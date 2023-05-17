@@ -166,6 +166,7 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,           P, Custom);
       setOperationAction(ISD::FMINNUM,        P, Custom);
       setOperationAction(ISD::FMAXNUM,        P, Custom);
+      setOperationAction(ISD::SETCC,          P, Custom);
       setOperationAction(ISD::VSELECT,        P, Custom);
 
       // Custom-lower BUILD_VECTOR. The standard (target-independent)

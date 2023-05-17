@@ -140,6 +140,7 @@ template <typename T> struct StrictIntegralType {
 
   // Helper to get the zero value.
   LIBC_INLINE static constexpr StrictIntegralType ZERO() { return {T(0)}; }
+  LIBC_INLINE static constexpr StrictIntegralType NONZERO() { return {T(1)}; }
 
 private:
   T value;

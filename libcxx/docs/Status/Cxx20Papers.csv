@@ -99,7 +99,7 @@
 "`P1464R1 <https://wg21.link/P1464R1>`__","LWG","Mandating the Standard Library: Clause 22 - Iterators library","Kona","|Complete|","9.0"
 "","","","","","",""
 "`P0325R4 <https://wg21.link/P0325R4>`__","LWG","to_array from LFTS with updates","Cologne","|Complete|","10.0"
-"`P0408R7 <https://wg21.link/P0408R7>`__","LWG","Efficient Access to basic_stringbuf's Buffer","Cologne","",""
+"`P0408R7 <https://wg21.link/P0408R7>`__","LWG","Efficient Access to basic_stringbuf's Buffer","Cologne","|In Progress| [#note-P0408]_",""
 "`P0466R5 <https://wg21.link/P0466R5>`__","LWG","Layout-compatibility and Pointer-interconvertibility Traits","Cologne","",""
 "`P0553R4 <https://wg21.link/P0553R4>`__","LWG","Bit operations","Cologne","|Complete|","9.0"
 "`P0631R8 <https://wg21.link/P0631R8>`__","LWG","Math Constants","Cologne","|Complete|","11.0"

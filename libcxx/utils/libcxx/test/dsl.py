@@ -228,9 +228,9 @@ def commandOutput(config, command):
   could appear on the right-hand-side of a `RUN:` keyword.
   """
   with _makeConfigTest(config) as test:
-    out, _, exitCode, _, _ = _executeScriptInternal(test, command)
+    out, err, exitCode, _, cmd = _executeScriptInternal(test, command)
     if exitCode != 0:
-     raise ConfigurationRuntimeError()
+     raise ConfigurationRuntimeError("Failed to run command: {}\nstderr is:\n{}".format(cmd, err))
     return out
 
 @_memoizeExpensiveOperation(lambda c, l: (c.substitutions, c.environment, l))
@@ -281,11 +281,11 @@ def compilerMacros(config, flags=''):
       #  include <__config_site>
       #endif
       """)
-    unparsedOutput, err, exitCode, _, _ = _executeScriptInternal(test, [
+    unparsedOutput, err, exitCode, _, cmd = _executeScriptInternal(test, [
       "%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)
     ])
     if exitCode != 0:
-      raise ConfigurationCompilationError("Failed to retrieve compiler macros, stderr is:\n{}".format(err))
+      raise ConfigurationCompilationError("Failed to retrieve compiler macros, compiler invocation is:\n{}\nstderr is:\n{}".format(cmd, err))
     parsedMacros = dict()
     defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define '))
     for line in defines:

@@ -964,12 +964,13 @@ SomeExpr RuntimeTableBuilder::PackageIntValueExpr(
 
 SymbolVector CollectBindings(const Scope &dtScope) {
   SymbolVector result;
-  std::map<SourceName, const Symbol *> localBindings;
+  std::map<SourceName, Symbol *> localBindings;
   // Collect local bindings
   for (auto pair : dtScope) {
-    const Symbol &symbol{*pair.second};
-    if (symbol.has<ProcBindingDetails>()) {
+    Symbol &symbol{const_cast<Symbol &>(*pair.second)};
+    if (auto *binding{symbol.detailsIf<ProcBindingDetails>()}) {
       localBindings.emplace(symbol.name(), &symbol);
+      binding->set_numPrivatesNotOverridden(0);
     }
   }
   if (const Scope * parentScope{dtScope.GetDerivedTypeParent()}) {
@@ -977,10 +978,20 @@ SymbolVector CollectBindings(const Scope &dtScope) {
     // Apply overrides from the local bindings of the extended type
     for (auto iter{result.begin()}; iter != result.end(); ++iter) {
       const Symbol &symbol{**iter};
-      auto overridden{localBindings.find(symbol.name())};
-      if (overridden != localBindings.end()) {
-        *iter = *overridden->second;
-        localBindings.erase(overridden);
+      auto overriderIter{localBindings.find(symbol.name())};
+      if (overriderIter != localBindings.end()) {
+        Symbol &overrider{*overriderIter->second};
+        if (symbol.attrs().test(Attr::PRIVATE) &&
+            FindModuleContaining(symbol.owner()) !=
+                FindModuleContaining(dtScope)) {
+          // Don't override inaccessible PRIVATE bindings
+          auto &binding{overrider.get<ProcBindingDetails>()};
+          binding.set_numPrivatesNotOverridden(
+              binding.numPrivatesNotOverridden() + 1);
+        } else {
+          *iter = overrider;
+          localBindings.erase(overriderIter);
+        }
       }
     }
   }
@@ -1026,32 +1037,31 @@ RuntimeTableBuilder::DescribeSpecialGenerics(const Scope &dtScope,
 void RuntimeTableBuilder::DescribeSpecialGeneric(const GenericDetails &generic,
     std::map<int, evaluate::StructureConstructor> &specials,
     const Scope &dtScope, const DerivedTypeSpec *derivedTypeSpec) const {
-  common::visit(common::visitors{
-                    [&](const GenericKind::OtherKind &k) {
-                      if (k == GenericKind::OtherKind::Assignment) {
-                        for (auto ref : generic.specificProcs()) {
-                          DescribeSpecialProc(specials, *ref, true,
-                              false /*!final*/, std::nullopt, &dtScope,
-                              derivedTypeSpec, true);
-                        }
-                      }
-                    },
-                    [&](const common::DefinedIo &io) {
-                      switch (io) {
-                      case common::DefinedIo::ReadFormatted:
-                      case common::DefinedIo::ReadUnformatted:
-                      case common::DefinedIo::WriteFormatted:
-                      case common::DefinedIo::WriteUnformatted:
-                        for (auto ref : generic.specificProcs()) {
-                          DescribeSpecialProc(specials, *ref, false,
-                              false /*!final*/, io, &dtScope, derivedTypeSpec,
-                              true);
-                        }
-                        break;
-                      }
-                    },
-                    [](const auto &) {},
-                },
+  common::visit(
+      common::visitors{
+          [&](const GenericKind::OtherKind &k) {
+            if (k == GenericKind::OtherKind::Assignment) {
+              for (auto ref : generic.specificProcs()) {
+                DescribeSpecialProc(specials, *ref, true, false /*!final*/,
+                    std::nullopt, &dtScope, derivedTypeSpec, true);
+              }
+            }
+          },
+          [&](const common::DefinedIo &io) {
+            switch (io) {
+            case common::DefinedIo::ReadFormatted:
+            case common::DefinedIo::ReadUnformatted:
+            case common::DefinedIo::WriteFormatted:
+            case common::DefinedIo::WriteUnformatted:
+              for (auto ref : generic.specificProcs()) {
+                DescribeSpecialProc(specials, *ref, false, false /*!final*/, io,
+                    &dtScope, derivedTypeSpec, true);
+              }
+              break;
+            }
+          },
+          [](const auto &) {},
+      },
       generic.kind().u);
 }
 
@@ -1208,68 +1218,92 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(
   return result;
 }
 
+// Find the type of a defined I/O procedure's interface's initial "dtv"
+// dummy argument.  Returns a non-null DeclTypeSpec pointer only if that
+// dtv argument exists and is a derived type.
+static const DeclTypeSpec *GetDefinedIoSpecificArgType(const Symbol &specific) {
+  const Symbol *interface {
+    &specific.GetUltimate()
+  };
+  if (const auto *procEntity{specific.detailsIf<ProcEntityDetails>()}) {
+    interface = procEntity->procInterface();
+  }
+  if (interface) {
+    if (const SubprogramDetails *
+            subprogram{interface->detailsIf<SubprogramDetails>()};
+        subprogram && !subprogram->dummyArgs().empty()) {
+      if (const Symbol * dtvArg{subprogram->dummyArgs().at(0)}) {
+        if (const DeclTypeSpec * declType{dtvArg->GetType()}) {
+          return declType->AsDerived() ? declType : nullptr;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Locate a particular scope's generic interface for a specific kind of
+// defined I/O.
+static const Symbol *FindGenericDefinedIo(
+    const Scope &scope, common::DefinedIo which) {
+  if (const Symbol * symbol{scope.FindSymbol(GenericKind::AsFortran(which))}) {
+    const Symbol &generic{symbol->GetUltimate()};
+    const auto &genericDetails{generic.get<GenericDetails>()};
+    CHECK(std::holds_alternative<common::DefinedIo>(genericDetails.kind().u));
+    CHECK(std::get<common::DefinedIo>(genericDetails.kind().u) == which);
+    return &generic;
+  } else {
+    return nullptr;
+  }
+}
+
 std::multimap<const Symbol *, NonTbpDefinedIo>
-CollectNonTbpDefinedIoGenericInterfaces(const Scope &scope) {
+CollectNonTbpDefinedIoGenericInterfaces(
+    const Scope &scope, bool useRuntimeTypeInfoEntries) {
   std::multimap<const Symbol *, NonTbpDefinedIo> result;
   if (!scope.IsTopLevel() &&
       (scope.GetImportKind() == Scope::ImportKind::All ||
           scope.GetImportKind() == Scope::ImportKind::Default)) {
-    result = CollectNonTbpDefinedIoGenericInterfaces(scope.parent());
+    result = CollectNonTbpDefinedIoGenericInterfaces(
+        scope.parent(), useRuntimeTypeInfoEntries);
   }
   if (scope.kind() != Scope::Kind::DerivedType) {
     for (common::DefinedIo which :
         {common::DefinedIo::ReadFormatted, common::DefinedIo::ReadUnformatted,
             common::DefinedIo::WriteFormatted,
             common::DefinedIo::WriteUnformatted}) {
-      if (auto iter{scope.find(GenericKind::AsFortran(which))};
-          iter != scope.end()) {
-        const Symbol &generic{iter->second->GetUltimate()};
-        const auto *genericDetails{generic.detailsIf<GenericDetails>()};
-        CHECK(genericDetails != nullptr);
-        CHECK(std::holds_alternative<common::DefinedIo>(
-            genericDetails->kind().u));
-        CHECK(std::get<common::DefinedIo>(genericDetails->kind().u) == which);
-        for (auto specific : genericDetails->specificProcs()) {
-          const Symbol *interface {
-            &specific->GetUltimate()
-          };
-          if (const auto *procEntity{
-                  specific->detailsIf<ProcEntityDetails>()}) {
-            interface = procEntity->procInterface();
-          }
-          const SubprogramDetails *subprogram{
-              interface ? interface->detailsIf<SubprogramDetails>() : nullptr};
-          const Symbol *dtvArg{subprogram && subprogram->dummyArgs().size() > 0
-                  ? subprogram->dummyArgs().at(0)
-                  : nullptr};
-          const DeclTypeSpec *declType{dtvArg ? dtvArg->GetType() : nullptr};
-          const DerivedTypeSpec *derived{
-              declType ? declType->AsDerived() : nullptr};
-          if (const Symbol *
-              dtDesc{derived && derived->scope()
-                      ? derived->scope()->runtimeDerivedTypeDescription()
-                      : nullptr}) {
-            if (&derived->scope()->parent() == &generic.owner()) {
-              // This non-TBP defined I/O generic was defined in the
-              // same scope as the derived type, and it will be
-              // included in the derived type's special bindings
-              // by IncorporateDefinedIoGenericInterfaces().
-            } else {
-              // Local scope's specific overrides host's for this type
-              bool updated{false};
-              for (auto [iter, end]{result.equal_range(dtDesc)}; iter != end;
-                   ++iter) {
-                NonTbpDefinedIo &nonTbp{iter->second};
-                if (nonTbp.definedIo == which) {
-                  nonTbp.subroutine = &*specific;
-                  nonTbp.isDtvArgPolymorphic = declType->IsPolymorphic();
-                  updated = true;
+      if (const Symbol * generic{FindGenericDefinedIo(scope, which)}) {
+        for (auto specific : generic->get<GenericDetails>().specificProcs()) {
+          if (const DeclTypeSpec *
+              declType{GetDefinedIoSpecificArgType(*specific)}) {
+            const DerivedTypeSpec &derived{DEREF(declType->AsDerived())};
+            if (const Symbol *
+                dtDesc{derived.scope()
+                        ? derived.scope()->runtimeDerivedTypeDescription()
+                        : nullptr}) {
+              if (useRuntimeTypeInfoEntries &&
+                  &derived.scope()->parent() == &generic->owner()) {
+                // This non-TBP defined I/O generic was defined in the
+                // same scope as the derived type, and it will be
+                // included in the derived type's special bindings
+                // by IncorporateDefinedIoGenericInterfaces().
+              } else {
+                // Local scope's specific overrides host's for this type
+                bool updated{false};
+                for (auto [iter, end]{result.equal_range(dtDesc)}; iter != end;
+                     ++iter) {
+                  NonTbpDefinedIo &nonTbp{iter->second};
+                  if (nonTbp.definedIo == which) {
+                    nonTbp.subroutine = &*specific;
+                    nonTbp.isDtvArgPolymorphic = declType->IsPolymorphic();
+                    updated = true;
+                  }
                 }
-              }
-              if (!updated) {
-                result.emplace(dtDesc,
-                    NonTbpDefinedIo{
-                        &*specific, which, declType->IsPolymorphic()});
+                if (!updated) {
+                  result.emplace(dtDesc,
+                      NonTbpDefinedIo{
+                          &*specific, which, declType->IsPolymorphic()});
+                }
               }
             }
           }
@@ -1278,6 +1312,98 @@ CollectNonTbpDefinedIoGenericInterfaces(const Scope &scope) {
     }
   }
   return result;
+}
+
+// ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces()
+//
+// Returns a true result when a kind of defined I/O generic procedure
+// has a type (from a symbol or a NAMELIST) such that
+// (1) there is a specific procedure matching that type for a non-type-bound
+//     generic defined in the scope of the type, and
+// (2) that specific procedure is unavailable or overridden in a particular
+//     local scope.
+// Specific procedures of non-type-bound defined I/O generic interfaces
+// declared in the scope of a derived type are identified as special bindings
+// in the derived type's runtime type information, as if they had been
+// type-bound.  This predicate is meant to determine local situations in
+// which those special bindings are not to be used.  Its result is intended
+// to be put into the "ignoreNonTbpEntries" flag of
+// runtime::NonTbpDefinedIoTable and passed (negated) as the
+// "useRuntimeTypeInfoEntries" argument of
+// CollectNonTbpDefinedIoGenericInterfaces() above.
+
+static const Symbol *FindSpecificDefinedIo(const Scope &scope,
+    const evaluate::DynamicType &derived, common::DefinedIo which) {
+  if (const Symbol * generic{FindGenericDefinedIo(scope, which)}) {
+    for (auto ref : generic->get<GenericDetails>().specificProcs()) {
+      const Symbol &specific{*ref};
+      if (const DeclTypeSpec *
+          thisType{GetDefinedIoSpecificArgType(specific)}) {
+        if (evaluate::DynamicType{DEREF(thisType->AsDerived()), true}
+                .IsTkCompatibleWith(derived)) {
+          return &specific.GetUltimate();
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
+bool ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces(
+    const Scope &scope, const DerivedTypeSpec *derived) {
+  if (!derived) {
+    return false;
+  }
+  const Symbol &typeSymbol{derived->typeSymbol()};
+  const Scope &typeScope{typeSymbol.GetUltimate().owner()};
+  evaluate::DynamicType dyType{*derived};
+  for (common::DefinedIo which :
+      {common::DefinedIo::ReadFormatted, common::DefinedIo::ReadUnformatted,
+          common::DefinedIo::WriteFormatted,
+          common::DefinedIo::WriteUnformatted}) {
+    if (const Symbol *
+        specific{FindSpecificDefinedIo(typeScope, dyType, which)}) {
+      // There's a non-TBP defined I/O procedure in the scope of the type's
+      // definition that applies to this type.  It will appear in the type's
+      // runtime information.  Determine whether it still applies in the
+      // scope of interest.
+      if (FindSpecificDefinedIo(scope, dyType, which) != specific) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces(
+    const Scope &scope, const DeclTypeSpec *type) {
+  return type &&
+      ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces(
+          scope, type->AsDerived());
+}
+
+bool ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces(
+    const Scope &scope, const Symbol *symbol) {
+  if (!symbol) {
+    return false;
+  }
+  return common::visit(
+      common::visitors{
+          [&](const NamelistDetails &x) {
+            for (auto ref : x.objects()) {
+              if (ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces(
+                      scope, &*ref)) {
+                return true;
+              }
+            }
+            return false;
+          },
+          [&](const auto &) {
+            return ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces(
+                scope, symbol->GetType());
+          },
+      },
+      symbol->GetUltimate().details());
 }
 
 } // namespace Fortran::semantics

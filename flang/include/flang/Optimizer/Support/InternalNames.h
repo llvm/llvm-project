@@ -80,8 +80,12 @@ struct NameUniquer {
                                      std::int64_t block, llvm::StringRef name,
                                      llvm::ArrayRef<std::int64_t> kinds);
 
-  /// Unique a compiler generated name
+  /// Unique a compiler generated name without scope context.
   static std::string doGenerated(llvm::StringRef name);
+  /// Unique a compiler generated name with scope context.
+  static std::string doGenerated(llvm::ArrayRef<llvm::StringRef> modules,
+                                 llvm::ArrayRef<llvm::StringRef> procs,
+                                 std::int64_t blockId, llvm::StringRef name);
 
   /// Unique an intrinsic type descriptor
   static std::string

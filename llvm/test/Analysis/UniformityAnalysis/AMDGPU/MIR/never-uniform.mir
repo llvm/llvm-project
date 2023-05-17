@@ -117,7 +117,7 @@ body:             |
     %16:vgpr_32 = IMPLICIT_DEF
     S_ENDPGM 0
 ...
-# Direclty reading physing vgpr not uniform
+# Directly reading physical vgpr not uniform
 ---
 name:            physicalreg
 tracksRegLiveness: true

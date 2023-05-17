@@ -3,7 +3,7 @@ UNSUPPORTED: target={{.*windows.*}}
 RUN: mkdir -p %t.d
 RUN: cd %t.d
 
-RUN: %clangxx --coverage -lpthread -o %t %S/Inputs/instrprof-gcov-multithread_fork.cpp
+RUN: %clangxx --coverage -lpthread -o %t %S/Inputs/instrprof-gcov-multithread_fork.cpp -dumpdir ./
 RUN: test -f instrprof-gcov-multithread_fork.gcno
 
 RUN: rm -f instrprof-gcov-multithread_fork.gcda

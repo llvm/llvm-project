@@ -1,10 +1,10 @@
-#===- disassembler.py - Python LLVM Bindings -----------------*- python -*--===#
+# ===- disassembler.py - Python LLVM Bindings -----------------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
+# ===------------------------------------------------------------------------===#
 
 from ctypes import CFUNCTYPE
 from ctypes import POINTER
@@ -23,7 +23,7 @@ from .common import c_object_p
 from .common import get_library
 
 __all__ = [
-    'Disassembler',
+    "Disassembler",
 ]
 
 lib = get_library()
@@ -33,9 +33,23 @@ callbacks = {}
 Option_UseMarkup = 1
 
 
-
 _initialized = False
-_targets = ['AArch64', 'ARM', 'Hexagon', 'MSP430', 'Mips', 'NVPTX', 'PowerPC', 'R600', 'Sparc', 'SystemZ', 'X86', 'XCore']
+_targets = [
+    "AArch64",
+    "ARM",
+    "Hexagon",
+    "MSP430",
+    "Mips",
+    "NVPTX",
+    "PowerPC",
+    "R600",
+    "Sparc",
+    "SystemZ",
+    "X86",
+    "XCore",
+]
+
+
 def _ensure_initialized():
     global _initialized
     if not _initialized:
@@ -63,6 +77,7 @@ class Disassembler(LLVMObject):
 
     Disassembler instances can disassemble instructions from multiple sources.
     """
+
     def __init__(self, triple):
         """Create a new disassembler instance.
 
@@ -72,11 +87,15 @@ class Disassembler(LLVMObject):
 
         _ensure_initialized()
 
-        ptr = lib.LLVMCreateDisasm(c_char_p(triple), c_void_p(None), c_int(0),
-                callbacks['op_info'](0), callbacks['symbol_lookup'](0))
+        ptr = lib.LLVMCreateDisasm(
+            c_char_p(triple),
+            c_void_p(None),
+            c_int(0),
+            callbacks["op_info"](0),
+            callbacks["symbol_lookup"](0),
+        )
         if not ptr:
-            raise Exception('Could not obtain disassembler for triple: %s' %
-                            triple)
+            raise Exception("Could not obtain disassembler for triple: %s" % triple)
 
         LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisasmDispose)
 
@@ -100,8 +119,9 @@ class Disassembler(LLVMObject):
         buf = cast(c_char_p(source), POINTER(c_ubyte))
         out_str = cast((c_byte * 255)(), c_char_p)
 
-        result = lib.LLVMDisasmInstruction(self, buf, c_uint64(len(source)),
-                                           c_uint64(pc), out_str, 255)
+        result = lib.LLVMDisasmInstruction(
+            self, buf, c_uint64(len(source)), c_uint64(pc), out_str, 255
+        )
 
         return (result, out_str.value)
 
@@ -128,9 +148,9 @@ class Disassembler(LLVMObject):
         end_address = pc + len(source)
         while address < end_address:
             b = cast(addressof(buf) + offset, POINTER(c_ubyte))
-            result = lib.LLVMDisasmInstruction(self, b,
-                    c_uint64(len(source) - offset), c_uint64(address),
-                    out_str, 255)
+            result = lib.LLVMDisasmInstruction(
+                self, b, c_uint64(len(source) - offset), c_uint64(address), out_str, 255
+            )
 
             if result == 0:
                 break
@@ -142,28 +162,40 @@ class Disassembler(LLVMObject):
 
     def set_options(self, options):
         if not lib.LLVMSetDisasmOptions(self, options):
-            raise Exception('Unable to set all disassembler options in %i' % options)
+            raise Exception("Unable to set all disassembler options in %i" % options)
 
 
 def register_library(library):
-    library.LLVMCreateDisasm.argtypes = [c_char_p, c_void_p, c_int,
-        callbacks['op_info'], callbacks['symbol_lookup']]
+    library.LLVMCreateDisasm.argtypes = [
+        c_char_p,
+        c_void_p,
+        c_int,
+        callbacks["op_info"],
+        callbacks["symbol_lookup"],
+    ]
     library.LLVMCreateDisasm.restype = c_object_p
 
     library.LLVMDisasmDispose.argtypes = [Disassembler]
 
-    library.LLVMDisasmInstruction.argtypes = [Disassembler, POINTER(c_ubyte),
-            c_uint64, c_uint64, c_char_p, c_size_t]
+    library.LLVMDisasmInstruction.argtypes = [
+        Disassembler,
+        POINTER(c_ubyte),
+        c_uint64,
+        c_uint64,
+        c_char_p,
+        c_size_t,
+    ]
     library.LLVMDisasmInstruction.restype = c_size_t
 
     library.LLVMSetDisasmOptions.argtypes = [Disassembler, c_uint64]
     library.LLVMSetDisasmOptions.restype = c_int
 
 
-callbacks['op_info'] = CFUNCTYPE(c_int, c_void_p, c_uint64, c_uint64, c_uint64,
-                                 c_int, c_void_p)
-callbacks['symbol_lookup'] = CFUNCTYPE(c_char_p, c_void_p, c_uint64,
-                                       POINTER(c_uint64), c_uint64,
-                                       POINTER(c_char_p))
+callbacks["op_info"] = CFUNCTYPE(
+    c_int, c_void_p, c_uint64, c_uint64, c_uint64, c_int, c_void_p
+)
+callbacks["symbol_lookup"] = CFUNCTYPE(
+    c_char_p, c_void_p, c_uint64, POINTER(c_uint64), c_uint64, POINTER(c_char_p)
+)
 
 register_library(lib)

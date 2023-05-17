@@ -2733,10 +2733,9 @@ define i64 @ursra_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: ursra_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    urshr d0, d0, #1
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ursra d1, d0, #1
+; CHECK-NEXT:    fmov x0, d1
 ; CHECK-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.urshl.i64(i64 %tmp1, i64 -1)
@@ -2861,10 +2860,9 @@ define i64 @srsra_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: srsra_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    srshr d0, d0, #1
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    srsra d1, d0, #1
+; CHECK-NEXT:    fmov x0, d1
 ; CHECK-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.srshl.i64(i64 %tmp1, i64 -1)

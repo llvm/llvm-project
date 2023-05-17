@@ -251,6 +251,37 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::udiv(Known1, Known2, /*Exact*/ true);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.isZero() || !N1.urem(N2).isZero())
+          return std::nullopt;
+        return N1.udiv(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::sdiv(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.isZero() || (N1.isMinSignedValue() && N2.isAllOnes()))
+          return std::nullopt;
+        return N1.sdiv(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::sdiv(Known1, Known2, /*Exact*/ true);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.isZero() || (N1.isMinSignedValue() && N2.isAllOnes()) ||
+            !N1.srem(N2).isZero())
+          return std::nullopt;
+        return N1.sdiv(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::urem(Known1, Known2);
       },
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {

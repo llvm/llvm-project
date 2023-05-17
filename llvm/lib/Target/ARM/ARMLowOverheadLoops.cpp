@@ -427,11 +427,6 @@ namespace {
     // after tail predication conversion.
     bool ValidateLiveOuts();
 
-    // Is it safe to define LR with DLS/WLS?
-    // LR can be defined if it is the operand to start, because it's the same
-    // value, or if it's going to be equivalent to the operand to Start.
-    MachineInstr *isSafeToDefineLR();
-
     // Check the branch targets are within range and we satisfy our
     // restrictions.
     void Validate(ARMBasicBlockUtils *BBUtils);

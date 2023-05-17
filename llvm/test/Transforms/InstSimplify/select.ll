@@ -1496,3 +1496,62 @@ define i8 @select_sub_cmp_nonzero(i8 %0, i8 %1) {
   %5 = select i1 %3, i8 42, i8 %4
   ret i8 %5
 }
+
+; X == Y ? 0 : X ^ Y --> X ^ Y, https://alive2.llvm.org/ce/z/cykffE
+define i8 @select_xor_cmp(i8 %0, i8 %1) {
+; CHECK-LABEL: @select_xor_cmp(
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
+;
+  %3 = icmp eq i8 %1, %0
+  %4 = xor i8 %1, %0
+  %5 = select i1 %3, i8 0, i8 %4
+  ret i8 %5
+}
+
+define <2 x i8> @select_xor_cmp_vec(<2 x i8> %0, <2 x i8> %1) {
+; CHECK-LABEL: @select_xor_cmp_vec(
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
+;
+  %3 = icmp eq <2 x i8> %1, %0
+  %4 = xor <2 x i8> %1, %0
+  %5 = select <2 x i1> %3, <2 x i8> <i8 0, i8 0>, <2 x i8> %4
+  ret <2 x i8> %5
+}
+
+define i8 @select_xor_cmp_swap(i8 %0, i8 %1) {
+; CHECK-LABEL: @select_xor_cmp_swap(
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
+;
+  %3 = icmp eq i8 %1, %0
+  %4 = xor i8 %0, %1
+  %5 = select i1 %3, i8 0, i8 %4
+  ret i8 %5
+}
+
+define <2 x i8> @select_xor_cmp_vec_swap(<2 x i8> %0, <2 x i8> %1) {
+; CHECK-LABEL: @select_xor_cmp_vec_swap(
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[TMP3]]
+;
+  %3 = icmp eq <2 x i8> %1, %0
+  %4 = xor <2 x i8> %0, %1
+  %5 = select <2 x i1> %3, <2 x i8> <i8 0, i8 0>, <2 x i8> %4
+  ret <2 x i8> %5
+}
+
+; Negative test: the xor operands are not %0 and %1
+define i8 @select_xor_cmp_unmatched_operands(i8 %0, i8 %1, i8 %c) {
+; CHECK-LABEL: @select_xor_cmp_unmatched_operands(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i8 0, i8 [[TMP4]]
+; CHECK-NEXT:    ret i8 [[TMP5]]
+;
+  %3 = icmp eq i8 %1, %0
+  %4 = xor i8 %1, %c
+  %5 = select i1 %3, i8 0, i8 %4
+  ret i8 %5
+}

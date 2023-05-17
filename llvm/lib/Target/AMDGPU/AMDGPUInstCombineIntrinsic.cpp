@@ -499,7 +499,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
 
     // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
-    if ((Mask & fcNan) && isKnownNeverNaN(Src0, &IC.getTargetLibraryInfo())) {
+    if ((Mask & fcNan) &&
+        isKnownNeverNaN(Src0, IC.getDataLayout(), &IC.getTargetLibraryInfo())) {
       return IC.replaceOperand(
           II, 1, ConstantInt::get(Src1->getType(), Mask & ~fcNan));
     }

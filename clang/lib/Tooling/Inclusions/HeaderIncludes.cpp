@@ -253,7 +253,7 @@ bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   //  1) foo.h => bar.cc
   //  2) foo.proto.h => foo.cc
   StringRef Matching;
-  if (MatchingFileStem.startswith_insensitive(HeaderStem))
+  if (MatchingFileStem.starts_with_insensitive(HeaderStem))
     Matching = MatchingFileStem; // example 1), 2)
   else if (FileStem.equals_insensitive(HeaderStem))
     Matching = FileStem; // example 3)

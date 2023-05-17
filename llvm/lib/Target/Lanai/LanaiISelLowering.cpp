@@ -519,7 +519,7 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
   if (IsVarArg) {
     // Record the frame index of the first variable argument
     // which is a value necessary to VASTART.
-    int FI = MFI.CreateFixedObject(4, CCInfo.getNextStackOffset(), true);
+    int FI = MFI.CreateFixedObject(4, CCInfo.getStackSize(), true);
     LanaiMFI->setVarArgsFrameIndex(FI);
   }
 
@@ -627,7 +627,7 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
   }
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getNextStackOffset();
+  unsigned NumBytes = CCInfo.getStackSize();
 
   // Create local copies for byval args.
   SmallVector<SDValue, 8> ByValArgs;

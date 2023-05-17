@@ -227,13 +227,14 @@ public:
         builder.createBlock(&dt.getRegion());
 
       for (const Fortran::semantics::SymbolRef &binding : bindings) {
-        const auto *details =
-            binding.get().detailsIf<Fortran::semantics::ProcBindingDetails>();
-        std::string bindingName = converter.mangleName(details->symbol());
+        const auto &details =
+            binding.get().get<Fortran::semantics::ProcBindingDetails>();
+        std::string tbpName = binding.get().name().ToString();
+        if (details.numPrivatesNotOverridden() > 0)
+          tbpName += "."s + std::to_string(details.numPrivatesNotOverridden());
+        std::string bindingName = converter.mangleName(details.symbol());
         builder.create<fir::DTEntryOp>(
-            info.loc,
-            mlir::StringAttr::get(builder.getContext(),
-                                  binding.get().name().ToString()),
+            info.loc, mlir::StringAttr::get(builder.getContext(), tbpName),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
       }
       if (!bindings.empty())
@@ -742,6 +743,10 @@ public:
     return genUnknownLocation();
   }
 
+  const Fortran::semantics::Scope &getCurrentScope() override final {
+    return bridge.getSemanticsContext().FindScope(currentPosition);
+  }
+
   fir::FirOpBuilder &getFirOpBuilder() override final { return *builder; }
 
   mlir::ModuleOp &getModuleOp() override final { return bridge.getModule(); }
@@ -757,7 +762,10 @@ public:
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
     return Fortran::lower::mangle::mangleName(derivedType, scopeBlockIdMap);
   }
-
+  std::string mangleName(std::string &name) override final {
+    return Fortran::lower::mangle::mangleName(name, getCurrentScope(),
+                                              scopeBlockIdMap);
+  }
   const fir::KindMapping &getKindMap() override final {
     return bridge.getKindMap();
   }
@@ -856,6 +864,20 @@ private:
             },
             [](auto x) -> Fortran::lower::SymbolBox { return x; });
       }
+
+      // Entry character result represented as an argument pair
+      // needs to be represented in the symbol table even before
+      // we can create DeclareOp for it. The temporary mapping
+      // is EmboxCharOp that conveys the address and length information.
+      // After mapSymbolAttributes is done, the mapping is replaced
+      // with the new DeclareOp, and the following table lookups
+      // do not reach here.
+      if (sym.IsFuncResult())
+        if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
+          if (declTy->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Character)
+            return symMap->lookupSymbol(sym);
+
       // Procedure dummies are not mapped with an hlfir.declare because
       // they are not "variable" (cannot be assigned to), and it would
       // make hlfir.declare more complex than it needs to to allow this.

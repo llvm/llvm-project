@@ -15,7 +15,6 @@ static_library("Analysis") {
   sources = [
     "AliasAnalysis.cpp",
     "AliasAnalysisEvaluator.cpp",
-    "AliasAnalysisSummary.cpp",
     "AliasSetTracker.cpp",
     "Analysis.cpp",
     "AssumeBundleQueries.cpp",

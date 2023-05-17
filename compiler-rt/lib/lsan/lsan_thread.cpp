@@ -24,7 +24,6 @@
 namespace __lsan {
 
 static ThreadRegistry *thread_registry;
-static ThreadArgRetval *thread_arg_retval;
 
 static Mutex mu_for_thread_context;
 static LowLevelAllocator allocator_for_thread_context;
@@ -35,17 +34,10 @@ static ThreadContextBase *CreateThreadContext(u32 tid) {
 }
 
 void InitializeThreadRegistry() {
-  static ALIGNED(alignof(
-      ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
+  static ALIGNED(64) char thread_registry_placeholder[sizeof(ThreadRegistry)];
   thread_registry =
       new (thread_registry_placeholder) ThreadRegistry(CreateThreadContext);
-
-  static ALIGNED(alignof(ThreadArgRetval)) char
-      thread_arg_retval_placeholder[sizeof(ThreadArgRetval)];
-  thread_arg_retval = new (thread_arg_retval_placeholder) ThreadArgRetval();
 }
-
-ThreadArgRetval &GetThreadArgRetval() { return *thread_arg_retval; }
 
 ThreadContextLsanBase::ThreadContextLsanBase(int tid)
     : ThreadContextBase(tid) {}
@@ -80,15 +72,9 @@ void GetThreadExtraStackRangesLocked(tid_t os_id,
                                      InternalMmapVector<Range> *ranges) {}
 void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
-void LockThreadRegistry() {
-  thread_registry->Lock();
-  thread_arg_retval->Lock();
-}
+void LockThreadRegistry() { thread_registry->Lock(); }
 
-void UnlockThreadRegistry() {
-  thread_arg_retval->Unlock();
-  thread_registry->Unlock();
-}
+void UnlockThreadRegistry() { thread_registry->Unlock(); }
 
 ThreadRegistry *GetLsanThreadRegistryLocked() {
   thread_registry->CheckLocked();
@@ -107,7 +93,12 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
 }
 
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
-  GetThreadArgRetval().GetAllPtrsLocked(ptrs);
+  // This function can be used to treat memory reachable from `tctx` as live.
+  // This is useful for threads that have been created but not yet started.
+
+  // This is currently a no-op because the LSan `pthread_create()` interceptor
+  // blocks until the child thread starts which keeps the thread's `arg` pointer
+  // live.
 }
 
 }  // namespace __lsan

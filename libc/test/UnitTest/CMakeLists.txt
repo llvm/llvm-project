@@ -1,9 +1,10 @@
 set(libc_test_srcs_common
-  Test.h
-  LibcTest.cpp
   CmakeFilePath.cpp
-  LibcTest.h
+  LibcTest.cpp
+  LibcTestMain.cpp
   TestLogger.cpp
+  LibcTest.h
+  Test.h
   TestLogger.h
 )
 
@@ -36,23 +37,7 @@ add_library(
   HermeticTestUtils.cpp
 )
 
-add_library(
-  LibcUnitTestMain
-  ${library_type}
-  EXCLUDE_FROM_ALL
-  LibcTestMain.cpp
-)
-add_dependencies(LibcUnitTestMain LibcUnitTest)
-
-add_library(
-  LibcHermeticTestMain
-  ${library_type}
-  EXCLUDE_FROM_ALL
-  LibcTestMain.cpp
-)
-add_dependencies(LibcHermeticTestMain LibcHermeticTest)
-
-foreach(lib LibcUnitTest LibcUnitTestMain LibcHermeticTest LibcHermeticTestMain)
+foreach(lib LibcUnitTest LibcHermeticTest)
   target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
   target_compile_options(${lib} PRIVATE -fno-exceptions -fno-rtti)
   add_dependencies(${lib}
@@ -65,11 +50,9 @@ foreach(lib LibcUnitTest LibcUnitTestMain LibcHermeticTest LibcHermeticTestMain)
   )
 endforeach()
 
-foreach(lib LibcHermeticTest LibcHermeticTestMain)
-  target_include_directories(${lib} PRIVATE ${LIBC_BUILD_DIR}/include)
-  target_compile_options(${lib}
-      PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} -ffreestanding -nostdlib -nostdlib++)
-endforeach()
+target_include_directories(LibcHermeticTest PRIVATE ${LIBC_BUILD_DIR}/include)
+target_compile_options(LibcHermeticTest
+    PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} -ffreestanding -nostdlib -nostdlib++)
 
 add_header_library(
   string_utils

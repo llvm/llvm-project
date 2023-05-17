@@ -45,9 +45,11 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   uint64_t Discriminator = 0;
   // For now only block probes have FS discriminators. See
   // MIRFSDiscriminator.cpp for more details.
-  if (DebugLoc &&
-      !DILocation::isPseudoProbeDiscriminator(DebugLoc->getDiscriminator()))
+  if (EnableFSDiscriminator && DebugLoc &&
+      (Type == (uint64_t)PseudoProbeType::Block))
     Discriminator = DebugLoc->getDiscriminator();
+  assert((EnableFSDiscriminator || Discriminator == 0) &&
+         "Discriminator should not be set in non-FSAFDO mode");
   SmallVector<InlineSite, 8> InlineStack(llvm::reverse(ReversedInlineStack));
   Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, Discriminator,
                                     InlineStack, Asm->CurrentFnSym);

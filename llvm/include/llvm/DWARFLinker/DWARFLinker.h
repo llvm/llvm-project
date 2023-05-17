@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include <map>
 
 namespace llvm {
@@ -48,14 +49,16 @@ public:
   /// section.
   virtual bool hasValidRelocs() = 0;
 
-  /// Checks that the specified variable \p DIE references the live code
-  /// section and returns the relocation adjustment value (to get the linked
-  /// address this value might be added to the source variable address).
-  /// Allowed kinds of input DIE: DW_TAG_variable, DW_TAG_constant.
+  /// Checks that the specified DWARF expression operand \p Op references live
+  /// code section and returns the relocation adjustment value (to get the
+  /// linked address this value might be added to the source expression operand
+  /// address).
   /// \returns relocation adjustment value or std::nullopt if there is no
   /// corresponding live address.
   virtual std::optional<int64_t>
-  getVariableRelocAdjustment(const DWARFDie &DIE) = 0;
+  getExprOpAddressRelocAdjustment(DWARFUnit &U,
+                                  const DWARFExpression::Operation &Op,
+                                  uint64_t StartOffset, uint64_t EndOffset) = 0;
 
   /// Checks that the specified subprogram \p DIE references the live code
   /// section and returns the relocation adjustment value (to get the linked
@@ -572,6 +575,12 @@ private:
                          CompileUnit &Unit, CompileUnit::DIEInfo &MyInfo,
                          unsigned Flags);
 
+  /// This function checks whether variable has DWARF expression containing
+  /// operation referencing live address(f.e. DW_OP_addr, DW_OP_addrx...).
+  /// \returns relocation adjustment value if live address is referenced.
+  std::optional<int64_t> getVariableRelocAdjustment(AddressesMap &RelocMgr,
+                                                    const DWARFDie &DIE);
+
   /// Check if a variable describing DIE should be kept.
   /// \returns updated TraversalFlags.
   unsigned shouldKeepVariableDIE(AddressesMap &RelocMgr, const DWARFDie &DIE,
@@ -703,14 +712,16 @@ private:
     /// Clone a DWARF expression that may be referencing another DIE.
     void cloneExpression(DataExtractor &Data, DWARFExpression Expression,
                          const DWARFFile &File, CompileUnit &Unit,
-                         SmallVectorImpl<uint8_t> &OutputBuffer);
+                         SmallVectorImpl<uint8_t> &OutputBuffer,
+                         int64_t AddrRelocAdjustment, bool IsLittleEndian);
 
     /// Clone an attribute referencing another DIE and add
     /// it to \p Die.
     /// \returns the size of the new attribute.
-    unsigned cloneBlockAttribute(DIE &Die, const DWARFFile &File,
-                                 CompileUnit &Unit, AttributeSpec AttrSpec,
-                                 const DWARFFormValue &Val, unsigned AttrSize,
+    unsigned cloneBlockAttribute(DIE &Die, const DWARFDie &InputDIE,
+                                 const DWARFFile &File, CompileUnit &Unit,
+                                 AttributeSpec AttrSpec,
+                                 const DWARFFormValue &Val,
                                  bool IsLittleEndian);
 
     /// Clone an attribute referencing another DIE and add
@@ -761,8 +772,9 @@ private:
   /// .debug_rnglists) for \p Unit, patch the attributes referencing it.
   void generateUnitRanges(CompileUnit &Unit, const DWARFFile &File) const;
 
-  using ExpressionHandlerRef = function_ref<void(SmallVectorImpl<uint8_t> &,
-                                                 SmallVectorImpl<uint8_t> &)>;
+  using ExpressionHandlerRef =
+      function_ref<void(SmallVectorImpl<uint8_t> &, SmallVectorImpl<uint8_t> &,
+                        int64_t AddrRelocAdjustment)>;
 
   /// Compute and emit debug locations (.debug_loc, .debug_loclists)
   /// for \p Unit, patch the attributes referencing it.

@@ -65,7 +65,8 @@ attributes #0 = { inaccessiblememonly nocallback nofree nosync nounwind willretu
 !6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 5, type: !7, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !7 = !DISubroutineType(types: !2)
 !8 = !DILocation(line: 7, column: 15, scope: !9)
-!9 = !DILexicalBlockFile(scope: !6, file: !1, discriminator: 0)
+;; The discriminator with value 2 is to test that it can be cleaned up by the first FS discriminator pass.
+!9 = !DILexicalBlockFile(scope: !6, file: !1, discriminator: 2)
 !10 = !DILocation(line: 7, column: 3, scope: !9)
 !11 = !DILocation(line: 9, column: 5, scope: !9)
 !12 = !DILocation(line: 14, column: 3, scope: !6)

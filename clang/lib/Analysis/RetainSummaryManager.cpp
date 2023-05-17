@@ -190,18 +190,18 @@ static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
 }
 
 static bool isRetain(const FunctionDecl *FD, StringRef FName) {
-  return FName.startswith_insensitive("retain") ||
-         FName.endswith_insensitive("retain");
+  return FName.starts_with_insensitive("retain") ||
+         FName.ends_with_insensitive("retain");
 }
 
 static bool isRelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.startswith_insensitive("release") ||
-         FName.endswith_insensitive("release");
+  return FName.starts_with_insensitive("release") ||
+         FName.ends_with_insensitive("release");
 }
 
 static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.startswith_insensitive("autorelease") ||
-         FName.endswith_insensitive("autorelease");
+  return FName.starts_with_insensitive("autorelease") ||
+         FName.ends_with_insensitive("autorelease");
 }
 
 static bool isMakeCollectable(StringRef FName) {
