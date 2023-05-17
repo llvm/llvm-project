@@ -640,11 +640,11 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
       return false;
     unsigned InsertedIdx = cast<ConstantInt>(IdxOp)->getZExtValue();
 
-    if (isa<UndefValue>(ScalarOp)) {  // inserting undef into vector.
+    if (isa<PoisonValue>(ScalarOp)) {  // inserting poison into vector.
       // We can handle this if the vector we are inserting into is
       // transitively ok.
       if (collectSingleShuffleElements(VecOp, LHS, RHS, Mask)) {
-        // If so, update the mask to reflect the inserted undef.
+        // If so, update the mask to reflect the inserted poison.
         Mask[InsertedIdx] = -1;
         return true;
       }
@@ -1240,11 +1240,11 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   if (FirstIE == &InsElt)
     return nullptr;
 
-  // If we are not inserting into an undef vector, make sure we've seen an
+  // If we are not inserting into a poison vector, make sure we've seen an
   // insert into every element.
   // TODO: If the base vector is not undef, it might be better to create a splat
   //       and then a select-shuffle (blend) with the base vector.
-  if (!match(FirstIE->getOperand(0), m_Undef()))
+  if (!match(FirstIE->getOperand(0), m_Poison()))
     if (!ElementPresent.all())
       return nullptr;
 
@@ -1255,7 +1255,7 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   if (!cast<ConstantInt>(FirstIE->getOperand(2))->isZero())
     FirstIE = InsertElementInst::Create(PoisonVec, SplatVal, Zero, "", &InsElt);
 
-  // Splat from element 0, but replace absent elements with undef in the mask.
+  // Splat from element 0, but replace absent elements with poison in the mask.
   SmallVector<int, 16> Mask(NumElements, 0);
   for (unsigned i = 0; i != NumElements; ++i)
     if (!ElementPresent[i])
@@ -3060,7 +3060,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   for (unsigned i = 0; i < VWidth; ++i) {
     int eltMask;
     if (Mask[i] < 0) {
-      // This element is an undef value.
+      // This element is a poison value.
       eltMask = -1;
     } else if (Mask[i] < (int)LHSWidth) {
       // This element is from left hand side vector operand.
@@ -3069,27 +3069,27 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       // new mask value for the element.
       if (newLHS != LHS) {
         eltMask = LHSMask[Mask[i]];
-        // If the value selected is an undef value, explicitly specify it
+        // If the value selected is an poison value, explicitly specify it
         // with a -1 mask value.
-        if (eltMask >= (int)LHSOp0Width && isa<UndefValue>(LHSOp1))
+        if (eltMask >= (int)LHSOp0Width && isa<PoisonValue>(LHSOp1))
           eltMask = -1;
       } else
         eltMask = Mask[i];
     } else {
       // This element is from right hand side vector operand
       //
-      // If the value selected is an undef value, explicitly specify it
+      // If the value selected is a poison value, explicitly specify it
       // with a -1 mask value. (case 1)
-      if (match(RHS, m_Undef()))
+      if (match(RHS, m_Poison()))
         eltMask = -1;
       // If RHS is going to be replaced (case 3 or 4), calculate the
       // new mask value for the element.
       else if (newRHS != RHS) {
         eltMask = RHSMask[Mask[i]-LHSWidth];
-        // If the value selected is an undef value, explicitly specify it
+        // If the value selected is an poison value, explicitly specify it
         // with a -1 mask value.
         if (eltMask >= (int)RHSOp0Width) {
-          assert(match(RHSShuffle->getOperand(1), m_Undef()) &&
+          assert(match(RHSShuffle->getOperand(1), m_Poison()) &&
                  "should have been check above");
           eltMask = -1;
         }
@@ -3120,7 +3120,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   // or is a splat, do the replacement.
   if (isSplat || newMask == LHSMask || newMask == RHSMask || newMask == Mask) {
     if (!newRHS)
-      newRHS = UndefValue::get(newLHS->getType());
+      newRHS = PoisonValue::get(newLHS->getType());
     return new ShuffleVectorInst(newLHS, newRHS, newMask);
   }
 
