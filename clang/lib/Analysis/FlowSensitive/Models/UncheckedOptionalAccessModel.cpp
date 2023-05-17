@@ -864,8 +864,7 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-std::vector<SourceLocation> diagnoseUnwrapCall(const Expr *UnwrapExpr,
-                                               const Expr *ObjectExpr,
+std::vector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
                                                const Environment &Env) {
   if (auto *OptionalVal = getValueBehindPossiblePointer(*ObjectExpr, Env)) {
     auto *Prop = OptionalVal->getProperty("has_value");
@@ -893,16 +892,16 @@ auto buildDiagnoseMatchSwitch(
           valueCall(IgnorableOptional),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              const Environment &Env) {
-            return diagnoseUnwrapCall(E, E->getImplicitObjectArgument(), Env);
+            return diagnoseUnwrapCall(E->getImplicitObjectArgument(), Env);
           })
 
       // optional::operator*, optional::operator->
-      .CaseOfCFGStmt<CallExpr>(
-          valueOperatorCall(IgnorableOptional),
-          [](const CallExpr *E, const MatchFinder::MatchResult &,
-             const Environment &Env) {
-            return diagnoseUnwrapCall(E, E->getArg(0), Env);
-          })
+      .CaseOfCFGStmt<CallExpr>(valueOperatorCall(IgnorableOptional),
+                               [](const CallExpr *E,
+                                  const MatchFinder::MatchResult &,
+                                  const Environment &Env) {
+                                 return diagnoseUnwrapCall(E->getArg(0), Env);
+                               })
       .Build();
 }
 
