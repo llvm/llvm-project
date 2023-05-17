@@ -28,6 +28,14 @@ def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {
 def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::mlir::ModuleOp"> {
   let summary = "Lower HLFIR ordered assignments like forall and where operations";
   let constructor = "hlfir::createLowerHLFIROrderedAssignmentsPass()";
+  let options = [
+    Option<"tryFusingAssignments", "fuse-assignments",
+           "bool", /*default=*/"false",
+           "Fuse Forall and Where assignments in the same loop nest when legal."
+           "It is not clear yet if this is always beneficial. It may be best to"
+           "leave this to later loop optimizations."
+           "Hence this is off by default.">
+  ];
 }
 
 def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics", "::mlir::func::FuncOp"> {
