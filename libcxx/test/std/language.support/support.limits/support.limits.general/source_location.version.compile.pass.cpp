@@ -59,10 +59,10 @@
 
 # if __has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)
 #   ifndef __cpp_lib_source_location
-#     error "__cpp_lib_source_location should be defined in c++2b"
+#     error "__cpp_lib_source_location should be defined in c++23"
 #   endif
 #   if __cpp_lib_source_location != 201907L
-#     error "__cpp_lib_source_location should have the value 201907L in c++2b"
+#     error "__cpp_lib_source_location should have the value 201907L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_source_location

@@ -276,9 +276,9 @@ generic-cxx20)
     check-runtimes
     check-abi-list
 ;;
-generic-cxx2b)
+generic-cxx23)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx23.cmake"
     check-runtimes
     check-abi-list
 ;;

@@ -54,14 +54,18 @@ _warningFlags = [
   '-Wno-unused-local-typedef',
 ]
 
-_allStandards = ['c++03', 'c++11', 'c++14', 'c++17', 'c++20', 'c++2b']
+_allStandards = ['c++03', 'c++11', 'c++14', 'c++17', 'c++20', 'c++23']
 def getStdFlag(cfg, std):
   fallbacks = {
     'c++11': 'c++0x',
     'c++14': 'c++1y',
     'c++17': 'c++1z',
     'c++20': 'c++2a',
+    'c++23': 'c++2b',
   }
+  # TODO LLVM 17 Remove this clang-tidy-16 work-around
+  if std == 'c++23':
+    std = 'c++2b'
   if hasCompileFlag(cfg, '-std='+std):
     return '-std='+std
   if std in fallbacks and hasCompileFlag(cfg, '-std='+fallbacks[std]):

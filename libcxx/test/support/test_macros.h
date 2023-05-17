@@ -99,6 +99,8 @@
 # define TEST_STD_VER 17
 #elif __cplusplus <= 202002L
 # define TEST_STD_VER 20
+#elif __cplusplus <= 202302L
+# define TEST_STD_VER 23
 #else
 # define TEST_STD_VER 99    // greater than current standard
 // This is deliberately different than _LIBCPP_STD_VER to discourage matching them up.

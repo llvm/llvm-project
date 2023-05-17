@@ -52,10 +52,10 @@
 #elif TEST_STD_VER > 20
 
 # ifndef __cpp_lib_math_constants
-#   error "__cpp_lib_math_constants should be defined in c++2b"
+#   error "__cpp_lib_math_constants should be defined in c++23"
 # endif
 # if __cpp_lib_math_constants != 201907L
-#   error "__cpp_lib_math_constants should have the value 201907L in c++2b"
+#   error "__cpp_lib_math_constants should have the value 201907L in c++23"
 # endif
 
 #endif // TEST_STD_VER > 20
