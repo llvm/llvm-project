@@ -55,7 +55,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 0 offen sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
@@ -91,7 +91,7 @@ define amdgpu_kernel void @raw_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> inre
 ; GFX940-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[4:7], 4 offen sc0 nt
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
+; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 2)
@@ -138,7 +138,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[0:3], 0 idxen sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -174,7 +174,7 @@ define amdgpu_kernel void @struct_buffer_atomic_add_rtn_f64_off4_slc(<4 x i32> i
 ; GFX940-NEXT:    buffer_atomic_add_f64 v[0:1], v2, s[4:7], 0 idxen offset:4 sc0 nt
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
+; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 0, i32 2)
@@ -221,7 +221,7 @@ define amdgpu_ps void @raw_buffer_atomic_min_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 0 offen sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
@@ -257,7 +257,7 @@ define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> inre
 ; GFX940-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[4:7], 4 offen sc0 nt
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
+; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 2)
@@ -304,7 +304,7 @@ define amdgpu_ps void @struct_buffer_atomic_min_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[0:3], 0 idxen sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -340,7 +340,7 @@ define amdgpu_kernel void @struct_buffer_atomic_min_rtn_f64_off4_slc(<4 x i32> i
 ; GFX940-NEXT:    buffer_atomic_min_f64 v[0:1], v2, s[4:7], 0 idxen offset:4 sc0 nt
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
+; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 0, i32 2)
@@ -387,7 +387,7 @@ define amdgpu_ps void @raw_buffer_atomic_max_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 0 offen sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
@@ -423,7 +423,7 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> inre
 ; GFX940-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[4:7], 4 offen sc0 nt
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
+; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 2)
@@ -470,7 +470,7 @@ define amdgpu_ps void @struct_buffer_atomic_max_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX940:       ; %bb.0: ; %main_body
 ; GFX940-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[0:3], 0 idxen sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; GFX940-NEXT:    flat_store_dwordx2 v[0:1], v[0:1] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
@@ -506,7 +506,7 @@ define amdgpu_kernel void @struct_buffer_atomic_max_rtn_f64_off4_slc(<4 x i32> i
 ; GFX940-NEXT:    buffer_atomic_max_f64 v[0:1], v2, s[4:7], 0 idxen offset:4 sc0 nt
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
+; GFX940-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9] sc0 sc1
 ; GFX940-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 0, i32 2)
