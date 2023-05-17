@@ -3,9 +3,9 @@
 // Test One-Shot Bufferize.
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.bufferization.one_shot_bufferize %0 : (!pdl.operation) -> !pdl.operation
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.bufferization.one_shot_bufferize %0 : (!transform.any_op) -> !transform.any_op
 }
 
 // CHECK-LABEL: func @test_function(
@@ -31,10 +31,10 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 // Test analysis of One-Shot Bufferize only.
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.bufferization.one_shot_bufferize %0
-      {test_analysis_only = true} : (!pdl.operation) -> !pdl.operation
+      {test_analysis_only = true} : (!transform.any_op) -> !transform.any_op
 }
 
 // CHECK-LABEL: func @test_function_analysis(
@@ -54,10 +54,10 @@ func.func @test_function_analysis(%A : tensor<?xf32>, %v : vector<4xf32>) -> (te
 // allowed with `allow_unknown_ops`.
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error @+1 {{bufferization failed}}
-  %1 = transform.bufferization.one_shot_bufferize %0 : (!pdl.operation) -> !pdl.operation
+  %1 = transform.bufferization.one_shot_bufferize %0 : (!transform.any_op) -> !transform.any_op
 }
 
 func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
@@ -69,9 +69,9 @@ func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
 // -----
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
+^bb0(%arg1: !transform.any_op):
   // %arg1 is the module
-  %0 = transform.bufferization.one_shot_bufferize %arg1 : (!pdl.operation) -> !pdl.operation
+  %0 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
 }
 
 module {
@@ -99,9 +99,9 @@ module {
 // Test we use identity layout at function boundaries.
 
 transform.sequence failures(propagate) {
-  ^bb0(%arg1: !pdl.operation):
+  ^bb0(%arg1: !transform.any_op):
   %0 = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1
-    { bufferize_function_boundaries = true } : (!pdl.operation) -> !pdl.operation
+    { bufferize_function_boundaries = true } : (!transform.any_op) -> !transform.any_op
 }
 
 // CHECK: func.func @matmul(
@@ -118,9 +118,9 @@ func.func @matmul(%A: tensor<12x9xf32>, %B: tensor<9x6xf32>, %C: tensor<12x6xf32
 // -----
 
 transform.sequence failures(propagate) {
-  ^bb0(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-    %1 = transform.cast %0 : !pdl.operation to !transform.op<"tensor.empty">
+  ^bb0(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.cast %0 : !transform.any_op to !transform.op<"tensor.empty">
     transform.bufferization.empty_tensor_to_alloc_tensor %1 : (!transform.op<"tensor.empty">) -> !transform.op<"bufferization.alloc_tensor">
 }
 
@@ -134,9 +134,9 @@ func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
 // -----
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.bufferization.eliminate_empty_tensors %0
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.bufferization.eliminate_empty_tensors %0 : !transform.any_op
 }
 
 // CHECK-LABEL: func @empty_tensor_elimination(

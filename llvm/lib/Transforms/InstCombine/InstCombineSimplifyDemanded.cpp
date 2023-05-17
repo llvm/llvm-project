@@ -808,9 +808,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return I;
       }
 
-      // Increase high zero bits from the input.
-      Known.Zero.setHighBits(
-          std::min(BitWidth, LHSKnown.Zero.countl_one() + RHSTrailingZeros));
+      Known = KnownBits::udiv(LHSKnown, KnownBits::makeConstant(*SA),
+                              cast<BinaryOperator>(I)->isExact());
     } else {
       computeKnownBits(I, Known, Depth, CxtI);
     }
@@ -852,25 +851,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       }
     }
 
-    // The sign bit is the LHS's sign bit, except when the result of the
-    // remainder is zero.
-    if (DemandedMask.isSignBitSet()) {
-      computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-      // If it's known zero, our sign bit is also zero.
-      if (LHSKnown.isNonNegative())
-        Known.makeNonNegative();
-    }
+    computeKnownBits(I, Known, Depth, CxtI);
     break;
   }
   case Instruction::URem: {
-    KnownBits Known2(BitWidth);
     APInt AllOnes = APInt::getAllOnes(BitWidth);
-    if (SimplifyDemandedBits(I, 0, AllOnes, Known2, Depth + 1) ||
-        SimplifyDemandedBits(I, 1, AllOnes, Known2, Depth + 1))
+    if (SimplifyDemandedBits(I, 0, AllOnes, LHSKnown, Depth + 1) ||
+        SimplifyDemandedBits(I, 1, AllOnes, RHSKnown, Depth + 1))
       return I;
 
-    unsigned Leaders = Known2.countMinLeadingZeros();
-    Known.Zero = APInt::getHighBitsSet(BitWidth, Leaders) & DemandedMask;
+    Known = KnownBits::urem(LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Call: {
@@ -1085,6 +1075,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    Known = KnownBits::computeForAddSub(/*Add*/ true, NSW, LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Sub: {
@@ -1097,6 +1089,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
       return I->getOperand(0);
 
+    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    Known = KnownBits::computeForAddSub(/*Add*/ false, NSW, LHSKnown, RHSKnown);
     break;
   }
   case Instruction::AShr: {
