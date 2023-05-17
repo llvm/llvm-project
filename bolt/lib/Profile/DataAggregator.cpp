@@ -1983,14 +1983,11 @@ std::error_code DataAggregator::parseMMapEvents() {
       continue;
 
     // Consider only the first mapping of the file for any given PID
-    bool PIDExists = false;
     auto Range = GlobalMMapInfo.equal_range(FileMMapInfo.first);
-    for (auto MI = Range.first; MI != Range.second; ++MI) {
-      if (MI->second.PID == FileMMapInfo.second.PID) {
-        PIDExists = true;
-        break;
-      }
-    }
+    bool PIDExists = llvm::any_of(make_range(Range), [&](const auto &MI) {
+      return MI.second.PID == FileMMapInfo.second.PID;
+    });
+
     if (PIDExists)
       continue;
 
@@ -2014,8 +2011,7 @@ std::error_code DataAggregator::parseMMapEvents() {
   }
 
   auto Range = GlobalMMapInfo.equal_range(NameToUse);
-  for (auto I = Range.first; I != Range.second; ++I) {
-    MMapInfo &MMapInfo = I->second;
+  for (MMapInfo &MMapInfo : llvm::make_second_range(make_range(Range))) {
     if (BC->HasFixedLoadAddress && MMapInfo.MMapAddress) {
       // Check that the binary mapping matches one of the segments.
       bool MatchFound = llvm::any_of(
