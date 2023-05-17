@@ -1272,7 +1272,6 @@ CollectNonTbpDefinedIoGenericInterfaces(
         {common::DefinedIo::ReadFormatted, common::DefinedIo::ReadUnformatted,
             common::DefinedIo::WriteFormatted,
             common::DefinedIo::WriteUnformatted}) {
-      auto name{GenericKind::AsFortran(which)};
       if (const Symbol * generic{FindGenericDefinedIo(scope, which)}) {
         for (auto specific : generic->get<GenericDetails>().specificProcs()) {
           if (const DeclTypeSpec *
