@@ -111,57 +111,57 @@ const char *SBInstruction::GetMnemonic(SBTarget target) {
   LLDB_INSTRUMENT_VA(this, target);
 
   lldb::InstructionSP inst_sp(GetOpaque());
-  if (inst_sp) {
-    ExecutionContext exe_ctx;
-    TargetSP target_sp(target.GetSP());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+  if (!inst_sp)
+    return nullptr;
 
-      target_sp->CalculateExecutionContext(exe_ctx);
-      exe_ctx.SetProcessSP(target_sp->GetProcessSP());
-    }
-    return inst_sp->GetMnemonic(&exe_ctx);
+  ExecutionContext exe_ctx;
+  TargetSP target_sp(target.GetSP());
+  std::unique_lock<std::recursive_mutex> lock;
+  if (target_sp) {
+    lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+
+    target_sp->CalculateExecutionContext(exe_ctx);
+    exe_ctx.SetProcessSP(target_sp->GetProcessSP());
   }
-  return nullptr;
+  return ConstString(inst_sp->GetMnemonic(&exe_ctx)).GetCString();
 }
 
 const char *SBInstruction::GetOperands(SBTarget target) {
   LLDB_INSTRUMENT_VA(this, target);
 
   lldb::InstructionSP inst_sp(GetOpaque());
-  if (inst_sp) {
-    ExecutionContext exe_ctx;
-    TargetSP target_sp(target.GetSP());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+  if (!inst_sp)
+    return nullptr;
 
-      target_sp->CalculateExecutionContext(exe_ctx);
-      exe_ctx.SetProcessSP(target_sp->GetProcessSP());
-    }
-    return inst_sp->GetOperands(&exe_ctx);
+  ExecutionContext exe_ctx;
+  TargetSP target_sp(target.GetSP());
+  std::unique_lock<std::recursive_mutex> lock;
+  if (target_sp) {
+    lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+
+    target_sp->CalculateExecutionContext(exe_ctx);
+    exe_ctx.SetProcessSP(target_sp->GetProcessSP());
   }
-  return nullptr;
+  return ConstString(inst_sp->GetOperands(&exe_ctx)).GetCString();
 }
 
 const char *SBInstruction::GetComment(SBTarget target) {
   LLDB_INSTRUMENT_VA(this, target);
 
   lldb::InstructionSP inst_sp(GetOpaque());
-  if (inst_sp) {
-    ExecutionContext exe_ctx;
-    TargetSP target_sp(target.GetSP());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+  if (!inst_sp)
+    return nullptr;
 
-      target_sp->CalculateExecutionContext(exe_ctx);
-      exe_ctx.SetProcessSP(target_sp->GetProcessSP());
-    }
-    return inst_sp->GetComment(&exe_ctx);
+  ExecutionContext exe_ctx;
+  TargetSP target_sp(target.GetSP());
+  std::unique_lock<std::recursive_mutex> lock;
+  if (target_sp) {
+    lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+
+    target_sp->CalculateExecutionContext(exe_ctx);
+    exe_ctx.SetProcessSP(target_sp->GetProcessSP());
   }
-  return nullptr;
+  return ConstString(inst_sp->GetComment(&exe_ctx)).GetCString();
 }
 
 lldb::InstructionControlFlowKind SBInstruction::GetControlFlowKind(lldb::SBTarget target) {
