@@ -6,8 +6,7 @@
 // RUN: %clang_cc1 -std=c++20 %t/B.cppm -emit-module-interface -o %t/M-B.pcm
 // RUN: %clang_cc1 -std=c++20 %t/M.cppm -emit-module-interface -o %t/M.pcm \
 // RUN:     -fprebuilt-module-path=%t
-// RUN: %clang_cc1 -std=c++20 %t/Use.cpp -fmodule-file=M=%t/M.pcm -fsyntax-only \
-// RUN:     -verify
+// RUN: %clang_cc1 -std=c++20 %t/Use.cpp -fsyntax-only -fprebuilt-module-path=%t -verify
 
 //--- foo.h
 template <typename T>

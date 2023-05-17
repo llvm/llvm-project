@@ -17,9 +17,12 @@
 // RUN: %clang_cc1 -std=c++20 %t/b.cppm -emit-module-interface -fmodule-file=a=%t/a.pcm -o %t/b.pcm
 // RUN: %clang_cc1 -std=c++20 %t/c.cppm -emit-module-interface -fmodule-file=a=%t/a.pcm -o %t/c.pcm
 // RUN: %clang_cc1 -std=c++20 %t/d.cppm -emit-module-interface  -o %t/d.pcm
-// RUN: %clang_cc1 -std=c++20 %t/e.cppm -emit-module-interface -fmodule-file=d=%t/d.pcm -o %t/e.pcm
+// RUN: %clang_cc1 -std=c++20 %t/e.cppm -emit-module-interface -fmodule-file=a=%t/a.pcm -fmodule-file=b=%t/b.pcm \
+// RUN:		-fmodule-file=c=%t/c.pcm -fmodule-file=d=%t/d.pcm -o %t/e.pcm
 // RUN: %clang_cc1 -std=c++20 %t/f.cppm -emit-module-interface -fmodule-file=a=%t/a.pcm -fmodule-file=b=%t/b.pcm -fmodule-file=c=%t/c.pcm -fmodule-file=d=%t/d.pcm -o %t/f.pcm
-// RUN: %clang_cc1 -std=c++20 %t/g.cppm -fmodule-file=e=%t/e.pcm -fmodule-file=f=%t/f.pcm -verify -fsyntax-only 
+// RUN: %clang_cc1 -std=c++20 %t/g.cppm -fmodule-file=a=%t/a.pcm -fmodule-file=b=%t/b.pcm \
+// RUN:		-fmodule-file=c=%t/c.pcm -fmodule-file=d=%t/d.pcm -fmodule-file=e=%t/e.pcm \
+// RUN:		-fmodule-file=f=%t/f.pcm -verify -fsyntax-only 
 
 //--- a.cppm
 export module a;

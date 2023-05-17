@@ -1352,6 +1352,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
         continue;
 
       Record.push_back((unsigned)M.Kind); // FIXME: Stable encoding
+      Record.push_back(M.StandardCXXModule);
       AddSourceLocation(M.ImportLoc, Record);
 
       // If we have calculated signature, there is no need to store
