@@ -28,6 +28,7 @@ class raw_ostream;
 namespace Fortran::parser {
 
 class Messages;
+class Prescanner;
 
 // Buffers a contiguous sequence of characters that has been partitioned into
 // a sequence of preprocessing tokens with provenances.
@@ -115,7 +116,7 @@ public:
   bool HasRedundantBlanks(std::size_t firstChar = 0) const;
   TokenSequence &RemoveBlanks(std::size_t firstChar = 0);
   TokenSequence &RemoveRedundantBlanks(std::size_t firstChar = 0);
-  TokenSequence &ClipComment(bool skipFirst = false);
+  TokenSequence &ClipComment(const Prescanner &, bool skipFirst = false);
   const TokenSequence &CheckBadFortranCharacters(Messages &) const;
   const TokenSequence &CheckBadParentheses(Messages &) const;
   void Emit(CookedSource &) const;
