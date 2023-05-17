@@ -8339,8 +8339,8 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   // If a trip multiple is huge (>=2^32), the trip count is still divisible by
   // the greatest power of 2 divisor less than 2^32.
   return Multiple.getActiveBits() > 32
-             ? 1U << std::min((uint32_t)31, Multiple.countTrailingZeros())
-             : Multiple.zextOrTrunc(32).getZExtValue();
+             ? 1U << std::min((unsigned)31, Multiple.countTrailingZeros())
+             : (unsigned)Multiple.zextOrTrunc(32).getZExtValue();
 }
 
 /// Returns the largest constant divisor of the trip count of this loop as a
