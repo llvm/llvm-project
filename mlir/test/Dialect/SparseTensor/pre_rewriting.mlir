@@ -1,15 +1,15 @@
 // RUN: mlir-opt %s -pre-sparsification-rewrite | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"]
+  lvlTypes = ["compressed"]
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed-nu", "singleton" ]
 }>
 
 #Slice = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed-nu", "singleton" ],
   slice = [ (?, 1, 1), (?, 3, 1) ]
 }>
 

@@ -23,23 +23,23 @@
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #Dense = #sparse_tensor.encoding<{
-  dimLevelType = ["dense", "dense"]
+  lvlTypes = ["dense", "dense"]
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed-nu", "singleton" ]
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ]
+  lvlTypes = [ "dense", "compressed" ]
 }>
 
 #DCSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ]
+  lvlTypes = [ "compressed", "compressed" ]
 }>
 
 #Row = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "dense" ]
+  lvlTypes = [ "compressed", "dense" ]
 }>
 
 module {

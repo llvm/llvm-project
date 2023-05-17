@@ -16,8 +16,8 @@
 // REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
 // RUN: %{compile} | %{run}
 
-#COO_2D = #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
-#COO_3D = #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
+#COO_2D = #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
+#COO_3D = #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
 
 module {
   func.func private @printMemref3dF32(%ptr : tensor<?x?x?xf32>) attributes { llvm.emit_c_interface }
