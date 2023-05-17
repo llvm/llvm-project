@@ -191,9 +191,10 @@ protected:
 public:
   ELFLinkGraphBuilder_aarch32(StringRef FileName,
                               const llvm::object::ELFFile<ELFT> &Obj, Triple TT,
+                              LinkGraph::FeatureVector Features,
                               aarch32::ArmConfig ArmCfg)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), FileName,
-                                  getELFAArch32EdgeKindName),
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
+                                  FileName, getELFAArch32EdgeKindName),
         ArmCfg(std::move(ArmCfg)) {}
 };
 
@@ -216,6 +217,10 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   auto ELFObj = ObjectFile::createELFObjectFile(ObjectBuffer);
   if (!ELFObj)
     return ELFObj.takeError();
+
+  auto Features = (*ELFObj)->getFeatures();
+  if (!Features)
+    return Features.takeError();
 
   // Find out what exact AArch32 instruction set and features we target.
   auto TT = (*ELFObj)->makeTriple();
@@ -249,14 +254,16 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   case Triple::thumb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32LE>>(**ELFObj).getELFFile();
     return ELFLinkGraphBuilder_aarch32<support::little>(
-               (*ELFObj)->getFileName(), ELFFile, TT, ArmCfg)
+               (*ELFObj)->getFileName(), ELFFile, TT, Features->getFeatures(),
+               ArmCfg)
         .buildGraph();
   }
   case Triple::armeb:
   case Triple::thumbeb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32BE>>(**ELFObj).getELFFile();
-    return ELFLinkGraphBuilder_aarch32<support::big>((*ELFObj)->getFileName(),
-                                                     ELFFile, TT, ArmCfg)
+    return ELFLinkGraphBuilder_aarch32<support::big>(
+               (*ELFObj)->getFileName(), ELFFile, TT, Features->getFeatures(),
+               ArmCfg)
         .buildGraph();
   }
   default:

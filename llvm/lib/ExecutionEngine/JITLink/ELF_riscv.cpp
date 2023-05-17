@@ -596,9 +596,10 @@ private:
 
 public:
   ELFLinkGraphBuilder_riscv(StringRef FileName,
-                            const object::ELFFile<ELFT> &Obj, Triple TT)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), FileName,
-                                  riscv::getEdgeKindName) {}
+                            const object::ELFFile<ELFT> &Obj, Triple TT,
+                            LinkGraph::FeatureVector Features)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
+                                  FileName, riscv::getEdgeKindName) {}
 };
 
 Expected<std::unique_ptr<LinkGraph>>
@@ -612,11 +613,15 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
   if (!ELFObj)
     return ELFObj.takeError();
 
+  auto Features = (*ELFObj)->getFeatures();
+  if (!Features)
+    return Features.takeError();
+
   if ((*ELFObj)->getArch() == Triple::riscv64) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF64LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple())
+               (*ELFObj)->makeTriple(), Features->getFeatures())
         .buildGraph();
   } else {
     assert((*ELFObj)->getArch() == Triple::riscv32 &&
@@ -624,7 +629,7 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF32LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple())
+               (*ELFObj)->makeTriple(), Features->getFeatures())
         .buildGraph();
   }
 }
