@@ -42,6 +42,8 @@ def use_lldb_substitutions(config):
         build_script_args.append('--tools-dir={0}'.format(config.lldb_tools_dir))
     if config.llvm_libs_dir:
         build_script_args.append('--libs-dir={0}'.format(config.llvm_libs_dir))
+    if config.objc_gnustep_dir:
+        build_script_args.append('--objc-gnustep-dir="{0}"'.format(config.objc_gnustep_dir))
 
     lldb_init = _get_lldb_init_path(config)
 

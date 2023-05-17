@@ -50,6 +50,30 @@ set(LLDB_TEST_MODULE_CACHE_CLANG "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-clan
 file(MAKE_DIRECTORY ${LLDB_TEST_MODULE_CACHE_LLDB})
 file(MAKE_DIRECTORY ${LLDB_TEST_MODULE_CACHE_CLANG})
 
+# Windows and Linux have no built-in ObjC runtime. Turn this on in order to run tests with GNUstep.
+option(LLDB_TEST_OBJC_GNUSTEP "Enable ObjC tests with GNUstep libobjc2 on non-Apple platforms" Off)
+set(LLDB_TEST_OBJC_GNUSTEP_DIR "" CACHE PATH "Custom path to the GNUstep shared library")
+
+if (LLDB_TEST_OBJC_GNUSTEP)
+  if (LLDB_TEST_OBJC_GNUSTEP_DIR)
+    set(GNUstepObjC_DIR ${LLDB_TEST_OBJC_GNUSTEP_DIR})
+  endif()
+  find_package(GNUstepObjC)
+  if (NOT GNUstepObjC_FOUND)
+    if (LLDB_TEST_OBJC_GNUSTEP_DIR)
+      message(FATAL_ERROR "Failed to find GNUstep libobjc2 in ${LLDB_TEST_OBJC_GNUSTEP_DIR}. "
+                          "Please check LLDB_TEST_OBJC_GNUSTEP_DIR or turn off LLDB_TEST_OBJC_GNUSTEP.")
+    else()
+      message(FATAL_ERROR "Failed to find GNUstep libobjc2. "
+                          "Please set LLDB_TEST_OBJC_GNUSTEP_DIR or turn off LLDB_TEST_OBJC_GNUSTEP.")
+    endif()
+  endif()
+  set(LLDB_TEST_OBJC_GNUSTEP_DIR ${GNUstepObjC_DIR})
+elseif (LLDB_TEST_OBJC_GNUSTEP_DIR)
+  message(STATUS "Reset LLDB_TEST_OBJC_GNUSTEP_DIR since LLDB_TEST_OBJC_GNUSTEP is off")
+  set(LLDB_TEST_OBJC_GNUSTEP_DIR "" CACHE PATH "Custom path to the GNUstep shared library" FORCE)
+endif()
+
 # LLVM_BUILD_MODE is used in lit.site.cfg
 if (CMAKE_CFG_INTDIR STREQUAL ".")
   set(LLVM_BUILD_MODE ".")
