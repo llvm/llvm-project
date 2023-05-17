@@ -2,7 +2,7 @@
 // RUN: cp %s %t
 // RUN: not %clang_cc1 -fixit %t -x c -DFIXIT
 // RUN: %clang_cc1 -fsyntax-only %t -x c -DFIXIT
-// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -strict-whitespace
+// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck %s -strict-whitespace
 
 void test1(void) {
   int a[] = {0,1,1,2,3};
