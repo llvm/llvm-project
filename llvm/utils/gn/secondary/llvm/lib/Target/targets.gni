@@ -62,6 +62,7 @@ llvm_build_BPF = false
 llvm_build_LoongArch = false
 llvm_build_Mips = false
 llvm_build_PowerPC = false
+llvm_build_RISCV = false
 llvm_build_SystemZ = false
 llvm_build_WebAssembly = false
 llvm_build_X86 = false
@@ -84,6 +85,8 @@ foreach(target, llvm_targets_to_build) {
     llvm_build_Mips = true
   } else if (target == "PowerPC") {
     llvm_build_PowerPC = true
+  } else if (target == "RISCV") {
+    llvm_build_RISCV = true
   } else if (target == "SystemZ") {
     llvm_build_SystemZ = true
   } else if (target == "WebAssembly") {
