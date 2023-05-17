@@ -806,12 +806,10 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
       continue;
 
     if (Reg.isPhysical()) {
-      if (MO.isUse() &&
-          (MRI->isConstantPhysReg(Reg) || TII->isIgnorableUse(MO)))
-        continue;
-
-      // Don't handle non-constant and non-ignorable physical register.
-      return false;
+      // Don't handle non-constant and non-ignorable physical register uses.
+      if (MO.isUse() && !MRI->isConstantPhysReg(Reg) && !TII->isIgnorableUse(MO))
+        return false;
+      continue;
     }
 
     // Users for the defs are all dominated by SuccToSinkTo.

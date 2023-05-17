@@ -2768,6 +2768,15 @@ let TargetPrefix = "aarch64" in {
   // Predicate-as-counter intrinsics
   //
 
+  def int_aarch64_sve_pext
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_aarch64_svcount_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+  def int_aarch64_sve_pext_x2
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                              [llvm_aarch64_svcount_ty, llvm_i32_ty],
+                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
   def int_aarch64_sve_ptrue_c8
       : DefaultAttrsIntrinsic<[llvm_aarch64_svcount_ty], [], [IntrNoMem]>;

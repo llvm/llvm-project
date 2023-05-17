@@ -223,11 +223,15 @@ private:
     uint64_t bit_size = 0;
     uint64_t bit_offset = 0;
     bool is_bitfield = false;
+    bool is_artificial = false;
 
     FieldInfo() = default;
 
     void SetIsBitfield(bool flag) { is_bitfield = flag; }
     bool IsBitfield() { return is_bitfield; }
+
+    void SetIsArtificial(bool flag) { is_artificial = flag; }
+    bool IsArtificial() const { return is_artificial; }
 
     bool NextBitfieldOffsetIsValid(const uint64_t next_bit_offset) const {
       // Any subsequent bitfields must not overlap and must be at a higher
@@ -235,6 +239,22 @@ private:
       return (bit_size + bit_offset) <= next_bit_offset;
     }
   };
+
+  /// Returns 'true' if we should create an unnamed bitfield
+  /// and add it to the parser's current AST.
+  ///
+  /// \param[in] last_field_info FieldInfo of the previous DW_TAG_member
+  ///            we parsed.
+  /// \param[in] last_field_end Offset (in bits) where the last parsed field
+  ///            ended.
+  /// \param[in] this_field_info FieldInfo of the current DW_TAG_member
+  ///            being parsed.
+  /// \param[in] layout_info Layout information of all decls parsed by the
+  ///            current parser.
+  bool ShouldCreateUnnamedBitfield(
+      FieldInfo const &last_field_info, uint64_t last_field_end,
+      FieldInfo const &this_field_info,
+      lldb_private::ClangASTImporter::LayoutInfo const &layout_info) const;
 
   /// Parses a DW_TAG_APPLE_property DIE and appends the parsed data to the
   /// list of delayed Objective-C properties.

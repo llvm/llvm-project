@@ -676,10 +676,6 @@ andw (%rdx), %r14w
 // CHECK: encoding: [0xe8,A,A,A,A]         
 callq 64 
 
-// CHECK: callw 64 
-// CHECK: encoding: [0x66,0xe8,A,A]         
-callw 64 
-
 // CHECK: cbtw 
 // CHECK: encoding: [0x66,0x98]          
 cbtw 

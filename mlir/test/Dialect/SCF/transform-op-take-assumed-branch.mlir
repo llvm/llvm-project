@@ -10,10 +10,10 @@ func.func @if_no_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
 
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
-  %if = transform.structured.match ops{["scf.if"]} in %arg1 
+  %if = transform.structured.match ops{["scf.if"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
   // expected-error @+1 {{requires an scf.if op with a single-block `else` region}}
-  transform.scf.take_assumed_branch %if take_else_branch 
+  transform.scf.take_assumed_branch %if take_else_branch
     : (!transform.any_op) -> ()
 }
 
@@ -63,8 +63,9 @@ func.func @tile_tensor_pad(
 transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 
-    : (!transform.any_op) -> !pdl.operation
-  transform.structured.tile_to_forall_op %0 tile_sizes[1, 1]
+    : (!transform.any_op) -> !transform.any_op
+  transform.structured.tile_to_forall_op %0 tile_sizes[1, 1] 
+    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   %if = transform.structured.match ops{["scf.if"]} in %arg1 
     : (!transform.any_op) -> !transform.any_op

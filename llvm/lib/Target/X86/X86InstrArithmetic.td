@@ -578,17 +578,17 @@ def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
-def INC8r  : INCDECR<MRM0r, "inc", Xi8, X86add_flag_nocf>;
-def INC16r : INCDECR<MRM0r, "inc", Xi16, X86add_flag_nocf>;
-def INC32r : INCDECR<MRM0r, "inc", Xi32, X86add_flag_nocf>;
-def INC64r : INCDECR<MRM0r, "inc", Xi64, X86add_flag_nocf>;
-} // isConvertibleToThreeAddress = 1, CodeSize = 2
-
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
 let CodeSize = 1, hasSideEffects = 0 in {
 def INC16r_alt : INCDECR_ALT<0x40, "inc", Xi16>;
 def INC32r_alt : INCDECR_ALT<0x40, "inc", Xi32>;
 } // CodeSize = 1, hasSideEffects = 0
+
+def INC8r  : INCDECR<MRM0r, "inc", Xi8, X86add_flag_nocf>;
+def INC16r : INCDECR<MRM0r, "inc", Xi16, X86add_flag_nocf>;
+def INC32r : INCDECR<MRM0r, "inc", Xi32, X86add_flag_nocf>;
+def INC64r : INCDECR<MRM0r, "inc", Xi64, X86add_flag_nocf>;
+} // isConvertibleToThreeAddress = 1, CodeSize = 2
 } // Constraints = "$src1 = $dst", SchedRW
 
 let CodeSize = 2, SchedRW = [WriteALURMW] in {
@@ -603,18 +603,18 @@ let Predicates = [UseIncDec, In64BitMode] in {
 } // CodeSize = 2, SchedRW
 
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
+// Short forms only valid in 32-bit mode. Selected during MCInst lowering.
+let CodeSize = 1, hasSideEffects = 0 in {
+def DEC16r_alt : INCDECR_ALT<0x48, "dec", Xi16>;
+def DEC32r_alt : INCDECR_ALT<0x48, "dec", Xi32>;
+} // CodeSize = 1, hasSideEffects = 0
+
 let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def DEC8r  : INCDECR<MRM1r, "dec", Xi8, X86sub_flag_nocf>;
 def DEC16r : INCDECR<MRM1r, "dec", Xi16, X86sub_flag_nocf>;
 def DEC32r : INCDECR<MRM1r, "dec", Xi32, X86sub_flag_nocf>;
 def DEC64r : INCDECR<MRM1r, "dec", Xi64, X86sub_flag_nocf>;
 } // isConvertibleToThreeAddress = 1, CodeSize = 2
-
-// Short forms only valid in 32-bit mode. Selected during MCInst lowering.
-let CodeSize = 1, hasSideEffects = 0 in {
-def DEC16r_alt : INCDECR_ALT<0x48, "dec", Xi16>;
-def DEC32r_alt : INCDECR_ALT<0x48, "dec", Xi32>;
-} // CodeSize = 1, hasSideEffects = 0
 } // Constraints = "$src1 = $dst", SchedRW
 
 let CodeSize = 2, SchedRW = [WriteALURMW] in {

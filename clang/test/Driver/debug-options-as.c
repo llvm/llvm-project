@@ -59,7 +59,7 @@
 //
 // GDWARF64_VER:  error: invalid argument '-gdwarf64' only allowed with 'DWARFv3 or greater'
 // GDWARF64_32ARCH: error: invalid argument '-gdwarf64' only allowed with '64 bit architecture'
-// GDWARF64_ELF: error: invalid argument '-gdwarf64' only allowed with 'ELF platforms'
+// GDWARF64_ELF: error: invalid argument '-gdwarf64' only allowed with 'ELF/XCOFF platforms'
 
 // Check that -gdwarf-N can be placed before other options of the "-g" group.
 // RUN: %clang -### -c -g -gdwarf-3 -target %itanium_abi_triple -fintegrated-as -x assembler %s 2>&1 \

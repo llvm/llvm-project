@@ -1512,10 +1512,10 @@ TEST_F(ComputeKnownFPClassTest, CopySignNNanSrc0) {
 
 TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_NegSign) {
   parseAssembly(
-      "declare float @llvm.sqrt.f32(float)\n"
+      "declare float @llvm.log.f32(float)\n"
       "declare float @llvm.copysign.f32(float, float)\n"
       "define float @test(float %arg0, float %arg1) {\n"
-      "  %ninf = call ninf float @llvm.sqrt.f32(float %arg0)"
+      "  %ninf = call ninf float @llvm.log.f32(float %arg0)"
       "  %A = call float @llvm.copysign.f32(float %ninf, float -1.0)"
       "  ret float %A\n"
       "}\n");

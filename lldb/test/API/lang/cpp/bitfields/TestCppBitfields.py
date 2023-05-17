@@ -168,3 +168,14 @@ class CppBitfieldsTestCase(TestBase):
                          result_children=with_vtable_and_unnamed_children)
         self.expect_var_path("with_vtable_and_unnamed",
                          children=with_vtable_and_unnamed_children)
+
+        derived_with_vtable_children = [
+            ValueCheck(name="Base", children=[
+              ValueCheck(name="b_a", value="2", type="uint32_t")
+            ]),
+            ValueCheck(name="a", value="1", type="unsigned int:1")
+        ]
+        self.expect_expr("derived_with_vtable",
+                         result_children=derived_with_vtable_children)
+        self.expect_var_path("derived_with_vtable",
+                         children=derived_with_vtable_children)

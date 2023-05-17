@@ -24,7 +24,26 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// Translation Parser
+// Diagnostic Filter
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A scoped diagnostic handler that marks non-error diagnostics as handled. As
+/// a result, the main diagnostic handler does not print non-error diagnostics.
+class ErrorDiagnosticFilter : public ScopedDiagnosticHandler {
+public:
+  ErrorDiagnosticFilter(MLIRContext *ctx) : ScopedDiagnosticHandler(ctx) {
+    setHandler([](Diagnostic &diag) {
+      if (diag.getSeverity() != DiagnosticSeverity::Error)
+        return success();
+      return failure();
+    });
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// Translate Entry Point
 //===----------------------------------------------------------------------===//
 
 LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
@@ -53,6 +72,12 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
       "verify-diagnostics",
       llvm::cl::desc("Check that emitted diagnostics match "
                      "expected-* lines on the corresponding line"),
+      llvm::cl::init(false));
+
+  static llvm::cl::opt<bool> errorDiagnosticsOnly(
+      "error-diagnostics-only",
+      llvm::cl::desc("Filter all non-error diagnostics "
+                     "(discouraged: testing only!)"),
       llvm::cl::init(false));
 
   llvm::InitLLVM y(argc, argv);
@@ -121,12 +146,17 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
 
       if (verifyDiagnostics) {
         // In the diagnostic verification flow, we ignore whether the
-        // translation failed (in most cases, it is expected to fail).
-        // Instead, we check if the diagnostics were produced as expected.
+        // translation failed (in most cases, it is expected to fail) and we do
+        // not filter non-error diagnostics even if `errorDiagnosticsOnly` is
+        // set. Instead, we check if the diagnostics were produced as expected.
         SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr,
                                                             &context);
         (void)(*translationRequested)(sourceMgr, os, &context);
         result = sourceMgrHandler.verify();
+      } else if (errorDiagnosticsOnly) {
+        SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
+        ErrorDiagnosticFilter diagnosticFilter(&context);
+        result = (*translationRequested)(sourceMgr, *stream, &context);
       } else {
         SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &context);
         result = (*translationRequested)(sourceMgr, *stream, &context);

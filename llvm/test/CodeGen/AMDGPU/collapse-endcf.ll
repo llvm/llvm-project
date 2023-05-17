@@ -861,6 +861,8 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:  .LBB5_2: ; %bb10
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[14:15]
+; GCN-NEXT:    s_and_b64 s[6:7], exec, s[4:5]
+; GCN-NEXT:    s_or_b64 s[12:13], s[6:7], s[12:13]
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    s_cbranch_execz .LBB5_7
@@ -873,12 +875,10 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:  ; %bb.4: ; %bb2
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GCN-NEXT:    s_and_b64 s[6:7], exec, s[4:5]
 ; GCN-NEXT:    s_mov_b32 s9, s8
 ; GCN-NEXT:    s_mov_b32 s10, s8
 ; GCN-NEXT:    s_mov_b32 s11, s8
 ; GCN-NEXT:    v_mov_b32_e32 v0, s8
-; GCN-NEXT:    s_or_b64 s[12:13], s[6:7], s[12:13]
 ; GCN-NEXT:    v_mov_b32_e32 v1, s9
 ; GCN-NEXT:    v_mov_b32_e32 v2, s10
 ; GCN-NEXT:    v_mov_b32_e32 v3, s11
