@@ -434,16 +434,21 @@ public:
   bool HasClangImporterErrors() const;
 
   void AddDiagnostic(DiagnosticSeverity severity, llvm::StringRef message);
-  void RaiseFatalError(std::string msg) { m_fatal_errors.SetErrorString(msg); }
+  void RaiseFatalError(std::string msg) const {
+    m_fatal_errors.SetErrorString(msg);
+  }
   static bool HasFatalErrors(swift::ASTContext *ast_context);
   bool HasFatalErrors() const {
     return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
   }
 
+  /// Return all errors and warnings that haven't been cleared.
   Status GetAllErrors() const;
+  /// Return only fatal errors.
   Status GetFatalErrors() const;
+  /// Notify the Process about any Swift or ClangImporter errors.
   void DiagnoseWarnings(Process &process, Module &module) const override;
-  void LogFatalErrors() const;
+  
 
   // NEVER call this without checking HasFatalErrors() first.
   // This clears the fatal-error state which is terrible.
@@ -820,6 +825,9 @@ protected:
   /// Similar logic applies to this "reverse" map
   typedef llvm::DenseMap<swift::TypeBase *, const char *>
       SwiftMangledNameFromTypeMap;
+
+  /// Called by the VALID_OR_RETURN macro to log all errors.
+  void LogFatalErrors() const;
 
   llvm::TargetOptions *getTargetOptions();
 
