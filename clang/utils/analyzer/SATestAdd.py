@@ -55,8 +55,7 @@ def add_new_project(project: ProjectInfo):
     :param name: is a short string used to identify a project.
     """
 
-    test_info = SATestBuild.TestInfo(project,
-                                     is_reference_build=True)
+    test_info = SATestBuild.TestInfo(project, is_reference_build=True)
     tester = SATestBuild.ProjectTester(test_info)
 
     project_dir = tester.get_project_dir()
@@ -71,8 +70,10 @@ def add_new_project(project: ProjectInfo):
     project_map = ProjectMap(should_exist=False)
 
     if is_existing_project(project_map, project):
-        print(f"Warning: Project with name '{project.name}' already exists.",
-              file=sys.stdout)
+        print(
+            f"Warning: Project with name '{project.name}' already exists.",
+            file=sys.stdout,
+        )
         print("Reference output has been regenerated.", file=sys.stdout)
     else:
         project_map.projects.append(project)
@@ -80,8 +81,10 @@ def add_new_project(project: ProjectInfo):
 
 
 def is_existing_project(project_map: ProjectMap, project: ProjectInfo) -> bool:
-    return any(existing_project.name == project.name
-               for existing_project in project_map.projects)
+    return any(
+        existing_project.name == project.name
+        for existing_project in project_map.projects
+    )
 
 
 if __name__ == "__main__":
