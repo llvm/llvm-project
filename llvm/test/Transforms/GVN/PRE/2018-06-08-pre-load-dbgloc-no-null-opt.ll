@@ -35,9 +35,9 @@ define i32 @test_no_null_opt(ptr readonly %desc) local_unnamed_addr #0 !dbg !4 {
 entry:
   %tobool = icmp eq ptr %desc, null
   br i1 %tobool, label %cond.end, label %cond.false, !dbg !9
-; ALL: %.pre = load ptr, ptr %desc, align 8, !dbg [[LOC_16_13:![0-9]+]]
-; ALL: br i1 %tobool, label %cond.end, label %cond.false, !dbg [[LOC_15_6:![0-9]+]]
-; ALL: cond.false:
+; ALL: br i1 %tobool, label %entry.cond.end_crit_edge, label %cond.false, !dbg [[LOC_15_6:![0-9]+]]
+; ALL: entry.cond.end_crit_edge:
+; ALL: load ptr, ptr null, align {{[0-9]+}}, !dbg [[LOC_16_13:![0-9]+]]
 
 cond.false:
   %0 = load ptr, ptr %desc, align 8, !dbg !11
@@ -45,7 +45,8 @@ cond.false:
   br label %cond.end, !dbg !9
 
 cond.end:
-; ALL: phi ptr [ %0, %cond.false ], [ null, %entry ]
+; ALL: phi ptr [ %0, %cond.false ], [ %.pre, %entry.cond.end_crit_edge ]
+; ALL: phi ptr [ %1, %cond.false ], [ null, %entry.cond.end_crit_edge ]
 
   %2 = phi ptr [ %1, %cond.false ], [ null, %entry ], !dbg !9
   %3 = load ptr, ptr %desc, align 8, !dbg !10
@@ -74,5 +75,5 @@ declare i32 @bar(ptr, ptr) local_unnamed_addr #1
 !11 = !DILocation(line: 15, column: 34, scope: !4)
 
 ;ALL: [[SCOPE:![0-9]+]] = distinct  !DISubprogram(name: "test_no_null_opt",{{.*}}
-;ALL: [[LOC_16_13]] = !DILocation(line: 16, column: 13, scope: [[SCOPE]])
 ;ALL: [[LOC_15_6]] = !DILocation(line: 15, column: 6, scope: [[SCOPE]])
+;ALL: [[LOC_16_13]] = !DILocation(line: 16, column: 13, scope: [[SCOPE]])
