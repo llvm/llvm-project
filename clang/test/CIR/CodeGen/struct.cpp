@@ -130,3 +130,18 @@ void h() { S s; }
 // CHECK:   cir.call @_ZN1SC1E1A(%0, %3) : (!cir.ptr<!ty_22struct2ES22>, !ty_22struct2EA22) -> ()
 // CHECK:   cir.return
 // CHECK: }
+
+typedef enum enumy {
+  A = 1
+} enumy;
+
+typedef enumy (*fnPtr)(int instance, const char* name, void* function);
+
+struct Entry {
+  fnPtr procAddr = nullptr;
+};
+
+void ppp() { Entry x; }
+
+// CHECK: cir.func linkonce_odr @_ZN5EntryC2Ev(%arg0: !cir.ptr<!ty_22struct2EEntry22>
+// CHECK: = "cir.struct_element_addr"(%1) <{member_name = "procAddr"}> : (!cir.ptr<!ty_22struct2EEntry22>) -> !cir.ptr<!cir.ptr<(i32, !cir.ptr<i8>, !cir.ptr<i8>) -> i32>>
