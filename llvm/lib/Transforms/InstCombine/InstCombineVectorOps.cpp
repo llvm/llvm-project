@@ -1249,9 +1249,9 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
       return nullptr;
 
   // Create the insert + shuffle.
-  Type *Int32Ty = Type::getInt32Ty(InsElt.getContext());
+  Type *Int64Ty = Type::getInt32Ty(InsElt.getContext());
   PoisonValue *PoisonVec = PoisonValue::get(VecTy);
-  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+  Constant *Zero = ConstantInt::get(Int64Ty, 0);
   if (!cast<ConstantInt>(FirstIE->getOperand(2))->isZero())
     FirstIE = InsertElementInst::Create(PoisonVec, SplatVal, Zero, "", &InsElt);
 
