@@ -16,35 +16,31 @@ with open("README.rst", "r", encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name = "lit",
-    version = lit.__version__,
-
-    author = lit.__author__,
-    author_email = lit.__email__,
-    url = 'http://llvm.org',
-    license = 'Apache-2.0 with LLVM exception',
-    license_files = ['LICENSE.TXT'],
-
-    description = "A Software Testing Tool",
-    keywords = 'test C++ automatic discovery',
-    long_description = long_description,
-
+    name="lit",
+    version=lit.__version__,
+    author=lit.__author__,
+    author_email=lit.__email__,
+    url="http://llvm.org",
+    license="Apache-2.0 with LLVM exception",
+    license_files=["LICENSE.TXT"],
+    description="A Software Testing Tool",
+    keywords="test C++ automatic discovery",
+    long_description=long_description,
     classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Environment :: Console',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: Apache Software License',
-        'Natural Language :: English',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python',
-        'Topic :: Software Development :: Testing',
+        "Development Status :: 3 - Alpha",
+        "Environment :: Console",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: Apache Software License",
+        "Natural Language :: English",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Topic :: Software Development :: Testing",
+    ],
+    zip_safe=False,
+    packages=find_packages(),
+    entry_points={
+        "console_scripts": [
+            "lit = lit.main:main",
         ],
-
-    zip_safe = False,
-    packages = find_packages(),
-    entry_points = {
-        'console_scripts': [
-            'lit = lit.main:main',
-            ],
-        }
+    },
 )
