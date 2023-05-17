@@ -394,16 +394,15 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       Attribute attr;
       RETURN_ON_FAIL(parser.parseAttribute(attr));
       auto arrayAttr = llvm::dyn_cast<ArrayAttr>(attr);
-      ERROR_IF(!arrayAttr, "expected an array for dimension level types")
+      ERROR_IF(!arrayAttr, "expected an array for lvlTypes")
       for (auto i : arrayAttr) {
         auto strAttr = llvm::dyn_cast<StringAttr>(i);
-        ERROR_IF(!strAttr, "expected a string value in dimension level types")
+        ERROR_IF(!strAttr, "expected a string value in lvlTypes")
         auto strVal = strAttr.getValue();
         if (auto optDLT = parseDLT(strVal)) {
           lvlTypes.push_back(optDLT.value());
         } else {
-          parser.emitError(parser.getNameLoc(),
-                           "unexpected dimension level type: ")
+          parser.emitError(parser.getNameLoc(), "unexpected level-type: ")
               << strVal;
           return {};
         }
@@ -512,14 +511,14 @@ LogicalResult SparseTensorEncodingAttr::verify(
   // use that same source-of-truth here.
   const Level lvlRank = lvlTypes.size();
   if (lvlRank == 0)
-    return emitError() << "expected a non-empty array for level types";
+    return emitError() << "expected a non-empty array for lvlTypes";
   if (dimOrdering) {
     if (!dimOrdering.isPermutation())
       return emitError()
              << "expected a permutation affine map for dimension ordering";
     if (dimOrdering.getNumResults() != lvlRank)
-      return emitError() << "unexpected mismatch in ordering and dimension "
-                            "level types size";
+      return emitError()
+             << "level-rank mismatch between dimOrdering and lvlTypes";
   }
   if (higherOrdering) {
     if (higherOrdering.getNumDims() >= higherOrdering.getNumResults())
@@ -527,12 +526,11 @@ LogicalResult SparseTensorEncodingAttr::verify(
                          << higherOrdering.getNumDims() << " to "
                          << higherOrdering.getNumResults();
     if (higherOrdering.getNumResults() != lvlRank)
-      return emitError() << "unexpected mismatch in higher ordering and "
-                            "dimension level types size";
+      return emitError()
+             << "level-rank mismatch between higherOrdering and lvlTypes";
   }
   if (!dimSlices.empty() && dimSlices.size() != lvlRank) {
-    return emitError() << "unexpected mismatch in dimension slices and "
-                          "dimension level type size";
+    return emitError() << "level-rank mismatch between dimSlices and lvlTypes";
   }
   return success();
 }
@@ -563,7 +561,7 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     // TODO: verification of higher ordering contents
   } else if (dimRank != getLvlRank()) {
     return emitError() << "expected an array of size " << dimRank
-                       << " for dimension level types";
+                       << " for lvlTypes";
   }
   return success();
 }
