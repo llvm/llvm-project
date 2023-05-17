@@ -251,7 +251,7 @@ void CallingConvEmitter::EmitAction(Record *Action,
       int Size = Action->getValueAsInt("Size");
       int Align = Action->getValueAsInt("Align");
 
-      O << IndentStr << "unsigned Offset" << ++Counter
+      O << IndentStr << "int64_t Offset" << ++Counter
         << " = State.AllocateStack(";
       if (Size)
         O << Size << ", ";
@@ -287,7 +287,7 @@ void CallingConvEmitter::EmitAction(Record *Action,
         O << LS << getQualifiedName(ShadowRegList->getElementAsRecord(i));
       O << "\n" << IndentStr << "};\n";
 
-      O << IndentStr << "unsigned Offset" << ++Counter
+      O << IndentStr << "int64_t Offset" << ++Counter
         << " = State.AllocateStack(" << Size << ", Align(" << Align << "), "
         << "ShadowRegList" << ShadowRegListNumber << ");\n";
       O << IndentStr << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
