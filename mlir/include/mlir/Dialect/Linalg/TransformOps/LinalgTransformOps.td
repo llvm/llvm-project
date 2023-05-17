@@ -819,7 +819,7 @@ def HoistPadBuildPackingLoopNestOp :
     loop nests, which can be empty.
   }];
 
-  // Also allow any !pdl.operation for simpler composition. Non-tensor.pad ops
+  // Also allow any payload operation for simpler composition. Non-tensor.pad ops
   // will be dropped from the results.
   let arguments =
     (ins TransformHandleTypeInterface:$target,
@@ -862,7 +862,7 @@ def HoistPadOp : Op<Transform_Dialect, "structured.hoist_pad",
     tensor.pad operations, which can be empty.
   }];
 
-  // Also allow any !pdl.operation for simpler composition. Non-tensor.pad ops
+  // Also allow any operation for simpler composition. Non-tensor.pad ops
   // will be dropped from the results.
   let arguments =
     (ins TransformHandleTypeInterface:$target,

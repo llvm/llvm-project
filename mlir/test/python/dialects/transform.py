@@ -32,38 +32,38 @@ def testTypes():
 @run
 def testSequenceOp():
   sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
-                                  [pdl.OperationType.get()],
-                                  pdl.OperationType.get())
+                                  [transform.AnyOpType.get()],
+                                  transform.AnyOpType.get())
   with InsertionPoint(sequence.body):
     transform.YieldOp([sequence.bodyTarget])
   # CHECK-LABEL: TEST: testSequenceOp
-  # CHECK: = transform.sequence -> !pdl.operation failures(propagate) {
-  # CHECK: ^{{.*}}(%[[ARG0:.+]]: !pdl.operation):
-  # CHECK:   yield %[[ARG0]] : !pdl.operation
+  # CHECK: = transform.sequence -> !transform.any_op failures(propagate) {
+  # CHECK: ^{{.*}}(%[[ARG0:.+]]: !transform.any_op):
+  # CHECK:   yield %[[ARG0]] : !transform.any_op
   # CHECK: }
 
 
 @run
 def testNestedSequenceOp():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get())
   with InsertionPoint(sequence.body):
     nested = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], sequence.bodyTarget)
     with InsertionPoint(nested.body):
       doubly_nested = transform.SequenceOp(
           transform.FailurePropagationMode.PROPAGATE,
-          [pdl.OperationType.get()], nested.bodyTarget)
+          [transform.AnyOpType.get()], nested.bodyTarget)
       with InsertionPoint(doubly_nested.body):
         transform.YieldOp([doubly_nested.bodyTarget])
       transform.YieldOp()
     transform.YieldOp()
   # CHECK-LABEL: TEST: testNestedSequenceOp
   # CHECK: transform.sequence failures(propagate) {
-  # CHECK: ^{{.*}}(%[[ARG0:.+]]: !pdl.operation):
-  # CHECK:   sequence %[[ARG0]] : !pdl.operation failures(propagate) {
-  # CHECK:   ^{{.*}}(%[[ARG1:.+]]: !pdl.operation):
-  # CHECK:     = sequence %[[ARG1]] : !pdl.operation -> !pdl.operation failures(propagate) {
-  # CHECK:     ^{{.*}}(%[[ARG2:.+]]: !pdl.operation):
-  # CHECK:       yield %[[ARG2]] : !pdl.operation
+  # CHECK: ^{{.*}}(%[[ARG0:.+]]: !transform.any_op):
+  # CHECK:   sequence %[[ARG0]] : !transform.any_op failures(propagate) {
+  # CHECK:   ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
+  # CHECK:     = sequence %[[ARG1]] : !transform.any_op -> !transform.any_op failures(propagate) {
+  # CHECK:     ^{{.*}}(%[[ARG2:.+]]: !transform.any_op):
+  # CHECK:       yield %[[ARG2]] : !transform.any_op
   # CHECK:     }
   # CHECK:   }
   # CHECK: }
@@ -103,58 +103,58 @@ def testNestedSequenceOpWithExtras():
 
 @run
 def testTransformPDLOps():
-  withPdl = transform.WithPDLPatternsOp(pdl.OperationType.get())
+  withPdl = transform.WithPDLPatternsOp(transform.AnyOpType.get())
   with InsertionPoint(withPdl.body):
     sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
-                                    [pdl.OperationType.get()],
+                                    [transform.AnyOpType.get()],
                                     withPdl.bodyTarget)
     with InsertionPoint(sequence.body):
-      match = transform.PDLMatchOp(pdl.OperationType.get(), sequence.bodyTarget, "pdl_matcher")
+      match = transform.PDLMatchOp(transform.AnyOpType.get(), sequence.bodyTarget, "pdl_matcher")
       transform.YieldOp(match)
   # CHECK-LABEL: TEST: testTransformPDLOps
   # CHECK: transform.with_pdl_patterns {
-  # CHECK: ^{{.*}}(%[[ARG0:.+]]: !pdl.operation):
-  # CHECK:   = sequence %[[ARG0]] : !pdl.operation -> !pdl.operation failures(propagate) {
-  # CHECK:   ^{{.*}}(%[[ARG1:.+]]: !pdl.operation):
+  # CHECK: ^{{.*}}(%[[ARG0:.+]]: !transform.any_op):
+  # CHECK:   = sequence %[[ARG0]] : !transform.any_op -> !transform.any_op failures(propagate) {
+  # CHECK:   ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
   # CHECK:     %[[RES:.+]] = pdl_match @pdl_matcher in %[[ARG1]]
-  # CHECK:     yield %[[RES]] : !pdl.operation
+  # CHECK:     yield %[[RES]] : !transform.any_op
   # CHECK:   }
   # CHECK: }
 
 
 @run
 def testGetClosestIsolatedParentOp():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get())
   with InsertionPoint(sequence.body):
-    transform.GetClosestIsolatedParentOp(pdl.OperationType.get(), sequence.bodyTarget)
+    transform.GetClosestIsolatedParentOp(transform.AnyOpType.get(), sequence.bodyTarget)
     transform.YieldOp()
   # CHECK-LABEL: TEST: testGetClosestIsolatedParentOp
   # CHECK: transform.sequence
-  # CHECK: ^{{.*}}(%[[ARG1:.+]]: !pdl.operation):
+  # CHECK: ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
   # CHECK:   = get_closest_isolated_parent %[[ARG1]]
 
 
 @run
 def testMergeHandlesOp():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get())
   with InsertionPoint(sequence.body):
     transform.MergeHandlesOp([sequence.bodyTarget])
     transform.YieldOp()
   # CHECK-LABEL: TEST: testMergeHandlesOp
   # CHECK: transform.sequence
-  # CHECK: ^{{.*}}(%[[ARG1:.+]]: !pdl.operation):
+  # CHECK: ^{{.*}}(%[[ARG1:.+]]: !transform.any_op):
   # CHECK:   = merge_handles %[[ARG1]]
 
 
 @run
 def testReplicateOp():
-  with_pdl = transform.WithPDLPatternsOp(pdl.OperationType.get())
+  with_pdl = transform.WithPDLPatternsOp(transform.AnyOpType.get())
   with InsertionPoint(with_pdl.body):
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], with_pdl.bodyTarget)
     with InsertionPoint(sequence.body):
-      m1 = transform.PDLMatchOp(pdl.OperationType.get(), sequence.bodyTarget, "first")
-      m2 = transform.PDLMatchOp(pdl.OperationType.get(), sequence.bodyTarget, "second")
+      m1 = transform.PDLMatchOp(transform.AnyOpType.get(), sequence.bodyTarget, "first")
+      m2 = transform.PDLMatchOp(transform.AnyOpType.get(), sequence.bodyTarget, "second")
       transform.ReplicateOp(m1, [m2])
       transform.YieldOp()
   # CHECK-LABEL: TEST: testReplicateOp
