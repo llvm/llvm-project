@@ -573,6 +573,12 @@ cplusplus14
 cplusplus17
   C++17 support is available.
 
+cplusplus20
+  C++20 support is available.
+
+cplusplus23
+  C++23 support is available.
+
 c99
   C99 support is available.
 
