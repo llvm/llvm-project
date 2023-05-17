@@ -256,6 +256,10 @@ SyntheticChildrenFrontEnd *
 LibcxxStdSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                       lldb::ValueObjectSP);
 
+SyntheticChildrenFrontEnd *
+LibcxxStdRangesRefViewSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                               lldb::ValueObjectSP);
+
 } // namespace formatters
 } // namespace lldb_private
 
