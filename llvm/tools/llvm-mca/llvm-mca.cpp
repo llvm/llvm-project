@@ -574,7 +574,7 @@ int main(int argc, char **argv) {
     SmallVector<std::unique_ptr<mca::Instruction>> LoweredSequence;
     for (const MCInst &MCI : Insts) {
       SMLoc Loc = MCI.getLoc();
-      const SmallVector<mca::SharedInstrument> Instruments =
+      const SmallVector<mca::Instrument *> Instruments =
           InstrumentRegions.getActiveInstruments(Loc);
 
       Expected<std::unique_ptr<mca::Instruction>> Inst =
