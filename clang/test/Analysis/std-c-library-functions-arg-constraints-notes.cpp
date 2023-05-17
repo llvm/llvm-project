@@ -28,19 +28,19 @@ void test_buffer_size(int x) {
   case 1: {
     char buf[9];
     __buf_size_arg_constraint_concrete(buf); // \
-    // expected-warning{{The 1st argument to '__buf_size_arg_constraint_concrete' is out of the accepted range; It should be a buffer with size equal to or greater than 10 [}}
+    // expected-warning{{The 1st argument to '__buf_size_arg_constraint_concrete' is a buffer with size 9 but should be a buffer with size equal to or greater than 10 [}}
     break;
   }
   case 2: {
     char buf[3];
     __buf_size_arg_constraint(buf, 4); // \
-    // expected-warning{{The 1st argument to '__buf_size_arg_constraint' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument}}
+    // expected-warning{{The 1st argument to '__buf_size_arg_constraint' is a buffer with size 3 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4) [}}
     break;
   }
   case 3: {
     char buf[3];
     __buf_size_arg_constraint_mul(buf, 4, 2); // \
-    // expected-warning{{The 1st argument to '__buf_size_arg_constraint_mul' is out of the accepted range; It should be a buffer with size equal to or greater than the value of the 2nd argument times the 3rd argument}}
+    // expected-warning{{The 1st argument to '__buf_size_arg_constraint_mul' is a buffer with size 3 but should be a buffer with size equal to or greater than the value of the 2nd argument (which is 4) times the 3rd argument (which is 2) [}}
     break;
   }
   }
