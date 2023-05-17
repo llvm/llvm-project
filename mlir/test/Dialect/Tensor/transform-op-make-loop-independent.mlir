@@ -30,9 +30,9 @@ func.func @make_pad_loop_independent_1(%lb: index, %ub: index, %step: index,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.tensor.make_loop_independent %0 {num_loops = 1}
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.tensor.make_loop_independent %0 {num_loops = 1} : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -67,9 +67,9 @@ func.func @make_pad_loop_independent_1(%lb: index, %ub: index, %step: index,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.tensor.make_loop_independent %0 {num_loops = 1}
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.tensor.make_loop_independent %0 {num_loops = 1} : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -93,9 +93,9 @@ func.func @two_loops(%lb: index, %ub: index, %step: index,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.tensor.make_loop_independent %0 {num_loops = 2}
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.tensor.make_loop_independent %0 {num_loops = 2} : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -117,10 +117,10 @@ func.func @not_enough_loops(%lb: index, %ub: index, %step: index,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error@below {{could not find 2-th enclosing loop}}
-  %1 = transform.tensor.make_loop_independent %0 {num_loops = 3}
+  %1 = transform.tensor.make_loop_independent %0 {num_loops = 3} : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -145,7 +145,7 @@ func.func @make_empty_loop_independent(%lb: index, %ub: index, %step: index) {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.tensor.make_loop_independent %0 {num_loops = 1}
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.tensor.make_loop_independent %0 {num_loops = 1} : (!transform.any_op) -> !transform.any_op
 }
