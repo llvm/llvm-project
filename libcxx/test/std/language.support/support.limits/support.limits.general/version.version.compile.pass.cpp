@@ -76,7 +76,7 @@
     __cpp_lib_exchange_function                    201304L [C++14]
     __cpp_lib_execution                            201603L [C++17]
                                                    201902L [C++20]
-    __cpp_lib_expected                             202202L [C++2b]
+    __cpp_lib_expected                             202211L [C++2b]
     __cpp_lib_filesystem                           201703L [C++17]
     __cpp_lib_format                               202106L [C++20]
     __cpp_lib_format_ranges                        202207L [C++2b]
@@ -4161,8 +4161,8 @@
 # ifndef __cpp_lib_expected
 #   error "__cpp_lib_expected should be defined in c++2b"
 # endif
-# if __cpp_lib_expected != 202202L
-#   error "__cpp_lib_expected should have the value 202202L in c++2b"
+# if __cpp_lib_expected != 202211L
+#   error "__cpp_lib_expected should have the value 202211L in c++2b"
 # endif
 
 # if !defined(_LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM)
