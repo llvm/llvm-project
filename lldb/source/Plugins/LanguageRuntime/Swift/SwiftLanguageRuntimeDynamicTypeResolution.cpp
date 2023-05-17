@@ -1909,7 +1909,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
   return true;
 }
 
-/// Determine whether the scratch SwiftASTContext has been locked.
+#ifndef NDEBUG
+/// Assert helper to determine if the scratch SwiftASTContext is locked.
 static bool IsScratchContextLocked(Target &target) {
   if (target.GetSwiftScratchContextLock().try_lock()) {
     target.GetSwiftScratchContextLock().unlock();
@@ -1918,10 +1919,11 @@ static bool IsScratchContextLocked(Target &target) {
   return true;
 }
 
-/// Determine whether the scratch SwiftASTContext has been locked.
+/// Assert helper to determine if the scratch SwiftASTContext is locked.
 static bool IsScratchContextLocked(TargetSP target) {
   return target ? IsScratchContextLocked(*target) : true;
 }
+#endif
 
 static bool IsPrivateNSClass(NodePointer node) {
   if (!node || node->getKind() != Node::Kind::Type ||
