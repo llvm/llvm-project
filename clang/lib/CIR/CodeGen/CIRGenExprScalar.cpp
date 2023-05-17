@@ -948,13 +948,45 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_LValueToRValueBitCast:
     llvm_unreachable("NYI");
   case CK_CPointerToObjCPointerCast:
-    llvm_unreachable("NYI");
   case CK_BlockPointerToObjCPointerCast:
-    llvm_unreachable("NYI");
   case CK_AnyPointerToBlockPointerCast:
-    llvm_unreachable("NYI");
-  case CK_BitCast:
-    llvm_unreachable("NYI");
+  case CK_BitCast: {
+    auto Src = Visit(const_cast<Expr *>(E));
+    mlir::Type DstTy = CGF.convertType(DestTy);
+
+    assert(!UnimplementedFeature::cirVectorType());
+    assert(!UnimplementedFeature::addressSpace());
+    if (CGF.SanOpts.has(SanitizerKind::CFIUnrelatedCast)) {
+      llvm_unreachable("NYI");
+    }
+
+    if (CGF.CGM.getCodeGenOpts().StrictVTablePointers) {
+      llvm_unreachable("NYI");
+    }
+
+    // Update heapallocsite metadata when there is an explicit pointer cast.
+    assert(!UnimplementedFeature::addHeapAllocSiteMetadata());
+
+    // If Src is a fixed vector and Dst is a scalable vector, and both have the
+    // same element type, use the llvm.vector.insert intrinsic to perform the
+    // bitcast.
+    assert(!UnimplementedFeature::cirVectorType());
+
+    // If Src is a scalable vector and Dst is a fixed vector, and both have the
+    // same element type, use the llvm.vector.extract intrinsic to perform the
+    // bitcast.
+    assert(!UnimplementedFeature::cirVectorType());
+
+    // Perform VLAT <-> VLST bitcast through memory.
+    // TODO: since the llvm.experimental.vector.{insert,extract} intrinsics
+    //       require the element types of the vectors to be the same, we
+    //       need to keep this around for bitcasts between VLAT <-> VLST where
+    //       the element types of the vectors are not the same, until we figure
+    //       out a better way of doing these casts.
+    assert(!UnimplementedFeature::cirVectorType());
+    return CGF.getBuilder().createBitcast(CGF.getLoc(E->getSourceRange()), Src,
+                                          DstTy);
+  }
   case CK_AddressSpaceConversion:
     llvm_unreachable("NYI");
   case CK_AtomicToNonAtomic:

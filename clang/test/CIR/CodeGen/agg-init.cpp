@@ -60,11 +60,20 @@ typedef struct Yo {
 
 void yo() {
   Yo ext = {X};
+  Yo ext2 = {Y, &ext};
 }
 
 // CHECK: cir.func @_Z2yov() {
-// CHECK:     %0 = cir.alloca !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>, ["ext"] {alignment = 8 : i64}
-// CHECK:     %1 = cir.const(#cir.const_struct<{1000070000 : i32,#cir.null : !cir.ptr<i8>,0 : i64}> : !ty_22struct2EYo22) : !ty_22struct2EYo22
-// CHECK:     cir.store %1, %0 : !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>
-// CHECK:     cir.return
-// CHECK:   }
+// CHECK:   %0 = cir.alloca !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>, ["ext"] {alignment = 8 : i64}
+// CHECK:   %1 = cir.alloca !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>, ["ext2", init] {alignment = 8 : i64}
+// CHECK:   %2 = cir.const(#cir.const_struct<{1000070000 : i32,#cir.null : !cir.ptr<i8>,0 : i64}> : !ty_22struct2EYo22) : !ty_22struct2EYo22
+// CHECK:   cir.store %2, %0 : !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>
+// CHECK:   %3 = "cir.struct_element_addr"(%1) <{member_name = "type"}> : (!cir.ptr<!ty_22struct2EYo22>) -> !cir.ptr<i32>
+// CHECK:   %4 = cir.const(1000066001 : i32) : i32
+// CHECK:   cir.store %4, %3 : i32, cir.ptr <i32>
+// CHECK:   %5 = "cir.struct_element_addr"(%1) <{member_name = "next"}> : (!cir.ptr<!ty_22struct2EYo22>) -> !cir.ptr<!cir.ptr<i8>>
+// CHECK:   %6 = cir.cast(bitcast, %0 : !cir.ptr<!ty_22struct2EYo22>), !cir.ptr<i8>
+// CHECK:   cir.store %6, %5 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
+// CHECK:   %7 = "cir.struct_element_addr"(%1) <{member_name = "createFlags"}> : (!cir.ptr<!ty_22struct2EYo22>) -> !cir.ptr<i64>
+// CHECK:   %8 = cir.const(0 : i64) : i64
+// CHECK:   cir.store %8, %7 : i64, cir.ptr <i64>
