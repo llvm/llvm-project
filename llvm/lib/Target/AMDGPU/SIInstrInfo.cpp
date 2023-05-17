@@ -634,11 +634,11 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
   assert(MBB.getParent()->getRegInfo().isReserved(Tmp) &&
          "VGPR used for an intermediate copy should have been reserved.");
 
-  // Only loop through if there are any free registers left, otherwise
-  // scavenger may report a fatal error without emergency spill slot
-  // or spill with the slot.
-  while (RegNo-- && RS.FindUnusedReg(&AMDGPU::VGPR_32RegClass)) {
-    Register Tmp2 = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
+  // Only loop through if there are any free registers left. We don't want to
+  // spill.
+  while (RegNo--) {
+    Register Tmp2 = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0,
+                                        /* AllowSpill */ false);
     if (!Tmp2 || RI.getHWRegIndex(Tmp2) >= MaxVGPRs)
       break;
     Tmp = Tmp2;
@@ -7919,9 +7919,10 @@ MachineInstrBuilder SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
     return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_U32_e32), DestReg);
 
   // If available, prefer to use vcc.
-  Register UnusedCarry = !RS.isRegUsed(AMDGPU::VCC)
-                             ? Register(RI.getVCC())
-                             : RS.scavengeRegister(RI.getBoolRC(), I, 0, false);
+  Register UnusedCarry =
+      !RS.isRegUsed(AMDGPU::VCC)
+          ? Register(RI.getVCC())
+          : RS.scavengeRegister(RI.getBoolRC(), I, 0, /* AllowSpill */ false);
 
   // TODO: Users need to deal with this.
   if (!UnusedCarry.isValid())
