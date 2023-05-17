@@ -344,6 +344,12 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
       getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
 
+  // Target properties.
+  if (!getTriple().isOSWindows() && getTriple().isArch64Bit()) {
+    Builder.defineMacro("_LP64");
+    Builder.defineMacro("__LP64__");
+  }
+
   std::string CodeModel = getTargetOpts().CodeModel;
   if (CodeModel == "default")
     CodeModel = "small";
