@@ -46,13 +46,14 @@ extern int printf (const char *__restrict __format, ...);
     } omp_sync_hint_t;
 
 int main() {
-  { // add i8: cas loop via backend
+  { // add i8: cas loop via clang codegen
     int8_t add_i8 = 0;
     int8_t h_add_i8 = 0;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: add_i8)
     for(int i = 0; i < 64; i++) {
+      // CHECK1: atomic_cont:
       // CHECK1: cmpxchg
       #pragma omp atomic
       add_i8 += i;
@@ -108,14 +109,15 @@ int main() {
     }
   }
 
-  { // add float: cas loop via runtime
+  { // add float: cas loop via clang codegen
     float add_float = 0.0f;
     float h_add_float = 0.0f;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: add_float)
     for(int i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopAdd_float(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       add_float += (float)i;
     }
@@ -128,14 +130,15 @@ int main() {
     }
   }
 
-  { // add double: cas loop via runtime
+  { // add double: cas loop via clang codegen
     double add_double = 0.0f;
     double h_add_double = 0.0f;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: add_double)
     for(int i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopAdd_double(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       add_double += (double)i;
     }
@@ -148,14 +151,15 @@ int main() {
     }
   }
 
-  { // sub int: cas loop via runtime
+  { // sub int: cas loop via clang codegen
     int sub_int = 2016;
     int h_sub_int = 2016;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: sub_int)
     for(int i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopSub_int32_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       sub_int -= i;
     }
@@ -168,14 +172,15 @@ int main() {
     }
   }
 
-  { // sub int32_t: cas loop via runtime
+  { // sub int32_t: cas loop via clang codegen
     int32_t sub_int32 = 2016;
     int32_t h_sub_int32 = 2016;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: sub_int32)
     for(int32_t i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopSub_int32_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       sub_int32 -= i;
     }
@@ -188,14 +193,15 @@ int main() {
     }
   }
 
-  { // sub long: cas loop via runtime
+  { // sub long: cas loop via clang codegen
     long sub_long = 2016;
     long h_sub_long = 2016;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: sub_long)
     for(long i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopSub_int64_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       sub_long -= i;
     }
@@ -208,14 +214,15 @@ int main() {
     }
   }
 
-  { // sub int64_t: cas loop via runtime
+  { // sub int64_t: cas loop via clang codegen
     int64_t sub_int64 = 2016;
     int64_t h_sub_int64 = 2016;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: sub_int64)
     for(int32_t i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopSub_int64_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       sub_int64 -= i;
     }
@@ -488,14 +495,15 @@ int main() {
     }
   }
 
-  { // and i32: cas loop via runtime
+  { // and i32: cas loop via clang codegen
     int and_i32 = 0;
     int h_and_i32 = 0;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: and_i32)
     for(int i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopAnd_int32_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       and_i32 = and_i32 & i;
     }
@@ -508,14 +516,15 @@ int main() {
     }
   }
 
-  { // and i64: cas loop via runtime
+  { // and i64: cas loop via clang codegen
     int64_t and_i64 = 0;
     int64_t h_and_i64 = 0;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: and_i64)
     for(int64_t i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopAnd_int64_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       and_i64 = and_i64 & i;
     }
@@ -528,14 +537,15 @@ int main() {
     }
   }
 
-  { // or i32: cas loop via runtime
+  { // or i32: cas loop via clang codegen
     int or_i32 = 0;
     int h_or_i32 = 0;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: or_i32)
     for(int i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopOr_int32_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       or_i32 = or_i32 | i;
     }
@@ -548,14 +558,15 @@ int main() {
     }
   }
 
-  { // or i64: cas loop via runtime
+  { // or i64: cas loop via clang codegen
     int64_t or_i64 = 0;
     int64_t h_or_i64 = 0;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: or_i64)
     for(int64_t i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopOr_int64_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       or_i64 = or_i64 | i;
     }
@@ -568,14 +579,15 @@ int main() {
     }
   }
 
-  { // xor i32: cas loop via runtime
+  { // xor i32: cas loop via clang codegen
     int xor_i32 = 0;
     int h_xor_i32 = 0;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: xor_i32)
     for(int i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopXor_int32_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       xor_i32 = xor_i32 ^ i;
     }
@@ -588,14 +600,15 @@ int main() {
     }
   }
 
-  { // xor i64: cas loop via runtime
+  { // xor i64: cas loop via clang codegen
     int64_t xor_i64 = 0;
     int64_t h_xor_i64 = 0;
 
     // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
     #pragma omp target teams distribute parallel for map(tofrom: xor_i64)
     for(int64_t i = 0; i < 64; i++) {
-      // CHECK1: __kmpc_atomicCASLoopXor_int64_t(
+      // CHECK1: atomic_cont:
+      // CHECK1: cmpxchg
       #pragma omp atomic
       xor_i64 = xor_i64 ^ i;
     }

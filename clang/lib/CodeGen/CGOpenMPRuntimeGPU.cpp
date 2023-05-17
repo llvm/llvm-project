@@ -4578,8 +4578,8 @@ bool CGOpenMPRuntimeGPU::mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X,
     return false;
 
   // For all other operations, integer types that are not 32 or 64 bits are
-  // already converted to CAS loop by the backend. This allows for simpler
-  // handling in devicertl call.
+  // already converted to CAS loop by clang codegen or backend. This allows for
+  // simpler handling in devicertl call.
   if (Update.getScalarVal()->getType()->isIntegerTy() &&
       (Context.getTypeSize(X.getType()) < 32 ||
        Context.getTypeSize(X.getType()) > 64))
@@ -4616,44 +4616,6 @@ CGOpenMPRuntimeGPU::emitAtomicCASLoop(CodeGenFunction &CGF, LValue X,
   CASLoopArgs.push_back(Update.getScalarVal());
   llvm::Value *CallInst = nullptr;
   switch (BO) {
-  case BO_Add: {
-    // only unavailable for float and double, integer types (32 and 64 bits) are
-    // available; integer types (non 32 or 64 bits) are lowered to cas loop by
-    // backend.
-    if (Update.getScalarVal()->getType()->isIntegerTy())
-      llvm_unreachable("Atomic Add on Integers should not be considered as a "
-                       "candidate for atomic CAS loop implementation");
-
-    if (Update.getScalarVal()->getType()->isDoubleTy())
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopAdd_double),
-          CASLoopArgs);
-    else if (Update.getScalarVal()->getType()->isFloatTy())
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopAdd_float),
-          CASLoopArgs);
-    return std::make_pair(true, RValue::get(CallInst));
-  }
-  case BO_Sub: { // only unavailable for integer types (32 and 64 bits)
-    if (!Update.getScalarVal()->getType()->isIntegerTy())
-      llvm_unreachable(
-          "Atomic Sub on Integers should be the only one considered as a "
-          "candidate for atomic CAS loop implementation");
-
-    if (Context.getTypeSize(X.getType()) == 32)
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopSub_int32_t),
-          CASLoopArgs);
-    else if (Context.getTypeSize(X.getType()) == 64)
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopSub_int64_t),
-          CASLoopArgs);
-    return std::make_pair(true, RValue::get(CallInst));
-  }
   case BO_LT: { // unavailable for both float, double, and integer types (32 and
                 // 64 bits)
     if (Update.getScalarVal()->getType()->isIntegerTy() &&
@@ -4730,8 +4692,6 @@ CGOpenMPRuntimeGPU::emitAtomicCASLoop(CodeGenFunction &CGF, LValue X,
               CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMax_float),
           CASLoopArgs);
 
-    // TODO: what about unsigned? OpenMP RTL interface does not have unsigned
-    // types
     else if (Update.getScalarVal()->getType()->isIntegerTy()) {
       if (Context.getTypeSize(X.getType()) == 32) {
         if (X.getType()->hasSignedIntegerRepresentation()) {
@@ -4769,62 +4729,14 @@ CGOpenMPRuntimeGPU::emitAtomicCASLoop(CodeGenFunction &CGF, LValue X,
     }
     return std::make_pair(true, RValue::get(CallInst));
   }
-  case BO_And: { // only unavailable for integer types (32 and 64 bits)
-    if (!Update.getScalarVal()->getType()->isIntegerTy())
-      llvm_unreachable(
-          "Atomic And on Integers should be the only one considered as a "
-          "candidate for atomic CAS loop implementation");
-
-    if (Context.getTypeSize(X.getType()) == 32)
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopAnd_int32_t),
-          CASLoopArgs);
-    else if (Context.getTypeSize(X.getType()) == 64)
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopAnd_int64_t),
-          CASLoopArgs);
-    return std::make_pair(true, RValue::get(CallInst));
-  }
-
-  case BO_Or: { // only unavailable for integer types (32 and 64 bits)
-    if (!Update.getScalarVal()->getType()->isIntegerTy())
-      llvm_unreachable(
-          "Atomic Or on Integers should be the only one considered as a "
-          "candidate for atomic CAS loop implementation");
-
-    if (Context.getTypeSize(X.getType()) == 32)
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopOr_int32_t),
-          CASLoopArgs);
-    else if (Context.getTypeSize(X.getType()) == 64)
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopOr_int64_t),
-          CASLoopArgs);
-    return std::make_pair(true, RValue::get(CallInst));
-  }
-  case BO_Xor: { // only unavailable for integer types (32 and 64 bits)
-    if (!Update.getScalarVal()->getType()->isIntegerTy())
-      llvm_unreachable(
-          "Atomic Xor on Integers should be the only one considered as a "
-          "candidate for atomic CAS loop implementation");
-
-    if (Context.getTypeSize(X.getType()) == 32)
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopXor_int32_t),
-          CASLoopArgs);
-    else if (Context.getTypeSize(X.getType()) == 64)
-      CallInst = CGF.EmitRuntimeCall(
-          OMPBuilder.getOrCreateRuntimeFunction(
-              CGM.getModule(), OMPRTL___kmpc_atomicCASLoopXor_int64_t),
-          CASLoopArgs);
-    return std::make_pair(true, RValue::get(CallInst));
-  }
-
+  case BO_Add:
+  case BO_Sub:
+  case BO_And:
+  case BO_Or:
+  case BO_Xor:
+    llvm_unreachable("Atomic operation must be generated via clang atomic "
+                     "support and not via OpenMP runtime");
+    break;
   default:
     llvm_unreachable(
         "Operation is not supported by kmpc_atomicCASLoop functions");

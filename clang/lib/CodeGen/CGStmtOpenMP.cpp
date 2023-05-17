@@ -6381,9 +6381,9 @@ emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X, RValue Update,
   ASTContext &Context = CGF.getContext();
 
   if (CGF.CGM.getOpenMPRuntime().mustEmitSafeAtomic(CGF, X, Update, BO)) {
-    auto Ret = CGF.CGM.getOpenMPRuntime().emitAtomicCASLoop(CGF, X, Update, BO);
-    if (Ret.first)
-      return Ret;
+    // this will force emission of cmpxchg in the caller using
+    // clang machinery
+    return std::make_pair(false, RValue::get(nullptr));
   }
 
   bool useFPAtomics = canUseAMDGPUFastFPAtomics(CGF, X, Update, BO, Hint);
