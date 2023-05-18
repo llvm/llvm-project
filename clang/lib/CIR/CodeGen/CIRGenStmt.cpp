@@ -53,6 +53,10 @@ mlir::LogicalResult CIRGenFunction::buildCompoundStmt(const CompoundStmt &S) {
   return res;
 }
 
+void CIRGenFunction::buildStopPoint(const Stmt *S) {
+  assert(!UnimplementedFeature::generateDebugInfo());
+}
+
 // Build CIR for a statement. useCurrentScope should be true if no
 // new scopes need be created when finding a compound statement.
 mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
@@ -668,8 +672,84 @@ static mlir::LogicalResult buildLoopCondYield(mlir::OpBuilder &builder,
 
 mlir::LogicalResult
 CIRGenFunction::buildCXXForRangeStmt(const CXXForRangeStmt &S,
-                                     ArrayRef<const Attr *> Attrs) {
-  llvm_unreachable("NYI");
+                                     ArrayRef<const Attr *> ForAttrs) {
+  mlir::cir::LoopOp loopOp;
+
+  // TODO(cir): pass in array of attributes.
+  auto forStmtBuilder = [&]() -> mlir::LogicalResult {
+    auto loopRes = mlir::success();
+    // Evaluate the first pieces before the loop.
+    if (S.getInit())
+      if (buildStmt(S.getInit(), /*useCurrentScope=*/true).failed())
+        return mlir::failure();
+    if (buildStmt(S.getRangeStmt(), /*useCurrentScope=*/true).failed())
+      return mlir::failure();
+    if (buildStmt(S.getBeginStmt(), /*useCurrentScope=*/true).failed())
+      return mlir::failure();
+    if (buildStmt(S.getEndStmt(), /*useCurrentScope=*/true).failed())
+      return mlir::failure();
+
+    assert(!UnimplementedFeature::loopInfoStack());
+    // From LLVM: if there are any cleanups between here and the loop-exit
+    // scope, create a block to stage a loop exit along.
+    // We probably already do the right thing because of ScopeOp, but make
+    // sure we handle all cases.
+    assert(!UnimplementedFeature::requiresCleanups());
+
+    loopOp = builder.create<LoopOp>(
+        getLoc(S.getSourceRange()), mlir::cir::LoopOpKind::For,
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          assert(!UnimplementedFeature::createProfileWeightsForLoop());
+          assert(!UnimplementedFeature::emitCondLikelihoodViaExpectIntrinsic());
+          mlir::Value condVal = evaluateExprAsBool(S.getCond());
+          if (buildLoopCondYield(b, loc, condVal).failed())
+            loopRes = mlir::failure();
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // https://en.cppreference.com/w/cpp/language/for
+          // In C++ the scope of the init-statement and the scope of
+          // statement are one and the same.
+          bool useCurrentScope = true;
+          if (buildStmt(S.getLoopVarStmt(), useCurrentScope).failed())
+            loopRes = mlir::failure();
+          if (buildStmt(S.getBody(), useCurrentScope).failed())
+            loopRes = mlir::failure();
+          buildStopPoint(&S);
+        },
+        /*stepBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          if (S.getInc())
+            if (buildStmt(S.getInc(), /*useCurrentScope=*/true).failed())
+              loopRes = mlir::failure();
+          builder.create<YieldOp>(loc);
+        });
+    return loopRes;
+  };
+
+  auto res = mlir::success();
+  auto scopeLoc = getLoc(S.getSourceRange());
+  builder.create<mlir::cir::ScopeOp>(
+      scopeLoc, /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto fusedLoc = loc.cast<mlir::FusedLoc>();
+        auto scopeLocBegin = fusedLoc.getLocations()[0];
+        auto scopeLocEnd = fusedLoc.getLocations()[1];
+        // Create a cleanup scope for the condition variable cleanups.
+        // Logical equivalent from LLVM codegn for
+        // LexicalScope ConditionScope(*this, S.getSourceRange())...
+        LexicalScopeContext lexScope{scopeLocBegin, scopeLocEnd,
+                                     builder.getInsertionBlock()};
+        LexicalScopeGuard lexForScopeGuard{*this, &lexScope};
+        res = forStmtBuilder();
+      });
+
+  if (res.failed())
+    return res;
+
+  terminateBody(builder, loopOp.getBody(), getLoc(S.getEndLoc()));
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
@@ -682,12 +762,19 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
     if (S.getInit())
       if (buildStmt(S.getInit(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
+    assert(!UnimplementedFeature::loopInfoStack());
+    // From LLVM: if there are any cleanups between here and the loop-exit
+    // scope, create a block to stage a loop exit along.
+    // We probably already do the right thing because of ScopeOp, but make
+    // sure we handle all cases.
+    assert(!UnimplementedFeature::requiresCleanups());
 
     loopOp = builder.create<LoopOp>(
         getLoc(S.getSourceRange()), mlir::cir::LoopOpKind::For,
         /*condBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // TODO: branch weigths, likelyhood, profile counter, etc.
+          assert(!UnimplementedFeature::createProfileWeightsForLoop());
+          assert(!UnimplementedFeature::emitCondLikelihoodViaExpectIntrinsic());
           mlir::Value condVal;
           if (S.getCond()) {
             // If the for statement has a condition scope,
@@ -716,6 +803,7 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
               CGM.getASTContext().getLangOpts().CPlusPlus ? true : false;
           if (buildStmt(S.getBody(), useCurrentScope).failed())
             loopRes = mlir::failure();
+          buildStopPoint(&S);
         },
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -754,12 +842,19 @@ mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
   // TODO: pass in array of attributes.
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
     auto loopRes = mlir::success();
+    assert(!UnimplementedFeature::loopInfoStack());
+    // From LLVM: if there are any cleanups between here and the loop-exit
+    // scope, create a block to stage a loop exit along.
+    // We probably already do the right thing because of ScopeOp, but make
+    // sure we handle all cases.
+    assert(!UnimplementedFeature::requiresCleanups());
 
     loopOp = builder.create<LoopOp>(
         getLoc(S.getSourceRange()), mlir::cir::LoopOpKind::DoWhile,
         /*condBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // TODO: branch weigths, likelyhood, profile counter, etc.
+          assert(!UnimplementedFeature::createProfileWeightsForLoop());
+          assert(!UnimplementedFeature::emitCondLikelihoodViaExpectIntrinsic());
           // C99 6.8.5p2/p4: The first substatement is executed if the
           // expression compares unequal to 0. The condition must be a
           // scalar type.
@@ -771,6 +866,7 @@ mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           if (buildStmt(S.getBody(), /*useCurrentScope=*/true).failed())
             loopRes = mlir::failure();
+          buildStopPoint(&S);
         },
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -806,12 +902,19 @@ mlir::LogicalResult CIRGenFunction::buildWhileStmt(const WhileStmt &S) {
   // TODO: pass in array of attributes.
   auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
     auto loopRes = mlir::success();
+    assert(!UnimplementedFeature::loopInfoStack());
+    // From LLVM: if there are any cleanups between here and the loop-exit
+    // scope, create a block to stage a loop exit along.
+    // We probably already do the right thing because of ScopeOp, but make
+    // sure we handle all cases.
+    assert(!UnimplementedFeature::requiresCleanups());
 
     loopOp = builder.create<LoopOp>(
         getLoc(S.getSourceRange()), mlir::cir::LoopOpKind::While,
         /*condBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // TODO: branch weigths, likelyhood, profile counter, etc.
+          assert(!UnimplementedFeature::createProfileWeightsForLoop());
+          assert(!UnimplementedFeature::emitCondLikelihoodViaExpectIntrinsic());
           mlir::Value condVal;
           // If the for statement has a condition scope,
           // emit the local variable declaration.
@@ -828,6 +931,7 @@ mlir::LogicalResult CIRGenFunction::buildWhileStmt(const WhileStmt &S) {
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           if (buildStmt(S.getBody(), /*useCurrentScope=*/true).failed())
             loopRes = mlir::failure();
+          buildStopPoint(&S);
         },
         /*stepBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {

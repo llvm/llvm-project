@@ -891,6 +891,9 @@ public:
   RValue buildCoroutineIntrinsic(const CallExpr *E, unsigned int IID);
   RValue buildCoroutineFrame();
 
+  /// Build a debug stoppoint if we are emitting debug info.
+  void buildStopPoint(const Stmt *S);
+
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
   mlir::LogicalResult buildStmt(const clang::Stmt *S, bool useCurrentScope,
