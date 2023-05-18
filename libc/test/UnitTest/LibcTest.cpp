@@ -285,6 +285,11 @@ template bool test<__llvm_libc::cpp::string_view>(
     __llvm_libc::cpp::string_view RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
+template bool test<__llvm_libc::cpp::string>(
+    RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::string LHS,
+    __llvm_libc::cpp::string RHS, const char *LHSStr, const char *RHSStr,
+    const char *File, unsigned long Line);
+
 } // namespace internal
 
 bool Test::testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
