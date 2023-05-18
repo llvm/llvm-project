@@ -25,7 +25,7 @@
 //    a < b implies that !(b < a)
 //
 // If this is not satisfied, we have seen issues in the past where the std::sort implementation
-// would proceed to do OOB reads.
+// would proceed to do OOB reads (rdar://106897934).
 
 // When the debug mode is enabled, this test fails because we actually catch that the comparator
 // is not a strict-weak ordering before we catch that we'd dereference out-of-bounds inside std::sort,
@@ -42,11 +42,8 @@
 #include <string>
 #include <vector>
 
+#include "bad_comparator_values.h"
 #include "check_assertion.h"
-
-std::string DATA =
-#   include "bad_comparator_values.dat"
-;
 
 int main(int, char**) {
     std::map<std::size_t, std::map<std::size_t, bool>> comparison_results; // terrible for performance, but really convenient
