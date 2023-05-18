@@ -647,6 +647,13 @@
 // RUN: %clang_cl /guard:ehcont -### -- %s 2>&1 | FileCheck -check-prefix=EHCONTGUARD %s
 // EHCONTGUARD: -ehcontguard
 
+// RUN: %clang_cl /guard:cf /guard:ehcont -Wall -Wno-msvc-not-found -### -- %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=BOTHGUARD %s --implicit-check-not=warning:
+// BOTHGUARD: -cfguard
+// BOTHGUARD-SAME: -ehcontguard
+// BOTHGUARD: -guard:cf
+// BOTHGUARD-SAME: -guard:ehcont
+
 // RUN: %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
 // CFGUARDINVALID: invalid value 'foo' in '/guard:'
 
