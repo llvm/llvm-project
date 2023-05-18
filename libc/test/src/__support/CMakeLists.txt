@@ -55,6 +55,8 @@ add_libc_test(
   DEPENDS
     libc.src.__support.integer_to_string
     libc.src.__support.CPP.string_view
+    libc.src.__support.uint
+    libc.src.__support.uint128
 )
 
 # The GPU does not support varargs currently.
