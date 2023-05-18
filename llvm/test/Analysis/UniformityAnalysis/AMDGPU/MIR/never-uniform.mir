@@ -140,3 +140,26 @@ body:             |
     %5:vgpr_32 = V_AND_B32_e32 $vgpr4, $vgpr5, implicit $exec
     S_ENDPGM 0
 ...
+# mbcnt instructions are not uniform
+---
+name:            mbcnt_lo
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function: mbcnt_lo
+    ; CHECK: DIVERGENT: %0
+    %0:vgpr_32 = V_MBCNT_LO_U32_B32_e64 -1, 0, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            mbcnt_hi
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function: mbcnt_hi
+    ; CHECK: DIVERGENT: %0
+    %0:vgpr_32 = V_MBCNT_HI_U32_B32_e64 -1, 0, implicit $exec
+    S_ENDPGM 0
+...
