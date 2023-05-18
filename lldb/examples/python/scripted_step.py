@@ -77,6 +77,10 @@
 #    is stale.  In this case, if the step_out plan that the FinishPrintAndContinue
 #    plan is driving is stale, so is ours, and it is time to do our printing.
 #
+# 4) If you implement the "stop_description(SBStream stream)" method in your
+#    python class, then that will show up as the "plan completed" reason when
+#    your thread plan is complete.
+#
 # Both examples show stepping through an address range for 20 bytes from the
 # current PC.  The first one does it by single stepping and checking a condition.
 # It doesn't, however handle the case where you step into another frame while
@@ -122,6 +126,8 @@ class SimpleStep:
     def should_step(self):
         return True
 
+    def stop_description(self, stream):
+        stream.Print("Simple step completed")
 
 class StepWithPlan:
 
@@ -145,6 +151,9 @@ class StepWithPlan:
 
     def should_step(self):
         return False
+
+    def stop_description(self, stream):
+        self.step_thread_plan.GetDescription(stream, lldb.eDescriptionLevelBrief)
 
 # Here's another example which does "step over" through the current function,
 # and when it stops at each line, it checks some condition (in this example the
@@ -205,6 +214,9 @@ class StepCheckingCondition:
     def should_step(self):
         return True
 
+    def stop_description(self, stream):
+        stream.Print(f"Stepped until a == 20")
+
 # Here's an example that steps out of the current frame, gathers some information
 # and then continues.  The information in this case is rax.  Currently the thread
 # plans are not a safe place to call lldb command-line commands, so the information
@@ -242,3 +254,6 @@ class FinishPrintAndContinue:
             print("RAX on exit: ", rax_value.GetValue())
         else:
             print("Couldn't get rax value:", rax_value.GetError().GetCString())
+
+    def stop_description(self, stream):
+        self.step_out_thread_plan.GetDescription(stream, lldb.eDescriptionLevelBrief)
