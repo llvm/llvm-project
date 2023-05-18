@@ -15893,7 +15893,7 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
       Subtarget.hasStdExtM() || Subtarget.hasStdExtZmmul();
   if (!VT.isScalarInteger())
     return false;
-  
+
   // Omit the optimization if the sub target has the M extension and the data
   // size exceeds XLen.
   if (HasExtMOrZmmul && VT.getSizeInBits() > Subtarget.getXLen())
