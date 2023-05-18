@@ -23,6 +23,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "AMDGPUtti"
 
@@ -352,6 +353,26 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
     // Neither operand is infinity or NaN.
     return true;
   }
+  return false;
+}
+
+/// Match an fpext from half to float, or a constant we can convert.
+static bool matchFPExtFromF16(Value *Arg, Value *&FPExtSrc) {
+  if (match(Arg, m_OneUse(m_FPExt(m_Value(FPExtSrc)))))
+    return FPExtSrc->getType()->isHalfTy();
+
+  ConstantFP *CFP;
+  if (match(Arg, m_ConstantFP(CFP))) {
+    bool LosesInfo;
+    APFloat Val(CFP->getValueAPF());
+    Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
+    if (LosesInfo)
+      return false;
+
+    FPExtSrc = ConstantFP::get(Type::getHalfTy(Arg->getContext()), Val);
+    return true;
+  }
+
   return false;
 }
 
@@ -730,6 +751,20 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
               II, ConstantFP::get(IC.Builder.getContext(), Result));
         }
       }
+    }
+
+    if (!ST->hasMed3_16())
+      break;
+
+    Value *X, *Y, *Z;
+
+    // Repeat floating-point width reduction done for minnum/maxnum.
+    // fmed3((fpext X), (fpext Y), (fpext Z)) -> fpext (fmed3(X, Y, Z))
+    if (matchFPExtFromF16(Src0, X) && matchFPExtFromF16(Src1, Y) &&
+        matchFPExtFromF16(Src2, Z)) {
+      Value *NewCall = IC.Builder.CreateIntrinsic(IID, {X->getType()},
+                                                  {X, Y, Z}, &II, II.getName());
+      return new FPExtInst(NewCall, II.getType());
     }
 
     break;

@@ -144,6 +144,7 @@ add_flang_library(FortranRuntime
   stop.cpp
   sum.cpp
   support.cpp
+  temporary-stack.cpp
   terminator.cpp
   time-intrinsic.cpp
   tools.cpp

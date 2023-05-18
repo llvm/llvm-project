@@ -320,81 +320,6 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   return MCOperand::createExpr(Expr);
 }
 
-/// Simplify FOO $imm, %{al,ax,eax,rax} to FOO $imm, for instruction with
-/// a short fixed-register form.
-static void SimplifyShortImmForm(MCInst &Inst, unsigned Opcode) {
-  unsigned ImmOp = Inst.getNumOperands() - 1;
-  assert(Inst.getOperand(0).isReg() &&
-         (Inst.getOperand(ImmOp).isImm() || Inst.getOperand(ImmOp).isExpr()) &&
-         ((Inst.getNumOperands() == 3 && Inst.getOperand(1).isReg() &&
-           Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg()) ||
-          Inst.getNumOperands() == 2) &&
-         "Unexpected instruction!");
-
-  // Check whether the destination register can be fixed.
-  unsigned Reg = Inst.getOperand(0).getReg();
-  if (Reg != X86::AL && Reg != X86::AX && Reg != X86::EAX && Reg != X86::RAX)
-    return;
-
-  // If so, rewrite the instruction.
-  MCOperand Saved = Inst.getOperand(ImmOp);
-  Inst = MCInst();
-  Inst.setOpcode(Opcode);
-  Inst.addOperand(Saved);
-}
-
-/// Simplify things like MOV32rm to MOV32o32a.
-static void SimplifyShortMoveForm(X86AsmPrinter &Printer, MCInst &Inst,
-                                  unsigned Opcode) {
-  // Don't make these simplifications in 64-bit mode; other assemblers don't
-  // perform them because they make the code larger.
-  if (Printer.getSubtarget().is64Bit())
-    return;
-
-  bool IsStore = Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg();
-  unsigned AddrBase = IsStore;
-  unsigned RegOp = IsStore ? 0 : 5;
-  unsigned AddrOp = AddrBase + 3;
-  assert(
-      Inst.getNumOperands() == 6 && Inst.getOperand(RegOp).isReg() &&
-      Inst.getOperand(AddrBase + X86::AddrBaseReg).isReg() &&
-      Inst.getOperand(AddrBase + X86::AddrScaleAmt).isImm() &&
-      Inst.getOperand(AddrBase + X86::AddrIndexReg).isReg() &&
-      Inst.getOperand(AddrBase + X86::AddrSegmentReg).isReg() &&
-      (Inst.getOperand(AddrOp).isExpr() || Inst.getOperand(AddrOp).isImm()) &&
-      "Unexpected instruction!");
-
-  // Check whether the destination register can be fixed.
-  unsigned Reg = Inst.getOperand(RegOp).getReg();
-  if (Reg != X86::AL && Reg != X86::AX && Reg != X86::EAX && Reg != X86::RAX)
-    return;
-
-  // Check whether this is an absolute address.
-  // FIXME: We know TLVP symbol refs aren't, but there should be a better way
-  // to do this here.
-  bool Absolute = true;
-  if (Inst.getOperand(AddrOp).isExpr()) {
-    const MCExpr *MCE = Inst.getOperand(AddrOp).getExpr();
-    if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(MCE))
-      if (SRE->getKind() == MCSymbolRefExpr::VK_TLVP)
-        Absolute = false;
-  }
-
-  if (Absolute &&
-      (Inst.getOperand(AddrBase + X86::AddrBaseReg).getReg() != 0 ||
-       Inst.getOperand(AddrBase + X86::AddrScaleAmt).getImm() != 1 ||
-       Inst.getOperand(AddrBase + X86::AddrIndexReg).getReg() != 0))
-    return;
-
-  // If so, rewrite the instruction.
-  MCOperand Saved = Inst.getOperand(AddrOp);
-  MCOperand Seg = Inst.getOperand(AddrBase + X86::AddrSegmentReg);
-  Inst = MCInst();
-  Inst.setOpcode(Opcode);
-  Inst.addOperand(Saved);
-  Inst.addOperand(Seg);
-}
-
 static unsigned getRetOpcode(const X86Subtarget &Subtarget) {
   return Subtarget.is64Bit() ? X86::RET64 : X86::RET32;
 }
@@ -474,20 +399,13 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (auto MaybeMCOp = LowerMachineOperand(MI, MO))
       OutMI.addOperand(*MaybeMCOp);
 
-  if (X86::optimizeInstFromVEX3ToVEX2(OutMI, MI->getDesc()))
-    return;
-
-  if (X86::optimizeShiftRotateWithImmediateOne(OutMI))
-    return;
-
-  if (X86::optimizeVPCMPWithImmediateOneOrSix(OutMI))
-    return;
-
-  if (X86::optimizeMOVSX(OutMI))
-    return;
-
   bool In64BitMode = AsmPrinter.getSubtarget().is64Bit();
-  if (X86::optimizeINCDEC(OutMI, In64BitMode))
+  if (X86::optimizeInstFromVEX3ToVEX2(OutMI, MI->getDesc()) ||
+      X86::optimizeShiftRotateWithImmediateOne(OutMI) ||
+      X86::optimizeVPCMPWithImmediateOneOrSix(OutMI) ||
+      X86::optimizeMOVSX(OutMI) || X86::optimizeINCDEC(OutMI, In64BitMode) ||
+      X86::optimizeMOV(OutMI, In64BitMode) ||
+      X86::optimizeToFixedRegisterForm(OutMI))
     return;
 
   // Handle a few special cases to eliminate operand modifiers.
@@ -502,7 +420,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     assert(OutMI.getOperand(1 + X86::AddrSegmentReg).getReg() == 0 &&
            "LEA has segment specified!");
     break;
-
   case X86::MULX32Hrr:
   case X86::MULX32Hrm:
   case X86::MULX64Hrr:
@@ -522,7 +439,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.insert(OutMI.begin(), MCOperand::createReg(DestReg));
     break;
   }
-
   // CALL64r, CALL64pcrel32 - These instructions used to have
   // register inputs modeled as normal uses instead of implicit uses.  As such,
   // they we used to truncate off all but the first operand (the callee). This
@@ -531,21 +447,18 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   case X86::CALL64pcrel32:
     assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     break;
-
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
     OutMI = MCInst();
     OutMI.setOpcode(getRetOpcode(AsmPrinter.getSubtarget()));
     break;
   }
-
   case X86::CLEANUPRET: {
     // Replace CLEANUPRET with the appropriate RET.
     OutMI = MCInst();
     OutMI.setOpcode(getRetOpcode(AsmPrinter.getSubtarget()));
     break;
   }
-
   case X86::CATCHRET: {
     // Replace CATCHRET with the appropriate RET.
     const X86Subtarget &Subtarget = AsmPrinter.getSubtarget();
@@ -555,7 +468,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(MCOperand::createReg(ReturnReg));
     break;
   }
-
   // TAILJMPd, TAILJMPd64, TailJMPd_cc - Lower to the correct jump
   // instruction.
   case X86::TAILJMPr:
@@ -566,13 +478,11 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
-
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC:
     assert(OutMI.getNumOperands() == 2 && "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
-
   case X86::TAILJMPm:
   case X86::TAILJMPm64:
   case X86::TAILJMPm64_REX:
@@ -580,131 +490,28 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
            "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
-
-  // We don't currently select the correct instruction form for instructions
-  // which have a short %eax, etc. form. Handle this by custom lowering, for
-  // now.
-  //
-  // Note, we are currently not handling the following instructions:
-  // MOV64ao8, MOV64o8a
-  // XCHG16ar, XCHG32ar, XCHG64ar
-  case X86::MOV8mr_NOREX:
-  case X86::MOV8mr:
-  case X86::MOV8rm_NOREX:
-  case X86::MOV8rm:
-  case X86::MOV16mr:
-  case X86::MOV16rm:
-  case X86::MOV32mr:
-  case X86::MOV32rm: {
-    unsigned NewOpc;
-    switch (OutMI.getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::MOV8mr_NOREX:
-    case X86::MOV8mr:  NewOpc = X86::MOV8o32a; break;
-    case X86::MOV8rm_NOREX:
-    case X86::MOV8rm:  NewOpc = X86::MOV8ao32; break;
-    case X86::MOV16mr: NewOpc = X86::MOV16o32a; break;
-    case X86::MOV16rm: NewOpc = X86::MOV16ao32; break;
-    case X86::MOV32mr: NewOpc = X86::MOV32o32a; break;
-    case X86::MOV32rm: NewOpc = X86::MOV32ao32; break;
-    }
-    SimplifyShortMoveForm(AsmPrinter, OutMI, NewOpc);
-    break;
-  }
-
-  case X86::ADC8ri: case X86::ADC16ri: case X86::ADC32ri: case X86::ADC64ri32:
-  case X86::ADD8ri: case X86::ADD16ri: case X86::ADD32ri: case X86::ADD64ri32:
-  case X86::AND8ri: case X86::AND16ri: case X86::AND32ri: case X86::AND64ri32:
-  case X86::CMP8ri: case X86::CMP16ri: case X86::CMP32ri: case X86::CMP64ri32:
-  case X86::OR8ri:  case X86::OR16ri:  case X86::OR32ri:  case X86::OR64ri32:
-  case X86::SBB8ri: case X86::SBB16ri: case X86::SBB32ri: case X86::SBB64ri32:
-  case X86::SUB8ri: case X86::SUB16ri: case X86::SUB32ri: case X86::SUB64ri32:
-  case X86::TEST8ri:case X86::TEST16ri:case X86::TEST32ri:case X86::TEST64ri32:
-  case X86::XOR8ri: case X86::XOR16ri: case X86::XOR32ri: case X86::XOR64ri32: {
-    unsigned NewOpc;
-    switch (OutMI.getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::ADC8ri:     NewOpc = X86::ADC8i8;    break;
-    case X86::ADC16ri:    NewOpc = X86::ADC16i16;  break;
-    case X86::ADC32ri:    NewOpc = X86::ADC32i32;  break;
-    case X86::ADC64ri32:  NewOpc = X86::ADC64i32;  break;
-    case X86::ADD8ri:     NewOpc = X86::ADD8i8;    break;
-    case X86::ADD16ri:    NewOpc = X86::ADD16i16;  break;
-    case X86::ADD32ri:    NewOpc = X86::ADD32i32;  break;
-    case X86::ADD64ri32:  NewOpc = X86::ADD64i32;  break;
-    case X86::AND8ri:     NewOpc = X86::AND8i8;    break;
-    case X86::AND16ri:    NewOpc = X86::AND16i16;  break;
-    case X86::AND32ri:    NewOpc = X86::AND32i32;  break;
-    case X86::AND64ri32:  NewOpc = X86::AND64i32;  break;
-    case X86::CMP8ri:     NewOpc = X86::CMP8i8;    break;
-    case X86::CMP16ri:    NewOpc = X86::CMP16i16;  break;
-    case X86::CMP32ri:    NewOpc = X86::CMP32i32;  break;
-    case X86::CMP64ri32:  NewOpc = X86::CMP64i32;  break;
-    case X86::OR8ri:      NewOpc = X86::OR8i8;     break;
-    case X86::OR16ri:     NewOpc = X86::OR16i16;   break;
-    case X86::OR32ri:     NewOpc = X86::OR32i32;   break;
-    case X86::OR64ri32:   NewOpc = X86::OR64i32;   break;
-    case X86::SBB8ri:     NewOpc = X86::SBB8i8;    break;
-    case X86::SBB16ri:    NewOpc = X86::SBB16i16;  break;
-    case X86::SBB32ri:    NewOpc = X86::SBB32i32;  break;
-    case X86::SBB64ri32:  NewOpc = X86::SBB64i32;  break;
-    case X86::SUB8ri:     NewOpc = X86::SUB8i8;    break;
-    case X86::SUB16ri:    NewOpc = X86::SUB16i16;  break;
-    case X86::SUB32ri:    NewOpc = X86::SUB32i32;  break;
-    case X86::SUB64ri32:  NewOpc = X86::SUB64i32;  break;
-    case X86::TEST8ri:    NewOpc = X86::TEST8i8;   break;
-    case X86::TEST16ri:   NewOpc = X86::TEST16i16; break;
-    case X86::TEST32ri:   NewOpc = X86::TEST32i32; break;
-    case X86::TEST64ri32: NewOpc = X86::TEST64i32; break;
-    case X86::XOR8ri:     NewOpc = X86::XOR8i8;    break;
-    case X86::XOR16ri:    NewOpc = X86::XOR16i16;  break;
-    case X86::XOR32ri:    NewOpc = X86::XOR32i32;  break;
-    case X86::XOR64ri32:  NewOpc = X86::XOR64i32;  break;
-    }
-    SimplifyShortImmForm(OutMI, NewOpc);
-    break;
-  }
-  case X86::VCMPPDrri:
-  case X86::VCMPPDYrri:
-  case X86::VCMPPSrri:
-  case X86::VCMPPSYrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr: {
-    // Swap the operands if it will enable a 2 byte VEX encoding.
-    // FIXME: Change the immediate to improve opportunities?
-    if (!X86II::isX86_64ExtendedReg(OutMI.getOperand(1).getReg()) &&
-        X86II::isX86_64ExtendedReg(OutMI.getOperand(2).getReg())) {
-      unsigned Imm = MI->getOperand(3).getImm() & 0x7;
-      switch (Imm) {
-      default: break;
-      case 0x00: // EQUAL
-      case 0x03: // UNORDERED
-      case 0x04: // NOT EQUAL
-      case 0x07: // ORDERED
-        std::swap(OutMI.getOperand(1), OutMI.getOperand(2));
-        break;
-      }
-    }
-    break;
-  }
   case X86::MASKMOVDQU:
   case X86::VMASKMOVDQU:
     if (In64BitMode)
       OutMI.setFlags(X86::IP_HAS_AD_SIZE);
     break;
-
-  default: {
+  case X86::BSF16rm:
+  case X86::BSF16rr:
+  case X86::BSF32rm:
+  case X86::BSF32rr:
+  case X86::BSF64rm:
+  case X86::BSF64rr: {
     // Add an REP prefix to BSF instructions so that new processors can
     // recognize as TZCNT, which has better performance than BSF.
-    if (X86::isBSF(OutMI.getOpcode()) && !MF.getFunction().hasOptSize()) {
-      // BSF and TZCNT have different interpretations on ZF bit. So make sure
-      // it won't be used later.
-      const MachineOperand *FlagDef = MI->findRegisterDefOperand(X86::EFLAGS);
-      if (FlagDef && FlagDef->isDead())
-        OutMI.setFlags(X86::IP_HAS_REPEAT);
-    }
+    // BSF and TZCNT have different interpretations on ZF bit. So make sure
+    // it won't be used later.
+    const MachineOperand *FlagDef = MI->findRegisterDefOperand(X86::EFLAGS);
+    if (!MF.getFunction().hasOptSize() && FlagDef && FlagDef->isDead())
+      OutMI.setFlags(X86::IP_HAS_REPEAT);
     break;
   }
+  default:
+    break;
   }
 }
 

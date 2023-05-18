@@ -34,6 +34,8 @@ public:
 
   bool useFPForScavengingIndex(const MachineFunction &MF) const override;
 
+  bool supportsBackwardScavenger() const override { return true; }
+
   bool eliminateFrameIndex(MachineBasicBlock::iterator II,
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
