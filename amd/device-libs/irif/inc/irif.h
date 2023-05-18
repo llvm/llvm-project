@@ -11,7 +11,6 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 #define REQUIRES_16BIT_INSTS __attribute__((target("16-bit-insts")))
-#define REQUIRES_GFX9_INSTS __attribute__((target("gfx9-insts")))
 #define REQUIRES_WAVE32 __attribute__((target("wavefrontsize32")))
 #define REQUIRES_WAVE64 __attribute__((target("wavefrontsize64")))
 
