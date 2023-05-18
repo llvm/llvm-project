@@ -2045,28 +2045,18 @@ let HasMasked = false, HasVL = false, IRName = "" in {
             //     --(bitcast)--------> <vscale x 64 x i1>
             //     --(vector_extract)-> <vscale x  8 x i1>
             llvm::Value *BitCast = Builder.CreateBitCast(Ops[0], Boolean64Ty);
-
-            ID = Intrinsic::vector_extract;
-            llvm::Value *Operands[2];
-            Operands[0] = BitCast;
-            Operands[1] = ConstantInt::get(Int64Ty, 0);
-            IntrinsicTypes = {ResultType, Boolean64Ty};
-
-            return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Operands, "");
+            return Builder.CreateExtractVector(ResultType, BitCast,
+                                               ConstantInt::get(Int64Ty, 0));
           } else {
             // Casting from vector boolean -> m1 vector integer
             // Ex: <vscale x  1 x i1>
             //       --(vector_insert)-> <vscale x 64 x i1>
             //       --(bitcast)-------> <vscale x  8 x i8>
-            ID = Intrinsic::vector_insert;
-            llvm::Value *Operands[3];
-            Operands[0] = llvm::PoisonValue::get(Boolean64Ty);
-            Operands[1] = Ops[0];
-            Operands[2] = ConstantInt::get(Int64Ty, 0);
-            IntrinsicTypes = {Boolean64Ty, Ops[0]->getType()};
             llvm::Value *Boolean64Val =
-              Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Operands, "");
-
+              Builder.CreateInsertVector(Boolean64Ty,
+                                         llvm::PoisonValue::get(Boolean64Ty),
+                                         Ops[0],
+                                         ConstantInt::get(Int64Ty, 0));
             return Builder.CreateBitCast(Boolean64Val, ResultType);
           }
         }
@@ -2151,10 +2141,8 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vlmul_trunc_v", OverloadedName = "vlmul_trunc",
       MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{ {
-        ID = Intrinsic::vector_extract;
-        IntrinsicTypes = {ResultType, Ops[0]->getType()};
-        Ops.push_back(ConstantInt::get(Int64Ty, 0));
-        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+        return Builder.CreateExtractVector(ResultType, Ops[0],
+                                           ConstantInt::get(Int64Ty, 0));
       } }] in {
     foreach dst_lmul = ["(SFixedLog2LMUL:-3)", "(SFixedLog2LMUL:-2)", "(SFixedLog2LMUL:-1)",
                         "(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
@@ -2170,12 +2158,9 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vlmul_ext_v", OverloadedName = "vlmul_ext",
       MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
-        ID = Intrinsic::vector_insert;
-        IntrinsicTypes = {ResultType, Ops[0]->getType()};
-        Ops.push_back(llvm::PoisonValue::get(ResultType));
-        std::swap(Ops[0], Ops[1]);
-        Ops.push_back(ConstantInt::get(Int64Ty, 0));
-        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+        return Builder.CreateInsertVector(ResultType,
+                                          llvm::PoisonValue::get(ResultType),
+                                          Ops[0], ConstantInt::get(Int64Ty, 0));
       }] in {
     foreach dst_lmul = ["(LFixedLog2LMUL:-2)", "(LFixedLog2LMUL:-1)", "(LFixedLog2LMUL:-0)",
                         "(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
@@ -2189,7 +2174,6 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vget_v", MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
-        ID = Intrinsic::vector_extract;
         auto *VecTy = cast<ScalableVectorType>(ResultType);
         auto *OpVecTy = cast<ScalableVectorType>(Ops[0]->getType());
         // Mask to only valid indices.
@@ -2200,8 +2184,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         Ops[1] = Builder.CreateMul(Ops[1],
                                    ConstantInt::get(Ops[1]->getType(),
                                                     VecTy->getMinNumElements()));
-        IntrinsicTypes = {ResultType, Ops[0]->getType()};
-        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+        return Builder.CreateExtractVector(ResultType, Ops[0], Ops[1]);
       }
       }] in {
     foreach dst_lmul = ["(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
@@ -2213,8 +2196,6 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vset_v", Log2LMUL = [0, 1, 2], MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
-        ID = Intrinsic::vector_insert;
-        IntrinsicTypes = {ResultType, Ops[2]->getType()};
         auto *ResVecTy = cast<ScalableVectorType>(ResultType);
         auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
         // Mask to only valid indices.
@@ -2225,8 +2206,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
         Ops[1] = Builder.CreateMul(Ops[1],
                                    ConstantInt::get(Ops[1]->getType(),
                                                     VecTy->getMinNumElements()));
-        std::swap(Ops[1], Ops[2]);
-        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+        return Builder.CreateInsertVector(ResultType, Ops[0], Ops[2], Ops[1]);
       }
       }] in {
     foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {

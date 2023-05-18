@@ -328,10 +328,4 @@ static __inline int __get_cpuid_count (unsigned int __leaf,
     return 1;
 }
 
-static __inline void __cpuidex (int __cpu_info[4], int __leaf, int __subleaf)
-{
-  __cpuid_count(__leaf, __subleaf, __cpu_info[0], __cpu_info[1], __cpu_info[2],
-                __cpu_info[3]);
-}
-
 #endif /* __CPUID_H */
