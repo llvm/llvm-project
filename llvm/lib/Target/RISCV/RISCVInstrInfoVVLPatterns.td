@@ -2395,7 +2395,7 @@ foreach vti = AllIntegerVectors in {
                 vti.RegClass:$rd, vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
 }
 
-foreach vti = !listconcat(AllIntegerVectors, AllFloatVectors) in {
+foreach vti = AllVectors in {
   def : Pat<(vti.Vector (riscv_slideup_vl (vti.Vector vti.RegClass:$rs3),
                                           (vti.Vector vti.RegClass:$rs1),
                                           uimm5:$rs2, (vti.Mask true_mask),
