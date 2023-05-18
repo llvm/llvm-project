@@ -12,8 +12,10 @@
 
 #include "X86EncodingOptimization.h"
 #include "X86BaseInfo.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -286,5 +288,63 @@ bool X86::optimizeINCDEC(MCInst &MI, bool In64BitMode) {
     FROM_TO(INC32r, INC32r_alt)
   }
   MI.setOpcode(NewOpc);
+  return true;
+}
+
+/// Simplify things like MOV32rm to MOV32o32a.
+bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
+  // Don't make these simplifications in 64-bit mode; other assemblers don't
+  // perform them because they make the code larger.
+  if (In64BitMode)
+    return false;
+  unsigned NewOpc;
+  // We don't currently select the correct instruction form for instructions
+  // which have a short %eax, etc. form. Handle this by custom lowering, for
+  // now.
+  //
+  // Note, we are currently not handling the following instructions:
+  // MOV64ao8, MOV64o8a
+  // XCHG16ar, XCHG32ar, XCHG64ar
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+    FROM_TO(MOV8mr_NOREX, MOV8o32a)
+    FROM_TO(MOV8mr, MOV8o32a)
+    FROM_TO(MOV8rm_NOREX, MOV8ao32)
+    FROM_TO(MOV8rm, MOV8ao32)
+    FROM_TO(MOV16mr, MOV16o32a)
+    FROM_TO(MOV16rm, MOV16ao32)
+    FROM_TO(MOV32mr, MOV32o32a)
+    FROM_TO(MOV32rm, MOV32ao32)
+  }
+  bool IsStore = MI.getOperand(0).isReg() && MI.getOperand(1).isReg();
+  unsigned AddrBase = IsStore;
+  unsigned RegOp = IsStore ? 0 : 5;
+  unsigned AddrOp = AddrBase + 3;
+  // Check whether the destination register can be fixed.
+  unsigned Reg = MI.getOperand(RegOp).getReg();
+  if (Reg != X86::AL && Reg != X86::AX && Reg != X86::EAX && Reg != X86::RAX)
+    return false;
+  // Check whether this is an absolute address.
+  // FIXME: We know TLVP symbol refs aren't, but there should be a better way
+  // to do this here.
+  bool Absolute = true;
+  if (MI.getOperand(AddrOp).isExpr()) {
+    const MCExpr *MCE = MI.getOperand(AddrOp).getExpr();
+    if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(MCE))
+      if (SRE->getKind() == MCSymbolRefExpr::VK_TLVP)
+        Absolute = false;
+  }
+  if (Absolute && (MI.getOperand(AddrBase + X86::AddrBaseReg).getReg() != 0 ||
+                   MI.getOperand(AddrBase + X86::AddrScaleAmt).getImm() != 1 ||
+                   MI.getOperand(AddrBase + X86::AddrIndexReg).getReg() != 0))
+    return false;
+  // If so, rewrite the instruction.
+  MCOperand Saved = MI.getOperand(AddrOp);
+  MCOperand Seg = MI.getOperand(AddrBase + X86::AddrSegmentReg);
+  MI.clear();
+  MI.setOpcode(NewOpc);
+  MI.addOperand(Saved);
+  MI.addOperand(Seg);
   return true;
 }
