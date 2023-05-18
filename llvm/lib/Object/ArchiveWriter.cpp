@@ -44,6 +44,7 @@
 #endif
 
 using namespace llvm;
+using namespace llvm::object;
 
 struct SymMap {
   bool UseECMap;
@@ -435,14 +436,15 @@ static uint64_t computeECSymbolsSize(SymMap &SymMap,
 
 static void writeSymbolTableHeader(raw_ostream &Out, object::Archive::Kind Kind,
                                    bool Deterministic, uint64_t Size,
-                                   uint64_t PrevMemberOffset = 0) {
+                                   uint64_t PrevMemberOffset = 0,
+                                   uint64_t NextMemberOffset = 0) {
   if (isBSDLike(Kind)) {
     const char *Name = is64BitKind(Kind) ? "__.SYMDEF_64" : "__.SYMDEF";
     printBSDMemberHeader(Out, Out.tell(), Name, now(Deterministic), 0, 0, 0,
                          Size);
   } else if (isAIXBigArchive(Kind)) {
-    printBigArchiveMemberHeader(Out, "", now(Deterministic), 0, 0,
-                                0, Size, PrevMemberOffset, 0);
+    printBigArchiveMemberHeader(Out, "", now(Deterministic), 0, 0, 0, Size,
+                                PrevMemberOffset, NextMemberOffset);
   } else {
     const char *Name = is64BitKind(Kind) ? "/SYM64" : "";
     printGNUSmallMemberHeader(Out, Name, now(Deterministic), 0, 0, 0, Size);
@@ -474,24 +476,60 @@ static uint64_t computeHeadersSize(object::Archive::Kind Kind,
   return Size + StringMemberSize;
 }
 
+static Expected<std::unique_ptr<SymbolicFile>>
+getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context) {
+  const file_magic Type = identify_magic(Buf.getBuffer());
+  // Don't attempt to read non-symbolic file types.
+  if (!object::SymbolicFile::isSymbolicFile(Type, &Context))
+    return nullptr;
+  if (Type == file_magic::bitcode) {
+    auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
+        Buf, file_magic::bitcode, &Context);
+    if (!ObjOrErr)
+      return ObjOrErr.takeError();
+    return std::move(*ObjOrErr);
+  } else {
+    auto ObjOrErr = object::SymbolicFile::createSymbolicFile(Buf);
+    if (!ObjOrErr)
+      return ObjOrErr.takeError();
+    return std::move(*ObjOrErr);
+  }
+}
+
+static Expected<bool> is64BitSymbolicFile(const StringRef &ObjStringRef) {
+  MemoryBufferRef ObjMbf(ObjStringRef, "");
+  // In the scenario when LLVMContext is populated SymbolicFile will contain a
+  // reference to it, thus SymbolicFile should be destroyed first.
+  LLVMContext Context;
+  Expected<std::unique_ptr<SymbolicFile>> ObjOrErr =
+      getSymbolicFile(ObjMbf, Context);
+  if (!ObjOrErr)
+    return ObjOrErr.takeError();
+
+  // Treat non-symbolic file types as not 64-bits.
+  if (!*ObjOrErr)
+    return false;
+
+  return (*ObjOrErr)->is64Bit();
+}
+
 static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
                              bool Deterministic, ArrayRef<MemberData> Members,
                              StringRef StringTable, uint64_t MembersOffset,
-                             uint64_t PrevMemberOffset = 0) {
+                             unsigned NumSyms, uint64_t PrevMemberOffset = 0,
+                             uint64_t NextMemberOffset = 0,
+                             bool Is64Bit = false) {
   // We don't write a symbol table on an archive with no members -- except on
   // Darwin, where the linker will abort unless the archive has a symbol table.
   if (StringTable.empty() && !isDarwin(Kind) && !isCOFFArchive(Kind))
     return;
 
-  unsigned NumSyms = 0;
-  for (const MemberData &M : Members)
-    NumSyms += M.Symbols.size();
-
   uint64_t OffsetSize = is64BitKind(Kind) ? 8 : 4;
   uint32_t Pad;
   uint64_t Size = computeSymbolTableSize(Kind, NumSyms, OffsetSize,
                                          StringTable.size(), &Pad);
-  writeSymbolTableHeader(Out, Kind, Deterministic, Size, PrevMemberOffset);
+  writeSymbolTableHeader(Out, Kind, Deterministic, Size, PrevMemberOffset,
+                         NextMemberOffset);
 
   if (isBSDLike(Kind))
     printNBits(Out, Kind, NumSyms * 2 * OffsetSize);
@@ -500,6 +538,19 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
 
   uint64_t Pos = MembersOffset;
   for (const MemberData &M : Members) {
+    if (isAIXBigArchive(Kind)) {
+      Expected<bool> Is64BitOrErr = is64BitSymbolicFile(M.Data);
+      // If there is an error, the error will have been emitted when
+      // 'computeMemberData' called the 'getSymbol' function, so don't need to
+      // handle it here.
+      if (!Is64BitOrErr)
+        cantFail(Is64BitOrErr.takeError());
+      if (*Is64BitOrErr != Is64Bit) {
+        Pos += M.Header.size() + M.Data.size() + M.Padding.size();
+        continue;
+      }
+    }
+
     for (unsigned StringOffset : M.Symbols) {
       if (isBSDLike(Kind))
         printNBits(Out, Kind, StringOffset);
@@ -581,29 +632,21 @@ static bool isECObject(object::SymbolicFile &Obj) {
 static Expected<std::vector<unsigned>>
 getSymbols(MemoryBufferRef Buf, uint16_t Index, raw_ostream &SymNames,
            SymMap *SymMap, bool &HasObject) {
-  std::vector<unsigned> Ret;
-
   // In the scenario when LLVMContext is populated SymbolicFile will contain a
   // reference to it, thus SymbolicFile should be destroyed first.
   LLVMContext Context;
-  std::unique_ptr<object::SymbolicFile> Obj;
 
-  const file_magic Type = identify_magic(Buf.getBuffer());
-  // Treat unsupported file types as having no symbols.
-  if (!object::SymbolicFile::isSymbolicFile(Type, &Context))
+  std::vector<unsigned> Ret;
+  Expected<std::unique_ptr<SymbolicFile>> ObjOrErr =
+      getSymbolicFile(Buf, Context);
+  if (!ObjOrErr)
+    return ObjOrErr.takeError();
+
+  // If the member is non-symbolic file, treat it as having no symbols.
+  if (!*ObjOrErr)
     return Ret;
-  if (Type == file_magic::bitcode) {
-    auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
-        Buf, file_magic::bitcode, &Context);
-    if (!ObjOrErr)
-      return ObjOrErr.takeError();
-    Obj = std::move(*ObjOrErr);
-  } else {
-    auto ObjOrErr = object::SymbolicFile::createSymbolicFile(Buf);
-    if (!ObjOrErr)
-      return ObjOrErr.takeError();
-    Obj = std::move(*ObjOrErr);
-  }
+
+  std::unique_ptr<object::SymbolicFile> Obj = std::move(*ObjOrErr);
 
   std::map<std::string, uint16_t> *Map = nullptr;
   if (SymMap)
@@ -853,12 +896,28 @@ static Error writeArchiveToStream(raw_ostream &Out,
   uint64_t LastMemberEndOffset = 0;
   uint64_t LastMemberHeaderOffset = 0;
   uint64_t NumSyms = 0;
+  uint64_t NumSyms32 = 0; // Store symbol number of 32-bit member files.
+
   for (const auto &M : Data) {
     // Record the start of the member's offset
     LastMemberHeaderOffset = LastMemberEndOffset;
     // Account for the size of each part associated with the member.
     LastMemberEndOffset += M.Header.size() + M.Data.size() + M.Padding.size();
     NumSyms += M.Symbols.size();
+
+    // AIX big archive files may contain two global symbol tables. The
+    // first global symbol table locates 32-bit file members that define global
+    // symbols; the second global symbol table does the same for 64-bit file
+    // members. As a big archive can have both 32-bit and 64-bit file members,
+    // we need to know the number of symbols in each symbol table individually.
+    if (isAIXBigArchive(Kind) && WriteSymtab) {
+      Expected<bool> Is64BitOrErr = is64BitSymbolicFile(M.Data);
+      if (Error E = Is64BitOrErr.takeError())
+        return E;
+
+      if (!*Is64BitOrErr)
+        NumSyms32 += M.Symbols.size();
+    }
   }
 
   std::optional<uint64_t> HeadersSize;
@@ -909,7 +968,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
             Kind, Data.size(), StringTableSize, NumSyms, SymNamesBuf.size(),
             isCOFFArchive(Kind) ? &SymMap : nullptr);
       writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf,
-                       *HeadersSize);
+                       *HeadersSize, NumSyms);
 
       if (isCOFFArchive(Kind))
         writeSymbolMap(Out, Kind, Deterministic, Data, SymMap, *HeadersSize);
@@ -953,11 +1012,49 @@ static Error writeArchiveToStream(raw_ostream &Out,
                                20 * MemberOffsets.size() +
                                MemberTableNameStrTblSize;
 
+    SmallString<0> SymNamesBuf32;
+    SmallString<0> SymNamesBuf64;
+    raw_svector_ostream SymNames32(SymNamesBuf32);
+    raw_svector_ostream SymNames64(SymNamesBuf64);
+
+    if (WriteSymtab && NumSyms)
+      // Generate the symbol names for the members.
+      for (const NewArchiveMember &M : NewMembers) {
+        MemoryBufferRef Buf = M.Buf->getMemBufferRef();
+        Expected<bool> Is64BitOrErr = is64BitSymbolicFile(Buf.getBuffer());
+        if (!Is64BitOrErr)
+          return Is64BitOrErr.takeError();
+
+        bool HasObject;
+        Expected<std::vector<unsigned>> SymbolsOrErr =
+            getSymbols(Buf, 0, *Is64BitOrErr ? SymNames64 : SymNames32, nullptr,
+                       HasObject);
+        if (!SymbolsOrErr)
+          return SymbolsOrErr.takeError();
+      }
+
+    uint64_t MemberTableEndOffset =
+        LastMemberEndOffset +
+        alignTo(sizeof(object::BigArMemHdrType) + MemberTableSize, 2);
+
+    // In AIX OS, The 'GlobSymOffset' field in the fixed-length header contains
+    // the offset to the 32-bit global symbol table, and the 'GlobSym64Offset'
+    // contains the offset to the 64-bit global symbol table.
     uint64_t GlobalSymbolOffset =
-        (WriteSymtab && NumSyms > 0)
-            ? LastMemberEndOffset +
-                  alignTo(sizeof(object::BigArMemHdrType) + MemberTableSize, 2)
-            : 0;
+        (WriteSymtab && NumSyms32 > 0) ? MemberTableEndOffset : 0;
+
+    uint64_t GlobalSymbolOffset64 = 0;
+    uint64_t NumSyms64 = NumSyms - NumSyms32;
+    if (WriteSymtab && NumSyms64 > 0) {
+      if (GlobalSymbolOffset == 0)
+        GlobalSymbolOffset64 = MemberTableEndOffset;
+      else
+        // If there is a global symbol table for 32-bit members,
+        // the 64-bit global symbol table is after the 32-bit one.
+        GlobalSymbolOffset64 =
+            GlobalSymbolOffset + sizeof(object::BigArMemHdrType) +
+            (NumSyms32 + 1) * 8 + alignTo(SymNamesBuf32.size(), 2);
+    }
 
     // Fixed Sized Header.
     printWithSpacePadding(Out, NewMembers.size() ? LastMemberEndOffset : 0,
@@ -965,9 +1062,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
     // If there are no file members in the archive, there will be no global
     // symbol table.
     printWithSpacePadding(Out, GlobalSymbolOffset, 20);
-    printWithSpacePadding(
-        Out, 0,
-        20); // Offset to 64 bits global symbol table - Not supported yet
+    printWithSpacePadding(Out, GlobalSymbolOffset64, 20);
     printWithSpacePadding(
         Out, NewMembers.size() ? sizeof(object::BigArchive::FixLenHdr) : 0,
         20); // Offset to first archive member
@@ -987,7 +1082,8 @@ static Error writeArchiveToStream(raw_ostream &Out,
       // Member table.
       printBigArchiveMemberHeader(Out, "", sys::toTimePoint(0), 0, 0, 0,
                                   MemberTableSize, LastMemberHeaderOffset,
-                                  GlobalSymbolOffset);
+                                  GlobalSymbolOffset ? GlobalSymbolOffset
+                                                     : GlobalSymbolOffset64);
       printWithSpacePadding(Out, MemberOffsets.size(), 20); // Number of members
       for (uint64_t MemberOffset : MemberOffsets)
         printWithSpacePadding(Out, MemberOffset,
@@ -999,9 +1095,25 @@ static Error writeArchiveToStream(raw_ostream &Out,
         Out << '\0'; // Name table must be tail padded to an even number of
                      // bytes.
 
-      if (WriteSymtab && NumSyms > 0)
-        writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf,
-                         *HeadersSize, LastMemberEndOffset);
+      if (WriteSymtab) {
+        // Write global symbol table for 32-bit file members.
+        if (GlobalSymbolOffset) {
+          writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf32,
+                           *HeadersSize, NumSyms32, LastMemberEndOffset,
+                           GlobalSymbolOffset64);
+          // Add padding between the symbol tables, if needed.
+          if (GlobalSymbolOffset64 && (SymNamesBuf32.size() % 2))
+            Out << '\0';
+        }
+
+        // Write global symbol table for 64-bit file members.
+        if (GlobalSymbolOffset64)
+          writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf64,
+                           *HeadersSize, NumSyms64,
+                           GlobalSymbolOffset ? GlobalSymbolOffset
+                                              : LastMemberEndOffset,
+                           0, true);
+      }
     }
   }
   Out.flush();
