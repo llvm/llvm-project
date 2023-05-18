@@ -30,4 +30,4 @@
 // CHECK-NOT: "-fprofile{{[^"]*}}"
 // CHECK: "-triple" "x86_64-unknown-linux-gnu"
 // PROF:      "-fprofile{{.*}}"
-// GCOV:      "-ftest-coverage"
+// GCOV:      "-coverage-notes-file"
