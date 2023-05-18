@@ -486,6 +486,10 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   if (X86::optimizeMOVSX(OutMI))
     return;
 
+  bool In64BitMode = AsmPrinter.getSubtarget().is64Bit();
+  if (X86::optimizeINCDEC(OutMI, In64BitMode))
+    return;
+
   // Handle a few special cases to eliminate operand modifiers.
   switch (OutMI.getOpcode()) {
   case X86::LEA64_32r:
@@ -545,7 +549,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   case X86::CATCHRET: {
     // Replace CATCHRET with the appropriate RET.
     const X86Subtarget &Subtarget = AsmPrinter.getSubtarget();
-    unsigned ReturnReg = Subtarget.is64Bit() ? X86::RAX : X86::EAX;
+    unsigned ReturnReg = In64BitMode ? X86::RAX : X86::EAX;
     OutMI = MCInst();
     OutMI.setOpcode(getRetOpcode(Subtarget));
     OutMI.addOperand(MCOperand::createReg(ReturnReg));
@@ -575,24 +579,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     assert(OutMI.getNumOperands() == X86::AddrNumOperands &&
            "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
-    break;
-
-  case X86::DEC16r:
-  case X86::DEC32r:
-  case X86::INC16r:
-  case X86::INC32r:
-    // If we aren't in 64-bit mode we can use the 1-byte inc/dec instructions.
-    if (!AsmPrinter.getSubtarget().is64Bit()) {
-      unsigned Opcode;
-      switch (OutMI.getOpcode()) {
-      default: llvm_unreachable("Invalid opcode");
-      case X86::DEC16r: Opcode = X86::DEC16r_alt; break;
-      case X86::DEC32r: Opcode = X86::DEC32r_alt; break;
-      case X86::INC16r: Opcode = X86::INC16r_alt; break;
-      case X86::INC32r: Opcode = X86::INC32r_alt; break;
-      }
-      OutMI.setOpcode(Opcode);
-    }
     break;
 
   // We don't currently select the correct instruction form for instructions
@@ -703,7 +689,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   }
   case X86::MASKMOVDQU:
   case X86::VMASKMOVDQU:
-    if (AsmPrinter.getSubtarget().is64Bit())
+    if (In64BitMode)
       OutMI.setFlags(X86::IP_HAS_AD_SIZE);
     break;
 
