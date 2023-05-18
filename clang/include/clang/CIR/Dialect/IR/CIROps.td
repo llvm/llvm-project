@@ -102,8 +102,8 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
                          [Pure, SameFirstOperandAndResultType]> {
   let summary = "Pointer access with stride";
   let description = [{
-    Given a base pointer as operand, provides a new pointer after applying
-    a stride. Currently only used for array subscripts.
+    Given a base pointer as first operand, provides a new pointer after applying
+    a stride (second operand).
 
     ```mlir
     %3 = cir.const(0 : i32) : i32
