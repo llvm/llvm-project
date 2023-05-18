@@ -1335,3 +1335,25 @@ acc.private.recipe @privatization_struct_i32_i64 : !llvm.struct<(i32, i32)> init
 // CHECK: ^bb0(%[[ARG0:.*]]: !llvm.struct<(i32, i32)>):
 // CHECK:   func.call @destroy_struct(%[[ARG0]]) : (!llvm.struct<(i32, i32)>) -> ()
 // CHECK:   acc.terminator
+
+// -----
+
+acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
+^bb0(%0: i64):
+  %1 = arith.constant 0 : i64
+  acc.yield %1 : i64
+} combiner {
+^bb0(%0: i64, %1: i64):
+  %2 = arith.addi %0, %1 : i64
+  acc.yield %2 : i64
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator <add> init {
+// CHECK:       ^bb0(%{{.*}}: i64):
+// CHECK:         %[[C0:.*]] = arith.constant 0 : i64
+// CHECK:         acc.yield %[[C0]] : i64
+// CHECK:       } combiner {
+// CHECK:       ^bb0(%[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64):
+// CHECK:         %[[RES:.*]] = arith.addi %[[ARG0]], %[[ARG1]] : i64
+// CHECK:         acc.yield %[[RES]] : i64
+// CHECK:       }
