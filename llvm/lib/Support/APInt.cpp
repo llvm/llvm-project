@@ -2136,8 +2136,8 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
     this->negate();
 }
 
-void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
-                     bool Signed, bool formatAsCLiteral) const {
+void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
+                     bool formatAsCLiteral, bool UpperCase) const {
   assert((Radix == 10 || Radix == 8 || Radix == 16 || Radix == 2 ||
           Radix == 36) &&
          "Radix should be 2, 8, 10, 16, or 36!");
@@ -2173,7 +2173,9 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
     return;
   }
 
-  static const char Digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  static const char BothDigits[] = "0123456789abcdefghijklmnopqrstuvwxyz"
+                                   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const char *Digits = BothDigits + (UpperCase ? 36 : 0);
 
   if (isSingleWord()) {
     char Buffer[65];
