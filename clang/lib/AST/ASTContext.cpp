@@ -9594,8 +9594,6 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
-        // Predicates have the same representation as uint8 so we also have to
-        // check the kind to make these types incompatible.
         if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector)
           return FirstType->isRVVVLSBuiltinType() &&
                  VT->getElementType().getCanonicalType() ==
