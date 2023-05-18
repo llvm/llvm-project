@@ -890,7 +890,8 @@ public:
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
-  mlir::LogicalResult buildStmt(const clang::Stmt *S, bool useCurrentScope);
+  mlir::LogicalResult buildStmt(const clang::Stmt *S, bool useCurrentScope,
+                                ArrayRef<const Attr *> Attrs = std::nullopt);
 
   mlir::LogicalResult buildSimpleStmt(const clang::Stmt *S,
                                       bool useCurrentScope);
@@ -898,6 +899,9 @@ public:
   mlir::LogicalResult buildForStmt(const clang::ForStmt &S);
   mlir::LogicalResult buildWhileStmt(const clang::WhileStmt &S);
   mlir::LogicalResult buildDoStmt(const clang::DoStmt &S);
+  mlir::LogicalResult
+  buildCXXForRangeStmt(const CXXForRangeStmt &S,
+                       ArrayRef<const Attr *> Attrs = std::nullopt);
   mlir::LogicalResult buildSwitchStmt(const clang::SwitchStmt &S);
 
   mlir::LogicalResult buildCompoundStmt(const clang::CompoundStmt &S);
