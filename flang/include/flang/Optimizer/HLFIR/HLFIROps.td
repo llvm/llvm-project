@@ -606,6 +606,11 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects]> {
     The shape and typeparams operands represent the extents and type
     parameters of the resulting array value.
 
+    Currently there is no way to control the iteration order of a hlfir
+    elemental operation and so operations in the body of the elemental must
+    not have side effects. If this is changed, an attribute must be added so
+    that the elemental inlining pass can skip these impure elementals.
+
 
     Example: Y + X,  with Integer :: X(10, 20), Y(10,20)
     ```
@@ -670,9 +675,17 @@ def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]
   let description = [{
     Given an hlfir.expr array value, hlfir.apply allow retrieving
     the value for an element given one based indices.
+
     When hlfir.apply is used on an hlfir.elemental, and if the hlfir.elemental
     operation evaluation can be moved to the location of the hlfir.apply, it is
     as if the hlfir.elemental body was evaluated given the hlfir.apply indices.
+    Therefore, apply operations on hlfir.elemental expressions should be located
+    such that evaluating the hlfir.elemental at the position of the hlfir.apply
+    operation produces the same result as evaluating the hlfir.elemental at its
+    location in the instruction stream. Attention should be paid to
+    hlfir.elemental memory side effects (in practice these are unlikely).
+    "10.1.4 Evaluation of operations" says that expression evaluation shall not
+    impact/be impacted by other expression evaluation in the statement.
   }];
 
   let arguments = (ins hlfir_ExprType:$expr,
