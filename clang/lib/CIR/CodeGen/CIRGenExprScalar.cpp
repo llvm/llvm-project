@@ -258,9 +258,10 @@ public:
     assert(!CGF.getLangOpts().OpenMP && "Not implemented");
     QualType type = E->getSubExpr()->getType();
 
+    int amount = (isInc ? 1 : -1);
     bool atomicPHI = false;
-    mlir::Value value;
-    mlir::Value input;
+    mlir::Value value{};
+    mlir::Value input{};
 
     if (const AtomicType *atomicTy = type->getAs<AtomicType>()) {
       llvm_unreachable("no atomics inc/dec yet");
@@ -310,8 +311,29 @@ public:
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
         value = buildUnaryOp(E, Kind, input);
       }
+      // Next most common: pointer increment.
     } else if (const PointerType *ptr = type->getAs<PointerType>()) {
-      llvm_unreachable("no pointer inc/dec yet");
+      QualType type = ptr->getPointeeType();
+      if (const VariableArrayType *vla =
+              CGF.getContext().getAsVariableArrayType(type)) {
+        // VLA types don't have constant size.
+        llvm_unreachable("NYI");
+      } else if (type->isFunctionType()) {
+        // Arithmetic on function pointers (!) is just +-1.
+        llvm_unreachable("NYI");
+      } else {
+        // For everything else, we can just do a simple increment.
+        auto loc = CGF.getLoc(E->getSourceRange());
+        auto &builder = CGF.getBuilder();
+        auto amt = builder.getInt32(amount, loc);
+        if (CGF.getLangOpts().isSignedOverflowDefined()) {
+          llvm_unreachable("NYI");
+        } else {
+          value = builder.create<mlir::cir::PtrStrideOp>(loc, value.getType(),
+                                                         value, amt);
+          assert(!UnimplementedFeature::emitCheckedInBoundsGEP());
+        }
+      }
     } else if (type->isVectorType()) {
       llvm_unreachable("no vector inc/dec yet");
     } else if (type->isRealFloatingType()) {

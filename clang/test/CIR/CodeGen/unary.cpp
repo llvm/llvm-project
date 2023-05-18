@@ -75,7 +75,6 @@ unsigned dec0() {
 // CHECK: %[[#OUTPUT:]] = cir.load %[[#RET]]
 // CHECK: cir.return %[[#OUTPUT]] : i32
 
-
 unsigned inc1() {
   unsigned a = 1;
   a++;
@@ -136,3 +135,19 @@ unsigned inc2() {
 // CHECK: %[[#OUTPUT:]] = cir.load %[[#RET]]
 // CHECK: cir.return %[[#OUTPUT]] : i32
 
+int *inc_p(int *i) {
+  --i;
+  ++i;
+  return i;
+}
+
+// CHECK: cir.func @_Z5inc_pPi(%arg0: !cir.ptr<i32>
+
+// CHECK:   %[[#i_addr:]] = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["i", init] {alignment = 8 : i64}
+// CHECK:   %[[#i_dec:]] = cir.load %[[#i_addr]] : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
+// CHECK:   %[[#dec_const:]] = cir.const(-1 : i32) : i32
+// CHECK:   = cir.ptr_stride(%[[#i_dec]] : !cir.ptr<i32>, %[[#dec_const]] : i32), !cir.ptr<i32>
+
+// CHECK:   %[[#i_inc:]] = cir.load %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
+// CHECK:   %[[#inc_const:]] = cir.const(1 : i32) : i32
+// CHECK:   = cir.ptr_stride(%[[#i_inc]] : !cir.ptr<i32>, %[[#inc_const]] : i32), !cir.ptr<i32>
