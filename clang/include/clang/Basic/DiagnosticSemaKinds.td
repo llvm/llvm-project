@@ -11279,6 +11279,10 @@ def err_invalid_module_name : Error<"%0 is an invalid name for a module">;
 def err_extern_def_in_header_unit : Error<
   "non-inline external definitions are not permitted in C++ header units">;
 
+def warn_experimental_header_unit : Warning<
+  "the implementation of header units is in an experimental phase">,
+  InGroup<DiagGroup<"experimental-header-units">>;
+
 def ext_equivalent_internal_linkage_decl_in_modules : ExtWarn<
   "ambiguous use of internal linkage declaration %0 defined in multiple modules">,
   InGroup<DiagGroup<"modules-ambiguous-internal-linkage">>;
