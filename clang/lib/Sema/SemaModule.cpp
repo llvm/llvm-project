@@ -544,6 +544,9 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
                                    SourceLocation ExportLoc,
                                    SourceLocation ImportLoc, Module *Mod,
                                    ModuleIdPath Path) {
+  if (Mod->isHeaderUnit())
+    Diag(ImportLoc, diag::warn_experimental_header_unit);
+
   VisibleModules.setVisible(Mod, ImportLoc);
 
   checkModuleImportContext(*this, Mod, ImportLoc, CurContext);
