@@ -8320,18 +8320,6 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   if (!verifyValidIntegerConstantExpr(S, Attr, RVVVectorSizeInBits))
     return;
 
-  unsigned VecSize = static_cast<unsigned>(RVVVectorSizeInBits.getZExtValue());
-
-  // The attribute vector size must match -mrvv-vector-bits.
-  // FIXME: Add support for types with LMUL!=1. Need to make sure size passed
-  // to attribute is equal to LMUL*VScaleMin*RVVBitsPerBlock.
-  if (VecSize != VScale->first * llvm::RISCV::RVVBitsPerBlock) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
-        << VecSize << VScale->first * llvm::RISCV::RVVBitsPerBlock;
-    Attr.setInvalid();
-    return;
-  }
-
   // Attribute can only be attached to a single RVV vector type.
   if (!CurType->isRVVVLSBuiltinType()) {
     S.Diag(Attr.getLoc(), diag::err_attribute_invalid_rvv_type)
@@ -8340,11 +8328,24 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
     return;
   }
 
-  QualType EltType = CurType->getRVVEltType(S.Context);
-  unsigned TypeSize = S.Context.getTypeSize(EltType);
+  unsigned VecSize = static_cast<unsigned>(RVVVectorSizeInBits.getZExtValue());
+
+  ASTContext::BuiltinVectorTypeInfo Info =
+      S.Context.getBuiltinVectorTypeInfo(CurType->getAs<BuiltinType>());
+  unsigned EltSize = S.Context.getTypeSize(Info.ElementType);
+  unsigned MinElts = Info.EC.getKnownMinValue();
+
+  // The attribute vector size must match -mrvv-vector-bits.
+  if (VecSize != VScale->first * MinElts * EltSize) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
+        << VecSize << VScale->first * llvm::RISCV::RVVBitsPerBlock;
+    Attr.setInvalid();
+    return;
+  }
+
   VectorType::VectorKind VecKind = VectorType::RVVFixedLengthDataVector;
-  VecSize /= TypeSize;
-  CurType = S.Context.getVectorType(EltType, VecSize, VecKind);
+  VecSize /= EltSize;
+  CurType = S.Context.getVectorType(Info.ElementType, VecSize, VecKind);
 }
 
 /// Handle OpenCL Access Qualifier Attribute.
