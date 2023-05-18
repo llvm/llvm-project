@@ -3,7 +3,7 @@
 
 // RUN: %clang -cc1depscan -o %t/inline.rsp -fdepscan=inline -fdepscan-include-tree -cc1-args -cc1 -triple x86_64-apple-macos11.0 \
 // RUN:     -emit-obj %t/t.c -o %t/t.o -dwarf-ext-refs -fmodule-format=obj  \
-// RUN:     -ftest-coverage -coverage-notes-file %t/t.gcno -coverage-data-file %t/t.gcda \
+// RUN:     -coverage-notes-file %t/t.gcno -coverage-data-file %t/t.gcda \
 // RUN:     -I %t/includes -isysroot %S/Inputs/SDK -fcas-path %t/cas -DSOME_MACRO -dependency-file %t/inline.d -MT deps
 
 // RUN: FileCheck %s -input-file %t/inline.rsp -DPREFIX=%t
@@ -14,7 +14,6 @@
 // CHECK: "-fcas-path" "[[PREFIX]]/cas"
 // CHECK: "-fcas-include-tree"
 // CHECK: "-isysroot"
-// CHECK: "-ftest-coverage"
 // CHECK: "-coverage-data-file" "[[PREFIX]]/t.gcda"
 // CHECK: "-coverage-notes-file" "[[PREFIX]]/t.gcno"
 // SHOULD-NOT: "-fcas-fs"
