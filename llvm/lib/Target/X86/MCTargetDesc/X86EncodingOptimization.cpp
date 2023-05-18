@@ -48,6 +48,25 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
     OpIdx2 = 2;
     break;
   }
+  case X86::VCMPPDrri:
+  case X86::VCMPPDYrri:
+  case X86::VCMPPSrri:
+  case X86::VCMPPSYrri:
+  case X86::VCMPSDrr:
+  case X86::VCMPSSrr: {
+    switch (MI.getOperand(3).getImm() & 0x7) {
+    default:
+      return false;
+    case 0x00: // EQUAL
+    case 0x03: // UNORDERED
+    case 0x04: // NOT EQUAL
+    case 0x07: // ORDERED
+      OpIdx1 = 1;
+      OpIdx2 = 2;
+      break;
+    }
+    break;
+  }
     // Commute operands to get a smaller encoding by using VEX.R instead of
     // VEX.B if one of the registers is extended, but other isn't.
     FROM_TO(VMOVZPQILo2PQIrr, VMOVPQI2QIrr, 0, 1)
