@@ -29,6 +29,7 @@ namespace llvm {
 class GISelChangeObserver;
 class APFloat;
 class APInt;
+class ConstantFP;
 class GPtrAdd;
 class GStore;
 class GZExtLoad;
@@ -353,9 +354,8 @@ public:
 
   /// Transform fp_instr(cst) to constant result of the fp operation.
   bool matchCombineConstantFoldFpUnary(MachineInstr &MI,
-                                       std::optional<APFloat> &Cst);
-  void applyCombineConstantFoldFpUnary(MachineInstr &MI,
-                                       std::optional<APFloat> &Cst);
+                                       const ConstantFP *&Cst);
+  void applyCombineConstantFoldFpUnary(MachineInstr &MI, const ConstantFP *Cst);
 
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg);
