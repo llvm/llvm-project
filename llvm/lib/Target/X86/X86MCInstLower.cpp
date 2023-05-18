@@ -420,7 +420,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     assert(OutMI.getOperand(1 + X86::AddrSegmentReg).getReg() == 0 &&
            "LEA has segment specified!");
     break;
-
   case X86::MULX32Hrr:
   case X86::MULX32Hrm:
   case X86::MULX64Hrr:
@@ -440,7 +439,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.insert(OutMI.begin(), MCOperand::createReg(DestReg));
     break;
   }
-
   // CALL64r, CALL64pcrel32 - These instructions used to have
   // register inputs modeled as normal uses instead of implicit uses.  As such,
   // they we used to truncate off all but the first operand (the callee). This
@@ -449,21 +447,18 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   case X86::CALL64pcrel32:
     assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     break;
-
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
     OutMI = MCInst();
     OutMI.setOpcode(getRetOpcode(AsmPrinter.getSubtarget()));
     break;
   }
-
   case X86::CLEANUPRET: {
     // Replace CLEANUPRET with the appropriate RET.
     OutMI = MCInst();
     OutMI.setOpcode(getRetOpcode(AsmPrinter.getSubtarget()));
     break;
   }
-
   case X86::CATCHRET: {
     // Replace CATCHRET with the appropriate RET.
     const X86Subtarget &Subtarget = AsmPrinter.getSubtarget();
@@ -473,7 +468,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(MCOperand::createReg(ReturnReg));
     break;
   }
-
   // TAILJMPd, TAILJMPd64, TailJMPd_cc - Lower to the correct jump
   // instruction.
   case X86::TAILJMPr:
@@ -484,13 +478,11 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     assert(OutMI.getNumOperands() == 1 && "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
-
   case X86::TAILJMPd_CC:
   case X86::TAILJMPd64_CC:
     assert(OutMI.getNumOperands() == 2 && "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
-
   case X86::TAILJMPm:
   case X86::TAILJMPm64:
   case X86::TAILJMPm64_REX:
@@ -498,25 +490,28 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
            "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
-
   case X86::MASKMOVDQU:
   case X86::VMASKMOVDQU:
     if (In64BitMode)
       OutMI.setFlags(X86::IP_HAS_AD_SIZE);
     break;
-
-  default: {
+  case X86::BSF16rm:
+  case X86::BSF16rr:
+  case X86::BSF32rm:
+  case X86::BSF32rr:
+  case X86::BSF64rm:
+  case X86::BSF64rr: {
     // Add an REP prefix to BSF instructions so that new processors can
     // recognize as TZCNT, which has better performance than BSF.
-    if (X86::isBSF(OutMI.getOpcode()) && !MF.getFunction().hasOptSize()) {
-      // BSF and TZCNT have different interpretations on ZF bit. So make sure
-      // it won't be used later.
-      const MachineOperand *FlagDef = MI->findRegisterDefOperand(X86::EFLAGS);
-      if (FlagDef && FlagDef->isDead())
-        OutMI.setFlags(X86::IP_HAS_REPEAT);
-    }
+    // BSF and TZCNT have different interpretations on ZF bit. So make sure
+    // it won't be used later.
+    const MachineOperand *FlagDef = MI->findRegisterDefOperand(X86::EFLAGS);
+    if (!MF.getFunction().hasOptSize() && FlagDef && FlagDef->isDead())
+      OutMI.setFlags(X86::IP_HAS_REPEAT);
     break;
   }
+  default:
+    break;
   }
 }
 
