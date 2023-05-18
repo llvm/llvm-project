@@ -255,7 +255,7 @@ def _get_create_sparse_tensor_kernel(
   return f"""
 !Ptr = !llvm.ptr<i8>
 #enc = #sparse_tensor.encoding<{{
-  dimLevelType = [ {sparsity} ]
+  lvlTypes = [ {sparsity} ]
 }}>
 func.func @{_ENTRY_NAME}(%filename: !Ptr) -> (tensor<{shape}x{type}, #enc>, memref<{rank}xindex>)
 attributes {{ llvm.emit_c_interface }} {{
@@ -331,7 +331,7 @@ def _get_output_sparse_tensor_kernel(
   return f"""
 !Ptr = !llvm.ptr<i8>
 #enc = #sparse_tensor.encoding<{{
-  dimLevelType = [ {sparsity} ]
+  lvlTypes = [ {sparsity} ]
 }}>
 func.func @{_ENTRY_NAME}(%t: tensor<{shape}x{type}, #enc>, %filename: !Ptr)
 attributes {{ llvm.emit_c_interface }} {{

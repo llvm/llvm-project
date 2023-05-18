@@ -31,12 +31,12 @@
 !Filename = !llvm.ptr<i8>
 
 #DenseMatrix = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense" ],
+  lvlTypes = [ "dense", "dense" ],
   dimOrdering = affine_map<(i,j) -> (i,j)>
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
+  lvlTypes = [ "dense", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (i,j)>
 }>
 

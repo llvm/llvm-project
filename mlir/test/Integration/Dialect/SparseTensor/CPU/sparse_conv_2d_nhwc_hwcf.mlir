@@ -27,11 +27,11 @@
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #CCCC = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed", "compressed", "compressed" ]
+  lvlTypes = [ "compressed", "compressed", "compressed", "compressed" ]
 }>
 
 #CDCD = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "dense", "compressed", "dense" ]
+  lvlTypes = [ "compressed", "dense", "compressed", "dense" ]
 }>
 
 // Creates and returns 4-D buffer of size (%s1, %s2, %s3, %s4) filled with the value %f

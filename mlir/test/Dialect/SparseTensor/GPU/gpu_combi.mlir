@@ -3,7 +3,7 @@
 // RUN:             --sparsification="parallelization-strategy=dense-outer-loop" \
 // RUN:             --sparse-gpu-codegen | FileCheck %s
 
-#CSR = #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ] }>
+#CSR = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
 
 //
 // CHECK-LABEL: gpu.module @sparse_kernels

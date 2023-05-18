@@ -27,17 +27,17 @@
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #Tensor1  = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed", "compressed" ],
+  lvlTypes = [ "compressed", "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j,k) -> (i,j,k)>
 }>
 
 #Tensor2  = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed", "compressed" ],
+  lvlTypes = [ "compressed", "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j,k) -> (j,k,i)>
 }>
 
 #Tensor3  = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed", "compressed" ],
+  lvlTypes = [ "compressed", "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
