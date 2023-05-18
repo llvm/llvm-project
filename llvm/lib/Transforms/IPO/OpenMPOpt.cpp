@@ -22,6 +22,7 @@
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -46,6 +47,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO/Attributor.h"
@@ -2641,6 +2643,10 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
     return Changed;
   }
 
+  bool isNoOpFence(const FenceInst &FI) const override {
+    return getState().isValidState() && !NonNoOpFences.count(&FI);
+  }
+
   /// Merge barrier and assumption information from \p PredED into the successor
   /// \p ED.
   void
@@ -2811,6 +2817,10 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
     R = V;
     return !Eq;
   }
+
+  /// Collection of fences known to be non-no-opt. All fences not in this set
+  /// can be assumed no-opt.
+  SmallPtrSet<const FenceInst *, 8> NonNoOpFences;
 };
 
 void AAExecutionDomainFunction::mergeInPredecessorBarriersAndAssumptions(
@@ -2978,6 +2988,33 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         // TODO: Should we also collect and delete lifetime markers?
         if (II->isAssumeLikeIntrinsic())
           continue;
+      }
+
+      if (auto *FI = dyn_cast<FenceInst>(&I)) {
+        if (!ED.EncounteredNonLocalSideEffect) {
+          // An aligned fence without non-local side-effects is a no-op.
+          if (ED.IsReachedFromAlignedBarrierOnly)
+            continue;
+          // A non-aligned fence without non-local side-effects is a no-op
+          // if the ordering only publishes non-local side-effects (or less).
+          switch (FI->getOrdering()) {
+          case AtomicOrdering::NotAtomic:
+            continue;
+          case AtomicOrdering::Unordered:
+            continue;
+          case AtomicOrdering::Monotonic:
+            continue;
+          case AtomicOrdering::Acquire:
+            break;
+          case AtomicOrdering::Release:
+            continue;
+          case AtomicOrdering::AcquireRelease:
+            break;
+          case AtomicOrdering::SequentiallyConsistent:
+            break;
+          };
+        }
+        NonNoOpFences.insert(FI);
       }
 
       auto *CB = dyn_cast<CallBase>(&I);
@@ -5204,6 +5241,10 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
     }
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
+      continue;
+    }
+    if (auto *FI = dyn_cast<FenceInst>(&I)) {
+      A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*FI));
       continue;
     }
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {

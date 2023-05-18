@@ -111,6 +111,7 @@ define void @pos_empty_8(i1 %c) "kernel" {
 ;
   br i1 %c, label %t, label %f
 t:
+  fence release
   call void @llvm.amdgcn.s.barrier() "llvm.assume"="ompx_aligned_barrier"
   br label %f
 f:
@@ -133,23 +134,33 @@ define void @neg_empty_9(i1 %c) "kernel" {
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    ret void
 ;
   br i1 %c, label %t, label %f
 t:
+  fence release
   call void @llvm.amdgcn.s.barrier()
+  fence release
   br label %m
 f:
+  fence release
   call void @llvm.amdgcn.s.barrier()
+  fence release
   br label %m
 m:
+  fence release
   call void @llvm.amdgcn.s.barrier()
+  fence release
   ret void
 }
 ; FIXME: We should remove the barrier
@@ -345,21 +356,27 @@ define void @neg_mem() "kernel" {
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr, ptr @GPtr, align 8
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @G1, align 4
+; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    store i32 [[A]], ptr [[ARG]], align 4
+; CHECK-NEXT:    fence release
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    [[B:%.*]] = load i32, ptr addrspacecast (ptr addrspace(1) @G2 to ptr), align 4
 ; CHECK-NEXT:    store i32 [[B]], ptr @G1, align 4
+; CHECK-NEXT:    fence acquire
 ; CHECK-NEXT:    ret void
 ;
   %arg = load ptr, ptr @GPtr
   %a = load i32, ptr @G1
+  fence seq_cst
   call void @aligned_barrier()
   store i32 %a, ptr %arg
+  fence release
   call void @aligned_barrier()
   %G2c = addrspacecast ptr addrspace(1) @G2 to ptr
   %b = load i32, ptr %G2c
   store i32 %b, ptr @G1
+  fence acquire
   call void @aligned_barrier()
   ret void
 }
@@ -397,27 +414,43 @@ define void @multiple_blocks_kernel_1(i1 %c0, i1 %c1) "kernel" {
 ; CHECK:       m:
 ; CHECK-NEXT:    ret void
 ;
+  fence acquire
   call void @llvm.nvvm.barrier0()
+  fence release
   call void @aligned_barrier()
+  fence seq_cst
   br i1 %c0, label %t0, label %f0
 t0:
+  fence seq_cst
   call void @aligned_barrier()
+  fence seq_cst
   br label %t0b
 t0b:
+  fence seq_cst
   call void @aligned_barrier()
+  fence seq_cst
   br label %m
 f0:
+  fence release
   call void @aligned_barrier()
+  fence acquire
   call void @llvm.nvvm.barrier0()
+  fence acquire
   br i1 %c1, label %t1, label %f1
 t1:
+  fence acquire
   call void @aligned_barrier()
+  fence seq_cst
   br label %m
 f1:
+  fence seq_cst
   call void @aligned_barrier()
+  fence acquire
   br label %m
 m:
+  fence seq_cst
   call void @aligned_barrier()
+  fence seq_cst
   ret void
 }
 
