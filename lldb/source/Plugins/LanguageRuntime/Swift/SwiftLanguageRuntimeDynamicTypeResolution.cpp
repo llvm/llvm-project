@@ -1688,7 +1688,7 @@ CreatePackType(swift::Demangle::Demangler &dem, TypeSystemSwiftTypeRef &ts,
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
     ValueObject &in_value, CompilerType pack_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &pack_type_or_name,
-    Address &address) {
+    Address &address, Value::ValueType &value_type) {
   Log *log(GetLog(LLDBLog::Types));
   auto *reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)
@@ -1915,7 +1915,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
   CompilerType expanded_type = ts->RemangleAsType(dem, transformed);
   pack_type_or_name.SetCompilerType(expanded_type);
 
-  lldb::addr_t addr = in_value.GetAddressOf();
+  AddressType address_type;
+  lldb::addr_t addr = in_value.GetAddressOf(true, &address_type);
+  value_type = Value::GetValueTypeFromAddressType(address_type);
   if (indirect) {
     Status status;
     addr = m_process.ReadPointerFromMemory(addr, status);
@@ -1961,9 +1963,11 @@ static bool IsPrivateNSClass(NodePointer node) {
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
     ValueObject &in_value, CompilerType class_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-    Address &address) {
+    Address &address, Value::ValueType &value_type) {
   AddressType address_type;
   lldb::addr_t instance_ptr = in_value.GetPointerValue(&address_type);
+  value_type = Value::GetValueTypeFromAddressType(address_type);
+
   if (instance_ptr == LLDB_INVALID_ADDRESS || instance_ptr == 0)
     return false;
 
@@ -2707,7 +2711,8 @@ bool SwiftLanguageRuntime::GetAbstractTypeName(StreamString &name,
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Value(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-    Address &address) {
+    Address &address, Value::ValueType &value_type) {
+  value_type = Value::ValueType::Invalid;
   class_type_or_name.SetCompilerType(bound_type);
 
   ExecutionContext exe_ctx = in_value.GetExecutionContextRef().Lock(true);
@@ -2715,17 +2720,20 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Value(
       bound_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return false;
-  lldb::addr_t val_address = in_value.GetAddressOf(true, nullptr);
+  AddressType address_type;
+  lldb::addr_t val_address = in_value.GetAddressOf(true, &address_type);
   if (*size && (!val_address || val_address == LLDB_INVALID_ADDRESS))
     return false;
 
+  value_type = Value::GetValueTypeFromAddressType(address_type);
   address.SetLoadAddress(val_address, in_value.GetTargetSP().get());
   return true;
 }
 
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address) {
+    TypeAndOrName &class_type_or_name, Address &address,
+    Value::ValueType &value_type) {
   static ConstString g_offset("offset");
 
   DataExtractor data;
@@ -2779,7 +2787,6 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
     if (!valobj_sp)
       return false;
 
-    Value::ValueType value_type;
     if (!GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
                                   address, value_type))
       return false;
@@ -2807,7 +2814,6 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
     if (!valobj_sp)
       return false;
 
-    Value::ValueType value_type;
     if (!GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
                                   address, value_type))
       return false;
@@ -2851,8 +2857,8 @@ Process &SwiftLanguageRuntimeImpl::GetProcess() const {
 Value::ValueType
 SwiftLanguageRuntimeImpl::GetValueType(ValueObject &in_value,
                                        CompilerType dynamic_type,
+                                       Value::ValueType static_value_type,
                                        bool is_indirect_enum_case) {
-  Value::ValueType static_value_type = in_value.GetValue().GetValueType();
   CompilerType static_type = in_value.GetCompilerType();
   Flags static_type_flags(static_type.GetTypeInfo());
   Flags dynamic_type_flags(dynamic_type.GetTypeInfo());
@@ -3057,19 +3063,20 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
   if (!type_info.AnySet(eTypeIsSwift))
     return false;
 
+  Value::ValueType static_value_type = Value::ValueType::Invalid;
   bool success = false;
   bool is_indirect_enum_case = IsIndirectEnumCase(in_value);
   // Type kinds with instance metadata don't need generic type resolution.
   if (is_indirect_enum_case)
     success = GetDynamicTypeAndAddress_IndirectEnumCase(
-        in_value, use_dynamic, class_type_or_name, address);
+        in_value, use_dynamic, class_type_or_name, address, static_value_type);
   else if (type_info.AnySet(eTypeIsPack))
     success = GetDynamicTypeAndAddress_Pack(in_value, val_type, use_dynamic,
-                                           class_type_or_name, address);
+                                           class_type_or_name, address, static_value_type);
   else if (type_info.AnySet(eTypeIsClass) ||
            type_info.AllSet(eTypeIsBuiltIn | eTypeIsPointer | eTypeHasValue))
     success = GetDynamicTypeAndAddress_Class(in_value, val_type, use_dynamic,
-                                             class_type_or_name, address);
+                                             class_type_or_name, address, static_value_type);
   else if (type_info.AnySet(eTypeIsProtocol))
     success = GetDynamicTypeAndAddress_Protocol(in_value, val_type, use_dynamic,
                                                 class_type_or_name, address);
@@ -3090,20 +3097,28 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
 
     Flags subst_type_info(bound_type.GetTypeInfo());
     if (subst_type_info.AnySet(eTypeIsClass)) {
-      success = GetDynamicTypeAndAddress_Class(
-          in_value, bound_type, use_dynamic, class_type_or_name, address);
+      success = GetDynamicTypeAndAddress_Class(in_value, bound_type,
+                                               use_dynamic, class_type_or_name,
+                                               address, static_value_type);
     } else if (subst_type_info.AnySet(eTypeIsProtocol)) {
       success = GetDynamicTypeAndAddress_Protocol(
           in_value, bound_type, use_dynamic, class_type_or_name, address);
     } else {
-      success = GetDynamicTypeAndAddress_Value(
-          in_value, bound_type, use_dynamic, class_type_or_name, address);
+      success = GetDynamicTypeAndAddress_Value(in_value, bound_type,
+                                               use_dynamic, class_type_or_name,
+                                               address, static_value_type);
     }
   }
 
-  if (success)
+  if (success) {
+    // If we haven't found a better static value type, use the value object's
+    // one.
+    if (static_value_type == Value::ValueType::Invalid)
+      static_value_type = in_value.GetValue().GetValueType();
+
     value_type = GetValueType(in_value, class_type_or_name.GetCompilerType(),
-                              is_indirect_enum_case);
+                              static_value_type, is_indirect_enum_case);
+  }
   return success;
 }
 
