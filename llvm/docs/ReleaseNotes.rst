@@ -196,7 +196,7 @@ Changes to the OCaml bindings
 -----------------------------
 
 Changes to the Python bindings
------------------------------
+------------------------------
 
 * The python bindings have been removed.
 
