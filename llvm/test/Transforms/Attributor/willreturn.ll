@@ -312,13 +312,13 @@ define float @call_floor2(float %a) #0 {
 ; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@call_floor2
 ; TUNIT-SAME: (float [[A:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR27:[0-9]+]]
+; TUNIT-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]]) #[[ATTR27:[0-9]+]]
 ; TUNIT-NEXT:    ret float [[C]]
 ;
 ; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@call_floor2
 ; CGSCC-SAME: (float [[A:%.*]]) #[[ATTR0]] {
-; CGSCC-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR28:[0-9]+]]
+; CGSCC-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]]) #[[ATTR28:[0-9]+]]
 ; CGSCC-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
