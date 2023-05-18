@@ -21,6 +21,7 @@ bool optimizeShiftRotateWithImmediateOne(MCInst &MI);
 bool optimizeVPCMPWithImmediateOneOrSix(MCInst &MI);
 bool optimizeMOVSX(MCInst &MI);
 bool optimizeINCDEC(MCInst &MI, bool In64BitMode);
+bool optimizeMOV(MCInst &MI, bool In64BitMode);
 } // namespace X86
 } // namespace llvm
 #endif

@@ -343,58 +343,6 @@ static void SimplifyShortImmForm(MCInst &Inst, unsigned Opcode) {
   Inst.addOperand(Saved);
 }
 
-/// Simplify things like MOV32rm to MOV32o32a.
-static void SimplifyShortMoveForm(X86AsmPrinter &Printer, MCInst &Inst,
-                                  unsigned Opcode) {
-  // Don't make these simplifications in 64-bit mode; other assemblers don't
-  // perform them because they make the code larger.
-  if (Printer.getSubtarget().is64Bit())
-    return;
-
-  bool IsStore = Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg();
-  unsigned AddrBase = IsStore;
-  unsigned RegOp = IsStore ? 0 : 5;
-  unsigned AddrOp = AddrBase + 3;
-  assert(
-      Inst.getNumOperands() == 6 && Inst.getOperand(RegOp).isReg() &&
-      Inst.getOperand(AddrBase + X86::AddrBaseReg).isReg() &&
-      Inst.getOperand(AddrBase + X86::AddrScaleAmt).isImm() &&
-      Inst.getOperand(AddrBase + X86::AddrIndexReg).isReg() &&
-      Inst.getOperand(AddrBase + X86::AddrSegmentReg).isReg() &&
-      (Inst.getOperand(AddrOp).isExpr() || Inst.getOperand(AddrOp).isImm()) &&
-      "Unexpected instruction!");
-
-  // Check whether the destination register can be fixed.
-  unsigned Reg = Inst.getOperand(RegOp).getReg();
-  if (Reg != X86::AL && Reg != X86::AX && Reg != X86::EAX && Reg != X86::RAX)
-    return;
-
-  // Check whether this is an absolute address.
-  // FIXME: We know TLVP symbol refs aren't, but there should be a better way
-  // to do this here.
-  bool Absolute = true;
-  if (Inst.getOperand(AddrOp).isExpr()) {
-    const MCExpr *MCE = Inst.getOperand(AddrOp).getExpr();
-    if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(MCE))
-      if (SRE->getKind() == MCSymbolRefExpr::VK_TLVP)
-        Absolute = false;
-  }
-
-  if (Absolute &&
-      (Inst.getOperand(AddrBase + X86::AddrBaseReg).getReg() != 0 ||
-       Inst.getOperand(AddrBase + X86::AddrScaleAmt).getImm() != 1 ||
-       Inst.getOperand(AddrBase + X86::AddrIndexReg).getReg() != 0))
-    return;
-
-  // If so, rewrite the instruction.
-  MCOperand Saved = Inst.getOperand(AddrOp);
-  MCOperand Seg = Inst.getOperand(AddrBase + X86::AddrSegmentReg);
-  Inst = MCInst();
-  Inst.setOpcode(Opcode);
-  Inst.addOperand(Saved);
-  Inst.addOperand(Seg);
-}
-
 static unsigned getRetOpcode(const X86Subtarget &Subtarget) {
   return Subtarget.is64Bit() ? X86::RET64 : X86::RET32;
 }
@@ -490,6 +438,9 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   if (X86::optimizeINCDEC(OutMI, In64BitMode))
     return;
 
+  if (X86::optimizeMOV(OutMI, In64BitMode))
+    return;
+
   // Handle a few special cases to eliminate operand modifiers.
   switch (OutMI.getOpcode()) {
   case X86::LEA64_32r:
@@ -580,37 +531,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
            "Unexpected number of operands!");
     OutMI.setOpcode(convertTailJumpOpcode(OutMI.getOpcode()));
     break;
-
-  // We don't currently select the correct instruction form for instructions
-  // which have a short %eax, etc. form. Handle this by custom lowering, for
-  // now.
-  //
-  // Note, we are currently not handling the following instructions:
-  // MOV64ao8, MOV64o8a
-  // XCHG16ar, XCHG32ar, XCHG64ar
-  case X86::MOV8mr_NOREX:
-  case X86::MOV8mr:
-  case X86::MOV8rm_NOREX:
-  case X86::MOV8rm:
-  case X86::MOV16mr:
-  case X86::MOV16rm:
-  case X86::MOV32mr:
-  case X86::MOV32rm: {
-    unsigned NewOpc;
-    switch (OutMI.getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::MOV8mr_NOREX:
-    case X86::MOV8mr:  NewOpc = X86::MOV8o32a; break;
-    case X86::MOV8rm_NOREX:
-    case X86::MOV8rm:  NewOpc = X86::MOV8ao32; break;
-    case X86::MOV16mr: NewOpc = X86::MOV16o32a; break;
-    case X86::MOV16rm: NewOpc = X86::MOV16ao32; break;
-    case X86::MOV32mr: NewOpc = X86::MOV32o32a; break;
-    case X86::MOV32rm: NewOpc = X86::MOV32ao32; break;
-    }
-    SimplifyShortMoveForm(AsmPrinter, OutMI, NewOpc);
-    break;
-  }
 
   case X86::ADC8ri: case X86::ADC16ri: case X86::ADC32ri: case X86::ADC64ri32:
   case X86::ADD8ri: case X86::ADD16ri: case X86::ADD32ri: case X86::ADD64ri32:
