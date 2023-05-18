@@ -65,7 +65,7 @@ def note_consteval_address_accessible : Note<
   "%select{pointer|reference}0 to a consteval declaration "
   "is not a constant expression">;
 def note_constexpr_uninitialized : Note<
-  "subobject %0 is not initialized">;
+  "%select{|sub}0object of type %1 is not initialized">;
 def note_constexpr_static_local : Note<
   "control flows through the definition of a %select{static|thread_local}0 variable">;
 def note_constexpr_subobject_declared_here : Note<
