@@ -75,7 +75,7 @@ void ThreadArgRetval::DetachLocked(uptr thread) {
   CHECK(t);
   CHECK(!t->second.detached);
   if (t->second.done) {
-    // Detached thread has no use after it started and returned args.
+    // We can't retrive retval after detached thread finished.
     data_.erase(t);
     return;
   }

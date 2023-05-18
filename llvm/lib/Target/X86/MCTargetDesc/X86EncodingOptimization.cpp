@@ -12,20 +12,17 @@
 
 #include "X86EncodingOptimization.h"
 #include "X86BaseInfo.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
-static bool shouldExchange(const MCInst &MI, unsigned OpIdx1, unsigned OpIdx2) {
-  return !X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx1).getReg()) &&
-         X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx2).getReg());
-}
-
 bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
   unsigned OpIdx1, OpIdx2;
-  unsigned NewOpc;
   unsigned Opcode = MI.getOpcode();
+  unsigned NewOpc = 0;
 #define FROM_TO(FROM, TO, IDX1, IDX2)                                          \
   case X86::FROM:                                                              \
     NewOpc = X86::TO;                                                          \
@@ -33,7 +30,7 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
     OpIdx2 = IDX2;                                                             \
     break;
 #define TO_REV(FROM) FROM_TO(FROM, FROM##_REV, 0, 1)
-  switch (MI.getOpcode()) {
+  switch (Opcode) {
   default: {
     // If the instruction is a commutable arithmetic instruction we might be
     // able to commute the operands to get a 2 byte VEX prefix.
@@ -49,10 +46,26 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
       return false;
     OpIdx1 = 1;
     OpIdx2 = 2;
-    if (!shouldExchange(MI, OpIdx1, OpIdx2))
+    break;
+  }
+  case X86::VCMPPDrri:
+  case X86::VCMPPDYrri:
+  case X86::VCMPPSrri:
+  case X86::VCMPPSYrri:
+  case X86::VCMPSDrr:
+  case X86::VCMPSSrr: {
+    switch (MI.getOperand(3).getImm() & 0x7) {
+    default:
       return false;
-    std::swap(MI.getOperand(OpIdx1), MI.getOperand(OpIdx2));
-    return true;
+    case 0x00: // EQUAL
+    case 0x03: // UNORDERED
+    case 0x04: // NOT EQUAL
+    case 0x07: // ORDERED
+      OpIdx1 = 1;
+      OpIdx2 = 2;
+      break;
+    }
+    break;
   }
     // Commute operands to get a smaller encoding by using VEX.R instead of
     // VEX.B if one of the registers is extended, but other isn't.
@@ -76,9 +89,13 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
 #undef TO_REV
 #undef FROM_TO
   }
-  if (!shouldExchange(MI, OpIdx1, OpIdx2))
+  if (X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx1).getReg()) ||
+      !X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx2).getReg()))
     return false;
-  MI.setOpcode(NewOpc);
+  if (NewOpc)
+    MI.setOpcode(NewOpc);
+  else
+    std::swap(MI.getOperand(OpIdx1), MI.getOperand(OpIdx2));
   return true;
 }
 
@@ -286,5 +303,124 @@ bool X86::optimizeINCDEC(MCInst &MI, bool In64BitMode) {
     FROM_TO(INC32r, INC32r_alt)
   }
   MI.setOpcode(NewOpc);
+  return true;
+}
+
+static bool isARegister(unsigned Reg) {
+  return Reg == X86::AL || Reg == X86::AX || Reg == X86::EAX || Reg == X86::RAX;
+}
+
+/// Simplify things like MOV32rm to MOV32o32a.
+bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
+  // Don't make these simplifications in 64-bit mode; other assemblers don't
+  // perform them because they make the code larger.
+  if (In64BitMode)
+    return false;
+  unsigned NewOpc;
+  // We don't currently select the correct instruction form for instructions
+  // which have a short %eax, etc. form. Handle this by custom lowering, for
+  // now.
+  //
+  // Note, we are currently not handling the following instructions:
+  // MOV64ao8, MOV64o8a
+  // XCHG16ar, XCHG32ar, XCHG64ar
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+    FROM_TO(MOV8mr_NOREX, MOV8o32a)
+    FROM_TO(MOV8mr, MOV8o32a)
+    FROM_TO(MOV8rm_NOREX, MOV8ao32)
+    FROM_TO(MOV8rm, MOV8ao32)
+    FROM_TO(MOV16mr, MOV16o32a)
+    FROM_TO(MOV16rm, MOV16ao32)
+    FROM_TO(MOV32mr, MOV32o32a)
+    FROM_TO(MOV32rm, MOV32ao32)
+  }
+  bool IsStore = MI.getOperand(0).isReg() && MI.getOperand(1).isReg();
+  unsigned AddrBase = IsStore;
+  unsigned RegOp = IsStore ? 0 : 5;
+  unsigned AddrOp = AddrBase + 3;
+  // Check whether the destination register can be fixed.
+  unsigned Reg = MI.getOperand(RegOp).getReg();
+  if (!isARegister(Reg))
+    return false;
+  // Check whether this is an absolute address.
+  // FIXME: We know TLVP symbol refs aren't, but there should be a better way
+  // to do this here.
+  bool Absolute = true;
+  if (MI.getOperand(AddrOp).isExpr()) {
+    const MCExpr *MCE = MI.getOperand(AddrOp).getExpr();
+    if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(MCE))
+      if (SRE->getKind() == MCSymbolRefExpr::VK_TLVP)
+        Absolute = false;
+  }
+  if (Absolute && (MI.getOperand(AddrBase + X86::AddrBaseReg).getReg() != 0 ||
+                   MI.getOperand(AddrBase + X86::AddrScaleAmt).getImm() != 1 ||
+                   MI.getOperand(AddrBase + X86::AddrIndexReg).getReg() != 0))
+    return false;
+  // If so, rewrite the instruction.
+  MCOperand Saved = MI.getOperand(AddrOp);
+  MCOperand Seg = MI.getOperand(AddrBase + X86::AddrSegmentReg);
+  MI.clear();
+  MI.setOpcode(NewOpc);
+  MI.addOperand(Saved);
+  MI.addOperand(Seg);
+  return true;
+}
+
+/// Simplify FOO $imm, %{al,ax,eax,rax} to FOO $imm, for instruction with
+/// a short fixed-register form.
+bool X86::optimizeToFixedRegisterForm(MCInst &MI) {
+  unsigned NewOpc;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+    FROM_TO(ADC8ri, ADC8i8)
+    FROM_TO(ADC16ri, ADC16i16)
+    FROM_TO(ADC32ri, ADC32i32)
+    FROM_TO(ADC64ri32, ADC64i32)
+    FROM_TO(ADD8ri, ADD8i8)
+    FROM_TO(ADD16ri, ADD16i16)
+    FROM_TO(ADD32ri, ADD32i32)
+    FROM_TO(ADD64ri32, ADD64i32)
+    FROM_TO(AND8ri, AND8i8)
+    FROM_TO(AND16ri, AND16i16)
+    FROM_TO(AND32ri, AND32i32)
+    FROM_TO(AND64ri32, AND64i32)
+    FROM_TO(CMP8ri, CMP8i8)
+    FROM_TO(CMP16ri, CMP16i16)
+    FROM_TO(CMP32ri, CMP32i32)
+    FROM_TO(CMP64ri32, CMP64i32)
+    FROM_TO(OR8ri, OR8i8)
+    FROM_TO(OR16ri, OR16i16)
+    FROM_TO(OR32ri, OR32i32)
+    FROM_TO(OR64ri32, OR64i32)
+    FROM_TO(SBB8ri, SBB8i8)
+    FROM_TO(SBB16ri, SBB16i16)
+    FROM_TO(SBB32ri, SBB32i32)
+    FROM_TO(SBB64ri32, SBB64i32)
+    FROM_TO(SUB8ri, SUB8i8)
+    FROM_TO(SUB16ri, SUB16i16)
+    FROM_TO(SUB32ri, SUB32i32)
+    FROM_TO(SUB64ri32, SUB64i32)
+    FROM_TO(TEST8ri, TEST8i8)
+    FROM_TO(TEST16ri, TEST16i16)
+    FROM_TO(TEST32ri, TEST32i32)
+    FROM_TO(TEST64ri32, TEST64i32)
+    FROM_TO(XOR8ri, XOR8i8)
+    FROM_TO(XOR16ri, XOR16i16)
+    FROM_TO(XOR32ri, XOR32i32)
+    FROM_TO(XOR64ri32, XOR64i32)
+  }
+  // Check whether the destination register can be fixed.
+  unsigned Reg = MI.getOperand(0).getReg();
+  if (!isARegister(Reg))
+    return false;
+
+  // If so, rewrite the instruction.
+  MCOperand Saved = MI.getOperand(MI.getNumOperands() - 1);
+  MI.clear();
+  MI.setOpcode(NewOpc);
+  MI.addOperand(Saved);
   return true;
 }

@@ -42,7 +42,7 @@ int baz(int);
 // CHECK-HU-NEXT:  Header Unit './hu-01.h' is the Primary Module at index #1
 
 //--- hu-02.h
-export import "hu-01.h";
+export import "hu-01.h"; // expected-warning {{the implementation of header units is in an experimental phase}}
 #if !defined(FORTYTWO) || FORTYTWO != 42
 #error FORTYTWO missing in hu-02
 #endif
@@ -82,7 +82,7 @@ inline int bar(int x) {
 
 //--- importer-01.cpp
 export module B;
-import "hu-02.h";
+import "hu-02.h"; // expected-warning {{the implementation of header units is in an experimental phase}}
 
 int success(int x) {
   return foo(FORTYTWO + x + KAP);
@@ -95,7 +95,7 @@ int fail(int x) {
 
 //--- importer-02.cpp
 export module C;
-import "hu-02.h";
+import "hu-02.h"; // expected-warning {{the implementation of header units is in an experimental phase}}
 
 int success(int x) {
   return foo(FORTYTWO + x + KAP);
