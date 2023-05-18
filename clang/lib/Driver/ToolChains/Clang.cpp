@@ -957,6 +957,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     } else {
       CoverageFilename = llvm::sys::path::filename(Output.getBaseInput());
     }
+    if (llvm::sys::path::is_relative(CoverageFilename))
+      (void)D.getVFS().makeAbsolute(CoverageFilename);
     llvm::sys::path::replace_extension(CoverageFilename, "gcno");
     if (EmitCovNotes) {
       CmdArgs.push_back("-coverage-notes-file");
@@ -2549,6 +2551,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     CmdArgs.push_back("-mincremental-linker-compatible");
 
   Args.AddLastArg(CmdArgs, options::OPT_femit_dwarf_unwind_EQ);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_femit_compact_unwind_non_canonical,
+                    options::OPT_fno_emit_compact_unwind_non_canonical);
 
   // If you add more args here, also add them to the block below that
   // starts with "// If CollectArgsForIntegratedAssembler() isn't called below".

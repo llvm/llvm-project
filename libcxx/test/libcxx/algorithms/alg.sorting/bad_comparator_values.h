@@ -1,4 +1,17 @@
-R"(
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_LIBCXX_ALGORITHMS_ALG_SORTING_BAD_COMPARATOR_VALUES_H
+#define TEST_LIBCXX_ALGORITHMS_ALG_SORTING_BAD_COMPARATOR_VALUES_H
+
+#include <string_view>
+
+inline constexpr std::string_view DATA = R"(
 0 0 0
 0 1 1
 0 2 1
@@ -3480,4 +3493,6 @@ R"(
 58 56 1
 58 57 1
 58 58 0
-)"
+)";
+
+#endif // TEST_LIBCXX_ALGORITHMS_ALG_SORTING_BAD_COMPARATOR_VALUES_H

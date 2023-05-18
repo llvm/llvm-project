@@ -1289,64 +1289,69 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
 }
 
 static std::optional<APFloat>
-constantFoldFpUnary(unsigned Opcode, LLT DstTy, const Register Op,
-                    const MachineRegisterInfo &MRI) {
-  const ConstantFP *MaybeCst = getConstantFPVRegVal(Op, MRI);
-  if (!MaybeCst)
-    return std::nullopt;
-
-  APFloat V = MaybeCst->getValueAPF();
-  switch (Opcode) {
+constantFoldFpUnary(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                    const APFloat &Val) {
+  APFloat Result(Val);
+  switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode!");
   case TargetOpcode::G_FNEG: {
-    V.changeSign();
-    return V;
+    Result.changeSign();
+    return Result;
   }
   case TargetOpcode::G_FABS: {
-    V.clearSign();
-    return V;
+    Result.clearSign();
+    return Result;
   }
-  case TargetOpcode::G_FPTRUNC:
-    break;
+  case TargetOpcode::G_FPTRUNC: {
+    bool Unused;
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    Result.convert(getFltSemanticForLLT(DstTy), APFloat::rmNearestTiesToEven,
+                   &Unused);
+    return Result;
+  }
   case TargetOpcode::G_FSQRT: {
     bool Unused;
-    V.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &Unused);
-    V = APFloat(sqrt(V.convertToDouble()));
+    Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                   &Unused);
+    Result = APFloat(sqrt(Result.convertToDouble()));
     break;
   }
   case TargetOpcode::G_FLOG2: {
     bool Unused;
-    V.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &Unused);
-    V = APFloat(log2(V.convertToDouble()));
+    Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                   &Unused);
+    Result = APFloat(log2(Result.convertToDouble()));
     break;
   }
   }
   // Convert `APFloat` to appropriate IEEE type depending on `DstTy`. Otherwise,
-  // `buildFConstant` will assert on size mismatch. Only `G_FPTRUNC`, `G_FSQRT`,
-  // and `G_FLOG2` reach here.
+  // `buildFConstant` will assert on size mismatch. Only `G_FSQRT`, and
+  // `G_FLOG2` reach here.
   bool Unused;
-  V.convert(getFltSemanticForLLT(DstTy), APFloat::rmNearestTiesToEven, &Unused);
-  return V;
+  Result.convert(Val.getSemantics(), APFloat::rmNearestTiesToEven, &Unused);
+  return Result;
 }
 
-bool CombinerHelper::matchCombineConstantFoldFpUnary(
-    MachineInstr &MI, std::optional<APFloat> &Cst) {
-  Register DstReg = MI.getOperand(0).getReg();
+bool CombinerHelper::matchCombineConstantFoldFpUnary(MachineInstr &MI,
+                                                     const ConstantFP *&Cst) {
   Register SrcReg = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  Cst = constantFoldFpUnary(MI.getOpcode(), DstTy, SrcReg, MRI);
-  return Cst.has_value();
+  const ConstantFP *MaybeCst = getConstantFPVRegVal(SrcReg, MRI);
+  if (!MaybeCst)
+    return false;
+
+  if (auto Folded = constantFoldFpUnary(MI, MRI, MaybeCst->getValue())) {
+    Cst = ConstantFP::get(Builder.getContext(), *Folded);
+    return true;
+  }
+
+  return false;
 }
 
-void CombinerHelper::applyCombineConstantFoldFpUnary(
-    MachineInstr &MI, std::optional<APFloat> &Cst) {
-  assert(Cst && "Optional is unexpectedly empty!");
+void CombinerHelper::applyCombineConstantFoldFpUnary(MachineInstr &MI,
+                                                     const ConstantFP *Cst) {
   Builder.setInstrAndDebugLoc(MI);
-  MachineFunction &MF = Builder.getMF();
-  auto *FPVal = ConstantFP::get(MF.getFunction().getContext(), *Cst);
-  Register DstReg = MI.getOperand(0).getReg();
-  Builder.buildFConstant(DstReg, *FPVal);
+  Builder.buildFConstant(MI.getOperand(0), *Cst);
   MI.eraseFromParent();
 }
 

@@ -411,8 +411,7 @@ llvm::raw_ostream &operator<<(
     os << " (has unanalyzedPDTComponentInit)";
   }
   if (!x.ignoreTKR_.empty()) {
-    os << ' ';
-    x.ignoreTKR_.Dump(os, common::EnumToString);
+    x.ignoreTKR_.Dump(os << ' ', common::EnumToString);
   }
   return os;
 }

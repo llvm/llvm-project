@@ -2,6 +2,7 @@
 /// 3.4 redesigns the format and changed .da to .gcda
 /// 4.7 enables cfg_checksum.
 /// 4.8 (default, compatible with gcov 7) emits the exit block the second.
+// RUN: rm -rf %t && mkdir %t && cd %t
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file /dev/null -coverage-version='304*' %s -o - | \
 // RUN:   FileCheck --check-prefixes=CHECK,304 %s
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -coverage-data-file /dev/null -coverage-version='407*' %s -o - | \

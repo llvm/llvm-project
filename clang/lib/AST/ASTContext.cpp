@@ -85,7 +85,6 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -9582,7 +9581,14 @@ bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
 static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
   assert(Ty->isRVVVLSBuiltinType() && "Invalid RVV Type");
   auto VScale = Context.getTargetInfo().getVScaleRange(Context.getLangOpts());
-  return VScale ? VScale->first * llvm::RISCV::RVVBitsPerBlock : 0;
+  if (!VScale)
+    return 0;
+
+  ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(Ty);
+
+  unsigned EltSize = Context.getTypeSize(Info.ElementType);
+  unsigned MinElts = Info.EC.getKnownMinValue();
+  return VScale->first * MinElts * EltSize;
 }
 
 bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
@@ -9600,7 +9606,8 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
                  VT->getElementType().getCanonicalType() ==
                      FirstType->getRVVEltType(*this);
         if (VT->getVectorKind() == VectorType::GenericVector)
-          return getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&
+          return FirstType->isRVVVLSBuiltinType() &&
+                 getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&
                  hasSameType(VT->getElementType(),
                              getBuiltinVectorTypeInfo(BT).ElementType);
       }
@@ -9622,6 +9629,9 @@ bool ASTContext::areLaxCompatibleRVVTypes(QualType FirstType,
   auto IsLaxCompatible = [this](QualType FirstType, QualType SecondType) {
     const auto *BT = FirstType->getAs<BuiltinType>();
     if (!BT)
+      return false;
+
+    if (!BT->isRVVVLSBuiltinType())
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();

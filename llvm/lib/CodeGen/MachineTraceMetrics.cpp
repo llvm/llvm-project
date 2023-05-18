@@ -1099,10 +1099,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
     }
 
     // Go through the block backwards.
-    for (MachineBasicBlock::const_iterator BI = MBB->end(), BB = MBB->begin();
-         BI != BB;) {
-      const MachineInstr &MI = *--BI;
-
+    for (const MachineInstr &MI : reverse(*MBB)) {
       // Find the MI height as determined by virtual register uses in the
       // trace below.
       unsigned Cycle = 0;
@@ -1149,11 +1146,10 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
     }
 
     // Transfer the live regunits to the live-in list.
-    for (SparseSet<LiveRegUnit>::const_iterator
-         RI = RegUnits.begin(), RE = RegUnits.end(); RI != RE; ++RI) {
-      TBI.LiveIns.push_back(LiveInReg(RI->RegUnit, RI->Cycle));
-      LLVM_DEBUG(dbgs() << ' ' << printRegUnit(RI->RegUnit, MTM.TRI) << '@'
-                        << RI->Cycle);
+    for (const LiveRegUnit &RU : RegUnits) {
+      TBI.LiveIns.push_back(LiveInReg(RU.RegUnit, RU.Cycle));
+      LLVM_DEBUG(dbgs() << ' ' << printRegUnit(RU.RegUnit, MTM.TRI) << '@'
+                        << RU.Cycle);
     }
     LLVM_DEBUG(dbgs() << '\n');
 

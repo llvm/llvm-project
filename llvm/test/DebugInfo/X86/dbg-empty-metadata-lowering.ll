@@ -1,14 +1,27 @@
-; RUN: llc %s -stop-after=finalize-isel -o - | FileCheck %s --implicit-check-not=DBG
-
+; RUN: llc %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s --implicit-check-not=DBG --check-prefixes=AT-DISABLED,BOTH
 ;; Check that dbg.values with empty metadata are treated as kills (i.e. become
 ;; DBG_VALUE $noreg, ...). dbg.declares with empty metadata location operands
 ;; should be ignored.
 
-; CHECK: stack: []
-; CHECK: DBG_VALUE float 5.000000e+00
-; CHECK: @ext
-; CHECK: DBG_VALUE $noreg
-; CHECK: @ext
+; RUN: sed 's/;Uncomment-with-sed//g' < %s \
+; RUN: | llc -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s --implicit-check-not=DBG --check-prefixes=AT-ENABLED,BOTH
+;; Check the same behaviour occurs with assignment tracking enabled.
+
+;; First ensure assignment tracking is truly unset/set.
+; AT-DISABLED: !llvm.module.flags = !{![[DWARFv:[0-9]+]], ![[DEBUGv:[0-9]+]]}
+; AT-DISABLED-NOT: !{i32 7, !"debug-info-assignment-tracking", i1 true}
+; AT-ENABLED: !llvm.module.flags = !{![[DWARFv:[0-9]+]], ![[DEBUGv:[0-9]+]], ![[AT:[0-9]+]]}
+; AT-ENABLED-DAG: ![[AT]] = !{i32 7, !"debug-info-assignment-tracking", i1 true}
+; BOTH-DAG: ![[DWARFv]] = !{i32 7, !"Dwarf Version", i32 5}
+; BOTH-DAG: ![[DEBUGv]] = !{i32 2, !"Debug Info Version", i32 3}
+
+; BOTH: stack: []
+; BOTH: DBG_VALUE float 5.000000e+00
+; BOTH: @ext
+; BOTH: DBG_VALUE $noreg
+; BOTH: @ext
 
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -27,7 +40,9 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3}
+!llvm.module.flags = !{!2, !3
+;Uncomment-with-sed , !21
+}
 !llvm.ident = !{!8}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 16.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
@@ -47,3 +62,4 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !18 = !DISubprogram(name: "ext", linkageName: "ext", scope: !1, file: !1, line: 1, type: !10, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !19)
 !19 = !{}
 !20 = !DILocalVariable(name: "g", scope: !9, file: !1, line: 3, type: !14)
+!21 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

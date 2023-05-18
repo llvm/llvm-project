@@ -26,9 +26,10 @@ body: |
     ; CHECK-NEXT: [[PRED_COPY3:%[0-9]+]]:vreg_64 = PRED_COPY [[REG_SEQUENCE]]
     ; CHECK-NEXT: [[PRED_COPY4:%[0-9]+]]:vreg_64 = PRED_COPY [[S_LOAD_DWORDX2_IMM]]
     ; CHECK-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[PRED_COPY3]], 1, [[PRED_COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[V_FRACT_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FRACT_F64_e64 0, [[V_ADD_F64_e64_]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[V_ADD_F64_e64_]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[V_ADD_F64_e64_]], 1, [[V_FLOOR_F64_e64_]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_FRACT_F64_e64_]], [[PRED_COPY1]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[PRED_COPY1]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     %2:sgpr(p4) = COPY $sgpr0_sgpr1
     %7:sgpr(s64) = G_CONSTANT i64 36
@@ -76,9 +77,10 @@ body: |
     ; CHECK-NEXT: [[PRED_COPY3:%[0-9]+]]:vreg_64 = PRED_COPY [[REG_SEQUENCE]]
     ; CHECK-NEXT: [[PRED_COPY4:%[0-9]+]]:vreg_64 = PRED_COPY [[S_LOAD_DWORDX2_IMM]]
     ; CHECK-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[PRED_COPY3]], 3, [[PRED_COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[V_FRACT_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FRACT_F64_e64 0, [[V_ADD_F64_e64_]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[V_ADD_F64_e64_]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[V_ADD_F64_e64_]], 1, [[V_FLOOR_F64_e64_]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_FRACT_F64_e64_]], [[PRED_COPY1]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[PRED_COPY1]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     %2:sgpr(p4) = COPY $sgpr0_sgpr1
     %7:sgpr(s64) = G_CONSTANT i64 36

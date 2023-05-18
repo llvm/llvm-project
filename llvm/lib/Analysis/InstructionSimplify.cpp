@@ -4090,7 +4090,7 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         return getFalse(RetTy);
       // LHS != Inf && LHS != NaN
       if (Pred == FCmpInst::FCMP_ONE &&
-          isKnownNeverInfinity(LHS, Q.DL, Q.TLI) &&
+          isKnownNeverInfinity(LHS, Q.DL, Q.TLI) && // xxxx fixme
           isKnownNeverNaN(LHS, Q.DL, Q.TLI))
         return getTrue(RetTy);
     }

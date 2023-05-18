@@ -126,7 +126,7 @@ void MCStreamer::emitExplicitComments() {}
 void MCStreamer::generateCompactUnwindEncodings(MCAsmBackend *MAB) {
   for (auto &FI : DwarfFrameInfos)
     FI.CompactUnwindEncoding =
-        (MAB ? MAB->generateCompactUnwindEncoding(FI.Instructions) : 0);
+        (MAB ? MAB->generateCompactUnwindEncoding(&FI, &Context) : 0);
 }
 
 /// EmitIntValue - Special case of EmitValue that avoids the client having to

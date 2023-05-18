@@ -1147,6 +1147,10 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
          It != End; ++It) {
       auto *Var = FnVarLocs->getDILocalVariable(It->VariableID);
       dropDanglingDebugInfo(Var, It->Expr);
+      if (It->Values.isKillLocation(It->Expr)) {
+        handleKillDebugValue(Var, It->Expr, It->DL, SDNodeOrder);
+        continue;
+      }
       SmallVector<Value *> Values(It->Values.location_ops());
       if (!handleDebugValue(Values, Var, It->Expr, It->DL, SDNodeOrder,
                             It->Values.hasArgList()))

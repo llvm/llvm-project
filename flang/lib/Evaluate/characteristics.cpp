@@ -400,6 +400,9 @@ llvm::raw_ostream &DummyDataObject::Dump(llvm::raw_ostream &o) const {
       sep = ',';
     }
   }
+  if (!ignoreTKR.empty()) {
+    ignoreTKR.Dump(o << ' ', common::EnumToString);
+  }
   return o;
 }
 

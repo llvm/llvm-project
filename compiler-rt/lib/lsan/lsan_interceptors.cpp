@@ -415,16 +415,8 @@ INTERCEPTOR(char *, strerror, int errnum) {
 
 #if SANITIZER_POSIX
 
-struct ThreadParam {
-  void *(*callback)(void *arg);
-  void *param;
-  atomic_uintptr_t tid;
-};
-
 extern "C" void *__lsan_thread_start_func(void *arg) {
-  ThreadParam *p = (ThreadParam*)arg;
-  void* (*callback)(void *arg) = p->callback;
-  void *param = p->param;
+  atomic_uintptr_t *atomic_tid = (atomic_uintptr_t *)arg;
   // Wait until the last iteration to maximize the chance that we are the last
   // destructor to run.
 #if !SANITIZER_NETBSD && !SANITIZER_FREEBSD
@@ -435,65 +427,88 @@ extern "C" void *__lsan_thread_start_func(void *arg) {
   }
 #endif
   int tid = 0;
-  while ((tid = atomic_load(&p->tid, memory_order_acquire)) == 0)
+  while ((tid = atomic_load(atomic_tid, memory_order_acquire)) == 0)
     internal_sched_yield();
   ThreadStart(tid, GetTid());
-  atomic_store(&p->tid, 0, memory_order_release);
-  return callback(param);
+  atomic_store(atomic_tid, 0, memory_order_release);
+  auto self = GetThreadSelf();
+  auto args = GetThreadArgRetval().GetArgs(self);
+  void *retval = (*args.routine)(args.arg_retval);
+  GetThreadArgRetval().Finish(self, retval);
+  return retval;
 }
 
 INTERCEPTOR(int, pthread_create, void *th, void *attr,
             void *(*callback)(void *), void *param) {
   ENSURE_LSAN_INITED;
   EnsureMainThreadIDIsCorrect();
+  bool detached = [attr]() {
+    int d = 0;
+    return attr && !pthread_attr_getdetachstate(attr, &d) && IsStateDetached(d);
+  }();
   __sanitizer_pthread_attr_t myattr;
   if (!attr) {
     pthread_attr_init(&myattr);
     attr = &myattr;
   }
   AdjustStackSize(attr);
-  int detached = 0;
-  pthread_attr_getdetachstate(attr, &detached);
-  ThreadParam p;
-  p.callback = callback;
-  p.param = param;
-  atomic_store(&p.tid, 0, memory_order_relaxed);
-  int res;
+  atomic_uintptr_t atomic_tid = {};
+  int result;
   {
     // Ignore all allocations made by pthread_create: thread stack/TLS may be
     // stored by pthread for future reuse even after thread destruction, and
     // the linked list it's stored in doesn't even hold valid pointers to the
     // objects, the latter are calculated by obscure pointer arithmetic.
     ScopedInterceptorDisabler disabler;
-    res = REAL(pthread_create)(th, attr, __lsan_thread_start_func, &p);
+    GetThreadArgRetval().Create(detached, {callback, param}, [&]() -> uptr {
+      result =
+          REAL(pthread_create)(th, attr, __lsan_thread_start_func, &atomic_tid);
+      return result ? 0 : *(uptr *)(th);
+    });
   }
-  if (res == 0) {
-    int tid = ThreadCreate(GetCurrentThreadId(), IsStateDetached(detached));
+  if (result == 0) {
+    int tid = ThreadCreate(GetCurrentThreadId(), detached);
     CHECK_NE(tid, kMainTid);
-    atomic_store(&p.tid, tid, memory_order_release);
-    while (atomic_load(&p.tid, memory_order_acquire) != 0)
+    atomic_store(&atomic_tid, tid, memory_order_release);
+    while (atomic_load(&atomic_tid, memory_order_acquire) != 0)
       internal_sched_yield();
   }
   if (attr == &myattr)
     pthread_attr_destroy(&myattr);
-  return res;
+  return result;
 }
 
 INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
-  return REAL(pthread_join)(thread, retval);
+  int result;
+  GetThreadArgRetval().Join((uptr)thread, [&]() {
+    result = REAL(pthread_join)(thread, retval);
+    return !result;
+  });
+  return result;
 }
 
 INTERCEPTOR(int, pthread_detach, void *thread) {
-  return REAL(pthread_detach)(thread);
+  int result;
+  GetThreadArgRetval().Detach((uptr)thread, [&]() {
+    result = REAL(pthread_detach)(thread);
+    return !result;
+  });
+  return result;
 }
 
 INTERCEPTOR(int, pthread_exit, void *retval) {
+  GetThreadArgRetval().Finish(GetThreadSelf(), retval);
   return REAL(pthread_exit)(retval);
 }
 
 #  if SANITIZER_INTERCEPT_TRYJOIN
 INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **ret) {
-  return REAL(pthread_tryjoin_np)(thread, ret);
+  int result;
+  GetThreadArgRetval().Join((uptr)thread, [&]() {
+    result = REAL(pthread_tryjoin_np)(thread, ret);
+    return !result;
+  });
+  return result;
 }
 #    define LSAN_MAYBE_INTERCEPT_TRYJOIN INTERCEPT_FUNCTION(pthread_tryjoin_np)
 #  else
@@ -503,7 +518,12 @@ INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **ret) {
 #  if SANITIZER_INTERCEPT_TIMEDJOIN
 INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
             const struct timespec *abstime) {
-  return REAL(pthread_timedjoin_np)(thread, ret, abstime);
+  int result;
+  GetThreadArgRetval().Join((uptr)thread, [&]() {
+    result = REAL(pthread_timedjoin_np)(thread, ret, abstime);
+    return !result;
+  });
+  return result;
 }
 #    define LSAN_MAYBE_INTERCEPT_TIMEDJOIN \
       INTERCEPT_FUNCTION(pthread_timedjoin_np)
