@@ -95,8 +95,6 @@ add_libc_test(
 
 add_libc_test(
   char_vector_test
-  # This test relies on 'realloc' which is not implemented for hermetic tests.
-  UNIT_TEST_ONLY
   SUITE
     libc-support-tests
   SRCS
