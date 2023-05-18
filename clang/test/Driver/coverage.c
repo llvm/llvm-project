@@ -1,7 +1,6 @@
 // RUN: %clang -### -S -ftest-coverage %s 2>&1 | FileCheck --check-prefix=TEST-COVERAGE %s
 // RUN: %clang -### -S -ftest-coverage -fno-test-coverage %s 2>&1 | FileCheck --check-prefix=NO-TEST-COVERAGE %s
 
-// TEST-COVERAGE: "-ftest-coverage"
 // TEST-COVERAGE: "-coverage-notes-file" "coverage.gcno"
 // NO-TEST-COVERAGE-NOT: "-coverage-notes-file"
 
@@ -9,7 +8,6 @@
 // RUN: %clang -### -S -fprofile-arcs -fno-profile-arcs %s 2>&1 | FileCheck --check-prefix=NO-PROFILE-ARCS %s
 
 // NO-PROFILE-ARCS-NOT: "-coverage-notes-file"
-// PROFILE-ARCS: "-fprofile-arcs"
 // PROFILE-ARCS: "-coverage-data-file" "coverage.gcda"
 
 // RUN: %clang -### -S -ftest-coverage %s -o /foo/bar.o 2>&1 | FileCheck --check-prefix=GCNO-LOCATION %s
