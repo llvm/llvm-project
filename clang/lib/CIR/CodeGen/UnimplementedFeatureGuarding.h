@@ -71,6 +71,8 @@ struct UnimplementedFeature {
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool incrementProfileCounter() { return false; }
+  static bool createProfileWeightsForLoop() { return false; }
+  static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool requiresReturnValueCheck() { return false; }
   static bool shouldEmitLifetimeMarkers() { return false; }
   static bool peepholeProtection() { return false; }
@@ -87,6 +89,8 @@ struct UnimplementedFeature {
   static bool createLaunderInvariantGroup() { return false; }
   static bool addAutoInitAnnotation() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
+  static bool loopInfoStack() { return false; }
+  static bool requiresCleanups() { return false; }
 };
 } // namespace cir
 
