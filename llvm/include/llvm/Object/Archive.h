@@ -410,6 +410,7 @@ public:
   const FixLenHdr *ArFixLenHdr;
   uint64_t FirstChildOffset = 0;
   uint64_t LastChildOffset = 0;
+  std::string MergedGlobalSymtabBuf;
 
 public:
   BigArchive(MemoryBufferRef Source, Error &Err);
