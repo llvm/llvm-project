@@ -261,8 +261,30 @@ bool X86::optimizeMOVSX(MCInst &MI) {
     FROM_TO(MOVSX16rr8, CBW, AX, AL)     // movsbw %al, %ax   --> cbtw
     FROM_TO(MOVSX32rr16, CWDE, EAX, AX)  // movswl %ax, %eax  --> cwtl
     FROM_TO(MOVSX64rr32, CDQE, RAX, EAX) // movslq %eax, %rax --> cltq
+#undef FROM_TO
   }
   MI.clear();
+  MI.setOpcode(NewOpc);
+  return true;
+}
+
+bool X86::optimizeINCDEC(MCInst &MI, bool In64BitMode) {
+  if (In64BitMode)
+    return false;
+  unsigned NewOpc;
+  // If we aren't in 64-bit mode we can use the 1-byte inc/dec instructions.
+#define FROM_TO(FROM, TO)                                                      \
+  case X86::FROM:                                                              \
+    NewOpc = X86::TO;                                                          \
+    break;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+    FROM_TO(DEC16r, DEC16r_alt)
+    FROM_TO(DEC32r, DEC32r_alt)
+    FROM_TO(INC16r, INC16r_alt)
+    FROM_TO(INC32r, INC32r_alt)
+  }
   MI.setOpcode(NewOpc);
   return true;
 }
