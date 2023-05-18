@@ -99,8 +99,6 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 
-  StackFrame *frame = m_exe_ctx.GetFramePtr();
-
   // First, try `expr` as the name of a frame variable.
   if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
