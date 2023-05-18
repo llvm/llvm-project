@@ -42,7 +42,8 @@ public func copyableVarTest() {
     print("stop here") // Set breakpoint
     var k = Klass()
     k.doSomething()
-    let m = consume k // Set breakpoint
+    print("stop here") // Set breakpoint
+    let m = consume k
     m.doSomething()
     k = Klass()     // Set breakpoint
     k.doSomething() // Set breakpoint
@@ -61,7 +62,8 @@ public func addressOnlyVarTest<T : P>(_ x: T) {
     print("stop here") // Set breakpoint
     var k = x
     k.doSomething()
-    let m = consume k // Set breakpoint
+    print("stop here") // Set breakpoint
+    let m = consume k
     m.doSomething()
     k = x // Set breakpoint
     k.doSomething() // Set breakpoint
@@ -81,7 +83,8 @@ public func copyableValueArgTest(_ k: __owned Klass) {
 public func copyableVarArgTest(_ k: inout Klass) {
     print("stop here") // Set breakpoint
     k.doSomething()
-    let m = consume k // Set breakpoint
+    print("stop here") // Set breakpoint
+    let m = consume k
     m.doSomething()
     k = Klass()     // Set breakpoint
     k.doSomething() // Set breakpoint
@@ -98,7 +101,8 @@ public func addressOnlyValueArgTest<T : P>(_ k: __owned T) {
 public func addressOnlyVarArgTest<T : P>(_ k: inout T, _ x: T) {
     print("stop here") // Set breakpoint
     k.doSomething()
-    let m = consume k // Set breakpoint
+    print("stop here") // Set breakpoint
+    let m = consume k
     m.doSomething()
     k = x // Set breakpoint
     k.doSomething() // Set breakpoint
@@ -132,7 +136,8 @@ public func copyableVarTestCCFlowTrueReinitOutOfBlockTest() {
     var k = Klass() // Set breakpoint
     k.doSomething()
     if trueBoolValue {
-        let m = consume k // Set breakpoint
+        print("stop here") // Set breakpoint
+        let m = consume k
         m.doSomething() // Set breakpoint
     }
     k = Klass() // Set breakpoint
@@ -143,7 +148,8 @@ public func copyableVarTestCCFlowTrueReinitInBlockTest() {
     var k = Klass() // Set breakpoint
     k.doSomething()
     if trueBoolValue {
-        let m = consume k // Set breakpoint
+        print("stop here") // Set breakpoint
+        let m = consume k
         m.doSomething()
         k = Klass() // Set breakpoint
         k.doSomething() // Set breakpoint
