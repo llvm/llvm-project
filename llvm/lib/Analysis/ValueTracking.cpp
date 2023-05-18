@@ -4617,17 +4617,22 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
                                           KnownFPClass &Known, unsigned Depth,
                                           const Query &Q,
                                           const TargetLibraryInfo *TLI) {
-  if ((InterestedClasses & fcNan) == fcNone)
+  if ((InterestedClasses &
+       (KnownFPClass::OrderedLessThanZeroMask | fcNan)) == fcNone)
     return;
 
   KnownFPClass KnownSrc;
   computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                       KnownSrc, Depth + 1, Q, TLI);
-  if (KnownSrc.isKnownNeverNaN())
-    Known.knownNot(fcNan);
+
+  // Sign should be preserved
+  // TODO: Handle cannot be ordered greater than zero
+  if (KnownSrc.cannotBeOrderedLessThanZero())
+    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+
+  Known.propagateNaN(KnownSrc, true);
 
   // Infinity needs a range check.
-  // TODO: Sign bit should be preserved
 }
 
 // TODO: Merge implementations of isKnownNeverNaN, isKnownNeverInfinity,
@@ -4912,43 +4917,42 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
         break;
       }
-      case Intrinsic::trunc: {
+      case Intrinsic::trunc:
+      case Intrinsic::floor:
+      case Intrinsic::ceil:
+      case Intrinsic::rint:
+      case Intrinsic::nearbyint:
+      case Intrinsic::round:
+      case Intrinsic::roundeven: {
         KnownFPClass KnownSrc;
-
         FPClassTest InterestedSrcs = InterestedClasses;
-        if (InterestedClasses & fcZero)
-          InterestedClasses |= fcNormal | fcSubnormal;
-
-        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
-                            KnownSrc, Depth + 1, Q, TLI);
+        if (InterestedSrcs & fcPosFinite)
+          InterestedSrcs |= fcPosFinite;
+        if (InterestedSrcs & fcNegFinite)
+          InterestedSrcs |= fcNegFinite;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedSrcs, KnownSrc, Depth + 1, Q, TLI);
 
         // Integer results cannot be subnormal.
         Known.knownNot(fcSubnormal);
 
-        // trunc passes through infinities.
-        if (KnownSrc.isKnownNeverPosInfinity())
-          Known.knownNot(fcPosInf);
-        if (KnownSrc.isKnownNeverNegInfinity())
-          Known.knownNot(fcNegInf);
+        Known.propagateNaN(KnownSrc, true);
 
-        // Non-constrained intrinsics do not guarantee signaling nan quieting.
-        if (KnownSrc.isKnownNeverNaN())
-          Known.knownNot(fcNan);
+        // Pass through infinities, except PPC_FP128 is a special case for
+        // intrinsics other than trunc.
+        if (IID == Intrinsic::trunc || !V->getType()->isMultiUnitFPType()) {
+          if (KnownSrc.isKnownNeverPosInfinity())
+            Known.knownNot(fcPosInf);
+          if (KnownSrc.isKnownNeverNegInfinity())
+            Known.knownNot(fcNegInf);
+        }
 
-        if (KnownSrc.isKnownNever(fcPosNormal))
-          Known.knownNot(fcPosNormal);
+        // Negative round ups to 0 produce -0
+        if (KnownSrc.isKnownNever(fcPosFinite))
+          Known.knownNot(fcPosFinite);
+        if (KnownSrc.isKnownNever(fcNegFinite))
+          Known.knownNot(fcNegFinite);
 
-        if (KnownSrc.isKnownNever(fcNegNormal))
-          Known.knownNot(fcNegNormal);
-
-        if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal | fcPosNormal))
-          Known.knownNot(fcPosZero);
-
-        if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal | fcNegNormal))
-          Known.knownNot(fcNegZero);
-
-        // Sign should be preserved
-        Known.SignBit = KnownSrc.SignBit;
         break;
       }
       case Intrinsic::exp:
