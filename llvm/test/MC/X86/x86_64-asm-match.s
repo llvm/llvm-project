@@ -34,7 +34,13 @@
 // CHECK: Trying to match opcode CRC32r32m32
 // CHECK:   Matching formal operand class MCK_Mem32 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rbx,IndexReg=rcx,Scale=8,Disp=3735928559,SegReg=gs): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_GR32 against actual operand at index 2 (Reg:ecx): match success using generic matcher
-// CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range Opcode result: complete match, selecting this opcode
+// CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range
+// CHECK:   Opcode result: complete match, selecting this opcode
+// CHECK: AsmMatcher: found 2 encodings with mnemonic 'vmaskmovdqu'
+// CHECK: Trying to match opcode VMASKMOVDQU64
+// CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 1 (Reg:xmm0): match success using generic matcher
+// CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 2 (Reg:xmm1): match success using generic matcher
+// CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range
 // CHECK: AsmMatcher: found 4 encodings with mnemonic 'punpcklbw'
 // CHECK: Trying to match opcode MMX_PUNPCKLBWrr
 // CHECK:   Matching formal operand class MCK_VR64 against actual operand at index 1 (Reg:mm0): match success using generic matcher
@@ -48,6 +54,7 @@ pshufb    CPI1_0(%rip), %xmm1
 sha1rnds4 $1, %xmm1, %xmm2
 pinsrw    $3, %ecx, %xmm5
 crc32l    %gs:0xdeadbeef(%rbx,%rcx,8),%ecx
+vmaskmovdqu     %xmm0, %xmm1
 
 .intel_syntax
 punpcklbw mm0, dword ptr [rsp]

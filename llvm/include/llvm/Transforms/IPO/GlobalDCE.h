@@ -61,7 +61,6 @@ private:
   void UpdateGVDependencies(GlobalValue &GV);
   void MarkLive(GlobalValue &GV,
                 SmallVectorImpl<GlobalValue *> *Updates = nullptr);
-  bool RemoveUnusedGlobalValue(GlobalValue &GV);
 
   // Dead virtual function elimination.
   void AddVirtualFunctionDependencies(Module &M);

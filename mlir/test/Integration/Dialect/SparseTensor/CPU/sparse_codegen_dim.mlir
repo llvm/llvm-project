@@ -27,7 +27,7 @@
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #DCSR  = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed"]
+  lvlTypes = [ "compressed", "compressed"]
 }>
 
 module {

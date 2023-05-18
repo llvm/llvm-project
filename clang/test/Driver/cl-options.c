@@ -647,10 +647,6 @@
 // RUN: %clang_cl /guard:ehcont -### -- %s 2>&1 | FileCheck -check-prefix=EHCONTGUARD %s
 // EHCONTGUARD: -ehcontguard
 
-// RUN: %clang_cl /guard:cf /guard:ehcont -### -- %s 2>&1 | FileCheck -check-prefix=BOTHGUARD %s
-// BOTHGUARD: -cfguard
-// BOTHGUARD-SAME: -ehcontguard
-
 // RUN: %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
 // CFGUARDINVALID: invalid value 'foo' in '/guard:'
 

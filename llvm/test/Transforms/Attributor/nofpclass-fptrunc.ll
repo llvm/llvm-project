@@ -34,7 +34,7 @@ define float @ret_fptrunc_noqnan(double nofpclass(qnan) %arg0) {
 }
 
 define float @ret_fptrunc_nosnan(double nofpclass(snan) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_nosnan
+; CHECK-LABEL: define nofpclass(snan) float @ret_fptrunc_nosnan
 ; CHECK-SAME: (double nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -134,7 +134,7 @@ define float @ret_fptrunc_nonorm(double nofpclass(norm) %arg0) {
 }
 
 define float @ret_fptrunc_posonly(double nofpclass(ninf nnorm nsub nzero) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_posonly
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_fptrunc_posonly
 ; CHECK-SAME: (double nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -144,7 +144,7 @@ define float @ret_fptrunc_posonly(double nofpclass(ninf nnorm nsub nzero) %arg0)
 }
 
 define float @ret_fptrunc_posonly_zero(double nofpclass(ninf nnorm nsub) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_posonly_zero
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_fptrunc_posonly_zero
 ; CHECK-SAME: (double nofpclass(ninf nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -154,7 +154,7 @@ define float @ret_fptrunc_posonly_zero(double nofpclass(ninf nnorm nsub) %arg0) 
 }
 
 define float @ret_fptrunc_posonly_zero_nan(double nofpclass(ninf nnorm nsub nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_posonly_zero_nan
+; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @ret_fptrunc_posonly_zero_nan
 ; CHECK-SAME: (double nofpclass(nan ninf nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -164,7 +164,7 @@ define float @ret_fptrunc_posonly_zero_nan(double nofpclass(ninf nnorm nsub nan)
 }
 
 define float @ret_fptrunc_posonly_nan(double nofpclass(ninf nnorm nsub nzero nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_posonly_nan
+; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @ret_fptrunc_posonly_nan
 ; CHECK-SAME: (double nofpclass(nan ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -234,9 +234,9 @@ define float @ret_fptrunc_round_noqnan(double nofpclass(qnan) %arg0) {
 }
 
 define float @ret_fptrunc_round_nosnan(double nofpclass(snan) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_nosnan
+; CHECK-LABEL: define nofpclass(snan) float @ret_fptrunc_round_nosnan
 ; CHECK-SAME: (double nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double [[ARG0]], metadata !"round.downward") #[[ATTR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(snan) float @llvm.fptrunc.round.f32.f64(double [[ARG0]], metadata !"round.downward") #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")

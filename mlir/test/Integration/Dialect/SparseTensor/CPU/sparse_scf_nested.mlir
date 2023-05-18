@@ -23,7 +23,7 @@
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-#SparseMatrix = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ] }>
+#SparseMatrix = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ] }>
 
 module @func_sparse.2 {
   // Do elementwise x+1 when true, x-1 when false

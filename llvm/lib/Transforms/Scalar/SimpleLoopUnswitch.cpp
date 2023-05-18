@@ -2655,8 +2655,7 @@ static BranchInst *turnSelectIntoBranch(SelectInst *SI, DominatorTree &DT,
   LLVM_DEBUG(dbgs() << "Turning " << *SI << " into a branch.\n");
   BasicBlock *HeadBB = SI->getParent();
 
-  DomTreeUpdater DTU =
-      DomTreeUpdater(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   SplitBlockAndInsertIfThen(SI->getCondition(), SI, false,
                             SI->getMetadata(LLVMContext::MD_prof), &DTU, &LI);
   auto *CondBr = cast<BranchInst>(HeadBB->getTerminator());
@@ -2709,15 +2708,10 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   if (MSSAU && VerifyMemorySSA)
      MSSAU->getMemorySSA()->verifyMemorySSA();
 
-  // Remove all CheckBB's successors from DomTree. A block can be seen among
-  // successors more than once, but for DomTree it should be added only once.
-  SmallPtrSet<BasicBlock *, 4> Successors;
-  for (auto *Succ : successors(CheckBB))
-    if (Successors.insert(Succ).second)
-      DTUpdates.push_back({DominatorTree::Delete, CheckBB, Succ});
-
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   Instruction *DeoptBlockTerm =
-      SplitBlockAndInsertIfThen(GI->getArgOperand(0), GI, true);
+      SplitBlockAndInsertIfThen(GI->getArgOperand(0), GI, true,
+                                GI->getMetadata(LLVMContext::MD_prof), &DTU, &LI);
   BranchInst *CheckBI = cast<BranchInst>(CheckBB->getTerminator());
   // SplitBlockAndInsertIfThen inserts control flow that branches to
   // DeoptBlockTerm if the condition is true.  We want the opposite.
@@ -2733,20 +2727,6 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
 
   GI->moveBefore(DeoptBlockTerm);
   GI->setArgOperand(0, ConstantInt::getFalse(GI->getContext()));
-
-  // Add new successors of CheckBB into DomTree.
-  for (auto *Succ : successors(CheckBB))
-    DTUpdates.push_back({DominatorTree::Insert, CheckBB, Succ});
-
-  // Now the blocks that used to be CheckBB's successors are GuardedBlock's
-  // successors.
-  for (auto *Succ : Successors)
-    DTUpdates.push_back({DominatorTree::Insert, GuardedBlock, Succ});
-
-  // Make proper changes to DT.
-  DT.applyUpdates(DTUpdates);
-  // Inform LI of a new loop block.
-  L.addBasicBlockToLoop(GuardedBlock, LI);
 
   if (MSSAU) {
     MemoryDef *MD = cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(GI));

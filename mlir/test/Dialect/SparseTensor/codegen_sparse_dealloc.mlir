@@ -6,9 +6,9 @@
 // RUN:    --sparse-tensor-codegen=create-sparse-deallocs=true \
 // RUN:    --canonicalize --cse | FileCheck %s -check-prefix=CHECK-DEALLOC
 
-#CSR = #sparse_tensor.encoding<{ dimLevelType = ["dense", "compressed"]}>
+#CSR = #sparse_tensor.encoding<{ lvlTypes = ["dense", "compressed"]}>
 #CSC = #sparse_tensor.encoding<{
-  dimLevelType = ["dense", "compressed"],
+  lvlTypes = ["dense", "compressed"],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
