@@ -859,7 +859,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     AST->Ctx->setExternalSource(AST->Reader);
 
   switch (AST->Reader->ReadAST(Filename, serialization::MK_MainFile,
-                          SourceLocation(), ASTReader::ARR_None)) {
+                               SourceLocation(), ASTReader::ARR_None)) {
   case ASTReader::Success:
     break;
 
