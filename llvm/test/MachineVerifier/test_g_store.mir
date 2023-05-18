@@ -1,0 +1,30 @@
+# RUN: not --crash llc -o - -mtriple=arm64 -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_store
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    ; CHECK: Bad machine code: Generic memory instruction must access a pointer
+    %0:_(s64) = G_CONSTANT i32 0
+    %1:_(s32) = G_CONSTANT i32 1
+    G_STORE %1, %0 :: (store (s32))
+
+    %2:_(p0) = G_IMPLICIT_DEF
+    %3:_(s8) = G_IMPLICIT_DEF
+    ; CHECK: Bad machine code: store memory size cannot exceed value size
+    G_STORE %3, %2 :: (store (s16))
+
+    ; CHECK: Bad machine code: atomic store cannot use acquire ordering
+    G_STORE %1, %2 :: (store acquire (s32))
+
+    ; CHECK: Bad machine code: atomic store cannot use acquire ordering
+    G_STORE %1, %2 :: (store acq_rel (s32))
+
+...

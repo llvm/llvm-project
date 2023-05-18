@@ -1,0 +1,30 @@
+# RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_jump_table
+legalized:       true
+tracksRegLiveness: true
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.0' ]
+body:             |
+  bb.0:
+    liveins: $x0
+    %0:_(s64) = COPY $x0
+    %1:_(p0) = COPY $x0
+    ; CHECK: Bad machine code: Too few operands
+    G_BRJT
+
+    ; CHECK: G_BRJT src operand 0 must be a pointer type
+    G_BRJT %0, %jump-table.0, %0
+
+    ; CHECK: G_BRJT src operand 1 must be a jump table index
+    G_BRJT %1, %0, %0
+
+    ; CHECK: G_BRJT src operand 2 must be a scalar reg type
+    G_BRJT %1, %jump-table.0, %1
+
+...

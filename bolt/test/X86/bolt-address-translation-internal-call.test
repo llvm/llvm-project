@@ -1,0 +1,57 @@
+# This checks for an issue with internal calls and BAT (BOLT address
+# translation). BAT needs to map every output block back to an input
+# block, but passes that introduce new blocks (such as validate
+# internal calls) might create new blocks without a mapping to an
+# input block.
+
+# REQUIRES: x86_64-linux,bolt-runtime
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
+# Delete our BB symbols so BOLT doesn't mark them as entry points
+# RUN: llvm-strip --strip-unneeded %t.o
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
+
+# RUN: llvm-bolt --enable-bat %t.exe --relocs -o %t.out | FileCheck %s
+# CHECK: BOLT-INFO: Wrote {{.*}} BAT maps
+
+# RUN: llvm-bat-dump %t.out --dump-all | \
+# RUN:   FileCheck %s --check-prefix=CHECK-BAT-DUMP
+# CHECK-BAT-DUMP:  BAT tables for {{.*}} functions
+
+  .text
+  .globl  main
+  .type main, %function
+  .p2align  4
+main:
+  push   %rbp
+  mov    %rsp,%rbp
+  push   %r12
+  push   %rbx
+  sub    $0x120,%rsp
+  mov    $0x3,%rbx
+  movq   rel(%rip), %rdi
+.J1:
+  cmp    $0x0,%rbx
+  je     .J2
+  callq  .J3
+  nopl   (%rax,%rax,1)
+  movabs $0xdeadbeef,%rax
+  retq
+.J2:
+  add    $0x120,%rsp
+  pop    %rbx
+  pop    %r12
+  jmp    .J4
+.J3:
+  pop    %rax
+  add    $0x4,%rax
+  dec    %rbx
+  jmp    .J1
+.J4:
+  pop    %rbp
+  retq
+end:
+  .size main, .-main
+
+  .data
+rel: .quad end

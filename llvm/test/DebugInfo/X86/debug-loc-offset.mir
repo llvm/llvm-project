@@ -1,0 +1,276 @@
+# RUN: llc -o - %s -start-after=patchable-function -filetype=obj -O0 -mtriple=i386-unknown-linux-gnu -dwarf-version=4 | llvm-dwarfdump -v - | FileCheck %s
+
+# From the code:
+#
+# debug-loc-offset1.cc
+# int bar (int b) {
+#   return b+4;
+# }
+#
+# debug-loc-offset2.cc
+# struct A {
+#   int var;
+#   virtual char foo();
+# };
+#
+# void baz(struct A a) {
+#   int z = 2;
+#   if (a.var > 2)
+#     z++;
+#   if (a.foo() == 'a')
+#     z++;
+# }
+#
+# Compiled separately for i386-pc-linux-gnu and linked together.
+# This ensures that we have multiple compile units and multiple location lists
+# so that we can verify that
+# debug_loc entries are relative to the low_pc of the CU. The loc entry for
+# the byval argument in foo.cpp is in the second CU and so should have
+# an offset relative to that CU rather than from the beginning of the text
+# section.
+#
+# Checking that we have two compile units with two sets of high/lo_pc.
+# CHECK: .debug_info contents
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_low_pc {{.*}} (0x00000020 ".text")
+# CHECK: DW_AT_high_pc
+#
+# CHECK: DW_TAG_subprogram
+# CHECK-NOT: DW_TAG
+# CHECK: DW_AT_linkage_name [DW_FORM_strp]{{.*}}"_Z3baz1A"
+# CHECK-NOT: {{DW_TAG|NULL}}
+# CHECK: DW_TAG_formal_parameter
+# CHECK-NOT: DW_TAG
+# CHECK:       DW_AT_location [DW_FORM_sec_offset]   ({{.*}}
+# CHECK-NEXT:    [0x00000029, 0x00000037) ".text": DW_OP_breg0 EAX+0, DW_OP_deref
+# CHECK-NEXT:    [0x00000037, 0x00000063) ".text": DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
+# CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}}"a"
+#
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_location [DW_FORM_exprloc]
+# CHECK-NOT: DW_AT_location
+#
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_low_pc {{.*}} (0x00000000 ".text")
+# CHECK: DW_AT_high_pc
+#
+# CHECK: DW_TAG_subprogram
+# CHECK-NOT: DW_TAG
+# CHECK: DW_AT_linkage_name [DW_FORM_strp]{{.*}}"_Z3bari"
+# CHECK-NOT: {{DW_TAG|NULL}}
+# CHECK: DW_TAG_formal_parameter
+# CHECK-NOT: DW_TAG
+# CHECK:       DW_AT_location [DW_FORM_sec_offset]   ({{.*}}
+# CHECK-NEXT:    [0x00000000, 0x0000000a) ".text": DW_OP_consts +0, DW_OP_stack_value
+# CHECK-NEXT:    [0x0000000a, 0x00000017) ".text": DW_OP_consts +1, DW_OP_stack_value)
+# CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}}"b"
+#
+# CHECK: .debug_loc contents:
+# CHECK:       0x00000000:
+# CHECK-NEXT:    (0x00000000, 0x0000000a): DW_OP_consts +0, DW_OP_stack_value
+# CHECK-NEXT:    (0x0000000a, 0x00000017): DW_OP_consts +1, DW_OP_stack_value
+# CHECK:       0x00000022:
+# CHECK-NEXT:    (0x00000009, 0x00000017): DW_OP_breg0 EAX+0, DW_OP_deref
+# CHECK-NEXT:    (0x00000017, 0x00000043): DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
+--- |
+  target triple = "i386-unknown-linux-gnu"
+  
+  %struct.A = type { ptr, i32 }
+  
+  ; Function Attrs: nounwind
+  define i32 @_Z3bari(i32 %b) #0 !dbg !10 {
+  entry:
+    %b.addr = alloca i32, align 4
+    store i32 %b, ptr %b.addr, align 4
+    call void @llvm.dbg.value(metadata i32 0, metadata !14, metadata !DIExpression()), !dbg !15
+    %0 = load i32, ptr %b.addr, align 4, !dbg !16
+    call void @llvm.dbg.value(metadata i32 1, metadata !14, metadata !DIExpression()), !dbg !15
+    %add = add nsw i32 %0, 4, !dbg !16
+    ret i32 %add, !dbg !16
+  }
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+  
+  define void @_Z3baz1A(ptr %a) #2 !dbg !17 {
+  entry:
+    %z = alloca i32, align 4
+    call void @llvm.dbg.declare(metadata ptr %a, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !21
+    call void @llvm.dbg.declare(metadata ptr %z, metadata !22, metadata !DIExpression()), !dbg !23
+    store i32 2, ptr %z, align 4, !dbg !23
+    %var = getelementptr inbounds %struct.A, ptr %a, i32 0, i32 1, !dbg !24
+    %0 = load i32, ptr %var, align 4, !dbg !24
+    %cmp = icmp sgt i32 %0, 2, !dbg !24
+    br i1 %cmp, label %if.then, label %if.end, !dbg !24
+  
+  if.then:                                          ; preds = %entry
+    %1 = load i32, ptr %z, align 4, !dbg !26
+    %inc = add nsw i32 %1, 1, !dbg !26
+    store i32 %inc, ptr %z, align 4, !dbg !26
+    br label %if.end, !dbg !26
+  
+  if.end:                                           ; preds = %if.then, %entry
+    %call = call signext i8 @_ZN1A3fooEv(ptr %a), !dbg !27
+    %conv = sext i8 %call to i32, !dbg !27
+    %cmp1 = icmp eq i32 %conv, 97, !dbg !27
+    br i1 %cmp1, label %if.then2, label %if.end4, !dbg !27
+  
+  if.then2:                                         ; preds = %if.end
+    %2 = load i32, ptr %z, align 4, !dbg !29
+    %inc3 = add nsw i32 %2, 1, !dbg !29
+    store i32 %inc3, ptr %z, align 4, !dbg !29
+    br label %if.end4, !dbg !29
+  
+  if.end4:                                          ; preds = %if.then2, %if.end
+    ret void, !dbg !30
+  }
+  
+  declare signext i8 @_ZN1A3fooEv(ptr) #2
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr) #3
+  
+  attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind readnone speculatable }
+  attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #3 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0, !3}
+  !llvm.module.flags = !{!7, !8}
+  !llvm.ident = !{!9, !9}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.5.0 (210479)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
+  !1 = !DIFile(filename: "debug-loc-offset1.cc", directory: "/llvm_cmake_gcc")
+  !2 = !{}
+  !3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !4, producer: "clang version 3.5.0 (210479)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !5, globals: !2, imports: !2)
+  !4 = !DIFile(filename: "debug-loc-offset2.cc", directory: "/llvm_cmake_gcc")
+  !5 = !{!6}
+  !6 = !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !4, line: 1, flags: DIFlagFwdDecl, identifier: "_ZTS1A")
+  !7 = !{i32 2, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{!"clang version 3.5.0 (210479)"}
+  !10 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", scope: !1, file: !1, line: 1, type: !11, isLocal: false, isDefinition: true, scopeLine: 1, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+  !11 = !DISubroutineType(types: !12)
+  !12 = !{!13, !13}
+  !13 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !14 = !DILocalVariable(name: "b", arg: 1, scope: !10, file: !1, line: 1, type: !13)
+  !15 = !DILocation(line: 1, scope: !10)
+  !16 = !DILocation(line: 2, scope: !10)
+  !17 = distinct !DISubprogram(name: "baz", linkageName: "_Z3baz1A", scope: !4, file: !4, line: 6, type: !18, isLocal: false, isDefinition: true, scopeLine: 6, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !3, retainedNodes: !2)
+  !18 = !DISubroutineType(types: !19)
+  !19 = !{null, !6}
+  !20 = !DILocalVariable(name: "a", arg: 1, scope: !17, file: !4, line: 6, type: !6)
+  !21 = !DILocation(line: 6, scope: !17)
+  !22 = !DILocalVariable(name: "z", scope: !17, file: !4, line: 7, type: !13)
+  !23 = !DILocation(line: 7, scope: !17)
+  !24 = !DILocation(line: 8, scope: !25)
+  !25 = distinct !DILexicalBlock(scope: !17, file: !4, line: 8)
+  !26 = !DILocation(line: 9, scope: !25)
+  !27 = !DILocation(line: 10, scope: !28)
+  !28 = distinct !DILexicalBlock(scope: !17, file: !4, line: 10)
+  !29 = !DILocation(line: 11, scope: !28)
+  !30 = !DILocation(line: 12, scope: !17)
+
+...
+---
+name:            _Z3bari
+alignment:       16
+tracksRegLiveness: true
+frameInfo:       
+  stackSize:       8
+  offsetAdjustment: -4
+  maxAlignment:    4
+  maxCallFrameSize: 0
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 8, stack-id: default }
+  - { id: 1, size: 4, alignment: 16, stack-id: default }
+stack:           
+  - { id: 0, type: spill-slot, offset: -12, size: 4, alignment: 4, stack-id: default }
+body:             |
+  bb.0.entry:
+    frame-setup PUSH32r killed $ebp, implicit-def $esp, implicit $esp
+    CFI_INSTRUCTION def_cfa_offset 8
+    CFI_INSTRUCTION offset $ebp, -8
+    $ebp = frame-setup MOV32rr $esp
+    CFI_INSTRUCTION def_cfa_register $ebp
+    frame-setup PUSH32r undef $eax, implicit-def $esp, implicit $esp
+    renamable $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.1)
+    DBG_VALUE 0, 0, !14, !DIExpression(), debug-location !15
+    renamable $ecx = MOV32rm $ebp, 1, $noreg, 8, $noreg, debug-location !16 :: (load (s32) from %ir.b.addr)
+    DBG_VALUE 1, 0, !14, !DIExpression(), debug-location !15
+    renamable $ecx = ADD32ri8 renamable $ecx, 4, implicit-def $eflags, debug-location !16
+    MOV32mr $ebp, 1, $noreg, -4, $noreg, killed $eax :: (store (s32) into %fixed-stack.1)
+    $eax = MOV32rr killed $ecx, debug-location !16
+    $esp = frame-destroy ADD32ri8 $esp, 4, implicit-def dead $eflags, debug-location !16
+    $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp, debug-location !16
+    CFI_INSTRUCTION def_cfa $esp, 4, debug-location !16
+    RET32 implicit killed $eax, debug-location !16
+
+...
+---
+name:            _Z3baz1A
+alignment:       16
+tracksRegLiveness: true
+frameInfo:       
+  stackSize:       28
+  offsetAdjustment: -24
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 4
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 8, stack-id: default }
+  - { id: 1, size: 4, alignment: 16, stack-id: default, isImmutable: true }
+stack:           
+  - { id: 0, name: z, offset: -12, size: 4, alignment: 4, stack-id: default,
+      debug-info-variable: '!22', debug-info-expression: '!DIExpression()', 
+      debug-info-location: '!23' }
+  - { id: 1, type: spill-slot, offset: -16, size: 4, alignment: 4, stack-id: default }
+body:             |
+  bb.0.entry:
+    frame-setup PUSH32r killed $ebp, implicit-def $esp, implicit $esp
+    CFI_INSTRUCTION def_cfa_offset 8
+    CFI_INSTRUCTION offset $ebp, -8
+    $ebp = frame-setup MOV32rr $esp
+    CFI_INSTRUCTION def_cfa_register $ebp
+    $esp = frame-setup SUB32ri8 $esp, 24, implicit-def dead $eflags
+    renamable $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.1)
+    DBG_VALUE renamable $eax, 0, !20, !DIExpression(DW_OP_deref), debug-location !21
+    MOV32mi $ebp, 1, $noreg, -4, $noreg, 2, debug-location !23 :: (store (s32) into %ir.z)
+    CMP32mi renamable $eax, 1, $noreg, 4, $noreg, 2, implicit-def $eflags, debug-location !24 :: (load (s32) from %ir.var)
+    MOV32mr $ebp, 1, $noreg, -8, $noreg, killed $eax :: (store (s32) into %stack.1)
+    DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
+    JCC_1 %bb.2, 14, implicit $eflags, debug-location !24
+  
+  bb.1.if.then:
+    DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
+    renamable $eax = MOV32rm $ebp, 1, $noreg, -4, $noreg, debug-location !26 :: (load (s32) from %ir.z)
+    renamable $eax = ADD32ri8 renamable $eax, 1, implicit-def $eflags, debug-location !26
+    MOV32mr $ebp, 1, $noreg, -4, $noreg, killed renamable $eax, debug-location !26 :: (store (s32) into %ir.z)
+  
+  bb.2.if.end:
+    DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
+    $eax = MOV32rm $ebp, 1, $noreg, -8, $noreg :: (load (s32) from %stack.1)
+    MOV32mr $esp, 1, $noreg, 0, $noreg, killed renamable $eax, debug-location !27 :: (store (s32) into stack)
+    CALLpcrel32 @_ZN1A3fooEv, csr_32, implicit $esp, implicit $ssp, implicit-def $al, debug-location !27
+    renamable $ecx = MOVSX32rr8 killed renamable $al, debug-location !27
+    CMP32ri8 killed renamable $ecx, 97, implicit-def $eflags, debug-location !27
+    JCC_1 %bb.4, 5, implicit $eflags, debug-location !27
+  
+  bb.3.if.then2:
+    DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
+    renamable $eax = MOV32rm $ebp, 1, $noreg, -4, $noreg, debug-location !29 :: (load (s32) from %ir.z)
+    renamable $eax = ADD32ri8 renamable $eax, 1, implicit-def $eflags, debug-location !29
+    MOV32mr $ebp, 1, $noreg, -4, $noreg, killed renamable $eax, debug-location !29 :: (store (s32) into %ir.z)
+  
+  bb.4.if.end4:
+    DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
+    $esp = frame-destroy ADD32ri8 $esp, 24, implicit-def dead $eflags, debug-location !30
+    $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp, debug-location !30
+    CFI_INSTRUCTION def_cfa $esp, 4, debug-location !30
+    RET32 debug-location !30
+
+...

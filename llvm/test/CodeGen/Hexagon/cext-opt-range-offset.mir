@@ -1,0 +1,42 @@
+# RUN: llc -march=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
+
+# Check that this testcase does not crash.
+# CHECK: L4_and_memopw_io
+
+---
+name: fred
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: intregs }
+  - { id: 3, class: intregs }
+  - { id: 4, class: predregs }
+  - { id: 5, class: intregs }
+  - { id: 6, class: intregs }
+body: |
+  bb.0:
+    successors: %bb.1
+        %0 = A2_tfrsi -360184608
+        %1 = L2_loadri_io %0, -1024
+
+  bb.1:
+    successors: %bb.2
+        %2 = A2_tfrsi -234944641
+        %3 = A2_tfrsi -360185632
+        L4_and_memopw_io %3, 0, %2
+
+  bb.2:
+    successors: %bb.3, %bb.4
+        %4 = IMPLICIT_DEF
+        J2_jumpt %4, %bb.4, implicit-def $pc
+        J2_jump %bb.3, implicit-def $pc
+
+  bb.3:
+    successors: %bb.4
+
+  bb.4:
+        %5 = A2_tfrsi -234944521
+        %6 = A2_tfrsi -360185632
+        L4_and_memopw_io %6, 0, %5
+...

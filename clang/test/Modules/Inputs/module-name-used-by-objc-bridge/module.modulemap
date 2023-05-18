@@ -1,0 +1,7 @@
+module InterfaceBridge {
+  header "InterfaceBridge.h"
+}
+
+module Interface {
+  header "Interface.h"
+}

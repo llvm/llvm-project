@@ -1,0 +1,26 @@
+## Don't make symlinks on Windows.
+# UNSUPPORTED: system-windows
+
+# RUN: rm -rf %t
+# RUN: mkdir %t
+
+## By default, assume llvm-cov.
+# RUN: ln -s llvm-cov %t/llvm-foo
+
+# RUN: llvm-cov --help 2>&1 | FileCheck --check-prefix=COV %s
+# RUN: %t/llvm-foo --help 2>&1 | FileCheck --check-prefix=COV %s
+
+# COV: Shows code coverage information.
+# COV: Subcommands:
+
+## If the filename ends in "gcov", assume gcov compatibility.
+# RUN: ln -s llvm-cov %t/llvm-gcov
+# RUN: ln -s llvm-cov %t/gcov
+
+# RUN: %t/llvm-gcov --help 2>&1 | FileCheck --check-prefix=GCOV %s
+# RUN: %t/gcov --help 2>&1 | FileCheck --check-prefix=GCOV %s
+# RUN: llvm-cov gcov --help 2>&1 | FileCheck --check-prefix=GCOV %s
+
+# GCOV: OVERVIEW: LLVM code coverage tool
+# GCOV: --gcda{{.*}}Override inferred gcda file
+# GCOV: --gcno{{.*}}Override inferred gcno file

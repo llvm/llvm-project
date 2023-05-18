@@ -1,0 +1,29 @@
+## Show that LLD can handle .eh_frame sections of different types.
+
+# RUN: yaml2obj %s -o %t1.o -D TYPE=SHT_PROGBITS
+# RUN: ld.lld %t1.o -o %t1
+# RUN: llvm-readobj -S %t1 | FileCheck %s
+
+# RUN: yaml2obj %s -o %t2.o -D TYPE=SHT_X86_64_UNWIND
+# RUN: ld.lld %t2.o -o %t2
+# RUN: llvm-readobj -S %t2 | FileCheck %s
+
+# RUN: ld.lld %t1.o %t2.o -o %tboth
+# RUN: llvm-readobj -S %tboth | FileCheck %s
+
+# RUN: ld.lld -r %t1.o %t2.o -o %tboth.ro
+# RUN: llvm-readobj -S %tboth.ro | FileCheck %s
+
+# CHECK:      Name: .eh_frame
+# CHECK-NEXT: Type: SHT_PROGBITS
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .eh_frame
+    Type:  [[TYPE]]
+    Flags: [ SHF_ALLOC ]

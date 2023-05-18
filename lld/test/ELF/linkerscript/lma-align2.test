@@ -1,0 +1,35 @@
+# REQUIRES: x86
+# RUN: echo '.globl _start; _start: ret;' | \
+# RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %t.o
+# RUN: ld.lld -T %s %t.o -o %t
+# RUN: llvm-readelf -S -l %t | FileCheck %s
+
+# CHECK:      Name         Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK-NEXT:              NULL     0000000000000000 000000 000000 00      0   0  0
+# CHECK-NEXT: .text        PROGBITS 0000000008000000 001000 000001 00  AX  0   0  4
+# CHECK-NEXT: .data        PROGBITS 0000000020000000 002000 000006 00  A   0   0  8
+# CHECK-NEXT: .data2       PROGBITS 000000000800000e 00200e 000008 00  A   0   0  1
+# CHECK-NEXT: .data3       PROGBITS 0000000020000008 002018 000000 00  A   0   0  8
+# CHECK-NEXT: .data4       PROGBITS 0000000008000018 002018 000008 00  A   0   0  1
+
+
+# CHECK:      Type  Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT: LOAD  0x001000 0x0000000008000000 0x0000000008000000 0x000001 0x000001 R E 0x1000
+# CHECK-NEXT: LOAD  0x002000 0x0000000020000000 0x0000000008000008 0x000006 0x000006 R   0x1000
+# CHECK-NEXT: LOAD  0x00200e 0x000000000800000e 0x000000000800000e 0x000008 0x000008 R   0x1000
+# CHECK-NEXT: LOAD  0x002018 0x0000000008000018 0x0000000008000018 0x000008 0x000008 R   0x1000
+
+MEMORY {
+  CODE (rx) : ORIGIN = 0x08000000, LENGTH = 100K
+  DATA (rw) : ORIGIN = 0x20000000, LENGTH = 100K
+}
+
+SECTIONS {
+  .text : { *(.text) } > CODE
+  ## Aligning the start address of .data to 8 should also increase the location counter of CODE.
+  .data : ALIGN(8) { . += 6; } > DATA AT> CODE
+  .data2 : { . += 8; } > CODE
+  ## Also an empty output section with an alignment requirement increases the location counter.
+  .data3 : ALIGN(8) { . = ALIGN(. != 0 ? 4 : 1); } > DATA AT> CODE
+  .data4 : { . += 8; } > CODE
+}

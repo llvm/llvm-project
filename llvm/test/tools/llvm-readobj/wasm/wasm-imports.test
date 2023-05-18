@@ -1,0 +1,136 @@
+# RUN: yaml2obj %s | llvm-readobj --symbols - | FileCheck %s
+
+# Test symbols with custom import module and name attributes.
+
+--- !WASM
+FileHeader:      
+  Version:         0x00000001
+Sections:        
+  - Type:            TYPE
+    Signatures:      
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            IMPORT
+    Imports:         
+      - Module:          env
+        Field:           __linear_memory
+        Kind:            MEMORY
+        Memory:          
+          Minimum:         0x00000000
+      - Module:          env
+        Field:           __indirect_function_table
+        Kind:            TABLE
+        Table:           
+          Index:           0
+          ElemType:        FUNCREF
+          Limits:          
+            Minimum:         0x00000000
+      - Module:          red
+        Field:           foo
+        Kind:            FUNCTION
+        SigIndex:        1
+      - Module:          env
+        Field:           green
+        Kind:            FUNCTION
+        SigIndex:        1
+      - Module:          blue
+        Field:           purple
+        Kind:            FUNCTION
+        SigIndex:        1
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            CODE
+    Relocations:     
+      - Type:            R_WASM_FUNCTION_INDEX_LEB
+        Index:           1
+        Offset:          0x00000004
+      - Type:            R_WASM_FUNCTION_INDEX_LEB
+        Index:           2
+        Offset:          0x0000000A
+      - Type:            R_WASM_FUNCTION_INDEX_LEB
+        Index:           3
+        Offset:          0x00000010
+    Functions:       
+      - Index:           3
+        Locals:          []
+        Body:            10808080800010818080800010828080800041000B
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:     
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            test
+        Flags:           [ VISIBILITY_HIDDEN ]
+        Function:        3
+      - Index:           1
+        Kind:            FUNCTION
+        Name:            foo
+        Flags:           [ UNDEFINED ]
+        Function:        0
+      - Index:           2
+        Kind:            FUNCTION
+        Name:            bar
+        Flags:           [ UNDEFINED, EXPLICIT_NAME ]
+        Function:        1
+      - Index:           3
+        Kind:            FUNCTION
+        Name:            qux
+        Flags:           [ UNDEFINED, EXPLICIT_NAME ]
+        Function:        2
+  - Type:            CUSTOM
+    Name:            producers
+    Tools:           
+      - Name:            clang
+        Version:         '9.0.0 (trunk 359436)'
+...
+ 
+# CHECK:      Format: WASM
+# CHECK-NEXT: Arch: wasm32
+# CHECK-NEXT: AddressSize: 32bit
+# CHECK-NEXT: Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: test
+# CHECK-NEXT:     Type: FUNCTION (0x0)
+# CHECK-NEXT:     Flags [ (0x4)
+# CHECK-NEXT:       VISIBILITY_HIDDEN (0x4)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     ElementIndex: 0x3
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: foo
+# CHECK-NEXT:     Type: FUNCTION (0x0)
+# CHECK-NEXT:     Flags [ (0x10)
+# CHECK-NEXT:       UNDEFINED (0x10)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     ImportModule: red
+# CHECK-NEXT:     ElementIndex: 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: bar
+# CHECK-NEXT:     Type: FUNCTION (0x0)
+# CHECK-NEXT:     Flags [ (0x50)
+# CHECK-NEXT:       EXPLICIT_NAME (0x40)
+# CHECK-NEXT:       UNDEFINED (0x10)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     ImportName: green
+# CHECK-NEXT:     ImportModule: env
+# CHECK-NEXT:     ElementIndex: 0x1
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: qux
+# CHECK-NEXT:     Type: FUNCTION (0x0)
+# CHECK-NEXT:     Flags [ (0x50)
+# CHECK-NEXT:       EXPLICIT_NAME (0x40)
+# CHECK-NEXT:       UNDEFINED (0x10)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     ImportName: purple
+# CHECK-NEXT:     ImportModule: blue
+# CHECK-NEXT:     ElementIndex: 0x2
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

@@ -1,0 +1,1329 @@
+# RUN: llc -run-pass ppc-mi-peepholes -ppc-convert-rr-to-ri %s -o - | FileCheck %s
+# RUN: llc -start-after ppc-mi-peepholes -ppc-late-peephole %s -o - | FileCheck %s --check-prefix=CHECK-LATE
+
+--- |
+  ; ModuleID = 'convert-rr-to-ri-instrs.ll'
+  source_filename = "convert-rr-to-ri-instrs.c"
+  target datalayout = "e-m:e-i64:64-n32:64"
+  target triple = "powerpc64le-unknown-linux-gnu"
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define zeroext i32 @testRLWNM(i32 zeroext %a) local_unnamed_addr #0 {
+  entry:
+    %shl = shl i32 %a, 4
+    %and = and i32 %shl, 4080
+    ret i32 %and
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testRLWNM8(i64 %a) local_unnamed_addr #0 {
+  entry:
+    %shl = shl i64 %a, 4
+    %and = and i64 %shl, 4080
+    ret i64 %and
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define zeroext i32 @testRLWNM_rec(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
+  entry:
+    %and = and i32 %a, 255
+    %tobool = icmp eq i32 %and, 0
+    %cond = select i1 %tobool, i32 %b, i32 %a
+    ret i32 %cond
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testRLWNM8_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %a.tr = trunc i64 %a to i32
+    %0 = shl i32 %a.tr, 4
+    %conv = and i32 %0, 4080
+    %tobool = icmp eq i32 %conv, 0
+    %conv1 = zext i32 %conv to i64
+    %cond = select i1 %tobool, i64 %b, i64 %conv1
+    ret i64 %cond
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define zeroext i32 @testSLW(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
+  entry:
+    %shl = shl i32 %a, %b
+    ret i32 %shl
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define zeroext i32 @testSLW_rec(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
+  entry:
+    %shl = shl i32 %a, %b
+    %tobool = icmp eq i32 %shl, 0
+    %cond = select i1 %tobool, i32 %b, i32 %a
+    ret i32 %cond
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define zeroext i32 @testSRW(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
+  entry:
+    %shr = lshr i32 %a, %b
+    ret i32 %shr
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define zeroext i32 @testSRW_rec(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
+  entry:
+    %shr = lshr i32 %a, %b
+    %tobool = icmp eq i32 %shr, 0
+    %cond = select i1 %tobool, i32 %b, i32 %a
+    ret i32 %cond
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define signext i32 @testSRAW(i32 signext %a, i32 signext %b) local_unnamed_addr #0 {
+  entry:
+    %shr = ashr i32 %a, %b
+    ret i32 %shr
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define signext i32 @testSRAW_rec(i32 signext %a, i32 signext %b) local_unnamed_addr #0 {
+  entry:
+    %shr = ashr i32 %a, %b
+    %tobool = icmp eq i32 %shr, 0
+    %cond = select i1 %tobool, i32 %b, i32 %shr
+    ret i32 %cond
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testRLDCL(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %and = and i64 %b, 63
+    %shl = shl i64 %a, %and
+    %sub = sub nsw i64 64, %and
+    %shr = lshr i64 %a, %sub
+    %or = or i64 %shr, %shl
+    ret i64 %or
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testRLDCL_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %and = and i64 %b, 63
+    %shl = shl i64 %a, %and
+    %sub = sub nsw i64 64, %and
+    %shr = lshr i64 %a, %sub
+    %or = or i64 %shr, %shl
+    %tobool = icmp eq i64 %or, 0
+    %cond = select i1 %tobool, i64 %and, i64 %a
+    ret i64 %cond
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testRLDCR(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %and = and i64 %b, 63
+    %shl = shl i64 %a, %and
+    %sub = sub nsw i64 64, %and
+    %shr = lshr i64 %a, %sub
+    %or = or i64 %shr, %shl
+    ret i64 %or
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testRLDCR_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %and = and i64 %b, 63
+    %shl = shl i64 %a, %and
+    %sub = sub nsw i64 64, %and
+    %shr = lshr i64 %a, %sub
+    %or = or i64 %shr, %shl
+    %tobool = icmp eq i64 %or, 0
+    %cond = select i1 %tobool, i64 %and, i64 %a
+    ret i64 %cond
+  }
+  
+  define i64 @testSLD(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %shl = shl i64 %a, %b
+    ret i64 %shl
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testSLD_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %shl = shl i64 %a, %b
+    %tobool = icmp eq i64 %shl, 0
+    %cond = select i1 %tobool, i64 %b, i64 %a
+    ret i64 %cond
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testSRD(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %shr = lshr i64 %a, %b
+    ret i64 %shr
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testSRD_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %shr = lshr i64 %a, %b
+    %tobool = icmp eq i64 %shr, 0
+    %cond = select i1 %tobool, i64 %b, i64 %a
+    ret i64 %cond
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testSRAD(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %shr = ashr i64 %a, %b
+    ret i64 %shr
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define i64 @testSRAD_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %shr = ashr i64 %a, %b
+    %tobool = icmp eq i64 %shr, 0
+    %cond = select i1 %tobool, i64 %b, i64 %shr
+    ret i64 %cond
+  }
+  
+  attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!2}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+  !2 = !{!"clang version 6.0.0 (trunk 316067)"}
+  !3 = !{!4, !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = !{!7, !7, i64 0}
+  !7 = !{!"short", !4, i64 0}
+  !8 = !{!9, !9, i64 0}
+  !9 = !{!"int", !4, i64 0}
+  !10 = !{!11, !11, i64 0}
+  !11 = !{!"long long", !4, i64 0}
+  !12 = !{!13, !13, i64 0}
+  !13 = !{!"double", !4, i64 0}
+  !14 = !{!15, !15, i64 0}
+  !15 = !{!"float", !4, i64 0}
+
+...
+---
+name:            testRLWNM
+# CHECK-ALL: name: testRLWNM
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: gprc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3
+  
+    %0 = COPY $x3
+    %1 = COPY %0.sub_32
+    %3 = IMPLICIT_DEF
+    %2 = LI 170
+    %4 = RLWNM killed %1, %2, 20, 27
+    ; CHECK: RLWINM killed %1, 10, 20, 27
+    ; CHECK-LATE: rlwinm 3, 3, 10, 20, 27
+    $x3 = EXTSW_32_64 %4
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testRLWNM8
+# CHECK-ALL: name: testRLWNM8
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3
+  
+    %0 = LI8 234
+    %1 = COPY $x3
+    %2 = RLWNM8 %1, %0, 20, 27
+    ; CHECK: RLWINM8 killed %1, 10, 20, 27
+    ; CHECK-LATE: rlwinm 3, 3, 10, 20, 27
+    $x3 = COPY %2
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testRLWNM_rec
+# CHECK-ALL: name: testRLWNM_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 3, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: gprc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: g8rc, preferred-register: '' }
+  - { id: 9, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = COPY %1.sub_32
+    %3 = LI -22
+    %4 = RLWNM_rec %2, %3, 24, 31, implicit-def $cr0
+    ; CHECK: RLWINM_rec %2, 10, 24, 31, implicit-def $cr0
+    ; CHECK-LATE: li 3, -22
+    ; CHECK-LATE: rlwinm. 5, 4, 10, 24, 31
+    %5 = COPY killed $cr0
+    %6 = ISEL %2, %3, %5.sub_eq
+    %8 = IMPLICIT_DEF
+    %7 = INSERT_SUBREG %8, killed %6, 1
+    %9 = RLDICL killed %7, 0, 32
+    $x3 = COPY %9
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testRLWNM8_rec
+# CHECK-ALL: name: testRLWNM8_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 2, class: g8rc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+  - { id: 5, class: g8rc, preferred-register: '' }
+  - { id: 6, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 7, class: crrc, preferred-register: '' }
+  - { id: 8, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI8 -18
+    %3 = RLWNM8_rec %1, %2, 20, 27, implicit-def $cr0
+    ; CHECK: RLWINM8_rec %1, 14, 20, 27, implicit-def $cr0
+    ; CHECK-LATE: rlwinm. 3, 4, 14, 20, 27
+    %7 = COPY killed $cr0
+    %6 = RLDICL killed %3, 0, 32
+    %8 = ISEL8 %1, %6, %7.sub_eq
+    $x3 = COPY %8
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSLW
+# CHECK-ALL: name: testSLW
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+  - { id: 5, class: gprc, preferred-register: '' }
+  - { id: 6, class: g8rc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: gprc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = COPY %1.sub_32
+    %5 = LI 210
+    %8 = SLW killed %2, killed %5
+    ; CHECK: RLWINM killed %2, 18, 0, 13
+    ; CHECK-LATE: slwi 3, 4, 18
+    $x3 = EXTSW_32_64 %8
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSLW_rec
+# CHECK-ALL: name: testSLW_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 3, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: gprc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: g8rc, preferred-register: '' }
+  - { id: 9, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI 35
+    %3 = COPY %0.sub_32
+    %4 = SLW_rec %3, %2, implicit-def $cr0
+    ; CHECK: ANDI_rec %3, 0, implicit-def $cr0
+    ; CHECK-LATE: andi. 5, 3, 0
+    %5 = COPY killed $cr0
+    %6 = ISEL %2, %3, %5.sub_eq
+    %8 = IMPLICIT_DEF
+    %7 = INSERT_SUBREG %8, killed %6, 1
+    %9 = RLDICL killed %7, 0, 32
+    $x3 = COPY %9
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSRW
+# CHECK-ALL: name: testSRW
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+  - { id: 5, class: gprc, preferred-register: '' }
+  - { id: 6, class: g8rc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: gprc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI 48
+    %5 = COPY %0.sub_32
+    %8 = SRW killed %5, killed %2
+    ; CHECK: LI 0
+    ; CHECK-LATE: li 3, 0
+    $x3 = EXTSW_32_64 %8
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSRW_rec
+# CHECK-ALL: name: testSRW_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 3, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: gprc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: g8rc, preferred-register: '' }
+  - { id: 9, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI -7
+    %3 = COPY %0.sub_32
+    %4 = SRW_rec %3, %2, implicit-def $cr0
+    ; CHECK: ANDI_rec %3, 0, implicit-def $cr0
+    ; CHECK-LATE: andi. 5, 3, 0
+    %5 = COPY killed $cr0
+    %6 = ISEL %2, %3, %5.sub_eq
+    %8 = IMPLICIT_DEF
+    %7 = INSERT_SUBREG %8, killed %6, 1
+    %9 = RLDICL killed %7, 0, 32
+    $x3 = COPY %9
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSRAW
+# CHECK-ALL: name: testSRAW
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: gprc, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+  - { id: 5, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI 48
+    %3 = COPY %0.sub_32
+    %4 = SRAW killed %3, killed %2, implicit-def dead $carry
+    ; CHECK: LI 48
+    ; CHECK: SRAW killed %3, killed %2, implicit-def dead $carry
+    ; CHECK-LATE: sraw 3, 3, 4
+    %5 = EXTSW_32_64 killed %4
+    $x3 = COPY %5
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSRAW_rec
+# CHECK-ALL: name: testSRAW_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 3, class: gprc, preferred-register: '' }
+  - { id: 4, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: gprc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI 80
+    %3 = COPY %0.sub_32
+    %4 = SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK: SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK-LATE: sraw. 3, 3, 4
+    %5 = COPY killed $cr0
+    %6 = ISEL %2, %4, %5.sub_eq
+    %7 = EXTSW_32_64 killed %6
+    $x3 = COPY %7
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testRLDCL
+# CHECK-ALL: name: testRLDCL
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: gprc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = COPY %1.sub_32
+    %3 = LI 140
+    %4 = RLDCL %0, killed %3, 0
+    ; CHECK: RLDICL killed %0, 12, 0
+    ; CHECK-LATE: rotldi 3, 3, 12
+    $x3 = COPY %4
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testRLDCL_rec
+# CHECK-ALL: name: testRLDCL_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 3, class: gprc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = RLDICL %1, 0, 58
+    %3 = LI -37
+    %4 = RLDCL_rec %0, killed %3, 0, implicit-def $cr0
+    ; CHECK: RLDICL_rec %0, 27, 0, implicit-def $cr0
+    ; CHECK-LATE: rotldi. 5, 3, 27
+    %5 = COPY killed $cr0
+    %6 = ISEL8 %2, %0, %5.sub_eq
+    $x3 = COPY %6
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testRLDCR
+# CHECK-ALL: name: testRLDCR
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: gprc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = COPY %1.sub_32
+    %3 = LI 300
+    %4 = RLDCR %0, killed %3, 0
+    ; CHECK: RLDICR killed %0, 44, 0
+    ; CHECK-LATE: rldicr 3, 3, 44, 0
+    $x3 = COPY %4
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testRLDCR_rec
+# CHECK-ALL: name: testRLDCR_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 3, class: gprc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = RLDICL %1, 0, 58
+    %3 = LI -18
+    %4 = RLDCR_rec %0, killed %3, 0, implicit-def $cr0
+    ; CHECK: RLDICR_rec %0, 46, 0, implicit-def $cr0
+    ; CHECK-LATE: rldicr. 5, 3, 46, 0
+    %5 = COPY killed $cr0
+    %6 = ISEL8 %2, %0, %5.sub_eq
+    $x3 = COPY %6
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSLD
+# CHECK-ALL: name: testSLD
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI -13
+    %3 = SLD %0, killed %2
+    ; CHECK: LI8 0
+    ; CHECK-LATE: li 3, 0
+    $x3 = COPY %3
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSLD_rec
+# CHECK-ALL: name: testSLD_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: crrc, preferred-register: '' }
+  - { id: 5, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI 88
+    %3 = SLD_rec %0, killed %2, implicit-def $cr0
+    ; CHECK: ANDI8_rec %0, 0, implicit-def $cr0
+    ; CHECK-LATE: andi. 5, 3, 0
+    %4 = COPY killed $cr0
+    %5 = ISEL8 %1, %0, %4.sub_eq
+    $x3 = COPY %5
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSRD
+# CHECK-ALL: name: testSRD
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI 400
+    %3 = SRD %0, killed %2
+    ; CHECK: RLDICL killed %0, 48, 16
+    ; CHECK-LATE: rldicl 3, 3, 48, 16
+    $x3 = COPY %3
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSRD_rec
+# CHECK-ALL: name: testSRD_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: crrc, preferred-register: '' }
+  - { id: 5, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI 64
+    %3 = SRD_rec %0, killed %2, implicit-def $cr0
+    ; CHECK: ANDI8_rec %0, 0, implicit-def $cr0
+    ; CHECK-LATE: andi. 5, 3, 0
+    %4 = COPY killed $cr0
+    %5 = ISEL8 %1, %0, %4.sub_eq
+    $x3 = COPY %5
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSRAD
+# CHECK-ALL: name: testSRAD
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI -44
+    %3 = SRAD %0, killed %2, implicit-def dead $carry
+    ; CHECK: SRAD killed %0, killed %2, implicit-def dead $carry
+    ; CHECK-LATE: srad 3, 3, 4
+    $x3 = COPY %3
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---
+name:            testSRAD_rec
+# CHECK-ALL: name: testSRAD_rec
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 4, class: crrc, preferred-register: '' }
+  - { id: 5, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+  
+    %1 = COPY $x4
+    %0 = COPY $x3
+    %2 = LI 68
+    %3 = SRAD_rec %0, killed %2, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK: SRAD_rec killed %0, killed %2, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK-LATE: srad. 3, 3, 5
+    %4 = COPY killed $cr0
+    %5 = ISEL8 %1, %3, %4.sub_eq
+    $x3 = COPY %5
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+---

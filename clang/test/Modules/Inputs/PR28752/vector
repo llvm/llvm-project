@@ -1,0 +1,28 @@
+#ifndef VECTOR
+#define VECTOR
+template <bool, typename> struct B;
+template <typename _Tp> struct B<true, _Tp> { typedef _Tp type; };
+namespace std {
+template <typename> struct D {
+
+  template <typename _Alloc2> struct F {
+    static const bool value = 0;
+  };
+
+  template <typename _Alloc2>
+  typename B<F<_Alloc2>::value, _Alloc2>::type _S_select(_Alloc2);
+  template <typename _Alloc2>
+  static
+  typename B<!F<_Alloc2>::value, _Alloc2>::type _S_select(_Alloc2);
+};
+template <typename _Alloc>
+template <typename _Alloc2>
+const bool D<_Alloc>::F<_Alloc2>::value;
+
+template <typename> class vector {
+public:
+  vector(int);
+  vector(vector &) : vector(D<bool>::_S_select((bool)0)) {}
+};
+}
+#endif // VECTOR

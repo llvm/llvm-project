@@ -1,0 +1,6 @@
+// RUN: rm -fr %t.prof
+// RUN: %clangxx_pgogen=%t.prof/ -o %t.gen -mllvm -do-comdat-renaming=true -O2 %S/../Inputs/comdat_rename_1.cpp %S/../Inputs/comdat_rename_2.cpp
+// RUN: %run %t.gen
+// RUN: llvm-profdata merge -o %t.profdata %t.prof/
+// RUN: %clangxx_profuse=%t.profdata  -O2 -mllvm -do-comdat-renaming=true -emit-llvm -S %S/../Inputs/comdat_rename_1.cpp -o - | FileCheck %S/../Inputs/comdat_rename_1.cpp
+// RUN: %clangxx_profuse=%t.profdata  -O2 -mllvm -do-comdat-renaming=true -emit-llvm -S %S/../Inputs/comdat_rename_2.cpp -o - | FileCheck %S/../Inputs/comdat_rename_2.cpp

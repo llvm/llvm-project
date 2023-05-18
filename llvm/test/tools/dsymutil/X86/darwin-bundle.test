@@ -1,0 +1,42 @@
+REQUIRES: system-darwin
+
+RUN: rm -rf %t
+RUN: mkdir -p %t/dsymdest
+RUN: cat %p/../Inputs/basic.macho.x86_64 > %t/basic.macho.x86_64
+RUN: cat %p/../Inputs/Info.plist > %t/Info.plist
+
+RUN: dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -o %t/dsymdest/basic.macho.x86_64.dSYM
+RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist
+
+RUN: dsymutil -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -toolchain "toolchain&and'some<symbols" -o %t/dsymdest/basic.macho.x86_64.dSYM
+RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist --check-prefix=CHECK --check-prefix=TOOLCHAIN
+
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -o %t/dsymdest/basic.macho.x86_64.dSYM
+RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist
+
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/.. %t/basic.macho.x86_64 -toolchain "toolchain&and'some<symbols" -o %t/dsymdest/basic.macho.x86_64.dSYM
+RUN: FileCheck %s --input-file %t/dsymdest/basic.macho.x86_64.dSYM/Contents/Info.plist --check-prefix=CHECK --check-prefix=TOOLCHAIN
+
+
+CHECK: <?xml version="1.0" encoding="UTF-8"?>
+CHECK-NEXT: <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+CHECK-NEXT: <plist version="1.0">
+CHECK-NEXT:         <dict>
+CHECK-NEXT:                 <key>CFBundleDevelopmentRegion</key>
+CHECK-NEXT:                 <string>English</string>
+CHECK-NEXT:                 <key>CFBundleIdentifier</key>
+CHECK-NEXT:                 <string>com.apple.xcode.dsym.Foo&amp;Bar</string>
+CHECK-NEXT:                 <key>CFBundleInfoDictionaryVersion</key>
+CHECK-NEXT:                 <string>6.0</string>
+CHECK-NEXT:                 <key>CFBundlePackageType</key>
+CHECK-NEXT:                 <string>dSYM</string>
+CHECK-NEXT:                 <key>CFBundleSignature</key>
+CHECK-NEXT:                 <string>????</string>
+CHECK-NEXT:                 <key>CFBundleShortVersionString</key>
+CHECK-NEXT:                 <string>2.0</string>
+CHECK-NEXT:                 <key>CFBundleVersion</key>
+CHECK-NEXT:                 <string>2</string>
+TOOLCHAIN:                  <key>Toolchain</key>
+TOOLCHAIN-NEXT:             <string>toolchain&amp;and&apos;some&lt;symbols</string>
+CHECK:              </dict>
+CHECK-NEXT: </plist>

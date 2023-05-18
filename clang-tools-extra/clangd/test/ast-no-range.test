@@ -1,0 +1,53 @@
+# RUN: clangd -lit-test < %s | FileCheck %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///simple.cpp","languageId":"cpp","version":1,"text":"int x;"}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/ast","params":{"textDocument":{"uri":"test:///simple.cpp"}}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "arcana": "{{TranslationUnitDecl.*}}"
+# CHECK-NEXT:    "children": [
+# CHECK-NEXT:      {
+#      CHECK:        "arcana": "VarDecl {{.*}} x 'int'",
+# CHECK-NEXT:        "children": [
+# CHECK-NEXT:          {
+# CHECK-NEXT:            "arcana": "QualType {{.*}} 'int' ",
+# CHECK-NEXT:            "detail": "int",
+# CHECK-NEXT:            "kind": "Builtin",
+# CHECK-NEXT:            "range": {
+# CHECK-NEXT:              "end": {
+# CHECK-NEXT:                "character": 3,
+# CHECK-NEXT:                "line": 0
+# CHECK-NEXT:              },
+# CHECK-NEXT:              "start": {
+# CHECK-NEXT:                "character": 0,
+# CHECK-NEXT:                "line": 0
+# CHECK-NEXT:              }
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "role": "type"
+# CHECK-NEXT:          }
+# CHECK-NEXT:        ],
+# CHECK-NEXT:        "detail": "x",
+# CHECK-NEXT:        "kind": "Var",
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 5,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 0,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "role": "declaration"
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ],
+# CHECK-NEXT:    "kind": "TranslationUnit",
+# CHECK-NEXT:    "role": "declaration"
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":2,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

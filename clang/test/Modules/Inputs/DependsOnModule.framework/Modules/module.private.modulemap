@@ -1,0 +1,6 @@
+explicit module DependsOnModule.Private {
+  explicit module DependsOnModule {
+    header "DependsOnModulePrivate.h"
+  }
+}
+

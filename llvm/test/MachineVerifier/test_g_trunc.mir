@@ -1,0 +1,23 @@
+# RUN: not --crash llc -o - -mtriple=arm64 -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_trunc
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    ; CHECK: Bad machine code: Too few operands
+    %0:_(s32) = G_TRUNC
+
+    %1:_(s64) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: Too few operands
+    ; CHECK: Bad machine code: Explicit definition marked as use
+    G_TRUNC %1
+
+...

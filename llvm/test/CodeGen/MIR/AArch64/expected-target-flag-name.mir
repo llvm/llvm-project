@@ -1,0 +1,23 @@
+# RUN: not llc -mtriple=aarch64-none-linux-gnu -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  @var_i32 = global i32 42
+  @var_i64 = global i64 0
+
+  define i32 @sub_small() {
+  entry:
+    %val32 = load i32, ptr @var_i32
+    ret i32 %val32
+  }
+
+...
+---
+name:            sub_small
+body: |
+  bb.0.entry:
+    $x8 = ADRP target-flags(aarch64-page) @var_i32
+  ; CHECK: [[@LINE+1]]:60: expected the name of the target flag
+    $w0 = LDRWui killed $x8, target-flags(aarch64-pageoff, ) @var_i32
+    RET_ReallyLR implicit $w0
+...

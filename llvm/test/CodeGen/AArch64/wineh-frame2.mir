@@ -1,0 +1,72 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
+# RUN:   -stop-after=prologepilog | FileCheck %s
+# Check save_freg_x, save_frep, save_reg
+
+# CHECK:       early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -48
+# CHECK-NEXT:  frame-setup SEH_SaveReg_X 19, -48
+# CHECK-NEXT:  frame-setup STPDi killed $d8, killed $d9, $sp, 1
+# CHECK-NEXT:  frame-setup SEH_SaveFRegP 8, 9, 8
+# CHECK-NEXT:  frame-setup STPDi killed $d10, killed $d11, $sp, 3
+# CHECK-NEXT:  frame-setup SEH_SaveFRegP 10, 11, 24
+# CHECK-NEXT:  frame-setup STRDui killed $d12, $sp, 5
+# CHECK-NEXT:  frame-setup SEH_SaveFReg 12, 40
+# CHECK-NEXT:  frame-setup SEH_PrologEnd
+# CHECK:       frame-destroy SEH_EpilogStart
+# CHECK-NEXT:  $d12 = frame-destroy LDRDui $sp, 5
+# CHECK-NEXT:  frame-destroy SEH_SaveFReg 12, 40
+# CHECK-NEXT:  $d10, $d11 = frame-destroy LDPDi $sp, 3
+# CHECK-NEXT:  frame-destroy SEH_SaveFRegP 10, 11, 24
+# CHECK-NEXT:  $d8, $d9 = frame-destroy LDPDi $sp, 1
+# CHECK-NEXT:  frame-destroy SEH_SaveFRegP 8, 9, 8
+# CHECK-NEXT:  early-clobber $sp, $x19 = frame-destroy LDRXpost $sp, 48
+# CHECK-NEXT:  frame-destroy SEH_SaveReg_X 19, -48
+# CHECK-NEXT:  frame-destroy SEH_EpilogEnd
+# CHECK-NEXT:  RET_ReallyLR implicit $x0
+...
+---
+name:            test
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       true
+registers:
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       112
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: true
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $d0, $d1, $d10, $d11, $d8, $d9
+    $x19 = ADDXrr $x0, killed $x1
+    $d8 = FADDDrr killed $d0, $d1, implicit $fpcr
+    $d9 = FADDDrr $d8, $d1, implicit $fpcr
+    $d10 = FADDDrr $d9, $d8, implicit $fpcr
+    $d11 = FADDDrr killed $d9, $d10, implicit $fpcr
+    $d12 = FADDDrr $d11, killed $d11, implicit $fpcr
+    $x0 = COPY $d12
+    RET_ReallyLR implicit $x0
+
+...

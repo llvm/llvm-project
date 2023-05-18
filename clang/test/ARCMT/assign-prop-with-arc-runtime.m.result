@@ -1,0 +1,72 @@
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -fobjc-arc -fobjc-runtime-has-weak -x objective-c %s.result
+// RUN: arcmt-test --args -triple x86_64-apple-macosx10.7 -fsyntax-only %s > %t
+// RUN: diff %t %s.result
+
+#include "Common.h"
+
+__attribute__((objc_arc_weak_reference_unavailable))
+@interface WeakOptOut
+@end
+
+@class _NSCachedAttributedString;
+typedef _NSCachedAttributedString *BadClassForWeak;
+
+@class Forw;
+
+@interface Foo : NSObject {
+  Foo *__weak x, *__weak w, *__weak q1, *__weak q2;
+  WeakOptOut *__unsafe_unretained oo;
+  BadClassForWeak __unsafe_unretained bcw;
+  id __unsafe_unretained not_safe1;
+  NSObject *__unsafe_unretained not_safe2;
+  Forw *__unsafe_unretained not_safe3;
+  Foo *assign_plus1;
+}
+@property (weak, readonly) Foo *x;
+@property (weak) Foo *w;
+@property (weak) Foo *q1, *q2;
+@property (unsafe_unretained) WeakOptOut *oo;
+@property (unsafe_unretained) BadClassForWeak bcw;
+@property (unsafe_unretained) id not_safe1;
+@property (unsafe_unretained) NSObject *not_safe2;
+@property (unsafe_unretained) Forw *not_safe3;
+@property (readonly) Foo *assign_plus1;
+@property (readonly) Foo *assign_plus2;
+@property (readonly) Foo *assign_plus3;
+
+@property (weak) Foo *no_user_ivar1;
+@property (weak, readonly) Foo *no_user_ivar2;
+
+@property (strong) id def1;
+@property (atomic,strong) id def2;
+@property (strong,atomic) id def3;
+
+@end
+
+@implementation Foo
+@synthesize x,w,q1,q2,oo,bcw,not_safe1,not_safe2,not_safe3;
+@synthesize no_user_ivar1, no_user_ivar2;
+@synthesize assign_plus1, assign_plus2, assign_plus3;
+@synthesize def1, def2, def3;
+
+-(void)test:(Foo *)parm {
+  assign_plus1 = [[Foo alloc] init];
+  assign_plus2 = [Foo new];
+  assign_plus3 = parm;
+}
+@end
+
+@interface TestExt
+@property (strong,readonly) TestExt *x1;
+@property (weak, readonly) TestExt *x2;
+@end
+
+@interface TestExt()
+@property (strong,readwrite) TestExt *x1;
+@property (weak, readwrite) TestExt *x2;
+@property (strong) TestExt *x3;
+@end
+
+@implementation TestExt
+@synthesize x1, x2, x3;
+@end

@@ -1,0 +1,22 @@
+# RUN: llvm-mc --disassemble %s -triple=s390x-linux-gnu < %s 2>&1 | FileCheck %s
+
+# This would be "axbr %f14, %f0", but %r14 is invalid.
+#
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: 0xb3 0x4a 0x00 0xe0
+# CHECK-NEXT: ^
+0xb3 0x4a 0x00 0xe0
+
+# This would be "axbr %f0, %f2", but %f2 is invalid.
+#
+# CHECK-NEXT: warning: invalid instruction encoding
+# CHECK-NEXT: 0xb3 0x4a 0x00 0x02
+# CHECK-NEXT: ^
+0xb3 0x4a 0x00 0x02
+
+# This would be "dlr %r1, %r8", but %r1 is invalid.
+#
+# CHECK-NEXT: warning: invalid instruction encoding
+# CHECK-NEXT: 0xb9 0x97 0x00 0x18
+# CHECK-NEXT: ^
+0xb9 0x97 0x00 0x18

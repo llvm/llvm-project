@@ -1,0 +1,13 @@
+# RUN: llc -march=hexagon -run-pass postrapseudos %s -o - | FileCheck %s
+
+# Check that this doesn't crash.
+# CHECK: $w2 = V6_vccombine $p0, $v1, $v0
+# CHECK: $w2 = V6_vnccombine killed $p0, $v3, $v2, implicit $w2
+
+name: fred
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $p0, $w0, $w1
+    $w2 = PS_wselect killed $p0, killed $w0, killed $w1
+---

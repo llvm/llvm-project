@@ -1,0 +1,13 @@
+# REQUIRES: system-darwin
+# REQUIRES: python
+# RUN: %clang_host %p/Inputs/cstr.c -g -o %t
+# RUN: %lldb -b -s %s -f %t | FileCheck %s
+
+br set -p return
+command script import lldb.macosx.heap
+run
+cstr_refs "patatino"
+
+# CHECK: "cstr_refs", {{.*}} commands have been installed, use the "--help" options on these commands
+
+# CHECK: {{.*}}: malloc(    16) -> {{.*}}

@@ -1,0 +1,232 @@
+--- |
+ ; pr37472
+ ; These test verify that shrink-wrap does not set the restore point
+ ; to a position where the stack might still be accessed by a load or store
+ 
+ ; RUN: llc -x=mir -simplify-mir -run-pass=shrink-wrap -o - %s | FileCheck %s
+ ; CHECK:      name:            compiler_pop_stack
+ ; CHECK:      frameInfo:
+ ; CHECK:      savePoint:       '%bb.1'
+ ; CHECK:      restorePoint:    '%bb.7'
+ ; CHECK:      name:            compiler_pop_stack_no_memoperands
+ ; CHECK:      frameInfo:
+ ; CHECK:      savePoint:       '%bb.1'
+ ; CHECK:      restorePoint:    '%bb.7'
+ ; CHECK:      name:            f
+ ; CHECK:      frameInfo:
+ ; CHECK:      savePoint:       '%bb.2'
+ ; CHECK-NEXT: restorePoint:    '%bb.4'
+ ; CHECK-NEXT: stack:
+
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64"
+
+  %struct.S = type { i32, i32 }
+
+ ; Test from: https://bugs.llvm.org/show_bug.cgi?id=42136
+  define void @compiler_pop_stack(i32 %num, i32 %dec) {
+  entry:
+    %rstack = alloca [16 x i32], align 4
+    %idxprom = zext i32 %dec to i64
+    %arrayidx2 = getelementptr inbounds [16 x i32], ptr %rstack, i64 0, i64 %idxprom
+    %sunkaddr = mul i64 %idxprom, 4
+    %sunkaddr2 = getelementptr inbounds i8, ptr %rstack, i64 %sunkaddr
+    ret void
+  }
+
+ define void @compiler_pop_stack_no_memoperands(i32 %num, i32 %dec) {
+  entry:
+    %rstack = alloca [16 x i32], align 4
+    %idxprom = zext i32 %dec to i64
+    %arrayidx2 = getelementptr inbounds [16 x i32], ptr %rstack, i64 0, i64 %idxprom
+    %sunkaddr = mul i64 %idxprom, 4
+    %sunkaddr2 = getelementptr inbounds i8, ptr %rstack, i64 %sunkaddr
+    ret void
+  }
+
+
+ ; Test from: https://bugs.llvm.org/show_bug.cgi?id=37472
+  define i32 @f(ptr nocapture %arg, i32 %arg1) {
+  bb:
+    %tmp = alloca [4 x i8], align 1
+    %tmp6 = getelementptr inbounds [4 x i8], ptr %tmp, i64 0, i64 3
+    %sunkaddr = getelementptr inbounds i8, ptr %tmp, i64 3
+    %tmp14 = getelementptr inbounds %struct.S, ptr %arg, i64 0, i32 1
+    ret i32 0
+  }
+
+...
+---
+name:            compiler_pop_stack
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+frameInfo:
+  maxAlignment:    4
+  maxCallFrameSize: 0
+  localFrameSize:  64
+stack:
+  - { id: 0, name: rstack, size: 64, alignment: 4, stack-id: default, local-offset: -64 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w0
+
+    dead $wzr = SUBSWri renamable $w0, 2, 0, implicit-def $nzcv
+    Bcc 3, %bb.6, implicit killed $nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: $w0
+
+    STRWui killed renamable $w0, %stack.0.rstack, 0 :: (volatile store (s32) into %ir.rstack)
+    renamable $w9 = MOVi32imm 1
+    renamable $x8 = ADDXri %stack.0.rstack, 0, 0
+
+  bb.2:
+    successors: %bb.3(0x30000000), %bb.4(0x50000000)
+    liveins: $w9, $x8
+
+    renamable $w10 = SUBWri renamable $w9, 1, 0, implicit-def $x10
+    renamable $w11 = LDRWroW renamable $x8, renamable $w10, 0, 1 :: (volatile load (s32) from %ir.arrayidx2)
+    CBNZW renamable $w11, %bb.4
+
+  bb.3:
+    liveins: $x8, $x10
+
+    renamable $w9 = COPY renamable $w10, implicit killed $x10
+    B %bb.5
+
+  bb.4:
+    liveins: $w9, $w11, $x8, $x10
+
+    STRWroX killed renamable $w11, renamable $x8, killed renamable $x10, 0, 1 :: (volatile store (s32) into %ir.sunkaddr2)
+
+  bb.5:
+    successors: %bb.6(0x04000000), %bb.2(0x7c000000)
+    liveins: $w9, $x8
+
+    CBNZW renamable $w9, %bb.2
+    B %bb.6
+
+  bb.6:
+    RET_ReallyLR
+
+...
+# Like compiler_pop_stack, but with the memory operands dropped from the
+# machine instructions.
+---
+name:            compiler_pop_stack_no_memoperands
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+frameInfo:
+  maxAlignment:    4
+  maxCallFrameSize: 0
+  localFrameSize:  64
+stack:
+  - { id: 0, name: rstack, size: 64, alignment: 4, stack-id: default, local-offset: -64 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w0
+
+    dead $wzr = SUBSWri renamable $w0, 2, 0, implicit-def $nzcv
+    Bcc 3, %bb.6, implicit killed $nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: $w0
+
+    STRWui killed renamable $w0, %stack.0.rstack, 0
+    renamable $w9 = MOVi32imm 1
+    renamable $x8 = ADDXri %stack.0.rstack, 0, 0
+
+  bb.2:
+    successors: %bb.3(0x30000000), %bb.4(0x50000000)
+    liveins: $w9, $x8
+
+    renamable $w10 = SUBWri renamable $w9, 1, 0, implicit-def $x10
+    renamable $w11 = LDRWroW renamable $x8, renamable $w10, 0, 1
+    CBNZW renamable $w11, %bb.4
+
+  bb.3:
+    liveins: $x8, $x10
+
+    renamable $w9 = COPY renamable $w10, implicit killed $x10
+    B %bb.5
+
+  bb.4:
+    liveins: $w9, $w11, $x8, $x10
+
+    STRWroX killed renamable $w11, renamable $x8, killed renamable $x10, 0, 1
+
+  bb.5:
+    successors: %bb.6(0x04000000), %bb.2(0x7c000000)
+    liveins: $w9, $x8
+
+    CBNZW renamable $w9, %bb.2
+    B %bb.6
+
+  bb.6:
+    RET_ReallyLR
+
+...
+
+---
+name:            f
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$w1' }
+frameInfo:
+  maxAlignment:    4
+  maxCallFrameSize: 0
+  localFrameSize:  4
+stack:
+  - { id: 0, name: tmp, size: 4, alignment: 4, stack-id: default, local-offset: -4 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w1, $x0
+
+    dead $wzr = SUBSWri renamable $w1, 4, 0, implicit-def $nzcv
+    Bcc 9, %bb.2, implicit killed $nzcv
+
+  bb.1:
+    renamable $w0 = MOVi32imm 1
+    B %bb.5
+
+  bb.2:
+    successors: %bb.3, %bb.4
+    liveins: $w1, $x0
+
+    renamable $w9 = MOVi32imm 67305985
+    renamable $w8 = ORRWrs $wzr, renamable $w1, 0, implicit-def $x8
+    STRWui killed renamable $w9, %stack.0.tmp, 0 :: (volatile store (s32) into %ir.tmp)
+    renamable $x9 = ADDXri %stack.0.tmp, 0, 0
+    renamable $w10 = LDRBBroX renamable $x9, renamable $x8, 0, 0 :: (volatile load (s8) from %ir.arg)
+    dead $wzr = SUBSWri killed renamable $w1, 2, 0, implicit-def $nzcv
+    STRWui killed renamable $w10, renamable $x0, 0 :: (store (s32) into %ir.arg)
+    Bcc 8, %bb.4, implicit killed $nzcv
+    B %bb.3
+
+  bb.3:
+    liveins: $x0, $x8, $x9
+
+    renamable $w8 = LDRBBroX killed renamable $x9, killed renamable $x8, 0, 0 :: (volatile load (s8) from %ir.sunkaddr)
+    STRWui killed renamable $w8, killed renamable $x0, 1 :: (store (s32) into %ir.tmp14)
+
+  bb.4:
+    renamable $w0 = COPY $wzr
+
+  bb.5:
+    liveins: $w0
+
+    RET_ReallyLR implicit $w0
+
+...

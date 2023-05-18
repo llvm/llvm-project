@@ -1,0 +1,75 @@
+## This test checks that a correct universal binary is produced when
+## llvm-libtool-darwin is given bitcode for multiple architectures.
+
+## Check that the subtypes of cputype CPU_TYPE_ARM are stored in a fat file:
+# RUN: llvm-as %p/Inputs/arm64-ios.ll -o %t-arm64.bc
+# RUN: llvm-as %p/Inputs/armv7-ios.ll -o %t-armv7.bc
+
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-arm64.bc %t-armv7.bc
+
+## Check that architectures are present in the universal output:
+# RUN: llvm-lipo -info %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARCHS -DFILE=%t.lib
+
+# ARCHS: Architectures in the fat file: [[FILE]] are: armv7 arm64 
+
+## Check that the files with the same architecture are combined in an archive:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-arm64.bc %t-arm64.bc %t-armv7.bc
+# RUN: llvm-lipo -info %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARCHS -DFILE=%t.lib
+# RUN: llvm-objdump --macho --arch all --all-headers %t.lib | \
+# RUN:   FileCheck %s --check-prefix=UNIVERSAL-MEMBERS -DFILE=%t.lib -DPREFIX=%basename_t.tmp --implicit-check-not=Archive
+
+# UNIVERSAL-MEMBERS:      Archive : [[FILE]] (architecture armv7)
+# UNIVERSAL-MEMBERS-NEXT: __.SYMDEF
+# UNIVERSAL-MEMBERS-NEXT: [[PREFIX]]-armv7.bc
+# UNIVERSAL-MEMBERS:      Archive : [[FILE]] (architecture arm64)
+# UNIVERSAL-MEMBERS-NEXT: __.SYMDEF
+# UNIVERSAL-MEMBERS-NEXT: [[PREFIX]]-arm64.bc
+# UNIVERSAL-MEMBERS-NEXT: [[PREFIX]]-arm64.bc
+
+## Check that the files extracted from a universal output are archives:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-arm64.bc %t-armv7.bc
+# RUN: llvm-lipo %t.lib -thin armv7 -output %t-extracted-v7.a
+# RUN: llvm-ar t %t-extracted-v7.a | \
+# RUN:   FileCheck %s --check-prefix=EXTRACT --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t-extracted-v7.a | \
+# RUN:   FileCheck %s --check-prefix=EXTRACT-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# EXTRACT: [[PREFIX]]-armv7.bc
+
+# EXTRACT-SYMBOLS:      Archive map
+# EXTRACT-SYMBOLS-NEXT: _armv7 in [[PREFIX]]-armv7.bc
+# EXTRACT-SYMBOLS-EMPTY:
+
+## Check that the subtypes of cputype CPU_TYPE_X86_64 are stored in a fat file:
+# RUN: llvm-as %p/Inputs/x86_64-osx.ll -o %t-x86_64.bc
+# RUN: llvm-as %p/Inputs/x86_64h-osx.ll -o %t-x86_64_h.bc
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-x86_64.bc %t-x86_64_h.bc
+# RUN: llvm-lipo -info %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARCHS-X86 -DFILE=%t.lib
+
+# ARCHS-X86: Architectures in the fat file: [[FILE]] are: x86_64 x86_64h
+
+## Check that the subtypes of cputype CPU_TYPE_ARM64 are stored in a fat file:
+## Testing it using llvm-objdump as, currently, there is no support for arm64e
+## under llvm/lib/Object/MachOObjectFile.cpp.
+# RUN: llvm-as %p/Inputs/arm64e-ios.ll -o %t-arm64e.bc
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-arm64.bc %t-arm64e.bc
+# RUN: llvm-objdump --macho --arch all --all-headers %t.lib | \
+# RUN:   FileCheck %s --check-prefix=UNIVERSAL-MEMBERS-ARM64 -DFILE=%t.lib -DPREFIX=%basename_t.tmp --implicit-check-not=Archive
+
+# UNIVERSAL-MEMBERS-ARM64:      Archive : [[FILE]] (architecture arm64)
+# UNIVERSAL-MEMBERS-ARM64-NEXT: __.SYMDEF
+# UNIVERSAL-MEMBERS-ARM64-NEXT: [[PREFIX]]-arm64.bc
+# UNIVERSAL-MEMBERS-ARM64:      Archive : [[FILE]]
+# UNIVERSAL-MEMBERS-ARM64-NEXT: __.SYMDEF
+# UNIVERSAL-MEMBERS-ARM64-NEXT: [[PREFIX]]-arm64e.bc
+
+## Check that different cputypes are stored together in a fat file:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-armv7.bc %t-x86_64.bc
+# RUN: llvm-lipo -info %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARCHS-CPU -DFILE=%t.lib
+
+# ARCHS-CPU: Architectures in the fat file: [[FILE]] are: armv7 x86_64
+

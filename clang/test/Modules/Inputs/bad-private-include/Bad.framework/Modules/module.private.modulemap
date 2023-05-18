@@ -1,0 +1,5 @@
+framework module Bad_Private {
+  umbrella header "BadPrivate.h"
+  export *
+  module * { export * }
+}

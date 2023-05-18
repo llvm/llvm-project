@@ -1,0 +1,121 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
+# RUN:   -filetype=obj  | llvm-readobj --unwind - | FileCheck %s
+# Check AddFP
+
+# CHECK:	 ExceptionData {
+# CHECK-NEXT:      FunctionLength: 72
+# CHECK-NEXT:      Version: 0
+# CHECK-NEXT:      ExceptionData: No
+# CHECK-NEXT:      EpiloguePacked: Yes
+# CHECK-NEXT:      EpilogueOffset: 0
+# CHECK-NEXT:      ByteCodeLength: 8
+# CHECK-NEXT:      Prologue [
+# CHECK-NEXT:        0xe204              ; add fp, sp, #32
+# CHECK-NEXT:        0x44                ; stp x29, x30, [sp, #32]
+# CHECK-NEXT:        0xc802              ; stp x19, x20, [sp, #16]
+# CHECK-NEXT:        0xcc85              ; stp x21, x22, [sp, #-48]!
+# CHECK-NEXT:        0xe4                ; end
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+# CHECK-NEXT:  }
+
+...
+---
+name:            '?func@@YAHHHHH@Z'
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI: true
+registers:
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+  - { reg: '$w1', virtual-reg: '' }
+  - { reg: '$w2', virtual-reg: '' }
+  - { reg: '$w3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       48
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: '', type: variable-sized, offset: -48,
+      alignment: 1, stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: 0, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$x20', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: '', type: spill-slot, offset: -40, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$x21', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -48, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$x22', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $w3, $x21, $x22, $x19, $x20, $lr
+
+    early-clobber $sp = frame-setup STPXpre killed $x21, killed $x22, $sp, -6 :: (store (s64) into %stack.5), (store (s64) into %stack.6)
+    frame-setup SEH_SaveRegP_X 21, 22, -48
+    frame-setup STPXi killed $x19, killed $x20, $sp, 2 :: (store (s64) into %stack.3), (store (s64) into %stack.4)
+    frame-setup SEH_SaveRegP 19, 20, 16
+    frame-setup STPXi killed $fp, killed $lr, $sp, 4 :: (store (s64) into %stack.1), (store (s64) into %stack.2)
+    frame-setup SEH_SaveFPLR 32
+    $fp = frame-setup ADDXri $sp, 32, 0
+    frame-setup SEH_AddFP 32
+    frame-setup SEH_PrologEnd
+    renamable $w19 = COPY $w3
+    renamable $w0 = KILL $w0, implicit-def $x0
+    renamable $w20 = COPY $w2
+    renamable $w21 = COPY $w1
+    renamable $x8 = SBFMXri killed renamable $x0, 0, 31
+    renamable $x9 = ADDXri killed renamable $x8, 15, 0
+    renamable $x15 = UBFMXri killed renamable $x9, 4, 63
+    renamable $x8 = COPY $sp
+    renamable $x22 = SUBXrs killed renamable $x8, killed renamable $x15, 4
+    $sp = COPY renamable $x22
+    $x0 = COPY renamable $x22
+    renamable $w8 = LDRWroW killed renamable $x22, killed renamable $w21, 1, 1
+    renamable $w9 = ADDWrr killed renamable $w19, killed renamable $w20
+    renamable $w0 = ADDWrr killed renamable $w9, killed renamable $w8
+    frame-destroy SEH_EpilogStart
+    $sp = frame-destroy SUBXri $fp, 32, 0
+    frame-destroy SEH_AddFP 32
+    $fp, $lr = frame-destroy LDPXi $sp, 4 :: (load (s64) from %stack.1), (load (s64) from %stack.2)
+    frame-destroy SEH_SaveFPLR 32
+    $x19, $x20 = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.3), (load (s64) from %stack.4)
+    frame-destroy SEH_SaveRegP 19, 20, 16
+    early-clobber $sp, $x21, $x22 = frame-destroy LDPXpost $sp, 6 :: (load (s64) from %stack.5), (load (s64) from %stack.6)
+    frame-destroy SEH_SaveRegP_X 21, 22, -48
+    frame-destroy SEH_EpilogEnd
+    RET_ReallyLR implicit $w0
+
+...

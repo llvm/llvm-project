@@ -1,0 +1,65 @@
+# RUN: llc -mtriple=aarch64 -run-pass machinelicm -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: test
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+stack:
+  - { id: 0, size: 8, type: spill-slot }
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: $x2 = LDRXui %stack.0, 0
+    liveins: $x0, $x1, $x2
+    B %bb.1
+
+  bb.1:
+    ; CHECK-LABEL: bb.1:
+    ; CHECK-NOT: $x2 = LDRXui %stack.0, 0
+    ; CHECK: $x0 = ADDXrr $x0, $x2
+    liveins: $x0
+    DBG_VALUE %stack.0, 0
+    $x2 = LDRXui %stack.0, 0 :: (load (s64) from %stack.0)
+    $x0 = ADDXrr $x0, killed $x2
+    $xzr = SUBSXri killed $x0, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+    liveins: $x0
+    %0 = COPY $x0
+    %0 = COPY $x0  ; Force isSSA = false.
+...
+---
+name: test2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+stack:
+  - { id: 0, size: 8, type: spill-slot }
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test2
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: $x2 = LDRXui %stack.0, 0
+    liveins: $x0, $x1, $x2
+    B %bb.1
+
+  bb.1:
+    ; CHECK-LABEL: bb.1:
+    ; CHECK-NOT: $x2 = LDRXui %stack.0, 0
+    ; CHECK: $w0 = ADDWrr $w0, $w2
+    liveins: $x0
+    DBG_VALUE %stack.0, 0
+    $x2 = LDRXui %stack.0, 0 :: (load (s64) from %stack.0)
+    $w0 = ADDWrr $w0, killed $w2
+    $wzr = SUBSWri killed $w0, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+    liveins: $x0
+    %0 = COPY $x0
+    %0 = COPY $x0  ; Force isSSA = false.
+...

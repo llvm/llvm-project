@@ -1,0 +1,43 @@
+# REQUIRES: python, native && target-aarch64 && system-darwin
+
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/interactive_crashlog/multithread-test.yaml > %t.dir/multithread-test
+# RUN: %lldb -o 'command script import lldb.macosx.crashlog' \
+# RUN: -o 'crashlog -a -i -t %t.dir/multithread-test %S/Inputs/interactive_crashlog/multithread-test.ips' \
+# RUN: -o "thread list" -o "bt all" 2>&1 | FileCheck %s
+
+# CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
+
+# CHECK: (lldb) process status
+# CHECK-NEXT: Process 22511 stopped
+# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+# CHECK-NEXT:     frame #0: 0x0000000100ec58f4 multithread-test`bar
+
+# CHECK: (lldb) thread backtrace
+# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+# CHECK-NEXT:   * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [artificial]
+# CHECK-NEXT:     frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [artificial]
+# CHECK-NEXT:     frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [artificial]
+
+# CHECK: (lldb) thread list
+# CHECK-NEXT: Process 22511 stopped
+# CHECK-NEXT:   thread #1: tid = 0x23c7fe, 0x000000019cc40b84{{.*}}, queue = 'com.apple.main-thread'
+# CHECK-NEXT:   thread #2: tid = 0x23c800, 0x000000019cc42c9c{{.*}}
+# CHECK-NEXT: * thread #3: tid = 0x23c801, 0x0000000100ec58f4 multithread-test`bar{{.*}}, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+
+# CHECK: (lldb) bt all
+# CHECK:  thread #1, queue = 'com.apple.main-thread'
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc40b84{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5b3b multithread-test`main{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x00000002230f8da7{{.*}} [artificial]
+# CHECK-NEXT:  thread #2
+# CHECK-NEXT:    frame #0: 0x000000019cc42c9c{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5957 multithread-test`call_and_wait{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [artificial]
+# CHECK-NEXT:* thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
+# CHECK-NEXT:  * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [artificial]
+# CHECK-NEXT:    frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [artificial]
+# CHECK-NEXT:    frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [artificial]

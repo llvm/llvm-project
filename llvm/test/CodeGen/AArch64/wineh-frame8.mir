@@ -1,0 +1,88 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
+# RUN:   -stop-after=prologepilog | FileCheck %s
+# Test that the frame lowering emits correct SEH updates for the case without
+# a stack frame (e.g. no callee saved registers, no frame pointer, just locals)
+
+# CHECK:      $sp = frame-setup SUBXri $sp, 16, 0
+# CHECK-NEXT: frame-setup SEH_StackAlloc 16
+# CHECK-NEXT: frame-setup SEH_PrologEnd
+# CHECK:      frame-destroy SEH_EpilogStart
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 16, 0
+# CHECK-NEXT: frame-destroy SEH_StackAlloc 16
+# CHECK-NEXT: frame-destroy SEH_EpilogEnd
+# CHECK-NEXT: RET_ReallyLR implicit killed $w0
+
+--- |
+  target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-windows-msvc19.11.0"
+
+  ; Function Attrs: noinline nounwind optnone uwtable
+  define dso_local i32 @"?func@@YAHH@Z"(i32 %a) #0 {
+  entry:
+    %a.addr = alloca i32, align 4
+    %b = alloca i32, align 4
+    store i32 %a, ptr %a.addr, align 4
+    store i32 2, ptr %b, align 4
+    %0 = load i32, ptr %b, align 4
+    %1 = load i32, ptr %a.addr, align 4
+    %add = add nsw i32 %0, %1
+    ret i32 %add
+  }
+
+  attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+...
+---
+name:            '?func@@YAHH@Z'
+alignment:       4
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: true
+selected:        true
+failedISel:      false
+tracksRegLiveness: true
+registers:
+liveins:
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  8
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: a.addr, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: b, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+constants:
+body:             |
+  bb.1.entry:
+    liveins: $w0
+
+    renamable $w8 = MOVi32imm 2
+    STRWui killed renamable $w0, %stack.0.a.addr, 0 :: (store (s32) into %ir.a.addr)
+    STRWui killed renamable $w8, %stack.1.b, 0 :: (store (s32) into %ir.b)
+    renamable $w8 = LDRWui %stack.1.b, 0 :: (load (s32) from %ir.b)
+    renamable $w0 = LDRWui %stack.0.a.addr, 0 :: (load (s32) from %ir.a.addr)
+    renamable $w0 = nsw ADDWrr killed renamable $w8, killed renamable $w0
+    RET_ReallyLR implicit killed $w0
+
+...

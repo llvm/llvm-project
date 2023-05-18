@@ -1,0 +1,29 @@
+
+# REQUIRES: x86-registered-target
+# Ensure llc can read and parse MIR pseudo probe operations.
+# RUN: llc -O0 -mtriple x86_64-- -run-pass none %s -o - | FileCheck %s
+
+# CHECK: PSEUDO_PROBE 6699318081062747564, 1, 0, 0
+# CHECK: PSEUDO_PROBE 6699318081062747564, 3, 0, 0
+# CHECK: PSEUDO_PROBE 6699318081062747564, 4, 0, 0
+# CHECK: PSEUDO_PROBE 6699318081062747564, 2, 0, 0
+# CHECK: PSEUDO_PROBE 6699318081062747564, 4, 0, 0
+
+name:            foo
+body:             |
+  bb.0:
+    TEST32rr killed renamable $edi, renamable $edi, implicit-def $eflags
+    PSEUDO_PROBE 6699318081062747564, 1, 0, 0
+    JCC_1 %bb.1, 4, implicit $eflags
+  
+  bb.2:
+    PSEUDO_PROBE 6699318081062747564, 3, 0, 0
+    PSEUDO_PROBE 6699318081062747564, 4, 0, 0
+    RET64
+  
+  bb.1:
+    PSEUDO_PROBE 6699318081062747564, 2, 0, 0
+    PSEUDO_PROBE 6699318081062747564, 4, 0, 0
+    RET64
+
+...

@@ -1,0 +1,634 @@
+# RUN: llc -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve.fp -run-pass=arm-low-overhead-loops %s -verify-machineinstrs -o - | FileCheck %s
+
+# This test was originally hitting problems with empty blocks. That went away
+# but the underlying problem (empty blocks causing iterator issues) still remains.
+# The test adds an extra empty block to one of the loops to test this.
+
+# CHECK: LETP
+
+--- |
+  %struct.DCT_InstanceTypeDef = type { ptr, i32, i32 }
+  
+  ; Function Attrs: nofree nounwind
+  define hidden arm_aapcs_vfpcc void @test(ptr nocapture readonly %S, ptr %pIn, ptr nocapture %pOut) {
+  entry:
+    %NumInputs = getelementptr inbounds %struct.DCT_InstanceTypeDef, ptr %S, i32 0, i32 2
+    %0 = load i32, ptr %NumInputs, align 4
+    %NumFilters = getelementptr inbounds %struct.DCT_InstanceTypeDef, ptr %S, i32 0, i32 1
+    %1 = load i32, ptr %NumFilters, align 4
+    %pDCTCoefs34 = bitcast ptr %S to ptr
+    %2 = load ptr, ptr %pDCTCoefs34, align 4
+    %3 = add i32 %0, 3
+    %4 = icmp slt i32 %0, 4
+    %smin36 = select i1 %4, i32 %0, i32 4
+    %5 = sub i32 %3, %smin36
+    %6 = lshr i32 %5, 2
+    %7 = add nuw nsw i32 %6, 1
+    %start1 = call i32 @llvm.start.loop.iterations.i32(i32 %7)
+    br label %do.body
+  
+  do.body:                                          ; preds = %do.body, %entry
+    %count.0 = phi i32 [ %0, %entry ], [ %12, %do.body ]
+    %pInT.0 = phi ptr [ %pIn, %entry ], [ %add.ptr, %do.body ]
+    %sumVec.0 = phi <4 x float> [ zeroinitializer, %entry ], [ %11, %do.body ]
+    %8 = phi i32 [ %start1, %entry ], [ %13, %do.body ]
+    %pInT.033 = bitcast ptr %pInT.0 to ptr
+    %9 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %count.0)
+    %10 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %pInT.033, i32 4, <4 x i1> %9, <4 x float> zeroinitializer)
+    %11 = tail call fast <4 x float> @llvm.arm.mve.add.predicated.v4f32.v4i1(<4 x float> %sumVec.0, <4 x float> %10, <4 x i1> %9, <4 x float> undef)
+    %add.ptr = getelementptr inbounds float, ptr %pInT.0, i32 4
+    %12 = add i32 %count.0, -4
+    %13 = call i32 @llvm.loop.decrement.reg.i32(i32 %8, i32 1)
+    %14 = icmp ne i32 %13, 0
+    br i1 %14, label %do.body, label %do.end
+  
+  do.end:                                           ; preds = %do.body
+    %15 = extractelement <4 x float> %11, i32 0
+    %16 = extractelement <4 x float> %11, i32 1
+    %add = fadd fast float %15, %16
+    %17 = extractelement <4 x float> %11, i32 2
+    %add1 = fadd fast float %add, %17
+    %18 = extractelement <4 x float> %11, i32 3
+    %add2 = fadd fast float %add1, %18
+    %19 = load float, ptr %2, align 4
+    %mul = fmul fast float %19, %add2
+    store float %mul, ptr %pOut, align 4
+    %sub4 = add i32 %1, -4
+    %cmp5201 = icmp ugt i32 %sub4, 1
+    br i1 %cmp5201, label %for.body.lr.ph, label %for.cond54.preheader
+  
+  for.body.lr.ph:                                   ; preds = %do.end
+    %scevgep = getelementptr float, ptr %pIn, i32 4
+    %20 = add i32 %0, 4
+    %scevgep5 = getelementptr float, ptr %2, i32 %20
+    %21 = shl i32 %0, 4
+    %22 = shl i32 %0, 1
+    %23 = add i32 %22, 4
+    %scevgep12 = getelementptr float, ptr %2, i32 %23
+    %24 = mul i32 %0, 3
+    %25 = add i32 %24, 4
+    %scevgep19 = getelementptr float, ptr %2, i32 %25
+    %26 = shl i32 %0, 2
+    %27 = add i32 %26, 4
+    %scevgep26 = getelementptr float, ptr %2, i32 %27
+    %28 = add i32 %0, -1
+    %29 = add i32 %0, -4
+    %30 = icmp slt i32 %29, 4
+    %smin35 = select i1 %30, i32 %29, i32 4
+    %31 = sub i32 %28, %smin35
+    %32 = lshr i32 %31, 2
+    %33 = add nuw nsw i32 %32, 1
+    br label %for.body
+  
+  for.cond54.preheader:                             ; preds = %do.end33, %do.end
+    %k.0.lcssa = phi i32 [ 1, %do.end ], [ %add53, %do.end33 ]
+    %cmp55199 = icmp ult i32 %k.0.lcssa, %1
+    br i1 %cmp55199, label %for.body56.preheader, label %for.end72
+  
+  for.body56.preheader:                             ; preds = %for.cond54.preheader
+    %34 = add i32 %0, 3
+    %35 = icmp slt i32 %0, 4
+    %smin = select i1 %35, i32 %0, i32 4
+    %36 = sub i32 %34, %smin
+    %37 = lshr i32 %36, 2
+    %38 = add nuw nsw i32 %37, 1
+    br label %for.body56
+  
+  for.body:                                         ; preds = %do.end33, %for.body.lr.ph
+    %lsr.iv27 = phi ptr [ %88, %do.end33 ], [ %scevgep26, %for.body.lr.ph ]
+    %lsr.iv20 = phi ptr [ %87, %do.end33 ], [ %scevgep19, %for.body.lr.ph ]
+    %lsr.iv13 = phi ptr [ %86, %do.end33 ], [ %scevgep12, %for.body.lr.ph ]
+    %lsr.iv6 = phi ptr [ %85, %do.end33 ], [ %scevgep5, %for.body.lr.ph ]
+    %k.0202 = phi i32 [ 1, %for.body.lr.ph ], [ %add53, %do.end33 ]
+    %39 = bitcast ptr %pIn to ptr
+    %mul7 = mul i32 %k.0202, %0
+    %arrayidx8 = getelementptr inbounds float, ptr %2, i32 %mul7
+    %add9 = add nuw nsw i32 %k.0202, 1
+    %mul10 = mul i32 %add9, %0
+    %arrayidx11 = getelementptr inbounds float, ptr %2, i32 %mul10
+    %add12 = add nuw nsw i32 %k.0202, 2
+    %mul13 = mul i32 %add12, %0
+    %arrayidx14 = getelementptr inbounds float, ptr %2, i32 %mul13
+    %add15 = add i32 %k.0202, 3
+    %mul16 = mul i32 %add15, %0
+    %arrayidx17 = getelementptr inbounds float, ptr %2, i32 %mul16
+    %40 = load <4 x float>, ptr %39, align 4
+    %41 = bitcast ptr %arrayidx8 to ptr
+    %42 = load <4 x float>, ptr %41, align 4
+    %43 = fmul fast <4 x float> %42, %40
+    %44 = bitcast ptr %arrayidx11 to ptr
+    %45 = load <4 x float>, ptr %44, align 4
+    %46 = fmul fast <4 x float> %45, %40
+    %47 = bitcast ptr %arrayidx14 to ptr
+    %48 = load <4 x float>, ptr %47, align 4
+    %49 = fmul fast <4 x float> %48, %40
+    %50 = bitcast ptr %arrayidx17 to ptr
+    %51 = load <4 x float>, ptr %50, align 4
+    %52 = fmul fast <4 x float> %51, %40
+    %start2 = call i32 @llvm.start.loop.iterations.i32(i32 %33)
+    br label %do.body24
+  
+  do.body24:                                        ; preds = %do.body24, %for.body
+    %lsr.iv30 = phi ptr [ %scevgep31, %do.body24 ], [ %lsr.iv27, %for.body ]
+    %lsr.iv23 = phi ptr [ %scevgep24, %do.body24 ], [ %lsr.iv20, %for.body ]
+    %lsr.iv16 = phi ptr [ %scevgep17, %do.body24 ], [ %lsr.iv13, %for.body ]
+    %lsr.iv9 = phi ptr [ %scevgep10, %do.body24 ], [ %lsr.iv6, %for.body ]
+    %lsr.iv = phi ptr [ %scevgep3, %do.body24 ], [ %scevgep, %for.body ]
+    %sumVec0.0 = phi <4 x float> [ %43, %for.body ], [ %56, %do.body24 ]
+    %sumVec1.0 = phi <4 x float> [ %46, %for.body ], [ %58, %do.body24 ]
+    %sumVec2.0 = phi <4 x float> [ %49, %for.body ], [ %60, %do.body24 ]
+    %sumVec3.0 = phi <4 x float> [ %52, %for.body ], [ %62, %do.body24 ]
+    %53 = phi i32 [ %start2, %for.body ], [ %63, %do.body24 ]
+    %lsr.iv4 = bitcast ptr %lsr.iv to ptr
+    %lsr.iv911 = bitcast ptr %lsr.iv9 to ptr
+    %lsr.iv1618 = bitcast ptr %lsr.iv16 to ptr
+    %lsr.iv2325 = bitcast ptr %lsr.iv23 to ptr
+    %lsr.iv3032 = bitcast ptr %lsr.iv30 to ptr
+    %54 = load <4 x float>, ptr %lsr.iv4, align 4
+    %55 = load <4 x float>, ptr %lsr.iv911, align 4
+    %56 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %54, <4 x float> %55, <4 x float> %sumVec0.0)
+    %57 = load <4 x float>, ptr %lsr.iv1618, align 4
+    %58 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %54, <4 x float> %57, <4 x float> %sumVec1.0)
+    %59 = load <4 x float>, ptr %lsr.iv2325, align 4
+    %60 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %54, <4 x float> %59, <4 x float> %sumVec2.0)
+    %61 = load <4 x float>, ptr %lsr.iv3032, align 4
+    %62 = tail call fast <4 x float> @llvm.fma.v4f32(<4 x float> %54, <4 x float> %61, <4 x float> %sumVec3.0)
+    %scevgep3 = getelementptr float, ptr %lsr.iv, i32 4
+    %scevgep10 = getelementptr float, ptr %lsr.iv9, i32 4
+    %scevgep17 = getelementptr float, ptr %lsr.iv16, i32 4
+    %scevgep24 = getelementptr float, ptr %lsr.iv23, i32 4
+    %scevgep31 = getelementptr float, ptr %lsr.iv30, i32 4
+    %63 = call i32 @llvm.loop.decrement.reg.i32(i32 %53, i32 1)
+    %64 = icmp ne i32 %63, 0
+    br i1 %64, label %do.body24, label %do.end33
+  
+  do.end33:                                         ; preds = %do.body24
+    %65 = bitcast ptr %lsr.iv27 to ptr
+    %66 = bitcast ptr %lsr.iv20 to ptr
+    %67 = bitcast ptr %lsr.iv13 to ptr
+    %68 = bitcast ptr %lsr.iv6 to ptr
+    %69 = extractelement <4 x float> %56, i32 0
+    %70 = extractelement <4 x float> %56, i32 1
+    %add34 = fadd fast float %69, %70
+    %71 = extractelement <4 x float> %56, i32 2
+    %add35 = fadd fast float %add34, %71
+    %72 = extractelement <4 x float> %56, i32 3
+    %add36 = fadd fast float %add35, %72
+    %arrayidx37 = getelementptr inbounds float, ptr %pOut, i32 %k.0202
+    store float %add36, ptr %arrayidx37, align 4
+    %73 = extractelement <4 x float> %58, i32 0
+    %74 = extractelement <4 x float> %58, i32 1
+    %add38 = fadd fast float %73, %74
+    %75 = extractelement <4 x float> %58, i32 2
+    %add39 = fadd fast float %add38, %75
+    %76 = extractelement <4 x float> %58, i32 3
+    %add40 = fadd fast float %add39, %76
+    %arrayidx42 = getelementptr inbounds float, ptr %pOut, i32 %add9
+    store float %add40, ptr %arrayidx42, align 4
+    %77 = extractelement <4 x float> %60, i32 0
+    %78 = extractelement <4 x float> %60, i32 1
+    %add43 = fadd fast float %77, %78
+    %79 = extractelement <4 x float> %60, i32 2
+    %add44 = fadd fast float %add43, %79
+    %80 = extractelement <4 x float> %60, i32 3
+    %add45 = fadd fast float %add44, %80
+    %arrayidx47 = getelementptr inbounds float, ptr %pOut, i32 %add12
+    store float %add45, ptr %arrayidx47, align 4
+    %81 = extractelement <4 x float> %62, i32 0
+    %82 = extractelement <4 x float> %62, i32 1
+    %add48 = fadd fast float %81, %82
+    %83 = extractelement <4 x float> %62, i32 2
+    %add49 = fadd fast float %add48, %83
+    %84 = extractelement <4 x float> %62, i32 3
+    %add50 = fadd fast float %add49, %84
+    %arrayidx52 = getelementptr inbounds float, ptr %pOut, i32 %add15
+    store float %add50, ptr %arrayidx52, align 4
+    %add53 = add i32 %k.0202, 4
+    %scevgep8 = getelementptr i1, ptr %68, i32 %21
+    %85 = bitcast ptr %scevgep8 to ptr
+    %scevgep15 = getelementptr i1, ptr %67, i32 %21
+    %86 = bitcast ptr %scevgep15 to ptr
+    %scevgep22 = getelementptr i1, ptr %66, i32 %21
+    %87 = bitcast ptr %scevgep22 to ptr
+    %scevgep29 = getelementptr i1, ptr %65, i32 %21
+    %88 = bitcast ptr %scevgep29 to ptr
+    %cmp5 = icmp ult i32 %add53, %sub4
+    br i1 %cmp5, label %for.body, label %for.cond54.preheader
+  
+  for.body56:                                       ; preds = %for.body56.preheader, %do.end66
+    %k.1200 = phi i32 [ %inc, %do.end66 ], [ %k.0.lcssa, %for.body56.preheader ]
+    %mul57 = mul i32 %k.1200, %0
+    %arrayidx58 = getelementptr inbounds float, ptr %2, i32 %mul57
+    %start3 = call i32 @llvm.start.loop.iterations.i32(i32 %38)
+    br label %do.body59
+  
+  do.body59:                                        ; preds = %do.body59, %for.body56
+    %count.2 = phi i32 [ %0, %for.body56 ], [ %94, %do.body59 ]
+    %pInT.2 = phi ptr [ %pIn, %for.body56 ], [ %add.ptr61, %do.body59 ]
+    %pCos0.1 = phi ptr [ %arrayidx58, %for.body56 ], [ %add.ptr62, %do.body59 ]
+    %sumVec.1 = phi <4 x float> [ zeroinitializer, %for.body56 ], [ %93, %do.body59 ]
+    %89 = phi i32 [ %start3, %for.body56 ], [ %95, %do.body59 ]
+    %pInT.21 = bitcast ptr %pInT.2 to ptr
+    %pCos0.12 = bitcast ptr %pCos0.1 to ptr
+    %90 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %count.2)
+    %91 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %pInT.21, i32 4, <4 x i1> %90, <4 x float> zeroinitializer)
+    %92 = tail call fast <4 x float> @llvm.masked.load.v4f32.p0(ptr %pCos0.12, i32 4, <4 x i1> %90, <4 x float> zeroinitializer)
+    %93 = tail call fast <4 x float> @llvm.arm.mve.fma.predicated.v4f32.v4i1(<4 x float> %91, <4 x float> %92, <4 x float> %sumVec.1, <4 x i1> %90)
+    %add.ptr61 = getelementptr inbounds float, ptr %pInT.2, i32 4
+    %add.ptr62 = getelementptr inbounds float, ptr %pCos0.1, i32 4
+    %94 = add i32 %count.2, -4
+    %95 = call i32 @llvm.loop.decrement.reg.i32(i32 %89, i32 1)
+    %96 = icmp ne i32 %95, 0
+    br i1 %96, label %do.body59, label %do.end66
+  
+  do.end66:                                         ; preds = %do.body59
+    %97 = extractelement <4 x float> %93, i32 0
+    %98 = extractelement <4 x float> %93, i32 1
+    %add67 = fadd fast float %97, %98
+    %99 = extractelement <4 x float> %93, i32 2
+    %add68 = fadd fast float %add67, %99
+    %100 = extractelement <4 x float> %93, i32 3
+    %add69 = fadd fast float %add68, %100
+    %arrayidx70 = getelementptr inbounds float, ptr %pOut, i32 %k.1200
+    store float %add69, ptr %arrayidx70, align 4
+    %inc = add nuw i32 %k.1200, 1
+    %exitcond.not = icmp eq i32 %inc, %1
+    br i1 %exitcond.not, label %for.end72, label %for.body56
+  
+  for.end72:                                        ; preds = %do.end66, %for.cond54.preheader
+    ret void
+  }
+
+  declare <4 x i1> @llvm.arm.mve.vctp32(i32) #1
+  declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32 immarg, <4 x i1>, <4 x float>) #2
+  declare <4 x float> @llvm.arm.mve.add.predicated.v4f32.v4i1(<4 x float>, <4 x float>, <4 x i1>, <4 x float>) #1
+  declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #3
+  declare <4 x float> @llvm.arm.mve.fma.predicated.v4f32.v4i1(<4 x float>, <4 x float>, <4 x float>, <4 x i1>) #1
+  declare i32 @llvm.start.loop.iterations.i32(i32) #4
+  declare i32 @llvm.loop.decrement.reg.i32(i32, i32) #4
+
+...
+---
+name:            test
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       112
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -76, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -80, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -84, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -88, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: '', type: spill-slot, offset: -92, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: '', type: spill-slot, offset: -96, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -100, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: spill-slot, offset: -104, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: spill-slot, offset: -108, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 10, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r11', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 11, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r10', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 12, name: '', type: spill-slot, offset: -16, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r9', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 13, name: '', type: spill-slot, offset: -20, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r8', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 14, name: '', type: spill-slot, offset: -24, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 15, name: '', type: spill-slot, offset: -28, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r6', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 16, name: '', type: spill-slot, offset: -32, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r5', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 17, name: '', type: spill-slot, offset: -36, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r4', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 18, name: '', type: spill-slot, offset: -48, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$d11', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 19, name: '', type: spill-slot, offset: -56, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$d10', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 20, name: '', type: spill-slot, offset: -64, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$d9', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 21, name: '', type: spill-slot, offset: -72, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$d8', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $r0, $r1, $r2, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11, $lr, $d8, $d9, $d10, $d11
+  
+    $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $r8, killed $r9, killed $r10, killed $r11, killed $lr
+    frame-setup CFI_INSTRUCTION def_cfa_offset 36
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r11, -8
+    frame-setup CFI_INSTRUCTION offset $r10, -12
+    frame-setup CFI_INSTRUCTION offset $r9, -16
+    frame-setup CFI_INSTRUCTION offset $r8, -20
+    frame-setup CFI_INSTRUCTION offset $r7, -24
+    frame-setup CFI_INSTRUCTION offset $r6, -28
+    frame-setup CFI_INSTRUCTION offset $r5, -32
+    frame-setup CFI_INSTRUCTION offset $r4, -36
+    $sp = frame-setup tSUBspi $sp, 1, 14 /* CC::al */, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_offset 40
+    $sp = frame-setup VSTMDDB_UPD $sp, 14 /* CC::al */, $noreg, killed $d8, killed $d9, killed $d10, killed $d11
+    frame-setup CFI_INSTRUCTION def_cfa_offset 72
+    frame-setup CFI_INSTRUCTION offset $d11, -48
+    frame-setup CFI_INSTRUCTION offset $d10, -56
+    frame-setup CFI_INSTRUCTION offset $d9, -64
+    frame-setup CFI_INSTRUCTION offset $d8, -72
+    $sp = frame-setup tSUBspi $sp, 10, 14 /* CC::al */, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_offset 112
+    renamable $r4 = tLDRi renamable $r0, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.NumInputs)
+    $r5 = tMOVr killed $r1, 14 /* CC::al */, $noreg
+    renamable $r11 = t2LDRi12 renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.pDCTCoefs34)
+    renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
+    $r1 = tMOVr $r4, 14 /* CC::al */, $noreg
+    tCMPi8 renamable $r4, 4, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2IT 10, 8, implicit-def $itstate
+    renamable $r1 = tMOVi8 $noreg, 4, 10 /* CC::ge */, killed $cpsr, implicit killed renamable $r1, implicit killed $itstate
+    renamable $r1, dead $cpsr = tSUBrr renamable $r4, killed renamable $r1, 14 /* CC::al */, $noreg
+    renamable $r1, dead $cpsr = tADDi8 killed renamable $r1, 3, 14 /* CC::al */, $noreg
+    renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r1, 19, 14 /* CC::al */, $noreg, $noreg
+    renamable $r3 = tLDRi killed renamable $r0, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.NumFilters)
+    $r0 = tMOVr $r4, 14 /* CC::al */, $noreg
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+    $r1 = tMOVr $r5, 14 /* CC::al */, $noreg
+    $lr = t2DoLoopStart renamable $lr
+  
+  bb.1.do.body (align 4):
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+    liveins: $lr, $q0, $r0, $r1, $r2, $r3, $r4, $r5, $r11
+
+    renamable $vpr = MVE_VCTP32 renamable $r0, 0, $noreg, $noreg
+    MVE_VPST 4, implicit $vpr
+    renamable $r1, renamable $q1 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.pInT.033, align 4)
+    renamable $q0 = MVE_VADDf32 killed renamable $q0, killed renamable $q1, 1, killed renamable $vpr, $noreg, undef renamable $q0
+    renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14 /* CC::al */, $noreg
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    t2LoopEnd renamable $lr, %bb.1, implicit-def dead $cpsr
+    tB %bb.2, 14 /* CC::al */, $noreg
+  
+  bb.2.do.end:
+    successors: %bb.3(0x40000000), %bb.7(0x40000000)
+    liveins: $q0, $r2, $r3, $r4, $r5, $r11
+  
+    renamable $s4 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s0, renamable $s1, 14 /* CC::al */, $noreg
+    renamable $r0, dead $cpsr = tSUBi3 renamable $r3, 4, 14 /* CC::al */, $noreg
+    tSTRspi killed renamable $r3, $sp, 1, 14 /* CC::al */, $noreg :: (store (s32) into %stack.8)
+    renamable $s4 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s4, renamable $s2, 14 /* CC::al */, $noreg
+    tSTRspi renamable $r0, $sp, 8, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s4, killed renamable $s3, 14 /* CC::al */, $noreg, implicit $q0
+    renamable $s2 = VLDRS renamable $r11, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.2)
+    tCMPi8 killed renamable $r0, 2, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    renamable $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VMULS killed renamable $s2, killed renamable $s0, 14 /* CC::al */, $noreg
+    VSTRS killed renamable $s0, renamable $r2, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.pOut)
+    t2Bcc %bb.7, 3 /* CC::lo */, killed $cpsr
+  
+  bb.3.for.body.lr.ph:
+    successors: %bb.4(0x80000000)
+    liveins: $r0, $r2, $r4, $r5, $r11
+  
+    renamable $r6 = t2ADDri renamable $r5, 16, 14 /* CC::al */, $noreg, $noreg
+    renamable $r1, dead $cpsr = tSUBi3 renamable $r4, 4, 14 /* CC::al */, $noreg
+    tSTRspi killed renamable $r6, $sp, 4, 14 /* CC::al */, $noreg :: (store (s32) into %stack.5)
+    renamable $r6, dead $cpsr = tLSLri renamable $r4, 4, 14 /* CC::al */, $noreg
+    tCMPi8 renamable $r1, 4, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    tSTRspi killed renamable $r6, $sp, 3, 14 /* CC::al */, $noreg :: (store (s32) into %stack.6)
+    t2IT 10, 8, implicit-def $itstate
+    renamable $r1 = tMOVi8 $noreg, 4, 10 /* CC::ge */, killed $cpsr, implicit killed renamable $r1, implicit killed $itstate
+    renamable $r7 = t2ADDrs renamable $r4, renamable $r4, 10, 14 /* CC::al */, $noreg, $noreg
+    renamable $r1, dead $cpsr = tMVN killed renamable $r1, 14 /* CC::al */, $noreg
+    renamable $r1 = tADDhirr killed renamable $r1, renamable $r4, 14 /* CC::al */, $noreg
+    renamable $r12 = t2ADDrs renamable $r11, renamable $r4, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $r3 = t2ADDrs renamable $r11, renamable $r4, 26, 14 /* CC::al */, $noreg, $noreg
+    renamable $lr = t2ADDrs renamable $r11, killed renamable $r7, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $r7 = t2ADDrs renamable $r11, renamable $r4, 34, 14 /* CC::al */, $noreg, $noreg
+    renamable $r1 = nuw nsw t2ADDrs renamable $r0, killed renamable $r1, 19, 14 /* CC::al */, $noreg, $noreg
+    renamable $r6 = t2ADDri killed renamable $r12, 16, 14 /* CC::al */, $noreg, $noreg
+    renamable $r12 = t2ADDri killed renamable $r3, 16, 14 /* CC::al */, $noreg, $noreg
+    tSTRspi killed renamable $r1, $sp, 2, 14 /* CC::al */, $noreg :: (store (s32) into %stack.7)
+    renamable $r1 = t2ADDri killed renamable $lr, 16, 14 /* CC::al */, $noreg, $noreg
+    renamable $r10 = t2ADDri killed renamable $r7, 16, 14 /* CC::al */, $noreg, $noreg
+    tSTRspi renamable $r4, $sp, 7, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
+    t2STRDi8 $r11, $r5, $sp, 20, 14 /* CC::al */, $noreg :: (store (s32) into %stack.4), (store (s32) into %stack.3)
+  
+  bb.4.for.body (align 4):
+    successors: %bb.5(0x80000000)
+    liveins: $r0, $r1, $r2, $r4, $r5, $r6, $r10, $r11, $r12
+  
+    renamable $r3 = t2MUL renamable $r0, renamable $r4, 14 /* CC::al */, $noreg
+    renamable $r7, dead $cpsr = nuw nsw tADDi3 renamable $r0, 1, 14 /* CC::al */, $noreg
+    renamable $r8 = nuw nsw t2ADDri renamable $r0, 2, 14 /* CC::al */, $noreg, $noreg
+    tSTRspi renamable $r7, $sp, 9, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
+    renamable $r9 = t2ADDri renamable $r0, 3, 14 /* CC::al */, $noreg, $noreg
+    renamable $r7, dead $cpsr = tMUL renamable $r4, killed renamable $r7, 14 /* CC::al */, $noreg
+    renamable $q0 = MVE_VLDRWU32 killed renamable $r5, 0, 0, $noreg, $noreg :: (load (s128) from %ir.39, align 4)
+    renamable $r3 = t2ADDrs renamable $r11, killed renamable $r3, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $r5 = t2MUL renamable $r8, renamable $r4, 14 /* CC::al */, $noreg
+    renamable $r4 = t2MUL renamable $r9, killed renamable $r4, 14 /* CC::al */, $noreg
+    renamable $r7 = t2ADDrs renamable $r11, killed renamable $r7, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $r5 = t2ADDrs renamable $r11, killed renamable $r5, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $r4 = t2ADDrs killed renamable $r11, killed renamable $r4, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $q1 = MVE_VLDRWU32 killed renamable $r3, 0, 0, $noreg, $noreg :: (load (s128) from %ir.41, align 4)
+    renamable $q3 = nnan ninf nsz arcp contract afn reassoc MVE_VMULf32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q3
+    renamable $q1 = MVE_VLDRWU32 killed renamable $r7, 0, 0, $noreg, $noreg :: (load (s128) from %ir.44, align 4)
+    renamable $q2 = nnan ninf nsz arcp contract afn reassoc MVE_VMULf32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q2
+    renamable $q1 = MVE_VLDRWU32 killed renamable $r5, 0, 0, $noreg, $noreg :: (load (s128) from %ir.47, align 4)
+    renamable $q1 = nnan ninf nsz arcp contract afn reassoc MVE_VMULf32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q1
+    renamable $q4 = MVE_VLDRWU32 killed renamable $r4, 0, 0, $noreg, $noreg :: (load (s128) from %ir.50, align 4)
+    renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VMULf32 killed renamable $q4, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0
+    renamable $lr = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg :: (load (s32) from %stack.7)
+    $r3 = tMOVr $r10, 14 /* CC::al */, $noreg
+    $r5 = tMOVr $r1, 14 /* CC::al */, $noreg
+    $r4 = tMOVr $r12, 14 /* CC::al */, $noreg
+    $lr = t2DoLoopStart renamable $lr
+    $r7 = tMOVr $r6, 14 /* CC::al */, $noreg
+    renamable $r11 = t2LDRi12 $sp, 16, 14 /* CC::al */, $noreg :: (load (s32) from %stack.5)
+  
+  bb.5.do.body24 (align 4):
+    successors: %bb.5(0x7c000000), %bb.6(0x04000000)
+    liveins: $lr, $q0, $q1, $q2, $q3, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11, $r12
+
+    renamable $r11, renamable $q4 = MVE_VLDRWU32_post killed renamable $r11, 16, 0, $noreg, $noreg :: (load (s128) from %ir.lsr.iv4, align 4)
+    renamable $r7, renamable $q5 = MVE_VLDRWU32_post killed renamable $r7, 16, 0, $noreg, $noreg :: (load (s128) from %ir.lsr.iv911, align 4)
+    renamable $q3 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q3, renamable $q4, killed renamable $q5, 0, $noreg, $noreg
+    renamable $r4, renamable $q5 = MVE_VLDRWU32_post killed renamable $r4, 16, 0, $noreg, $noreg :: (load (s128) from %ir.lsr.iv1618, align 4)
+    renamable $q2 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q2, renamable $q4, killed renamable $q5, 0, $noreg, $noreg
+    renamable $r5, renamable $q5 = MVE_VLDRWU32_post killed renamable $r5, 16, 0, $noreg, $noreg :: (load (s128) from %ir.lsr.iv2325, align 4)
+    renamable $q1 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q1, renamable $q4, killed renamable $q5, 0, $noreg, $noreg
+    renamable $r3, renamable $q5 = MVE_VLDRWU32_post killed renamable $r3, 16, 0, $noreg, $noreg :: (load (s128) from %ir.lsr.iv3032, align 4)
+    renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q0, killed renamable $q4, killed renamable $q5, 0, $noreg, $noreg
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    t2LoopEnd renamable $lr, %bb.5, implicit-def dead $cpsr
+    tB %bb.6, 14 /* CC::al */, $noreg
+  
+  bb.6.do.end33:
+    successors: %bb.4(0x7c000000), %bb.7(0x04000000)
+    liveins: $q0, $q1, $q2, $q3, $r0, $r1, $r2, $r6, $r8, $r9, $r10, $r12
+  
+    renamable $s16 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s12, renamable $s13, 14 /* CC::al */, $noreg
+    renamable $s18 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s8, renamable $s9, 14 /* CC::al */, $noreg
+    renamable $s16 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s16, renamable $s14, 14 /* CC::al */, $noreg
+    renamable $s18 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s18, renamable $s10, 14 /* CC::al */, $noreg
+    renamable $s12 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s16, killed renamable $s15, 14 /* CC::al */, $noreg, implicit $q3
+    renamable $s8 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s18, killed renamable $s11, 14 /* CC::al */, $noreg, implicit $q2
+    renamable $s10 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s4, renamable $s5, 14 /* CC::al */, $noreg
+    renamable $s14 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s0, renamable $s1, 14 /* CC::al */, $noreg
+    renamable $r7 = tLDRspi $sp, 9, 14 /* CC::al */, $noreg :: (load (s32) from %stack.0)
+    renamable $s10 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s10, renamable $s6, 14 /* CC::al */, $noreg
+    renamable $s14 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s14, renamable $s2, 14 /* CC::al */, $noreg
+    renamable $r3 = t2ADDrs renamable $r2, renamable $r0, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $r7 = t2ADDrs renamable $r2, killed renamable $r7, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $s4 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s10, killed renamable $s7, 14 /* CC::al */, $noreg, implicit $q1
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s14, killed renamable $s3, 14 /* CC::al */, $noreg, implicit $q0
+    VSTRS killed renamable $s12, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx37)
+    VSTRS killed renamable $s8, killed renamable $r7, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx42)
+    renamable $r3 = t2ADDrs renamable $r2, killed renamable $r8, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $r7 = t2ADDrs renamable $r2, killed renamable $r9, 18, 14 /* CC::al */, $noreg, $noreg
+    VSTRS killed renamable $s4, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx47)
+    VSTRS killed renamable $s0, killed renamable $r7, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx52)
+    $r11, $r5 = t2LDRDi8 $sp, 20, 14 /* CC::al */, $noreg :: (load (s32) from %stack.4), (load (s32) from %stack.3)
+    renamable $r0, dead $cpsr = tADDi8 killed renamable $r0, 4, 14 /* CC::al */, $noreg
+    renamable $r7 = tLDRspi $sp, 3, 14 /* CC::al */, $noreg :: (load (s32) from %stack.6)
+    renamable $r3 = tLDRspi $sp, 8, 14 /* CC::al */, $noreg :: (load (s32) from %stack.1)
+    renamable $r4 = tLDRspi $sp, 7, 14 /* CC::al */, $noreg :: (load (s32) from %stack.2)
+    renamable $r6 = tADDhirr killed renamable $r6, renamable $r7, 14 /* CC::al */, $noreg
+    renamable $r12 = tADDhirr killed renamable $r12, renamable $r7, 14 /* CC::al */, $noreg
+    renamable $r1 = tADDhirr killed renamable $r1, renamable $r7, 14 /* CC::al */, $noreg
+    tCMPr renamable $r0, killed renamable $r3, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    renamable $r10 = tADDhirr killed renamable $r10, killed renamable $r7, 14 /* CC::al */, $noreg
+    t2Bcc %bb.4, 3 /* CC::lo */, killed $cpsr
+  
+  bb.7.for.cond54.preheader:
+    successors: %bb.8(0x40000000), %bb.12(0x40000000)
+    liveins: $r0, $r2, $r4, $r5, $r11
+  
+    renamable $r12 = t2LDRi12 $sp, 4, 14 /* CC::al */, $noreg :: (load (s32) from %stack.8)
+    tCMPhir renamable $r0, renamable $r12, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    tBcc %bb.12, 2 /* CC::hs */, killed $cpsr
+  
+  bb.8.for.body56.preheader:
+    successors: %bb.9(0x80000000)
+    liveins: $r0, $r2, $r4, $r5, $r11, $r12
+  
+    $r1 = tMOVr $r4, 14 /* CC::al */, $noreg
+    tCMPi8 renamable $r4, 4, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2IT 10, 8, implicit-def $itstate
+    renamable $r1 = tMOVi8 $noreg, 4, 10 /* CC::ge */, killed $cpsr, implicit killed renamable $r1, implicit killed $itstate
+    renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
+    renamable $r1, dead $cpsr = tSUBrr renamable $r4, killed renamable $r1, 14 /* CC::al */, $noreg
+    renamable $r1, dead $cpsr = tADDi8 killed renamable $r1, 3, 14 /* CC::al */, $noreg
+    renamable $r3 = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r1, 19, 14 /* CC::al */, $noreg, $noreg
+  
+  bb.9.for.body56 (align 4):
+    successors: %bb.13(0x80000000)
+    liveins: $r0, $r2, $r3, $r4, $r5, $r11, $r12
+  
+    renamable $r1 = t2MUL renamable $r0, renamable $r4, 14 /* CC::al */, $noreg
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+    renamable $r1 = t2ADDrs renamable $r11, killed renamable $r1, 18, 14 /* CC::al */, $noreg, $noreg
+    $r6 = tMOVr $r4, 14 /* CC::al */, $noreg
+    $r7 = tMOVr $r5, 14 /* CC::al */, $noreg
+    $lr = tMOVr $r3, 14 /* CC::al */, $noreg
+    $lr = t2DoLoopStart renamable $r3
+
+  bb.13:
+    successors: %bb.10(0x80000000)
+    liveins: $lr, $q0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r11, $r12
+  
+  bb.10.do.body59 (align 4):
+    successors: %bb.10(0x7c000000), %bb.11(0x04000000)
+    liveins: $lr, $q0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r11, $r12
+
+    renamable $vpr = MVE_VCTP32 renamable $r6, 0, $noreg, $noreg
+    MVE_VPST 2, implicit $vpr
+    renamable $r7, renamable $q1 = MVE_VLDRWU32_post killed renamable $r7, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.pInT.21, align 4)
+    renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.pCos0.12, align 4)
+    renamable $q0 = MVE_VFMAf32 killed renamable $q0, killed renamable $q1, killed renamable $q2, 1, killed renamable $vpr, $noreg
+    renamable $r6, dead $cpsr = tSUBi8 killed renamable $r6, 4, 14 /* CC::al */, $noreg
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    t2LoopEnd renamable $lr, %bb.10, implicit-def dead $cpsr
+    tB %bb.11, 14 /* CC::al */, $noreg
+  
+  bb.11.do.end66:
+    successors: %bb.12(0x04000000), %bb.9(0x7c000000)
+    liveins: $q0, $r0, $r2, $r3, $r4, $r5, $r11, $r12
+  
+    renamable $s4 = nnan ninf nsz arcp contract afn reassoc VADDS renamable $s0, renamable $s1, 14 /* CC::al */, $noreg
+    renamable $r1 = t2ADDrs renamable $r2, renamable $r0, 18, 14 /* CC::al */, $noreg, $noreg
+    renamable $s4 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s4, renamable $s2, 14 /* CC::al */, $noreg
+    renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 1, 14 /* CC::al */, $noreg
+    renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s4, killed renamable $s3, 14 /* CC::al */, $noreg, implicit $q0
+    tCMPhir renamable $r0, renamable $r12, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    VSTRS killed renamable $s0, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.arrayidx70)
+    tBcc %bb.9, 1 /* CC::ne */, killed $cpsr
+  
+  bb.12.for.end72:
+    $sp = frame-destroy tADDspi $sp, 10, 14 /* CC::al */, $noreg
+    $sp = frame-destroy VLDMDIA_UPD $sp, 14 /* CC::al */, $noreg, def $d8, def $d9, def $d10, def $d11
+    $sp = frame-destroy tADDspi $sp, 1, 14 /* CC::al */, $noreg
+    $sp = frame-destroy t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11, def $pc
+
+...

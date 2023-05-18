@@ -1,0 +1,38 @@
+## This test checks JSON output for DATA.
+
+# REQUIRES: x86-registered-target
+
+## Show how library errors are reported in the output.
+# RUN: llvm-symbolizer "DATA %t-no-file.o 0" --output-style=JSON | \
+# RUN:   FileCheck %s -DMSG=%errc_ENOENT --check-prefix=NO-FILE --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# NO-FILE:[{"Address":"0x0","Error":{"Message":"[[MSG]]"},"ModuleName":"{{.*}}no-file.o"}]
+
+## Handle invalid argument.
+# RUN: llvm-symbolizer "DATA tmp.o Z" --output-style=JSON | \
+# RUN:   FileCheck %s -DMSG=%errc_ENOENT --check-prefix=INVARG --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# INVARG:[{"Error":{"Message":"[[MSG]]"},"ModuleName":"tmp.o","SymName":"Z"}]
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
+
+## Resolve out of range address.
+# RUN: llvm-symbolizer "DATA %t.o 0x10000000" --output-style=JSON | \
+# RUN:   FileCheck %s --check-prefix=NOT-FOUND --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# NOT-FOUND:[{"Address":"0x10000000","Data":{"Name":"","Size":"0x0","Start":"0x0"},"ModuleName":"{{.*}}.o"}]
+
+## Resolve valid address.
+# RUN: llvm-symbolizer "DATA %t.o 0" --output-style=JSON | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# CHECK:[{"Address":"0x0","Data":{"Name":"d1","Size":"0x8","Start":"0x0"},"ModuleName":"{{.*}}.o"}]
+
+## Test multiple addresses on the command-line.
+# RUN: llvm-symbolizer -e=%t.o "DATA 2" "DATA 8" --output-style=JSON | \
+# RUN:   FileCheck %s --check-prefix=MULTI --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# MULTI:[{"Address":"0x2","Data":{"Name":"d1","Size":"0x8","Start":"0x0"},"ModuleName":"{{.*}}.o"},{"Address":"0x8","Data":{"Name":"d2","Size":"0x4","Start":"0x8"},"ModuleName":"{{.*}}.o"}]
+
+d1:
+    .quad 0x1122334455667788
+    .size d1, 8
+
+d2:
+    .long 0x99aabbcc
+    .size d2, 4

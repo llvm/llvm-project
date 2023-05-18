@@ -1,0 +1,177 @@
+# RUN: llc -start-before=prologepilog -stop-after=livedebugvalues -mattr=+sve -o - %s | FileCheck %s
+#
+# FIXME: re-enable this run line when InstrRef LiveDebugValues is able to
+# rely on the target spill/restore inst recognisers.
+# run: llc -start-before=prologepilog -stop-after=livedebugvalues -experimental-debug-variable-locations -mattr=+sve -o - %s | FileCheck %s
+#
+# Test that the LiveDebugValues pass can correctly handle the address
+# of the SVE spill (at a scalable address location) which is expressed
+# with a complex DIExpression.
+#
+# CHECK: $z2 = ORR_ZZZ killed $z1, $z1
+# CHECK: $z1 = ORR_ZZZ killed $z0, $z0
+# CHECK-DAG: ST1W_IMM renamable $z1, killed renamable $p{{[0-9]+}}, $fp, -[[#%u,OFFSET:]], debug-location !{{[0-9]+}} :: (store unknown-size into %stack.0, align 16)
+# CHECK-DAG: DBG_VALUE $fp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, [[#mul(OFFSET,8)]], DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_minus),
+#
+# TODO: When LiveDebugValues pass supports reloads for AArch64, it should
+# correctly recognize debug-value !27 is in $z1 after the following reload:
+#
+# CHECK: renamable $z1 = LD1W_IMM renamable $p0, $fp, -[[#OFFSET]], debug-location !34 :: (load unknown-size from %stack.0, align 16)
+# CHECK-DAG: ST1W_IMM killed renamable $z3, killed renamable $p0, $fp, -[[#OFFSET]] :: (store unknown-size into %stack.0, align 16)
+# CHECK-DAG: DBG_VALUE $noreg, $noreg, !27, !DIExpression(), debug-location !30
+
+--- |
+  ; ModuleID = 't.c'
+  source_filename = "t.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+
+  ; Function Attrs: nounwind
+  define dso_local <vscale x 8 x i32> @foo(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z1, i32 %c) local_unnamed_addr #0 !dbg !11 {
+  entry:
+    call void @llvm.dbg.value(metadata <vscale x 4 x i32> %z0, metadata !27, metadata !DIExpression()), !dbg !30
+    call void @llvm.dbg.value(metadata <vscale x 4 x i32> %z1, metadata !28, metadata !DIExpression()), !dbg !30
+    call void @llvm.dbg.value(metadata i32 %c, metadata !29, metadata !DIExpression()), !dbg !30
+    %tobool.not = icmp eq i32 %c, 0, !dbg !31
+    br i1 %tobool.not, label %if.end, label %if.then, !dbg !33
+
+  if.then:                                          ; preds = %entry
+    %call = call <vscale x 8 x i32> @bar(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z0, <vscale x 4 x i32> %z0, <vscale x 4 x i32> %z0, <vscale x 4 x i32> %z0, <vscale x 4 x i32> %z0, <vscale x 4 x i32> %z0, <vscale x 4 x i32> %z0, <vscale x 4 x i32> %z0) #0, !dbg !34
+    br label %return, !dbg !35
+
+  if.end:                                           ; preds = %entry
+    %0 = call <vscale x 8 x i32> @llvm.aarch64.sve.tuple.create2.nxv8i32.nxv4i32(<vscale x 4 x i32> %z1, <vscale x 4 x i32> %z0), !dbg !36
+    br label %return, !dbg !37
+
+  return:                                           ; preds = %if.end, %if.then
+    %retval.0 = phi <vscale x 8 x i32> [ %call, %if.then ], [ %0, %if.end ], !dbg !30
+    ret <vscale x 8 x i32> %retval.0, !dbg !38
+  }
+
+  declare !dbg !39 dso_local <vscale x 8 x i32> @bar(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>) local_unnamed_addr
+
+  ; Function Attrs: nounwind readonly
+  declare <vscale x 8 x i32> @llvm.aarch64.sve.tuple.create2.nxv8i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
+
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+
+  attributes #0 = { "frame-pointer"="non-leaf"}
+  attributes #1 = { readnone speculatable willreturn }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6, !7, !8, !9}
+  !llvm.ident = !{!10}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0 (https://github.com/llvm/llvm-project.git b19275ba870a06c5ef0428af6264ffd28c7cde9e)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "t.c", directory: "/tmp/")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 8, !"branch-target-enforcement", i32 0}
+  !7 = !{i32 8, !"sign-return-address", i32 0}
+  !8 = !{i32 8, !"sign-return-address-all", i32 0}
+  !9 = !{i32 8, !"sign-return-address-with-bkey", i32 0}
+  !10 = !{!"clang version 12.0.0 (https://github.com/llvm/llvm-project.git b19275ba870a06c5ef0428af6264ffd28c7cde9e)"}
+  !11 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 6, type: !12, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !26)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{!14, !21, !21, !18}
+  !14 = !DIDerivedType(tag: DW_TAG_typedef, name: "svint32x2_t", file: !15, line: 59, baseType: !16)
+  !15 = !DIFile(filename: "lib/clang/12.0.0/include/arm_sve.h", directory: "/tmp")
+  !16 = !DIDerivedType(tag: DW_TAG_typedef, name: "__clang_svint32x2_t", file: !1, baseType: !17)
+  !17 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, flags: DIFlagVector, elements: !19)
+  !18 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !19 = !{!20}
+  !20 = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 4, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
+  !21 = !DIDerivedType(tag: DW_TAG_typedef, name: "svint32_t", file: !15, line: 34, baseType: !22)
+  !22 = !DIDerivedType(tag: DW_TAG_typedef, name: "__SVInt32_t", file: !1, baseType: !23)
+  !23 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, flags: DIFlagVector, elements: !24)
+  !24 = !{!25}
+  !25 = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 2, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
+  !26 = !{!27, !28, !29}
+  !27 = !DILocalVariable(name: "z0", arg: 1, scope: !11, file: !1, line: 6, type: !21)
+  !28 = !DILocalVariable(name: "z1", arg: 2, scope: !11, file: !1, line: 6, type: !21)
+  !29 = !DILocalVariable(name: "c", arg: 3, scope: !11, file: !1, line: 6, type: !18)
+  !30 = !DILocation(line: 0, scope: !11)
+  !31 = !DILocation(line: 7, column: 7, scope: !32)
+  !32 = distinct !DILexicalBlock(scope: !11, file: !1, line: 7, column: 7)
+  !33 = !DILocation(line: 7, column: 7, scope: !11)
+  !34 = !DILocation(line: 8, column: 12, scope: !32)
+  !35 = !DILocation(line: 8, column: 5, scope: !32)
+  !36 = !DILocation(line: 9, column: 10, scope: !11)
+  !37 = !DILocation(line: 9, column: 3, scope: !11)
+  !38 = !DILocation(line: 10, column: 1, scope: !11)
+  !39 = !DISubprogram(name: "bar", scope: !1, file: !1, line: 3, type: !40, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !40 = !DISubroutineType(types: !41)
+  !41 = !{!17, !23, !23, !23, !23, !23, !23, !23, !23, !23}
+
+...
+---
+name:            foo
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$z0' }
+  - { reg: '$z1' }
+  - { reg: '$w0' }
+frameInfo:
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  savePoint:       '%bb.1'
+  restorePoint:    '%bb.1'
+stack:
+  - { id: 0, size: 16, alignment: 16, stack-id: scalable-vector }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $w0, $z0, $z1
+
+    DBG_VALUE $z0, $noreg, !27, !DIExpression(), debug-location !30
+    DBG_VALUE $z1, $noreg, !28, !DIExpression(), debug-location !30
+    DBG_VALUE $w0, $noreg, !29, !DIExpression(), debug-location !30
+    renamable $z2 = COPY $z1
+    renamable $z1 = COPY $z0
+    DBG_VALUE $w0, $noreg, !29, !DIExpression(), debug-location !30
+    DBG_VALUE $z2, $noreg, !28, !DIExpression(), debug-location !30
+    DBG_VALUE $z1, $noreg, !27, !DIExpression(), debug-location !30
+    CBZW killed renamable $w0, %bb.2, debug-location !33
+    B %bb.1, debug-location !33
+
+  bb.1.if.then:
+    liveins: $z1
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !34
+    renamable $p0 = PTRUE_S 31, implicit $vg, debug-location !34
+    $x0 = ADDXri %stack.0, 0, 0, debug-location !34
+    ST1W_IMM renamable $z1, killed renamable $p0, %stack.0, 0, debug-location !34 :: (store unknown-size into %stack.0, align 16)
+    $z0 = COPY renamable $z1, debug-location !34
+    $z2 = COPY renamable $z1, debug-location !34
+    $z3 = COPY renamable $z1, debug-location !34
+    $z4 = COPY renamable $z1, debug-location !34
+    $z5 = COPY renamable $z1, debug-location !34
+    $z6 = COPY renamable $z1, debug-location !34
+    $z7 = COPY renamable $z1, debug-location !34
+    BL @bar, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $z0, implicit $z1, implicit $z2, implicit $z3, implicit $z4, implicit $z5, implicit $z6, implicit $z7, implicit $x0, implicit-def $sp, implicit-def $z0, implicit-def $z1, debug-location !34
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !34
+    renamable $p0 = PTRUE_S 31, implicit $vg, debug-location !34
+    $z3 = IMPLICIT_DEF
+    renamable $z1 = LD1W_IMM renamable $p0, %stack.0, 0, debug-location !34 :: (load unknown-size from %stack.0, align 16)
+    ST1W_IMM renamable $z3, killed renamable $p0, %stack.0, 0 :: (store unknown-size into %stack.0, align 16)
+    renamable $z2 = COPY $z0, debug-location !34
+    B %bb.3, debug-location !35
+
+  bb.2.if.end:
+    liveins: $z1, $z2
+
+
+  bb.3.return:
+    liveins: $z1, $z2
+
+    $z0 = COPY killed renamable $z2, debug-location !38
+    RET_ReallyLR implicit $z0, implicit $z1, debug-location !38
+
+...

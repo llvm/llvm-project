@@ -1,0 +1,11 @@
+# RUN: yaml-bench -canonical %s | FileCheck %s
+# CHECK: !!str "\n\nliteral\n\ntext\n"
+
+|
+ 
+  
+  literal
+ 
+  text
+
+ # Comment

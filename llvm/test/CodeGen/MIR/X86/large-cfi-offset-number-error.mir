@@ -1,0 +1,27 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define void @test() {
+  entry:
+    %tmp = alloca [4168 x i8], align 4
+    ret void
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       4040
+stack:
+  - { id: 0, name: tmp, offset: -4176, size: 4168, alignment: 4 }
+body: |
+  bb.0.entry:
+    $rsp = SUB64ri32 $rsp, 4040, implicit-def dead $eflags
+    ; CHECK: [[@LINE+1]]:36: expected a 32 bit integer (the cfi offset is too large)
+    CFI_INSTRUCTION def_cfa_offset 123456789123456
+    $rsp = ADD64ri32 $rsp, 4040, implicit-def dead $eflags
+    RET64
+...
+

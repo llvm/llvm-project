@@ -1,0 +1,13 @@
+#define NS_DESIGNATED_INITIALIZER __attribute__((objc_designated_initializer))
+
+@class NSString;
+
+@interface B1
+-(instancetype)init;
+@end
+
+@interface S1 : B1
+@property (nonatomic) int prop;
++(instancetype)s1;
+-(instancetype)initWithFoo:(NSString*)foo NS_DESIGNATED_INITIALIZER;
+@end

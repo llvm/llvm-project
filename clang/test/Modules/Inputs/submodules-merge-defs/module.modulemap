@@ -1,0 +1,22 @@
+module "stuff" {
+  textual header "defs.h"
+  module "empty" { header "empty.h" }
+  module "use" { header "use-defs.h" }
+  module "use-2" { requires use_defs_twice header "use-defs-2.h" }
+}
+
+module "redef" {
+  header "import-and-redefine.h"
+  // Do not re-export stuff.use
+  use "stuff"
+}
+
+module "merged-defs" {
+  header "merged-defs.h"
+  use "stuff"
+}
+
+module "indirect" {
+  header "indirect.h"
+  use "merged-defs"
+}

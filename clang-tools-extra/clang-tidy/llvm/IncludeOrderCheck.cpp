@@ -1,0 +1,185 @@
+//===--- IncludeOrderCheck.cpp - clang-tidy -------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "IncludeOrderCheck.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/STLExtras.h"
+
+#include <map>
+
+namespace clang::tidy::llvm_check {
+
+namespace {
+class IncludeOrderPPCallbacks : public PPCallbacks {
+public:
+  explicit IncludeOrderPPCallbacks(ClangTidyCheck &Check,
+                                   const SourceManager &SM)
+      : Check(Check), SM(SM) {}
+
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                          StringRef FileName, bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
+                          SrcMgr::CharacteristicKind FileType) override;
+  void EndOfMainFile() override;
+
+private:
+  struct IncludeDirective {
+    SourceLocation Loc;    ///< '#' location in the include directive
+    CharSourceRange Range; ///< SourceRange for the file name
+    std::string Filename;  ///< Filename as a string
+    bool IsAngled;         ///< true if this was an include with angle brackets
+    bool IsMainModule;     ///< true if this was the first include in a file
+  };
+
+  using FileIncludes = std::vector<IncludeDirective>;
+  std::map<clang::FileID, FileIncludes> IncludeDirectives;
+  bool LookForMainModule = true;
+
+  ClangTidyCheck &Check;
+  const SourceManager &SM;
+};
+} // namespace
+
+void IncludeOrderCheck::registerPPCallbacks(const SourceManager &SM,
+                                            Preprocessor *PP,
+                                            Preprocessor *ModuleExpanderPP) {
+  PP->addPPCallbacks(::std::make_unique<IncludeOrderPPCallbacks>(*this, SM));
+}
+
+static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
+  // We leave the main module header at the top.
+  if (IsMainModule)
+    return 0;
+
+  // LLVM and clang headers are in the penultimate position.
+  if (Filename.starts_with("llvm/") || Filename.starts_with("llvm-c/") ||
+      Filename.starts_with("clang/") || Filename.starts_with("clang-c/"))
+    return 2;
+
+  // Put these between system and llvm headers to be consistent with LLVM
+  // clang-format style.
+  if (Filename.starts_with("gtest/") || Filename.starts_with("gmock/"))
+    return 3;
+
+  // System headers are sorted to the end.
+  if (IsAngled)
+    return 4;
+
+  // Other headers are inserted between the main module header and LLVM headers.
+  return 1;
+}
+
+void IncludeOrderPPCallbacks::InclusionDirective(
+    SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
+  // We recognize the first include as a special main module header and want
+  // to leave it in the top position.
+  IncludeDirective ID = {HashLoc, FilenameRange, std::string(FileName),
+                         IsAngled, false};
+  if (LookForMainModule && !IsAngled) {
+    ID.IsMainModule = true;
+    LookForMainModule = false;
+  }
+
+  // Bucket the include directives by the id of the file they were declared in.
+  IncludeDirectives[SM.getFileID(HashLoc)].push_back(std::move(ID));
+}
+
+void IncludeOrderPPCallbacks::EndOfMainFile() {
+  LookForMainModule = true;
+  if (IncludeDirectives.empty())
+    return;
+
+  // TODO: find duplicated includes.
+
+  // Form blocks of includes. We don't want to sort across blocks. This also
+  // implicitly makes us never reorder over #defines or #if directives.
+  // FIXME: We should be more careful about sorting below comments as we don't
+  // know if the comment refers to the next include or the whole block that
+  // follows.
+  for (auto &Bucket : IncludeDirectives) {
+    auto &FileDirectives = Bucket.second;
+    std::vector<unsigned> Blocks(1, 0);
+    for (unsigned I = 1, E = FileDirectives.size(); I != E; ++I)
+      if (SM.getExpansionLineNumber(FileDirectives[I].Loc) !=
+          SM.getExpansionLineNumber(FileDirectives[I - 1].Loc) + 1)
+        Blocks.push_back(I);
+    Blocks.push_back(FileDirectives.size()); // Sentinel value.
+
+    // Get a vector of indices.
+    std::vector<unsigned> IncludeIndices;
+    for (unsigned I = 0, E = FileDirectives.size(); I != E; ++I)
+      IncludeIndices.push_back(I);
+
+    // Sort the includes. We first sort by priority, then lexicographically.
+    for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI)
+      llvm::sort(IncludeIndices.begin() + Blocks[BI],
+                 IncludeIndices.begin() + Blocks[BI + 1],
+                 [&FileDirectives](unsigned LHSI, unsigned RHSI) {
+                   IncludeDirective &LHS = FileDirectives[LHSI];
+                   IncludeDirective &RHS = FileDirectives[RHSI];
+
+                   int PriorityLHS = getPriority(LHS.Filename, LHS.IsAngled,
+                                                 LHS.IsMainModule);
+                   int PriorityRHS = getPriority(RHS.Filename, RHS.IsAngled,
+                                                 RHS.IsMainModule);
+
+                   return std::tie(PriorityLHS, LHS.Filename) <
+                          std::tie(PriorityRHS, RHS.Filename);
+                 });
+
+    // Emit a warning for each block and fixits for all changes within that
+    // block.
+    for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI) {
+      // Find the first include that's not in the right position.
+      unsigned I = 0, E = 0;
+      for (I = Blocks[BI], E = Blocks[BI + 1]; I != E; ++I)
+        if (IncludeIndices[I] != I)
+          break;
+
+      if (I == E)
+        continue;
+
+      // Emit a warning.
+      auto D = Check.diag(FileDirectives[I].Loc,
+                          "#includes are not sorted properly");
+
+      // Emit fix-its for all following includes in this block.
+      for (; I != E; ++I) {
+        if (IncludeIndices[I] == I)
+          continue;
+        const IncludeDirective &CopyFrom = FileDirectives[IncludeIndices[I]];
+
+        SourceLocation FromLoc = CopyFrom.Range.getBegin();
+        const char *FromData = SM.getCharacterData(FromLoc);
+        unsigned FromLen = std::strcspn(FromData, "\n");
+
+        StringRef FixedName(FromData, FromLen);
+
+        SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
+        const char *ToData = SM.getCharacterData(ToLoc);
+        unsigned ToLen = std::strcspn(ToData, "\n");
+        auto ToRange =
+            CharSourceRange::getCharRange(ToLoc, ToLoc.getLocWithOffset(ToLen));
+
+        D << FixItHint::CreateReplacement(ToRange, FixedName);
+      }
+    }
+  }
+
+  IncludeDirectives.clear();
+}
+
+} // namespace clang::tidy::llvm_check

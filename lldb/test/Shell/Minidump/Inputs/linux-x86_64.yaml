@@ -1,0 +1,29 @@
+--- !minidump
+Streams:         
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000400000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/test/linux-x86_64'
+        CodeView Record: 4C457042E35C283BC327C28762DB788BF5A4078BE2351448
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Processor Level: 6
+    Processor Revision: 15876
+    Number of Processors: 40
+    Platform ID:     Linux
+    CSD Version:     'Linux 3.13.0-91-generic #138-Ubuntu SMP Fri Jun 24 17:00:34 UTC 2016 x86_64'
+    CPU:             
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            LinuxProcStatus
+    Text:             |
+      Name:	linux-x86_64
+      State:	t (tracing stop)
+      Tgid:	29917
+      Ngid:	0
+      Pid:	29917
+      PPid:	29370
+
+...

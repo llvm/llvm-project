@@ -1,0 +1,126 @@
+# RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -verify-machineinstrs -run-pass mir-canonicalizer %s | FileCheck %s
+# RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -mir-vreg-namer-use-stable-hash -verify-machineinstrs -run-pass mir-canonicalizer %s | FileCheck %s
+# These Idempotent instructions are sorted alphabetically (based on after the '=')
+# CHECK: %bb0_{{[0-9a-f]+}}__1:gpr64 = MOVi64imm 4617315517961601024
+# CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:gpr32 = MOVi32imm 408
+# CHECK-NEXT: %bb0_{{[0-9a-f]+}}__2:gpr32 = MOVi32imm 408
+# CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:gpr64all = IMPLICIT_DEF
+# CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fpr64 = FMOVDi 20
+# CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:fpr64 = FMOVDi 112
+
+...
+---
+name: Proc8
+stack:
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -16, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 2, type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -24, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 3, type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -32, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 4, type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -40, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 5, type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -48, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 6, type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -56, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+constants:
+body: |
+  bb.0:
+    liveins: $x0, $x1, $d0, $d1
+
+    %3:fpr64 = COPY $d1
+    %2:fpr64 = COPY $d0
+    %1:gpr64 = COPY $x1
+    %0:gpr64common = COPY $x0
+    STRXui %0, %stack.1, 0 :: (store (s64))
+    STRXui %1, %stack.2, 0 :: (store (s64))
+    STRDui %2, %stack.3, 0 :: (store (s64))
+    STRDui %3, %stack.4, 0 :: (store (s64))
+
+    %4:fpr64 = FMOVDi 20
+    %5:fpr64 = FADDDrr %2, killed %4, implicit $fpcr
+    STRDui %5, %stack.5, 0 :: (store (s64))
+
+    %6:gpr32 = FCVTZSUWDr %5, implicit $fpcr
+    STRDroW %3, %0, killed %6, 1, 1
+
+    %7:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load (s64))
+    %8:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
+
+    %9:gpr32common = FCVTZSUWDr killed %8, implicit $fpcr
+    %10:fpr64 = LDRDroW %7, %9, 1, 1
+
+    %11:gpr32common = ADDWri %9, 1, 0
+    STRDroW killed %10, %7, killed %11, 1, 1
+
+    %12:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
+    %13:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load (s64))
+
+    %14:gpr32common = FCVTZSUWDr %12, implicit $fpcr
+    %15:gpr32common = ADDWri killed %14, 30, 0
+    STRDroW %12, killed %13, killed %15, 1, 1
+
+    %16:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
+    STRDui killed %16, %stack.6, 0 :: (store (s64))
+
+    %19:fpr64 = FMOVDi 112
+    %46:gpr32 = MOVi32imm 408
+    %43:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
+    %44:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load (s64))
+
+    %45:gpr32 = FCVTZSUWDr %43, implicit $fpcr
+    %47:gpr64common = SMADDLrrr killed %45, %46, killed %44
+    %48:fpr64 = LDRDui %stack.6, 0 :: (dereferenceable load (s64))
+
+    %49:gpr32 = FCVTZSUWDr killed %48, implicit $fpcr
+    STRDroW %43, killed %47, killed %49, 1, 1
+
+    %21:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load (s64))
+    %22:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
+
+    %23:gpr32 = FCVTZSUWDr killed %22, implicit $fpcr
+    %24:gpr32 = MOVi32imm 408
+    %25:gpr64common = SMADDLrrr %23, %24, killed %21
+    %26:gpr64sp = ADDXrx killed %25, %23, 51
+    %27:fpr64 = LDURDi %26, -8
+    %29:fpr64 = FADDDrr killed %27, %19, implicit $fpcr
+    STURDi killed %29, %26, -8
+
+    %30:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load (s64))
+    %31:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
+
+    %32:gpr32common = FCVTZSUWDr killed %31, implicit $fpcr
+    %34:gpr64all = IMPLICIT_DEF
+    %33:gpr64 = INSERT_SUBREG %34, %32, %subreg.sub_32
+    %35:gpr64 = SBFMXri killed %33, 61, 31
+    %36:fpr64 = LDRDroX killed %30, %35, 0, 0
+    %37:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load (s64))
+
+    %38:gpr32common = ADDWri %32, 20, 0
+    %39:gpr64common = SMADDLrrr killed %38, %24, killed %37
+    STRDroX killed %36, killed %39, %35, 0, 0
+
+    %40:gpr64 = MOVi64imm 4617315517961601024
+
+    %42:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load (s64))
+    $w0 = COPY %42
+    RET_ReallyLR implicit $w0
+
+...

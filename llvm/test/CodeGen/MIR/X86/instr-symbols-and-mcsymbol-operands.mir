@@ -1,0 +1,82 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses pre- and post-instruction symbols
+# and MCSymbol operands correctly.
+
+--- |
+  declare void @f(i32 %x) nounwind
+
+  declare void @g(i32 %x) nounwind
+
+  declare void @h(i32 %x) nounwind
+
+  define i64 @test(i32 %x) nounwind {
+  entry:
+    call void @f(i32 %x)
+    call void @g(i32 %x)
+    call void @h(i32 %x), !dbg !9
+    ret i64 undef
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!6, !7}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
+  !1 = !DIFile(filename: "test.ll", directory: "")
+  !2 = !{}
+  !4 = distinct !DISubprogram(name: "test", scope: !5, file: !5, line: 4, type: !2, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+  !5 = !DIFile(filename: "test.c", directory: "")
+  !6 = !{i32 2, !"Dwarf Version", i32 4}
+  !7 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !DILocation(line: 1, scope: !4)
+
+...
+---
+name: test
+# CHECK-LABEL: name: test
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+body: |
+  bb.0.entry:
+    liveins: $edi
+
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY killed %0
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    $edi = COPY %1
+
+    CALL64pcrel32 @f, csr_64, implicit $rsp, implicit $ssp, implicit $edi, pre-instr-symbol <mcsymbol .Lpre_f>, post-instr-symbol <mcsymbol .Lpost_f>
+  ; CHECK: CALL64pcrel32 @f, {{.*}}, pre-instr-symbol <mcsymbol .Lpre_f>, post-instr-symbol <mcsymbol .Lpost_f>
+
+    ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    $edi = COPY %1
+
+    CALL64pcrel32 @g, csr_64, implicit $rsp, implicit $ssp, implicit $edi, pre-instr-symbol <mcsymbol .Lpre_g>
+  ; CHECK: CALL64pcrel32 @g, {{.*}}, pre-instr-symbol <mcsymbol .Lpre_g>
+
+    ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    $edi = COPY %1
+
+    CALL64pcrel32 @h, csr_64, implicit $rsp, implicit $ssp, implicit $edi, post-instr-symbol <mcsymbol .Lpost_h>, debug-location !9
+  ; CHECK: CALL64pcrel32 @h, {{.*}}, post-instr-symbol <mcsymbol .Lpost_h>, debug-location
+
+    ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+
+    %2:gr64 = MOV64ri32 <mcsymbol .Lpre_f>
+    %3:gr64 = MOV64ri32 <mcsymbol .Lpost_f>
+    %4:gr64 = MOV64ri32 <mcsymbol .Lpre_g>
+    %5:gr64 = MOV64ri32 <mcsymbol .Lpost_h>
+  ; CHECK: %2:gr64 = MOV64ri32 <mcsymbol .Lpre_f>
+  ; CHECK: %3:gr64 = MOV64ri32 <mcsymbol .Lpost_f>
+  ; CHECK: %4:gr64 = MOV64ri32 <mcsymbol .Lpre_g>
+  ; CHECK: %5:gr64 = MOV64ri32 <mcsymbol .Lpost_h>
+
+    %6:gr64 = ADD64rr killed %2, killed %3, implicit-def $eflags
+    %7:gr64 = ADD64rr killed %4, killed %5, implicit-def $eflags
+    %8:gr64 = ADD64rr killed %6, killed %7, implicit-def $eflags
+    $rax = COPY %8
+    RET64 implicit $rax
+
+...

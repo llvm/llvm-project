@@ -1,0 +1,14 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -p %t | FileCheck %s
+
+# CHECK: Program Header:
+# CHECK-NEXT: {{ }}PROPERTY{{ }}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+ProgramHeaders:
+  - Type: PT_GNU_PROPERTY

@@ -1,0 +1,15 @@
+# RUN: llvm-mc < %s -triple armv7-apple-darwin -filetype=obj | llvm-objdump -m -d - | FileCheck %s
+	.thumb
+	.thumb_func	_t
+_t:
+	movw	r3, :lower16:(Str-(PCinst+4))
+	movt	r3, :upper16:(Str-(PCinst+4))
+	.thumb_func	PCinst
+PCinst:
+	add	r3, pc
+
+	.section	__TEXT,__cstring,cstring_literals
+Str: 
+	.asciz	"Hello world\n"
+# CHECK: movw	r3, :lower16:((Str-PCinst)-4)
+# CHECK: movt	r3, :upper16:((Str-PCinst)-4)

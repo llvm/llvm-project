@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs -stop-after prologepilog -o - %s | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=ASM
+
+---
+name:    verify_vxrm
+tracksRegLiveness: true
+body:     |
+  bb.0.entry:
+    liveins: $v8, $v9, $x10
+
+    ; MIR-LABEL: name: verify_vxrm
+    ; MIR: liveins: $v8, $v9, $x10
+    ; MIR-NEXT: {{  $}}
+    ; MIR-NEXT: dead $x0 = PseudoVSETVLI renamable $x10, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype
+    ; MIR-NEXT: WriteVXRMImm 0, implicit-def $vxrm
+    ; MIR-NEXT: renamable $v8 = PseudoVAADD_VV_MF8 undef $v8, renamable $v8, renamable $v9, 0, $noreg, 3 /* e8 */, 0  /* tu, mu */, implicit $vl, implicit $vtype, implicit $vxrm
+    ; MIR-NEXT: PseudoRET implicit $v8
+    ; ASM-LABEL: verify_vxrm:
+    ; ASM:        # %bb.0:
+    ; ASM-NEXT:    vsetvli	zero, a0, e8, mf8, ta, ma
+    ; ASM-NEXT:    csrwi	vxrm, 0
+    ; ASM-NEXT:    vaadd.vv	v8, v8, v9
+    ; ASM-NEXT:    ret
+    %0:vr = COPY $v8
+    %1:vr = COPY $v9
+    dead $x0 = PseudoVSETVLI killed renamable $x10, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype
+    %pt:vr = IMPLICIT_DEF
+    renamable $v8 = PseudoVAADD_VV_MF8 %pt, killed renamable $v8, killed renamable $v9, 0, $noreg, 3 /* e8 */, 0
+    PseudoRET implicit $v8
+...

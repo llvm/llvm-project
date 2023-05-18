@@ -1,0 +1,87 @@
+## This is a general test for the --section-headers option.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj --section-headers %t1 | \
+# RUN:   FileCheck --strict-whitespace --match-full-lines --check-prefixes=SEC,SEC32 %s
+
+# RUN: yaml2obj -DMAGIC=0x01F7 %s -o %t2
+# RUN: llvm-readobj --section-headers %t2 | \
+# RUN:   FileCheck --strict-whitespace --match-full-lines --check-prefixes=SEC,SEC64 %s
+
+#      SEC32:Format: aixcoff-rs6000
+#      SEC64:Format: aix5coff64-rs6000
+# SEC32-NEXT:Arch: powerpc
+# SEC64-NEXT:Arch: powerpc64
+# SEC32-NEXT:AddressSize: 32bit
+# SEC64-NEXT:AddressSize: 64bit
+#   SEC-NEXT:Sections [
+#   SEC-NEXT:  Section {
+#   SEC-NEXT:    Index: 1
+#   SEC-NEXT:    Name: .text
+#   SEC-NEXT:    PhysicalAddress: 0x0
+#   SEC-NEXT:    VirtualAddress: 0x0
+#   SEC-NEXT:    Size: 0x2
+# SEC32-NEXT:    RawDataOffset: 0xB4
+# SEC64-NEXT:    RawDataOffset: 0x138
+#   SEC-NEXT:    RelocationPointer: 0x0
+#   SEC-NEXT:    LineNumberPointer: 0x0
+#   SEC-NEXT:    NumberOfRelocations: 0
+#   SEC-NEXT:    NumberOfLineNumbers: 0
+#   SEC-NEXT:    Type: STYP_TEXT (0x20)
+#   SEC-NEXT:  }
+#   SEC-NEXT:  Section {
+#   SEC-NEXT:    Index: 2
+#   SEC-NEXT:    Name: .data
+#   SEC-NEXT:    PhysicalAddress: 0x0
+#   SEC-NEXT:    VirtualAddress: 0x0
+#   SEC-NEXT:    Size: 0x2
+# SEC32-NEXT:    RawDataOffset: 0xB8
+# SEC64-NEXT:    RawDataOffset: 0x13C
+# SEC32-NEXT:    RelocationPointer: 0xC4
+# SEC64-NEXT:    RelocationPointer: 0x148
+#   SEC-NEXT:    LineNumberPointer: 0x0
+#   SEC-NEXT:    NumberOfRelocations: 1
+#   SEC-NEXT:    NumberOfLineNumbers: 0
+#   SEC-NEXT:    Type: STYP_DATA (0x40)
+#   SEC-NEXT:  }
+#   SEC-NEXT:  Section {
+#   SEC-NEXT:    Index: 3
+#   SEC-NEXT:    Name: .dwabrev
+#        SEC:    Type: STYP_DWARF (0x10)
+#   SEC-NEXT:    DWARFSubType: SSUBTYP_DWABREV (0x60000)
+#   SEC-NEXT:  }
+#   SEC-NEXT:  Section {
+#   SEC-NEXT:    Index: 4
+#   SEC-NEXT:    Name: .dwinfo
+#        SEC:    Type: STYP_DWARF (0x10)
+#   SEC-NEXT:    DWARFSubType: SSUBTYP_DWINFO (0x10000)
+#   SEC-NEXT:  }
+#   SEC-NEXT:]
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC=0x1DF]]
+Sections:
+  - Name:        .text
+    Flags:       [ STYP_TEXT ]
+    SectionData: "1234"
+  - Name:        .data
+    Flags:       [ STYP_DATA ]
+    SectionData: "5678"
+    Relocations:
+      - Address: 0x80
+        Symbol:  0x21
+        Info:    0x1F
+        Type:    0x0
+  - Name:            .dwabrev
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DWARFSectionSubtype: SSUBTYP_DWABREV
+    SectionData:     01110125
+  - Name:            .dwinfo
+    Address:         0x0
+    Size:            0x4
+    Flags:           [ STYP_DWARF ]
+    DWARFSectionSubtype: SSUBTYP_DWINFO
+    SectionData:     00000080

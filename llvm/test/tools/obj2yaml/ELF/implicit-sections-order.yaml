@@ -1,0 +1,158 @@
+## Check that obj2yaml dumps SHT_STRTAB/SHT_SYMTAB/SHT_DYNSYM sections
+## when they are allocatable.
+
+## In the following test we check the normal case: when .dynsym (SHT_DYNSYM)
+## and .dynstr (SHT_STRTAB) are allocatable sections and .symtab (SHT_SYMTAB),
+## .strtab (SHT_STRTAB) and .shstrtab (SHT_STRTAB) are not.
+## Check we explicitly declare allocatable sections.
+
+# RUN: yaml2obj %s -o %t1.so -D FLAG1=SHF_ALLOC -D FLAG2=""
+# RUN: llvm-readelf -S %t1.so | FileCheck %s --check-prefixes=RE,RE-1
+# RUN: obj2yaml %t1.so | FileCheck %s --check-prefix=OUTPUT
+
+## Check the information about sections using an independent tool.
+
+# RE:        Section Headers:
+# RE-NEXT:   [Nr] Name      Type     Address          Off    Size   ES Flg Lk Inf Al
+# RE-NEXT:   [ 0]           NULL     0000000000000000 000000 000000 00     0   0  0
+# RE-NEXT:   [ 1] .foo.1    PROGBITS 0000000000000000 000040 000000 00     0   0  0
+# RE-1-NEXT: [ 2] .dynsym   DYNSYM   0000000000001000 000040 000030 18   A 4   2  0
+# RE-2-NEXT: [ 2] .dynsym   DYNSYM   0000000000001000 000040 000030 18     4   2  0
+# RE-NEXT:   [ 3] .foo.2    PROGBITS 0000000000000000 000070 000000 00     0   0  0
+# RE-1-NEXT: [ 4] .dynstr   STRTAB   0000000000002000 000070 000005 00   A 0   0  0
+# RE-2-NEXT: [ 4] .dynstr   STRTAB   0000000000002000 000070 000005 00     0   0  0
+# RE-NEXT:   [ 5] .foo.3    PROGBITS 0000000000000000 000075 000000 00     0   0  0
+# RE-1-NEXT: [ 6] .symtab   SYMTAB   0000000000003000 000075 000030 18     8   2  0
+# RE-2-NEXT: [ 6] .symtab   SYMTAB   0000000000003000 000075 000030 18   A 8   2  0
+# RE-NEXT:   [ 7] .foo.4    PROGBITS 0000000000000000 0000a5 000000 00     0   0  0
+# RE-1-NEXT: [ 8] .strtab   STRTAB   0000000000004000 0000a5 000005 00     0   0  0
+# RE-2-NEXT: [ 8] .strtab   STRTAB   0000000000004000 0000a5 000005 00   A 0   0  0
+# RE-NEXT:   [ 9] .foo.5    PROGBITS 0000000000000000 0000aa 000000 00     0   0  0
+# RE-1-NEXT: [10] .shstrtab STRTAB   0000000000005000 0000aa 000055 00     0   0  0
+# RE-2-NEXT: [10] .shstrtab STRTAB   0000000000005000 0000aa 000055 00   A 0   0  0
+# RE-NEXT:   [11] .foo.6    PROGBITS 0000000000000000 0000ff 000000 00     0   0  0
+
+# OUTPUT:      --- !ELF
+# OUTPUT-NEXT: FileHeader:
+# OUTPUT-NEXT:   Class: ELFCLASS64
+# OUTPUT-NEXT:   Data:  ELFDATA2LSB
+# OUTPUT-NEXT:   Type:  ET_DYN
+# OUTPUT-NEXT: Sections:
+# OUTPUT-NEXT:   - Name: .foo.1
+# OUTPUT-NEXT:     Type: SHT_PROGBITS
+# OUTPUT-NEXT:   - Name:    .dynsym
+# OUTPUT-NEXT:     Type:    SHT_DYNSYM
+# OUTPUT-NEXT:     Flags:   [ SHF_ALLOC ]
+# OUTPUT-NEXT:     Address: 0x1000
+# OUTPUT-NEXT:     Link:    .dynstr
+# OUTPUT-NEXT:   - Name: .foo.2
+# OUTPUT-NEXT:     Type: SHT_PROGBITS
+# OUTPUT-NEXT:   - Name:    .dynstr
+# OUTPUT-NEXT:     Type:    SHT_STRTAB
+# OUTPUT-NEXT:     Flags:   [ SHF_ALLOC ]
+# OUTPUT-NEXT:     Address: 0x2000
+# OUTPUT-NEXT:   - Name: .foo.3
+# OUTPUT-NEXT:     Type: SHT_PROGBITS
+# OUTPUT-NEXT:   - Name: .foo.4
+# OUTPUT-NEXT:     Type: SHT_PROGBITS
+# OUTPUT-NEXT:   - Name: .foo.5
+# OUTPUT-NEXT:     Type: SHT_PROGBITS
+# OUTPUT-NEXT:   - Name: .foo.6
+# OUTPUT-NEXT:     Type: SHT_PROGBITS
+# OUTPUT-NEXT: Symbols:
+# OUTPUT-NEXT:   - Name: foo
+# OUTPUT-NEXT: DynamicSymbols:
+# OUTPUT-NEXT:   - Name: bar
+# OUTPUT-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .foo.1
+    Type: SHT_PROGBITS
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Address: 0x1000
+    Flags: [ [[FLAG1]] ]
+  - Name: .foo.2
+    Type: SHT_PROGBITS
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x2000
+    Flags: [ [[FLAG1]] ]
+  - Name: .foo.3
+    Type: SHT_PROGBITS
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Address: 0x3000
+    Flags: [ [[FLAG2]] ]
+  - Name: .foo.4
+    Type: SHT_PROGBITS
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Address: 0x4000
+    Flags: [ [[FLAG2]] ]
+  - Name: .foo.5
+    Type: SHT_PROGBITS
+  - Name:    .shstrtab
+    Type:    SHT_STRTAB
+    Address: 0x5000
+    Flags: [ [[FLAG2]] ]
+  - Name: .foo.6
+    Type: SHT_PROGBITS
+Symbols:
+  - Name: foo
+DynamicSymbols:
+  - Name: bar
+
+## Now test the abnormal case: when .symtab (SHT_SYMTAB),
+## .strtab (SHT_STRTAB) and .shstrtab (SHT_STRTAB) are
+## allocatable sections, but .dynsym (SHT_DYNSYM) and
+## .dynstr (SHT_STRTAB) are not.
+## Check that only allocatable versions are explicitly declared.
+
+# RUN: yaml2obj %s -o %t2.so -D FLAG1="" -D FLAG2=SHF_ALLOC
+# RUN: llvm-readelf -S %t2.so | FileCheck %s --check-prefixes=RE,RE-2
+# RUN: obj2yaml %t2.so | FileCheck %s --check-prefix=OUTPUT2
+
+## Check we explicitly declare only allocatable
+## SHT_STRTAB/SHT_SYMTAB/SHT_DYNSYM sections.
+# OUTPUT2:      --- !ELF
+# OUTPUT2-NEXT: FileHeader:
+# OUTPUT2-NEXT:   Class: ELFCLASS64
+# OUTPUT2-NEXT:   Data:  ELFDATA2LSB
+# OUTPUT2-NEXT:   Type:  ET_DYN
+# OUTPUT2-NEXT: Sections:
+# OUTPUT2-NEXT:   - Name: .foo.1
+# OUTPUT2-NEXT:     Type: SHT_PROGBITS
+# OUTPUT2-NEXT:   - Name: .foo.2
+# OUTPUT2-NEXT:     Type: SHT_PROGBITS
+# OUTPUT2-NEXT:   - Name: .foo.3
+# OUTPUT2-NEXT:     Type: SHT_PROGBITS
+# OUTPUT2-NEXT:   - Name:    .symtab
+# OUTPUT2-NEXT:     Type:    SHT_SYMTAB
+# OUTPUT2-NEXT:     Flags:   [ SHF_ALLOC ]
+# OUTPUT2-NEXT:     Address: 0x3000
+# OUTPUT2-NEXT:     Link:    .strtab
+# OUTPUT2-NEXT:   - Name: .foo.4
+# OUTPUT2-NEXT:     Type: SHT_PROGBITS
+# OUTPUT2-NEXT:   - Name:    .strtab
+# OUTPUT2-NEXT:     Type:    SHT_STRTAB
+# OUTPUT2-NEXT:     Flags:   [ SHF_ALLOC ]
+# OUTPUT2-NEXT:     Address: 0x4000
+# OUTPUT2-NEXT:   - Name: .foo.5
+# OUTPUT2-NEXT:     Type: SHT_PROGBITS
+# OUTPUT2-NEXT:   - Name:    .shstrtab
+# OUTPUT2-NEXT:     Type:    SHT_STRTAB
+# OUTPUT2-NEXT:     Flags:   [ SHF_ALLOC ]
+# OUTPUT2-NEXT:     Address: 0x5000
+# OUTPUT2-NEXT:   - Name:    .foo.6
+# OUTPUT2-NEXT:     Type:    SHT_PROGBITS
+# OUTPUT2-NEXT: Symbols:
+# OUTPUT2-NEXT:   - Name: foo
+# OUTPUT2-NEXT: DynamicSymbols:
+# OUTPUT2-NEXT:   - Name: bar
+# OUTPUT2-NEXT: ...

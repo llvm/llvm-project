@@ -1,0 +1,2 @@
+int decltype_val;
+

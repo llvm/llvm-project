@@ -1,0 +1,53 @@
+## Test that debug sections (but not linking or names) are stripped with --strip-debug
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --strip-debug %t
+# RUN: obj2yaml %t | FileCheck --implicit-check-not=.debug %s
+
+# CHECK:      Sections:
+# CHECK-NEXT:   - Type: TYPE
+# CHECK:          Name: linking
+# CHECK:          Name: name
+# CHECK-NEXT:     FunctionNames:
+# CHECK:          Name: producers
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes: []
+  - Type: FUNCTION
+    FunctionTypes: [ 0 ]
+  - Type: CODE
+    Functions:
+      - Index: 0
+        Locals: []
+        Body: 0B
+  - Type: CUSTOM
+    Name: .debug_info
+    Payload: CAFE1234
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            foo
+        Flags:           [ BINDING_LOCAL ]
+        Function:        0
+  - Type: CUSTOM
+    Name: name
+    FunctionNames:
+     - Index:          0
+       Name:           foo
+  - Type: CUSTOM
+    Name: producers
+    Tools:
+      - Name:   clang
+        Version: 9.0.0
+  - Type: CUSTOM
+    Name: .debug_line
+    Payload: DEADBEEF

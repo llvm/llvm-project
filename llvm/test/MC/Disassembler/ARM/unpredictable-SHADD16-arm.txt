@@ -1,0 +1,7 @@
+# RUN: llvm-mc --disassemble %s -triple=arm-apple-darwin9 2>&1 | FileCheck %s
+
+# CHECK: warning: potentially undefined
+# CHECK: shadd16	r5, r7, r0
+0x10 0x51 0x37 0xe6
+
+

@@ -1,0 +1,7 @@
+# RUN: obj2yaml %S/Inputs/test-1.o > %t.stdout.yaml
+# RUN: obj2yaml %S/Inputs/test-1.o -o %t.file.yaml 2>&1 | count 0
+# RUN: yaml2obj %t.stdout.yaml -o %t.o
+# RUN: llvm-pdbutil dump --types %t.o | FileCheck %s -check-prefix=ALL
+# RUN: diff %t.stdout.yaml %t.file.yaml
+
+# ALL: {{.*}} guid = {00C903AB-0968-4639-84F8-7D3E719A1BE1}

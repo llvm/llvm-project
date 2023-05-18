@@ -1,0 +1,8 @@
+module Misplaced {
+  module Sub_A {
+    header "misplaced-a.h"
+  }
+  module Sub_B {
+    header "misplaced-b.h"
+  }
+}

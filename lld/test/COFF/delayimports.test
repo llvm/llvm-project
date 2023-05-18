@@ -1,0 +1,66 @@
+# RUN: lld-link /out:%t.exe /entry:main /subsystem:console \
+# RUN:   %p/Inputs/hello64.obj %p/Inputs/std64.lib /delayload:STD64.DLL \
+# RUN:   /alternatename:__delayLoadHelper2=main
+# RUN: llvm-readobj --coff-imports %t.exe | FileCheck -check-prefix=IMPORT %s
+# RUN: llvm-readobj --coff-basereloc %t.exe | FileCheck -check-prefix=BASEREL %s
+# RUN: llvm-readobj --unwind %t.exe | FileCheck -check-prefix=UNWIND %s
+
+IMPORT:      DelayImport {
+IMPORT-NEXT:   Name: std64.dll
+IMPORT-NEXT:   Attributes: 0x1
+IMPORT-NEXT:   ModuleHandle: 0x3018
+IMPORT-NEXT:   ImportAddressTable: 0x3020
+IMPORT-NEXT:   ImportNameTable: 0x2050
+IMPORT-NEXT:   BoundDelayImportTable: 0x0
+IMPORT-NEXT:   UnloadDelayImportTable: 0x0
+IMPORT-NEXT:   Import {
+IMPORT-NEXT:     Symbol: ExitProcess (0)
+IMPORT-NEXT:     Address: 0x140001066
+IMPORT-NEXT:   }
+IMPORT-NEXT:   Import {
+IMPORT-NEXT:     Symbol:  (50)
+IMPORT-NEXT:     Address: 0x140001072
+IMPORT-NEXT:   }
+IMPORT-NEXT:   Import {
+IMPORT-NEXT:     Symbol: MessageBoxA (0)
+IMPORT-NEXT:     Address: 0x14000107E
+IMPORT-NEXT:   }
+IMPORT-NEXT: }
+
+BASEREL:      BaseReloc [
+BASEREL-NEXT:   Entry {
+BASEREL-NEXT:     Type: DIR64
+BASEREL-NEXT:     Address: 0x3020
+BASEREL-NEXT:   }
+BASEREL-NEXT:   Entry {
+BASEREL-NEXT:     Type: DIR64
+BASEREL-NEXT:     Address: 0x3028
+BASEREL-NEXT:   }
+BASEREL-NEXT:   Entry {
+BASEREL-NEXT:     Type: DIR64
+BASEREL-NEXT:     Address: 0x3030
+BASEREL-NEXT:   }
+
+UNWIND:      UnwindInformation [
+UNWIND-NEXT:   RuntimeFunction {
+UNWIND-NEXT:     StartAddress: (0x14000108A)
+UNWIND-NEXT:     EndAddress: (0x1400010DD)
+UNWIND-NEXT:     UnwindInfoAddress: (0x140002000)
+UNWIND-NEXT:     UnwindInfo {
+UNWIND-NEXT:       Version: 1
+UNWIND-NEXT:       Flags [ (0x0)
+UNWIND-NEXT:       ]
+UNWIND-NEXT:       PrologSize: 10
+UNWIND-NEXT:       FrameRegister: -
+UNWIND-NEXT:       FrameOffset: -
+UNWIND-NEXT:       UnwindCodeCount: 5
+UNWIND-NEXT:       UnwindCodes [
+UNWIND-NEXT:         0x0A: ALLOC_SMALL size=72
+UNWIND-NEXT:         0x06: ALLOC_SMALL size=8
+UNWIND-NEXT:         0x04: ALLOC_SMALL size=8
+UNWIND-NEXT:         0x02: ALLOC_SMALL size=8
+UNWIND-NEXT:         0x01: ALLOC_SMALL size=8
+UNWIND-NEXT:       ]
+UNWIND-NEXT:     }
+UNWIND-NEXT:   }
+UNWIND-NEXT: ]

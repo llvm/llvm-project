@@ -1,0 +1,12 @@
+[
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/header_stat_before_open_input.m -iframework Inputs/frameworks",
+  "file": "DIR/header_stat_before_open_input.m"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E -Xclang -iframework -Xclang Inputs/frameworks -- DIR/header_stat_before_open_input_clangcl.m",
+  "file": "DIR/header_stat_before_open_input_clangcl.m"
+}
+]

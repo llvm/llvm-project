@@ -1,0 +1,21 @@
+# Test that symbol contexts for trap handler frames are set correctly even when
+# the pc is at the start of the function.
+
+# UNSUPPORTED: system-windows
+# REQUIRES: target-x86_64, native
+
+# RUN: %clang_host %p/Inputs/call-asm.c %p/Inputs/trap_frame_sym_ctx.s -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+settings append target.trap-handler-names tramp
+
+breakpoint set -n bar
+# CHECK: Breakpoint 1: where = {{.*}}`bar
+
+process launch
+# CHECK: stop reason = breakpoint 1.1
+
+thread backtrace
+# CHECK: frame #0: {{.*}}`bar
+# CHECK: frame #1: {{.*}}`tramp
+# CHECK: frame #2: {{.*}}`main

@@ -1,0 +1,10 @@
+# RUN: yaml-bench -canonical %s
+
+- foo
+ 
+  bar
+- |-
+  foo
+ 
+  bar
+  

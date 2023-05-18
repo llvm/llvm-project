@@ -1,0 +1,34 @@
+# RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs \
+# RUN:     -run-pass=cfi-instr-inserter 2>&1 | FileCheck %s
+# Test that CFI inserter inserts .cfi_restore properly for
+# callee saved registers.
+--- |
+  define void @foo() {
+    ret void
+  }
+...
+---
+# CHECK:      bb.3:
+# CHECK:      CFI_INSTRUCTION restore $rbx
+# CHECK-NEXT: CFI_INSTRUCTION restore $rbp
+name:            foo
+body:             |
+  bb.0:
+    TEST8rr renamable $dil, renamable $dil, implicit-def $eflags, implicit killed $edi
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    JMP_1 %bb.3
+
+  bb.2:
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    CFI_INSTRUCTION def_cfa_register $rbp
+    CFI_INSTRUCTION offset $rbx, -24
+    CFI_INSTRUCTION def_cfa $rsp, 8
+    RET 0, $rax
+
+  bb.3:
+    RET 0, $rax
+
+...

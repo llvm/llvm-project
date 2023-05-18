@@ -1,0 +1,688 @@
+## Show that obj2yaml is able to dump program headers.
+
+## Part I. Base check. All simple cases that look OK as a part of a single large test live here.
+
+# RUN: yaml2obj %s -o %t1
+
+## Show the layout of the object before we dump it using obj2yaml.
+## The check is here to make it clear what the layout should look like.
+# RUN: llvm-readelf --segments %t1 | FileCheck %s --check-prefix=SEGMENT-MAPPING
+
+# SEGMENT-MAPPING:      Program Headers:
+# SEGMENT-MAPPING-NEXT:   Type      Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# SEGMENT-MAPPING-NEXT:   LOAD      0x000000 0x0000000000000000 0x0000000000000000 0x000281 0x000281 R   0x1000
+# SEGMENT-MAPPING-NEXT:   LOAD      0x000281 0x0000000000001000 0x0000000000001000 0x000010 0x000010 R E 0x1000
+# SEGMENT-MAPPING-NEXT:   LOAD      0x000291 0x0000000000002000 0x0000000000002000 0x000009 0x000009 R   0x1000
+# SEGMENT-MAPPING-NEXT:   LOAD      0x00029a 0x0000000000003ef0 0x0000000000003ef0 0x000011 0x000011 RW  0x1000
+# SEGMENT-MAPPING-NEXT:   DYNAMIC   0x00029a 0x0000000000003ef0 0x0000000000003ef0 0x000010 0x000010 RW  0x8
+# SEGMENT-MAPPING-NEXT:   GNU_RELRO 0x00029a 0x0000000000003ef0 0x0000000000003ef0 0x000010 0x000010 R   0x1
+# SEGMENT-MAPPING-NEXT:   LOAD      0x000000 0x0000000000004000 0x0000000000004000 0x000000 0x000000 R   0x1
+# SEGMENT-MAPPING-NEXT:   LOAD      0x000248 0x00000000000001a0 0x00000000000001a0 0x000020 0x000020 R   0x1
+# SEGMENT-MAPPING-NEXT:   LOAD      0x000248 0x00000000000001a0 0x00000000000001a0 0x000020 0x000020 R   0x1
+# SEGMENT-MAPPING:      Section to Segment mapping:
+# SEGMENT-MAPPING-NEXT:  Segment Sections...
+# SEGMENT-MAPPING-NEXT:   00     .hash .gnu.hash .dynsym .dynstr {{$}}
+# SEGMENT-MAPPING-NEXT:   01     .foo .zed {{$}}
+# SEGMENT-MAPPING-NEXT:   02     .foo .baz {{$}}
+# SEGMENT-MAPPING-NEXT:   03     .dynamic .dynamic.tail {{$}}
+# SEGMENT-MAPPING-NEXT:   04     .dynamic {{$}}
+# SEGMENT-MAPPING-NEXT:   05     .dynamic {{$}}
+# SEGMENT-MAPPING-NEXT:   06{{ *$}}
+# SEGMENT-MAPPING-NEXT:   07     .gnu.hash {{$}}
+# SEGMENT-MAPPING-NEXT:   08     .gnu.hash {{$}}
+# SEGMENT-MAPPING-NEXT:   None   .symtab .strtab .shstrtab {{$}}
+
+## Check that obj2yaml produced a correct program headers description.
+
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=YAML
+
+# YAML:      ProgramHeaders:
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: .hash
+# YAML-NEXT:    LastSec:  .dynstr
+# YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:    Offset:   0x0
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_X, PF_R ]
+# YAML-NEXT:    FirstSec: .foo
+# YAML-NEXT:    LastSec:  .zed
+# YAML-NEXT:    VAddr:    0x1000
+# YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:    Offset:   0x281
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: '.foo (1)'
+# YAML-NEXT:    LastSec:  .baz
+# YAML-NEXT:    VAddr:    0x2000
+# YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:    Offset:   0x291
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_W, PF_R ]
+# YAML-NEXT:    FirstSec: .dynamic
+# YAML-NEXT:    LastSec:  .dynamic.tail
+# YAML-NEXT:    VAddr:    0x3EF0
+# YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:    Offset:   0x29A
+# YAML-NEXT:  - Type:     PT_DYNAMIC
+# YAML-NEXT:    Flags:    [ PF_W, PF_R ]
+# YAML-NEXT:    FirstSec: .dynamic
+# YAML-NEXT:    LastSec:  .dynamic
+# YAML-NEXT:    VAddr:    0x3EF0
+# YAML-NEXT:    Align:    0x8
+# YAML-NEXT:    Offset:   0x29A
+# YAML-NEXT:  - Type:     PT_GNU_RELRO
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: .dynamic
+# YAML-NEXT:    LastSec:  .dynamic
+# YAML-NEXT:    VAddr:    0x3EF0
+# YAML-NEXT:    Offset:   0x29A
+# YAML-NEXT:  - Type:  PT_LOAD
+# YAML-NEXT:    Flags: [ PF_R ]
+# YAML-NEXT:    VAddr: 0x4000
+# YAML-NEXT:    Offset:   0x0
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: .gnu.hash
+# YAML-NEXT:    LastSec:  .gnu.hash
+# YAML-NEXT:    VAddr:    0x1A0
+# YAML-NEXT:    Offset:   0x248
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: .gnu.hash
+# YAML-NEXT:    LastSec:  .gnu.hash
+# YAML-NEXT:    VAddr:    0x1A0
+# YAML-NEXT:    Offset:   0x248
+# YAML-NEXT: Sections:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+ProgramHeaders:
+## Check we can create a PT_LOAD with arbitrary (we used .hash, .gnu.hash)
+## and implicit sections (we use .dynsym, .dynstr). It also checks that the
+## SHT_NULL section at index 0 is not included in the segment.
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .hash
+    LastSec:  .dynstr
+    Align:  0x1000
+    Offset: 0x0
+## Check we can create a PT_LOAD with a different set of properties and sections.
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .foo
+    LastSec:  .zed
+    VAddr:    0x1000
+    Align:    0x1000
+## Create a PT_LOAD to demonstate we are able to refer to output sections with the same name.
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: '.foo (1)'
+    LastSec:  .baz
+    VAddr:    0x2000
+    Align:    0x1000
+## Show we can create a writeable PT_LOAD segment and put an arbitrary section into it.
+## Here we test both regular (SHT_PROGBITS) and a special section (SHT_DYNAMIC).
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .dynamic
+    LastSec:  .dynamic.tail
+    VAddr:    0x3EF0
+    Align:    0x1000
+## Show we can create a nested dynamic segment and put a section into it.
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+    VAddr:    0x3EF0
+    Align:    0x8
+## Show we can create a relro segment and put a section into it.
+## We used .dynamic here and in tests above to demonstrate that
+## we can place a section in any number of segments.
+## Also, we explicitly set the "Align" property to 1 to demonstate
+## that we do not dump it, because it is the default alignment
+## value set by yaml2obj.
+  - Type:     PT_GNU_RELRO
+    Flags:    [ PF_R ]
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+    VAddr:    0x3EF0
+    Align:    0x1
+## Show we can dump a standalone empty segment.
+  - Type:  PT_LOAD
+    Flags: [ PF_R ]
+    VAddr: 0x4000
+    Align: 0x1
+## ELF specification says that loadable segment entries in the
+## program header are sorted by virtual address.
+## Show we can dump an out of order segment.
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .gnu.hash
+    LastSec:  .gnu.hash
+    VAddr:    0x1A0
+    Align:    0x1
+## Test we are able to dump duplicated segments.
+## We use a segment that is the same as the previous one for this.
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .gnu.hash
+    LastSec:  .gnu.hash
+    VAddr:    0x1A0
+    Align:    0x1
+Sections:
+  - Name:    .hash
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x190
+    Size:    0x10
+  - Name:    .gnu.hash
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1A0
+    Size:    0x20
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1C0
+    Link:    .dynstr
+    EntSize: 0x18
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1D8
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    0x8
+  - Name:    .zed
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1008
+    Size:    0x8
+  - Name:    '.foo (1)'
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x2000
+    Size:    0x8
+  - Name:    .baz
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x2008
+    Size:    0x1
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+    Address: 0x0000000000003EF0
+    Link:    .dynstr
+    Entries:
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name:    .dynamic.tail
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+    Content: "FE"
+Symbols: []
+DynamicSymbols: []
+
+## Part II. More specific tests.
+
+## Check we are able to dump segments that are empty or
+## contain empty sections.
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=EMPTY
+
+# EMPTY:      - Type:     PT_LOAD
+# EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
+# EMPTY-NEXT:   FirstSec: .empty.tls.start
+# EMPTY-NEXT:   LastSec:  .empty.tls.end
+# EMPTY-NEXT:   VAddr:    0x1000
+# EMPTY-NEXT:   Align:    0x1000
+# EMPTY-NEXT:   Offset:   0x120
+# EMPTY-NEXT: - Type:     PT_TLS
+# EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
+# EMPTY-NEXT:   FirstSec: .empty.tls.start
+# EMPTY-NEXT:   LastSec:  .empty.tls.start
+# EMPTY-NEXT:   VAddr:    0x1000
+# EMPTY-NEXT:   Offset:   0x120
+# EMPTY-NEXT: - Type:     PT_TLS
+# EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
+# EMPTY-NEXT:   FirstSec: .empty.tls.middle
+# EMPTY-NEXT:   LastSec:  .empty.tls.middle
+# EMPTY-NEXT:   VAddr:    0x1100
+# EMPTY-NEXT:   Offset:   0x220
+# EMPTY-NEXT: - Type:     PT_TLS
+# EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
+# EMPTY-NEXT:   FirstSec: .empty.tls.end
+# EMPTY-NEXT:   LastSec:  .empty.tls.end
+# EMPTY-NEXT:   VAddr:    0x1200
+# EMPTY-NEXT:   Offset:   0x320
+# EMPTY-NEXT: Sections:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .empty.tls.start
+    LastSec:  .empty.tls.end
+    VAddr:    0x1000
+    Align:    0x1000
+  - Type:     PT_TLS
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .empty.tls.start
+    LastSec:  .empty.tls.start
+    VAddr:    0x1000
+    Align:    0x1
+  - Type:     PT_TLS
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .empty.tls.middle
+    LastSec:  .empty.tls.middle
+    VAddr:    0x1100
+    Align:    0x1
+  - Type:     PT_TLS
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .empty.tls.end
+    LastSec:  .empty.tls.end
+    VAddr:    0x1200
+    Align:    0x1
+Sections:
+  - Name:    .empty.tls.start
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_TLS ]
+    Size:    0x0
+    Address: 0x1000
+  - Name:  .section.1
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x100
+  - Name:  .empty.tls.middle
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_TLS ]
+    Size:  0x0
+  - Name:  .section.2
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x100
+  - Name:  .empty.tls.end
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_TLS ]
+    Size:  0x0
+
+## Document we are able to dump misaligned segments.
+## I.e. segments where (p_offset % p_align) != (p_vaddr % p_align).
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readelf --segments --sections %t3 | FileCheck %s --check-prefix=MISALIGNED-READELF
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=MISALIGNED-YAML
+
+## As a misaligned p_offset value we use (`.foo` section offset - 1).
+# MISALIGNED-READELF:      [Nr] Name Type     Address          Off
+# MISALIGNED-READELF:      [ 1] .foo PROGBITS 0000000000001000 000078
+# MISALIGNED-READELF:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# MISALIGNED-READELF-NEXT: LOAD 0x000077 0x0000000000001000 0x0000000000001000 0x000078 0x000078 R   0x1000
+
+# MISALIGNED-YAML:      ProgramHeaders:
+# MISALIGNED-YAML-NEXT:  - Type:     PT_LOAD
+# MISALIGNED-YAML-NEXT:    Flags:    [ PF_R ]
+# MISALIGNED-YAML-NEXT:    FirstSec: .foo
+# MISALIGNED-YAML-NEXT:    LastSec:  .foo
+# MISALIGNED-YAML-NEXT:    VAddr:    0x1000
+# MISALIGNED-YAML-NEXT:    Align:    0x1000
+# MISALIGNED-YAML-NEXT:    Offset:   0x77
+# MISALIGNED-YAML-NEXT: Sections:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .foo
+    LastSec:  .foo
+    VAddr:    0x1000
+    Align:    0x1000
+    Offset:   0x000077
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x77
+    Address: 0x1000
+
+## Test we include non-allocatable sections in segments.
+## We also document that SHT_NULL sections are not considered to be inside a segment.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=NON-ALLOC
+
+# NON-ALLOC:      ProgramHeaders:
+# NON-ALLOC-NEXT: - Type:     PT_LOAD
+# NON-ALLOC-NEXT:   Flags:    [ PF_R ]
+# NON-ALLOC-NEXT:   FirstSec: .alloc.1
+# NON-ALLOC-NEXT:   LastSec:  .non-alloc.1
+# NON-ALLOC-NEXT:   Offset:   0x120
+# NON-ALLOC-NEXT: - Type:     PT_LOAD
+# NON-ALLOC-NEXT:   Flags:    [ PF_R ]
+# NON-ALLOC-NEXT:   FirstSec: .alloc.1
+# NON-ALLOC-NEXT:   LastSec:  .non-alloc.1
+# NON-ALLOC-NEXT:   Offset:   0x120
+# NON-ALLOC-NEXT: - Type:     PT_LOAD
+# NON-ALLOC-NEXT:   Flags:    [ PF_R ]
+# NON-ALLOC-NEXT:   FirstSec: .alloc.2
+# NON-ALLOC-NEXT:   LastSec:  .alloc.2
+# NON-ALLOC-NEXT:   Offset:   0x230
+# NON-ALLOC-NEXT: - Type:     PT_LOAD
+# NON-ALLOC-NEXT:   Flags:    [ PF_R ]
+# NON-ALLOC-NEXT:   FirstSec: .alloc.1
+# NON-ALLOC-NEXT:   LastSec:  .alloc.2
+# NON-ALLOC-NEXT:   Offset:   0x120
+# NON-ALLOC-NEXT: Sections:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .alloc.1
+    LastSec:  .non-alloc.1
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .alloc.1
+    LastSec:  .non-alloc.2
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .non-alloc.2
+    LastSec:  .alloc.2
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .alloc.1
+    LastSec:  .alloc.2
+Sections:
+  - Name:    .alloc.1
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x100
+    Address: 0x1000
+  - Name:    .non-alloc.1
+    Type:    SHT_PROGBITS
+    Flags:   [ ]
+    Size:    0x10
+  - Name:    .non-alloc.2
+    Type:    SHT_NULL
+    Flags:   [ ]
+    Size:    0x10
+  - Name:    .alloc.2
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x1
+
+## Check how we dump segments which contain SHT_NOBITS sections.
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: obj2yaml %t5 | FileCheck %s --check-prefix=NOBITS
+
+# NOBITS:      ProgramHeaders:
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .bss
+# NOBITS-NEXT:     LastSec:  .bss
+# NOBITS-NEXT:     Offset:   0x159
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .data.1
+# NOBITS-NEXT:     LastSec:  .bss
+# NOBITS-NEXT:     Offset:   0x158
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .data.1
+# NOBITS-NEXT:     LastSec:  .data.2
+# NOBITS-NEXT:     Offset:   0x158
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .bss
+# NOBITS-NEXT:     LastSec:  .data.2
+# NOBITS-NEXT:     Offset:   0x159
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .foo.bss
+# NOBITS-NEXT:     LastSec:  .bar.bss
+# NOBITS-NEXT:     VAddr:    0x200000000
+# NOBITS-NEXT:     Offset:   0x15A
+# NOBITS-NEXT: Sections:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+ProgramHeaders:
+## Case 1: the segment contains a single SHT_NOBITS section.
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .bss
+    LastSec:  .bss
+## Case 2: the SHT_NOBITS section is the last section in the segment.
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .data.1
+    LastSec:  .bss
+## Case 3: the SHT_NOBITS section is in the middle of the segment.
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .data.1
+    LastSec:  .data.2
+## Case 4: the SHT_NOBITS section is the first section in the segment.
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .bss
+    LastSec:  .data.2
+## Case 5: another two SHT_NOBITS sections in a different segment.
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .foo.bss
+    LastSec:  .bar.bss
+    VAddr:    0x200000000
+Sections:
+  - Name:    .data.1
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+## Use an arbitrary address and size.
+    Address: 0x1000
+    Size:    0x1
+  - Name:   .bss
+    Type:   SHT_NOBITS
+    Flags:  [ SHF_WRITE, SHF_ALLOC ]
+## Use a size that is larger than the file size.
+    ShSize: 0x00000000FFFFFFFF
+  - Name:  .data.2
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+## Use an arbitrary size.
+    Size:  0x1
+  - Name:    .foo.bss
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+## Set an arbitrary address and size so that this section can be used
+## to start a different non-overlapping segment.
+## I.e. its address is larger than addresses of previous sections.
+    Size:    0x10
+    Address: 0x200000000
+  - Name:    .bar.bss
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+## Use an arbitrary size that is different to the size of
+## the previous section.
+    Size:    0x20
+
+## Check that we require sections in a program header
+## declaration to be sorted by their offsets.
+# RUN: not yaml2obj --docnum=6 %s -o %t6 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=UNSORTED --implicit-check-not="error:"
+
+# UNSORTED:      error: program header with index 0: the section index of .bar is greater than the index of .foo
+# UNSORTED-NEXT: error: sections in the program header with index 3 are not sorted by their file offset
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+ProgramHeaders:
+## Case 1: the .bar section is placed after the .foo section in the file.
+##         Check we report an error about the violation of the order.
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .bar
+    LastSec:  .foo
+    VAddr:    0x1000
+## There is nothing wrong with this segment. We have it to show that
+## we report correct program header indices in error messages.
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .foo
+    LastSec:  .bar
+    VAddr:    0x1000
+## Case 2: the .bar section is placed before the .zed section in the file,
+##         but the sh_offset of .zed is less than the sh_offset of
+##         the .bar section because of the "ShOffset" property.
+##         Document we report an error for such a case.
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .bar
+    LastSec:  .zed
+    VAddr:    0x1001
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x1
+    Address: 0x1000
+  - Name:    .bar
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x1
+  - Name:     .zed
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_ALLOC ]
+    Size:     0x1
+    ShOffset: 0x0
+
+## Check how we dump segments which contain empty sections.
+# RUN: yaml2obj --docnum=7 %s -o %t7
+
+## Show the layout of the object before we dump it using obj2yaml.
+## Notes: 1) '.empty.foo', '.empty.bar1' and '.bar' have the same file offset, but '.empty.foo'
+##           has a VA that is outside of the segment, hence we should not include it in it.
+##        2) '.bar1' ends at 0x79, which is the starting file offset of both '.empty.bar2'
+##           and '.empty.zed'. We should only include '.empty.bar2', because the VA of the
+##           '.empty.zed' section is outside the segment's virtual space.
+# RUN: llvm-readelf -S %t7 | FileCheck %s --check-prefix=ZERO-SIZE-MAPPING
+
+# ZERO-SIZE-MAPPING:      Section Headers:
+# ZERO-SIZE-MAPPING-NEXT:   [Nr] Name        Type     Address          Off    Size
+# ZERO-SIZE-MAPPING:        [ 1] .empty.foo  PROGBITS 0000000000001000 000078 000000
+# ZERO-SIZE-MAPPING-NEXT:   [ 2] .empty.bar1 PROGBITS 0000000000002000 000078 000000
+# ZERO-SIZE-MAPPING-NEXT:   [ 3] .bar        PROGBITS 0000000000002000 000078 000001
+# ZERO-SIZE-MAPPING-NEXT:   [ 4] .empty.bar2 PROGBITS 0000000000002001 000079 000000
+# ZERO-SIZE-MAPPING-NEXT:   [ 5] .empty.zed  PROGBITS 0000000000003000 000079 000000
+
+# RUN: obj2yaml %t7 | FileCheck %s --check-prefix=ZERO-SIZE
+
+# ZERO-SIZE:      ProgramHeaders:
+# ZERO-SIZE-NEXT:   - Type:     PT_LOAD
+# ZERO-SIZE-NEXT:     Flags:    [ PF_W, PF_R ]
+# ZERO-SIZE-NEXT:     FirstSec: .empty.bar1
+# ZERO-SIZE-NEXT:     LastSec:  .empty.bar2
+# ZERO-SIZE-NEXT:     VAddr:    0x2000
+# ZERO-SIZE-NEXT:     Offset:   0x78
+# ZERO-SIZE-NEXT: Sections:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .bar
+    LastSec:  .bar
+    VAddr:    0x2000
+Sections:
+  - Name:    .empty.foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+  - Name:    .empty.bar1
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x2000
+  - Name:    .bar
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+    Address: 0x2000
+    Size:    0x1
+  - Name:    .empty.bar2
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x2001
+  - Name:    .empty.zed
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x3000
+
+## Check how we dump a segment when we have sections that are outside of the virtual
+## address space of a segment, but inside its file space. We do not include such sections
+## in a segment when they are at the edges of a segment, because this is a normal case and
+## it may mean they belong to a different segment.
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: obj2yaml %t8 | FileCheck %s --check-prefix=BROKEN-VA
+
+# BROKEN-VA:      ProgramHeaders:
+# BROKEN-VA-NEXT:  - Type:     PT_LOAD
+# BROKEN-VA-NEXT:    Flags:    [ PF_W, PF_R ]
+# BROKEN-VA-NEXT:    FirstSec: .empty_middle
+# BROKEN-VA-NEXT:    LastSec:  .empty_middle
+# BROKEN-VA-NEXT:    VAddr:    0x1000
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    VAddr:    0x1000
+    FirstSec: .empty_begin
+    LastSec:  .empty_end
+Sections:
+  - Name:    .empty_begin
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0xFEFEFEFE
+  - Type:    Fill
+    Pattern: "00"
+    Size:    1
+    Name:    begin
+  - Name:    .empty_middle
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0xFEFEFEFE
+  - Type:    Fill
+    Pattern: "00"
+    Size:    1
+  - Name:    .empty_end
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0xFEFEFEFE

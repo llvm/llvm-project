@@ -1,0 +1,51 @@
+# This file allows mapping several author and committer email addresses and
+# names to a single canonical one for `git shortlog`, `git log --author`,
+# or `git check-mailmap`.
+#
+# For example, if you commit as `random.person@example.com` but sometimes use
+# "Rañdom Person" and sometimes "Random Person" as name and you want the former
+# to be your canonical name, add
+#
+#     Rañdom Person <random.person@example.com>
+#
+# If you commit as both `random.person@example.com` and `ranp@example.com` and
+# you want the former to be your canonical email address, add
+#
+#     <random.person@example.com> <ranp@example.com>
+#
+# Combinations of both are possible too, see
+# https://git-scm.com/docs/gitmailmap for format details.
+#
+# You can commit changes for your own names and email addresses without review.
+# If you want to add entries for other people, please have them review the
+# addition.
+#
+# Please keep this file sorted.
+
+<compnerd@compnerd.org> <abdulras@fb.com>
+<compnerd@compnerd.org> <abdulras@google.com>
+<compnerd@compnerd.org> <abdulras@thebrowser.company>
+<git@xen0n.name> <xen0n@gentoo.org>
+<hans@hanshq.net> <hans@chromium.org>
+<i@maskray.me> <maskray@google.com>
+<JCTremoulet@gmail.com> <jotrem@microsoft.com>
+<min@myhsu.dev> <minyihh@uci.edu>
+<qiucofan@cn.ibm.com> <qiucf@cn.ibm.com>
+<rnk@google.com> <reid@kleckner.net>
+<thakis@chromium.org> <nicolasweber@gmx.de>
+Jianjian GUAN <jacquesguan@me.com>
+Jianjian GUAN <jacquesguan@me.com> <Jianjian.Guan@streamcomputing.com>
+Jon Roelofs <jonathan_roelofs@apple.com> <jonathan@codesourcery.com>
+Jon Roelofs <jonathan_roelofs@apple.com> <jroelofs@jroelofs.com>
+Jonathan Thackray <jonathan.thackray@arm.com> <jthackray@users.noreply.github.com>
+LLVM GN Syncbot <llvmgnsyncbot@gmail.com>
+Martin Storsjö <martin@martin.st>
+Med Ismail Bennani <ismail@bennani.ma> <m.i.b@apple.com>
+Med Ismail Bennani <ismail@bennani.ma> <medismail.bennani@gmail.com>
+Ramkumar Ramachandra <r@artagnon.com> <artagnon@gmail.com>
+Ramkumar Ramachandra <r@artagnon.com> <Ramkumar.Ramachandra@imgtec.com>
+Saleem Abdulrasool <compnerd@compnerd.org>
+Tommy Chiang <ty1208chiang@gmail.com> <oToToT@users.noreply.github.com>
+Wang Pengcheng <wangpengcheng.pp@bytedance.com>
+Wang Pengcheng <wangpengcheng.pp@bytedance.com> <137158460+wangpc-pp@users.noreply.github.com>
+Wang Pengcheng <wangpengcheng.pp@bytedance.com> <pc.wang@linux.alibaba.com>

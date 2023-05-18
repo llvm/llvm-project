@@ -1,0 +1,30 @@
+# RUN: yaml2obj %p/Inputs/debug_addrx.yaml -o %ttest
+# RUN: lldb-test breakpoints %ttest %s | FileCheck %s
+
+# The following code and invocation were used.
+# clang -gdwarf-5 test.cc -o test_v5 -fuse-ld=lld -fno-rtti -O2 -ffunction-sections
+# Then output was converted to yaml and reduced.
+#
+# struct A {
+#   void foo() {};
+# };
+# 
+# void bar(struct A a) {
+#    a.foo();
+# }
+#
+# int main() {
+#  A objA;
+#  bar(objA);
+#
+#  return 0;
+# }
+#
+# clang and LLD versions were 8.0.0 (trunk 344834)
+#
+# Output file contains DW_FORM_addrx forms.
+
+b bar
+
+# CHECK-LABEL: b bar
+# CHECK: Address: {{.*}}`bar(A) at test.cc:15:1

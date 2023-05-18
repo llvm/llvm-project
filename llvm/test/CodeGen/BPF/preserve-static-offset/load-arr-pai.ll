@@ -1,0 +1,93 @@
+; RUN: opt -passes=bpf-preserve-static-offset -mtriple=bpf-pc-linux -S -o - %s | FileCheck %s
+;
+; Source:
+;    #define __ctx __attribute__((preserve_static_offset))
+;    #define __pai __attribute__((preserve_access_index))
+;    
+;    struct bar {
+;      int a[7];
+;    } __pai __ctx;
+;    
+;    int buz(struct bar *p) {
+;      return p->a[5];
+;    }
+;    
+; Compilation flag:
+;   clang -cc1 -O2 -triple bpf -S -emit-llvm -disable-llvm-passes -debug-info-kind=limited -o - \
+;       | opt -passes=function(sroa) -S -o -
+
+%struct.bar = type { [7 x i32] }
+
+; Function Attrs: nounwind
+define dso_local i32 @buz(ptr noundef %p) #0 !dbg !10 {
+entry:
+  call void @llvm.dbg.value(metadata ptr %p, metadata !18, metadata !DIExpression()), !dbg !19
+  %0 = call ptr @llvm.preserve.static.offset(ptr %p), !dbg !20
+  %1 = call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.bar) %0, i32 0, i32 0), !dbg !20, !llvm.preserve.access.index !14
+  %2 = call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([7 x i32]) %1, i32 1, i32 5), !dbg !21, !llvm.preserve.access.index !3
+  %3 = load i32, ptr %2, align 4, !dbg !21, !tbaa !22
+  ret i32 %3, !dbg !26
+}
+
+; CHECK:      define dso_local i32 @buz(ptr noundef %[[p:.*]]) {{.*}} {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   call void @llvm.dbg.value
+; CHECK-NEXT:   %[[v5:.*]] = call i32 (ptr, i1, i8, i8, i8, i1, ...)
+; CHECK-SAME:     @llvm.bpf.getelementptr.and.load.i32
+; CHECK-SAME:       (ptr readonly elementtype(%struct.bar) %[[p]],
+; CHECK-SAME:        i1 false, i8 0, i8 1, i8 2, i1 true, i32 immarg 0, i32 immarg 0, i32 immarg 5)
+; CHECK-SAME:      #[[v6:.*]], !tbaa
+; CHECK-NEXT:   ret i32 %[[v5]]
+; CHECK-NEXT: }
+; CHECK:      attributes #[[v6]] = { memory(argmem: read) }
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare ptr @llvm.preserve.static.offset(ptr readnone) #1
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+declare ptr @llvm.preserve.struct.access.index.p0.p0(ptr, i32 immarg, i32 immarg) #2
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+declare ptr @llvm.preserve.array.access.index.p0.p0(ptr, i32 immarg, i32 immarg) #2
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+
+attributes #0 = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { nocallback nofree nosync nounwind willreturn memory(none) }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!7, !8}
+!llvm.ident = !{!9}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, splitDebugInlining: false, nameTableKind: None)
+!1 = !DIFile(filename: "some-file.c", directory: "/some/dir/")
+!2 = !{!3}
+!3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 224, elements: !5)
+!4 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!5 = !{!6}
+!6 = !DISubrange(count: 7)
+!7 = !{i32 2, !"Debug Info Version", i32 3}
+!8 = !{i32 1, !"wchar_size", i32 4}
+!9 = !{!"clang"}
+!10 = distinct !DISubprogram(name: "buz", scope: !1, file: !1, line: 8, type: !11, scopeLine: 8, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !17)
+!11 = !DISubroutineType(types: !12)
+!12 = !{!4, !13}
+!13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !14, size: 64)
+!14 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "bar", file: !1, line: 4, size: 224, elements: !15)
+!15 = !{!16}
+!16 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !14, file: !1, line: 5, baseType: !3, size: 224)
+!17 = !{!18}
+!18 = !DILocalVariable(name: "p", arg: 1, scope: !10, file: !1, line: 8, type: !13)
+!19 = !DILocation(line: 0, scope: !10)
+!20 = !DILocation(line: 9, column: 13, scope: !10)
+!21 = !DILocation(line: 9, column: 10, scope: !10)
+!22 = !{!23, !23, i64 0}
+!23 = !{!"int", !24, i64 0}
+!24 = !{!"omnipotent char", !25, i64 0}
+!25 = !{!"Simple C/C++ TBAA"}
+!26 = !DILocation(line: 9, column: 3, scope: !10)

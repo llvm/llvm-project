@@ -1,0 +1,75 @@
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Content:         554889E58B0425A80000005DC30F1F00
+  - Name:            .anothertext
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000010
+    AddressAlign:    0x0000000000000010
+    Content:         554889E54883EC20488D0425A8000000C745FC00000000488945F0488B45F08B08894DECE8C7FFFFFF8B4DEC01C189C84883C4205D746573742073747200C3
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000000050
+    AddressAlign:    0x0000000000000008
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C00000090FFFFFF0D00000000410E108602430D06000000000000001C0000003C00000080FFFFFF3F00000000410E108602430D0600000000000000
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x00000000000000A8
+    AddressAlign:    0x0000000000000004
+    Content:         '01000000'
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x0000000000000001
+    Content:         5562756E747520636C616E672076657273696F6E20332E352D317562756E74753120287472756E6B2920286261736564206F6E204C4C564D20332E352900
+Symbols:
+  - Type:            STT_SECTION
+    Section:         .text
+  - Type:            STT_SECTION
+    Section:         .anothertext
+    Value:           0x0000000000000010
+  - Type:            STT_SECTION
+    Section:         .eh_frame
+    Value:           0x0000000000000050
+  - Type:            STT_SECTION
+    Section:         .data
+    Value:           0x00000000000000A8
+  - Type:            STT_SECTION
+    Section:         .comment
+  - Name:            /tmp/a.c
+    Type:            STT_FILE
+  - Type:            STT_FILE          
+  - Name:            somedata
+    Type:            STT_OBJECT
+    Section:         .anothertext
+    Value:           0x0000000000000045
+    Binding:         STB_GLOBAL
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .anothertext
+    Value:           0x0000000000000010
+    Size:            0x000000000000003F
+    Binding:         STB_GLOBAL
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x000000000000000D
+    Binding:         STB_GLOBAL
+  - Name:            a
+    Type:            STT_OBJECT
+    Section:         .data
+    Value:           0x00000000000000A8
+    Size:            0x0000000000000004
+    Binding:         STB_GLOBAL
+...

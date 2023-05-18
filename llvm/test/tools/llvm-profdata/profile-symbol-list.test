@@ -1,0 +1,9 @@
+; RUN: llvm-profdata merge -sample -extbinary -prof-sym-list=%S/Inputs/profile-symbol-list-1.text %S/Inputs/sample-profile.proftext -o %t.1.output
+; RUN: llvm-profdata merge -sample -extbinary -prof-sym-list=%S/Inputs/profile-symbol-list-2.text %S/Inputs/sample-profile.proftext -o %t.2.output
+; RUN: llvm-profdata merge -sample -extbinary %t.1.output %t.2.output -o %t.3.output
+; RUN: llvm-profdata show -sample -show-prof-sym-list %t.3.output > %t.4.output
+; RUN: diff -b %S/Inputs/profile-symbol-list.expected %t.4.output
+; RUN: llvm-profdata merge -sample -extbinary --drop-profile-symbol-list %t.1.output %t.2.output -o %t.5.output
+; RUN: llvm-profdata show -sample -show-sec-info-only %t.5.output  | FileCheck %s -check-prefix=NOSYMLIST
+
+; NOSYMLIST: ProfileSymbolListSection {{.*}} Size: 0

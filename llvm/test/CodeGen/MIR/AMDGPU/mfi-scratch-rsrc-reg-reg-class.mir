@@ -1,0 +1,12 @@
+# RUN: not llc -mtriple=amdgcn -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+name: wrong_reg_class_scratch_rsrc_reg
+machineFunctionInfo:
+  scratchRSrcReg:  '$vgpr0_vgpr1_vgpr2_vgpr3'
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: incorrect register class for field
+body:             |
+  bb.0:
+
+    S_ENDPGM
+...

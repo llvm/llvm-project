@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=x86_64-windows-msvc -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
+
+# Check that branch-folder does not create a fallthrough to a landing pad.
+# Also make sure that the landing pad still can be tail merged.
+---
+name: foo
+body: |
+  ; CHECK-LABEL: name: foo
+  bb.0:
+    successors: %bb.1, %bb.3
+  bb.1:
+    JCC_1 %bb.4, 5, implicit killed $eflags
+  bb.2:
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    JMP_1 %bb.5
+  ; CHECK: bb.2:
+  ; CHECK-NOT: successors: {{.*}}bb.3
+  ; CHECK: bb.3 (landing-pad):
+  ; CHECK-NOT: MOV8mi
+  bb.3(landing-pad):
+    MOV8mi $r13, 1, $noreg, 0, $noreg, 0
+    JMP_1 %bb.5
+  ; CHECK: bb.4:
+  bb.4:
+    MOV8mi $r13, 2, $noreg, 0, $noreg, 0
+  bb.5:
+    RET 0
+...

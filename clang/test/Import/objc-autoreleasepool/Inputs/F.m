@@ -1,0 +1,5 @@
+void f() {
+  @autoreleasepool {
+    return;
+  }
+}

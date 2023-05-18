@@ -1,0 +1,17 @@
+# RUN: llc -march=hexagon -run-pass hexagon-gen-mux -o - -verify-machineinstrs %s | FileCheck %s
+# CHECK: $r1 = C2_muxri $p0, 123, $r0
+# CHECK: $r2 = C2_muxir killed $p0, killed $r0, 321
+---
+name: fred
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $p0
+
+    $r2 = A2_tfrt $p0, $r0
+    $r1 = C2_cmoveit $p0, 123
+    $r1 = A2_tfrf $p0, killed $r0, implicit killed $r1
+    $r2 = C2_cmoveif killed $p0, 321, implicit killed $r2
+...
+

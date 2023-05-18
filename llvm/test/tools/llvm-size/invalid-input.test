@@ -1,0 +1,18 @@
+## Show that llvm-size reports an error when passed an input file in an
+## unknown format.
+
+# RUN: not llvm-size %s 2>&1 | FileCheck %s -DFILE=%s --check-prefix=UNRECOGNIZED
+# UNRECOGNIZED: {{.*}}llvm-size{{(.*)}}: error: '[[FILE]]': The file was not recognized as a valid object file
+
+## Show that llvm-size reports an error when passed an input file in an
+## unsupported format.
+
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-size %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=NOTSUPPORTED
+# NOTSUPPORTED: {{.*}}llvm-size{{(.*)}}: error: '[[FILE]]': unsupported file type
+
+--- !minidump
+Streams:
+  - Type:    LinuxAuxv
+    Size:    7
+    Content: 11223344556600

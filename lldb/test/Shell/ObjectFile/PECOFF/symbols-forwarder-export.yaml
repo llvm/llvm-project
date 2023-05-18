@@ -1,0 +1,51 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test symbols %t | FileCheck %s
+
+# CHECK:       UserID DSX Type File Address/Value {{.*}} Size            Flags           Name
+# CHECK-NEXT:  ------
+# CHECK-NEXT:       1   X Data 0x{{[0-9a-f]+}}           0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} LoadLibrary (forwarded to kernel32.LoadLibrary)
+# CHECK-EMPTY:
+
+# Test file generated with:
+#   clang -O2 --target=x86_64-windows-msvc test.c -nostdlib -c -o test.obj
+#   lld-link -dll -out:test.dll -entry:entry -export:LoadLibrary=kernel32.LoadLibrary test.obj
+# test.c:
+#   void entry(void) {}
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       6442450944
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_GUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExportTable:
+    RelativeVirtualAddress: 8192
+    Size:            110
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     1
+    SectionData:     C3
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     110
+    SectionData:     0000000000000000000000002820000001000000010000000100000043200000472000004B2000006578706F72742D666F727761726465722E632E746D702E646C6C00592000004D20000000004C6F61644C696272617279006B65726E656C33322E4C6F61644C69627261727900
+symbols:         []
+...

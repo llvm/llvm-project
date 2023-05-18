@@ -1,0 +1,6 @@
+# RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux -mcpu=mips32r2 -mattr=+msa | FileCheck %s
+
+0x01 0x2a 0x40 0x05 # CHECK: lsa        $8, $9, $10, 1
+0x01 0x2a 0x40 0x45 # CHECK: lsa        $8, $9, $10, 2
+0x01 0x2a 0x40 0x85 # CHECK: lsa        $8, $9, $10, 3
+0x01 0x2a 0x40 0xc5 # CHECK: lsa        $8, $9, $10, 4

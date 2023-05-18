@@ -1,0 +1,445 @@
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass si-wqm -o -  %s | FileCheck %s
+
+--- |
+  define amdgpu_ps void @test_strict_wwm_scc() {
+    ret void
+  }
+  define amdgpu_ps void @test_strict_wwm_scc2() {
+    ret void
+  }
+  define amdgpu_ps void @no_cfg() {
+    ret void
+  }
+  define amdgpu_ps void @copy_exec() {
+    ret void
+  }
+  define amdgpu_ps void @scc_always_live() {
+    ret void
+  }
+  define amdgpu_ps void @test_wwm_set_inactive_propagation() {
+    ret void
+  }
+  define amdgpu_ps void @test_wqm_lr_phi() {
+    ret void
+  }
+  define amdgpu_cs void @no_wqm_in_cs() {
+    ret void
+  }
+  define amdgpu_es void @no_wqm_in_es() {
+    ret void
+  }
+  define amdgpu_gs void @no_wqm_in_gs() {
+    ret void
+  }
+  define amdgpu_hs void @no_wqm_in_hs() {
+    ret void
+  }
+  define amdgpu_ls void @no_wqm_in_ls() {
+    ret void
+  }
+  define amdgpu_vs void @no_wqm_in_vs() {
+    ret void
+  }
+...
+---
+
+---
+# Check for awareness that s_or_saveexec_b64 clobbers SCC
+#
+#CHECK: ENTER_STRICT_WWM
+#CHECK: S_CMP_LT_I32
+#CHECK: S_CSELECT_B32
+name:            test_strict_wwm_scc
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '' }
+  - { id: 1, class: sgpr_32, preferred-register: '' }
+  - { id: 2, class: sgpr_32, preferred-register: '' }
+  - { id: 3, class: vgpr_32, preferred-register: '' }
+  - { id: 4, class: vgpr_32, preferred-register: '' }
+  - { id: 5, class: sgpr_32, preferred-register: '' }
+  - { id: 6, class: vgpr_32, preferred-register: '' }
+  - { id: 7, class: vgpr_32, preferred-register: '' }
+  - { id: 8, class: sreg_32_xm0, preferred-register: '' }
+  - { id: 9, class: sreg_32, preferred-register: '' }
+  - { id: 10, class: sreg_32, preferred-register: '' }
+  - { id: 11, class: vgpr_32, preferred-register: '' }
+  - { id: 12, class: vgpr_32, preferred-register: '' }
+liveins:
+  - { reg: '$sgpr0', virtual-reg: '%0' }
+  - { reg: '$sgpr1', virtual-reg: '%1' }
+  - { reg: '$sgpr2', virtual-reg: '%2' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
+
+    %3 = COPY $vgpr0
+    %2 = COPY $sgpr2
+    %1 = COPY $sgpr1
+    %0 = COPY $sgpr0
+    S_CMP_LT_I32 0, %0, implicit-def $scc
+    %12 = V_ADD_CO_U32_e32 %3, %3, implicit-def $vcc, implicit $exec
+    %5 = S_CSELECT_B32 %2, %1, implicit $scc
+    %11 = V_ADD_CO_U32_e32 %5, %12, implicit-def $vcc, implicit $exec
+    $vgpr0 = STRICT_WWM %11, implicit $exec
+    SI_RETURN_TO_EPILOG $vgpr0
+
+...
+
+---
+# Second test for awareness that s_or_saveexec_b64 clobbers SCC
+# Because entry block is treated differently.
+#
+#CHECK: %bb.1
+#CHECK: S_CMP_LT_I32
+#CHECK: COPY $scc
+#CHECK: ENTER_STRICT_WWM
+#CHECK: $scc = COPY
+#CHECK: S_CSELECT_B32
+name:            test_strict_wwm_scc2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
+
+    %3:vgpr_32 = COPY $vgpr0
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %13:sgpr_128 = IMPLICIT_DEF
+
+  bb.1:
+    S_CMP_LT_I32 0, %0:sgpr_32, implicit-def $scc
+    %10:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %3:vgpr_32, %13:sgpr_128, 0, 0, 0, 0, implicit $exec
+    %12:vgpr_32 = V_ADD_CO_U32_e32 %3:vgpr_32, %3:vgpr_32, implicit-def $vcc, implicit $exec
+    %5:sgpr_32 = S_CSELECT_B32 %2:sgpr_32, %1:sgpr_32, implicit $scc
+    %11:vgpr_32 = V_ADD_CO_U32_e32 %5:sgpr_32, %12:vgpr_32, implicit-def $vcc, implicit $exec
+    $vgpr0 = STRICT_WWM %11:vgpr_32, implicit $exec
+    $vgpr1 = COPY %10:vgpr_32
+    SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
+
+...
+
+---
+# V_SET_INACTIVE, when its second operand is undef, is replaced by a
+# COPY by si-wqm. Ensure the instruction is removed.
+#CHECK-NOT: V_SET_INACTIVE
+name:            no_cfg
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '' }
+  - { id: 1, class: sgpr_32, preferred-register: '' }
+  - { id: 2, class: sgpr_32, preferred-register: '' }
+  - { id: 3, class: sgpr_32, preferred-register: '' }
+  - { id: 4, class: sgpr_32, preferred-register: '' }
+  - { id: 5, class: sgpr_128, preferred-register: '' }
+  - { id: 6, class: sgpr_128, preferred-register: '' }
+  - { id: 7, class: sreg_32, preferred-register: '' }
+  - { id: 8, class: vreg_64, preferred-register: '' }
+  - { id: 9, class: sreg_32, preferred-register: '' }
+  - { id: 10, class: vgpr_32, preferred-register: '' }
+  - { id: 11, class: vgpr_32, preferred-register: '' }
+  - { id: 12, class: sreg_32, preferred-register: '' }
+  - { id: 13, class: vgpr_32, preferred-register: '' }
+  - { id: 14, class: vgpr_32, preferred-register: '' }
+  - { id: 15, class: vgpr_32, preferred-register: '' }
+  - { id: 16, class: vgpr_32, preferred-register: '' }
+liveins:
+  - { reg: '$sgpr0', virtual-reg: '%0' }
+  - { reg: '$sgpr1', virtual-reg: '%1' }
+  - { reg: '$sgpr2', virtual-reg: '%2' }
+  - { reg: '$sgpr3', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %6:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+    %5:sgpr_128 = COPY %6
+    %7:sreg_32 = S_MOV_B32 0
+    %8:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %6, %7, 0, 0, 0, implicit $exec
+    %16:vgpr_32 = COPY %8.sub1
+    %11:vgpr_32 = COPY %16
+    %10:vgpr_32 = V_SET_INACTIVE_B32 %11, undef %12:sreg_32, implicit $exec, implicit-def $scc
+    %14:vgpr_32 = COPY %7
+    %13:vgpr_32 = V_MOV_B32_dpp %14, killed %10, 323, 12, 15, 0, implicit $exec
+    early-clobber %15:vgpr_32 = STRICT_WWM killed %13, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET_exact killed %15, %6, %7, 4, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+
+---
+# Ensure that strict_wwm is not put around an EXEC copy
+#CHECK-LABEL: name: copy_exec
+#CHECK: %7:sreg_64 = COPY $exec
+#CHECK-NEXT: %14:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+#CHECK-NEXT: %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+#CHECK-NEXT: $exec = EXIT_STRICT_WWM %14
+#CHECK-NEXT: %9:vgpr_32 = V_MBCNT_LO_U32_B32_e64 %7.sub0, 0, implicit $exec
+name:            copy_exec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %4:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+    %5:sreg_32 = S_MOV_B32 0
+    %6:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %4, %5, 0, 0, 0, implicit $exec
+
+    %8:sreg_64 = COPY $exec
+    %9:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %10:vgpr_32 = V_MBCNT_LO_U32_B32_e64 %8.sub0:sreg_64, 0, implicit $exec
+    %11:vgpr_32 = V_MOV_B32_dpp %9:vgpr_32, %10:vgpr_32, 312, 15, 15, 0, implicit $exec
+    %12:sreg_32 = V_READLANE_B32 %11:vgpr_32, 63
+    early-clobber %13:sreg_32 = STRICT_WWM %9:vgpr_32, implicit $exec
+
+    %14:vgpr_32 = COPY %13
+    BUFFER_STORE_DWORD_OFFSET_exact killed %14, %4, %5, 4, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+
+---
+# Check exit of WQM is still inserted correctly when SCC is live until block end.
+# Critially this tests that compilation does not fail.
+#CHECK-LABEL: name: scc_always_live
+#CHECK: %8:vreg_128 = IMAGE_SAMPLE_V4_V2 %7
+#CHECK-NEXT: S_CMP_EQ_U32 %2, 0, implicit-def $scc
+#CHECK-NEXT: undef %9.sub0:vreg_64 = nsz arcp nofpexcept V_ADD_F32_e64
+#CHECK-NEXT: %9.sub1:vreg_64 = nsz arcp nofpexcept V_MUL_F32_e32
+#CHECK-NEXT: %14:sreg_32_xm0 = COPY $scc
+#CHECK-NEXT: $exec = S_AND_B64 $exec, %13, implicit-def $scc
+#CHECK-NEXT: $scc = COPY %14
+#CHECK-NEXT: %10:vgpr_32 = nsz arcp nofpexcept V_ADD_F32_e64
+#CHECK-NEXT: %11:vreg_128 = IMAGE_SAMPLE_V4_V2
+#CHECK-NEXT: S_CBRANCH_SCC0 %bb.2
+name:            scc_always_live
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr1, $sgpr2, $vgpr1, $vgpr2
+
+    $m0 = COPY $sgpr1
+    %0:vgpr_32 = COPY $vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %8:sgpr_32 = COPY $sgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %2:vgpr_32 = V_INTERP_P1_F32 %0:vgpr_32, 3, 2, implicit $mode, implicit $m0, implicit $exec
+    %3:vgpr_32 = V_INTERP_P1_F32 %1:vgpr_32, 3, 2, implicit $mode, implicit $m0, implicit $exec
+
+    undef %7.sub0:vreg_64 = COPY %2:vgpr_32
+    %7.sub1:vreg_64 = COPY %3:vgpr_32
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %7:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+    S_CMP_EQ_U32 %8:sgpr_32, 0, implicit-def $scc
+
+    undef %5.sub0:vreg_64 = nsz arcp nofpexcept V_ADD_F32_e64 0, %4.sub0:vreg_128, 0, %3:vgpr_32, 1, 0, implicit $mode, implicit $exec
+    %5.sub1:vreg_64 = nsz arcp nofpexcept V_MUL_F32_e32 %2, %3, implicit $mode, implicit $exec
+    %6:vgpr_32 = nsz arcp nofpexcept V_ADD_F32_e64 0, %2:vgpr_32, 0, %3:vgpr_32, 1, 0, implicit $mode, implicit $exec
+
+    %9:vreg_128 = IMAGE_SAMPLE_V4_V2 %5:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+
+  bb.1:
+    %10:sreg_32 = S_MOV_B32 0
+    BUFFER_STORE_DWORD_OFFSET_exact %6:vgpr_32, %101:sgpr_128, %10:sreg_32, 4, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+  bb.2:
+    $vgpr0 = COPY %4.sub0:vreg_128
+    $vgpr1 = COPY %4.sub1:vreg_128
+    $vgpr2 = COPY %9.sub0:vreg_128
+    $vgpr3 = COPY %9.sub1:vreg_128
+    SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
+...
+
+---
+# Check that unnecessary instruction do not get marked for WWM
+#
+#CHECK-NOT: ENTER_STRICT_WWM
+#CHECK: BUFFER_LOAD_DWORDX2
+#CHECK-NOT: ENTER_STRICT_WWM
+#CHECK: V_SET_INACTIVE_B32
+#CHECK: V_SET_INACTIVE_B32
+#CHECK: ENTER_STRICT_WWM
+#CHECK: V_MAX
+name:            test_wwm_set_inactive_propagation
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:vgpr_32 = COPY $vgpr0
+    %2:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN %1:vgpr_32, %0:sgpr_128, 0, 0, 0, 0, implicit $exec
+    %2.sub0:vreg_64 = V_SET_INACTIVE_B32 %2.sub0:vreg_64, 0, implicit $exec, implicit-def $scc
+    %2.sub1:vreg_64 = V_SET_INACTIVE_B32 %2.sub1:vreg_64, 0, implicit $exec, implicit-def $scc
+    %3:vreg_64 = nnan nsz arcp contract reassoc nofpexcept V_MAX_F64_e64 0, %2:vreg_64, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
+    $vgpr0 = STRICT_WWM %3.sub0:vreg_64, implicit $exec
+    $vgpr1 = STRICT_WWM %3.sub1:vreg_64, implicit $exec
+    SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
+...
+
+---
+# Check that WQM marking occurs correctly through phi nodes in live range graph.
+# If not then initial V_MOV will not be in WQM.
+#
+#CHECK-LABEL: name: test_wqm_lr_phi
+#CHECK: COPY $exec
+#CHECK-NEXT: S_WQM
+#CHECK-NEXT: V_MOV_B32_e32 -10
+#CHECK-NEXT: V_MOV_B32_e32 0
+name:            test_wqm_lr_phi
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    undef %0.sub0:vreg_64 = V_MOV_B32_e32 -10, implicit $exec
+    %0.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+    %1:sreg_64 = S_GETPC_B64
+    %2:sgpr_256 = S_LOAD_DWORDX8_IMM %1:sreg_64, 32, 0
+
+   bb.1:
+    $vcc = V_CMP_LT_U32_e64 4, 4, implicit $exec
+    S_CBRANCH_VCCNZ %bb.3, implicit $vcc
+    S_BRANCH %bb.2
+
+   bb.2:
+    %0.sub0:vreg_64 = V_ADD_U32_e32 1, %0.sub1, implicit $exec
+    S_BRANCH %bb.3
+
+   bb.3:
+    %0.sub1:vreg_64 = V_ADD_U32_e32 1, %0.sub1, implicit $exec
+    S_BRANCH %bb.4
+
+   bb.4:
+    %3:sgpr_128 = IMPLICIT_DEF
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %2:sgpr_256, %3:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    $vgpr0 = COPY %4.sub0:vreg_128
+    $vgpr1 = COPY %4.sub1:vreg_128
+    SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_cs
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_cs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_es
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_es
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_gs
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_gs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_hs
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_hs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_ls
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_ls
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...
+
+---
+#CHECK-LABEL: name: no_wqm_in_vs
+#CHECK-NOT: S_WQM
+name:            no_wqm_in_vs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+
+    undef %0.sub0:vreg_64 = COPY $vgpr1
+    %0.sub1:vreg_64 = COPY $vgpr2
+    %100:sgpr_256 = IMPLICIT_DEF
+    %101:sgpr_128 = IMPLICIT_DEF
+
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
+...

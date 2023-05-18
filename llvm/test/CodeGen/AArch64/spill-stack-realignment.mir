@@ -1,0 +1,35 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+
+# Ensure references to scavenged stack slots in the CSR area use the
+# FP as a base when the stack pointer must be aligned to something
+# larger than required by the target. This is necessary because the
+# alignment padding area is between the CSR area and the SP, so the SP
+# cannot be used to reference the CSR area.
+name:            test
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    64
+# CHECK:      stack:
+# CHECK:        id: 0, name: '', type: default, offset: -64, size: 4, alignment: 64
+# CHECK-NEXT:     stack-id: default
+# CHECK-NEXT:     local-offset: -64
+# CHECK:        id: 1, name: '', type: default, offset: -4, size: 4, alignment: 4
+# CHECK-NEXT:     stack-id: default
+# CHECK-NEXT:     local-offset: -68
+stack:
+  - { id: 0, size: 4, alignment: 64, local-offset: -64 }
+  - { id: 1, size: 4, alignment: 4, local-offset: -68 }
+
+# CHECK: body:
+# CHECK:   $sp = frame-setup ANDXri killed ${{x[0-9]+}}, 7865
+# CHECK:   STRSui $s0, $sp, 0
+# CHECK:   STRSui $s0, $fp, 7
+body:             |
+  bb.0.entry:
+    liveins: $s0
+
+    STRSui $s0, %stack.0, 0
+    STRSui $s0, %stack.1, 0
+    ; Force preserve a CSR to create a hole in the CSR stack region.
+    $x28 = IMPLICIT_DEF
+    RET_ReallyLR

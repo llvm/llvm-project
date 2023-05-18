@@ -1,0 +1,139 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer  %s -o - | FileCheck %s
+
+--- |
+
+  define amdgpu_kernel void @multiple_mem_operands(ptr addrspace(1) %out, i32 %cond, i32 %if_offset, i32 %else_offset) #0 {
+  entry:
+    %scratch0 = alloca [8192 x i32], addrspace(5)
+    %scratch1 = alloca [8192 x i32], addrspace(5)
+    %scratchptr01 = bitcast ptr addrspace(5) %scratch0 to ptr addrspace(5)
+    store i32 1, ptr addrspace(5) %scratchptr01
+    %scratchptr12 = bitcast ptr addrspace(5) %scratch1 to ptr addrspace(5)
+    store i32 2, ptr addrspace(5) %scratchptr12
+    %cmp = icmp eq i32 %cond, 0
+    br i1 %cmp, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
+
+  if:                                               ; preds = %entry
+    %if_ptr = getelementptr [8192 x i32], ptr addrspace(5) %scratch0, i32 0, i32 %if_offset, !amdgpu.uniform !0
+    %if_value = load i32, ptr addrspace(5) %if_ptr, align 4, !nontemporal !1
+    br label %done, !structurizecfg.uniform !0
+
+  else:                                             ; preds = %entry
+    %else_ptr = getelementptr [8192 x i32], ptr addrspace(5) %scratch1, i32 0, i32 %else_offset, !amdgpu.uniform !0
+    %else_value = load i32, ptr addrspace(5) %else_ptr, align 4
+    br label %done, !structurizecfg.uniform !0
+
+  done:                                             ; preds = %else, %if
+    %value = phi i32 [ %if_value, %if ], [ %else_value, %else ]
+    store i32 %value, ptr addrspace(1) %out
+    ret void
+  }
+
+  attributes #0 = { "target-cpu"="gfx803" }
+  attributes #1 = { convergent nounwind }
+  attributes #2 = { convergent nounwind readnone }
+
+  !0 = !{}
+  !1 = !{i32 1}
+
+...
+---
+
+# CHECK-LABEL: name: multiple_mem_operands
+
+# CHECK-LABEL: bb.3.done:
+# CHECK: BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0
+
+name:            multiple_mem_operands
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '' }
+  - { reg: '$sgpr3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       65540
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 4, stack-id: default,
+      isImmutable: false, isAliased: false, callee-saved-register: '' }
+stack:
+  - { id: 0, name: scratch0, type: default, offset: 4, size: 32768, alignment: 4,
+      stack-id: default, callee-saved-register: '', local-offset: 0,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: scratch1, type: default, offset: 32772, size: 32768,
+      alignment: 4, stack-id: default, callee-saved-register: '', local-offset: 32768,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    successors: %bb.1.if(0x30000000), %bb.2.else(0x50000000)
+    liveins: $sgpr0_sgpr1, $sgpr3
+
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 44, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
+    $sgpr8 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 36, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    $sgpr9 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
+    $sgpr10 = S_MOV_B32 4294967295, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
+    $sgpr11 = S_MOV_B32 15204352, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 4, 0, 0, implicit $exec :: (store (s32) into %ir.scratchptr01)
+    S_WAITCNT 127
+    S_CMP_LG_U32 killed $sgpr2, 0, implicit-def $scc
+    S_WAITCNT 3855
+    $vgpr0 = V_MOV_B32_e32 2, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 32772, implicit $exec
+    BUFFER_STORE_DWORD_OFFEN killed $vgpr0, killed $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, implicit $exec :: (store (s32) into %ir.scratchptr12)
+    S_CBRANCH_SCC0 %bb.1.if, implicit killed $scc
+
+  bb.2.else:
+    successors: %bb.3.done(0x80000000)
+    liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
+
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 52, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
+    S_WAITCNT 3855
+    $vgpr0 = V_MOV_B32_e32 32772, implicit $exec
+    S_BRANCH %bb.3.done
+
+  bb.1.if:
+    successors: %bb.3.done(0x80000000)
+    liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
+
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 48, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
+    S_WAITCNT 3855
+    $vgpr0 = V_MOV_B32_e32 4, implicit $exec
+
+  bb.3.done:
+    liveins: $sgpr3, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $sgpr0
+
+    S_WAITCNT 127
+    $sgpr0 = S_LSHL_B32 killed $sgpr0, 2, implicit-def dead $scc
+    $vgpr0 = V_ADD_CO_U32_e32 killed $sgpr0, killed $vgpr0, implicit-def dead $vcc, implicit $exec
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, implicit $exec :: (load (s32) from %ir.else_ptr), (non-temporal load (s32) from %ir.if_ptr)
+    $vgpr1 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr4_sgpr5
+    $vgpr2 = V_MOV_B32_e32 killed $sgpr5, implicit $exec, implicit $sgpr4_sgpr5, implicit $exec
+    S_WAITCNT 3952
+    FLAT_STORE_DWORD killed $vgpr1_vgpr2, killed $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out)
+    S_ENDPGM 0
+
+...

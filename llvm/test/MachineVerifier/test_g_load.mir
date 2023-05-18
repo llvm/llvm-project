@@ -1,0 +1,29 @@
+#RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_load
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    ; CHECK: Bad machine code: Generic memory instruction must access a pointer
+    %0:_(s64) = G_CONSTANT i32 0
+    %1:_(s32) = G_LOAD %0 :: (load (s32))
+
+    %2:_(p0) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: load memory size cannot exceed result size
+    %3:_(s8) = G_LOAD %2 :: (load (s16))
+
+    ; CHECK: Bad machine code: atomic load cannot use release ordering
+    %4:_(s32) = G_LOAD %2 :: (load release (s32))
+
+    ; CHECK: Bad machine code: atomic load cannot use release ordering
+    %5:_(s32) = G_LOAD %2 :: (load acq_rel (s32))
+
+...

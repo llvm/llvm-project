@@ -1,0 +1,20 @@
+RUN: mkdir -p %t/a/b/
+RUN: echo "" > %t/a/b/c.tmp
+RUN: echo "" > %t/a/d.tmp
+
+RUN: llvm-cov show /dev/null -instr-profile /dev/null -dump-collected-paths %t | FileCheck %s --check-prefix=REAL
+RUN: llvm-cov show /dev/null -instr-profile /dev/null -dump-collected-paths %t/a/b/c.tmp %t/a/d.tmp | FileCheck %s --check-prefix=REAL
+
+REAL-DAG: {{.*}}c.tmp
+REAL-DAG: {{.*}}d.tmp
+
+// NEEDS FIX.
+RUN: llvm-cov show /dev/null -instr-profile /dev/null -dump-collected-paths -path-equivalence=%t,%S %t a b c d e f | FileCheck %s --check-prefix=EQUIV
+EQUIV-DAG: {{.*}}c.tmp
+EQUIV-DAG: {{.*}}d.tmp
+EQUIV-DAG: a
+EQUIV-DAG: b
+EQUIV-DAG: c
+EQUIV-DAG: d
+EQUIV-DAG: e
+EQUIV-DAG: f

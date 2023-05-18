@@ -1,0 +1,140 @@
+# RUN: llc -emit-call-site-info -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+# CHECK:        DW_TAG_GNU_call_site
+# CHECK-NEXT:     DW_AT_abstract_origin {{.*}} "foo")
+# CHECK-NEXT:     DW_AT_low_pc {{.*}}
+# CHECK-EMPTY:
+# CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg9 R9)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg15 R15+10)
+# CHECK-EMPTY:
+# CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg8 R8)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg15 R15+0, DW_OP_lit2, DW_OP_mul, DW_OP_plus_uconst 0x8)
+# CHECK-EMPTY:
+# CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg1 RDX)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+0, DW_OP_lit5, DW_OP_mul, DW_OP_plus_uconst 0x8)
+# CHECK-EMPTY:
+# CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg4 RSI)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+0)
+# CHECK-EMPTY:
+# CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg5 RDI)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+0, DW_OP_breg15 R15+0, DW_OP_lit2, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst 0x4)
+# CHECK-EMPTY:
+# CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg2 RCX)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+0, DW_OP_breg15 R15+0, DW_OP_plus)
+# CHECK:        DW_TAG_GNU_call_site
+# CHECK-NEXT:     DW_AT_abstract_origin {{.*}} "foo2")
+# CHECK-NEXT:     DW_AT_low_pc {{.*}}
+# CHECK-EMPTY:
+# CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg5 RDI)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg14 R14+0, DW_OP_lit2, DW_OP_mul)
+--- |
+  ; ModuleID = 'dbgcall-site-lea-interpretation.ll'
+  source_filename = "dbgcall-site-lea-interpretation.c"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define dso_local i32 @baa(i32 %arg1, i32 %arg2, i32 %arg3) local_unnamed_addr !dbg !10 {
+  entry:
+    %arg1.addr = alloca i32, align 4
+    %arg3.addr = alloca i32, align 4
+    %local1 = alloca i32, align 4
+    store i32 %arg1, ptr %arg1.addr, align 4
+    store i32 %arg3, ptr %arg3.addr, align 4
+    %0 = bitcast ptr %local1 to ptr, !dbg !14
+    %mul = mul nsw i32 %arg3, %arg1, !dbg !14
+    store i32 %mul, ptr %local1, align 4, !dbg !14
+    %add = add nsw i32 %arg2, %arg1, !dbg !14
+    %sub = sub nsw i32 %add, %arg3, !dbg !14
+    %call = call i32 @foo(i32 %mul, i32 %sub, ptr nonnull %local1, ptr nonnull %arg1.addr, ptr nonnull %arg3.addr, i32 %add), !dbg !14
+    %1 = load i32, ptr %local1, align 4, !dbg !14
+    %add2 = add nsw i32 %1, %call, !dbg !14
+    store i32 %add2, ptr %local1, align 4, !dbg !14
+    %call3 = call i32 @foo2(ptr nonnull %local1), !dbg !14
+    %2 = load i32, ptr %local1, align 4, !dbg !14
+    ret i32 %2, !dbg !14
+  }
+  
+  declare !dbg !4 dso_local i32 @foo(i32, i32, ptr, ptr, ptr, i32) local_unnamed_addr
+  
+  declare !dbg !5 dso_local i32 @foo2(ptr) local_unnamed_addr
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!6, !7, !8}
+  !llvm.ident = !{!9}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 9.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "dbgcall-site-lea-interpretation.c", directory: "/dir")
+  !2 = !{}
+  !3 = !{!4, !5}
+  !4 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 8, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubprogram(name: "foo2", scope: !1, file: !1, line: 9, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !6 = !{i32 2, !"Dwarf Version", i32 4}
+  !7 = !{i32 2, !"Debug Info Version", i32 3}
+  !8 = !{i32 1, !"wchar_size", i32 4}
+  !9 = !{!"clang version 9.0.0"}
+  !10 = distinct !DISubprogram(name: "baa", scope: !1, file: !1, line: 11, type: !11, scopeLine: 11, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !11 = !DISubroutineType(types: !12)
+  !12 = !{!13, !13, !13, !13}
+  !13 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !14 = !DILocation(line: 11, column: 13, scope: !10)
+
+...
+---
+name:            baa
+liveins:         
+  - { reg: '$edi', virtual-reg: '' }
+  - { reg: '$esi', virtual-reg: '' }
+  - { reg: '$edx', virtual-reg: '' }
+callSites:       
+  - { bb: 0, offset: 21, fwdArgRegs: 
+      - { arg: 0, reg: '$edi' }
+      - { arg: 1, reg: '$esi' }
+      - { arg: 2, reg: '$rdx' }
+      - { arg: 3, reg: '$rcx' }
+      - { arg: 4, reg: '$r8' }
+      - { arg: 5, reg: '$r9d' } }
+  - { bb: 0, offset: 24, fwdArgRegs: 
+      - { arg: 0, reg: '$rdi' } }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $edx, $esi, $rbx
+  
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    $rsp = frame-setup SUB64ri8 $rsp, 16, implicit-def dead $eflags
+    CFI_INSTRUCTION def_cfa_offset 32
+    CFI_INSTRUCTION offset $rbx, -16
+    $r9d = MOV32rr $esi
+    $r14 = MOV64rr $rsi
+    $r15 = MOV64rr $rdi
+    MOV32mr $rsp, 1, $noreg, 12, $noreg, renamable $edi :: (store (s32) into %ir.arg1.addr)
+    MOV32mr $rsp, 1, $noreg, 8, $noreg, renamable $edx :: (store (s32) into %ir.arg3.addr)
+    renamable $r9d = nsw ADD32rr killed renamable $r9d, renamable $edi, implicit-def dead $eflags, debug-location !14
+    $esi = MOV32rr $r9d, debug-location !14
+    renamable $esi = nsw SUB32rr killed renamable $esi, renamable $edx, implicit-def dead $eflags, debug-location !14
+    renamable $edx = nsw IMUL32rr killed renamable $edx, killed renamable $edi, implicit-def dead $eflags, debug-location !14
+    MOV32mr $rsp, 1, $noreg, 4, $noreg, renamable $edx, debug-location !14 :: (store (s32) into %ir.local1)
+    renamable $rcx = LEA64r $r14, 1, $r15, 0, $noreg
+    renamable $edi = LEA64_32r $r14, 2, $r15, 4, $noreg
+    renamable $esi = LEA64_32r $r14, 1, $noreg, 0, $noreg
+    renamable $rdx = LEA64r $r14, 4, $r14, 8, $noreg
+    renamable $r8 = LEA64r $noreg, 2, $r15, 8, $noreg
+    renamable $r9d = LEA64_32r  $noreg, 1, $r15, 10, $noreg, implicit-def $r9d
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit $rdx, implicit $rcx, implicit $r8, implicit $r9d, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !14
+    ADD32mr $rsp, 1, $noreg, 4, $noreg, killed renamable $eax, implicit-def dead $eflags, debug-location !14 :: (store (s32) into %ir.local1), (dereferenceable load (s32) from %ir.local1)
+    $rdi = LEA64r $r14, 1, killed $r14, 0, $noreg
+    CALL64pcrel32 @foo2, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax, debug-location !14
+    renamable $eax = MOV32rm $rsp, 1, $noreg, 4, $noreg, debug-location !14 :: (dereferenceable load (s32) from %ir.local1)
+    $rsp = frame-destroy ADD64ri8 $rsp, 16, implicit-def dead $eflags, debug-location !14
+    CFI_INSTRUCTION def_cfa_offset 16, debug-location !14
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !14
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !14
+    RET64 $eax, debug-location !14
+
+...

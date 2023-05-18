@@ -1,0 +1,9 @@
+/// \mainpage clang-tools
+///
+/// \section main_intro Introduction
+/// Welcome to clang tools.
+///
+/// This documentation describes the **internal** software that makes
+/// up clang tools, not the **external** use of clang tools. For
+/// usage instructions, please see the programmer's guide or reference
+/// manual.

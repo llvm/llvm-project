@@ -1,0 +1,117 @@
+## Test that we can pass multiple files. There are several ways to do this:
+## list them all individually, use --libdir to shorten the list, or use a
+## response file (with or without --libdir).
+##
+# REQUIRES: x86-registered-target
+#
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj --docnum=1 %s -o %t.dir/file1
+# RUN: yaml2obj --docnum=2 %s -o %t.dir/file2
+# RUN: yaml2obj --docnum=3 %s -o %t.dir/file3
+
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 --report=full \
+# RUN:     %t.dir/file1 %t.dir/file2 %t.dir/file3 | \
+# RUN:   FileCheck %s
+#
+## Same result using --libdir.
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 --report=full \
+# RUN:     --libdir=%t.dir file1 file2 file3 | \
+# RUN:   FileCheck %s
+#
+## And with a response file.
+# RUN: echo -e "file1\nfile2\nfile3\n" > %t.dir/resp1.txt
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 --report=full \
+# RUN:     --libdir=%t.dir @%t.dir/resp1.txt | \
+# RUN:   FileCheck %s
+#
+# RUN: echo %t.dir/file1  > %t.dir/resp2.txt
+# RUN: echo %t.dir/file2 >> %t.dir/resp2.txt
+# RUN: echo %t.dir/file3 >> %t.dir/resp2.txt
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 --report=full \
+# RUN:     @%t.dir/resp2.txt | \
+# RUN:   FileCheck %s
+#
+## Also check that an archive works. Put file1 and file2 into an archive,
+## and pass the archive name plus file3 on the command line.
+# RUN: rm -f %t.dir/archive.a
+# RUN: llvm-ar rc %t.dir/archive.a %t.dir/file1 %t.dir/file2
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 --report=full \
+# RUN:     --libdir=%t.dir archive.a file3 | \
+# RUN:   FileCheck %s
+#
+# CHECK: TLI knows {{[0-9]+}} symbols, [[#AVAILABLE:]] available
+# CHECK: >> TLI no  SDK yes: '_ZdaPvj'
+# CHECK: == TLI yes SDK yes: 'abs'
+# CHECK: == TLI yes SDK yes: 'calloc'
+## The yes/no and yes/yes should add up to the total available.
+## The no/yes aren't included in the total available.
+# CHECK: << Total TLI yes SDK no: [[#AVAILABLE-2]]
+# CHECK: >> Total TLI no  SDK yes: 1{{$}}
+# CHECK: == Total TLI yes SDK yes: 2{{$}}
+
+## --separate should give one summary per input file (as listed on the
+# command line; it doesn't break things down by archive member).
+# RUN: llvm-tli-checker --triple x86_64-scei-ps4 --separate \
+# RUN:     --libdir=%t.dir archive.a file3 | \
+# RUN:   FileCheck %s --check-prefix=SEPARATE
+#
+# SEPARATE: TLI knows {{[0-9]+}} symbols, [[#AVAILABLE:]] available
+# SEPARATE: Found 2 global function symbols in '{{.*}}archive.a'
+# SEPARATE: << Total TLI yes SDK no:  [[#AVAILABLE-1]]
+# SEPARATE: >> Total TLI no  SDK yes: 1{{$}}
+# SEPARATE: == Total TLI yes SDK yes: 1{{$}}
+# SEPARATE: Found 1 global function symbols in '{{.*}}file3'
+# SEPARATE: << Total TLI yes SDK no:  [[#AVAILABLE-1]]
+# SEPARATE: >> Total TLI no  SDK yes: 0{{$}}
+# SEPARATE: == Total TLI yes SDK yes: 1{{$}}
+
+# file1
+--- !ELF
+FileHeader:
+    Class:           ELFCLASS64
+    Data:            ELFDATA2LSB
+    OSABI:           ELFOSABI_FREEBSD
+    Type:            ET_DYN
+    Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+DynamicSymbols:
+  - Name:            abs
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+
+# file2
+--- !ELF
+FileHeader:
+    Class:           ELFCLASS64
+    Data:            ELFDATA2LSB
+    OSABI:           ELFOSABI_FREEBSD
+    Type:            ET_DYN
+    Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+DynamicSymbols:
+  - Name:            _ZdaPvj
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+
+# file3
+--- !ELF
+FileHeader:
+    Class:           ELFCLASS64
+    Data:            ELFDATA2LSB
+    OSABI:           ELFOSABI_FREEBSD
+    Type:            ET_DYN
+    Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+DynamicSymbols:
+  - Name:            calloc
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL

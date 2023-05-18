@@ -1,0 +1,111 @@
+# RUN: llc -mtriple=amdgcn -run-pass si-fold-operands -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL:       name: fold-imm-copy
+# GCN:             V_AND_B32_e32 65535
+
+---
+name: fold-imm-copy
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sgpr_64 = COPY $sgpr0_sgpr1
+    %2:sgpr_128 = S_LOAD_DWORDX4_IMM %1, 9, 0
+    %3:sreg_32_xm0 = S_MOV_B32 2
+    %4:vgpr_32 = V_LSHLREV_B32_e64 killed %3, %0, implicit $exec
+    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE killed %4, %subreg.sub0, killed %5, %subreg.sub1
+    %7:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %6, %2, 0, 4, 0, 0, implicit $exec
+    %8:sreg_32_xm0 = S_MOV_B32 65535
+    %9:vgpr_32 = COPY %8
+    %10:vgpr_32 = V_AND_B32_e32 %7, %9, implicit $exec
+...
+
+---
+# GCN-LABEL:       name: no_extra_fold_on_same_opnd
+# The first XOR needs commuting to fold that immediate operand.
+# GCN:             V_XOR_B32_e32 0, %1
+# GCN:             V_XOR_B32_e32 %2, %4.sub0
+name: no_extra_fold_on_same_opnd
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %4:vreg_64 = REG_SEQUENCE killed %0, %subreg.sub0, killed %3, %subreg.sub1
+    %5:vgpr_32 = V_XOR_B32_e32 %1, %4.sub1, implicit $exec
+    %6:vgpr_32 = V_XOR_B32_e32 %2, %4.sub0, implicit $exec
+...
+
+---
+
+# Make sure the subreg index is not reinterpreted when folding
+# immediates
+#
+# GCN-LABEL: name: clear_subreg_imm_fold{{$}}
+# GCN: %1:sgpr_32 = S_MOV_B32 4294967288
+# GCN: %2:sgpr_32 = S_MOV_B32 4294967295
+name: clear_subreg_imm_fold
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_64 = S_MOV_B64 -8
+    %1:sgpr_32 = COPY %0.sub0
+    %2:sgpr_32 = COPY %0.sub1
+    S_ENDPGM 0, implicit %1, implicit %2
+
+...
+
+# GCN-LABEL: name: no_fold_imm_into_m0{{$}}
+# GCN: %0:sreg_32 = S_MOV_B32 -8
+# GCN-NEXT: $m0 = COPY %0
+
+---
+name: no_fold_imm_into_m0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 -8
+    $m0 = COPY %0
+    S_ENDPGM 0, implicit $m0
+
+...
+
+# GCN-LABEL: name: fold_sgpr_imm_to_vgpr_copy{{$}}
+# GCN: $vgpr0 = V_MOV_B32_e32 -8, implicit $exec
+---
+name: fold_sgpr_imm_to_vgpr_copy
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 -8
+    $vgpr0 = COPY %0
+    S_ENDPGM 0, implicit $vgpr0
+
+...
+
+# The users of $vgpr1 should not be visited for further immediate
+# folding.
+
+# GCN-LABEL: name: no_fold_physreg_users_vgpr{{$}}
+# GCN: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT: S_NOP 0, implicit-def $vgpr1
+# GCN-NEXT: %2:vgpr_32 = COPY $vgpr1
+# GCN-NEXT: $vgpr2 = COPY %2
+---
+name: no_fold_physreg_users_vgpr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_32 = S_MOV_B32 0
+    %1:vgpr_32 = COPY %0
+    $vgpr1 = COPY %0
+    S_NOP 0, implicit-def $vgpr1
+    %2:vgpr_32 = COPY $vgpr1
+    $vgpr2 = COPY %2
+    S_ENDPGM 0
+
+...

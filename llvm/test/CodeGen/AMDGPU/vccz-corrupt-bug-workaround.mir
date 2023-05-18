@@ -1,0 +1,332 @@
+# RUN: llc -run-pass=si-insert-waitcnts -mtriple=amdgcn -mcpu=tahiti -o - %s | FileCheck %s -check-prefixes=CHECK,SI
+# RUN: llc -run-pass=si-insert-waitcnts -mtriple=amdgcn -mcpu=gfx900 -o - %s | FileCheck %s -check-prefixes=CHECK,GFX9
+# RUN: llc -run-pass=si-insert-waitcnts -mtriple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -o - %s | FileCheck %s
+# RUN: llc -run-pass=si-insert-waitcnts -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -o - %s | FileCheck %s
+---
+# CHECK-LABEL: name: vccz_corrupt_workaround
+# CHECK: $vcc = V_CMP_EQ_F32
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
+
+name: vccz_corrupt_workaround
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0
+    $sgpr7 = S_MOV_B32 61440
+    $sgpr6 = S_MOV_B32 -1
+    $vcc = V_CMP_EQ_F32_e64 0, 0, 0, undef $sgpr2, 0, implicit $mode, implicit $exec
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+
+  bb.2:
+    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+
+    $vgpr0 = V_MOV_B32_e32 9, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.1:
+    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+
+    $vgpr0 = V_MOV_B32_e32 100, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+
+  bb.3:
+    liveins: $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+
+    $sgpr3 = S_MOV_B32 61440
+    $sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# CHECK-LABEL: name: vccz_corrupt_undef_vcc
+# CHECK: BUFFER_STORE_DWORD_OFFSET
+# SI-NEXT: S_WAITCNT 3855
+# CHECK-NEXT: $vgpr0 = V_MOV_B32_e32
+
+name: vccz_corrupt_undef_vcc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0
+    $sgpr7 = S_MOV_B32 61440
+    $sgpr6 = S_MOV_B32 -1
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+
+  bb.2:
+    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+
+    $vgpr0 = V_MOV_B32_e32 9, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.1:
+    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+
+    $vgpr0 = V_MOV_B32_e32 100, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+
+  bb.3:
+    liveins: $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+
+    $sgpr3 = S_MOV_B32 61440
+    $sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# Test that after reloading vcc spilled to a vgpr, we insert any necessary
+# instructions to fix vccz.
+
+# CHECK-LABEL: name: reload_vcc_from_vgpr
+# CHECK: $vcc_lo = V_READLANE_B32 $vgpr0, 8, implicit-def $vcc
+# CHECK: $vcc_hi = V_READLANE_B32 $vgpr0, 9
+# SI:    $vcc = S_MOV_B64 $vcc
+# GFX9:  $vcc = S_MOV_B64 $vcc
+# CHECK-NEXT: S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+
+name: reload_vcc_from_vgpr
+body: |
+  bb.0:
+    $vcc_lo = V_READLANE_B32 $vgpr0, 8, implicit-def $vcc
+    $vcc_hi = V_READLANE_B32 $vgpr0, 9
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+  bb.1:
+
+...
+---
+# Test that after reloading vcc spilled to memory, we insert any necessary
+# instructions to fix vccz.
+
+# CHECK-LABEL: name: reload_vcc_from_mem
+# CHECK: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec
+# CHECK: $vcc_lo = V_READFIRSTLANE_B32 killed $vgpr0, implicit $exec, implicit-def $vcc
+# CHECK: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec
+# CHECK: $vcc_hi = V_READFIRSTLANE_B32 killed $vgpr0, implicit $exec, implicit-def $vcc
+# SI:    $vcc = S_MOV_B64 $vcc
+# GFX9:  $vcc = S_MOV_B64 $vcc
+# CHECK-NEXT: S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+
+name: reload_vcc_from_mem
+body: |
+  bb.0:
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec
+    $vcc_lo = V_READFIRSTLANE_B32 killed $vgpr0, implicit $exec, implicit-def $vcc
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec
+    $vcc_hi = V_READFIRSTLANE_B32 killed $vgpr0, implicit $exec, implicit-def $vcc
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+  bb.1:
+
+...
+---
+# Test that after inline asm that defines vcc_lo, we insert any necessary
+# instructions to fix vccz.
+
+# CHECK-LABEL: name: inlineasm_def_vcc_lo
+# CHECK: INLINEASM &"; def vcc_lo", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vcc_lo
+# SI:    $vcc = S_MOV_B64 $vcc
+# GFX9:  $vcc = S_MOV_B64 $vcc
+# CHECK-NEXT: S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+
+name: inlineasm_def_vcc_lo
+body: |
+  bb.0:
+    INLINEASM &"; def vcc_lo", 1, 10, implicit-def $vcc_lo
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+  bb.1:
+
+...
+---
+# Test that after inline asm that defines vcc, no unnecessary instructions are
+# inserted to fix vccz.
+
+# CHECK-LABEL: name: inlineasm_def_vcc
+# CHECK: INLINEASM &"; def vcc", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vcc
+# CHECK-NEXT: S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+
+name: inlineasm_def_vcc
+body: |
+  bb.0:
+    INLINEASM &"; def vcc", 1, 10, implicit-def $vcc
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+  bb.1:
+
+...
+---
+# Test vcc definition in a previous basic block.
+
+# CHECK-LABEL: name: vcc_def_pred
+# CHECK: bb.1:
+# SI:  $vcc = S_MOV_B64 $vcc
+# GFX9:  $vcc = S_MOV_B64 $vcc
+# CHECK: S_CBRANCH_VCCZ %bb.2, implicit $vcc
+
+name: vcc_def_pred
+body: |
+  bb.0:
+    $vcc = S_MOV_B64 0
+  bb.1:
+    S_CBRANCH_VCCZ %bb.2, implicit $vcc
+  bb.2:
+
+...
+
+# Test various ways that the live range of vccz can overlap with the live range
+# of an outstanding smem load.
+
+---
+# CHECK-LABEL: name: load_wait_def_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_wait_def_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    S_WAITCNT 127
+    $vcc = S_MOV_B64 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: load_wait_nop_def_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_NOP 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_wait_nop_def_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    S_WAITCNT 127
+    S_NOP 0
+    $vcc = S_MOV_B64 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: load_def_wait_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_def_wait_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    $vcc = S_MOV_B64 0
+    S_WAITCNT 127
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+# CHECK-LABEL: name: load_def_wait_nop_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_NOP 0
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_def_wait_nop_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    $vcc = S_MOV_B64 0
+    S_WAITCNT 127
+    S_NOP 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: load_def_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: load_def_use
+body: |
+  bb.0:
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    $vcc = S_MOV_B64 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: def_load_wait_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: def_load_wait_use
+body: |
+  bb.0:
+    $vcc = S_MOV_B64 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    S_WAITCNT 127
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: def_load_wait_nop_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: S_NOP 0
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: def_load_wait_nop_use
+body: |
+  bb.0:
+    $vcc = S_MOV_B64 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    S_WAITCNT 127
+    S_NOP 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...
+
+---
+# CHECK-LABEL: name: def_load_use
+# SI: S_WAITCNT 0
+# SI-NEXT: $vcc = S_MOV_B64 0
+# SI-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+# SI-NEXT: S_WAITCNT 127
+# SI-NEXT: $vcc = S_MOV_B64 $vcc
+# SI-NEXT: S_CBRANCH_VCCZ %bb.1, implicit $vcc
+name: def_load_use
+body: |
+  bb.0:
+    $vcc = S_MOV_B64 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.1:
+...

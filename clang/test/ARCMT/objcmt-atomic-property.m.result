@@ -1,0 +1,200 @@
+// RUN: rm -rf %t
+// RUN: %clang_cc1 -fblocks -objcmt-migrate-readwrite-property -objcmt-migrate-readonly-property -objcmt-atomic-property -mt-migrate-directory %t %s -x objective-c -fobjc-runtime-has-weak -fobjc-arc -triple x86_64-apple-darwin11
+// RUN: c-arcmt-test -mt-migrate-directory %t | arcmt-test -verify-transformed-files %s.result
+// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin10 -fsyntax-only -x objective-c -fobjc-runtime-has-weak -fobjc-arc %s.result
+
+#define WEBKIT_OBJC_METHOD_ANNOTATION(ANNOTATION) ANNOTATION
+#define WEAK_IMPORT_ATTRIBUTE __attribute__((objc_arc_weak_reference_unavailable))
+#define AVAILABLE_WEBKIT_VERSION_3_0_AND_LATER
+#define DEPRECATED  __attribute__((deprecated)) 
+
+typedef char BOOL;
+@class NSString;
+@protocol NSCopying @end
+
+@interface NSObject <NSCopying>
+@end
+
+@interface NSDictionary : NSObject
+@end
+
+@interface I : NSObject {
+  int ivarVal;
+}
+@property (weak) NSString *WeakProp;
+
+@property (strong) NSString *StrongProp;
+
+@property (strong) NSString *UnavailProp  __attribute__((unavailable));
+- (void) setUnavailProp  : (NSString *)Val;
+
+@property (strong) NSString *UnavailProp1  __attribute__((unavailable));
+
+@property (strong) NSString *UnavailProp2;
+- (void) setUnavailProp2  : (NSString *)Val  __attribute__((unavailable));
+
+@property (copy) NSDictionary *undoAction;
+@end
+
+@implementation I
+@end
+
+@class NSArray;
+
+@interface MyClass2  {
+@private
+    NSArray *_names1;
+    NSArray *_names2;
+    NSArray *_names3;
+    NSArray *_names4;
+}
+@property (strong) NSArray *names2;
+@property (strong) NSArray *names3;
+@property (strong) NSArray *names4;
+@property (strong) NSArray *names1;
+@end
+
+// Properties that contain the name "delegate" or "dataSource",
+// or have exact name "target" have unsafe_unretained attribute.
+@interface NSInvocation 
+@property (assign) id target;
+
+@property (assign) id dataSource;
+
+@property (assign) id xxxdelegateYYY;
+
+
+@property (strong) id MYtarget;
+
+@property (strong) id targetX;
+ 
+@property  int value;
+
+@property (getter=isContinuous) BOOL continuous;
+
+- (id) isAnObject;
+- (void)setAnObject : (id) object;
+
+@property (getter=isinValid, readonly) BOOL inValid;
+- (void) setInValid : (BOOL) arg;
+
+- (void) Nothing;
+@property (readonly) int Length;
+@property (readonly, strong) id object;
++ (double) D;
+@property (readonly) void *JSObject WEBKIT_OBJC_METHOD_ANNOTATION(AVAILABLE_WEBKIT_VERSION_3_0_AND_LATER);
+@property (getter=isIgnoringInteractionEvents, readonly) BOOL ignoringInteractionEvents;
+
+@property (getter=getStringValue, strong) NSString *stringValue;
+@property (getter=getCounterValue, readonly) BOOL counterValue;
+@property (getter=getns_dixtionary, readonly, copy) NSDictionary *ns_dixtionary;
+
+- (BOOL)is3bar; // watch out
+- (NSString *)get3foo; // watch out
+
+@property (getter=getM, readonly) BOOL m;
+@property (getter=getMA, readonly) BOOL MA;
+@property (getter=getALL, readonly) BOOL ALL;
+@property (getter=getMANY, readonly) BOOL MANY;
+@property (getter=getSome, readonly) BOOL some;
+@end
+
+
+@interface NSInvocation(CAT)
+@property (assign) id target;
+
+@property (assign) id dataSource;
+
+@property (assign) id xxxdelegateYYY;
+
+
+@property (strong) id MYtarget;
+
+@property (strong) id targetX;
+
+@property  int value;
+
+@property (getter=isContinuous) BOOL continuous;
+
+- (id) isAnObject;
+- (void)setAnObject : (id) object;
+
+@property (getter=isinValid, readonly) BOOL inValid;
+- (void) setInValid : (BOOL) arg;
+
+- (void) Nothing;
+@property (readonly) int Length;
+@property (readonly, strong) id object;
++ (double) D;
+
+- (BOOL)is3bar; // watch out
+- (NSString *)get3foo; // watch out
+
+@property (getter=getM, readonly) BOOL m;
+@property (getter=getMA, readonly) BOOL MA;
+@property (getter=getALL, readonly) BOOL ALL;
+@property (getter=getMANY, readonly) BOOL MANY;
+@property (getter=getSome, readonly) BOOL some;
+@end
+
+DEPRECATED
+@interface I_DEP
+- (BOOL) isinValid;
+- (void) setInValid : (BOOL) arg;
+@end
+
+@interface AnotherOne
+- (BOOL) isinValid DEPRECATED;
+- (void) setInValid : (BOOL) arg;
+- (id)MYtarget;
+- (void)setMYtarget: (id)target DEPRECATED;
+- (BOOL) getM DEPRECATED;
+
+- (id)xxxdelegateYYY DEPRECATED;
+- (void)setXxxdelegateYYY:(id)delegate DEPRECATED;
+@end
+
+#define NS_AVAILABLE __attribute__((availability(macosx,introduced=10.0)))
+#define NORETURN __attribute__((noreturn))
+#define ALIGNED __attribute__((aligned(16)))
+
+@interface NSURL
+// Do not infer a property.
+@property (strong) NSURL *appStoreReceiptURL NS_AVAILABLE;
+- (void) setAppStoreReceiptURL : (NSURL *)object;
+
+@property (strong) NSURL *appStoreReceiptURLX NS_AVAILABLE;
+
+// Do not infer a property.
+@property (strong) NSURL *appStoreReceiptURLY ;
+- (void) setAppStoreReceiptURLY : (NSURL *)object NS_AVAILABLE;
+
+@property (readonly, strong) id OkToInfer NS_AVAILABLE;
+
+// Do not infer a property.
+@property (strong) NSURL *appStoreReceiptURLZ ;
+- (void) setAppStoreReceiptURLZ : (NSURL *)object NS_AVAILABLE;
+
+// Do not infer a property.
+- (id) t1 NORETURN NS_AVAILABLE;
+- (void) setT1 : (id) arg NS_AVAILABLE;
+
+@property (strong) id method1 ALIGNED NS_AVAILABLE;
+
+- (NSURL *)init;  // No Change
++ (id)alloc;      // No Change
+
+- (BOOL)is1stClass; // Not a valid property
+@property (getter=isClass, readonly) BOOL class;    // This is a valid property 'class' is not a keyword in ObjC
+- (BOOL)isDouble; // Not a valid property
+
+@end
+
+@class NSMutableDictionary;
+
+@interface NSArray
+@property (readonly, copy) id (^expressionBlock)(id, NSArray *, NSMutableDictionary *);
+@property (copy) id (^MyBlock)(id, NSArray *, NSMutableDictionary *);
+@property (readonly) id (*expressionFuncptr)(id, NSArray *, NSMutableDictionary *);
+@property  id (*MyFuncptr)(id, NSArray *, NSMutableDictionary *);
+@end

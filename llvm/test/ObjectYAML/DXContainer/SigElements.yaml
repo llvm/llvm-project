@@ -1,0 +1,149 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            PSV0
+    Size:            250
+    PSVInfo:
+      Version:         1
+      ShaderStage:     0
+      DepthOutput:     7
+      SampleFrequency: 96
+      MinimumWaveLaneCount: 0
+      MaximumWaveLaneCount: 4294967295
+      UsesViewID:      0
+      SigInputVectors: 0
+      SigOutputVectors: [ 8, 16, 32, 64 ]
+      ResourceStride:       16
+      Resources:
+        - Type:            1
+          Space:           2
+          LowerBound:      3
+          UpperBound:      4
+        - Type:            128
+          Space:           32768
+          LowerBound:      8388608
+          UpperBound:      2147483648
+      SigInputElements:
+        - Name:            IN
+          Indices:         [ 0, 1 ]
+          StartRow:        0
+          Cols:            2
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   SInt32
+          Interpolation:   Undefined
+          DynamicMask:     0x0
+          Stream:          0
+      SigOutputElements:
+        - Name:            OUT
+          Indices:         [ 0, 1 ]
+          StartRow:        0
+          Cols:            2
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float32
+          Interpolation:   Linear
+          DynamicMask:     0x0
+          Stream:          1
+      SigPatchOrPrimElements:
+        - Name:            Patch
+          Indices:         [ 0 ]
+          StartRow:        0
+          Cols:            1
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float32
+          Interpolation:   Linear
+          DynamicMask:     0x1
+          Stream:          2
+        - Name:            Patch1
+          Indices:         [ 2 ]
+          StartRow:        0
+          Cols:            1
+          StartCol:        0
+          Allocated:       true
+          Kind:            Arbitrary
+          ComponentType:   Float64
+          Interpolation:   LinearSample
+          DynamicMask:     0x2
+          Stream:          3
+      InputOutputMap:
+        - [  ]
+        - [  ]
+        - [  ]
+        - [  ]
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      0
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+...
+
+# CHECK: Name:            PSV0
+# CHECK: PSVInfo:
+# CHECK-NEXT: Version:         1
+# CHECK-NEXT: ShaderStage:     0
+
+# CHECK: SigInputElements:
+# CHECK-NEXT:   - Name:            IN
+# CHECK-NEXT:     Indices:         [ 0, 1 ]
+# CHECK-NEXT:     StartRow:        0
+# CHECK-NEXT:     Cols:            2
+# CHECK-NEXT:     StartCol:        0
+# CHECK-NEXT:     Allocated:       true
+# CHECK-NEXT:     Kind:            Arbitrary
+# CHECK-NEXT:     ComponentType:   SInt32
+# CHECK-NEXT:     Interpolation:   Undefined
+# CHECK-NEXT:     DynamicMask:     0x0
+# CHECK-NEXT:     Stream:          0
+# CHECK-NEXT: SigOutputElements:
+# CHECK-NEXT:   - Name:            OUT
+# CHECK-NEXT:     Indices:         [ 0, 1 ]
+# CHECK-NEXT:     StartRow:        0
+# CHECK-NEXT:     Cols:            2
+# CHECK-NEXT:     StartCol:        0
+# CHECK-NEXT:     Allocated:       true
+# CHECK-NEXT:     Kind:            Arbitrary
+# CHECK-NEXT:     ComponentType:   Float32
+# CHECK-NEXT:     Interpolation:   Linear
+# CHECK-NEXT:     DynamicMask:     0x0
+# CHECK-NEXT:     Stream:          1
+# CHECK-NEXT: SigPatchOrPrimElements:
+# CHECK-NEXT:   - Name:            Patch
+# CHECK-NEXT:     Indices:         [ 0 ]
+# CHECK-NEXT:     StartRow:        0
+# CHECK-NEXT:     Cols:            1
+# CHECK-NEXT:     StartCol:        0
+# CHECK-NEXT:     Allocated:       true
+# CHECK-NEXT:     Kind:            Arbitrary
+# CHECK-NEXT:     ComponentType:   Float32
+# CHECK-NEXT:     Interpolation:   Linear
+# CHECK-NEXT:     DynamicMask:     0x1
+# CHECK-NEXT:     Stream:          2
+# CHECK-NEXT:   - Name:            Patch1
+# CHECK-NEXT:     Indices:         [ 2 ]
+# CHECK-NEXT:     StartRow:        0
+# CHECK-NEXT:     Cols:            1
+# CHECK-NEXT:     StartCol:        0
+# CHECK-NEXT:     Allocated:       true
+# CHECK-NEXT:     Kind:            Arbitrary
+# CHECK-NEXT:     ComponentType:   Float64
+# CHECK-NEXT:     Interpolation:   LinearSample
+# CHECK-NEXT:     DynamicMask:     0x2
+# CHECK-NEXT:     Stream:          3

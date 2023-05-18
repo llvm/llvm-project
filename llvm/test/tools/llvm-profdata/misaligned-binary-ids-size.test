@@ -1,0 +1,30 @@
+// gnuwin32 printf does not work for this test because it will print \15 (CR)
+// whenever \12 (LF) is in the input string.
+UNSUPPORTED: system-windows
+RUN: printf '\201rforpl\377' > %t.profraw
+RUN: printf '\12\0\0\0\0\0\0\0' >> %t.profraw
+// We should fail on this because the binary IDs is not a multiple of 8 bytes.
+RUN: printf '\77\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+
+// Binary IDs - There are only two in this case that are 20 bytes.
+RUN: printf '\24\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\1\2\3\4\5\6\7' >> %t.profraw
+RUN: printf '\0\1\2\3\4\5\6\7' >> %t.profraw
+RUN: printf '\0\1\2\3\0\0\0\0' >> %t.profraw
+RUN: printf '\24\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\1\1\1\1\1\1\1\1' >> %t.profraw
+RUN: printf '\2\2\2\2\2\2\2\2' >> %t.profraw
+RUN: printf '\3\3\3\3\0\0\0\0' >> %t.profraw
+
+// RUN: not llvm-profdata show --binary-ids  %t.profraw 2>&1 | FileCheck %s
+// CHECK: invalid instrumentation profile data (file header is corrupt)

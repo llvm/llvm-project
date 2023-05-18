@@ -1,0 +1,143 @@
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/fs-discriminator.raw.prof --binary=%S/Inputs/fs-discriminator.perfbin --output=%t1
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK
+; RUN: llvm-profgen --unsymbolized-profile=%S/Inputs/fs-discriminator.raw.prof --binary=%S/Inputs/fs-discriminator.perfbin --output=%t1
+; RUN: llvm-profdata show --sample --show-sec-info-only %t1 | FileCheck %s --check-prefix=CHECK-SECTION
+
+;CHECK-SECTION: ProfileSummarySection - Offset: [[#]], Size: [[#]], Flags: {fs-discriminator}
+
+;CHECK: partition_pivot_last:507:1
+;CHECK:  1: 4
+;CHECK:  2: 4
+;CHECK:  3: 4
+;CHECK:  3.1: 4
+;CHECK:  3.3: 4
+;CHECK:  3.3072: 5
+;CHECK:  3.7169: 4
+;CHECK:  3.7171: 4
+;CHECK:  4: 3
+;CHECK:  4.3072: 6
+;CHECK:  4.12800: 4
+;CHECK:  4.3221238272: 2
+;CHECK:  5: 2
+;CHECK:  5.5120: 2
+;CHECK:  6: 3
+;CHECK:  7: 3
+;CHECK:  5: swap:80
+;CHECK:   1: 2
+;CHECK:   1.1024: 2
+;CHECK:   1.4096: 2
+;CHECK:   2: 2
+;CHECK:   2.9216: 2
+;CHECK:   2.12288: 2
+;CHECK:   3: 2
+;CHECK:   3.512: 2
+;CHECK:   3.3584: 2
+;CHECK:   65532: 2
+;CHECK:  6: swap:51
+;CHECK:   1.14336: 3
+;CHECK:   2.7168: 3
+;CHECK:   2.11776: 3
+;CHECK:   3.13824: 3
+;CHECK: main:369:0
+;CHECK:  0: 0
+;CHECK:  3: 0
+;CHECK:  4.1: 1
+;CHECK:  4.3: 1
+;CHECK:  5.3: 4
+;CHECK:  5.1537: 4
+;CHECK:  6: 4
+;CHECK:  6.1: 3
+;CHECK:  6.3: 4
+;CHECK:  7: 1
+;CHECK:  8: 1 quick_sort:1
+;CHECK:  9: 1
+;CHECK:  11: 0
+;CHECK:  14: 0
+;CHECK:  65499: 2
+;CHECK: partition_pivot_first:298:1
+;CHECK:  0: 1
+;CHECK:  1: 1
+;CHECK:  2: 1
+;CHECK:  3: 1
+;CHECK:  3.1: 1
+;CHECK:  3.11265: 7
+;CHECK:  4: 7
+;CHECK:  4.1: 4
+;CHECK:  4.2: 2
+;CHECK:  4.3: 4
+;CHECK:  5: 1
+;CHECK:  6: 1
+;CHECK:  65516: 1
+;CHECK:  4.2: swap:24
+;CHECK:   1.7168: 2
+;CHECK:   2: 2
+;CHECK:   3.4608: 2
+;CHECK:  5: swap:17
+;CHECK:   1: 1
+;CHECK:   2.229376: 1
+;CHECK:   2.589824: 1
+;CHECK:   3: 1
+;CHECK: quick_sort:122:2
+;CHECK:  0: 2
+;CHECK:  1: 2
+;CHECK:  1.15360: 2
+;CHECK:  2: 2 partition_pivot_first:1 partition_pivot_last:1
+;CHECK:  3: 1 quick_sort:1
+;CHECK:  4: 2
+;CHECK:  6: 2
+;CHECK:  65507: 2
+
+
+; original code:
+; clang -O3 -g -mllvm --enable-fs-discriminator -fdebug-info-for-profiling qsort.c -o a.out
+#include <stdio.h>
+#include <stdlib.h>
+
+void swap(int *a, int *b) {
+	int t = *a;
+	*a = *b;
+	*b = t;
+}
+
+int partition_pivot_last(int* array, int low, int high) {
+	int pivot = array[high];
+	int i = low - 1;
+	for (int j = low; j < high; j++)
+		if (array[j] < pivot)
+			swap(&array[++i], &array[j]);
+	swap(&array[i + 1], &array[high]);
+	return (i + 1);
+}
+
+int partition_pivot_first(int* array, int low, int high) {
+	int pivot = array[low];
+	int i = low + 1;
+	for (int j = low + 1; j <= high; j++)
+		if (array[j] < pivot) { if (j != i) swap(&array[i], &array[j]); i++;}
+	swap(&array[i - 1], &array[low]);
+	return i - 1;
+}
+
+void quick_sort(int* array, int low, int high, int (*partition_func)(int *, int, int)) {
+	if (low < high) {
+		int pi = (*partition_func)(array, low, high);
+		quick_sort(array, low, pi - 1, partition_func);
+		quick_sort(array, pi + 1, high, partition_func);
+	}
+}
+
+int main() {
+	const int size = 200;
+	int sum = 0;
+	int *array = malloc(size * sizeof(int));
+	for(int i = 0; i < 100 * 1000; i++) {
+		for(int j = 0; j < size; j++)
+			array[j] = j % 10 ? rand() % size: j;
+		int (*fptr)(int *, int, int) = i % 3 ? partition_pivot_last : partition_pivot_first;
+		quick_sort(array, 0, size - 1, fptr);
+		sum += array[i % size];
+	}
+	printf("sum=%d\n", sum);
+
+	return 0;
+}

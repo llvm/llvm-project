@@ -1,0 +1,54 @@
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -ppc-gep-opt=0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -ppc-gen-isel=false -ppc-gep-opt=0 < %s | FileCheck --check-prefix=CHECK-NO-ISEL %s
+target datalayout = "E-m:e-i64:64-n32:64"
+target triple = "powerpc64-unknown-linux-gnu"
+
+; Function Attrs: nounwind
+define void @jbd2_journal_commit_transaction(i32 %input1, ptr %input2, ptr %input3, ptr %input4) #0 {
+entry:
+  br label %while.body392
+
+while.body392:                                    ; preds = %wait_on_buffer.exit1319, %while.body392.lr.ph
+  %0 = load ptr, ptr %input4, align 8
+  %add.ptr399 = getelementptr inbounds i8, ptr %0, i64 -72
+  %ivar = add i32 %input1, 1
+  %tobool.i1316 = icmp eq i32 %input1, 0
+  br i1 %tobool.i1316, label %wait_on_buffer.exit1319, label %while.end418
+
+wait_on_buffer.exit1319:                          ; preds = %while.body392
+  %1 = load volatile i64, ptr %add.ptr399, align 8
+  %conv.i.i1322 = and i64 %1, 1
+  %lnot404 = icmp eq i64 %conv.i.i1322, 0
+  %.err.4 = select i1 %lnot404, i32 -5, i32 %input1
+  %2 = call i64 asm sideeffect "1:.long 0x7c0000a8 $| ((($0) & 0x1f) << 21) $| (((0) & 0x1f) << 16) $| ((($3) & 0x1f) << 11) $| (((0) & 0x1) << 0) \0Aandc $0,$0,$2\0Astdcx. $0,0,$3\0Abne- 1b\0A", "=&r,=*m,r,r,*m,~{cc},~{memory}"(ptr elementtype(i64) %add.ptr399, i64 262144, ptr %add.ptr399, ptr elementtype(i64) %add.ptr399) #0
+  store ptr %0, ptr %input4, align 8
+  %cmp.i1312 = icmp eq ptr %input2, %input3
+  br i1 %cmp.i1312, label %while.end418, label %while.body392
+
+while.end418:                                     ; preds = %wait_on_buffer.exit1319, %do.body378
+  %err.4.lcssa = phi i32 [ %ivar, %while.body392 ], [ %.err.4, %wait_on_buffer.exit1319 ]
+  %tobool419 = icmp eq i32 %err.4.lcssa, 0
+  br i1 %tobool419, label %if.end421, label %if.then420
+
+; CHECK-LABEL: @jbd2_journal_commit_transaction
+; CHECK-NO-ISEL-LABEL: @jbd2_journal_commit_transaction
+; CHECK: andi.
+; CHECK: crmove [[REG:[0-9]+]], 1
+; CHECK: stdcx.
+; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; CHECK-NO-ISEL: bc 12, 20, [[TRUE:.LBB[0-9]+]]
+; CHECK-NO-ISEL: ori 7, 8, 0
+; CHECK-NO-ISEL-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
+; CHECK-NO-ISEL: [[TRUE]]
+; CHECK-NO-ISEL: addi 7, 3, 0
+
+if.then420:                                       ; preds = %while.end418
+  unreachable
+
+if.end421:                                        ; preds = %while.end418
+  unreachable
+
+}
+
+attributes #0 = { nounwind }
+

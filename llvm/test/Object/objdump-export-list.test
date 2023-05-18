@@ -1,0 +1,5 @@
+RUN: llvm-objdump --macho --exports-trie %p/Inputs/macho-no-exports.dylib | FileCheck %s
+
+; Test that we don't crash with an empty export list.
+CHECK: macho-no-exports.dylib
+CHECK: Exports trie:

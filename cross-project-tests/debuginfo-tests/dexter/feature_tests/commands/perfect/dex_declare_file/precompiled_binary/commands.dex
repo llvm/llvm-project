@@ -1,0 +1,18 @@
+# Purpose:
+#    Check that \DexDeclareFile's file declaration can reference source files
+#    in a precompiled binary.
+#
+# UNSUPPORTED: system-darwin
+#
+# RUN: %dexter_regression_test_build %S/test.cpp -o %t
+# RUN: %dexter_regression_base --binary %t %s | FileCheck %s
+# CHECK: commands.dex
+#
+# test.cpp
+# 1. int main() {
+# 2.   int result = 0;
+# 3.   return result;
+# 4. }
+
+DexDeclareFile('test.cpp')
+DexExpectWatchValue('result', 0, on_line=3)

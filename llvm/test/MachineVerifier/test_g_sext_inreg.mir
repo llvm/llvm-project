@@ -1,0 +1,52 @@
+# RUN: not --crash llc -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+--- |
+
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test() { ret void }
+
+...
+
+---
+name:            test
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: gpr }
+  - { id: 6, class: gpr }
+  - { id: 7, class: gpr }
+body: |
+  bb.0:
+   liveins: $x0
+   %0(s64) = COPY $x0
+   %1(<4 x s16>) = COPY $x0
+
+   ; CHECK: *** Bad machine code: G_SEXT_INREG expects an immediate operand #2 ***
+   ; CHECK: instruction: %2:gpr(s64) = G_SEXT_INREG
+   %2(s64) = G_SEXT_INREG %0, %0
+
+   ; CHECK: *** Bad machine code: G_SEXT_INREG expects an immediate operand #2 ***
+   ; CHECK: instruction: %3:gpr(s64) = G_SEXT_INREG
+   %3(s64) = G_SEXT_INREG %0, i8 8
+
+   ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
+   ; CHECK: instruction: %4:gpr(<2 x s32>) = G_SEXT_INREG
+   %4(<2 x s32>) = G_SEXT_INREG %0, 8
+
+   ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
+   ; CHECK: instruction: %5:gpr(<2 x s32>) = G_SEXT_INREG
+   %5(<2 x s32>) = G_SEXT_INREG %1, 8
+
+   ; CHECK: *** Bad machine code: G_SEXT_INREG size must be >= 1 ***
+   ; CHECK: instruction: %6:gpr(s64) = G_SEXT_INREG
+   %6(s64) = G_SEXT_INREG %0, 0
+
+   ; CHECK: *** Bad machine code: G_SEXT_INREG size must be less than source bit width ***
+   ; CHECK: instruction: %7:gpr(s64) = G_SEXT_INREG
+   %7(s64) = G_SEXT_INREG %0, 128
+...

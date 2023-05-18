@@ -1,0 +1,21 @@
++==============================================================================+
+| How to organize the lit tests                                                |
++==============================================================================+
+
+- If you write a test for matching a single DAG opcode or intrinsic, it should
+  go in a file called {opcode_name,intrinsic_name}.ll (e.g. fadd.ll)
+
+- If you write a test that matches several DAG opcodes and checks for a single
+  ISA instruction, then that test should go in a file called {ISA_name}.ll (e.g.
+  bfi_int.ll
+
+- For all other tests, use your best judgement for organizing tests and naming
+  the files.
+
++==============================================================================+
+| Naming conventions                                                           |
++==============================================================================+
+
+- Use dash '-' and not underscore '_' to separate words in file names, unless
+  the file is named after a DAG opcode or ISA instruction that has an
+  underscore '_' in its name.

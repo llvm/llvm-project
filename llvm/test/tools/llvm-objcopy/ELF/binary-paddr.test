@@ -1,0 +1,308 @@
+## The computed LMA of a section in a PT_LOAD equals sh_offset-p_offset+p_paddr.
+## The byte offset difference between two sections equals the difference between their LMAs.
+
+## Corollary: if two sections are in the same PT_LOAD, the byte offset
+## difference equals the difference between their sh_addr fields.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-objcopy -O binary %t1 %t1.out
+# RUN: od -A x -t x2 %t1.out | FileCheck %s --check-prefix=CHECK1 --ignore-case
+# RUN: wc -c %t1.out | FileCheck %s --check-prefix=SIZE1
+
+# CHECK1:      000000 c3c3 c3c3 0000 0000 0000 0000 0000 0000
+# CHECK1-NEXT: 000010 0000 0000 0000 0000 0000 0000 0000 0000
+# CHECK1-NEXT: *
+# CHECK1-NEXT: 001000 3232
+# SIZE1:       4098
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x1000
+    Content:         "c3c3c3c3"
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x2000
+    AddressAlign:    0x1000
+    Content:         "3232"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    FirstSec: .text
+    LastSec:  .data
+
+## The computed LMA of a section not in a PT_LOAD equals its sh_addr.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-objcopy -O binary %t2 %t2.out
+# RUN: od -A x -t x2 %t2.out | FileCheck %s --check-prefix=CHECK2 --ignore-case
+# RUN: wc -c %t2.out | FileCheck %s --check-prefix=SIZE2
+
+## The computed LMA of .data is 0x4000. The minimum LMA of all non-empty sections is 0x1000.
+## The content of .data will be written at 0x4000-0x1000 = 0x3000.
+# CHECK2:      000000 c3c3 c3c3 0000 0000 0000 0000 0000 0000
+# CHECK2-NEXT: 000010 0000 0000 0000 0000 0000 0000 0000 0000
+# CHECK2-NEXT: *
+# CHECK2-NEXT: 003000 3232
+# SIZE2:       12290
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    ## Not in a PT_LOAD. LMA = sh_addr = 0x1000.
+    Address:         0x1000
+    AddressAlign:    0x1000
+    Content:         "c3c3c3c3"
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    ## LMA = sh_offset-p_offset+p_paddr = 0x2000-0x2000+0x4000 = 0x4000.
+    Address:         0x2000
+    AddressAlign:    0x1000
+    Content:         "3232"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x2000
+    ## p_vaddr is increased from 0x2000 to 0x4000.
+    PAddr:    0x4000
+    FirstSec: .data
+    LastSec:  .data
+
+## Check that we use sh_offset instead of sh_addr to decide where to write section contents.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-objcopy -O binary %t3 %t3.out
+# RUN: od -A x -t x2 %t3.out | FileCheck %s --check-prefix=CHECK3 --ignore-case
+# RUN: wc -c %t3.out | FileCheck %s --check-prefix=SIZE3
+
+## The minimum LMA of all non-empty sections is 0x1000.
+## The content of .data will be written at 0x3000-0x1000 = 0x2000.
+# CHECK3:      000000 c3c3 c3c3 0000 0000 0000 0000 0000 0000
+# CHECK3-NEXT: 000010 0000 0000 0000 0000 0000 0000 0000 0000
+# CHECK3-NEXT: *
+# CHECK3-NEXT: 002000 3232
+# SIZE3:       8194
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    ## Not in a PT_LOAD. LMA = sh_addr = 0x1000.
+    Address:         0x1000
+    AddressAlign:    0x1000
+    Content:         "c3c3c3c3"
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    ## sh_addr is increased from 0x2000 to 0x3000, but it is ignored.
+    ## LMA = sh_offset-p_offset+p_paddr = 0x2000-0x2000+0x3000 = 0x3000.
+    Address:         0x3000
+    AddressAlign:    0x1000
+    Content:         "3232"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x3000
+    FirstSec: .data
+    LastSec:  .data
+
+## The first section (.text) is empty. Test that we skip its LMA until the first
+## non-empty section, otherwise we would leave a large number of leading zeroes.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-objcopy -O binary %t4 %t4.out
+# RUN: od -A x -t x2 %t4.out | FileCheck %s --check-prefix=SKIPEMPTY
+
+# SKIPEMPTY:      000000 3232
+# SKIPEMPTY-NEXT: 000002
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x1000
+  - Name:         gap
+    Type:         Fill
+    Size:         0x1000
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Content:      "3232"
+
+## The last section (.data) is empty. Test that we stop dumping after the last
+## non-empty section, otherwise we would leave a large number of trailing zeroes.
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-objcopy -O binary %t5 %t5.out
+# RUN: od -A x -t x2 %t5.out | FileCheck %s --check-prefix=SKIPEMPTY
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x1000
+    Content:      "3232"
+  - Name:         gap
+    Type:         Fill
+    Size:         0xffd
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+
+## NOBITS sections should not appear in output.
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-objcopy -O binary %t6 %t6.out
+# RUN: od -A x -t x2 %t6.out | FileCheck %s --check-prefix=SKIPNOBITS --ignore-case
+
+# SKIPNOBITS:      000000 c3c3 c3c3
+# SKIPNOBITS-NEXT: 000004
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x1000
+    AddressAlign: 0x1000
+    Size:         0x123
+  - Name:         gap
+    Type:         Fill
+    Size:         0xffd
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x4000
+    AddressAlign: 0x1000
+    Content:      "c3c3c3c3"
+
+## If .bss is converted to non-SHT_NOBITS, align its new offset. This may affect
+## the output size.
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-objcopy -O binary --set-section-flags .bss=alloc,contents %t7 %t7.out
+# RUN: od -A x -t x2 %t7.out | FileCheck %s --check-prefix=FILLNOBITS --ignore-case
+
+# FILLNOBITS:      000000 c3c3 0000 0000 0000 0000 0000 0000 0000
+# FILLNOBITS-NEXT: 000010 0000 00
+# FILLNOBITS-NEXT: 000013
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x1000
+    Content:      "c3c3"
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC ]
+    ## sh_offset is not aligned.
+    ShOffset:     0x1002
+    Size:         0x3
+    AddressAlign: 0x10
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W, PF_X ]
+    Offset:   0x1000
+    VAddr:    0x1000
+    PAddr:    0x1000
+    FileSize: 0x2
+    MemSize:  0x13
+    Align:    0x1000
+
+## Test that sections do not move relative to their physical addresses if
+## the physical address is not aligned. This behavior matches GNU objcopy
+## and is important for embedded images where the physical address is
+## used to store the initial data image. Without converting the type of a
+## NOBITS section, don't align the offset. This matches GNU objcopy when
+## the physical address of a section is not aligned.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-objcopy -O binary --only-section=.text --only-section=.data %t8 %t8.out
+# RUN: od -A x -t x1 %t8.out | FileCheck %s --check-prefix=PHYSUNALIGNED --ignore-case
+
+# PHYSUNALIGNED:      000000 11 22 33 44 55 66 77 88 99 aa bb cc dd ee ff 00
+# PHYSUNALIGNED-NEXT: 000010 11 22 33 44 bd ac cd ab
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x200000
+    PAddr:           0x200000
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .data
+    LastSec:         .data
+    VAddr:           0x400000
+    PAddr:           0x200014
+## PAddr is not aligned by sh_addralign(.data)
+    Align:           0x1000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x200000
+    AddressAlign:    0x1
+    Offset:          0x1000
+    Content:         112233445566778899aabbccddeeff0011223344
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x400000
+    AddressAlign:    0x8
+    Offset:          0x2000
+    Content:         BDACCDAB

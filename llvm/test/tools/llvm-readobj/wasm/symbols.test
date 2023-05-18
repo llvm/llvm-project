@@ -1,0 +1,49 @@
+## This is the test for the --symbols option and its aliases.
+
+# RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.wasm | FileCheck %s
+
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: main
+# CHECK-NEXT:     Type: FUNCTION (0x0)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     ElementIndex: 0x2
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .L.str
+# CHECK-NEXT:     Type: DATA (0x1)
+# CHECK-NEXT:     Flags [ (0x2)
+# CHECK-NEXT:       BINDING_LOCAL (0x2)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Offset: 0x0
+# CHECK-NEXT:     Segment: 0x0
+# CHECK-NEXT:     Size: 0xD
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: puts
+# CHECK-NEXT:     Type: FUNCTION (0x0)
+# CHECK-NEXT:     Flags [ (0x10)
+# CHECK-NEXT:       UNDEFINED (0x10)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     ImportModule: env
+# CHECK-NEXT:     ElementIndex: 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .LSomeOtherFunction_bitcast
+# CHECK-NEXT:     Type: FUNCTION (0x0)
+# CHECK-NEXT:     Flags [ (0x2)
+# CHECK-NEXT:       BINDING_LOCAL (0x2)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     ElementIndex: 0x3
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: SomeOtherFunction
+# CHECK-NEXT:     Type: FUNCTION (0x0)
+# CHECK-NEXT:     Flags [ (0x10)
+# CHECK-NEXT:       UNDEFINED (0x10)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     ImportModule: env
+# CHECK-NEXT:     ElementIndex: 0x1
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

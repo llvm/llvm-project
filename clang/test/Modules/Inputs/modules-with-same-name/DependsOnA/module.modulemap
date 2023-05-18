@@ -1,0 +1,4 @@
+module DependsOnA {
+  header "DependsOnA.h"
+  export *
+}

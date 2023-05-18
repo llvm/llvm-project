@@ -1,0 +1,18 @@
+# Test that `thread step-out` fails when the "return address"
+# points to non-executable memory.
+
+# REQUIRES: target-x86_64
+# UNSUPPORTED: system-windows, ld_new-bug
+
+# RUN: %clang_host %p/Inputs/call-asm.c -x assembler-with-cpp %p/Inputs/thread-step-out-ret-addr-check.s -o %t
+# RUN: not %lldb %t -s %s -b 2>&1 | FileCheck %s
+
+breakpoint set -n nonstandard_stub
+# CHECK: Breakpoint 1: where = {{.*}}`nonstandard_stub
+
+process launch
+# CHECK: stop reason = breakpoint 1.1
+
+thread step-out
+# CHECK: Could not create return address breakpoint.
+# CHECK: Return address (0x{{[a-f0-9]*}}) did not point to executable memory.

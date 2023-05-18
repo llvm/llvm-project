@@ -1,0 +1,5 @@
+RUN: llvm-cxxmap %S/Inputs/before.sym %S/Inputs/after.sym -r %S/Inputs/remap.map -o %t.output -Wambiguous -Wincomplete 2>&1 | FileCheck %s --allow-empty
+RUN: diff -b %S/Inputs/expected %t.output
+
+CHECK-NOT: warning
+CHECK-NOT: error

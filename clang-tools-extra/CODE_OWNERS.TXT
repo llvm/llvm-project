@@ -1,0 +1,30 @@
+This file is a list of the people responsible for ensuring that patches for a
+particular tool are reviewed, either by themself or by someone else. They are
+also the gatekeepers for their part of Clang, with the final word on what goes
+in or not.
+
+The list is sorted by surname and formatted to allow easy grepping and
+beautification by scripts.  The fields are: name (N), email (E), Phabricator
+handle (H), and description (D).
+
+N: Aaron Ballman
+E: aaron@aaronballman.com
+H: aaron.ballman
+D: clang-query
+
+N: Julie Hockett
+E: juliehockett@google.com
+D: clang-doc
+
+N: Nathan James
+E: n.james93@hotmail.co.uk
+H: njames93
+D: clang-tidy
+
+N: Manuel Klimek
+E: klimek@google.com
+D: clang-rename, all parts of clang-tools-extra not covered by someone else
+
+N: Sam McCall
+E: sammccall@google.com
+D: clangd

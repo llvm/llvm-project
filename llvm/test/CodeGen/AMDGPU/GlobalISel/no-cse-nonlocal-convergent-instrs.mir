@@ -1,0 +1,86 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -o - -run-pass=machine-cse %s | FileCheck %s
+
+# LLVM's current definition of `isConvergent` does not necessarily prove that
+# non-local CSE is illegal. The following test extends the definition of
+# `isConvergent` to assume a convergent instruction is dependent not only on
+# additional conditions, but also on fewer conditions. LLVM does not have a
+# MachineInstr attribute which expresses this extended definition, so it's
+# necessary to use `isConvergent` to prevent illegally CSE-ing the subset of
+# `isConvergent` instructions which do fall into this extended definition.
+
+# This is a coverage test for the MachineCSE change. It does not reproduce an
+# actual bug in the AMDGPU backend. The current open source GPU backends as is
+# do not appear to allow a reasonably simple test case that provably and
+# undeniably functionally breaks without the associated MachineCSE changes.
+
+# The test checks that we don't CSE non-local convergent instrs. Otherwise,
+# reusing defs of convergent instrs from different control flow scopes can
+# cause illegal codegen. Previously, the swizzle in bb2 would be CSE-ed in
+# favor of using the swizzle in bb1 despite bb2 being a different BBs.
+
+# CHECK-LABEL: name: no_cse
+# CHECK: bb.1.if.then
+# CHECK: [[SWIZZLE1:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[SRC:%[0-9]+]], 100, 0, implicit $exec
+# CHECK-NEXT: V_ADD_CO_U32_e64 [[SWIZZLE1]], {{%[0-9]+}}, 0, implicit $exec
+# CHECK-NEXT: S_CMP_LT_I32 {{.*}} implicit-def $scc
+# CHECK-NEXT: S_CBRANCH_SCC1 %bb.3, implicit $scc
+# CHECK-NEXT: S_BRANCH %bb.2
+# CHECK: bb.2.if.then.if.then
+# CHECK: [[SWIZZLE2:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[SRC]], 100, 0, implicit $exec
+# CHECK-NEXT: V_ADD_CO_U32_e64 [[SWIZZLE2]], {{%[0-9]+}}, 0, implicit $exec
+
+--- |
+  define amdgpu_kernel void @no_cse(ptr addrspace(1), i32, i1) {
+  entry:
+    unreachable
+  if.then:
+    unreachable
+  if.then.if.then:
+    unreachable
+  if.then.phi:
+    unreachable
+  exit:
+    unreachable
+  }
+...
+---
+name: no_cse
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $sgpr4_sgpr5
+    %0:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0(p4), 0, 0
+    %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0(p4), 2, 0
+    %3:sreg_64 = COPY %1
+    %4:sreg_32 = COPY %2.sub1
+    %5:sreg_32 = S_MOV_B32 42
+    S_CMP_EQ_U32 %4, %5, implicit-def $scc
+    %6:vgpr_32 = COPY %5, implicit $exec
+    S_CBRANCH_SCC1 %bb.4, implicit $scc
+    S_BRANCH %bb.1
+  
+  bb.1.if.then:
+    %7:sreg_32 = COPY %2.sub0
+    %8:vgpr_32 = COPY %7
+    %9:vgpr_32 = DS_SWIZZLE_B32 %8, 100, 0, implicit $exec
+    %10:vgpr_32, %21:sreg_32 = V_ADD_CO_U32_e64 %9, %5, 0, implicit $exec
+    S_CMP_LT_I32 %7, %5, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+    S_BRANCH %bb.2
+  
+  bb.2.if.then.if.then:
+    %11:sreg_32 = S_MOV_B32 64
+    %12:vgpr_32 = DS_SWIZZLE_B32 %8, 100, 0, implicit $exec
+    %13:vgpr_32, %24:sreg_32 = V_ADD_CO_U32_e64 %12, %11, 0, implicit $exec
+  
+  bb.3.if.then.phi:
+    %14:vgpr_32 = PHI %10, %bb.1, %13, %bb.2
+  
+  bb.4.exit:
+    %15:vgpr_32 = PHI %6, %bb.0, %14, %bb.3
+    %16:vreg_64 = COPY %3
+    FLAT_STORE_DWORD %16, %15, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+
+...

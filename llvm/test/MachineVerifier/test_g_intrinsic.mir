@@ -1,0 +1,38 @@
+# RUN: not --crash llc -o - -mtriple=amdgcn -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: amdgpu-registered-target
+
+---
+name:            test_intrinsic
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(p3) = G_IMPLICIT_DEF
+    %1:_(s32) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: Too few operands
+    G_INTRINSIC
+
+    ; CHECK: Bad machine code: G_INTRINSIC first src operand must be an intrinsic ID
+    G_INTRINSIC 0
+
+    ; CHECK: Bad machine code: G_INTRINSIC first src operand must be an intrinsic ID
+    G_INTRINSIC %0, %1
+
+    ; CHECK: Bad machine code: G_INTRINSIC first src operand must be an intrinsic ID
+    %2:_(s32) = G_INTRINSIC %0, %1
+
+    ; CHECK: Bad machine code: G_INTRINSIC first src operand must be an intrinsic ID
+    %3:_(s32), %4:_(s32) = G_INTRINSIC %0, %1
+
+    ; CHECK: Bad machine code: G_INTRINSIC used with intrinsic that accesses memory
+    G_INTRINSIC intrinsic(@llvm.amdgcn.s.barrier)
+
+    ; CHECK: Bad machine code: G_INTRINSIC used with intrinsic that accesses memory
+    %3:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ds.append), %0, 1
+
+...

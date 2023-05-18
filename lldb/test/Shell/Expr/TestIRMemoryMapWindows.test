@@ -1,0 +1,13 @@
+# REQUIRES: system-windows
+
+# RUN: %clang_cl_host /Zi /GS- %p/Inputs/call-function.cpp /c /o %t.obj
+# RUN: %msvc_link /debug:full %t.obj /out:%t
+
+# RUN: lldb-test ir-memory-map %t %S/Inputs/ir-memory-map-basic
+# RUN: lldb-test ir-memory-map -host-only %t %S/Inputs/ir-memory-map-basic
+
+# RUN: lldb-test ir-memory-map %t %S/Inputs/ir-memory-map-overlap1
+# RUN: lldb-test ir-memory-map -host-only %t %S/Inputs/ir-memory-map-overlap1
+
+# RUN: lldb-test ir-memory-map %t %S/Inputs/ir-memory-map-mix-malloc-free
+# RUN: lldb-test ir-memory-map -host-only %t %S/Inputs/ir-memory-map-mix-malloc-free

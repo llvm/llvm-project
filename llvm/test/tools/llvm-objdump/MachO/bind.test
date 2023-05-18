@@ -1,0 +1,13 @@
+# RUN: llvm-objdump --macho --bind %p/Inputs/bind.macho-x86_64 \
+# RUN:   | FileCheck %s --match-full-lines --strict-whitespace
+
+#      CHECK:{{.*}}bind.macho-x86_64:
+#CHECK-EMPTY:
+# CHECK-NEXT:Bind table:
+# CHECK-NEXT:segment  section            address    type       addend dylib            symbol
+# CHECK-NEXT:__DATA   __data             0x00001028 pointer         0 flat-namespace   _any
+# CHECK-NEXT:__DATA   __data             0x00001020 pointer         0 main-executable  _fromApp
+# CHECK-NEXT:__DATA   __data             0x00001018 pointer         0 this-image       _myfunc
+# CHECK-NEXT:__DATA   __data             0x00001000 pointer         0 libfoo           _foo
+# CHECK-NEXT:__DATA   __data             0x00001008 pointer         0 libbar           _bar
+# CHECK-NEXT:__DATA   __data             0x00001010 pointer         0 libSystem        _malloc

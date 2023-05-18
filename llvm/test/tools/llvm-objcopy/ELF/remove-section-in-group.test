@@ -1,0 +1,37 @@
+## This checks that the group section is shrunk when its member is removed.
+
+# RUN: yaml2obj %s -o - \
+# RUN:   | llvm-objcopy -R .foo - - \
+# RUN:   | obj2yaml - \
+# RUN:   | FileCheck %s
+
+# CHECK:      - Name: .group
+# CHECK:        Members:
+# CHECK-NEXT:     - SectionOrType:  GRP_COMDAT
+# CHECK-NEXT:     - SectionOrType:  .bar
+# CHECK-NOT:      - SectionOrType:
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_REL
+  Machine:    EM_X86_64
+Sections:
+  - Name:     .group
+    Type:     SHT_GROUP
+    Info:     foo_bar_grp
+    Members:
+      - SectionOrType:  GRP_COMDAT
+      - SectionOrType:  .foo
+      - SectionOrType:  .bar
+  - Name:     .foo
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_ALLOC, SHF_GROUP ]
+  - Name:     .bar
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_ALLOC, SHF_GROUP ]
+Symbols:
+  - Name:     foo_bar_grp
+    Section:  .group
+    Binding:  STB_GLOBAL

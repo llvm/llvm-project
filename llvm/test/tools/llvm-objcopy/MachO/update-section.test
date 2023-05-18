@@ -1,0 +1,115 @@
+# RUN: echo -n AAAB > %t.diff
+# RUN: echo -n AAA > %t.smaller
+# RUN: echo -n AAAAAAAAA > %t.larger
+
+# RUN: yaml2obj --docnum=1 %s -o %t
+
+# RUN: llvm-objcopy --update-section __TEXT,__text=%t.diff %t - | obj2yaml | FileCheck %s
+# CHECK: content: '41414142'
+
+# RUN: llvm-objcopy --update-section __TEXT,__text=%t.smaller %t - | obj2yaml | FileCheck %s --check-prefix=SMALLER
+# SMALLER: content: '414141'
+
+# RUN: not llvm-objcopy --update-section __TEXT,__text=%t.larger %t /dev/null 2>&1 | FileCheck %s --check-prefix=TOO-LARGE
+# TOO-LARGE: error: {{.*}}new section cannot be larger than previous section
+
+# RUN: not llvm-objcopy --update-section __TEXT,__text=%t.noexist %t /dev/null
+
+# RUN: not llvm-objcopy --update-section __NOEXIST,__text=%t.diff %t /dev/null 2>&1 | FileCheck %s --check-prefix=NO-SEGMENT
+# NO-SEGMENT: error: {{.*}}could not find segment with name '__NOEXIST'
+
+# RUN: not llvm-objcopy --update-section __TEXT,__noexist=%t.diff %t /dev/null 2>&1 | FileCheck %s --check-prefix=NO-SECTION
+# NO-SECTION: error: {{.*}}could not find section with name '__noexist'
+
+# RUN: yaml2obj --docnum=2 %s -o %t
+
+# RUN: llvm-objcopy --update-section __TEXT,__text=%t.diff %t - | obj2yaml | FileCheck %s --check-prefix=FULL-SECNAME
+# FULL-SECNAME: content: '41414142'
+
+# RUN: not llvm-objcopy --update-section __text=%t.diff %t /dev/null 2>&1 | FileCheck %s --check-prefix=NON-CANONICAL-SECNAME
+# NON-CANONICAL-SECNAME: error: {{.*}}invalid section name '__text' (should be formatted as '<segment name>,<section name>')
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         184
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         '41414141'
+        size:            4
+        offset:          184
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      312
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         '__TEXT'
+    vmaddr:          0
+    vmsize:          12
+    fileoff:         344
+    filesize:        12
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          344
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+      - sectname:        __text
+        segname:         __TEXT2
+        addr:            0x0000000000000004
+        content:         ''
+        size:            0
+        offset:          348
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000

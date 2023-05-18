@@ -1,0 +1,34 @@
+REQUIRES: x86, gnutar
+
+RUN: rm -rf %t && mkdir -p %t && cd %t
+RUN: yaml2obj %S/Inputs/pdb-type-server-simple-a.yaml -o a.obj
+RUN: yaml2obj %S/Inputs/pdb-type-server-simple-b.yaml -o b.obj
+RUN: llvm-pdbutil yaml2pdb %S/Inputs/pdb-type-server-simple-ts.yaml -pdb ts.pdb
+RUN: cp %p/Inputs/natvis-1.natvis %t.natvis
+RUN: cp %p/Inputs/stream.txt %t.txt
+RUN: lld-link a.obj b.obj -entry:main -debug -out:%t.exe -pdb:%t.pdb \
+RUN:     -nodefaultlib -linkrepro:. -natvis:%t.natvis \
+RUN:     -pdbstream:srcsrv=%t.txt
+RUN: tar tf repro.tar | FileCheck --check-prefix=LIST %s
+RUN: tar xf repro.tar
+RUN: diff ts.pdb repro/%:t/ts.pdb
+RUN: diff %t.natvis repro/%:t.natvis
+RUN: diff %t.txt repro/%:t.txt
+RUN: cat repro/response.txt | FileCheck -check-prefix=RSP %s
+
+LIST: .obj
+LIST: response.txt
+LIST: .natvis
+
+RSP: -out:linkrepro-pdb.test.tmp.exe
+RSP-NEXT: -pdb:linkrepro-pdb.test.tmp.pdb
+RSP-NEXT: -nodefaultlib
+RSP-NOT: -natvis:/
+RSP-NOT: -pdbstream:srcsrv=/
+
+RUN: yaml2obj %p/Inputs/export.yaml -o %t1.obj
+RUN: lld-link /out:%t1.dll /dll %t1.obj /implib:%t1.lib /export:exportfn1 /export:exportfn2 /reproduce:repro2.tar
+RUN: tar xf repro2.tar
+RUN: cat repro2/response.txt | FileCheck -check-prefix=IMP %s
+
+IMP: /implib:linkrepro-pdb.test.tmp1.lib

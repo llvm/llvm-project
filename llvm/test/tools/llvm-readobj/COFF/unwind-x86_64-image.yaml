@@ -1,0 +1,168 @@
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-readobj --unwind %t.exe | FileCheck %s
+
+# CHECK:         RuntimeFunction {
+# CHECK:          StartAddress: entry (0x140001020)
+# CHECK-NEXT:     EndAddress: (0x14000105C)
+# CHECK-NEXT:     UnwindInfoAddress: (0x140002008)
+# CHECK-NEXT:     UnwindInfo {
+# CHECK-NEXT:       Version: 1
+# CHECK-NEXT:       Flags [ (0x3)
+# CHECK-NEXT:         ExceptionHandler (0x1)
+# CHECK-NEXT:         TerminateHandler (0x2)
+# CHECK-NEXT:       ]
+# CHECK-NEXT:       PrologSize: 4
+# CHECK-NEXT:       FrameRegister: -
+# CHECK-NEXT:       FrameOffset: -
+# CHECK-NEXT:       UnwindCodeCount: 1
+# CHECK-NEXT:       UnwindCodes [
+# CHECK-NEXT:         0x04: ALLOC_SMALL size=56
+# CHECK-NEXT:       ]
+# CHECK-NEXT:       Handler: __gxx_personality_seh0 (0x140001070)
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4128
+  ImageBase:       5368709120
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ImportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ResourceTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ExceptionTable:
+    RelativeVirtualAddress: 12288
+    Size:            24
+  CertificateTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BaseRelocationTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Debug:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Architecture:
+    RelativeVirtualAddress: 0
+    Size:            0
+  GlobalPtr:
+    RelativeVirtualAddress: 0
+    Size:            0
+  TlsTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  LoadConfigTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BoundImport:
+    RelativeVirtualAddress: 0
+    Size:            0
+  IAT:
+    RelativeVirtualAddress: 0
+    Size:            0
+  DelayImportDescriptor:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ClrRuntimeHeader:
+    RelativeVirtualAddress: 0
+    Size:            0
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     113
+    SectionData:     C3662E0F1F8400000000000F1F4400005048890C2458C3660F1F8400000000004883EC38E8D7FFFFFFE900000000488D4C2430E8D8FFFFFF904883C438C3488944242889542424488D4C2430E8BFFFFFFF488B4C2428E805000000CC0F1F4000C3662E0F1F8400000000000F1F440000C3
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     32
+    SectionData:     0101010001020000190401000462000070100000FFFF010804051E0009330000
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  12288
+    VirtualSize:     24
+    SectionData:     101000001710000000200000201000005C10000008200000
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            other
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            _ZN4RAIID2Ev
+    Value:           16
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            entry
+    Value:           32
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            _ZN4RAIID1Ev
+    Value:           16
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            _Unwind_Resume
+    Value:           96
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            __gxx_personality_seh0
+    Value:           112
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            GCC_except_table2
+    Value:           20
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+...

@@ -1,0 +1,51 @@
+# REQUIRES: arm
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld %t.o -o %t
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
+
+# CHECK: Disassembly of section .text:
+# CHECK-EMPTY:
+# CHECK-NEXT: <_start>:
+# CHECK-NEXT:    e7ff    b       0x200b6 <_start+0x2> @ imm = #-2
+# CHECK-NEXT:    d0fe    beq     0x200b6 <_start+0x2> @ imm = #-4
+
+# Test the R_ARM_THM_JUMP11 (102) and R_ARM_THM_JUMP8 (103) relocations to an
+# undefined weak reference.  It should resolve to the next instruction, which
+# is an offset of -2 which when added to the Thumb PC-bias of 4 is +2. We can't
+# use llvm-mc to construct the object as it relaxes b.n to b.w (R_ARM_JUMP24).
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_ARM
+Sections:
+  - Type:            SHT_PROGBITS
+    Name:            .text
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         "fee7fed0"
+  - Type:            SHT_REL
+    Name:            .rel.text
+    Link:            .symtab
+    Info:            .text
+    Relocations:
+      - Symbol:          undefined_weak
+        Type:            R_ARM_THM_JUMP11
+      - Symbol:          undefined_weak
+        Type:            R_ARM_THM_JUMP8
+
+Symbols:
+  - Type:             STT_NOTYPE
+    Name:             "$t"
+    Section:          .text
+    Value:            0
+  - Type:             STT_FUNC
+    Name:             _start
+    Value:            1
+    Section:          .text
+    Binding:          STB_GLOBAL
+  - Type:             STT_NOTYPE
+    Name:             undefined_weak
+    Value:            0
+    Binding:          STB_WEAK

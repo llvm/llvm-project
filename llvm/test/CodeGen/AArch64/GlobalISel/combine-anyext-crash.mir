@@ -1,0 +1,42 @@
+# RUN: llc -O0 -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  
+  define void @test_anyext_crash() {
+  entry:
+    br label %block2
+  
+  block2:
+    %0 = trunc i16 0 to i8
+    %1 = uitofp i8 %0 to double
+    br label %block2
+  }
+  
+
+...
+---
+name:            test_anyext_crash
+alignment:       4
+legalized:       false
+registers:       
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+body:             |
+  bb.1:
+   ; Check we don't crash due to trying to legalize a dead instruction.
+   ; CHECK-LABEL: test_anyext_crash
+   ; CHECK-LABEL: bb.1:
+    successors: %bb.2
+  
+    %0(s16) = G_CONSTANT i16 0
+  
+  bb.2:
+    successors: %bb.2
+  
+    %1(s8) = G_TRUNC %0(s16)
+    %2(s64) = G_UITOFP %1(s8)
+    G_BR %bb.2
+
+...

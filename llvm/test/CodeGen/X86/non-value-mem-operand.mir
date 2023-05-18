@@ -1,0 +1,293 @@
+# RUN: llc  -run-pass implicit-null-checks -mtriple=x86_64-apple-macosx -o - %s | FileCheck %s
+
+# CHECK-NOT: FAULTING_OP
+
+--- |
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  @global = external global i8*
+  @global.1 = external global i8*
+  
+  declare i8* @ham(i8*, i8**)
+  
+  define void @eggs(i8* %arg) gc "statepoint-example" {
+  bb:
+    %tmp = call i8* undef(i8* undef, i8** undef)
+    %tmp1 = icmp eq i8* %tmp, null
+    br i1 %tmp1, label %bb2, label %bb3, !make.implicit !0
+  
+  bb2:                                              ; preds = %bb
+    br i1 undef, label %bb51, label %bb59
+  
+  bb3:                                              ; preds = %bb
+    %tmp4 = getelementptr inbounds i8, i8* %tmp, i64 16
+    %tmp5 = bitcast i8* %tmp4 to i64*
+    br label %bb7
+  
+  bb7:                                              ; preds = %bb37, %bb3
+    %tmp8 = phi i64* [ %tmp5, %bb3 ], [ %tmp18, %bb37 ]
+    %tmp10 = phi i32 [ undef, %bb3 ], [ %tmp48, %bb37 ]
+    %tmp12 = phi i32 [ 0, %bb3 ], [ 6, %bb37 ]
+    %tmp13 = phi double [ 0.000000e+00, %bb3 ], [ 2.000000e+00, %bb37 ]
+    %tmp14 = zext i32 %tmp10 to i64
+    br i1 undef, label %bb26, label %bb15
+  
+  bb15:                                             ; preds = %bb7
+    %tmp16 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* nonnull elementtype(void ()) @wibble, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 1, i32 0, i32 99, i32 0, i32 12, i32 0, i32 10, i32 %tmp10, i32 10, i32 0, i32 10, i32 %tmp12, i32 10, i32 undef, i32 6, float undef, i32 7, double %tmp13, i32 99, i8* null, i32 7, double undef, i32 99, i8* null, i32 13, i8* %tmp, i32 7, double undef, i32 99, i8* null, i8* undef)]
+    br label %bb26
+  
+  bb26:                                             ; preds = %bb15, %bb7
+    %tmp18 = phi i64* [ %tmp8, %bb7 ], [ undef, %bb15 ]
+    %tmp20 = sub i32 0, 0
+    %tmp21 = select i1 undef, i32 0, i32 %tmp20
+    %tmp22 = sext i32 %tmp21 to i64
+    %tmp23 = load i8*, i8** @global.1, align 8
+    %tmp24 = icmp eq i8* %tmp23, null
+    %tmp25 = select i1 %tmp24, i8* null, i8* undef
+    %tmp27 = load i32, i32* undef, align 4
+    %sunkaddr = mul i64 %tmp14, 8
+    %tmp2 = bitcast i64* %tmp18 to i8*
+    %sunkaddr1 = getelementptr i8, i8* %tmp2, i64 %sunkaddr
+    %tmp3 = bitcast i8* %sunkaddr1 to i64*
+    %tmp28 = load i64, i64* %tmp3, align 8
+    %tmp29 = add i64 %tmp28, 1
+    store i64 %tmp29, i64* %tmp3, align 8
+    %tmp30 = trunc i64 %tmp28 to i32
+    %tmp31 = sub i32 %tmp27, %tmp30
+    store i32 %tmp31, i32* undef, align 4
+    %tmp32 = getelementptr inbounds i8, i8* %tmp25, i64 768
+    %tmp33 = bitcast i8* %tmp32 to i64*
+    %tmp34 = load i64, i64* %tmp33, align 8
+    br i1 undef, label %bb37, label %bb35
+  
+  bb35:                                             ; preds = %bb26
+    %tmp36 = call i8* @ham(i8* undef, i8** nonnull @global)
+    br label %bb37
+  
+  bb37:                                             ; preds = %bb35, %bb26
+    %tmp38 = phi i8* [ %tmp36, %bb35 ], [ undef, %bb26 ]
+    %tmp39 = getelementptr inbounds i8, i8* %tmp38, i64 760
+    %tmp40 = bitcast i8* %tmp39 to i64*
+    %tmp41 = load i64, i64* %tmp40, align 8
+    %tmp42 = icmp slt i64 %tmp34, %tmp41
+    %tmp43 = select i1 %tmp42, i64 %tmp41, i64 %tmp34
+    %tmp44 = and i64 %tmp43, 63
+    %tmp45 = ashr i64 %tmp29, %tmp44
+    %sunkaddr2 = mul i64 %tmp14, 8
+    %tmp6 = bitcast i64* %tmp18 to i8*
+    %sunkaddr3 = getelementptr i8, i8* %tmp6, i64 %sunkaddr2
+    %tmp7 = bitcast i8* %sunkaddr3 to i64*
+    store i64 %tmp45, i64* %tmp7, align 8
+    %tmp46 = sub i64 0, %tmp22
+    store i64 %tmp46, i64* undef, align 8
+    %tmp47 = add nsw i32 %tmp12, 1
+    %tmp48 = add i32 %tmp10, 1
+    %tmp49 = icmp sgt i32 %tmp48, 15140
+    br i1 %tmp49, label %bb51.loopexit, label %bb7
+  
+  bb51.loopexit:                                    ; preds = %bb37
+    %tmp9 = add i32 %tmp10, 1
+    br label %bb51
+  
+  bb51:                                             ; preds = %bb51.loopexit, %bb2
+    %tmp52 = phi i32 [ %tmp47, %bb51.loopexit ], [ 0, %bb2 ]
+    %tmp53 = phi double [ 2.000000e+00, %bb51.loopexit ], [ 0.000000e+00, %bb2 ]
+    %tmp54 = phi i32 [ %tmp9, %bb51.loopexit ], [ undef, %bb2 ]
+    %tmp56 = add i32 %tmp54, 0
+    %tmp57 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @wobble, i32 1, i32 0, i32 -121, i32 0, i32 0) ["deopt" (i32 1, i32 0, i32 270, i32 4, i32 12, i32 0, i32 11, i64 undef, i32 99, i8* null, i32 10, i32 %tmp56, i32 6, float undef, i32 99, i8* null, i32 99, i8* null, i32 10, i32 %tmp52, i32 10, i32 undef, i32 99, i8* null, i32 7, double %tmp53, i32 99, i8* null, i32 7, double undef, i32 99, i8* null, i32 13, i8* undef, i32 99, i8* null, i32 99, i8* null, i8* undef)]
+    unreachable
+  
+  bb59:                                             ; preds = %bb2
+    %tmp61 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @wobble, i32 1, i32 0, i32 8, i32 0, i32 0) ["deopt" (i32 1, i32 0, i32 123, i32 4, i32 12, i32 0, i32 13, i8* null, i32 99, i32 undef, i32 13, i8* null, i32 10, i32 undef, i32 99, i32 undef, i32 99, i32 undef, i32 99, i32 undef, i32 99, i8* null, i32 99, float undef, i32 99, double undef, i32 99, i8* null, i32 99, double undef, i32 99, i8* null, i32 13, i8* null, i32 99, double undef, i32 99, i8* null)]
+    unreachable
+  }
+  
+  declare void @wibble()
+  
+  declare void @wobble(i32)
+  
+  declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64, i32, void (i32)*, i32, i32, ...)
+  
+  declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #0
+  
+  attributes #0 = { nounwind }
+  
+  !0 = !{}
+...
+---
+name:            eggs
+alignment:       16
+tracksRegLiveness: true
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, callee-saved-register: '$rbx' }
+  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, callee-saved-register: '$r12' }
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, callee-saved-register: '$r13' }
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, callee-saved-register: '$r14' }
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$r15' }
+  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$rbp' }
+stack:           
+  - { id: 0, offset: -88, size: 8, alignment: 8 }
+  - { id: 1, offset: -96, size: 8, alignment: 8 }
+  - { id: 2, offset: -104, size: 8, alignment: 8 }
+  - { id: 3, offset: -64, size: 8, alignment: 8 }
+  - { id: 4, type: spill-slot, offset: -72, size: 8, alignment: 8 }
+  - { id: 5, type: spill-slot, offset: -80, size: 8, alignment: 8 }
+constants:       
+  - id:              0
+    value:           'double 2.000000e+00'
+    alignment:       8
+body:             |
+  bb.0.bb:
+    successors: %bb.1.bb2(0x00000800), %bb.3.bb3(0x7ffff800)
+    liveins: $rbp, $r15, $r14, $r13, $r12, $rbx
+  
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r13, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    $rsp = frame-setup SUB64ri8 $rsp, 56, implicit-def dead $eflags
+    CALL64r undef $rax, csr_64, implicit $rsp, implicit undef $rdi, implicit undef $rsi, implicit-def $rsp, implicit-def $rax
+    TEST64rr $rax, $rax, implicit-def $eflags
+    JCC_1 %bb.3.bb3, 5, implicit killed $eflags
+  
+  bb.1.bb2:
+    successors: %bb.2(0x40000000), %bb.13.bb59(0x40000000)
+  
+    $ebp = XOR32rr undef $ebp, undef $ebp, implicit-def dead $eflags
+    TEST8rr $bpl, $bpl, implicit-def $eflags
+    JCC_1 %bb.13.bb59, 4, implicit killed $eflags
+  
+  bb.2:
+    successors: %bb.12.bb51(0x80000000)
+    liveins: $ebp
+  
+    $xmm0 = XORPSrr undef $xmm0, undef $xmm0
+    $ebx = IMPLICIT_DEF implicit-def $rbx
+    JMP_1 %bb.12.bb51
+  
+  bb.3.bb3:
+    successors: %bb.4.bb7(0x80000000)
+    liveins: $rax
+  
+    MOV64mr $rsp, 1, $noreg, 32, $noreg, $rax :: (store (s64) into %stack.5)
+    $r12 = MOV64rr killed $rax
+    $r12 = ADD64ri8 killed $r12, 16, implicit-def dead $eflags
+    $xmm0 = XORPSrr undef $xmm0, undef $xmm0
+    $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags
+    $rax = MOV64ri %const.0
+    $xmm1 = MOVSDrm_alt killed $rax, 1, $noreg, 0, $noreg :: (load (s64) from constant-pool)
+    MOVSDmr $rsp, 1, $noreg, 40, $noreg, killed $xmm1 :: (store (s64) into %stack.4)
+    $eax = IMPLICIT_DEF
+    $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def dead $eflags
+  
+  bb.4.bb7:
+    successors: %bb.6.bb26(0x40000000), %bb.5.bb15(0x40000000)
+    liveins: $eax, $ecx, $esi, $r12, $xmm0
+  
+    $ebp = MOV32rr killed $ecx
+    $ebx = MOV32rr killed $eax, implicit-def $rbx
+    $r14d = MOV32rr $ebx, implicit-def $r14
+    TEST8rr $sil, $sil, implicit-def $eflags
+    JCC_1 %bb.6.bb26, 5, implicit $eflags
+  
+  bb.5.bb15:
+    successors: %bb.6.bb26(0x80000000)
+    liveins: $ebp, $rbx, $r14, $xmm0
+  
+    MOV32mr $rsp, 1, $noreg, 24, $noreg, $ebx :: (store (s32) into %stack.0, align 8)
+    MOV32mr $rsp, 1, $noreg, 16, $noreg, $ebp :: (store (s32) into %stack.1, align 8)
+    MOVSDmr $rsp, 1, $noreg, 8, $noreg, killed $xmm0 :: (store (s64) into %stack.2)
+    $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load (s64) from %stack.5)
+    MOV64mr $rsp, 1, $noreg, 48, $noreg, killed $rax :: (store (s64) into %stack.3)
+    $rax = MOV64ri @wibble
+    STATEPOINT 2882400000, 0, 0, killed $rax, 2, 0, 2, 0, 2, 30, 2, 1, 2, 0, 2, 99, 2, 0, 2, 12, 2, 0, 2, 10, 1, 8, $rsp, 24, 2, 10, 2, 0, 2, 10, 1, 8, $rsp, 16, 2, 10, 2, 4278124286, 2, 6, 2, 4278124286, 2, 7, 1, 8, $rsp, 8, 2, 99, 2, 0, 2, 7, 2, 4278124286, 2, 99, 2, 0, 2, 13, 1, 8, $rsp, 48, 2, 7, 2, 4278124286, 2, 99, 2, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp :: (volatile load (s64) from %stack.0), (volatile load (s64) from %stack.1), (volatile load (s64) from %stack.2), (volatile load (s64) from %stack.3)
+    $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags
+    $r12 = IMPLICIT_DEF
+  
+  bb.6.bb26:
+    successors: %bb.8.bb37(0x40000000), %bb.7.bb35(0x40000000)
+    liveins: $ebp, $esi, $rbx, $r12, $r14
+  
+    $rax = MOV64ri @global.1
+    $rax = MOV64rm killed $rax, 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from @global.1)
+    TEST64rr $rax, $rax, implicit-def $eflags
+    $rax = CMOV64rr undef $rax, killed $rax, 4, implicit killed $eflags
+    $ecx = MOV32rm undef $rax, 1, $noreg, 0, $noreg :: (load (s32) from `i32* undef`)
+    $rdx = MOV64rm $r12, 8, $r14, 0, $noreg :: (load (s64) from %ir.tmp3)
+    $r15 = LEA64r $rdx, 1, $noreg, 1, _
+    MOV64mr $r12, 8, $r14, 0, $noreg, $r15 :: (store (s64) into %ir.tmp3)
+    $ecx = SUB32rr killed $ecx, $edx, implicit-def dead $eflags, implicit killed $rdx
+    MOV32mr undef $rax, 1, $noreg, 0, $noreg, killed $ecx :: (store (s32) into `i32* undef`)
+    $r13 = MOV64rm killed $rax, 1, $noreg, 768, $noreg :: (load (s64) from %ir.tmp33)
+    TEST8rr $sil, $sil, implicit-def $eflags
+    $rax = IMPLICIT_DEF
+    JCC_1 %bb.8.bb37, 5, implicit $eflags
+  
+  bb.7.bb35:
+    successors: %bb.8.bb37(0x80000000)
+    liveins: $ebp, $rbx, $r12, $r13, $r14, $r15
+  
+    $rsi = MOV64ri @global
+    $rax = MOV64ri @ham
+    CALL64r killed $rax, csr_64, implicit $rsp, implicit undef $rdi, implicit $rsi, implicit-def $rsp, implicit-def $rax
+    $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags
+  
+  bb.8.bb37:
+    successors: %bb.9.bb37(0x40000000), %bb.10.bb37(0x40000000)
+    liveins: $ebp, $esi, $rax, $rbx, $r12, $r13, $r14, $r15
+  
+    $rcx = MOV64rm killed $rax, 1, $noreg, 760, $noreg :: (load (s64) from %ir.tmp40)
+    CMP64rr $r13, $rcx, implicit-def $eflags
+    JCC_1 %bb.10.bb37, 12, implicit $eflags
+  
+  bb.9.bb37:
+    successors: %bb.10.bb37(0x80000000)
+    liveins: $ebp, $esi, $rbx, $r12, $r13, $r14, $r15
+  
+    $cl = MOV8rr $r13b, implicit killed $r13, implicit-def $rcx
+  
+  bb.10.bb37:
+    successors: %bb.11.bb51.loopexit(0x00000800), %bb.4.bb7(0x7ffff800)
+    liveins: $ebp, $esi, $rbx, $rcx, $r12, $r14, $r15
+  
+    $cl = KILL $cl, implicit killed $rcx
+    $r15 = SAR64rCL killed $r15, implicit-def dead $eflags, implicit $cl
+    MOV64mr $r12, 8, killed $r14, 0, $noreg, killed $r15 :: (store (s64) into %ir.tmp7)
+    MOV64mi32 undef $rax, 1, $noreg, 0, $noreg, 0 :: (store (s64) into `i64* undef`)
+    $eax = LEA64_32r $rbx, 1, $noreg, 1, _
+    $ecx = MOV32ri 6
+    CMP32ri $eax, 15141, implicit-def $eflags
+    $xmm0 = MOVSDrm_alt $rsp, 1, $noreg, 40, $noreg :: (load (s64) from %stack.4)
+    JCC_1 %bb.4.bb7, 12, implicit $eflags
+  
+  bb.11.bb51.loopexit:
+    successors: %bb.12.bb51(0x80000000)
+    liveins: $ebp, $rbx
+  
+    $ebp = INC32r killed $ebp, implicit-def dead $eflags
+    $ebx = INC32r $ebx, implicit-def dead $eflags, implicit killed $rbx, implicit-def $rbx
+    $rax = MOV64ri %const.0
+    $xmm0 = MOVSDrm_alt killed $rax, 1, $noreg, 0, $noreg :: (load (s64) from constant-pool)
+  
+  bb.12.bb51:
+    liveins: $ebp, $rbx, $xmm0
+  
+    MOV32mr $rsp, 1, $noreg, 24, $noreg, $ebx, implicit killed $rbx :: (store (s32) into %stack.0, align 8)
+    MOV32mr $rsp, 1, $noreg, 16, $noreg, killed $ebp :: (store (s32) into %stack.1, align 8)
+    MOVSDmr $rsp, 1, $noreg, 8, $noreg, killed $xmm0 :: (store (s64) into %stack.2)
+    $rax = MOV64ri @wobble
+    $edi = MOV32ri -121
+    STATEPOINT 2882400000, 0, 1, killed $rax, $edi, 2, 0, 2, 0, 2, 38, 2, 1, 2, 0, 2, 270, 2, 4, 2, 12, 2, 0, 2, 11, 2, 4278124286, 2, 99, 2, 0, 2, 10, 1, 8, $rsp, 24, 2, 6, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 0, 2, 10, 1, 8, $rsp, 16, 2, 10, 2, 4278124286, 2, 99, 2, 0, 2, 7, 1, 8, $rsp, 8, 2, 99, 2, 0, 2, 7, 2, 4278124286, 2, 99, 2, 0, 2, 13, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp :: (volatile load (s64) from %stack.0), (volatile load (s64) from %stack.1), (volatile load (s64) from %stack.2)
+  
+  bb.13.bb59:
+    $rax = MOV64ri @wobble
+    $edi = MOV32ri 8
+    STATEPOINT 2882400000, 0, 1, killed $rax, $edi, 2, 0, 2, 0, 2, 38, 2, 1, 2, 0, 2, 123, 2, 4, 2, 12, 2, 0, 2, 13, 2, 0, 2, 99, 2, 4278124286, 2, 13, 2, 0, 2, 10, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 13, 2, 0, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp
+
+...

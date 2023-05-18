@@ -1,0 +1,42 @@
+# RUN: llc -march=hexagon -run-pass if-converter %s -o - | FileCheck %s
+
+# Make sure that the necessary implicit uses are added to predicated
+# instructions.
+
+# CHECK-LABEL: name: foo
+
+--- |
+  define void @foo() {
+    ret void
+  }
+...
+
+---
+name: foo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r0, $r2, $p1
+        J2_jumpf $p1, %bb.1, implicit-def $pc
+        J2_jump %bb.2, implicit-def $pc
+  bb.1:
+    successors: %bb.3
+    liveins: $r2
+        $r0 = A2_tfrsi 2
+        J2_jump %bb.3, implicit-def $pc
+  bb.2:
+    successors: %bb.3
+    liveins: $r0
+    ; Even though r2 was not live on entry to this block, it was live across
+    ; block bb.1 in the original diamond. After if-conversion, the diamond
+    ; became a single block, and so r2 is now live on entry to the instructions
+    ; originating from bb.2.
+    ; CHECK: $r2 = C2_cmoveit $p1, 1, implicit killed $r2
+        $r2 = A2_tfrsi 1
+  bb.3:
+    liveins: $r0, $r2
+        $r0 = A2_add $r0, $r2
+        J2_jumpr $r31, implicit-def $pc
+...
+

@@ -1,0 +1,15 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that the MIR parser detects errors when parsing machine
+# metadata.
+
+--- |
+  define i32 @t0() {
+    ret i32 0
+  }
+...
+---
+name: t0
+machineMetadataNodes:
+  - '!9 = distinct {!9, !7, !"Dst"}'
+...
+# CHECK: [[@LINE-2]]:20: expected a metadata node

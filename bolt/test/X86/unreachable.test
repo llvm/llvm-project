@@ -1,0 +1,49 @@
+# Check unreachable code elimination
+
+RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -pie -shared -o %t.so
+RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
+RUN:   %p/Inputs/unreachable.s -o %t.o
+RUN: %clangxx %cxxflags -no-pie %t.o -o %t.exe %t.so
+RUN: llvm-bolt %t.exe -o %t \
+RUN:   -reorder-blocks=none -split-functions -eliminate-unreachable \
+RUN:   -funcs=foo -use-gnu-stack -print-cfg -print-finalized \
+RUN:   | FileCheck %s --check-prefix=BOLT
+RUN: llvm-objdump -d %t --print-imm-hex --disassemble-symbols=foo \
+RUN:   --no-show-raw-insn | FileCheck %s
+
+BOLT: BB Layout   : .LBB{{.*}}, .LFT{{.*}}, .Ltmp{{.*}}, .LFT{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .LLP{{.*}}, .LFT{{.*}}, .Ltmp{{.*}}, .LFT{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}
+BOLT: BOLT-INFO: UCE removed 4 blocks and 16 bytes of code
+BOLT: BB Layout   : .LBB{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .LLP{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}
+
+CHECK: <foo>:
+CHECK-NEXT: pushq   %rbp
+CHECK-NEXT: movq    %rsp, %rbp
+CHECK-NEXT: pushq   %rbx
+CHECK-NEXT: subq    $0x18, %rsp
+CHECK-NEXT: movq    %rdi, -0x18(%rbp)
+CHECK-NEXT: incq   -0x18(%rbp)
+CHECK-NEXT: incq   -0x18(%rbp)
+CHECK-NEXT: cmpq   $0x2, -0x18(%rbp)
+CHECK-NEXT: je    0x[[#%x,JMP1:]]
+CHECK-NEXT: incq   -0x18(%rbp)
+CHECK-NEXT: [[#JMP1]]: incq   -0x18(%rbp)
+CHECK-NEXT: movq    -0x18(%rbp), %rax
+CHECK-NEXT: movq    %rax, %rdi
+CHECK-NEXT: callq {{.*}} <bar>
+CHECK-NEXT: movq    %rax, %rbx
+CHECK-NEXT: [[#%x,JMP3:]]: movq    %rbx, %rax
+CHECK-NEXT: jmp   {{.*}}
+CHECK-NEXT: movq    %rax, %rdi
+CHECK-NEXT: callq {{.*}} <__cxa_begin_catch@plt>
+CHECK-NEXT: incq   -0x18(%rbp)
+CHECK-NEXT: incq   -0x18(%rbp)
+CHECK-NEXT: cmpq   $0x2, -0x18(%rbp)
+CHECK-NEXT: je    0x[[#%x,JMP2:]]
+CHECK-NEXT: incq   -0x18(%rbp)
+CHECK-NEXT: [[#JMP2]]: incq   -0x18(%rbp)
+CHECK-NEXT: movq    -0x18(%rbp), %rbx
+CHECK-NEXT: callq {{.*}} <__cxa_end_catch@plt>
+CHECK-NEXT: jmp   0x[[#JMP3]]
+CHECK-NEXT: movq	-0x8(%rbp), %rbx
+CHECK-NEXT: leave
+CHECK-NEXT: retq

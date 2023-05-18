@@ -1,0 +1,25 @@
+RUN: llvm-objdump -p %p/Inputs/program-headers.elf-i386 \
+RUN:              | FileCheck %s -check-prefix ELF-i386
+RUN: llvm-objdump -p %p/Inputs/program-headers.elf-x86-64 \
+RUN:              | FileCheck %s -check-prefix ELF-x86-64
+RUN: llvm-objdump -p %p/Inputs/macho-rpath-x86_64 \
+RUN:              | FileCheck %s -check-prefix MACHO-x86_64
+
+ELF-i386: Program Header:
+ELF-i386:     LOAD off    0x00000000 vaddr 0x08048000 paddr 0x08048000 align 2**12
+ELF-i386:          filesz 0x00000134 memsz 0x00000134 flags r-x
+ELF-i386:    STACK off    0x00000000 vaddr 0x00000000 paddr 0x00000000 align 2**2
+ELF-i386:          filesz 0x00000000 memsz 0x00000000 flags rw-
+
+ELF-x86-64: Program Header:
+ELF-x86-64:     LOAD off    0x0000000000000000 vaddr 0x0000000000400000 paddr 0x0000000000400000 align 2**21
+ELF-x86-64:          filesz 0x0000000000000138 memsz 0x0000000000000138 flags r-x
+ELF-x86-64: EH_FRAME off    0x00000000000000f4 vaddr 0x00000000004000f4 paddr 0x00000000004000f4 align 2**2
+ELF-x86-64:          filesz 0x0000000000000014 memsz 0x0000000000000014 flags r--
+ELF-x86-64:    STACK off    0x0000000000000000 vaddr 0x0000000000000000 paddr 0x0000000000000000 align 2**3
+ELF-x86-64:          filesz 0x0000000000000000 memsz 0x0000000000000000 flags rw-
+
+MACHO-x86_64: Load command 12
+MACHO-x86_64:          cmd LC_RPATH
+MACHO-x86_64:      cmdsize 32
+MACHO-x86_64:         path @executable_path/. (offset 12)

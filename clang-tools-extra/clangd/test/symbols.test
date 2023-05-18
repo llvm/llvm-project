@@ -1,0 +1,99 @@
+# RUN: clangd --index-file=%S/Inputs/symbols.test.yaml -lit-test < %s | FileCheck %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"textDocument":{"documentSymbol":{"hierarchicalDocumentSymbolSupport":true}},"workspace":{"symbol":{"symbolKind":{"valueSet": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]}}}},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"void foo(); int main() { foo(); }\n"}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"workspace/symbol","params":{"query":"vector"}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:    "result": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "containerName": "std",
+# CHECK-NEXT:        "kind": 5,
+# CHECK-NEXT:        "location": {
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": {{.*}},
+# CHECK-NEXT:              "line": {{.*}}
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": {{.*}},
+# CHECK-NEXT:              "line": {{.*}}
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "uri": "file://{{.*}}/vector.h"
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "name": "vector",
+# CHECK-NEXT:        "score": {{.*}}
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ]
+# CHECK-NEXT:}
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"test:///main.cpp"}}}
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:    "result": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "detail": "void ()",
+# CHECK-NEXT:        "kind": 12,
+# CHECK-NEXT:        "name": "foo",
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": {{.*}},
+# CHECK-NEXT:            "line": {{.*}}
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": {{.*}},
+# CHECK-NEXT:            "line": {{.*}}
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "selectionRange": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": {{.*}},
+# CHECK-NEXT:            "line": {{.*}}
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": {{.*}},
+# CHECK-NEXT:            "line": {{.*}}
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      },
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "detail": "int ()",
+# CHECK-NEXT:        "kind": 12,
+# CHECK-NEXT:        "name": "main",
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": {{.*}},
+# CHECK-NEXT:            "line": {{.*}}
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": {{.*}},
+# CHECK-NEXT:            "line": {{.*}}
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "selectionRange": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": {{.*}},
+# CHECK-NEXT:            "line": {{.*}}
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": {{.*}},
+# CHECK-NEXT:            "line": {{.*}}
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ]
+# CHECK-NEXT:}
+---
+{"jsonrpc":"2.0","id":3,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"test:///foo.cpp"}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602,
+# CHECK-NEXT:    "message": "trying to get AST for non-added document"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 3,
+# CHECK-NEXT:  "jsonrpc": "2.0"
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

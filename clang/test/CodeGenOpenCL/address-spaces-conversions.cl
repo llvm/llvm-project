@@ -1,0 +1,109 @@
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -ffake-address-space-map -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -ffake-address-space-map -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -cl-std=CL2.0 -emit-llvm -o - | FileCheck --check-prefix=CHECK-NOFAKE %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - | FileCheck --check-prefix=CHECK-NOFAKE %s
+// When -ffake-address-space-map is not used, all addr space mapped to 0 for x86_64.
+
+// test that we generate address space casts everywhere we need conversions of
+// pointers to different address spaces
+
+// CHECK: define{{.*}} void @test
+void test(global int *arg_glob, generic int *arg_gen,
+          __attribute__((opencl_global_device)) int *arg_device,
+          __attribute__((opencl_global_host)) int *arg_host) {
+  int var_priv;
+  arg_gen = arg_glob; // implicit cast global -> generic
+  // CHECK: %{{[0-9]+}} = addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr addrspace(4)
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  arg_gen = &var_priv; // implicit cast with obtaining adr, private -> generic
+  // CHECK: %{{[._a-z0-9]+}} = addrspacecast ptr %{{[._a-z0-9]+}} to ptr addrspace(4)
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  arg_glob = (global int *)arg_gen; // explicit cast
+  // CHECK: %{{[0-9]+}} = addrspacecast ptr addrspace(4) %{{[0-9]+}} to ptr addrspace(1)
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  global int *var_glob =
+      (global int *)arg_glob; // explicit cast in the same address space
+  // CHECK-NOT: %{{[0-9]+}} = addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr addrspace(1)
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  var_priv = arg_gen - arg_glob; // arithmetic operation
+  // CHECK: %{{.*}} = ptrtoint ptr addrspace(4) %{{.*}} to i64
+  // CHECK: %{{.*}} = ptrtoint ptr addrspace(1) %{{.*}} to i64
+  // CHECK-NOFAKE: %{{.*}} = ptrtoint ptr %{{.*}} to i64
+  // CHECK-NOFAKE: %{{.*}} = ptrtoint ptr %{{.*}} to i64
+
+  var_priv = arg_gen > arg_glob; // comparison
+  // CHECK: %{{[0-9]+}} = addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr addrspace(4)
+
+  generic void *var_gen_v = arg_glob;
+  // CHECK: addrspacecast
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  arg_glob = arg_device; // implicit cast
+  // CHECK: addrspacecast
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  arg_glob = arg_host; // implicit cast
+  // CHECK: addrspacecast
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  arg_glob = (global int *)arg_device; // explicit cast
+  // CHECK: addrspacecast
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  arg_glob = (global int *)arg_host; // explicit cast
+  // CHECK: addrspacecast
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  arg_device = (__attribute((opencl_global_device)) int *)arg_glob; // explicit cast
+  // CHECK: addrspacecast
+  // CHECK-NOFAKE-NOT: addrspacecast
+
+  arg_host = (__attribute((opencl_global_host)) int *)arg_glob; // explicit cast
+  // CHECK: addrspacecast
+  // CHECK-NOFAKE-NOT: addrspacecast
+}
+
+// Test ternary operator.
+// CHECK: define{{.*}} void @test_ternary
+void test_ternary(void) {
+  global int *var_glob;
+  generic int *var_gen;
+  generic int *var_gen2;
+  generic float *var_gen_f;
+  generic void *var_gen_v;
+
+  var_gen = var_gen ? var_gen : var_gen2; // operands of the same addr spaces and the same type
+  // CHECK: icmp
+  // CHECK-NOT: addrspacecast
+  // CHECK: phi
+  // CHECK: store ptr addrspace(4) %{{.+}}, ptr %{{.+}}
+
+  var_gen = var_gen ? var_gen : var_glob; // operands of overlapping addr spaces and the same type
+  // CHECK: icmp
+  // CHECK: %{{.+}} = addrspacecast ptr addrspace(1) %{{.+}} to ptr addrspace(4)
+  // CHECK: phi
+  // CHECK: store
+
+  typedef int int_t;
+  global int_t *var_glob_typedef;
+  var_gen = var_gen ? var_gen : var_glob_typedef; // operands of overlapping addr spaces and equivalent types
+  // CHECK: icmp
+  // CHECK: %{{.+}} = addrspacecast ptr addrspace(1) %{{.+}} to ptr addrspace(4)
+  // CHECK: phi
+  // CHECK: store
+ 
+  var_gen_v = var_gen ? var_gen : var_gen_f; // operands of the same addr space and different types
+  // CHECK: icmp
+  // CHECK: phi
+  // CHECK: store
+
+  var_gen_v = var_gen ? var_glob : var_gen_f; // operands of overlapping addr spaces and different types
+  // CHECK: icmp
+  // CHECK: %{{.+}} = addrspacecast ptr addrspace(1) %{{.+}} to ptr addrspace(4)
+  // CHECK: phi
+  // CHECK: store
+}

@@ -1,0 +1,351 @@
+# RUN: llc -mtriple=amdgcn -mcpu=carrizo -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN %s
+
+---
+# Trivial clause at beginning of program
+name: trivial_smem_clause_load_smrd4_x1
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x1
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    S_ENDPGM 0
+...
+---
+# Trivial clause at beginning of program
+name: trivial_smem_clause_load_smrd4_x2
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x2
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr1 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr1 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+# Trivial clause at beginning of program
+name: trivial_smem_clause_load_smrd4_x3
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x3
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: $sgpr1 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    $sgpr1 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    S_ENDPGM 0
+...
+---
+# Trivial clause at beginning of program
+name: trivial_smem_clause_load_smrd4_x4
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x4
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: $sgpr1 = S_LOAD_DWORD_IMM $sgpr8_sgpr9, 0, 0
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    ; GCN-NEXT: $sgpr3 = S_LOAD_DWORD_IMM $sgpr16_sgpr17, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    $sgpr1 = S_LOAD_DWORD_IMM $sgpr8_sgpr9, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    $sgpr3 = S_LOAD_DWORD_IMM $sgpr16_sgpr17, 0, 0
+    S_ENDPGM 0
+...
+---
+# Reuse of same input pointer is OK
+name: trivial_smem_clause_load_smrd4_x2_sameptr
+body: |
+  bb.0:
+    ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x2_sameptr
+    ; GCN: $sgpr12 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr13 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr12 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr13 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    S_ENDPGM 0
+...
+---
+# 32-bit load partially clobbers its own ptr reg
+name: smrd_load4_overwrite_ptr_lo
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: smrd_load4_overwrite_ptr_lo
+    ; GCN: $sgpr10 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr10 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    S_ENDPGM 0
+...
+---
+# 32-bit load partially clobbers its own ptr reg
+name: smrd_load4_overwrite_ptr_hi
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: smrd_load4_overwrite_ptr_hi
+    ; GCN: $sgpr11 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr11 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    S_ENDPGM 0
+...
+---
+# 64-bit load clobbers its own ptr reg
+name: smrd_load8_overwrite_ptr
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: smrd_load8_overwrite_ptr
+    ; GCN: $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
+    S_ENDPGM 0
+...
+---
+# vmcnt has 4 bits, so maximum 16 outstanding loads. The waitcnt
+# breaks the clause.
+
+name: break_smem_clause_at_max_smem_clause_size_smrd_load4
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_smem_clause_at_max_smem_clause_size_smrd_load4
+    ; GCN: $sgpr13 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr14 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr15 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr16 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr17 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr18 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr19 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr20 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr21 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr22 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr23 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr24 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr25 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr26 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr27 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr28 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr0 = S_LOAD_DWORD_IMM $sgpr30_sgpr31, 0, 0
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 $sgpr0, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr27, implicit $sgpr28
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr13 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr14 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr15 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr16 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+
+    $sgpr17 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr18 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr19 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr20 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+
+    $sgpr21 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr22 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr23 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr24 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+
+    $sgpr25 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr26 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr27 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr28 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr30_sgpr31, 0, 0
+    $sgpr0 = S_MOV_B32 $sgpr0, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr27, implicit $sgpr28
+    S_ENDPGM 0
+...
+---
+
+name: break_smem_clause_simple_load_smrd4_lo_ptr
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_smem_clause_simple_load_smrd4_lo_ptr
+    ; GCN: $sgpr10 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; XNACK-NEXT: S_NOP 0
+    ; GCN-NEXT: $sgpr12 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr10 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr12 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+
+name: break_smem_clause_simple_load_smrd4_hi_ptr
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_smem_clause_simple_load_smrd4_hi_ptr
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr3 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr3 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+
+name: break_smem_clause_simple_load_smrd8_ptr
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_smem_clause_simple_load_smrd8_ptr
+    ; GCN: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
+    ; XNACK-NEXT: S_NOP 0
+    ; GCN-NEXT: $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+
+name: break_smem_clause_simple_load_smrd16_ptr
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_smem_clause_simple_load_smrd16_ptr
+    ; GCN: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX4_IMM $sgpr6_sgpr7, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX4_IMM $sgpr6_sgpr7, 0, 0
+    S_ENDPGM 0
+...
+---
+
+name: break_smem_clause_block_boundary_load_smrd8_ptr
+
+body: |
+  ; GCN-LABEL: name: break_smem_clause_block_boundary_load_smrd8_ptr
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.1(0x80000000)
+  ; GCN:   $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
+  ; GCN: bb.1:
+  ; XNACK-NEXT:   S_NOP 0
+  ; GCN-NEXT:   $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM $sgpr12_sgpr13, 0, 0
+  ; GCN-NEXT:   S_ENDPGM 0
+  bb.0:
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
+
+  bb.1:
+    $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+# The load clobbers the pointer of the store, so it needs to break.
+
+name: break_smem_clause_store_load_into_ptr_smrd4
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_smem_clause_store_load_into_ptr_smrd4
+    ; GCN: S_STORE_DWORD_IMM $sgpr16, $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr12 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    S_STORE_DWORD_IMM $sgpr16, $sgpr10_sgpr11, 0, 0
+    $sgpr12 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    S_ENDPGM 0
+...
+---
+# The load clobbers the data of the store, so it needs to break.
+# FIXME: Would it be better to s_nop and wait later?
+
+name: break_smem_clause_store_load_into_data_smrd4
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_smem_clause_store_load_into_data_smrd4
+    ; GCN: S_STORE_DWORD_IMM $sgpr8, $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr8 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    S_STORE_DWORD_IMM $sgpr8, $sgpr10_sgpr11, 0, 0
+    $sgpr8 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+# Regular VALU instruction breaks clause, no nop needed
+name: valu_inst_breaks_smem_clause
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: valu_inst_breaks_smem_clause
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+# Regular SALU instruction breaks clause, no nop needed
+name: salu_inst_breaks_smem_clause
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: salu_inst_breaks_smem_clause
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr8 = S_MOV_B32 0
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr8 = S_MOV_B32 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+name: ds_inst_breaks_smem_clause
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: ds_inst_breaks_smem_clause
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $vgpr8 = DS_READ_B32 $vgpr9, 0, 0, implicit $m0, implicit $exec
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $vgpr8 = DS_READ_B32 $vgpr9, 0, 0, implicit $m0, implicit $exec
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+
+name: flat_inst_breaks_smem_clause
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: flat_inst_breaks_smem_clause
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+# FIXME: Should this be handled?
+name: implicit_use_breaks_smem_clause
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: implicit_use_breaks_smem_clause
+    ; GCN: $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0, implicit $sgpr12_sgpr13
+    ; XNACK-NEXT: S_NOP 0
+    ; GCN-NEXT: $sgpr12_sgpr13 = S_LOAD_DWORDX2_IMM $sgpr6_sgpr7, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0, implicit $sgpr12_sgpr13
+    $sgpr12_sgpr13 = S_LOAD_DWORDX2_IMM $sgpr6_sgpr7, 0, 0
+    S_ENDPGM 0
+...

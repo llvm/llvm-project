@@ -1,0 +1,106 @@
+# RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -run-pass=livedebugvalues -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE
+#
+# Test that the DBG_VALUE of ecx below does not get propagated. It is considered
+# live-in on LiveDebugValues' first pass through the loop, but on the second it
+# should be removed from the InLocs set because it gets clobbered inside the
+# loop. There should be no transfer from ecx to ebx -- this is ensured by the
+# FileCheck implicit-check-not option.
+#
+# FIXME: we successfully prevent the false location (ebx) from being
+# propagated into block 2, but the original transfer isn't yet eliminated.
+# Thus we get no DBG_VALUe in block 2, but an invalid one in block 1.
+#
+# CHECK-LABEL: name: foo
+# CHECK-LABEL: bb.0.entry:
+# CHECK:       $ecx = MOV32ri 0
+# CHECK-NEXT:  DBG_VALUE
+# CHECK-LABEL: bb.1.loop:
+# CHECK:       $ebx = COPY killed $ecx
+# CHECK-NEXT:  DBG_VALUE
+#
+# An identical test in llvm/test/DebugInfo/MIR/X86/live-debug-values-bad-transfer.mir
+# checks this for InstrRefBasedLDV.
+
+--- |
+  source_filename = "live-debug-values-remove-range.ll"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  define i32 @foo(i32 %bar) !dbg !4 {
+  entry:
+    br label %loop
+  loop:
+    br label %loop
+  exit:
+    ret i32 %bar
+  }
+  
+  !llvm.module.flags = !{!0, !1}
+  !llvm.dbg.cu = !{!2}
+  
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = !{i32 2, !"Dwarf Version", i32 4}
+  !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "beards", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !3 = !DIFile(filename: "bees.cpp", directory: ".")
+  !4 = distinct !DISubprogram(name: "nope", scope: !3, file: !3, line: 1, type: !5, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !8)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7}
+  !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !8 = !{!9}
+  !9 = !DILocalVariable(name: "thin", scope: !4, file: !3, line: 1, type: !7)
+  !10 = !DILocation(line: 1, scope: !4)
+
+...
+---
+name:            foo
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+frameInfo:
+  stackSize:       8
+  offsetAdjustment: -8
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 8
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$rbx' }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $edi, $rbx
+  
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbx, -16
+    $ebx = MOV32rr $edi
+    $eax = MOV32ri 0, debug-location !10
+    $ecx = MOV32ri 0, debug-location !10
+    DBG_VALUE $ecx, $noreg, !9, !DIExpression(), debug-location !10
+    $edi = MOV32ri 0, debug-location !10
+    $esi = MOV32ri 0, debug-location !10
+  
+  bb.1.loop:
+    successors: %bb.1, %bb.2
+    liveins: $ebx, $eax, $ecx, $edi, $esi
+  
+    $eax = COPY $ecx, debug-location !10
+    $ebx = COPY killed $ecx, debug-location !10
+    $ecx = COPY killed $edi, debug-location !10
+    $edi = COPY killed $esi, debug-location !10
+    $esi = MOV32ri 1, debug-location !10
+    TEST8ri killed renamable $al, 1, implicit-def $eflags
+    JCC_1 %bb.1, 5, implicit killed $eflags, debug-location !10
+  
+  bb.2.exit:
+    liveins: $ebx
+  
+    $eax = MOV32rr killed $ebx, debug-location !10
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 8
+    RET64 $eax, debug-location !10
+
+...

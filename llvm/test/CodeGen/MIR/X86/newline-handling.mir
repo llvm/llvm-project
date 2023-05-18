@@ -1,0 +1,109 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+
+--- |
+
+  define i32 @foo(i32 %a) {
+  entry:
+    %0 = icmp sle i32 %a, 10
+    br i1 %0, label %less, label %exit
+
+  less:
+    ret i32 0
+
+  exit:
+    ret i32 %a
+  }
+
+  define i32 @bar(i32 %a) {
+  entry:
+    %0 = icmp sle i32 %a, 10
+    br i1 %0, label %less, label %exit
+
+  less:
+    ret i32 0
+
+  exit:
+    ret i32 %a
+  }
+
+...
+---
+name:            foo
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+# CHECK-LABEL: name: foo
+# CHECK: body: |
+# CHECK-NEXT: bb.0.entry:
+# CHECK-NEXT: successors: %bb.1(0x40000000), %bb.2(0x40000000)
+# CHECK-NEXT: liveins: $edi
+# CHECK:      CMP32ri8 $edi, 10, implicit-def $eflags
+# CHECK-NEXT: JCC_1 %bb.2, 15, implicit killed $eflags
+
+# CHECK:      bb.1.less:
+# CHECK-NEXT: $eax = MOV32r0 implicit-def dead $eflags
+# CHECK-NEXT: RET64 killed $eax
+
+# CHECK:      bb.2.exit:
+# CHECK-NEXT: liveins: $edi
+# CHECK:      $eax = COPY killed $edi
+# CHECK-NEXT: RET64 killed $eax
+body: |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+
+    liveins: $edi
+
+    CMP32ri8 $edi, 10, implicit-def $eflags
+
+    JCC_1 %bb.2, 15, implicit killed $eflags
+
+  bb.1.less:
+
+
+    $eax = MOV32r0 implicit-def dead $eflags
+    RET64 killed $eax
+  bb.2.exit:
+
+
+    liveins: $edi
+    $eax = COPY killed $edi
+    RET64 killed $eax
+
+...
+---
+name:            bar
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+# CHECK-LABEL: name: bar
+# CHECK: body: |
+# CHECK-NEXT: bb.0.entry:
+# CHECK-NEXT: successors: %bb.1(0x40000000), %bb.2(0x40000000)
+# CHECK-NEXT: liveins: $edi
+# CHECK:      CMP32ri8 $edi, 10, implicit-def $eflags
+# CHECK-NEXT: JCC_1 %bb.2, 15, implicit killed $eflags
+
+# CHECK:      bb.1.less:
+# CHECK-NEXT: $eax = MOV32r0 implicit-def dead $eflags
+# CHECK-NEXT: RET64 killed $eax
+
+# CHECK:      bb.2.exit:
+# CHECK-NEXT: liveins: $edi
+# CHECK:      $eax = COPY killed $edi
+# CHECK-NEXT: RET64 killed $eax
+body: |
+
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $edi
+    CMP32ri8 $edi, 10, implicit-def $eflags
+    JCC_1 %bb.2, 15, implicit killed $eflags
+  bb.1.less:  $eax = MOV32r0 implicit-def dead $eflags
+              RET64 killed $eax
+
+  bb.2.exit:  liveins: $edi
+    $eax = COPY killed $edi
+    RET64 killed $eax
+
+...

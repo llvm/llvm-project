@@ -1,0 +1,75 @@
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml | FileCheck --check-prefix DEFAULT %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s count | FileCheck --check-prefix COUNT-ASC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s min | FileCheck --check-prefix MIN-ASC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s max | FileCheck --check-prefix MAX-ASC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s sum | FileCheck --check-prefix SUM-ASC %s
+
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s count -r dsc | FileCheck --check-prefix COUNT-DSC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s min -r dsc | FileCheck --check-prefix MIN-DSC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s max -r dsc | FileCheck --check-prefix MAX-DSC %s
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -s sum -r dsc | FileCheck --check-prefix SUM-DSC %s
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 1
+records:
+  # Function id: 1
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10100 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10101 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10200 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10201 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10300 }
+  # Function id: 2
+  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-exit, tsc: 10002 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-enter, tsc: 10101 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 222, kind: function-exit, tsc: 10102 }
+
+#DEFAULT:       Functions with latencies: 2
+#DEFAULT-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#DEFAULT-NEXT:  1 3 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+#DEFAULT-NEXT:  2 2 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+
+#COUNT-ASC:       Functions with latencies: 2
+#COUNT-ASC-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#COUNT-ASC-NEXT:  2 2 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+#COUNT-ASC-NEXT:  1 3 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+
+#COUNT-DSC:       Functions with latencies: 2
+#COUNT-DSC-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#COUNT-DSC-NEXT:  1 3 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+#COUNT-DSC-NEXT:  2 2 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+
+#MIN-ASC:       Functions with latencies: 2
+#MIN-ASC-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#MIN-ASC-NEXT:  2 2 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+#MIN-ASC-NEXT:  1 3 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+
+#MIN-DSC:       Functions with latencies: 2
+#MIN-DSC-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#MIN-DSC-NEXT:  1 3 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+#MIN-DSC-NEXT:  2 2 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+
+#MAX-ASC:       Functions with latencies: 2
+#MAX-ASC-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#MAX-ASC-NEXT:  2 2 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+#MAX-ASC-NEXT:  1 3 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+
+#MAX-DSC:       Functions with latencies: 2
+#MAX-DSC-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#MAX-DSC-NEXT:  1 3 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+#MAX-DSC-NEXT:  2 2 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+
+#SUM-ASC:       Functions with latencies: 2
+#SUM-ASC-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#SUM-ASC-NEXT:  2 2 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+#SUM-ASC-NEXT:  1 3 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+
+#SUM-DSC:       Functions with latencies: 2
+#SUM-DSC-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#SUM-DSC-NEXT:  1 3 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}
+#SUM-DSC-NEXT:  2 2 [{{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}] {{.*}} {{.*}}

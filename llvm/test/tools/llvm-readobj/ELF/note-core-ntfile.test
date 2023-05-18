@@ -1,0 +1,95 @@
+## Test that NT_FILE sections in core files are interpreted correctly.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM
+
+## llvm-mc doesn't support generating ET_CORE files; the 'Content' field was
+## generated with the following steps:
+# $ llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu tmp.s -o tmp.o
+# $ bin/llvm-objcopy --dump-section=.note.foo=tmp.txt tmp.o /dev/null
+# $ xxd -p tmp.txt | tr -d '\n'; echo
+## Using the following input:
+# .section ".note.foo", "a"
+#       .align 4
+#       .long 5 /* namesz */
+#       .long end - begin /* descsz */
+#       .long 0x46494c45 /* type = NT_FILE */
+#       .asciz "CORE"
+#       .align 4
+# begin:
+#       .quad 3 /* 3 file mappings */
+#       .quad 4096 /* page size */
+#       .quad 0x1000 /* start #1 */
+#       .quad 0x2000 /* end #1 */
+#       .quad 0x3000 /* offset #1 */
+#       .quad 0x4000 /* start #2 */
+#       .quad 0x5000 /* end #2 */
+#       .quad 0x6000 /* offset #2 */
+#       .quad 0x7000 /* start #3 */
+#       .quad 0x8000 /* end #3 */
+#       .quad 0x9000 /* offset #3 */
+#       .asciz "/path/to/a.out"
+#       .asciz "/path/to/libc.so"
+#       .asciz "[stack]"
+#       .align 4
+# end:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_CORE
+Sections:
+  - Name:        .note.foo
+    Type:        SHT_NOTE
+    Content:     0500000080000000454C4946434F524500000000030000000000000000100000000000000010000000000000002000000000000000300000000000000040000000000000005000000000000000600000000000000070000000000000008000000000000000900000000000002F706174682F746F2F612E6F7574002F706174682F746F2F6C6962632E736F005B737461636B5D00
+ProgramHeaders:
+  - Type:     PT_NOTE
+    FirstSec: .note.foo
+    LastSec:  .note.foo
+
+# GNU:      Displaying notes found
+# GNU-NEXT:   Owner                 Data size       Description
+# GNU-NEXT:   CORE                  0x00000080      NT_FILE (mapped files)
+# GNU-NEXT:     Page size: 4096
+# GNU-NEXT:                  Start                 End         Page Offset
+# GNU-NEXT:     0x0000000000001000  0x0000000000002000  0x0000000000003000
+# GNU-NEXT:         /path/to/a.out
+# GNU-NEXT:     0x0000000000004000  0x0000000000005000  0x0000000000006000
+# GNU-NEXT:         /path/to/libc.so
+# GNU-NEXT:     0x0000000000007000  0x0000000000008000  0x0000000000009000
+# GNU-NEXT:         [stack]
+# GNU-EMPTY:
+
+# LLVM:      Notes [
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: <?>
+# LLVM-NEXT:     Offset:
+# LLVM-NEXT:     Size:
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: CORE
+# LLVM-NEXT:       Data size: 0x80
+# LLVM-NEXT:       Type: NT_FILE (mapped files)
+# LLVM-NEXT:       Page Size: 4096
+# LLVM-NEXT:       Mapping [
+# LLVM-NEXT:         Start: 0x1000
+# LLVM-NEXT:         End: 0x2000
+# LLVM-NEXT:         Offset: 0x3000
+# LLVM-NEXT:         Filename: /path/to/a.out
+# LLVM-NEXT:       ]
+# LLVM-NEXT:       Mapping [
+# LLVM-NEXT:         Start: 0x4000
+# LLVM-NEXT:         End: 0x5000
+# LLVM-NEXT:         Offset: 0x6000
+# LLVM-NEXT:         Filename: /path/to/libc.so
+# LLVM-NEXT:       ]
+# LLVM-NEXT:       Mapping [
+# LLVM-NEXT:         Start: 0x7000
+# LLVM-NEXT:         End: 0x8000
+# LLVM-NEXT:         Offset: 0x9000
+# LLVM-NEXT:         Filename: [stack]
+# LLVM-NEXT:       ]
+# LLVM-NEXT:     }
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]

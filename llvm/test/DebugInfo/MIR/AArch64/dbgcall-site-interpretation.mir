@@ -1,0 +1,180 @@
+# RUN: llc -emit-call-site-info -mtriple aarch64-linux-gnu -debug-entry-values -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+# Following code is used for producing this test case. Note that
+# some of argument loading instruction are modified in order to
+# cover certain cases.
+#
+# extern int func2(int,int,int*);
+# int func1(int arg1, int arg2, int arg3) {
+#   int a = func2(arg1 + 2, arg2 - 4, &arg3);
+#   a += func2(arg3 - 16, arg1 + 8, &a);
+#   return a++;
+# }
+#
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin {{.*}} "func2"
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NOT:   DW_AT_location      (DW_OP_reg2 W0)
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg2 W2)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_fbreg +28)
+# CHECK-EMPTY: 
+# CHECK-NEXT: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg1 W1)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg19 W19-4)
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin {{.*}} "func2")
+# CHECK-NEXT: DW_AT_low_pc
+# CHECK-EMPTY: 
+# CHECK-NEXT: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_lit13)
+# CHECK-EMPTY: 
+# CHECK-NEXT: DW_TAG_GNU_call_site_parameter
+# W2 loads memory location. We can't rely that memory location won't be changed.
+# CHECK-NOT:   DW_AT_location      (DW_OP_reg2 W2)
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg1 W1)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_constu 0xc0)
+--- |
+  ; ModuleID = 'describe-call-pram-load-instruction.c'
+  source_filename = "describe-call-pram-load-instruction.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+  
+  ; Function Attrs: nounwind
+  define dso_local i32 @func1(i32 %arg1, i32 %arg2, i32 %arg3) local_unnamed_addr #0 !dbg !13 {
+  entry:
+    %arg3.addr = alloca i32, align 4
+    %a = alloca i32, align 4
+    call void @llvm.dbg.value(metadata i32 %arg1, metadata !17, metadata !DIExpression()), !dbg !21
+    call void @llvm.dbg.value(metadata i32 %arg2, metadata !18, metadata !DIExpression()), !dbg !21
+    call void @llvm.dbg.value(metadata i32 %arg3, metadata !19, metadata !DIExpression()), !dbg !21
+    store i32 %arg3, ptr %arg3.addr, align 4
+    %0 = bitcast ptr %a to ptr, !dbg !21
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0), !dbg !21
+    %add = add nsw i32 %arg1, 2, !dbg !21
+    %sub = add nsw i32 %arg2, -4, !dbg !21
+    call void @llvm.dbg.value(metadata ptr %arg3.addr, metadata !19, metadata !DIExpression(DW_OP_deref)), !dbg !21
+    %call = call i32 @func2(i32 %add, i32 %sub, ptr nonnull %arg3.addr), !dbg !21
+    call void @llvm.dbg.value(metadata i32 %call, metadata !20, metadata !DIExpression()), !dbg !21
+    store i32 %call, ptr %a, align 4, !dbg !21
+    %1 = load i32, ptr %arg3.addr, align 4, !dbg !21
+    call void @llvm.dbg.value(metadata i32 %1, metadata !19, metadata !DIExpression()), !dbg !21
+    %sub1 = add nsw i32 %1, -16, !dbg !21
+    %add2 = add nsw i32 %arg1, 8, !dbg !21
+    call void @llvm.dbg.value(metadata ptr %a, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !21
+    %call3 = call i32 @func2(i32 %sub1, i32 %add2, ptr nonnull %a), !dbg !21
+    %2 = load i32, ptr %a, align 4, !dbg !21
+    call void @llvm.dbg.value(metadata i32 %2, metadata !20, metadata !DIExpression()), !dbg !21
+    %add4 = add nsw i32 %2, %call3, !dbg !21
+    call void @llvm.dbg.value(metadata i32 %add4, metadata !20, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !21
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %0), !dbg !21
+    ret i32 %add4, !dbg !21
+  }
+  
+  ; Function Attrs: argmemonly nounwind willreturn
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+  
+  declare !dbg !4 dso_local i32 @func2(i32, i32, ptr) local_unnamed_addr
+  
+  ; Function Attrs: argmemonly nounwind willreturn
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+  
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr)
+  
+  attributes #0 = { "frame-pointer"="all" }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!9, !10, !11}
+  !llvm.ident = !{!12}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "describe-call-pram-load-instruction.c", directory: "/")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "func2", scope: !1, file: !1, line: 8, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7, !7, !7, !8}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64)
+  !9 = !{i32 2, !"Dwarf Version", i32 4}
+  !10 = !{i32 2, !"Debug Info Version", i32 3}
+  !11 = !{i32 1, !"wchar_size", i32 4}
+  !12 = !{!"clang version 10.0.0 "}
+  !13 = distinct !DISubprogram(name: "func1", scope: !1, file: !1, line: 9, type: !14, scopeLine: 9, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !16)
+  !14 = !DISubroutineType(types: !15)
+  !15 = !{!7, !7, !7, !7}
+  !16 = !{!17, !18, !19, !20}
+  !17 = !DILocalVariable(name: "arg1", arg: 1, scope: !13, file: !1, line: 9, type: !7)
+  !18 = !DILocalVariable(name: "arg2", arg: 2, scope: !13, file: !1, line: 9, type: !7)
+  !19 = !DILocalVariable(name: "arg3", arg: 3, scope: !13, file: !1, line: 9, type: !7)
+  !20 = !DILocalVariable(name: "a", scope: !13, file: !1, line: 10, type: !7)
+  !21 = !DILocation(line: 0, scope: !13)
+
+...
+---
+name:            func1
+frameInfo:
+  adjustsStack:    true
+  hasCalls:        true
+stack:
+  - { id: 0, name: arg3.addr, offset: -4, size: 4, alignment: 4, local-offset: -4 }
+  - { id: 1, name: a, offset: -8, size: 4, alignment: 4, local-offset: -8 }
+  - { id: 2, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$x19' }
+  - { id: 3, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$lr' }
+  - { id: 4, type: spill-slot, offset: -32, size: 8, alignment: 8, callee-saved-register: '$fp' }
+callSites:
+  - { bb: 0, offset: 20, fwdArgRegs: 
+      - { arg: 0, reg: '$w0' }
+      - { arg: 1, reg: '$w1' }
+      - { arg: 2, reg: '$x2' } }
+  - { bb: 0, offset: 29, fwdArgRegs: 
+      - { arg: 0, reg: '$w0' }
+      - { arg: 1, reg: '$w1' }
+      - { arg: 2, reg: '$x2' } }
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $lr, $x19
+  
+    DBG_VALUE $w0, $noreg, !17, !DIExpression(), debug-location !21
+    DBG_VALUE $w1, $noreg, !18, !DIExpression(), debug-location !21
+    DBG_VALUE $w1, $noreg, !18, !DIExpression(), debug-location !21
+    DBG_VALUE $w2, $noreg, !19, !DIExpression(), debug-location !21
+    DBG_VALUE $w2, $noreg, !19, !DIExpression(), debug-location !21
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -4 :: (store (s64) into %stack.4), (store (s64) into %stack.3)
+    frame-setup STRXui killed $x19, $sp, 2 :: (store (s64) into %stack.2)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 32
+    frame-setup CFI_INSTRUCTION offset $w19, -16
+    frame-setup CFI_INSTRUCTION offset $w30, -24
+    frame-setup CFI_INSTRUCTION offset $w29, -32
+    $w19 = ORRWrs $wzr, $w0, 0
+    DBG_VALUE $w19, $noreg, !17, !DIExpression(), debug-location !21
+    STRWui killed renamable $w2, $fp, 7 :: (store (s32) into %ir.arg3.addr)
+    renamable $w0 = nsw ADDWri $w0, 2, 0, debug-location !21
+    renamable $w1 = nsw SUBWri renamable $w19, 4, 0, debug-location !21
+    DBG_VALUE $w1, $noreg, !18, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !21
+    DBG_VALUE $fp, $noreg, !19, !DIExpression(DW_OP_plus_uconst, 28, DW_OP_deref), debug-location !21
+    $x2 = ADDXri $fp, 28, 0, debug-location !21
+    BL @func2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $x2, implicit-def $sp, implicit-def $w0, debug-location !21
+    DBG_VALUE $w0, $noreg, !20, !DIExpression(), debug-location !21
+    renamable $w8 = LDRWui $fp, 7, debug-location !21 :: (dereferenceable load (s32) from %ir.arg3.addr)
+    DBG_VALUE $w8, $noreg, !19, !DIExpression(), debug-location !21
+    STRWui killed renamable $w0, $fp, 6, debug-location !21 :: (store (s32) into %ir.a)
+    renamable $w1 = nsw MOVZWi 12, 4
+    DBG_VALUE $fp, $noreg, !20, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref), debug-location !21
+    $x2 = LDRXui $fp, 24, debug-location !21
+    renamable $w0 = nsw MOVZWi 13, 0
+    BL @func2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $x2, implicit-def $sp, implicit-def $w0, debug-location !21
+    renamable $w8 = LDRWui $fp, 6, debug-location !21 :: (dereferenceable load (s32) from %ir.a)
+    DBG_VALUE $w8, $noreg, !20, !DIExpression(), debug-location !21
+    $x19 = frame-destroy LDRXui $sp, 2, debug-location !21 :: (load (s64) from %stack.2)
+    DBG_VALUE $w0, $noreg, !17, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !21
+    $w0 = ADDWrs killed renamable $w8, killed renamable $w0, 0, debug-location !21
+    DBG_VALUE $w0, $noreg, !20, !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value), debug-location !21
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 4, debug-location !21 :: (load (s64) from %stack.4), (load (s64) from %stack.3)
+    RET undef $lr, implicit killed $w0, debug-location !21
+
+...

@@ -1,0 +1,59 @@
+# Tests the data flow tracer.
+REQUIRES: linux, x86_64
+
+# Disabling due to dfs$ prefix to .dfsan suffix change in DFSan.
+# TODO(kcc): re-enable.
+RUN: false
+XFAIL: *
+
+# Build the tracer and the test.
+DISABLED: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fsanitize=dataflow %S/../../lib/fuzzer/dataflow/DataFlow.cpp -o  %t-DataFlow.o
+DISABLED: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fPIC                %S/../../lib/fuzzer/dataflow/DataFlowCallbacks.cpp -o  %t-DataFlowCallbacks.o
+DISABLED: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp   %S/OnlySomeBytesTest.cpp     %t-DataFlow*.o -o %t-DFT
+DISABLED: %cpp_compiler %S/OnlySomeBytesTest.cpp -o %t-Fuzz
+
+# Prepare the inputs.
+DISABLED: rm -rf %t/*
+DISABLED: mkdir -p %t/IN
+DISABLED: echo -n 0123456789012345678901234567890123456789012345678901234567891234 > %t/IN/6
+DISABLED: cat  %t/IN/6 %t/IN/6 %t/IN/6 %t/IN/6 > %t/IN/8
+DISABLED: cat  %t/IN/8 %t/IN/8 %t/IN/8 %t/IN/8 > %t/IN/10
+DISABLED: cat  %t/IN/10 %t/IN/10 %t/IN/10 %t/IN/10 > %t/IN/12
+# %t/IN/12 is 4096 bytes-long.
+
+DISABLED: %t-Fuzz -focus_function='fB(unsigned char const*)' -runs=0 %t/IN 2>&1 | FileCheck %s --check-prefix=FOCUS_fB
+FOCUS_fB: Focus function is set to 'fB(unsigned char const*)'
+
+DISABLED: %t-Fuzz -focus_function=f0 -runs=0 %t/IN 2>&1 | FileCheck %s --check-prefix=NO_FOCUSED_INPUT
+NO_FOCUSED_INPUT: Focus function is set to 'f0'
+NO_FOCUSED_INPUT: INFO: 0/2 inputs touch the focus function
+
+DISABLED: (echo -n ABC; cat %t/IN/12) > %t/IN/ABC
+DISABLED: %t-Fuzz -focus_function=f0 -runs=0 %t/IN 2>&1 | FileCheck %s --check-prefix=ONE_FOCUSED_INPUT
+ONE_FOCUSED_INPUT: INFO: 1/3 inputs touch the focus function
+
+DISABLED: rm -rf %t/IN_DFT
+DISABLED: %t-Fuzz -collect_data_flow=%t-DFT %t/IN -data_flow_trace=%t/IN_DFT > /dev/null 2>&1
+
+# Repeat twice to make sure that the inputs with DFT are not removed from the corpus.
+DISABLED: %t-Fuzz -focus_function=f0 -data_flow_trace=%t/IN_DFT -runs=100 %t/IN 2>&1 | FileCheck %s --check-prefix=HAVE_DFT
+DISABLED: %t-Fuzz -focus_function=f0 -data_flow_trace=%t/IN_DFT -runs=100 %t/IN 2>&1 | FileCheck %s --check-prefix=HAVE_DFT
+HAVE_DFT: INFO: 1/{{.*}} inputs have the Data Flow Trace
+
+# Collect DFT, then use it.
+DISABLED: rm -rf %t/C %t/C1  && mkdir %t/C %t/C1 &&  cp %t/IN/* %t/C
+DISABLED: rm -rf %t/C_DFT && %t-Fuzz -collect_data_flow=%t-DFT %t/C -data_flow_trace=%t/C_DFT > /dev/null 2>&1
+DISABLED: not %t-Fuzz -focus_function=f0 -data_flow_trace=%t/C_DFT -seed=1 -runs=1000000 -use_value_profile=1 %t/C1 %t/C 2> %t/log
+DISABLED: grep BINGO %t/log
+
+# Test -focus_function=auto: run 100 times and verify that
+#  * 'f0' is the most frequent focus function.
+#  * the second most frequent is one of fA/fB/fC in a de-mangled form.
+DISABLED: %t-Fuzz -focus_function=auto -data_flow_trace=%t/C_DFT -runs=0 %t/C -jobs=100 2>&1 | grep AUTOFOCUS  | sort | uniq -c | sort -g -r | head -n 2 | FileCheck %s --check-prefix=AUTOFOCUS
+AUTOFOCUS: INFO: AUTOFOCUS: {{.*}} f0
+AUTOFOCUS: INFO: AUTOFOCUS: {{.*f[ABC]}}(unsigned char const*)
+
+# Actually execute 50 fuzzing processes with a small number of runs, to test  -focus_function=auto for real.
+# We can not test data_flow_trace=auto in just a single run, because it may choose to focus on a wrong function.
+DISABLED: not %t-Fuzz -focus_function=auto -data_flow_trace=%t/C_DFT %t/C -jobs=50 -runs=200000 -use_value_profile=1 2> %t/log
+DISABLED: grep BINGO %t/log

@@ -1,0 +1,205 @@
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: vmem_vcc_fallthrough
+# GCN:      bb.1:
+# GCN-NEXT: S_NOP 4
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_fallthrough
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+...
+# GCN-LABEL: name: vmem_vcc_branch_to_next
+# GCN:      bb.1:
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_branch_to_next
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+...
+# GCN-LABEL: name: vmem_vcc_fallthrough_no_hazard_too_far
+# GCN:      bb.1:
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_fallthrough_no_hazard_too_far
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr0 = S_MOV_B32 0
+    $sgpr0 = S_MOV_B32 0
+    $sgpr0 = S_MOV_B32 0
+    $sgpr0 = S_MOV_B32 0
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+...
+# GCN-LABEL: name: vmem_vcc_fallthrough_no_hazard_nops
+# GCN:      bb.1:
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_fallthrough_no_hazard_nops
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_NOP 4
+
+  bb.1:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+...
+# GCN-LABEL: name: vmem_vcc_branch_around
+# GCN:      bb.2:
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_branch_around
+body:             |
+  bb.0:
+    successors: %bb.2
+
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+
+  bb.2:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+...
+# GCN-LABEL: name: vmem_vcc_branch_backedge
+# GCN:      S_NOP 3
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_branch_backedge
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr0 = IMPLICIT_DEF
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+
+  bb.1:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_BRANCH %bb.0
+...
+# GCN-LABEL: name: vmem_vcc_min_of_two
+# GCN:      bb.2:
+# GCN-NEXT: S_NOP 4
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_min_of_two
+body:             |
+  bb.0:
+    successors: %bb.2
+
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_NOP 0
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+
+  bb.2:
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+...
+# GCN-LABEL: name: vmem_vcc_self_loop
+# GCN:      S_NOP 3
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_self_loop
+body:             |
+  bb.0:
+    successors: %bb.0
+
+    $vgpr0 = IMPLICIT_DEF
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_BRANCH %bb.0
+...
+# GCN-LABEL: name: vmem_vcc_min_of_two_self_loop1
+# GCN:      bb.1:
+# GCN:      $sgpr0 = S_MOV_B32 0
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_min_of_two_self_loop1
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+
+  bb.1:
+    successors: %bb.1
+
+    $sgpr0 = S_MOV_B32 0
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+    $vgpr1 = V_ADDC_U32_e32 $vgpr1, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_BRANCH %bb.1
+...
+# GCN-LABEL: name: vmem_vcc_min_of_two_self_loop2
+# GCN:      bb.1:
+# GCN:      $sgpr0 = S_MOV_B32 0
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
+---
+name:            vmem_vcc_min_of_two_self_loop2
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_NOP 0
+
+  bb.1:
+    successors: %bb.1
+
+    $sgpr0 = S_MOV_B32 0
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
+    $vgpr1 = V_ADDC_U32_e32 $vgpr1, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+    S_BRANCH %bb.1
+...

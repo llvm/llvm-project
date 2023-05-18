@@ -1,0 +1,26 @@
+add_entrypoint_object(
+  remove
+  SRCS
+    remove.cpp
+  HDRS
+    ../remove.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.stdio
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  rename
+  SRCS
+    rename.cpp
+  HDRS
+    ../rename.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

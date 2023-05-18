@@ -1,0 +1,37 @@
+# RUN: llc -mcpu=exynos-m5 -mtriple=aarch64 -enable-misched -run-pass=machine-scheduler -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# CHECK-LABEL: ********** MI Scheduling **********
+# CHECK:       SU(0):   %0:fpr128 = COPY $q1
+# CHECK-NEXT:    # preds left       : 0
+# CHECK-NEXT:    # succs left       : 1
+# CHECK-NEXT:    # rdefs left       : 0
+# CHECK-NEXT:    Latency            : 2
+# CHECK-NEXT:    Depth              : 0
+# CHECK-NEXT:    Height             : 12
+# CHECK-NEXT:    Successors:
+# CHECK-NEXT:      SU(1): Data Latency=2 Reg=%0
+# CHECK-NEXT:    Single Issue       : false;
+# CHECK-NEXT:  SU(1):   %1:fpr32 = FMINVv4i32v %0:fpr128, implicit $fpcr
+# CHECK-NEXT:    # preds left       : 1
+# CHECK-NEXT:    # succs left       : 1
+# CHECK-NEXT:    # rdefs left       : 0
+# CHECK-NEXT:    Latency            : 8
+# CHECK-NEXT:    Depth              : 2
+# CHECK-NEXT:    Height             : 10
+# CHECK-NEXT:    Predecessors:
+# CHECK-NEXT:      SU(0): Data Latency=2 Reg=%0
+# CHECK-NEXT:    Successors:
+# CHECK-NEXT:      SU(2): Data Latency=8 Reg=%1
+# CHECK-NEXT:    Single Issue       : false;
+
+name: test_qform_virtreg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $s0, $q1
+    %0:fpr128 = COPY $q1
+    %1:fpr32 = FMINVv4i32v %0:fpr128, implicit $fpcr
+    $s0 = COPY %1
+    RET_ReallyLR implicit $s0
+

@@ -1,0 +1,56 @@
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+
+# readlane, readfirstlane is always uniform
+
+---
+name:            readlane
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function: readlane
+    ; CHECK-NEXT: ALL VALUES UNIFORM
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sgpr_32 = V_READFIRSTLANE_B32 %0, implicit $exec
+    %3:sgpr_32 = V_READLANE_B32 %1, 0, implicit $exec
+    $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+    $sgpr1 = V_READLANE_B32 $vgpr1, $sgpr0, implicit $exec
+    S_ENDPGM 0
+...
+
+# Readlane with physical register as operand
+---
+name:            readlane2
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function: readlane2
+    ; CHECK-NEXT: ALL VALUES UNIFORM
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %4:sgpr_32 = V_READLANE_B32 $vgpr0, 0, implicit $exec
+    $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+    $sgpr1 = V_READLANE_B32 $vgpr1, $sgpr0, implicit $exec
+    %5:sgpr_32 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
+
+
+# for copy operand src = sgpr -> uniform
+---
+name:            sgprcopy
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function: sgprcopy
+    ; CHECK-NEXT: ALL VALUES UNIFORM
+    liveins: $sgpr0,$sgpr1,$vgpr0
+    %0:sgpr_32 = COPY $sgpr0
+    %1:vgpr_32 = COPY $sgpr1
+    S_ENDPGM 0
+...

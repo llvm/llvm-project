@@ -1,0 +1,7 @@
+# UNSUPPORTED: lldb-repro
+#
+# Test that the SBAddress properties throw an exception when used outside of
+# the interactive script interpreter.
+#
+# RUN: %lldb --script-language python -o 'command script import %S/Inputs/sbaddress.py' -o 'test' 2>&1 | FileCheck %s
+# CHECK: RuntimeError: This resolves the SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command). For things like Python based commands and breakpoint callbacks use GetLoadAddress instead.

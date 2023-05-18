@@ -1,0 +1,33 @@
+REQUIRES: curl
+
+RUN: rm -rf %t
+RUN: mkdir -p %t/debuginfod-cache
+RUN: %python %S/Inputs/capture_req.py llvm-debuginfod-find --debuginfo 0 \
+RUN:   | FileCheck --check-prefix NO-HEADERS %s
+RUN: env DEBUGINFOD_CACHE=%t/debuginfod-cache DEBUGINFOD_HEADERS_FILE=bad %python %S/Inputs/capture_req.py \
+RUN:   llvm-debuginfod-find --debuginfo 0 \
+RUN:   | FileCheck --check-prefix NO-HEADERS %s
+RUN: rm -rf %t/debuginfod-cache/*
+RUN: env DEBUGINFOD_CACHE=%t/debuginfod-cache DEBUGINFOD_HEADERS_FILE=%S/Inputs/headers %python %S/Inputs/capture_req.py \
+RUN:   llvm-debuginfod-find --debuginfo 0 \
+RUN:   | FileCheck --check-prefix HEADERS %s
+RUN: rm -rf %t/debuginfod-cache/*
+RUN: env DEBUGINFOD_CACHE=%t/debuginfod-cache DEBUGINFOD_HEADERS_FILE=%S/Inputs/headers DEBUGINFOD_URLS=fake not llvm-debuginfod-find --debuginfo 0 2>&1 \
+RUN:   | FileCheck --check-prefix ERR -DHEADER_FILE=%S/Inputs/headers %s
+
+NO-HEADERS: Accept: */*
+NO-HEADERS-NEXT: Accept-Encoding: {{.*}}
+NO-HEADERS-NOT: {{.}}
+
+HEADERS:      Accept: */*
+HEADERS-NEXT: Accept-Encoding: {{.*}}
+HEADERS-NEXT: A: B
+HEADERS-NEXT: C: D
+HEADERS-NEXT: E: F
+HEADERS-NEXT: hi!$:		j			k
+HEADERS-NOT: {{.}}
+
+ERR:      warning: could not parse debuginfod header: [[HEADER_FILE]]:3
+ERR-NEXT: warning: could not parse debuginfod header: [[HEADER_FILE]]:4
+ERR-NEXT: warning: could not parse debuginfod header: [[HEADER_FILE]]:5
+ERR-NEXT: warning: could not parse debuginfod header: [[HEADER_FILE]]:6

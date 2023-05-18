@@ -1,0 +1,9 @@
+# Test that command script add with no arguments prompts for
+# and generates the modern (exe_ctx) version of the command.
+
+# RUN: %lldb < %s | FileCheck %s
+command script add doit
+print(exe_ctx.target)
+DONE
+doit
+# CHECK: No value

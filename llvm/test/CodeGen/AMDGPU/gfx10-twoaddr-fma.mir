@@ -1,0 +1,84 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck --check-prefixes=GFX10 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck --check-prefixes=GFX10 %s
+
+# GFX10-LABEL: name: test_fmamk_reg_imm_f16
+# GFX10: %2:vgpr_32 = IMPLICIT_DEF
+# GFX10-NOT: V_MOV_B32
+# GFX10: V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+---
+name:            test_fmamk_reg_imm_f16
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit $exec
+    %3 = V_FMAC_F16_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+
+...
+
+# GFX10-LABEL: name: test_fmamk_imm_reg_f16
+# GFX10: %2:vgpr_32 = IMPLICIT_DEF
+# GFX10-NOT: V_MOV_B32
+# GFX10: V_FMAMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+---
+name:            test_fmamk_imm_reg_f16
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit $exec
+    %3 = V_FMAC_F16_e32 %2, killed %0.sub0, killed %1, implicit $mode, implicit $exec
+
+...
+
+# GFX10-LABEL: name: test_fmaak_f16
+# GFX10: %1:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
+# GFX10-NOT: V_MOV_B32
+# GFX10: V_FMAAK_F16 killed %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
+---
+name:            test_fmaak_f16
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = V_MOV_B32_e32 1078523331, implicit $exec
+    %2 = V_FMAC_F16_e32 killed %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %1
+...
+
+# GFX10-LABEL: name: test_fmaak_inline_literal_f16
+# GFX10: %1:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
+# GFX10-NOT: V_MOV_B32
+# GFX10: %2:vgpr_32 = V_FMAAK_F16 16384, killed %0, 49664, implicit $mode, implicit $exec
+
+---
+name:            test_fmaak_inline_literal_f16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    %0:vgpr_32 = COPY killed $vgpr0
+
+    %1:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
+    %2:vgpr_32 = V_FMAC_F16_e32 16384, killed %0, %1, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %1
+...

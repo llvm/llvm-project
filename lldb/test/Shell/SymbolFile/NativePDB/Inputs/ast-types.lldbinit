@@ -1,0 +1,27 @@
+target variable TC
+target variable TS
+target variable TU
+target variable TE
+
+target variable ABCInt
+target variable ABCFloat
+target variable ABCVoid
+
+target variable AC0
+target variable ACNeg1
+
+target variable AC1D
+target variable AC0D
+target variable ACNeg1D
+target variable AD
+target variable ADE
+
+target variable AnonInt
+target variable AnonABCVoid
+target variable AnonABCVoidD
+
+target variable mp1 mp2 mp3 mp4 mp5 mp6 mp7 mp8 mp9
+
+target modules dump ast
+
+quit

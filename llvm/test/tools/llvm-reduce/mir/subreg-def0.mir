@@ -1,0 +1,22 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=instructions -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS: V_ADD_U32
+
+# RESULT: undef %{{[0-9]+}}.sub1:vreg_64 = IMPLICIT_DEF
+# RESULT-NEXT: undef %{{[0-9]+}}.sub0:vreg_64 = IMPLICIT_DEF
+# RESULT-NEXT: %1:vgpr_32 = V_ADD_U32_e32 %{{[0-9]+}}.sub0, %{{[0-9]+}}.sub1, implicit $exec
+# RESULT-NEXT: S_ENDPGM 0, implicit %1
+
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    S_WAITCNT 0
+    undef %0.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+    %0.sub0:vreg_64 = V_MOV_B32_e32 1, implicit $exec
+    %1:vgpr_32 = V_ADD_U32_e32 %0.sub0, %0.sub1, implicit $exec
+    S_ENDPGM 0, implicit %1
+...

@@ -1,0 +1,252 @@
+RUN: cp %p/../Inputs/basic.macho.x86_64 %t1
+RUN: dsymutil -accelerator=Pub -f -oso-prepend-path=%p/.. %t1
+RUN: llvm-dwarfdump -a %t1.dwarf | FileCheck %s
+RUN: dsymutil -accelerator=Pub -f -o %t2 -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64
+RUN: llvm-dwarfdump -a %t2 | FileCheck %s
+RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - \
+RUN:   | FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
+RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64 | dsymutil -accelerator=Pub -f -y \
+RUN:   -o - - | llvm-dwarfdump -a - | FileCheck %s \
+RUN:   --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil -accelerator=Pub -dump-debug-map -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-archive.macho.x86_64 | dsymutil -accelerator=Pub \
+RUN:   -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s \
+RUN:   --check-prefixes=CHECK,ARCHIVE,PUB
+
+### ---------------------------------------
+### Repeat the same steps for --linker parallel
+
+RUN: dsymutil --linker parallel -accelerator=Pub -f -oso-prepend-path=%p/.. %t1
+RUN: llvm-dwarfdump -a %t1.dwarf | FileCheck %s
+RUN: dsymutil --linker parallel  -accelerator=Pub -f -o %t2 -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64
+RUN: llvm-dwarfdump -a %t2 | FileCheck %s
+RUN: dsymutil --linker parallel  -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil --linker parallel -accelerator=Pub -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
+RUN: dsymutil --linker parallel -accelerator=Pub -dump-debug-map \
+RUN:  -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 \
+RUN:  | dsymutil -accelerator=Pub -f -y -o - - | llvm-dwarfdump \
+RUN:  -a - | FileCheck %s --check-prefixes=CHECK,BASIC,PUB
+RUN: dsymutil --linker parallel -accelerator=Pub -dump-debug-map \
+RUN:   -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 \
+RUN:   | dsymutil -accelerator=Pub -f -o - -y - | llvm-dwarfdump -a - | \
+RUN:   FileCheck %s --check-prefixes=CHECK,ARCHIVE,PUB
+
+CHECK: file format Mach-O 64-bit x86-64
+
+CHECK: debug_info contents
+
+CHECK:  Compile Unit:
+
+CHECK:  DW_TAG_compile_unit
+CHECK:    DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK:    DW_AT_language (DW_LANG_C99)
+CHECK:    DW_AT_name ("basic1.c")
+CHECK:    DW_AT_stmt_list (0x00000000)
+CHECK:    DW_AT_comp_dir ("/Inputs")
+CHECK:    DW_AT_low_pc (0x0000000100000ea0)
+CHECK:    DW_TAG_subprogram
+CHECK:    DW_AT_name ("main")
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK:      DW_AT_decl_line (23)
+CHECK:      DW_AT_prototyped (0x01)
+CHECK:      DW_AT_type (0x00000063
+CHECK:      DW_AT_external (0x01)
+CHECK:      DW_AT_accessibility (DW_ACCESS_public)
+CHECK:      DW_AT_low_pc (0x0000000100000ea0)
+CHECK:      DW_AT_high_pc (0x0000000100000ec4)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("argc")
+CHECK:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK:        DW_AT_decl_line (23)
+CHECK:        DW_AT_type (0x00000063
+CHECK:        DW_AT_location (DW_OP_fbreg -8)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("argv")
+CHECK:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK:        DW_AT_decl_line (23)
+CHECK:        DW_AT_type (0x0000006a
+CHECK:        DW_AT_location (DW_OP_fbreg -16)
+CHECK:      NULL
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("int")
+CHECK:      DW_AT_encoding (DW_ATE_signed)
+CHECK:      DW_AT_byte_size (0x04)
+CHECK:    DW_TAG_pointer_type
+CHECK:      DW_AT_type (0x0000006f
+CHECK:    DW_TAG_pointer_type
+CHECK:      DW_AT_type (0x00000074
+CHECK:    DW_TAG_const_type
+CHECK:      DW_AT_type (0x00000079
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("char")
+CHECK:      DW_AT_encoding (DW_ATE_signed_char)
+CHECK:      DW_AT_byte_size (0x01)
+CHECK:    NULL
+
+CHECK:  Compile Unit:
+
+CHECK:  DW_TAG_compile_unit
+CHECK:   DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK:   DW_AT_name ("basic2.c")
+CHECK:   DW_AT_stmt_list (0x0000003f)
+CHECK:   DW_AT_comp_dir ("/Inputs")
+CHECK:   DW_AT_low_pc (0x0000000100000ed0)
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("int")
+CHECK:    DW_TAG_variable
+CHECK:      DW_AT_name ("private_int")
+CHECK:      DW_AT_type (0x000000a7
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
+BASIC:      DW_AT_location (DW_OP_addr 0x100001008)
+ARCHIVE:    DW_AT_location (DW_OP_addr 0x100001004)
+CHECK:    DW_TAG_variable
+CHECK:      DW_AT_name ("baz")
+CHECK:      DW_AT_type (0x000000a7
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
+CHECK:      DW_AT_location (DW_OP_addr 0x100001000)
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("foo")
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
+CHECK:      DW_AT_type (0x000000a7
+CHECK:      DW_AT_low_pc (0x0000000100000ed0)
+CHECK:      DW_AT_high_pc (0x0000000100000f19)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("arg")
+CHECK:        DW_AT_type (0x000000a7
+CHECK:        DW_AT_location (DW_OP_fbreg -4)
+CHECK:      NULL
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("inc")
+CHECK:      DW_AT_type (0x000000a7
+CHECK:      DW_AT_low_pc (0x0000000100000f20)
+CHECK:      DW_AT_high_pc (0x0000000100000f37)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:    NULL
+
+CHECK:  Compile Unit:
+
+CHECK:  DW_TAG_compile_unit
+CHECK:    DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK:    DW_AT_name ("basic3.c")
+CHECK:    DW_AT_stmt_list (0x00000093)
+CHECK:    DW_AT_comp_dir ("/Inputs")
+CHECK:    DW_AT_low_pc (0x0000000100000f40)
+CHECK:    DW_TAG_variable
+CHECK:      DW_AT_name ("val")
+CHECK:      DW_AT_type (0x00000162
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic3.c")
+BASIC:      DW_AT_location (DW_OP_addr 0x100001004)
+ARCHIVE:    DW_AT_location (DW_OP_addr 0x100001008)
+CHECK:    DW_TAG_volatile_type
+CHECK:      DW_AT_type (0x00000167
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("int")
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("bar")
+CHECK:      DW_AT_type (0x00000167
+CHECK:      DW_AT_low_pc (0x0000000100000f40)
+CHECK:      DW_AT_high_pc (0x0000000100000f84)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("arg")
+CHECK:        DW_AT_type (0x00000167
+CHECK:        DW_AT_location (DW_OP_fbreg -8)
+CHECK:      NULL
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("inc")
+CHECK:      DW_AT_type (0x00000167
+CHECK:      DW_AT_low_pc (0x0000000100000f90)
+CHECK:      DW_AT_high_pc (0x0000000100000fa9)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+
+CHECK:    NULL
+
+CHECK-NOT: .debug_loc contents
+
+CHECK:.debug_aranges contents:
+CHECK-NEXT:Address Range Header: length = 0x0000002c, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT:[0x0000000100000ea0, 0x0000000100000ec4)
+CHECK-NEXT:Address Range Header: length = 0x0000003c, format = DWARF32, version = 0x0002, cu_offset = 0x00000081, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT:[0x0000000100000ed0, 0x0000000100000f19)
+CHECK-NEXT:[0x0000000100000f20, 0x0000000100000f37)
+CHECK-NEXT:Address Range Header: length = 0x0000003c, format = DWARF32, version = 0x0002, cu_offset = 0x00000126, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT:[0x0000000100000f40, 0x0000000100000f84)
+CHECK-NEXT:[0x0000000100000f90, 0x0000000100000fa9)
+
+CHECK: .debug_line contents:
+CHECK: file_names[  1]:
+CHECK-NEXT: name: "basic1.c"
+CHECK-NEXT: dir_index: 0
+CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000100000ea0     23      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000eb6     24      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000ec4     24      0      1   0             0       0  is_stmt end_sequence
+
+CHECK: file_names[  1]:
+CHECK-NEXT: name: "basic2.c"
+CHECK-NEXT: dir_index: 0
+CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000100000ed0     19      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000ee2     20      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000f19     20      0      1   0             0       0  is_stmt end_sequence
+CHECK-NEXT: 0x0000000100000f20     14      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f24     15      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000f37     15      0      1   0             0       0  is_stmt end_sequence
+
+CHECK: file_names[  1]:
+CHECK-NEXT: name: "basic3.c"
+CHECK-NEXT: dir_index: 0
+CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000100000f40     16      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f4b     17      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000f58     18      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f6c     19      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f7b     20      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f84     20      0      1   0             0       0  is_stmt end_sequence
+CHECK-NEXT: 0x0000000100000f90     11      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f9b     12      0      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000fa9     12      0      1   0             0       0  is_stmt end_sequence
+
+PUB: .debug_pubnames contents:
+PUB-NEXT: length = 0x00000017, format = DWARF32, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000081
+PUB-NEXT: Offset     Name
+PUB-NEXT: 0x00000026 "main"
+PUB-NEXT: length = 0x00000036, format = DWARF32, version = 0x0002, unit_offset = 0x00000081, unit_size = 0x000000a5
+PUB-NEXT: Offset     Name
+PUB-NEXT: 0x0000002d "private_int"
+PUB-NEXT: 0x00000042 "baz"
+PUB-NEXT: 0x00000057 "foo"
+PUB-NEXT: 0x00000086 "inc"
+PUB-NEXT: length = 0x00000026, format = DWARF32, version = 0x0002, unit_offset = 0x00000126, unit_size = 0x00000096
+PUB-NEXT: Offset     Name
+PUB-NEXT: 0x00000026 "val"
+PUB-NEXT: 0x00000048 "bar"
+PUB-NEXT: 0x00000077 "inc"
+
+PUB: .debug_pubtypes contents:
+PUB-NEXT: length = 0x0000001f, format = DWARF32, version = 0x0002, unit_offset = 0x00000000, unit_size = 0x00000081
+PUB-NEXT: Offset     Name
+PUB-NEXT: 0x00000063 "int"
+PUB-NEXT: 0x00000079 "char"
+PUB-NEXT: length = 0x00000016, format = DWARF32, version = 0x0002, unit_offset = 0x00000081, unit_size = 0x000000a5
+PUB-NEXT: Offset     Name
+PUB-NEXT: 0x00000026 "int"
+PUB-NEXT: length = 0x00000016, format = DWARF32, version = 0x0002, unit_offset = 0x00000126, unit_size = 0x00000096
+PUB-NEXT: Offset     Name
+PUB-NEXT: 0x00000041 "int"

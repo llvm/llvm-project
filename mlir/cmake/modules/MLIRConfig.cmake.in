@@ -1,0 +1,51 @@
+# This file allows users to call find_package(MLIR) and pick up our targets.
+
+@MLIR_CONFIG_CODE@
+
+set(LLVM_VERSION @LLVM_VERSION_MAJOR@.@LLVM_VERSION_MINOR@.@LLVM_VERSION_PATCH@)
+find_package(LLVM ${LLVM_VERSION} EXACT REQUIRED CONFIG
+             HINTS "@MLIR_CONFIG_LLVM_CMAKE_DIR@")
+
+set(MLIR_EXPORTED_TARGETS "@MLIR_EXPORTS@")
+set(MLIR_CMAKE_DIR "@MLIR_CONFIG_CMAKE_DIR@")
+set(MLIR_INCLUDE_DIRS "@MLIR_CONFIG_INCLUDE_DIRS@")
+set(MLIR_TABLEGEN_EXE "@MLIR_CONFIG_TABLEGEN_EXE@")
+set(MLIR_PDLL_TABLEGEN_EXE "@MLIR_CONFIG_PDLL_TABLEGEN_EXE@")
+set(MLIR_INSTALL_AGGREGATE_OBJECTS "@MLIR_INSTALL_AGGREGATE_OBJECTS@")
+set(MLIR_ENABLE_BINDINGS_PYTHON "@MLIR_ENABLE_BINDINGS_PYTHON@")
+set(MLIR_ENABLE_EXECUTION_ENGINE "@MLIR_ENABLE_EXECUTION_ENGINE@")
+
+# For mlir_tablegen()
+set(MLIR_INCLUDE_DIR "@MLIR_INCLUDE_DIR@")
+set(MLIR_MAIN_SRC_DIR "@MLIR_MAIN_SRC_DIR@")
+
+set_property(GLOBAL PROPERTY MLIR_ALL_LIBS "@MLIR_ALL_LIBS@")
+set_property(GLOBAL PROPERTY MLIR_DIALECT_LIBS "@MLIR_DIALECT_LIBS@")
+set_property(GLOBAL PROPERTY MLIR_CONVERSION_LIBS "@MLIR_CONVERSION_LIBS@")
+set_property(GLOBAL PROPERTY MLIR_EXTENSION_LIBS "@MLIR_EXTENSION_LIBS@")
+set_property(GLOBAL PROPERTY MLIR_TRANSLATION_LIBS "@MLIR_TRANSLATION_LIBS@")
+set_property(GLOBAL PROPERTY MLIR_UPSTREAM_CAPI_LIBS "@MLIR_CAPI_LIBS@")
+
+# Provide all our library targets to users.
+# More specifically, configure MLIR so that it can be directly included in a top
+# level CMakeLists.txt, but also so that it can be imported via `find_package`.
+# This is based on how LLVM handles exports.
+if(NOT TARGET MLIRSupport)
+  @MLIR_CONFIG_INCLUDE_EXPORTS@
+endif()
+
+# By creating these targets here, subprojects that depend on MLIR's
+# tablegen-generated headers can always depend on these targets whether building
+# in-tree with MLIR or not.
+if(NOT TARGET mlir-tablegen-targets)
+  add_custom_target(mlir-tablegen-targets)
+endif()
+if(NOT TARGET mlir-headers)
+  add_custom_target(mlir-headers)
+endif()
+if(NOT TARGET mlir-generic-headers)
+  add_custom_target(mlir-generic-headers)
+endif()
+if(NOT TARGET mlir-doc)
+  add_custom_target(mlir-doc)
+endif()

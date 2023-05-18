@@ -1,0 +1,10 @@
+# RUN: yaml2obj %s | not llvm-objdump -h - 2>&1 | FileCheck %s
+
+!WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            START
+    StartFunction:   0
+
+# CHECK: {{.*}}: invalid start function

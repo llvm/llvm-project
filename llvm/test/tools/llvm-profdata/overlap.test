@@ -1,0 +1,21 @@
+RUN: llvm-profdata overlap %p/Inputs/overlap_1.proftext %p/Inputs/overlap_2.proftext | FileCheck %s -check-prefix=OVERLAP
+RUN: llvm-profdata overlap -function=main %p/Inputs/overlap_1.proftext %p/Inputs/overlap_2.proftext | FileCheck %s --check-prefixes=MAINFUNC,OVERLAP
+RUN: llvm-profdata overlap -value-cutoff=15000 %p/Inputs/overlap_1.proftext %p/Inputs/overlap_2.proftext | FileCheck %s --check-prefixes=MAINFUNC,OVERLAP
+RUN: llvm-profdata merge %p/Inputs/overlap_1.proftext -o %t_1.profdata
+RUN: llvm-profdata merge %p/Inputs/overlap_2.proftext -o %t_2.profdata
+RUN: llvm-profdata overlap %t_1.profdata %t_2.profdata | FileCheck %s -check-prefix=OVERLAP
+MAINFUNC: Function: main (Hash=29212902728)
+MAINFUNC:   # of edge counters overlap: 2
+MAINFUNC:   Edge profile overlap: 100.000%
+MAINFUNC:   Edge profile base count sum: 200000
+MAINFUNC:   Edge profile test count sum: 20000
+OVERLAP: Profile overlap infomation for base_profile: {{.*}} and test_profile:
+OVERLAP: Program level:
+OVERLAP:   # of functions overlap: 2
+OVERLAP:   # of functions mismatch: 1
+OVERLAP:   # of functions only in test_profile: 1
+OVERLAP:   Edge profile overlap: 60.000%
+OVERLAP:   Mismatched count percentage (Edge): 20.000%
+OVERLAP:   Percentage of Edge profile only in test_profile: 20.000%
+OVERLAP:   Edge profile base count sum: 500000
+OVERLAP:   Edge profile test count sum: 50000

@@ -1,0 +1,10 @@
+# Test does not complete on Armv7 Thumb build bot
+UNSUPPORTED: target={{.*thumb.*}}
+UNSUPPORTED: ios
+CHECK: BINGO
+RUN: %cpp_compiler %S/SwitchTest.cpp -o %t-SwitchTest
+RUN: %cpp_compiler %S/Switch2Test.cpp -o %t-Switch2Test
+RUN: %cpp_compiler %S/Switch3Test.cpp -o %t-Switch3Test
+RUN: not %run %t-SwitchTest  -use_cmp=0 -use_value_profile=1 -runs=100000000 -seed=1 2>&1 | FileCheck %s
+RUN: not %run %t-Switch2Test -use_cmp=0 -use_value_profile=1 -runs=100000000 -seed=1 2>&1 | FileCheck %s
+RUN: not %run %t-Switch3Test -use_cmp=0 -use_value_profile=1 -runs=100000000 -seed=1 2>&1

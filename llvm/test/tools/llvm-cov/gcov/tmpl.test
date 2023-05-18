@@ -1,0 +1,19 @@
+# Check that the coverage statistics for template functions are calculated as expected.
+
+RUN: rm -rf %t
+RUN: mkdir %t
+RUN: cd %t
+RUN: cp %p/Inputs/tmpl* .
+
+RUN: llvm-cov gcov tmpl.cpp -f | FileCheck %s --check-prefix=F
+RUN: llvm-cov gcov tmpl.cpp -t | FileCheck %s --check-prefix=T
+
+F:      Function '_Z4testILi1EEiv'
+F-NEXT: Lines executed:100.00% of 1
+F:      Function '_Z4testILi2EEiv'
+F-NEXT: Lines executed:100.00% of 1
+
+T:      -: 1:template <int N>
+T-NEXT: 2: 2:int test() { return N; }
+T-NEXT: -: 3:
+T-NEXT: 1: 4:int main() { return test<1>() + test<2>(); }

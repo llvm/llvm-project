@@ -1,0 +1,255 @@
+# RUN: llc -mtriple=i686-- -run-pass machine-cp -verify-machineinstrs -o - %s | FileCheck %s
+
+--- |
+  declare void @foo()
+  define void @copyprop_remove_kill0() { ret void }
+  define void @copyprop_remove_kill1() { ret void }
+  define void @copyprop_remove_kill2() { ret void }
+  define void @copyprop0() { ret void }
+  define void @copyprop1() { ret void }
+  define void @copyprop2() { ret void }
+  define void @copyprop3() { ret void }
+  define void @copyprop4() { ret void }
+  define void @nocopyprop0() { ret void }
+  define void @nocopyprop1() { ret void }
+  define void @nocopyprop2() { ret void }
+  define void @nocopyprop3() { ret void }
+  define void @nocopyprop4() { ret void }
+  define void @nocopyprop5() { ret void }
+...
+---
+# The second copy is redundant and will be removed, check that we also remove
+# the kill flag of intermediate instructions.
+# CHECK-LABEL: name: copyprop_remove_kill0
+# CHECK: bb.0:
+# CHECK-NEXT: $rax = COPY $rdi
+# CHECK-NEXT: NOOP implicit $rdi
+# CHECK-NOT: COPY
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop_remove_kill0
+body: |
+  bb.0:
+    $rax = COPY $rdi
+    NOOP implicit killed $rdi
+    $rdi = COPY $rax
+    NOOP implicit $rax, implicit $rdi
+...
+---
+# The second copy is redundant and will be removed, check that we also remove
+# the kill flag of intermediate instructions.
+# CHECK-LABEL: name: copyprop_remove_kill1
+# CHECK: bb.0:
+# CHECK-NEXT: $rax = COPY $rdi
+# CHECK-NEXT: NOOP implicit $edi
+# CHECK-NOT: COPY
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop_remove_kill1
+body: |
+  bb.0:
+    $rax = COPY $rdi
+    NOOP implicit killed $edi
+    $rdi = COPY $rax
+    NOOP implicit $rax, implicit $rdi
+...
+---
+# The second copy is redundant and will be removed, check that we also remove
+# the kill flag of intermediate instructions.
+# CHECK-LABEL: name: copyprop_remove_kill2
+# CHECK: bb.0:
+# CHECK-NEXT: $ax = COPY $di
+# CHECK-NEXT: NOOP implicit $rdi
+# CHECK-NOT: COPY
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop_remove_kill2
+body: |
+  bb.0:
+    $ax = COPY $di
+    NOOP implicit killed $rdi
+    $di = COPY $ax
+    NOOP implicit $rax, implicit $rdi
+...
+---
+# The second copy is redundant; the call preserves the source and dest register.
+# CHECK-LABEL: name: copyprop0
+# CHECK: bb.0:
+# CHECK-NEXT: $rax = COPY $rdi
+# CHECK-NEXT: CALL64pcrel32 @foo, csr_64_rt_mostregs
+# CHECK-NEXT: NOOP implicit $edi
+# CHECK-NOT: COPY
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop0
+body: |
+  bb.0:
+    $rax = COPY $rdi
+    CALL64pcrel32 @foo, csr_64_rt_mostregs
+    NOOP implicit killed $edi
+    $rdi = COPY $rax
+    NOOP implicit $rax, implicit $rdi
+...
+---
+# The 2nd copy is redundant; The call preserves the source and dest register.
+# CHECK-LABEL: name: copyprop1
+# CHECK: bb.0:
+# CHECK-NEXT: $rax = COPY $rdi
+# CHECK-NEXT: NOOP implicit $rax
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop1
+body: |
+  bb.0:
+    $rax = COPY $rdi
+    NOOP implicit killed $rax
+    $rax = COPY $rdi
+    NOOP implicit $rax, implicit $rdi
+...
+---
+# CHECK-LABEL: name: copyprop2
+# CHECK: bb.0:
+# CHECK-NEXT: $rax = COPY $rdi
+# CHECK-NEXT: NOOP implicit $ax
+# CHECK-NEXT: CALL64pcrel32 @foo, csr_64_rt_mostregs
+# CHECK-NOT: $rax = COPY $rdi
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop2
+body: |
+  bb.0:
+    $rax = COPY $rdi
+    NOOP implicit killed $ax
+    CALL64pcrel32 @foo, csr_64_rt_mostregs
+    $rax = COPY $rdi
+    NOOP implicit $rax, implicit $rdi
+...
+---
+# Check that undef is removed from the remaining copy because
+# the deleted COPY did not have it.
+# CHECK-LABEL: name: copyprop3
+# CHECK: bb.0:
+# CHECK:      $rax = COPY $rdi
+# CHECK-NEXT: NOOP implicit $rax
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi
+
+    $rax = COPY undef $rdi
+    NOOP implicit killed $rax
+    $rax = COPY $rdi
+    NOOP implicit $rax, implicit $rdi
+...
+---
+# Check that undef is NOT removed from the remaining copy because
+# the deleted COPY also had it.
+# CHECK-LABEL: name: copyprop4
+# CHECK: bb.0:
+# CHECK:      $rax = COPY undef $rdi
+# CHECK-NEXT: NOOP implicit $rax
+# CHECK-NEXT: NOOP implicit $rax, implicit $rdi
+name: copyprop4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi
+
+    $rax = COPY undef $rdi
+    NOOP implicit killed $rax
+    $rax = COPY undef $rdi
+    NOOP implicit $rax, implicit $rdi
+...
+---
+# The second copy is not redundant if the source register ($rax) is clobbered
+# even if the dest ($rbp) is not.
+# CHECK-LABEL: name: nocopyprop0
+# CHECK: bb.0:
+# CHECK-NEXT: $rax = COPY $rbp
+# CHECK-NEXT: CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
+# CHECK-NEXT: $rbp = COPY $rax
+# CHECK-NEXT: NOOP implicit $rax, implicit $rbp
+name: nocopyprop0
+body: |
+  bb.0:
+    $rax = COPY $rbp
+    CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
+    $rbp = COPY $rax
+    NOOP implicit $rax, implicit $rbp
+...
+---
+# The second copy is not redundant if the dest register ($rax) is clobbered
+# even if the source ($rbp) is not.
+# CHECK-LABEL: name: nocopyprop1
+# CHECK: bb.0:
+# CHECK-NEXT: $rbp = COPY $rax
+# CHECK-NEXT: CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
+# CHECK-NEXT: $rax = COPY $rbp
+# CHECK-NEXT: NOOP implicit $rax, implicit $rbp
+name: nocopyprop1
+body: |
+  bb.0:
+    $rbp = COPY $rax
+    CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
+    $rax = COPY $rbp
+    NOOP implicit $rax, implicit $rbp
+...
+---
+# The second copy is not redundant if the source register ($rax) is clobbered
+# even if the dest ($rbp) is not.
+# CHECK-LABEL: name: nocopyprop2
+# CHECK: bb.0:
+# CHECK-NEXT: $rax = COPY $rbp
+# CHECK-NEXT: CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
+# CHECK-NEXT: $rax = COPY $rbp
+# CHECK-NEXT: NOOP implicit $rax, implicit $rbp
+name: nocopyprop2
+body: |
+  bb.0:
+    $rax = COPY $rbp
+    CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
+    $rax = COPY $rbp
+    NOOP implicit $rax, implicit $rbp
+...
+---
+# The second copy is not redundant if the dest register ($rax) is clobbered
+# even if the source ($rbp) is not.
+# CHECK-LABEL: name: nocopyprop3
+# CHECK: bb.0:
+# CHECK-NEXT: $rbp = COPY $rax
+# CHECK-NEXT: CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
+# CHECK-NEXT: $rbp = COPY $rax
+# CHECK-NEXT: NOOP implicit $rax, implicit $rbp
+name: nocopyprop3
+body: |
+  bb.0:
+    $rbp = COPY $rax
+    CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
+    $rbp = COPY $rax
+    NOOP implicit $rax, implicit $rbp
+...
+---
+# A reserved register may change its value so the 2nd copy is not redundant.
+# CHECK-LABEL: name: nocopyprop4
+# CHECK: bb.0:
+# CHECK-NEXT: $rax = COPY $rip
+# CHECK-NEXT: NOOP implicit $rax
+# CHECK-NEXT: $rax = COPY $rip
+# CHECK-NEXT: NOOP implicit $rax
+name: nocopyprop4
+body: |
+  bb.0:
+    $rax = COPY $rip
+    NOOP implicit $rax
+    $rax = COPY $rip
+    NOOP implicit $rax
+...
+---
+# Writing to a reserved register may have additional effects (slightly illegal
+# testcase because writing to $rip like this should make the instruction a jump)
+# CHECK-LABEL: name: nocopyprop5
+# CHECK: bb.0:
+# CHECK-NEXT: $rip = COPY $rax
+# CHECK-NEXT: $rip = COPY $rax
+name: nocopyprop5
+body: |
+  bb.0:
+    $rip = COPY $rax
+    $rip = COPY $rax
+...

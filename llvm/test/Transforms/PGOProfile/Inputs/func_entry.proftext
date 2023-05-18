@@ -1,0 +1,26 @@
+# IR level Instrumentation Flag
+:ir
+:entry_first
+hot
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+9000
+
+cold
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+10
+
+med
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+50

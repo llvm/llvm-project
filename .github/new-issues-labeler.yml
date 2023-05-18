@@ -1,0 +1,29 @@
+'clang':
+  - '/\bclang(?!\-)\b/i'
+
+'clang-format':
+  - '/\bclang-format/i'
+
+'clang-tidy':
+  - '/\bclang-tidy/i'
+
+'libc++':
+  - '/libc[+x]{2}(?!\-)/i'
+
+'libc++abi':
+  - '/libc[+x]{2}-?abi/i'
+
+'libc':
+  - '/\blibc(?![-+])\b/i'
+
+'flang':
+  - '/\bflang(?!\-)\b/i'
+
+'lld':
+  - '/\blld(?!\-)\b/i'
+
+'mlir':
+  - '/\bmlir(?!\-)\b/i'
+
+'bolt':
+  - '/\bbolt(?!\-)\b/i'

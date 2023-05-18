@@ -1,0 +1,90 @@
+## Test the s and S modifiers. Build and do not build a symbol table.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: touch %t-other.txt
+
+## Default:
+# RUN: rm -f %t-default.a
+# RUN: llvm-ar rc %t-default.a %t.o
+# RUN: llvm-nm --print-armap %t-default.a \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
+
+## Use a modifer:
+# RUN: rm -f %t-symtab.a
+# RUN: llvm-ar rcs %t-symtab.a %t.o
+# RUN: llvm-nm --print-armap %t-symtab.a \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
+
+# RUN: rm -f %t-no-symtab.a
+# RUN: llvm-ar rcS %t-no-symtab.a %t.o
+# RUN: llvm-nm --print-armap %t-no-symtab.a \
+# RUN:   | FileCheck %s --check-prefix=NO-SYMTAB
+
+## Use both modifers:
+# RUN: rm -f %t-symtab-last.a
+# RUN: llvm-ar rcSs %t-symtab-last.a %t.o
+# RUN: llvm-nm --print-armap %t-symtab-last.a \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
+
+# RUN: rm -f %t-no-symtab-last.a
+# RUN: llvm-ar rcsS %t-no-symtab-last.a %t.o
+# RUN: llvm-nm --print-armap %t-no-symtab-last.a \
+# RUN:   | FileCheck %s --check-prefix=NO-SYMTAB
+
+## Use an existing archive:
+# RUN: rm -f %t-to-symtab.a
+# RUN: llvm-ar rcS %t-to-symtab.a %t.o
+# RUN: llvm-ar rs %t-to-symtab.a %t-other.txt
+# RUN: llvm-nm --print-armap %t-to-symtab.a \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
+
+# RUN: llvm-ar rs %t-to-symtab.a %t-other.txt
+# RUN: llvm-nm --print-armap %t-to-symtab.a \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
+
+# RUN: rm -f %t-to-no-symtab.a
+# RUN: llvm-ar rcs %t-to-no-symtab.a %t.o
+# RUN: llvm-ar rS %t-to-no-symtab.a %t-other.txt
+# RUN: llvm-nm --print-armap %t-to-no-symtab.a \
+# RUN:   | FileCheck %s --check-prefix=NO-SYMTAB
+
+# RUN: llvm-ar rS %t-to-no-symtab.a %t-other.txt
+# RUN: llvm-nm --print-armap %t-to-no-symtab.a \
+# RUN:   | FileCheck %s --check-prefix=NO-SYMTAB
+
+## Thin Archive:
+# RUN: rm -f %t-thin.a
+# RUN: llvm-ar rcT %t-thin.a %t.o
+# RUN: llvm-nm --print-armap %t-thin.a \
+# RUN:   | FileCheck %s --check-prefix=SYMTAB
+
+## llvm-ranlib does not change a thin archive to a regular one.
+# RUN: rm -f %t-thin.a && llvm-ar rcTS %t-thin.a %t.o
+# RUN: llvm-nm --print-armap %t-thin.a | FileCheck %s --check-prefix=NO-SYMTAB
+# RUN: llvm-ranlib %t-thin.a
+# RUN: llvm-nm --print-armap %t-thin.a | FileCheck %s --check-prefix=SYMTAB
+# RUN: FileCheck --input-file=%t-thin.a %s --check-prefixes=THIN
+
+## llvm-ar -s is identical to ranlib and a duplicated operation does not change the output.
+# RUN: rm -f %t-thin2.a && llvm-ar rcTS %t-thin2.a %t.o
+# RUN: llvm-ar s %t-thin2.a && cmp %t-thin.a %t-thin2.a
+# RUN: llvm-ar s %t-thin2.a && cmp %t-thin.a %t-thin2.a
+
+# SYMTAB:        symbol in
+# NO-SYMTAB-NOT: symbol in
+
+# THIN: !<thin>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol
+    Binding: STB_GLOBAL
+    Section: .text

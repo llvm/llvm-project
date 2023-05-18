@@ -1,0 +1,5 @@
+pytest
+pytest-cov
+coverage
+coveralls
+pytest-capturelog

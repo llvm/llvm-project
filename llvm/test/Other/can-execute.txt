@@ -1,0 +1,23 @@
+REQUIRES: can-execute
+REQUIRES: shell
+
+This tests that we abstract two peculiarities of unix in can_execute:
+
+* Directories are executable, but we don't want to try to execute them.
+* For shell scripts, we also need to be able to read them.
+
+The PATH is constructed such that 'not' will first find a directory named
+TestProg, then a file with executable bit but not readable and finally a
+shell script which always returns false, which is what it actually tries to
+execute.
+
+If we want, it is probably OK to change the semantics of can_execute and this
+test, but for now this test serves as a reminder to audit all the callers if
+we do that.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: cp -f %S/Inputs/TestProg/TestProg %t/TestProg
+RUN: chmod 111 %t/TestProg
+RUN: export PATH=%S/Inputs:%t:%S/Inputs/TestProg:$PATH
+RUN: not TestProg
+RUN: rm -rf %t

@@ -1,0 +1,71 @@
+# This test simply tests a simple but common real world example of overlapping
+# segments.
+
+# RUN: llvm-objcopy %p/Inputs/pt-phdr.elf %t
+# RUN: llvm-readobj --program-headers %t | FileCheck %s
+
+#CHECK: ProgramHeaders [
+#CHECK-NEXT:  ProgramHeader {
+#CHECK-NEXT:    Type: PT_PHDR
+#CHECK-NEXT:    Offset: 0x40
+#CHECK-NEXT:    VirtualAddress: 0x200040
+#CHECK-NEXT:    PhysicalAddress: 0x200040
+#CHECK-NEXT:    FileSize: 280
+#CHECK-NEXT:    MemSize: 280
+#CHECK-NEXT:    Flags [
+#CHECK-NEXT:      PF_R
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Alignment: 8
+#CHECK-NEXT:  }
+#CHECK-NEXT:  ProgramHeader {
+#CHECK-NEXT:    Type: PT_LOAD
+#CHECK-NEXT:    Offset: 0x0
+#CHECK-NEXT:    VirtualAddress: 0x200000
+#CHECK-NEXT:    PhysicalAddress: 0x200000
+#CHECK-NEXT:    FileSize: 344
+#CHECK-NEXT:    MemSize: 344
+#CHECK-NEXT:    Flags [
+#CHECK-NEXT:      PF_R
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Alignment: 4096
+#CHECK-NEXT:  }
+#CHECK-NEXT:  ProgramHeader {
+#CHECK-NEXT:    Type: PT_LOAD
+#CHECK-NEXT:    Offset: 0x1000
+#CHECK-NEXT:    VirtualAddress: 0x201000
+#CHECK-NEXT:    PhysicalAddress: 0x201000
+#CHECK-NEXT:    FileSize: 1
+#CHECK-NEXT:    MemSize: 1
+#CHECK-NEXT:    Flags [
+#CHECK-NEXT:      PF_R
+#CHECK-NEXT:      PF_X
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Alignment: 4096
+#CHECK-NEXT:  }
+#CHECK-NEXT:  ProgramHeader {
+#CHECK-NEXT:    Type: PT_LOAD
+#CHECK-NEXT:    Offset: 0x2000
+#CHECK-NEXT:    VirtualAddress: 0x202000
+#CHECK-NEXT:    PhysicalAddress: 0x202000
+#CHECK-NEXT:    FileSize: 14
+#CHECK-NEXT:    MemSize: 14
+#CHECK-NEXT:    Flags [
+#CHECK-NEXT:      PF_R
+#CHECK-NEXT:      PF_W
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Alignment: 4096
+#CHECK-NEXT:  }
+#CHECK-NEXT:  ProgramHeader {
+#CHECK-NEXT:    Type: PT_GNU_STACK (0x6474E551)
+#CHECK-NEXT:    Offset: 0x0
+#CHECK-NEXT:    VirtualAddress: 0x0
+#CHECK-NEXT:    PhysicalAddress: 0x0
+#CHECK-NEXT:    FileSize: 0
+#CHECK-NEXT:    MemSize: 0
+#CHECK-NEXT:    Flags [
+#CHECK-NEXT:      PF_R
+#CHECK-NEXT:      PF_W
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Alignment: 0
+#CHECK-NEXT:  }
+#CHECK-NEXT:]

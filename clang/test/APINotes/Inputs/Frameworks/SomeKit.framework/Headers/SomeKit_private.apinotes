@@ -1,0 +1,15 @@
+Name: SomeKit
+Classes:
+  - Name: A
+    Methods:
+      - Selector: "privateTransform:input:"
+        MethodKind:      Instance
+        NullabilityOfRet: N
+        Nullability:      [ N, S ]
+    Properties:
+      - Name: internalProperty
+        Nullability: N
+Protocols:
+  - Name: InternalProtocol
+    Availability: none
+    AvailabilityMsg: "not for you"

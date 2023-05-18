@@ -1,0 +1,4 @@
+## Error for an unknown output style.
+RUN: not llvm-readobj --elf-output-style=unknown 2>&1 | FileCheck %s
+
+CHECK: error: --elf-output-style value should be either 'LLVM', 'GNU', or 'JSON', but was 'unknown'

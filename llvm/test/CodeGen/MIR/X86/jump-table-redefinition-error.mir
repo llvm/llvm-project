@@ -1,0 +1,76 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define i32 @test_jumptable(i32 %in) {
+  entry:
+    switch i32 %in, label %def [
+      i32 0, label %lbl1
+      i32 1, label %lbl2
+      i32 2, label %lbl3
+      i32 3, label %lbl4
+    ]
+
+  def:
+    ret i32 0
+
+  lbl1:
+    ret i32 1
+
+  lbl2:
+    ret i32 2
+
+  lbl3:
+    ret i32 4
+
+  lbl4:
+    ret i32 8
+  }
+
+...
+---
+name:            test_jumptable
+jumpTable:
+  kind:          label-difference32
+  entries:
+    - id:        0
+      blocks:    [ '%bb.3.lbl1', '%bb.4.lbl2', '%bb.5.lbl3', '%bb.6.lbl4' ]
+# CHECK: [[@LINE+1]]:18: redefinition of jump table entry '%jump-table.0'
+    - id:        0
+      blocks:    [ '%bb.3.lbl1', '%bb.4.lbl2', '%bb.5.lbl3', '%bb.6.lbl4' ]
+body: |
+  bb.0.entry:
+    successors: %bb.2.def, %bb.1.entry
+
+    $eax = MOV32rr $edi, implicit-def $rax
+    CMP32ri8 $edi, 3, implicit-def $eflags
+    JCC_1 %bb.2.def, 7, implicit $eflags
+
+  bb.1.entry:
+    successors: %bb.3.lbl1, %bb.4.lbl2, %bb.5.lbl3, %bb.6.lbl4
+
+    $rcx = LEA64r $rip, 1, _, %jump-table.0, _
+    $rax = MOVSX64rm32 $rcx, 4, $rax, 0, _
+    $rax = ADD64rr $rax, $rcx, implicit-def $eflags
+    JMP64r $rax
+
+  bb.2.def:
+    $eax = MOV32r0 implicit-def $eflags
+    RET64 $eax
+
+  bb.3.lbl1:
+    $eax = MOV32ri 1
+    RET64 $eax
+
+  bb.4.lbl2:
+    $eax = MOV32ri 2
+    RET64 $eax
+
+  bb.5.lbl3:
+    $eax = MOV32ri 4
+    RET64 $eax
+
+  bb.6.lbl4:
+    $eax = MOV32ri 8
+    RET64 $eax
+...

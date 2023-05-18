@@ -1,0 +1,23 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Variables needed for common clang config.
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+config.python_executable = "@Python3_EXECUTABLE@"
+# Support substitution of the tools and libs dirs with user parameters. This is
+# used when we can't determine the tool dir at configuration time.
+config.clang_tools_dir = lit_config.substitute("@CURRENT_TOOLS_DIR@")
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
+config.llvm_shlib_dir = "@SHLIBDIR@"
+
+config.clangd_source_dir = "@CMAKE_CURRENT_SOURCE_DIR@/.."
+config.clangd_binary_dir = "@CMAKE_CURRENT_BINARY_DIR@/.."
+config.clangd_build_xpc = @CLANGD_BUILD_XPC@
+config.clangd_enable_remote = @CLANGD_ENABLE_REMOTE@
+config.clangd_tidy_checks = @CLANGD_TIDY_CHECKS@
+config.have_zlib = @LLVM_ENABLE_ZLIB@
+
+# Delegate logic to lit.cfg.py.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

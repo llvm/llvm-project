@@ -1,0 +1,310 @@
+## Test that yaml2obj and obj2yaml can create mach-o files with valid
+## __debug_ranges section.
+##
+## The DWARF should end up looking like:
+##
+## 0x0000000b: DW_TAG_compile_unit
+##               DW_AT_name        ("/tmp/main.c")
+##               DW_AT_language    (DW_LANG_C_plus_plus)
+##               DW_AT_low_pc      (0x0000000000000000)
+##               DW_AT_ranges      (0x00000000
+##                  [0x0000000000000000, 0x0000000000000020)
+##                  [0x0000000000000000, 0x0000000000000030)
+##                  [0x0000000000001000, 0x0000000000002000))
+##               DW_AT_stmt_list   (0x00000000)
+##
+## 0x00000022:   DW_TAG_subprogram
+##                 DW_AT_name      ("stripped1")
+##                 DW_AT_low_pc    (0x0000000000000000)
+##                 DW_AT_high_pc   (0x0000000000000020)
+##
+## 0x00000033:   DW_TAG_subprogram
+##                 DW_AT_name      ("stripped2")
+##                 DW_AT_low_pc    (0x0000000000000000)
+##                 DW_AT_high_pc   (0x0000000000000030)
+##
+## 0x00000048:   DW_TAG_subprogram
+##                 DW_AT_name      ("main")
+##                 DW_AT_low_pc    (0x0000000000001000)
+##                 DW_AT_high_pc   (0x0000000000002000)
+##
+## 0x00000059:   NULL
+
+# RUN: yaml2obj %s > %t
+# RUN: llvm-dwarfdump %t | FileCheck %s
+# RUN: obj2yaml %t | FileCheck --check-prefix=YAML %s
+
+# CHECK:      DW_AT_ranges	(0x00000000
+# CHECK-NEXT: [0x0000000000000000, 0x0000000000000020)
+# CHECK-NEXT: [0x0000000000000000, 0x0000000000000030)
+# CHECK-NEXT: [0x0000000000001000, 0x0000000000002000))
+
+# YAML:      - sectname:        __debug_ranges
+# YAML-NEXT:   segname:         __DWARF
+# YAML-NEXT:   addr:            0x7A
+# YAML-NEXT:   size:            80
+# YAML-NEXT:   offset:          0x28A
+
+# YAML:      debug_ranges:
+# YAML-NEXT:   - Offset:          0x0
+# YAML-NEXT:     AddrSize:        0x8
+# YAML-NEXT:     Entries:
+# YAML-NEXT:       - LowOffset:       0x0
+# YAML-NEXT:         HighOffset:      0x20
+# YAML-NEXT:       - LowOffset:       0x0
+# YAML-NEXT:         HighOffset:      0x30
+# YAML-NEXT:       - LowOffset:       0xFFFFFFFFFFFFFFFF
+# YAML-NEXT:         HighOffset:      0x1000
+# YAML-NEXT:       - LowOffset:       0x0
+# YAML-NEXT:         HighOffset:      0x1000
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           4
+  sizeofcmds:      464
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         392
+    segname:         ''
+    vmaddr:          0
+    vmsize:          240
+    fileoff:         528
+    filesize:        240
+    maxprot:         7
+    initprot:        7
+    nsects:          4
+    flags:           0
+    Sections:
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x0000000000000000
+        size:            36
+        offset:          0x00000210
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x0000000000000024
+        size:            86
+        offset:          0x00000234
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_ranges
+        segname:         __DWARF
+        addr:            0x000000000000007A
+        size:            80
+        offset:          0x0000028A
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x00000000000000CA
+        size:            38
+        offset:          0x000002DA
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0
+    stroff:          768
+    strsize:         8
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           658944
+    sdk:             658944
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         34734080
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         768
+    datasize:        0
+LinkEditData:
+  StringTable:
+    - ' '
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+DWARF:
+  debug_str:
+    - ''
+    - '/tmp/main.c'
+    - stripped1
+    - stripped2
+    - main
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000003
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_ranges:
+    - Offset:          0x00000000
+      Entries:
+        - LowOffset:       0x0000000000000000
+          HighOffset:      0x0000000000000020
+        - LowOffset:       0x0000000000000000
+          HighOffset:      0x0000000000000030
+        - LowOffset:       0xFFFFFFFFFFFFFFFF
+          HighOffset:      0x0000000000001000
+        - LowOffset:       0x0000000000000000
+          HighOffset:      0x0000000000001000
+  debug_info:
+    - Length:          82
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000004
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000020
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000017
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000030
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000021
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000000
+          Values:          []
+...
+
+## Test generating and dumping an empty __debug_ranges section.
+
+# RUN: yaml2obj --docnum=2 %s | obj2yaml | FileCheck %s --check-prefix=EMPTY
+
+#      EMPTY: DWARF:
+# EMPTY-NEXT:   debug_ranges:    []
+# EMPTY-NEXT: ...
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x0000000A
+  ncmds:      1
+  sizeofcmds: 232
+  flags:      0x00000000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  152
+    segname:  __DWARF
+    vmaddr:   0x00
+    vmsize:   0x00
+    fileoff:  0x00
+    filesize: 0x00
+    maxprot:  0
+    initprot: 0
+    nsects:   1
+    flags:    0
+    Sections:
+      - sectname:  __debug_ranges
+        segname:   __DWARF
+        addr:      0x00
+        size:      [[SIZE=0]]
+        offset:    0x210
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        content:   [[CONTENT=<none>]]
+
+## Test generating and dumping a __debug_ranges section whose size isn't a
+## multiple of the address size. This test case is to ensure that when the
+## parser fails, the content of the __debug_ranges section will be dumped into
+## the 'content' entry and the 'debug_ranges' entry will not exist.
+
+# RUN: yaml2obj --docnum=2 -DSIZE=3 -DCONTENT='010203' %s | obj2yaml | FileCheck %s --check-prefix=FAILS
+
+#  FAILS-NOT: DWARF:
+#      FAILS: Sections:
+# FAILS-NEXT:   - sectname:  __debug_ranges
+# FAILS-NEXT:     segname:   __DWARF
+# FAILS-NEXT:     addr:      0x0
+# FAILS-NEXT:     size:      3
+# FAILS-NEXT:     offset:    0x210
+# FAILS-NEXT:     align:     0
+# FAILS-NEXT:     reloff:    0x0
+# FAILS-NEXT:     nreloc:    0
+# FAILS-NEXT:     flags:     0x0
+# FAILS-NEXT:     reserved1: 0x0
+# FAILS-NEXT:     reserved2: 0x0
+# FAILS-NEXT:     reserved3: 0x0
+# FAILS-NEXT:     content:   '010203'
+# FAILS-NEXT: ...

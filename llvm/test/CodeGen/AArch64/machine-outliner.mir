@@ -1,0 +1,169 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs -frame-pointer=non-leaf %s -o - | FileCheck %s
+--- |
+
+  @x = common global i32 0, align 4
+
+  define void @baz() #0 {
+    ret void
+  }
+
+  define i32 @main() #0 {
+    ret i32 0
+  }
+
+  define void @bar(i32 %a) #0 {
+    ret void
+  }
+
+  attributes #0 = { noinline noredzone }
+...
+---
+# This test ensures that we
+# - Create outlined functions
+# - Don't outline anything to do with LR or W30
+# - Save LR when it's not available
+# - Functions whose addresses are taken can still be outlined
+#
+# CHECK-LABEL: main
+# CHECK-LABEL: bb.1:
+# CHECK-DAG: BL @OUTLINED_FUNCTION_[[F0:[0-9]+]]
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x[[REG:[0-9]+]], 0
+# CHECK-NEXT: STRHHroW $w12, $x9, $w30, 1, 1
+# CHECK-NEXT: $lr = ORRXri $xzr, 1
+
+# CHECK-DAG: bb.2
+# CHECK: BL @OUTLINED_FUNCTION_[[F0]]
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x[[REG]], 0
+# CHECK-NEXT: STRHHroW $w12, $x9, $w30, 1, 1
+# CHECK-NEXT: $lr = ORRXri $xzr, 1
+
+# CHECK-DAG: bb.3
+# CHECK: BL @OUTLINED_FUNCTION_[[F0]]
+# CHECK-NEXT: $lr = ORRXrs $xzr, $x[[REG]], 0
+# CHECK-NEXT: STRHHroW $w12, $x9, $w30, 1, 1
+# CHECK-NEXT: $lr = ORRXri $xzr, 1
+name:            main
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $sp = frame-setup SUBXri $sp, 16, 0
+    renamable $x9 = ADRP target-flags(aarch64-page) @bar
+    $x9 = ORRXri $xzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w30 = ORRWri $wzr, 1
+    $lr = ORRXri $xzr, 1
+  bb.1:
+  liveins: $lr
+    $x20, $x19 = LDPXi $sp, 10
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    renamable $x9 = ADRP target-flags(aarch64-page) @x
+    $x12 = ADDXri $sp, 48, 0;
+    STRHHroW $w12, $x9, $w30, 1, 1
+    $lr = ORRXri $xzr, 1
+  bb.2:
+  liveins: $lr
+    $x20, $x19 = LDPXi $sp, 10
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    renamable $x9 = ADRP target-flags(aarch64-page) @x
+    $x12 = ADDXri $sp, 48, 0;
+    STRHHroW $w12, $x9, $w30, 1, 1
+    $lr = ORRXri $xzr, 1
+  bb.3:
+  liveins: $lr
+    $x20, $x19 = LDPXi $sp, 10
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    renamable $x9 = ADRP target-flags(aarch64-page) @x
+    $x12 = ADDXri $sp, 48, 0;
+    STRHHroW $w12, $x9, $w30, 1, 1
+    $lr = ORRXri $xzr, 1
+    $sp = ADDXri $sp, 16, 0
+  bb.4:
+  liveins: $lr
+    RET undef $lr
+
+...
+---
+# This test ensures that we can avoid saving LR when it's available.
+# It also makes sure that KILL instructions don't impact outlining.
+# CHECK-LABEL: bb.1:
+# CHECK-NOT: BL @baz, implicit-def dead $lr, implicit $sp
+# CHECK: BL @OUTLINED_FUNCTION_[[F1:[0-9]+]], implicit-def $lr, implicit $sp
+# CHECK-NEXT: $w11 = ORRWri $wzr, 2
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_[[F1]], implicit-def $lr, implicit $sp
+# CHECK-NEXT: $w8 = ORRWri $wzr, 0
+# CHECK-NOT: $w11 = KILL renamable $w11, implicit killed $w11
+name:            bar
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    $sp = frame-setup SUBXri $sp, 32, 0
+    $fp = frame-setup ADDXri $sp, 16, 0
+
+  bb.1:
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w11 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 1
+    $w11 = KILL renamable $w11, implicit killed $w11
+    $w11 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w11 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 2
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w11 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w11 = ORRWri $wzr, 1
+    $w11 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 0
+
+  bb.2:
+    $w15 = ORRWri $wzr, 1
+    $w15 = ORRWri $wzr, 1
+    $w15 = ORRWri $wzr, 1
+    $w15 = ORRWri $wzr, 1
+    $x15 = ADDXri $sp, 48, 0;
+    $w9 = ORRWri $wzr, 0
+    $w15 = ORRWri $wzr, 1
+    $w15 = ORRWri $wzr, 1
+    $w15 = ORRWri $wzr, 1
+    $w15 = ORRWri $wzr, 1
+    $x15 = ADDXri $sp, 48, 0;
+    $w8 = ORRWri $wzr, 0
+
+  bb.3:
+    $fp, $lr = LDPXi $sp, 2
+    $sp = ADDXri $sp, 32, 0
+    RET undef $lr
+
+...
+---
+name:            baz
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    RET undef $lr
+
+# CHECK-LABEL: name:            OUTLINED_FUNCTION_{{[0-9]}}
+# CHECK=LABEL: name:            OUTLINED_FUNCTION_{{[1-9]}}

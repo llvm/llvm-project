@@ -1,0 +1,6 @@
+set(LLVM_TARGET_DEFINITIONS Passes.td)
+mlir_tablegen(Passes.h.inc -gen-pass-decls -name SparseTensor)
+mlir_tablegen(Passes.capi.h.inc -gen-pass-capi-header --prefix SparseTensor)
+mlir_tablegen(Passes.capi.cpp.inc -gen-pass-capi-impl --prefix SparseTensor)
+add_public_tablegen_target(MLIRSparseTensorPassIncGen)
+add_mlir_doc(Passes SparseTensorPasses ./ -gen-pass-doc)

@@ -1,0 +1,24 @@
+# RUN: llc -march=hexagon -run-pass hexagon-packetizer -o - %s | FileCheck %s
+---
+name: fred
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    ; Check that all these instructions go in the same packet. This is to
+    ; make sure that a target flag (other than HMOTF_ConstExtend) on an
+    ; operand will not be interpreted as a constant-extender flag.
+    ; The combination used below (pcrel + 0) does not technically make sense,
+    ; but combinations that do make sense require constant extending, so
+    ; testing this is not possible otherwise.
+
+    ; CHECK: BUNDLE
+    ; CHECK-DAG: $r0 = A2_tfrsi
+    ; CHECK-DAG: $r1 = A2_tfrsi
+    ; CHECK-DAG: $r2 = A2_tfrsi
+    ; CHECK: }
+    $r0 = A2_tfrsi target-flags (hexagon-pcrel) 0
+    $r1 = A2_tfrsi target-flags (hexagon-pcrel) 0
+    $r2 = A2_tfrsi target-flags (hexagon-pcrel) 0
+...
+

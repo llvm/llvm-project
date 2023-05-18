@@ -1,0 +1,29 @@
+;; Some quoted arguments below don't work properly on Windows when llvm-lit
+;; invokes the cmd shell to run the commands. Just require running in a
+;; posix shell, to keep being able to test this corner case on Unix at least.
+; REQUIRES: shell
+
+; RUN: llvm-windres -### --include-dir %p/incdir1 --include %p/incdir2 "-DFOO1=\\\"foo bar\\\"" -UFOO2 -D FOO3 --preprocessor-arg "-DFOO4=\\\"baz baz\\\"" -DFOO5=\"bar\" %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK1
+; RUN: llvm-windres -### --include-dir %p/incdir1 --include %p/incdir2 "-DFOO1=\"foo bar\"" -UFOO2 -D FOO3 --preprocessor-arg "-DFOO4=\"baz baz\"" "-DFOO5=bar" %p/Inputs/empty.rc %t.res --use-temp-file | FileCheck %s --check-prefix=CHECK1
+; CHECK1: {{^}} "clang" "--driver-mode=gcc" "-target" "{{.*}}-{{.*}}{{mingw32|windows-gnu}}" "-E" "-xc" "-DRC_INVOKED" "-I" "{{.*}}incdir1" "-I" "{{.*}}incdir2" "-D" "FOO1=\"foo bar\"" "-U" "FOO2" "-D" "FOO3" "-DFOO4=\"baz baz\"" "-D" "FOO5=bar" "{{.*}}empty.rc" "-o" "{{.*}}preproc-{{.*}}.rc"{{$}}
+; RUN: llvm-windres -### --preprocessor "i686-w64-mingw32-gcc" --preprocessor-arg -E "-DFOO=\\\"foo bar\\\"" %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK2
+; CHECK2: {{^}} "{{.*}}i686-w64-mingw32-gcc" "-E" "-D" "FOO=\"foo bar\"" "{{.*}}empty.rc" "-o" "{{.*}}preproc-{{.*}}.rc"{{$}}
+
+;; Test resolving the --preprocessor executable from PATH
+
+; RUN: rm -rf %t-bin/testbin
+; RUN: mkdir -p %t-bin/testbin
+; RUN: ln -s llvm-windres %t-bin/testbin/i686-w64-mingw32-gcc
+; RUN: env PATH=%t-bin/testbin llvm-windres -### --preprocessor i686-w64-mingw32-gcc --preprocessor-arg -E --preprocessor-arg -xc -DRC_INVOKED %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK3
+; CHECK3: {{^}} "{{.*}}/testbin/i686-w64-mingw32-gcc" "-E" "-xc" "-D" "RC_INVOKED" "{{.*}}empty.rc" "-o" "{{.*}}preproc-{{.*}}.rc"{{$}}
+
+
+;; Test error messages when unable to execute the preprocessor.
+
+; RUN: not llvm-windres --preprocessor intentionally-missing-executable %p/Inputs/empty.rc %t.res 2>&1 | FileCheck %s --check-prefix=CHECK4
+; CHECK4: llvm-rc: Preprocessing failed: Executable "intentionally-missing-executable" doesn't exist!
+
+;; Test --preprocessor with an argument with spaces.
+
+; RUN: llvm-windres -### --preprocessor "path with spaces/gcc" %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK5
+; CHECK5: {{^}} "path with spaces/gcc" "{{.*}}empty.rc" "-o" "{{.*}}preproc-{{.*}}.rc"{{$}}

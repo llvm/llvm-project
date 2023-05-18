@@ -1,0 +1,88 @@
+# RUN: not --crash llc -o - %s -mtriple=x86_64-- -verify-machineinstrs -run-pass=none 2>&1 | FileCheck %s
+# REQUIRES: x86-registered-target
+
+# CHECK: Bad machine code: Generic extend/truncate can not operate on pointers
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.1
+# CHECK-NEXT: - instruction: %t_p:_(s32) = G_TRUNC %p:_(p0)
+
+# CHECK: Bad machine code: operand types must be all-vector or all-scalar
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.2
+# CHECK-NEXT: - instruction: %se_i32:_(<2 x s64>) = G_SEXT %i32:_(s32)
+
+# CHECK: Bad machine code: operand types must preserve number of vector elements
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.3
+# CHECK-NEXT: - instruction: %ze_v2i32:_(<4 x s64>) = G_ZEXT %v2i32:_(<2 x s32>)
+
+# CHECK: Bad machine code: Generic extend has destination type no larger than source
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.4
+# CHECK-NEXT: - instruction: %ae_i32:_(s32) = G_ANYEXT %i32:_(s32)
+
+# CHECK: Bad machine code: Generic truncate has destination type no smaller than source ***
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.5
+# CHECK-NEXT: - instruction: %ft_f32:_(s64) = G_FPTRUNC %f32:_(s32)
+
+
+# CHECK: Bad machine code: Generic extend/truncate can not operate on pointers
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.6
+# CHECK-NEXT: - instruction: %ze_v2i128:_(<4 x p0>) = G_ZEXT %v2i128:_(<2 x s128>)
+
+# CHECK: Bad machine code: operand types must preserve number of vector elements
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.6
+# CHECK-NEXT: - instruction: %ze_v2i128:_(<4 x p0>) = G_ZEXT %v2i128:_(<2 x s128>)
+
+# CHECK: Bad machine code: Generic extend has destination type no larger than source
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.6
+# CHECK-NEXT: - instruction: %ze_v2i128:_(<4 x p0>) = G_ZEXT %v2i128:_(<2 x s128>)
+
+
+# CHECK: Bad machine code: Generic extend/truncate can not operate on pointers
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.6
+# CHECK-NEXT: - instruction: %fe_v2f128:_(p0) = G_FPEXT %v2f128:_(<2 x s128>)
+
+# CHECK: Bad machine code: operand types must be all-vector or all-scalar
+# CHECK-NEXT: - function:    bad_generic_extends_and_truncates
+# CHECK-NEXT: - basic block: %bb.6
+# CHECK-NEXT: - instruction: %fe_v2f128:_(p0) = G_FPEXT %v2f128:_(<2 x s128>)
+
+---
+name:              bad_generic_extends_and_truncates
+tracksRegLiveness: true
+body:              |
+  bb.0:
+    liveins: $rdi, $esi, $rdx, $xmm0, $ymm1, $ymm2
+
+    %p:_(p0) = COPY $rdi
+    %i32:_(s32) = COPY $esi
+    %v2i32:_(<2 x s32>) = COPY $rdx
+    %f32:_(s32) = COPY $xmm0
+    %v2i128:_(<2 x s128>) = COPY $ymm1
+    %v2f128:_(<2 x s128>) = COPY $ymm2
+
+  bb.1:
+    %t_p:_(s32) = G_TRUNC %p
+
+  bb.2:
+    %se_i32:_(<2 x s64>) = G_SEXT %i32
+
+  bb.3:
+    %ze_v2i32:_(<4 x s64>) = G_ZEXT %v2i32
+
+  bb.4:
+    %ae_i32:_(s32) = G_ANYEXT %i32
+
+  bb.5:
+    %ft_f32:_(s64) = G_FPTRUNC %f32
+
+  bb.6:
+    %ze_v2i128:_(<4 x p0>) = G_ZEXT %v2i128
+    %fe_v2f128:_(p0) = G_FPEXT %v2f128
+...

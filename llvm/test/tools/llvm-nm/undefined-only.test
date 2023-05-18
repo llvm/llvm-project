@@ -1,0 +1,20 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-nm --undefined-only %t.o | FileCheck %s --implicit-check-not=symbol_defined
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol_undefined_a
+  - Name:    symbol_defined
+    Section: .text
+  - Name:    symbol_undefined_b
+
+# CHECK:      U symbol_undefined_a
+# CHECK-NEXT: U symbol_undefined_b

@@ -1,0 +1,17 @@
+Test which operations create an archive and which don't.
+
+RUN: touch %t
+RUN: rm -f %t.foo.a
+RUN: not llvm-ar p %t.foo.a %t 2>&1 | FileCheck %s
+RUN: not llvm-ar d %t.foo.a %t 2>&1 | FileCheck %s
+RUN: not llvm-ar m %t.foo.a %t 2>&1 | FileCheck %s
+RUN: not llvm-ar t %t.foo.a %t 2>&1 | FileCheck %s
+RUN: not llvm-ar x %t.foo.a %t 2>&1 | FileCheck %s
+
+RUN: llvm-ar q %t.foo.a %t 2>&1 | FileCheck --check-prefix=CREATE %s
+RUN: rm -f %t.foo.a
+RUN: llvm-ar r %t.foo.a %t 2>&1 | FileCheck --check-prefix=CREATE %s
+RUN: rm -f %t.foo.a
+
+CHECK: llvm-ar{{(.exe|.EXE)?}}: error: unable to load '{{[^']+}}.foo.a':
+CREATE: creating {{.*}}.foo.a

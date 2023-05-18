@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=arm64-apple-ios -start-before=localstackalloc -stop-after=prologepilog -o - %s | FileCheck %s
+
+--- |
+  @__stack_chk_guard = external global ptr
+  define i32 @main(i32, ptr) {
+    %StackGuardSlot = alloca ptr
+    unreachable
+  }
+...
+---
+name:            main
+tracksRegLiveness: true
+frameInfo:
+# CHECK: stackSize: 544
+  stackProtector:  '%stack.0.StackGuardSlot'
+stack:
+  - { id: 0, name: StackGuardSlot, size: 8, alignment: 8, stack-id: default }
+# Verify that the offset assigned to the stack protector is at the top of the
+# frame, covering the locals.
+# CHECK:       - { id: 0, name: StackGuardSlot, type: default, offset: -24, size: 8,
+# CHECK-NEXT:      alignment: 8, stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT:      local-offset: -8, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT:      debug-info-location: '' }
+  - { id: 1, size: 512, alignment: 1, stack-id: default }
+  - { id: 2, size: 4, alignment: 4, stack-id: default }
+body:             |
+  bb.0:
+    %25:gpr64common = LOAD_STACK_GUARD :: (dereferenceable invariant load (s64) from @__stack_chk_guard)
+    STRXui killed %25, %stack.0.StackGuardSlot, 0 :: (volatile store (s64) into %stack.0.StackGuardSlot)
+    %28:gpr64 = LDRXui %stack.0.StackGuardSlot, 0 :: (volatile load (s64) from %stack.0.StackGuardSlot)
+    %29:gpr64common = LOAD_STACK_GUARD :: (dereferenceable invariant load (s64) from @__stack_chk_guard)
+    RET_ReallyLR implicit undef $w0, implicit killed %28, implicit killed %29
+
+...

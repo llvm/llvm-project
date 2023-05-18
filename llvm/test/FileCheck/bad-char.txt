@@ -1,0 +1,42 @@
+# This file contains characters that render as spaces (at least for me in vim)
+# but are encoded as 160.  Each is indicated with a "^" on the following line.
+# FileCheck used to call functions like isalnum on each without casting to
+# unsigned char first, so it sign-extended beyond what unsigned char or EOF can
+# represent.  C says that has undefined behavior, and it has caused stack dumps
+# under Windows.
+
+//------------------------------------------------
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -check-prefix=BEFORE-PREFIX %s < /dev/null 2>&1 | \
+RUN:   FileCheck -check-prefix=ERR-EMPTY-CHECK %s
+
+ BEFORE-PREFIX:
+^
+ERR-EMPTY-CHECK: error: found empty check string
+
+//------------------------------------------------
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -check-prefix=AFTER-PREFIX %s < /dev/null 2>&1 | \
+RUN:   FileCheck -check-prefix=ERR-NO-CHECK %s
+
+AFTER-PREFIX :
+            ^
+ERR-NO-CHECK: error: no check strings found
+
+//------------------------------------------------
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -check-prefix=BEFORE-VAR %s < /dev/null 2>&1 | \
+RUN:   FileCheck -check-prefix=ERR-BAD-VAR %s
+
+BEFORE-VAR: [[ VAR:]]
+              ^
+ERR-BAD-VAR: error: invalid variable name
+
+//------------------------------------------------
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -check-prefix=AFTER-VAR %s < /dev/null 2>&1 | \
+RUN:   FileCheck -check-prefix=ERR-BAD-STRING-VAR %s
+
+AFTER-VAR: [[VAR :]]
+                ^
+ERR-BAD-STRING-VAR: error: invalid name in string variable definition

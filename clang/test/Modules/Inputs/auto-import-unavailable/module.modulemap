@@ -1,0 +1,19 @@
+module missing_header {
+  module missing { header "missing_header/missing.h" }
+  module error_importing_this { header "missing_header/not_missing.h" }
+}
+
+module nonrequired_missing_header {
+  module unsatisfied_requires {
+    requires nonexistent_feature
+    header "nonrequired_missing_header/missing.h"
+  }
+  module fine_to_import {
+    header "nonrequired_missing_header/not_missing.h"
+  }
+}
+
+module missing_requirement {
+  requires nonexistent_feature
+  header "missing_requirement.h"
+}

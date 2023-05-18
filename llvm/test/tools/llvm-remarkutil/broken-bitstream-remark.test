@@ -1,0 +1,6 @@
+RUN: not llvm-remarkutil bitstream2yaml %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
+RUN: not llvm-remarkutil instruction-count --parser=bitstream %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
+RUN: not llvm-remarkutil annotation-count --parser=bitstream --annotation-type=remark %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
+RUN: not llvm-remarkutil count --parser=bitstream %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
+
+CHECK: error: Unknown magic number: expecting RMRK, got --- .

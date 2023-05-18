@@ -1,0 +1,51 @@
+## The Unix version of this test must use umask(1) because
+## llvm-dwarfutil respects the umask in setting output permissions.
+## Setting the umask to 0 ensures deterministic permissions across
+## test environments.
+# UNSUPPORTED: system-windows
+# REQUIRES: shell
+
+# RUN: touch %t
+# RUN: chmod 0777 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0777
+# RUN: chmod 0666 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0666
+# RUN: chmod 0640 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0640
+
+## Set umask to be permissive of all permissions,
+## only test mirroring of permissions.
+# RUN: umask 0
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: chmod 0777 %t
+# RUN: llvm-dwarfutil --no-garbage-collection %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0777
+# RUN: llvm-dwarfutil --garbage-collection --separate-debug-file %t %t2
+# RUN: ls -l %t2 | cut -f 1 -d ' ' > %t2.perms
+# RUN: cmp %t2.perms %t.0777
+
+# RUN: chmod 0666 %t
+# RUN: llvm-dwarfutil --no-garbage-collection %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0666
+# RUN: llvm-dwarfutil --garbage-collection --separate-debug-file %t %t2
+# RUN: ls -l %t2 | cut -f 1 -d ' ' > %t2.perms
+# RUN: cmp %t2.perms %t.0666
+
+# RUN: chmod 0640 %t
+# RUN: llvm-dwarfutil --no-garbage-collection %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0640
+# RUN: llvm-dwarfutil --garbage-collection --separate-debug-file %t %t2
+# RUN: ls -l %t2 | cut -f 1 -d ' ' > %t2.perms
+# RUN: cmp %t2.perms %t.0640
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64

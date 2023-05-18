@@ -1,0 +1,23 @@
+# RUN: llvm-mc < %s -triple thumbv7-unknown-unknown -disassemble -mattr=+vfp4,-d16 2>&1 | FileCheck %s --check-prefix=D32
+# RUN: llvm-mc < %s -triple thumbv7-unknown-unknown -disassemble -mattr=+vfp4,-d16 2>&1 | FileCheck %s --check-prefix=D32
+
+
+# D32: vadd.f64 d1, d2, d16
+# D16: warning: invalid instruction encoding
+[0x32,0xee,0x20,0x1b]
+
+# D32: vadd.f64 d1, d17, d6
+# D16: warning: invalid instruction encoding
+[0x31,0xee,0x86,0x1b]
+
+# D32: vadd.f64 d19, d7, d6
+# D16: warning: invalid instruction encoding
+[0x77,0xee,0x06,0x3b]
+
+# D32: vcvt.f64.f32 d22, s4
+# D16: warning: invalid instruction encoding
+[0xf7,0xee,0xc2,0x6a]
+
+# D32: vcvt.f32.f64 s26, d30
+# D16: warning: invalid instruction encoding
+[0xb7,0xee,0xee,0xdb]

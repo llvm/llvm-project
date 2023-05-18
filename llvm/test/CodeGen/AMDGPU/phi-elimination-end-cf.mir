@@ -1,0 +1,54 @@
+# RUN: llc -mtriple amdgcn -run-pass livevars -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
+
+# CHECK-LABEL:  phi-cf-test
+# CHECK: bb.0:
+# CHECK:     [[COND:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64
+# CHECK:     [[IF_SOURCE0:%[0-9]+]]:sreg_64 = SI_IF [[COND]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# CHECK:     [[IF_INPUT_REG:%[0-9]+]]:sreg_64 = S_MOV_B64_term killed [[IF_SOURCE0]], implicit $exec
+
+# CHECK: bb.1:
+# CHECK:     [[END_CF_ARG:%[0-9]+]]:sreg_64 = COPY killed [[IF_INPUT_REG]]
+# CHECK:     SI_END_CF killed [[END_CF_ARG]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+# CHECK: bb.2:
+# CHECK:     [[IF_SOURCE1:%[0-9]+]]:sreg_64 = SI_IF [[COND]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# CHECK:     [[IF_INPUT_REG]]:sreg_64 = S_MOV_B64_term killed [[IF_SOURCE1]], implicit $exec
+
+
+...
+---
+name:            phi-cf-test
+tracksRegLiveness: true
+body:             |
+
+  bb.0:
+    successors: %bb.3(0x40000000), %bb.2(0x40000000)
+    liveins: $vgpr0
+
+    %5:vgpr_32(s32) = COPY $vgpr0
+    %0:sreg_64 = V_CMP_EQ_U32_e64 0, %5(s32), implicit $exec
+    %18:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %22:sreg_64 = SI_IF %0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %24:sreg_64 = PHI %20, %bb.3, %22, %bb.0
+    %23:vgpr_32 = PHI %19, %bb.3, %18, %bb.0
+    SI_END_CF %24, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %3:vgpr_32, dead %10:sreg_64 = nsw V_ADD_CO_U32_e64 1, %23, 0, implicit $exec
+
+  bb.3:
+    successors: %bb.3(0x40000000), %bb.2(0x40000000)
+
+    %4:vgpr_32 = PHI %19, %bb.3, %3, %bb.2, %18, %bb.0
+    %15:sreg_32_xm0 = S_MOV_B32 61440
+    %16:sreg_32_xm0 = S_MOV_B32 -1
+    %17:sgpr_128 = REG_SEQUENCE undef %14:sreg_32_xm0, %subreg.sub0, undef %12:sreg_32_xm0, %subreg.sub1, %16, %subreg.sub2, %15, %subreg.sub3
+    BUFFER_STORE_DWORD_OFFSET %4, %17, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    %19:vgpr_32 = COPY %4
+    %20:sreg_64 = SI_IF %0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.3
+
+...

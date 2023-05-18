@@ -1,0 +1,91 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=register-coalescer -o - %s
+
+# An implicit-def will be added to SUBREG_TO_REG during coalescing
+---
+name:  rematerialize_subreg_to_reg_added_impdef_0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x2aaaaaab), %bb.2(0x55555555)
+    liveins: $edi
+
+    %0:gr32 = MOV32r0 implicit-def dead $eflags
+    %1:gr8 = COPY %0.sub_8bit
+    %2:gr64 = SUBREG_TO_REG 0, killed %0, %subreg.sub_32bit
+    JCC_1 %bb.2, 5, implicit killed undef $eflags
+
+  bb.1:
+    %4:gr8 = COPY %1
+    %5:gr8 = COPY killed undef %1
+    JMP_1 %bb.5
+
+  bb.2:
+    %6:gr64 = IMPLICIT_DEF
+    %2:gr64 = COPY killed %6
+    %5:gr8 = MOV8ri 1
+
+  bb.5:
+    successors: %bb.6(0x30000000), %bb.7(0x50000000)
+
+    TEST8rr killed undef %5, %5, implicit-def $eflags
+    JCC_1 %bb.7, 5, implicit killed undef $eflags
+
+  bb.6:
+    $al = COPY killed %1
+    RET 0, killed undef $al
+
+  bb.7:
+    MOV64mr undef $noreg, 1, undef $noreg, 0, undef $noreg, killed %2 :: (store (s64))
+    RET 0, killed undef $al
+
+...
+
+
+# Reduced version of previous with the SUBREG_TO_REG already folded
+# away.
+#
+# The mov32r0 defines a subregister and has an implicit-def of the
+# super register. After coalescing, the full register implicit def of
+# %2 becomes a different subregister def.
+
+---
+name:  rematerialize_subreg_to_reg_coalesces_to_subreg_impdef
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x2aaaaaab), %bb.2(0x55555555)
+    liveins: $edi
+
+    undef %2.sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def %2
+    %1:gr8 = COPY %2.sub_8bit
+    JCC_1 %bb.2, 5, implicit killed undef $eflags
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    dead %3:gr8 = COPY %1
+    %4:gr8 = COPY undef %1
+    JMP_1 %bb.3
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %5:gr64 = IMPLICIT_DEF
+    %2:gr64_with_sub_8bit = COPY %5
+    %4:gr8 = MOV8ri 1
+
+  bb.3:
+    successors: %bb.4(0x30000000), %bb.5(0x50000000)
+
+    TEST8rr undef %4, %4, implicit-def $eflags
+    JCC_1 %bb.5, 5, implicit killed undef $eflags
+
+  bb.4:
+    $al = COPY %1
+    RET 0, killed undef $al
+
+  bb.5:
+    MOV64mr undef $noreg, 1, undef $noreg, 0, undef $noreg, %2 :: (store (s64))
+    RET 0, killed undef $al
+
+...

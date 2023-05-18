@@ -1,0 +1,10 @@
+REQUIRES: linux
+REQUIRES: zlib
+# zlib is "supported" on i386 even when only for x86_64, explicitly make i386
+# unsupported by this test.
+UNSUPPORTED: i386, target=arm{{.*}}
+# Custom mutator should find this bug, w/o custom -- no chance.
+RUN: %cpp_compiler %S/CompressedTest.cpp -o %t-CompressedTestCustom -DCUSTOM_MUTATOR -lz
+RUN: %cpp_compiler %S/CompressedTest.cpp -o %t-CompressedTestPlain -lz
+RUN: not %run %t-CompressedTestCustom -seed=1 -runs=1000000
+RUN:     %run %t-CompressedTestPlain  -seed=1 -runs=1000000

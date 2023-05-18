@@ -1,0 +1,56 @@
+# exports_test_so.txt #
+
+#
+#//===----------------------------------------------------------------------===//
+#//
+#// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+#// See https://llvm.org/LICENSE.txt for license information.
+#// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#//
+#//===----------------------------------------------------------------------===//
+#
+
+# This is used only to test if the linker supports version scripts. If the full
+# version script it used we may error on undefined symbols and erroneously fail.
+
+VERSION {
+
+    global: # Exported symbols.
+
+        *;         # All symbols as exported for testing.
+
+}; # VERSION
+
+# sets up GCC OMP_ version dependency chain
+OMP_1.0 {
+};
+OMP_2.0 {
+} OMP_1.0;
+OMP_3.0 {
+} OMP_2.0;
+OMP_3.1 {
+} OMP_3.0;
+OMP_4.0 {
+} OMP_3.1;
+OMP_4.5 {
+} OMP_4.0;
+OMP_5.0 {
+} OMP_4.5;
+
+# sets up GCC GOMP_ version dependency chain
+GOMP_1.0 {
+};
+GOMP_2.0 {
+} GOMP_1.0;
+GOMP_3.0 {
+} GOMP_2.0;
+GOMP_4.0 {
+} GOMP_3.0;
+GOMP_4.5 {
+} GOMP_4.0;
+GOMP_5.0 {
+} GOMP_4.5;
+GOMP_5.0.1 {
+} GOMP_5.0;
+
+# end of file #

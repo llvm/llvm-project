@@ -1,0 +1,25 @@
+# This testing configuration handles running the test suite against LLVM's libc++abi
+# using a static library, with Clang-cl on Windows.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}', '--driver-mode=g++'))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support  -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_STDIO_ISO_WIDE_SPECIFIERS -DNOMINMAX'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib -L %{lib} -llibc++ -llibc++abi -lmsvcrt -lmsvcprt -loldnames'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T --prepend_env PATH=%{lib} -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

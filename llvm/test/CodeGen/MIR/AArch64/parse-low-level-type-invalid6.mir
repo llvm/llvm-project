@@ -1,0 +1,10 @@
+# RUN: not llc -mtriple=aarch64-- -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# When a low-level type vector has a 0-bit element
+---
+name: test_vector_element_size_0
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:15: invalid size for scalar element in vector
+    %0:_(<2 x s0>) = G_IMPLICIT_DEF
+...

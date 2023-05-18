@@ -1,0 +1,66 @@
+# REQUIRES: lld
+
+# Make sure DWARF v4 type units work.
+# RUN: %clangxx -target x86_64-pc-linux %S/Inputs/debug-types-basic.cpp \
+# RUN:   -g -gdwarf-4 -fdebug-types-section -c -o %t4.o
+# RUN: ld.lld %t4.o -o %t4
+# RUN: %lldb %t4 -s %s -o exit | FileCheck %s
+
+# Now do the same for DWARF v5.
+# RUN: %clangxx -target x86_64-pc-linux %S/Inputs/debug-types-basic.cpp \
+# RUN:   -g -gdwarf-5 -fdebug-types-section -c -o %t5.o
+# RUN: ld.lld %t5.o -o %t5
+# RUN: %lldb %t5 -s %s -o exit | FileCheck %s
+
+# Test type units in dwo files.
+# RUN: %clangxx -target x86_64-pc-linux %S/Inputs/debug-types-basic.cpp \
+# RUN:   -g -gdwarf-4 -fdebug-types-section -gsplit-dwarf -c -o %t4dwo.o
+# RUN: ld.lld %t4dwo.o -o %t4dwo
+# RUN: %lldb %t4dwo -s %s -o exit | FileCheck %s
+
+# And type units+dwo+dwarf5.
+# RUN: %clangxx -target x86_64-pc-linux %S/Inputs/debug-types-basic.cpp \
+# RUN:   -g -gdwarf-5 -fdebug-types-section -gsplit-dwarf -c -o %t5dwo.o
+# RUN: ld.lld %t5dwo.o -o %t5dwo
+# RUN: %lldb %t5dwo -s %s -o exit | FileCheck %s
+
+type lookup A
+# CHECK-LABEL: type lookup A
+# CHECK:      struct A {
+# CHECK-NEXT:   int i;
+# CHECK-NEXT:   long l;
+# CHECK-NEXT:   float f;
+# CHECK-NEXT:   double d;
+# CHECK-NEXT:   E e;
+# CHECK-NEXT:   EC ec;
+# CHECK-NEXT: }
+
+type lookup E
+# CHECK-LABEL: type lookup E
+# CHECK:      enum E {
+# CHECK-NEXT:   e1,
+# CHECK-NEXT:   e2,
+# CHECK-NEXT:   e3
+# CHECK-NEXT: }
+
+type lookup EC
+# CHECK-LABEL: type lookup EC
+# CHECK:      enum class EC {
+# CHECK-NEXT:   e1,
+# CHECK-NEXT:   e2,
+# CHECK-NEXT:   e3
+# CHECK-NEXT: }
+
+expression (E) 1
+# CHECK-LABEL: expression (E) 1
+# CHECK: (E) $0 = e2
+
+expression (EC) 1
+# CHECK-LABEL: expression (EC) 1
+# CHECK: (EC) $1 = e2
+
+target variable a e ec
+# CHECK-LABEL: target variable a e ec
+# CHECK: (const A) a = (i = 42, l = 47, f = 4.{{[12].*}}, d = 4.{{[67].*}}, e = e1, ec = e3)
+# CHECK: (const E) e = e2
+# CHECK: (const EC) ec = e2

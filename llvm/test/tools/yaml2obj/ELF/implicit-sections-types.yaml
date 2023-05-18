@@ -1,0 +1,68 @@
+## Here we check the types set for implicit sections
+## in different cases.
+
+## Check the types set by default in case sections were implicitly
+## added and not described in the YAML.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj -S %t1 | FileCheck %s --check-prefix=CASE1
+
+# CASE1:      Name: .dynsym
+# CASE1-NEXT: Type: SHT_DYNSYM
+# CASE1:      Name: .dynstr
+# CASE1-NEXT: Type: SHT_STRTAB
+# CASE1:      Name: .symtab
+# CASE1-NEXT: Type: SHT_SYMTAB
+# CASE1:      Name: .strtab
+# CASE1-NEXT: Type: SHT_STRTAB
+# CASE1:      Name: .shstrtab
+# CASE1-NEXT: Type: SHT_STRTAB
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+## Needed to force the creation of the .symtab.
+Symbols: []
+## Needed to force the creation of the .dynsym and .dynstr.
+DynamicSymbols: []
+
+## Check we can set any arbitrary types when describing sections
+## that are usually implicit.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj -S %t2 | FileCheck %s --check-prefix=CASE2
+
+# CASE2:      Name: .symtab
+# CASE2-NEXT: Type: SHT_DYNAMIC
+# CASE2:      Name: .strtab
+# CASE2-NEXT: Type: SHT_RELA
+# CASE2:      Name: .shstrtab
+# CASE2-NEXT: Type: SHT_PROGBITS
+# CASE2:      Name: .dynsym
+# CASE2-NEXT: Type: SHT_NOTE
+# CASE2:      Name: .dynstr
+# CASE2-NEXT: Type: SHT_NOBITS
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .symtab
+    Type: SHT_DYNAMIC
+  - Name: .strtab
+    Type: SHT_RELA
+  - Name: .shstrtab
+    Type: SHT_PROGBITS
+  - Name: .dynsym
+    Type: SHT_NOTE
+    Size: 0
+  - Name: .dynstr
+    Type: SHT_NOBITS
+## Needed to set the proper content size for .symtab, so
+## that llvm-readobj can dump this section.
+Symbols:
+  - Name: foo

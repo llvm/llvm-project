@@ -1,0 +1,5 @@
+RUN: not llvm-cov show -instr-profile=%t.nonexistent.profdata %t.nonexistent 2>&1 | FileCheck %s
+RUN: not llvm-cov export -instr-profile=%t.nonexistent.profdata %t.nonexistent 2>&1 | FileCheck %s
+RUN: not llvm-cov report -instr-profile=%t.nonexistent.profdata %t.nonexistent 2>&1 | FileCheck %s
+
+CHECK: nonexistent.profdata: could not read profile data!

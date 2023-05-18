@@ -1,0 +1,185 @@
+//===--- DanglingHandleCheck.cpp - clang-tidy------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "DanglingHandleCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+
+using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
+
+namespace clang::tidy::bugprone {
+
+namespace {
+
+ast_matchers::internal::BindableMatcher<Stmt>
+handleFrom(const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle,
+           const ast_matchers::internal::Matcher<Expr> &Arg) {
+  return expr(
+      anyOf(cxxConstructExpr(hasDeclaration(cxxMethodDecl(ofClass(IsAHandle))),
+                             hasArgument(0, Arg)),
+            cxxMemberCallExpr(hasType(hasUnqualifiedDesugaredType(recordType(
+                                  hasDeclaration(cxxRecordDecl(IsAHandle))))),
+                              callee(memberExpr(member(cxxConversionDecl()))),
+                              on(Arg))));
+}
+
+ast_matchers::internal::Matcher<Stmt> handleFromTemporaryValue(
+    const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle) {
+
+  const auto TemporaryExpr = anyOf(
+      cxxBindTemporaryExpr(),
+      cxxFunctionalCastExpr(
+          hasCastKind(CK_ConstructorConversion),
+          hasSourceExpression(ignoringParenImpCasts(cxxBindTemporaryExpr()))));
+  // If a ternary operator returns a temporary value, then both branches hold a
+  // temporary value. If one of them is not a temporary then it must be copied
+  // into one to satisfy the type of the operator.
+  const auto TemporaryTernary = conditionalOperator(
+      hasTrueExpression(ignoringParenImpCasts(TemporaryExpr)),
+      hasFalseExpression(ignoringParenImpCasts(TemporaryExpr)));
+
+  return handleFrom(IsAHandle, anyOf(TemporaryExpr, TemporaryTernary));
+}
+
+ast_matchers::internal::Matcher<RecordDecl> isASequence() {
+  return hasAnyName("::std::deque", "::std::forward_list", "::std::list",
+                    "::std::vector");
+}
+
+ast_matchers::internal::Matcher<RecordDecl> isASet() {
+  return hasAnyName("::std::set", "::std::multiset", "::std::unordered_set",
+                    "::std::unordered_multiset");
+}
+
+ast_matchers::internal::Matcher<RecordDecl> isAMap() {
+  return hasAnyName("::std::map", "::std::multimap", "::std::unordered_map",
+                    "::std::unordered_multimap");
+}
+
+ast_matchers::internal::BindableMatcher<Stmt> makeContainerMatcher(
+    const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle) {
+  // This matcher could be expanded to detect:
+  //  - Constructors: eg. vector<string_view>(3, string("A"));
+  //  - emplace*(): This requires a different logic to determine that
+  //                the conversion will happen inside the container.
+  //  - map's insert: This requires detecting that the pair conversion triggers
+  //                  the bug. A little more complicated than what we have now.
+  return callExpr(
+      hasAnyArgument(
+          ignoringParenImpCasts(handleFromTemporaryValue(IsAHandle))),
+      anyOf(
+          // For sequences: assign, push_back, resize.
+          cxxMemberCallExpr(
+              callee(functionDecl(hasAnyName("assign", "push_back", "resize"))),
+              on(expr(hasType(hasUnqualifiedDesugaredType(
+                  recordType(hasDeclaration(recordDecl(isASequence())))))))),
+          // For sequences and sets: insert.
+          cxxMemberCallExpr(callee(functionDecl(hasName("insert"))),
+                            on(expr(hasType(hasUnqualifiedDesugaredType(
+                                recordType(hasDeclaration(recordDecl(
+                                    anyOf(isASequence(), isASet()))))))))),
+          // For maps: operator[].
+          cxxOperatorCallExpr(callee(cxxMethodDecl(ofClass(isAMap()))),
+                              hasOverloadedOperatorName("[]"))));
+}
+
+} // anonymous namespace
+
+DanglingHandleCheck::DanglingHandleCheck(StringRef Name,
+                                         ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      HandleClasses(utils::options::parseStringList(Options.get(
+          "HandleClasses",
+          "std::basic_string_view;std::experimental::basic_string_view"))),
+      IsAHandle(cxxRecordDecl(hasAnyName(HandleClasses)).bind("handle")) {}
+
+void DanglingHandleCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "HandleClasses",
+                utils::options::serializeStringList(HandleClasses));
+}
+
+void DanglingHandleCheck::registerMatchersForVariables(MatchFinder *Finder) {
+  const auto ConvertedHandle = handleFromTemporaryValue(IsAHandle);
+
+  // Find 'Handle foo(ReturnsAValue());', 'Handle foo = ReturnsAValue();'
+  Finder->addMatcher(
+      varDecl(hasType(hasUnqualifiedDesugaredType(
+                  recordType(hasDeclaration(cxxRecordDecl(IsAHandle))))),
+              unless(parmVarDecl()),
+              hasInitializer(
+                  exprWithCleanups(ignoringElidableConstructorCall(has(
+                                       ignoringParenImpCasts(ConvertedHandle))))
+                      .bind("bad_stmt"))),
+      this);
+
+  // Find 'foo = ReturnsAValue();  // foo is Handle'
+  Finder->addMatcher(
+      traverse(TK_AsIs,
+               cxxOperatorCallExpr(callee(cxxMethodDecl(ofClass(IsAHandle))),
+                                   hasOverloadedOperatorName("="),
+                                   hasArgument(1, ConvertedHandle))
+                   .bind("bad_stmt")),
+      this);
+
+  // Container insertions that will dangle.
+  Finder->addMatcher(
+      traverse(TK_AsIs, makeContainerMatcher(IsAHandle).bind("bad_stmt")),
+      this);
+}
+
+void DanglingHandleCheck::registerMatchersForReturn(MatchFinder *Finder) {
+  // Return a local.
+  Finder->addMatcher(
+      traverse(TK_AsIs,
+               returnStmt(
+                   // The AST contains two constructor calls:
+                   //   1. Value to Handle conversion.
+                   //   2. Handle copy construction (elided in C++17+).
+                   // We have to match both.
+                   has(ignoringImplicit(ignoringElidableConstructorCall(
+                       ignoringImplicit(handleFrom(
+                           IsAHandle,
+                           declRefExpr(to(varDecl(
+                               // Is function scope ...
+                               hasAutomaticStorageDuration(),
+                               // ... and it is a local array or Value.
+                               anyOf(hasType(arrayType()),
+                                     hasType(hasUnqualifiedDesugaredType(
+                                         recordType(hasDeclaration(recordDecl(
+                                             unless(IsAHandle))))))))))))))),
+                   // Temporary fix for false positives inside lambdas.
+                   unless(hasAncestor(lambdaExpr())))
+                   .bind("bad_stmt")),
+      this);
+
+  // Return a temporary.
+  Finder->addMatcher(
+      traverse(TK_AsIs,
+               returnStmt(has(exprWithCleanups(ignoringElidableConstructorCall(
+                              has(ignoringParenImpCasts(
+                                  handleFromTemporaryValue(IsAHandle)))))))
+                   .bind("bad_stmt")),
+      this);
+}
+
+void DanglingHandleCheck::registerMatchers(MatchFinder *Finder) {
+  registerMatchersForVariables(Finder);
+  registerMatchersForReturn(Finder);
+}
+
+void DanglingHandleCheck::check(const MatchFinder::MatchResult &Result) {
+  auto *Handle = Result.Nodes.getNodeAs<CXXRecordDecl>("handle");
+  diag(Result.Nodes.getNodeAs<Stmt>("bad_stmt")->getBeginLoc(),
+       "%0 outlives its value")
+      << Handle->getQualifiedNameAsString();
+}
+
+} // namespace clang::tidy::bugprone

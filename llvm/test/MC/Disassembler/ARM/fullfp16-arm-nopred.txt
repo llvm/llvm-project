@@ -1,0 +1,6 @@
+# RUN: llvm-mc -disassemble -triple armv8a-none-eabi -mattr=+fullfp16 -show-encoding < %s 2>&1 | FileCheck %s
+
+# CHECK: [[@LINE+1]]:2: warning: potentially undefined instruction encoding
+[0x80,0x09,0x30,0xae]
+# CHECK-NOT: [[@LINE+1]]:2: warning
+[0x80,0x0a,0x30,0xae]

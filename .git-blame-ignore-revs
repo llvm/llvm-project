@@ -1,0 +1,83 @@
+# Since version 2.23 (released in August 2019), git-blame has a feature
+# to ignore or bypass certain commits.
+#
+# This file contains a list of commits that are not likely what you
+# are looking for in a blame, such as mass reformatting or renaming.
+# You can set this file as a default ignore file for blame by running
+# the following command.
+#
+# $ git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# r365730: [Coding style change][lld] Rename variables for non-ELF ports
+136d27ab4de0c1d5dedfecc32a9857be78fa0648
+
+# r365595: [Coding style change] Rename variables so that they start with a lowercase letter
+3837f4273fcc40cc519035479aefe78e5cbd3055
+
+# r280751: [Coding style change][lldb] Moved LLDB code base to use LLVM style
+b9c1b51e45b845debb76d8658edabca70ca56079
+
+# r302421: That change incorrectly changed line endings in some libc++ files
+9669df28d4fd3c52d09f451186bd217cdc3322c0
+
+# r302496: That is the revert of r302421
+ff63090b0e1072bd398b8efef8ae2291613a6ec9
+
+# Fix more line endings changed in r320089. NFC.
+d8f0e6caa91e230a486c948ab643174e40bdf215
+
+# Correct line endings that got mixed up in r320089; NFC.
+29dc5ded45447915d96ef7ca3f02acf2232282e0
+
+# Remove line-endings added by r320089. NFC.
+100a0eedc00b2bf48bcdc6c209c000745a4a0e48
+
+# Cleanup __config indention. NFC.
+2b772b930e097ed6f06d698a51e291c7fd318baa
+
+# Fixing whitespace problems
+94b2dd0998230c758abd92c99d3700c971f7a31a
+
+# Wiped out some non-ascii characters that snuck into the copyright.
+5b08a8a43254ed30bd953e869b0fd9fc1e8b82d0
+
+# Use C++11 default member initializers in LLDB. NFC.
+9494c510af56d9c8593ab69017dcaa232210b235
+
+# [libc++][NFC] clang-format <__config>
+ac251726f84d5b7e6533a2e3712920184435b61b
+
+# Python black reformatting, by subdir. NFC
+b71edfaa4ec3c998aadb35255ce2f60bba2940b0
+f84bac329ba6c9f0c022bcf77237e912362e247a
+dd3c26a045c081620375a878159f536758baba6e
+7bfaa0f09d0564f315ea778023b34b8a113ec740
+f98ee40f4b5d7474fc67e82824bf6abbaedb7b1c
+2238dcc39358353cac21df75c3c3286ab20b8f53
+f9008e6366c2496b1ca1785b891d5578174ad63e
+
+# [libc++][NFC] Apply clang-format on large parts of the code base
+5aa03b648b827128d439f705cd7d57d59673741d
+
+# [clang][NFC] Remove trailing whitespaces and enforce it in lib, include and docs
+f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
+
+# [libc++][NFC] clang-format <shared_mutex>
+2d7eb9c9ea1a146412a83603d5c0c6339a5d8284
+
+# [libc++] Rename _LIBCPP_INLINE_VISIBILITY to _LIBCPP_HIDE_FROM_ABI
+4c198542226223f6a5c5511a1f89b37d15ee10b9
+
+# [libc++] Replace uses of _VSTD:: by std:: (#74331)
+77a00c0d546cd4aa8311b5b9031ae9ea8cdb050c
+
+# [libc++] Format the code base (#74334)
+9783f28cbb155e4a8d49c12e1c60ce14dcfaf0c7
+
+# [RFC] compiler-rt builtins cleanup and refactoring
+082b89b25faae3e45a023caf51b65ca0f02f377f
+0ba22f51d128bee9d69756c56c4678097270e10b
+84da0e1bb75f8666cf222d2f600f37bebb9ea389
+
+# [NFC] clang-format utils/TableGen (#80973)
+b9079baaddfed5e604fbfaa1d81a7a1c38e78c26

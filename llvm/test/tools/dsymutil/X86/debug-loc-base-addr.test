@@ -1,0 +1,32 @@
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/baseaddr/loc1.x86_64 -f -o - | llvm-dwarfdump --debug-info - | FileCheck %s
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/baseaddr/loc1.x86_64 -f -o - | llvm-dwarfdump --debug-info - | FileCheck %s
+
+The test was compiled from a single source:
+$ cat loc1.cpp
+int f1(int i, int j) {
+  int x = 5;
+  int y = 3;
+  int r = i + j;
+  int undef;
+  x = undef;
+  y = 4;
+  return r;
+}
+__attribute__((nodebug)) void f2() {
+}
+int main() {
+  return 0;
+}
+
+CHECK: DW_TAG_compile_unit
+CHECK: DW_TAG_variable
+CHECK: DW_AT_location
+CHECK: [0x0000000100000f94, 0x0000000100000f97): DW_OP_consts +3, DW_OP_stack_value
+CHECK: [0x0000000100000f97, 0x0000000100000f99): DW_OP_consts +4, DW_OP_stack_value
+CHECK: DW_TAG_variable
+CHECK: DW_AT_location
+CHECK: [0x0000000100000f94, 0x0000000100000f97): DW_OP_consts +5, DW_OP_stack_value
+CHECK: DW_TAG_variable
+CHECK: DW_AT_location
+CHECK: [0x0000000100000f97, 0x0000000100000f99): DW_OP_reg0 RAX

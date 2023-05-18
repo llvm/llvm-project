@@ -1,0 +1,163 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-dualcu-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-dualcu-helper.s \
+; RUN: -split-dwarf-file=helper.dwo -o helper.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe -fno-pic -no-pie
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --always-convert-to-ranges
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe | FileCheck -check-prefix=PRE-BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-ranges main.exe.bolt &> %t/foo.txt
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo.txt
+; RUN: cat %t/foo.txt | FileCheck -check-prefix=BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo &> maindwo.txt
+; RUN: cat maindwo.txt | FileCheck -check-prefix=PRE-BOLT-DWO-MAIN %s
+; RUN: not llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo &> mainddwodwo.txt
+; RUN: cat mainddwodwo.txt | FileCheck -check-prefix=BOLT-DWO-MAIN %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info helper.dwo &> helperdwo.txt
+; RUN: cat helperdwo.txt | FileCheck -check-prefix=PRE-BOLT-DWO-HELPER %s
+; RUN: not llvm-dwarfdump --show-form --verbose --debug-info helper.dwo.dwo &> helperdwodwo.txt
+; RUN: cat helperdwodwo.txt | FileCheck -check-prefix=BOLT-DWO-HELPER %s
+
+; Testing dwarf5 split dwarf for two CUs. Making sure DW_AT_low_pc/DW_AT_high_pc are converted correctly in the binary and in dwo.
+; Checking that DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx ##) are updated correctly.
+
+; PRE-BOLT: version = 0x0004
+; PRE-BOLT: DW_TAG_compile_unit
+; PRE-BOLT: DW_AT_low_pc [DW_FORM_addr]
+; PRE-BOLT-NEXT: DW_AT_high_pc [DW_FORM_data4]
+; PRE-BOLT-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]  (0x00000000)
+; PRE-BOLT-NEXT: Compile
+; PRE-BOLT: version = 0x0004
+; PRE-BOLT: DW_TAG_compile_unit
+; PRE-BOLT: DW_AT_low_pc [DW_FORM_addr]
+; PRE-BOLT-NEXT: DW_AT_high_pc [DW_FORM_data4]
+; PRE-BOLT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]  (0x00000020)
+
+; BOLT: .debug_ranges
+; BOLT-NEXT: 00000000 <End of list>
+; BOLT-NEXT: 00000010 [[#%.16x,ADDR:]] [[#%.16x,ADDRB:]]
+; BOLT-NEXT: 00000010 <End of list>
+; BOLT-NEXT: 00000030 [[#%.16x,ADDR1:]] [[#%.16x,ADDR1B:]]
+; BOLT-NEXT: 00000030 <End of list>
+; BOLT-NEXT: 00000050 [[#%.16x,ADDR2:]] [[#%.16x,ADDR2B:]]
+; BOLT-NEXT: 00000050 [[#%.16x,ADDR3:]] [[#%.16x,ADDR3B:]]
+; BOLT-NEXT: 00000050 <End of list>
+; BOLT-NEXT: 00000080 [[#%.16x,ADDR4:]] [[#%.16x,ADDR4B:]]
+; BOLT-NEXT: 00000080 <End of list>
+; BOLT-NEXT: 000000a0 [[#%.16x,ADDR5:]] [[#%.16x,ADDR5B:]]
+; BOLT-NEXT: 000000a0 <End of list>
+
+; BOLT: DW_TAG_compile_unit
+; BOLT: DW_AT_GNU_dwo_name [DW_FORM_strp] ( .debug_str[0x00000016] = "main.dwo.dwo")
+; BOLT-NEXT: DW_AT_GNU_dwo_id
+; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000050
+; BOLT-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2B]])
+; BOLT-NEXT: [0x[[#ADDR3]], 0x[[#ADDR3B]]))
+; BOLT-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]  (0x00000000)
+; BOLT-NEXT: DW_AT_GNU_ranges_base [DW_FORM_sec_offset]  (0x00000010)
+; BOLT-NEXT: Compile
+; BOLT: DW_TAG_compile_unit
+; BOLT: DW_AT_GNU_dwo_name [DW_FORM_strp] ( .debug_str[0x00000023] = "helper.dwo.dwo")
+; BOLT-NEXT: DW_AT_GNU_dwo_id
+; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x000000a0
+; BOLT-NEXT: [0x[[#ADDR5]], 0x[[#ADDR5B]])
+; BOLT-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]  (0x00000010)
+; BOLT-NEXT: DW_AT_GNU_ranges_base [DW_FORM_sec_offset]  (0x00000080)
+
+; PRE-BOLT-DWO-MAIN: version = 0x0004
+; PRE-BOLT-DWO-MAIN: DW_TAG_compile_unit
+; PRE-BOLT-DWO-MAIN: DW_TAG_variable [2]
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000000) string = "x")
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_type
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_external
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_decl_file
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x0)
+; PRE-BOLT-DWO-MAIN: DW_TAG_variable [2]
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000002) string = "y")
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_type
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_external
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_decl_file
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x1)
+; PRE-BOLT-DWO-MAIN: DW_TAG_subprogram
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000002)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x00000024)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_frame_base
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_linkage_name [DW_FORM_GNU_str_index]	(indexed (00000003) string = "_Z3usePiS_")
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000004) string = "use")
+; PRE-BOLT-DWO-MAIN: DW_TAG_subprogram
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000003)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x0000005f)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_frame_base
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000005) string = "main")
+
+; BOLT-DWO-MAIN: version = 0x0004
+; BOLT-DWO-MAIN: DW_TAG_compile_unit
+; BOLT-DWO-MAIN: DW_TAG_variable [2]
+; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000000) string = "x")
+; BOLT-DWO-MAIN-NEXT: DW_AT_type
+; BOLT-DWO-MAIN-NEXT: DW_AT_external
+; BOLT-DWO-MAIN-NEXT: DW_AT_decl_file
+; BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
+; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x0)
+; BOLT-DWO-MAIN: DW_TAG_variable [2]
+; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000002) string = "y")
+; BOLT-DWO-MAIN-NEXT: DW_AT_type
+; BOLT-DWO-MAIN-NEXT: DW_AT_external
+; BOLT-DWO-MAIN-NEXT: DW_AT_decl_file
+; BOLT-DWO-MAIN-NEXT: DW_AT_decl_line
+; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x1)
+; BOLT-DWO-MAIN: DW_TAG_subprogram [4]
+; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_sec_offset]	(0x00000000
+; BOLT-DWO-MAIN-NEXT: )
+; BOLT-DWO-MAIN-NEXT: DW_AT_frame_base
+; BOLT-DWO-MAIN-NEXT: DW_AT_linkage_name [DW_FORM_GNU_str_index]	(indexed (00000003) string = "_Z3usePiS_")
+; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000004) string = "use")
+; BOLT-DWO-MAIN: DW_TAG_subprogram [6]
+; BOLT-DWO-MAIN-NEXT: DW_AT_ranges [DW_FORM_sec_offset]	(0x00000020
+; BOLT-DWO-MAIN-NEXT: )
+; BOLT-DWO-MAIN-NEXT: DW_AT_frame_base [DW_FORM_exprloc]	(DW_OP_reg6 RBP)
+; BOLT-DWO-MAIN-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000005) string = "main")
+
+
+; PRE-BOLT-DWO-HELPER: version = 0x0004
+; PRE-BOLT-DWO-HELPER: DW_TAG_variable [2]
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000000) string = "z")
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_type
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_external
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_decl_file
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_decl_line
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x0)
+; PRE-BOLT-DWO-HELPER: DW_TAG_variable [2]
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000002) string = "d")
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_type
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_external
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_decl_file
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_decl_line
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x1)
+; PRE-BOLT-DWO-HELPER: DW_TAG_subprogram [4]
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_low_pc [DW_FORM_GNU_addr_index]	(indexed (00000002)
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x0000003d)
+
+; BOLT-DWO-HELPER: version = 0x0004
+; BOLT-DWO-HELPER: DW_TAG_variable [2]
+; BOLT-DWO-HELPER-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000000) string = "z")
+; BOLT-DWO-HELPER-NEXT: DW_AT_type
+; BOLT-DWO-HELPER-NEXT: DW_AT_external
+; BOLT-DWO-HELPER-NEXT: DW_AT_decl_file
+; BOLT-DWO-HELPER-NEXT: DW_AT_decl_line
+; BOLT-DWO-HELPER-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x0)
+; BOLT-DWO-HELPER: DW_TAG_variable [2]
+; BOLT-DWO-HELPER-NEXT: DW_AT_name [DW_FORM_GNU_str_index]	(indexed (00000002) string = "d")
+; BOLT-DWO-HELPER-NEXT: DW_AT_type
+; BOLT-DWO-HELPER-NEXT: DW_AT_external
+; BOLT-DWO-HELPER-NEXT: DW_AT_decl_file
+; BOLT-DWO-HELPER-NEXT: DW_AT_decl_line
+; BOLT-DWO-HELPER-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_GNU_addr_index 0x1)
+; BOLT-DWO-HELPER: DW_TAG_subprogram [4]
+; BOLT-DWO-HELPER-NEXT: DW_AT_ranges [DW_FORM_sec_offset]	(0x00000000

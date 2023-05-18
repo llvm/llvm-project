@@ -1,0 +1,6 @@
+RUN: llvm-cxxfilt -n _Z1fi __Z1fi f ___ZSt1ff_block_invoke | FileCheck %s
+
+CHECK: f(int)
+CHECK-NEXT: __Z1fi
+CHECK-NEXT: f
+CHECK-NEXT: invocation function for block in std::f(float)

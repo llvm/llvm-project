@@ -1,0 +1,35 @@
+# RUN: yaml2obj %p/Inputs/armv7-slice-big.yaml -o %t-armv7big.o
+# RUN: yaml2obj %p/Inputs/i386-x86_64-armv7-arm64-universal.yaml -o %t-universal.o
+
+# RUN: llvm-lipo %t-universal.o -replace armv7 %t-armv7big.o -o %t.o
+# RUN: llvm-objdump %t.o -m --universal-headers | FileCheck --check-prefix=ARMV7_BIG %s
+# RUN: llvm-lipo %t.o -thin armv7 -o %t-armv7-out.o
+# RUN: cmp %t-armv7big.o %t-armv7-out.o
+# ARMV7_BIG: architecture i386
+# ARMV7_BIG: offset 4096
+# ARMV7_BIG: align 2^12 (4096)
+# ARMV7_BIG-NEXT: architecture x86_64
+# ARMV7_BIG: offset 8192
+# ARMV7_BIG: align 2^12 (4096)
+# ARMV7_BIG-NEXT: architecture armv7
+# ARMV7_BIG: offset 16384
+# ARMV7_BIG: size 88128
+# ARMV7_BIG: align 2^14 (16384)
+# ARMV7_BIG-NEXT: architecture arm64
+# ARMV7_BIG: offset 114688
+# ARMV7_BIG: size 516
+# ARMV7_BIG: align 2^14 (16384)
+
+# RUN: yaml2obj %p/Inputs/armv7-slice.yaml -o %t-armv7.o
+# RUN: yaml2obj %p/Inputs/armv7_i386_non_default_alignment.yaml -o %t-universal-align.o
+
+# RUN: llvm-lipo %t-universal-align.o -replace armv7 %t-armv7.o -o %t2.o
+# RUN: llvm-objdump %t2.o -m --universal-headers | FileCheck --check-prefix=ARMV7_ALIGN_SWAP %s
+# RUN: llvm-lipo %t2.o -thin armv7 -o %t-armv7-out2.o
+# RUN: cmp %t-armv7.o %t-armv7-out2.o
+# ARMV7_ALIGN_SWAP: architecture i386
+# ARMV7_ALIGN_SWAP: offset 4096
+# ARMV7_ALIGN_SWAP: align 2^12 (4096)
+# ARMV7_ALIGN_SWAP-NEXT: architecture armv7
+# ARMV7_ALIGN_SWAP: offset 16384
+# ARMV7_ALIGN_SWAP: align 2^14 (16384)

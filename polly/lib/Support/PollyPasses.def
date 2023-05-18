@@ -1,0 +1,48 @@
+#ifndef FUNCTION_ANALYSIS
+#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)
+#endif
+FUNCTION_ANALYSIS("polly-detect", ScopAnalysis())
+FUNCTION_ANALYSIS("polly-function-scops", ScopInfoAnalysis())
+#undef FUNCTION_ANALYSIS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("polly-prepare", CodePreparationPass())
+FUNCTION_PASS("print<polly-detect>", ScopAnalysisPrinterPass(llvm::errs()))
+FUNCTION_PASS("print<polly-function-scops>", ScopInfoPrinterPass(llvm::errs()))
+FUNCTION_PASS("polly-scop-viewer", ScopViewer())
+FUNCTION_PASS("polly-scop-only-viewer", ScopOnlyViewer())
+FUNCTION_PASS("polly-scop-printer", ScopPrinter())
+FUNCTION_PASS("polly-scop-only-printer", ScopOnlyPrinter())
+#undef FUNCTION_PASS
+
+#ifndef SCOP_ANALYSIS
+#define SCOP_ANALYSIS(NAME, CREATE_PASS)
+#endif
+SCOP_ANALYSIS("pass-instrumentation", llvm::PassInstrumentationAnalysis(PIC))
+SCOP_ANALYSIS("polly-ast", IslAstAnalysis())
+SCOP_ANALYSIS("polly-dependences", DependenceAnalysis())
+#undef SCOP_ANALYSIS
+
+#ifndef SCOP_PASS
+#define SCOP_PASS(NAME, CREATE_PASS)
+#endif
+SCOP_PASS("polly-export-jscop", JSONExportPass())
+SCOP_PASS("polly-import-jscop", JSONImportPass())
+SCOP_PASS("print<polly-ast>", IslAstPrinterPass(llvm::outs()))
+SCOP_PASS("print<polly-dependences>", DependenceInfoPrinterPass(llvm::outs()))
+SCOP_PASS("polly-codegen", CodeGenerationPass())
+SCOP_PASS("polly-simplify", SimplifyPass())
+SCOP_PASS("print<polly-simplify>", SimplifyPrinterPass(llvm::outs()))
+SCOP_PASS("polly-optree", ForwardOpTreePass())
+SCOP_PASS("print<polly-optree>", ForwardOpTreePrinterPass(llvm::outs()))
+SCOP_PASS("polly-delicm", DeLICMPass())
+SCOP_PASS("print<polly-delicm>", DeLICMPrinterPass(llvm::outs()))
+SCOP_PASS("polly-prune-unprofitable", PruneUnprofitablePass())
+SCOP_PASS("polly-opt-isl", IslScheduleOptimizerPass())
+SCOP_PASS("print<polly-opt-isl>", IslScheduleOptimizerPrinterPass(llvm::outs()))
+SCOP_PASS("polly-dce", DeadCodeElimPass())
+SCOP_PASS("polly-mse", MaximalStaticExpansionPass())
+SCOP_PASS("print<polly-mse>", MaximalStaticExpansionPrinterPass(llvm::outs()))
+#undef SCOP_PASS

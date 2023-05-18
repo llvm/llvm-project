@@ -1,0 +1,12 @@
+add_entrypoint_object(
+  select
+  SRCS
+    select.cpp
+  HDRS
+    ../select.h
+  DEPENDS
+    libc.include.sys_select
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

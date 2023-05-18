@@ -1,0 +1,6 @@
+// RUN: %clang_pgogen  -fuse-ld=gold -Wl,-wrap,malloc -Wl,-wrap,calloc -o %t -O3 %S/../Inputs/instrprof-alloc.c
+// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
+
+// RUN: %clang_pgogen  -mllvm -vp-static-alloc=false -fuse-ld=gold -Wl,-wrap,malloc -Wl,-wrap,calloc -o %t.dyn -O3 %S/../Inputs/instrprof-alloc.c
+// RUN: env LLVM_PROFILE_FILE=%t.profraw not %run %t.dyn
+

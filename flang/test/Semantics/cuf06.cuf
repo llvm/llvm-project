@@ -1,0 +1,15 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+module m
+  use, intrinsic :: __fortran_builtins, only: __builtin_dim3
+ contains
+  attributes(global) subroutine kernel
+  end subroutine
+  subroutine test
+    call kernel<<< 1, 32 >>> ! ok
+    call kernel<<< __builtin_dim3(1,1), __builtin_dim3(32,1,1) >>> ! ok
+    !ERROR: Kernel launch grid parameter must be either integer or TYPE(dim3)
+    call kernel<<< 1.d0, 32 >>>
+    !ERROR: Kernel launch block parameter must be either integer or TYPE(dim3)
+    call kernel<<< 1, "abc" >>>
+  end
+end module

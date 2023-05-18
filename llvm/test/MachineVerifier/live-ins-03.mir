@@ -1,0 +1,36 @@
+# RUN: not --crash llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z14 -run-pass none 2>&1 | FileCheck %s
+# REQUIRES: systemz-registered-target
+
+# Test that a the machine verifier reports an error when a register in
+# liveins is not liveout from predecessor.
+
+---
+name:            f1
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2l, $r3l
+  
+    %1:gr32bit = COPY $r3l
+    %0:gr32bit = COPY $r2l
+    CHIMux %0, 0, implicit-def $cc
+
+  bb.1:
+    liveins: $cc
+    BRC 14, 8, %bb.3, implicit $cc
+
+  bb.2:
+
+  bb.3:
+    liveins: $cc
+
+    %2:grx32bit = LOCRMux %1, %0, 14, 8, implicit $cc
+    $r2l = COPY %2
+    Return implicit $r2l
+...
+
+# CHECK: *** Bad machine code: Live in register not found to be live out from predecessor. ***
+# CHECK:- function:    f1
+# CHECK:- basic block: %bb.3
+# CHECK:CC not found to be live out from %bb.2

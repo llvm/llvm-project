@@ -1,0 +1,111 @@
+# RUN: llc -mtriple=ve -verify-machineinstrs -run-pass peephole-opt -o - %s | FileCheck %s
+
+---
+## Ensure fold immediate as simm7 at rhs
+#CHECK-LABEL: name: cmpsl_ir
+#CHECK: %2:i64 = nsw CMPSLir 5, %0
+name:            cmpsl_ir
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: i64, preferred-register: '' }
+  - { id: 1, class: i64, preferred-register: '' }
+liveins:
+  - { reg: '$sx0', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $sx0
+
+    %0:i64 = COPY $sx0
+    %1:i64 = ORim 5, 0
+    %2:i64 = nsw CMPSLrr %1, %0
+    $sx0 = COPY %2
+    RET implicit $sx10, implicit $sx0
+
+...
+
+---
+## Ensure fold immediate as mimm at rhs
+#CHECK-LABEL: name: cmpsl_rm
+#CHECK: %2:i64 = nsw CMPSLrm %0, 120
+name:            cmpsl_rm
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: i64, preferred-register: '' }
+  - { id: 1, class: i64, preferred-register: '' }
+liveins:
+  - { reg: '$sx0', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $sx0
+
+    %0:i64 = COPY $sx0
+    %1:i64 = ORim 0, 120
+    %2:i64 = nsw CMPSLrr %0, %1
+    $sx0 = COPY %2
+    RET implicit $sx10, implicit $sx0
+
+...

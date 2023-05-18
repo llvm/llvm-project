@@ -1,0 +1,22 @@
+#RUN: llc -mtriple=aarch64 -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_invoke_start
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(s32) = G_CONSTANT i32 0
+
+    ; Check we don't error when preceding a non-terminator
+    ; CHECK: G_INVOKE_REGION_START
+    G_INVOKE_REGION_START
+
+    %1:_(s32) = G_ADD %0, %0
+
+...

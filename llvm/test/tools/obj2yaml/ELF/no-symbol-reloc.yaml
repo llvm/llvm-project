@@ -1,0 +1,43 @@
+## Check yaml2obj is able to dump relocations
+## that have no or a zero symbol associated.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: obj2yaml %t.o | FileCheck %s
+
+# CHECK:      --- !ELF
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   Class:   ELFCLASS64
+# CHECK-NEXT:   Data:    ELFDATA2LSB
+# CHECK-NEXT:   Type:    ET_REL
+# CHECK-NEXT:   Machine: EM_X86_64
+# CHECK-NEXT: Sections:
+# CHECK-NEXT:   - Name:    .text
+# CHECK-NEXT:     Type:    SHT_PROGBITS
+# CHECK-NEXT:     Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+# CHECK-NEXT:   - Name:    .rela.text
+# CHECK-NEXT:     Type:    SHT_RELA
+# CHECK-NEXT:     Info:    .text
+# CHECK-NEXT:     Relocations:
+# CHECK-NEXT:       - Type:   R_X86_64_NONE
+# CHECK-NEXT:       - Offset: 0x4
+# CHECK-NEXT:         Type:   R_X86_64_NONE
+# CHECK-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:  .rela.text
+    Type:  SHT_RELA
+    Info:  .text
+    Relocations:
+      - Type:   R_X86_64_NONE
+      - Offset: 0x4
+        Type:   R_X86_64_NONE
+        Symbol: 0

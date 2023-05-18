@@ -1,0 +1,144 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -run-pass=machine-scheduler -verify-misched -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s
+
+--- |
+  define amdgpu_kernel void @high-RP-reschedule() { ret void }
+...
+
+# CHECK: Unclustered High Register Pressure Reschedule stage successfully increased occupancy to 4
+
+---
+name: high-RP-reschedule
+tracksRegLiveness: true
+machineFunctionInfo:
+  occupancy: 4
+body: |
+  bb.0:
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:vreg_128 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vreg_128 = IMPLICIT_DEF
+    %4:vreg_128 = IMPLICIT_DEF
+    %5:vreg_128 = IMPLICIT_DEF
+    %6:vreg_128 = IMPLICIT_DEF
+    %7:vreg_128 = IMPLICIT_DEF
+    %8:vreg_128 = IMPLICIT_DEF
+    %9:vreg_128 = IMPLICIT_DEF
+    %10:vreg_128 = IMPLICIT_DEF
+    %11:sreg_64_xexec = IMPLICIT_DEF
+    %12:vreg_64 = IMPLICIT_DEF
+
+  bb.1:
+    %13:vgpr_32 = V_LSHRREV_B16_e32 1, %12.sub0, implicit $exec
+    %14:vgpr_32 = V_AND_B32_e32 127, %13, implicit $exec
+    %15:vgpr_32 = V_MUL_LO_U16_e32 49, %14, implicit $exec
+    %16:vgpr_32 = V_LSHRREV_B16_e32 10, %15, implicit $exec
+    %17:vgpr_32 = V_MUL_LO_U16_e32 42, %16, implicit $exec
+    %18:vgpr_32 = V_SUB_U16_e32 %12.sub0, %17, implicit $exec
+    %19:vgpr_32 = V_MOV_B32_e32 7, implicit $exec
+    %20:vgpr_32 = V_MUL_U32_U24_sdwa 0, %18, 0, %19, 0, 6, 0, 0, 6, implicit $exec
+    %21:vgpr_32 = V_LSHLREV_B32_e32 4, %20, implicit $exec
+    %22:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %11, %21, 608, 0, implicit $exec :: (load (s128))
+    %23:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %11, %21, 576, 0, implicit $exec :: (load (s128))
+    %24:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %11, %21, 592, 0, implicit $exec :: (load (s128))
+    %25:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %11, %21, 624, 0, implicit $exec :: (load (s128))
+    %26:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %11, %21, 672, 0, implicit $exec :: (load (s128))
+    %27:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %11, %21, 640, 0, implicit $exec :: (load (s128))
+    %28:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %11, %21, 656, 0, implicit $exec :: (load (s128))
+    %29:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %7.sub2_sub3, 0, %25.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    %30:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %7.sub2_sub3, 0, %25.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %31:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %7.sub0_sub1, 0, %25.sub0_sub1, 1, %29, 0, 0, implicit $mode, implicit $exec
+    %32:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %7.sub0_sub1, 0, %25.sub2_sub3, 0, %30, 0, 0, implicit $mode, implicit $exec
+    %33:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %5.sub2_sub3, 0, %24.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    %34:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %5.sub2_sub3, 0, %24.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %35:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %5.sub0_sub1, 0, %24.sub0_sub1, 1, %33, 0, 0, implicit $mode, implicit $exec
+    %36:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %5.sub0_sub1, 0, %24.sub2_sub3, 0, %34, 0, 0, implicit $mode, implicit $exec
+    %37:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %9.sub2_sub3, 0, %28.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    %38:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %9.sub2_sub3, 0, %28.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %39:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %9.sub0_sub1, 0, %28.sub0_sub1, 1, %37, 0, 0, implicit $mode, implicit $exec
+    %40:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %9.sub0_sub1, 0, %28.sub2_sub3, 0, %38, 0, 0, implicit $mode, implicit $exec
+    %41:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %4.sub2_sub3, 0, %23.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    %42:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %4.sub2_sub3, 0, %23.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %43:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %4.sub0_sub1, 0, %23.sub0_sub1, 1, %41, 0, 0, implicit $mode, implicit $exec
+    %44:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %4.sub0_sub1, 0, %23.sub2_sub3, 0, %42, 0, 0, implicit $mode, implicit $exec
+    %45:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %8.sub2_sub3, 0, %27.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    %46:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %8.sub2_sub3, 0, %27.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %47:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %6.sub2_sub3, 0, %22.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    %48:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %8.sub0_sub1, 0, %27.sub0_sub1, 1, %45, 0, 0, implicit $mode, implicit $exec
+    %49:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %8.sub0_sub1, 0, %27.sub2_sub3, 0, %46, 0, 0, implicit $mode, implicit $exec
+    %50:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %10.sub2_sub3, 0, %26.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    %51:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %6.sub2_sub3, 0, %22.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %52:vreg_64 = contract nofpexcept V_MUL_F64_e64 0, %10.sub2_sub3, 0, %26.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %53:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %6.sub0_sub1, 0, %22.sub0_sub1, 1, %47, 0, 0, implicit $mode, implicit $exec
+    %54:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %10.sub0_sub1, 0, %26.sub0_sub1, 1, %50, 0, 0, implicit $mode, implicit $exec
+    %55:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %6.sub0_sub1, 0, %22.sub2_sub3, 0, %51, 0, 0, implicit $mode, implicit $exec
+    %56:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %10.sub0_sub1, 0, %26.sub2_sub3, 0, %52, 0, 0, implicit $mode, implicit $exec
+    %57:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %3.sub2_sub3, 1, %32, 0, 0, implicit $mode, implicit $exec
+    %58:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %35, 1, %39, 0, 0, implicit $mode, implicit $exec
+    %59:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %44, 1, %49, 0, 0, implicit $mode, implicit $exec
+    %60:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %53, 1, %54, 0, 0, implicit $mode, implicit $exec
+    %61:sreg_64 = S_MOV_B64_IMM_PSEUDO 4604544271217802189
+    %62:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %3.sub0_sub1, 1, %31, 0, 0, implicit $mode, implicit $exec
+    undef %63.sub1:sreg_64 = S_MOV_B32 -1075404642
+    %64:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %36, 1, %40, 0, 0, implicit $mode, implicit $exec
+    %65:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %43, 1, %48, 0, 0, implicit $mode, implicit $exec
+    %66:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %55, 1, %56, 0, 0, implicit $mode, implicit $exec
+    %67:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %57, 0, %58, 0, 0, implicit $mode, implicit $exec
+    %68:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %59, 0, %60, 0, 0, implicit $mode, implicit $exec
+    %69:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %3.sub2_sub3, 0, 4611686018427387904, 1, %57, 0, 0, implicit $mode, implicit $exec
+    %70:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %3.sub0_sub1, 0, 4611686018427387904, 1, %62, 0, 0, implicit $mode, implicit $exec
+    %71:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %35, 0, 4611686018427387904, 1, %58, 0, 0, implicit $mode, implicit $exec
+    %72:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %36, 0, 4611686018427387904, 1, %64, 0, 0, implicit $mode, implicit $exec
+    %73:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %43, 0, 4611686018427387904, 1, %65, 0, 0, implicit $mode, implicit $exec
+    %74:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %44, 0, 4611686018427387904, 1, %59, 0, 0, implicit $mode, implicit $exec
+    %75:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %55, 0, 4611686018427387904, 1, %66, 0, 0, implicit $mode, implicit $exec
+    %76:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %53, 0, 4611686018427387904, 1, %60, 0, 0, implicit $mode, implicit $exec
+    %77:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %62, 1, %64, 0, 0, implicit $mode, implicit $exec
+    %78:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %65, 1, %66, 0, 0, implicit $mode, implicit $exec
+    %79:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %70, 1, %71, 0, 0, implicit $mode, implicit $exec
+    %80:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %57, 0, 4611686018427387904, 1, %67, 0, 0, implicit $mode, implicit $exec
+    %81:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %59, 0, 4611686018427387904, 1, %68, 0, 0, implicit $mode, implicit $exec
+    %82:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %69, 1, %72, 0, 0, implicit $mode, implicit $exec
+    %83:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %74, 1, %75, 0, 0, implicit $mode, implicit $exec
+    %84:vreg_64 = contract nofpexcept V_ADD_F64_e64 0, %73, 1, %76, 0, 0, implicit $mode, implicit $exec
+    %85:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %62, 0, 4611686018427387904, 1, %77, 0, 0, implicit $mode, implicit $exec
+    %86:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %65, 0, 4611686018427387904, 1, %78, 0, 0, implicit $mode, implicit $exec
+    %63.sub0:sreg_64 = COPY %61.sub0
+    %87:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %68, 0, %61, 0, %67, 0, 0, implicit $mode, implicit $exec
+    %88:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %81, 0, %63, 0, %80, 0, 0, implicit $mode, implicit $exec
+    %89:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %70, 0, 4611686018427387904, 1, %79, 0, 0, implicit $mode, implicit $exec
+    %90:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %69, 0, 4611686018427387904, 1, %82, 0, 0, implicit $mode, implicit $exec
+    %91:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %74, 0, 4611686018427387904, 1, %83, 0, 0, implicit $mode, implicit $exec
+    %92:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %73, 0, 4611686018427387904, 1, %84, 0, 0, implicit $mode, implicit $exec
+    %93:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %86, 0, %63, 0, %85, 0, 0, implicit $mode, implicit $exec
+    %94:vreg_64 = contract nofpexcept V_FMA_F64_e64 0, %78, 0, %61, 0, %77, 0, 0, implicit $mode, implicit $exec
+    undef %95.sub2_sub3:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %78, 0, %61, 0, %87, 0, 0, implicit $mode, implicit $exec
+    undef %96.sub2_sub3:vreg_128 = contract nofpexcept V_ADD_F64_e64 0, %82, 0, %84, 0, 0, implicit $mode, implicit $exec
+    undef %97.sub2_sub3:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %86, 0, %61, 0, %88, 0, 0, implicit $mode, implicit $exec
+    undef %98.sub2_sub3:vreg_128 = contract nofpexcept V_ADD_F64_e64 0, %90, 1, %91, 0, 0, implicit $mode, implicit $exec
+    %98.sub0_sub1:vreg_128 = contract nofpexcept V_ADD_F64_e64 0, %89, 1, %92, 0, 0, implicit $mode, implicit $exec
+    %97.sub0_sub1:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %81, 0, %63, 0, %93, 0, 0, implicit $mode, implicit $exec
+    %96.sub0_sub1:vreg_128 = contract nofpexcept V_ADD_F64_e64 0, %79, 1, %83, 0, 0, implicit $mode, implicit $exec
+    %95.sub0_sub1:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %68, 0, %63, 0, %94, 0, 0, implicit $mode, implicit $exec
+    undef %99.sub2_sub3:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %67, 0, 4611686018427387904, 1, %95.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    undef %100.sub2_sub3:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %82, 0, 4611686018427387904, 1, %96.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    undef %101.sub2_sub3:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %80, 0, 4611686018427387904, 1, %97.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    undef %102.sub2_sub3:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %90, 0, 4611686018427387904, 1, %98.sub2_sub3, 0, 0, implicit $mode, implicit $exec
+    %102.sub0_sub1:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %89, 0, 4611686018427387904, 1, %98.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %101.sub0_sub1:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %85, 0, 4611686018427387904, 1, %97.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %100.sub0_sub1:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %79, 0, 4611686018427387904, 1, %96.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %99.sub0_sub1:vreg_128 = contract nofpexcept V_FMA_F64_e64 0, %77, 0, 4611686018427387904, 1, %95.sub0_sub1, 0, 0, implicit $mode, implicit $exec
+    %103:vgpr_32 = V_ADD_U32_sdwa 0, %2, 0, %18, 0, 6, 0, 6, 0, implicit $exec
+    %104:vgpr_32 = V_LSHL_ADD_U32_e64 %103, 4, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %104, %102, 0, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %104, %101, 672, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %104, %100, 1344, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %104, %99, 2016, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %104, %98, 2688, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %104, %97, 3360, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %104, %96, 4032, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %104, %95, 4704, 0, implicit $exec
+
+  bb.2:
+    S_ENDPGM 0, implicit %0, implicit %1
+...

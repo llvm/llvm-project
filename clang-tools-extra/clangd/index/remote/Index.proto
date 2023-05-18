@@ -1,0 +1,133 @@
+//===--- Index.proto - Remote index Protocol Buffers definition -----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+syntax = "proto2";
+
+package clang.clangd.remote;
+
+// Common final result for streaming requests.
+message FinalResult { optional bool has_more = 1; }
+
+message LookupRequest { repeated string ids = 1; }
+
+// The response is a stream of symbol messages and the terminating message
+// indicating the end of stream.
+message LookupReply {
+  oneof kind {
+    Symbol stream_result = 1;
+    FinalResult final_result = 2;
+  }
+}
+
+message FuzzyFindRequest {
+  optional string query = 1;
+  repeated string scopes = 2;
+  optional bool any_scope = 3;
+  optional uint32 limit = 4;
+  optional bool restricted_for_code_completion = 5;
+  repeated string proximity_paths = 6;
+  repeated string preferred_types = 7;
+}
+
+// The response is a stream of symbol messages, and one terminating has_more
+// message.
+message FuzzyFindReply {
+  oneof kind {
+    Symbol stream_result = 1;
+    FinalResult final_result = 2;
+  }
+}
+
+message RefsRequest {
+  repeated string ids = 1;
+  optional uint32 filter = 2;
+  optional uint32 limit = 3;
+  optional bool want_container = 4;
+}
+
+// The response is a stream of reference messages, and one terminating has_more
+// message.
+message RefsReply {
+  oneof kind {
+    Ref stream_result = 1;
+    FinalResult final_result = 2;
+  }
+}
+
+message Symbol {
+  optional string id = 1;
+  optional SymbolInfo info = 2;
+  optional string name = 3;
+  optional SymbolLocation definition = 4;
+  optional string scope = 5;
+  optional SymbolLocation canonical_declaration = 6;
+  optional int32 references = 7;
+  reserved 8;
+  optional string signature = 9;
+  optional string template_specialization_args = 10;
+  optional string completion_snippet_suffix = 11;
+  optional string documentation = 12;
+  optional string return_type = 13;
+  optional string type = 14;
+  repeated HeaderWithReferences headers = 15;
+  optional uint32 flags = 16;
+}
+
+message Ref {
+  optional SymbolLocation location = 1;
+  optional uint32 kind = 2;
+}
+
+message SymbolInfo {
+  optional uint32 kind = 1;
+  optional uint32 subkind = 2;
+  optional uint32 language = 3;
+  optional uint32 properties = 4;
+}
+
+message SymbolLocation {
+  optional Position start = 1;
+  optional Position end = 2;
+  // clangd::SymbolLocation stores FileURI, but the protocol transmits a the
+  // relative path. Because paths are different on the remote and local machines
+  // they will be translated in the marshalling layer.
+  optional string file_path = 3;
+}
+
+message Position {
+  optional uint32 line = 1;
+  optional uint32 column = 2;
+}
+
+message HeaderWithReferences {
+  optional string header = 1;
+  optional uint32 references = 2;
+  optional uint32 supported_directives = 3;
+}
+
+message RelationsRequest {
+  repeated string subjects = 1;
+  optional uint32 predicate = 2;
+  optional uint32 limit = 3;
+}
+
+// The response is a stream of reference messages, and one terminating has_more
+// message.
+message RelationsReply {
+  oneof kind {
+    Relation stream_result = 1;
+    FinalResult final_result = 2;
+  }
+}
+
+// This struct does not mirror clangd::Relation but rather the arguments of
+// SymbolIndex::relations callback.
+message Relation {
+  optional string subject_id = 1;
+  optional Symbol object = 2;
+}

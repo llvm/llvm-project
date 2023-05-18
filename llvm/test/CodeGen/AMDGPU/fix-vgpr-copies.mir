@@ -1,0 +1,44 @@
+# RUN: llc -mtriple=amdgcn -start-after=greedy -disable-copyprop -stop-after=si-optimize-exec-masking -o - %s | FileCheck %s
+# Check that we first do all vector instructions and only then change exec
+# CHECK-DAG:  COPY $vgpr10_vgpr11
+# CHECK-DAG:  COPY $vgpr12_vgpr13
+# CHECK:      $exec = COPY
+
+---
+name:            main
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
+  - { reg: '$sgpr6' }
+  - { reg: '$vgpr0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.entry:
+    liveins: $vgpr3, $vgpr10_vgpr11, $vgpr12_vgpr13
+
+    $vcc = V_CMP_NE_U32_e64 0, killed $vgpr3, implicit $exec
+    $sgpr4_sgpr5 = COPY $exec, implicit-def $exec
+    $sgpr6_sgpr7 = S_AND_B64 $sgpr4_sgpr5, killed $vcc, implicit-def dead $scc
+    $sgpr4_sgpr5 = S_XOR_B64 $sgpr6_sgpr7, killed $sgpr4_sgpr5, implicit-def dead $scc
+    $vgpr61_vgpr62 = COPY $vgpr10_vgpr11
+    $vgpr155_vgpr156 = COPY $vgpr12_vgpr13
+    $exec = S_MOV_B64_term killed $sgpr6_sgpr7
+...

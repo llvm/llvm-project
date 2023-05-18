@@ -1,0 +1,73 @@
+## This test checks the warning message when no user specified sections are
+## found in the object file.
+
+## Test relocatable file.
+# RUN: yaml2obj --docnum=1 %s -o %t.1.o
+# RUN: yaml2obj --docnum=2 %s -o %t.2.o
+
+## - Warn for one section is found case.
+# RUN: llvm-objdump --reloc --section=single %t.2.o 2>&1 \
+# RUN:   | FileCheck --check-prefix=SINGLE-WARN %s
+
+## - Don't warn twice for duplicate missing sections.
+# RUN: llvm-objdump --reloc --section=single --section=single %t.2.o 2>&1 \
+# RUN:   | FileCheck --check-prefixes=SINGLE-WARN --implicit-check-not=warning: %s
+
+## - Don't warn if any user specified section is found.
+# RUN: llvm-objdump --reloc --section=.text1 --section=.text2 %t.2.o \
+# RUN:   | FileCheck --implicit-check-not=warning: %s
+
+## - Warn for each specified section if none of them are found.
+# RUN: llvm-objdump --reloc --section=multi1 --section=multi2 %t.2.o 2>&1 \
+# RUN:   | FileCheck --check-prefix=MULTI-WARN %s
+
+## - Don't warn if the specified section has no name.
+# RUN: llvm-objdump --reloc --section="" %t.2.o 2>&1 \
+# RUN:   | FileCheck --implicit-check-not=warning: %s
+
+## - Warning for --section is applicable for various other options.
+# RUN: llvm-objdump --section-headers --section=single %t.2.o 2>&1 \
+# RUN:   | FileCheck --check-prefix=SINGLE-WARN %s
+# RUN: llvm-objdump --full-contents --section=single %t.2.o 2>&1 \
+# RUN:   | FileCheck --check-prefix=SINGLE-WARN %s
+
+## Test archive file.
+# RUN: rm -f %t.a
+# RUN: llvm-ar rc %t.a %t.1.o %t.2.o
+
+## - Warn for one section is found case.
+# RUN: llvm-objdump --reloc --section=single %t.a 2>&1 \
+# RUN:   | FileCheck --check-prefix=SINGLE-WARN %s
+
+## - Don't warn if any user specified section is found.
+# RUN: llvm-objdump --reloc --section=.text1 %t.a \
+# RUN:   | FileCheck --implicit-check-not=warning: %s
+
+## - Warn for each specified section if none of them are found.
+# RUN: llvm-objdump --reloc --section=multi1 --section=multi2 %t.a 2>&1 \
+# RUN:   | FileCheck --check-prefix=MULTI-WARN %s
+
+
+# SINGLE-WARN: warning: section 'single' mentioned in a -j/--section option, but not found in any input file
+# MULTI-WARN:      warning: section 'multi1' mentioned in a -j/--section option, but not found in any input file
+# MULTI-WARN-NEXT: warning: section 'multi2' mentioned in a -j/--section option, but not found in any input file
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+- Name:    .text1
+  Type:    SHT_PROGBITS
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+- Name:    .text2
+  Type:    SHT_PROGBITS

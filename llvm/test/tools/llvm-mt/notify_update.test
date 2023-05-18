@@ -1,0 +1,16 @@
+REQUIRES: libxml2
+UNSUPPORTED: system-windows
+
+Exits normally without /notify_update
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /out:%t.manifest
+RUN: rm -f %t.manifest
+
+We can't check exit code so all we can do is see if not considered it as a failure
+
+File didn't exist previously so it's an update
+RUN: not llvm-mt /manifest %p/Inputs/test_manifest.manifest /out:%t.manifest /notify_update
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /out:%t.manifest /notify_update
+
+New manifest, so it's an update
+RUN: not llvm-mt /manifest %p/Inputs/additional.manifest /out:%t.manifest /notify_update
+RUN: llvm-mt /manifest %p/Inputs/additional.manifest /out:%t.manifest /notify_update

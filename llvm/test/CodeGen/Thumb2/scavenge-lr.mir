@@ -1,0 +1,221 @@
+# RUN: llc -mtriple=thumbv7-unknown-linux-android30 -run-pass=prologepilog -verify-machineinstrs %s -o - | FileCheck %s
+
+# When saving and restoring callee-saved registers, LR is saved but not restored,
+# because it is reloaded directly into PC. Therefore it should be available to scavenge
+# without requiring an emergency spill slot.
+
+# Used to result in
+#   LLVM ERROR: Error while trying to spill LR from class GPR: Cannot scavenge register without an emergency spill slot!
+
+# Check that LR is considered live in
+# CHECK: liveins: {{.*}}$lr
+
+# Check that LR is saved to the stack
+# CHECK: frame-setup t2STMDB_UPD {{.*}} killed $lr
+# CHECK: frame-setup CFI_INSTRUCTION offset $lr,
+
+# Check that LR was successfully scavenged somewhere in the function
+# CHECK:  $lr = t2ADDri
+# CHECK: VSTMQIA $q11, killed $lr
+
+# Check that LR is not restored at the end of the function
+# CHECK-NOT: $lr = frame-destroy
+# CHECK-NOT: frame-destroy VLDMDIA_UPD {{.*}} def $lr
+# CHECK-NOT: frame-destroy t2LDMIA_RET {{.*}} def $lr
+# CHECK: frame-destroy t2LDMIA_RET {{.*}} def $pc
+
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+
+  %S = type { [32 x i8] }
+
+  define void @f(ptr %arg) {
+  entry:
+    %ppp..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -8
+    %ppp..sroa_cast248 = bitcast ptr %ppp..sroa_idx to ptr
+    %ppp.copyload = load <8 x float>, ptr %ppp..sroa_cast248, align 32
+
+    %xxx..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -5
+    %xxx..sroa_cast248 = bitcast ptr %xxx..sroa_idx to ptr
+    %xxx.copyload = load <8 x float>, ptr %xxx..sroa_cast248, align 32
+
+    %yyy..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -2
+    %yyy..sroa_cast244 = bitcast ptr %yyy..sroa_idx to ptr
+    %yyy.copyload = load <8 x float>, ptr %yyy..sroa_cast244, align 32
+
+    %zzz..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -7
+    %zzz..sroa_cast241 = bitcast ptr %zzz..sroa_idx to ptr
+    %zzz.copyload = load <8 x float>, ptr %zzz..sroa_cast241, align 32
+
+    %www..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -4
+    %www..sroa_cast238 = bitcast ptr %www..sroa_idx to ptr
+    %www.copyload = load <8 x float>, ptr %www..sroa_cast238, align 32
+
+    %uuu..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 1
+    %uuu..sroa_cast235 = bitcast ptr %uuu..sroa_idx to ptr
+    %uuu.copyload = load <8 x float>, ptr %uuu..sroa_cast235, align 32
+
+    %vvv..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -6
+    %vvv..sroa_cast230 = bitcast ptr %vvv..sroa_idx to ptr
+    %vvv.copyload = load <8 x float>, ptr %vvv..sroa_cast230, align 32
+
+    %ttt..sroa_idx = getelementptr inbounds %S, ptr %arg, i32 -3
+    %ttt..sroa_cast226 = bitcast ptr %ttt..sroa_idx to ptr
+    %ttt.copyload = load <8 x float>, ptr %ttt..sroa_cast226, align 32
+
+    %sss..sroa_cast223 = bitcast ptr %arg to ptr
+    %sss.copyload = load <8 x float>, ptr %sss..sroa_cast223, align 32
+
+    %mul.i = fmul <8 x float> %ppp.copyload, %www.copyload
+    %mul.i185 = fmul <8 x float> %xxx.copyload, %uuu.copyload
+    %mul.i179 = fmul <8 x float> %mul.i185, %vvv.copyload
+    %mul.i173 = fmul <8 x float> %mul.i179, %ttt.copyload
+    %mul.i167 = fmul <8 x float> %zzz.copyload, %mul.i173
+    %add.i = fadd <8 x float> %mul.i, %mul.i167
+    %div.i = fdiv <8 x float> zeroinitializer, %add.i
+    %mul.i153 = fmul <8 x float> %uuu.copyload, %div.i
+
+    store <8 x float> %mul.i153, ptr %ppp..sroa_cast248, align 32
+
+    %mul.i147 = fmul <8 x float> %uuu.copyload, %vvv.copyload
+    %mul.i141 = fmul <8 x float> %zzz.copyload, %sss.copyload
+    %mul.i135 = fmul <8 x float> %mul.i141, %div.i
+    %sub.i129 = fsub <8 x float> %mul.i147, %mul.i135
+
+    store <8 x float> %sub.i129, ptr %zzz..sroa_cast241, align 32
+    store <8 x float> %div.i, ptr %vvv..sroa_cast230, align 32
+    store <8 x float> %div.i, ptr %xxx..sroa_cast248, align 32
+
+    %mul.i123 = fmul <8 x float> %yyy.copyload, %vvv.copyload
+    %mul.i117 = fmul <8 x float> %mul.i123, %div.i
+    %sub.i111 = fsub <8 x float> %sss.copyload, %mul.i117
+    store <8 x float> %sub.i111, ptr %www..sroa_cast238, align 32
+
+    %mul.i105 = fmul <8 x float> %ppp.copyload, %ttt.copyload
+    %mul.i99 = fmul <8 x float> %mul.i105, %div.i
+    %sub.i93 = fsub <8 x float> %xxx.copyload, %mul.i99
+    store <8 x float> %sub.i93, ptr %ttt..sroa_cast226, align 32
+
+    %mul.i81 = fmul <8 x float> %yyy.copyload, %www.copyload
+    %mul.i75 = fmul <8 x float> %mul.i81, %div.i
+    %sub.i = fsub <8 x float> %mul.i185, %mul.i75
+    store <8 x float> %sub.i, ptr %yyy..sroa_cast244, align 32
+
+    ret void
+  }
+...
+---
+name:            f
+alignment:       2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+frameInfo:
+  maxAlignment:    16
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 16 }
+  - { id: 1, type: spill-slot, size: 16, alignment: 16 }
+  - { id: 2, type: spill-slot, size: 16, alignment: 16 }
+  - { id: 3, type: spill-slot, size: 16, alignment: 16 }
+constants:
+  - id:              0
+    value:           'float 0.000000e+00'
+    alignment:       4
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r0
+    $r2 = t2SUBri $r0, 128, 14 /* CC::al */, $noreg, $noreg
+    $q8 = VLD1q64 $r2, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.www..sroa_cast238, align 32)
+    VSTMQIA $q8, %stack.0, 14 /* CC::al */, $noreg :: (store (s128) into %stack.0)
+    $r12 = t2SUBri $r0, 256, 14 /* CC::al */, $noreg, $noreg
+    $q12 = VLD1q64 $r12, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.ppp..sroa_cast248, align 32)
+    $q1 = VMULfq $q12, killed $q8, 14 /* CC::al */, $noreg
+    $r3 = nuw t2ADDri $r0, 32, 14 /* CC::al */, $noreg, $noreg
+    $q10 = VLD1q64 killed $r3, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.uuu..sroa_cast235, align 32)
+    $r5 = t2SUBri $r0, 160, 14 /* CC::al */, $noreg, $noreg
+    $q15 = VLD1q64 $r5, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.xxx..sroa_cast248, align 32)
+    $q14 = VMULfq $q15, $q10, 14 /* CC::al */, $noreg
+    $r6 = t2SUBri $r0, 192, 14 /* CC::al */, $noreg, $noreg
+    $q13 = VLD1q64 $r6, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.vvv..sroa_cast230, align 32)
+    $q8 = VMULfq $q14, $q13, 14 /* CC::al */, $noreg
+    $r4 = t2SUBri $r0, 96, 14 /* CC::al */, $noreg, $noreg
+    $q6 = VLD1q64 $r4, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.ttt..sroa_cast226, align 32)
+    $q8 = VMULfq killed $q8, $q6, 14 /* CC::al */, $noreg
+    $r3 = t2SUBri $r0, 224, 14 /* CC::al */, $noreg, $noreg
+    $q5 = VLD1q64 $r3, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.zzz..sroa_cast241, align 32)
+    $q1 = VMLAfq killed $q1, $q5, killed $q8, 14 /* CC::al */, $noreg
+    $s8 = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
+    $s3 = VDIVS $s8, $s7, 14 /* CC::al */, $noreg, implicit-def $q0
+    $s2 = VDIVS $s8, $s6, 14 /* CC::al */, $noreg, implicit killed $q0, implicit-def $q0
+    $s1 = VDIVS $s8, $s5, 14 /* CC::al */, $noreg, implicit killed $q0, implicit-def $q0
+    $s0 = VDIVS $s8, $s4, 14 /* CC::al */, $noreg, implicit killed $q1, implicit killed $q0, implicit-def $q0
+    $r7 = t2SUBri $r0, 64, 14 /* CC::al */, $noreg, $noreg
+    $q8 = VLD1q64 $r7, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.yyy..sroa_cast244, align 32)
+    VSTMQIA $q8, %stack.1, 14 /* CC::al */, $noreg :: (store (s128) into %stack.1)
+    $q8 = VMULfq killed $q8, $q13, 14 /* CC::al */, $noreg
+    $r1 = t2ADDri $r0, 48, 14 /* CC::al */, $noreg, $noreg
+    $q9, $r0 = VLD1q32wb_fixed killed $r0, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.sss..sroa_cast223, align 32)
+    $q11 = COPY $q9
+    $q11 = VMLSfq killed $q11, killed $q8, $q0, 14 /* CC::al */, $noreg
+    $r2 = VST1q32wb_fixed killed $r2, 16, killed $q11, 14 /* CC::al */, $noreg :: (store (s128) into %ir.www..sroa_cast238, align 32)
+    $q8 = VLD1q64 $r2, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.www..sroa_cast238 + 16, basealign 32)
+    VSTMQIA $q8, %stack.3, 14 /* CC::al */, $noreg :: (store (s128) into %stack.3)
+    $q11 = VMULfq $q10, $q0, 14 /* CC::al */, $noreg
+    $r12 = VST1q32wb_fixed killed $r12, 16, killed $q11, 14 /* CC::al */, $noreg :: (store (s128) into %ir.ppp..sroa_cast248, align 32)
+    $q11 = VLD1q64 $r12, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.ppp..sroa_cast248 + 16, basealign 32)
+    VSTMQIA $q11, %stack.2, 14 /* CC::al */, $noreg :: (store (s128) into %stack.2)
+    $q1 = VMULfq killed $q11, killed $q8, 14 /* CC::al */, $noreg
+    $r5 = VST1q32wb_fixed killed $r5, 16, $q0, 14 /* CC::al */, $noreg :: (store (s128) into %ir.xxx..sroa_cast248, align 32)
+    $q4 = VLD1q64 $r5, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.xxx..sroa_cast248 + 16, basealign 32)
+    $q11 = VLD1q64 killed $r1, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.uuu..sroa_cast235 + 16, basealign 32)
+    $q7 = VMULfq $q4, $q11, 14 /* CC::al */, $noreg
+    $r6 = VST1q32wb_fixed killed $r6, 16, $q0, 14 /* CC::al */, $noreg :: (store (s128) into %ir.vvv..sroa_cast230, align 32)
+    $q3 = VLD1q64 $r6, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.vvv..sroa_cast230 + 16, basealign 32)
+    $q8 = VMULfq $q7, $q3, 14 /* CC::al */, $noreg
+    $q12 = VMULfq killed $q12, killed $q6, 14 /* CC::al */, $noreg
+    $q15 = VMLSfq killed $q15, killed $q12, $q0, 14 /* CC::al */, $noreg
+    $r4 = VST1q32wb_fixed killed $r4, 16, killed $q15, 14 /* CC::al */, $noreg :: (store (s128) into %ir.ttt..sroa_cast226, align 32)
+    $q12 = VLD1q64 $r4, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.ttt..sroa_cast226 + 16, basealign 32)
+    $q8 = VMULfq killed $q8, $q12, 14 /* CC::al */, $noreg
+    $q9 = VMULfq killed $q5, killed $q9, 14 /* CC::al */, $noreg
+    $q10 = VMULfq killed $q10, killed $q13, 14 /* CC::al */, $noreg
+    $q10 = VMLSfq killed $q10, killed $q9, $q0, 14 /* CC::al */, $noreg
+    $r3 = VST1q32wb_fixed killed $r3, 16, killed $q10, 14 /* CC::al */, $noreg :: (store (s128) into %ir.zzz..sroa_cast241, align 32)
+    $q10 = VLD1q64 $r3, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.zzz..sroa_cast241 + 16, basealign 32)
+    $q1 = VMLAfq killed $q1, $q10, killed $q8, 14 /* CC::al */, $noreg
+    $s23 = VDIVS $s8, $s7, 14 /* CC::al */, $noreg, implicit-def $q5
+    $s22 = VDIVS $s8, $s6, 14 /* CC::al */, $noreg, implicit killed $q5, implicit-def $q5
+    $s21 = VDIVS $s8, $s5, 14 /* CC::al */, $noreg, implicit killed $q5, implicit-def $q5
+    $s20 = VDIVS killed $s8, $s4, 14 /* CC::al */, $noreg, implicit killed $q1, implicit killed $q5, implicit-def $q5
+    VST1q64 killed $r5, 16, $q5, 14 /* CC::al */, $noreg :: (store (s128) into %ir.xxx..sroa_cast248 + 16, basealign 32)
+    VST1q64 killed $r6, 16, $q5, 14 /* CC::al */, $noreg :: (store (s128) into %ir.vvv..sroa_cast230 + 16, basealign 32)
+    $q8 = VLDMQIA %stack.0, 14 /* CC::al */, $noreg :: (load (s128) from %stack.0)
+    $q9 = VLDMQIA %stack.1, 14 /* CC::al */, $noreg :: (load (s128) from %stack.1)
+    $q8 = VMULfq killed $q9, killed $q8, 14 /* CC::al */, $noreg
+    $q14 = VMLSfq killed $q14, killed $q8, killed $q0, 14 /* CC::al */, $noreg
+    $r7 = VST1q32wb_fixed killed $r7, 16, killed $q14, 14 /* CC::al */, $noreg :: (store (s128) into %ir.yyy..sroa_cast244, align 32)
+    $q8 = VLD1q64 $r7, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.yyy..sroa_cast244 + 16, basealign 32)
+    $q9 = VLDMQIA %stack.3, 14 /* CC::al */, $noreg :: (load (s128) from %stack.3)
+    $q9 = VMULfq $q8, killed $q9, 14 /* CC::al */, $noreg
+    $q7 = VMLSfq killed $q7, killed $q9, $q5, 14 /* CC::al */, $noreg
+    VST1q64 killed $r7, 16, killed $q7, 14 /* CC::al */, $noreg :: (store (s128) into %ir.yyy..sroa_cast244 + 16, basealign 32)
+    $q9 = VLDMQIA %stack.2, 14 /* CC::al */, $noreg :: (load (s128) from %stack.2)
+    $q9 = VMULfq killed $q9, killed $q12, 14 /* CC::al */, $noreg
+    $q4 = VMLSfq killed $q4, killed $q9, $q5, 14 /* CC::al */, $noreg
+    VST1q64 killed $r4, 16, killed $q4, 14 /* CC::al */, $noreg :: (store (s128) into %ir.ttt..sroa_cast226 + 16, basealign 32)
+    $q8 = VMULfq killed $q8, $q3, 14 /* CC::al */, $noreg
+    $q9 = VLD1q64 killed $r0, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.sss..sroa_cast223 + 16, basealign 32)
+    $q12 = COPY $q9
+    $q12 = VMLSfq killed $q12, killed $q8, $q5, 14 /* CC::al */, $noreg
+    VST1q64 killed $r2, 16, killed $q12, 14 /* CC::al */, $noreg :: (store (s128) into %ir.www..sroa_cast238 + 16, basealign 32)
+    $q8 = VMULfq $q11, killed $q3, 14 /* CC::al */, $noreg
+    $q9 = VMULfq killed $q10, killed $q9, 14 /* CC::al */, $noreg
+    $q8 = VMLSfq killed $q8, killed $q9, $q5, 14 /* CC::al */, $noreg
+    VST1q64 killed $r3, 16, killed $q8, 14 /* CC::al */, $noreg :: (store (s128) into %ir.zzz..sroa_cast241 + 16, basealign 32)
+    $q8 = VMULfq killed $q11, killed $q5, 14 /* CC::al */, $noreg
+    VST1q64 killed $r12, 16, killed $q8, 14 /* CC::al */, $noreg :: (store (s128) into %ir.ppp..sroa_cast248 + 16, basealign 32)
+    tBX_RET 14 /* CC::al */, $noreg
+
+...

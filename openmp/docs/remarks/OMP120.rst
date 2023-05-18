@@ -1,0 +1,94 @@
+.. _omp120:
+
+Transformed generic-mode kernel to SPMD-mode [OMP120]
+=====================================================
+
+This optimization remark indicates that the execution strategy for the OpenMP
+target offloading kernel was changed. Generic-mode kernels are executed by a
+single thread that schedules parallel worker threads using a state machine. This
+code transformation can move a kernel that was initially generated in generic
+mode to SPMD-mode where all threads are active at the same time with no state
+machine. This execution strategy is closer to how the threads are actually
+executed on a GPU target. This is only possible if the instructions previously
+executed by a single thread have no side-effects or can be guarded. If the
+instructions have no side-effects they are simply recomputed by each thread.
+
+Generic-mode is often considerably slower than SPMD-mode because of the extra
+overhead required to separately schedule worker threads and pass data between
+them.This optimization allows users to use generic-mode semantics while
+achieving the performance of SPMD-mode. This can be helpful when defining shared
+memory between the threads using :ref:`OMP111 <omp111>`.
+
+Examples
+--------
+
+Normally, any kernel that contains split OpenMP target and parallel regions will
+be executed in generic-mode. Sometimes it is easier to use generic-mode
+semantics to define shared memory, or more tightly control the distribution of
+the threads. This shows a naive matrix-matrix multiplication that contains code
+that will need to be guarded.
+
+.. code-block:: c++
+
+  void matmul(int M, int N, int K, double *A, double *B, double *C) {
+  #pragma omp target teams distribute collapse(2) \
+    map(to:A[0: M*K]) map(to:B[0: K*N]) map(tofrom:C[0 : M*N])
+    for (int i = 0; i < M; i++) {
+      for (int j = 0; j < N; j++) {
+        double sum = 0.0;
+
+  #pragma omp parallel for reduction(+:sum) default(firstprivate)
+        for (int k = 0; k < K; k++)
+          sum += A[i*K + k] * B[k*N + j];
+
+        C[i*N + j] = sum;
+      }
+    }
+  }
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -fopenmp-version=51 -O2 -Rpass=openmp-opt omp120.cpp
+   omp120.cpp:6:14: remark: Replaced globalized variable with 8 bytes of shared memory. [OMP111]
+        double sum = 0.0;
+               ^
+   omp120.cpp:2:1: remark: Transformed generic-mode kernel to SPMD-mode. [OMP120]
+   #pragma omp target teams distribute collapse(2) \
+   ^
+
+This requires guarding the store to the shared variable ``sum`` and the store to
+the matrix ``C``. This can be thought of as generating the code below.
+
+.. code-block:: c++
+
+  void matmul(int M, int N, int K, double *A, double *B, double *C) {
+  #pragma omp target teams distribute collapse(2) \
+    map(to:A[0: M*K]) map(to:B[0: K*N]) map(tofrom:C[0 : M*N])
+    for (int i = 0; i < M; i++) {
+      for (int j = 0; j < N; j++) {
+      double sum;
+  #pragma omp parallel default(firstprivate) shared(sum)
+      {
+      #pragma omp barrier
+      if (omp_get_thread_num() == 0)
+        sum = 0.0;
+      #pragma omp barrier
+
+  #pragma omp for reduction(+:sum)
+        for (int k = 0; k < K; k++)
+          sum += A[i*K + k] * B[k*N + j];
+
+      #pragma omp barrier
+      if (omp_get_thread_num() == 0)
+        C[i*N + j] = sum;
+      #pragma omp barrier
+      }
+      }
+    }
+  }
+
+
+Diagnostic Scope
+----------------
+
+OpenMP target offloading optimization remark.

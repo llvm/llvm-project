@@ -1,0 +1,54 @@
+# Compile with:
+#    cat >modules.modulemap <<EOF
+#      module Foo {
+#        header "Foo.h"
+#        export *
+#      }
+#      module Bar {
+#        header "Bar.h"
+#        export *
+#      }
+# EOF
+#    echo 'typedef int bar;' >Bar.h
+#    echo '@import Bar; typedef bar foo;' >Foo.h
+#    echo '@import Foo; foo f() { return 0; }' >module-warnings.m
+#    clang -cc1 -emit-obj -fmodules -fmodule-map-file=modules.modulemap \
+#      -fmodule-format=obj -debug-info-kind=standalone -dwarf-ext-refs \
+#      -fmodules-cache-path=ModuleCache \
+#      -fdisable-module-hash module-warnings.m -o 1.o
+#
+# Test for module-related warnings.
+#
+# RUN: rm -rf %t.dir && mkdir %t.dir && mkdir %t.dir/ModuleCache
+# RUN: cp %p/../Inputs/module-warnings/1.o %t.dir
+# RUN: cp %p/../Inputs/module-warnings/Foo.pcm %t.dir/ModuleCache
+#
+# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y \
+# RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck %s
+#
+# Module-not-found should be reported only once.
+# The exact error message depends on the OS so we don't check for it.
+# CHECK:     warning: {{.*}}Bar.pcm:
+# CHECK-NOT: warning: {{.*}}Bar.pcm:
+#
+# RUN: cp %p/../Inputs/module-warnings/libstatic.a %t.dir
+# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 | FileCheck %s
+# CHECK: rebuild the module cache
+# CHECK-NOT: static libraries
+#
+# RUN: rm -rf %t.dir/ModuleCache
+# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=STATIC
+# STATIC: warning: {{.*}}Bar.pcm:
+# STATIC: note: Linking a static library
+# STATIC: warning: {{.*}}Foo.pcm:
+# STATIC: warning: couldn`t find compile unit for the macro table with offset = 0x0
+# STATIC-NOT: warning:
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: libstatic.a(1.o)
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+...

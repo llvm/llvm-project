@@ -1,0 +1,15 @@
+# RUN: not llvm-ifs --input-format=IFS --output-ifs - %s %S/object.ifs 2>&1 | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS
+
+# Here we are testing to see if two symbols with identical names will fail to
+# merge in conflict due to mismatching sizes.
+# CHECK-IFS: error: Interface Stub: Size Mismatch for b.
+# CHECK-IFS-NEXT: Filename:
+# CHECK-IFS-NEXT: Size Values: 1 4
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target: x86_64-unknown-linux-gnu
+Symbols:
+  - { Name: b, Type: Object, Size: 1 }
+...

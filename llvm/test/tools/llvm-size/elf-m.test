@@ -1,0 +1,16 @@
+## Show that llvm-size falls back to Berkeley output if --format=darwin is
+## specified and the input is not Mach-O.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-size -m %t | FileCheck -DFILE=%t %s
+# RUN: llvm-size --format=darwin %t | FileCheck -DFILE=%t %s
+
+# CHECK:         text    data     bss     dec     hex filename
+# CHECK-NEXT:       0       0       0       0       0 [[FILE]]{{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64

@@ -1,0 +1,447 @@
+## In this test we test how machine-specific dynamic tags are dumped.
+
+## Case 1: Test that hexagon machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=1 %s -o %t.hex
+# RUN: llvm-readobj --dynamic-table %t.hex | FileCheck %s --check-prefix=LLVM-HEXAGON
+# RUN: llvm-readelf --dynamic-table %t.hex | FileCheck %s --check-prefix=GNU-HEXAGON
+
+# LLVM-HEXAGON:      DynamicSection [ (4 entries)
+# LLVM-HEXAGON-NEXT:   Tag                Type          Name/Value
+# LLVM-HEXAGON-NEXT:   0x0000000070000000 HEXAGON_SYMSZ 0x10
+# LLVM-HEXAGON-NEXT:   0x0000000070000001 HEXAGON_VER   4096
+# LLVM-HEXAGON-NEXT:   0x0000000070000002 HEXAGON_PLT   0x1000
+# LLVM-HEXAGON-NEXT:   0x0000000000000000 NULL          0x0
+# LLVM-HEXAGON-NEXT: ]
+
+# GNU-HEXAGON:      Dynamic section at offset {{.*}} contains 4 entries:
+# GNU-HEXAGON-NEXT:   Tag                Type            Name/Value
+# GNU-HEXAGON-NEXT:   0x0000000070000000 (HEXAGON_SYMSZ) 0x10
+# GNU-HEXAGON-NEXT:   0x0000000070000001 (HEXAGON_VER)   4096
+# GNU-HEXAGON-NEXT:   0x0000000070000002 (HEXAGON_PLT)   0x1000
+# GNU-HEXAGON-NEXT:   0x0000000000000000 (NULL)          0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_HEXAGON
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_HEXAGON_SYMSZ
+        Value: 0x10
+      - Tag:   DT_HEXAGON_VER
+        Value: 0x1000
+      - Tag:   DT_HEXAGON_PLT
+        Value: 0x1000
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 2: Test that MIPS machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=2 %s -o %t.mips
+# RUN: llvm-readobj --dynamic-table %t.mips \
+# RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=LLVM-MIPS
+# RUN: llvm-readelf --dynamic-table %t.mips \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=GNU-MIPS
+
+#      LLVM-MIPS:DynamicSection [ (48 entries)
+# LLVM-MIPS-NEXT:  Tag                Type                       Name/Value
+# LLVM-MIPS-NEXT:  0x0000000000000004 HASH                       0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000001 MIPS_RLD_VERSION           305419896
+# LLVM-MIPS-NEXT:  0x0000000070000002 MIPS_TIME_STAMP            0x11223344
+# LLVM-MIPS-NEXT:  0x0000000070000003 MIPS_ICHECKSUM             0x11112222
+# LLVM-MIPS-NEXT:  0x0000000070000004 MIPS_IVERSION              0x1
+# LLVM-MIPS-NEXT:  0x0000000070000005 MIPS_FLAGS                 QUICKSTART SGI_ONLY PIXIE CORD 
+# LLVM-MIPS-NEXT:  0x0000000070000006 MIPS_BASE_ADDRESS          0x87654321
+# LLVM-MIPS-NEXT:  0x0000000070000007 MIPS_MSYM                  0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000008 MIPS_CONFLICT              0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000009 MIPS_LIBLIST               0x1000
+# LLVM-MIPS-NEXT:  0x000000007000000A MIPS_LOCAL_GOTNO           1
+# LLVM-MIPS-NEXT:  0x000000007000000B MIPS_CONFLICTNO            0x1
+# LLVM-MIPS-NEXT:  0x0000000070000010 MIPS_LIBLISTNO             0x1
+# LLVM-MIPS-NEXT:  0x0000000070000011 MIPS_SYMTABNO              1
+# LLVM-MIPS-NEXT:  0x0000000070000012 MIPS_UNREFEXTNO            0
+# LLVM-MIPS-NEXT:  0x0000000070000013 MIPS_GOTSYM                0x0
+# LLVM-MIPS-NEXT:  0x0000000070000014 MIPS_HIPAGENO              0x88776655
+# LLVM-MIPS-NEXT:  0x0000000070000016 MIPS_RLD_MAP               0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000017 MIPS_DELTA_CLASS           0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000018 MIPS_DELTA_CLASS_NO        0x1
+# LLVM-MIPS-NEXT:  0x0000000070000019 MIPS_DELTA_INSTANCE        0x1000
+# LLVM-MIPS-NEXT:  0x000000007000001A MIPS_DELTA_INSTANCE_NO     0x1
+# LLVM-MIPS-NEXT:  0x000000007000001B MIPS_DELTA_RELOC           0x1000
+# LLVM-MIPS-NEXT:  0x000000007000001C MIPS_DELTA_RELOC_NO        0x1
+# LLVM-MIPS-NEXT:  0x000000007000001D MIPS_DELTA_SYM             0x1000
+# LLVM-MIPS-NEXT:  0x000000007000001E MIPS_DELTA_SYM_NO          0x1
+# LLVM-MIPS-NEXT:  0x0000000070000020 MIPS_DELTA_CLASSSYM        0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000021 MIPS_DELTA_CLASSSYM_NO     0x1
+# LLVM-MIPS-NEXT:  0x0000000070000022 MIPS_CXX_FLAGS             0x88887777
+# LLVM-MIPS-NEXT:  0x0000000070000023 MIPS_PIXIE_INIT            0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000025 MIPS_LOCALPAGE_GOTIDX      0x1
+# LLVM-MIPS-NEXT:  0x0000000070000026 MIPS_LOCAL_GOTIDX          0x1
+# LLVM-MIPS-NEXT:  0x0000000070000027 MIPS_HIDDEN_GOTIDX         0x1
+# LLVM-MIPS-NEXT:  0x0000000070000028 MIPS_PROTECTED_GOTIDX      0x1
+# LLVM-MIPS-NEXT:  0x0000000070000029 MIPS_OPTIONS               0x1000
+# LLVM-MIPS-NEXT:  0x000000007000002A MIPS_INTERFACE             0x1000
+# LLVM-MIPS-NEXT:  0x000000007000002B MIPS_DYNSTR_ALIGN          0x88888888
+# LLVM-MIPS-NEXT:  0x000000007000002C MIPS_INTERFACE_SIZE        0x10
+# LLVM-MIPS-NEXT:  0x000000007000002D MIPS_RLD_TEXT_RESOLVE_ADDR 0x8
+# LLVM-MIPS-NEXT:  0x000000007000002E MIPS_PERF_SUFFIX           0x0
+# LLVM-MIPS-NEXT:  0x000000007000002F MIPS_COMPACT_SIZE          0x10
+# LLVM-MIPS-NEXT:  0x0000000070000030 MIPS_GP_VALUE              0x1
+# LLVM-MIPS-NEXT:  0x0000000070000031 MIPS_AUX_DYNAMIC           0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000032 MIPS_PLTGOT                0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000034 MIPS_RWPLT                 0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000035 MIPS_RLD_MAP_REL           0x1000
+# LLVM-MIPS-NEXT:  0x0000000070000036 MIPS_XHASH                 0x2000
+# LLVM-MIPS-NEXT:  0x0000000000000000 NULL                       0x0
+# LLVM-MIPS-NEXT:]
+
+#      GNU-MIPS:Dynamic section at offset {{.*}} contains 48 entries:
+# GNU-MIPS-NEXT:  Tag                Type                         Name/Value
+# GNU-MIPS-NEXT:  0x0000000000000004 (HASH)                       0x1000
+# GNU-MIPS-NEXT:  0x0000000070000001 (MIPS_RLD_VERSION)           305419896
+# GNU-MIPS-NEXT:  0x0000000070000002 (MIPS_TIME_STAMP)            0x11223344
+# GNU-MIPS-NEXT:  0x0000000070000003 (MIPS_ICHECKSUM)             0x11112222
+# GNU-MIPS-NEXT:  0x0000000070000004 (MIPS_IVERSION)              0x1
+# GNU-MIPS-NEXT:  0x0000000070000005 (MIPS_FLAGS)                 QUICKSTART SGI_ONLY PIXIE CORD 
+# GNU-MIPS-NEXT:  0x0000000070000006 (MIPS_BASE_ADDRESS)          0x87654321
+# GNU-MIPS-NEXT:  0x0000000070000007 (MIPS_MSYM)                  0x1000
+# GNU-MIPS-NEXT:  0x0000000070000008 (MIPS_CONFLICT)              0x1000
+# GNU-MIPS-NEXT:  0x0000000070000009 (MIPS_LIBLIST)               0x1000
+# GNU-MIPS-NEXT:  0x000000007000000a (MIPS_LOCAL_GOTNO)           1
+# GNU-MIPS-NEXT:  0x000000007000000b (MIPS_CONFLICTNO)            0x1
+# GNU-MIPS-NEXT:  0x0000000070000010 (MIPS_LIBLISTNO)             0x1
+# GNU-MIPS-NEXT:  0x0000000070000011 (MIPS_SYMTABNO)              1
+# GNU-MIPS-NEXT:  0x0000000070000012 (MIPS_UNREFEXTNO)            0
+# GNU-MIPS-NEXT:  0x0000000070000013 (MIPS_GOTSYM)                0x0
+# GNU-MIPS-NEXT:  0x0000000070000014 (MIPS_HIPAGENO)              0x88776655
+# GNU-MIPS-NEXT:  0x0000000070000016 (MIPS_RLD_MAP)               0x1000
+# GNU-MIPS-NEXT:  0x0000000070000017 (MIPS_DELTA_CLASS)           0x1000
+# GNU-MIPS-NEXT:  0x0000000070000018 (MIPS_DELTA_CLASS_NO)        0x1
+# GNU-MIPS-NEXT:  0x0000000070000019 (MIPS_DELTA_INSTANCE)        0x1000
+# GNU-MIPS-NEXT:  0x000000007000001a (MIPS_DELTA_INSTANCE_NO)     0x1
+# GNU-MIPS-NEXT:  0x000000007000001b (MIPS_DELTA_RELOC)           0x1000
+# GNU-MIPS-NEXT:  0x000000007000001c (MIPS_DELTA_RELOC_NO)        0x1
+# GNU-MIPS-NEXT:  0x000000007000001d (MIPS_DELTA_SYM)             0x1000
+# GNU-MIPS-NEXT:  0x000000007000001e (MIPS_DELTA_SYM_NO)          0x1
+# GNU-MIPS-NEXT:  0x0000000070000020 (MIPS_DELTA_CLASSSYM)        0x1000
+# GNU-MIPS-NEXT:  0x0000000070000021 (MIPS_DELTA_CLASSSYM_NO)     0x1
+# GNU-MIPS-NEXT:  0x0000000070000022 (MIPS_CXX_FLAGS)             0x88887777
+# GNU-MIPS-NEXT:  0x0000000070000023 (MIPS_PIXIE_INIT)            0x1000
+# GNU-MIPS-NEXT:  0x0000000070000025 (MIPS_LOCALPAGE_GOTIDX)      0x1
+# GNU-MIPS-NEXT:  0x0000000070000026 (MIPS_LOCAL_GOTIDX)          0x1
+# GNU-MIPS-NEXT:  0x0000000070000027 (MIPS_HIDDEN_GOTIDX)         0x1
+# GNU-MIPS-NEXT:  0x0000000070000028 (MIPS_PROTECTED_GOTIDX)      0x1
+# GNU-MIPS-NEXT:  0x0000000070000029 (MIPS_OPTIONS)               0x1000
+# GNU-MIPS-NEXT:  0x000000007000002a (MIPS_INTERFACE)             0x1000
+# GNU-MIPS-NEXT:  0x000000007000002b (MIPS_DYNSTR_ALIGN)          0x88888888
+# GNU-MIPS-NEXT:  0x000000007000002c (MIPS_INTERFACE_SIZE)        0x10
+# GNU-MIPS-NEXT:  0x000000007000002d (MIPS_RLD_TEXT_RESOLVE_ADDR) 0x8
+# GNU-MIPS-NEXT:  0x000000007000002e (MIPS_PERF_SUFFIX)           0x0
+# GNU-MIPS-NEXT:  0x000000007000002f (MIPS_COMPACT_SIZE)          0x10
+# GNU-MIPS-NEXT:  0x0000000070000030 (MIPS_GP_VALUE)              0x1
+# GNU-MIPS-NEXT:  0x0000000070000031 (MIPS_AUX_DYNAMIC)           0x1000
+# GNU-MIPS-NEXT:  0x0000000070000032 (MIPS_PLTGOT)                0x1000
+# GNU-MIPS-NEXT:  0x0000000070000034 (MIPS_RWPLT)                 0x1000
+# GNU-MIPS-NEXT:  0x0000000070000035 (MIPS_RLD_MAP_REL)           0x1000
+# GNU-MIPS-NEXT:  0x0000000070000036 (MIPS_XHASH)                 0x2000
+# GNU-MIPS-NEXT:  0x0000000000000000 (NULL)                       0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_MIPS
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x1000
+      - Tag:   DT_MIPS_RLD_VERSION
+        Value: 0x12345678
+      - Tag:   DT_MIPS_TIME_STAMP
+        Value: 0x11223344
+      - Tag:   DT_MIPS_ICHECKSUM
+        Value: 0x11112222
+      - Tag:   DT_MIPS_IVERSION
+        Value: 0x1
+      - Tag:   DT_MIPS_FLAGS
+        Value: 0x11111111
+      - Tag:   DT_MIPS_BASE_ADDRESS
+        Value: 0x87654321
+      - Tag:   DT_MIPS_MSYM
+        Value: 0x1000
+      - Tag:   DT_MIPS_CONFLICT
+        Value: 0x1000
+      - Tag:   DT_MIPS_LIBLIST
+        Value: 0x1000
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 0x1
+      - Tag:   DT_MIPS_CONFLICTNO
+        Value: 0x1
+      - Tag:   DT_MIPS_LIBLISTNO
+        Value: 0x1
+      - Tag:   DT_MIPS_SYMTABNO
+        Value: 0x1
+      - Tag:   DT_MIPS_UNREFEXTNO
+        Value: 0x0
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 0x0
+      - Tag:   DT_MIPS_HIPAGENO
+        Value: 0x88776655
+      - Tag:   DT_MIPS_RLD_MAP
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_CLASS
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_CLASS_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_INSTANCE
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_INSTANCE_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_RELOC
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_RELOC_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_SYM
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_SYM_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_CLASSSYM
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_CLASSSYM_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_CXX_FLAGS
+        Value: 0x88887777
+      - Tag:   DT_MIPS_PIXIE_INIT
+        Value: 0x1000
+      - Tag:   DT_MIPS_LOCALPAGE_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_LOCAL_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_HIDDEN_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_PROTECTED_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_OPTIONS
+        Value: 0x1000
+      - Tag:   DT_MIPS_INTERFACE
+        Value: 0x1000
+      - Tag:   DT_MIPS_DYNSTR_ALIGN
+        Value: 0x88888888
+      - Tag:   DT_MIPS_INTERFACE_SIZE
+        Value: 0x10
+      - Tag:   DT_MIPS_RLD_TEXT_RESOLVE_ADDR
+        Value: 0x8
+      - Tag:   DT_MIPS_PERF_SUFFIX
+        Value: 0x0
+      - Tag:   DT_MIPS_COMPACT_SIZE
+        Value: 0x10
+      - Tag:   DT_MIPS_GP_VALUE
+        Value: 0x1
+      - Tag:   DT_MIPS_AUX_DYNAMIC
+        Value: 0x1000
+      - Tag:   DT_MIPS_PLTGOT
+        Value: 0x1000
+      - Tag:   DT_MIPS_RWPLT
+        Value: 0x1000
+      - Tag:   DT_MIPS_RLD_MAP_REL
+        Value: 0x1000
+      - Tag:   DT_MIPS_XHASH
+        Value: 0x2000
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 3: Test that PPC machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=3 %s -o %t.ppc
+# RUN: llvm-readobj --dynamic-table %t.ppc | FileCheck %s --check-prefix=LLVM-PPC
+# RUN: llvm-readelf --dynamic-table %t.ppc | FileCheck %s --check-prefix=GNU-PPC
+
+# LLVM-PPC:      DynamicSection [ (3 entries)
+# LLVM-PPC-NEXT:   Tag        Type    Name/Value
+# LLVM-PPC-NEXT:   0x70000000 PPC_GOT 0x200C0
+# LLVM-PPC-NEXT:   0x70000001 PPC_OPT 0x1
+# LLVM-PPC-NEXT:   0x00000000 NULL    0x0
+# LLVM-PPC-NEXT: ]
+
+# GNU-PPC:      Dynamic section at offset {{.*}} contains 3 entries:
+# GNU-PPC-NEXT:   Tag        Type      Name/Value
+# GNU-PPC-NEXT:   0x70000000 (PPC_GOT) 0x200c0
+# GNU-PPC-NEXT:   0x70000001 (PPC_OPT) 0x1
+# GNU-PPC-NEXT:   0x00000000 (NULL)    0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2MSB
+  Type:    ET_EXEC
+  Machine: EM_PPC
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_PPC_GOT
+        Value: 0x200c0
+      - Tag:   DT_PPC_OPT
+        Value: 1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 4: Test that PPC64 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=4 %s -o %t.ppc64
+# RUN: llvm-readobj --dynamic-table %t.ppc64 | FileCheck %s --check-prefix=LLVM-PPC64
+# RUN: llvm-readelf --dynamic-table %t.ppc64 | FileCheck %s --check-prefix=GNU-PPC64
+
+# LLVM-PPC64:      DynamicSection [ (2 entries)
+# LLVM-PPC64-NEXT:   Tag                Type        Name/Value
+# LLVM-PPC64-NEXT:   0x0000000070000000 PPC64_GLINK 0x1000
+# LLVM-PPC64-NEXT:   0x0000000000000000 NULL        0x0
+# LLVM-PPC64-NEXT: ]
+
+# GNU-PPC64:      Dynamic section at offset {{.*}} contains 2 entries:
+# GNU-PPC64-NEXT:   Tag                Type          Name/Value
+# GNU-PPC64-NEXT:   0x0000000070000000 (PPC64_GLINK) 0x1000
+# GNU-PPC64-NEXT:   0x0000000000000000 (NULL)        0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_PPC64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_PPC64_GLINK
+        Value: 0x1000
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 5: Test that AARCH64 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=5 %s -o %t.aarch64
+# RUN: llvm-readobj --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=LLVM-AARCH64
+# RUN: llvm-readelf --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=GNU-AARCH64
+
+# LLVM-AARCH64:     DynamicSection [ (7 entries)
+# LLVM-AARCH64-NEXT:  Tag                Type                Name/Value
+# LLVM-AARCH64-NEXT:  0x0000000070000001 AARCH64_BTI_PLT      1
+# LLVM-AARCH64-NEXT:  0x0000000070000003 AARCH64_PAC_PLT      2
+# LLVM-AARCH64-NEXT:  0x0000000070000005 AARCH64_VARIANT_PCS  3
+# LLVM-AARCH64-NEXT:  0x0000000070000012 AARCH64_AUTH_RELR    0x4
+# LLVM-AARCH64-NEXT:  0x0000000070000011 AARCH64_AUTH_RELRSZ  5
+# LLVM-AARCH64-NEXT:  0x0000000070000013 AARCH64_AUTH_RELRENT 6
+# LLVM-AARCH64-NEXT:  0x0000000000000000 NULL                 0x0
+# LLVM-AARCH64-NEXT:]
+
+# GNU-AARCH64:      Dynamic section at offset {{.*}} contains 7 entries:
+# GNU-AARCH64-NEXT:  Tag                Type                  Name/Value
+# GNU-AARCH64-NEXT:  0x0000000070000001 (AARCH64_BTI_PLT)      1
+# GNU-AARCH64-NEXT:  0x0000000070000003 (AARCH64_PAC_PLT)      2
+# GNU-AARCH64-NEXT:  0x0000000070000005 (AARCH64_VARIANT_PCS)  3
+# GNU-AARCH64-NEXT:  0x0000000070000012 (AARCH64_AUTH_RELR)    0x4
+# GNU-AARCH64-NEXT:  0x0000000070000011 (AARCH64_AUTH_RELRSZ)  5
+# GNU-AARCH64-NEXT:  0x0000000070000013 (AARCH64_AUTH_RELRENT) 6
+# GNU-AARCH64-NEXT:  0x0000000000000000 (NULL)                 0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_AARCH64_BTI_PLT
+        Value: 1
+      - Tag:   DT_AARCH64_PAC_PLT
+        Value: 2
+      - Tag:   DT_AARCH64_VARIANT_PCS
+        Value: 3
+      - Tag:   DT_AARCH64_AUTH_RELR
+        Value: 4
+      - Tag:   DT_AARCH64_AUTH_RELRSZ
+        Value: 5
+      - Tag:   DT_AARCH64_AUTH_RELRENT
+        Value: 6
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 6: Test that RISC-V machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=6 %s -o %t.rv
+# RUN: llvm-readobj --dynamic-table %t.rv | FileCheck %s --check-prefix=LLVM-RISCV
+# RUN: llvm-readelf --dynamic-table %t.rv | FileCheck %s --check-prefix=GNU-RISCV
+
+# LLVM-RISCV:      DynamicSection [ (2 entries)
+# LLVM-RISCV-NEXT:   Tag                Type                Name/Value
+# LLVM-RISCV-NEXT:   0x0000000070000001 RISCV_VARIANT_CC    0x1
+# LLVM-RISCV-NEXT:   0x0000000000000000 NULL                0x0
+# LLVM-RISCV-NEXT: ]
+
+# GNU-RISCV:       Dynamic section at offset {{.*}} contains 2 entries:
+# GNU-RISCV-NEXT:   Tag                Type                 Name/Value
+# GNU-RISCV-NEXT:   0x0000000070000001 (RISCV_VARIANT_CC)   0x1
+# GNU-RISCV-NEXT:   0x0000000000000000 (NULL)               0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_RISCV
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RISCV_VARIANT_CC
+        Value: 1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

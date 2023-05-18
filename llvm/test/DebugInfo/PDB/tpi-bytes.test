@@ -1,0 +1,27 @@
+; RUN: llvm-pdbutil bytes -type=0x1002 %p/Inputs/empty.pdb | FileCheck --check-prefix=TYPE %s
+; RUN: llvm-pdbutil bytes -id=0x1007 %p/Inputs/empty.pdb | FileCheck --check-prefix=ID %s
+; RUN: llvm-pdbutil bytes -type=0x2000 %p/Inputs/empty.pdb | FileCheck --check-prefix=INVALID-TYPE %s
+; RUN: llvm-pdbutil bytes -id=0x2000 %p/Inputs/empty.pdb | FileCheck --check-prefix=INVALID-ID %s
+
+TYPE:                           Type (TPI) Records
+TYPE-NEXT: ============================================================
+TYPE-NEXT:   Type 0x1002 (
+TYPE-NEXT:     12050: 4A000312 02150300 01006170 6172746D 656E7400 02150300 02007369 6E676C65  |J.........apartment.......single|
+TYPE-NEXT:     12070: 00F3F2F1 02150300 03006672 656500F1 02150300 04006E65 75747261 6C00F2F1  |..........free........neutral...|
+TYPE-NEXT:     12090: 02150300 0500626F 746800F1                                               |......both..|
+TYPE-NEXT:   )
+
+ID:                          Index (IPI) Records
+ID-NEXT: ============================================================
+ID-NEXT:   Type 0x1007 (
+ID-NEXT:     140C4: 2E000516 00000000 643A5C73 72635C6C 6C766D5C 74657374 5C446562 7567496E  |........d:\src\llvm\test\DebugIn|
+ID-NEXT:     140E4: 666F5C50 44425C49 6E707574 7300F2F1                                      |fo\PDB\Inputs...|
+ID-NEXT:   )
+
+INVALID-TYPE:                           Type (TPI) Records
+INVALID-TYPE-NEXT: ============================================================
+INVALID-TYPE-NEXT: Error: TypeIndex 0x2000 does not exist
+
+INVALID-ID:                           Index (IPI) Records
+INVALID-ID-NEXT: ============================================================
+INVALID-ID-NEXT: Error: TypeIndex 0x2000 does not exist

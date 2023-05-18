@@ -1,0 +1,41 @@
+## This test shows that the name of the file is printed under the right
+## circumstances and with the correct formatting for object inputs.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: cp %t1 %t2
+
+## Show that the file name is not printed for a single input for GNU output.
+# RUN: llvm-readelf --file-headers %t1 \
+# RUN:   | FileCheck %s --implicit-check-not=File: --check-prefix=GNU-SINGLE
+
+## Show that the very first line of the output is the one with "ELF Header" on.
+# GNU-SINGLE:      {{^}}
+# GNU-SINGLE-SAME: ELF Header:
+
+## Show that the file names are printed for all inputs for GNU output.
+# RUN: llvm-readelf --file-headers %t1 %t2 \
+# RUN:   | FileCheck %s --check-prefixes=NAME1,GNU,NAME2 -DFILE1=%t1 -DFILE2=%t2
+
+## Show that the file name is printed for a single input for LLVM output.
+# RUN: llvm-readobj --file-headers %t1 | FileCheck %s --check-prefix=NAME1 -DFILE1=%t1
+
+## Show that the file name is printed with correct spacing for multiple inputs
+## with LLVM output.
+# RUN: llvm-readobj --file-headers %t1 %t2 \
+# RUN:   | FileCheck %s --check-prefixes=NAME1,LLVM,NAME2 -DFILE1=%t1 -DFILE2=%t2
+
+## The very first line should be blank. CHECK-EMPTY isn't allowed on the first line.
+# NAME1:      {{^$}}
+# NAME1-NEXT: {{^}}File: [[FILE1]]{{$}}
+
+# GNU:          Section header string table index:
+# LLVM:         StringTableSectionIndex:
+# LLVM-NEXT:  }
+# NAME2-EMPTY:
+# NAME2-NEXT: {{^}}File: [[FILE2]]{{$}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL

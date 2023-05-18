@@ -1,0 +1,94 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: ld.lld a.o -T a.t -o a
+
+## Here we check that can handle OVERLAY which will produce sections
+## .out.big and .out.small with the same starting VAs, but different LMAs.
+## Section .big is larger than .small, we check that placing of section
+## .text does not cause overlapping error and that
+## .text's VA is 0x1000 + max(sizeof(.out.big), sizeof(.out.small)).
+
+# RUN: llvm-readelf --sections -l a | FileCheck %s
+
+# CHECK:      Name       Type     Address          Off    Size
+# CHECK:      .big1      PROGBITS 0000000000001000 001000 000008
+# CHECK-NEXT: .small1    PROGBITS 0000000000001000 002000 000004
+# CHECK-NEXT: .small2    PROGBITS 0000000000001008 002008 000004
+# CHECK-NEXT: .big2      PROGBITS 0000000000001008 003008 000008
+# CHECK-NEXT: .empty3    PROGBITS 0000000000001010 003010 000000
+# CHECK-NEXT: .small3    PROGBITS 0000000000001010 003010 000004
+# CHECK-NEXT: .big3      PROGBITS 0000000000001010 004010 000008
+# CHECK-NEXT: .text      PROGBITS 0000000000001018 004018 000001
+
+# CHECK:      Program Headers:
+# CHECK:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT: LOAD 0x001000 0x0000000000001000 0x0000000000001000 0x000008 0x000008 R   0x1000
+# CHECK-NEXT: LOAD 0x002000 0x0000000000001000 0x0000000000001008 0x000004 0x000004 R   0x1000
+# CHECK-NEXT: LOAD 0x002008 0x0000000000001008 0x0000000000002008 0x000004 0x000004 R   0x1000
+# CHECK-NEXT: LOAD 0x003008 0x0000000000001008 0x000000000000200c 0x000008 0x000008 R   0x1000
+# CHECK-NEXT: LOAD 0x003010 0x0000000000001010 0x0000000000002014 0x000004 0x000004 R   0x1000
+# CHECK-NEXT: LOAD 0x004010 0x0000000000001010 0x0000000000002018 0x000008 0x000008 R   0x1000
+# CHECK-NEXT: LOAD 0x004018 0x0000000000001018 0x0000000000002020 0x000001 0x000001 R E 0x1000
+
+# RUN: not ld.lld a.o -T err1.t 2>&1 | FileCheck %s --check-prefix=ERR1 --match-full-lines --strict-whitespace
+#      ERR1:{{.*}}error: err1.t:3: { expected, but got 0x3000
+# ERR1-NEXT:>>>     .out.aaa 0x3000 : { *(.aaa) }
+# ERR1-NEXT:>>>              ^
+
+# RUN: not ld.lld a.o -T err2.t 2>&1 | FileCheck %s --check-prefix=ERR2 --match-full-lines --strict-whitespace
+#      ERR2:{{.*}}error: err2.t:{{.*}}: { expected, but got AX
+# ERR2-NEXT:>>>     .out.aaa { *(.aaa) } > AX AT>FLASH
+# ERR2-NEXT:>>>                            ^
+
+#--- a.s
+.globl _start
+_start:
+  nop
+
+.section .small1, "a"; .long 0
+.section .big1, "a"; .quad 1
+
+.section .small2, "a"; .long 0
+.section .big2, "a"; .quad 1
+
+.section .small3, "a"; .long 0
+.section .big3, "a"; .quad 1
+
+#--- a.t
+SECTIONS {
+## LMA defaults to VMA
+  OVERLAY 0x1000 : {
+    .big1 { *(.big1) }
+    .small1 { *(.small1) }
+  }
+## .big2 starts at ADDR(.small2)
+  OVERLAY : AT (0x2008) {
+    .small2 { *(.small2) }
+    .big2 { *(.big2) }
+  }
+## .empty3 is not discarded. .small3 and .big3 share its address.
+  OVERLAY . : AT (0x2014) {
+    .empty3 { *(.empty3) }
+    .small3 { *(.small3) }
+    .big3 { *(.big3) }
+  }
+  .text : { *(.text) }
+}
+
+#--- err1.t
+SECTIONS {
+  OVERLAY 0x1000 : AT ( 0x2000 ) {
+    .out.aaa 0x3000 : { *(.aaa) }
+  }
+}
+
+#--- err2.t
+MEMORY {
+  AX (ax)    : ORIGIN = 0x3000, LENGTH = 0x4000
+}
+SECTIONS {
+  OVERLAY 0x1000 : AT ( 0x2000 ) {
+    .out.aaa { *(.aaa) } > AX AT>FLASH
+  }
+}

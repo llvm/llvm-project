@@ -1,0 +1,7 @@
+# Test that --replace-value-regex is applied correctly when multiple RUN lines
+# use the same FileCheck prefix and have the same output.
+
+RUN: cp %S/Inputs/replace-value-regex-across-runs.c %t.c
+RUN: %update_cc_test_checks %t.c \
+RUN:     --replace-value-regex '__omp_offloading_[0-9a-z]+_[0-9a-z]+'
+RUN: diff -u %S/Inputs/replace-value-regex-across-runs.c.expected %t.c

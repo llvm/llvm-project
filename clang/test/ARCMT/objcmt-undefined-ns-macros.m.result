@@ -1,0 +1,24 @@
+// RUN: rm -rf %t
+// RUN: %clang_cc1 -fmodules -objcmt-migrate-ns-macros -mt-migrate-directory %t %s -x objective-c -fobjc-runtime-has-weak -fobjc-arc -triple x86_64-apple-darwin11
+// RUN: c-arcmt-test -mt-migrate-directory %t | arcmt-test -verify-transformed-files %s.result
+
+typedef long NSInteger;
+#ifndef NS_ENUM
+@import Foundation;
+#endif
+typedef NS_OPTIONS(NSUInteger, UITableStyle) {
+    UIViewNone         = 0x0,
+    UIViewMargin       = 0x1,
+    UIViewWidth        = 0x2,
+    UIViewRightMargin  = 0x3,
+    UIViewBottomMargin = 0xbadbeef
+};
+
+
+typedef
+  NS_ENUM(unsigned int, NumericEnum2) { two = 1 };
+
+typedef NS_ENUM(unsigned int, NumericEnum3) { three = 1 };
+
+typedef NS_ENUM(unsigned int, NumericEnum4) { four = 1 };
+

@@ -1,0 +1,18 @@
+for FILE in $(ls *.c); do
+	if gcc -arch ppc -O0 $FILE ../../../Release/ppc/libcompiler_rt.Optimized.a -mlong-double-128
+	then
+	    echo "Testing $FILE"
+		if ./a.out
+		then
+			rm ./a.out
+		else
+			echo "fail"
+# 			exit 1
+		fi
+	else
+		echo "$FILE failed to compile"
+#		exit 1
+	fi
+done
+echo "pass"
+exit

@@ -1,0 +1,202 @@
+# RUN: llc -x mir < %s -run-pass=greedy,virtregrewriter,stack-slot-coloring | FileCheck %s
+--- |
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  define dso_local i32 @main() local_unnamed_addr {
+  entry:
+    ; Dummy IR that just performs some allocas -- the machine IR function
+    ; below is what this test is about.
+    %alpha = alloca i8, align 1
+    %foxtrot = alloca <2 x double>, align 16
+    %india = alloca <2 x double>, align 16
+    ret i32 0
+  }
+
+...
+---
+name:            main
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+registers:
+liveins:
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: alpha, type: default, offset: 0, size: 1, alignment: 1,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: foxtrot, type: default, offset: 0, size: 16, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: india, type: spill-slot, offset: 0, size: 16, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    ; To trick stack-slot-colouring to run its dead-store-elimination phase,
+    ; which is at fault, we need the register allocator to run, and spill in two
+    ; places that can have their slots merged. Achieve this by volatile-loading
+    ; data into $xmm[0-14] and volatile storing them later, leaving regalloc only
+    ; $xmm15 to play with in the middle.
+    ; Then, perform two virtreg load-and-store pairs, with the faulty code
+    ; sequence in the middle (MOVSDrm then MOVAPDmr on the same slot). The 
+    ; virtreg gets spilt; the corresponding stack slots merged; and faulty code
+    ; sequence eliminated if LLVM is broken.
+
+    ; Make first 15 $xmm registers live
+    $xmm0 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm1 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm2 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm3 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm4 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm5 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm6 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm7 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm8 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm9 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm10 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm11 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm12 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm13 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+    $xmm14 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+
+    ; First vreg load
+    %1:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+
+    ; First faulty sequence; %1 spilt
+    %12:fr64 = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s64) from %ir.india)
+    %13:vr128 = COPY killed %12
+    MOVAPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %13 :: (volatile store (s128) into %ir.india)
+    ; CHECK: renamable $xmm{{[0-9]+}} = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s64) from %ir.india)
+    ; CHECK-NEXT: MOVAPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed renamable $xmm{{[0-9]+}} :: (volatile store (s128) into %ir.india)
+
+    ; Store %1 to avoid it being optimised out, will result in a load-from-spill
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %1 :: (volatile dereferenceable store (s128) into %ir.india)
+
+    ; That code sequence a second time, to generate a second spill slot that
+    ; will get coloured and merged.
+    %2:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+
+    %22:fr64 = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s64) from %ir.india)
+    %23:vr128 = COPY killed %22
+    MOVAPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %23 :: (volatile store (s128) into %ir.india)
+
+    ; CHECK: renamable $xmm{{[0-9]+}} = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s64) from %ir.india)
+    ; CHECK-NEXT: MOVAPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed renamable $xmm{{[0-9]+}} :: (volatile store (s128) into %ir.india)
+
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %2 :: (volatile dereferenceable store (s128) into %ir.india)
+
+
+    ; Test some sequences that _should_ be eliminated
+    %3:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+
+    %32:fr64 = VMOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from %ir.india)
+    %33:fr64 = COPY killed %32
+    VMOVSDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %33 :: (store (s64) into %ir.india)
+
+    ; This is the spill introduced by regalloc; we check that the inner dead
+    ; store and load were eliminated
+    ; CHECK: MOVAPSmr %stack.3, 1, $noreg, 0, $noreg, killed renamable $xmm{{[0-9]+}} :: (store (s128) into %stack.3)
+    ; CHECK-NEXT:renamable $xmm{{[0-9]+}} = MOVAPSrm %stack.3, 1, $noreg, 0, $noreg :: (load (s128) from %stack.3)
+
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %3 :: (volatile dereferenceable store (s128) into %ir.india)
+
+
+    ; Moves with different encodings but same size should be eliminated
+    %4:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+
+    %42:fr32 = MOVSSrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.india)
+    %43:fr32 = COPY killed %42
+    VMOVSSZmr %stack.2.india, 1, $noreg, 0, $noreg, killed %43 :: (store (s32) into %ir.india)
+
+    ; CHECK: MOVAPSmr %stack.3, 1, $noreg, 0, $noreg, killed renamable $xmm{{[0-9]+}} :: (store (s128) into %stack.3)
+    ; CHECK-NEXT:renamable $xmm{{[0-9]+}} = MOVAPSrm %stack.3, 1, $noreg, 0, $noreg :: (load (s128) from %stack.3)
+
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %4 :: (volatile dereferenceable store (s128) into %ir.india)
+
+
+    ; Same deal with double-size
+    %5:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+
+    %52:fr64 = MOVSDrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from %ir.india)
+    %53:fr64 = COPY killed %52
+    VMOVSDZmr %stack.2.india, 1, $noreg, 0, $noreg, killed %53 :: (store (s64) into %ir.india)
+
+    ; CHECK: MOVAPSmr %stack.3, 1, $noreg, 0, $noreg, killed renamable $xmm{{[0-9]+}} :: (store (s128) into %stack.3)
+    ; CHECK-NEXT:renamable $xmm{{[0-9]+}} = MOVAPSrm %stack.3, 1, $noreg, 0, $noreg :: (load (s128) from %stack.3)
+
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %5 :: (volatile dereferenceable store (s128) into %ir.india)
+
+
+    ; Last two repeated, with load/store opcode flipped
+    %6:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+
+    %62:fr32 = VMOVSSZrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.india)
+    %63:fr32 = COPY killed %62
+    MOVSSmr %stack.2.india, 1, $noreg, 0, $noreg, killed %63 :: (store (s32) into %ir.india)
+
+    ; CHECK: MOVAPSmr %stack.3, 1, $noreg, 0, $noreg, killed renamable $xmm{{[0-9]+}} :: (store (s128) into %stack.3)
+    ; CHECK-NEXT:renamable $xmm{{[0-9]+}} = MOVAPSrm %stack.3, 1, $noreg, 0, $noreg :: (load (s128) from %stack.3)
+
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %6 :: (volatile dereferenceable store (s128) into %ir.india)
+
+
+    ; Flipped double-size different-encoding test
+    %7:vr128 = MOVUPDrm %stack.2.india, 1, $noreg, 0, $noreg :: (volatile dereferenceable load (s128) from %ir.india)
+
+    %72:fr64 = VMOVSDZrm_alt %stack.2.india, 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from %ir.india)
+    %73:fr64 = COPY killed %72
+    MOVSDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %73 :: (store (s64) into %ir.india)
+
+    ; CHECK: MOVAPSmr %stack.3, 1, $noreg, 0, $noreg, killed renamable $xmm{{[0-9]+}} :: (store (s128) into %stack.3)
+    ; CHECK-NEXT:renamable $xmm{{[0-9]+}} = MOVAPSrm %stack.3, 1, $noreg, 0, $noreg :: (load (s128) from %stack.3)
+
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed %7 :: (volatile dereferenceable store (s128) into %ir.india)
+
+
+    ; Stores of first 15 $xmm registers to keep them live across the middle of
+    ; this bb.
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm0 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm1 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm2 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm3 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm4 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm5 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm6 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm7 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm8 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm9 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm10 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm11 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm12 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm13 :: (volatile dereferenceable store (s128) into %ir.india)
+    MOVUPDmr %stack.2.india, 1, $noreg, 0, $noreg, killed $xmm14 :: (volatile dereferenceable store (s128) into %ir.india)
+
+    RET 0
+
+...

@@ -1,0 +1,97 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/shared.s -o %t/b.o
+# RUN: ld.lld -shared -soname=b %t/b.o -o %t/b.so
+
+## With relro or without DATA_SEGMENT_RELRO_END just aligns to
+## page boundary.
+
+# RUN: ld.lld --hash-style=sysv -z max-page-size=65536 -z norelro %t/a.o %t/b.so -T %t/1.t -o %t/a1
+# RUN: llvm-readelf -S -l %t/a1 | FileCheck %s --check-prefixes=CHECK,CHECK1
+
+# RUN: ld.lld --hash-style=sysv -z max-page-size=65536 -z relro --orphan-handling=warn \
+# RUN:   %t/a.o %t/b.so -T %t/1.t -o %t/a2 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: llvm-readelf -S -l %t/a2 | FileCheck %s --check-prefixes=CHECK,CHECK2
+
+# WARN:     warning: <internal>:(.dynsym) is being placed in '.dynsym'
+# WARN-NOT:                     (.relro_padding)
+
+# CHECK:      Name           Type     Address          Off      Size ES Flg
+# CHECK-NEXT:                NULL     {{.*}}
+# CHECK:      .orphan.ro     PROGBITS {{.*}}                              A
+# CHECK:      .dynamic       DYNAMIC  {{.*}}                             WA
+# CHECK-NEXT: __libc_atexit  PROGBITS {{.*}}                             WA
+# CHECK-NEXT: .got           PROGBITS {{.*}}                             WA
+# CHECK2-NEXT:.relro_padding NOBITS   0000000000010100 010100 000f00 00  WA
+# CHECK-NEXT: .got.plt       PROGBITS {{.*}}                             WA
+# CHECK:      .orphan.rw     PROGBITS {{.*}}                             WA
+
+# CHECK1:      Program Headers:
+# CHECK1-NOT:  GNU_RELRO
+
+# CHECK2:      Program Headers:
+# CHECK2-NEXT:   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK2-NEXT:   PHDR           0x000040
+# CHECK2-NEXT:   LOAD           0x000000
+# CHECK2-NEXT:   LOAD           0x0002b0
+# CHECK2-NEXT:   LOAD           0x010000 0x0000000000010000 0x0000000000010000 0x000100 0x001000 RW  0x10000
+# CHECK2-NEXT:   LOAD           0x020000 0x0000000000020000 0x0000000000020000 0x000034 0x000034 RW  0x10000
+# CHECK2-NEXT:   DYNAMIC        0x010000 0x0000000000010000 0x0000000000010000 0x0000f0 0x0000f0 RW  0x8
+# CHECK2-NEXT:   GNU_RELRO      0x010000 0x0000000000010000 0x0000000000010000 0x000100 0x001000 R   0x1
+# CHECK2-NEXT:   GNU_STACK      0x000000
+
+# CHECK2:      Section to Segment mapping:
+# CHECK2:        06     .dynamic __libc_atexit .got .relro_padding {{$}}
+
+# RUN: sed '/DATA_SEGMENT_RELRO_END/d' %t/1.t > %t/2.t
+# RUN: not ld.lld %t/a.o %t/b.so -T %t/2.t -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: section: .got is not contiguous with other relro sections
+
+#--- a.s
+.global _start
+_start:
+  .long bar
+  jmp *bar2@GOTPCREL(%rip)
+
+.section .data,"aw"
+.quad 0
+
+.zero 4
+.section .foo,"aw"
+.section .bss,"",@nobits
+
+.section __libc_atexit,"aw",@progbits
+.dc.a __libc_atexit
+
+.section .orphan.ro,"a",@progbits
+.dc.a 0
+
+.section .orphan.rw,"aw",@progbits
+.dc.a .orphan.rw
+
+#--- 1.t
+SECTIONS {
+  . = SIZEOF_HEADERS;
+
+  .plt  : { *(.plt) }
+  .text : { *(.text) }
+
+  . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE));
+
+  .dynamic : { *(.dynamic) }
+  ## The custom section __libc_atexit is made relro.
+  __libc_atexit : { *(__libc_atexit) }
+  .got : { *(.got) }
+
+  . = DATA_SEGMENT_RELRO_END (1 ? 24 : 0, .);
+
+  .got.plt : { *(.got.plt) }
+  .data : { *(.data) }
+  .bss : { *(.bss) }
+
+  . = DATA_SEGMENT_END (.);
+
+  .comment 0 : { *(.comment) }
+}

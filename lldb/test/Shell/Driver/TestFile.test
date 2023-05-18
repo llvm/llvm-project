@@ -1,0 +1,4 @@
+# UNSUPPORTED: lldb-repro
+#
+# RUN: not %lldb -f /bogus/path 2>&1 | FileCheck %s
+# CHECK: error: file specified in --file (-f) option doesn't exist

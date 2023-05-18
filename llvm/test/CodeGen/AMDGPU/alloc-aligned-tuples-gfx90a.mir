@@ -1,0 +1,238 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -start-before=greedy,0 -stop-after=virtregrewriter,1 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GCN,GFX90A %s
+# Using the unaligned vector tuples are OK as long as they aren't used
+# in a real instruction.
+
+---
+# GCN-LABEL: name: alloc_vgpr_64
+# GFX90A: $vgpr4_vgpr5 = GLOBAL_LOAD
+name:            alloc_vgpr_64
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr2' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_vgpr_96
+# GFX90A: $vgpr4_vgpr5_vgpr6 = GLOBAL_LOAD
+name:            alloc_vgpr_96
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr2' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vreg_96_align2 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_vgpr_128
+# GFX90A: $vgpr4_vgpr5_vgpr6_vgpr7 = GLOBAL_LOAD
+name:            alloc_vgpr_128
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr2' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_vgpr_160
+# GFX90A: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_LOAD
+name:            alloc_vgpr_160
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr2' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vreg_160_align2 = IMAGE_LOAD_V5_V1 %0.sub0, undef %3:sgpr_256, 0, 0, 0, 0, 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
+    GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_vgpr_256
+# GFX90A: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = COPY
+name:            alloc_vgpr_256
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr2' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %3:sgpr_256 = IMPLICIT_DEF
+    %2:vreg_256_align2 = COPY %3:sgpr_256
+    %4:vreg_128_align2 = IMAGE_SAMPLE_C_CL_O_V4_V8 %2, %3:sgpr_256, undef %5:sgpr_128, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
+    GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_vgpr_512
+# GFX90A: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = IMPLICIT_DEF
+name:            alloc_vgpr_512
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr2' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vreg_512_align2 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub4_sub5_sub6_sub7, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub8_sub9_sub10_sub11, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub12_sub13_sub14_sub15, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_vgpr_1024
+# GFX90A: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35 = IMPLICIT_DEF
+name:            alloc_vgpr_1024
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr2' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vreg_1024_align2 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub4_sub5_sub6_sub7, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub8_sub9_sub10_sub11, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub12_sub13_sub14_sub15, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub16_sub17_sub18_sub19, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub20_sub21_sub22_sub23, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub24_sub25_sub26_sub27, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub28_sub29_sub30_sub31, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_agpr_64
+# GFX90A: $agpr1_agpr2 = IMPLICIT_DEF
+name:            alloc_agpr_64
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$agpr0' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $agpr0
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %3:areg_64 = IMPLICIT_DEF
+    %2:vreg_64_align2 = COPY %3:areg_64
+    GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
+    %1:vgpr_32 = COPY $agpr0
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_agpr_128
+# GFX90A: $agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
+name:            alloc_agpr_128
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$agpr0' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $agpr0
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %3:areg_128 = IMPLICIT_DEF
+    %2:vreg_128_align2 = COPY %3:areg_128
+    GLOBAL_STORE_DWORDX4 %0, %2, 0, 0, implicit $exec
+    %1:vgpr_32 = COPY $agpr0
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_agpr_512
+# GFX90A: $agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16 = IMPLICIT_DEF
+name:            alloc_agpr_512
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$agpr0' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $agpr0
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %3:areg_512 = IMPLICIT_DEF
+    %2:vreg_512_align2 = COPY %3:areg_512
+    GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub4_sub5_sub6_sub7, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub8_sub9_sub10_sub11, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub12_sub13_sub14_sub15, 0, 0, implicit $exec
+    %1:vgpr_32 = COPY $agpr0
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: alloc_agpr_1024
+# GFX90A: $agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31_agpr32 = IMPLICIT_DEF
+name:            alloc_agpr_1024
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$agpr0' }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $agpr0
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %3:areg_1024 = IMPLICIT_DEF
+    %2:vreg_1024_align2 = COPY %3:areg_1024
+    GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub4_sub5_sub6_sub7, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub8_sub9_sub10_sub11, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub12_sub13_sub14_sub15, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub16_sub17_sub18_sub19, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub20_sub21_sub22_sub23, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub24_sub25_sub26_sub27, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %2.sub28_sub29_sub30_sub31, 0, 0, implicit $exec
+    %1:vgpr_32 = COPY $agpr0
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
+...

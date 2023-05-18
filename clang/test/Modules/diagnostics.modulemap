@@ -1,0 +1,36 @@
+// RUN: rm -rf %t
+// RUN: not %clang_cc1 -fmodules -fmodules-cache-path=%t -fmodule-map-file=%S/Inputs/diagnostics-aux.modulemap -fmodule-map-file=%s -fsyntax-only -x c++ /dev/null 2>&1 | FileCheck %s --implicit-check-not error:
+
+// CHECK: In file included from {{.*}}diagnostics-aux.modulemap:3:
+// CHECK: diagnostics-aux-2.modulemap:2:3: error: expected
+
+// PR22299: Ensure we can produce diagnostics for duplicate modules from -fmodule-map-file=.
+//
+// CHECK: diagnostics.modulemap:[[@LINE+2]]:8: error: redefinition of module 'foo'
+// CHECK: diagnostics-aux.modulemap:1:8: note: previously defined here
+module foo {}
+
+//* Check that we accept BCPL comments properly, not just as an extension. */
+
+module bad_use {
+  // CHECK: diagnostics.modulemap:[[@LINE+1]]:22: error: use declarations are only allowed in top-level modules
+  module submodule { use foo }
+}
+
+module header_attr {
+  // CHECK: diagnostics.modulemap:[[@LINE+1]]:20: error: expected a header attribute name
+  header "foo.h" { x }
+  // CHECK: diagnostics.modulemap:[[@LINE+1]]:27: error: header attribute 'size' specified multiple times
+  header "bar.h" { size 1 size 2 }
+  // CHECK: diagnostics.modulemap:[[@LINE+1]]:25: error: expected integer literal as value for header attribute 'size'
+  header "baz.h" { size "30 kilobytes" }
+
+  header "quux.h" { size 1 mtime 2 }
+  header "no_attrs.h" {}
+}
+
+// CHECK: diagnostics.modulemap:[[@LINE+1]]:8: error: no module named 'unknown' found, parent module must be defined before the submodule
+module unknown.submodule {}
+module known_top_level {}
+// CHECK: diagnostics.modulemap:[[@LINE+1]]:24: error: no module named 'unknown' in 'known_top_level', parent module must be defined before the submodule
+module known_top_level.unknown.submodule {}

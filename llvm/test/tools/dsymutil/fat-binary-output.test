@@ -1,0 +1,32 @@
+RUN: dsymutil -f -verbose -no-output %p/Inputs/fat-test.dylib -oso-prepend-path %p | FileCheck %s
+
+RUN: dsymutil --linker parallel -f -verbose -no-output %p/Inputs/fat-test.dylib -oso-prepend-path %p | FileCheck %s
+
+This test doesn't produce any filesytstem output, we just look at the verbose
+log output.
+
+For each arch in the binary, check that we emit the right triple with the right
+file and the right symbol inside it (each slice has a different symbol, so that
+means that the logic is looking at the right file slice too).
+
+After the link of each architecture, check that lipo is correctly invoked to
+generate the fat output binary.
+
+CHECK: triple:          'x86_64-apple-darwin'
+CHECK:   - filename:        {{'?}}[[INPUTS_PATH:.*]]fat-test.o
+CHECK:   DW_AT_name{{.*}} "x86_64_var"
+
+CHECK: triple:          'i386-apple-darwin'
+CHECK:   - filename:        {{'?}}[[INPUTS_PATH]]fat-test.o
+CHECK:   DW_AT_name{{.*}} "i386_var"
+
+CHECK: triple:          'x86_64h-apple-darwin'
+CHECK:   - filename:        {{'?}}[[INPUTS_PATH]]fat-test.o
+CHECK:   DW_AT_name{{.*}} "x86_64h_var"
+
+CHECK: Running lipo
+CHECK-NEXT: lipo -create
+CHECK-SAME  [[TMP_PATH:.*?]]fat-test.dylib.tmp{{......}}.dwarf [[TMP_PATH]]fat-test.dylib.tmp{{......}}.dwarf [[TMP_PATH]]fat-test.dylib.tmp{{......}}.dwarf
+CHECK-SAME: -segalign x86_64 20 -segalign i386 20 -segalign x86_64h 20
+CHECK-SAME: -output [[INPUTS_PATH]]fat-test.dylib.dwarf
+

@@ -1,0 +1,82 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses basic block successors correctly.
+
+--- |
+
+  define i32 @foo(i32 %a) {
+  entry:
+    %0 = icmp sle i32 %a, 10
+    br i1 %0, label %less, label %exit
+
+  less:
+    ret i32 0
+
+  exit:
+    ret i32 %a
+  }
+
+  define i32 @bar(i32 %a) {
+  entry:
+    %b = icmp sle i32 %a, 10
+    br i1 %b, label %0, label %1
+
+  ; <label>:0
+    ret i32 0
+
+  ; <label>:1
+    ret i32 %a
+  }
+
+...
+---
+name:            foo
+body: |
+  ; CHECK-LABEL: bb.0.entry:
+  ; CHECK-LABEL: bb.1.less:
+  bb.0.entry:
+    successors: %bb.1.less, %bb.2.exit
+    liveins: $edi
+
+    CMP32ri8 $edi, 10, implicit-def $eflags
+    JCC_1 %bb.2.exit, 15, implicit killed $eflags
+
+  bb.1.less:
+    $eax = MOV32r0 implicit-def dead $eflags
+    RET64 killed $eax
+
+  bb.2.exit:
+    liveins: $edi
+
+    $eax = COPY killed $edi
+    RET64 killed $eax
+...
+---
+name:            bar
+body: |
+  ; CHECK-LABEL: name: bar
+  ; Verify that we can have multiple lists of successors that will be merged
+  ; into one.
+  ; CHECK-LABEL: bb.0.entry:
+  ; CHECK:         successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  bb.0.entry:
+    liveins: $edi
+    successors: %bb.1
+    successors: %bb.2
+
+    CMP32ri8 $edi, 10, implicit-def $eflags
+    JCC_1 %bb.2, 15, implicit killed $eflags
+
+  ; Verify that we can have an empty list of successors.
+  ; CHECK-LABEL: bb.1:
+  ; CHECK-NEXT:  $eax = MOV32r0 implicit-def dead $eflags
+  bb.1:
+    successors:
+    $eax = MOV32r0 implicit-def dead $eflags
+    RET64 killed $eax
+
+  bb.2:
+    liveins: $edi
+
+    $eax = COPY killed $edi
+    RET64 killed $eax
+...

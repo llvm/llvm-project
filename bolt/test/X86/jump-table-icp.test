@@ -1,0 +1,120 @@
+RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
+RUN:   %p/Inputs/jump_table_icp.s -o %t.o
+RUN: link_fdata %p/Inputs/jump_table_icp.s %t.o %t.fdata --nmtool llvm-nm
+RUN: llvm-strip --strip-unneeded %t.o
+RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
+
+# This test has commands that rely on shell capabilities that won't execute
+# correctly on Windows e.g. subshell execution
+REQUIRES: shell
+
+RUN: (llvm-bolt %t.exe --data %t.fdata -o %t --relocs \
+RUN:   --reorder-blocks=cache --split-functions --split-all-cold \
+RUN:   --use-gnu-stack --dyno-stats --indirect-call-promotion=jump-tables \
+RUN:   --print-icp -v=0 \
+RUN:   --enable-bat --print-cache-metrics \
+RUN:   --icp-jt-remaining-percent-threshold=10 \
+RUN:   --icp-jt-total-percent-threshold=2 \
+RUN:   --indirect-call-promotion-topn=1 \
+RUN:   --icp-jump-tables-targets --align-functions-max-bytes=7 2>&1 && \
+RUN:   llvm-objdump -d %t --print-imm-hex) | FileCheck %s
+
+BOLT-INFO: ICP total indirect callsites = 0
+BOLT-INFO: ICP total jump table callsites = 2
+BOLT-INFO: ICP total number of calls = 2137
+BOLT-INFO: ICP percentage of calls that are indirect = 0.0%
+BOLT-INFO: ICP percentage of indirect calls that can be optimized = 0.0%
+BOLT-INFO: ICP percentage of indirect calls that are optimized = 0.0%
+BOLT-INFO: ICP percentage of jump table calls that can be optimized = 17.7%
+BOLT-INFO: ICP percentage of jump table calls that are optimized = 100.0%
+
+CHECK: Binary Function "_Z3inci" after indirect-call-promotion
+CHECK: .LBB{{.*}} (8 instructions, align : 1)
+CHECK-NEXT:   Entry Point
+CHECK-NEXT:   Exec Count : 1073
+CHECK:   Successors: .Ltmp{{.*}} (mispreds: 189, count: 189), .LFT{{.*}} (mispreds: 0, count: 881)
+
+CHECK: .LFT{{.*}} (4 instructions, align : 1)
+CHECK-NEXT:   Exec Count : 881
+CHECK:   Predecessors: .LBB{{.*}}
+CHECK:     je {{.*}} # Offset: 28
+CHECK-NEXT: Successors: .Ltmp{{.*}} (mispreds: 138, count: 155), .Ltmp{{.*}} (mispreds: 0, count: 726)
+
+CHECK: .Ltmp{{.*}} (1 instructions, align : 1)
+CHECK-NEXT:   Exec Count : 726
+CHECK:   Predecessors: .LFT{{.*}}
+CHECK:     jmpq {{.*}} # Offset: 28
+CHECK-NEXT: Successors: .L{{.*}} (mispreds: 126, count: 157), .L{{.*}} (mispreds: 140, count: 156), .L{{.*}} (mispreds: 134, count: 152), .L{{.*}} (mispreds: 137, count: 150), .L{{.*}} (mispreds: 129, count: 148), .L{{.*}} (mispreds: 0, count: 0)
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:  Exec Count : 167
+CHECK:  Predecessors: .Ltmp{{.*}}, .LFT{{.*}}
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:  Exec Count : 156
+CHECK:  Predecessors: .Ltmp{{.*}}
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:  Exec Count : 157
+CHECK:  Predecessors: .Ltmp{{.*}}
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:  Exec Count : 148
+CHECK:  Predecessors: .Ltmp{{.*}}
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:  Exec Count : 150
+CHECK:  Predecessors: .Ltmp{{.*}}
+
+CHECK: Binary Function "_Z7inc_dupi" after indirect-call-promotion
+CHECK: .LBB{{.*}} (8 instructions, align : 1)
+CHECK-NEXT:   Entry Point
+CHECK-NEXT:   Exec Count : 1064
+CHECK:   Successors: .Ltmp{{.*}} (mispreds: 143, count: 144), .LFT{{.*}} (mispreds: 0, count: 777)
+
+CHECK: .LFT{{.*}} (4 instructions, align : 1)
+CHECK-NEXT:   Exec Count : 777
+CHECK:   Predecessors: .LBB{{.*}}
+CHECK:   Successors: .Ltmp{{.*}} (mispreds: 120, count: 138), .Ltmp{{.*}} (mispreds: 0, count: 639)
+
+CHECK: .Ltmp{{.*}} (1 instructions, align : 1)
+CHECK-NEXT:   Exec Count : 639
+CHECK:   Predecessors: .LFT{{.*}}
+CHECK:   Successors: .L{{.*}} (mispreds: 130, count: 137), .L{{.*}} (mispreds: 126, count: 136), .L{{.*}} (mispreds: 122, count: 130), .L{{.*}} (mispreds: 111, count: 130), .L{{.*}} (mispreds: 104, count: 114), .L{{.*}} (mispreds: 0, count: 0)
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:   Exec Count : 137
+CHECK:   Predecessors: .Ltmp{{.*}}
+CHECK:   Successors: .Ltmp{{.*}} (mispreds: 0, count: 106)
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:   Exec Count : 136
+CHECK:   Predecessors: .Ltmp{{.*}}
+CHECK:   Successors: .Ltmp{{.*}} (mispreds: 0, count: 113)
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:   Exec Count : 130
+CHECK:   Predecessors: .Ltmp{{.*}}
+CHECK:   Successors: .Ltmp{{.*}} (mispreds: 0, count: 97)
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:   Exec Count : 130
+CHECK:   Predecessors: .Ltmp{{.*}}
+CHECK:   Successors: .Ltmp{{.*}} (mispreds: 0, count: 105)
+
+CHECK: .Ltmp{{.*}} (5 instructions, align : 1)
+CHECK-NEXT:   Exec Count : 140
+CHECK:   Predecessors: .Ltmp{{.*}}, .LFT{{.*}}
+CHECK:   Successors: .Ltmp{{.*}} (mispreds: 0, count: 98)
+
+CHECK:     <_Z3inci>:
+CHECK:        	movq    0x{{.*}}(,%rax,8), %rax
+CHECK-NEXT:    cmpq    $0x{{.*}}, %rax
+CHECK-NEXT:    je {{.*}} <_Z3inci+0x{{.*}}>
+CHECK-NEXT:   	jmpq   *%rax
+
+CHECK:     <_Z7inc_dupi>:
+CHECK:        	movq    0x{{.*}}(,%rax,8), %rax
+CHECK-NEXT:    cmpq $0x{{.*}}, %rax
+CHECK-NEXT:    je {{.*}} <_Z7inc_dupi+0x{{.*}}>
+CHECK-NEXT:   	jmpq   *%rax

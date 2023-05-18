@@ -1,0 +1,571 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the machine memory operands
+# correctly.
+
+--- |
+
+  define i32 @test(ptr %a) {
+  entry:
+    %b = load i32, ptr %a
+    store i32 42, ptr %a
+    ret i32 %b
+  }
+
+  define void @test2(ptr %"a value") {
+  entry2:
+    %b = load i32, ptr %"a value"
+    %c = add i32 %b, 1
+    store i32 %c, ptr %"a value"
+    ret void
+  }
+
+  define void @test3(ptr) {
+  entry3:
+    %1 = alloca i32
+    %b = load i32, ptr %0
+    %c = add i32 %b, 1
+    store i32 %c, ptr %1
+    ret void
+  }
+
+  define i32 @volatile_inc(ptr %x) {
+  entry:
+    %0 = load volatile i32, ptr %x
+    %1 = add i32 %0, 1
+    store volatile i32 %1, ptr %x
+    ret i32 %1
+  }
+
+  define void @non_temporal_store(ptr %a, i32 %b) {
+  entry:
+    store i32 %b, ptr %a, align 16, !nontemporal !0
+    ret void
+  }
+
+  !0 = !{i32 1}
+
+  define i32 @invariant_load(ptr %x) {
+  entry:
+    %v = load i32, ptr %x, !invariant.load !1
+    ret i32 %v
+  }
+
+  !1 = !{}
+
+  define void @memory_offset(ptr %vec) {
+  entry:
+    %v = load <8 x float>, ptr %vec
+    %v2 = insertelement <8 x float> %v, float 0.0, i32 4
+    store <8 x float> %v2, ptr %vec
+    ret void
+  }
+
+  define void @memory_alignment(ptr %vec) {
+  entry:
+    %v = load <16 x float>, ptr %vec
+    %v2 = insertelement <16 x float> %v, float 0.0, i32 4
+    store <16 x float> %v2, ptr %vec
+    ret void
+  }
+
+  define double @constant_pool_psv(double %a) {
+  entry:
+    %b = fadd double %a, 3.250000e+00
+    ret double %b
+  }
+
+  declare x86_fp80 @cosl(x86_fp80) #0
+
+  define x86_fp80 @stack_psv(x86_fp80 %x) {
+  entry:
+    %y = call x86_fp80 @cosl(x86_fp80 %x) #0
+    ret x86_fp80 %y
+  }
+
+  attributes #0 = { readonly }
+
+  @G = external global i32
+
+  define i32 @got_psv() {
+  entry:
+    %a = load i32, ptr @G
+    %b = add i32 %a, 1
+    ret i32 %b
+  }
+
+  @0 = external global i32
+
+  define i32 @global_value() {
+  entry:
+    %a = load i32, ptr @G
+    %b = add i32 %a, 1
+    %c = load i32, ptr @0
+    %d = add i32 %b, %c
+    ret i32 %d
+  }
+
+  define i32 @jumptable_psv(i32 %in) {
+  entry:
+    switch i32 %in, label %def [
+      i32 0, label %lbl1
+      i32 1, label %lbl2
+      i32 2, label %lbl3
+      i32 3, label %lbl4
+    ]
+  def:
+    ret i32 0
+  lbl1:
+    ret i32 1
+  lbl2:
+    ret i32 2
+  lbl3:
+    ret i32 4
+  lbl4:
+    ret i32 8
+  }
+
+  %struct.XXH_state64_t = type { i32, i32, i64, i64, i64 }
+
+  @a = common global i32 0, align 4
+
+  define i32 @tbaa_metadata() {
+  entry:
+    %0 = load i32, ptr @a, align 4, !tbaa !2
+    %1 = inttoptr i32 %0 to ptr
+    %2 = load i32, ptr %1, align 4, !tbaa !6
+    ret i32 %2
+  }
+
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"int", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C/C++ TBAA"}
+  !6 = !{!7, !3, i64 0}
+  !7 = !{!"XXH_state64_t", !3, i64 0, !3, i64 4, !8, i64 8, !8, i64 16, !8, i64 24}
+  !8 = !{!"long long", !4, i64 0}
+
+  define void @aa_scope(ptr nocapture %a, ptr nocapture readonly %c) #1 {
+  entry:
+    %0 = load float, ptr %c, align 4, !alias.scope !9
+    %arrayidx.i = getelementptr inbounds float, ptr %a, i64 5
+    store float %0, ptr %arrayidx.i, align 4, !noalias !9
+    %1 = load float, ptr %c, align 4
+    %arrayidx = getelementptr inbounds float, ptr %a, i64 7
+    store float %1, ptr %arrayidx, align 4
+    ret void
+  }
+
+  attributes #1 = { nounwind uwtable }
+
+  !9 = !{!10}
+  !10 = distinct !{!10, !11, !"some scope"}
+  !11 = distinct !{!11, !"some domain"}
+
+  define zeroext i1 @range_metadata(ptr %x) {
+  entry:
+    %0 = load i8, ptr %x, align 1, !range !12
+    %tobool = trunc i8 %0 to i1
+    ret i1 %tobool
+  }
+
+  !12 = !{i8 0, i8 2}
+
+  %st = type { i32, i32 }
+
+  @values = common global [50 x %st] zeroinitializer, align 16
+
+  define void @gep_value(i64 %d) {
+  entry:
+    %conv = trunc i64 %d to i32
+    store i32 %conv, ptr @values, align 16
+    ret void
+  }
+
+  define ptr @undef_value() {
+  entry:
+    %0 = load ptr, ptr undef, align 8
+    ret ptr %0
+  }
+
+  define void @dummy0() { ret void }
+  define void @dummy1() { ret void }
+  define void @dummy2() { ret void }
+  define void @dummy3() { ret void }
+...
+---
+name:            test
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+  ; CHECK:      $eax = MOV32rm $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.a)
+  ; CHECK-NEXT: MOV32mi killed $rdi, 1, $noreg, 0, $noreg, 42 :: (store (s32) into %ir.a)
+    $eax = MOV32rm $rdi, 1, _, 0, _ :: (load (s32) from %ir.a)
+    MOV32mi killed $rdi, 1, _, 0, _, 42 :: (store (s32) into %ir.a)
+    RET64 $eax
+...
+---
+name:            test2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry2:
+    liveins: $rdi
+  ; CHECK: INC32m killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (store (s32) into %ir."a value"), (load (s32) from %ir."a value")
+    INC32m killed $rdi, 1, _, 0, _, implicit-def dead $eflags :: (store (s32) into %ir."a value"), (load (s32) from %ir."a value")
+    RET64
+...
+---
+name:            test3
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+frameInfo:
+  maxAlignment:    4
+stack:
+  - { id: 0, offset: -12, size: 4, alignment: 4 }
+body: |
+  bb.0.entry3:
+    liveins: $rdi
+  ; Verify that the unnamed local values can be serialized.
+  ; CHECK-LABEL: name: test3
+  ; CHECK: $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.0)
+  ; CHECK: MOV32mr $rsp, 1, $noreg, -4, $noreg, killed $eax :: (store (s32) into %ir.1)
+    $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load (s32) from %ir.0)
+    $eax = INC32r killed $eax, implicit-def dead $eflags
+    MOV32mr $rsp, 1, _, -4, _, killed $eax :: (store (s32) into %ir.1)
+    RET64
+...
+---
+name:            volatile_inc
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+    ; CHECK: name: volatile_inc
+    ; CHECK: $eax = MOV32rm $rdi, 1, $noreg, 0, $noreg :: (volatile load (s32) from %ir.x)
+    ; CHECK: MOV32mr killed $rdi, 1, $noreg, 0, $noreg, $eax :: (volatile store (s32) into %ir.x)
+    $eax = MOV32rm $rdi, 1, _, 0, _ :: (volatile load (s32) from %ir.x)
+    $eax = INC32r killed $eax, implicit-def dead $eflags
+    MOV32mr killed $rdi, 1, _, 0, _, $eax :: (volatile store (s32) into %ir.x)
+    RET64 $eax
+...
+---
+name:            non_temporal_store
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$esi' }
+body: |
+  bb.0.entry:
+    liveins: $esi, $rdi
+  ; CHECK: name: non_temporal_store
+  ; CHECK: MOVNTImr killed $rdi, 1, $noreg, 0, $noreg, killed $esi :: (non-temporal store (s32) into %ir.a)
+    MOVNTImr killed $rdi, 1, _, 0, _, killed $esi :: (non-temporal store (s32) into %ir.a)
+    RET64
+...
+---
+name:            invariant_load
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+  ; CHECK: name: invariant_load
+  ; CHECK: $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (invariant load (s32) from %ir.x)
+    $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (invariant load (s32) from %ir.x)
+    RET64 $eax
+...
+---
+name:            memory_offset
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+  ; CHECK: name: memory_offset
+  ; CHECK:      $xmm0 = MOVAPSrm $rdi, 1, $noreg, 0, $noreg :: (load (s128) from %ir.vec)
+  ; CHECK-NEXT: $xmm1 = MOVAPSrm $rdi, 1, $noreg, 16, $noreg :: (load (s128) from %ir.vec + 16)
+  ; CHECK:      MOVAPSmr $rdi, 1, $noreg, 0, $noreg, killed $xmm0 :: (store (s128) into %ir.vec)
+  ; CHECK-NEXT: MOVAPSmr killed $rdi, 1, $noreg, 16, $noreg, killed $xmm1 :: (store (s128) into %ir.vec + 16)
+    $xmm0 = MOVAPSrm $rdi, 1, _, 0, _ :: (load (s128) from %ir.vec)
+    $xmm1 = MOVAPSrm $rdi, 1, _, 16, _ :: (load (s128) from %ir.vec + 16)
+    $xmm2 = FsFLD0SS
+    $xmm1 = MOVSSrr killed $xmm1, killed $xmm2
+    MOVAPSmr $rdi, 1, _, 0, _, killed $xmm0 :: (store (s128) into %ir.vec)
+    MOVAPSmr killed $rdi, 1, _, 16, _, killed $xmm1 :: (store (s128) into %ir.vec + 16)
+    RET64
+...
+---
+name:            memory_alignment
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+  ; CHECK: name: memory_alignment
+  ; CHECK:      $xmm0 = MOVAPSrm $rdi, 1, $noreg, 0, $noreg :: (load (s128) from %ir.vec, align 64)
+  ; CHECK-NEXT: $xmm1 = MOVAPSrm $rdi, 1, $noreg, 16, $noreg :: (load (s128) from %ir.vec + 16, basealign 64)
+  ; CHECK-NEXT: $xmm2 = MOVAPSrm $rdi, 1, $noreg, 32, $noreg :: (load (s128) from %ir.vec + 32, align 32, basealign 64)
+  ; CHECK-NEXT: $xmm3 = MOVAPSrm $rdi, 1, $noreg, 48, $noreg :: (load (s128) from %ir.vec + 48, basealign 64)
+  ; CHECK:      MOVAPSmr $rdi, 1, $noreg, 0, $noreg, killed $xmm0 :: (store (s128) into %ir.vec, align 64)
+  ; CHECK-NEXT: MOVAPSmr $rdi, 1, $noreg, 16, $noreg, killed $xmm1 :: (store (s128) into %ir.vec + 16, basealign 64)
+  ; CHECK-NEXT: MOVAPSmr $rdi, 1, $noreg, 32, $noreg, killed $xmm2 :: (store (s128) into %ir.vec + 32, align 32, basealign 64)
+  ; CHECK-NEXT: MOVAPSmr killed $rdi, 1, $noreg, 48, $noreg, killed $xmm3 :: (store (s128) into %ir.vec + 48, basealign 64)
+    $xmm0 = MOVAPSrm $rdi, 1, _, 0, _ :: (load (s128) from %ir.vec, align 64)
+    $xmm1 = MOVAPSrm $rdi, 1, _, 16, _ :: (load (s128) from %ir.vec + 16, basealign 64)
+    $xmm2 = MOVAPSrm $rdi, 1, _, 32, _ :: (load (s128) from %ir.vec + 32, align 32, basealign 64)
+    $xmm3 = MOVAPSrm $rdi, 1, _, 48, _ :: (load (s128) from %ir.vec + 48, basealign 64)
+    $xmm4 = FsFLD0SS
+    $xmm1 = MOVSSrr killed $xmm1, killed $xmm4
+    MOVAPSmr $rdi, 1, _, 0, _, killed $xmm0 :: (store (s128) into %ir.vec, align 64)
+    MOVAPSmr $rdi, 1, _, 16, _, killed $xmm1 :: (store (s128) into %ir.vec + 16, basealign 64)
+    MOVAPSmr $rdi, 1, _, 32, _, killed $xmm2 :: (store (s128) into %ir.vec + 32, align 32, basealign 64)
+    MOVAPSmr killed $rdi, 1, _, 48, _, killed $xmm3 :: (store (s128) into %ir.vec + 48, basealign 64)
+    RET64
+...
+---
+name:            constant_pool_psv
+tracksRegLiveness: true
+liveins:
+  - { reg: '$xmm0' }
+constants:
+  - id:          0
+    value:       'double 3.250000e+00'
+body: |
+  bb.0.entry:
+    liveins: $xmm0
+  ; CHECK: name: constant_pool_psv
+  ; CHECK:      $xmm0 = ADDSDrm killed $xmm0, $rip, 1, $noreg, %const.0, $noreg, implicit $mxcsr :: (load (s64) from constant-pool)
+  ; CHECK-NEXT: $xmm0 = ADDSDrm killed $xmm0, $rip, 1, $noreg, %const.0, $noreg, implicit $mxcsr :: (load (s64) from constant-pool + 8)
+    $xmm0 = ADDSDrm killed $xmm0, $rip, 1, _, %const.0, _, implicit $mxcsr :: (load (s64) from constant-pool)
+    $xmm0 = ADDSDrm killed $xmm0, $rip, 1, _, %const.0, _, implicit $mxcsr :: (load (s64) from constant-pool + 8)
+    RET64 $xmm0
+...
+---
+name:            stack_psv
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       24
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 16
+fixedStack:
+  - { id: 0, offset: 0, size: 10, alignment: 16, isImmutable: true, isAliased: false }
+body: |
+  bb.0.entry:
+    $rsp = frame-setup SUB64ri8 $rsp, 24, implicit-def dead $eflags
+    CFI_INSTRUCTION def_cfa_offset 32
+    LD_F80m $rsp, 1, $noreg, 32, $noreg, implicit-def dead $fpsw, implicit $fpcw
+  ; CHECK: name: stack_psv
+  ; CHECK: ST_FP80m $rsp, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (store (s80) into stack, align 16)
+    ST_FP80m $rsp, 1, _, 0, _, implicit-def dead $fpsw, implicit $fpcw :: (store (s80) into stack, align 16)
+    CALL64pcrel32 &cosl, csr_64, implicit $rsp, implicit-def $rsp, implicit-def $fp0
+    $rsp = ADD64ri8 $rsp, 24, implicit-def dead $eflags
+    RET64
+...
+---
+name:            got_psv
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+  ; CHECK: name: got_psv
+  ; CHECK: $rax = MOV64rm $rip, 1, $noreg, @G, $noreg :: (load (s64) from got)
+    $rax = MOV64rm $rip, 1, _, @G, _ :: (load (s64) from got)
+    $eax = MOV32rm killed $rax, 1, _, 0, _
+    $eax = INC32r killed $eax, implicit-def dead $eflags
+    RET64 $eax
+...
+---
+name:            global_value
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    $rax = MOV64rm $rip, 1, _, @G, _
+  ; CHECK-LABEL: name: global_value
+  ; CHECK: $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from @G)
+  ; CHECK: $ecx = MOV32rm killed $rcx, 1, $noreg, 0, $noreg, implicit-def $rcx :: (load (s32) from @0)
+    $eax = MOV32rm killed $rax, 1, _, 0, _, implicit-def $rax :: (load (s32) from @G)
+    $rcx = MOV64rm $rip, 1, _, @0, _
+    $ecx = MOV32rm killed $rcx, 1, _, 0, _, implicit-def $rcx :: (load (s32) from @0)
+    $eax = LEA64_32r killed $rax, 1, killed $rcx, 1, _
+    RET64 $eax
+...
+---
+name:            jumptable_psv
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+jumpTable:
+  kind:          label-difference32
+  entries:
+    - id:        0
+      blocks:    [ '%bb.3.lbl1', '%bb.4.lbl2', '%bb.5.lbl3', '%bb.6.lbl4' ]
+body: |
+  bb.0.entry:
+    successors: %bb.2.def, %bb.1.entry
+    liveins: $edi
+
+    $eax = MOV32rr $edi, implicit-def $rax
+    CMP32ri8 killed $edi, 3, implicit-def $eflags
+    JCC_1 %bb.2.def, 7, implicit killed $eflags
+
+  bb.1.entry:
+    successors: %bb.3.lbl1, %bb.4.lbl2, %bb.5.lbl3, %bb.6.lbl4
+    liveins: $rax
+
+    $rcx = LEA64r $rip, 1, _, %jump-table.0, _
+  ; CHECK: name: jumptable_psv
+  ; CHECK: $rax = MOVSX64rm32 $rcx, 4, killed $rax, 0, $noreg :: (load (s32) from jump-table, align 8)
+    $rax = MOVSX64rm32 $rcx, 4, killed $rax, 0, _ :: (load (s32) from jump-table, align 8)
+    $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
+    JMP64r killed $rax
+
+  bb.2.def:
+    $eax = MOV32r0 implicit-def dead $eflags
+    RET64 $eax
+
+  bb.3.lbl1:
+    $eax = MOV32ri 1
+    RET64 $eax
+
+  bb.4.lbl2:
+    $eax = MOV32ri 2
+    RET64 $eax
+
+  bb.5.lbl3:
+    $eax = MOV32ri 4
+    RET64 $eax
+
+  bb.6.lbl4:
+    $eax = MOV32ri 8
+    RET64 $eax
+...
+---
+name:            tbaa_metadata
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    $rax = MOV64rm $rip, 1, _, @a, _ :: (load (s64) from got)
+  ; CHECK-LABEL: name: tbaa_metadata
+  ; CHECK:      $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from @a, !tbaa !2)
+  ; CHECK-NEXT: $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg :: (load (s32) from %ir.1, !tbaa !6)
+    $eax = MOV32rm killed $rax, 1, _, 0, _, implicit-def $rax :: (load (s32) from @a, !tbaa !2)
+    $eax = MOV32rm killed $rax, 1, _, 0, _ :: (load (s32) from %ir.1, !tbaa !6)
+    RET64 $eax
+...
+---
+name:            aa_scope
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+  ; CHECK-LABEL: name: aa_scope
+  ; CHECK: $xmm0 = MOVSSrm_alt $rsi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.c, !alias.scope !9)
+    $xmm0 = MOVSSrm_alt $rsi, 1, _, 0, _ :: (load (s32) from %ir.c, !alias.scope !9)
+  ; CHECK-NEXT: MOVSSmr $rdi, 1, $noreg, 20, $noreg, killed $xmm0 :: (store (s32) into %ir.arrayidx.i, !noalias !9)
+    MOVSSmr $rdi, 1, _, 20, _, killed $xmm0 :: (store (s32) into %ir.arrayidx.i, !noalias !9)
+    $xmm0 = MOVSSrm_alt killed $rsi, 1, _, 0, _ :: (load (s32) from %ir.c)
+    MOVSSmr killed $rdi, 1, _, 28, _, killed $xmm0 :: (store (s32) into %ir.arrayidx)
+    RET64
+...
+---
+name:            range_metadata
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+  ; CHECK-LABEL: name: range_metadata
+  ; CHECK: $al = MOV8rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s8) from %ir.x, !range !11)
+    $al = MOV8rm killed $rdi, 1, _, 0, _ :: (load (s8) from %ir.x, !range !11)
+    RET64 $al
+...
+---
+name:            gep_value
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+
+    $rax = MOV64rm $rip, 1, _, @values, _ :: (load (s64) from got)
+  ; CHECK-LABEL: gep_value
+  ; CHECK: MOV32mr killed $rax, 1, $noreg, 0, $noreg, $edi, implicit killed $rdi :: (store (s32) into @values, align 16)
+    MOV32mr killed $rax, 1, _, 0, _, $edi, implicit killed $rdi :: (store (s32) into @values, align 16)
+    RET64
+...
+---
+name:            undef_value
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+  ; CHECK-LABEL: name: undef_value
+  ; CHECK: $rax = MOV64rm undef $rax, 1, $noreg, 0, $noreg :: (load (s64) from `ptr undef`)
+    $rax = MOV64rm undef $rax, 1, _, 0, _ :: (load (s64) from `ptr undef`)
+    RET64 $rax
+...
+---
+# Test memory operand without associated value.
+# CHECK-LABEL: name: dummy0
+# CHECK: $rax = MOV64rm undef $rax, 1, $noreg, 0, $noreg :: (load (s64))
+name: dummy0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $rax = MOV64rm undef $rax, 1, _, 0, _ :: (load (s64))
+    RET64 $rax
+...
+---
+# Test parsing of stack references in machine memory operands.
+# CHECK-LABEL: name: dummy1
+# CHECK: $rax = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+name: dummy1
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    $rax = MOV64rm $rsp, 1, _, 0, _ :: (load (s64) from %stack.0)
+    RET64 $rax
+...
+---
+# Test parsing of unknown size in machine memory operands without alignment.
+# CHECK-LABEL: name: dummy2
+# CHECK: $rax = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load unknown-size from %stack.0, align 1)
+name: dummy2
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    $rax = MOV64rm $rsp, 1, _, 0, _ :: (load unknown-size from %stack.0)
+    RET64 $rax
+...
+---
+# Test parsing of unknown size in machine memory operands with alignment.
+# CHECK-LABEL: name: dummy3
+# CHECK: $rax = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load unknown-size from %stack.0, align 4)
+name: dummy3
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    $rax = MOV64rm $rsp, 1, _, 0, _ :: (load unknown-size from %stack.0, align 4)
+    RET64 $rax
+...

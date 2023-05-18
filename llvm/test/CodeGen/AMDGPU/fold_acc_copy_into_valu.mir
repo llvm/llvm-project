@@ -1,0 +1,15 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -o - -run-pass si-fix-sgpr-copies -verify-machineinstrs %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: fold_acc_copy_into_valu
+# GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY %0.sub0
+# GCN: %2:vgpr_32 = V_AND_B32_e32 [[COPY]], undef %3:vgpr_32, implicit $exec
+---
+name:            fold_acc_copy_into_valu
+body:             |
+  bb.0.entry:
+
+    %0:areg_1024 = IMPLICIT_DEF
+    %1:sreg_32_xm0 = COPY %0.sub0
+    %3:vgpr_32 = V_AND_B32_e32 %1, undef %2:vgpr_32, implicit $exec
+
+...

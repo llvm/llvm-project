@@ -1,0 +1,24 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux /dev/null -o %t.o
+# RUN: ld.lld -shared %t.o -T %s -o %t
+# RUN: llvm-readobj --dynamic-table --sections %t | FileCheck %s
+
+## Check that we remove the empty .rela.plt section even when it
+## is explicitly assigned to a program header.
+## Check that no related dynamic tags are produced.
+
+# CHECK-NOT: Name: .rela.plt
+
+# CHECK: DynamicSection [
+# CHECK-NOT: JMPREL
+# CHECK-NOT: PLTGOT
+
+PHDRS {
+  all PT_LOAD;
+  dyn PT_DYNAMIC;
+}
+SECTIONS {
+  .rela.plt : { *(.rela.plt) }: all
+  .dynamic : { *(.dynamic) }: all : dyn
+  .got.plt : {*(.got.plt)}: all
+}

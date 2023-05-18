@@ -1,0 +1,94 @@
+# RUN: llc -x mir -run-pass=twoaddressinstruction < %s | FileCheck %s
+
+# This test checks that TwoAddressInstruction pass does not create redundate COPY
+# instruction for STATEPOINT tied operands.
+
+--- |
+  ; ModuleID = 'statepoint-vreg-twoaddr.ll'
+  source_filename = "statepoint-vreg-twoaddr.ll"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-pc-linux-gnu"
+
+  declare i1 @return_i1()
+
+  declare void @consume(ptr addrspace(1))
+  declare void @consume1(ptr addrspace(1), ptr addrspace(1))
+
+  define i1 @test_relocate(ptr addrspace(1) %a) gc "statepoint-example" {
+  entry:
+    %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %a) ]
+    %rel1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 0) ; (%a, %a)
+    %res1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+    call void @consume(ptr addrspace(1) %rel1)
+    ret i1 %res1
+  }
+
+  define void @test_duplicate_gcregs(ptr addrspace(1) %a) gc "statepoint-example" {
+    ret void
+  }
+
+  ; Function Attrs: nounwind readnone
+  declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32 immarg, i32 immarg) #0
+
+  declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
+
+  ; Function Attrs: nounwind readnone
+  declare i1 @llvm.experimental.gc.result.i1(token) #0
+
+  attributes #0 = { nounwind readnone }
+
+...
+---
+name:            test_relocate
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr8 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    ; CHECK-LABEL: name: test_relocate
+    ; CHECK: [[VREG1:%[0-9]+]]:gr64 = COPY killed $rdi
+    ; CHECK-NOT: [[VREG2:%[0-9]+]]:gr64 = COPY [[VREG1]]
+    ; CHECK: [[VREG1]]:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, killed [[VREG1]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
+    ; CHECK: $rdi = COPY killed [[VREG1]]
+    ; CHECK: CALL64pcrel32 target-flags(x86-plt) @consume, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp
+
+    %0:gr64 = COPY killed $rdi
+    %1:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, killed %0(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
+    %2:gr8 = COPY killed $al
+    $rdi = COPY killed %1
+    CALL64pcrel32 target-flags(x86-plt) @consume, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp
+    $al = COPY killed %2
+    RET 0, killed $al
+
+...
+---
+name:            test_duplicate_gcregs
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $rdi
+
+    ; CHECK-LABEL: name: test_duplicate_gcregs
+    ; CHECK:   %1:gr64 = COPY %0
+    ; CHECK:   %2:gr64 = COPY %0
+    ; CHECK:   %1:gr64, %2:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 2, %1(tied-def 0), %2(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64
+    ; CHECK:   $rdi = COPY killed %1
+    ; CHECK:   $rsi = COPY killed %2
+    ; CHECK:   CALL64pcrel32 target-flags(x86-plt) @consume1, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
+    ; CHECK:   RET 0
+    %0:gr64 = COPY killed $rdi
+    %1:gr64, %2:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) @return_i1, 2, 0, 2, 0, 2, 0, 2, 2, killed %0(tied-def 0), killed %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $al
+    $rdi = COPY killed %1
+    $rsi = COPY killed %2
+    CALL64pcrel32 target-flags(x86-plt) @consume1, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
+    RET 0
+...

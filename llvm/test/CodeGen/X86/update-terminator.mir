@@ -1,0 +1,79 @@
+# RUN: llc -mtriple=x86_64-- -verify-machineinstrs -run-pass block-placement -o - %s | FileCheck %s
+# Check the conditional jump in bb.1 is changed to unconditional after block placement swaps bb.2 and bb.3.
+
+--- |
+  @a = external global i16
+  @b = external global i32
+
+  declare void @dummy1()
+  declare void @dummy2()
+  declare void @dummy3()
+
+  ; Function Attrs: nounwind
+  define void @f2() {
+    br i1 undef, label %bb1, label %bb3
+
+  bb1:
+    call void @dummy1()
+    call void @dummy1()
+    call void @dummy1()
+    br i1 undef, label %bb2, label %bb2
+
+  bb2:
+    call void @dummy2()
+    call void @dummy2()
+    call void @dummy2()
+    br label %bb4
+
+  bb3:
+    call void @dummy3()
+    call void @dummy3()
+    call void @dummy3()
+    br label %bb2
+
+  bb4:
+    ret void
+  }
+
+
+...
+---
+# CHECK-LABEL: name: f2
+# CHECK: bb.1:
+# CHECK: JMP_1 %bb.2
+# CHECK: bb.3:
+# CHECK: bb.2:
+name:            f2
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1(50), %bb.3(50)
+
+    JCC_1 %bb.1, 2, implicit $eflags
+    JMP_1 %bb.3
+  bb.1:
+    successors: %bb.2(100)
+
+    CALL64pcrel32 @dummy1, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy1, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy1, csr_64, implicit $rsp, implicit-def $rsp
+    JCC_1 %bb.2, 5, implicit $eflags
+
+  bb.2:
+    successors: %bb.4(100)
+
+    CALL64pcrel32 @dummy2, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy2, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy2, csr_64, implicit $rsp, implicit-def $rsp
+    JMP_1 %bb.4
+
+  bb.3:
+    successors: %bb.2(100)
+    CALL64pcrel32 @dummy3, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy3, csr_64, implicit $rsp, implicit-def $rsp
+    CALL64pcrel32 @dummy3, csr_64, implicit $rsp, implicit-def $rsp
+    JMP_1 %bb.2
+
+  bb.4:
+    RET64
+
+...

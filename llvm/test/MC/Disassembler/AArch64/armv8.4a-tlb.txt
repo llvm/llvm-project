@@ -1,0 +1,152 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=-v8.4a --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOV84
+
+# Outer shareable TLB Maintenance instructions:
+
+0x1f,0x81,0x08,0xd5
+0x20,0x81,0x08,0xd5
+0x40,0x81,0x08,0xd5
+0x60,0x81,0x08,0xd5
+0xa0,0x81,0x08,0xd5
+0xe0,0x81,0x08,0xd5
+0x00,0x84,0x0c,0xd5
+0x80,0x84,0x0c,0xd5
+0x20,0x81,0x0c,0xd5
+0xa0,0x81,0x0c,0xd5
+0xdf,0x81,0x0c,0xd5
+0x20,0x81,0x0e,0xd5
+0xa0,0x81,0x0e,0xd5
+0x1f,0x81,0x0c,0xd5
+0x9f,0x81,0x0c,0xd5
+0x1f,0x81,0x0e,0xd5
+
+#CHECK:  tlbi  vmalle1os
+#CHECK:  tlbi  vae1os, x0
+#CHECK:  tlbi  aside1os, x0
+#CHECK:  tlbi  vaae1os, x0
+#CHECK:  tlbi  vale1os, x0
+#CHECK:  tlbi  vaale1os, x0
+#CHECK:  tlbi  ipas2e1os, x0
+#CHECK:  tlbi  ipas2le1os, x0
+#CHECK:  tlbi  vae2os, x0
+#CHECK:  tlbi  vale2os, x0
+#CHECK:  tlbi  vmalls12e1os
+#CHECK:  tlbi  vae3os, x0
+#CHECK:  tlbi  vale3os, x0
+#CHECK:  tlbi  alle2os
+#CHECK:  tlbi  alle1os
+#CHECK:  tlbi  alle3os
+
+#CHECK-NOV84:  sys  #0, c8, c1, #0
+#CHECK-NOV84:  sys #0, c8, c1, #1, x0
+#CHECK-NOV84:  sys #0, c8, c1, #2, x0
+#CHECK-NOV84:  sys #0, c8, c1, #3, x0
+#CHECK-NOV84:  sys #0, c8, c1, #5, x0
+#CHECK-NOV84:  sys #0, c8, c1, #7, x0
+#CHECK-NOV84:  sys #4, c8, c4, #0, x0
+#CHECK-NOV84:  sys #4, c8, c4, #4, x0
+#CHECK-NOV84:  sys #4, c8, c1, #1, x0
+#CHECK-NOV84:  sys #4, c8, c1, #5, x0
+#CHECK-NOV84:  sys  #4, c8, c1, #6
+#CHECK-NOV84:  sys #6, c8, c1, #1, x0
+#CHECK-NOV84:  sys #6, c8, c1, #5, x0
+#CHECK-NOV84:  sys  #4, c8, c1, #0
+#CHECK-NOV84:  sys  #4, c8, c1, #4
+#CHECK-NOV84:  sys  #6, c8, c1, #0
+#CHECK-NOV84:  sys #0, c8, c6, #1, x3
+
+# TLB range maintenance instructions:
+
+0x23,0x86,0x08,0xd5
+0x63,0x86,0x08,0xd5
+0xa3,0x86,0x08,0xd5
+0xe3,0x86,0x08,0xd5
+0x23,0x82,0x08,0xd5
+0x63,0x82,0x08,0xd5
+0xa3,0x82,0x08,0xd5
+0xe3,0x82,0x08,0xd5
+0x23,0x85,0x08,0xd5
+0x63,0x85,0x08,0xd5
+0xa3,0x85,0x08,0xd5
+0xe3,0x85,0x08,0xd5
+0x43,0x80,0x0c,0xd5
+0xc3,0x80,0x0c,0xd5
+0x43,0x84,0x0c,0xd5
+0xc3,0x84,0x0c,0xd5
+0x63,0x84,0x0c,0xd5
+0xe3,0x84,0x0c,0xd5
+0x23,0x86,0x0c,0xd5
+0xa3,0x86,0x0c,0xd5
+0x23,0x82,0x0c,0xd5
+0xa3,0x82,0x0c,0xd5
+0x23,0x85,0x0c,0xd5
+0xa3,0x85,0x0c,0xd5
+0x23,0x86,0x0e,0xd5
+0xa3,0x86,0x0e,0xd5
+0x23,0x82,0x0e,0xd5
+0xa3,0x82,0x0e,0xd5
+0x23,0x85,0x0e,0xd5
+0xa3,0x85,0x0e,0xd5
+
+#CHECK:  tlbi  rvae1, x3
+#CHECK:  tlbi  rvaae1, x3
+#CHECK:  tlbi  rvale1, x3
+#CHECK:  tlbi  rvaale1, x3
+#CHECK:  tlbi  rvae1is, x3
+#CHECK:  tlbi  rvaae1is, x3
+#CHECK:  tlbi  rvale1is, x3
+#CHECK:  tlbi  rvaale1is, x3
+#CHECK:  tlbi  rvae1os, x3
+#CHECK:  tlbi  rvaae1os, x3
+#CHECK:  tlbi  rvale1os, x3
+#CHECK:  tlbi  rvaale1os, x3
+#CHECK:  tlbi  ripas2e1is, x3
+#CHECK:  tlbi  ripas2le1is, x3
+#CHECK:  tlbi  ripas2e1, x3
+#CHECK:  tlbi  ripas2le1, x3
+#CHECK:  tlbi  ripas2e1os, x3
+#CHECK:  tlbi  ripas2le1os, x3
+#CHECK:  tlbi  rvae2, x3
+#CHECK:  tlbi  rvale2, x3
+#CHECK:  tlbi  rvae2is, x3
+#CHECK:  tlbi  rvale2is, x3
+#CHECK:  tlbi  rvae2os, x3
+#CHECK:  tlbi  rvale2os, x3
+#CHECK:  tlbi  rvae3, x3
+#CHECK:  tlbi  rvale3, x3
+#CHECK:  tlbi  rvae3is, x3
+#CHECK:  tlbi  rvale3is, x3
+#CHECK:  tlbi  rvae3os, x3
+#CHECK:  tlbi  rvale3os, x3
+
+#CHECK-NOV84:  sys #0, c8, c6, #3, x3
+#CHECK-NOV84:  sys #0, c8, c6, #5, x3
+#CHECK-NOV84:  sys #0, c8, c6, #7, x3
+#CHECK-NOV84:  sys #0, c8, c2, #1, x3
+#CHECK-NOV84:  sys #0, c8, c2, #3, x3
+#CHECK-NOV84:  sys #0, c8, c2, #5, x3
+#CHECK-NOV84:  sys #0, c8, c2, #7, x3
+#CHECK-NOV84:  sys #0, c8, c5, #1, x3
+#CHECK-NOV84:  sys #0, c8, c5, #3, x3
+#CHECK-NOV84:  sys #0, c8, c5, #5, x3
+#CHECK-NOV84:  sys #0, c8, c5, #7, x3
+#CHECK-NOV84:  sys #4, c8, c0, #2, x3
+#CHECK-NOV84:  sys #4, c8, c0, #6, x3
+#CHECK-NOV84:  sys #4, c8, c4, #2, x3
+#CHECK-NOV84:  sys #4, c8, c4, #6, x3
+#CHECK-NOV84:  sys #4, c8, c4, #3, x3
+#CHECK-NOV84:  sys #4, c8, c4, #7, x3
+#CHECK-NOV84:  sys #4, c8, c6, #1, x3
+#CHECK-NOV84:  sys #4, c8, c6, #5, x3
+#CHECK-NOV84:  sys #4, c8, c2, #1, x3
+#CHECK-NOV84:  sys #4, c8, c2, #5, x3
+#CHECK-NOV84:  sys #4, c8, c5, #1, x3
+#CHECK-NOV84:  sys #4, c8, c5, #5, x3
+#CHECK-NOV84:  sys #6, c8, c6, #1, x3
+#CHECK-NOV84:  sys #6, c8, c6, #5, x3
+#CHECK-NOV84:  sys #6, c8, c2, #1, x3
+#CHECK-NOV84:  sys #6, c8, c2, #5, x3
+#CHECK-NOV84:  sys #6, c8, c5, #1, x3
+#CHECK-NOV84:  sys #6, c8, c5, #5, x3
+

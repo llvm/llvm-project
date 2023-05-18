@@ -1,0 +1,59 @@
+# REQUIRES: x86
+
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
+
+## Check if the linker can generate the final file, containing all non-empty sections,
+## without warnings for .intvec0_out, .intvec1_out1, .intvec2_out, because their
+## input sections are empty. Althoung, the linker must generate a warning for the
+## first ".nonalloc" section and the second .dat, as expected.
+
+# RUN: ld.lld %t/a.o -T %t/a.lds -o %t/a.elf 2>&1 | FileCheck %s --check-prefix=WARN --implicit-check-not=warning:
+
+# WARN: warning: ignoring memory region assignment for non-allocatable section '.nonalloc'
+# WARN: warning: ignoring memory region assignment for non-allocatable section '.dat'
+
+## The output file must include all sections.
+# RUN: llvm-readelf -S %t/a.elf | FileCheck %s
+
+# CHECK:      There are 12 section headers, starting at offset 0x2140:
+# CHECK:      [Nr] Name         Type      Address          Off    Size   ES Flg Lk Inf Al
+# CHECK-NEXT: [ 0]              NULL      0000000000000000 000000 000000 00     0  0   0
+# CHECK-NEXT: [ 1] .nonalloc    PROGBITS  0000000000000000 001064 001000 00 W   0  0   1
+# CHECK-NEXT: [ 2] .comment     PROGBITS  0000000000000000 {{.*}} {{.*}} 01 MS  0  0   1
+# CHECK-NEXT: [ 3] .symtab      SYMTAB    0000000000000000 {{.*}} {{.*}} 18     5  1   8
+# CHECK-NEXT: [ 4] .shstrtab    STRTAB    0000000000000000 {{.*}} {{.*}} 00     0  0   1
+# CHECK-NEXT: [ 5] .strtab      STRTAB    0000000000000000 {{.*}} {{.*}} 00     0  0   1
+# CHECK-NEXT: [ 6] .dat         PROGBITS  0000000000000000 002137 000004 00 W   0  0   1
+# CHECK-NEXT: [ 7] .intvec0_out PROGBITS  0000000000000000 00213b 000000 00 W   0  0   1
+# CHECK-NEXT: [ 8] .intvec1_out PROGBITS  0000000000000000 00213b 000000 00 W   0  0   1
+# CHECK-NEXT: [ 9] .intvec2_out PROGBITS  0000000000000000 00213b 000000 00 W   0  0   1
+# CHECK-NEXT: [10] .intvec3_out PROGBITS  00000000803fe060 001060 000004 00 AX  0  0   1
+# CHECK-NEXT: [11] .text        PROGBITS  00000000803fe064 001064 000000 00 AX  0  0   4
+
+
+#--- a.s
+.global _start
+.text
+_start:
+.section .nonalloc,"w"
+.zero 0x1000
+.section .intvec3,"ax",@progbits
+.long 1
+
+#--- a.lds
+MEMORY {
+  MEM1 : ORIGIN = 0x10000000, LENGTH = 1M
+  MEM2 (rx) : ORIGIN = 0x80000000, LENGTH = 4M
+}
+
+VEC_START = 0x803FE000;
+
+SECTIONS {
+ .nonalloc : { *(.nonalloc) } > MEM
+ .dat : { LONG(0); } > MEM1
+ .intvec0_out (VEC_START + 0x0000) : {KEEP (*(.intvec1)) } > MEM2
+ .intvec1_out (VEC_START + 0x0020) : {KEEP (*(.intvec1)) } > MEM2
+ .intvec2_out (VEC_START + 0x0040) : {KEEP (*(.intvec2)) } > MEM2
+ .intvec3_out (VEC_START + 0x0060) : {KEEP (*(.intvec3)) } > MEM2
+}

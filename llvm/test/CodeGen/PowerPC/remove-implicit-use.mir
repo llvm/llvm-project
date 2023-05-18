@@ -1,0 +1,78 @@
+# RUN: llc -mtriple=powerpc64le-unknown-unknown -start-after=ppc-mi-peepholes \ 
+# RUN: -stop-before=ppc-expand-isel -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  ; ModuleID = 'a.ll'
+  source_filename = "a.c"   
+  target datalayout = "e-m:e-i64:64-n32:64"
+  target triple = "powerpc64le-unknown-linux-gnu"
+
+  ; Function Attrs: norecurse nounwind readnone
+  define signext i32 @test(i32 signext %a, i32 signext %b, i32 signext %c) local_unnamed_addr #0 {
+  entry:
+    %cmp = icmp sgt i32 %a, %b
+    %add = add nsw i32 %c, %b
+    %cond = select i1 %cmp, i32 %a, i32 %add
+    ret i32 %cond
+  }
+
+  
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!2}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+  !2 = !{!"clang version 8.0.0 (trunk 347251)"}
+
+...
+---
+name:            test
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         
+  - { reg: '$x3', virtual-reg: '' }
+  - { reg: '$x4', virtual-reg: '' }
+  - { reg: '$x5', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+constants:       []
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x5
+
+    renamable $r4 = LI 0
+    renamable $r5 = nsw ADD4 killed renamable $r5, renamable $r5, implicit $x5
+    renamable $cr0 = CMPW renamable $r3, killed renamable $r4, implicit $x4
+    ; CHECK: ADD4
+    ; CHECK-NOT: implicit $x4
+    renamable $r3 = ISEL killed renamable $r3, killed renamable $r5, killed renamable $cr0gt, implicit $cr0, implicit $x3
+    renamable $x3 = EXTSW_32_64 killed renamable $r3
+    BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+
+...
+

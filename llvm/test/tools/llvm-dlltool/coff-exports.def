@@ -1,0 +1,36 @@
+; RUN: llvm-dlltool -m i386:x86-64 --input-def %s --output-lib %t.a
+; RUN: llvm-readobj %t.a | FileCheck %s --check-prefixes=CHECK,CHECK-X64
+; RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=SYMTAB %s
+; RUN: llvm-dlltool -m arm64 --input-def %s --output-lib %t.a
+; RUN: llvm-readobj %t.a | FileCheck %s --check-prefixes=CHECK,CHECK-ARM64
+; RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=SYMTAB %s
+
+LIBRARY test.dll
+EXPORTS
+TestFunction1
+TestFunction2;
+TestFunction3 ; This is a comment
+AnotherFunction
+
+; CHECK: File: test.dll
+; CHECK-X64:   Format: COFF-import-file-x86-64
+; CHECK-ARM64: Format: COFF-import-file-ARM64
+; CHECK: Type: code
+; CHECK:      Name type: name
+; CHECK-NEXT: Export name: TestFunction1
+; CHECK-NEXT: Symbol: __imp_TestFunction1
+; CHECK-NEXT: Symbol: TestFunction1
+; CHECK:      Name type: name
+; CHECK-NEXT: Export name: TestFunction2
+; CHECK-NEXT: Symbol: __imp_TestFunction2{{$}}
+; CHECK-NEXT: Symbol: TestFunction2{{$}}
+; CHECK:      Name type: name
+; CHECK-NEXT: Export name: TestFunction3
+; CHECK-NEXT: Symbol: __imp_TestFunction3{{$}}
+; CHECK-NEXT: Symbol: TestFunction3{{$}}
+
+; SYMTAB: Archive map
+; SYMTAB: TestFunction1 in test.dll
+; SYMTAB: TestFunction2 in test.dll
+; SYMTAB: TestFunction3 in test.dll
+; SYMTAB: AnotherFunction in test.dll

@@ -1,0 +1,68 @@
+# This script checks that perf2bolt is reading pre-aggregated perf information
+# correctly for a simple example. The perf.data of this example was generated
+# with the following command:
+#
+#  $ perf record -j any,u -e branch -o perf.data -- ./blarge
+#
+#  blarge is the binary for "basicmath large inputs" taken from Mibench.
+
+# Currently failing in MacOS / generating different hash for usqrt
+REQUIRES: system-linux
+
+RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
+RUN: perf2bolt %t.exe -o %t --pa -p %p/Inputs/pre-aggregated.txt -w %t.new \
+RUN:   --profile-use-dfs
+RUN: cat %t | sort | FileCheck %s -check-prefix=PERF2BOLT
+RUN: cat %t.new | FileCheck %s -check-prefix=NEWFORMAT
+
+# Test --profile-format option with perf2bolt
+RUN: perf2bolt %t.exe -o %t.fdata --pa -p %p/Inputs/pre-aggregated.txt \
+RUN:   --profile-format=fdata
+RUN: cat %t.fdata | sort | FileCheck %s -check-prefix=PERF2BOLT
+
+RUN: perf2bolt %t.exe -o %t.yaml --pa -p %p/Inputs/pre-aggregated.txt \
+RUN:   --profile-format=yaml --profile-use-dfs
+RUN: cat %t.yaml | FileCheck %s -check-prefix=NEWFORMAT
+
+# Test --profile-format option with llvm-bolt --aggregate-only
+RUN: llvm-bolt %t.exe -o %t.bolt.fdata --pa -p %p/Inputs/pre-aggregated.txt \
+RUN:   --aggregate-only --profile-format=fdata
+RUN: cat %t.bolt.fdata | sort | FileCheck %s -check-prefix=PERF2BOLT
+
+RUN: llvm-bolt %t.exe -o %t.bolt.yaml --pa -p %p/Inputs/pre-aggregated.txt \
+RUN:   --aggregate-only --profile-format=yaml --profile-use-dfs
+RUN: cat %t.bolt.yaml | FileCheck %s -check-prefix=NEWFORMAT
+
+PERF2BOLT: 0 [unknown] 7f36d18d60c0 1 main 53c 0 2
+PERF2BOLT: 1 main 451 1 SolveCubic 0 0 2
+PERF2BOLT: 1 main 490 0 [unknown] 4005f0 0 1
+PERF2BOLT: 1 main 537 0 [unknown] 400610 0 1
+PERF2BOLT: 1 usqrt 30 1 usqrt 32 0 22
+PERF2BOLT: 1 usqrt 30 1 usqrt 39 4 33
+PERF2BOLT: 1 usqrt 35 1 usqrt 39 0 22
+PERF2BOLT: 1 usqrt 3d 1 usqrt 10 0 58
+PERF2BOLT: 1 usqrt 3d 1 usqrt 3f 0 22
+PERF2BOLT: 1 usqrt a 1 usqrt 10 0 22
+
+NEWFORMAT:  - name:            'frame_dummy/1'
+NEWFORMAT:    fid:             3
+NEWFORMAT:    hash:            0x28C72085C0BD8D37
+NEWFORMAT:    exec:            1
+
+NEWFORMAT:  - name:            usqrt
+NEWFORMAT:    fid:             7
+NEWFORMAT:    exec:            0
+NEWFORMAT:    nblocks:         5
+NEWFORMAT:    blocks:
+NEWFORMAT:      - bid:             0
+NEWFORMAT:        insns:           4
+NEWFORMAT:        succ:            [ { bid: 1, cnt: 22 } ]
+NEWFORMAT:      - bid:             1
+NEWFORMAT:        insns:           9
+NEWFORMAT:        succ:            [ { bid: 3, cnt: 33, mis: 4 }, { bid: 2, cnt: 22 } ]
+NEWFORMAT:      - bid:             2
+NEWFORMAT:        insns:           2
+NEWFORMAT:        succ:            [ { bid: 3, cnt: 22 } ]
+NEWFORMAT:      - bid:             3
+NEWFORMAT:        insns:           2
+NEWFORMAT:        succ:            [ { bid: 1, cnt: 58 }, { bid: 4, cnt: 22 } ]

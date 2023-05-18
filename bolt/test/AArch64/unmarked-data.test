@@ -1,0 +1,34 @@
+// This test checks that multiple data objects in text of which only first is marked get disassembled properly
+
+// RUN: yaml2obj %S/Inputs/unmarked-data.yaml -o %t.exe
+// RUN: llvm-bolt %t.exe -o %t.bolt --lite=0 --use-old-text=0 2>&1 | FileCheck %s
+// CHECK-NOT: BOLT-WARNING
+// RUN: llvm-objdump -j .text -d --disassemble-symbols=first,second %t.bolt | FileCheck %s -check-prefix=CHECK-SYMBOL
+// CHECK-SYMBOL: <first>:
+// CHECK-SYMBOL: <second>:
+
+// YAML is based in the following assembly:
+
+  .equ val, 0x070b0f03  // we use constant that is not a valid instruction so that it can't be silently disassembled
+  .text
+
+first:
+  .xword val
+  .size first, .-first
+
+second:
+  .xword val
+  .size second, .-second
+
+  .globl dummy
+  .type dummy, %function
+dummy: // dummy function to force relocations
+    ret
+
+  .globl _start
+  .type _start, %function
+_start:
+    bl      dummy
+    mov     x0, #0
+    mov     w8, #93
+    svc     #0

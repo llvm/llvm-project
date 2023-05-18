@@ -1,0 +1,293 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX1010 -check-prefix=GCN %s
+
+# GCN-LABEL: {{^}}name: vop1_instructions
+
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_sdwa 0, %{{[0-9]+}}, 0, 5, 0, 5, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_FRACT_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_CVT_U32_F32_sdwa 0, %{{[0-9]+}}, 0, 5, 0, 5, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_CVT_F32_I32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit $mode, implicit $exec
+
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_sdwa 0, %{{[0-9]+}}, 0, 6, 0, 5, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_FRACT_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_CVT_U32_F32_sdwa 0, %{{[0-9]+}}, 0, 5, 0, 5, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_CVT_F32_I32_sdwa 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, implicit $mode, implicit $exec
+
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_FRACT_F32_sdwa 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_SIN_F32_sdwa 0, %{{[0-9]+}}, 1, 0, 5, 0, 5, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_CVT_U32_F32_sdwa 1, %{{[0-9]+}}, 0, 5, 0, 5, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_CVT_F32_I32_sdwa 0, %{{[0-9]+}}, 0, 1, 5, 0, 5, implicit $mode, implicit $exec
+
+---
+name:            vop1_instructions
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_32_xm0 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sreg_32_xm0 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32 }
+  - { id: 9, class: vgpr_32 }
+  - { id: 10, class: vgpr_32 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 12, class: vgpr_32 }
+  - { id: 13, class: vgpr_32 }
+  - { id: 14, class: vgpr_32 }
+  - { id: 15, class: vgpr_32 }
+  - { id: 16, class: vgpr_32 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vgpr_32 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vgpr_32 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vgpr_32 }
+  - { id: 23, class: vgpr_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vgpr_32 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: vgpr_32 }
+  - { id: 28, class: vgpr_32 }
+  - { id: 29, class: vgpr_32 }
+  - { id: 30, class: vgpr_32 }
+  - { id: 31, class: vgpr_32 }
+  - { id: 32, class: vgpr_32 }
+  - { id: 33, class: vgpr_32 }
+  - { id: 34, class: vgpr_32 }
+  - { id: 35, class: vgpr_32 }
+  - { id: 36, class: vgpr_32 }
+  - { id: 37, class: vgpr_32 }
+  - { id: 38, class: vgpr_32 }
+  - { id: 39, class: vgpr_32 }
+  - { id: 40, class: vgpr_32 }
+  - { id: 41, class: vgpr_32 }
+  - { id: 42, class: vgpr_32 }
+  - { id: 43, class: vgpr_32 }
+  - { id: 44, class: vgpr_32 }
+  - { id: 45, class: vgpr_32 }
+  - { id: 46, class: vgpr_32 }
+  - { id: 47, class: vgpr_32 }
+  - { id: 48, class: vgpr_32 }
+  - { id: 100, class: vgpr_32 }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_sgpr31
+
+    %2 = COPY $sgpr30_sgpr31
+    %1 = COPY $vgpr2_vgpr3
+    %0 = COPY $vgpr0_vgpr1
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
+
+    %5 = S_MOV_B32 65535
+    %6 = S_MOV_B32 65535
+
+    %10 = V_LSHRREV_B32_e64 16, %3, implicit $exec
+    %11 = V_MOV_B32_e32 %10, implicit $exec
+    %12 = V_LSHLREV_B32_e64 16, %11, implicit $exec
+    %14 = V_FRACT_F32_e32 123, implicit $mode, implicit $exec
+    %15 = V_LSHLREV_B32_e64 16, %14, implicit $exec
+    %16 = V_LSHRREV_B32_e64 16, %15, implicit $exec
+    %17 = V_SIN_F32_e32 %16, implicit $mode, implicit $exec
+    %18 = V_LSHLREV_B32_e64 16, %17, implicit $exec
+    %19 = V_LSHRREV_B32_e64 16, %18, implicit $exec
+    %20 = V_CVT_U32_F32_e32 %19, implicit $mode, implicit $exec
+    %21 = V_LSHLREV_B32_e64 16, %20, implicit $exec
+    %23 = V_CVT_F32_I32_e32 123, implicit $mode, implicit $exec
+    %24 = V_LSHLREV_B32_e64 16, %23, implicit $exec
+
+    %25 = V_LSHRREV_B32_e64 16, %3, implicit $exec
+    %26 = V_MOV_B32_e64 %25, implicit $exec
+    %26 = V_LSHLREV_B32_e64 16, %26, implicit $exec
+    %27 = V_FRACT_F32_e64 0, %6, 0, 0, implicit $mode, implicit $exec
+    %28 = V_LSHLREV_B32_e64 16, %27, implicit $exec
+    %29 = V_LSHRREV_B32_e64 16, %28, implicit $exec
+    %30 = V_SIN_F32_e64 0, %29, 0, 0, implicit $mode, implicit $exec
+    %31 = V_LSHLREV_B32_e64 16, %30, implicit $exec
+    %32 = V_LSHRREV_B32_e64 16, %31, implicit $exec
+    %33 = V_CVT_U32_F32_e64 0, %32, 0, 0, implicit $mode, implicit $exec
+    %34 = V_LSHLREV_B32_e64 16, %33, implicit $exec
+    %35 = V_CVT_F32_I32_e64 %6, 0, 0, implicit $mode, implicit $exec
+    %36 = V_LSHLREV_B32_e64 16, %35, implicit $exec
+
+
+    %37 = V_LSHRREV_B32_e64 16, %36, implicit $exec
+    %38 = V_FRACT_F32_e64 1, %37, 0, 0, implicit $mode, implicit $exec
+    %39 = V_LSHLREV_B32_e64 16, %38, implicit $exec
+    %40 = V_LSHRREV_B32_e64 16, %39, implicit $exec
+    %41 = V_SIN_F32_e64 0, %40, 1, 0, implicit $mode, implicit $exec
+    %42 = V_LSHLREV_B32_e64 16, %41, implicit $exec
+    %43 = V_LSHRREV_B32_e64 16, %42, implicit $exec
+    %44 = V_CVT_U32_F32_e64 1, %43, 0, 0, implicit $mode, implicit $exec
+    %45 = V_LSHLREV_B32_e64 16, %44, implicit $exec
+    %46 = V_LSHRREV_B32_e64 16, %45, implicit $exec
+    %47 = V_CVT_F32_I32_e64 %46, 0, 1, implicit $mode, implicit $exec
+    %48 = V_LSHLREV_B32_e64 16, %47, implicit $exec
+
+
+    %100 = V_MOV_B32_e32 %48, implicit $exec
+
+    FLAT_STORE_DWORD %0, %100, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
+    $sgpr30_sgpr31 = COPY %2
+    S_SETPC_B64_return $sgpr30_sgpr31
+
+...
+---
+# GCN-LABEL: {{^}}name: vop2_instructions
+
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 5, 0, 6, 5, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 6, 0, 5, 1, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_FMAC_F32_e32 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_FMAC_F16_e32 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, implicit $mode, implicit $exec
+
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_AND_B32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 5, 0, 6, 5, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_FMAC_F32_e64 0, 23, 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_FMAC_F16_e64 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 0, implicit $mode, implicit $exec
+
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_ADD_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 5, 1, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_SUB_F16_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 0, 5, 0, 6, 1, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_FMAC_F32_e64 1, 23, 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, 0, implicit $mode, implicit $exec
+# GFX1010: %{{[0-9]+}}:vgpr_32 = V_FMAC_F16_e64 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 2, implicit $mode, implicit $exec
+
+name:            vop2_instructions
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_32_xm0 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sreg_32_xm0 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32 }
+  - { id: 9, class: vgpr_32 }
+  - { id: 10, class: vgpr_32 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 12, class: vgpr_32 }
+  - { id: 13, class: vgpr_32 }
+  - { id: 14, class: vgpr_32 }
+  - { id: 15, class: vgpr_32 }
+  - { id: 16, class: vgpr_32 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vgpr_32 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vgpr_32 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vgpr_32 }
+  - { id: 23, class: vgpr_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vgpr_32 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: vgpr_32 }
+  - { id: 28, class: vgpr_32 }
+  - { id: 29, class: vgpr_32 }
+  - { id: 30, class: vgpr_32 }
+  - { id: 31, class: vgpr_32 }
+  - { id: 32, class: vgpr_32 }
+  - { id: 33, class: vgpr_32 }
+  - { id: 34, class: vgpr_32 }
+  - { id: 35, class: vgpr_32 }
+  - { id: 36, class: vgpr_32 }
+  - { id: 37, class: vgpr_32 }
+  - { id: 38, class: vgpr_32 }
+  - { id: 39, class: vgpr_32 }
+  - { id: 40, class: vgpr_32 }
+  - { id: 41, class: vgpr_32 }
+  - { id: 42, class: vgpr_32 }
+  - { id: 43, class: vgpr_32 }
+  - { id: 44, class: vgpr_32 }
+  - { id: 45, class: vgpr_32 }
+  - { id: 46, class: vgpr_32 }
+  - { id: 47, class: vgpr_32 }
+  - { id: 48, class: vgpr_32 }
+  - { id: 49, class: vgpr_32 }
+  - { id: 50, class: vgpr_32 }
+  - { id: 51, class: vgpr_32 }
+  - { id: 52, class: vgpr_32 }
+  - { id: 53, class: vgpr_32 }
+  - { id: 54, class: vgpr_32 }
+  - { id: 55, class: vgpr_32 }
+  - { id: 56, class: vgpr_32 }
+  - { id: 57, class: vgpr_32 }
+  - { id: 58, class: vgpr_32 }
+  - { id: 59, class: vgpr_32 }
+  - { id: 60, class: vgpr_32 }
+  - { id: 100, class: vgpr_32 }
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_sgpr31
+
+    %2 = COPY $sgpr30_sgpr31
+    %1 = COPY $vgpr2_vgpr3
+    %0 = COPY $vgpr0_vgpr1
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
+
+    %5 = S_MOV_B32 65535
+    %6 = S_MOV_B32 65535
+
+    %11 = V_LSHRREV_B32_e64 16, %3, implicit $exec
+    %12 = V_AND_B32_e32 %6, %11, implicit $exec
+    %13 = V_LSHLREV_B32_e64 16, %12, implicit $exec
+    %14 = V_LSHRREV_B32_e64 16, %13, implicit $exec
+    %15 = V_BFE_U32_e64 %13, 8, 8, implicit $exec
+    %16 = V_ADD_F32_e32 %14, %15, implicit $mode, implicit $exec
+    %17 = V_LSHLREV_B32_e64 16, %16, implicit $exec
+    %18 = V_LSHRREV_B32_e64 16, %17, implicit $exec
+    %19 = V_BFE_U32_e64 %17, 8, 8, implicit $exec
+    %20 = V_SUB_F16_e32 %18, %19, implicit $mode, implicit $exec
+    %21 = V_LSHLREV_B32_e64 16, %20, implicit $exec
+    %22 = V_BFE_U32_e64 %20, 8, 8, implicit $exec
+    %23 = V_FMAC_F32_e32 %21, %22, %22, implicit $mode, implicit $exec
+    %24 = V_LSHLREV_B32_e64 16, %23, implicit $exec
+    %25 = V_LSHRREV_B32_e64 16, %24, implicit $exec
+    %26 = V_BFE_U32_e64 %24, 8, 8, implicit $exec
+    %27 = V_FMAC_F16_e32 %25, %26, %26, implicit $mode, implicit $exec
+    %28 = V_LSHLREV_B32_e64 16, %27, implicit $exec
+
+    %29 = V_LSHRREV_B32_e64 16, %28, implicit $exec
+    %30 = V_AND_B32_e64 23, %29, implicit $exec
+    %31 = V_LSHLREV_B32_e64 16, %30, implicit $exec
+    %32 = V_LSHRREV_B32_e64 16, %31, implicit $exec
+    %33 = V_BFE_U32_e64 %31, 8, 8, implicit $exec
+    %34 = V_ADD_F32_e64 0, %32, 0, %33, 0, 0, implicit $mode, implicit $exec
+    %35 = V_LSHLREV_B32_e64 16, %34, implicit $exec
+    %37 = V_BFE_U32_e64 %35, 8, 8, implicit $exec
+    %38 = V_SUB_F16_e64 0, 23, 0, %37, 0, 0, implicit $mode, implicit $exec
+    %39 = V_LSHLREV_B32_e64 16, %38, implicit $exec
+    %40 = V_BFE_U32_e64 %39, 8, 8, implicit $exec
+    %41 = V_FMAC_F32_e64 0, 23, 0, %40, 0, %40, 0, 0, implicit $mode, implicit $exec
+    %42 = V_LSHLREV_B32_e64 16, %41, implicit $exec
+    %43 = V_LSHRREV_B32_e64 16, %42, implicit $exec
+    %44 = V_BFE_U32_e64 %42, 8, 8, implicit $exec
+    %45 = V_FMAC_F16_e64 0, %43, 0, %44, 0, %44, 0, 0, implicit $mode, implicit $exec
+    %46 = V_LSHLREV_B32_e64 16, %45, implicit $exec
+
+    %47 = V_LSHRREV_B32_e64 16, %46, implicit $exec
+    %48 = V_BFE_U32_e64 %46, 8, 8, implicit $exec
+    %49 = V_ADD_F32_e64 0, %47, 1, %48, 0, 0, implicit $mode, implicit $exec
+    %50 = V_LSHLREV_B32_e64 16, %49, implicit $exec
+    %51 = V_BFE_U32_e64 %50, 8, 8, implicit $exec
+    %52 = V_SUB_F16_e64 1, 23, 1, %51, 0, 0, implicit $mode, implicit $exec
+    %53 = V_LSHLREV_B32_e64 16, %52, implicit $exec
+    %54 = V_BFE_U32_e64 %53, 8, 8, implicit $exec
+    %55 = V_FMAC_F32_e64 1, 23, 1, %54, 1, %54, 1, 0, implicit $mode, implicit $exec
+    %56 = V_LSHLREV_B32_e64 16, %55, implicit $exec
+    %57 = V_LSHRREV_B32_e64 16, %56, implicit $exec
+    %58 = V_BFE_U32_e64 %56, 8, 8, implicit $exec
+    %59 = V_FMAC_F16_e64 1, %57, 1, %58, 1, %58, 0, 2, implicit $mode, implicit $exec
+    %60 = V_LSHLREV_B32_e64 16, %59, implicit $exec
+
+    %100 = V_MOV_B32_e32 %60, implicit $exec
+
+    FLAT_STORE_DWORD %0, %100, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
+    $sgpr30_sgpr31 = COPY %2
+    S_SETPC_B64_return $sgpr30_sgpr31
+
+...

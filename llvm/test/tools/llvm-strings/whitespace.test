@@ -1,0 +1,3 @@
+## Show that the default output format matches GNU strings.
+RUN: echo -n abcd | llvm-strings - | FileCheck %s --strict-whitespace --implicit-check-not={{.}}
+CHECK: {{^}}abcd{{$}}

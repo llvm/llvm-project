@@ -1,0 +1,44 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/at2.s -o %t.o
+# RUN: ld.lld -o %t.exe %t.o --script %s
+# RUN: llvm-readelf -l %t.exe | FileCheck %s
+# RUN: llvm-objdump --section-headers %t.exe | FileCheck %s --check-prefix=SECTIONS
+
+MEMORY {
+  AX (ax)    : ORIGIN = 0x2000, LENGTH = 0x100
+  AW (aw)    : ORIGIN = 0x3000, LENGTH = 0x100
+  FLASH (ax) : ORIGIN = 0x6000, LENGTH = 0x100
+  RAM (aw)   : ORIGIN = 0x7000, LENGTH = 0x100
+}
+
+SECTIONS {
+ .foo1 : { *(.foo1) } > AX AT>FLASH
+## In GNU ld, .foo1's LMA region is propagated to .foo2 because their VMA region
+## is the same and .foo2 does not set an explicit address.
+## lld sets .foo2's LMA region to null.
+ .foo2 : { *(.foo2) } > AX
+
+ .bar1 : { *(.bar1) } > AW
+ .bar2 : { *(.bar2) } > AW AT > RAM
+ .bar3 . : { *(.bar3) } > AW
+ .bar4 : { *(.bar4) } > AW AT >RAM
+}
+
+# CHECK:      Type  Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT: LOAD  0x001000 0x0000000000002000 0x0000000000006000 0x000008 0x000008 R E 0x1000
+# CHECK-NEXT: LOAD  0x001008 0x0000000000002008 0x0000000000002008 0x000008 0x000008 R E 0x1000
+# CHECK-NEXT: LOAD  0x002000 0x0000000000003000 0x0000000000003000 0x000008 0x000008 RW  0x1000
+# CHECK-NEXT: LOAD  0x002008 0x0000000000003008 0x0000000000007000 0x000008 0x000008 RW  0x1000
+# CHECK-NEXT: LOAD  0x002010 0x0000000000003010 0x0000000000003010 0x000008 0x000008 RW  0x1000
+# CHECK-NEXT: LOAD  0x002018 0x0000000000003018 0x0000000000007008 0x000008 0x000008 RW  0x1000
+
+# SECTIONS:      Sections:
+# SECTIONS-NEXT: Idx Name          Size     VMA
+# SECTIONS-NEXT:   0               00000000 0000000000000000
+# SECTIONS-NEXT:   1 .foo1         00000008 0000000000002000
+# SECTIONS-NEXT:   2 .foo2         00000008 0000000000002008
+# SECTIONS-NEXT:   3 .text         00000000 0000000000002010
+# SECTIONS-NEXT:   4 .bar1         00000008 0000000000003000
+# SECTIONS-NEXT:   5 .bar2         00000008 0000000000003008
+# SECTIONS-NEXT:   6 .bar3         00000008 0000000000003010
+# SECTIONS-NEXT:   7 .bar4         00000008 0000000000003018

@@ -1,0 +1,59 @@
+## Test that only debug sections are kept with --only-keep-debug.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --only-keep-debug %t
+# RUN: obj2yaml %t | FileCheck %s
+
+## Test that keep-section overrides only-keep-debug.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --only-keep-debug --keep-section=foo %t
+# RUN: obj2yaml %t | FileCheck --implicit-check-not=Name --check-prefix=CHECK --check-prefix=KEEP %s
+
+## Test that keep-section overrides only-keep-debug, even for known sections.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --only-keep-debug --keep-section=TYPE %t
+# RUN: obj2yaml %t | FileCheck --implicit-check-not=Name --check-prefix=CHECK --check-prefix=KEEPTYPE %s
+
+# CHECK:      Sections:
+# KEEPTYPE:     - Type: TYPE
+# CHECK-NOT:    - Type: TYPE
+# CHECK:        - Type: CUSTOM
+# CHECK-NEXT:     Name: .debug_info
+# CHECK:        - Type: CUSTOM
+# CHECK-NEXT:     Name: .debug_line
+# KEEP:           Name: foo
+
+## Test that remove-section overrides only-keep-debug.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --only-keep-debug --remove-section=.debug_info %t
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=NOINFO --implicit-check-not=.debug_info
+
+# NOINFO: Name: .debug_line
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - F32
+  - Type: CUSTOM
+    Name: .debug_info
+    Payload: CAFE1234
+  - Type: CUSTOM
+    Name: linking
+    Version: 2
+  - Type: CUSTOM
+    Name: producers
+    Tools:
+      - Name:   clang
+        Version: 9.0.0
+  - Type: CUSTOM
+    Name: .debug_line
+    Payload: DEADBEEF
+  - Type: CUSTOM
+    Name: foo
+    Payload: CAFE

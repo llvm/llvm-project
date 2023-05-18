@@ -1,0 +1,36 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses machine function's liveins
+# correctly.
+
+--- |
+
+  define i32 @test(i32 %a, i32 %b) {
+  body:
+    %c = add i32 %a, %b
+    ret i32 %c
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+# CHECK: liveins:
+# CHECK-NEXT: - { reg: '$edi', virtual-reg: '%0' }
+# CHECK-NEXT: - { reg: '$esi', virtual-reg: '%1' }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+body: |
+  bb.0.body:
+    liveins: $edi, $esi
+
+    %1 = COPY $esi
+    %0 = COPY $edi
+    %2 = ADD32rr %0, %1, implicit-def dead $eflags
+    $eax = COPY %2
+    RET64 $eax
+...

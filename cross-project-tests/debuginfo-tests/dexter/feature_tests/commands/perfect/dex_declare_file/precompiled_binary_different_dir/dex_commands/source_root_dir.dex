@@ -1,0 +1,22 @@
+## Purpose:
+##    Check that \DexDeclareFile's file declaration can be made relative to the
+##    --source-root-dir path.
+
+# UNSUPPORTED: system-darwin
+
+# RUN: %clang %S/../source/test.cpp -O0 -g -o %t
+# RUN: %dexter_regression_base --binary %t \
+# RUN:   --source-root-dir="%S/../source" -- %s | FileCheck %s
+# RUN: rm %t
+
+# CHECK: source_root_dir.dex: (1.0000)
+
+## ../source/test.cpp
+## 1. int main() {
+## 2.   int result = 0;
+## 3.   return result;
+## 4. }
+
+## test.cpp is found in ../source, which we set as the source-root-dir.
+DexDeclareFile('test.cpp')
+DexExpectWatchValue('result', 0, on_line=3)

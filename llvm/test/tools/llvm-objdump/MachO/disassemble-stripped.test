@@ -1,0 +1,6 @@
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/hello.exe.stripped.macho-x86_64 | FileCheck %s
+
+CHECK: (__TEXT,__text) section
+CHECK: 0000000100000f30	pushq	%rbp
+CHECK: 0000000100000f31	movq	%rsp, %rbp
+CHECK: 0000000100000f34	subq	$0x20, %rsp

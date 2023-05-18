@@ -1,0 +1,13 @@
+RUN: llvm-remarkutil size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/2-identical-func-1-instr-1-stack.yaml --parser=yaml | FileCheck -strict-whitespace %s --check-prefix=ADD
+RUN: llvm-remarkutil size-diff %p/Inputs/2-identical-func-1-instr-1-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml  --parser=yaml | FileCheck -strict-whitespace %s --check-prefix=REMOVE
+
+; The "two-identical-one-instr-funcs" file contains a single-instruction
+; function which does not appear in the other file.
+
+; ADD: ++ > func1, 1 instrs, 1 stack B
+; ADD-DAG: instruction count: 1 (100.00%)
+; ADD-DAG: stack byte usage: 1 (100.00%)
+
+; REMOVE: -- < func1, -1 instrs, -1 stack B
+; REMOVE-DAG: instruction count: -1 (-50.00%)
+; REMOVE-DAG: stack byte usage: -1 (-50.00%)

@@ -1,0 +1,29 @@
+# RUN: not --crash llc -mtriple=i686-- -run-pass liveintervals -o - %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+--- |
+  define void @func() { ret void }
+...
+---
+# Liveness calculation should detect that we do not have a definition for %0
+# on all paths; In this example a def for %0 is missing when jumping from
+# bb.0 to bb.3.
+#
+# CHECK: Use of %0 does not have a corresponding definition on every path
+# CHECK: ERROR: Use not jointly dominated by defs.
+name: func
+registers:
+  - { id: 0, class: gr32 }
+body: |
+  bb.0:
+    JCC_1 %bb.2, 15, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.2:
+    %0 = IMPLICIT_DEF
+    JMP_1 %bb.3
+
+  bb.3:
+    $eax = COPY %0
+    RET64 $eax
+...

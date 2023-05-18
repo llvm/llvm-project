@@ -1,0 +1,897 @@
+# RUN: yaml2obj --docnum=1 %s -o %t.armv7
+# RUN: llvm-objdump --private-headers %t.armv7 | FileCheck %s --check-prefix=ARMV7
+
+# ARMV7:       segname __PAGEZERO
+# ARMV7-NEXT:  vmaddr 0x00000000
+# ARMV7-NEXT:  vmsize 0x00004000
+# ARMV7:       segname __TEXT
+# ARMV7-NEXT:  vmaddr 0x00004000
+# ARMV7-NEXT:  vmsize 0x00008000
+# ARMV7:       segname __LINKEDIT
+# ARMV7-NEXT:  vmaddr 0x0000c000
+# ARMV7-NEXT:  vmsize 0x00004000
+
+# RUN: yaml2obj --docnum=2 %s -o %t.arm64
+# RUN: llvm-objdump --private-headers %t.arm64 | FileCheck %s --check-prefix=ARM64
+
+# ARM64:       segname __PAGEZERO
+# ARM64-NEXT:  vmaddr 0x0000000000000000
+# ARM64-NEXT:  vmsize 0x0000000100000000
+# ARM64:       segname __TEXT
+# ARM64-NEXT:  vmaddr 0x0000000100000000
+# ARM64-NEXT:  vmsize 0x0000000000008000
+# ARM64:       segname __LINKEDIT
+# ARM64-NEXT:  vmaddr 0x0000000100008000
+# ARM64-NEXT:  vmsize 0x0000000000004000
+
+# RUN: yaml2obj --docnum=3 %s -o %t.arm64_32
+# RUN: llvm-objdump --private-headers %t.arm64_32 | FileCheck %s --check-prefix=ARM64_32
+
+# ARM64_32:       segname __PAGEZERO
+# ARM64_32-NEXT:  vmaddr 0x00000000
+# ARM64_32-NEXT:  vmsize 0x00004000
+# ARM64_32:       segname __TEXT
+# ARM64_32-NEXT:  vmaddr 0x00004000
+# ARM64_32-NEXT:  vmsize 0x00008000
+# ARM64_32:       segname __LINKEDIT
+# ARM64_32-NEXT:  vmaddr 0x0000c000
+# ARM64_32-NEXT:  vmsize 0x00004000
+
+# RUN: yaml2obj --docnum=4 %s -o %t.x86_64
+# RUN: llvm-objdump --private-headers %t.x86_64 | FileCheck %s --check-prefix=X86_64
+
+# X86_64:       segname __PAGEZERO
+# X86_64-NEXT:  vmaddr 0x0000000000000000
+# X86_64-NEXT:  vmsize 0x0000000100000000
+# X86_64:       segname __TEXT
+# X86_64-NEXT:  vmaddr 0x0000000100000000
+# X86_64-NEXT:  vmsize 0x0000000000001000
+# X86_64:       segname __LINKEDIT
+# X86_64-NEXT:  vmaddr 0x0000000100001000
+# X86_64-NEXT:  vmsize 0x0000000000001000
+
+## Input binaries:
+
+## Case 1: armv7 iOS binary.
+## This binary can be built on OSX as follows:
+## main.c: int main() { return 0; }
+## xcrun -sdk iphoneos clang -arch armv7 main.c -o main.exe
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x0000000C
+  cpusubtype:      0x00000009
+  filetype:        0x00000002
+  ncmds:           15
+  sizeofcmds:      600
+  flags:           0x00200085
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT
+    cmdsize:         124
+    segname:         __TEXT
+    vmaddr:          16384
+    vmsize:          32768
+    fileoff:         0
+    filesize:        32768
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x000000000000BFF6
+        size:            10
+        offset:          0x00007FF6
+        align:           1
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         81B00020009001B07047
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __LINKEDIT
+    vmaddr:          49152
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        132
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      32768
+    export_size:     44
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32816
+    nsyms:           3
+    stroff:          32852
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      2
+    iundefsym:       2
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         28
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    3
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            C84A0193-BE6F-3625-882F-CBFC052AF6CF
+  - cmd:             LC_VERSION_MIN_IPHONEOS
+    cmdsize:         16
+    version:         680803
+    sdk:             852480
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        32759
+    stacksize:       0
+  - cmd:             LC_ENCRYPTION_INFO
+    cmdsize:         20
+    cryptoff:        16384
+    cryptsize:       16384
+    cryptid:         0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         52
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 83951616
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    2
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32812
+    datasize:        4
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32816
+    datasize:        0
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0000000000000000
+    Address:         0x0000000000000000
+    Other:           0x0000000000000000
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0000000000000000
+        Address:         0x0000000000000000
+        Other:           0x0000000000000000
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      33
+            Name:            _mh_execute_header
+            Flags:           0x0000000000000000
+            Address:         0x0000000000000000
+            Other:           0x0000000000000000
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      37
+            Name:            main
+            Flags:           0x0000000000000000
+            Address:         0x0000000000007FF7
+            Other:           0x0000000000000000
+            ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          16
+      n_value:         16384
+    - n_strx:          22
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          8
+      n_value:         49142
+    - n_strx:          28
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - dyld_stub_binder
+    - ''
+    - ''
+    - ''
+...
+
+## Case 2: arm64 iOS binary.
+## This binary can be built on OSX as follows:
+## main.c: int main() { return 0; }
+## xcrun -sdk iphoneos clang -arch arm64 main.c -o main.exe
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      0x00000000
+  filetype:        0x00000002
+  ncmds:           15
+  sizeofcmds:      768
+  flags:           0x00200085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          32768
+    fileoff:         0
+    filesize:        32768
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100007FA0
+        size:            24
+        offset:          0x00007FA0
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         FF4300D1FF0F00B908008052E00308AAFF430091C0035FD6
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x0000000100007FB8
+        size:            72
+        offset:          0x00007FB8
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         010000001C000000000000001C000000000000001C00000002000000A07F00003400000034000000B97F00000000000034000000030000000C000100100001000000000000100002
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4295000064
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        152
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      32768
+    export_size:     48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32824
+    nsyms:           3
+    stroff:          32872
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      2
+    iundefsym:       2
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            945B24FC-E351-3186-9D74-A88A7A93392A
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        2
+    minos:           852480
+    sdk:             852480
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         34734080
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        32672
+    stacksize:       0
+  - cmd:             LC_ENCRYPTION_INFO_64
+    cmdsize:         24
+    cryptoff:        16384
+    cryptsize:       16384
+    cryptid:         0
+    pad:             0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 83951616
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32816
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32824
+    datasize:        0
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0000000000000000
+    Address:         0x0000000000000000
+    Other:           0x0000000000000000
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0000000000000000
+        Address:         0x0000000000000000
+        Other:           0x0000000000000000
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      33
+            Name:            _mh_execute_header
+            Flags:           0x0000000000000000
+            Address:         0x0000000000000000
+            Other:           0x0000000000000000
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      37
+            Name:            main
+            Flags:           0x0000000000000000
+            Address:         0x0000000000007FA0
+            Other:           0x0000000000000000
+            ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294999968
+    - n_strx:          28
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - dyld_stub_binder
+    - ''
+    - ''
+    - ''
+...
+
+## Case 3: arm64_32 WatchOS binary.
+## This binary can be built on OSX as follows:
+## main.c: int main() { return 0; }
+## xcrun -sdk watchos clang -arch arm64_32 main.c -o main.exe
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x0200000C
+  cpusubtype:      0x00000001
+  filetype:        0x00000002
+  ncmds:           15
+  sizeofcmds:      684
+  flags:           0x00200085
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT
+    cmdsize:         192
+    segname:         __TEXT
+    vmaddr:          16384
+    vmsize:          32768
+    fileoff:         0
+    filesize:        32768
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x000000000000BFA0
+        size:            24
+        offset:          0x00007FA0
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         FF4300D108008052E80F00B9E00308AAFF430091C0035FD6
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x000000000000BFB8
+        size:            72
+        offset:          0x00007FB8
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         010000001C000000000000001C000000000000001C00000002000000A07F00003400000034000000B97F00000000000034000000030000000C000100100001000000000000100002
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __LINKEDIT
+    vmaddr:          49152
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        132
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      32768
+    export_size:     44
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          32816
+    nsyms:           3
+    stroff:          32852
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      2
+    iundefsym:       2
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         28
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    3
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            F33E5680-8F64-3402-8952-7FD251400D78
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        4
+    minos:           393472
+    sdk:             393472
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         34734080
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        32672
+    stacksize:       0
+  - cmd:             LC_ENCRYPTION_INFO
+    cmdsize:         20
+    cryptoff:        16384
+    cryptsize:       16384
+    cryptid:         0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         52
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 83951616
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    2
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         32812
+    datasize:        4
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         32816
+    datasize:        0
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0000000000000000
+    Address:         0x0000000000000000
+    Other:           0x0000000000000000
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0000000000000000
+        Address:         0x0000000000000000
+        Other:           0x0000000000000000
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      33
+            Name:            _mh_execute_header
+            Flags:           0x0000000000000000
+            Address:         0x0000000000000000
+            Other:           0x0000000000000000
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      37
+            Name:            main
+            Flags:           0x0000000000000000
+            Address:         0x0000000000007FA0
+            Other:           0x0000000000000000
+            ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          16
+      n_value:         16384
+    - n_strx:          22
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         49056
+    - n_strx:          28
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - dyld_stub_binder
+    - ''
+    - ''
+    - ''
+...
+
+## Case 4: x86_64 OSX binary.
+## This binary can be built on OSX as follows:
+## main.c: int main() { return 0; }
+## clang -arch x86_64 main.c -o main.exe
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           14
+  sizeofcmds:      744
+  flags:           0x00200085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100000FA0
+        size:            15
+        offset:          0x00000FA0
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         554889E531C0C745FC000000005DC3
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x0000000100000FB0
+        size:            72
+        offset:          0x00000FB0
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         010000001C000000000000001C000000000000001C00000002000000A00F00003400000034000000B00F00000000000034000000030000000C000100100001000000000000000001
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        152
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      4096
+    export_size:     48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          4152
+    nsyms:           3
+    stroff:          4200
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      2
+    iundefsym:       2
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            D70F7C9D-410A-3567-83E2-4CA3F33585FF
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           658944
+    sdk:             658944
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         34734080
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        4000
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 82115073
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         4144
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         4152
+    datasize:        0
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0000000000000000
+    Address:         0x0000000000000000
+    Other:           0x0000000000000000
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0000000000000000
+        Address:         0x0000000000000000
+        Other:           0x0000000000000000
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      33
+            Name:            _mh_execute_header
+            Flags:           0x0000000000000000
+            Address:         0x0000000000000000
+            Other:           0x0000000000000000
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      37
+            Name:            main
+            Flags:           0x0000000000000000
+            Address:         0x0000000000000FA0
+            Other:           0x0000000000000000
+            ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971296
+    - n_strx:          28
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - dyld_stub_binder
+    - ''
+    - ''
+    - ''
+...

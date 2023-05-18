@@ -1,0 +1,75 @@
+# RUN: llc %s -emit-call-site-info -run-pass=block-placement -tail-dup-placement-threshold=4 -o - | FileCheck %s
+#
+# Test case adapted from test/CodeGen/X86/taildup-heapallocsite.ll.
+
+# CHECK-LABEL: callSites:
+# CHECK-NEXT:   - { bb: 1, offset: 1, fwdArgRegs:
+# CHECK-NEXT:       - { arg: 0, reg: '$rcx' } }
+# CHECK-NEXT:   - { bb: 2, offset: 1, fwdArgRegs:
+# CHECK-NEXT:       - { arg: 0, reg: '$rcx' } }
+
+--- |
+  target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-pc-windows-msvc19.22.27905"
+
+  define dso_local void @taildupit(ptr readonly %size_ptr) {
+  entry:
+    %tobool = icmp eq ptr %size_ptr, null
+    br i1 %tobool, label %cond.end, label %cond.true
+
+  cond.true:                                        ; preds = %entry
+    %0 = load i32, ptr %size_ptr, align 4
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.true, %entry
+    %cond = phi i32 [ %0, %cond.true ], [ 1, %entry ]
+    %call = tail call ptr @alloc(i32 %cond)
+    tail call void @f2()
+    ret void
+  }
+
+  declare dso_local ptr @alloc(i32)
+
+  declare dso_local void @f2()
+
+...
+---
+name:            taildupit
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rcx', virtual-reg: '' }
+callSites:
+  - { bb: 3, offset: 0, fwdArgRegs:
+      - { arg: 0, reg: '$rcx' } }
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $rcx
+
+    $rsp = frame-setup SUB64ri8 $rsp, 40, implicit-def dead $eflags
+    frame-setup SEH_StackAlloc 40
+    frame-setup SEH_EndPrologue
+    TEST64rr renamable $rcx, renamable $rcx, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    renamable $ecx = MOV32ri 1
+    JMP_1 %bb.3
+
+  bb.2.cond.true:
+    successors: %bb.3(0x80000000)
+    liveins: $rcx
+
+    renamable $ecx = MOV32rm killed renamable $rcx, 1, $noreg, 0, $noreg :: (load (s32) from %ir.size_ptr)
+
+  bb.3.cond.end:
+    liveins: $ecx
+
+    CALL64pcrel32 @alloc, csr_win64, implicit $rsp, implicit $ssp, implicit $ecx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+    SEH_Epilogue
+    $rsp = frame-destroy ADD64ri8 $rsp, 40, implicit-def dead $eflags
+    TAILJMPd64 @f2, csr_win64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp
+
+...

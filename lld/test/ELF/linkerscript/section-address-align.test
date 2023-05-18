@@ -1,0 +1,34 @@
+# REQUIRES: x86
+## Test ALIGN when specifying the output section address.
+
+# RUN: echo '.globl _start; _start: ret; \
+# RUN:   .data.rel.ro; .balign 8; .byte 0; \
+# RUN:   .data; .byte 0; \
+# RUN:   .bss; .balign 32; .byte 0' | \
+# RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %t.o
+# RUN: ld.lld -T %s %t.o -o %t 2>&1 | FileCheck --check-prefix=WARN %s --implicit-check-not=warning:
+# RUN: llvm-readelf -S %t | FileCheck %s
+
+# WARN: warning: address (0x10004) of section .data.rel.ro is not a multiple of alignment (8)
+# WARN: warning: address (0x20008) of section .bss is not a multiple of alignment (32)
+
+# CHECK:      Name         Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK-NEXT:              NULL     0000000000000000 000000 000000 00      0   0  0
+# CHECK-NEXT: .text        PROGBITS 0000000000010000 001000 000001 00  AX  0   0  4
+# CHECK-NEXT: .data.rel.ro PROGBITS 0000000000010004 001004 000005 00  WA  0   0  8
+# CHECK-NEXT: .data        PROGBITS 0000000000020000 002000 000001 00  WA  0   0  1
+# CHECK-NEXT: .bss         NOBITS   0000000000020008 002001 000019 00  WA  0   0 32
+
+SECTIONS {
+  .text 0x10000 : { *(.text) }
+  ## The output .data.rel.ro starts at 0x10004.
+  ## The input .data.rel.ro starts at 0x10008 and ends at 0x10009.
+  ## sh_size(.data.rel.ro) = 0x10009-0x10004 = 0x5.
+  .data.rel.ro ALIGN(4) : { *(.data.rel.ro) }
+
+  .data 0x20000 : { *(.data) }
+  ## The output .bss starts at 0x20008.
+  ## The input .bss starts at 0x20020 and ends at 0x20021.
+  ## sh_size(.bss) = 0x20021-0x20008 = 0x19.
+  .bss ALIGN(8) : { *(.bss) }
+}

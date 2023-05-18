@@ -1,0 +1,11 @@
+; RUN: llvm-undname -warn-trailing 2>&1 < %s | FileCheck %s
+
+?x@@3HAasdf
+; CHECK: ?x@@3HAasdf
+; CHECK-NEXT: int x
+; CHECK-NEXT: warning: trailing characters: asdf
+
+.?AVNet@@
+; CHECK: .?AVNet@@
+; CHECK-NEXT: class Net `RTTI Type Descriptor Name'
+; CHECK-NOT: warning: trailing characters

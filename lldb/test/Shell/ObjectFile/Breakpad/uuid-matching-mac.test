@@ -1,0 +1,13 @@
+# RUN: yaml2obj %S/Inputs/uuid-matching-mac.yaml -o %T/uuid-matching-mac.out
+# RUN: cd %S
+# RUN: %lldb %T/uuid-matching-mac.out -s %s -o exit | FileCheck %s
+
+target symbols add Inputs/uuid-matching-mac.syms
+# CHECK-LABEL: target symbols add
+# CHECK: symbol file '{{.*}}uuid-matching-mac.syms' has been added to '{{.*}}uuid-matching-mac.out'
+
+image lookup -n main
+# CHECK-LABEL: image lookup
+# CHECK: Address: uuid-matching-mac.out[0x0000000100000f90]
+
+

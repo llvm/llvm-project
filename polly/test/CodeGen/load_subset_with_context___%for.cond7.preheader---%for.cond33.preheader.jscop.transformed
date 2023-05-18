@@ -1,0 +1,74 @@
+{
+   "arrays" : [
+      {
+         "name" : "MemRef_ATH",
+         "sizes" : [ "*" ],
+         "type" : "float"
+      },
+      {
+         "name" : "MemRef_ath",
+         "sizes" : [ "*" ],
+         "type" : "float"
+      }
+   ],
+   "context" : "[p_0] -> {  : 0 <= p_0 <= 16 }",
+   "name" : "%for.cond7.preheader---%for.cond33.preheader",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "[p_0] -> { Stmt_for_cond7_preheader[i0] -> MemRef_ATH[0] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[p_0] -> { Stmt_for_cond7_preheader[i0] -> MemRef_ath[i0] }"
+            }
+         ],
+         "domain" : "[p_0] -> { Stmt_for_cond7_preheader[i0] : 0 <= i0 <= 55 }",
+         "name" : "Stmt_for_cond7_preheader",
+         "schedule" : "[p_0] -> { Stmt_for_cond7_preheader[i0] -> [i0, 0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[p_0] -> { Stmt_if_then_3[i0] -> MemRef_ath[i0] }"
+            }
+         ],
+         "domain" : "[p_0] -> { Stmt_if_then_3[i0] : 0 <= i0 <= 84 - 4p_0 and i0 <= 55 }",
+         "name" : "Stmt_if_then_3",
+         "schedule" : "[p_0] -> { Stmt_if_then_3[i0] -> [i0, 2] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "[p_0] -> { Stmt_if_else_3[i0] -> MemRef_ath[i0] : i0 >= 0 }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[p_0] -> { Stmt_if_else_3[i0] -> MemRef_ath[i0] : i0 >= 0 }"
+            }
+         ],
+         "domain" : "[p_0] -> { Stmt_if_else_3[i0] : 85 - 4p_0 <= i0 <= 55 }",
+         "name" : "Stmt_if_else_3",
+         "schedule" : "[p_0] -> { Stmt_if_else_3[i0] -> [i0, 1] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "[p_0] -> { Stmt_for_inc_3[i0] -> MemRef_ath[i0] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[p_0] -> { Stmt_for_inc_3[i0] -> MemRef_ath[i0] }"
+            }
+         ],
+         "domain" : "[p_0] -> { Stmt_for_inc_3[i0] : 0 <= i0 <= 55 }",
+         "name" : "Stmt_for_inc_3",
+         "schedule" : "[p_0] -> { Stmt_for_inc_3[i0] -> [i0, 3] }"
+      }
+   ]
+}

@@ -1,0 +1,57 @@
+RUN: llvm-nm --format=darwin %p/Inputs/darwin-m-test1.mach0-armv7 \
+RUN:         | FileCheck %s -check-prefix test1
+RUN: llvm-nm --format=darwin %p/Inputs/darwin-m-test2.macho-i386 \
+RUN:         | FileCheck %s -check-prefix test2
+RUN: llvm-nm -m %p/Inputs/darwin-m-test3.macho-x86-64 \
+RUN:         | FileCheck %s -check-prefix test3
+
+# This is testing that the various bits in the n_desc feild are correct
+test1: 00000001 (absolute) non-external _a
+test1: 00000008 (common) (alignment 2^2) external _c
+test1: 0000000a (__DATA,__data) non-external [no dead strip] _d
+test1: 00000004 (__TEXT,__text) non-external [alt entry] _e
+test1: 00000000 (__TEXT,__text) non-external [symbol resolver] _r
+test1: 00000008 (__TEXT,__text) non-external [Thumb] _t
+
+# This is testing that an N_INDR symbol gets its alias name, the "(for ...)"
+test2:          (undefined) external __i
+test2:          (indirect) external _i (for __i)
+
+# This is testing is using darwin-m-test3.macho-x86-64 that is linked with
+# dylibs that have the follow set of -install_names:
+#	Foo.framework/Foo
+#	/System/Library/Frameworks/FooPath.framework/FooPath
+#	FooSuffix.framework/FooSuffix_debug
+#	/System/Library/Frameworks/FooPathSuffix.framework/FooPathSuffix_profile
+#	FooVers.framework/Versions/A/FooVers
+#	/System/Library/Frameworks/FooPathVers.framework/Versions/B/FooPathVers
+#	libx.dylib
+#	libxSuffix_profile.dylib
+#	/usr/local/lib/libxPathSuffix_debug.dylib
+#	libATS.A_profile.dylib
+#	/usr/lib/libPathATS.A_profile.dylib
+#	QT.A.qtx
+#	/lib/QTPath.qtx
+#	/usr/lib/libfoo_bar.dylib
+#	/usr/lib/libfoo_bar_profile.dylib
+#	/usr/lib/libSystem.B.dylib
+# to test that MachOObjectFile::guessLibraryShortName() is correctly parsing
+# them into their short names.
+test3: 0000000100000000 (__TEXT,__text) [referenced dynamically] external __mh_execute_header
+test3:                  (undefined) external _atsPathVersSuffix (from libPathATS)
+test3:                  (undefined) external _atsVersSuffix (from libATS)
+test3:                  (undefined) external _foo (from Foo)
+test3:                  (undefined) external _fooPath (from FooPath)
+test3:                  (undefined) external _fooPathSuffix (from FooPathSuffix)
+test3:                  (undefined) external _fooPathVers (from FooPathVers)
+test3:                  (undefined) external _fooSuffix (from FooSuffix)
+test3:                  (undefined) external _fooVers (from FooVers)
+test3:                  (undefined) external _foo_bar (from libfoo_bar)
+test3:                  (undefined) external _foo_barSuffix (from libfoo_barSuffix)
+test3: 0000000100000e50 (__TEXT,__text) external _main
+test3:                  (undefined) external _qt (from QT)
+test3:                  (undefined) external _qtPath (from QTPath)
+test3:                  (undefined) external _x (from libx)
+test3:                  (undefined) external _xPathSuffix (from libxPathSuffix)
+test3:                  (undefined) external _xSuffix (from libxSuffix)
+test3:                  (undefined) external dyld_stub_binder (from libSystem)

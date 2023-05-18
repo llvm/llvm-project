@@ -1,0 +1,178 @@
+# RUN: llvm-mc -triple=thumbv8.1m.main-none-eabi -mattr=+8msecext,+mve -show-encoding -disassemble < %s 2> %t | FileCheck --check-prefix=CHECK %s
+# RUN: FileCheck --check-prefix=STDERR < %t %s
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x11,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x12,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x13,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x14,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x15,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x16,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x17,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x18,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x19,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x1a,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x1b,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x1c,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x1d,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x1e,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x1f,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x30,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x50,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x70,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0x90,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0xb0,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0xd0,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmsr  fpscr, r0  @ encoding: [0xe1,0xee,0x10,0x0a]
+[0xe1,0xee,0xf0,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x11,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x12,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x13,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x14,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x15,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x16,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x17,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x18,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x19,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x1a,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x1b,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x1c,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x1d,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x1e,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x1f,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x30,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x50,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x70,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0x90,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0xb0,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0xd0,0x0a]
+
+# STDERR: [[@LINE+2]]:2: warning: potentially undefined instruction encoding
+# CHECK: vmrs  r0, fpscr  @ encoding: [0xf1,0xee,0x10,0x0a]
+[0xf1,0xee,0xf0,0x0a]

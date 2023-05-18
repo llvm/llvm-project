@@ -1,0 +1,869 @@
+;--------------------------------------------------
+; Use -strict-whitespace to check marker and note alignment here.
+; (Also check multiline marker where start/end columns vary across lines.)
+;
+; In the remaining checks, don't use -strict-whitespace and thus check just the
+; presence, order, and lengths of markers.  That way, if we ever change padding
+; within line labels, we don't have to adjust so many tests.
+;--------------------------------------------------
+
+; RUN: echo 'hello world' > %t.in
+; RUN: echo 'goodbye' >> %t.in
+; RUN: echo 'world' >> %t.in
+; RUN: echo 'unicorn' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK: universe' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -strict-whitespace -match-full-lines -check-prefix=ALIGN \
+; RUN:             -implicit-check-not='remark:' %s
+
+; Verbose diagnostics are suppressed but not errors.
+; ALIGN:{{.*}}error:{{.*}}
+; ALIGN:{{.*}}possible intended match here{{.*}}
+
+; ALIGN:Input was:
+; ALIGN-NEXT:<<<<<<
+; ALIGN-NEXT:           1: hello world 
+; ALIGN-NEXT:check:1       ^~~~~
+; ALIGN-NEXT:check:2'0          X~~~~~~ error: no match found
+; ALIGN-NEXT:           2: goodbye 
+; ALIGN-NEXT:check:2'0     ~~~~~~~~
+; ALIGN-NEXT:           3: world 
+; ALIGN-NEXT:check:2'0     ~~~~~~
+; ALIGN-NEXT:           4: unicorn 
+; ALIGN-NEXT:check:2'0     ~~~~~~~~
+; ALIGN-NEXT:check:2'1     ?        possible intended match
+; ALIGN-NEXT:>>>>>>
+; ALIGN-NOT:{{.}}
+
+;--------------------------------------------------
+; CHECK (also: multi-line search range, fuzzy match)
+;--------------------------------------------------
+
+; Good match and no match.
+
+; RUN: echo 'hello'   > %t.in
+; RUN: echo 'again'   >> %t.in
+; RUN: echo 'whirled' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK: world' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=CHK \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CHK,CHK-V \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CHK,CHK-V \
+; RUN:             -implicit-check-not='remark:'
+
+; Verbose diagnostics are suppressed but not errors.
+; CHK: {{.*}}error:{{.*}}
+; CHK: {{.*}}possible intended match here{{.*}}
+
+; CHK:        <<<<<<
+; CHK-NEXT:              1: hello 
+; CHK-V-NEXT: check:1       ^~~~~
+; CHK-NEXT:   check:2'0          X error: no match found
+; CHK-NEXT:              2: again 
+; CHK-NEXT:   check:2'0     ~~~~~~
+; CHK-NEXT:              3: whirled 
+; CHK-NEXT:   check:2'0     ~~~~~~~~
+; CHK-NEXT:   check:2'1     ?        possible intended match
+; CHK-NEXT:   >>>>>>
+; CHK-NOT:    {{.}}
+
+;--------------------------------------------------
+; CHECK-COUNT-<num>
+;--------------------------------------------------
+
+; Good match and no match.
+
+; RUN: echo 'pete'   > %t.in
+; RUN: echo 'repete' >> %t.in
+; RUN: echo 'repeat' >> %t.in
+
+; RUN: echo 'CHECK-COUNT-3: pete' > %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CNT,CNT-Q \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CNT,CNT-V \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CNT,CNT-V \
+; RUN:             -implicit-check-not='remark:'
+
+; Verbose diagnostics are suppressed but not errors.
+; CNT: {{.*}}error:{{.*}}
+
+; CNT:          <<<<<<
+; CNT-NEXT:                1: pete 
+; CNT-V-NEXT:   count:1'0     ^~~~
+; CNT-NEXT:                2: repete 
+; CNT-V-NEXT:   count:1'1       ^~~~
+; CNT-Q-NEXT:   count:1'0           X error: no match found
+; CNT-V-NEXT:   count:1'2           X error: no match found
+; CNT-NEXT:                3: repeat 
+; CNT-Q-NEXT:   count:1'0     ~~~~~~~
+; CNT-Q-NEXT:   count:1'1     ?       possible intended match
+; CNT-V-NEXT:   count:1'2     ~~~~~~~
+; CNT-V-NEXT:   count:1'3     ?       possible intended match
+; CNT-NEXT:     >>>>>>
+; CNT-NOT:      {{.}}
+
+;--------------------------------------------------
+; CHECK-NEXT (also: EOF search-range, wrong-line match)
+;--------------------------------------------------
+
+; Good match and no match.
+
+; RUN: echo 'hello' > %t.in
+; RUN: echo 'again' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK-NEXT: again' >> %t.chk
+; RUN: echo 'CHECK-NEXT: world' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=NXT \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NXT,NXT-V \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NXT,NXT-V,NXT-VV \
+; RUN:             -implicit-check-not='remark:' -allow-unused-prefixes
+
+; Verbose diagnostics are suppressed but not errors.
+; NXT: {{.*}}error:{{.*}}
+
+; NXT:        <<<<<<
+; NXT-NEXT:            1: hello 
+; NXT-V-NEXT: check:1     ^~~~~
+; NXT-NEXT:            2: again 
+; NXT-V-NEXT: next:2      ^~~~~
+; NXT-NEXT:   next:3           X error: no match found
+; NXT-NEXT:   >>>>>>
+; NXT-NOT:    {{.}}
+
+; Wrong-line match.
+
+; RUN: echo 'yonder' >> %t.in
+; RUN: echo 'world' >> %t.in
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=NXT2
+
+; NXT2:      <<<<<<
+; NXT2-NEXT:         1: hello 
+; NXT2-NEXT:         2: again 
+; NXT2-NEXT:         3: yonder 
+; NXT2-NEXT:         4: world 
+; NXT2-NEXT: next:3     !~~~~  error: match on wrong line
+; NXT2-NEXT: >>>>>>
+; NXT2-NOT:  {{.}}
+
+;--------------------------------------------------
+; CHECK-SAME (also: multiple annotations per line, single-char search range,
+; wrong-line match)
+;--------------------------------------------------
+
+; Good match and no match.
+
+; RUN: echo 'hello world!' > %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK-SAME: world' >> %t.chk
+; RUN: echo 'CHECK-SAME: again' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=SAM \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=SAM,SAM-V \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=SAM,SAM-V,SAM-VV \
+; RUN:             -implicit-check-not='remark:' -allow-unused-prefixes
+
+; Verbose diagnostics are suppressed but not errors.
+; SAM: {{.*}}error:{{.*}}
+
+; SAM:        <<<<<<
+; SAM-NEXT:            1: hello world! 
+; SAM-V-NEXT: check:1     ^~~~~
+; SAM-V-NEXT: same:2            ^~~~~
+; SAM-NEXT:   same:3                 X~ error: no match found
+; SAM-NEXT:   >>>>>>
+; SAM-NOT:    {{.}}
+
+; Wrong-line match.
+
+; RUN: echo 'again' >> %t.in
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=SAM2 \
+; RUN:             -implicit-check-not='remark:'
+
+; Verbose diagnostics are suppressed but not errors.
+; SAM2: {{.*}}error:{{.*}}
+
+; SAM2:      <<<<<<
+; SAM2-NEXT:          1: hello world! 
+; SAM2-NEXT: check:1     ^~~~~
+; SAM2-NEXT: same:2            ^~~~~
+; SAM2-NEXT:          2: again 
+; SAM2-NEXT: same:3      !~~~~  error: match on wrong line
+; SAM2-NEXT: >>>>>>
+; SAM2-NOT:  {{.}}
+
+;--------------------------------------------------
+; CHECK-EMPTY (also: search range ends at label, single-char match, wrong-line
+; match)
+;--------------------------------------------------
+
+; Good match and no match.
+;
+; CHECK-EMPTY always seems to match an empty line at EOF (illegally when it's
+; not the next line) unless either (1) the last line is non-empty and has no
+; newline or (2) there's a CHECK-LABEL to end the search range before EOF.  We
+; choose scenario 2 to check the case of no match.
+
+; RUN: echo 'hello' > %t.in
+; RUN: echo '' >> %t.in
+; RUN: echo 'world' >> %t.in
+; RUN: echo 'label' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK-EMPTY:' >> %t.chk
+; RUN: echo 'CHECK-EMPTY:' >> %t.chk
+; RUN: echo 'CHECK-LABEL: label' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=EMP \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP,EMP-V \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP,EMP-V,EMP-VV \
+; RUN:             -implicit-check-not='remark:' -allow-unused-prefixes
+
+; Verbose diagnostics are suppressed but not errors.
+; EMP: {{.*}}error:{{.*}}
+
+; EMP:        <<<<<<
+; EMP-NEXT:            1: hello 
+; EMP-V-NEXT: check:1     ^~~~~
+; EMP-NEXT:            2:
+; EMP-V-NEXT: empty:2     ^
+; EMP-NEXT:   empty:3          X error: no match found
+; EMP-NEXT:            3: world 
+; EMP-NEXT:   empty:3     ~~~~~~
+; EMP-NEXT:            4: label 
+; EMP-V-NEXT: label:4     ^~~~~
+; EMP-NEXT:   empty:3     ~~~~~
+; EMP-NEXT:   >>>>>>
+; EMP-NOT:    {{.}}
+
+; Wrong-line match.
+
+; RUN: echo 'hello' > %t.in
+; RUN: echo 'world' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK-EMPTY:' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=EMP2 \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP2,EMP2-V \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP2,EMP2-V,EMP2-VV \
+; RUN:             -implicit-check-not='remark:' -allow-unused-prefixes
+
+; Verbose diagnostics are suppressed but not errors.
+; EMP2: {{.*}}error:{{.*}}
+
+; EMP2:        <<<<<<
+; EMP2-NEXT:            1: hello 
+; EMP2-V-NEXT: check:1     ^~~~~
+; EMP2-NEXT:            2: world 
+; EMP2-NEXT:            3:
+; EMP2-NEXT:   empty:2     !      error: match on wrong line
+; EMP2-NEXT:   >>>>>>
+; EMP2-NOT:    {{.}}
+
+;--------------------------------------------------
+; CHECK-NOT (also: EOF pattern, and multiline range that ends before EOL)
+;--------------------------------------------------
+
+; No match (success) and unexpected match (error).
+
+; RUN: echo 'hello' > %t.in
+; RUN: echo 'world' >> %t.in
+; RUN: echo 'again' >> %t.in
+
+; RUN: echo 'CHECK-NOT: goodbye' > %t.chk
+; RUN: echo 'CHECK-NOT: world' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=NOT \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT,NOT-V \
+; RUN:             -implicit-check-not='remark:' -allow-unused-prefixes
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT,NOT-V,NOT-VV \
+; RUN:             -implicit-check-not='remark:' -allow-unused-prefixes
+
+; Verbose diagnostics are suppressed but not errors.
+; NOT: {{.*}}error:{{.*}}
+
+; NOT:         <<<<<<
+; NOT-NEXT:           1: hello 
+; NOT-VV-NEXT: not:1     X~~~~~
+; NOT-NEXT:           2: world 
+; NOT-VV-NEXT: not:1     ~~~~~~
+; NOT-NEXT:    not:2     !~~~~  error: no match expected
+; NOT-NEXT:           3: again 
+; NOT-VV-NEXT: not:1     ~~~~~~
+; NOT-VV-NEXT:        4:
+; NOT-VV-NEXT: eof:2     ^
+; NOT-NEXT:    >>>>>>
+; NOT-NOT:     {{.}}
+
+; Again, but with a CHECK instead of EOF as search range end.
+
+; RUN: echo 'CHECK: ain' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=NOT2 \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT2,NOT2-V \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT2,NOT2-V,NOT2-VV \
+; RUN:             -implicit-check-not='remark:'
+
+; Verbose diagnostics are suppressed but not errors.
+; NOT2: {{.*}}error:{{.*}}
+
+; NOT2:         <<<<<<
+; NOT2-NEXT:             1: hello 
+; NOT2-VV-NEXT: not:1       X~~~~~
+; NOT2-NEXT:             2: world 
+; NOT2-VV-NEXT: not:1       ~~~~~~
+; NOT2-NEXT:    not:2       !~~~~  error: no match expected
+; NOT2-NEXT:             3: again 
+; NOT2-V-NEXT:  check:3       ^~~
+; NOT2-VV-NEXT: not:1       ~~
+; NOT2-NEXT:    >>>>>>
+; NOT2-NOT:     {{.}}
+
+;--------------------------------------------------
+; CHECK-DAG (also: matches in different order than directives, discarded match)
+;--------------------------------------------------
+
+; Good match, discarded match plus good match, and no match.
+
+; RUN: echo 'abc' > %t.in
+; RUN: echo 'def' >> %t.in
+; RUN: echo 'abc' >> %t.in
+
+; RUN: echo 'CHECK-DAG: def' > %t.chk
+; RUN: echo 'CHECK-DAG: abc' >> %t.chk
+; RUN: echo 'CHECK-DAG: abc' >> %t.chk
+; RUN: echo 'CHECK-DAG: def' >> %t.chk
+
+; Prefixes used here:
+; DAG    = quiet, -v, or -vv
+; DAG-Q  = quiet
+; DAG-V  = -v or -vv (-vv implies -v)
+; DAG-VQ = -v and not -vv
+; DAG-VV = -vv
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG,DAG-Q \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG,DAG-V,DAG-VQ \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG,DAG-V,DAG-VV \
+; RUN:             -implicit-check-not='remark:'
+
+; Verbose diagnostics are suppressed but not errors.
+; DAG: {{.*}}error:{{.*}}
+
+; DAG:         <<<<<<
+; DAG-NEXT:             1: abc 
+; DAG-V-NEXT:  dag:2       ^~~
+; DAG-VV-NEXT: dag:3'0     !~~  discard: overlaps earlier match
+; DAG-NEXT:             2: def 
+; DAG-V-NEXT:  dag:1       ^~~
+; DAG-VV-NEXT: dag:4'0     !~~  discard: overlaps earlier match
+; DAG-Q-NEXT:  dag:4          X error: no match found
+; DAG-VQ-NEXT: dag:4          X error: no match found
+; DAG-VV-NEXT: dag:4'1        X error: no match found
+; DAG-NEXT:             3: abc 
+; DAG-VQ-NEXT: dag:3       ^~~
+; DAG-VV-NEXT: dag:3'1     ^~~
+; DAG-Q-NEXT:  dag:4       ~~~~
+; DAG-VQ-NEXT: dag:4       ~~~~
+; DAG-VV-NEXT: dag:4'1     ~~~~
+; DAG-NEXT:    >>>>>>
+; DAG-NOT:     {{.}}
+
+; Check sorting of annotations when the order of diagnostics across an input
+; line is different than the order of the associated directives in the check
+; file.  Try cases when diagnostics' input ranges overlap but are not
+; identical to check how that affects sorting.
+
+; RUN: echo 'abc def abc def' > %t.in
+
+; RUN: echo 'CHECK-DAG: def' > %t.chk
+; RUN: echo 'CHECK-DAG: bc' >> %t.chk
+; RUN: echo 'CHECK-DAG: abc' >> %t.chk
+; RUN: echo 'CHECK-DAG: de' >> %t.chk
+; RUN: echo 'CHECK-DAG: def' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG1L,DAG1L-Q \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG1L,DAG1L-V,DAG1L-VQ \
+; RUN:             -implicit-check-not='remark:'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG1L,DAG1L-V,DAG1L-VV \
+; RUN:             -implicit-check-not='remark:'
+
+; Verbose diagnostics are suppressed but not errors.
+; DAG1L:{{.*}}error:{{.*}}
+
+;         DAG1L:<<<<<<
+;    DAG1L-NEXT:         1: abc def abc def 
+;  DAG1L-V-NEXT:dag:1           ^~~
+;  DAG1L-V-NEXT:dag:2        ^~
+; DAG1L-VV-NEXT:dag:3'0     !~~              discard: overlaps earlier match
+; DAG1L-VQ-NEXT:dag:3               ^~~
+; DAG1L-VV-NEXT:dag:3'1             ^~~
+; DAG1L-VV-NEXT:dag:4'0         !~           discard: overlaps earlier match
+; DAG1L-VQ-NEXT:dag:4                   ^~
+; DAG1L-VV-NEXT:dag:4'1                 ^~
+; DAG1L-VV-NEXT:dag:5'0         !~~          discard: overlaps earlier match
+; DAG1L-VV-NEXT:dag:5'1                 !~~  discard: overlaps earlier match
+;  DAG1L-Q-NEXT:dag:5                     X~ error: no match found
+; DAG1L-VQ-NEXT:dag:5                     X~ error: no match found
+; DAG1L-VV-NEXT:dag:5'2                   X~ error: no match found
+;    DAG1L-NEXT:>>>>>>
+;     DAG1L-NOT:{{.}}
+
+;--------------------------------------------------
+; CHECK-LABEL
+;
+; Each CHECK-LABEL is processed twice: once before other patterns in the
+; preceding section, and once afterward.
+;
+; As expected, the search range for a negative pattern preceding a CHECK-LABEL
+; ends at the start of the CHECK-LABEL match.  not:7 and not:11 below
+; demonstrate this behavior.
+;
+; The search range for a positive pattern preceding a CHECK-LABEL ends at the
+; end of the CHECK-LABEL match.  check:3 and check:5 below demonstrate this
+; behavior.  As in the case of check:5, an effect of this behavior is that the
+; second CHECK-LABEL match might fail even though the first succeeded.
+;
+; FIXME: It seems like the search range for such a positive pattern should be
+; the same as in the case of a negative pattern.  Note that -dump-input is
+; correct here.  It's the matching behavior that's strange.
+;--------------------------------------------------
+
+; RUN: echo 'text'   >  %t.in
+; RUN: echo 'labelA' >> %t.in
+; RUN: echo 'textA'  >> %t.in
+; RUN: echo 'labelB' >> %t.in
+; RUN: echo 'textB'  >> %t.in
+; RUN: echo 'labelC' >> %t.in
+; RUN: echo 'textC'  >> %t.in
+; RUN: echo 'labelD' >> %t.in
+; RUN: echo 'textD'  >> %t.in
+; RUN: echo 'labelE' >> %t.in
+; RUN: echo 'textE'  >> %t.in
+; RUN: echo 'labelF' >> %t.in
+
+; RUN: echo 'CHECK: text'         >  %t.chk
+; RUN: echo 'CHECK-LABEL: labelA' >> %t.chk
+; RUN: echo 'CHECK: foobar'       >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelB' >> %t.chk
+; RUN: echo 'CHECK: labelC'       >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelC' >> %t.chk
+; RUN: echo 'CHECK-NOT: foobar'   >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelD' >> %t.chk
+; RUN: echo 'CHECK-NOT: textD'    >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelE' >> %t.chk
+; RUN: echo 'CHECK-NOT: labelF'   >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelF' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-Q \
+; RUN:             -implicit-check-not='{{remark:|error:}}'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-V \
+; RUN:             -implicit-check-not='{{remark:|error:}}'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-V,LAB-VV \
+; RUN:             -implicit-check-not='{{remark:|error:}}'
+
+; Verbose diagnostics are suppressed but not errors.
+; LAB:{{.*}}.chk:3:8: error: CHECK: expected string not found in input
+; LAB:{{.*}}.chk:6:14: error: CHECK-LABEL: expected string not found in input
+; LAB:{{.*}}.chk:9:12: error: CHECK-NOT: excluded string found in input
+
+;         LAB:<<<<<<
+;    LAB-NEXT:            1: text 
+;  LAB-V-NEXT:check:1        ^~~~
+;    LAB-NEXT:            2: labelA 
+;  LAB-V-NEXT:label:2'0      ^~~~~~
+;  LAB-V-NEXT:label:2'1      ^~~~~~
+;    LAB-NEXT:check:3              X error: no match found
+;    LAB-NEXT:            3: textA 
+;    LAB-NEXT:check:3        ~~~~~~
+;    LAB-NEXT:            4: labelB 
+;  LAB-V-NEXT:label:4        ^~~~~~
+;    LAB-NEXT:check:3        ~~~~~~
+;    LAB-NEXT:            5: textB 
+;    LAB-NEXT:            6: labelC 
+;  LAB-V-NEXT:label:6'0      ^~~~~~
+;  LAB-V-NEXT:check:5        ^~~~~~
+;  LAB-Q-NEXT:label:6              X error: no match found
+;  LAB-V-NEXT:label:6'1            X error: no match found
+; LAB-VV-NEXT:not:7                X
+;    LAB-NEXT:            7: textC 
+; LAB-VV-NEXT:not:7          ~~~~~~
+;    LAB-NEXT:            8: labelD 
+;  LAB-V-NEXT:label:8'0      ^~~~~~
+;  LAB-V-NEXT:label:8'1      ^~~~~~
+;    LAB-NEXT:            9: textD 
+;    LAB-NEXT:not:9          !~~~~  error: no match expected
+;    LAB-NEXT:           10: labelE 
+;  LAB-V-NEXT:label:10'0     ^~~~~~
+;  LAB-V-NEXT:label:10'1     ^~~~~~
+; LAB-VV-NEXT:not:11               X
+;    LAB-NEXT:           11: textE 
+; LAB-VV-NEXT:not:11         ~~~~~~
+;    LAB-NEXT:           12: labelF 
+;  LAB-V-NEXT:label:12'0     ^~~~~~
+;  LAB-V-NEXT:label:12'1     ^~~~~~
+;    LAB-NEXT:>>>>>>
+;     LAB-NOT:{{.}}
+
+;--------------------------------------------------
+; --implicit-check-not
+;
+; The first two --implicit-check-not patterns have no match (success).  The
+; third has an unexpected match (error).  To check per-input-line annotation
+; sorting, all of those plus the CHECK directives have annotations on the same
+; input line.
+;--------------------------------------------------
+
+; RUN: echo 'hello world again!' > %t.in
+
+; RUN: echo 'CHECK: hel' > %t.chk
+; RUN: echo 'CHECK: wor' >> %t.chk
+; RUN: echo 'CHECK: !' >> %t.chk
+
+; Prefixes used here:
+; IMPNOT    = quiet, -v, or -vv
+; IMPNOT-Q  = quiet
+; IMPNOT-V  = -v or -vv (-vv implies -v)
+; IMPNOT-VQ = -v and not -vv
+; IMPNOT-VV = -vv
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file=%t.in %t.chk 2>&1 \
+; RUN:               --implicit-check-not='goodbye' \
+; RUN:               --implicit-check-not='world' \
+; RUN:               --implicit-check-not='again' \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=IMPNOT,IMPNOT-Q \
+; RUN:             -implicit-check-not='{{remark:|error:}}'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file=%t.in %t.chk -v 2>&1 \
+; RUN:               --implicit-check-not='goodbye' \
+; RUN:               --implicit-check-not='world' \
+; RUN:               --implicit-check-not='again' \
+; RUN: | FileCheck -match-full-lines %s \
+; RUN:             -check-prefixes=IMPNOT,IMPNOT-V,IMPNOT-VQ \
+; RUN:             -implicit-check-not='{{remark:|error:}}'
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -input-file=%t.in %t.chk -vv 2>&1 \
+; RUN:               --implicit-check-not='goodbye' \
+; RUN:               --implicit-check-not='world' \
+; RUN:               --implicit-check-not='again' \
+; RUN: | FileCheck -match-full-lines %s \
+; RUN:             -check-prefixes=IMPNOT,IMPNOT-V,IMPNOT-VV \
+; RUN:             -implicit-check-not='{{remark:|error:}}'
+
+; Verbose diagnostics are suppressed but not errors.
+; IMPNOT:{{.*}}command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
+
+;         IMPNOT:<<<<<<
+;    IMPNOT-NEXT:            1: hello world again! 
+;  IMPNOT-V-NEXT:check:1        ^~~
+; IMPNOT-VV-NEXT:not:imp1'0     X
+; IMPNOT-VV-NEXT:not:imp2'0     X
+; IMPNOT-VV-NEXT:not:imp3'0     X
+;  IMPNOT-V-NEXT:check:2              ^~~
+; IMPNOT-VV-NEXT:not:imp1'1        X~~
+; IMPNOT-VV-NEXT:not:imp2'1        X~~
+; IMPNOT-VV-NEXT:not:imp3'1        X~~
+;  IMPNOT-V-NEXT:check:3                         ^
+; IMPNOT-VV-NEXT:not:imp1'2              X~~~~~~~
+; IMPNOT-VV-NEXT:not:imp2'2              X~~~~~~~
+;  IMPNOT-Q-NEXT:not:imp3                   !~~~~   error: no match expected
+; IMPNOT-VQ-NEXT:not:imp3                   !~~~~   error: no match expected
+; IMPNOT-VV-NEXT:not:imp3'2                 !~~~~   error: no match expected
+;    IMPNOT-NEXT:>>>>>>
+;     IMPNOT-NOT:{{.}}
+
+;--------------------------------------------------
+; Substitutions: successful and failed positive directives.
+;--------------------------------------------------
+
+; RUN: echo 'def-match1 def-match2'  >  %t.in
+; RUN: echo 'def-match1 def-nomatch' >> %t.in
+
+; RUN: echo 'CHECK: [[DEF_MATCH1]] [[DEF_MATCH2]]'            >  %t.chk
+; RUN: echo 'CHECK: [[DEF_MATCH1]] [[UNDEF]] [[DEF_NOMATCH]]' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -vv -input-file=%t.in %t.chk 2>&1 \
+; RUN:               -DDEF_MATCH1=def-match1 -DDEF_MATCH2=def-match2 \
+; RUN:               -DDEF_NOMATCH=foobar \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST-POS
+
+;      SUBST-POS:<<<<<<
+; SUBST-POS-NEXT:           1: def-match1 def-match2 
+; SUBST-POS-NEXT:check:1'0     ^~~~~~~~~~~~~~~~~~~~~
+; SUBST-POS-NEXT:check:1'1                            with "DEF_MATCH1" equal to "def-match1"
+; SUBST-POS-NEXT:check:1'2                            with "DEF_MATCH2" equal to "def-match2"
+; SUBST-POS-NEXT:check:2'0     X error: match failed for invalid pattern
+; SUBST-POS-NEXT:check:2'1                            undefined variable: UNDEF
+; SUBST-POS-NEXT:check:2'2                            with "DEF_MATCH1" equal to "def-match1"
+; SUBST-POS-NEXT:check:2'3                            with "DEF_NOMATCH" equal to "foobar"
+; SUBST-POS-NEXT:           2: def-match1 def-nomatch
+; SUBST-POS-NEXT:check:2'0     ~~~~~~~~~~~~~~~~~~~~~~~
+; SUBST-POS-NEXT:check:2'4 ? possible intended match
+; SUBST-POS-NEXT:>>>>>>
+
+;--------------------------------------------------
+; Substitutions: successful and failed negative directives.
+;--------------------------------------------------
+
+; RUN: echo 'def-match1 def-nomatch' >  %t.in
+; RUN: echo 'def-match1 def-match2'  >> %t.in
+; RUN: echo 'END'                    >> %t.in
+
+; RUN: echo 'CHECK-NOT: [[DEF_MATCH1]] [[UNDEF]] [[DEF_NOMATCH]]' >  %t.chk
+; RUN: echo 'CHECK-NOT: [[DEF_MATCH1]] [[DEF_MATCH2]]'            >> %t.chk
+; RUN: echo 'CHECK: END'                                          >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -vv -input-file=%t.in %t.chk 2>&1 \
+; RUN:               -DDEF_MATCH1=def-match1 -DDEF_MATCH2=def-match2 \
+; RUN:               -DDEF_NOMATCH=foobar \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST-NEG
+
+;      SUBST-NEG:<<<<<<
+; SUBST-NEG-NEXT:         1: def-match1 def-nomatch
+; SUBST-NEG-NEXT:not:1'0     X~~~~~~~~~~~~~~~~~~~~~~ error: match failed for invalid pattern
+; SUBST-NEG-NEXT:not:1'1                             undefined variable: UNDEF
+; SUBST-NEG-NEXT:not:1'2                             with "DEF_MATCH1" equal to "def-match1"
+; SUBST-NEG-NEXT:not:1'3                             with "DEF_NOMATCH" equal to "foobar"
+; SUBST-NEG-NEXT:         2: def-match1 def-match2
+; SUBST-NEG-NEXT:not:1'0     ~~~~~~~~~~~~~~~~~~~~~~
+; SUBST-NEG-NEXT:not:2'0     !~~~~~~~~~~~~~~~~~~~~  error: no match expected
+; SUBST-NEG-NEXT:not:2'1                            with "DEF_MATCH1" equal to "def-match1"
+; SUBST-NEG-NEXT:not:2'2                            with "DEF_MATCH2" equal to "def-match2"
+; SUBST-NEG-NEXT:         3: END
+; SUBST-NEG-NEXT:check:3     ^~~
+; SUBST-NEG-NEXT:>>>>>>
+
+;--------------------------------------------------
+; Captured variables
+;--------------------------------------------------
+
+; RUN: echo 'strvar: foo'           >  %t.in
+; RUN: echo 'numvar no expr: 51'    >> %t.in
+; RUN: echo 'numvar expr: -49'      >> %t.in
+; RUN: echo 'many: foo 100 8 bar'   >> %t.in
+; RUN: echo 'var in neg match: foo' >> %t.in
+; RUN: echo 'END'                   >> %t.in
+
+; RUN: echo 'CHECK: strvar: [[STRVAR:[a-z]+]]'                         >  %t.chk
+; RUN: echo 'CHECK: numvar no expr: [[#NUMVAR_NO_EXPR:]]'              >> %t.chk
+; RUN: echo 'CHECK: numvar expr: [[#%d,NUMVAR_EXPR:2-NUMVAR_NO_EXPR]]' >> %t.chk
+
+; Capture many variables of different kinds in a different order than their
+; names sort alphabetically to ensure they're sorted in capture order.
+; RUN: echo 'CHECK: many: [[VAR1:foo]] [[#%d,VAR3:]] [[#VAR2:]] [[VAR4:bar]]' \
+; RUN:      >> %t.chk
+
+; RUN: echo 'CHECK-NOT: var in neg match: [[VAR:foo]]' >> %t.chk
+; RUN: echo 'CHECK: END'                               >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -vv -input-file=%t.in %t.chk 2>&1 \
+; RUN: | FileCheck -strict-whitespace -match-full-lines %s -check-prefix=CAPTURE-NEG
+
+;      CAPTURE-NEG:<<<<<<
+; CAPTURE-NEG-NEXT:           1: strvar: foo 
+; CAPTURE-NEG-NEXT:check:1'0     ^~~~~~~~~~~
+; CAPTURE-NEG-NEXT:check:1'1             ^~~  captured var "STRVAR"
+; CAPTURE-NEG-NEXT:           2: numvar no expr: 51 
+; CAPTURE-NEG-NEXT:check:2'0     ^~~~~~~~~~~~~~~~~~
+; CAPTURE-NEG-NEXT:check:2'1                     ^~  captured var "NUMVAR_NO_EXPR"
+; CAPTURE-NEG-NEXT:           3: numvar expr: -49 
+; CAPTURE-NEG-NEXT:check:3'0     ^~~~~~~~~~~~~~~~
+; CAPTURE-NEG-NEXT:check:3'1                       with "%d,NUMVAR_EXPR:2-NUMVAR_NO_EXPR" equal to "-49"
+; CAPTURE-NEG-NEXT:check:3'2                  ^~~  captured var "NUMVAR_EXPR"
+; CAPTURE-NEG-NEXT:           4: many: foo 100 8 bar 
+; CAPTURE-NEG-NEXT:check:4'0     ^~~~~~~~~~~~~~~~~~~
+; CAPTURE-NEG-NEXT:check:4'1           ^~~            captured var "VAR1"
+; CAPTURE-NEG-NEXT:check:4'2               ^~~        captured var "VAR3"
+; CAPTURE-NEG-NEXT:check:4'3                   ^      captured var "VAR2"
+; CAPTURE-NEG-NEXT:check:4'4                     ^~~  captured var "VAR4"
+; CAPTURE-NEG-NEXT:           5: var in neg match: foo 
+; CAPTURE-NEG-NEXT:not:5'0       !~~~~~~~~~~~~~~~~~~~~  error: no match expected
+; CAPTURE-NEG-NEXT:not:5'1                         !~~  captured var "VAR"
+; CAPTURE-NEG-NEXT:           6: END 
+; CAPTURE-NEG-NEXT:check:6       ^~~
+; CAPTURE-NEG-NEXT:>>>>>>
+
+;--------------------------------------------------
+; CHECK-NEXT, CHECK-SAME, CHECK-DAG note fixups.
+;
+; When CHECK-NEXT or CHECK-SAME fails for the wrong line, or when a CHECK-DAG
+; match is discarded, the associated diagnostic type must be converted from
+; successful to failed or discarded.  However, any note annotation must be
+; traversed to find that diagnostic.  We check this behavior here only for
+; substitutions, but it's the same mechanism for all note annotations.
+;--------------------------------------------------
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; CHECK-NEXT.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; RUN: echo 'pre var' > %t.in
+
+; RUN: echo 'CHECK: pre'          >  %t.chk
+; RUN: echo 'CHECK-NEXT: [[VAR]]' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -vv -input-file=%t.in %t.chk 2>&1 \
+; RUN:               -DVAR=var \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST_NEXT
+
+;      SUBST_NEXT:<<<<<<
+; SUBST_NEXT-NEXT:          1: pre var 
+; SUBST_NEXT-NEXT:check:1      ^~~
+; SUBST_NEXT-NEXT:next:2'0         !~~  error: match on wrong line
+; SUBST_NEXT-NEXT:next:2'1              with "VAR" equal to "var"
+; SUBST_NEXT-NEXT:>>>>>>
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; CHECK-SAME.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; RUN: echo 'pre' >  %t.in
+; RUN: echo 'var' >> %t.in
+
+; RUN: echo 'CHECK: pre'          >  %t.chk
+; RUN: echo 'CHECK-SAME: [[VAR]]' >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input=always -vv -input-file=%t.in %t.chk 2>&1 \
+; RUN:               -DVAR=var \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST_SAME
+
+;      SUBST_SAME:<<<<<<
+; SUBST_SAME-NEXT:          1: pre 
+; SUBST_SAME-NEXT:check:1      ^~~
+; SUBST_SAME-NEXT:          2: var 
+; SUBST_SAME-NEXT:same:2'0     !~~  error: match on wrong line
+; SUBST_SAME-NEXT:same:2'1          with "VAR" equal to "var"
+; SUBST_SAME-NEXT:>>>>>>
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; CHECK-DAG.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; RUN: echo 'var' >  %t.in
+; RUN: echo 'var' >> %t.in
+; RUN: echo 'END' >> %t.in
+
+; RUN: echo 'CHECK-DAG: var'      >  %t.chk
+; RUN: echo 'CHECK-DAG: [[VAR]]'  >> %t.chk
+; RUN: echo 'CHECK: END'          >> %t.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: FileCheck -dump-input=always -vv -input-file=%t.in %t.chk 2>&1 \
+; RUN:           -DVAR=var \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=SUBST_DAG
+
+;      SUBST_DAG:<<<<<<
+; SUBST_DAG-NEXT:         1: var 
+; SUBST_DAG-NEXT:dag:1       ^~~
+; SUBST_DAG-NEXT:dag:2'0     !~~  discard: overlaps earlier match
+; SUBST_DAG-NEXT:dag:2'1          with "VAR" equal to "var"
+; SUBST_DAG-NEXT:         2: var 
+; SUBST_DAG-NEXT:dag:2'2     ^~~
+; SUBST_DAG-NEXT:dag:2'3          with "VAR" equal to "var"
+; SUBST_DAG-NEXT:         3: END 
+; SUBST_DAG-NEXT:check:3     ^~~
+; SUBST_DAG-NEXT:>>>>>>

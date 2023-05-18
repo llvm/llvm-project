@@ -1,0 +1,53 @@
+# Meta test using merge-fdata binary
+UNSUPPORTED: asan
+# Instrumentation currently only works on X86
+REQUIRES: x86_64-linux,bolt-runtime
+
+# Instrumentation, should test:
+# - Direct branches
+# - Unmapped calls coming from uninstrumented code (libc)
+# - Direct calls
+RUN: llvm-bolt merge-fdata -o %t.inst --instrument \
+RUN:   --instrumentation-file=%t.fdata
+
+# Execute with no input
+RUN: %t.inst --version
+RUN: mv %t.fdata %t.fdata1
+
+# Check unmapped calls coverage - libc should be calling _start via
+# uninstrumented code
+RUN: cat %t.fdata1 | FileCheck %s --check-prefix=CHECK-FDATA
+CHECK-FDATA: 0 [unknown] 0 1 _start 0 0 1
+
+# Check that BOLT works with this profile
+RUN: llvm-bolt merge-fdata -o %t.bolt --data %t.fdata1 \
+RUN:   --reorder-blocks=ext-tsp --reorder-functions=hfsort+ \
+RUN:   --split-functions 2>&1 \
+RUN:   | FileCheck %s --check-prefix=CHECK-BOLT1
+CHECK-BOLT1-NOT: invalid (possibly stale) profile
+
+# Execute again
+RUN: %t.inst --help
+RUN: mv %t.fdata %t.fdata2
+
+# Check profile coverage
+RUN: llvm-boltdiff merge-fdata merge-fdata \
+RUN:   --data %t.fdata1 --data2 %t.fdata2 --display-count=20 | \
+RUN:   FileCheck %s --check-prefix=CHECK-BOLTDIFF
+CHECK-BOLTDIFF: Inputs share [[#]] functions
+
+# Check that instrumented binary produces the same result
+RUN: merge-fdata %t.fdata1 %t.fdata2 > %t.fdata.base
+RUN: %t.inst %t.fdata1 %t.fdata2 > %t.fdata.inst
+RUN: cmp %t.fdata.base %t.fdata.inst
+
+# Optimize using merged fdata
+RUN: llvm-bolt merge-fdata -o %t.opt --data %t.fdata.base \
+RUN:   --reorder-blocks=ext-tsp --reorder-functions=hfsort+ \
+RUN:   --split-functions 2>&1 \
+RUN:   | FileCheck %s --check-prefix=CHECK-BOLT2
+CHECK-BOLT2-NOT: invalid (possibly stale) profile
+
+# Check that optimized binary produces the same result
+RUN: %t.opt %t.fdata1 %t.fdata2 > %t.fdata.opt
+RUN: cmp %t.fdata.base %t.fdata.opt

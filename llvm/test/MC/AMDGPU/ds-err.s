@@ -1,0 +1,125 @@
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --implicit-check-not=error: %s
+
+// offset too big
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a 16-bit unsigned offset
+ds_add_u32 v2, v4 offset:1000000000
+
+// offset too big
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a 16-bit unsigned offset
+ds_add_u32 v2, v4 offset:0x10000
+
+// offset0 twice
+// CHECK:  error: not a valid operand.
+ds_write2_b32 v2, v4, v6 offset0:4 offset0:8
+
+// offset1 twice
+// CHECK:  error: invalid operand for instruction
+ds_write2_b32 v2, v4, v6 offset1:4 offset1:8
+
+// offset0 too big
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+ds_write2_b32 v2, v4, v6 offset0:1000000000
+
+// offset0 too big
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+ds_write2_b32 v2, v4, v6 offset0:0x100
+
+// offset1 too big
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+ds_write2_b32 v2, v4, v6 offset1:1000000000
+
+// offset1 too big
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+ds_write2_b32 v2, v4, v6 offset1:0x100
+
+//===----------------------------------------------------------------------===//
+// swizzle
+//===----------------------------------------------------------------------===//
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a colon
+ds_swizzle_b32 v8, v2 offset
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: unknown token in expression
+ds_swizzle_b32 v8, v2 offset:
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a colon
+ds_swizzle_b32 v8, v2 offset-
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a swizzle macro or an absolute expression
+ds_swizzle_b32 v8, v2 offset:SWIZZLE(QUAD_PERM, 0, 1, 2, 3)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a swizzle mode
+ds_swizzle_b32 v8, v2 offset:swizzle(quad_perm, 0, 1, 2, 3)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a swizzle mode
+ds_swizzle_b32 v8, v2 offset:swizzle(XXX,1)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a comma
+ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a comma
+ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a closing parentheses
+ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2, 3
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a closing parentheses
+ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 0, 1, 2, 3, 4)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a 2-bit lane id
+ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, -1, 1, 2, 3)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a 2-bit lane id
+ds_swizzle_b32 v8, v2 offset:swizzle(QUAD_PERM, 4, 1, 2, 3)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be in the interval [1,16]
+ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,0)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be a power of two
+ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,3)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be in the interval [1,16]
+ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,17)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be in the interval [1,16]
+ds_swizzle_b32 v8, v2 offset:swizzle(SWAP,32)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be in the interval [2,32]
+ds_swizzle_b32 v8, v2 offset:swizzle(REVERSE,1)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be a power of two
+ds_swizzle_b32 v8, v2 offset:swizzle(REVERSE,3)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be in the interval [2,32]
+ds_swizzle_b32 v8, v2 offset:swizzle(REVERSE,33)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be in the interval [2,32]
+ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,1,0)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be a power of two
+ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,3,1)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: group size must be in the interval [2,32]
+ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,33,1)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: lane id must be in the interval [0,group size - 1]
+ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,2,-1)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: lane id must be in the interval [0,group size - 1]
+ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,2,2)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a string
+ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, pppii)
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a 5-character mask
+ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "")
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a 5-character mask
+ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "ppii")
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a 5-character mask
+ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppiii")
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid mask
+ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppi2")

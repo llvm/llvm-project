@@ -1,0 +1,6 @@
+## Show that llvm-strings can handle a negative signed char value (i.e. > 0x7f).
+## Such characters should form string delimiters like other unprintable ones.
+
+# RUN: echo -e "z\0\x80\0a\0" | llvm-strings --bytes 1 - | FileCheck %s
+# CHECK: z{{$}}
+# CHECK-NEXT: {{^}}a

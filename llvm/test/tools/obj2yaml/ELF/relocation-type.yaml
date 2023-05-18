@@ -1,0 +1,51 @@
+## Show how obj2yaml dumps relocation types.
+
+## Show that obj2yaml is able to dump relocation types when `e_machine` kind is unknown.
+# RUN: yaml2obj %s -o %t1 -DMACHINE=0x1234
+# RUN: obj2yaml %t1 | FileCheck %s -DMACHINE=0x1234 -DFIRST=0x0 -DSECOND=0x1
+
+# CHECK:      --- !ELF
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   Class:   ELFCLASS64
+# CHECK-NEXT:   Data:    ELFDATA2MSB
+# CHECK-NEXT:   Type:    ET_REL
+# CHECK-NEXT:   Machine: [[MACHINE]]
+# CHECK-NEXT: Sections:
+# CHECK-NEXT:   - Name:    .rela.text
+# CHECK-NEXT:     Type:    SHT_RELA
+# CHECK-NEXT:     Relocations:
+# CHECK-NEXT:       - Offset: 0x9
+# CHECK-NEXT:         Type:   [[FIRST]]
+# CHECK-NEXT:       - Offset: 0x8
+# CHECK-NEXT:         Type:   [[SECOND]]
+# CHECK-NEXT:       - Offset: 0x7
+# CHECK-NEXT:         Type:   0x7F
+# CHECK-NEXT:       - Offset: 0x6
+# CHECK-NEXT:         Type:   0xFF
+# CHECK-NEXT: ...
+
+## Show how obj2yaml dumps relocation types when `e_machine` kind is known.
+## In this case unknown relocation types are dumped as hex values.
+## All known relocation types are printed as strings representing relocation names.
+# RUN: yaml2obj %s -o %t2 -DMACHINE=EM_X86_64
+# RUN: obj2yaml %t2 | FileCheck %s -DMACHINE=EM_X86_64 -DFIRST=R_X86_64_NONE -DSECOND=R_X86_64_64
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: [[MACHINE]]
+Sections:
+  - Name: .rela.text
+    Type: SHT_RELA
+    Relocations:
+## Test a few noticeable possible values: 0, 1, max(int8_t)=127, max(uint8_t)=0xFF=-1
+      - Offset: 0x9
+        Type:   0x0
+      - Offset: 0x8
+        Type:   0x1
+      - Offset: 0x7
+        Type:   0x7F
+      - Offset: 0x6
+        Type:   0xFF

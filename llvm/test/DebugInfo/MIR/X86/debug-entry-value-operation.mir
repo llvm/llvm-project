@@ -1,0 +1,93 @@
+# RUN: llc -start-before=livedebugvalues -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
+# RUN: llvm-dwarfdump %t | FileCheck %s
+
+# RUN: llc -force-instr-ref-livedebugvalues=1 -start-before=livedebugvalues -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
+# RUN: llvm-dwarfdump %t | FileCheck %s
+
+# RUN: llc -start-before=livedebugvalues -debugger-tune=sce -mtriple=x86_64-sce-ps4 -o %t1 %s -filetype=obj
+# RUN: llvm-dwarfdump %t1 | FileCheck %s -check-prefix=SCE
+
+# RUN: llc -force-instr-ref-livedebugvalues=1 -start-before=livedebugvalues -debugger-tune=sce -mtriple=x86_64-sce-ps4 -o %t1 %s -filetype=obj
+# RUN: llvm-dwarfdump %t1 | FileCheck %s -check-prefix=SCE
+
+## Based on:
+## int global;
+## int foo(int p, int q, int r) {
+##   global = p + 1;
+##   asm __volatile("" : : : "edi", "esi", "edx");
+##   return 123;
+## }
+
+# CHECK: DW_TAG_formal_parameter
+# CHECK:   DW_OP_entry_value
+
+# SCE-NOT: DW_OP_{{.*}}entry_value
+
+--- |
+  ; ModuleID = 'multiple-param-dbg-value-entry.ll'
+  source_filename = "multiple-param-dbg-value-entry.c"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
+  @global = common dso_local local_unnamed_addr global i32 0, align 4, !dbg !0
+
+  define dso_local i32 @foo(i32 %p, i32 %q, i32 %r) local_unnamed_addr !dbg !11 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %p, metadata !15, metadata !DIExpression()), !dbg !18
+    call void @llvm.dbg.value(metadata i32 %q, metadata !16, metadata !DIExpression()), !dbg !18
+    call void @llvm.dbg.value(metadata i32 %r, metadata !17, metadata !DIExpression()), !dbg !18
+    %add = add nsw i32 %p, 1, !dbg !18
+    store i32 %add, ptr @global, align 4, !dbg !18
+    tail call void asm sideeffect "", "~{edi},~{esi},~{edx},~{dirflag},~{fpsr},~{flags}"(), !dbg !18, !srcloc !19
+    ret i32 123, !dbg !18
+  }
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!7, !8, !9}
+  !llvm.ident = !{!10}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "global", scope: !2, file: !3, line: 8, type: !6, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 9.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, nameTableKind: None)
+  !3 = !DIFile(filename: "multiple-param-dbg-value-entry.c", directory: "/")
+  !4 = !{}
+  !5 = !{!0}
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !{i32 2, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{i32 1, !"wchar_size", i32 4}
+  !10 = !{!"clang version 9.0.0 "}
+  !11 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 9, type: !12, scopeLine: 9, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !14)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{!6, !6, !6, !6}
+  !14 = !{!15, !16, !17}
+  !15 = !DILocalVariable(name: "p", arg: 1, scope: !11, file: !3, line: 9, type: !6)
+  !16 = !DILocalVariable(name: "q", arg: 2, scope: !11, file: !3, line: 9, type: !6)
+  !17 = !DILocalVariable(name: "r", arg: 3, scope: !11, file: !3, line: 9, type: !6)
+  !18 = !DILocation(line: 9, column: 13, scope: !11)
+  !19 = !{i32 213}
+
+...
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+body:             |
+  bb.0.entry:
+    liveins: $edi
+
+    DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !18
+    DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !18
+    DBG_VALUE $esi, $noreg, !16, !DIExpression(), debug-location !18
+    DBG_VALUE $edx, $noreg, !17, !DIExpression(), debug-location !18
+    renamable $edi = nsw INC32r killed renamable $edi, implicit-def dead $eflags, debug-location !18
+    MOV32mr $rip, 1, $noreg, @global, $noreg, killed renamable $edi, debug-location !18 :: (store (s32) into @global)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $edi, 12, implicit-def dead early-clobber $esi, 12, implicit-def dead early-clobber $edx, 12, implicit-def dead early-clobber $df, 12, implicit-def dead early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, !19, debug-location !18
+    $eax = MOV32ri 123, debug-location !18
+    RET64 killed $eax, debug-location !18
+
+...

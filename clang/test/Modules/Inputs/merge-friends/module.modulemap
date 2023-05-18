@@ -1,0 +1,2 @@
+module decl { header "decl.h" export * }
+module friend { header "friend.h" export * }

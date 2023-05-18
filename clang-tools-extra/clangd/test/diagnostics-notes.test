@@ -1,0 +1,49 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"textDocument":{"publishDiagnostics":{"relatedInformation":true}}},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.cc","languageId":"cpp","text":"int x;\nint x;"}}}
+#      CHECK:  "method": "textDocument/publishDiagnostics",
+# CHECK-NEXT:  "params": {
+# CHECK-NEXT:    "diagnostics": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "code": "redefinition",
+# CHECK-NEXT:        "message": "Redefinition of 'x'",
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 5,
+# CHECK-NEXT:            "line": 1
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 4,
+# CHECK-NEXT:            "line": 1
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "relatedInformation": [
+# CHECK-NEXT:          {
+# CHECK-NEXT:            "location": {
+# CHECK-NEXT:              "range": {
+# CHECK-NEXT:                "end": {
+# CHECK-NEXT:                  "character": 5,
+# CHECK-NEXT:                  "line": 0
+# CHECK-NEXT:                },
+# CHECK-NEXT:                "start": {
+# CHECK-NEXT:                  "character": 4,
+# CHECK-NEXT:                  "line": 0
+# CHECK-NEXT:                }
+# CHECK-NEXT:              },
+# CHECK-NEXT:              "uri": "{{.*}}foo.cc"
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "message": "Previous definition is here"
+# CHECK-NEXT:          }
+# CHECK-NEXT:        ],
+# CHECK-NEXT:        "severity": 1,
+# CHECK-NEXT:        "source": "clang"
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ],
+# CHECK-NEXT:    "uri": "file://{{.*}}/foo.cc",
+# CHECK-NEXT:    "version": 0
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":5,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

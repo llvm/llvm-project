@@ -1,0 +1,8 @@
+module X {
+  module A { header "a.h" }
+  module B { header "b.h" }
+  module C { header "c.h" }
+}
+module Y {
+  module D { header "d.h" }
+}

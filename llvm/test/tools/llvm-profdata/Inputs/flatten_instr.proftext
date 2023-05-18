@@ -1,0 +1,32 @@
+# IR level Instrumentation Flag
+:ir
+# Always instrument the function entry block
+:entry_first
+foo
+# Func Hash:
+1111
+# Num Counters:
+5
+# Counter Values:
+10000
+50
+2000
+40
+6000
+
+bar.cc;bar
+# Func Hash:
+2222
+# Num Counters:
+10
+# Counter Values:
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0

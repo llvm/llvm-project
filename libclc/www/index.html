@@ -1,0 +1,53 @@
+<html>
+<head>
+<title>libclc</title>
+</head>
+<body>
+<h1>libclc</h1>
+<p>
+libclc is an open source, BSD/MIT dual licensed
+implementation of the library requirements of the
+OpenCL C programming language, as specified by the <a
+href="https://www.khronos.org/registry/OpenCL/specs/opencl-1.1.pdf">OpenCL
+1.1 Specification</a>.  The following sections of the specification
+impose library requirements:
+<ul>
+<li>6.1: Supported Data Types
+<li>6.2.3: Explicit Conversions
+<li>6.2.4.2: Reinterpreting Types Using as_type() and as_typen()
+<li>6.9: Preprocessor Directives and Macros
+<li>6.11: Built-in Functions
+<li>9.3: Double Precision Floating-Point
+<li>9.4: 64-bit Atomics
+<li>9.5: Writing to 3D image memory objects
+<li>9.6: Half Precision Floating-Point
+</ul>
+</p>
+
+<p>
+libclc is intended to be used with the <a href="https://clang.llvm.org/">Clang</a>
+compiler's OpenCL frontend.
+</p>
+
+<p>
+libclc is designed to be portable and extensible.  To this end,
+it provides generic implementations of most library requirements,
+allowing the target to override the generic implementation at the
+granularity of individual functions.
+</p>
+
+<p>
+libclc currently supports the AMDGCN, and R600 and NVPTX targets, but
+support for more targets is welcome.
+</p>
+
+<h2>Download</h2>
+
+<tt>git clone https://github.com/llvm/llvm-project.git</tt> (<a href="https://github.com/llvm/llvm-project/tree/libclc">View sources</a>)
+
+<h2>Discourse forums</h2>
+
+<a href="https://discourse.llvm.org/c/runtimes/opencl/65">Runtimes - OpenCL category</a>
+
+</body>
+</html>

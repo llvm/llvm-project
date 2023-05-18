@@ -1,0 +1,83 @@
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -fobjc-arc -x objective-c %s.result
+// RUN: arcmt-test --args -triple x86_64-apple-darwin10 -fsyntax-only -x objective-c %s > %t
+// RUN: diff %t %s.result
+
+#include "Common.h"
+
+typedef const struct __CFString * CFStringRef;
+extern const CFStringRef kUTTypePlainText;
+extern const CFStringRef kUTTypeRTF;
+extern CFStringRef kNonConst;
+
+typedef const struct __CFAllocator * CFAllocatorRef;
+typedef const struct __CFUUID * CFUUIDRef;
+
+extern const CFAllocatorRef kCFAllocatorDefault;
+
+extern CFStringRef CFUUIDCreateString(CFAllocatorRef alloc, CFUUIDRef uuid);
+
+struct StrS {
+  CFStringRef sref_member;
+};
+
+@interface NSString : NSObject {
+  CFStringRef sref;
+  struct StrS *strS;
+}
+-(id)string;
+-(id)newString;
+@end
+
+void f(BOOL b, id p) {
+  NSString *str = (NSString *)kUTTypePlainText; // no change
+  str = b ? kUTTypeRTF : kUTTypePlainText; // no change
+  str = (NSString *)(b ? kUTTypeRTF : kUTTypePlainText); // no change
+  str = (NSString *)p; // no change.
+
+  str = (__bridge NSString *)kNonConst;
+  str = (__bridge NSString *)(b ? kUTTypeRTF : kNonConst);
+  str = (__bridge NSString *)(b ? kUTTypeRTF : kNonConst);
+
+  CFUUIDRef   _uuid;
+  NSString *_uuidString = (NSString *)CFBridgingRelease(CFUUIDCreateString(kCFAllocatorDefault, _uuid));
+  _uuidString = (NSString *)CFBridgingRelease(CFUUIDCreateString(kCFAllocatorDefault, _uuid));
+  _uuidString = CFBridgingRelease(CFRetain(_uuid));
+}
+
+@implementation NSString (StrExt)
+- (NSString *)stringEscapedAsURI {
+  CFStringRef str = (__bridge CFStringRef)self;
+  CFStringRef str2 = (__bridge CFStringRef)(self);
+  return self;
+}
+@end
+
+@implementation NSString
+-(id)string {
+  if (0)
+    return (__bridge id)(sref);
+  else
+    return (__bridge id)(strS->sref_member);
+}
+-(id)newString { return 0; }
+@end
+
+extern void consumeParam(CFStringRef CF_CONSUMED p);
+
+void f2(NSString *s) {
+  CFStringRef ref = (__bridge CFStringRef)([s string]);
+  ref = (__bridge CFStringRef)[s string];
+  ref = (__bridge CFStringRef)(s.string);
+  ref = CFBridgingRetain([NSString new]);
+  ref = CFBridgingRetain([s newString]);
+  ref = (CFStringRef)CFBridgingRetain([NSString new]);
+  ref = CFBridgingRetain([[NSString alloc] init]);
+  ref = CFBridgingRetain([s string]);
+  ref = (CFStringRef)CFBridgingRetain([s string]);
+  ref = CFBridgingRetain([s string]);
+  ref = CFBridgingRetain(s);
+  ref = CFBridgingRetain(s);
+
+  consumeParam((CFStringRef)CFBridgingRetain(s));
+  consumeParam(CFBridgingRetain(s));
+}

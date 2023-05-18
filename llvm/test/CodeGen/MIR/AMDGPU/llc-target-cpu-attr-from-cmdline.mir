@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=amdgcn -mcpu=hawaii -run-pass=none -o - %s | FileCheck -check-prefix=MCPU %s
+# RUN: llc -mtriple=amdgcn -mattr=+unaligned-access-mode -run-pass=none -o - %s | FileCheck -check-prefix=MATTR %s
+
+# The command line arguments for -mcpu and -mattr should manifest themselves by adding the corresponding attributes to the stub IR function.
+
+# MCPU: attributes #0 = { "target-cpu"="hawaii" }
+# MATTR: attributes #0 = { "target-features"="+unaligned-access-mode" }
+
+---
+name: no_ir
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+
+    %0:sgpr(s32) = COPY $sgpr0
+    %1:sgpr(s32) = COPY $sgpr1
+    %2:vgpr(s32) = G_OR %0, %1
+    S_ENDPGM 0, implicit %2
+...

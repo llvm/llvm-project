@@ -1,0 +1,479 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55  \
+# RUN:  -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
+# RUN:  -misched-bottomup=true -sched-print-cycles=true \
+# RUN:  -misched-dump-reserved-cycles=true -misched-detail-resource-booking=true\
+# RUN:  -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-width=4 \
+# RUN:  2>&1 | FileCheck %s
+
+# REQUIRES: asserts, aarch64-registered-target
+---
+name: f
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    $x3 = ADDXrr $x0, $x0
+    $x4 = ADDXrr $x1, $x1
+    $x5 = ADDXrr $x2, $x2
+    
+# CHECK-LABEL: Before MISched:
+# CHECK-NEXT: # Machine code for function f: IsSSA, NoPHIs, TracksLiveness, NoVRegs
+# CHECK-EMPTY: 
+# CHECK-NEXT: bb.0:
+# CHECK-NEXT:   liveins: $x0, $x1, $x2
+# CHECK-NEXT:   $x3 = ADDXrr $x0, $x0
+# CHECK-NEXT:   $x4 = ADDXrr $x1, $x1
+# CHECK-NEXT:   $x5 = ADDXrr $x2, $x2
+# CHECK-EMPTY: 
+# CHECK-NEXT: # End machine code for function f.
+# CHECK-EMPTY: 
+# CHECK-NEXT: ********** MI Scheduling **********
+# CHECK-NEXT: f:%bb.0 
+# CHECK-NEXT:   From: $x3 = ADDXrr $x0, $x0
+# CHECK-NEXT:     To: End
+# CHECK-NEXT:  RegionInstrs: 3
+# CHECK-NEXT: ScheduleDAGMILive::schedule starting
+# CHECK-NEXT: GenericScheduler RegionPolicy:  ShouldTrackPressure=0 OnlyTopDown=0 OnlyBottomUp=1
+# CHECK-NEXT: Disabled scoreboard hazard recognizer
+# CHECK-NEXT: Disabled scoreboard hazard recognizer
+# CHECK-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x3 = ADDXrr $x0, $x0
+# CHECK-NEXT:   # preds left       : 0
+# CHECK-NEXT:   # succs left       : 0
+# CHECK-NEXT:   # rdefs left       : 0
+# CHECK-NEXT:   Latency            : 3
+# CHECK-NEXT:   Depth              : 0
+# CHECK-NEXT:   Height             : 0
+# CHECK-NEXT:   Single Issue       : false;
+# CHECK-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x4 = ADDXrr $x1, $x1
+# CHECK-NEXT:   # preds left       : 0
+# CHECK-NEXT:   # succs left       : 0
+# CHECK-NEXT:   # rdefs left       : 0
+# CHECK-NEXT:   Latency            : 3
+# CHECK-NEXT:   Depth              : 0
+# CHECK-NEXT:   Height             : 0
+# CHECK-NEXT:   Single Issue       : false;
+# CHECK-NEXT: SU(2) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x5 = ADDXrr $x2, $x2
+# CHECK-NEXT:   # preds left       : 0
+# CHECK-NEXT:   # succs left       : 0
+# CHECK-NEXT:   # rdefs left       : 0
+# CHECK-NEXT:   Latency            : 3
+# CHECK-NEXT:   Depth              : 0
+# CHECK-NEXT:   Height             : 0
+# CHECK-NEXT:   Single Issue       : false;
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT: Critical Path(GS-RR ): 0
+# CHECK-NEXT: ** ScheduleDAGMILive::schedule picking next node
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT: Queue BotQ.P: 
+# CHECK-NEXT: Queue BotQ.A: 2 1 0 
+# CHECK-NEXT:   Cand SU(2) ORDER                              
+# CHECK-NEXT: Pick Bot ORDER     
+# CHECK-NEXT: Scheduling SU(2) $x5 = ADDXrr $x2, $x2
+# CHECK-NEXT:   Ready @0c
+# CHECK-NEXT:   CortexA55UnitALU +1x1u
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT: BotQ.A @0c
+# CHECK-NEXT:   Retired: 1
+# CHECK-NEXT:   Executed: 0c
+# CHECK-NEXT:   Critical: 0c, 1 MOps
+# CHECK-NEXT:   ExpectedLatency: 0c
+# CHECK-NEXT:   - Latency limited.
+# CHECK-NEXT: CortexA55UnitALU(0) = 0
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT: ** ScheduleDAGMILive::schedule picking next node
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 0
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @1c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[1] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 0
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @1c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[1] available @0c
+# CHECK-NEXT: Queue BotQ.P: 
+# CHECK-NEXT: Queue BotQ.A: 0 1 
+# CHECK-NEXT:   Cand SU(0) ORDER                              
+# CHECK-NEXT:   Cand SU(1) ORDER                              
+# CHECK-NEXT: Pick Bot ORDER     
+# CHECK-NEXT: Scheduling SU(1) $x4 = ADDXrr $x1, $x1
+# CHECK-NEXT:   Ready @0c
+# CHECK-NEXT:   CortexA55UnitALU +1x1u
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 0
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @1c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[1] available @0c
+# CHECK-NEXT:   Resource booking (@0c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 0
+# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@0c): 
+# CHECK-NEXT:     Instance 0 available @1c
+# CHECK-NEXT:     Instance 1 available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[1] available @0c
+# CHECK-NEXT:   *** Max MOps 2 at cycle 0
+# CHECK-NEXT: Cycle: 1 BotQ.A
+# CHECK-NEXT: BotQ.A @1c
+# CHECK-NEXT:   Retired: 2
+# CHECK-NEXT:   Executed: 1c
+# CHECK-NEXT:   Critical: 1c, 2 MOps
+# CHECK-NEXT:   ExpectedLatency: 0c
+# CHECK-NEXT:   - Latency limited.
+# CHECK-NEXT: CortexA55UnitALU(0) = 0
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT: ** ScheduleDAGMILive::schedule picking next node
+# CHECK-NEXT:   Resource booking (@1c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 0
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@1c): 
+# CHECK-NEXT:     Instance 0 available @1c
+# CHECK-NEXT:     Instance 1 available @1c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @1c
+# CHECK-NEXT: Queue BotQ.P: 
+# CHECK-NEXT: Queue BotQ.A: 0 
+# CHECK-NEXT: Scheduling SU(0) $x3 = ADDXrr $x0, $x0
+# CHECK-NEXT:   Ready @1c
+# CHECK-NEXT:   CortexA55UnitALU +1x1u
+# CHECK-NEXT:   Resource booking (@1c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 0
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@1c): 
+# CHECK-NEXT:     Instance 0 available @1c
+# CHECK-NEXT:     Instance 1 available @1c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @1c
+# CHECK-NEXT:   Resource booking (@1c): 
+# CHECK-NEXT: CortexA55UnitALU(0) = 0
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT:   getNextResourceCycle (@1c): 
+# CHECK-NEXT:     Instance 0 available @1c
+# CHECK-NEXT:     Instance 1 available @1c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @1c
+# CHECK-NEXT: BotQ.A @1c
+# CHECK-NEXT:   Retired: 3
+# CHECK-NEXT:   Executed: 1c
+# CHECK-NEXT:   Critical: 1c, 3 MOps
+# CHECK-NEXT:   ExpectedLatency: 0c
+# CHECK-NEXT:   - Latency limited.
+# CHECK-NEXT: CortexA55UnitALU(0) = 1
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT: ** ScheduleDAGMILive::schedule picking next node
+# CHECK-NEXT: *** Final schedule for %bb.0 ***
+# CHECK-NEXT:  * Schedule table (BottomUp):
+# CHECK-NEXT:   i: issue
+# CHECK-NEXT:   x: resource booked
+# CHECK-NEXT: Cycle              | 1 | 0 |
+# CHECK-NEXT: SU(0)              | i |   |
+# CHECK-NEXT:   CortexA55UnitALU | x |   | 
+# CHECK-NEXT: SU(1)              |   | i |
+# CHECK-NEXT:   CortexA55UnitALU |   | x | 
+# CHECK-NEXT: SU(2)              |   | i |
+# CHECK-NEXT:   CortexA55UnitALU |   | x | 
+# CHECK-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 1]:   $x3 = ADDXrr $x0, $x0
+# CHECK-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x4 = ADDXrr $x1, $x1
+# CHECK-NEXT: SU(2) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $x5 = ADDXrr $x2, $x2
+# CHECK-EMPTY: 
+# CHECK-NEXT: ********** INTERVALS **********
+# CHECK-NEXT: W0 [0B,16r:0) 0@0B-phi
+# CHECK-NEXT: W1 [0B,32r:0) 0@0B-phi
+# CHECK-NEXT: W2 [0B,48r:0) 0@0B-phi
+# CHECK-NEXT: RegMasks:
+# CHECK-NEXT: ********** MACHINEINSTRS **********
+# CHECK-NEXT: # Machine code for function f: IsSSA, NoPHIs, TracksLiveness, NoVRegs
+# CHECK-EMPTY: 
+# CHECK-NEXT: 0B	bb.0:
+# CHECK-NEXT: 	  liveins: $x0, $x1, $x2
+# CHECK-NEXT: 16B	  $x3 = ADDXrr $x0, $x0
+# CHECK-NEXT: 32B	  $x4 = ADDXrr $x1, $x1
+# CHECK-NEXT: 48B	  $x5 = ADDXrr $x2, $x2
+# CHECK-EMPTY: 
+# CHECK-NEXT: # End machine code for function f.

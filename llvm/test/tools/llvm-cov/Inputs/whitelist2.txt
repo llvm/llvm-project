@@ -1,0 +1,2 @@
+whitelist_fun:*func3*
+whitelist_fun:*func4*

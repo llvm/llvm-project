@@ -1,0 +1,30 @@
+# IR level Instrumentation Flag
+:ir
+_Z3barmi
+# Func Hash:
+784007056844089447
+# Num Counters:
+2
+# Counter Values:
+0
+0
+
+main
+# Func Hash:
+784007059655560962
+# Num Counters:
+2
+# Counter Values:
+1
+0
+
+test.c;_ZL3foom
+# Func Hash:
+1124680652115249575
+# Num Counters:
+3
+# Counter Values:
+0
+0
+0
+

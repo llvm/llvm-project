@@ -1,0 +1,128 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=+brbe -disassemble %s 2> %t | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -disassemble %s 2> %t | FileCheck --check-prefix=NO-BRBE %s
+
+[0x00,0x90,0x11,0xd5]
+[0x01,0x90,0x31,0xd5]
+# CHECK:   msr     BRBCR_EL1, x0
+# CHECK:   mrs     x1, BRBCR_EL1
+# NO-BRBE: msr     S2_1_C9_C0_0, x0
+# NO-BRBE: mrs     x1, S2_1_C9_C0_0
+
+[0x02,0x90,0x15,0xd5]
+[0x03,0x90,0x35,0xd5]
+# CHECK:   msr     BRBCR_EL12, x2
+# CHECK:   mrs     x3, BRBCR_EL12
+# NO-BRBE: msr     S2_5_C9_C0_0, x2
+# NO-BRBE: mrs     x3, S2_5_C9_C0_0
+
+[0x04,0x90,0x14,0xd5]
+[0x05,0x90,0x34,0xd5]
+# CHECK:   msr     BRBCR_EL2, x4
+# CHECK:   mrs     x5, BRBCR_EL2
+# NO-BRBE: msr     S2_4_C9_C0_0, x4
+# NO-BRBE: mrs     x5, S2_4_C9_C0_0
+
+[0x26,0x90,0x11,0xd5]
+[0x27,0x90,0x31,0xd5]
+# CHECK:   msr     BRBFCR_EL1, x6
+# CHECK:   mrs     x7, BRBFCR_EL1
+# NO-BRBE: msr     S2_1_C9_C0_1, x6
+# NO-BRBE: mrs     x7, S2_1_C9_C0_1
+
+[0x08,0x92,0x11,0xd5] # expect failure: BRBIDR0_EL1 is RO
+[0x09,0x92,0x31,0xd5]
+# CHECK:   msr     S2_1_C9_C2_0, x8
+# CHECK:   mrs     x9, BRBIDR0_EL1
+# NO-BRBE: msr     S2_1_C9_C2_0, x8
+# NO-BRBE: mrs     x9, S2_1_C9_C2_0
+
+[0x0a,0x91,0x11,0xd5]
+[0x0b,0x91,0x31,0xd5]
+# CHECK:   msr     BRBINFINJ_EL1, x10
+# CHECK:   mrs     x11, BRBINFINJ_EL1
+# NO-BRBE: msr     S2_1_C9_C1_0, x10
+# NO-BRBE: mrs     x11, S2_1_C9_C1_0
+
+[0x2c,0x91,0x11,0xd5]
+[0x2d,0x91,0x31,0xd5]
+# CHECK:   msr     BRBSRCINJ_EL1, x12
+# CHECK:   mrs     x13, BRBSRCINJ_EL1
+# NO-BRBE: msr     S2_1_C9_C1_1, x12
+# NO-BRBE: mrs     x13, S2_1_C9_C1_1
+
+[0x4e,0x91,0x11,0xd5]
+[0x4f,0x91,0x31,0xd5]
+# CHECK:   msr     BRBTGTINJ_EL1, x14
+# CHECK:   mrs     x15, BRBTGTINJ_EL1
+# NO-BRBE: msr     S2_1_C9_C1_2, x14
+# NO-BRBE: mrs     x15, S2_1_C9_C1_2
+
+[0x50,0x90,0x11,0xd5]
+[0x51,0x90,0x31,0xd5]
+# CHECK:   msr     BRBTS_EL1, x16
+# CHECK:   mrs     x17, BRBTS_EL1
+# NO-BRBE: msr     S2_1_C9_C0_2, x16
+# NO-BRBE: mrs     x17, S2_1_C9_C0_2
+
+[0x12,0x80,0x11,0xd5] # expect failure: BRBINF0_EL1 is RO
+[0x13,0x80,0x31,0xd5]
+# CHECK:   msr     S2_1_C8_C0_0, x18
+# CHECK:   mrs     x19, BRBINF0_EL1
+# NO-BRBE: msr     S2_1_C8_C0_0, x18
+# NO-BRBE: mrs     x19, S2_1_C8_C0_0
+
+[0x14,0x81,0x11,0xd5] # expect failure: BRBINF1_EL1 is RO
+[0x15,0x81,0x31,0xd5]
+# CHECK:   msr     S2_1_C8_C1_0, x20
+# CHECK:   mrs     x21, BRBINF1_EL1
+# NO-BRBE: msr     S2_1_C8_C1_0, x20
+# NO-BRBE: mrs     x21, S2_1_C8_C1_0
+
+[0x16,0x82,0x11,0xd5] # expect failure: BRBINF2_EL1 is RO
+[0x17,0x82,0x31,0xd5]
+# CHECK:   msr     S2_1_C8_C2_0, x22
+# CHECK:   mrs     x23, BRBINF2_EL1
+# NO-BRBE: msr     S2_1_C8_C2_0, x22
+# NO-BRBE: mrs     x23, S2_1_C8_C2_0
+
+[0x38,0x84,0x11,0xd5] # expect failure: BRBSRC4_EL1 is RO
+[0x39,0x84,0x31,0xd5]
+# CHECK:   msr     S2_1_C8_C4_1, x24
+# CHECK:   mrs     x25, BRBSRC4_EL1
+# NO-BRBE: msr     S2_1_C8_C4_1, x24
+# NO-BRBE: mrs     x25, S2_1_C8_C4_1
+
+[0x3a,0x88,0x11,0xd5] # expect failure: BRBSRC8_EL1 is RO
+[0x3b,0x88,0x31,0xd5]
+# CHECK:   msr     S2_1_C8_C8_1, x26
+# CHECK:   mrs     x27, BRBSRC8_EL1
+# NO-BRBE: msr     S2_1_C8_C8_1, x26
+# NO-BRBE: mrs     x27, S2_1_C8_C8_1
+
+[0xbc,0x80,0x11,0xd5] # expect failure: BRBSRC16_EL1 is RO
+[0xbd,0x80,0x31,0xd5]
+# CHECK:   msr     S2_1_C8_C0_5, x28
+# CHECK:   mrs     x29, BRBSRC16_EL1
+# NO-BRBE: msr     S2_1_C8_C0_5, x28
+# NO-BRBE: mrs     x29, S2_1_C8_C0_5
+
+[0x40,0x8a,0x11,0xd5] # expect failure: BRBTGT10_EL1 is RO
+[0x41,0x8a,0x31,0xd5]
+# CHECK:   msr     S2_1_C8_C10_2, x0
+# CHECK:   mrs     x1, BRBTGT10_EL1
+# NO-BRBE: msr     S2_1_C8_C10_2, x0
+# NO-BRBE: mrs     x1, S2_1_C8_C10_2
+
+[0xc2,0x85,0x11,0xd5] # expect failure: BRBTGT21_EL1 is RO
+[0xc3,0x85,0x31,0xd5]
+# CHECK:   msr     S2_1_C8_C5_6, x2
+# CHECK:   mrs     x3, BRBTGT21_EL1
+# NO-BRBE: msr     S2_1_C8_C5_6, x2
+# NO-BRBE: mrs     x3, S2_1_C8_C5_6
+
+[0xc4,0x8f,0x11,0xd5] # expect failure: BRBTGT31_EL1 is RO
+[0xc5,0x8f,0x31,0xd5]
+# CHECK:   msr     S2_1_C8_C15_6, x4
+# CHECK:   mrs     x5, BRBTGT31_EL1
+# NO-BRBE: msr     S2_1_C8_C15_6, x4
+# NO-BRBE: mrs     x5, S2_1_C8_C15_6

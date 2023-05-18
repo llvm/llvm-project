@@ -1,0 +1,70 @@
+# RUN: llc -mtriple=x86_64-unknown-unknown -run-pass=prologepilog -pass-remarks-output=%t -pass-remarks-analysis=prologepilog -o /dev/null %s 2>&1
+# RUN: cat %t | FileCheck %s
+--- |
+
+  define void @fun0() noredzone { ret void }
+  define void @fun1() noredzone { ret void }
+  define void @fun2() noredzone { ret void }
+
+...
+---
+name:            fun0
+stack:
+  - { id: 0, type: default, offset: 0, size: 8, alignment: 4 }
+# --- !Analysis
+# CHECK: Pass:            prologepilog
+# CHECK-NEXT: Name:            StackSize
+# CHECK-NEXT: Function:        fun0
+# CHECK-NEXT: Args:
+# CHECK-NEXT:   - NumStackBytes:   '8'
+# CHECK-NEXT:   - String:          ' stack bytes in function '''
+# CHECK-NEXT:   - Function: fun0
+# CHECK-NEXT:   - String: ''''
+# CHECK-NEXT: ...
+
+constants:
+body:             |
+  bb.0:
+    RET64
+
+...
+---
+name:            fun1
+stack:
+  - { id: 0, type: default, offset: 0, size: 19, alignment: 4 }
+# --- !Analysis
+# CHECK: Pass:            prologepilog
+# CHECK-NEXT: Name:            StackSize
+# CHECK-NEXT: Function:        fun1
+# CHECK-NEXT: Args:
+# CHECK-NEXT:   - NumStackBytes:   '20'
+# CHECK-NEXT:   - String:          ' stack bytes in function '''
+# CHECK-NEXT:   - Function: fun1
+# CHECK-NEXT:   - String: ''''
+# CHECK-NEXT: ...
+constants:
+body:             |
+  bb.0:
+    RET64
+
+...
+---
+name:            fun2
+stack:
+  - { id: 0, type: default, offset: 0, size: 1024, alignment: 8 }
+# --- !Analysis
+# CHECK: Pass:            prologepilog
+# CHECK-NEXT: Name:            StackSize
+# CHECK-NEXT: Function:        fun2
+# CHECK-NEXT: Args:
+# CHECK-NEXT:   - NumStackBytes:   '1024'
+# CHECK-NEXT:   - String:          ' stack bytes in function '''
+# CHECK-NEXT:   - Function: fun2
+# CHECK-NEXT:   - String: ''''
+# CHECK-NEXT: ...
+constants:
+body:             |
+  bb.0:
+    RET64
+
+...

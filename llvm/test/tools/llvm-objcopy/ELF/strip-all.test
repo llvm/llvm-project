@@ -1,0 +1,86 @@
+# RUN: yaml2obj %s -o %t
+# RUN: cp %t %t3
+# RUN: llvm-objcopy --strip-all %t %t2
+# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s
+
+# Verify that the previous llvm-objcopy's run has not modified the input.
+# RUN: cmp %t %t3
+
+# RUN: llvm-strip %t3 
+# RUN: cmp %t2 %t3
+
+# RUN: cp %t %t4
+# RUN: llvm-strip %t4 -o %t5
+# RUN: cmp %t2 %t5
+
+# Verify that the previous llvm-strip's run has not modified the input.
+# RUN: cmp %t %t4
+
+# RUN: cp %t %t-should-remain-the-same
+# RUN: llvm-strip %t4 -o %t-should-remain-the-same -o %t-should-be-stripped
+# RUN: cmp %t2 %t-should-be-stripped
+# RUN: cmp %t %t-should-remain-the-same
+
+# RUN: rm -f %t.a
+# RUN: llvm-ar crs %t.a %t
+# RUN: llvm-objcopy --strip-all %t.a %t.a
+# RUN: llvm-ar p %t.a > %t6
+# RUN: cmp %t2 %t6
+
+# RUN: cp %t %t7
+# RUN: llvm-strip --strip-all %t7
+# RUN: cmp %t2 %t7
+
+# RUN: cp %t %t8
+# RUN: llvm-objcopy -S %t8 %t8
+# RUN: cmp %t2 %t8
+
+# RUN: cp %t %t9
+# RUN: llvm-strip -s %t9
+# RUN: cmp %t2 %t9
+
+# Verify that a non-existent symbol table (after first call to llvm-strip)
+# can be handled correctly.
+# RUN: cp %t %t10
+# RUN: llvm-strip --strip-all --keep-symbol=unavailable_symbol %t10
+# RUN: llvm-strip --strip-all --keep-symbol=unavailable_symbol %t10
+# RUN: cmp %t2 %t10
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            non_alloc_in_segment
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Size:            4
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:            .blarg
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .gnu.warning.foo
+    Type:            SHT_PROGBITS
+  - Name:            .gnu_debuglink
+    Type:            SHT_PROGBITS
+ProgramHeaders:
+  # Use an arbitrary segment type to show that the segment type is unimportant.
+  - Type:     0x61234567
+    FirstSec: non_alloc_in_segment
+    LastSec:  non_alloc_in_segment
+
+# CHECK: SectionHeaderCount: 7
+
+# CHECK: Name: non_alloc_in_segment
+# CHECK: Name: .bss
+# CHECK: Name: .text
+# CHECK: Name: .gnu.warning.foo
+# CHECK: Name: .gnu_debuglink
+# CHECK: Name: .shstrtab

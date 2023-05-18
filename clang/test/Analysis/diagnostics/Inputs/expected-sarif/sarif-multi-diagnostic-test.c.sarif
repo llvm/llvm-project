@@ -1,0 +1,506 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "artifacts": [
+        {
+          "length": 1081,
+          "location": {
+            "index": 0,
+          },
+          "mimeType": "text/plain",
+          "roles": [
+            "resultFile"
+          ]
+        }
+      ],
+      "columnKind": "unicodeCodePoints",
+      "results": [
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Calling 'f'"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 6,
+                            "endLine": 39,
+                            "startColumn": 3,
+                            "startLine": 39
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "tainted"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 18,
+                            "endLine": 11,
+                            "startColumn": 11,
+                            "startLine": 11
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                },
+                "region": {
+                  "endColumn": 18,
+                  "endLine": 11,
+                  "startColumn": 11,
+                  "startLine": 11
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "tainted"
+          },
+          "ruleId": "debug.TaintTest",
+          "ruleIndex": 0
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Calling 'g'"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 6,
+                            "endLine": 40,
+                            "startColumn": 3,
+                            "startLine": 40
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "'fp' declared without an initial value"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 12,
+                            "endLine": 15,
+                            "startColumn": 3,
+                            "startLine": 15
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Called function pointer is an uninitialized pointer value"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 9,
+                            "endLine": 16,
+                            "startColumn": 3,
+                            "startLine": 16
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                },
+                "region": {
+                  "endColumn": 9,
+                  "endLine": 16,
+                  "startColumn": 3,
+                  "startLine": 16
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Called function pointer is an uninitialized pointer value"
+          },
+          "ruleId": "core.CallAndMessage",
+          "ruleIndex": 1
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "important",
+                      "location": {
+                        "message": {
+                          "text": "Assuming 'i' is equal to 0"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 13,
+                            "endLine": 20,
+                            "startColumn": 7,
+                            "startLine": 20
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "unimportant",
+                      "location": {
+                        "message": {
+                          "text": "Taking true branch"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 3,
+                            "startColumn": 3,
+                            "startLine": 20
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Division by zero"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 14,
+                            "startColumn": 14,
+                            "startLine": 21
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                },
+                "region": {
+                  "endColumn": 14,
+                  "startColumn": 14,
+                  "startLine": 21
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Division by zero"
+          },
+          "ruleId": "core.DivideZero",
+          "ruleIndex": 2
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Memory is allocated"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 24,
+                            "endLine": 26,
+                            "startColumn": 15,
+                            "startLine": 26
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "important",
+                      "location": {
+                        "message": {
+                          "text": "Assuming 'i' is < 4"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 12,
+                            "endLine": 27,
+                            "startColumn": 7,
+                            "startLine": 27
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "unimportant",
+                      "location": {
+                        "message": {
+                          "text": "Taking true branch"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 3,
+                            "startColumn": 3,
+                            "startLine": 27
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Potential leak of memory pointed to by 'mem'"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 12,
+                            "startColumn": 12,
+                            "startLine": 28
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                },
+                "region": {
+                  "endColumn": 12,
+                  "startColumn": 12,
+                  "startLine": 28
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Potential leak of memory pointed to by 'mem'"
+          },
+          "ruleId": "unix.Malloc",
+          "ruleIndex": 3
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "'løçål' initialized to 0"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 12,
+                            "endLine": 34,
+                            "startColumn": 3,
+                            "startLine": 34
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Division by zero"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 20,
+                            "startColumn": 20,
+                            "startLine": 35
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                },
+                "region": {
+                  "endColumn": 20,
+                  "startColumn": 20,
+                  "startLine": 35
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Division by zero"
+          },
+          "ruleId": "core.DivideZero",
+          "ruleIndex": 2
+        }
+      ],
+      "tool": {
+        "driver": {
+          "fullName": "clang static analyzer",
+          "informationUri": "https://clang.llvm.org/docs/UsersManual.html",
+          "language": "en-US",
+          "name": "clang",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning",
+                "rank": -1
+              },
+              "fullDescription": {
+                "text": "Mark tainted symbols as such."
+              },
+              "id": "debug.TaintTest",
+              "name": "debug.TaintTest"
+            },
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning",
+                "rank": -1
+              },
+              "fullDescription": {
+                "text": "Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers)"
+              },
+              "helpUri": "https://clang.llvm.org/docs/analyzer/checkers.html#core-callandmessage",
+              "id": "core.CallAndMessage",
+              "name": "core.CallAndMessage"
+            },
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning",
+                "rank": -1
+              },
+              "fullDescription": {
+                "text": "Check for division by zero"
+              },
+              "helpUri": "https://clang.llvm.org/docs/analyzer/checkers.html#core-dividezero",
+              "id": "core.DivideZero",
+              "name": "core.DivideZero"
+            },
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning",
+                "rank": -1
+              },
+              "fullDescription": {
+                "text": "Check for memory leaks, double free, and use-after-free problems. Traces memory managed by malloc()/free()."
+              },
+              "helpUri": "https://clang.llvm.org/docs/analyzer/checkers.html#unix-malloc",
+              "id": "unix.Malloc",
+              "name": "unix.Malloc"
+            }
+          ],
+        }
+      }
+    }
+  ],
+}

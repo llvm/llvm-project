@@ -1,0 +1,39 @@
+digraph "Scop Graph for 'init_array' function" {
+	label="Scop Graph for 'init_array' function";
+
+	Node0x7fffdb5cceb0 [shape=record,label="{entry}"];
+	Node0x7fffdb5cceb0 -> Node0x7fffdb5ccf00;
+	Node0x7fffdb5ccf00 [shape=record,label="{entry.split}"];
+	Node0x7fffdb5ccf00 -> Node0x7fffdb5ccf80;
+	Node0x7fffdb5ccf80 [shape=record,label="{for.cond1.preheader}"];
+	Node0x7fffdb5ccf80 -> Node0x7fffdb5cd090;
+	Node0x7fffdb5cd090 [shape=record,label="{for.body3}"];
+	Node0x7fffdb5cd090 -> Node0x7fffdb5cd090[constraint=false];
+	Node0x7fffdb5cd090 -> Node0x7fffdb5cd0b0;
+	Node0x7fffdb5cd0b0 [shape=record,label="{for.inc17}"];
+	Node0x7fffdb5cd0b0 -> Node0x7fffdb5ccf80[constraint=false];
+	Node0x7fffdb5cd0b0 -> Node0x7fffdb5cd2a0;
+	Node0x7fffdb5cd2a0 [shape=record,label="{for.end19}"];
+	colorscheme = "paired12"
+        subgraph cluster_0x7fffdb5b8530 {
+          label = "";
+          style = solid;
+          color = 1
+          subgraph cluster_0x7fffdb5b8f40 {
+            label = "Region can not profitably be optimized!";
+            style = solid;
+            color = 6
+            subgraph cluster_0x7fffdb5b86a0 {
+              label = "";
+              style = solid;
+              color = 5
+              Node0x7fffdb5cd090;
+            }
+            Node0x7fffdb5ccf80;
+            Node0x7fffdb5cd0b0;
+          }
+          Node0x7fffdb5cceb0;
+          Node0x7fffdb5ccf00;
+          Node0x7fffdb5cd2a0;
+        }
+}

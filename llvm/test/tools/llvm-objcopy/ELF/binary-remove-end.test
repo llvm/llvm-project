@@ -1,0 +1,44 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy -R .text3 -O binary %t %t2
+# RUN: od -Ax -v -t x1 %t2 | FileCheck %s
+# RUN: wc -c %t2 | FileCheck %s --check-prefix=SIZE
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x1000
+    Content:         "c3c3c3c3"
+    Size:            0x1000
+  - Name:            .text2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x2000
+    AddressAlign:    0x1000
+    Content:         "DEADBEEF"
+    Size:            0x1000
+  - Name:            .text3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x3000
+    AddressAlign:    0x1000
+    Content:         "32323232"
+    Size:            0x1000
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text3
+
+# CHECK: 000000 c3 c3 c3 c3
+# CHECK: 001000 de ad be ef
+
+# SIZE: 8192

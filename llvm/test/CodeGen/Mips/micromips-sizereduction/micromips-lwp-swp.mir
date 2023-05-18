@@ -1,0 +1,289 @@
+# RUN: llc -mtriple=mipsel-unknown-linux-gnu -mattr=+micromips -mcpu=mips32r2 \
+# RUN:     -verify-machineinstrs -run-pass micromips-reduce-size \
+# RUN:      %s -o - | FileCheck %s
+
+--- |
+  define void @f1(ptr %adr, i32 %val) { ret void }
+  define void @f2(ptr %adr, i32 %val) { ret void }
+  define void @f3(ptr %adr, i32 %val) { ret void }
+  define void @f4(ptr %adr, i32 %val) { ret void }
+
+  declare ptr @f()
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr)
+
+...
+---
+# CHECK-LABEL: name: f1
+# CHECK: SWP_MM
+# CHECK: LWP_MM
+name:            f1
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$a1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 16
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$s1', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.0:
+    liveins: $a0, $a1, $ra, $s1, $s0
+
+    $sp = ADDiu $sp, -32
+    CFI_INSTRUCTION def_cfa_offset 32
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
+    SW killed $s1, $sp, 24 :: (store (s32) into %stack.1)
+    SW killed $s0, $sp, 20 :: (store (s32) into %stack.2)
+    CFI_INSTRUCTION offset $ra_64, -4
+    CFI_INSTRUCTION offset $s1_64, -8
+    CFI_INSTRUCTION offset $s0_64, -12
+    $s1 = MOVE16_MM $a1
+    $s0 = MOVE16_MM $a0
+    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
+    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
+    $v0 = LI16_MM 0
+    $s0 = LW $sp, 20 :: (load (s32) from %stack.2)
+    $s1 = LW $sp, 24 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 28 :: (load (s32) from %stack.0)
+    $sp = ADDiu $sp, 32
+    PseudoReturn undef $ra, implicit killed $v0
+
+...
+---
+# CHECK-LABEL: name: f2
+# CHECK: SWP_MM
+# CHECK: LWP_MM
+name:            f2
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$a1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 16
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$s1', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.0:
+    liveins: $a0, $a1, $ra, $s1, $s0
+
+    $sp = ADDiu $sp, -32
+    CFI_INSTRUCTION def_cfa_offset 32
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
+    SW_MM killed $s1, $sp, 24 :: (store (s32) into %stack.1)
+    SW_MM killed $s0, $sp, 20 :: (store (s32) into %stack.2)
+    CFI_INSTRUCTION offset $ra_64, -4
+    CFI_INSTRUCTION offset $s1_64, -8
+    CFI_INSTRUCTION offset $s0_64, -12
+    $s1 = MOVE16_MM $a1
+    $s0 = MOVE16_MM $a0
+    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
+    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
+    $v0 = LI16_MM 0
+    $s0 = LW_MM $sp, 20 :: (load (s32) from %stack.2)
+    $s1 = LW_MM $sp, 24 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 28 :: (load (s32) from %stack.0)
+    $sp = ADDiu $sp, 32
+    PseudoReturn undef $ra, implicit killed $v0
+
+...
+---
+# CHECK-LABEL: name: f3
+# CHECK: SWP_MM
+# CHECK: LWP_MM
+name:            f3
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$a1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 16
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$s1', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.0:
+    liveins: $a0, $a1, $ra, $s1, $s0
+
+    $sp = ADDiu $sp, -32
+    CFI_INSTRUCTION def_cfa_offset 32
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
+    SW_MM killed $s1, $sp, 24 :: (store (s32) into %stack.1)
+    SW killed $s0, $sp, 20 :: (store (s32) into %stack.2)
+    CFI_INSTRUCTION offset $ra_64, -4
+    CFI_INSTRUCTION offset $s1_64, -8
+    CFI_INSTRUCTION offset $s0_64, -12
+    $s1 = MOVE16_MM $a1
+    $s0 = MOVE16_MM $a0
+    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
+    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
+    $v0 = LI16_MM 0
+    $s0 = LW_MM $sp, 20 :: (load (s32) from %stack.2)
+    $s1 = LW $sp, 24 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 28 :: (load (s32) from %stack.0)
+    $sp = ADDiu $sp, 32
+    PseudoReturn undef $ra, implicit killed $v0
+
+...
+---
+# CHECK-LABEL: name: f4
+# CHECK: SWP_MM
+# CHECK: LWP_MM
+name:            f4
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$a0', virtual-reg: '' }
+  - { reg: '$a1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 16
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$s1', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.0:
+    liveins: $a0, $a1, $ra, $s1, $s0
+
+    $sp = ADDiu $sp, -32
+    CFI_INSTRUCTION def_cfa_offset 32
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
+    SW killed $s1, $sp, 24 :: (store (s32) into %stack.1)
+    SW_MM killed $s0, $sp, 20 :: (store (s32) into %stack.2)
+    CFI_INSTRUCTION offset $ra_64, -4
+    CFI_INSTRUCTION offset $s1_64, -8
+    CFI_INSTRUCTION offset $s0_64, -12
+    $s1 = MOVE16_MM $a1
+    $s0 = MOVE16_MM $a0
+    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
+    SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
+    $v0 = LI16_MM 0
+    $s0 = LW $sp, 20 :: (load (s32) from %stack.2)
+    $s1 = LW_MM $sp, 24 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 28 :: (load (s32) from %stack.0)
+    $sp = ADDiu $sp, 32
+    PseudoReturn undef $ra, implicit killed $v0
+
+...
+

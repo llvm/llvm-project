@@ -1,0 +1,177 @@
+# Check that llvm can describe a call site parameter which resides in a spill slot.
+#
+# RUN: llc -emit-call-site-info -debug-entry-values -start-after=machineverifier -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
+# 
+# Command:
+# $ ~/src/builds/llvm-project-main-RA/bin/clang -g -Xclang -femit-debug-entry-values -O2 -c -o spill.o spill.cc -mllvm -stop-before=machineverifier -o spill.mir
+#
+# Source:
+## extern void callee(int);
+## 
+## #define FORCE_SPILL()                                                          \
+##   asm volatile(""                                                              \
+##                :                                                               \
+##                :                                                               \
+##                : "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "r8", "r9",  \
+##                  "r10", "r11", "r12", "r13", "r14", "r15")
+## 
+## __attribute__((disable_tail_calls)) void caller(int x) {
+##   FORCE_SPILL();
+##   callee(x);
+## }
+
+# CHECK-LABEL: DW_TAG_call_site_parameter
+# CHECK-NEXT:    DW_AT_location (DW_OP_reg5 RDI)
+# CHECK-NEXT:    DW_AT_call_value (DW_OP_fbreg -44, DW_OP_deref_size 0x4)
+
+--- |
+  ; ModuleID = 'spill.cc'
+  source_filename = "spill.cc"
+  target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-apple-macosx10.14.0"
+  
+  ; Function Attrs: ssp uwtable
+  define void @_Z6calleri(i32 %x) local_unnamed_addr #0 !dbg !13 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %x, metadata !15, metadata !DIExpression()), !dbg !16
+    call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(), !dbg !17, !srcloc !18
+    call void @_Z6calleei(i32 %x), !dbg !19
+    ret void, !dbg !20
+  }
+  
+  declare !dbg !4 void @_Z6calleei(i32) local_unnamed_addr
+  
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr)
+  
+  attributes #0 = { "disable-tail-calls"="true" "frame-pointer"="all" }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!8, !9, !10, !11}
+  !llvm.ident = !{!12}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 10.0.0 (git@github.com:llvm/llvm-project.git 132f768649d8f21d577ee220e5e084904874cb3d)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "spill.cc", directory: "/Users/vsk/tmp/param-analysis")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "callee", linkageName: "_Z6calleei", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !{i32 2, !"Dwarf Version", i32 4}
+  !9 = !{i32 2, !"Debug Info Version", i32 3}
+  !10 = !{i32 1, !"wchar_size", i32 4}
+  !11 = !{i32 7, !"PIC Level", i32 2}
+  !12 = !{!"clang version 10.0.0 (git@github.com:llvm/llvm-project.git 132f768649d8f21d577ee220e5e084904874cb3d)"}
+  !13 = distinct !DISubprogram(name: "caller", linkageName: "_Z6calleri", scope: !1, file: !1, line: 10, type: !5, scopeLine: 10, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !14)
+  !14 = !{!15}
+  !15 = !DILocalVariable(name: "x", arg: 1, scope: !13, file: !1, line: 10, type: !7)
+  !16 = !DILocation(line: 0, scope: !13)
+  !17 = !DILocation(line: 11, column: 3, scope: !13)
+  !18 = !{i32 -2147469811}
+  !19 = !DILocation(line: 12, column: 3, scope: !13)
+  !20 = !DILocation(line: 13, column: 1, scope: !13)
+
+...
+---
+name:            _Z6calleri
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       56
+  offsetAdjustment: -56
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 40
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default, 
+      callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: spill-slot, offset: -48, size: 8, alignment: 16, stack-id: default, 
+      callee-saved-register: '$r12', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: default, 
+      callee-saved-register: '$r13', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: default, 
+      callee-saved-register: '$r14', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default, 
+      callee-saved-register: '$r15', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default, 
+      callee-saved-register: '', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -60, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:
+  - { bb: 0, offset: 23, fwdArgRegs: 
+      - { arg: 0, reg: '$edi' } }
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $edi, $r15, $r14, $r13, $r12, $rbx
+  
+    DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !16
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r13, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION offset $rbx, -56
+    CFI_INSTRUCTION offset $r12, -48
+    CFI_INSTRUCTION offset $r13, -40
+    CFI_INSTRUCTION offset $r14, -32
+    CFI_INSTRUCTION offset $r15, -24
+    MOV32mr $rbp, 1, $noreg, -44, $noreg, $edi :: (store (s32) into %stack.0)
+    DBG_VALUE $rbp, 0, !15, !DIExpression(DW_OP_constu, 44, DW_OP_minus), debug-location !16
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $df, 12, implicit-def early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, !18, debug-location !17
+    DBG_VALUE $edi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !16
+    $edi = MOV32rm $rbp, 1, $noreg, -44, $noreg :: (load (s32) from %stack.0)
+    DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !16
+    CALL64pcrel32 @_Z6calleei, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, debug-location !19
+    DBG_VALUE $edi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !16
+    $rsp = frame-destroy ADD64ri8 $rsp, 8, implicit-def dead $eflags, debug-location !20
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
+    $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
+    $r13 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
+    $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
+    $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !20
+    RET64 debug-location !20
+
+...

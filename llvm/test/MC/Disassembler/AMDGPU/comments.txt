@@ -1,0 +1,8 @@
+# RUN: llvm-mc -assemble -triple=amdgcn--amdhsa -mcpu=gfx1100 -filetype=obj %s -o - | \
+# RUN:   llvm-objdump -d - | FileCheck %s
+
+; Make sure disassembling of this instruction does not cause any errors
+; generated in the comment. For this test to do its job, the instruction
+; has to be the last or the only one in the object file.
+; CHECK: v_perm_b32 v14, v52, v51, 0x5040100 // 000000000000: D644000E 03FE6734 05040100{{$}}
+  v_perm_b32 v14, v52, v51, 0x5040100

@@ -1,0 +1,127 @@
+# RUN: llc -mtriple=thumbv8.1m.main %s -run-pass=arm-low-overhead-loops --verify-machineinstrs -o - | FileCheck %s
+
+# CHECK: while.body:
+# CHECK-NOT: t2DLS
+# CHECK-NOT: t2LEUpdate
+
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main"
+  
+  define i32 @mov_between_dec_end(i32 %n) #0 {
+  entry:
+    %cmp6 = icmp eq i32 %n, 0
+    br i1 %cmp6, label %while.end, label %while.body.preheader
+  
+  while.body.preheader:                             ; preds = %entry
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %n)
+    br label %while.body
+  
+  while.body:                                       ; preds = %while.body, %while.body.preheader
+    %0 = phi i32 [ %start, %while.body.preheader ], [ %1, %while.body ]
+    %1 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+    %add = add i32 %1, 2
+    %2 = icmp ne i32 %1, 0
+    br i1 %2, label %while.body, label %while.end
+  
+  while.end:                                        ; preds = %while.body, %entry
+    %res.0.lcssa = phi i32 [ 0, %entry ], [ %add, %while.body ]
+    ret i32 %res.0.lcssa
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i32 @llvm.start.loop.iterations.i32(i32) #1
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr) #2
+  
+  attributes #0 = { "target-features"="+mve.fp" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+
+...
+---
+name:            mov_between_dec_end
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.4(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r7, $lr
+  
+    frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    tCBZ $r0, %bb.4
+  
+  bb.1.while.body.preheader:
+    successors: %bb.2(0x80000000)
+    liveins: $r0
+  
+    $lr = tMOVr $r0, 14, $noreg
+    $lr = t2DoLoopStart killed $r0
+  
+  bb.2.while.body:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+    liveins: $lr
+  
+    $r4 = tMOVr $lr, 14, $noreg
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    renamable $r0 = t2ADDri renamable $lr, 2, 14, $noreg, $noreg
+    $lr = tMOVr $r4, 14, $noreg
+    t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
+    tB %bb.3, 14, $noreg
+  
+  bb.3.while.end:
+    liveins: $r0
+  
+    tPOP_RET 14, $noreg, def $r7, def $pc, implicit killed $r0
+  
+  bb.4:
+    renamable $r0, dead $cpsr = tMOVi8 0, 14, $noreg
+    tPOP_RET 14, $noreg, def $r7, def $pc, implicit killed $r0
+
+...

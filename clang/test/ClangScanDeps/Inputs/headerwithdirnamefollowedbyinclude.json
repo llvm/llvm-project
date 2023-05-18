@@ -1,0 +1,12 @@
+[
+    {
+      "directory": "DIR",
+      "command": "clang -c -IDIR -IInputs DIR/headerwithdirname_input.cpp",
+      "file": "DIR/headerwithdirname_input.cpp"
+    },
+    {
+      "directory": "DIR",
+      "command": "clang-cl /c /IDIR /IInputs -- DIR/headerwithdirname_input_clangcl.cpp",
+      "file": "DIR/headerwithdirname_input_clangcl.cpp"
+    }
+]

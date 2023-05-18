@@ -1,0 +1,11 @@
+# RUN: llc -run-pass none -o - %s | llc -x=mir -run-pass none -o - | FileCheck %s
+
+# Check that we don't print a trailing comma for CFI escape indices, and that
+# in general we can round trip them.
+
+name: func
+# CHECK-LABEL: name: func
+body: |
+  bb.0:
+    CFI_INSTRUCTION escape 0x61, 0x62, 0x63
+    ; CHECK: CFI_INSTRUCTION escape 0x61, 0x62, 0x63{{$}}

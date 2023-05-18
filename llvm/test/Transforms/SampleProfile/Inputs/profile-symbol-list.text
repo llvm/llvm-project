@@ -1,0 +1,10 @@
+_Z3goov
+_Z3sumii
+_Z3toov
+__libc_csu_fini
+__libc_csu_init
+_dl_relocate_static_pie
+_fini
+_init
+_start
+ main

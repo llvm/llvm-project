@@ -1,0 +1,36 @@
+# RUN: llc -mtriple=i386-linux-gnu                       -run-pass=regbankselect %s -o - | FileCheck %s
+# RUN: llc -mtriple=i386-linux-gnu -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s
+
+--- |
+  define void @test_uadde_i32() {
+    ret void
+  }
+
+...
+---
+name:            test_uadde_i32
+# CHECK-LABEL: name:  test_uadde_i32
+alignment:       16
+legalized:       true
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
+# CHECK-NEXT:   - { id: 4, class: gpr, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+body:             |
+  bb.0 (%ir-block.0):
+    %0(s32) = IMPLICIT_DEF
+    %1(s32) = IMPLICIT_DEF
+    %2(s1) = IMPLICIT_DEF
+    %3(s32), %4(s1) = G_UADDE %0, %1, %2
+    RET 0
+
+...

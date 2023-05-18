@@ -1,0 +1,2 @@
+# RUN: %lldb --script-language none -o 'script' 2>&1 | FileCheck %s
+# CHECK: error: the script-lang setting is set to none - scripting not available

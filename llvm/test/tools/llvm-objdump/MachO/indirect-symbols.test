@@ -1,0 +1,26 @@
+RUN: llvm-objdump --macho --indirect-symbols %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s
+RUN: llvm-otool -Iv %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s
+RUN: llvm-objdump --macho --indirect-symbols --non-verbose %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=NON_VERBOSE
+RUN: llvm-otool -I %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=NON_VERBOSE
+
+CHECK: Indirect symbols for (__TEXT,__stubs) 1 entries
+CHECK: address            index name
+CHECK: 0x0000000100000f6c     2 _printf
+CHECK: Indirect symbols for (__DATA,__nl_symbol_ptr) 2 entries
+CHECK: address            index name
+CHECK: 0x0000000100001000     3 dyld_stub_binder
+CHECK: 0x0000000100001008 ABSOLUTE
+CHECK: Indirect symbols for (__DATA,__la_symbol_ptr) 1 entries
+CHECK: address            index name
+CHECK: 0x0000000100001010     2 _printf
+
+NON_VERBOSE: Indirect symbols for (__TEXT,__stubs) 1 entries
+NON_VERBOSE: address            index
+NON_VERBOSE: 0x0000000100000f6c     2 
+NON_VERBOSE: Indirect symbols for (__DATA,__nl_symbol_ptr) 2 entries
+NON_VERBOSE: address            index
+NON_VERBOSE: 0x0000000100001000     3 
+NON_VERBOSE: 0x0000000100001008 ABSOLUTE
+NON_VERBOSE: Indirect symbols for (__DATA,__la_symbol_ptr) 1 entries
+NON_VERBOSE: address            index
+NON_VERBOSE: 0x0000000100001010     2 

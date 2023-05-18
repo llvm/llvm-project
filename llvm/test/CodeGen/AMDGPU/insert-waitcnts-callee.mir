@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+--- |
+  define float @entry_callee_wait(float %arg) #0 {
+    ret float %arg
+  }
+
+  attributes #0 = { nounwind }
+...
+---
+# CHECK-LABEL: name: entry_callee_wait{{$}}
+# CHECK: bb.0:
+# CHECK-NEXT: S_WAITCNT 0{{$}}
+# CHECK-NEXT: V_ADD_F32
+# CHECK-NEXT: S_SETPC_B64
+liveins:
+  - { reg: '$sgpr0_sgpr1' }
+  - { reg: '$vgpr0' }
+
+name: entry_callee_wait
+body:             |
+  bb.0:
+    $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
+    S_SETPC_B64 killed $sgpr0_sgpr1
+
+...

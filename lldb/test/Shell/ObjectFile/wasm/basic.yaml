@@ -1,0 +1,30 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK: Plugin name: wasm
+# CHECK: Architecture: wasm32-unknown-unknown-wasm
+# CHECK: UUID: 
+# CHECK: Executable: false
+# CHECK: Stripped: false
+# CHECK: Type: shared library
+# CHECK: Strata: user
+# CHECK: Base VM address: 0x0
+
+# CHECK: Name: code
+# CHECK: Type: code
+# CHECK: VM address: 0x0
+# CHECK: VM size: 56
+# CHECK: File size: 56
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           6
+        Body:            238080808000210141102102200120026B21032003200036020C200328020C2104200328020C2105200420056C210620060F0B
+

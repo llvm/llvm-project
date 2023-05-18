@@ -1,0 +1,56 @@
+Tests for weighted merge of sample profiles.
+
+1- Merge the foo and bar profiles with unity weight and verify the combined output
+RUN: llvm-profdata merge -sample -text -weighted-input=1,%p/Inputs/weight-sample-bar.proftext -weighted-input=1,%p/Inputs/weight-sample-foo.proftext -o - | FileCheck %s -check-prefix=1X_1X_WEIGHT
+RUN: llvm-profdata merge -sample -text -weighted-input=1,%p/Inputs/weight-sample-bar.proftext %p/Inputs/weight-sample-foo.proftext -o - | FileCheck %s -check-prefix=1X_1X_WEIGHT
+1X_1X_WEIGHT-DAG: foo:1763288:35327
+1X_1X_WEIGHT-DAG:  7: 35327
+1X_1X_WEIGHT-DAG:  8: 35327
+1X_1X_WEIGHT-DAG:  9: 6930
+1X_1X_WEIGHT-DAG:  10: 29341
+1X_1X_WEIGHT-DAG:  11: 11906
+1X_1X_WEIGHT-DAG:  13: 18185 foo:19531
+1X_1X_WEIGHT-DAG:  15: 36458
+1X_1X_WEIGHT-DAG: bar:1772037:35370
+1X_1X_WEIGHT-DAG:  17: 35370
+1X_1X_WEIGHT-DAG:  18: 35370
+1X_1X_WEIGHT-DAG:  19: 7005
+1X_1X_WEIGHT-DAG:  20: 29407
+1X_1X_WEIGHT-DAG:  21: 12170
+1X_1X_WEIGHT-DAG:  23: 18150 bar:19829
+1X_1X_WEIGHT-DAG:  25: 36666
+
+2- Merge the foo and bar profiles with weight 3x and 5x respectively and verify the combined output
+RUN: llvm-profdata merge -sample -text -weighted-input=3,%p/Inputs/weight-sample-bar.proftext -weighted-input=5,%p/Inputs/weight-sample-foo.proftext -o - | FileCheck %s -check-prefix=3X_5X_WEIGHT
+3X_5X_WEIGHT-DAG: foo:8816440:176635
+3X_5X_WEIGHT-DAG:  7: 176635
+3X_5X_WEIGHT-DAG:  8: 176635
+3X_5X_WEIGHT-DAG:  9: 34650
+3X_5X_WEIGHT-DAG:  10: 146705
+3X_5X_WEIGHT-DAG:  11: 59530
+3X_5X_WEIGHT-DAG:  13: 90925 foo:97655
+3X_5X_WEIGHT-DAG:  15: 182290
+3X_5X_WEIGHT-DAG: bar:5316111:106110
+3X_5X_WEIGHT-DAG:  17: 106110
+3X_5X_WEIGHT-DAG:  18: 106110
+3X_5X_WEIGHT-DAG:  19: 21015
+3X_5X_WEIGHT-DAG:  20: 88221
+3X_5X_WEIGHT-DAG:  21: 36510
+3X_5X_WEIGHT-DAG:  23: 54450 bar:59487
+3X_5X_WEIGHT-DAG:  25: 109998
+
+3- Bad merge: invalid weight
+RUN: not llvm-profdata merge -sample -weighted-input=3,%p/Inputs/weight-sample-bar.proftext -weighted-input=0,%p/Inputs/weight-sample-foo.proftext -o %t.out 2>&1 | FileCheck %s -check-prefix=INVALID_WEIGHT
+RUN: not llvm-profdata merge -sample -weighted-input=3,%p/Inputs/weight-sample-bar.proftext -weighted-input=0.75,%p/Inputs/weight-sample-foo.proftext -o %t.out 2>&1 | FileCheck %s -check-prefix=INVALID_WEIGHT
+RUN: not llvm-profdata merge -sample -weighted-input=3,%p/Inputs/weight-sample-bar.proftext -weighted-input=-5,%p/Inputs/weight-sample-foo.proftext -o %t.out 2>&1 | FileCheck %s -check-prefix=INVALID_WEIGHT
+RUN: not llvm-profdata merge -sample -weighted-input=3,%p/Inputs/weight-sample-bar.proftext -weighted-input=,%p/Inputs/weight-sample-foo.proftext -o %t.out 2>&1 | FileCheck %s -check-prefix=INVALID_WEIGHT
+RUN: not llvm-profdata merge -sample -weighted-input=3,%p/Inputs/weight-sample-bar.proftext -weighted-input=%p/Inputs/weight-sample-foo.proftext -o %t.out 2>&1 | FileCheck %s -check-prefix=INVALID_WEIGHT
+INVALID_WEIGHT: error: input weight must be a positive integer
+
+4- Bad merge: input path does not exist
+RUN: not llvm-profdata merge -sample -weighted-input=3,%p/Inputs/does-not-exist.proftext -weighted-input=2,%p/Inputs/does-not-exist-either.proftext -o %t.out 2>&1 | FileCheck -DMSG=%errc_ENOENT %s -check-prefix=INVALID_INPUT
+INVALID_INPUT: {{.*}}: {{.*}}does-not-exist.proftext: [[MSG]]
+
+5- No inputs
+RUN: not llvm-profdata merge -sample -o %t.out 2>&1 | FileCheck %s -check-prefix=NO_INPUT
+NO_INPUT: {{.*}}: no input files specified. See llvm-profdata{{(\.EXE|\.exe)?}} merge -help

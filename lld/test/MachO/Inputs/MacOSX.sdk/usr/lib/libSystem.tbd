@@ -1,0 +1,72 @@
+--- !tapi-tbd
+tbd-version:      4
+targets:          [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+uuids:
+  - target:       x86_64-macos
+    value:        00000000-0000-0000-0000-000000000000
+  - target:       x86_64-maccatalyst
+    value:        00000000-0000-0000-0000-000000000000
+  - target:       arm64-macos
+    value:        00000000-0000-0000-0000-000000000001
+install-name:     '/usr/lib/libSystem.dylib'
+current-version:  0001.001.1
+reexported-libraries:
+  - targets:      [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+    libraries:    [ '/usr/lib/system/libdyld.dylib',
+                    '/usr/lib/system/libsystem_c.dylib',
+                    '/usr/lib/system/libsystem_m.dylib' ]
+--- !tapi-tbd
+tbd-version:      4
+targets:          [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+uuids:
+  - target:       x86_64-macos
+    value:        00000000-0000-0000-0000-000000000002
+  - target:       x86_64-maccatalyst
+    value:        00000000-0000-0000-0000-000000000000
+  - target:       arm64-macos
+    value:        00000000-0000-0000-0000-000000000003
+install-name:     '/usr/lib/system/libdyld.dylib'
+current-version:  0001.001.1
+parent-umbrella:
+  - targets:      [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+    umbrella:     System
+exports:
+  - targets:      [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+    symbols:      [ dyld_stub_binder, __tlv_bootstrap ]
+--- !tapi-tbd
+tbd-version:      4
+targets:          [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+uuids:
+  - target:       x86_64-macos
+    value:        00000000-0000-0000-0000-000000000003
+  - target:       x86_64-maccatalyst
+    value:        00000000-0000-0000-0000-000000000000
+  - target:       arm64-macos
+    value:        00000000-0000-0000-0000-000000000004
+install-name:     '/usr/lib/system/libsystem_c.dylib'
+current-version:  0001.001.1
+parent-umbrella:
+  - targets:      [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+    umbrella:     System
+exports:
+  - targets:      [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+    symbols:      [ ]
+--- !tapi-tbd
+tbd-version:      4
+targets:          [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+uuids:
+  - target:       x86_64-macos
+    value:        00000000-0000-0000-0000-000000000004
+  - target:       x86_64-maccatalyst
+    value:        00000000-0000-0000-0000-000000000000
+  - target:       arm64-macos
+    value:        00000000-0000-0000-0000-000000000005
+install-name:     '/usr/lib/system/libsystem_m.dylib'
+current-version:  0001.001.1
+parent-umbrella:
+  - targets:      [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+    umbrella:     System
+exports:
+  - targets:      [ x86_64-macos, x86_64-maccatalyst, arm64-macos ]
+    symbols:      [ ___nan, ___isnan, ___inf, ___isinf ]
+...

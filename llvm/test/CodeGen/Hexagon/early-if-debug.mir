@@ -1,0 +1,52 @@
+# RUN: llc -march=hexagon -eif-limit=4 -run-pass hexagon-early-if -o - %s | FileCheck %s
+# Check that even with the limit of 4 instructions, the block bb.1 is
+# if-converted.
+
+# CHECK-LABEL: bb.0:
+# CHECK: %0:intregs = COPY $r0
+# CHECK: %1:predregs = C2_cmpeqi %0, 0
+# CHECK: %2:intregs = A2_tfrsi 123
+# CHECK: DBG_VALUE %0, $noreg
+# CHECK: DBG_VALUE %0, $noreg
+# CHECK: DBG_VALUE %0, $noreg
+# CHECK: DBG_VALUE %0, $noreg
+# CHECK: DBG_VALUE %0, $noreg
+# CHECK: %3:intregs = A2_tfrsi 321
+# CHECK: %5:intregs = C2_mux %1, %2, %3
+
+--- |
+  define void @foo() {
+    ret void
+  }
+...
+---
+name: foo
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: predregs }
+  - { id: 2, class: intregs }
+  - { id: 3, class: intregs }
+  - { id: 4, class: intregs }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0 = COPY $r0
+    %1 = C2_cmpeqi %0, 0
+    %2 = A2_tfrsi 123
+    J2_jumpt %1, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    DBG_VALUE %0, $noreg
+    DBG_VALUE %0, $noreg
+    DBG_VALUE %0, $noreg
+    DBG_VALUE %0, $noreg
+    DBG_VALUE %0, $noreg
+    %3 = A2_tfrsi 321
+
+  bb.2:
+    %4 = PHI %2, %bb.0, %3, %bb.1
+
+...

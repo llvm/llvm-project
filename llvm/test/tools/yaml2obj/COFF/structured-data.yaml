@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --hex-dump=.rdata %t | FileCheck %s
+# CHECK:  0x180001000 01000000 02000000 11223344 ffffffff
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     20
+    StructuredData:
+        - UInt32: 1
+        - UInt32: 2
+        - Binary: 11223344
+        - UInt32: 0xffffffff
+symbols: []
+...

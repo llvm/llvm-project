@@ -1,0 +1,287 @@
+RUN: export LSAN_OPTIONS=detect_leaks=0
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-empty.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-EMPTY %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ENCODING %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=BAD-ABBREV %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-unexpected-eof.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=UNEXPECTED-EOF %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-bad-abbrev-number.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=BAD-ABBREV-NUMBER %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-type-table-forward-ref.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=BAD-TYPE-TABLE-FORWARD-REF %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-bitwidth.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=BAD-BITWIDTH %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-align.bc  2>&1 | \
+RUN:   FileCheck --check-prefix=BAD-ALIGN %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-call-non-function-explicit-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NON-FUNCTION-EXPLICIT-CALL %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-invoke-mismatched-explicit-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-INVOKE %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-invoke-non-function-explicit-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NON-FUNCTION-EXPLICIT-INVOKE %s
+
+INVALID-EMPTY: error: file too small to contain bitcode header
+INVALID-ENCODING: Invalid encoding
+BAD-ABBREV: error: can't skip to bit
+UNEXPECTED-EOF: error: can't skip to bit
+BAD-ABBREV-NUMBER: error: can't skip to bit
+BAD-TYPE-TABLE-FORWARD-REF: Invalid TYPE table: Only named structs can be forward referenced
+BAD-BITWIDTH: error: can't skip to bit
+BAD-ALIGN: Invalid alignment value
+NON-FUNCTION-EXPLICIT-CALL: Explicit call type is not a function type
+MISMATCHED-EXPLICIT-INVOKE: Insufficient operands to call
+NON-FUNCTION-EXPLICIT-INVOKE: Explicit invoke type is not a function type
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-extractval-array-idx.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=EXTRACT-ARRAY %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-extractval-struct-idx.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=EXTRACT-STRUCT %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-extractval-too-many-idxs.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=EXTRACT-IDXS %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-insertval-array-idx.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INSERT-ARRAY %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-insertval-struct-idx.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INSERT-STRUCT %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-insertval-too-many-idxs.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INSERT-IDXS %s
+
+
+EXTRACT-ARRAY: EXTRACTVAL: Invalid array index
+EXTRACT-STRUCT: EXTRACTVAL: Invalid struct index
+EXTRACT-IDXS: EXTRACTVAL: Invalid type
+INSERT-ARRAY: INSERTVAL: Invalid array index
+INSERT-STRUCT: INSERTVAL: Invalid struct index
+INSERT-IDXS: INSERTVAL: Invalid type
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-fp-shift.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=FP-SHIFT %s
+
+FP-SHIFT: Invalid record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-vbr-size-too-big.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=HUGE-ABBREV-OP %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-fixed-size-too-big.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=HUGE-ABBREV-OP %s
+
+HUGE-ABBREV-OP: Fixed or VBR abbrev record with size > MaxChunkData
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=ARRAY-TYPE %s
+
+ARRAY-TYPE: Array element type can't be an Array or a Blob
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-non-vector-extractelement.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-TYPE %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-non-vector-insertelement.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-TYPE %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-non-vector-shufflevector.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-TYPE %s
+
+INVALID-TYPE: Invalid type for value
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-fwdref-type-mismatch.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=FWDREF-TYPE %s
+
+FWDREF-TYPE: Invalid record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-fwdref-type-mismatch-2.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=FWDREF-TYPE-MISMATCH %s
+
+FWDREF-TYPE-MISMATCH: Malformed block
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-element-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=ELEMENT-TYPE %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-vector-element-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=ELEMENT-TYPE %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-pointer-element-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=ELEMENT-TYPE %s
+
+ELEMENT-TYPE: Invalid type
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-cast.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CAST %s
+
+INVALID-CAST: Invalid cast
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-op-not-2nd-to-last.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=ARRAY-NOT-2LAST %s
+
+ARRAY-NOT-2LAST: Array op not second to last
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-too-big-fwdref.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=HUGE-FWDREF %s
+
+HUGE-FWDREF: Invalid record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-load-pointer-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=LOAD-BAD-TYPE %s
+
+LOAD-BAD-TYPE: Load operand is not a pointer type
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-GCTable-overflow.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=GCTABLE-OFLOW %s
+
+GCTABLE-OFLOW: Invalid ID
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-insert-0-indices.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INSERT-0-IDXS %s
+
+INSERT-0-IDXS: INSERTVAL: Invalid instruction with 0 indices
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-extract-0-indices.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=EXTRACT-0-IDXS %s
+
+EXTRACT-0-IDXS: EXTRACTVAL: Invalid instruction with 0 indices
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-load-ptr-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=BAD-LOAD-PTR-TYPE %s
+
+BAD-LOAD-PTR-TYPE: error: can't skip to bit
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-inserted-value-type-mismatch.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INSERT-TYPE-MISMATCH %s
+
+INSERT-TYPE-MISMATCH: Inserted value type doesn't match aggregate type
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-code-len-width.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CODELENWIDTH %s
+
+INVALID-CODELENWIDTH: error: can't skip to bit
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-function-argument-type.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ARGUMENT-TYPE %s
+
+INVALID-ARGUMENT-TYPE: Invalid function argument type
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-function-comdat-id.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-FCOMDAT-ID %s
+
+INVALID-FCOMDAT-ID: Malformed block
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-global-var-comdat-id.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-GVCOMDAT-ID %s
+
+INVALID-GVCOMDAT-ID: Invalid global variable comdat ID
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-no-operands.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=ABBREV-NO-OPS %s
+
+ABBREV-NO-OPS: Abbrev record with no operands
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-operand-encoding.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=ARRAY-OP-ENC %s
+
+ARRAY-OP-ENC: Malformed block
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-metadata-not-followed-named-node.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=META-NOT-FOLLOWED-BY-NAMED-META %s
+
+META-NOT-FOLLOWED-BY-NAMED-META: Malformed block
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-vector-length.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=VECTOR-LENGTH %s
+
+VECTOR-LENGTH: Invalid vector length
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-alias-type-mismatch.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=ALIAS-TYPE-MISMATCH %s
+
+ALIAS-TYPE-MISMATCH: Insufficient function protos
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-no-function-block.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NO-FUNCTION-BLOCK %s
+
+NO-FUNCTION-BLOCK: Trying to materialize functions before seeing function blocks (Producer: 'LLVM3.8.0git' Reader: 'LLVM
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-name-with-0-byte.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NAME-WITH-0 %s
+
+NAME-WITH-0: Malformed block
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-void-constant.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=VOID-CONSTANT-TYPE %s
+
+VOID-CONSTANT-TYPE: Invalid constant type
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-no-operands.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=GEP-NO-OPERANDS %s
+
+GEP-NO-OPERANDS: Constant GEP record must have at least two elements
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-constant-gep.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CONSTANT-GEP %s
+
+INVALID-CONSTANT-GEP: Constant GEP record must have at least two elements
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-storeatomic.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NONPOINTER-STOREATOMIC %s
+
+NONPOINTER-STOREATOMIC: Invalid record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-atomicrmw.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NONPOINTER-ATOMICRMW %s
+
+NONPOINTER-ATOMICRMW: Invalid record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-fcmp-opnum.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-FCMP-OPNUM %s
+
+INVALID-FCMP-OPNUM: Invalid record: operand number exceeded available operands
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering-2.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering-3.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-cmpxchg-ordering-4.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=CMPXCHG-ORDERING %s
+
+CMPXCHG-ORDERING: Invalid cmpxchg {{failure|success}} ordering
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-number.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ABBREV-NUMBER %s
+
+INVALID-ABBREV-NUMBER: Invalid abbrev number
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-attribute-group-entry.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-ATTRIBUTE-GROUP-ENTRY %s
+
+INVALID-ATTRIBUTE-GROUP-ENTRY: Invalid attribute group entry
+
+RUN: not llvm-dis -disable-output %p/Inputs/unterminated-blob.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=UNTERMINATED-BLOB %s
+
+UNTERMINATED-BLOB: Blob ends too soon
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-value-symbol-table.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-VALUE-SYMBOL-TABLE %s
+
+INVALID-VALUE-SYMBOL-TABLE: Invalid value reference in symbol table
+
+RUN: not llvm-dis -disable-output %p/Inputs/unterminated-vbr.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=UNTERMINATED-VBR %s
+
+UNTERMINATED-VBR: Failed to read size: Unterminated VBR
+
+RUN: not llvm-dis -disable-output %p/Inputs/comdat-name-too-large.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=COMDAT-NAME-TOO-LARGE %s
+
+COMDAT-NAME-TOO-LARGE: Comdat name size too large
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-chunk-size.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-CHUNK-SIZE %s
+
+INVALID-CHUNK-SIZE: Fixed or VBR abbrev record with size > MaxChunkData
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-diimportedentity-record.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-DIIMPORTEDENTITY-RECORD %s
+
+INVALID-DIIMPORTEDENTITY-RECORD: Invalid DIImportedEntity record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-forward-declare.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-FORWARD-DECLARE %s
+
+INVALID-FORWARD-DECLARE: Assigned value does not match type of forward declaration

@@ -1,0 +1,116 @@
+Some basic tests for supplementing instrumentation profile with sample profile.
+
+Test all of goo's counters will be set to PseudoHot.
+RUN: llvm-profdata merge \
+RUN:     -supplement-instr-with-sample=%p/Inputs/mix_sample.proftext \
+RUN:     -suppl-min-size-threshold=0 %p/Inputs/mix_instr.proftext -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=MIX1
+
+MIX1: foo:
+MIX1-NEXT: Hash: 0x0000000000000007
+MIX1-NEXT: Counters: 5
+MIX1-NEXT: Block counts: [12, 13, 0, 0, 0]
+MIX1: goo:
+MIX1-NEXT: Hash: 0x0000000000000005
+MIX1-NEXT: Counters: 3
+MIX1-NOT: Block counts:
+MIX1-SAME: <PseudoHot>
+MIX1: moo:
+MIX1-NEXT: Hash: 0x0000000000000009
+MIX1-NEXT: Counters: 4
+MIX1-NEXT: Block counts: [3000, 1000, 2000, 500]
+
+Test when the zero counter ratio of foo is higher than zero-counter-threshold.
+RUN: llvm-profdata merge \
+RUN:     -supplement-instr-with-sample=%p/Inputs/mix_sample.proftext \
+RUN:     -suppl-min-size-threshold=0 -zero-counter-threshold=0.5 \
+RUN:     -instr-prof-cold-threshold=30 %p/Inputs/mix_instr.proftext -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=MIX2
+
+MIX2: foo:
+MIX2-NEXT: Hash: 0x0000000000000007
+MIX2-NEXT: Counters: 5
+MIX2-NOT: Block counts:
+MIX2-SAME: <PseudoHot>
+MIX2: goo:
+MIX2-NEXT: Hash: 0x0000000000000005
+MIX2-NEXT: Counters: 3
+MIX2-NOT: Block counts:
+MIX2-SAME: <PseudoHot>
+MIX2: moo:
+MIX2-NEXT: Hash: 0x0000000000000009
+MIX2-NEXT: Counters: 4
+MIX2-NEXT: Block counts: [3000, 1000, 2000, 500]
+
+Test when the zero counter ratio of foo is lower than zero-counter-threshold.
+RUN: llvm-profdata merge \
+RUN:     -supplement-instr-with-sample=%p/Inputs/mix_sample.proftext \
+RUN:     -suppl-min-size-threshold=0 -zero-counter-threshold=0.7 \
+RUN:     -instr-prof-cold-threshold=30 %p/Inputs/mix_instr.proftext -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=MIX3
+
+MIX3: foo:
+MIX3-NEXT: Hash: 0x0000000000000007
+MIX3-NEXT: Counters: 5
+MIX3-NEXT: Block counts: [1384, 1500, 0, 0, 0]
+MIX3: goo:
+MIX3-NEXT: Hash: 0x0000000000000005
+MIX3-NEXT: Counters: 3
+MIX3-NOT: Block counts:
+MIX3-SAME: <PseudoHot>
+MIX3: moo:
+MIX3-NEXT: Hash: 0x0000000000000009
+MIX3-NEXT: Counters: 4
+MIX3-NEXT: Block counts: [3000, 1000, 2000, 500]
+
+Test foo's profile won't be adjusted because its size is smaller
+than suppl-min-size-threshold.
+RUN: llvm-profdata merge \
+RUN:     -supplement-instr-with-sample=%p/Inputs/mix_sample.proftext \
+RUN:     -suppl-min-size-threshold=2 -zero-counter-threshold=0.7 \
+RUN:     -instr-prof-cold-threshold=30 %p/Inputs/mix_instr_small.proftext -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=MIX4
+
+MIX4: foo:
+MIX4-NEXT: Hash: 0x0000000000000007
+MIX4-NEXT: Counters: 1
+MIX4-NEXT: Block counts: [0]
+MIX4: goo:
+MIX4-NEXT: Hash: 0x0000000000000005
+MIX4-NEXT: Counters: 3
+MIX4-NOT: Block counts:
+MIX4-SAME: <PseudoHot>
+MIX4: moo:
+MIX4-NEXT: Hash: 0x0000000000000009
+MIX4-NEXT: Counters: 1
+MIX4-NEXT: Block counts: [0]
+
+Test profile summary won't be affected by pseudo counters.
+RUN: llvm-profdata merge \
+RUN:     -supplement-instr-with-sample=%p/Inputs/mix_sample.proftext \
+RUN:     -suppl-min-size-threshold=0 %p/Inputs/mix_instr.proftext -o %t
+RUN: llvm-profdata show %t -detailed-summary | FileCheck %s --check-prefix=MIX5
+
+MIX5: Instrumentation level: IR
+MIX5-NEXT: Total functions: 2
+MIX5-NEXT: Maximum function count: 3000
+MIX5-NEXT: Maximum internal block count: 2000
+MIX5-NEXT: Total number of blocks: 9
+MIX5-NEXT: Total count: 6525
+MIX5-NEXT: Detailed summary:
+MIX5-NEXT: 1 blocks with count >= 3000 account for 1 percentage of the total counts.
+MIX5-NEXT: 1 blocks with count >= 3000 account for 10 percentage of the total counts.
+MIX5-NEXT: 1 blocks with count >= 3000 account for 20 percentage of the total counts.
+MIX5-NEXT: 1 blocks with count >= 3000 account for 30 percentage of the total counts.
+MIX5-NEXT: 1 blocks with count >= 3000 account for 40 percentage of the total counts.
+MIX5-NEXT: 2 blocks with count >= 2000 account for 50 percentage of the total counts.
+MIX5-NEXT: 2 blocks with count >= 2000 account for 60 percentage of the total counts.
+MIX5-NEXT: 2 blocks with count >= 2000 account for 70 percentage of the total counts.
+MIX5-NEXT: 3 blocks with count >= 1000 account for 80 percentage of the total counts.
+MIX5-NEXT: 3 blocks with count >= 1000 account for 90 percentage of the total counts.
+MIX5-NEXT: 4 blocks with count >= 500 account for 95 percentage of the total counts.
+MIX5-NEXT: 4 blocks with count >= 500 account for 99 percentage of the total counts.
+MIX5-NEXT: 6 blocks with count >= 12 account for 99.9 percentage of the total counts.
+MIX5-NEXT: 6 blocks with count >= 12 account for 99.99 percentage of the total counts.
+MIX5-NEXT: 6 blocks with count >= 12 account for 99.999 percentage of the total counts.
+MIX5-NEXT: 6 blocks with count >= 12 account for 99.9999 percentage of the total counts.

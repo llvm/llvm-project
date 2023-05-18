@@ -1,0 +1,66 @@
+function: {
+  source: source_function,
+  target: target_function,
+}
+
+global variable: {
+  source: source_variable,
+  target: target_variable,
+}
+
+function: {
+  source: source_function_(.*),
+  transform: target_\1,
+}
+
+global variable: {
+  source: source_variable_(.*),
+  transform: target_\1,
+}
+
+function: {
+  source: naked_source_function,
+  target: naked_target_function,
+  naked: true,
+}
+
+function: {
+  source: imported_function,
+  target: exported_function,
+}
+
+function: {
+  source: missing_global_leader_prefix,
+  target: DO_NOT_REWRITE,
+}
+
+function: {
+  source: first_callee,
+  target: renamed_callee,
+}
+
+global alias: {
+  source: _ZN1SC1Ev,
+  target: _ZN1SD1Ev,
+}
+
+function: {
+  source: source_comdat_function,
+  target: target_comdat_function,
+}
+
+function: {
+  source: source_comdat_function_(.*),
+  transform: target_comdat_function_\1,
+}
+
+global variable: {
+  source: source_comdat_variable,
+  target: target_comdat_variable,
+}
+
+global variable: {
+  source: source_comdat_variable_(.*),
+  transform: target_comdat_variable_\1,
+}
+

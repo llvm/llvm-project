@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-nm %t.o --portability | FileCheck %s --strict-whitespace --match-full-lines
+# RUN: llvm-nm %t.o -P | FileCheck %s --strict-whitespace --match-full-lines
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol_a
+    Section: .text
+    Size:    16
+    Value:   0xff
+  - Name:    symbol_wider_name
+    Section: .text
+    Size:    256
+    Value:   0xffeedd
+
+# CHECK:symbol_a n ff 10
+# CHECK-NEXT:symbol_wider_name n ffeedd 100

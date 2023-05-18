@@ -1,0 +1,61 @@
+# RUN: llvm-mc --disassemble %s -triple=i386-apple-darwin9 | FileCheck %s
+
+# CHECK:  movl    %fs:24, %eax
+0x64 0xa1 0x18 0x00 0x00 0x00 # mov eax, dword ptr fs:[18h]
+
+# CHECK: rep insb    %dx, %es:(%edi)
+0xf3 0x6c #rep ins
+# CHECK: rep insl    %dx, %es:(%edi)
+0xf3 0x6d #rep ins
+# CHECK: rep movsb   (%esi), %es:(%edi)
+0xf3 0xa4 #rep movs
+# CHECK: rep movsl   (%esi), %es:(%edi)
+0xf3 0xa5 #rep movs
+# CHECK: rep outsb   (%esi), %dx
+0xf3 0x6e #rep outs
+# CHECK: rep outsl   (%esi), %dx
+0xf3 0x6f #rep outs
+# CHECK: rep lodsb   (%esi), %al
+0xf3 0xac #rep lods
+# CHECK: rep lodsl   (%esi), %eax
+0xf3 0xad #rep lods
+# CHECK: rep stosb   %al, %es:(%edi)
+0xf3 0xaa #rep stos
+# CHECK: rep stosl   %eax, %es:(%edi)
+0xf3 0xab #rep stos
+# CHECK: rep cmpsb   %es:(%edi), (%esi)
+0xf3 0xa6 #rep cmps
+# CHECK: rep cmpsl   %es:(%edi), (%esi)
+0xf3 0xa7 #repe cmps
+# CHECK: rep scasb   %es:(%edi), %al
+0xf3 0xae #repe scas
+# CHECK: rep scasl   %es:(%edi), %eax
+0xf3 0xaf #repe scas
+# CHECK: repne cmpsb   %es:(%edi), (%esi)
+0xf2 0xa6 #repne cmps
+# CHECK: repne cmpsl   %es:(%edi), (%esi)
+0xf2 0xa7 #repne cmps
+# CHECK: repne scasb   %es:(%edi), %al
+0xf2 0xae #repne scas
+# CHECK: repne scasl   %es:(%edi), %eax
+0xf2 0xaf #repne scas
+
+# CHECK: repne scasw   %es:(%edi), %ax
+0xf2 0x66 0xaf
+# CHECK: repne scasw   %es:(%edi), %ax
+0x66 0xf2 0xaf
+
+# CHECK: rep scasw   %es:(%edi), %ax
+0xf3 0x66 0xaf
+# CHECK: rep scasw   %es:(%edi), %ax
+0x66 0xf3 0xaf
+
+# CHECK: repne insw    %dx, %es:(%edi)
+0xf2 0x66 0x6d
+# CHECK: repne insw    %dx, %es:(%edi)
+0x66 0xf2 0x6d
+
+# CHECK: rep insw    %dx, %es:(%edi)
+0xf3 0x66 0x6d
+# CHECK: rep insw    %dx, %es:(%edi)
+0x66 0xf3 0x6d

@@ -1,0 +1,258 @@
+## Check we can use obj2yaml to yamalize the object containing .dynamic
+## section. Check that resulting section has the proper attributes and
+## dynamic tags and that we do not dump the default sh_entsize.
+
+# RUN: yaml2obj -DENTSIZE=0x10 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s
+
+# CHECK:       Sections:
+# CHECK-NEXT:  - Name:            .dynamic
+# CHECK-NEXT:    Type:            SHT_DYNAMIC
+# CHECK-NEXT:    Address:         0x1000
+# CHECK-NEXT:    AddressAlign:    0x2000
+# CHECK-NEXT:    Entries:
+# CHECK-NEXT:      - Tag:             DT_NULL
+# CHECK-NEXT:        Value:           0x0
+# CHECK-NEXT:      - Tag:             DT_NEEDED
+# CHECK-NEXT:        Value:           0x1
+# CHECK-NEXT:      - Tag:             DT_PLTRELSZ
+# CHECK-NEXT:        Value:           0x2
+# CHECK-NEXT:      - Tag:             DT_PLTGOT
+# CHECK-NEXT:        Value:           0x3
+# CHECK-NEXT:      - Tag:             DT_HASH
+# CHECK-NEXT:        Value:           0x4
+# CHECK-NEXT:      - Tag:             DT_STRTAB
+# CHECK-NEXT:        Value:           0x5
+# CHECK-NEXT:      - Tag:             DT_SYMTAB
+# CHECK-NEXT:        Value:           0x6
+# CHECK-NEXT:      - Tag:             DT_RELA
+# CHECK-NEXT:        Value:           0x7
+# CHECK-NEXT:      - Tag:             DT_RELASZ
+# CHECK-NEXT:        Value:           0x8
+# CHECK-NEXT:      - Tag:             DT_RELAENT
+# CHECK-NEXT:        Value:           0x9
+# CHECK-NEXT:      - Tag:             DT_STRSZ
+# CHECK-NEXT:        Value:           0xA
+# CHECK-NEXT:      - Tag:             DT_SYMENT
+# CHECK-NEXT:        Value:           0xB
+# CHECK-NEXT:      - Tag:             DT_INIT
+# CHECK-NEXT:        Value:           0xC
+# CHECK-NEXT:      - Tag:             DT_FINI
+# CHECK-NEXT:        Value:           0xD
+# CHECK-NEXT:      - Tag:             DT_SONAME
+# CHECK-NEXT:        Value:           0xE
+# CHECK-NEXT:      - Tag:             DT_RPATH
+# CHECK-NEXT:        Value:           0xF
+# CHECK-NEXT:      - Tag:             DT_SYMBOLIC
+# CHECK-NEXT:        Value:           0x10
+# CHECK-NEXT:      - Tag:             DT_REL
+# CHECK-NEXT:        Value:           0x11
+# CHECK-NEXT:      - Tag:             DT_RELSZ
+# CHECK-NEXT:        Value:           0x12
+# CHECK-NEXT:      - Tag:             DT_RELENT
+# CHECK-NEXT:        Value:           0x13
+# CHECK-NEXT:      - Tag:             DT_PLTREL
+# CHECK-NEXT:        Value:           0x14
+# CHECK-NEXT:      - Tag:             DT_DEBUG
+# CHECK-NEXT:        Value:           0x15
+# CHECK-NEXT:      - Tag:             DT_TEXTREL
+# CHECK-NEXT:        Value:           0x16
+# CHECK-NEXT:      - Tag:             DT_JMPREL
+# CHECK-NEXT:        Value:           0x17
+# CHECK-NEXT:      - Tag:             DT_BIND_NOW
+# CHECK-NEXT:        Value:           0x18
+# CHECK-NEXT:      - Tag:             DT_INIT_ARRAY
+# CHECK-NEXT:        Value:           0x19
+# CHECK-NEXT:      - Tag:             DT_FINI_ARRAY
+# CHECK-NEXT:        Value:           0x1A
+# CHECK-NEXT:      - Tag:             DT_INIT_ARRAYSZ
+# CHECK-NEXT:        Value:           0x1B
+# CHECK-NEXT:      - Tag:             DT_FINI_ARRAYSZ
+# CHECK-NEXT:        Value:           0x1C
+# CHECK-NEXT:      - Tag:             DT_RUNPATH
+# CHECK-NEXT:        Value:           0x1D
+# CHECK-NEXT:      - Tag:             DT_FLAGS
+# CHECK-NEXT:        Value:           0x1E
+# CHECK-NEXT:      - Tag:             DT_PREINIT_ARRAY
+# CHECK-NEXT:        Value:           0x1F
+# CHECK-NEXT:      - Tag:             DT_PREINIT_ARRAYSZ
+# CHECK-NEXT:        Value:           0x20
+# CHECK-NEXT:      - Tag:             DT_SYMTAB_SHNDX
+# CHECK-NEXT:        Value:           0x21
+# CHECK-NEXT:      - Tag:             DT_RELRSZ
+# CHECK-NEXT:        Value:           0x22
+# CHECK-NEXT:      - Tag:             DT_RELR
+# CHECK-NEXT:        Value:           0x23
+# CHECK-NEXT:      - Tag:             DT_RELRENT
+# CHECK-NEXT:        Value:           0x24
+# CHECK-NEXT:      - Tag:             DT_ANDROID_REL
+# CHECK-NEXT:        Value:           0x25
+# CHECK-NEXT:      - Tag:             DT_ANDROID_RELSZ
+# CHECK-NEXT:        Value:           0x26
+# CHECK-NEXT:      - Tag:             DT_ANDROID_RELA
+# CHECK-NEXT:        Value:           0x27
+# CHECK-NEXT:      - Tag:             DT_ANDROID_RELASZ
+# CHECK-NEXT:        Value:           0x28
+# CHECK-NEXT:      - Tag:             DT_ANDROID_RELR
+# CHECK-NEXT:        Value:           0x29
+# CHECK-NEXT:      - Tag:             DT_ANDROID_RELRSZ
+# CHECK-NEXT:        Value:           0x2A
+# CHECK-NEXT:      - Tag:             DT_ANDROID_RELRENT
+# CHECK-NEXT:        Value:           0x2B
+# CHECK-NEXT:      - Tag:             DT_GNU_HASH
+# CHECK-NEXT:        Value:           0x2C
+# CHECK-NEXT:      - Tag:             DT_TLSDESC_PLT
+# CHECK-NEXT:        Value:           0x2D
+# CHECK-NEXT:      - Tag:             DT_TLSDESC_GOT
+# CHECK-NEXT:        Value:           0x2E
+# CHECK-NEXT:      - Tag:             DT_RELACOUNT
+# CHECK-NEXT:        Value:           0x2F
+# CHECK-NEXT:      - Tag:             DT_RELCOUNT
+# CHECK-NEXT:        Value:           0x30
+# CHECK-NEXT:      - Tag:             DT_FLAGS_1
+# CHECK-NEXT:        Value:           0x31
+# CHECK-NEXT:      - Tag:             DT_VERSYM
+# CHECK-NEXT:        Value:           0x32
+# CHECK-NEXT:      - Tag:             DT_VERDEF
+# CHECK-NEXT:        Value:           0x33
+# CHECK-NEXT:      - Tag:             DT_VERDEFNUM
+# CHECK-NEXT:        Value:           0x34
+# CHECK-NEXT:      - Tag:             DT_VERNEED
+# CHECK-NEXT:        Value:           0x35
+# CHECK-NEXT:      - Tag:             DT_VERNEEDNUM
+# CHECK-NEXT:        Value:           0x36
+# CHECK-NEXT:      - Tag:             DT_USED
+# CHECK-NEXT:        Value:           0x1
+
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Address:         0x0000000000001000
+    AddressAlign:    0x0000000000002000
+    EntSize:         [[ENTSIZE]]
+    Entries:
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
+      - Tag:             DT_NEEDED
+        Value:           0x0000000000000001
+      - Tag:             DT_PLTRELSZ
+        Value:           0x0000000000000002
+      - Tag:             DT_PLTGOT
+        Value:           0x0000000000000003
+      - Tag:             DT_HASH
+        Value:           0x0000000000000004
+      - Tag:             DT_STRTAB
+        Value:           0x0000000000000005
+      - Tag:             DT_SYMTAB
+        Value:           0x0000000000000006
+      - Tag:             DT_RELA
+        Value:           0x0000000000000007
+      - Tag:             DT_RELASZ
+        Value:           0x0000000000000008
+      - Tag:             DT_RELAENT
+        Value:           0x0000000000000009
+      - Tag:             DT_STRSZ
+        Value:           0x000000000000000A
+      - Tag:             DT_SYMENT
+        Value:           0x000000000000000B
+      - Tag:             DT_INIT
+        Value:           0x000000000000000C
+      - Tag:             DT_FINI
+        Value:           0x000000000000000D
+      - Tag:             DT_SONAME
+        Value:           0x000000000000000E
+      - Tag:             DT_RPATH
+        Value:           0x000000000000000F
+      - Tag:             DT_SYMBOLIC
+        Value:           0x0000000000000010
+      - Tag:             DT_REL
+        Value:           0x0000000000000011
+      - Tag:             DT_RELSZ
+        Value:           0x0000000000000012
+      - Tag:             DT_RELENT
+        Value:           0x0000000000000013
+      - Tag:             DT_PLTREL
+        Value:           0x0000000000000014
+      - Tag:             DT_DEBUG
+        Value:           0x0000000000000015
+      - Tag:             DT_TEXTREL
+        Value:           0x0000000000000016
+      - Tag:             DT_JMPREL
+        Value:           0x0000000000000017
+      - Tag:             DT_BIND_NOW
+        Value:           0x0000000000000018
+      - Tag:             DT_INIT_ARRAY
+        Value:           0x0000000000000019
+      - Tag:             DT_FINI_ARRAY
+        Value:           0x000000000000001A
+      - Tag:             DT_INIT_ARRAYSZ
+        Value:           0x000000000000001B
+      - Tag:             DT_FINI_ARRAYSZ
+        Value:           0x000000000000001C
+      - Tag:             DT_RUNPATH
+        Value:           0x000000000000001D
+      - Tag:             DT_FLAGS
+        Value:           0x000000000000001E
+      - Tag:             DT_PREINIT_ARRAY
+        Value:           0x000000000000001F
+      - Tag:             DT_PREINIT_ARRAYSZ
+        Value:           0x0000000000000020
+      - Tag:             DT_SYMTAB_SHNDX
+        Value:           0x0000000000000021
+      - Tag:             DT_RELRSZ
+        Value:           0x0000000000000022
+      - Tag:             DT_RELR
+        Value:           0x0000000000000023
+      - Tag:             DT_RELRENT
+        Value:           0x0000000000000024
+      - Tag:             DT_ANDROID_REL
+        Value:           0x0000000000000025
+      - Tag:             DT_ANDROID_RELSZ
+        Value:           0x0000000000000026
+      - Tag:             DT_ANDROID_RELA
+        Value:           0x0000000000000027
+      - Tag:             DT_ANDROID_RELASZ
+        Value:           0x0000000000000028
+      - Tag:             DT_ANDROID_RELR
+        Value:           0x0000000000000029
+      - Tag:             DT_ANDROID_RELRSZ
+        Value:           0x000000000000002A
+      - Tag:             DT_ANDROID_RELRENT
+        Value:           0x000000000000002B
+      - Tag:             DT_GNU_HASH
+        Value:           0x000000000000002C
+      - Tag:             DT_TLSDESC_PLT
+        Value:           0x000000000000002D
+      - Tag:             DT_TLSDESC_GOT
+        Value:           0x000000000000002E
+      - Tag:             DT_RELACOUNT
+        Value:           0x000000000000002F
+      - Tag:             DT_RELCOUNT
+        Value:           0x0000000000000030
+      - Tag:             DT_FLAGS_1
+        Value:           0x0000000000000031
+      - Tag:             DT_VERSYM
+        Value:           0x0000000000000032
+      - Tag:             DT_VERDEF
+        Value:           0x0000000000000033
+      - Tag:             DT_VERDEFNUM
+        Value:           0x0000000000000034
+      - Tag:             DT_VERNEED
+        Value:           0x0000000000000035
+      - Tag:             DT_VERNEEDNUM
+        Value:           0x0000000000000036
+      - Tag:             DT_USED
+        Value:           0x0000000000000001
+
+## Test the behavior when sh_entsize is invalid.
+## Here we use 0xFE as an arbitrary broken value instead of expected 0x16.
+
+# RUN: yaml2obj -DENTSIZE=0xff %s -o %t2
+# RUN: not obj2yaml %t2 2>&1 | FileCheck %s --check-prefix=ENTSIZE
+
+# ENTSIZE: section [index 1] has invalid sh_entsize: expected 16, but got 255

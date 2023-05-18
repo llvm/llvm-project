@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=amdgcn -run-pass liveintervals -verify-machineinstrs -o /dev/null -debug-only=regalloc %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+# We currently maintain a main liveness range which operates like a superset of
+# all subregister liveranges. We may need to create additional SSA values at
+# merge point in this main liverange even though none of the subregister
+# liveranges needed it.
+#
+# Should see three distinct value numbers:
+# CHECK: %0 [{{.*}}:0)[{{.*}}:1)[{{.*}}:2) 0@{{[0-9]+[Berd]}} 1@{{[0-9]+[Berd]}} 2@{{[0-9]+B-phi}}
+--- |
+  define amdgpu_kernel void @test0() { ret void }
+...
+---
+name: test0
+registers:
+  - { id: 0, class: sreg_64 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def undef %0.sub0
+    S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.1:
+    S_NOP 0, implicit-def %0.sub1
+    S_NOP 0, implicit %0.sub1
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_NOP 0, implicit %0.sub0
+...

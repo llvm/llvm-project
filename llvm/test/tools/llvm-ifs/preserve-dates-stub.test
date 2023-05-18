@@ -1,0 +1,19 @@
+## Test writing unchanged content to ELF Stub file with --write-if-changed flag.
+
+# RUN: llvm-ifs --output-elf=%t %s
+# RUN: env TZ=GMT touch -m -t 197001010000 %t
+# RUN: llvm-ifs --output-elf=%t --write-if-changed %s
+# RUN: env TZ=GMT ls -l %t | FileCheck %s
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
+NeededLibs:
+  - libc.so.6
+Symbols:
+  - { Name: bar, Type: Object, Size: 42 }
+  - { Name: baz, Type: TLS, Size: 3 }
+  - { Name: plus, Type: Func }
+...
+
+# CHECK: {{[[:space:]]1970}}

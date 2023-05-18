@@ -1,0 +1,32 @@
+{
+   "context" : "[n] -> {  : n >= -2147483648 and n <= 2147483647 }",
+   "name" : "for.cond => for.end10",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "[n -> { Stmt_S0[i0] -> MemRef_A[0] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_S0[i0] -> MemRef_A[0] }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_S0[i0] : i0 >= 0 and i0 <= -1 + 2n and n >= 1 }",
+         "name" : "Stmt_S0",
+         "schedule" : "[n] -> { Stmt_S0[i0] -> [0, n - i0, 0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_S1[i0] -> MemRef_A[1 + i0] }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_S1[i0] : i0 >= 0 and i0 <= -1 + 2n and n >= 1 }",
+         "name" : "Stmt_S1",
+         "schedule" : "[n] -> { Stmt_S1[i0] -> [1, n - i0, 0] }"
+      }
+   ]
+}

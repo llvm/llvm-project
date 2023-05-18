@@ -1,0 +1,3 @@
+module a { header "friend.h" export * }
+module b { header "def.h" export * }
+

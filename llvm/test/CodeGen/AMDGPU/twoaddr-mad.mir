@@ -1,0 +1,249 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: test_madmk_reg_imm_f32
+# GCN: V_MADMK_F32 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+---
+name:            test_madmk_reg_imm_f32
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit $exec
+    %3 = V_MAC_F32_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_madmk_imm_reg_f32
+# GCN: V_MADMK_F32 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+---
+name:            test_madmk_imm_reg_f32
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit $exec
+    %3 = V_MAC_F32_e32 %2, killed %0.sub0, killed %1, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_madak_f32
+# GCN: V_MADAK_F32 killed %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
+---
+name:            test_madak_f32
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = V_MOV_B32_e32 1078523331, implicit $exec
+    %2 = V_MAC_F32_e32 killed %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %1
+...
+
+# GCN-LABEL: name: test_madmk_reg_imm_f16
+# GCN: V_MADMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+---
+name:            test_madmk_reg_imm_f16
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit $exec
+    %3 = V_MAC_F16_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_madmk_imm_reg_f16
+# GCN: V_MADMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+---
+name:            test_madmk_imm_reg_f16
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = COPY %0.sub1
+    %2 = V_MOV_B32_e32 1078523331, implicit $exec
+    %3 = V_MAC_F16_e32 %2, killed %0.sub0, killed %1, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_madak_f16
+# GCN: V_MADAK_F16 killed %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
+---
+name:            test_madak_f16
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = V_MOV_B32_e32 1078523331, implicit $exec
+    %2 = V_MAC_F16_e32 killed %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %1
+...
+
+# Make sure constant bus restriction isn't violated if src0 is an SGPR.
+
+# GCN-LABEL: name: test_madak_sgpr_src0_f32
+# GCN: %1:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
+# GCN: %3:vgpr_32 = V_MAD_F32_e64 0, killed %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+
+---
+name:            test_madak_sgpr_src0_f32
+registers:
+  - { id: 0, class: sreg_32_xm0 }
+  - { id: 1, class: vgpr_32}
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = IMPLICIT_DEF
+    %1 = V_MOV_B32_e32 1078523331, implicit $exec
+    %2 = IMPLICIT_DEF
+    %3 = V_MAC_F32_e32 killed %0, %1, %2, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %2
+...
+
+# This can still fold if this is an inline immediate.
+
+# GCN-LABEL: name: test_madak_inlineimm_src0_f32
+# GCN: %2:vgpr_32 = V_MADMK_F32 1073741824, 1078523331, %1, implicit $mode, implicit $exec
+
+---
+name:            test_madak_inlineimm_src0_f32
+registers:
+  - { id: 0, class: vgpr_32}
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = V_MOV_B32_e32 1078523331, implicit $exec
+    %1 = IMPLICIT_DEF
+    %2 = V_MAC_F32_e32 1073741824, %0, %1, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %1
+...
+# Non-inline immediate uses constant bus already.
+
+# GCN-LABEL: name: test_madak_otherimm_src0_f32
+# GCN: %2:vgpr_32 = V_MADMK_F32 %0, 1120403456, %1, implicit $mode, implicit $exec
+
+---
+name:            test_madak_otherimm_src0_f32
+registers:
+  - { id: 0, class: vgpr_32}
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0 = V_MOV_B32_e32 1078523331, implicit $exec
+    %1 = IMPLICIT_DEF
+    %2 = V_MAC_F32_e32 1120403456, %0, %1, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %1
+...
+# Non-inline immediate uses constant bus already.
+
+# GCN-LABEL: name: test_madak_other_constantlike_src0_f32
+# GCN: %2:vgpr_32 = V_MAC_F32_e32 %stack.0, %0, %2, implicit $mode, implicit $exec
+---
+name:            test_madak_other_constantlike_src0_f32
+registers:
+  - { id: 0, class: vgpr_32}
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+stack:
+  - { id: 0, name: "", type: default, offset: 0, size: 128, alignment: 8,
+      callee-saved-register: '', local-offset: 0, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0:
+
+    %0 = V_MOV_B32_e32 1078523331, implicit $exec
+    %1 = IMPLICIT_DEF
+    %2 = V_MAC_F32_e32 %stack.0, %0, %1, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: name: test_madak_inline_literal_f16
+# GCN: %2:vgpr_32 = V_MADAK_F16 16384, killed %0, 49664, implicit $mode, implicit $exec
+
+---
+name:            test_madak_inline_literal_f16
+body:             |
+  bb.0:
+    %3:vgpr_32 = COPY killed $vgpr0
+
+    %26:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
+    %28:vgpr_32 = V_MAC_F16_e32 16384, killed %3, %26, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %26
+...
+
+# GCN-LABEL: name: test_mad_src0mods
+# GCN: %3:vgpr_32 = V_MAD_F32_e64 1, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: test_mad_src0mods
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_MAC_F32_e64 1, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %2
+...
+
+# GCN-LABEL: name: test_mad_src1mods
+# GCN: %3:vgpr_32 = V_MAD_F32_e64 0, %0, 1, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: test_mad_src1mods
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_MAC_F32_e64 0, %0, 1, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %2
+...
+
+# GCN-LABEL: name: test_mad_src2mods
+# GCN: %3:vgpr_32 = V_MAD_F32_e64 0, %0, 0, %1, 1, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: test_mad_src2mods
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_MAC_F32_e64 0, %0, 0, %1, 1, %2, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %2
+...

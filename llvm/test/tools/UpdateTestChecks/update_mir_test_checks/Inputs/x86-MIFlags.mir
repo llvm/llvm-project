@@ -1,0 +1,79 @@
+# RUN: llc -mtriple=x86_64-unknown-unknown -run-pass=finalize-isel -verify-machineinstrs  %s -o - | FileCheck %s --check-prefixes=CHECK
+
+--- |
+
+
+  define float @check_MI_flags(float %f) {
+    %div = fdiv nsz float 1.000000e+00, %f
+    ret float %div
+  }
+
+...
+---
+name:            check_MI_flags
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: fr32, preferred-register: '' }
+  - { id: 1, class: fr32, preferred-register: '' }
+  - { id: 2, class: fr32, preferred-register: '' }
+liveins:
+  - { reg: '$xmm0', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:
+  - id:              0
+    value:           'float 1.000000e+00'
+    alignment:       4
+    isTargetSpecific: false
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $xmm0
+
+    %0:fr32 = COPY $xmm0
+    %1:fr32 = MOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+    %2:fr32 = nsz nofpexcept DIVSSrr %1, %0, implicit $mxcsr
+    $xmm0 = COPY %2
+    RET 0, $xmm0
+
+...
+
+
+

@@ -1,0 +1,10 @@
+# Check that llvm-bolt detects bad profile data and aborts
+
+# This test uses the clang driver without target flags and will only succeed
+# on Linux systems where the host triple matches the target.
+REQUIRES: system-linux
+
+RUN: %clang %S/Inputs/icf-jump-tables.c -o %t
+RUN: not llvm-bolt %t -o %t.bolt --data %t 2>&1 | FileCheck %s
+
+CHECK: no valid profile data found

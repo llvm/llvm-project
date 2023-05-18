@@ -1,0 +1,149 @@
+## Check how llvm-readobj and llvm-readelf tools dump addends of relocations. 
+
+# RUN: yaml2obj --docnum=1 -DENCODE=LSB -DTYPE=SHT_RELA %s -o %t.le64.rela
+# RUN: llvm-readobj -r %t.le64.rela | FileCheck %s --check-prefix=LLVM-RELA64
+# RUN: llvm-readelf -r %t.le64.rela | FileCheck %s --check-prefix=GNU-RELA64
+
+# LLVM-RELA64:      R_X86_64_NONE - 0x0{{$}}
+# LLVM-RELA64-NEXT: R_X86_64_NONE - 0x1{{$}}
+# LLVM-RELA64-NEXT: R_X86_64_NONE - 0xFFFFFFFFFFFFFFFF{{$}}
+# LLVM-RELA64-NEXT: R_X86_64_NONE - 0x7FFFFFFFFFFFFFFF{{$}}
+# LLVM-RELA64-NEXT: R_X86_64_NONE - 0x8000000000000000{{$}}
+# LLVM-RELA64-NEXT: R_X86_64_NONE - 0xFFFFFFFFFFFFCFC7{{$}}
+# LLVM-RELA64-NEXT: R_X86_64_NONE - 0x12345{{$}}
+
+## FIXME: GNU readelf prints addends differently.
+##        See https://bugs.llvm.org/show_bug.cgi?id=45235.
+# GNU-RELA64:      Type          Symbol's Value  Symbol's Name + Addend
+# GNU-RELA64-NEXT: R_X86_64_NONE                                 0{{$}}
+# GNU-RELA64-NEXT: R_X86_64_NONE                                 1{{$}}
+# GNU-RELA64-NEXT: R_X86_64_NONE                                 ffffffffffffffff{{$}}
+# GNU-RELA64-NEXT: R_X86_64_NONE                                 7fffffffffffffff{{$}}
+# GNU-RELA64-NEXT: R_X86_64_NONE                                 8000000000000000{{$}}
+# GNU-RELA64-NEXT: R_X86_64_NONE                                 ffffffffffffcfc7{{$}}
+# GNU-RELA64-NEXT: R_X86_64_NONE                                 12345{{$}}
+
+# RUN: yaml2obj --docnum=1 -DENCODE=MSB -DTYPE=SHT_RELA %s -o %t.be64.rela
+# RUN: llvm-readobj -r %t.be64.rela | FileCheck %s --check-prefix=LLVM-RELA64
+# RUN: llvm-readelf -r %t.be64.rela | FileCheck %s --check-prefix=GNU-RELA64
+
+# RUN: yaml2obj --docnum=1 -DENCODE=LSB -DTYPE=SHT_REL %s -o %t.le64.rel
+# RUN: llvm-readobj -r %t.le64.rel | FileCheck %s --check-prefix=LLVM-REL64
+# RUN: llvm-readelf -r %t.le64.rel | FileCheck %s --check-prefix=GNU-REL64
+
+# LLVM-REL64-COUNT-7:  R_X86_64_NONE -{{$}}
+# LLVM-REL64-NOT:      R_
+
+# GNU-REL64:         Type               Symbol's Value  Symbol's Name{{$}}
+# GNU-REL64-COUNT-7: R_X86_64_NONE {{$}}
+# GNU-REL64-NOT:     R_
+
+# RUN: yaml2obj --docnum=1 -DENCODE=MSB -DTYPE=SHT_REL %s -o %t.be64.rel
+# RUN: llvm-readobj -r %t.be64.rel | FileCheck %s --check-prefix=LLVM-REL64
+# RUN: llvm-readelf -r %t.be64.rel | FileCheck %s --check-prefix=GNU-REL64
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2[[ENCODE]]
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .foo
+    Type:  [[TYPE]]
+    Relocations:
+## Addend == 0.
+      - Addend: 0x0
+        Type:   R_X86_64_NONE
+## Addend == first positive int64/uint64 == 1.
+      - Addend: 0x1
+        Type:   R_X86_64_NONE
+## Addend == first negative int64 == -1.
+      - Addend: 0xffffffffffffffff
+        Type:   R_X86_64_NONE
+## Addend == max possible int64 == 0x7FFFFFFFFFFFFFFF.
+      - Addend: 0x7FFFFFFFFFFFFFFF
+        Type:   R_X86_64_NONE
+## Addend == min possible int64 == 0x8000000000000000.
+      - Addend: 0x8000000000000000
+        Type:   R_X86_64_NONE
+## Addend == an arbitrary negative number.
+      - Addend: 0xFFFFFFFFFFFFCFC7 ## -12345
+        Type:   R_X86_64_NONE
+## Addend == an arbitrary positive number.
+      - Addend: 0x12345
+        Type:   R_X86_64_NONE
+
+## Starting from here we check ELFCLASS32 objects.
+
+# RUN: yaml2obj --docnum=2 -DENCODE=LSB -DTYPE=SHT_RELA %s -o %t.le32.rela
+# RUN: llvm-readobj -r %t.le32.rela | FileCheck %s --check-prefix=LLVM-RELA32
+# RUN: llvm-readelf -r %t.le32.rela | FileCheck %s --check-prefix=GNU-RELA32
+
+# LLVM-RELA32:      R_386_NONE - 0x0{{$}}
+# LLVM-RELA32-NEXT: R_386_NONE - 0x1{{$}}
+# LLVM-RELA32-NEXT: R_386_NONE - 0xFFFFFFFF{{$}}
+# LLVM-RELA32-NEXT: R_386_NONE - 0x7FFFFFFF{{$}}
+# LLVM-RELA32-NEXT: R_386_NONE - 0x80000000{{$}}
+# LLVM-RELA32-NEXT: R_386_NONE - 0xFFFFCFC7{{$}}
+
+## FIXME: GNU readelf prints addends differently.
+##        See https://bugs.llvm.org/show_bug.cgi?id=45235.
+# GNU-RELA32:      Type       Sym. Value  Symbol's Name + Addend
+# GNU-RELA32-NEXT: R_386_NONE                             0{{$}}
+# GNU-RELA32-NEXT: R_386_NONE                             1{{$}}
+# GNU-RELA32-NEXT: R_386_NONE                             ffffffffffffffff{{$}}
+# GNU-RELA32-NEXT: R_386_NONE                             7fffffff{{$}}
+# GNU-RELA32-NEXT: R_386_NONE                             ffffffff80000000{{$}}
+# GNU-RELA32-NEXT: R_386_NONE                             ffffffffffffcfc7{{$}}
+
+# RUN: yaml2obj --docnum=2 -DENCODE=MSB -DTYPE=SHT_RELA %s -o %t.be32.rela
+# RUN: llvm-readobj -r %t.be32.rela | FileCheck %s --check-prefix=LLVM-RELA32
+# RUN: llvm-readelf -r %t.be32.rela | FileCheck %s --check-prefix=GNU-RELA32
+
+# RUN: yaml2obj --docnum=2 -DENCODE=LSB -DTYPE=SHT_REL %s -o %t.le32.rel
+# RUN: llvm-readobj -r %t.le32.rel | FileCheck %s --check-prefix=LLVM-REL32
+# RUN: llvm-readelf -r %t.le32.rel | FileCheck %s --check-prefix=GNU-REL32
+
+# LLVM-REL32-COUNT-7: R_386_NONE -{{$}}
+# LLVM-REL32-NOT:     R_
+
+# GNU-REL32:         Type
+# GNU-REL32-COUNT-7: R_386_NONE {{$}}
+# GNU-REL32-NOT:     R_
+
+# RUN: yaml2obj --docnum=2 -DENCODE=MSB -DTYPE=SHT_REL %s -o %t.be32.rel
+# RUN: llvm-readobj -r %t.be32.rel | FileCheck %s --check-prefix=LLVM-REL32
+# RUN: llvm-readelf -r %t.be32.rel | FileCheck %s --check-prefix=GNU-REL32
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2[[ENCODE]]
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name: .foo
+    Type: [[TYPE]]
+    Relocations:
+## Addend == 0.
+      - Addend: 0x0
+        Type:   R_386_NONE
+## Addend == first positive int32/uint32 == 1.
+      - Addend: 0x1
+        Type:   R_386_NONE
+## Addend == first negative int32 == -1.
+      - Addend: 0xffffffff
+        Type:   R_386_NONE
+## Addend == max possible int32 == 0x7FFFFFFF.
+      - Addend: 0x7FFFFFFF
+        Type:   R_386_NONE
+## Addend == min possible int32 == 0x80000000.
+      - Addend: 0x80000000
+        Type:   R_386_NONE
+## Addend == an arbitrary negative number.
+      - Addend: 0xFFFFCFC7 ## -12345
+        Type:   R_386_NONE
+## Addend == an arbitrary positive number.
+      - Addend: 0x12345
+        Type:   R_386_NONE

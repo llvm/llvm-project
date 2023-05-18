@@ -1,0 +1,41 @@
+# RUN: not --crash llc -o - -mtriple=arm64 -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            g_build_vector
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    %0:_(s32) = IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: G_BUILD_VECTOR must produce a vector from scalar operands
+    %1:_(s32) = G_BUILD_VECTOR %0
+
+    %2:_(<2 x s32>) = IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: G_BUILD_VECTOR must produce a vector from scalar operands
+    %3:_(<2 x s32>) = G_BUILD_VECTOR %2
+
+    ; CHECK: Bad machine code: G_BUILD_VECTOR must have an operand for each elemement
+    %4:_(<2 x s32>) = G_BUILD_VECTOR %0, %0, %0, %0
+
+    ; CHECK: Bad machine code: G_BUILD_VECTOR result element type must match source type
+    ; CHECK: Bad machine code: G_BUILD_VECTOR must have an operand for each elemement
+    %5:_(<4 x s16>) = G_BUILD_VECTOR %0, %0
+
+    %6:_(s16) = IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: G_BUILD_VECTOR result element type must match source type
+    ; CHECK: Bad machine code: G_BUILD_VECTOR must have an operand for each elemement
+    %7:_(<2 x s32>) = G_BUILD_VECTOR %6, %6, %6, %6
+
+    %8:_(p0) = IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: G_BUILD_VECTOR result element type must match source type
+    %9:_(<2 x s64>) = G_BUILD_VECTOR %8, %8
+
+    %10:_(s64) = IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: G_BUILD_VECTOR result element type must match source type
+    %11:_(<2 x p0>) = G_BUILD_VECTOR %10, %10
+...

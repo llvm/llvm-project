@@ -1,0 +1,188 @@
+; This test checks to ensure that if three DWARFv5 object files have correct values for the DW_AT_addr_base in their compile units.
+
+; 1.o was produced with the source file:
+
+; a.cpp
+; __attribute__((section("1,__text_foo"))) void foo() {}
+; 
+; int foo2(int a) {
+;     return a+5;
+; }
+; 
+; int foo3(int x) {
+;     return x+2;
+; }
+; 
+; int main () {
+;     return 1;
+; }
+
+; clang -g -c -O1 a.cpp -gdwarf-5 -o 1.o
+
+; 2.o was produced with the following source file:
+
+; b.cpp
+; __attribute__((section("1,__text_foo"))) void bar() {}
+; 
+; int bar2(int a) {
+;     return a+5;
+; }
+; 
+; int bar3(int x) {
+;     return x+2;
+; }
+
+; clang -g -c -O1 b.cpp -gdwarf-5 -o 2.o
+
+; 3.o was produced with the following source file:
+
+; c.cpp
+; 
+; int baz(int x) {
+;     return x+2;
+; }
+
+; clang -g -c -O1 c.cpp -gdwarf-5 -o 3.o
+
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --linker parallel --no-odr -y %p/dummy-debug-map-amr64.map \
+RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
+RUN:   -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --linker parallel -y %p/dummy-debug-map-amr64.map \
+RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
+RUN:   -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
+RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-LLVM
+
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --update -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | FileCheck %s --check-prefix=UPD
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --linker parallel --no-odr --update -y %p/dummy-debug-map-amr64.map \
+RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
+RUN:   -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
+RUN:   FileCheck %s --check-prefix=UPD
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --linker parallel --update -y %p/dummy-debug-map-amr64.map \
+RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-addr-base-str-off-base \
+RUN:   -o %t.dir/dwarf5-addr-base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr-base.dSYM -a --verbose | \
+RUN:   FileCheck %s --check-prefix=UPD
+
+
+CHECK: .debug_info contents:
+
+CHECK-LLVM: Compile Unit: length = 0x0000001f, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
+CHECK-LLVM: DW_TAG_compile_unit
+CHECK-LLVM: DW_TAG_base_type
+
+CHECK: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
+
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+
+CHECK:   DW_TAG_subprogram
+CHECK-NEXT:                DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR1:[0-9a-f]+]])
+
+
+CHECK: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
+
+CHECK: DW_TAG_compile_unit
+CHECK:              DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000018)
+
+CHECK: DW_TAG_subprogram
+CHECK-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR2:[0-9a-f]+]])
+
+CHECK: Compile Unit: length = 0x00000043, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
+
+CHECK: DW_TAG_compile_unit
+CHECK: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000028)
+
+CHECK:   DW_TAG_subprogram
+CHECK-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR3:[0-9a-f]+]])
+
+CHECK: .debug_addr contents:
+CHECK-NEXT: 0x00000000: Address table header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: Addrs: [
+CHECK-NEXT: 0x[[ADDR1]]
+CHECK-NEXT: ]
+CHECK-NEXT: 0x00000010: Address table header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: Addrs: [
+CHECK-NEXT: 0x[[ADDR2]]
+CHECK-NEXT: ]
+CHECK-NEXT: 0x00000020: Address table header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: Addrs: [
+CHECK-NEXT: 0x[[ADDR3]]
+CHECK-NEXT: ]
+
+UPD: .debug_info contents:
+UPD-NEXT: 0x00000000: Compile Unit: length = 0x00000081, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08
+
+UPD: 0x0000000c: DW_TAG_compile_unit [1] *
+UPD:               DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+
+UPD: 0x00000031:   DW_TAG_subprogram [2]   (0x0000000c)
+UPD-NEXT:                DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000018)
+
+UPD: 0x0000003d:   DW_TAG_subprogram [3] * (0x0000000c)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000000000000)
+
+UPD: 0x00000057:   DW_TAG_subprogram [3] * (0x0000000c)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000000000008)
+
+UPD: 0x00000071:   DW_TAG_subprogram [5]   (0x0000000c)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000003) address = 0x0000000000000010)
+
+
+UPD: 0x00000085: Compile Unit: length = 0x00000072, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x00{{00|99}}, addr_size = 0x08
+
+UPD: 0x00000091: DW_TAG_compile_unit [1] *
+UPD:              DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+
+UPD: 0x000000b6:   DW_TAG_subprogram [2]   (0x00000091)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000018)
+
+UPD: 0x000000c2:   DW_TAG_subprogram [3] * (0x00000091)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000000000000)
+
+UPD: 0x000000dc:   DW_TAG_subprogram [3] * (0x00000091)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000000000008)
+
+UPD: 0x000000fb: Compile Unit: length = 0x00000044, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0{{000|115}}, addr_size = 0x08
+
+UPD: 0x00000107: DW_TAG_compile_unit {{.*}} *
+UPD: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+
+UPD: 0x00000124:   DW_TAG_subprogram {{.*}} * (0x00000107)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000018)
+
+UPD: .debug_addr contents:
+UPD-NEXT: 0x00000000: Address table header: length = 0x00000024, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+UPD-NEXT: Addrs: [
+UPD-NEXT: 0x0000000000000018
+UPD-NEXT: 0x0000000000000000
+UPD-NEXT: 0x0000000000000008
+UPD-NEXT: 0x0000000000000010
+UPD-NEXT: ]
+UPD-NEXT: 0x00000028: Address table header: length = 0x0000001c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+UPD-NEXT: Addrs: [
+UPD-NEXT: 0x0000000000000010
+UPD-NEXT: 0x0000000000000000
+UPD-NEXT: 0x0000000000000008
+UPD-NEXT: ]
+UPD-NEXT: 0x00000048: Address table header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+UPD-NEXT: Addrs: [
+UPD-NEXT: 0x0000000000000000
+UPD-NEXT: ]

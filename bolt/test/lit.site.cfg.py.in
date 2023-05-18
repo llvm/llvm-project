@@ -1,0 +1,27 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+
+config.llvm_src_root = "@LLVM_SOURCE_DIR@"
+config.llvm_obj_root = "@LLVM_BINARY_DIR@"
+config.bolt_obj_root = "@BOLT_BINARY_DIR@"
+config.bolt_enable_runtime = @BOLT_ENABLE_RUNTIME@
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
+config.llvm_shlib_dir = lit_config.substitute("@SHLIBDIR@")
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
+config.host_arch = "@HOST_ARCH@"
+config.python_executable = "@Python3_EXECUTABLE@"
+config.bolt_clang = "@BOLT_CLANG_EXE@"
+config.bolt_lld = "@BOLT_LLD_EXE@"
+config.targets_to_build = "@BOLT_TARGETS_TO_BUILD@"
+config.gnu_ld = "@GNU_LD_EXECUTABLE@"
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@BOLT_SOURCE_DIR@/test/lit.cfg.py")

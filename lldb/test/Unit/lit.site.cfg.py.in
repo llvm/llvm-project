@@ -1,0 +1,18 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.llvm_src_root = "@LLVM_SOURCE_DIR@"
+config.llvm_obj_root = "@LLVM_BINARY_DIR@"
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
+config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.lldb_obj_root = "@LLDB_BINARY_DIR@"
+config.lldb_src_root = "@LLDB_SOURCE_DIR@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.python_executable = "@Python3_EXECUTABLE@"
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(config, os.path.join(config.lldb_src_root, "test", "Unit", "lit.cfg.py"))

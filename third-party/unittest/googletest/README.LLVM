@@ -1,0 +1,21 @@
+LLVM notes
+----------
+
+This directory contains Google Test v1.14.0, with all elements removed except
+for the actual source code, to minimize the addition to the LLVM distribution.
+
+Cleaned up as follows:
+
+# Remove all the unnecessary files and directories
+$ rm -f CMakeLists.txt configure* Makefile* CHANGES CONTRIBUTORS README README.md .gitignore
+$ rm -rf build-aux cmake codegear m4 make msvc samples scripts test xcode docs
+$ rm -f src/gtest_main.cc
+
+# Put the license in the consistent place for LLVM.
+$ mv LICENSE LICENSE.TXT
+
+Modified as follows:
+* Added raw_os_ostream support to include/gtest/internal/custom/gtest-printers.h.
+* Added StringRef support to include/gtest/internal/custom/gtest-printers.h.
+* Added LLVM printable value support to include/gtest/gtest-message.h and
+  include/gtest/gtest-printers.h.

@@ -1,0 +1,48 @@
+# RUN: llc -mtriple=aarch64 -run-pass=prologepilog -run-pass=aarch64-ptrauth -o - %s 2>&1 | FileCheck %s
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64"
+
+  define dso_local i32 @foo() "sign-return-address"="all" "sign-return-address-key"="a_key" {
+  entry:
+    ret i32 2
+  }
+
+  define dso_local i32 @bar() "sign-return-address"="all" "sign-return-address-key"="b_key" {
+  entry:
+    ret i32 2
+  }
+...
+---
+#CHECK: foo
+name:            foo
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxCallFrameSize: 0
+#CHECK:    frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
+#CHECK:    frame-setup CFI_INSTRUCTION negate_ra_sign_state
+#CHECK:    frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
+body:             |
+  bb.0.entry:
+    $w0 = MOVi32imm 2
+    RET_ReallyLR implicit killed $w0
+
+...
+---
+#CHECK: bar
+name:            bar
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxCallFrameSize: 0
+#CHECK:    frame-setup EMITBKEY
+#CHECK:    frame-setup PACIBSP implicit-def $lr, implicit $lr, implicit $sp
+#CHECK:    frame-setup CFI_INSTRUCTION negate_ra_sign_state
+#CHECK:    frame-destroy AUTIBSP implicit-def $lr, implicit $lr, implicit $sp
+body:             |
+  bb.0.entry:
+    $w0 = MOVi32imm 2
+    RET_ReallyLR implicit killed $w0
+
+...

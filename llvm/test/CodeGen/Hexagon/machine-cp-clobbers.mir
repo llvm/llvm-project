@@ -1,0 +1,51 @@
+# RUN: llc -march=hexagon -o - %s -run-pass=machine-cp | FileCheck %s
+
+---
+name: dont_propagate_past_lower_subreg_kill
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: dont_propagate_past_lower_subreg_kill
+    ; CHECK: A2_nop implicit-def $d0
+    ; CHECK: A2_nop implicit-def $r2
+    ; CHECK: A2_nop implicit killed $r2
+    ; CHECK: $d1 = COPY killed $d0
+    ; CHECK: $d2 = COPY $d1
+    ; CHECK: A2_nop implicit $d2
+    A2_nop implicit-def $d0
+    $d1 = COPY killed $d0
+    $d0 = COPY killed $d1
+
+    A2_nop implicit-def $r2
+    A2_nop implicit killed $r2
+
+    $d1 = COPY killed $d0
+    $d2 = COPY $d1
+    A2_nop implicit $d2
+
+...
+
+---
+name: dont_propagate_past_upper_subreg_kill
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: dont_propagate_past_upper_subreg_kill
+    ; CHECK: A2_nop implicit-def $d0
+    ; CHECK: A2_nop implicit-def $r3
+    ; CHECK: A2_nop implicit killed $r3
+    ; CHECK: $d1 = COPY killed $d0
+    ; CHECK: $d2 = COPY $d1
+    ; CHECK: A2_nop implicit $d2
+    A2_nop implicit-def $d0
+    $d1 = COPY killed $d0
+    $d0 = COPY killed $d1
+
+    A2_nop implicit-def $r3
+    A2_nop implicit killed $r3
+
+    $d1 = COPY killed $d0
+    $d2 = COPY $d1
+    A2_nop implicit $d2
+
+...

@@ -1,0 +1,5 @@
+RUN: llvm-dwarfdump -v %p/Inputs/arm-relocs.elf-arm | FileCheck %s
+
+; CHECK: debug_info contents
+; CHECK: DW_TAG_enumeration_type
+; CHECK-NEXT: DW_AT_name{{.*}} = "e1"

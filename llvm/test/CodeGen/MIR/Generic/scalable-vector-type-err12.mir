@@ -1,0 +1,10 @@
+# RUN: not llc -run-pass none -o - %s 2>&1 | FileCheck %s
+
+---
+name: err_after_vscalexMxp0
+body: |
+  bb.0:
+    %0:_(<vscale x 4 x p0) = IMPLICIT_DEF
+...
+
+# CHECK: expected <vscale x M x sN> or <vscale M x pA> for vector type

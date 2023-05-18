@@ -1,0 +1,9 @@
+# UNSUPPORTED: lldb-repro
+#
+# RUN: echo ':quit' | %lldb -x --repl -O 'expr 42' -S %S/Inputs/Print2.in -o 'expr 999999' -s %s 2>&1 | FileCheck %s
+# CHECK: {{w}}arning: commands specified to run after file load (via -o or -s) are ignored in REPL mode
+# CHECK: (int) $0 = 42
+# CHECK: (int) $1 = 2
+# CHECK-NOT: 999999
+
+expr 999999

@@ -1,0 +1,415 @@
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -start-before si-peephole-sdwa -o - %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+
+# GCN-LABEL: {{^}}sdwa_imm_operand:
+# GCN: v_mov_b32_e32 v[[SHIFT:[0-9]+]], 2
+# GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 2
+# GCN: BB0_1:
+# GCN: v_lshlrev_b32_sdwa v{{[0-9]+}}, v[[SHIFT]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
+# GCN: v_lshlrev_b32_sdwa v{{[0-9]+}}, v[[SHIFT]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
+
+# GCN-LABEL: {{^}}sdwa_sgpr_operand:
+# VI: v_mov_b32_e32 v[[SHIFT:[0-9]+]], 2
+# VI-NOT: v_mov_b32_e32 v{{[0-9]+}}, 2
+# VI: BB1_1:
+# VI: v_lshlrev_b32_sdwa v{{[0-9]+}}, v[[SHIFT]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
+# VI: v_lshlrev_b32_sdwa v{{[0-9]+}}, v[[SHIFT]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
+
+# GFX9: s_mov_b32 s[[SHIFT:[0-9]+]], 2
+# GFX9-NOT: v_mov_b32_e32 v{{[0-9]+}}, 2
+# GFX9: BB1_1:
+# GFX9: v_lshlrev_b32_sdwa v{{[0-9]+}}, s[[SHIFT]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
+# GFX9: v_lshlrev_b32_sdwa v{{[0-9]+}}, s[[SHIFT]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
+
+--- |
+  ; ModuleID = 'sdwa-scalar-ops.opt.ll'
+  source_filename = "sdwa-scalar-ops.opt.ll"
+  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
+
+  define amdgpu_kernel void @sdwa_imm_operand(ptr addrspace(1) nocapture %arg) {
+  bb:
+    br label %bb2
+
+  bb1:                                              ; preds = %bb2
+    ret void
+
+  bb2:                                              ; preds = %bb2, %bb
+    %lsr.iv = phi i64 [ %lsr.iv.next, %bb2 ], [ 0, %bb ]
+    %bc = bitcast ptr addrspace(1) %arg to ptr addrspace(1)
+    %uglygep4 = getelementptr i8, ptr addrspace(1) %bc, i64 %lsr.iv
+    %uglygep45 = bitcast ptr addrspace(1) %uglygep4 to ptr addrspace(1)
+    %tmp5 = load i32, ptr addrspace(1) %uglygep45, align 4
+    %tmp6 = lshr i32 %tmp5, 8
+    %tmp7 = and i32 %tmp6, 255
+    %tmp8 = zext i32 %tmp7 to i64
+    %tmp9 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp8
+    store i32 1, ptr addrspace(1) %tmp9, align 4
+    %scevgep = getelementptr i32, ptr addrspace(1) %uglygep45, i64 1
+    %tmp13 = load i32, ptr addrspace(1) %scevgep, align 4
+    %tmp14 = lshr i32 %tmp13, 8
+    %tmp15 = and i32 %tmp14, 255
+    %tmp16 = zext i32 %tmp15 to i64
+    %tmp17 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp16
+    store i32 1, ptr addrspace(1) %tmp17, align 4
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 8
+    %tmp1 = trunc i64 %lsr.iv.next to i32
+    %tmp19 = icmp eq i32 %tmp1, 4096
+    br i1 %tmp19, label %bb1, label %bb2
+  }
+
+  define amdgpu_kernel void @sdwa_sgpr_operand(ptr addrspace(1) nocapture %arg) {
+  bb:
+    br label %bb2
+
+  bb1:                                              ; preds = %bb2
+    ret void
+
+  bb2:                                              ; preds = %bb2, %bb
+    %lsr.iv = phi i64 [ %lsr.iv.next, %bb2 ], [ 0, %bb ]
+    %bc = bitcast ptr addrspace(1) %arg to ptr addrspace(1)
+    %uglygep4 = getelementptr i8, ptr addrspace(1) %bc, i64 %lsr.iv
+    %uglygep45 = bitcast ptr addrspace(1) %uglygep4 to ptr addrspace(1)
+    %tmp5 = load i32, ptr addrspace(1) %uglygep45, align 4
+    %tmp6 = lshr i32 %tmp5, 8
+    %tmp7 = and i32 %tmp6, 255
+    %tmp8 = zext i32 %tmp7 to i64
+    %tmp9 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp8
+    store i32 1, ptr addrspace(1) %tmp9, align 4
+    %scevgep = getelementptr i32, ptr addrspace(1) %uglygep45, i64 1
+    %tmp13 = load i32, ptr addrspace(1) %scevgep, align 4
+    %tmp14 = lshr i32 %tmp13, 8
+    %tmp15 = and i32 %tmp14, 255
+    %tmp16 = zext i32 %tmp15 to i64
+    %tmp17 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 %tmp16
+    store i32 1, ptr addrspace(1) %tmp17, align 4
+    %lsr.iv.next = add nuw nsw i64 %lsr.iv, 8
+    %tmp1 = trunc i64 %lsr.iv.next to i32
+    %tmp19 = icmp eq i32 %tmp1, 4096
+    br i1 %tmp19, label %bb1, label %bb2
+  }
+
+...
+---
+name:            sdwa_imm_operand
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_64 }
+  - { id: 1, class: sreg_64 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sgpr_128 }
+  - { id: 4, class: sgpr_64 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_64 }
+  - { id: 8, class: sreg_64 }
+  - { id: 9, class: sreg_64_xexec }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sreg_32_xm0 }
+  - { id: 13, class: sreg_32_xm0 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_32_xm0 }
+  - { id: 16, class: sreg_64 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: sreg_32_xm0 }
+  - { id: 20, class: sreg_32 }
+  - { id: 21, class: sreg_32_xm0 }
+  - { id: 22, class: sreg_32_xm0 }
+  - { id: 23, class: sreg_32_xm0 }
+  - { id: 24, class: sreg_64 }
+  - { id: 25, class: sreg_32_xm0 }
+  - { id: 26, class: sreg_32_xm0 }
+  - { id: 27, class: sreg_32_xm0 }
+  - { id: 28, class: sreg_32_xm0 }
+  - { id: 29, class: sreg_64 }
+  - { id: 30, class: vgpr_32 }
+  - { id: 31, class: vreg_64 }
+  - { id: 32, class: sreg_32_xm0 }
+  - { id: 33, class: sreg_32_xm0 }
+  - { id: 34, class: sreg_64 }
+  - { id: 35, class: sreg_32_xm0 }
+  - { id: 36, class: sreg_32_xm0 }
+  - { id: 37, class: sreg_32_xm0 }
+  - { id: 38, class: sreg_32_xm0 }
+  - { id: 39, class: vreg_64 }
+  - { id: 40, class: vgpr_32 }
+  - { id: 41, class: vreg_64 }
+  - { id: 42, class: sreg_32_xm0 }
+  - { id: 43, class: sreg_32 }
+  - { id: 44, class: sreg_32_xm0 }
+  - { id: 45, class: sreg_64 }
+  - { id: 46, class: sreg_32_xm0 }
+  - { id: 47, class: sreg_32_xm0 }
+  - { id: 48, class: sreg_32_xm0 }
+  - { id: 49, class: sreg_32_xm0 }
+  - { id: 50, class: sreg_64 }
+  - { id: 51, class: vreg_64 }
+  - { id: 52, class: sreg_64 }
+  - { id: 53, class: sreg_32_xm0 }
+  - { id: 54, class: sreg_32_xm0 }
+  - { id: 55, class: sreg_32_xm0 }
+  - { id: 56, class: sreg_32_xm0 }
+  - { id: 57, class: sreg_64 }
+  - { id: 58, class: sreg_32_xm0 }
+  - { id: 59, class: sreg_32_xm0 }
+  - { id: 60, class: vgpr_32 }
+  - { id: 61, class: vgpr_32 }
+  - { id: 62, class: vreg_64 }
+  - { id: 63, class: vgpr_32 }
+  - { id: 64, class: vgpr_32 }
+  - { id: 65, class: vgpr_32 }
+  - { id: 66, class: vgpr_32 }
+  - { id: 67, class: vreg_64 }
+  - { id: 68, class: vgpr_32 }
+  - { id: 69, class: vgpr_32 }
+  - { id: 70, class: vgpr_32 }
+  - { id: 71, class: vgpr_32 }
+  - { id: 72, class: vgpr_32 }
+  - { id: 73, class: vgpr_32 }
+  - { id: 74, class: vgpr_32 }
+  - { id: 75, class: vreg_64 }
+  - { id: 76, class: vgpr_32 }
+  - { id: 77, class: vgpr_32 }
+  - { id: 78, class: vgpr_32 }
+  - { id: 79, class: vgpr_32 }
+  - { id: 80, class: vreg_64 }
+  - { id: 81, class: vgpr_32 }
+  - { id: 82, class: vgpr_32 }
+  - { id: 83, class: vgpr_32 }
+liveins:
+  - { reg: '$sgpr4_sgpr5', virtual-reg: '%4' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.bb:
+    successors: %bb.2.bb2(0x80000000)
+    liveins: $sgpr4_sgpr5
+
+    %4 = COPY $sgpr4_sgpr5
+    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %8 = S_MOV_B64 0
+    %7 = COPY %9
+    %30 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.2.bb2
+
+  bb.1.bb1:
+    S_ENDPGM 0
+
+  bb.2.bb2:
+    successors: %bb.1.bb1(0x04000000), %bb.2.bb2(0x7c000000)
+
+    %0 = PHI %8, %bb.0.bb, %1, %bb.2.bb2
+    %13 = COPY %7.sub1
+    %14 = S_ADD_U32 %7.sub0, %0.sub0, implicit-def $scc
+    %15 = S_ADDC_U32 %7.sub1, %0.sub1, implicit-def dead $scc, implicit $scc
+    %16 = REG_SEQUENCE %14, %subreg.sub0, %15, %subreg.sub1
+    %18 = COPY %16
+    %17 = FLAT_LOAD_DWORD %18, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.uglygep45)
+    %60 = V_BFE_U32_e64 %17, 8, 8, implicit $exec
+    %61 = V_LSHLREV_B32_e32 2, killed %60, implicit $exec
+    %70 = V_ADD_CO_U32_e32 %7.sub0, %61, implicit-def $vcc, implicit $exec
+    %66 = COPY %13
+    %65 = V_ADDC_U32_e32 0, %66, implicit-def $vcc, implicit $vcc, implicit $exec
+    %67 = REG_SEQUENCE %70, %subreg.sub0, killed %65, %subreg.sub1
+    FLAT_STORE_DWORD %67, %30, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.tmp9)
+    %37 = S_ADD_U32 %14, 4, implicit-def $scc
+    %38 = S_ADDC_U32 %15, 0, implicit-def dead $scc, implicit $scc
+    %71 = COPY killed %37
+    %72 = COPY killed %38
+    %41 = REG_SEQUENCE killed %71, %subreg.sub0, killed %72, %subreg.sub1
+    %40 = FLAT_LOAD_DWORD killed %41, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.scevgep)
+    %73 = V_BFE_U32_e64 %40, 8, 8, implicit $exec
+    %74 = V_LSHLREV_B32_e32 2, killed %73, implicit $exec
+    %83 = V_ADD_CO_U32_e32 %7.sub0, %74, implicit-def $vcc, implicit $exec
+    %78 = V_ADDC_U32_e32 0, %66, implicit-def $vcc, implicit $vcc, implicit $exec
+    %80 = REG_SEQUENCE %83, %subreg.sub0, killed %78, %subreg.sub1
+    FLAT_STORE_DWORD %80, %30, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.tmp17)
+    %55 = S_ADD_U32 %0.sub0, 8, implicit-def $scc
+    %56 = S_ADDC_U32 %0.sub1, 0, implicit-def dead $scc, implicit $scc
+    %57 = REG_SEQUENCE %55, %subreg.sub0, killed %56, %subreg.sub1
+    %1 = COPY %57
+    S_CMPK_EQ_I32 %55, 4096, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1.bb1, implicit $scc
+    S_BRANCH %bb.2.bb2
+
+...
+---
+name:            sdwa_sgpr_operand
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_64 }
+  - { id: 1, class: sreg_64 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: sgpr_128 }
+  - { id: 4, class: sgpr_64 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sgpr_32 }
+  - { id: 7, class: sreg_64 }
+  - { id: 8, class: sreg_64 }
+  - { id: 9, class: sreg_64_xexec }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sreg_32_xm0 }
+  - { id: 13, class: sreg_32_xm0 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_32_xm0 }
+  - { id: 16, class: sreg_64 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: sreg_32_xm0 }
+  - { id: 20, class: sreg_32 }
+  - { id: 21, class: sreg_32_xm0 }
+  - { id: 22, class: sreg_32_xm0 }
+  - { id: 23, class: sreg_32_xm0 }
+  - { id: 24, class: sreg_64 }
+  - { id: 25, class: sreg_32_xm0 }
+  - { id: 26, class: sreg_32_xm0 }
+  - { id: 27, class: sreg_32_xm0 }
+  - { id: 28, class: sreg_32_xm0 }
+  - { id: 29, class: sreg_64 }
+  - { id: 30, class: vgpr_32 }
+  - { id: 31, class: vreg_64 }
+  - { id: 32, class: sreg_32_xm0 }
+  - { id: 33, class: sreg_32_xm0 }
+  - { id: 34, class: sreg_64 }
+  - { id: 35, class: sreg_32_xm0 }
+  - { id: 36, class: sreg_32_xm0 }
+  - { id: 37, class: sreg_32_xm0 }
+  - { id: 38, class: sreg_32_xm0 }
+  - { id: 39, class: vreg_64 }
+  - { id: 40, class: vgpr_32 }
+  - { id: 41, class: vreg_64 }
+  - { id: 42, class: sreg_32_xm0 }
+  - { id: 43, class: sreg_32 }
+  - { id: 44, class: sreg_32_xm0 }
+  - { id: 45, class: sreg_64 }
+  - { id: 46, class: sreg_32_xm0 }
+  - { id: 47, class: sreg_32_xm0 }
+  - { id: 48, class: sreg_32_xm0 }
+  - { id: 49, class: sreg_32_xm0 }
+  - { id: 50, class: sreg_64 }
+  - { id: 51, class: vreg_64 }
+  - { id: 52, class: sreg_64 }
+  - { id: 53, class: sreg_32_xm0 }
+  - { id: 54, class: sreg_32_xm0 }
+  - { id: 55, class: sreg_32_xm0 }
+  - { id: 56, class: sreg_32_xm0 }
+  - { id: 57, class: sreg_64 }
+  - { id: 58, class: sreg_32_xm0 }
+  - { id: 59, class: sreg_32_xm0 }
+  - { id: 60, class: vgpr_32 }
+  - { id: 61, class: vgpr_32 }
+  - { id: 62, class: vreg_64 }
+  - { id: 63, class: vgpr_32 }
+  - { id: 64, class: vgpr_32 }
+  - { id: 65, class: vgpr_32 }
+  - { id: 66, class: vgpr_32 }
+  - { id: 67, class: vreg_64 }
+  - { id: 68, class: vgpr_32 }
+  - { id: 69, class: vgpr_32 }
+  - { id: 70, class: vgpr_32 }
+  - { id: 71, class: vgpr_32 }
+  - { id: 72, class: vgpr_32 }
+  - { id: 73, class: vgpr_32 }
+  - { id: 74, class: vgpr_32 }
+  - { id: 75, class: vreg_64 }
+  - { id: 76, class: vgpr_32 }
+  - { id: 77, class: vgpr_32 }
+  - { id: 78, class: vgpr_32 }
+  - { id: 79, class: vgpr_32 }
+  - { id: 80, class: vreg_64 }
+  - { id: 81, class: vgpr_32 }
+  - { id: 82, class: vgpr_32 }
+  - { id: 83, class: vgpr_32 }
+  - { id: 84, class: sreg_32_xm0 }
+liveins:
+  - { reg: '$sgpr4_sgpr5', virtual-reg: '%4' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.bb:
+    successors: %bb.2.bb2(0x80000000)
+    liveins: $sgpr4_sgpr5
+
+    %4 = COPY $sgpr4_sgpr5
+    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %8 = S_MOV_B64 0
+    %7 = COPY %9
+    %30 = V_MOV_B32_e32 1, implicit $exec
+    %84 = S_MOV_B32 2
+    S_BRANCH %bb.2.bb2
+
+  bb.1.bb1:
+    S_ENDPGM 0
+
+  bb.2.bb2:
+    successors: %bb.1.bb1(0x04000000), %bb.2.bb2(0x7c000000)
+
+    %0 = PHI %8, %bb.0.bb, %1, %bb.2.bb2
+    %13 = COPY %7.sub1
+    %14 = S_ADD_U32 %7.sub0, %0.sub0, implicit-def $scc
+    %15 = S_ADDC_U32 %7.sub1, %0.sub1, implicit-def dead $scc, implicit $scc
+    %16 = REG_SEQUENCE %14, %subreg.sub0, %15, %subreg.sub1
+    %18 = COPY %16
+    %17 = FLAT_LOAD_DWORD %18, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.uglygep45)
+    %60 = V_BFE_U32_e64 %17, 8, 8, implicit $exec
+    %61 = V_LSHLREV_B32_e32 %84, killed %60, implicit $exec
+    %70 = V_ADD_CO_U32_e32 %7.sub0, %61, implicit-def $vcc, implicit $exec
+    %66 = COPY %13
+    %65 = V_ADDC_U32_e32 0, %66, implicit-def $vcc, implicit $vcc, implicit $exec
+    %67 = REG_SEQUENCE %70, %subreg.sub0, killed %65, %subreg.sub1
+    FLAT_STORE_DWORD %67, %30, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.tmp9)
+    %37 = S_ADD_U32 %14, 4, implicit-def $scc
+    %38 = S_ADDC_U32 %15, 0, implicit-def dead $scc, implicit $scc
+    %71 = COPY killed %37
+    %72 = COPY killed %38
+    %41 = REG_SEQUENCE killed %71, %subreg.sub0, killed %72, %subreg.sub1
+    %40 = FLAT_LOAD_DWORD killed %41, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.scevgep)
+    %73 = V_BFE_U32_e64 %40, 8, 8, implicit $exec
+    %74 = V_LSHLREV_B32_e32 %84, killed %73, implicit $exec
+    %83 = V_ADD_CO_U32_e32 %7.sub0, %74, implicit-def $vcc, implicit $exec
+    %78 = V_ADDC_U32_e32 0, %66, implicit-def $vcc, implicit $vcc, implicit $exec
+    %80 = REG_SEQUENCE %83, %subreg.sub0, killed %78, %subreg.sub1
+    FLAT_STORE_DWORD %80, %30, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.tmp17)
+    %55 = S_ADD_U32 %0.sub0, 8, implicit-def $scc
+    %56 = S_ADDC_U32 %0.sub1, 0, implicit-def dead $scc, implicit $scc
+    %57 = REG_SEQUENCE %55, %subreg.sub0, killed %56, %subreg.sub1
+    %1 = COPY %57
+    S_CMPK_EQ_I32 %55, 4096, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1.bb1, implicit $scc
+    S_BRANCH %bb.2.bb2
+
+...

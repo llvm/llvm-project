@@ -1,0 +1,80 @@
+# RUN: llc -run-pass=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | FileCheck %s
+#
+#extern void fn2(int);
+#
+#__attribute__((noinline))
+#void
+#fn1 (int x, int y) {
+#  int u = x + y;
+#  if (x > 1)
+#    u += 1;
+#  else
+#    u += 2;
+#  int a = 7;
+#  fn2 (a);
+#  u --;
+#}
+# CHECK: DBG_VALUE $edi, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
+# CHECK-NOT: DBG_VALUE $esi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1)
+
+--- |
+  ; ModuleID = 'test.c'
+  source_filename = "test.c"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  
+  ; Function Attrs: noinline nounwind uwtable
+  define dso_local void @fn1(i32 %x, i32 %y) local_unnamed_addr !dbg !9 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %x, metadata !14, metadata !DIExpression()), !dbg !18
+    call void @llvm.dbg.value(metadata i32 %y, metadata !15, metadata !DIExpression()), !dbg !18
+    call void @llvm.dbg.value(metadata i32 7, metadata !17, metadata !DIExpression()), !dbg !18
+    tail call void @fn2(i32 7), !dbg !18
+    ret void, !dbg !18
+  }
+  
+  declare !dbg !4 dso_local void @fn2(i32) local_unnamed_addr
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!5, !6, !7}
+  !llvm.ident = !{!8}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 9.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "test.c", directory: "/dir")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "fn2", scope: !1, file: !1, line: 11, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !{i32 2, !"Dwarf Version", i32 4}
+  !6 = !{i32 2, !"Debug Info Version", i32 3}
+  !7 = !{i32 1, !"wchar_size", i32 4}
+  !8 = !{!"clang version 9.0.0"}
+  !9 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 15, type: !10, scopeLine: 15, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !13)
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{null, !12, !12}
+  !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !13 = !{!14, !15, !16, !17}
+  !14 = !DILocalVariable(name: "x", arg: 1, scope: !9, file: !1, line: 15, type: !12)
+  !15 = !DILocalVariable(name: "y", arg: 2, scope: !9, file: !1, line: 15, type: !12)
+  !16 = !DILocalVariable(name: "u", scope: !9, file: !1, line: 16, type: !12)
+  !17 = !DILocalVariable(name: "a", scope: !9, file: !1, line: 21, type: !12)
+  !18 = !DILocation(line: 15, column: 10, scope: !9)
+
+...
+---
+name:            fn1
+alignment:       16
+tracksRegLiveness: true
+liveins:         []
+body:             |
+  bb.0.entry:
+    DBG_VALUE $edi, $noreg, !14, !DIExpression(), debug-location !18
+    DBG_VALUE $esi, $noreg, !15, !DIExpression(), debug-location !18
+    DBG_VALUE 7, $noreg, !17, !DIExpression(), debug-location !18
+    $edi = MOV32ri 7, debug-location !18
+    TAILJMPd64 @fn2, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit killed $edi, debug-location !18
+
+...

@@ -1,0 +1,61 @@
+// Header
+//
+// INSTR_PROF_RAW_HEADER(uint64_t, Magic, __llvm_profile_get_magic())
+// INSTR_PROF_RAW_HEADER(uint64_t, Version, __llvm_profile_get_version())
+// INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
+// INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, NumBitmaskBytes, NumBitmaskBytes)
+// INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, BitmaskDelta, (uintptr_t)BitmaskBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, VNamesSize, VNamesSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, NumVTables, NumVTables)
+// INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
+
+// gnuwin32 printf does not work for this test because it will print \15 (CR)
+// whenever \12 (LF) is in the input string.
+UNSUPPORTED: system-windows
+RUN: printf '\201rforpl\377' > %t.profraw
+RUN: printf '\12\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\4\0\2\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+
+// Data Section
+//
+// struct ProfData {
+// #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) \
+//    Type Name;
+// #include "llvm/ProfileData/InstrProfData.inc"
+// };
+
+RUN: printf '\254\275\030\333\114\302\370\134' >> %t.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+
+RUN: printf '\023\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\3\0foo\0\0\0' >> %t.profraw
+
+// Write some garbage data at the end so we get "not enough space for another header" message
+RUN: printf '\x03\x00\' >> %t.profraw
+
+RUN: not llvm-profdata show %t.profraw 2>&1 | FileCheck %s
+CHECK: malformed instrumentation profile data: not enough space for another header

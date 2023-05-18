@@ -1,0 +1,383 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>scan-build: running the analyzer from the command line</title>
+  <link type="text/css" rel="stylesheet" href="content.css">
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <script type="text/javascript" src="scripts/menu.js"></script>
+</head>
+<body>
+
+<div id="page">
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+
+<h1>scan-build: running the analyzer from the command line</h1>
+
+<table style="margin-top:0px" width="100%" cellpadding="0px" cellspacing="0">
+<tr><td>
+
+<h3>What is it?</h3>
+<p><b>scan-build</b> is a command line utility that enables a user to run the
+static analyzer over their codebase as part of performing a regular build (from
+the command line).</p>
+
+<h3>How does it work?</h3>
+<p>During a project build, as source files are compiled they are also analyzed
+in tandem by the static analyzer.</p>
+
+<p>Upon completion of the build, results are then presented to the user within a
+web browser.</p>
+
+<h3>Will it work with any build system?</h3>
+<p><b>scan-build</b> has little or no knowledge about how you build your code.
+It works by overriding the <tt>CC</tt> and <tt>CXX</tt> environment variables to
+(hopefully) change your build to use a &quot;fake&quot; compiler instead of the
+one that would normally build your project. This fake compiler executes either
+<tt>clang</tt> or <tt>gcc</tt> (depending on the platform) to compile your
+code and then executes the static analyzer to analyze your code.</p>
+
+<p>This &quot;poor man's interposition&quot; works amazingly well in many cases
+and falls down in others. Please consult the information on this page on making
+the best use of <b>scan-build</b>, which includes getting it to work when the
+aforementioned hack fails to work.</p>
+
+</td>
+<td style="padding-left:10px; text-align:center">
+  <img src="images/scan_build_cmd.png" width="450px" alt="scan-build"><br>
+  <a href="images/analyzer_html.png"><img src="images/analyzer_html.png" width="450px" alt="analyzer in browser"></a>
+<br><b>Viewing static analyzer results in a web browser</b>
+</td></tr></table>
+
+<h2>Contents</h2>
+
+<ul>
+<li><a href="#scanbuild">Getting Started</a>
+ <ul>
+  <li><a href="#scanbuild_basicusage">Basic Usage</a></li>
+  <li><a href="#scanbuild_forwindowsusers">For Windows Users</a></li>
+  <li><a href="#scanbuild_otheroptions">Other Options</a></li>
+  <li><a href="#scanbuild_output">Output of scan-build</a></li>
+ </ul>
+</li>
+<li><a href="#recommendedguidelines">Recommended Usage Guidelines</a>
+ <ul>
+  <li><a href="#recommended_debug">Always Analyze a Project in its &quot;Debug&quot; Configuration</a></li>
+  <li><a href="#recommended_verbose">Use Verbose Output when Debugging scan-build</a></li>
+  <li><a href="#recommended_autoconf">Run './configure' through scan-build</a></li>
+ </ul>
+</li>
+<li><a href="#iphone">Analyzing iPhone Projects</a></li>
+</ul>
+
+<h2 id="scanbuild">Getting Started</h2>
+
+<p>The <tt>scan-build</tt> command can be used to analyze an entire project by
+essentially interposing on a project's build process. This means that to run the
+analyzer using <tt>scan-build</tt>, you will use <tt>scan-build</tt> to analyze
+the source files compiled by <tt>gcc</tt>/<tt>clang</tt> during a project build.
+This means that any files that are not compiled will also not be analyzed.</p>
+
+<h3 id="scanbuild_basicusage">Basic Usage</h3>
+
+<p>Basic usage of <tt>scan-build</tt> is designed to be simple: just place the
+word &quot;scan-build&quot; in front of your build command:</p>
+
+<pre class="code_example">
+$ <span class="code_highlight">scan-build</span> make
+$ <span class="code_highlight">scan-build</span> xcodebuild
+</pre>
+
+<p>In the first case <tt>scan-build</tt> analyzes the code of a project built
+with <tt>make</tt> and in the second case <tt>scan-build</tt> analyzes a project
+built using <tt>xcodebuild</tt>.<p>
+
+<p>Here is the general format for invoking <tt>scan-build</tt>:</p>
+
+<pre class="code_example">
+$ <span class="code_highlight">scan-build</span> <i>[scan-build options]</i> <span class="code_highlight">&lt;command&gt;</span> <i>[command options]</i>
+</pre>
+
+<p>Operationally, <tt>scan-build</tt> literally runs &lt;command&gt; with all of the
+subsequent options passed to it. For example, one can pass <tt>-j4</tt> to
+<tt>make</tt> get a parallel build over 4 cores:</p>
+
+<pre class="code_example">
+$ scan-build make <span class="code_highlight">-j4</span>
+</pre>
+
+<p>In almost all cases, <tt>scan-build</tt> makes no effort to interpret the
+options after the build command; it simply passes them through. In general,
+<tt>scan-build</tt> should support parallel builds, but <b>not distributed
+builds</b>.</p>
+
+<p>It is also possible to use <tt>scan-build</tt> to analyze specific
+files:</p>
+
+<pre class="code_example">
+ $ scan-build gcc -c <span class="code_highlight">t1.c t2.c</span>
+</pre>
+
+<p>This example causes the files <tt>t1.c</tt> and <tt>t2.c</tt> to be analyzed.
+</p>
+
+<h3 id="scanbuild_forwindowsusers">For Windows Users</h3>
+
+<p>Windows users must have Perl installed to use scan-build.</p>
+
+<p><tt>scan-build.bat</tt> script allows you to launch scan-build in the same
+way as it described in the Basic Usage section above. To invoke scan-build from
+an arbitrary location, add the path to the folder containing scan-build.bat to
+your PATH environment variable.</p>
+
+<p>If you have unexpected compilation/make problems when running scan-build
+with MinGW/MSYS the following information may be helpful:</p>
+
+<ul>
+ <li> If getting unexpected <tt>"fatal error: no input files"</tt> while
+building with MSYS make from the Windows cmd, try one of these solutions:</li>
+ <ul>
+ <li> Use MinGW <tt>mingw32-make</tt> instead of MSYS <tt>make</tt> and
+exclude the path to MSYS from PATH to prevent <tt>mingw32-make</tt> from using
+MSYS utils. MSYS utils are dependent on the MSYS runtime and they are not
+intended for being run from the Windows cmd. Specifically, makefile commands
+with backslashed quotes may be heavily corrupted when passed for execution.</li>
+ <li> Run <tt>make</tt> from the sh shell:
+<pre class="code_example">
+$ <span class="code_highlight">scan-build</span> <i>[scan-build options]</i> sh -c "make <i>[make options]</i>"
+</pre></li>
+ </ul>
+ <li> If getting <tt>"Error : *** target pattern contains no `%'"</tt> while
+using GNU Make 3.81, try to use another version of make.</li>
+</ul>
+
+<h3 id="scanbuild_otheroptions">Other Options</h3>
+
+<p>As mentioned above, extra options can be passed to <tt>scan-build</tt>. These
+options prefix the build command. For example:</p>
+
+<pre class="code_example">
+ $ scan-build <span class="code_highlight">-k -V</span> make
+ $ scan-build <span class="code_highlight">-k -V</span> xcodebuild
+</pre>
+
+<p>Here is a subset of useful options:</p>
+
+<table class="options">
+<colgroup><col class="option"><col class="description"></colgroup>
+<thead><tr><td>Option</td><td>Description</td></tr></thead>
+
+<tr><td><b>-o</b></td><td>Target directory for HTML report files. Subdirectories
+will be created as needed to represent separate "runs" of the analyzer. If this
+option is not specified, a directory is created in <tt>/tmp</tt> to store the
+reports.</td></tr>
+
+<tr><td><b>-h</b><br><i>(or&nbsp;no&nbsp;arguments)</i></td><td>Display all
+<tt>scan-build</tt> options.</td></tr>
+
+<tr><td><b>-k</b><br><b>--keep-going</b></td><td>Add a "keep on
+going" option to the specified build command. <p>This option currently supports
+<tt>make</tt> and <tt>xcodebuild</tt>.</p> <p>This is a convenience option; one
+can specify this behavior directly using build options.</p></td></tr>
+
+<tr><td><b>-v</b></td><td>Verbose output from scan-build and the analyzer. <b>A
+second and third "-v" increases verbosity</b>, and is useful for filing bug
+reports against the analyzer.</td></tr>
+
+<tr><td><b>-V</b></td><td>View analysis results in a web browser when the build
+command completes.</td></tr>
+
+<tr><td><b>--use-analyzer Xcode</b><br><i>or</i><br>
+<b>--use-analyzer [path to clang]</b></td><td><tt>scan-build</tt> uses the
+'clang' executable relative to itself for static analysis. One can override this
+behavior with this option by using the 'clang' packaged with Xcode (on OS X) or
+from the PATH.</p></td></tr> </table>
+
+<p>A complete list of options can be obtained by running <tt>scan-build</tt>
+with no arguments.</p>
+
+<h3 id="scanbuild_output">Output of scan-build</h3>
+
+<p>
+The output of scan-build is a set of HTML files, each one which represents a
+separate bug report. A single <tt>index.html</tt> file is generated for
+surveying all of the bugs. You can then just open <tt>index.html</tt> in a web
+browser to view the bug reports.
+</p>
+
+<p>
+Where the HTML files are generated is specified with a <b>-o</b> option to
+<tt>scan-build</tt>. If <b>-o</b> isn't specified, a directory in <tt>/tmp</tt>
+is created to store the files (<tt>scan-build</tt> will print a message telling
+you where they are). If you want to view the reports immediately after the build
+completes, pass <b>-V</b> to <tt>scan-build</tt>.
+</p>
+
+
+<h2 id="recommendedguidelines">Recommended Usage Guidelines</h2>
+
+<p>This section describes a few recommendations with running the analyzer.</p>
+
+<h3 id="recommended_debug">ALWAYS analyze a project in its &quot;debug&quot; configuration</h3>
+
+<p>Most projects can be built in a &quot;debug&quot; mode that enables assertions.
+Assertions are picked up by the static analyzer to prune infeasible paths, which
+in some cases can greatly reduce the number of false positives (bogus error
+reports) emitted by the tool.</p>
+
+<p>Another option is to use <tt>--force-analyze-debug-code</tt> flag of
+<b>scan-build</b> tool which would enable assertions automatically.</p>
+
+<h3 id="recommend_verbose">Use verbose output when debugging scan-build</h3>
+
+<p><tt>scan-build</tt> takes a <b>-v</b> option to emit verbose output about
+what it's doing; two <b>-v</b> options emit more information. Redirecting the
+output of <tt>scan-build</tt> to a text file (make sure to redirect standard
+error) is useful for filing bug reports against <tt>scan-build</tt> or the
+analyzer, as we can see the exact options (and files) passed to the analyzer.
+For more comprehensible logs, don't perform a parallel build.</p>
+
+<h3 id="recommended_autoconf">Run './configure' through scan-build</h3>
+
+<p>If an analyzed project uses an autoconf generated <tt>configure</tt> script,
+you will probably need to run <tt>configure</tt> script through
+<tt>scan-build</tt> in order to analyze the project.</p>
+
+<p><b>Example</b></p>
+
+<pre class="code_example">
+$ scan-build ./configure
+$ scan-build --keep-cc make
+</pre>
+
+<p>The reason <tt>configure</tt> also needs to be run through
+<tt>scan-build</tt> is because <tt>scan-build</tt> scans your source files by
+<i>interposing</i> on the compiler. This interposition is currently done by
+<tt>scan-build</tt> temporarily setting the environment variable <tt>CC</tt> to
+<tt>ccc-analyzer</tt>. The program <tt>ccc-analyzer</tt> acts like a fake
+compiler, forwarding its command line arguments over to the compiler to perform
+regular compilation and <tt>clang</tt> to perform static analysis.</p>
+
+<p>Running <tt>configure</tt> typically generates makefiles that have hardwired
+paths to the compiler, and by running <tt>configure</tt> through
+<tt>scan-build</tt> that path is set to <tt>ccc-analyzer</tt>.</p>
+
+<!--
+<h2 id="Debugging">Debugging the Analyzer</h2>
+
+<p>This section provides information on debugging the analyzer, and troubleshooting
+it when you have problems analyzing a particular project.</p>
+
+<h3>How it Works</h3>
+
+<p>To analyze a project, <tt>scan-build</tt> simply sets the environment variable
+<tt>CC</tt> to the full path to <tt>ccc-analyzer</tt>. It also sets a few other
+environment variables to communicate to <tt>ccc-analyzer</tt> where to dump HTML
+report files.</p>
+
+<p>Some Makefiles (or equivalent project files) hardcode the compiler; for such
+projects simply overriding <tt>CC</tt> won't cause <tt>ccc-analyzer</tt> to be
+called. This will cause the compiled code <b>to not be analyzed.</b></p> If you
+find that your code isn't being analyzed, check to see if <tt>CC</tt> is
+hardcoded. If this is the case, you can hardcode it instead to the <b>full
+path</b> to <tt>ccc-analyzer</tt>.</p>
+
+<p>When applicable, you can also run <tt>./configure</tt> for a project through
+<tt>scan-build</tt> so that configure sets up the location of <tt>CC</tt> based
+on the environment passed in from <tt>scan-build</tt>:
+
+<pre>
+  $ scan-build <b>./configure</b>
+</pre>
+
+<p><tt>scan-build</tt> has special knowledge about <tt>configure</tt>, so it in
+most cases will not actually analyze the configure tests run by
+<tt>configure</tt>.</p>
+
+<p>Under the hood, <tt>ccc-analyzer</tt> directly invokes <tt>gcc</tt> to
+compile the actual code in addition to running the analyzer (which occurs by it
+calling <tt>clang</tt>). <tt>ccc-analyzer</tt> tries to correctly forward all
+the arguments over to <tt>gcc</tt>, but this may not work perfectly (please
+report bugs of this kind).
+ -->
+
+<h2 id="iphone">Analyzing iPhone Projects</h2>
+
+<p>Conceptually Xcode projects for iPhone applications are nearly the same as
+their cousins for desktop applications. <b>scan-build</b> can analyze these
+projects as well, but users often encounter problems with just building their
+iPhone projects from the command line because there are a few extra preparative
+steps they need to take (e.g., setup code signing).</p>
+
+<h3>Recommendation: use &quot;Build and Analyze&quot;</h3>
+
+<p>The absolute easiest way to analyze iPhone projects is to use the
+<a href="https://developer.apple.com/library/ios/recipes/xcode_help-source_editor/chapters/Analyze.html#//apple_ref/doc/uid/TP40009975-CH4-SW1"><i>Analyze</i>
+feature in Xcode</a> (which is based on the Clang Static Analyzer). There a
+user can analyze their project right from a menu without most of the setup
+described later.</p>
+
+<p><a href="/xcode.html">Instructions are available</a> on this
+website on how to use open source builds of the analyzer as a replacement for
+the one bundled with Xcode.</p>
+
+<h3>Using scan-build directly</h3>
+
+<p>If you wish to use <b>scan-build</b> with your iPhone project, keep the
+following things in mind:</p>
+
+<ul>
+ <li>Analyze your project in the <tt>Debug</tt> configuration, either by setting
+this as your configuration with Xcode or by passing <tt>-configuration
+Debug</tt> to <tt>xcodebuild</tt>.</li>
+ <li>Analyze your project using the <tt>Simulator</tt> as your base SDK. It is
+possible to analyze your code when targeting the device, but this is much
+easier to do when using Xcode's <i>Build and Analyze</i> feature.</li>
+ <li>Check that your code signing SDK is set to the simulator SDK as well, and make sure this option is set to <tt>Don't Code Sign</tt>.</li>
+</ul>
+
+<p>Note that you can most of this without actually modifying your project. For
+example, if your application targets iPhoneOS 2.2, you could run
+<b>scan-build</b> in the following manner from the command line:</p>
+
+<pre class="code_example">
+$ scan-build xcodebuild -configuration Debug -sdk iphonesimulator2.2
+</pre>
+
+Alternatively, if your application targets iPhoneOS 3.0:
+
+<pre class="code_example">
+$ scan-build xcodebuild -configuration Debug -sdk iphonesimulator3.0
+</pre>
+
+<h3>Gotcha: using the right compiler</h3>
+
+<p>Recall that <b>scan-build</b> analyzes your project by using a compiler to
+compile the project and <tt>clang</tt> to analyze your project. The script uses
+simple heuristics to determine which compiler should be used (it defaults to
+<tt>clang</tt> on Darwin and <tt>gcc</tt> on other platforms). When analyzing
+iPhone projects, <b>scan-build</b> may pick the wrong compiler than the one
+Xcode would use to build your project. For example, this could be because
+multiple versions of a compiler may be installed on your system, especially if
+you are developing for the iPhone.</p>
+
+<p>When compiling your application to run on the simulator, it is important that <b>scan-build</b>
+finds the correct version of <tt>gcc/clang</tt>. Otherwise, you may see strange build
+errors that only happen when you run <tt>scan-build</tt>.
+
+<p><b>scan-build</b> provides the <tt>--use-cc</tt> and <tt>--use-c++</tt>
+options to hardwire which compiler scan-build should use for building your code.
+Note that although you are chiefly interested in analyzing your project, keep in
+mind that running the analyzer is intimately tied to the build, and not being
+able to compile your code means it won't get fully analyzed (if at all).</p>
+
+<p>If you aren't certain which compiler Xcode uses to build your project, try
+just running <tt>xcodebuild</tt> (without <b>scan-build</b>). You should see the
+full path to the compiler that Xcode is using, and use that as an argument to
+<tt>--use-cc</tt>.</p>
+
+</div>
+</div>
+</body>
+</html>

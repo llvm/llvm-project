@@ -1,0 +1,27 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=prologepilog -o - %s | FileCheck %s
+
+# Make sure the MIR printer doesn't crash when there are dead frame indexes. The
+# CSR SGPR frame indexes are inserted, but deleted.
+
+# CHECK-LABEL: name: csr_sgpr
+# CHECK: fixedStack: []
+# CHECK: stack: []
+---
+name:            csr_sgpr
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr30_sgpr31' }
+frameInfo:
+  maxAlignment:    4
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr5'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $sgpr30_sgpr31
+
+    INLINEASM &"; clobber s42", 1, 12, implicit-def dead early-clobber $sgpr42
+    S_SETPC_B64_return $sgpr30_sgpr31
+
+...

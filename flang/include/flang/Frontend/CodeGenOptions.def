@@ -1,0 +1,44 @@
+//===--- CodeGenOptions.def - Code generation option database ----- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the code generation options. Users of this file
+// must define the CODEGENOPT macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+#ifndef CODEGENOPT
+#  error Define the CODEGENOPT macro to handle language options
+#endif
+
+#ifndef ENUM_CODEGENOPT
+#  define ENUM_CODEGENOPT(Name, Type, Bits, Default) \
+CODEGENOPT(Name, Bits, Default)
+#endif
+
+CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
+
+CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
+                                   ///< pass manager.
+
+CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
+CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
+CODEGENOPT(PrepareForFullLTO , 1, 0) ///< Set when -flto is enabled on the
+                                     ///< compile step.
+CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
+                                     ///< compile step.
+CODEGENOPT(StackArrays, 1, 0) ///< -fstack-arrays (enable the stack-arrays pass)
+CODEGENOPT(LoopVersioning, 1, 0) ///< Enable loop versioning.
+CODEGENOPT(AliasAnalysis, 1, 0) ///< Enable alias analysis pass
+
+CODEGENOPT(Underscoring, 1, 1)
+ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< Name of the relocation model to use.
+ENUM_CODEGENOPT(DebugInfo,  llvm::codegenoptions::DebugInfoKind, 4,  llvm::codegenoptions::NoDebugInfo) ///< Level of debug info to generate
+ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibrary::NoLibrary) ///< Vector functions library to use
+ENUM_CODEGENOPT(FramePointer, llvm::FramePointerKind, 2, llvm::FramePointerKind::None) ///< Enable the usage of frame pointers
+
+#undef CODEGENOPT
+#undef ENUM_CODEGENOPT

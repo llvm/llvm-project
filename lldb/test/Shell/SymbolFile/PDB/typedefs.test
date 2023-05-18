@@ -1,0 +1,58 @@
+REQUIRES: system-windows, msvc
+RUN: %build --compiler=msvc --arch=32 --nodefaultlib --output=%T/SimpleTypesTest.cpp.typedefs.exe %S/Inputs/SimpleTypesTest.cpp
+RUN: lldb-test symbols %T/SimpleTypesTest.cpp.typedefs.exe | FileCheck %s
+
+; Generate 32-bit target
+
+; FIXME: PDB does not have line information for typedef statements so source
+; and line information for them is not tested.
+
+; Note, types `long double` and `double` have same bit size in MSVC and there
+; is no information in the PDB to distinguish them. So the compiler type for
+; both of them is the same.
+
+CHECK: Module [[MOD:.*]]
+CHECK: SymbolFile pdb ([[MOD]])
+CHECK-DAG: name = "char32_t", size = 4, compiler_type = {{.*}} char32_t
+CHECK-DAG: name = "char16_t", size = 2, compiler_type = {{.*}} char16_t
+CHECK-DAG: Type{{.*}} , name = "unsigned long", size = 4, compiler_type = {{.*}} unsigned long
+CHECK-DAG: Type{{.*}} , size = 40, compiler_type = {{.*}} unsigned long[10]
+
+; Note: compiler_type of `long double` is represented by the one for `double`
+CHECK-DAG: Type{{.*}} , name = "double", size = 8, compiler_type = {{.*}} double
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} double *
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} double *&
+CHECK-DAG: Type{{.*}} , name = "RefTypedef", compiler_type = {{.*}} typedef RefTypedef
+
+CHECK-DAG: Type{{.*}} , name = "wchar_t", size = 2, compiler_type = {{.*}} wchar_t
+
+CHECK-DAG: Type{{.*}} , name = "int", size = 4, compiler_type = {{.*}} int
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} int &
+CHECK-DAG: Type{{.*}} , name = "unsigned char", size = 1, compiler_type = {{.*}} unsigned char
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} unsigned char *
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} unsigned char **
+CHECK-DAG: Type{{.*}} , name = "short", size = 2, compiler_type = {{.*}} short
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} short *
+CHECK-DAG: Type{{.*}} , name = "const double", size = 8, compiler_type = {{.*}} const double
+CHECK-DAG: Type{{.*}} , name = "volatile bool", size = 1, compiler_type = {{.*}} volatile _Bool
+CHECK-DAG: Type{{.*}} , name = "long long", size = 8, compiler_type = {{.*}} long long
+CHECK-DAG: Type{{.*}} , compiler_type = {{.*}} long long (int &, unsigned char **, short *, const double, volatile _Bool)
+CHECK-DAG: Type{{.*}} , name = "FuncPtrTypedef", compiler_type = {{.*}} typedef FuncPtrTypedef
+
+CHECK-DAG: Type{{.*}} , name = "void", compiler_type = {{.*}} void
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} void *
+CHECK-DAG: Type{{.*}} , name = "long", size = 4, compiler_type = {{.*}} long
+CHECK-DAG: Type{{.*}} , name = "unsigned short", size = 2, compiler_type = {{.*}} unsigned short
+CHECK-DAG: Type{{.*}} , name = "unsigned int", size = 4, compiler_type = {{.*}} unsigned int
+CHECK-DAG: Type{{.*}} , name = "char", size = 1, compiler_type = {{.*}} char
+CHECK-DAG: Type{{.*}} , name = "signed char", size = 1, compiler_type = {{.*}} signed char
+CHECK-DAG: Type{{.*}} , compiler_type = {{.*}} char (void *, long, unsigned short, unsigned int, ...)
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} char (*)(void *, long, unsigned short, unsigned int, ...)
+CHECK-DAG: Type{{.*}} , name = "VarArgsFuncTypedef", compiler_type = {{.*}} typedef VarArgsFuncTypedef
+
+CHECK-DAG: Type{{.*}} , name = "float", size = 4, compiler_type = {{.*}} float
+CHECK-DAG: Type{{.*}} , compiler_type = {{.*}} float (...)
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} float (*)(...)
+CHECK-DAG: Type{{.*}} , name = "VarArgsFuncTypedefA", compiler_type = {{.*}} typedef VarArgsFuncTypedefA
+
+CHECK-DAG: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\SimpleTypesTest.cpp'

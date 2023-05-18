@@ -1,0 +1,97 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc CPP functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "atomic_test",
+    srcs = ["atomic_test.cpp"],
+    deps = ["//libc:__support_cpp_atomic"],
+)
+
+libc_test(
+    name = "bitset_test",
+    srcs = ["bitset_test.cpp"],
+    deps = ["//libc:__support_cpp_bitset"],
+)
+
+libc_test(
+    name = "bit_test",
+    srcs = ["bit_test.cpp"],
+    deps = [
+        "//libc:__support_big_int",
+        "//libc:__support_cpp_bit",
+        "//libc:__support_macros_properties_types",
+    ],
+)
+
+libc_test(
+    name = "cstddef_test",
+    srcs = ["cstddef_test.cpp"],
+    deps = ["//libc:__support_cpp_cstddef"],
+)
+
+libc_test(
+    name = "integer_sequence_test",
+    srcs = ["integer_sequence_test.cpp"],
+    deps = ["//libc:__support_cpp_utility"],
+)
+
+libc_test(
+    name = "limits_test",
+    srcs = ["limits_test.cpp"],
+    deps = [
+        "//libc:__support_big_int",
+        "//libc:__support_cpp_limits",
+        "//libc:__support_macros_properties_types",
+    ],
+)
+
+libc_test(
+    name = "optional_test",
+    srcs = ["optional_test.cpp"],
+    deps = ["//libc:__support_cpp_optional"],
+)
+
+libc_test(
+    name = "span_test",
+    srcs = ["span_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_array",
+        "//libc:__support_cpp_span",
+    ],
+)
+
+libc_test(
+    name = "stringstream_test",
+    srcs = ["stringstream_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:__support_cpp_stringstream",
+    ],
+)
+
+libc_test(
+    name = "string_test",
+    srcs = ["string_test.cpp"],
+    deps = ["//libc:__support_cpp_string"],
+)
+
+libc_test(
+    name = "stringview_test",
+    srcs = ["stringview_test.cpp"],
+    deps = ["//libc:__support_cpp_string_view"],
+)
+
+libc_test(
+    name = "type_traits_test",
+    srcs = ["type_traits_test.cpp"],
+    deps = ["//libc:__support_cpp_type_traits"],
+)

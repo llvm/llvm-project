@@ -1,0 +1,197 @@
+# RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=VI %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=GFX8 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+
+# GCN-LABEL: name: hazard_implicit_def
+# GCN:    bb.0.entry:
+# GCN:      $m0 = S_MOV_B32
+# GFX9:     S_NOP 0
+# VI-NOT:   S_NOP_0
+# GCN:      V_INTERP_P1_F32
+
+---
+name:            hazard_implicit_def
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$sgpr7', virtual-reg: '' }
+  - { reg: '$vgpr4', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $sgpr7, $vgpr4
+
+    $m0 = S_MOV_B32 killed $sgpr7
+    $vgpr5 = IMPLICIT_DEF
+    $vgpr0 = V_INTERP_P1_F32 killed $vgpr4, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    SI_RETURN_TO_EPILOG killed $vgpr5, killed $vgpr0
+
+...
+
+# GCN-LABEL: name: hazard_inlineasm
+# GCN:    bb.0.entry:
+# GCN:      $m0 = S_MOV_B32
+# GFX9:     S_NOP 0
+# VI-NOT:   S_NOP_0
+# GCN:      V_INTERP_P1_F32
+---
+name:            hazard_inlineasm
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$sgpr7', virtual-reg: '' }
+  - { reg: '$vgpr4', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $sgpr7, $vgpr4
+
+    $m0 = S_MOV_B32 killed $sgpr7
+    INLINEASM &"; no-op", 1, 327690, def $vgpr5
+    $vgpr0 = V_INTERP_P1_F32 killed $vgpr4, 0, 0, implicit $mode, implicit $m0, implicit $exec
+    SI_RETURN_TO_EPILOG killed $vgpr5, killed $vgpr0
+...
+
+# IMPLICIT_DEF/DBG_VALUE instructions should not prevent the hazard recognizer
+# from adding s_nop instructions between m0 update and s_sendmsg.
+
+# GCN-LABEL: name: hazard-lookahead-implicit-def
+# GCN: $vgpr6 = IMPLICIT_DEF
+# GFX8-NEXT: S_NOP 0
+# GFX9-NEXT: S_NOP 0
+# GCN: S_SENDMSG 3, implicit $exec, implicit $m0
+---
+name: hazard-lookahead-implicit-def
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 killed $sgpr12
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr2 = IMPLICIT_DEF
+    $vgpr3 = IMPLICIT_DEF
+    $vgpr4 = IMPLICIT_DEF
+    $vgpr5 = IMPLICIT_DEF
+    $vgpr6 = IMPLICIT_DEF
+    S_SENDMSG 3, implicit $exec, implicit $m0
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard-lookahead-dbg-value
+# GCN: DBG_VALUE 6
+# GFX8-NEXT: S_NOP 0
+# GFX9-NEXT: S_NOP 0
+# GCN: S_SENDMSG 3, implicit $exec, implicit $m0
+---
+name: hazard-lookahead-dbg-value
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 killed $sgpr12
+    DBG_VALUE 0
+    DBG_VALUE 1
+    DBG_VALUE 2
+    DBG_VALUE 3
+    DBG_VALUE 4
+    DBG_VALUE 5
+    DBG_VALUE 6
+    S_SENDMSG 3, implicit $exec, implicit $m0
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard-lookahead-dbg-label
+# GCN: DBG_LABEL 6
+# GFX8-NEXT: S_NOP 0
+# GFX9-NEXT: S_NOP 0
+# GCN: S_SENDMSG 3, implicit $exec, implicit $m0
+---
+name: hazard-lookahead-dbg-label
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 killed $sgpr12
+    DBG_LABEL 0
+    DBG_LABEL 1
+    DBG_LABEL 2
+    DBG_LABEL 3
+    DBG_LABEL 4
+    DBG_LABEL 5
+    DBG_LABEL 6
+    S_SENDMSG 3, implicit $exec, implicit $m0
+    S_ENDPGM 0
+...
+# GCN-LABEL: name: hazard-lookahead-wave-barrier
+# GCN: S_WAITCNT 0
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_ADD_F16_dpp
+---
+name: hazard-lookahead-wave-barrier
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr3
+
+    renamable $vgpr1 = contract nofpexcept V_ADD_F16_e32 killed $vgpr1, $vgpr0, implicit $mode, implicit $exec
+    WAVE_BARRIER
+    S_WAITCNT 0
+    renamable $vgpr2 = contract nofpexcept V_ADD_F16_dpp undef $vgpr2, 0, $vgpr1, 0, $vgpr3, 273, 15, 15, 1, implicit $mode, implicit $exec
+...
+# GCN-LABEL: name: hazard-lookahead-masked-unreachable
+# GCN: SI_MASKED_UNREACHABLE
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_SENDMSG
+---
+name: hazard-lookahead-masked-unreachable
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 -1
+    SI_MASKED_UNREACHABLE
+    S_SENDMSG 3, implicit $exec, implicit $m0
+
+  bb.1:
+    S_ENDPGM 0
+...
+# GCN-LABEL: name: fallthrough-hazard-lookahead-masked-unreachable
+# GCN: SI_MASKED_UNREACHABLE
+# GCN-LABEL: bb.1:
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_SENDMSG
+---
+name: fallthrough-hazard-lookahead-masked-unreachable
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 -1
+    SI_MASKED_UNREACHABLE
+
+  bb.1:
+    S_SENDMSG 3, implicit $exec, implicit $m0
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: buffer_store_lds_dword
+# GCN:       $m0 = S_MOV_B32 0
+# GFX9-NEXT: S_NOP 0
+# GCN-NEXT:  BUFFER_STORE_LDS_DWORD
+---
+name: buffer_store_lds_dword
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_STORE_LDS_DWORD $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec, implicit $m0
+...
+
+# GCN-LABEL: name: lds_direct_read_m0
+# GCN:       $m0 = S_MOV_B32 0
+# GFX9-NEXT: S_NOP 0
+# GCN-NEXT:  V_MOV_B32
+---
+name: lds_direct_read_m0
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    $vgpr0 = V_MOV_B32_e32 $lds_direct, implicit $exec, implicit $m0
+...

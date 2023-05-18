@@ -1,0 +1,29 @@
+Test binaries created with the following commands:
+
+$ cat call.c
+__attribute__((noinline, noreturn)) void foo() {
+    asm volatile("" ::: "memory");
+      __builtin_unreachable();
+}
+__attribute__((noinline)) void bar() {
+    asm volatile("nop" :::);
+      foo();
+}
+
+int main() { bar(); }
+
+$ clang -g call.c -fomit-frame-pointer -c -Os -o call.o
+$ clang -g call.o -o call
+
+The test requires the return PC to match a relocation (in this case the
+DW_AT_high_pc of main). Without this change the value would get relocated
+twice.
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/call_return_pc/call -o %t.dSYM
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_return_pc
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/call_return_pc/call -o %t.dSYM
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_return_pc
+
+CHECK: DW_AT_call_return_pc  (0x0000000100000f72)
+CHECK: DW_AT_call_return_pc  (0x0000000100000f78)

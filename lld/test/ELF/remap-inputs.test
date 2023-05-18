@@ -1,0 +1,85 @@
+# REQUIRES: x86
+## --remap-inputs and --remap-inputs-file= remap input files.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: llvm-as b.ll -o b.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 c.s -o c.o && llvm-ar rc c.a c.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 d.s -o d.o && ld.lld -shared -soname=d d.o -o d.so
+# RUN: ld.lld --remap-inputs-file=1.map --remap-inputs-file=2.map --remap-inputs='d*.so=d.so' --reproduce=repro.tar aa.o bb.bc cc.a dd.so empty -o out
+# RUN: tar tf repro.tar | FileCheck %s --check-prefix=REPRO
+
+# REPRO:      1.map
+# REPRO-NEXT: 2.map
+# REPRO-NEXT: a.o
+# REPRO-NEXT: b.o
+# REPRO-NEXT: c.a
+# REPRO-NEXT: d.so
+
+## --remap-inputs can also be specified multiple times.
+# RUN: ld.lld --remap-inputs 'aa.o=a.o' --remap-inputs='d[d].so=d.so' aa.o b.o c.a d.so -o /dev/null
+
+## A multiple-to-one pattern may easily cause issues. Users should be careful.
+# RUN: not ld.lld --remap-inputs-file=3.map aa.o bb.bc -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE --implicit-check-not=error:
+# DUPLICATE: error: duplicate symbol: _start
+
+# RUN: not ld.lld --remap-inputs-file=err1.map aa.o bb.bc -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR1 --implicit-check-not=error:
+# ERR1:      error: err1.map:2: parse error, not 'from-glob=to-file'
+# ERR1-NEXT: error: cannot open bb.bc: {{.*}}
+
+# RUN: not ld.lld --remap-inputs-file=err2.map aa.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
+# ERR2:      error: err2.map:1: invalid glob pattern, unmatched '[': aa.[o
+# ERR2-NEXT: error: cannot open aa.o: {{.*}}
+
+# RUN: not ld.lld --remap-inputs=aa.o aa.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR3 --implicit-check-not=error:
+# RUN: not ld.lld --remap-inputs=aa.o= aa.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR3 --implicit-check-not=error:
+# ERR3:      error: --remap-inputs: parse error, not 'from-glob=to-file'
+# ERR3-NEXT: error: cannot open aa.o: {{.*}}
+
+#--- a.s
+.globl _start
+_start:
+  call b
+  call c
+  call d
+
+#--- b.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @b() {
+  ret void
+}
+
+#--- c.s
+.globl c
+c:
+
+#--- d.s
+.globl d
+d:
+
+#--- 1.map
+aa.o=a.o
+b?.[b]c=b.o
+
+#--- 2.map
+cc.a=c.a
+## Use /dev/null to indicate an input file which should be ignored.
+empty=/dev/null
+
+#--- 3.map
+*=a.o
+
+#--- err1.map
+aa.o=a.o
+bb.bc
+cc.a
+
+#--- err2.map
+aa.[o=a.o

@@ -1,0 +1,271 @@
+# RUN: llc -emit-call-site-info -start-after=livedebugvalues -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+
+# Based on the following C reproducer:
+#
+# extern void call_int(int);
+# extern void call_int_int(int, int);
+# extern void call_long(long);
+# extern int global;
+#
+# int same_reg(int p) {
+#   call_int(p);
+#   return 0;
+# }
+#
+# int super_reg(unsigned p) {
+#   call_long(p);
+#   return 0;
+# }
+#
+# int sub_reg(int p, long q) {
+#   call_int_int(q, global);
+#   return p;
+# }
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64"
+
+  @global = external global i32, align 4
+
+  ; Function Attrs: noinline nounwind
+  define i32 @same_reg(i32 %p) #0 !dbg !19 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %p, metadata !23, metadata !DIExpression()), !dbg !24
+    tail call void @call_int(i32 %p), !dbg !25
+    ret i32 0, !dbg !26
+  }
+
+  declare !dbg !4 void @call_int(i32)
+
+  ; Function Attrs: noinline nounwind
+  define i32 @super_reg(i32 %p) #0 !dbg !27 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %p, metadata !32, metadata !DIExpression()), !dbg !33
+    %conv = zext i32 %p to i64, !dbg !34
+    tail call void @call_long(i64 %conv), !dbg !34
+    ret i32 0, !dbg !35
+  }
+
+  declare !dbg !8 void @call_long(i64)
+
+  ; Function Attrs: noinline nounwind
+  define i32 @sub_reg(i32 returned %p, i64 %q) #0 !dbg !36 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %p, metadata !40, metadata !DIExpression()), !dbg !42
+    call void @llvm.dbg.value(metadata i64 %q, metadata !41, metadata !DIExpression()), !dbg !42
+    %conv = trunc i64 %q to i32, !dbg !43
+    %0 = load i32, ptr @global, align 4, !dbg !43
+    tail call void @call_int_int(i32 %conv, i32 %0), !dbg !43
+    ret i32 %p, !dbg !44
+  }
+
+  declare !dbg !12 void @call_int_int(i32, i32)
+
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+
+  attributes #0 = { noinline nounwind  "frame-pointer"="all" }
+  attributes #1 = { nounwind readnone speculatable willreturn }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!15, !16, !17}
+  !llvm.ident = !{!18}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0 (ssh://gerritmirror.rnd.ki.sw.ericsson.se:29418/flextools/llvm-project.git f76e863b549ddccd5e917e2f3ff50646915654d2)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
+  !1 = !DIFile(filename: "orrxrs.c", directory: "/repo/edasten/llvm-project/llvm")
+  !2 = !{}
+  !4 = !DISubprogram(name: "call_int", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !DISubprogram(name: "call_long", scope: !1, file: !1, line: 3, type: !9, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !9 = !DISubroutineType(types: !10)
+  !10 = !{null, !11}
+  !11 = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
+  !12 = !DISubprogram(name: "call_int_int", scope: !1, file: !1, line: 2, type: !13, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{null, !7, !7}
+  !15 = !{i32 2, !"Dwarf Version", i32 4}
+  !16 = !{i32 2, !"Debug Info Version", i32 3}
+  !17 = !{i32 1, !"wchar_size", i32 4}
+  !18 = !{!"clang version 10.0.0 (ssh://gerritmirror.rnd.ki.sw.ericsson.se:29418/flextools/llvm-project.git f76e863b549ddccd5e917e2f3ff50646915654d2)"}
+  !19 = distinct !DISubprogram(name: "same_reg", scope: !1, file: !1, line: 6, type: !20, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !22)
+  !20 = !DISubroutineType(types: !21)
+  !21 = !{!7, !7}
+  !22 = !{!23}
+  !23 = !DILocalVariable(name: "p", arg: 1, scope: !19, file: !1, line: 6, type: !7)
+  !24 = !DILocation(line: 0, scope: !19)
+  !25 = !DILocation(line: 7, scope: !19)
+  !26 = !DILocation(line: 8, scope: !19)
+  !27 = distinct !DISubprogram(name: "super_reg", scope: !1, file: !1, line: 11, type: !28, scopeLine: 11, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !31)
+  !28 = !DISubroutineType(types: !29)
+  !29 = !{!7, !30}
+  !30 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !31 = !{!32}
+  !32 = !DILocalVariable(name: "p", arg: 1, scope: !27, file: !1, line: 11, type: !30)
+  !33 = !DILocation(line: 0, scope: !27)
+  !34 = !DILocation(line: 12, scope: !27)
+  !35 = !DILocation(line: 13, scope: !27)
+  !36 = distinct !DISubprogram(name: "sub_reg", scope: !1, file: !1, line: 16, type: !37, scopeLine: 16, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !39)
+  !37 = !DISubroutineType(types: !38)
+  !38 = !{!7, !7, !11}
+  !39 = !{!40, !41}
+  !40 = !DILocalVariable(name: "p", arg: 1, scope: !36, file: !1, line: 16, type: !7)
+  !41 = !DILocalVariable(name: "q", arg: 2, scope: !36, file: !1, line: 16, type: !11)
+  !42 = !DILocation(line: 0, scope: !36)
+  !43 = !DILocation(line: 17, scope: !36)
+  !44 = !DILocation(line: 18, scope: !36)
+
+...
+---
+name:            same_reg
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+frameInfo:
+  stackSize:       16
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp' }
+callSites:
+  - { bb: 0, offset: 8, fwdArgRegs:
+      - { arg: 0, reg: '$w0' } }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $w0, $lr
+
+    DBG_VALUE $w0, $noreg, !23, !DIExpression(), debug-location !24
+    DBG_VALUE $w0, $noreg, !23, !DIExpression(), debug-location !24
+    DBG_VALUE $w0, $noreg, !23, !DIExpression(), debug-location !24
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !25
+    frame-setup CFI_INSTRUCTION offset $w29, -16, debug-location !25
+    BL @call_int, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit-def $sp, debug-location !25
+    DBG_VALUE $w0, $noreg, !23, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !24
+    $w0 = ORRWrs $wzr, $wzr, 0, debug-location !26
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !26 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    RET undef $lr, implicit killed $w0, debug-location !26
+
+...
+
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin ({{.*}} "call_int")
+#
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg0 W0))
+
+---
+name:            super_reg
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+frameInfo:
+  stackSize:       16
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp' }
+callSites:
+  - { bb: 0, offset: 9, fwdArgRegs:
+      - { arg: 0, reg: '$x0' } }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $w0, $lr
+
+    DBG_VALUE $w0, $noreg, !32, !DIExpression(), debug-location !33
+    DBG_VALUE $w0, $noreg, !32, !DIExpression(), debug-location !33
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !34
+    frame-setup CFI_INSTRUCTION offset $w29, -16, debug-location !34
+    renamable $w0 = ORRWrs $wzr, killed renamable $w0, 0, implicit-def $x0, debug-location !34
+    DBG_VALUE $w0, $noreg, !32, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !33
+    BL @call_long, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !34
+    $w0 = ORRWrs $wzr, $wzr, 0, debug-location !35
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !35 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    RET undef $lr, implicit killed $w0, debug-location !35
+
+...
+
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin ({{.*}} "call_long")
+#
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg0 W0))
+
+---
+name:            sub_reg
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$x1' }
+frameInfo:
+  stackSize:       32
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$x19' }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$lr' }
+  - { id: 2, type: spill-slot, offset: -32, size: 8, alignment: 8, callee-saved-register: '$fp' }
+callSites:
+  - { bb: 0, offset: 17, fwdArgRegs:
+      - { arg: 0, reg: '$w0' }
+      - { arg: 1, reg: '$w1' } }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $w0, $x1, $lr, $x19
+
+    DBG_VALUE $w0, $noreg, !40, !DIExpression(), debug-location !42
+    DBG_VALUE $x1, $noreg, !41, !DIExpression(), debug-location !42
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -4 :: (store (s64) into %stack.2), (store (s64) into %stack.1)
+    frame-setup STRXui killed $x19, $sp, 2 :: (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 32
+    frame-setup CFI_INSTRUCTION offset $w19, -16
+    frame-setup CFI_INSTRUCTION offset $w30, -24
+    frame-setup CFI_INSTRUCTION offset $w29, -32
+    renamable $x9 = ADRP target-flags(aarch64-page) @global, debug-location !43
+    $x8 = ORRXrs $xzr, killed $x1, 0
+    DBG_VALUE $x8, $noreg, !41, !DIExpression(), debug-location !42
+    renamable $w1 = LDRWui killed renamable $x9, target-flags(aarch64-pageoff, aarch64-nc) @global, debug-location !43 :: (dereferenceable load (s32) from @global)
+    $w19 = ORRWrs $wzr, killed $w0, 0
+    DBG_VALUE $w19, $noreg, !40, !DIExpression(), debug-location !42
+    DBG_VALUE $w19, $noreg, !40, !DIExpression(), debug-location !42
+    $w0 = ORRWrs $wzr, killed $w8, 0, implicit $x8, debug-location !43
+    BL @call_int_int, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit-def $sp, debug-location !43
+    DBG_VALUE $x1, $noreg, !41, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !42
+    $w0 = ORRWrs $wzr, killed $w19, 0, debug-location !44
+    DBG_VALUE $w0, $noreg, !40, !DIExpression(), debug-location !42
+    $x19 = frame-destroy LDRXui $sp, 2, debug-location !44 :: (load (s64) from %stack.0)
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 4, debug-location !44 :: (load (s64) from %stack.2), (load (s64) from %stack.1)
+    RET undef $lr, implicit killed $w0, debug-location !44
+
+...
+
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin ({{.*}} "call_int_int")
+#
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg1 W1))

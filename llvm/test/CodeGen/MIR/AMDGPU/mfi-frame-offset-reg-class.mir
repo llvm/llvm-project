@@ -1,0 +1,12 @@
+# RUN: not llc -mtriple=amdgcn -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+name: wrong_reg_class_frame_offset_reg
+machineFunctionInfo:
+  frameOffsetReg:  '$vgpr0'
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: incorrect register class for field
+body:             |
+  bb.0:
+
+    S_ENDPGM
+...

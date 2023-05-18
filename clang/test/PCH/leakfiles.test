@@ -1,0 +1,29 @@
+// Test that compiling using a PCH doesn't leak file descriptors.
+// https://bugs.chromium.org/p/chromium/issues/detail?id=924225
+//
+// This test requires bash loops and ulimit.
+// REQUIRES: shell
+// UNSUPPORTED: target={{.*win32.*}}
+//
+// Set up source files. lib/lib.h includes lots of lib*.h files in that dir.
+// client.c includes lib/lib.h, and also the individual files directly.
+//
+// RUN: rm -rf %t
+// RUN: mkdir %t
+// RUN: cd %t
+// RUN: mkdir lib
+// RUN: for i in {1..300}; do touch lib/lib$i.h; done
+// RUN: for i in {1..300}; do echo "#include \"lib$i.h\"" >> lib/lib.h; done
+// RUN: echo "#include \"lib/lib.h\"" > client.c
+// RUN: for i in {1..300}; do echo "#include \"lib/lib$i.h\"" >> client.c; done
+//
+// We want to verify that we don't hold all the files open at the same time.
+// This is important e.g. on mac, which has a low default FD limit.
+// RUN: ulimit -n 100
+//
+// Test without PCH.
+// RUN: %clang_cc1 -fsyntax-only -Ilib/ client.c
+//
+// Test with PCH.
+// RUN: %clang_cc1 -emit-pch -o pch -Ilib/ client.c
+// RUN: %clang_cc1 -include-pch pch -Ilib/ client.c -fsyntax-only

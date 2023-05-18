@@ -1,0 +1,125 @@
+## Show that llvm-readobj can dump SHT_LLVM_ADDRSIG sections.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: llvm-readobj --addrsig %t1.o | FileCheck -DFILE=%t1.o %s --check-prefix=LLVM
+# RUN: llvm-readelf --addrsig %t1.o | \
+# RUN:   FileCheck -DFILE=%t1.o %s --strict-whitespace --match-full-lines --check-prefix=GNU
+
+# LLVM:      Addrsig [
+# LLVM-NEXT:   Sym: foo (1)
+# LLVM-NEXT:   Sym: bar (2)
+# LLVM-NEXT: ]
+
+#       GNU:Address-significant symbols section '.llvm_addrsig' contains 2 entries:
+#  GNU-NEXT:   Num: Name
+#  GNU-NEXT:     1: foo
+#  GNU-NEXT:     2: bar
+# GNU-EMPTY:
+#   GNU-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .llvm_addrsig
+    ShName:  [[NAME=<none>]]
+    Type:    SHT_LLVM_ADDRSIG
+    Symbols: [ foo, bar ]
+Symbols:
+  - Name: foo
+  - Name: bar
+
+## Check what we print when it is impossible to read the name of the SHT_LLVM_ADDRSIG section.
+## llvm-readelf reports a warning in this case.
+
+# RUN: yaml2obj --docnum=1 -DNAME=0xff %s -o %t1.name.o
+# RUN: llvm-readobj --addrsig %t1.name.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.name.o %s --check-prefix=LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --addrsig %t1.name.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.name.o %s --check-prefix=NAME-GNU --implicit-check-not=warning:
+
+# NAME-GNU: warning: '[[FILE]]': unable to get the name of SHT_LLVM_ADDRSIG section with index 1: a section [index 1] has an invalid sh_name (0xff) offset which goes past the end of the section name string table
+# NAME-GNU:      Address-significant symbols section '<?>' contains 2 entries:
+# NAME-GNU-NEXT:    Num: Name
+# NAME-GNU-NEXT:      1: foo
+# NAME-GNU-NEXT:      2: bar
+
+## Check that llvm-readobj dumps any SHT_LLVM_ADDRSIG section when --all
+## is specified for LLVM style, but not for GNU style.
+
+# RUN: llvm-readobj --all %t1.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --all %t1.o | FileCheck %s --implicit-check-not="Address-significant"
+
+## Check we report a warning when the content of the SHT_LLVM_ADDRSIG section
+## is broken (e.g. contains a malformed uleb128).
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.1.o
+# RUN: llvm-readobj --addrsig %t2.1.o 2>&1 | FileCheck %s -DFILE=%t2.1.o --check-prefix=MALFORMED-LLVM
+# RUN: llvm-readelf --addrsig %t2.1.o 2>&1 | FileCheck %s -DFILE=%t2.1.o --check-prefix=MALFORMED-GNU
+
+# MALFORMED-LLVM:      Addrsig [
+# MALFORMED-LLVM-NEXT: warning: '[[FILE]]': unable to decode SHT_LLVM_ADDRSIG section with index 1: malformed uleb128, extends past end
+# MALFORMED-LLVM-NEXT: ]
+
+# MALFORMED-GNU:    warning: '[[FILE]]': unable to decode SHT_LLVM_ADDRSIG section with index 1: malformed uleb128, extends past end
+# MALFORMED-GNU-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:     .llvm_addrsig
+    Type:     SHT_LLVM_ADDRSIG
+    Content:  "FF"
+    ShOffset: [[OFFSET=<none>]]
+
+## Check we report a warning when the content of the SHT_LLVM_ADDRSIG section can't be read.
+
+# RUN: yaml2obj --docnum=2 -DOFFSET=0xffffffff %s -o %t2.2.o
+# RUN: llvm-readobj --addrsig %t2.2.o 2>&1 | FileCheck %s -DFILE=%t2.2.o --check-prefix=BROKEN-SEC-LLVM
+# RUN: llvm-readelf --addrsig %t2.2.o 2>&1 | FileCheck %s -DFILE=%t2.2.o --check-prefix=BROKEN-SEC-GNU
+
+# BROKEN-SEC-LLVM:      Addrsig [
+# BROKEN-SEC-LLVM-NEXT: warning: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x1) that is greater than the file size (0x168)
+# BROKEN-SEC-LLVM-NEXT: ]
+
+# BROKEN-SEC-GNU:    warning: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x1) that is greater than the file size (0x168)
+# BROKEN-SEC-GNU-NOT:{{.}}
+
+## Check we report a warning when SHT_LLVM_ADDRSIG references a symbol that can't be
+## dumped (e.g. the index value is larger than the number of symbols in .symtab).
+
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: llvm-readobj --addrsig %t3.o 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=INVALID-INDEX-LLVM
+# RUN: llvm-readelf --addrsig %t3.o 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=INVALID-INDEX-GNU
+
+# INVALID-INDEX-LLVM:      Addrsig [
+# INVALID-INDEX-LLVM-NEXT:   Sym: foo (1)
+# INVALID-INDEX-LLVM-NEXT:   warning: '[[FILE]]': unable to read the name of symbol with index 255: unable to get symbol from section [index 2]: invalid symbol index (255)
+# INVALID-INDEX-LLVM-NEXT:   Sym: <?> (255)
+# INVALID-INDEX-LLVM-NEXT:   Sym: bar (2)
+# INVALID-INDEX-LLVM-NEXT: ]
+
+# INVALID-INDEX-GNU:      Address-significant symbols section '.llvm_addrsig' contains 3 entries:
+# INVALID-INDEX-GNU-NEXT:    Num: Name
+# INVALID-INDEX-GNU-NEXT:      1: foo
+# INVALID-INDEX-GNU-NEXT: warning: '[[FILE]]': unable to read the name of symbol with index 255: unable to get symbol from section [index 2]: invalid symbol index (255)
+# INVALID-INDEX-GNU-NEXT:      2: <?>
+# INVALID-INDEX-GNU-NEXT:      3: bar
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Symbols: [ 1, 255, 2 ]
+Symbols:
+  - Name: foo
+  - Name: bar

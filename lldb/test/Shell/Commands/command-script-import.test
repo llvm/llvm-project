@@ -1,0 +1,13 @@
+# REQUIRES: python
+# RUN: echo 'b main' > %t.in
+# RUN: echo 'run' >> %t.in
+# RUN: echo 'command script import %S/Inputs/frame.py' >> %t.in
+
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: %lldb -b -s %t.in -o 'script print("script: {}".format(lldb.frame))' %t.out | FileCheck %s
+
+# Make sure that we don't have access to lldb.frame from the Python script.
+# CHECK: frame.py: None
+
+# Make sure that we do have access to lldb.frame from the script command.
+# CHECK: script: frame #0

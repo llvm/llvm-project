@@ -1,0 +1,10 @@
+add_lldb_unittest(UnwindAssemblyx86Tests
+    Testx86AssemblyInspectionEngine.cpp
+    LINK_LIBS
+      lldbCore
+      lldbSymbol
+      lldbPluginUnwindAssemblyX86
+    LINK_COMPONENTS
+      Support
+      ${LLVM_TARGETS_TO_BUILD}
+  )

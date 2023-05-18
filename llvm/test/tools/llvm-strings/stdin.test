@@ -1,0 +1,22 @@
+## Show that llvm-strings can handle stdin input properly.
+
+## Case 1: output with single string.
+RUN: echo -n "abcdefg" | llvm-strings - | FileCheck %s --check-prefix=CASE1 --implicit-check-not={{.}}
+CASE1: abcdefg
+
+## Case 2: output too short for string.
+RUN: echo -n "abc" | llvm-strings - | FileCheck %s --implicit-check-not={{.}} --allow-empty
+
+## Case 3: output with new line.
+RUN: echo -e "abcd\nefgh" | llvm-strings - | FileCheck %s --check-prefix=CASE3 --implicit-check-not={{.}}
+CASE3:      abcd
+CASE3-NEXT: efgh
+
+## Case 4: output containing unprintable characters.
+RUN: echo -e "abcd\x00ef\x1fghij\x7fklmn" | llvm-strings - | FileCheck %s --check-prefix=CASE4 --implicit-check-not={{.}}
+CASE4:      abcd
+CASE4-NEXT: ghij
+CASE4-NEXT: klmn
+
+## Case 5: no file name specified is equivalent to explicitly requesting stdin.
+RUN: echo -n "abcdefg" | llvm-strings | FileCheck %s --check-prefix=CASE1 --implicit-check-not={{.}}

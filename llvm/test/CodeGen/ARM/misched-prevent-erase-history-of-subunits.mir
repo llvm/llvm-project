@@ -1,0 +1,37 @@
+# RUN: llc -mtriple=thumbv7em-unknown-unknown -mcpu=cortex-m7 \
+# RUN:    -sched-model-force-enable-intervals \
+# RUN:    %s -run-pass=machine-scheduler -o - 2>&1 -debug | FileCheck %s
+# REQUIRES: arm-registered-target, asserts
+
+# NOTE: Without the bugfix introduced in this code, the test below
+# would raise the assertion "A resource is being overwritten" from
+# `ResourceSegments::add` when enforcing the use of resource intervals
+# via -sched-model-force-enable-intervals with the scheduling model
+# for -mcpu=cortex-m7.
+
+# CHECK-LABEL: *** Final schedule for %bb.0 ***
+# CHECK: SU(0):   %0:dpr = COPY $d0
+# CHECK: SU(1):   %1:dpr = VABSD %0:dpr, 14, $noreg
+# CHECK: SU(2):   %2:dpr = VLDRD %const.0, 0, 14, $noreg :: (load (s64) from constant-pool)
+# CHECK: SU(4):   %3:rgpr = t2MOVi 0, 14, $noreg, $noreg
+# CHECK: SU(3):   VCMPD %1:dpr, %2:dpr, 14, $noreg, implicit-def $fpscr_nzcv
+# CHECK: SU(5):   $r0 = COPY %3:rgpr
+---
+name:            test
+tracksRegLiveness: true
+constants:
+  - id:              0
+    value:           double 0x7FF0000000000000
+body:             |
+  bb.0:
+    liveins: $d0
+
+    %0:dpr = COPY $d0
+    %1:dpr = VABSD %0, 14 /* CC::al */, $noreg
+    %2:dpr = VLDRD %const.0, 0, 14 /* CC::al */, $noreg :: (load (s64) from constant-pool)
+    VCMPD %1, %2, 14 /* CC::al */, $noreg, implicit-def $fpscr_nzcv
+    %4:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    $r0 = COPY %4
+    tBX_RET 14 /* CC::al */, $noreg, implicit killed $r0
+
+...

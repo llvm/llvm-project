@@ -1,0 +1,37 @@
+# RUN: not --crash llc -o - -mtriple=aarch64 -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_fcmp
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    liveins: $x0, $w0, $q0
+    %s32:_(s32) = COPY $w0
+    %ptr:_(p0) = COPY $x0
+    %vector:_(<4 x s32>) = COPY $q0
+
+    %val1:_(s1) = G_IS_FPCLASS %s32
+    ; CHECK: *** Bad machine code: Too few operands ***
+    ; CHECK: 3 operands expected, but 2 given.
+
+    %val2:_(p0) = G_IS_FPCLASS %s32, 3
+    ; CHECK: *** Bad machine code: Destination must be a scalar or vector of scalars ***
+
+    %val4:_(s1) = G_IS_FPCLASS %s32, 7777
+    ; CHECK: *** Bad machine code: Incorrect floating-point class set (operand 2) ***
+
+    %val5:_(s1) = G_IS_FPCLASS %ptr:_(p0), 3
+    ; CHECK: *** Bad machine code: Source must be a scalar or vector of scalars ***
+
+    %var6:_(s1) = G_IS_FPCLASS %vector:_(<4 x s32>), 1
+    ; CHECK: *** Bad machine code: operand types must be all-vector or all-scalar ***
+
+    %var7:_(<2 x s1>) = G_IS_FPCLASS %vector:_(<4 x s32>), 1
+    ; CHECK: *** Bad machine code: operand types must preserve number of vector elements ***
+
+...

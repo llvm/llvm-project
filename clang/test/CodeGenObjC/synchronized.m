@@ -1,0 +1,76 @@
+// RUN: %clang_cc1 -emit-llvm -triple i686-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -o - %s -O2 | FileCheck %s
+
+@interface MyClass
+{
+}
+- (void)method;
+@end
+
+@implementation MyClass
+
+// CHECK: define internal void @"\01-[MyClass method]"
+- (void)method
+{
+  // CHECK: call i32 @objc_sync_enter
+  // CHECK: call void @objc_exception_try_enter
+  // CHECK: call i32 @_setjmp
+  @synchronized(self) {
+  }
+}
+
+@end
+
+// CHECK-LABEL: define{{.*}} void @foo(
+void foo(id a) {
+  // CHECK: [[A:%.*]] = alloca ptr
+  // CHECK: [[SYNC:%.*]] = alloca ptr
+
+  // CHECK:      store ptr [[AVAL:%.*]], ptr [[A]]
+  // CHECK-NEXT: call i32 @objc_sync_enter(ptr [[AVAL]])
+  // CHECK-NEXT: store ptr [[AVAL]], ptr [[SYNC]]
+  // CHECK-NEXT: call void @objc_exception_try_enter
+  // CHECK:      call i32 @_setjmp
+  @synchronized(a) {
+    // This is unreachable, but the optimizers can't know that.
+    // CHECK: call void asm sideeffect "", "=*m,=*m,=*m"(ptr nonnull elementtype(ptr) [[A]], ptr nonnull elementtype(ptr) [[SYNC]]
+    // CHECK: call i32 @objc_sync_exit
+    // CHECK: call ptr @objc_exception_extract
+    // CHECK: call void @objc_exception_throw
+    // CHECK: unreachable
+
+    // CHECK:      call void @objc_exception_try_exit
+    // CHECK-NEXT: call i32 @objc_sync_exit
+    // CHECK: ret void
+    return;
+  }
+
+}
+
+// CHECK-LABEL: define{{.*}} i32 @f0(
+int f0(id a) {
+  // We can optimize the ret to a constant as we can figure out
+  // that x isn't stored to within the synchronized block.
+
+  // CHECK: [[X:%.*]] = alloca i32
+  // CHECK: store i32 1, ptr [[X]]
+  int x = 0;
+  @synchronized((x++, a)) {    
+  }
+
+  // CHECK: ret i32 1
+  return x;
+}
+
+// CHECK-LABEL: define{{.*}} void @f1(
+void f1(id a) {
+  // Check that the return doesn't go through the cleanup.
+  extern void opaque(void);
+  opaque();
+
+  // CHECK: call void @opaque()
+  // CHECK-NEXT: ret void
+
+  @synchronized(({ return; }), a) {
+    return;
+  }
+}

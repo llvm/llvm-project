@@ -1,0 +1,50 @@
+Processing of the -arch option happens at debug map parsing time, thus just
+looking at the dumped debug maps is enough to validate their effects.
+
+RUN: dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib | FileCheck %s -check-prefixes=ARM64,ARMV7S,ARMV7,CHECK
+RUN: dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch all | FileCheck %s -check-prefixes=ARM64,ARMV7S,ARMV7,CHECK
+RUN: dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch='*' | FileCheck %s -check-prefixes=ARM64,ARMV7S,ARMV7,CHECK
+RUN: dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch arm64 | FileCheck %s -check-prefixes=ARM64,CHECK
+RUN: dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch arm | FileCheck %s -check-prefixes=ARMV7S,ARMV7,CHECK
+RUN: dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch armv7 | FileCheck %s -check-prefixes=ARMV7,CHECK
+RUN: dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch arm64 -arch armv7s | FileCheck %s -check-prefixes=ARM64,ARMV7S,CHECK
+RUN: not dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch arm42 2>&1 | FileCheck %s -check-prefix=BADARCH
+RUN: not dsymutil -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch i386 2>&1 | FileCheck %s -check-prefix=EMPTY
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib | FileCheck %s -check-prefixes=ARM64,ARMV7S,ARMV7,CHECK
+RUN: dsymutil --linker parallel -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch all | FileCheck %s -check-prefixes=ARM64,ARMV7S,ARMV7,CHECK
+RUN: dsymutil --linker parallel -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch='*' | FileCheck %s -check-prefixes=ARM64,ARMV7S,ARMV7,CHECK
+RUN: dsymutil --linker parallel -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch arm64 | FileCheck %s -check-prefixes=ARM64,CHECK
+RUN: dsymutil --linker parallel -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch arm | FileCheck %s -check-prefixes=ARMV7S,ARMV7,CHECK
+RUN: dsymutil --linker parallel -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch armv7 | FileCheck %s -check-prefixes=ARMV7,CHECK
+RUN: dsymutil --linker parallel -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch arm64 -arch armv7s | FileCheck %s -check-prefixes=ARM64,ARMV7S,CHECK
+RUN: not dsymutil --linker parallel -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch arm42 2>&1 | FileCheck %s -check-prefix=BADARCH
+RUN: not dsymutil --linker parallel -oso-prepend-path %p -dump-debug-map %p/Inputs/fat-test.arm.dylib -arch i386 2>&1 | FileCheck %s -check-prefix=EMPTY
+
+
+
+ARMV7: ---
+ARMV7-NOT: ...
+ARMV7: triple:          'armv7-apple-darwin'
+ARMV7-NOT: ...
+ARMV7: sym: _armv7_var
+ARMV7-NOT: ---
+
+ARMV7S: ---
+ARMV7S-NOT: ...
+ARMV7S: triple:          'armv7s-apple-darwin'
+ARMV7S-NOT: ...
+ARMV7S: sym: _armv7s_var
+ARMV7S-NOT: ---
+
+ARM64: ---
+ARM64-NOT: ...
+ARM64: triple:          'arm64-apple-darwin'
+ARM64-NOT: ...
+ARM64: sym: _arm64_var
+ARM64-NOT: ---
+
+CHECK: ...
+
+BADARCH: error: unsupported cpu architecture: 'arm42'
+EMPTY: error: no architecture to link

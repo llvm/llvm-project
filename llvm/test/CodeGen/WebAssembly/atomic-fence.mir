@@ -1,0 +1,66 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -run-pass wasm-reg-stackify -run-pass wasm-explicit-locals %s -o - | FileCheck %s
+
+# In the two tests below, without compiler_fence or atomic.fence in between,
+# memory.atomic.notify and i32.add will be reordered by register stackify pass
+# to meet 'call @foo''s requirements. But because we have fences between
+# memory.atomic.notify and i32.add, they cannot be reordered, and local.set and
+# local.get are inserted to save and load memory.atomic.notify's return value.
+
+--- |
+  target triple = "wasm32-unknown-unknown"
+
+  declare void @foo(i32, i32)
+  define void @compiler_fence_test(i32) {
+    ret void
+  }
+  define void @atomic_fence_test(i32) {
+    ret void
+  }
+...
+---
+# CHECK-LABEL: name: compiler_fence_test
+name: compiler_fence_test
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK: %[[REG:[0-9]+]]:i32 = MEMORY_ATOMIC_NOTIFY_A32
+    ; CHECK: LOCAL_SET_I32 [[LOCAL:[0-9]+]], %[[REG]]
+    ; CHECK: COMPILER_FENCE
+    ; CHECK: ADD_I32
+    ; CHECK: LOCAL_GET_I32 [[LOCAL]]
+    ; CHECK: CALL @foo
+
+    liveins: $arguments
+    %0:i32 = CONST_I32 0, implicit-def $arguments
+    %1:i32 = MEMORY_ATOMIC_NOTIFY_A32 2, 0, %0:i32, %0:i32, implicit-def $arguments
+    COMPILER_FENCE implicit-def $arguments
+    %2:i32 = ADD_I32 %0:i32, %0:i32, implicit-def $arguments
+    CALL @foo, %2:i32, %1:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+...
+
+---
+# CHECK-LABEL: name: atomic_fence_test
+name: atomic_fence_test
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK: %[[REG:[0-9]+]]:i32 = MEMORY_ATOMIC_NOTIFY_A32
+    ; CHECK: LOCAL_SET_I32 [[LOCAL:[0-9]+]], %[[REG]]
+    ; CHECK: ATOMIC_FENCE
+    ; CHECK: ADD_I32
+    ; CHECK: LOCAL_GET_I32 [[LOCAL]]
+    ; CHECK: CALL @foo
+
+    liveins: $arguments
+    %0:i32 = CONST_I32 0, implicit-def $arguments
+    %1:i32 = MEMORY_ATOMIC_NOTIFY_A32 2, 0, %0:i32, %0:i32, implicit-def $arguments
+    ATOMIC_FENCE 0, implicit-def $arguments
+    %2:i32 = ADD_I32 %0:i32, %0:i32, implicit-def $arguments
+    CALL @foo, %2:i32, %1:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+...

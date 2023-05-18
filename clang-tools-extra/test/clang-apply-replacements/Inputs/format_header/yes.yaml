@@ -1,0 +1,14 @@
+---
+MainSourceFile:  yes.cpp
+Diagnostics:
+  - DiagnosticName:  test-header-format
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/yes.cpp
+      FileOffset: 36
+      Replacements:
+        - FilePath:        $(path)/yes.cpp
+          Offset:          36
+          Length:          17
+          ReplacementText: ""
+...

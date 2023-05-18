@@ -1,0 +1,214 @@
+# RUN: llc -O0 -mtriple=mips -mcpu=mips32r3 -mattr=+micromips,+eva -start-after=finalize-isel \
+# RUN:     -filetype obj %s -o - | llvm-objdump --no-print-imm-hex --mattr=+eva -d - | FileCheck %s
+
+--- |
+
+  @wArray = global [13 x i32] zeroinitializer, align 4
+  @hArray = global [13 x i16] zeroinitializer, align 2
+  @bArray = global [13 x i8] zeroinitializer, align 1
+
+  ; Function Attrs: noinline nounwind optnone
+  define void @_Z3foov() {
+  entry:
+    %0 = load i8, ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 5), align 1
+    %conv = sext i8 %0 to i32
+    %sub = sub nsw i32 %conv, 7
+    %conv1 = trunc i32 %sub to i8
+    store i8 %conv1, ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 3), align 1
+    %1 = load i8, ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 5), align 1
+    %conv2 = sext i8 %1 to i32
+    %sub3 = sub nsw i32 %conv2, 7
+    %conv4 = trunc i32 %sub3 to i8
+    store i8 %conv4, ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 3), align 1
+    %2 = load i16, ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 5), align 2
+    %conv5 = sext i16 %2 to i32
+    %sub6 = sub nsw i32 %conv5, 7
+    %conv7 = trunc i32 %sub6 to i16
+    store i16 %conv7, ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 3), align 2
+    %3 = load i16, ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 5), align 2
+    %conv8 = sext i16 %3 to i32
+    %sub9 = sub nsw i32 %conv8, 7
+    %conv10 = trunc i32 %sub9 to i16
+    store i16 %conv10, ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 3), align 2
+    %4 = load i32, ptr getelementptr inbounds ([13 x i32], ptr @wArray, i32 0, i32 5), align 4
+    %sub11 = sub nsw i32 %4, 7
+    store i32 %sub11, ptr getelementptr inbounds ([13 x i32], ptr @wArray, i32 0, i32 3), align 4
+    ret void
+  }
+
+  ; Function Attrs: noinline nounwind optnone
+  define i32 @_Z3barPi(ptr %z) {
+  entry:
+    %z.addr = alloca ptr, align 4
+    store ptr %z, ptr %z.addr, align 4
+    %0 = load ptr, ptr %z.addr, align 4
+    fence seq_cst
+    %1 = atomicrmw add ptr %0, i32 42 monotonic
+    fence seq_cst
+    %2 = add i32 %1, 42
+    ret i32 %2
+  }
+
+...
+---
+name:            _Z3foov
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32, preferred-register: '' }
+  - { id: 1, class: gpr32, preferred-register: '' }
+  - { id: 2, class: gpr32, preferred-register: '' }
+  - { id: 3, class: gpr32, preferred-register: '' }
+  - { id: 4, class: gpr32, preferred-register: '' }
+  - { id: 5, class: gpr32, preferred-register: '' }
+  - { id: 6, class: gpr32, preferred-register: '' }
+  - { id: 7, class: gpr32, preferred-register: '' }
+  - { id: 8, class: gpr32, preferred-register: '' }
+  - { id: 9, class: gpr32, preferred-register: '' }
+  - { id: 10, class: gpr32, preferred-register: '' }
+  - { id: 11, class: gpr32, preferred-register: '' }
+  - { id: 12, class: gpr32, preferred-register: '' }
+  - { id: 13, class: gpr32, preferred-register: '' }
+  - { id: 14, class: gpr32, preferred-register: '' }
+  - { id: 15, class: gpr32, preferred-register: '' }
+liveins:
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    %0:gpr32 = LUi target-flags(mips-abs-hi) @bArray
+    %1:gpr32 = ADDiu killed %0, target-flags(mips-abs-lo) @bArray
+    %2:gpr32 = LBuE %1, 5 :: (dereferenceable load (s8) from `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 5)`)
+    %3:gpr32 = ADDiu killed %2, -7
+    SBE killed %3, %1, 3 :: (store (s8) into `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 3)`)
+    %4:gpr32 = LBE %1, 5 :: (dereferenceable load (s8) from `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 5)`)
+    %5:gpr32 = ADDiu killed %4, -7
+    SBE killed %5, %1, 3 :: (store (s8) into `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 3)`)
+    %6:gpr32 = LUi target-flags(mips-abs-hi) @hArray
+    %7:gpr32 = ADDiu killed %6, target-flags(mips-abs-lo) @hArray
+    %8:gpr32 = LHuE %7, 10 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 5)`)
+    %9:gpr32 = ADDiu killed %8, -7
+    SHE killed %9, %7, 6 :: (store (s16) into `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 3)`)
+    %10:gpr32 = LHE %7, 10 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 5)`)
+    %11:gpr32 = ADDiu killed %10, -7
+    SHE killed %11, %7, 6 :: (store (s16) into `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 3)`)
+    %12:gpr32 = LUi target-flags(mips-abs-hi) @wArray
+    %13:gpr32 = ADDiu killed %12, target-flags(mips-abs-lo) @wArray
+    %14:gpr32 = LWE %13, 20 :: (dereferenceable load (s32) from `ptr getelementptr inbounds ([13 x i32], ptr @wArray, i32 0, i32 5)`)
+    %15:gpr32 = ADDiu killed %14, -7
+    SWE killed %15, %13, 12 :: (store (s32) into `ptr getelementptr inbounds ([13 x i32], ptr @wArray, i32 0, i32 3)`)
+    RetRA
+
+...
+---
+name:            _Z3barPi
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32, preferred-register: '' }
+  - { id: 1, class: gpr32, preferred-register: '' }
+  - { id: 2, class: gpr32, preferred-register: '' }
+  - { id: 3, class: gpr32, preferred-register: '' }
+  - { id: 4, class: gpr32, preferred-register: '' }
+  - { id: 5, class: gpr32, preferred-register: '' }
+  - { id: 6, class: gpr32, preferred-register: '' }
+  - { id: 7, class: gpr32, preferred-register: '' }
+  - { id: 8, class: gpr32, preferred-register: '' }
+liveins:
+  - { reg: '$a0', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: z.addr, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $a0
+
+    %0:gpr32 = COPY $a0
+    %1:gpr32 = COPY %0
+    SW %0, %stack.0.z.addr, 0 :: (store (s32) into %ir.z.addr)
+    %2:gpr32 = LW %stack.0.z.addr, 0 :: (dereferenceable load (s32) from %ir.z.addr)
+    SYNC 0
+    %3:gpr32 = ADDiu $zero, 42
+
+  bb.1.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    %4:gpr32 = LLE %2, 0
+    %6:gpr32 = ADDu %4, %3
+    %8:gpr32 = SCE %6, %2, 0
+    BEQ %8, $zero, %bb.1, implicit-def $at
+
+  bb.2.entry:
+    SYNC 0
+    %5:gpr32 = ADDiu killed %4, 42
+    $v0 = COPY %5
+    CACHEE %1, 5, 2
+    PREFE %1, 5, 2
+    RetRA implicit $v0
+
+...
+
+# CHECK: 60 22 60 05  lbue  $1, 5($2)
+# CHECK: 60 22 68 05  lbe $1, 5($2)
+# CHECK: 60 22 a8 03  sbe $1, 3($2)
+
+# CHECK: 60 22 62 0a  lhue  $1, 10($2)
+# CHECK: 60 22 6a 0a  lhe $1, 10($2)
+# CHECK: 60 22 aa 06  she $1, 6($2)
+
+# CHECK: 60 22 6e 14  lwe $1, 20($2)
+# CHECK: 60 22 ae 0c  swe $1, 12($2)
+
+# CHECK: 60 22 6c 00  lle $1, 0($2)
+# CHECK: 60 22 ac 00  sce $1, 0($2)
+
+# CHECK: 60 41 a6 05  cachee  2, 5($1)
+# CHECK: 60 41 a4 05  prefe 2, 5($1)

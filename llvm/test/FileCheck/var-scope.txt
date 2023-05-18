@@ -1,0 +1,37 @@
+; Test that variables not starting with dollar sign get undefined after a
+; CHECK-LABEL directive iff --enable-var-scope is used.
+
+; Reference run: variables remain defined at all time when not using
+; --enable-var-scope option.
+RUN: FileCheck --check-prefixes CHECK,LOCAL3,GLOBAL --input-file %s %s
+
+RUN: FileCheck --check-prefixes CHECK,GLOBAL --enable-var-scope --input-file %s %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL1 --enable-var-scope --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix ERRUNDEFLOCAL %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL2 --enable-var-scope --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix ERRUNDEFLOCNUM %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL3 --enable-var-scope --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefixes ERRUNDEFLOCAL,ERRUNDEFLOCNUM %s
+
+local1
+global1
+CHECK: [[LOCAL:loc[^[:digit:]]*]][[#LOCNUM:]]
+CHECK: [[$GLOBAL:glo[^[:digit:]]*]][[#$GLOBNUM:]]
+
+local2
+global2
+CHECK: [[LOCAL]][[#LOCNUM+1]]
+CHECK: [[$GLOBAL]][[#$GLOBNUM+1]]
+
+barrier:
+CHECK-LABEL: barrier
+
+local3
+global3
+LOCAL1: [[LOCAL]]3
+LOCAL2: local[[#LOCNUM+2]]
+LOCAL3: [[LOCAL]][[#LOCNUM+2]]
+GLOBAL: [[$GLOBAL]][[#$GLOBNUM+2]]
+
+ERRUNDEFLOCAL: undefined variable: LOCAL
+ERRUNDEFLOCNUM: undefined variable: LOCNUM

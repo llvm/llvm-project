@@ -1,0 +1,13 @@
+---
+TypeIdMap:
+  typeid1:
+    TTRes:
+      Kind:            AllOnes
+CfiFunctionDefs:
+  - local_func1
+  - local_func2
+  - local_func3
+CfiFunctionDecls:
+  - extern_decl
+  - extern_weak
+...

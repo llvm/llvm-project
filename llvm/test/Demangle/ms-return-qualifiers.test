@@ -1,0 +1,182 @@
+; These tests are based on clang/test/CodeGenCXX/mangle-ms-return-qualifiers.cpp
+
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+?a1@@YAXXZ
+; CHECK: void __cdecl a1(void)
+
+?a2@@YAHXZ
+; CHECK: int __cdecl a2(void)
+
+?a3@@YA?BHXZ
+; CHECK: int const __cdecl a3(void)
+
+?a4@@YA?CHXZ
+; CHECK: int volatile __cdecl a4(void)
+
+?a5@@YA?DHXZ
+; CHECK: int const volatile __cdecl a5(void)
+
+?a6@@YAMXZ
+; CHECK: float __cdecl a6(void)
+
+?b1@@YAPAHXZ
+; CHECK: int * __cdecl b1(void)
+
+?b2@@YAPBDXZ
+; CHECK: char const * __cdecl b2(void)
+
+?b3@@YAPAMXZ
+; CHECK: float * __cdecl b3(void)
+
+?b4@@YAPBMXZ
+; CHECK: float const * __cdecl b4(void)
+
+?b5@@YAPCMXZ
+; CHECK: float volatile * __cdecl b5(void)
+
+?b6@@YAPDMXZ
+; CHECK: float const volatile * __cdecl b6(void)
+
+?b7@@YAAAMXZ
+; CHECK: float & __cdecl b7(void)
+
+?b8@@YAABMXZ
+; CHECK: float const & __cdecl b8(void)
+
+?b9@@YAACMXZ
+; CHECK: float volatile & __cdecl b9(void)
+
+?b10@@YAADMXZ
+; CHECK: float const volatile & __cdecl b10(void)
+
+?b11@@YAPAPBDXZ
+; CHECK: char const ** __cdecl b11(void)
+
+?c1@@YA?AVA@@XZ
+; CHECK: class A __cdecl c1(void)
+
+?c2@@YA?BVA@@XZ
+; CHECK: class A const __cdecl c2(void)
+
+?c3@@YA?CVA@@XZ
+; CHECK: class A volatile __cdecl c3(void)
+
+?c4@@YA?DVA@@XZ
+; CHECK: class A const volatile __cdecl c4(void)
+
+?c5@@YAPBVA@@XZ
+; CHECK: class A const * __cdecl c5(void)
+
+?c6@@YAPCVA@@XZ
+; CHECK: class A volatile * __cdecl c6(void)
+
+?c7@@YAPDVA@@XZ
+; CHECK: class A const volatile * __cdecl c7(void)
+
+?c8@@YAAAVA@@XZ
+; CHECK: class A & __cdecl c8(void)
+
+?c9@@YAABVA@@XZ
+; CHECK: class A const & __cdecl c9(void)
+
+?c10@@YAACVA@@XZ
+; CHECK: class A volatile & __cdecl c10(void)
+
+?c11@@YAADVA@@XZ
+; CHECK: class A const volatile & __cdecl c11(void)
+
+?d1@@YA?AV?$B@H@@XZ
+; CHECK: class B<int> __cdecl d1(void)
+
+?d2@@YA?AV?$B@PBD@@XZ
+; CHECK: class B<char const *> __cdecl d2(void)
+
+?d3@@YA?AV?$B@VA@@@@XZ
+; CHECK: class B<class A> __cdecl d3(void)
+
+?d4@@YAPAV?$B@VA@@@@XZ
+; CHECK: class B<class A> * __cdecl d4(void)
+
+?d5@@YAPBV?$B@VA@@@@XZ
+; CHECK: class B<class A> const * __cdecl d5(void)
+
+?d6@@YAPCV?$B@VA@@@@XZ
+; CHECK: class B<class A> volatile * __cdecl d6(void)
+
+?d7@@YAPDV?$B@VA@@@@XZ
+; CHECK: class B<class A> const volatile * __cdecl d7(void)
+
+?d8@@YAAAV?$B@VA@@@@XZ
+; CHECK: class B<class A> & __cdecl d8(void)
+
+?d9@@YAABV?$B@VA@@@@XZ
+; CHECK: class B<class A> const & __cdecl d9(void)
+
+?d10@@YAACV?$B@VA@@@@XZ
+; CHECK: class B<class A> volatile & __cdecl d10(void)
+
+?d11@@YAADV?$B@VA@@@@XZ
+; CHECK: class B<class A> const volatile & __cdecl d11(void)
+
+?e1@@YA?AW4Enum@@XZ
+; CHECK: Enum __cdecl e1(void)
+
+?e2@@YA?BW4Enum@@XZ
+; CHECK: Enum const __cdecl e2(void)
+
+?e3@@YAPAW4Enum@@XZ
+; CHECK: Enum * __cdecl e3(void)
+
+?e4@@YAAAW4Enum@@XZ
+; CHECK: Enum & __cdecl e4(void)
+
+?f1@@YA?AUS@@XZ
+; CHECK: struct S __cdecl f1(void)
+
+?f2@@YA?BUS@@XZ
+; CHECK: struct S const __cdecl f2(void)
+
+?f3@@YAPAUS@@XZ
+; CHECK: struct S * __cdecl f3(void)
+
+?f4@@YAPBUS@@XZ
+; CHECK: struct S const * __cdecl f4(void)
+
+?f5@@YAPDUS@@XZ
+; CHECK: struct S const volatile * __cdecl f5(void)
+
+?f6@@YAAAUS@@XZ
+; CHECK: struct S & __cdecl f6(void)
+
+?f7@@YAQAUS@@XZ
+; CHECK: struct S *const __cdecl f7(void)
+
+?f8@@YAPQS@@HXZ
+; CHECK: int S::* __cdecl f8(void)
+
+?f9@@YAQQS@@HXZ
+; CHECK: int S::*const __cdecl f9(void)
+
+?f10@@YAPIQS@@HXZ
+; CHECK: int S::*__restrict __cdecl f10(void)
+
+?f11@@YAQIQS@@HXZ
+; CHECK: int S::*const __restrict __cdecl f11(void)
+
+?g1@@YAP6AHH@ZXZ
+; CHECK: int (__cdecl * __cdecl g1(void))(int)
+
+?g2@@YAQ6AHH@ZXZ
+; CHECK: int (__cdecl *const __cdecl g2(void))(int)
+
+?g3@@YAPAP6AHH@ZXZ
+; CHECK: int (__cdecl ** __cdecl g3(void))(int)
+
+?g4@@YAPBQ6AHH@ZXZ
+; CHECK: int (__cdecl *const * __cdecl g4(void))(int)
+
+?h1@@YAAIAHXZ
+; CHECK: int &__restrict __cdecl h1(void)

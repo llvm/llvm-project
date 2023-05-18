@@ -1,0 +1,33 @@
+# RUN: find-all-symbols -merge-dir=%S/Inputs/merge %t.merged
+# RUN: sed '/^#/d' %s > %t.golden
+# RUN: diff --strip-trailing-cr -u %t.golden %t.merged
+---
+Name:            bar
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+FilePath:        '../include/bar.h'
+Type:            Class
+Seen:            1
+Used:            1
+...
+---
+Name:            bar
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+FilePath:        '../include/barbar.h'
+Type:            Class
+Seen:            1
+Used:            0
+...
+---
+Name:            foo
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+FilePath:        foo.h
+Type:            Class
+Seen:            2
+Used:            2
+...

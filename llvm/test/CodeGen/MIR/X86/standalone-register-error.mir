@@ -1,0 +1,23 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+--- |
+  define i32 @test(i32 %a) {
+  body:
+    ret i32 %a
+  }
+...
+---
+name:            test
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+liveins:
+# CHECK: [[@LINE+1]]:13: unknown register name 'register'
+  - { reg: '$register', virtual-reg: '%0' }
+body: |
+  bb.0.body:
+    liveins: $edi
+
+    %0 = COPY $edi
+    $eax = COPY %0
+    RET64 $eax
+...

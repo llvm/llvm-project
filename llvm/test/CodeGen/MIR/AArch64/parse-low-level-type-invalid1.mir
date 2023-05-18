@@ -1,0 +1,10 @@
+# RUN: not llc -mtriple=aarch64-- -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# When a low-level type does not start with 's', 'p', or '<'
+---
+name: test_low_level_type_does_not_start_with_s_p_lt
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:10: expected sN, pA, <M x sN>, <M x pA>, <vscale x M x sN>, or <vscale x M x pA> for GlobalISel type
+    %0:_(i64) = COPY $x0
+...

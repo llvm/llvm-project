@@ -1,0 +1,45 @@
+# RUN: llc -run-pass=codegenprepare -o - %s | FileCheck %s
+
+# REQUIRES: default_triple
+
+# This testcase without the accompanying fix triggers the assert
+# "Replacement PHI node is already replaced."
+
+--- |
+  define void @f1() {
+  entry:
+    %arrayidx = getelementptr inbounds [2 x i16], ptr undef, i16 0, i16 2
+    br label %for.cond
+
+  for.cond:
+    %0 = phi ptr [ %arrayidx, %entry ], [ %5, %cleanup ]
+    %1 = phi ptr [ %arrayidx, %entry ], [ %7, %cleanup ]
+    br label %for.body
+
+  for.body:
+    %2 = phi ptr [ %1, %for.cond ], [ %7, %cleanup ]
+    %3 = phi ptr [ %0, %for.cond ], [ %7, %cleanup ]
+    %4 = phi ptr [ %0, %for.cond ], [ %7, %cleanup ]
+    br i1 false, label %for.cond2, label %if.then
+
+  if.then:
+    store i32 undef, ptr %2, align 1
+    unreachable
+
+  for.cond2:
+    %5 = phi ptr [ %4, %for.body ], [ %5, %if.then5 ], [ undef, %for.cond2 ]
+    %6 = phi ptr [ %3, %for.body ], [ %6, %if.then5 ], [ undef, %for.cond2 ]
+    %7 = phi ptr [ %2, %for.body ], [ %6, %if.then5 ], [ undef, %for.cond2 ]
+    br i1 undef, label %for.cond2, label %if.then5
+
+  if.then5:
+    br i1 undef, label %cleanup, label %for.cond2
+
+  cleanup:
+    br i1 true, label %for.cond, label %for.body
+  }
+
+...
+
+# A check to verify that something got through.
+# CHECK-LABEL: entry:

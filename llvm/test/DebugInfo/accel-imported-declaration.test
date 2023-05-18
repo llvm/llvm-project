@@ -1,0 +1,37 @@
+RUN: llvm-dwarfdump -v %p/Inputs/accel-imported-declaration.macho-arm64.o | FileCheck %s
+RUN: llvm-dwarfdump -verify %p/Inputs/accel-imported-declaration.macho-arm64.o | FileCheck %s --check-prefix=VERIFY
+
+Gather some DIE indexes to verify the accelerator table contents.
+
+CHECK: .debug_info contents
+CHECK: {{.*}}DW_TAG_namespace
+CHECK:   DW_AT_name{{.*}}"A"
+CHECK: {{.*}}DW_TAG_namespace
+CHECK:   DW_AT_name{{.*}}"B"
+CHECK: [[NAMESPACE:0x[0-9a-f]*]]:{{.*}}DW_TAG_namespace
+CHECK:   DW_AT_name{{.*}}"C"
+CHECK: [[IMPORTED:0x[0-9a-f]*]]:{{.*}}DW_TAG_imported_declaration
+CHECK:   DW_AT_name{{.*}}"C"
+
+Check that the .apple_namespaces section contains two entries for "namespace C"
+
+CHECK:      .apple_namespaces contents:
+CHECK:      Bucket 1 [
+CHECK-NEXT:   Hash {{.*}} [
+CHECK-NEXT:     Name{{.*}} {
+CHECK-NEXT:       String: {{.*}} "C"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: [[NAMESPACE]]
+CHECK-NEXT:       ]
+CHECK-NEXT:       Data 1 [
+CHECK-NEXT:         Atom[0]: [[IMPORTED]]
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+
+VERIFY:      Verifying .apple_names...
+VERIFY-NEXT: Verifying .apple_types...
+VERIFY-NEXT: Verifying .apple_namespaces...
+VERIFY-NEXT: Verifying .apple_objc...
+VERIFY-NEXT: No errors.

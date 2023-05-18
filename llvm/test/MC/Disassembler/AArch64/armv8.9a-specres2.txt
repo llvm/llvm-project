@@ -1,0 +1,16 @@
+# FEAT_SPECRES2 is optional for all v8a/v9a, mandatory for 8.9a/9.4a.
+# Should disassemble to hint #22 if the feature is not present.
+# RUN: llvm-mc -triple=aarch64 -disassemble %s | FileCheck %s --check-prefix=HINT_22
+# RUN: llvm-mc -triple=aarch64 -disassemble -mattr=+v8a %s | FileCheck %s --check-prefix=HINT_22
+# RUN: llvm-mc -triple=aarch64 -disassemble -mattr=+v8.9a -mattr=-specres2 %s | FileCheck %s --check-prefix=HINT_22
+# RUN: llvm-mc -triple=aarch64 -disassemble -mattr=+v9.3a %s | FileCheck %s --check-prefix=HINT_22
+# RUN: llvm-mc -triple=aarch64 -disassemble -mattr=+v9.4a -mattr=-specres2 %s | FileCheck %s --check-prefix=HINT_22
+# RUN: llvm-mc -triple=aarch64 -disassemble -mattr=+specres2 %s | FileCheck %s --check-prefix=FEAT_SPECRES2
+# RUN: llvm-mc -triple=aarch64 -disassemble -mattr=+v8a -mattr=+specres2 %s | FileCheck %s --check-prefix=FEAT_SPECRES2
+# RUN: llvm-mc -triple=aarch64 -disassemble -mattr=+v8.9a %s | FileCheck %s --check-prefix=FEAT_SPECRES2
+# RUN: llvm-mc -triple=aarch64 -disassemble -mattr=+v9.3a -mattr=+specres2 %s | FileCheck %s --check-prefix=FEAT_SPECRES2
+# RUN: llvm-mc -triple=aarch64 -disassemble -mattr=+v9.4a %s | FileCheck %s --check-prefix=FEAT_SPECRES2
+
+[0xc0,0x73,0x0b,0xd5]
+# FEAT_SPECRES2: cosp rctx, x0
+# HINT_22: sys #3, c7, c3, #6, x0

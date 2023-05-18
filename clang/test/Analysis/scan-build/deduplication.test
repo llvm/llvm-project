@@ -1,0 +1,40 @@
+// FIXME: Actually, "perl".
+REQUIRES: shell
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir \
+RUN:             %clang -S %S/Inputs/deduplication/1.c \
+RUN:                       %S/Inputs/deduplication/2.c \
+RUN:     | FileCheck %s -check-prefix CHECK-STDOUT
+
+RUN: ls %t.output_dir/*/ | FileCheck %s -check-prefix CHECK-FILENAMES
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir \
+RUN:             -analyzer-config stable-report-filename=true \
+RUN:             %clang -S %S/Inputs/deduplication/1.c \
+RUN:                       %S/Inputs/deduplication/2.c \
+RUN:     | FileCheck %s -check-prefix CHECK-STDOUT
+
+RUN: ls %t.output_dir/*/ | FileCheck %s -check-prefix CHECK-FILENAMES
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir \
+RUN:             -analyzer-config verbose-report-filename=true \
+RUN:             %clang -S %S/Inputs/deduplication/1.c \
+RUN:                       %S/Inputs/deduplication/2.c \
+RUN:     | FileCheck %s -check-prefix CHECK-STDOUT
+
+RUN: ls %t.output_dir/*/ | FileCheck %s -check-prefix CHECK-FILENAMES
+
+// Only one report file should be generated.
+
+CHECK-STDOUT: scan-build: Using '{{.*}}' for static analysis
+CHECK-STDOUT: scan-build: 1 bug found.
+CHECK-STDOUT: scan-build: Run 'scan-view {{.*}}' to examine bug reports.
+
+
+CHECK-FILENAMES: index.html
+CHECK-FILENAMES-NEXT: report-{{.*}}.html
+CHECK-FILENAMES-NEXT: scanview.css
+CHECK-FILENAMES-NEXT: sorttable.js

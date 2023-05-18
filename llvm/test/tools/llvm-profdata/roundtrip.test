@@ -1,0 +1,18 @@
+RUN: llvm-profdata merge -o %t.0.profdata %S/Inputs/IR_profile.proftext
+RUN: llvm-profdata show -o %t.0.proftext -all-functions -text %t.0.profdata 
+RUN: diff -b %t.0.proftext %S/Inputs/IR_profile.proftext
+RUN: llvm-profdata merge -o %t.1.profdata %t.0.proftext
+RUN: llvm-profdata show -o %t.1.proftext -all-functions -text %t.1.profdata 
+RUN: diff -b %t.1.proftext %S/Inputs/IR_profile.proftext
+RUN: llvm-profdata merge --sample --binary -output=%t.2.profdata %S/Inputs/sample-profile.proftext
+RUN: llvm-profdata merge --sample --text -output=%t.2.proftext %t.2.profdata
+RUN: diff -b %t.2.proftext %S/Inputs/sample-profile.proftext
+# Round trip from text --> extbinary --> text
+RUN: llvm-profdata merge --sample --extbinary -output=%t.3.profdata %S/Inputs/sample-profile.proftext
+RUN: llvm-profdata merge --sample --text -output=%t.3.proftext %t.3.profdata
+RUN: diff -b %t.3.proftext %S/Inputs/sample-profile.proftext
+# Round trip from text --> binary --> extbinary --> text
+RUN: llvm-profdata merge --sample --binary -output=%t.4.profdata %S/Inputs/sample-profile.proftext
+RUN: llvm-profdata merge --sample --extbinary -output=%t.5.profdata %t.4.profdata
+RUN: llvm-profdata merge --sample --text -output=%t.4.proftext %t.5.profdata
+RUN: diff -b %t.4.proftext %S/Inputs/sample-profile.proftext

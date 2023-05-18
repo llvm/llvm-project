@@ -1,0 +1,58 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS: V_MOV_B32
+
+
+# RESULT: name: func
+# RESULT-NEXT: alignment:       32
+# RESULT-NEXT: exposesReturnsTwice: true
+# RESULT-NEXT: legalized:       true
+# RESULT-NEXT: regBankSelected: true
+# RESULT-NEXT: selected:        true
+# RESULT-NEXT: failedISel:      true
+# RESULT-NEXT: tracksRegLiveness: true
+# RESULT-NEXT: hasWinCFI:       true
+# RESULT-NEXT: callsEHReturn: true
+# RESULT-NEXT: callsUnwindInit: true
+# RESULT-NEXT: hasEHCatchret: true
+# RESULT-NEXT: hasEHScopes: true
+# RESULT-NEXT: hasEHFunclets: true
+# RESULT-NEXT: failsVerification: true
+# RESULT-NEXT: tracksDebugUserValues: true
+
+# RESULT: %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+# RESULT-NEXT: S_ENDPGM
+
+--- |
+  define void @func(i32 %size)  {
+    ret void
+  }
+
+...
+---
+name: func
+alignment:       32
+exposesReturnsTwice: true
+legalized:       true
+regBankSelected: true
+selected:        true
+failedISel:      true
+tracksRegLiveness: true
+hasWinCFI:       true
+failsVerification: true
+tracksDebugUserValues: true
+callsEHReturn: true
+callsUnwindInit: true
+hasEHCatchret: true
+hasEHScopes: true
+hasEHFunclets: true
+
+body:             |
+  bb.0:
+    S_NOP 0
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    INLINEASM &"", 1 /* sideeffect attdialect */
+    S_ENDPGM 0, implicit %0
+...

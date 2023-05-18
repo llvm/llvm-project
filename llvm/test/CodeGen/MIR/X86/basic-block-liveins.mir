@@ -1,0 +1,65 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses basic block liveins correctly.
+
+--- |
+
+  define i32 @test(i32 %a, i32 %b) {
+  body:
+    %c = add i32 %a, %b
+    ret i32 %c
+  }
+
+  define i32 @test2(i32 %a, i32 %b) {
+  body:
+    %c = add i32 %a, %b
+    ret i32 %c
+  }
+
+  define i32 @test3() {
+  body:
+    ret i32 0
+  }
+
+...
+---
+name: test
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: bb.0.body:
+  ; CHECK-NEXT:    liveins: $edi, $esi
+  bb.0.body:
+    liveins: $edi, $esi
+
+    $eax = LEA64_32r killed $rdi, 1, killed $rsi, 0, _
+    RET64 $eax
+...
+---
+name: test2
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: test2
+  ; Verify that we can have multiple lists of liveins that will be merged into
+  ; one.
+  ; CHECK:       bb.0.body:
+  ; CHECK-NEXT:    liveins: $edi, $esi
+  bb.0.body:
+    liveins: $edi
+    liveins: $esi
+
+    $eax = LEA64_32r killed $rdi, 1, killed $rsi, 0, _
+    RET64 $eax
+...
+---
+name: test3
+tracksRegLiveness: true
+body: |
+  ; Verify that we can have an empty list of liveins.
+  ; CHECK-LABEL: name: test3
+  ; CHECK:       bb.0.body:
+  ; CHECK-NEXT:    $eax = MOV32r0 implicit-def dead $eflags
+  bb.0.body:
+    liveins:
+
+    $eax = MOV32r0 implicit-def dead $eflags
+    RET64 killed $eax
+...

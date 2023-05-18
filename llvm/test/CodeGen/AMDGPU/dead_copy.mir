@@ -1,0 +1,27 @@
+# RUN: llc -o - %s -mtriple=amdgcn -mcpu=fiji  -run-pass=machine-cp -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: dead_copy
+# GCN:       bb.0
+# GCN-NOT:   dead $vgpr5 = COPY undef $vgpr11, implicit $exec
+# GCN:       $vgpr5 = COPY $vgpr11, implicit $exec
+
+---
+name: dead_copy
+
+body:    |
+
+  bb.0:
+    liveins: $vgpr11, $sgpr0, $sgpr1, $vgpr6, $vgpr7, $vgpr4
+
+    dead $vgpr5 = COPY undef $vgpr11, implicit $exec
+
+    $vgpr5 = COPY $vgpr11, implicit $exec
+
+    $sgpr14 = S_ADD_U32 $sgpr0, target-flags(amdgpu-gotprel) 1136, implicit-def $scc
+    $sgpr15 = S_ADDC_U32 $sgpr1, target-flags(amdgpu-gotprel32-lo) 0, implicit-def dead $scc, implicit $scc
+
+    $vgpr10 = COPY killed $sgpr14, implicit $exec
+    $vgpr11 = COPY killed $sgpr15, implicit $exec
+
+    FLAT_STORE_DWORDX4 $vgpr10_vgpr11, $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec, implicit $flat_scr
+...

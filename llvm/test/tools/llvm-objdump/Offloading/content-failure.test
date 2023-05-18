@@ -1,0 +1,18 @@
+# Test to check if we fail to get the section contents.
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-objdump --offloading %t 2>&1 | FileCheck -DFILENAME=%t %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+Sections:
+  - Name:            .llvm.offloading
+    Type:            SHT_LLVM_OFFLOADING
+    Flags:           [ SHF_EXCLUDE ]
+    Address:         0x0
+    ShOffset:        0x99999
+    AddressAlign:    0x0000000000000008
+
+# CHECK: error: '[[FILENAME]]': while extracting offloading files: The end of the file was unexpectedly encountered

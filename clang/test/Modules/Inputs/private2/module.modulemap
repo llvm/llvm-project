@@ -1,0 +1,4 @@
+module libPrivateN2 {
+  header "public2.h"
+  private header "private2.h"
+}

@@ -1,0 +1,4 @@
+sink: { S[] -> a[] }
+must_source: { T[i] -> a[] : 0 <= i < 10 }
+kill: { K[] -> a[] }
+schedule_map: { T[i] -> [0,i]; K[] -> [0,10]; S[] -> [1,0] }

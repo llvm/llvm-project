@@ -1,0 +1,17 @@
+# REQUIRES: python
+# UNSUPPORTED: lldb-repro
+#
+# RUN: mkdir -p %t.root
+# RUN: mkdir -p %t.home
+# RUN: cp %S/Inputs/.lldbinit %t.root
+# RUN: cp %S/Inputs/syntax_error.py %t.root
+# RUN: cd %t.root
+# RUN: env HOME=%t.home %lldb-init -o 'settings show frame-format' 2>&1 | FileCheck %s --check-prefix=WARNINIT --check-prefix=CHECK
+# RUN: env HOME=%t.home %lldb-init -local-lldbinit -o 'settings show frame-format' 2>&1 | FileCheck %s --check-prefix=ALLOWINIT --check-prefix=NOINIT
+# RUN: %lldb -o 'settings show frame-format' 2>&1 | FileCheck %s --check-prefix=NOINIT --check-prefix=CHECK
+
+# WARNINIT: There is a .lldbinit file in the current directory which is not being read.
+# NOINIT-NOT: There is a .lldbinit file in the current directory which is not being read.
+# CHECK-NOT: bogus
+# ALLOWINIT: name 'prlnt' is not defined
+# ALLOWINIT: bogus

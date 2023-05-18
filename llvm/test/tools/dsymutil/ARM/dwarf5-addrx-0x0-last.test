@@ -1,0 +1,53 @@
+$ cat dwarf5-addrx-0x0-last.c
+#include <stdio.h>
+
+int main (int argc, char const *argv[])
+{
+  int pass_me = argc + 10;
+  printf("Foo\n");
+  printf("Bar\n");
+
+  return 0;
+}
+
+$ clang -gdwarf-5 dwarf5-addrx-0x0-last.c -c -o dwarf5-addrx-0x0-last.o
+$ clang dwarf5-addrx-0x0-last.o -o dwarf5-addrx-0x0-last.out
+
+# Sanity check: make sure main's low PC (0x0) requires an index computation
+# into the .debug_addr section.
+RUN: llvm-dwarfdump -debug-addr %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx-0x0-last.o | FileCheck %s --check-prefix DEBUGADDR
+
+DEBUGADDR: Addrs: [
+DEBUGADDR: 0x0000000000000054
+DEBUGADDR: 0x0000000000000059
+DEBUGADDR: 0x0000000000000000
+DEBUGADDR: ]
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx-0x0-last.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+RUN: llvm-dwarfdump --verbose -debug-info %t.dSYM | FileCheck %s --check-prefix DEBUGINFO
+RUN: llvm-dwarfdump --verbose -debug-line %t.dSYM | FileCheck %s --check-prefix DEBUGLINE
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs \
+RUN:   %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx-0x0-last.out \
+RUN:   -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+RUN: llvm-dwarfdump --verbose -debug-info %t.dSYM | FileCheck %s --check-prefix DEBUGINFO
+RUN: llvm-dwarfdump --verbose -debug-line %t.dSYM | FileCheck %s --check-prefix DEBUGLINE
+
+
+CHECK-NOT: error:
+
+DEBUGINFO:   DW_TAG_subprogram
+DEBUGINFO:     DW_AT_low_pc [DW_FORM_addrx]      (indexed (00000000) address = 0x0000000100003f4c)
+DEBUGINFO:     DW_AT_high_pc [DW_FORM_data4]   (0x00000054)
+DEBUGINFO:     DW_AT_name [DW_FORM_strx]       (indexed (00000007) string = "main")
+
+DEBUGLINE:  0x0000000100003f4c   4   0  {{.*}}  is_stmt
+DEBUGLINE:  0x0000000100003f6c   5  17  {{.*}}  is_stmt prologue_end
+DEBUGLINE:  0x0000000100003f70   5  22  {{.*}}
+DEBUGLINE:  0x0000000100003f74   5   7  {{.*}}
+DEBUGLINE:  0x0000000100003f78   6   3  {{.*}}  is_stmt
+DEBUGLINE:  0x0000000100003f84   7   3  {{.*}}  is_stmt
+DEBUGLINE:  0x0000000100003f94   9   3  {{.*}}  is_stmt epilogue_begin
+DEBUGLINE:  0x0000000100003fa0   9   3  {{.*}}  is_stmt end_sequence

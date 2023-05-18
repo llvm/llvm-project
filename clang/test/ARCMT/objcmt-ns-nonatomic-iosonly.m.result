@@ -1,0 +1,206 @@
+// RUN: rm -rf %t
+// RUN: %clang_cc1 -fblocks -objcmt-migrate-readwrite-property -objcmt-ns-nonatomic-iosonly -objcmt-migrate-readonly-property -objcmt-atomic-property -mt-migrate-directory %t %s -x objective-c -fobjc-runtime-has-weak -fobjc-arc -triple x86_64-apple-darwin11
+// RUN: c-arcmt-test -mt-migrate-directory %t | arcmt-test -verify-transformed-files %s.result
+// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin10 -fsyntax-only -x objective-c -fobjc-runtime-has-weak -fobjc-arc %s.result
+
+#define WEBKIT_OBJC_METHOD_ANNOTATION(ANNOTATION) ANNOTATION
+#define WEAK_IMPORT_ATTRIBUTE __attribute__((objc_arc_weak_reference_unavailable))
+#define AVAILABLE_WEBKIT_VERSION_3_0_AND_LATER
+#define DEPRECATED  __attribute__((deprecated)) 
+
+#if TARGET_OS_IPHONE
+  #define NS_NONATOMIC_IOSONLY nonatomic
+#else
+  #define NS_NONATOMIC_IOSONLY atomic
+#endif
+
+typedef char BOOL;
+@class NSString;
+@protocol NSCopying @end
+
+@interface NSObject <NSCopying>
+@end
+
+@interface NSDictionary : NSObject
+@end
+
+@interface I : NSObject {
+  int ivarVal;
+}
+@property (NS_NONATOMIC_IOSONLY, weak) NSString *WeakProp;
+
+@property (NS_NONATOMIC_IOSONLY, strong) NSString *StrongProp;
+
+@property (NS_NONATOMIC_IOSONLY, strong) NSString *UnavailProp  __attribute__((unavailable));
+- (void) setUnavailProp  : (NSString *)Val;
+
+@property (NS_NONATOMIC_IOSONLY, strong) NSString *UnavailProp1  __attribute__((unavailable));
+
+@property (NS_NONATOMIC_IOSONLY, strong) NSString *UnavailProp2;
+- (void) setUnavailProp2  : (NSString *)Val  __attribute__((unavailable));
+
+@property (NS_NONATOMIC_IOSONLY, copy) NSDictionary *undoAction;
+@end
+
+@implementation I
+@end
+
+@class NSArray;
+
+@interface MyClass2  {
+@private
+    NSArray *_names1;
+    NSArray *_names2;
+    NSArray *_names3;
+    NSArray *_names4;
+}
+@property (NS_NONATOMIC_IOSONLY, strong) NSArray *names2;
+@property (NS_NONATOMIC_IOSONLY, strong) NSArray *names3;
+@property (NS_NONATOMIC_IOSONLY, strong) NSArray *names4;
+@property (NS_NONATOMIC_IOSONLY, strong) NSArray *names1;
+@end
+
+// Properties that contain the name "delegate" or "dataSource",
+// or have exact name "target" have unsafe_unretained attribute.
+@interface NSInvocation 
+@property (NS_NONATOMIC_IOSONLY, assign) id target;
+
+@property (NS_NONATOMIC_IOSONLY, assign) id dataSource;
+
+@property (NS_NONATOMIC_IOSONLY, assign) id xxxdelegateYYY;
+
+
+@property (NS_NONATOMIC_IOSONLY, strong) id MYtarget;
+
+@property (NS_NONATOMIC_IOSONLY, strong) id targetX;
+ 
+@property (NS_NONATOMIC_IOSONLY) int value;
+
+@property (NS_NONATOMIC_IOSONLY, getter=isContinuous) BOOL continuous;
+
+- (id) isAnObject;
+- (void)setAnObject : (id) object;
+
+@property (NS_NONATOMIC_IOSONLY, getter=isinValid, readonly) BOOL inValid;
+- (void) setInValid : (BOOL) arg;
+
+- (void) Nothing;
+@property (NS_NONATOMIC_IOSONLY, readonly) int Length;
+@property (NS_NONATOMIC_IOSONLY, readonly, strong) id object;
++ (double) D;
+@property (NS_NONATOMIC_IOSONLY, readonly) void *JSObject WEBKIT_OBJC_METHOD_ANNOTATION(AVAILABLE_WEBKIT_VERSION_3_0_AND_LATER);
+@property (NS_NONATOMIC_IOSONLY, getter=isIgnoringInteractionEvents, readonly) BOOL ignoringInteractionEvents;
+
+@property (NS_NONATOMIC_IOSONLY, getter=getStringValue, strong) NSString *stringValue;
+@property (NS_NONATOMIC_IOSONLY, getter=getCounterValue, readonly) BOOL counterValue;
+@property (NS_NONATOMIC_IOSONLY, getter=getns_dixtionary, readonly, copy) NSDictionary *ns_dixtionary;
+
+- (BOOL)is3bar; // watch out
+- (NSString *)get3foo; // watch out
+
+@property (NS_NONATOMIC_IOSONLY, getter=getM, readonly) BOOL m;
+@property (NS_NONATOMIC_IOSONLY, getter=getMA, readonly) BOOL MA;
+@property (NS_NONATOMIC_IOSONLY, getter=getALL, readonly) BOOL ALL;
+@property (NS_NONATOMIC_IOSONLY, getter=getMANY, readonly) BOOL MANY;
+@property (NS_NONATOMIC_IOSONLY, getter=getSome, readonly) BOOL some;
+@end
+
+
+@interface NSInvocation(CAT)
+@property (NS_NONATOMIC_IOSONLY, assign) id target;
+
+@property (NS_NONATOMIC_IOSONLY, assign) id dataSource;
+
+@property (NS_NONATOMIC_IOSONLY, assign) id xxxdelegateYYY;
+
+
+@property (NS_NONATOMIC_IOSONLY, strong) id MYtarget;
+
+@property (NS_NONATOMIC_IOSONLY, strong) id targetX;
+
+@property (NS_NONATOMIC_IOSONLY) int value;
+
+@property (NS_NONATOMIC_IOSONLY, getter=isContinuous) BOOL continuous;
+
+- (id) isAnObject;
+- (void)setAnObject : (id) object;
+
+@property (NS_NONATOMIC_IOSONLY, getter=isinValid, readonly) BOOL inValid;
+- (void) setInValid : (BOOL) arg;
+
+- (void) Nothing;
+@property (NS_NONATOMIC_IOSONLY, readonly) int Length;
+@property (NS_NONATOMIC_IOSONLY, readonly, strong) id object;
++ (double) D;
+
+- (BOOL)is3bar; // watch out
+- (NSString *)get3foo; // watch out
+
+@property (NS_NONATOMIC_IOSONLY, getter=getM, readonly) BOOL m;
+@property (NS_NONATOMIC_IOSONLY, getter=getMA, readonly) BOOL MA;
+@property (NS_NONATOMIC_IOSONLY, getter=getALL, readonly) BOOL ALL;
+@property (NS_NONATOMIC_IOSONLY, getter=getMANY, readonly) BOOL MANY;
+@property (NS_NONATOMIC_IOSONLY, getter=getSome, readonly) BOOL some;
+@end
+
+DEPRECATED
+@interface I_DEP
+- (BOOL) isinValid;
+- (void) setInValid : (BOOL) arg;
+@end
+
+@interface AnotherOne
+- (BOOL) isinValid DEPRECATED;
+- (void) setInValid : (BOOL) arg;
+- (id)MYtarget;
+- (void)setMYtarget: (id)target DEPRECATED;
+- (BOOL) getM DEPRECATED;
+
+- (id)xxxdelegateYYY DEPRECATED;
+- (void)setXxxdelegateYYY:(id)delegate DEPRECATED;
+@end
+
+#define NS_AVAILABLE __attribute__((availability(macosx,introduced=10.0)))
+#define NORETURN __attribute__((noreturn))
+#define ALIGNED __attribute__((aligned(16)))
+
+@interface NSURL
+// Do not infer a property.
+@property (NS_NONATOMIC_IOSONLY, strong) NSURL *appStoreReceiptURL NS_AVAILABLE;
+- (void) setAppStoreReceiptURL : (NSURL *)object;
+
+@property (NS_NONATOMIC_IOSONLY, strong) NSURL *appStoreReceiptURLX NS_AVAILABLE;
+
+// Do not infer a property.
+@property (NS_NONATOMIC_IOSONLY, strong) NSURL *appStoreReceiptURLY ;
+- (void) setAppStoreReceiptURLY : (NSURL *)object NS_AVAILABLE;
+
+@property (NS_NONATOMIC_IOSONLY, readonly, strong) id OkToInfer NS_AVAILABLE;
+
+// Do not infer a property.
+@property (NS_NONATOMIC_IOSONLY, strong) NSURL *appStoreReceiptURLZ ;
+- (void) setAppStoreReceiptURLZ : (NSURL *)object NS_AVAILABLE;
+
+// Do not infer a property.
+- (id) t1 NORETURN NS_AVAILABLE;
+- (void) setT1 : (id) arg NS_AVAILABLE;
+
+@property (NS_NONATOMIC_IOSONLY, strong) id method1 ALIGNED NS_AVAILABLE;
+
+- (NSURL *)init;  // No Change
++ (id)alloc;      // No Change
+
+- (BOOL)is1stClass; // Not a valid property
+@property (NS_NONATOMIC_IOSONLY, getter=isClass, readonly) BOOL class;    // This is a valid property 'class' is not a keyword in ObjC
+- (BOOL)isDouble; // Not a valid property
+
+@end
+
+@class NSMutableDictionary;
+
+@interface NSArray
+@property (NS_NONATOMIC_IOSONLY, readonly, copy) id (^expressionBlock)(id, NSArray *, NSMutableDictionary *);
+@property (NS_NONATOMIC_IOSONLY, copy) id (^MyBlock)(id, NSArray *, NSMutableDictionary *);
+@property (NS_NONATOMIC_IOSONLY, readonly) id (*expressionFuncptr)(id, NSArray *, NSMutableDictionary *);
+@property (NS_NONATOMIC_IOSONLY) id (*MyFuncptr)(id, NSArray *, NSMutableDictionary *);
+@end

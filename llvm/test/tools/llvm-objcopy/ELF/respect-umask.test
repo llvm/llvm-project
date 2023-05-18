@@ -1,0 +1,38 @@
+## This tests that the umask is respected when
+## assigning permissions of output files.
+
+## Windows has no umask so this test makes no sense, nor would
+## it work because there is no umask(1) in a Windows environment
+# UNSUPPORTED: system-windows
+# REQUIRES: shell
+
+# RUN: rm -f %t
+# RUN: touch %t
+# RUN: chmod 0755 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0755
+# RUN: chmod 0600 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0600
+# RUN: chmod 0655 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0655
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: umask 0022
+# RUN: chmod 0777 %t
+# RUN: llvm-objcopy %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' | cmp - %t.0755
+
+# RUN: umask 0177
+# RUN: llvm-objcopy %t %t2
+# RUN: ls -l %t2 | cut -f 1 -d ' ' | cmp - %t.0600
+
+# RUN: umask 0122
+# RUN: llvm-objcopy %t %t3
+# RUN: ls -l %t3 | cut -f 1 -d ' ' | cmp - %t.0655
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64

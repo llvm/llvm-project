@@ -1,0 +1,72 @@
+# RUN: llc -mtriple=amdgcn -misched=converge -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -misched-regpressure=false -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=NORP
+
+# REQUIRES: asserts
+
+# Check there is no SReg_32 pressure created by DS_* instructions because of M0 use
+
+# CHECK: ScheduleDAGMILive::schedule starting
+# CHECK: SU({{.*}} = DS_READ_B32 {{.*}} implicit $m0, implicit $exec
+# CHECK: Pressure Diff : {{$}}
+# CHECK: SU({{.*}} DS_WRITE_B32
+
+# NORP: ScheduleDAGMILive::schedule starting
+# NORP: GenericScheduler RegionPolicy:  ShouldTrackPressure=0
+# NORP-NOT: Pressure Diff : {{$}}
+# NORP-NOT: Pressure Diff : {{$}}
+# NORP-NOT: Pressure Diff : {{$}}
+# NORP-NOT: Pressure Diff : {{$}}
+# NORP-NOT: Pressure Diff : {{$}}
+# NORP-NOT: Pressure Diff : {{$}}
+# NORP-NOT: Bottom Pressure:
+# NORP-NOT: UpdateRegP
+# NORP-NOT: UpdateRegP
+# NORP-NOT: UpdateRegP
+
+---
+name:            mo_pset
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_128 }
+  - { id: 1, class: sgpr_64 }
+  - { id: 2, class: sreg_32_xm0 }
+  - { id: 3, class: sgpr_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sreg_32_xm0_xexec }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: vgpr_32 }
+  - { id: 8, class: vgpr_32 }
+liveins:
+  - { reg: '$sgpr4_sgpr5', virtual-reg: '%1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: $sgpr4_sgpr5
+
+    %1 = COPY $sgpr4_sgpr5
+    %5 = S_LOAD_DWORD_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
+    $m0 = S_MOV_B32 -1
+    %7 = COPY %5
+    %6 = DS_READ_B32 %7, 0, 0, implicit $m0, implicit $exec
+    DS_WRITE_B32 %7, %6, 4, 0, implicit killed $m0, implicit $exec
+    S_ENDPGM 0
+
+...

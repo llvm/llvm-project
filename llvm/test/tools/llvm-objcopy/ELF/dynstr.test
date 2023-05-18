@@ -1,0 +1,32 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+    Content:         "002EDEADBEEF002EBAADF00D00"
+
+#CHECK:         Name: .dynstr
+#CHECK-NEXT:    Type: SHT_STRTAB
+#CHECK-NEXT:    Flags [
+#CHECK-NEXT:      SHF_ALLOC
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Address: 0x1000
+#CHECK-NEXT:    Offset:
+#CHECK-NEXT:    Size: 13
+#CHECK-NEXT:    Link:
+#CHECK-NEXT:    Info:
+#CHECK-NEXT:    AddressAlignment:
+#CHECK-NEXT:    EntrySize:
+#CHECK-NEXT:    SectionData (
+#CHECK-NEXT:      0000: 002EDEAD BEEF002E BAADF00D 00
+#CHECK-NEXT:    )

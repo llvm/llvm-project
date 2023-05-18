@@ -1,0 +1,109 @@
+# This test uses the local debuginfod cache to test the llvm-objdump integration
+# with the debuginfod client.
+REQUIRES: x86-registered-target
+
+RUN: rm -rf %t
+RUN: mkdir %t
+
+# Produce a stripped copy of the input binary.
+# Note: See embedded-source.test for details about the input file.
+RUN: llvm-objcopy --strip-debug %p/Inputs/embedded-source %t/stripped
+
+# Printing source for the stripped binary should fail.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --source %t/stripped | \
+RUN:   FileCheck %s --check-prefix=NOTFOUND
+
+# Use cp to write the debug binary to an appropriately-named file in the llvm
+# debuginfod cache.
+RUN: cp %p/Inputs/embedded-source %t/llvmcache-17908201640401622315
+
+# Write a broken "binary" under %t/broken.
+RUN: mkdir %t/broken
+RUN: echo "bad" > %t/broken/llvmcache-17908201640401622315
+
+# Write the stripped binary under %t/stripped-cache.
+RUN: mkdir %t/stripped-cache
+RUN: cp %t/stripped %t/stripped-cache/llvmcache-17908201640401622315
+
+# Write to a debug info directory as well.
+RUN: mkdir -p %t/debug/.build-id/15
+RUN: cp %p/Inputs/embedded-source %t/debug/.build-id/15/12f769114c011387393822af15dd660c080295.debug
+
+# Don't use debuginfod by default without any URLs.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --source %t/stripped | \
+RUN:   FileCheck %s --check-prefix=NOTFOUND
+
+# Don't use debuginfod if disabled.
+RUN: env DEBUGINFOD_CACHE_PATH=%t DEBUGINFOD_URLS=http://foo \
+RUN:   llvm-objdump -d --source --no-debuginfod %t/stripped | \
+RUN:   FileCheck %s --check-prefix=NOTFOUND
+
+# Look up build IDs locally without debuginfod.
+RUN: llvm-objdump -d --source --no-debuginfod --debug-file-directory %t/debug \
+RUN:      %t/stripped | \
+RUN:   FileCheck %s --check-prefix=FOUND
+
+# Use debuginfod without URLs if requested.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --source --debuginfod \
+RUN:   %t/stripped | \
+RUN:   FileCheck %s --check-prefix=FOUND
+
+# Produce a warning if a bad binary is fetched, but do not fail.
+RUN: env DEBUGINFOD_CACHE_PATH=%t/broken llvm-objdump -d --source --debuginfod \
+RUN:   %t/stripped 2> %t.err | \
+RUN:   FileCheck %s --check-prefix=NOTFOUND
+RUN: FileCheck %s --check-prefix=BADBINARYERROR -DPATH=%t --input-file %t.err
+BADBINARYERROR: warning: '[[PATH]]/broken{{[/\\]}}llvmcache-17908201640401622315': The file was not recognized as a valid object file
+
+# Use the original binary if the fetched binary has no debug info.
+RUN: env DEBUGINFOD_CACHE_PATH=%t/stripped-cache llvm-objdump -d --source \
+RUN:   --debuginfod %t/stripped 2> %t.err | \
+RUN:   FileCheck %s --check-prefix=NOTFOUND
+RUN: count 0 < %t.err
+
+# Use debuginfod to look up build IDs.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --source \
+RUN:   --build-id 1512f769114c011387393822af15dd660c080295 | \
+RUN:   FileCheck %s --check-prefix=FOUND
+
+# Produce an error if malformed (not a hex string).
+RUN: not env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --source --build-id foo \
+RUN:   2> %t.err
+RUN: FileCheck %s --check-prefix=MALFORMEDERROR --input-file %t.err
+MALFORMEDERROR: error: --build-id: expected a build ID, but got 'foo'
+
+# Produce an error if not found.
+RUN: not env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --source --build-id abc \
+RUN:   2> %t.err
+RUN: FileCheck %s --check-prefix=NOTFOUNDERROR --input-file %t.err
+NOTFOUNDERROR: error: --build-id: could not find build ID 'abc'
+
+# Use debuginfod to recover symbols.
+RUN: llvm-strip --strip-sections %t/stripped
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --debuginfod \
+RUN:   %t/stripped | \
+RUN:   FileCheck %s --check-prefix=SYMBOLS
+
+# Use debuginfod to recover section headers, but not symbols.
+RUN: mkdir %t/stripped-symbols
+RUN: cp %p/Inputs/embedded-source %t/stripped-symbols/llvmcache-17908201640401622315
+RUN: llvm-strip %t/stripped-symbols/llvmcache-17908201640401622315
+RUN: env DEBUGINFOD_CACHE_PATH=%t/stripped-symbols llvm-objdump -d \
+RUN:   --debuginfod %t/stripped | \
+RUN:   FileCheck %s --check-prefix=SECTIONS
+
+# Don't use debuginfod if neither section headers nor symbols can be recovered.
+RUN: mkdir %t/stripped-sections
+RUN: echo "" | llvm-mc -filetype=obj -triple x86_64 > \
+RUN:   %t/stripped-sections/llvmcache-17908201640401622315
+RUN: llvm-strip --strip-sections %t/stripped-sections/llvmcache-17908201640401622315
+RUN: env DEBUGINFOD_CACHE_PATH=%t/stripped-sections llvm-objdump -d \
+RUN:   --debuginfod %t/stripped | \
+RUN:   FileCheck %s --check-prefix=NOSECTIONS
+
+NOTFOUND-NOT: int main(int argc, char *argv[]) {
+FOUND: int main(int argc, char *argv[]) {
+
+SYMBOLS: <main>:
+SECTIONS: <.text>:
+NOSECTIONS: <PT_LOAD#{{[0-9]+}}>:

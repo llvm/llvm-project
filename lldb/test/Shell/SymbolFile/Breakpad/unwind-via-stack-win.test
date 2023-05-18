@@ -1,0 +1,58 @@
+# REQUIRES: x86
+
+# RUN: yaml2obj %S/Inputs/unwind-via-stack-win.yaml -o %t
+# RUN: %lldb -c %t \
+# RUN:   -o "target symbols add %S/Inputs/unwind-via-stack-win.syms" \
+# RUN:   -s %s -b | FileCheck %s
+
+# First check that unwind plan generation works correctly.
+# This function has a "typical" unwind rule.
+image show-unwind -n call_many
+# CHECK-LABEL: image show-unwind -n call_many
+# CHECK: UNWIND PLANS for unwind-via-stack-win.exe`call_many
+# CHECK: Symbol file UnwindPlan:
+# CHECK: This UnwindPlan originally sourced from breakpad STACK WIN
+# CHECK: This UnwindPlan is sourced from the compiler: yes.
+# CHECK: This UnwindPlan is valid at all instruction locations: no.
+# CHECK: This UnwindPlan is for a trap handler function: no.
+# CHECK: Address range of this UnwindPlan: [unwind-via-stack-win.exe..module_image + 4112-0x0000107d)
+# CHECK: row[0]:    0: CFA=DW_OP_breg7 +0, DW_OP_consts +80, DW_OP_plus  => esp=DW_OP_pick 0x0, DW_OP_consts +4, DW_OP_plus eip=DW_OP_pick 0x0, DW_OP_deref
+
+# Then, some invalid rules.
+image show-unwind -n bogus_rule
+# CHECK-LABEL: image show-unwind -n bogus_rule
+# CHECK: UNWIND PLANS for unwind-via-stack-win.exe`bogus_rule
+# CHECK-NOT: Symbol file
+
+image show-unwind -n bogus_cfa_rhs
+# CHECK-LABEL: image show-unwind -n bogus_cfa_rhs
+# CHECK: UNWIND PLANS for unwind-via-stack-win.exe`bogus_cfa_rhs
+# CHECK-NOT: Symbol file
+
+image show-unwind -n bogus_esp_rhs
+# CHECK-LABEL: image show-unwind -n bogus_esp_rhs
+# CHECK: UNWIND PLANS for unwind-via-stack-win.exe`bogus_esp_rhs
+# CHECK-NOT: Symbol file
+
+# We don't treat unknown lhs as an error, as it can be just a temporary
+# variable used in other rules.
+image show-unwind -n temporary_var
+# CHECK-LABEL: image show-unwind -n temporary_var
+# CHECK: UNWIND PLANS for unwind-via-stack-win.exe`temporary_var
+# CHECK: Symbol file UnwindPlan:
+# CHECK: This UnwindPlan originally sourced from breakpad STACK WIN
+# CHECK: This UnwindPlan is sourced from the compiler: yes.
+# CHECK: This UnwindPlan is valid at all instruction locations: no.
+# CHECK: This UnwindPlan is for a trap handler function: no.
+# CHECK: Address range of this UnwindPlan: [unwind-via-stack-win.exe..module_image + 4400-0x00001134)
+# CHECK: row[0]:    0: CFA=DW_OP_breg7 +0 => esp=DW_OP_pick 0x0, DW_OP_consts +4, DW_OP_plus  eip=DW_OP_pick 0x0, DW_OP_deref
+
+# And finally, check that backtracing works as a whole by unwinding a simple
+# stack.
+thread backtrace
+# CHECK-LABEL: thread backtrace
+# CHECK: frame #0: 0x000b1092 unwind-via-stack-win.exe`many_pointer_args
+# CHECK: frame #1: 0x000b1079 unwind-via-stack-win.exe`call_many + 105
+# CHECK: frame #2: 0x000b1085 unwind-via-stack-win.exe`main + 5
+# CHECK: frame #3: 0x77278494 kernel32.dll
+# CHECK-NOT: frame

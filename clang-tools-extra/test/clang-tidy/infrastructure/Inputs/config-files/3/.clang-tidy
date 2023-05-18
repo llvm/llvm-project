@@ -1,0 +1,3 @@
+InheritParentConfig: true
+Checks: 'from-child3'
+HeaderFilterRegex: 'child3'

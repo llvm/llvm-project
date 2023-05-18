@@ -1,0 +1,2 @@
+#define AB
+#undef AB

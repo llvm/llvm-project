@@ -1,0 +1,90 @@
+## This test checks deleting a LC_RPATH load command from a MachO binary.
+
+# RUN: yaml2obj %s -o %t
+
+## Deleting a single RPath entry:
+# RUN: llvm-install-name-tool -delete_rpath @executable_a/. %t
+# RUN: llvm-objdump -p %t | \
+# RUN:   FileCheck %s --check-prefix=RPATHS --implicit-check-not=@executable
+
+# RPATHS: @executable_b/.
+# RPATHS: @executable_c/.
+# RPATHS: @executable_d/.
+# RPATHS: @executable_e/.
+
+## Deleting multiple RPath entries:
+# RUN: llvm-install-name-tool -delete_rpath @executable_b/. \
+# RUN:                        -delete_rpath @executable_c/. %t
+# RUN: llvm-objdump -p %t | \
+# RUN:   FileCheck %s --check-prefix=RPATHS-MULTIPLE --implicit-check-not=@executable
+
+# RPATHS-MULTIPLE: @executable_d/.
+# RPATHS-MULTIPLE: @executable_e/.
+
+## Duplicate delete_rpath commands:
+# RUN: llvm-install-name-tool -delete_rpath @executable_d/. \
+# RUN:                        -delete_rpath @executable_d/. %t
+# RUN: llvm-objdump -p %t | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE --implicit-check-not=@executable
+
+# DUPLICATE: @executable_e/.
+
+## Deleting a nonexistent RPath:
+# RUN: not llvm-install-name-tool -delete_rpath @executable_a/. %t 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ABSENT-RPATH
+
+# ABSENT-RPATH: no LC_RPATH load command with path: @executable_a/.
+
+## Adding and deleting RPATH at the same time:
+# RUN: not llvm-install-name-tool -add_rpath @executable_b/. \
+# RUN:                            -delete_rpath @executable_b/. %t 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=COMBINED
+
+# COMBINED: cannot specify both -add_rpath '@executable_b/.' and -delete_rpath '@executable_b/.'
+
+## Remove all RPATHS
+# RUN: yaml2obj %s -o %t2
+# RUN: llvm-install-name-tool -delete_all_rpaths %t2
+# RUN: llvm-objdump -p %t2 | FileCheck %s
+
+# CHECK-NOT: LC_RPATH
+
+## Remove all RPATHS and add a new one.
+# RUN: yaml2obj %s -o %t3
+# RUN: llvm-install-name-tool --delete_all_rpaths -add_rpath @executable_b/. %t3
+# RUN: llvm-objdump -p %t3 | \
+# RUN:   FileCheck %s --check-prefix=DELETE_AND_ADD --implicit-check-not=@executable
+
+# DELETE_AND_ADD: @executable_b/.
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           5
+  sizeofcmds:      160
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_RPATH
+    cmdsize:         32
+    path:            12
+    Content:         '@executable_a/.'
+  - cmd:             LC_RPATH
+    cmdsize:         32
+    path:            12
+    Content:         '@executable_b/.'
+  - cmd:             LC_RPATH
+    cmdsize:         32
+    path:            12
+    Content:         '@executable_c/.'
+  - cmd:             LC_RPATH
+    cmdsize:         32
+    path:            12
+    Content:         '@executable_d/.'
+  - cmd:             LC_RPATH
+    cmdsize:         32
+    path:            12
+    Content:         '@executable_e/.'

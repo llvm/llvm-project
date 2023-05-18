@@ -1,0 +1,24 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux /dev/null -o %t.o
+# RUN: ld.lld -o %t.so --script %s %t.o -shared
+# RUN: llvm-readelf -S -s %t.so | FileCheck %s
+
+SECTIONS {
+  . = . + 4;
+  .text : {
+    *(.text)
+    foo1 = ADDR(.text) + 1; bar1 = 1 + ADDR(.text);
+    foo2 = ADDR(.text) & 1; bar2 = 1 & ADDR(.text);
+    foo3 = ADDR(.text) | 1; bar3 = 1 | ADDR(.text);
+  }
+};
+
+# CHECK: [ 5] .text PROGBITS 000000000000014c
+
+# CHECK:    Value         Size Type   Bind   Vis     Ndx Name
+# CHECK: 000000000000014d    0 NOTYPE GLOBAL DEFAULT   5 foo1
+# CHECK: 000000000000014d    0 NOTYPE GLOBAL DEFAULT   5 bar1
+# CHECK: 0000000000000000    0 NOTYPE GLOBAL DEFAULT   5 foo2
+# CHECK: 0000000000000000    0 NOTYPE GLOBAL DEFAULT   5 bar2
+# CHECK: 000000000000014d    0 NOTYPE GLOBAL DEFAULT   5 foo3
+# CHECK: 000000000000014d    0 NOTYPE GLOBAL DEFAULT   5 bar3

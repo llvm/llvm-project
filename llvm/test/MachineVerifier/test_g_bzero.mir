@@ -1,0 +1,35 @@
+#RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            test_bzero
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %cst1:_(s64) = G_CONSTANT i64 4
+    %cst2:_(s8) = G_CONSTANT i8 7
+
+    ; CHECK: *** Bad machine code: bzero must have 1 memory operand ***
+    G_BZERO %ptr, %cst2, 0
+
+    ; CHECK: *** Bad machine code: bzero memory operand must be a store ***
+    G_BZERO %ptr, %cst2, 0 :: (load (s32))
+
+    ; CHECK: *** Bad machine code: Missing mayLoad flag ***
+    ; CHECK: *** Bad machine code: bzero memory operand must be a store ***
+    G_BZERO %ptr, %cst2, 0 :: (load store (s32))
+
+    ; CHECK: *** Bad machine code: inconsistent bzero address space ***
+    G_BZERO %ptr, %cst2, 0 :: (store (s32), addrspace 1)
+
+    ; CHECK: *** Bad machine code: bzero operand must be a pointer ***
+    G_BZERO %cst1, %cst2, 0 :: (store (s32))
+
+    ; CHECK: *** Bad machine code: 'tail' flag (last operand) must be an immediate 0 or 1 ***
+    G_BZERO %ptr, %cst2, 2 :: (store (s32))
+...

@@ -1,0 +1,35 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=finalize-isel -verify-machineinstrs -o - %s | FileCheck %s
+# Check that we're not copying the kill flags with the operands from the pseudo
+# instruction.
+--- |
+  define void @bar() { ret void }
+
+  !llvm.module.flags = !{!0}
+
+  !0 = !{i32 8, !"cf-protection-return", i32 1}
+...
+---
+name:            bar
+# CHECK-LABEL: name: bar
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:gr64 = IMPLICIT_DEF
+    ; CHECK: %0:gr64 = IMPLICIT_DEF
+    EH_SjLj_LongJmp64 killed %0, 1, $noreg, 0, $noreg
+    ; CHECK: bb.3:
+    ; CHECK: MOV64rm %0
+    ; CHECK-NOT: MOV64rm killed %0
+    ; CHECK: bb.7:
+    ; CHECK-NEXT: MOV64rm %0
+    ; CHECK-NOT: MOV64rm killed %0
+    ; CHECK-NEXT: MOV64rm %0
+    ; CHECK-NOT: MOV64rm killed %0
+    ; CHECK-NEXT: MOV64rm killed %0
+
+  ; FIXME: Dummy PHI to set the property NoPHIs to false. PR38439.
+  bb.2:
+    %1:gr64 = PHI undef %1, %bb.2, undef %1, %bb.2
+    JMP_1 %bb.2
+...

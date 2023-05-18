@@ -1,0 +1,48 @@
+## Check that a full line is matched case insensitively.
+# RUN: FileCheck --ignore-case --match-full-lines --check-prefix=FULL --input-file=%s %s
+
+## Check that a regular expression matches case insensitively.
+# RUN: FileCheck --ignore-case --check-prefix=REGEX --input-file=%s %s
+
+## Check that a pattern from command line matches case insensitively.
+# RUN: FileCheck --ignore-case --check-prefix=PAT --DPATTERN="THIS is the" --input-file=%s %s
+
+## Check that COUNT and NEXT work case insensitively.
+# RUN: FileCheck --ignore-case --check-prefix=CNT --input-file=%s %s
+
+## Check that match on same line works case insensitively.
+# RUN: FileCheck --ignore-case --check-prefix=LINE --input-file=%s %s
+
+## Check that option --implicit-not works case insensitively.
+# RUN: sed '/^#/d' %s | FileCheck --implicit-check-not=sTrInG %s
+# RUN: sed '/^#/d' %s \
+# RUN: | %ProtectFileCheckOutput \
+# RUN:   not FileCheck --ignore-case --implicit-check-not=sTrInG %s 2>&1 \
+# RUN: | FileCheck --check-prefix=ERROR %s
+
+this is the STRING to be matched
+
+# FULL: tHis iS The String TO be matched
+# REGEX: s{{TRing}}
+# PAT: [[PATTERN]] string
+
+Loop 1
+lOop 2
+loOp 3
+looP 4
+loop 5
+LOOP 6
+BREAK
+
+# CNT-COUNT-6: LOop {{[0-9]}}
+# CNT-NOT: loop
+# CNT-NEXT: break
+
+One Line To Match
+
+# LINE: {{o}}ne line
+# LINE-SAME: {{t}}o match
+
+# ERROR: command line:1:{{[0-9]+}}: error: IMPLICIT-CHECK-NOT: excluded string found in input
+# ERROR-NEXT: -implicit-check-not='sTrInG'
+# ERROR: note: found here

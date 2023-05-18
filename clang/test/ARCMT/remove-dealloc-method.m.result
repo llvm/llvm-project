@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -fobjc-arc -x objective-c %s.result
+// RUN: arcmt-test --args -triple x86_64-apple-darwin10 -fsyntax-only -x objective-c %s > %t
+// RUN: diff %t %s.result
+
+#define nil ((void*) 0)
+
+@interface Foo 
+@property (strong) id x;
+@property (strong) id y;
+@property (strong) id w;
+@property (strong) id z;
+@end
+
+@implementation Foo 
+@synthesize x;
+@synthesize y;
+@synthesize w;
+@synthesize z;
+
+@end

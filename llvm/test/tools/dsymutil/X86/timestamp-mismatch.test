@@ -1,0 +1,12 @@
+RUN: mkdir -p %t/Inputs
+RUN: cp %p/../Inputs/basic.macho.x86_64 %t/Inputs
+RUN: cp %p/../Inputs/basic1.macho.x86_64.o %t/Inputs
+RUN: cp %p/../Inputs/basic2.macho.x86_64.o %t/Inputs
+RUN: cp %p/../Inputs/basic3.macho.x86_64.o %t/Inputs
+RUN: dsymutil -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s
+
+RUN: dsymutil --linker parallel -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s
+
+CHECK: warning: {{.*}}/Inputs/basic1.macho.x86_64.o: timestamp mismatch between object file ({{.*}}) and debug map ({{.*}})
+CHECK: warning: {{.*}}/Inputs/basic2.macho.x86_64.o: timestamp mismatch between object file ({{.*}}) and debug map ({{.*}})
+CHECK: warning: {{.*}}/Inputs/basic3.macho.x86_64.o: timestamp mismatch between object file ({{.*}}) and debug map ({{.*}})

@@ -1,0 +1,53 @@
+# RUN: llc -mtriple=powerpc64le--linux-gnu -start-before ppc-mi-peepholes %s -o - -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=powerpc64le--linux-gnu -run-pass ppc-mi-peepholes %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-PASS
+
+# The differential revision https://reviews.llvm.org/D60402 was supposed to
+# collapse RLDICL/RLDICR into RLDIC when possible, but it missed removing the
+# RLDICL instruction. This test case tests the fix for the bug.
+
+--- |
+  ; ModuleID = 'jump-tables-collapse-rotate-remove-SrcMI.ll'
+  source_filename = "jump-tables-collapse-rotate-remove-SrcMI.ll"
+  target datalayout = "e-m:e-i64:64-n32:64"
+
+  define dso_local i64 @test(i64 %a, i64 %b) local_unnamed_addr {
+  entry:
+    %add = add nsw i64 %b, %a
+    ret i64 %add
+  }
+
+...
+---
+name:            test
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: g8rc }
+  - { id: 1, class: g8rc }
+  - { id: 2, class: g8rc }
+liveins:
+  - { reg: '$x3', virtual-reg: '%0' }
+  - { reg: '$x4', virtual-reg: '%1' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+
+    %1:g8rc = COPY $x4
+    %0:g8rc = COPY $x3
+    %2:g8rc = RLDICL killed %1, 0, 32
+    %3:g8rc = RLDICR %2, 2, 61
+    $x3 = COPY %3
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+# CHECK-LABEL: test:
+# CHECK: # %bb.0: # %entry
+# CHECK-NEXT: 	rldic 3, 4, 2, 30
+# CHECK-NEXT: 	blr
+#
+# CHECK-PASS-NOT:     %2:g8rc = RLDICL killed %1, 0, 32
+# CHECK-PASS-NOT:     %3:g8rc = RLDICR %2, 2, 61
+# CHECK-PASS:     %3:g8rc = RLDIC killed %1, 2, 30

@@ -1,0 +1,9 @@
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.ret32.o
+RUN: not wasm-ld -o %t.wasm %t.ret32.o 2>&1 | FileCheck %s
+RUN: not wasm-ld --allow-undefined -o %t.wasm %t.ret32.o 2>&1 | FileCheck %s
+RUN: not wasm-ld -entry=foo -o %t.wasm %t.ret32.o 2>&1 | FileCheck %s -check-prefix=CHECK-CUSTOM
+
+CHECK: error: entry symbol not defined (pass --no-entry to suppress): _start
+CHECK-CUSTOM: error: entry symbol not defined (pass --no-entry to suppress): foo
+
+RUN: wasm-ld --no-entry -o %t.wasm %t.ret32.o

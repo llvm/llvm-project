@@ -1,0 +1,100 @@
+## Test how we dump archives.
+
+## Show that dumping operations apply to all members in an archive.
+
+# RUN: rm -f %t.a
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj --docnum=1 %s -o %t.dir/trivial.obj.elf-x86-64
+# RUN: yaml2obj --docnum=2 %s -o %t.dir/trivial.obj.elf-i386
+# RUN: yaml2obj --docnum=3 %s -o %t.dir/trivial.obj.coff-arm
+
+# RUN: llvm-ar rc %t.a %t.dir/trivial.obj.elf-x86-64 %t.dir/trivial.obj.elf-i386 %t.dir/trivial.obj.coff-arm
+# RUN: llvm-readobj --all %t.a | FileCheck %s -DARFILE="%t.a" --check-prefixes=LLVM,COFF
+# RUN: llvm-readelf --all %t.a | FileCheck %s -DARFILE="%t.a" --check-prefixes=GNU,COFF
+
+# LLVM: {{^$}}
+# LLVM-NEXT: File: [[ARFILE]](trivial.obj.elf-x86-64)
+# LLVM: Format: elf64-x86-64
+# LLVM: ElfHeader {
+# LLVM:   Machine: EM_X86_64
+# LLVM: Sections [
+# LLVM: Relocations [
+# LLVM: Symbols [
+# LLVM: Notes [
+# LLVM: ]
+# LLVM: StackSizes [
+# LLVM: ]
+
+# GNU: {{^$}}
+# GNU-NEXT: File: [[ARFILE]](trivial.obj.elf-x86-64)
+# GNU: ELF Header:
+# GNU:   Machine: Advanced Micro Devices X86-64
+# GNU: Section Headers:
+# GNU: There are no section groups in this file.
+
+# LLVM-EMPTY:
+# LLVM-NEXT: File: [[ARFILE]](trivial.obj.elf-i386)
+# LLVM: Format: elf32-i386
+# LLVM: ElfHeader {
+# LLVM:   Machine: EM_386
+# LLVM: Sections [
+# LLVM: Relocations [
+# LLVM: Symbols [
+# LLVM: Notes [
+# LLVM: ]
+# LLVM: StackSizes [
+# LLVM: ]
+
+# GNU-EMPTY:
+# GNU-NEXT: File: [[ARFILE]](trivial.obj.elf-i386)
+# GNU: ELF Header:
+# GNU:   Machine: Intel 80386
+# GNU: Section Headers:
+# GNU: There are no section groups in this file.
+
+# LLVM-EMPTY:
+# LLVM-NEXT: File: [[ARFILE]](trivial.obj.coff-arm)
+# LLVM: Format: COFF-ARM
+# GNU-EMPTY:
+# GNU-NEXT: File: [[ARFILE]](trivial.obj.coff-arm)
+# COFF: ImageFileHeader {
+# COFF:   Machine: IMAGE_FILE_MACHINE_ARMNT
+# COFF: Sections [
+# COFF: Relocations [
+# COFF: Symbols [
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARMNT
+  Characteristics: [  ]
+sections: []
+symbols: []
+
+## Here we test that we report a warning and continue dumping when an archive contains
+## an unrecognized object. We add a dummy archive to the middle of another archive,
+## so that it is between two valid objects.
+
+# RUN: rm -f %t2.a
+# RUN: llvm-ar rc %t.dir/broken.a %t.dir/trivial.obj.elf-x86-64
+# RUN: llvm-ar qc %t2.a %t.dir/trivial.obj.elf-x86-64 %t.dir/broken.a %t.dir/trivial.obj.elf-x86-64
+# RUN: llvm-readobj --all %t2.a 2>&1 | FileCheck %s -DARFILE="%t2.a" --check-prefix=BROKEN
+# RUN: llvm-readelf --all %t2.a 2>&1 | FileCheck %s -DARFILE="%t2.a" --check-prefix=BROKEN
+
+# BROKEN: File: [[ARFILE]](trivial.obj.elf-x86-64)
+# BROKEN: warning: '[[ARFILE]]': broken.a has an unsupported file type
+# BROKEN: File: [[ARFILE]](trivial.obj.elf-x86-64)

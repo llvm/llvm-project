@@ -1,0 +1,12 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+name: align_0
+body: |
+  bb.0:
+
+    %0:_(p0) = IMPLICIT_DEF
+    ; CHECK: [[@LINE+1]]:54: expected a power-of-2 literal after 'align'
+    %1:_(s64) = G_LOAD %0(p0) :: (load (s64), align 0)
+...
+

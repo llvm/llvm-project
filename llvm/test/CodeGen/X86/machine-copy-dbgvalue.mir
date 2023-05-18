@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=i686-- -run-pass machine-cp -verify-machineinstrs -o - %s | FileCheck %s
+
+
+---
+# Test that machine copy propagation ignores DBG_VALUE and DBL_VALUE_LIST and updates it.
+# CHECK-LABEL: name: foo
+# CHECK: bb.0:
+# CHECK-NEXT: $rax = MOV64ri 31
+# CHECK-NEXT: DBG_VALUE $rax
+# CHECK-NEXT: DBG_VALUE_LIST 0, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value), $rax, 0, 0
+# CHECK-NEXT: RET64 implicit killed $rax
+name: foo
+body: |
+  bb.0:
+    renamable $rcx = MOV64ri 31
+    DBG_VALUE $rcx, 0, 0, 0, 0
+    DBG_VALUE_LIST 0, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value), $rcx, 0, 0
+    $rax = COPY killed renamable $rcx
+    RET64 implicit killed $rax
+...

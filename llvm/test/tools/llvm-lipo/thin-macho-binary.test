@@ -1,0 +1,21 @@
+# RUN: yaml2obj %s -o %t
+
+# RUN: not llvm-lipo %t -thin i386 2>&1 | FileCheck --check-prefix=NO_OUTPUT %s
+# NO_OUTPUT: error: thin expects a single output file
+
+# RUN: not llvm-lipo %t %t -thin i386 2>&1 | FileCheck --check-prefix=MULTIPLE_INPUT_OBJ %s
+# MULTIPLE_INPUT_OBJ: thin expects a single input file
+
+# RUN: not llvm-lipo %t -thin i386 -output %t.out 2>&1 | FileCheck --check-prefix=INPUT_FILE_THIN %s
+# INPUT_FILE_THIN: must be a fat file when the -thin option is specified
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x00000097
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00002000
+...

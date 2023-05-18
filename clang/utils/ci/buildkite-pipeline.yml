@@ -1,0 +1,105 @@
+#===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===----------------------------------------------------------------------===##
+
+#
+# This file describes the various pre-commit CI bots used to test Clang against
+# libc++ under various configurations. Unlike the usual libc++ CI pipeline,
+# which aims to test libc++ itself, this pipeline aims to test Clang by
+# compiling libc++ and running its test suite against the just-built Clang,
+# in various configurations.
+#
+env:
+    # LLVM RELEASE bump version
+    LLVM_HEAD_VERSION: "17"
+steps:
+  - label: "Format"
+    commands:
+      - "clang/utils/ci/run-buildbot check-format"
+    agents:
+      queue: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Building and testing clang (Linux)"
+    commands:
+      - "clang/utils/ci/run-buildbot build-clang"
+    agents:
+      queue: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Building and testing clang (Windows)"
+    commands:
+      - "C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64"
+      - "bash clang/utils/ci/run-buildbot build-clang-windows"
+    agents:
+      queue: "windows"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - wait
+
+  - label: "Running libc++ test suite in C++03"
+    commands:
+      - "clang/utils/ci/run-buildbot generic-cxx03"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/crash_diagnostics/*"
+    env:
+        LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}" # TODO: Should we build that from scratch?
+        CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
+    agents:
+      queue: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Running libc++ test suite in C++26"
+    commands:
+      - "clang/utils/ci/run-buildbot generic-cxx26"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/crash_diagnostics/*"
+    env:
+        LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}" # TODO: Should we build that from scratch?
+        CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
+    agents:
+      queue: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Running libc++ test suite with Clang Modules"
+    commands:
+      - "clang/utils/ci/run-buildbot generic-modules"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/crash_diagnostics/*"
+    env:
+        LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}" # TODO: Should we build that from scratch?
+        CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
+    agents:
+      queue: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120

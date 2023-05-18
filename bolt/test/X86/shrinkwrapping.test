@@ -1,0 +1,49 @@
+# Verifies that llvm-bolt updates CFI correctly after
+# shrink-wrapping when optimizing a function without
+# frame pointers.
+
+# This test has commands that rely on shell capabilities that won't execute
+# correctly on Windows e.g. subshell execution to capture command output.
+REQUIRES: shell
+
+RUN: %clangxx %cxxflags -no-pie %S/Inputs/exc4sw.S -o %t.exe -Wl,-q
+RUN: llvm-bolt %t.exe -o %t --relocs --frame-opt=all \
+RUN:   --data=%p/Inputs/exc4sw.fdata --reorder-blocks=cache 2>&1 | \
+RUN:   FileCheck %s --check-prefix=CHECK-BOLT
+
+RUN: llvm-objdump --dwarf=frames %t.exe | grep -A20 -e \
+RUN:   `llvm-nm --numeric-sort %t.exe | grep main | tail -n 1 | \
+RUN:    cut -f1 -d' ' | tail -c9` 2>&1 | FileCheck %s --check-prefix=CHECK-INPUT
+
+RUN: llvm-objdump --dwarf=frames %t | grep -A20 -e \
+RUN:   `llvm-nm --numeric-sort %t | grep main | tail -n 1 | cut -f1 -d' ' | \
+RUN:    tail -c9` 2>&1 | FileCheck %s --check-prefix=CHECK-OUTPUT
+
+CHECK-BOLT: Shrink wrapping moved 2 spills inserting load/stores and 0 spills inserting push/pops
+
+CHECK-INPUT:  DW_CFA_advance_loc: 2
+CHECK-INPUT-NEXT:  DW_CFA_def_cfa_offset: +16
+CHECK-INPUT-NEXT:  DW_CFA_offset: reg13 -16
+CHECK-INPUT-NEXT:  DW_CFA_advance_loc: 2
+CHECK-INPUT-NEXT:  DW_CFA_def_cfa_offset: +24
+CHECK-INPUT-NEXT:  DW_CFA_offset: reg12 -24
+CHECK-INPUT-NEXT:  DW_CFA_advance_loc: 1
+CHECK-INPUT-NEXT:  DW_CFA_def_cfa_offset: +32
+CHECK-INPUT-NEXT:  DW_CFA_offset: reg6 -32
+CHECK-INPUT-NEXT:  DW_CFA_advance_loc: 6
+CHECK-INPUT-NEXT:  DW_CFA_def_cfa_offset: +40
+CHECK-INPUT-NEXT:  DW_CFA_offset: reg3 -40
+CHECK-INPUT-NEXT:  DW_CFA_advance_loc: 6
+CHECK-INPUT-NEXT:  DW_CFA_def_cfa_offset: +48
+
+CHECK-OUTPUT:  DW_CFA_advance_loc: 4
+CHECK-OUTPUT-NEXT:  DW_CFA_def_cfa_offset: +16
+CHECK-OUTPUT-NEXT:  DW_CFA_def_cfa_offset: +24
+CHECK-OUTPUT-NEXT:  DW_CFA_advance_loc: 1
+CHECK-OUTPUT-NEXT:  DW_CFA_def_cfa_offset: +32
+CHECK-OUTPUT-NEXT:  DW_CFA_offset: reg6 -32
+CHECK-OUTPUT-NEXT:  DW_CFA_advance_loc: 6
+CHECK-OUTPUT-NEXT:  DW_CFA_def_cfa_offset: +40
+CHECK-OUTPUT-NEXT:  DW_CFA_offset: reg3 -40
+CHECK-OUTPUT-NEXT:  DW_CFA_advance_loc: 6
+CHECK-OUTPUT-NEXT:  DW_CFA_def_cfa_offset: +48

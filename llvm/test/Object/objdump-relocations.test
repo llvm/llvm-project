@@ -1,0 +1,135 @@
+# RUN: llvm-objdump -r %p/Inputs/trivial-object-test.coff-i386 \
+# RUN:              | FileCheck %s -check-prefix COFF-i386
+# RUN: llvm-objdump -r %p/Inputs/trivial-object-test.coff-x86-64 \
+# RUN:              | FileCheck %s -check-prefix COFF-x86-64
+
+# RUN: yaml2obj --docnum=1 %s -o %t-i386
+# RUN: llvm-objdump -r %t-i386 | FileCheck %s --check-prefix=ELF-i386
+
+# ELF-i386: .text
+# ELF-i386: R_386_32 .section
+# ELF-i386: R_386_PC32 symbol
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .section
+    Type: SHT_PROGBITS
+  - Name: .rel.text
+    Type: SHT_REL
+    Link: .symtab
+    Info: .text
+    Relocations:
+      - Symbol: .section
+        Type:   R_386_32
+      - Offset: 0x1
+        Symbol: symbol
+        Type:   R_386_PC32
+Symbols:
+  - Name:    .section
+    Type:    STT_SECTION
+    Section: .section
+  - Name:    symbol
+    Binding: STB_GLOBAL
+
+# RUN: yaml2obj --docnum=2 %s -o %t-x86-64
+# RUN: llvm-objdump -r %t-x86-64 | FileCheck %s --check-prefix=ELF-x86-64
+
+# ELF-x86-64: .text
+# ELF-x86-64: R_X86_64_32S .section
+# ELF-x86-64: R_X86_64_PC32 symbol
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .section
+    Type: SHT_PROGBITS
+  - Name: .rel.text
+    Type: SHT_REL
+    Link: .symtab
+    Info: .text
+    Relocations:
+      - Symbol: .section
+        Type:   R_X86_64_32S
+      - Offset: 0x1
+        Symbol: symbol
+        Type:   R_X86_64_PC32
+Symbols:
+  - Name:    .section
+    Type:    STT_SECTION
+    Section: .section
+  - Name:    symbol
+    Binding: STB_GLOBAL
+
+# RUN: llvm-objdump -r %p/Inputs/trivial-object-test.elf-hexagon \
+# RUN:              | FileCheck %s -check-prefix ELF-hexagon
+# RUN: llvm-objdump -r %p/Inputs/trivial-object-test.elf-mips64el \
+# RUN:              | FileCheck %s -check-prefix ELF-MIPS64EL
+# RUN: llvm-objdump -r %p/Inputs/trivial-object-test.elf-mipsel \
+# RUN:              | FileCheck %s -check-prefix ELF-MIPSEL
+# RUN: llvm-objdump -r %p/Inputs/trivial-object-test.wasm \
+# RUN:              | FileCheck %s -check-prefix WASM
+
+# RUN: llvm-objdump -r %p/Inputs/relocations.elf-x86-64 \
+# RUN:              | FileCheck %s -check-prefix ELF-complex-x86-64
+
+# COFF-i386: .text
+# COFF-i386: IMAGE_REL_I386_DIR32 L_.str
+# COFF-i386: IMAGE_REL_I386_REL32 _puts
+# COFF-i386: IMAGE_REL_I386_REL32 _SomeOtherFunction
+
+# COFF-x86-64: .text
+# COFF-x86-64: IMAGE_REL_AMD64_REL32 L.str
+# COFF-x86-64: IMAGE_REL_AMD64_REL32 puts
+# COFF-x86-64: IMAGE_REL_AMD64_REL32 SomeOtherFunction
+
+# ELF-hexagon: .text
+# ELF-hexagon: R_HEX_GOTREL_HI16 .main
+# ELF-hexagon: R_HEX_GOTREL_LO16 .main
+# ELF-hexagon: R_HEX_HI16 puts
+# ELF-hexagon: R_HEX_LO16 puts
+# ELF-hexagon: R_HEX_B15_PCREL testf
+# ELF-hexagon: R_HEX_B22_PCREL puts
+
+## Note: this file was produced with gas to make sure we don't end up in a
+## situation where LLVM produces and accepts a broken file.
+# ELF-MIPS64EL: .data
+# ELF-MIPS64EL: R_MIPS_64/R_MIPS_NONE/R_MIPS_NONE zed
+
+# ELF-MIPSEL: .text
+# ELF-MIPSEL: R_MIPS_HI16 _gp_disp
+# ELF-MIPSEL: R_MIPS_LO16 _gp_disp
+# ELF-MIPSEL: R_MIPS_GOT16 $.str
+# ELF-MIPSEL: R_MIPS_LO16 $.str
+# ELF-MIPSEL: R_MIPS_CALL16 puts
+# ELF-MIPSEL: R_MIPS_CALL16 SomeOtherFunction
+
+# WASM:      CODE
+# WASM-NEXT: OFFSET TYPE VALUE
+# WASM-NEXT: R_WASM_MEMORY_ADDR_SLEB .L.str
+# WASM-NEXT: R_WASM_FUNCTION_INDEX_LEB puts
+# WASM-NEXT: R_WASM_FUNCTION_INDEX_LEB .LSomeOtherFunction_bitcast
+# WASM-NEXT: R_WASM_FUNCTION_INDEX_LEB SomeOtherFunction
+
+# ELF-complex-x86-64: .text
+# ELF-complex-x86-64-NEXT: OFFSET TYPE VALUE
+# ELF-complex-x86-64-NEXT: R_X86_64_8 .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_16 .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_32 .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_32S .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_64 .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_PC32 .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_32 .data
+# ELF-complex-x86-64-NEXT: R_X86_64_32 .data+0x4

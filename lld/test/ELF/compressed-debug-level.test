@@ -1,0 +1,38 @@
+# REQUIRES: x86, zlib
+
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: ld.lld %t.o -o %t.default --compress-debug-sections=zlib
+# RUN: llvm-readelf --sections %t.default | FileCheck -check-prefixes=HEADER,LEVEL1 %s
+
+# RUN: ld.lld -O0 %t.o -o %t.O0 --compress-debug-sections=zlib
+# RUN: llvm-readelf --sections %t.O0 | FileCheck -check-prefixes=HEADER,LEVEL1 %s
+# RUN: cmp %t.default %t.O0
+
+# RUN: ld.lld -O1 %t.o -o %t.O1 --compress-debug-sections=zlib
+# RUN: llvm-readelf --sections %t.O1 | FileCheck -check-prefixes=HEADER,LEVEL1 %s
+# RUN: cmp %t.default %t.O1
+
+# RUN: ld.lld -O2 %t.o -o %t.O2 --compress-debug-sections=zlib
+# RUN: llvm-readelf --sections %t.O2 | FileCheck -check-prefixes=HEADER,LEVEL6 %s
+
+## LLD uses zlib compression of level 1 when -O0, -O1 and level 6 when -O2.
+## Here we check how -O flag affects the size of compressed sections produced.
+
+# HEADER: [Nr] Name        Type     Address  Off    Size
+# LEVEL1: [ 1] .debug_info PROGBITS 00000000 000094 00001{{[bc]}}
+# LEVEL6: [ 1] .debug_info PROGBITS 00000000 000094 00001a
+
+## A little arbitrary debug section which has a different size after
+## applying compression of level 1 and 6.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name:    .debug_info
+    Type:    SHT_PROGBITS
+    Content: '010101010101010201010201'

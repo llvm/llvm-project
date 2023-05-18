@@ -1,0 +1,166 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: hazard_vcmpx_smov_exec_lo
+# GCN:        $sgpr0 = S_MOV_B32 $exec_lo
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65534
+# GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
+---
+name:            hazard_vcmpx_smov_exec_lo
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_MOV_B32 $exec_lo
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_vcmpx_smov_exec
+# GCN:        $sgpr0_sgpr1 = S_MOV_B64 $exec
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65534
+# GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
+---
+name:            hazard_vcmpx_smov_exec
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0_sgpr1 = S_MOV_B64 $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_vcmpx_vmov_exec_lo
+# GCN:      $vgpr0 = V_MOV_B32_e32 $exec_lo, implicit $exec
+# GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
+---
+name:            no_hazard_vcmpx_vmov_exec_lo
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 $exec_lo, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_vcmpx_valu_impuse_exec
+# GCN:      $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
+---
+name:            no_hazard_vcmpx_valu_impuse_exec
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_imp
+# GCN:      $sgpr0 = S_MOV_B32 $exec_lo
+# GCN-NEXT: $vgpr0 = V_ADDC_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+# GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
+---
+name:            no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_imp
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_MOV_B32 $exec_lo
+    $vgpr0 = V_ADDC_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_exp
+# GCN:      $sgpr0 = S_MOV_B32 $exec_lo
+# GCN-NEXT: $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $vgpr0, 0, implicit $exec
+# GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
+---
+name:            no_hazard_vcmpx_smov_exec_lo_valu_writes_sgpr_exp
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_MOV_B32 $exec_lo
+    $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $vgpr0, 0, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: no_hazard_vcmpx_smov_exec_lo_depctr_fffe
+# GCN:      $sgpr0 = S_MOV_B32 $exec_lo
+# GCN-NEXT: S_WAITCNT_DEPCTR 65534
+# GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
+---
+name:            no_hazard_vcmpx_smov_exec_lo_depctr_fffe
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_MOV_B32 $exec_lo
+    S_WAITCNT_DEPCTR 65534
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_vcmpx_smov_exec_lo_depctr_ffff
+# GCN:        $sgpr0 = S_MOV_B32 $exec_lo
+# GCN-NEXT:   S_WAITCNT_DEPCTR 65535
+# GFX10-NEXT: S_WAITCNT_DEPCTR 65534
+# GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
+---
+name:            hazard_vcmpx_smov_exec_lo_depctr_ffff
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_MOV_B32 $exec_lo
+    S_WAITCNT_DEPCTR 65535
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: hazard_vcmpx_smov_exec_lo_depctr_effe
+# GCN:        $sgpr0 = S_MOV_B32 $exec_lo
+# GCN-NEXT:   S_WAITCNT_DEPCTR 61438
+# GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
+---
+name:            hazard_vcmpx_smov_exec_lo_depctr_effe
+body:            |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_MOV_B32 $exec_lo
+    S_WAITCNT_DEPCTR 61438
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+...

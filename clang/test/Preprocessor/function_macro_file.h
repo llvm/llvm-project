@@ -1,0 +1,3 @@
+
+#define f() x
+f

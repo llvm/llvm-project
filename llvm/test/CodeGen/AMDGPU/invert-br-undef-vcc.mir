@@ -1,0 +1,86 @@
+# RUN: llc -run-pass block-placement -mtriple=amdgcn -verify-machineinstrs -o - %s | FileCheck %s
+--- |
+
+  define amdgpu_kernel void @invert_br_undef_vcc(float %cond, ptr addrspace(1) %out) #0 {
+  entry:
+    br i1 undef, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
+
+  else:                                             ; preds = %entry
+    store volatile i32 100, ptr addrspace(1) undef
+    br label %done, !structurizecfg.uniform !0
+
+  if:                                               ; preds = %entry
+    store volatile i32 9, ptr addrspace(1) undef
+    br label %done, !structurizecfg.uniform !0
+
+  done:                                             ; preds = %if, %else
+    %value = phi i32 [ 0, %if ], [ 1, %else ]
+    store i32 %value, ptr addrspace(1) %out
+    ret void
+  }
+
+  attributes #0 = { nounwind }
+
+  !0 = !{}
+
+...
+---
+# CHECK-LABEL: name: invert_br_undef_vcc
+# CHECK: S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+
+name:            invert_br_undef_vcc
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.entry:
+    liveins: $sgpr0_sgpr1
+
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    $sgpr7 = S_MOV_B32 61440
+    $sgpr6 = S_MOV_B32 -1
+    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
+
+  bb.1.else:
+    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+
+    $vgpr0 = V_MOV_B32_e32 100, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2.if:
+    liveins: $sgpr6, $sgpr7, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+
+    $vgpr0 = V_MOV_B32_e32 9, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+
+  bb.3.done:
+    liveins: $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3:0x00000003
+
+    $sgpr3 = S_MOV_B32 61440
+    $sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out)
+    S_ENDPGM 0
+
+...

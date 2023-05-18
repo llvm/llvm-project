@@ -1,0 +1,15 @@
+; RUN: llvm-c-test --calc <%s | FileCheck %s
+
+; constant folding
+test 100 200 +
+;CHECK: ModuleID = 'test'
+;CHECK: define i64 @test
+;CHECK: {
+;CHECK: ret i64 300
+;CHECK: }
+
+arg1 0 @ 0 @ * 1 @ 1 @ * +
+;CHECK: ModuleID = 'arg1'
+;CHECK: getelementptr
+;CHECK: load
+;CHECK: ret

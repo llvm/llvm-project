@@ -1,0 +1,187 @@
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass si-insert-waitcnts %s -o - | FileCheck %s
+
+--- |
+  define amdgpu_kernel void @basic_insert_dcache_wb() {
+    ret void
+  }
+
+  define amdgpu_kernel void @explicit_flush_after() {
+    ret void
+  }
+
+  define amdgpu_kernel void @explicit_flush_before() {
+    ret void
+  }
+
+  define amdgpu_kernel void @no_scalar_store() {
+    ret void
+  }
+
+  define amdgpu_kernel void @multi_block_store() {
+  bb0:
+    br i1 undef, label %bb1, label %bb2
+
+   bb1:
+     ret void
+
+   bb2:
+    ret void
+  }
+
+  define amdgpu_kernel void @one_block_store() {
+  bb0:
+    br i1 undef, label %bb1, label %bb2
+
+   bb1:
+     ret void
+
+   bb2:
+    ret void
+  }
+
+  define amdgpu_ps float @si_return() {
+    ret float undef
+  }
+
+...
+---
+# CHECK-LABEL: name: basic_insert_dcache_wb
+# CHECK: bb.0:
+# CHECK-NEXT: S_STORE_DWORD
+# CHECK-NEXT: S_DCACHE_WB
+# CHECK-NEXT: S_ENDPGM 0
+
+name: basic_insert_dcache_wb
+tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
+
+body: |
+  bb.0:
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
+    S_ENDPGM 0
+...
+---
+# Already has an explicitly requested flush after the last store.
+# CHECK-LABEL: name: explicit_flush_after
+# CHECK: bb.0:
+# CHECK-NEXT: S_STORE_DWORD
+# CHECK-NEXT: S_DCACHE_WB
+# CHECK-NEXT: S_ENDPGM 0
+
+name: explicit_flush_after
+tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
+
+body: |
+  bb.0:
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
+    S_DCACHE_WB
+    S_ENDPGM 0
+...
+---
+# Already has an explicitly requested flush before the last store.
+# CHECK-LABEL: name: explicit_flush_before
+# CHECK: bb.0:
+# CHECK-NEXT: S_DCACHE_WB
+# CHECK-NEXT: S_STORE_DWORD
+# CHECK-NEXT: S_DCACHE_WB
+# CHECK-NEXT: S_ENDPGM 0
+
+name: explicit_flush_before
+tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
+
+body: |
+  bb.0:
+    S_DCACHE_WB
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
+    S_ENDPGM 0
+...
+---
+# CHECK-LABEL: no_scalar_store
+# CHECK: bb.0
+# CHECK-NEXT: S_ENDPGM 0
+name: no_scalar_store
+tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
+
+body: |
+  bb.0:
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: multi_block_store
+# CHECK: bb.0:
+# CHECK-NEXT: S_STORE_DWORD
+# CHECK-NEXT: S_DCACHE_WB
+# CHECK-NEXT: S_ENDPGM 0
+
+# CHECK: bb.1:
+# CHECK-NEXT: S_STORE_DWORD
+# CHECK-NEXT: S_DCACHE_WB
+# CHECK-NEXT: S_ENDPGM 0
+
+name: multi_block_store
+tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
+
+body: |
+  bb.0:
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
+    S_ENDPGM 0
+
+  bb.1:
+    S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0
+    S_ENDPGM 0
+...
+...
+
+# This one should be able to omit the flush in the storeless block but
+# this isn't handled now.
+
+# CHECK-LABEL: name: one_block_store
+# CHECK: bb.0:
+# CHECK-NEXT: S_DCACHE_WB
+# CHECK-NEXT: S_ENDPGM 0
+
+# CHECK: bb.1:
+# CHECK-NEXT: S_STORE_DWORD
+# CHECK-NEXT: S_DCACHE_WB
+# CHECK-NEXT: S_ENDPGM 0
+
+name: one_block_store
+tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
+
+body: |
+  bb.0:
+    S_ENDPGM 0
+
+  bb.1:
+    S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0
+    S_ENDPGM 0
+...
+---
+# CHECK-LABEL: name: si_return
+# CHECK: bb.0:
+# CHECK-NEXT: S_STORE_DWORD
+# CHECK-NEXT: S_WAITCNT
+# CHECK-NEXT: S_DCACHE_WB
+# CHECK-NEXT: SI_RETURN
+
+name: si_return
+tracksRegLiveness: false
+machineFunctionInfo:
+  isEntryFunction: true
+
+body: |
+  bb.0:
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
+    SI_RETURN_TO_EPILOG undef $vgpr0
+...

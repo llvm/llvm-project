@@ -1,0 +1,49 @@
+# Check that memory region parsing works correctly, with a particular emphasis
+# on the boundary conditions.
+
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb -b -c %t \
+# RUN:   -o "memory region 0" -o "memory region 0xd9000" \
+# RUN:   -o "memory region 0xd9001" -o "memory region 0xdafff" \
+# RUN:   -o "memory region 0xdb000" -o "memory region 0xdd000" | FileCheck %s
+
+# CHECK-LABEL: (lldb) memory region 0
+# CHECK: [0x0000000000000000-0x00000000000d9000) ---
+# CHECK-LABEL: (lldb) memory region 0xd9000
+# CHECK: [0x00000000000d9000-0x00000000000db000) r-x /system/bin/app_process
+# CHECK-LABEL: (lldb) memory region 0xd9001
+# CHECK: [0x00000000000d9000-0x00000000000db000) r-x /system/bin/app_process
+# CHECK-LABEL: (lldb) memory region 0xdafff
+# CHECK: [0x00000000000d9000-0x00000000000db000) r-x /system/bin/app_process
+# CHECK-LABEL: (lldb) memory region 0xdb000
+# CHECK: [0x00000000000db000-0x00000000000dc000) ---
+# CHECK-LABEL: (lldb) memory region 0xdd000
+# CHECK: [0x00000000000dd000-0xffffffffffffffff) ---
+
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Platform ID:     Linux
+    CPU:             
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            LinuxProcStatus
+    Text:             |
+      Name:	nonexisting-module
+      State:	t (tracing stop)
+      Tgid:	29939
+      Ngid:	0
+      Pid:	29939
+      PPid:	29370
+      TracerPid:	29940
+      Uid:	1001	1001	1001	1001
+      Gid:	1001	1001	1001	1001
+
+  - Type:            LinuxMaps
+    Text:             |
+      000d9000-000db000 r-xp 00000000 b3:04 227        /system/bin/app_process
+      000dc000-000dd000 rw-p 00000000 00:00 0
+
+...

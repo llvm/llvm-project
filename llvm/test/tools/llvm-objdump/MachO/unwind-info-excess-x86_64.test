@@ -1,0 +1,67 @@
+## Ensure that per-page compact encodings (indexes 127 and greater)
+## appear in the output of llvm-objdump --unwind-info
+## Verify that the common encodings table is full at 0x7f (127) entries.
+##
+## TODO(gkm): The input is a binary object file constructed from a
+## large generated assembler file. For sake of expediency and
+## test-time performance, I am following the unfortunate precedent
+## that MachO test inputs are binary.
+##
+## Non-MachO tests largely use YAML inputs. As I understand it, the
+## rationale is that these MachO tests were written prior to
+## availability of sufficiently-expressive YAML processors.
+##
+## I consider YAML a submoptimal input format. Better would be
+## assembler language inputs convertable to binary via llvm-mc.  In
+## the case of this test however, the input is very large and the
+## overhead of llvm-mc is terrible (~10s) on a debug build. Overhead
+## for a release build of llvm-mc is acceptable at ~1s. It would be
+## good if there were a way to prefer an installed version of llvm-mc
+## to process tests in debug build trees when not testing llvm-mc
+## itself.
+
+# RUN: llvm-objdump --unwind-info %p/Inputs/unwind-info-excess.macho-x86_64 2>/dev/null | FileCheck %s
+
+# CHECK:Contents of __unwind_info section:
+# CHECK-NEXT:  Version:                                   0x1
+# CHECK-NEXT:  Common encodings array section offset:     0x1c
+# CHECK-NEXT:  Number of common encodings in array:       0x7f
+
+# CHECK:  Second level indices:
+# CHECK:    Second level index[0]: offset in section
+# CHECK:      Page encodings: (count = 17)
+# CHECK:        encoding[127]: 0x01010003
+# CHECK:        encoding[128]: 0x01010002
+# CHECK:        encoding[129]: 0x01010001
+# CHECK:        encoding[130]: 0x0102001d
+# CHECK:        encoding[131]: 0x01020015
+# CHECK:        encoding[132]: 0x0102000d
+# CHECK:        encoding[133]: 0x0102001c
+# CHECK:        encoding[134]: 0x01020014
+# CHECK:        encoding[135]: 0x0102000c
+# CHECK:        encoding[136]: 0x01020013
+# CHECK:        encoding[137]: 0x0102000b
+# CHECK:        encoding[138]: 0x01020022
+# CHECK:        encoding[139]: 0x0102001a
+# CHECK:        encoding[140]: 0x0102000a
+# CHECK:        encoding[141]: 0x01020021
+# CHECK:        encoding[142]: 0x01020019
+# CHECK:        encoding[143]: 0x01020011
+
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[127]=0x01010003
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[128]=0x01010002
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[129]=0x01010001
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[130]=0x0102001d
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[131]=0x01020015
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[132]=0x0102000d
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[133]=0x0102001c
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[134]=0x01020014
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[135]=0x0102000c
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[136]=0x01020013
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[137]=0x0102000b
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[138]=0x01020022
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[139]=0x0102001a
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[140]=0x0102000a
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[141]=0x01020021
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[142]=0x01020019
+# CHECK:      [{{[0-9]+}}]: function offset={{[x0-9a-f]+}}, encoding[143]=0x01020011

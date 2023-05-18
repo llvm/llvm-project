@@ -1,0 +1,8 @@
+# foo:: and foo::detail:: are equivalent
+name 3foo N3foo6detailE
+
+# foo::qux and foo::quux are equivalent
+type N3foo3quxE N3foo4quuxE
+
+# N::X and M::X are equivalent
+name N1N1XE N1M1XE

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Function>
+<Name>aaa</Name>
+<Abstract><Para>Aaa.</Para></Abstract>
+<Discussion>
+  <Para>Bbb</Para>
+  <Para kind="attention">Bbb</Para>
+  <Para kind="author">Bbb</Para>
+  <Para kind="authors">Bbb</Para>
+  <Para kind="bug">Bbb</Para>
+  <Para kind="copyright">Bbb</Para>
+  <Para kind="date">Bbb</Para>
+  <Para kind="invariant">Bbb</Para>
+  <Para kind="note">Bbb</Para>
+  <Para kind="post">Bbb</Para>
+  <Para kind="pre">Bbb</Para>
+  <Para kind="remark">Bbb</Para>
+  <Para kind="remarks">Bbb</Para>
+  <Para kind="sa">Bbb</Para>
+  <Para kind="see">Bbb</Para>
+  <Para kind="since">Bbb</Para>
+  <Para kind="todo">Bbb</Para>
+  <Para kind="version">Bbb</Para>
+  <Para kind="warning">Bbb</Para>
+</Discussion>
+</Function>
+

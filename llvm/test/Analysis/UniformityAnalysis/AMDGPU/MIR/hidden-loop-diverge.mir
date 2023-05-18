@@ -1,0 +1,76 @@
+# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# CHECK-LABEL: MachineUniformityInfo for function: hidden_loop_diverge
+
+# CHECK-LABEL: BLOCK bb.0
+# CHECK-NOT: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_ICMP intpred(slt), %{{[0-9]*}}:_(s32), %{{[0-9]*}}:_
+# CHECK-NOT: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.3
+# CHECK-NOT: DIVERGENT: G_BR %bb.1
+
+# CHECK-LABEL: BLOCK bb.1
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_ICMP intpred(slt), %{{[0-9]*}}:_(s32), %{{[0-9]*}}:_
+# CHECK: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.3
+# CHECK: DIVERGENT: G_BR %bb.2
+
+# CHECK-LABEL: BLOCK bb.2
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_ICMP intpred(sgt), %{{[0-9]*}}:_(s32), %{{[0-9]*}}:_
+# CHECK: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.4
+# CHECK: DIVERGENT: G_BR %bb.1
+
+# CHECK-LABEL: BLOCK bb.3
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.0, %{{[0-9]*}}:_(s32), %bb.1
+# CHECK-NOT: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.4
+# CHECK-NOT: DIVERGENT: G_BR %bb.5
+
+# CHECK-LABEL: BLOCK bb.4
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.3, %{{[0-9]*}}:_(s32), %bb.2
+
+# CHECK-LABEL: BLOCK bb.5
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.3, %{{[0-9]*}}:_(s32), %bb.4
+
+---
+name:            hidden_loop_diverge
+tracksRegLiveness: true
+body:             |
+    bb.0:
+        successors: %bb.3, %bb.1
+        liveins: $sgpr4_sgpr5
+
+        %0:_(s32) = G_IMPLICIT_DEF
+        %20:_(s32) = G_IMPLICIT_DEF
+        %21:_(s32) = G_CONSTANT i32 42
+        %22:_(s32) = G_IMPLICIT_DEF
+        %1:_(s32) = G_CONSTANT i32 0
+        %2:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+        %3:_(s1) = G_ICMP intpred(slt), %0(s32), %1
+        G_BRCOND %3(s1), %bb.3                            ; Uniform branch
+        G_BR %bb.1
+    bb.1:
+        successors: %bb.3, %bb.2
+
+        %4:_(s32) = G_PHI %1(s32), %bb.0, %7(s32), %bb.2
+        %5:_(s1) = G_ICMP intpred(slt), %1(s32), %2(s32)
+        G_BRCOND %5(s1), %bb.3                            ; Divergent exit
+        G_BR %bb.2
+    bb.2:
+        successors: %bb.4, %bb.1
+
+        %6:_(s32) = G_CONSTANT i32 1
+        %7:_(s32) = G_ADD %6(s32), %4(s32)
+        %8:_(s1) = G_ICMP intpred(sgt), %2(s32), %1(s32)
+        G_BRCOND %8(s1), %bb.4                            ; Divergent exit
+        G_BR %bb.1
+    bb.3:
+        successors: %bb.4, %bb.5
+
+        %9:_(s32) = G_PHI %20(s32), %bb.0, %4(s32), %bb.1    ; Temporal divergent phi
+        G_BRCOND %3(s1), %bb.4
+        G_BR %bb.5
+
+    bb.4:
+        successors: %bb.5
+
+        %10:_(s32) = G_PHI %21(s32), %bb.3, %22(s32), %bb.2  ; Temporal divergent phi
+        G_BR %bb.5
+    bb.5:
+        %11:_(s32) = G_PHI %20(s32), %bb.3, %22(s32), %bb.4
+...

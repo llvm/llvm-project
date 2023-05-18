@@ -1,0 +1,26 @@
+# RUN: rm -rf %t
+# RUN: clangd-indexer %S/Inputs/Source.cpp > %t.idx
+# RUN: %python %S/pipeline_helper.py --input-file-name=%s --server-arg=--log=verbose --server-arg=-log-public --server-log=%t.public.log --project-root=%S --index-file=%t.idx > /dev/null
+# RUN: %python %S/pipeline_helper.py --input-file-name=%s --server-arg=--log=verbose --server-log=%t.log --project-root=%S --index-file=%t.idx > /dev/null
+# RUN: FileCheck --check-prefixes=LOG,LOG-PUBLIC %s < %t.public.log
+# RUN: FileCheck --check-prefixes=LOG,LOG-ALL %s < %t.log
+# REQUIRES: clangd-remote-index
+
+# LOG: Server listening on
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+# Verify that request and response bodies are included in the verbose logs,
+# but not when --log-public is on.
+# The request summary should be included in either case.
+{"jsonrpc":"2.0","id":1,"method":"workspace/symbol","params":{"query":"gFoo"}}
+# LOG-ALL: <<< FuzzyFindRequest
+# LOG-ALL: query: "gFoo"
+# LOG-ALL: >>> FuzzyFindReply
+# LOG-ALL: name: "getFoo"
+# LOG-PUBLIC-NOT: gFoo
+# LOG-PUBLIC-NOT: getFoo
+# LOG: request v1/FuzzyFind => OK: 1 results in {{.*}}ms
+---
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

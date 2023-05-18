@@ -1,0 +1,218 @@
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
+
+// CHECK: invept 485498096, %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x80,0x3c,0x25,0xf0,0x1c,0xf0,0x1c]        
+invept 485498096, %r15 
+
+// CHECK: invept 64(%rdx), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x80,0x7a,0x40]        
+invept 64(%rdx), %r15 
+
+// CHECK: invept 64(%rdx,%rax,4), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x80,0x7c,0x82,0x40]        
+invept 64(%rdx,%rax,4), %r15 
+
+// CHECK: invept -64(%rdx,%rax,4), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x80,0x7c,0x82,0xc0]        
+invept -64(%rdx,%rax,4), %r15 
+
+// CHECK: invept 64(%rdx,%rax), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x80,0x7c,0x02,0x40]        
+invept 64(%rdx,%rax), %r15 
+
+// CHECK: invept (%rdx), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x80,0x3a]        
+invept (%rdx), %r15 
+
+// CHECK: invvpid 485498096, %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x81,0x3c,0x25,0xf0,0x1c,0xf0,0x1c]        
+invvpid 485498096, %r15 
+
+// CHECK: invvpid 64(%rdx), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x81,0x7a,0x40]        
+invvpid 64(%rdx), %r15 
+
+// CHECK: invvpid 64(%rdx,%rax,4), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x81,0x7c,0x82,0x40]        
+invvpid 64(%rdx,%rax,4), %r15 
+
+// CHECK: invvpid -64(%rdx,%rax,4), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x81,0x7c,0x82,0xc0]        
+invvpid -64(%rdx,%rax,4), %r15 
+
+// CHECK: invvpid 64(%rdx,%rax), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x81,0x7c,0x02,0x40]        
+invvpid 64(%rdx,%rax), %r15 
+
+// CHECK: invvpid (%rdx), %r15 
+// CHECK: encoding: [0x66,0x44,0x0f,0x38,0x81,0x3a]        
+invvpid (%rdx), %r15 
+
+// CHECK: vmcall 
+// CHECK: encoding: [0x0f,0x01,0xc1]          
+vmcall 
+
+// CHECK: vmclear 485498096 
+// CHECK: encoding: [0x66,0x0f,0xc7,0x34,0x25,0xf0,0x1c,0xf0,0x1c]         
+vmclear 485498096 
+
+// CHECK: vmclear 64(%rdx) 
+// CHECK: encoding: [0x66,0x0f,0xc7,0x72,0x40]         
+vmclear 64(%rdx) 
+
+// CHECK: vmclear 64(%rdx,%rax,4) 
+// CHECK: encoding: [0x66,0x0f,0xc7,0x74,0x82,0x40]         
+vmclear 64(%rdx,%rax,4) 
+
+// CHECK: vmclear -64(%rdx,%rax,4) 
+// CHECK: encoding: [0x66,0x0f,0xc7,0x74,0x82,0xc0]         
+vmclear -64(%rdx,%rax,4) 
+
+// CHECK: vmclear 64(%rdx,%rax) 
+// CHECK: encoding: [0x66,0x0f,0xc7,0x74,0x02,0x40]         
+vmclear 64(%rdx,%rax) 
+
+// CHECK: vmclear (%rdx) 
+// CHECK: encoding: [0x66,0x0f,0xc7,0x32]         
+vmclear (%rdx) 
+
+// CHECK: vmlaunch 
+// CHECK: encoding: [0x0f,0x01,0xc2]          
+vmlaunch 
+
+// CHECK: vmptrld 485498096 
+// CHECK: encoding: [0x0f,0xc7,0x34,0x25,0xf0,0x1c,0xf0,0x1c]         
+vmptrld 485498096 
+
+// CHECK: vmptrld 64(%rdx) 
+// CHECK: encoding: [0x0f,0xc7,0x72,0x40]         
+vmptrld 64(%rdx) 
+
+// CHECK: vmptrld 64(%rdx,%rax,4) 
+// CHECK: encoding: [0x0f,0xc7,0x74,0x82,0x40]         
+vmptrld 64(%rdx,%rax,4) 
+
+// CHECK: vmptrld -64(%rdx,%rax,4) 
+// CHECK: encoding: [0x0f,0xc7,0x74,0x82,0xc0]         
+vmptrld -64(%rdx,%rax,4) 
+
+// CHECK: vmptrld 64(%rdx,%rax) 
+// CHECK: encoding: [0x0f,0xc7,0x74,0x02,0x40]         
+vmptrld 64(%rdx,%rax) 
+
+// CHECK: vmptrld (%rdx) 
+// CHECK: encoding: [0x0f,0xc7,0x32]         
+vmptrld (%rdx) 
+
+// CHECK: vmptrst 485498096 
+// CHECK: encoding: [0x0f,0xc7,0x3c,0x25,0xf0,0x1c,0xf0,0x1c]         
+vmptrst 485498096 
+
+// CHECK: vmptrst 64(%rdx) 
+// CHECK: encoding: [0x0f,0xc7,0x7a,0x40]         
+vmptrst 64(%rdx) 
+
+// CHECK: vmptrst 64(%rdx,%rax,4) 
+// CHECK: encoding: [0x0f,0xc7,0x7c,0x82,0x40]         
+vmptrst 64(%rdx,%rax,4) 
+
+// CHECK: vmptrst -64(%rdx,%rax,4) 
+// CHECK: encoding: [0x0f,0xc7,0x7c,0x82,0xc0]         
+vmptrst -64(%rdx,%rax,4) 
+
+// CHECK: vmptrst 64(%rdx,%rax) 
+// CHECK: encoding: [0x0f,0xc7,0x7c,0x02,0x40]         
+vmptrst 64(%rdx,%rax) 
+
+// CHECK: vmptrst (%rdx) 
+// CHECK: encoding: [0x0f,0xc7,0x3a]         
+vmptrst (%rdx) 
+
+// CHECK: vmreadq %r15, 485498096 
+// CHECK: encoding: [0x44,0x0f,0x78,0x3c,0x25,0xf0,0x1c,0xf0,0x1c]        
+vmreadq %r15, 485498096 
+
+// CHECK: vmreadq %r15, 64(%rdx) 
+// CHECK: encoding: [0x44,0x0f,0x78,0x7a,0x40]        
+vmreadq %r15, 64(%rdx) 
+
+// CHECK: vmreadq %r15, 64(%rdx,%rax,4) 
+// CHECK: encoding: [0x44,0x0f,0x78,0x7c,0x82,0x40]        
+vmreadq %r15, 64(%rdx,%rax,4) 
+
+// CHECK: vmreadq %r15, -64(%rdx,%rax,4) 
+// CHECK: encoding: [0x44,0x0f,0x78,0x7c,0x82,0xc0]        
+vmreadq %r15, -64(%rdx,%rax,4) 
+
+// CHECK: vmreadq %r15, 64(%rdx,%rax) 
+// CHECK: encoding: [0x44,0x0f,0x78,0x7c,0x02,0x40]        
+vmreadq %r15, 64(%rdx,%rax) 
+
+// CHECK: vmreadq %r15, %r15 
+// CHECK: encoding: [0x45,0x0f,0x78,0xff]        
+vmreadq %r15, %r15 
+
+// CHECK: vmreadq %r15, (%rdx) 
+// CHECK: encoding: [0x44,0x0f,0x78,0x3a]        
+vmreadq %r15, (%rdx) 
+
+// CHECK: vmresume 
+// CHECK: encoding: [0x0f,0x01,0xc3]          
+vmresume 
+
+// CHECK: vmwriteq 485498096, %r15 
+// CHECK: encoding: [0x44,0x0f,0x79,0x3c,0x25,0xf0,0x1c,0xf0,0x1c]        
+vmwriteq 485498096, %r15 
+
+// CHECK: vmwriteq 64(%rdx), %r15 
+// CHECK: encoding: [0x44,0x0f,0x79,0x7a,0x40]        
+vmwriteq 64(%rdx), %r15 
+
+// CHECK: vmwriteq 64(%rdx,%rax,4), %r15 
+// CHECK: encoding: [0x44,0x0f,0x79,0x7c,0x82,0x40]        
+vmwriteq 64(%rdx,%rax,4), %r15 
+
+// CHECK: vmwriteq -64(%rdx,%rax,4), %r15 
+// CHECK: encoding: [0x44,0x0f,0x79,0x7c,0x82,0xc0]        
+vmwriteq -64(%rdx,%rax,4), %r15 
+
+// CHECK: vmwriteq 64(%rdx,%rax), %r15 
+// CHECK: encoding: [0x44,0x0f,0x79,0x7c,0x02,0x40]        
+vmwriteq 64(%rdx,%rax), %r15 
+
+// CHECK: vmwriteq %r15, %r15 
+// CHECK: encoding: [0x45,0x0f,0x79,0xff]        
+vmwriteq %r15, %r15 
+
+// CHECK: vmwriteq (%rdx), %r15 
+// CHECK: encoding: [0x44,0x0f,0x79,0x3a]        
+vmwriteq (%rdx), %r15 
+
+// CHECK: vmxoff 
+// CHECK: encoding: [0x0f,0x01,0xc4]          
+vmxoff 
+
+// CHECK: vmxon 485498096 
+// CHECK: encoding: [0xf3,0x0f,0xc7,0x34,0x25,0xf0,0x1c,0xf0,0x1c]         
+vmxon 485498096 
+
+// CHECK: vmxon 64(%rdx) 
+// CHECK: encoding: [0xf3,0x0f,0xc7,0x72,0x40]         
+vmxon 64(%rdx) 
+
+// CHECK: vmxon 64(%rdx,%rax,4) 
+// CHECK: encoding: [0xf3,0x0f,0xc7,0x74,0x82,0x40]         
+vmxon 64(%rdx,%rax,4) 
+
+// CHECK: vmxon -64(%rdx,%rax,4) 
+// CHECK: encoding: [0xf3,0x0f,0xc7,0x74,0x82,0xc0]         
+vmxon -64(%rdx,%rax,4) 
+
+// CHECK: vmxon 64(%rdx,%rax) 
+// CHECK: encoding: [0xf3,0x0f,0xc7,0x74,0x02,0x40]         
+vmxon 64(%rdx,%rax) 
+
+// CHECK: vmxon (%rdx) 
+// CHECK: encoding: [0xf3,0x0f,0xc7,0x32]         
+vmxon (%rdx) 
+

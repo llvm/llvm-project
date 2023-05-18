@@ -1,0 +1,16 @@
+# :ir is the flag to indicate this is IR level profile.
+:ir
+foo
+567185241952511723
+4
+3
+1
+2
+0
+
+bar
+784007058953177093
+2
+3
+2
+

@@ -1,0 +1,22 @@
+# RUN: dsymutil -no-output %p/../Inputs/fat-test.arm.dylib -o /dev/null -verbose 2>&1 | FileCheck %s
+
+# RUN: dsymutil --linker parallel -no-output %p/../Inputs/fat-test.arm.dylib -o /dev/null -verbose 2>&1 | FileCheck %s
+
+# We detect thumb triples from the binaries, because those are the only ones
+# that are guaranteed to be able to generate a Target instance (for example
+# we would detect armv7m-apple-darwin as non-thumb triple, but you can't
+# instantiate a Target from that). In the user-visible architecture names, and
+# in the lipo invocation, we need to rewrite the thumb arch names to the arm
+# ones.
+
+# CHECK: warning: no debug symbols in executable (-arch armv7)
+
+# CHECK: warning: no debug symbols in executable (-arch armv7s)
+
+# CHECK: warning: no debug symbols in executable (-arch arm64)
+
+# CHECK: Running lipo
+# CHECK-NEXT: lipo -create
+# CHECK-SAME: -segalign armv7
+# CHECK-SAME: -segalign armv7s
+# CHECK-SAME: -segalign arm64

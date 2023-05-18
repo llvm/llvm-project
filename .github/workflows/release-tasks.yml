@@ -1,0 +1,81 @@
+name: Release Task
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      # The regex support here is limited, so just match everything that starts with llvmorg- and filter later.
+      - 'llvmorg-*'
+
+jobs:
+  validate-tag:
+    name: Validate Tag
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    outputs:
+      release-version: ${{ steps.validate-tag.outputs.release-version }}
+    steps:
+      - name: Validate Tag
+        id: validate-tag
+        run: |
+          echo "${{ github.ref_name }}" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
+          release_version=$(echo "${{ github.ref_name }}" | sed 's/llvmorg-//g')
+          echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
+
+  release-create:
+    name: Create a New Release
+    runs-on: ubuntu-latest
+    needs: validate-tag
+
+    steps:
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install python3-github
+
+      - name: Checkout LLVM
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+        run: |
+          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --release ${{ needs.validate-tag.outputs.release-version }} --user ${{ github.actor }} --user-token "$USER_TOKEN" create
+  release-documentation:
+    name: Build and Upload Release Documentation
+    needs:
+      - validate-tag
+    uses: ./.github/workflows/release-documentation.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
+      upload: true
+
+  release-doxygen:
+    name: Build and Upload Release Doxygen
+    needs:
+      - validate-tag
+      - release-create
+    uses: ./.github/workflows/release-doxygen.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
+      upload: true
+
+  release-lit:
+    name: Release Lit
+    needs: validate-tag
+    uses: ./.github/workflows/release-lit.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
+
+  release-binaries:
+    name: Build Release Binaries
+    needs:
+      - validate-tag
+      - release-create
+    uses: ./.github/workflows/release-binaries.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
+      upload: true

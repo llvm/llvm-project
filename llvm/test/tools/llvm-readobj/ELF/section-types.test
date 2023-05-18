@@ -1,0 +1,247 @@
+# Show that all regular section types are properly printed for both LLVM and
+# GNU styles.
+
+# RUN: yaml2obj %s -o %t-basic.o
+# RUN: llvm-readobj --section-headers %t-basic.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --section-headers %t-basic.o | FileCheck %s --check-prefix=GNU
+
+# LLVM: Name: (0)
+# LLVM: Type: SHT_NULL
+# LLVM: Name: progbits
+# LLVM: Type: SHT_PROGBITS
+# LLVM: Name: rela
+# LLVM: Type: SHT_RELA
+# LLVM: Name: hash
+# LLVM: Type: SHT_HASH
+# LLVM: Name: dynamic
+# LLVM: Type: SHT_DYNAMIC
+# LLVM: Name: note
+# LLVM: Type: SHT_NOTE
+# LLVM: Name: nobits
+# LLVM: Type: SHT_NOBITS
+# LLVM: Name: rel
+# LLVM: Type: SHT_REL
+# LLVM: Name: shlib
+# LLVM: Type: SHT_SHLIB
+# LLVM: Name: dynsym
+# LLVM: Type: SHT_DYNSYM
+# LLVM: Name: init_array
+# LLVM: Type: SHT_INIT_ARRAY
+# LLVM: Name: fini_array
+# LLVM: Type: SHT_FINI_ARRAY
+# LLVM: Name: preinit_array
+# LLVM: Type: SHT_PREINIT_ARRAY
+# LLVM: Name: group
+# LLVM: Type: SHT_GROUP
+# LLVM: Name: symtab_shndx
+# LLVM: Type: SHT_SYMTAB_SHNDX
+# LLVM: Name: relr
+# LLVM: Type: SHT_RELR
+# LLVM: Name: android_rel
+# LLVM: Type: SHT_ANDROID_REL
+# LLVM: Name: android_rela
+# LLVM: Type: SHT_ANDROID_RELA
+# LLVM: Name: android_relr
+# LLVM: Type: SHT_ANDROID_RELR
+# LLVM: Name: llvm_odrtab
+# LLVM: Type: SHT_LLVM_ODRTAB
+# LLVM: Name: linker_options
+# LLVM: Type: SHT_LLVM_LINKER_OPTIONS
+# LLVM: Name: llvm_call_graph_profile
+# LLVM: Type: SHT_LLVM_CALL_GRAPH_PROFILE
+# LLVM: Name: llvm_addrsig
+# LLVM: Type: SHT_LLVM_ADDRSIG
+# LLVM: Name: .deplibs
+# LLVM: Type: SHT_LLVM_DEPENDENT_LIBRARIES
+# LLVM: Name: .llvm_sympart.f
+# LLVM: Type: SHT_LLVM_SYMPART
+# LLVM: Name: part1
+# LLVM: Type: SHT_LLVM_PART_EHDR
+# LLVM: Name: .phdrs
+# LLVM: Type: SHT_LLVM_PART_PHDR
+# LLVM: Name: .llvm.lto
+# LLVM: Type: SHT_LLVM_LTO
+# LLVM: Name: gnu_attributes
+# LLVM: Type: SHT_GNU_ATTRIBUTES
+# LLVM: Name: gnu_hash
+# LLVM: Type: SHT_GNU_HASH
+# LLVM: Name: gnu_verdef
+# LLVM: Type: SHT_GNU_verdef
+# LLVM: Name: gnu_verneed
+# LLVM: Type: SHT_GNU_verneed
+# LLVM: Name: unknown
+# LLVM: Type: Unknown (0x1000)
+# LLVM: Name: loos
+# LLVM: Type: Unknown (0x60000000)
+# LLVM: Name: fooos
+# LLVM: Type: Unknown (0x60000F00)
+# LLVM: Name: hios
+# LLVM: Type: SHT_GNU_versym
+# LLVM: Name: loproc
+# LLVM: Type: Unknown (0x70000000)
+# LLVM: Name: fooproc
+# LLVM: Type: Unknown (0x70000F00)
+# LLVM: Name: hiproc
+# LLVM: Type: Unknown (0x7FFFFFFF)
+# LLVM: Name: louser
+# LLVM: Type: Unknown (0x80000000)
+# LLVM: Name: foouser
+# LLVM: Type: Unknown (0x80000F00)
+# LLVM: Name: hiuser
+# LLVM: Type: Unknown (0xFFFFFFFF)
+# LLVM: Name: .symtab
+# LLVM: Type: SHT_SYMTAB
+# LLVM: Name: .strtab
+# LLVM: Type: SHT_STRTAB
+
+# GNU: [ 0]                         NULL
+# GNU-NEXT: progbits                PROGBITS
+# GNU-NEXT: rela                    RELA
+# GNU-NEXT: hash                    HASH
+# GNU-NEXT: dynamic                 DYNAMIC
+# GNU-NEXT: note                    NOTE
+# GNU-NEXT: nobits                  NOBITS
+# GNU-NEXT: rel                     REL
+# GNU-NEXT: shlib                   SHLIB
+# GNU-NEXT: dynsym                  DYNSYM
+# GNU-NEXT: init_array              INIT_ARRAY
+# GNU-NEXT: fini_array              FINI_ARRAY
+# GNU-NEXT: preinit_array           PREINIT_ARRAY
+# GNU-NEXT: group                   GROUP
+# GNU-NEXT: symtab_shndx            SYMTAB SECTION INDICES
+# GNU-NEXT: relr                    RELR
+# GNU-NEXT: android_rel             ANDROID_REL
+# GNU-NEXT: android_rela            ANDROID_RELA
+# GNU-NEXT: android_relr            ANDROID_RELR
+# GNU-NEXT: llvm_odrtab             LLVM_ODRTAB
+# GNU-NEXT: linker_options          LLVM_LINKER_OPTIONS
+# GNU-NEXT: llvm_call_graph_profile LLVM_CALL_GRAPH_PROFILE
+# GNU-NEXT: llvm_addrsig            LLVM_ADDRSIG
+# GNU-NEXT: .deplibs                LLVM_DEPENDENT_LIBRARIES
+# GNU-NEXT: .llvm_sympart.f         LLVM_SYMPART
+# GNU-NEXT: part1                   LLVM_PART_EHDR
+# GNU-NEXT: .phdrs                  LLVM_PART_PHDR
+# GNU-NEXT: .llvm.lto               LLVM_LTO
+# GNU-NEXT: gnu_attributes          ATTRIBUTES
+# GNU-NEXT: gnu_hash                GNU_HASH
+# GNU-NEXT: gnu_verdef              VERDEF
+# GNU-NEXT: gnu_verneed             VERNEED
+# GNU-NEXT: unknown                 0x1000: <unknown>
+# GNU-NEXT: loos                    LOOS+0x0
+# GNU-NEXT: fooos                   LOOS+0xF00
+# GNU-NEXT: hios                    VERSYM
+# GNU-NEXT: loproc                  LOPROC+0x0
+# GNU-NEXT: fooproc                 LOPROC+0xF00
+# GNU-NEXT: hiproc                  LOPROC+0xFFFFFFF
+# GNU-NEXT: louser                  LOUSER+0x0
+# GNU-NEXT: foouser                 LOUSER+0xF00
+# GNU-NEXT: hiuser                  LOUSER+0x7FFFFFFF
+# GNU-NEXT: .symtab                 SYMTAB
+# GNU-NEXT: .strtab                 STRTAB
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: progbits
+    Type: SHT_PROGBITS
+  - Name: rela
+    Type: SHT_RELA
+    Info: progbits
+  - Name: hash
+    Type: SHT_HASH
+    Content: ''
+  - Name: dynamic
+    Type: SHT_DYNAMIC
+  - Name: note
+    Type: SHT_NOTE
+    Notes: []
+  - Name: nobits
+    Type: SHT_NOBITS
+  - Name: rel
+    Type: SHT_REL
+    Info: progbits
+  - Name: shlib
+    Type: SHT_SHLIB
+  - Name: dynsym
+    Type: SHT_DYNSYM
+    Link: .strtab
+  - Name: init_array
+    Type: SHT_INIT_ARRAY
+  - Name: fini_array
+    Type: SHT_FINI_ARRAY
+  - Name: preinit_array
+    Type: SHT_PREINIT_ARRAY
+  - Name: group
+    Type: SHT_GROUP
+    Info: foo
+    Members:
+        - SectionOrType: 0
+  - Name: symtab_shndx
+    Type: SHT_SYMTAB_SHNDX
+    Link: .symtab
+    Entries: [ 0, 1 ]
+  - Name: relr
+    Type: SHT_RELR
+  - Name: android_rel
+    Type: SHT_ANDROID_REL
+  - Name: android_rela
+    Type: SHT_ANDROID_RELA
+  - Name: android_relr
+    Type: SHT_ANDROID_RELR
+  - Name: llvm_odrtab
+    Type: SHT_LLVM_ODRTAB
+  - Name: linker_options
+    Type: SHT_LLVM_LINKER_OPTIONS
+  - Name: llvm_call_graph_profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+  - Name: llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Symbols:
+  - Name: .deplibs
+    Type: SHT_LLVM_DEPENDENT_LIBRARIES
+  - Name: .llvm_sympart.f
+    Type: SHT_LLVM_SYMPART
+  - Name: part1
+    Type: SHT_LLVM_PART_EHDR
+  - Name: .phdrs
+    Type: SHT_LLVM_PART_PHDR
+  - Name: .llvm.lto
+    Type: SHT_LLVM_LTO
+  - Name: gnu_attributes
+    Type: SHT_GNU_ATTRIBUTES
+  - Name: gnu_hash
+    Type: SHT_GNU_HASH
+    Content: ""
+  - Name: gnu_verdef
+    Type: SHT_GNU_verdef
+    Entries:
+  - Name: gnu_verneed
+    Type: SHT_GNU_verneed
+    Dependencies:
+  - Name: unknown
+    Type: 0x1000
+  - Name: loos
+    Type: 0x60000000
+  - Name: fooos
+    Type: 0x60000F00
+  - Name: hios
+    Type: 0x6fffffff
+    Entries: []
+  - Name: loproc
+    Type: 0x70000000
+  - Name: fooproc
+    Type: 0x70000F00
+  - Name: hiproc
+    Type: 0x7fffffff
+  - Name: louser
+    Type: 0x80000000
+  - Name: foouser
+    Type: 0x80000F00
+  - Name: hiuser
+    Type: 0xffffffff
+Symbols:
+  - Name:    foo
+    Binding: STB_GLOBAL

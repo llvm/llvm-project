@@ -1,0 +1,72 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner \
+# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+
+# Ensure that we never outline calls into sequences where unsafe stack
+# instructions are present.
+
+--- |
+  define void @foo() #0 { ret void }
+  define void @bar() #0 { ret void }
+  define void @baz() #0 { ret void }
+  define void @f1() #0 { ret void }
+  define void @f2() #0 { ret void }
+  attributes #0 = { minsize noinline noredzone "frame-pointer"="all" }
+...
+---
+
+name:            f1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    ; CHECK-LABEL: name:            f1
+    ; CHECK: foo
+    ; CHECK-DAG: bar
+    ; CHECK-DAG: baz
+    $lr = ORRXri $xzr, 1
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $x20, $x19 = LDPXi $sp, 255
+    $x20, $x19 = LDPXi $sp, 255
+    $x20, $x19 = LDPXi $sp, 255
+    $x20, $x19 = LDPXi $sp, 255
+  bb.1:
+    BL @bar, implicit-def dead $lr, implicit $sp
+    $x11 = ADDXri $sp, 48, 0;
+    $x12 = ADDXri $sp, 48, 0;
+    $x13 = ADDXri $sp, 48, 0;
+    $x14 = ADDXri $sp, 48, 0;
+  bb.2:
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $x0 = ADDXri $sp, 48, 0;
+    $x1 = ADDXri $sp, 48, 0;
+    RET undef $lr
+
+...
+---
+
+name:            f2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr
+    ; CHECK-LABEL: name:            f2
+    ; CHECK: foo
+    ; CHECK-DAG: bar
+    ; CHECK-DAG: baz
+    $lr = ORRXri $xzr, 1
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $x20, $x19 = LDPXi $sp, 255
+    $x20, $x19 = LDPXi $sp, 255
+    $x20, $x19 = LDPXi $sp, 255
+    $x20, $x19 = LDPXi $sp, 255
+  bb.1:
+    BL @bar, implicit-def dead $lr, implicit $sp
+    $x11 = ADDXri $sp, 48, 0;
+    $x12 = ADDXri $sp, 48, 0;
+    $x13 = ADDXri $sp, 48, 0;
+    $x14 = ADDXri $sp, 48, 0;
+  bb.2:
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $x0 = ADDXri $sp, 48, 0;
+    $x1 = ADDXri $sp, 48, 0;
+    RET undef $lr

@@ -1,0 +1,25 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define double @test(double %a, float %b) {
+  entry:
+    %c = fadd double %a, 3.250000e+00
+    ret double %c
+  }
+
+...
+---
+name:            test
+constants:
+  - id:          0
+    value:       'double 3.250000e+00'
+# CHECK: [[@LINE+1]]:18: redefinition of constant pool item '%const.0'
+  - id:          0
+    value:       'double 3.250000e+00'
+body: |
+  bb.0.entry:
+    %xmm0 = ADDSDrm killed %xmm0, %rip, 1, _, %const.0, _
+    RET64 %xmm0
+...
+

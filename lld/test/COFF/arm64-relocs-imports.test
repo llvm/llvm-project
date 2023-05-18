@@ -1,0 +1,296 @@
+# REQUIRES: aarch64
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-objdump --no-print-imm-hex -d %t.obj | FileCheck %s --check-prefix BEFORE
+# RUN: lld-link /entry:main /subsystem:console /out:%t.exe %t.obj %p/Inputs/library-arm64.lib
+# RUN: llvm-objdump --no-print-imm-hex -d %t.exe | FileCheck %s --check-prefix AFTER
+
+# BEFORE: Disassembly of section .text:
+# BEFORE-EMPTY:
+# BEFORE:        0:       f81f0ffe        str     x30, [sp, #-16]!
+# BEFORE:        4:       90000000        adrp    x0, 0x0
+# BEFORE:        8:       91000800        add     x0, x0, #2
+# BEFORE:        c:       94000000        bl      0xc
+# BEFORE:       10:       39400100        ldrb    w0, [x8]
+# BEFORE:       14:       79400100        ldrh    w0, [x8]
+# BEFORE:       18:       b9400100        ldr     w0, [x8]
+# BEFORE:       1c:       f9400100        ldr     x0, [x8]
+# BEFORE:       20:       39000100        strb    w0, [x8]
+# BEFORE:       24:       79000100        strh    w0, [x8]
+# BEFORE:       28:       b9000100        str     w0, [x8]
+# BEFORE:       2c:       f9000100        str     x0, [x8]
+# BEFORE:       30:       3d400100        ldr     b0, [x8]
+# BEFORE:       34:       7d400100        ldr     h0, [x8]
+# BEFORE:       38:       bd400100        ldr     s0, [x8]
+# BEFORE:       3c:       fd400100        ldr     d0, [x8]
+# BEFORE:       40:       3dc00100        ldr     q0, [x8]
+# BEFORE:       44:       3d000100        str     b0, [x8]
+# BEFORE:       48:       7d000100        str     h0, [x8]
+# BEFORE:       4c:       bd000100        str     s0, [x8]
+# BEFORE:       50:       fd000100        str     d0, [x8]
+# BEFORE:       54:       3d800100        str     q0, [x8]
+# BEFORE:       58:       f9400500        ldr     x0, [x8, #8]
+# BEFORE:       5c:       b0011a20        adrp    x0, 0x2345000
+# BEFORE:       60:       f94ffc00        ldr     x0, [x0, #8184]
+# BEFORE:       64:       2a1f03e0        mov      w0, wzr
+# BEFORE:       68:       f84107fe        ldr     x30, [sp], #16
+# BEFORE:       6c:       d65f03c0        ret
+# BEFORE:       70:       00000008        udf #8
+# BEFORE:       74:       00000000        udf #0
+# BEFORE:       78:       00000001        udf #1
+# BEFORE:       7c:       00000001        udf #1
+# BEFORE:       80:       91000000        add     x0, x0, #0
+# BEFORE:       84:       91400000        add     x0, x0, #0, lsl #12
+# BEFORE:       88:       f9400000        ldr     x0, [x0]
+# BEFORE:       8c:       00000001        udf #1
+# BEFORE:       90:       30091a20        adr x0, 0x123d5
+# BEFORE:       94:       54000001        b.ne    0x94
+# BEFORE:       98:       36000000        tbz     w0, #0, 0x98
+# BEFORE:       9c:       00000001        udf #1
+# BEFORE:       a0:       90800002        adrp    x2, 0xffffffff00000000
+
+# AFTER: Disassembly of section .text:
+# AFTER-EMPTY:
+# AFTER:  140001000:      f81f0ffe        str     x30, [sp, #-16]!
+# AFTER:  140001004:      b0000000        adrp    x0, 0x140002000
+# AFTER:  140001008:      91001800        add     x0, x0, #6
+# AFTER:  14000100c:      94000026        bl      0x1400010a4
+# AFTER:  140001010:      39402100        ldrb    w0, [x8, #8]
+# AFTER:  140001014:      79401100        ldrh    w0, [x8, #8]
+# AFTER:  140001018:      b9400900        ldr     w0, [x8, #8]
+# AFTER:  14000101c:      f9400500        ldr     x0, [x8, #8]
+# AFTER:  140001020:      39002100        strb    w0, [x8, #8]
+# AFTER:  140001024:      79001100        strh    w0, [x8, #8]
+# AFTER:  140001028:      b9000900        str     w0, [x8, #8]
+# AFTER:  14000102c:      f9000500        str     x0, [x8, #8]
+# AFTER:  140001030:      3d404100        ldr     b0, [x8, #16]
+# AFTER:  140001034:      7d402100        ldr     h0, [x8, #16]
+# AFTER:  140001038:      bd401100        ldr     s0, [x8, #16]
+# AFTER:  14000103c:      fd400900        ldr     d0, [x8, #16]
+# AFTER:  140001040:      3dc00500        ldr     q0, [x8, #16]
+# AFTER:  140001044:      3d004100        str     b0, [x8, #16]
+# AFTER:  140001048:      7d002100        str     h0, [x8, #16]
+# AFTER:  14000104c:      bd001100        str     s0, [x8, #16]
+# AFTER:  140001050:      fd000900        str     d0, [x8, #16]
+# AFTER:  140001054:      3d800500        str     q0, [x8, #16]
+# AFTER:  140001058:      f9400900        ldr     x0, [x8, #16]
+# AFTER:  14000105c:      f0000000        adrp    x0, 0x140004000
+# AFTER:  140001060:      f947fc00        ldr     x0, [x0, #4088]
+# AFTER:  140001064:      2a1f03e0        mov      w0, wzr
+# AFTER:  140001068:      f84107fe        ldr     x30, [sp], #16
+# AFTER:  14000106c:      d65f03c0        ret
+# AFTER:  140001070:      40002010        <unknown>
+# AFTER:  140001074:      00000001        udf #1
+# AFTER:  140001078:      00002009        udf #8201
+# AFTER:  14000107c:      00000009        udf #9
+# AFTER:  140001080:      910e2000        add     x0, x0, #904
+# AFTER:  140001084:      91400400        add     x0, x0, #1, lsl #12
+# AFTER:  140001088:      f941c400        ldr     x0, [x0, #904]
+# AFTER:  14000108c:      00000003        udf #3
+# AFTER:  140001090:      300995e0        adr     x0, 0x14001434d
+# AFTER:  140001094:      54000081        b.ne    0x1400010a4
+# AFTER:  140001098:      36000060        tbz     w0, #0, 0x1400010a4
+# AFTER:  14000109c:      ffffff61        <unknown>
+# AFTER:  1400010a0:      b0fff802        adrp    x2,  0x13ff02000
+# AFTER:  1400010a4:      b0000010        adrp    x16, 0x140002000
+# AFTER:  1400010a8:      f9402a10        ldr     x16, [x16, #80]
+# AFTER:  1400010ac:      d61f0200        br      x16
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     FE0F1FF80000009000080091000000940001403900014079000140B9000140F90001003900010079000100B9000100F90001403D0001407D000140BD000140FD0001C03D0001003D0001007D000100BD000100FD0001803D000540F9201A01B000FC4FF9E0031F2AFE0741F8C0035FD6080000000000000001000000010000000000009100004091000040f901000000201a093001000054000000360100000002008090
+    Relocations:
+      - VirtualAddress:  4
+        SymbolName:      .Lstr
+        Type:            IMAGE_REL_ARM64_PAGEBASE_REL21
+      - VirtualAddress:  8
+        SymbolName:      .Lstr
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12A
+      - VirtualAddress:  12
+        SymbolName:      function
+        Type:            IMAGE_REL_ARM64_BRANCH26
+      - VirtualAddress:  16
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  20
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  24
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  28
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  32
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  36
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  40
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  44
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  48
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  52
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  56
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  60
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  64
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  68
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  72
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  76
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  80
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  84
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  88
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  92
+        SymbolName:      .Lglobal16
+        Type:            IMAGE_REL_ARM64_PAGEBASE_REL21
+      - VirtualAddress:  96
+        SymbolName:      .Lglobal0
+        Type:            IMAGE_REL_ARM64_PAGEOFFSET_12L
+      - VirtualAddress:  112
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_ADDR64
+      - VirtualAddress:  120
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_ADDR32NB
+      - VirtualAddress:  124
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_SECREL
+      - VirtualAddress:  128
+        SymbolName:      .Lglobal5000
+        Type:            IMAGE_REL_ARM64_SECREL_LOW12A
+      - VirtualAddress:  132
+        SymbolName:      .Lglobal5000
+        Type:            IMAGE_REL_ARM64_SECREL_HIGH12A
+      - VirtualAddress:  136
+        SymbolName:      .Lglobal5000
+        Type:            IMAGE_REL_ARM64_SECREL_LOW12L
+      - VirtualAddress:  140
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_SECTION
+      - VirtualAddress:  144
+        SymbolName:      .Lglobal
+        Type:            IMAGE_REL_ARM64_REL21
+      - VirtualAddress:  148
+        SymbolName:      function
+        Type:            IMAGE_REL_ARM64_BRANCH19
+      - VirtualAddress:  152
+        SymbolName:      function
+        Type:            IMAGE_REL_ARM64_BRANCH14
+      - VirtualAddress:  156
+        SymbolName:      main
+        Type:            IMAGE_REL_ARM64_REL32
+      - VirtualAddress:  160
+        SymbolName:      .Lstr
+        Type:            IMAGE_REL_ARM64_PAGEBASE_REL21
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .bss
+    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     00000000202068656C6C6F20776F726C6400
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          28
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        1438860354
+      Number:          1
+  - Name:            .rdata
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          12
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        872944732
+      Number:          4
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            .Lstr
+    Value:           4
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .Lglobal
+    Value:           8
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .Lglobal16
+    Value:           16
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .Lglobal0
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            function
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            .Lglobal5000
+    Value:           5000
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+...

@@ -1,0 +1,3 @@
+RUN: yaml2obj %p/Inputs/COFF/empty-drectve.yaml | llvm-readobj --coff-directives - | FileCheck %s
+
+CHECK: Directive(s): {{$}}

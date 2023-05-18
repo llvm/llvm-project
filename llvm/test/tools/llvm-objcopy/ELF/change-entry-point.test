@@ -1,0 +1,59 @@
+# RUN: yaml2obj %s -o %t
+
+# Test --set-start.
+# RUN: llvm-objcopy --set-start 0x1000 %t %t2
+# RUN: llvm-readobj --file-headers %t2 | FileCheck %s --check-prefix=SET
+# RUN: llvm-objcopy --set-start 4096 %t %t3
+# RUN: cmp %t2 %t3
+# RUN: llvm-objcopy --set-start 0x100000000 %t %t4
+# RUN: llvm-readobj --file-headers %t4 | FileCheck %s --check-prefix=SET-LARGE
+# RUN: not llvm-objcopy --set-start -123 %t %t5 2>&1 | FileCheck %s --check-prefix=SET-ERR
+
+# Test --change-start.
+# RUN: llvm-objcopy --change-start 0x50 %t %t6
+# RUN: llvm-readobj --file-headers %t6 | FileCheck %s --check-prefix=ADD
+# RUN: llvm-objcopy --change-start 0x100000000 %t %t7
+# RUN: llvm-readobj --file-headers %t7 | FileCheck %s --check-prefix=ADD-LARGE
+# RUN: llvm-objcopy --change-start -128 %t %t8
+# RUN: llvm-readobj --file-headers %t8 | FileCheck %s --check-prefix=SUB
+# RUN: llvm-objcopy --change-start -4353 %t %t9
+# RUN: llvm-readobj --file-headers %t9 | FileCheck %s --check-prefix=ADD-UNDERFLOW
+# RUN: llvm-objcopy --change-start -0x1101 %t %t10
+# RUN: cmp %t9 %t10
+# RUN: not llvm-objcopy --change-start -xyz %t %t11 2>&1 | FileCheck %s --check-prefix=ADD-ERR
+
+# Test --change-start after --set-start. Result should be 0x1150.
+# RUN: llvm-objcopy --set-start 0x1000 --change-start 0x100 --change-start 0x50 %t %t12
+# RUN: cmp %t6 %t12
+
+# If --set-start is after --change-start then --change-start has no effect.
+# RUN: llvm-objcopy --change-start 0x150 --set-start 0x1000 %t %t13
+# RUN: cmp %t2 %t13
+
+# --adjust-start is an alias for --change-start.
+# RUN: llvm-objcopy --adjust-start -0x1101 %t %t14
+# RUN: cmp %t10 %t14
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x1100
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000001000
+    Size:            0x200
+
+# SET: Entry: 0x1000
+# ADD: Entry: 0x1150
+# SUB: Entry: 0x1080
+# SET-ERR: error: bad entry point address: '-123'
+# SET-LARGE: Entry: 0x100000000
+# ADD-LARGE: Entry: 0x100001100
+# ADD-ERR: error: bad entry point increment: '-xyz'
+# ADD-UNDERFLOW: Entry: 0xFFFFFFFFFFFFFFFF

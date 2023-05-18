@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<body>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
+<script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
+<div id="graph" style="text-align: center;"></div>
+<script>
+var dotSrc = `
+<INSERT_DOT>
+`;
+
+var dotSrcLines;
+// Label to assembly line mapping
+var labelAsm = {};
+// regex to find node label line
+const re = /^"(?<node>[^"]+)" \[label="\1/;
+var graphviz = d3.select("#graph").graphviz();
+
+function render() {
+  var t = d3.transition().delay(100).duration(500);
+  graphviz.transition(t).renderDot(dotSrc).on("end", interactive);
+}
+
+function setup() {
+  dotSrcLines = dotSrc.split('\n');
+  console.log("Removing assembly lines from nodes");
+  // find the assembly line for each label and preserve it in labelAsm
+  for (i = 0; i < dotSrcLines.length;) {
+      console.log("checking line %d: %s", i, dotSrcLines[i]);
+      match = dotSrcLines[i].match(re);
+      if (match && dotSrcLines[i+2].startsWith(' ')) {
+          console.log(match);
+          node = match.groups['node'];
+          console.log('Found node "%s" on line %d', node, i);
+          labelAsm[node] = dotSrcLines[i+2];
+          console.log(labelAsm);
+          console.log('Deleting line %d: %s', i+2, dotSrcLines[i+2]);
+          dotSrcLines.splice(i+2, 1);
+          i = i+3;
+      } else {
+          i++;
+      }
+  }
+  dotSrc = dotSrcLines.join('\n');
+  render();
+}
+
+function interactive() {
+  nodes = d3.selectAll('.node');
+  nodes.on("click", function () {
+    var title = d3.select(this).selectAll('title').text().trim();
+    var text = d3.select(this).selectAll('text').text();
+    var id = d3.select(this).attr('id');
+    var class1 = d3.select(this).attr('class');
+    dotElement = title.replace('->',' -> ');
+    console.log('Element id="%s" class="%s" title="%s" text="%s" dotElement="%s"', id, class1, title, text, dotElement);
+    console.log('Inserting assembly line for "%s"', dotElement);
+    for (i = 0; i < dotSrcLines.length;) {
+        var match = dotSrcLines[i].match(re);
+        if (match) {
+            var node = match.groups['node'];
+            if (node === dotElement) {
+                // check if we have an assembly line
+                var asm = labelAsm[node];
+                if (asm) {
+                    // toggle the assembly line
+                    if (dotSrcLines[i+2].startsWith(' ')) {
+                        dotSrcLines.splice(i+2, 1);
+                    } else {
+                        dotSrcLines.splice(i+2, 0, asm);
+                    }
+                    break;
+                }
+            }
+        }
+        i++;
+    }
+    dotSrc = dotSrcLines.join('\n');
+    render();
+  });
+}
+
+setup();
+</script>

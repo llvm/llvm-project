@@ -1,0 +1,44 @@
+## Check we do not fail to dump the section headers when
+## a .shstrtab section does not have a SHT_STRTAB type.
+
+## Check we report only one warning for the issue for each input object.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj -S %t1 2>&1 | FileCheck %s -DFILE=%t1 --implicit-check-not warning --check-prefix LLVM
+# RUN: llvm-readelf -S %t1 2>&1 | FileCheck %s -DFILE=%t1 --implicit-check-not warning --check-prefix GNU
+
+# LLVM: warning: '[[FILE]]': invalid sh_type for string table section [index 1]: expected SHT_STRTAB, but got SHT_PROGBITS
+# LLVM:  Section {
+# LLVM:    Name: .shstrtab
+# LLVM:    Type: SHT_PROGBITS
+
+# GNU: Section Headers:
+# GNU:   [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# GNU: warning: '[[FILE]]': invalid sh_type for string table section [index 1]: expected SHT_STRTAB, but got SHT_PROGBITS
+# GNU:   [ 1] .shstrtab         PROGBITS        0000000000000000 000040 000013 00 0   0  0
+
+## Test we report multiple identical warnings (one for each object) when dumping an archive.
+
+# RUN: rm -f %t.a
+# RUN: cp %t1 %t2
+# RUN: llvm-ar rc %t.a %t1 %t2 %t1
+# RUN: llvm-readobj -S %t.a 2>&1 | FileCheck %s --implicit-check-not warning --check-prefix WARNINGS
+# RUN: llvm-readelf -S %t.a 2>&1 | FileCheck %s --implicit-check-not warning --check-prefix WARNINGS
+
+# WARNINGS: warning: '{{.*}}1': invalid sh_type for string table section [index 1]: expected SHT_STRTAB, but got SHT_PROGBITS
+# WARNINGS: warning: '{{.*}}2': invalid sh_type for string table section [index 1]: expected SHT_STRTAB, but got SHT_PROGBITS
+# WARNINGS: warning: '{{.*}}1': invalid sh_type for string table section [index 1]: expected SHT_STRTAB, but got SHT_PROGBITS
+
+## Test we report the warning for each input file specified on the command line.
+
+# RUN: llvm-readobj -S %t1 %t2 %t1 2>&1 | FileCheck %s --implicit-check-not warning --check-prefix WARNINGS
+# RUN: llvm-readelf -S %t1 %t2 %t1 2>&1 | FileCheck %s --implicit-check-not warning --check-prefix WARNINGS
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .shstrtab
+    Type: SHT_PROGBITS

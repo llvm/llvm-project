@@ -1,0 +1,5 @@
+# RUN: llvm-mc --disassemble %s -triple=s390x-linux-gnu 2>&1 | FileCheck %s
+# Every instruction must be at least two bytes long.
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: 0xc4
+0xc4

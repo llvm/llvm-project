@@ -1,0 +1,232 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=si-optimize-exec-masking-pre-ra,greedy -verify-machineinstrs -o - %s
+
+# This sample can trigger a "Non-empty but used interval" assert in regalloc if
+# SIOptimizeExecMaskingPreRA does not update live intervals correctly.
+
+---
+name:            foo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:sreg_32_xm0_xexec = IMPLICIT_DEF
+    %2:sreg_64_xexec = IMPLICIT_DEF
+    %3:sgpr_32 = IMPLICIT_DEF
+    %4:sreg_32_xexec_hi = IMPLICIT_DEF
+    %5:sreg_32 = IMPLICIT_DEF
+    %6:sreg_32 = IMPLICIT_DEF
+    %7:sreg_32 = IMPLICIT_DEF
+    %8:sreg_32 = IMPLICIT_DEF
+    %9:sreg_32 = IMPLICIT_DEF
+    %10:sreg_32 = IMPLICIT_DEF
+    %11:sreg_32 = IMPLICIT_DEF
+    %12:sreg_64_xexec = IMPLICIT_DEF
+    %13:sreg_64_xexec = IMPLICIT_DEF
+    %14:sreg_32 = IMPLICIT_DEF
+    %15:sreg_32 = IMPLICIT_DEF
+    %16:sreg_32 = IMPLICIT_DEF
+    %17:sreg_32 = IMPLICIT_DEF
+    %18:sgpr_32 = IMPLICIT_DEF
+    $exec_lo = S_MOV_B32_term undef %9
+    S_BRANCH %bb.2
+
+  bb.1:
+    $exec_lo = S_XOR_B32_term $exec_lo, undef %10, implicit-def $scc
+    S_CBRANCH_EXECZ %bb.39, implicit $exec
+    S_BRANCH %bb.32
+
+  bb.2:
+    S_CMP_EQ_U32 %15, undef %15, implicit-def $scc
+    %19:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit killed undef $scc
+    %20:sreg_32 = IMPLICIT_DEF
+    dead $vcc_lo = COPY undef %20
+    S_CBRANCH_VCCNZ %bb.3, implicit $vcc
+    S_BRANCH %bb.3
+
+  bb.3:
+    dead $vcc_lo = S_AND_B32 $exec_lo, undef %19, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.6, implicit $vcc
+    S_BRANCH %bb.4
+
+  bb.4:
+    %21:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %19, implicit $exec
+    %22:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 1, undef %21, implicit $exec
+    dead $vcc_lo = S_AND_B32 $exec_lo, undef %22, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.7, implicit $vcc
+    S_BRANCH %bb.5
+
+  bb.5:
+    S_BRANCH %bb.7
+
+  bb.6:
+    $vcc_lo = COPY %20
+    %18:sgpr_32 = COPY %18
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_BRANCH %bb.2
+
+  bb.7:
+    %23:sreg_32 = S_AND_B32 undef %20, %9, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term undef %23
+    S_CBRANCH_EXECZ %bb.10, implicit $exec
+    S_BRANCH %bb.9
+
+  bb.8:
+    %24:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR %13, undef %21, 0, 0, implicit $exec
+    S_BRANCH %bb.28
+
+  bb.9:
+    S_BRANCH %bb.11
+
+  bb.10:
+    $exec_lo = S_XOR_B32_term $exec_lo, %23, implicit-def $scc
+    S_CBRANCH_EXECZ %bb.31, implicit $exec
+    S_BRANCH %bb.8
+
+  bb.11:
+    %25:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR %2, undef %21, 0, 0, implicit $exec
+    $exec_lo = S_MOV_B32_term undef %23
+    S_CBRANCH_EXECZ %bb.12, implicit $exec
+    S_BRANCH %bb.14
+
+  bb.12:
+    $exec_lo = S_XOR_B32_term $exec_lo, undef %23, implicit-def $scc
+    S_CBRANCH_EXECZ %bb.15, implicit $exec
+    S_BRANCH %bb.13
+
+  bb.13:
+    $exec_lo = S_MOV_B32_term undef %23
+    S_CBRANCH_EXECZ %bb.15, implicit $exec
+    S_BRANCH %bb.15
+
+  bb.14:
+    %26:vgpr_32 = V_BFI_B32_e64 2147483647, %3, undef %25, implicit $exec
+    %27:vgpr_32 = V_CNDMASK_B32_e64 0, undef %26, 0, 2143289344, %1, implicit $exec
+    dead %28:vgpr_32, %29:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %12.sub0, undef %27, 0, implicit $exec
+    %30:vgpr_32, dead %31:sreg_32_xm0_xexec = V_ADDC_U32_e64 %12.sub1, undef %27, undef %22, 0, implicit $exec
+    SCRATCH_STORE_DWORD_SADDR undef %27, %4, 0, 0, implicit $exec, implicit $flat_scr
+    S_BRANCH %bb.12
+
+  bb.15:
+    %32:sreg_32 = IMPLICIT_DEF
+    $exec_lo = S_MOV_B32_term undef %32
+    S_CBRANCH_EXECZ %bb.17, implicit $exec
+    S_BRANCH %bb.16
+
+  bb.16:
+    %33:sreg_32 = S_AND_B32 undef %32, %16, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term undef %33
+    S_CBRANCH_EXECZ %bb.17, implicit $exec
+    S_BRANCH %bb.17
+
+  bb.17:
+    $exec_lo = S_XOR_B32_term $exec_lo, undef %32, implicit-def $scc
+    S_CBRANCH_EXECZ %bb.30, implicit $exec
+    S_BRANCH %bb.18
+
+  bb.18:
+    %34:sreg_32 = IMPLICIT_DEF
+    %35:sreg_32 = S_AND_B32 undef %34, %17, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term undef %35
+    S_CBRANCH_EXECZ %bb.20, implicit $exec
+    S_BRANCH %bb.19
+
+  bb.19:
+    dead %36:vgpr_32, $sgpr_null = V_ADD_CO_U32_e64 %14, undef %25, 0, implicit $exec
+    %37:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.21
+
+  bb.20:
+    $exec_lo = S_OR_B32 $exec_lo, %34, implicit-def $scc
+    S_BRANCH %bb.30
+
+  bb.21:
+    %38:sreg_32 = IMPLICIT_DEF
+    $exec_lo = S_MOV_B32_term undef %38
+    S_CBRANCH_EXECZ %bb.23, implicit $exec
+    S_BRANCH %bb.22
+
+  bb.22:
+    S_BRANCH %bb.24
+
+  bb.23:
+    S_BRANCH %bb.26
+
+  bb.24:
+    %39:sreg_32 = S_AND_B32 undef %38, %11, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term undef %39
+    S_CBRANCH_EXECZ %bb.38, implicit $exec
+    S_BRANCH %bb.25
+
+  bb.25:
+    %40:sreg_32 = S_AND_B32 %5, $exec_lo, implicit-def dead $scc
+    S_BRANCH %bb.38
+
+  bb.26:
+    %37:sreg_32 = S_OR_B32 %38, %37, implicit-def $scc
+    $exec_lo = S_ANDN2_B32_term $exec_lo, undef %37, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.21, implicit $exec
+    S_BRANCH %bb.27
+
+  bb.27:
+    %41:sreg_32 = S_OR_B32 undef %37, %35, implicit-def $scc
+    $exec_lo = S_ANDN2_B32_term $exec_lo, undef %35, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.21, implicit $exec
+    S_BRANCH %bb.20
+
+  bb.28:
+    dead $vcc_lo = S_AND_B32 $exec_lo, %22, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.29, implicit $vcc
+    S_BRANCH %bb.29
+
+  bb.29:
+    $exec_lo = S_ANDN2_B32_term $exec_lo, undef %23, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.28, implicit $exec
+    S_BRANCH %bb.31
+
+  bb.30:
+    $exec_lo = S_OR_B32 $exec_lo, %32, implicit-def $scc
+    S_BRANCH %bb.10
+
+  bb.31:
+    %42:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 undef %23, %21, implicit $exec
+    $vcc_lo = S_AND_B32 $exec_lo, undef %42, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.6, implicit killed $vcc
+
+  bb.32:
+    %43:sreg_32 = S_AND_B32 %10, %8, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term undef %43
+    S_CBRANCH_EXECZ %bb.37, implicit $exec
+    S_BRANCH %bb.33
+
+  bb.33:
+    %44:sreg_32 = S_AND_B32 undef %43, %0, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term undef %44
+    S_CBRANCH_EXECZ %bb.37, implicit $exec
+    S_BRANCH %bb.34
+
+  bb.34:
+    %45:sreg_32 = S_AND_B32 undef %44, %6, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term undef %45
+    S_CBRANCH_EXECZ %bb.37, implicit $exec
+    S_BRANCH %bb.35
+
+  bb.35:
+    %46:sreg_32 = S_AND_B32 undef %45, %7, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term undef %46
+    S_CBRANCH_EXECZ %bb.36, implicit $exec
+    S_BRANCH %bb.37
+
+  bb.36:
+    S_BRANCH %bb.37
+
+  bb.37:
+    dead $vcc_lo = COPY undef %47:sreg_32
+    S_BRANCH %bb.39
+
+  bb.38:
+    S_BRANCH %bb.26
+
+  bb.39:
+    SI_RETURN
+
+...

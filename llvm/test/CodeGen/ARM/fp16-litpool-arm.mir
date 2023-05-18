@@ -1,0 +1,91 @@
+# RUN: llc -mtriple=arm-none-eabi -run-pass=arm-cp-islands %s -o - | FileCheck %s
+#
+# This checks alignment of a new block when a big basic block is split up.
+#
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "arm-arm--eabi"
+
+  declare i32 @llvm.arm.space(i32, i32) #0
+
+  define dso_local i32 @ARM(ptr %LL, i32 %A.coerce) local_unnamed_addr #1 {
+  entry:
+    %S = alloca half, align 2
+    %tmp.0.extract.trunc = trunc i32 %A.coerce to i16
+    %0 = bitcast i16 %tmp.0.extract.trunc to half
+    store volatile half 0xH3C00, ptr %S, align 2
+    store volatile i64 4242424242424242, ptr %LL, align 8
+    %1 = call i32 @llvm.arm.space(i32 8920, i32 undef)
+    %S.0.S.0.570 = load volatile half, ptr %S, align 2
+    %add298 = fadd half %S.0.S.0.570, 0xH2E66
+    store volatile half %add298, ptr %S, align 2
+    %2 = call i32 @llvm.arm.space(i32 1350, i32 undef)
+    %3 = bitcast half %add298 to i16
+    %tmp343.0.insert.ext = zext i16 %3 to i32
+    ret i32 %tmp343.0.insert.ext
+  }
+
+  attributes #0 = { nounwind }
+  attributes #1 = { minsize nounwind optsize "target-features"="+crc,+crypto,+dsp,+fp-armv8,+fullfp16,+hwdiv,+hwdiv-arm,+neon,+ras,+strict-align,-thumb-mode" }
+
+...
+---
+name:            ARM
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+frameInfo:
+  stackSize:       4
+  maxAlignment:    2
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, name: S, offset: -2, size: 2, alignment: 2, stack-id: default, local-offset: -2 }
+constants:
+  - id:              0
+    value:           i32 1576323506
+    alignment:       4
+  - id:              1
+    value:           i32 987766
+    alignment:       4
+  - id:              2
+    value:           half 0xH2E66
+    alignment:       2
+
+#CHECK:  B %[[BB4:bb.[0-9]]]
+#CHECK:  bb.{{.}} (align 4):
+#CHECK:    successors:
+#CHECK:    CONSTPOOL_ENTRY {{.}}, %const.{{.}}, 4
+#CHECK:  bb.{{.}} (align 4):
+#CHECK:    successors:
+#CHECK:    CONSTPOOL_ENTRY {{.}}, %const.{{.}}, 4
+#CHECK:  bb.{{.}} (align 2):
+#CHECK:    successors:
+#CHECK:    CONSTPOOL_ENTRY {{.}}, %const.{{.}}, 2
+#CHECK:  [[BB4]].entry (align 4):
+
+body:             |
+  bb.0.entry:
+    liveins: $r0
+
+    $sp = frame-setup SUBri $sp, 4, 14, $noreg, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_offset 4
+    renamable $s0 = FCONSTH 112, 14, $noreg
+    renamable $r1 = LDRcp %const.0, 0, 14, $noreg :: (load (s32) from constant-pool)
+    renamable $r2 = LDRcp %const.1, 0, 14, $noreg :: (load (s32) from constant-pool)
+    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
+    STRi12 killed renamable $r2, renamable $r0, 4, 14, $noreg :: (volatile store (s32) into %ir.LL + 4)
+    renamable $s0 = VLDRH %const.2, 0, 14, $noreg :: (load (s16) from constant-pool)
+    STRi12 killed renamable $r1, killed renamable $r0, 0, 14, $noreg :: (volatile store (s32) into %ir.LL, align 8)
+    dead renamable $r0 = SPACE 8920, undef renamable $r0
+    renamable $s2 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load (s16) from %ir.S)
+    renamable $s0 = VADDH killed renamable $s2, killed renamable $s0, 14, $noreg
+    VSTRH renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
+    renamable $r0 = VMOVRH killed renamable $s0, 14, $noreg
+    dead renamable $r1 = SPACE 1350, undef renamable $r0
+    $sp = ADDri $sp, 4, 14, $noreg, $noreg
+    MOVPCLR 14, $noreg, implicit killed $r0
+
+...

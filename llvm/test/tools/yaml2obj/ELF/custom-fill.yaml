@@ -1,0 +1,330 @@
+## Here we check that we are able to define sections with a type of "Fill".
+## Fills are custom pieces of data that can be placed anywhere just like normal
+## output sections, but they are not real output sections and you'll never see them in
+## the section headers.
+
+## Check we can create named and unnamed fills and use "Pattern" and "Size" fields
+## to describe the data emitted.
+## Check the data emitted and how it affects regular sections offsets.
+## Check that the "Name" field is optional for fills.
+## Check that "Size" can be greater than or equal to the pattern data size.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf --sections --headers %t1 | FileCheck %s --check-prefix=BASIC
+
+# BASIC:        Number of section headers: 5
+# BASIC:        Section Headers:
+# BASIC-NEXT:   [Nr] Name      Type     Address          Off    Size   ES Flg Lk Inf Al
+# BASIC-NEXT:   [ 0]           NULL     0000000000000000 000000 000000 00     0   0  0
+# BASIC-NEXT:   [ 1] .foo      PROGBITS 0000000000000000 000043 000002 00     0   0  0
+# BASIC-NEXT:   [ 2] .bar      PROGBITS 0000000000000000 000049 000001 00     0   0  0
+# BASIC-NEXT:   [ 3] .strtab   STRTAB   0000000000000000 00004b 000001 00     0   0  1
+# BASIC-NEXT:   [ 4] .shstrtab STRTAB   0000000000000000 00004c 00001d 00     0   0  1
+
+## The fill we dump starts at (offset of .foo - 3), which is (0x43 - 3) = 0x40.
+# RUN: od -t x1 -v -j 0x40 -N 11 %t1 | FileCheck %s --ignore-case --check-prefix=DATA
+# DATA: aa bb aa 11 22 cc dd cc dd ff ee
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type:    Fill
+    Pattern: "AABB"
+    Size:    0x3
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Content: "1122"
+  - Type:    Fill
+    Name:    unusedName
+    Pattern: "CCDD"
+    Size:    4
+  - Name:    .bar
+    Type:    SHT_PROGBITS
+    Content: "FF"
+  - Type:    Fill
+    Pattern: "EE"
+    Size:    1
+
+## Check we can have no explicit regular sections in the YAML description, and can
+## describe the content with the use of fills only.
+## Check that "Size" can be less than the pattern data size.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readelf --sections --headers %t2 | FileCheck %s --check-prefix=NOSECTIONS
+
+## The fill we dump starts at (offset of .strtab - 3 - 2), which is (0x45 - 5) = 0x40.
+# RUN: od -t x1 -v -j 0x40 -N 6 %t2 | FileCheck %s --ignore-case --check-prefix=NOSECTIONS-DATA
+
+# NOSECTIONS:      Number of section headers: 3
+# NOSECTIONS:      Section Headers:
+# NOSECTIONS-NEXT:  [Nr] Name      Type   Address          Off    Size   ES Flg Lk Inf Al
+# NOSECTIONS-NEXT:  [ 0]           NULL   0000000000000000 000000 000000 00     0   0  0
+# NOSECTIONS-NEXT:  [ 1] .strtab   STRTAB 0000000000000000 000045 000001 00     0   0  1
+# NOSECTIONS-NEXT:  [ 2] .shstrtab STRTAB 0000000000000000 000046 000013 00     0   0  1
+
+## .strtab that follows fills starts at 0x46 and always has a null character at the begining.
+# NOSECTIONS-DATA: aa bb cc dd ee 00
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type:    Fill
+    Pattern: "AABBCCFF"
+    Size:    0x3
+  - Type:    Fill
+    Pattern: "DDEEFF"
+    Size:    0x2
+
+## Check we can use named fills when describing program headers.
+## Check that fills consume the file size and therefore affect the p_filesz fields of segments.
+## Check that the fill does not affect the p_align field of the segment.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readelf --sections --program-headers %t3 | FileCheck %s --check-prefix=PHDR
+
+# PHDR: [Nr] Name      Type     Address          Off    Size   ES Flg Lk Inf  Al
+# PHDR: [ 0]           NULL     0000000000000000 000000 000000 00      0   0  0
+# PHDR: [ 1] .bar      PROGBITS 0000000000000100 0000c0 000005 00      0   0  2
+# PHDR: [ 2] .strtab   STRTAB   0000000000000000 00010a 000001 00      0   0  1
+# PHDR: [ 3] .shstrtab STRTAB   0000000000000000 00010b 000018 00      0   0  1
+
+# PHDR: Program Headers:
+# PHDR:   Type      Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# PHDR:   LOAD      0x0000b0 0x0000000000000100 0x0000000000000100 0x00005a 0x00005a     0x2
+# PHDR:   GNU_RELRO 0x0000c5 0x0000000000000105 0x0000000000000105 0x000045 0x000045     0x1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type:    Fill
+    Name:    fill1
+    Pattern: ""
+    Size:    0x10
+  - Name:         .bar
+    Type:         SHT_PROGBITS
+    Size:         0x5
+    Address:      0x100
+    AddressAlign: 2
+  - Type:    Fill
+    Name:    fill2
+    Pattern: ""
+    Size:    0x45
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x100
+    FirstSec: fill1
+    LastSec:  fill2
+  - Type:     PT_GNU_RELRO
+    VAddr:    0x105
+    FirstSec: fill2
+    LastSec:  fill2
+
+## Check that the "Pattern" field is not mandatory.
+# RUN: yaml2obj --docnum=4 2>&1 -o %t4 %s
+# RUN: llvm-readelf --sections %t4 | FileCheck %s --check-prefix=NOPATTERN
+
+## The fill we dump starts at (offset of .strtab - 1 - 3 - 1), which is (0x45 - 5) = 0x40.
+# RUN: od -t x1 -v -j 0x40 -N 5 %t4 | FileCheck %s --ignore-case --check-prefix=NOPATTERN-DATA
+
+# NOPATTERN: [Nr] Name    Type   Address          Off
+# NOPATTERN: [ 1] .strtab STRTAB 0000000000000000 000045
+
+# NOPATTERN-DATA: aa 00 00 00 bb
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type:    Fill
+    Size:    0x1
+    Pattern: "AA"
+  - Type: Fill
+    Size: 0x3
+  - Type:    Fill
+    Size:    0x1
+    Pattern: "BB"
+
+## Check that the "Size" field is mandatory.
+# RUN: not yaml2obj --docnum=5 2>&1 %s | FileCheck %s --check-prefix=NOSIZE
+
+## NOSIZE: error: missing required key 'Size'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type:    Fill
+    Pattern: "00"
+
+## Check that fills are not allowed to have duplicate names.
+# RUN: not yaml2obj --docnum=6 2>&1 %s | FileCheck %s --check-prefix=UNIQUE-NAME
+
+# UNIQUE-NAME: error: repeated section/fill name: 'foo' at YAML section/fill number 2
+# UNIQUE-NAME: error: repeated section/fill name: 'foo' at YAML section/fill number 3
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type:    Fill
+    Name:    foo
+    Pattern: "00"
+    Size:    1
+  - Type:    Fill
+    Name:    foo
+    Pattern: "00"
+    Size:    1
+  - Name: foo
+    Type: SHT_PROGBITS
+
+## Check that "Pattern" can be empty, when "Size" is zero.
+# RUN: yaml2obj --docnum=7 2>&1 %s -o %t7
+# RUN: llvm-readelf --sections %t7 | FileCheck %s --check-prefix=NOOP
+
+# NOOP: [Nr] Name  Type     Address          Off
+# NOOP: [ 1] begin PROGBITS 0000000000000000 000040
+# NOOP: [ 2] end   PROGBITS 0000000000000000 000041
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: begin
+    Type: SHT_PROGBITS
+    Size: 1
+  - Type:    Fill
+    Pattern: ""
+    Size:    0
+  - Name: end
+    Type: SHT_PROGBITS
+    Size: 1
+
+## Check that we can have an empty "Pattern", but have non-zero "Size".
+## In this case we emit Size number of zeroes to the output.
+
+# RUN: yaml2obj --docnum=8 2>&1 -o %t8 %s
+# RUN: llvm-readelf --sections %t8 | FileCheck %s --check-prefix=EMPTY-PATTERN
+
+## The fill we dump starts at (offset of .strtab - 1 - 3 - 1), which is (0x45 - 5) = 0x40.
+# RUN: od -t x1 -v -j 0x40 -N 5 %t8 | FileCheck %s --ignore-case --check-prefix=EMPTY-PATTERN-DATA
+
+# EMPTY-PATTERN:      Section Headers:
+# EMPTY-PATTERN-NEXT:  [Nr] Name    Type   Address          Off    Size   ES Flg Lk Inf Al
+# EMPTY-PATTERN-NEXT:  [ 0]         NULL   0000000000000000 000000 000000 00     0   0  0
+# EMPTY-PATTERN-NEXT:  [ 1] .strtab STRTAB 0000000000000000 000045 000001 00     0   0  1
+
+# EMPTY-PATTERN-DATA: aa 00 00 00 bb
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type:    Fill
+    Pattern: "AA"
+    Size:    0x1
+  - Type:    Fill
+    Size:    3
+    Pattern: ""
+  - Type:    Fill
+    Pattern: "BB"
+    Size:    0x1
+
+## Check that "Size" can't be 0, when "Pattern" is not empty.
+# RUN: not yaml2obj --docnum=9 2>&1 %s | FileCheck %s --check-prefix=ZERO-SIZE-ERR
+
+# ZERO-SIZE-ERR: error: "Size" can't be 0 when "Pattern" is not empty
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type:    Fill
+    Pattern: "00"
+    Size:    0
+
+## Check we report an error when a program header references
+## an unknown section or fill and have at least one Fill defined.
+
+# RUN: not yaml2obj --docnum=10 2>&1 %s | FileCheck %s --check-prefix=UNKNOWN-ERR
+# UNKNOWN-ERR: error: unknown section or fill referenced: 'fill' by the 'FirstSec' key of the program header with index 0
+# UNKNOWN-ERR: error: unknown section or fill referenced: 'fill' by the 'LastSec' key of the program header with index 0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Type:    Fill
+    Pattern: ""
+    Size:    0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: fill
+    LastSec:  fill
+
+## Show that we can use the "Offset" key to set an arbitrary offset for a Fill.
+
+## 0x41 is the minimal possible valid offset for Fill,
+## because the .foo section of size 0x1 is placed at 0x40.
+# RUN: yaml2obj --docnum=11 -DOFFSET=0x41 -o %t11 %s
+# RUN: llvm-readelf --section-headers %t11 | FileCheck %s --check-prefix=OFFSET-MIN
+
+## 0x123 is an arbitrary offset.
+# RUN: yaml2obj --docnum=11 -DOFFSET=0x123 -o %t12 %s
+# RUN: llvm-readelf --section-headers %t12 | FileCheck %s --check-prefix=OFFSET
+
+# OFFSET-MIN:      Section Headers:
+# OFFSET-MIN-NEXT:  [Nr] Name Type     Address          Off    Size
+# OFFSET-MIN-NEXT:  [ 0]      NULL     0000000000000000 000000 000000
+# OFFSET-MIN-NEXT:  [ 1] .foo PROGBITS 0000000000000000 000040 000001
+# OFFSET-MIN-NEXT:  [ 2] .bar PROGBITS 0000000000000000 000042 000001
+
+# OFFSET:      Section Headers:
+# OFFSET-NEXT:  [Nr] Name Type     Address          Off    Size
+# OFFSET-NEXT:  [ 0]      NULL     0000000000000000 000000 000000
+# OFFSET-NEXT:  [ 1] .foo PROGBITS 0000000000000000 000040 000001
+# OFFSET-NEXT:  [ 2] .bar PROGBITS 0000000000000000 000124 000001
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Size: 1
+  - Type:    Fill
+    Pattern: "AA"
+    Size:    0x1
+    Offset:  [[OFFSET]]
+  - Name: .bar
+    Type: SHT_PROGBITS
+    Size: 1
+
+## Show that the "Offset" value can't go backward.
+# RUN: not yaml2obj --docnum=11 -DOFFSET=0x40 2>&1 %s | FileCheck %s --check-prefix=OFFSET-ERR
+
+# OFFSET-ERR: error: the 'Offset' value (0x40) goes backward

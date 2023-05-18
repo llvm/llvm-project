@@ -1,0 +1,13 @@
+# RUN: not llvm-mc -disassemble -triple=msp430 %s 2>&1 | FileCheck %s
+
+# This should not decode as 'and.b @r15+, (0)r1' [0xf1,0xff,0x00,0x00]
+[0xf1 0xff]
+# CHECK: warning: invalid instruction encoding
+
+# This should not decode as 'add 6(r7), 6(r5)' [0x95 0x57 0x06 0x00 0x06 0x00]
+[0x95 0x57 0x06 0x00]
+# CHECK: warning: invalid instruction encoding
+
+# This should not decode as 'call 6(r7)' [0x97 0x12 0x06 0x00]
+[0x97 0x12]
+# CHECK: warning: invalid instruction encoding

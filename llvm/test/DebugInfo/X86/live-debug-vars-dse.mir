@@ -1,0 +1,147 @@
+# RUN: llc -start-after=machine-scheduler %s -o - | FileCheck %s
+
+# C source:
+# void escape(int *);
+# extern int global;
+# void f(int x) {
+#   escape(&x);
+#   x = 1;
+#   global = x;
+#   x = 2;
+#   escape(&x);
+# }
+
+# CHECK-LABEL: f: # @f
+# CHECK: movl    %ecx, [[OFF_X:[0-9]+]](%rsp)
+# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [$rsp+0]
+# CHECK: leaq [[OFF_X]](%rsp), %rsi
+# CHECK: callq   escape
+# CHECK: #DEBUG_VALUE: f:x <- 1
+# CHECK: movl    $1, global(%rip)
+# CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [$rsp+0]
+# CHECK: movl    $2, [[OFF_X]](%rsp)
+# CHECK: callq   escape
+# CHECK: retq
+
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "dse.c"
+  target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-pc-windows-msvc19.0.24215"
+  
+  @global = external global i32, align 4
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+  
+  declare void @escape(ptr)
+  
+  ; Function Attrs: nounwind uwtable
+  define void @f(i32 %x) #1 !dbg !8 {
+  entry:
+    %x.addr = alloca i32, align 4
+    store i32 %x, ptr %x.addr, align 4
+    call void @llvm.dbg.value(metadata ptr %x.addr, metadata !13, metadata !DIExpression()), !dbg !14
+    call void @escape(ptr %x.addr), !dbg !15
+    call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !DIExpression()), !dbg !16
+    store i32 1, ptr @global, align 4, !dbg !17
+    call void @llvm.dbg.value(metadata ptr %x.addr, metadata !13, metadata !DIExpression()), !dbg !18
+    store i32 2, ptr %x.addr, align 4, !dbg !18
+    call void @escape(ptr %x.addr), !dbg !19
+    ret void, !dbg !20
+  }
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr) #2
+  
+  attributes #0 = { nounwind readnone speculatable }
+  attributes #1 = { nounwind uwtable }
+  attributes #2 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !llvm.ident = !{!7}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "dse.c", directory: "C:\5Csrc\5Cllvm-project\5Cbuild")
+  !2 = !{}
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 2}
+  !6 = !{i32 7, !"PIC Level", i32 2}
+  !7 = !{!"clang version 6.0.0 "}
+  !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 3, type: !9, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+  !9 = !DISubroutineType(types: !10)
+  !10 = !{null, !11}
+  !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !12 = !{!13}
+  !13 = !DILocalVariable(name: "x", arg: 1, scope: !8, file: !1, line: 3, type: !11)
+  !14 = !DILocation(line: 3, column: 12, scope: !8)
+  !15 = !DILocation(line: 4, column: 3, scope: !8)
+  !16 = !DILocation(line: 5, column: 5, scope: !8)
+  !17 = !DILocation(line: 6, column: 10, scope: !8)
+  !18 = !DILocation(line: 7, column: 5, scope: !8)
+  !19 = !DILocation(line: 8, column: 3, scope: !8)
+  !20 = !DILocation(line: 9, column: 1, scope: !8)
+
+...
+---
+name:            f
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr64, preferred-register: '' }
+liveins:         
+  - { reg: '$ecx', virtual-reg: '%0' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+  - { id: 0, name: x.addr, type: default, offset: 0, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $ecx
+  
+    %0 = COPY $ecx
+    MOV32mr %stack.0.x.addr, 1, _, 0, _, %0 :: (store (s32) into %ir.x.addr)
+    DBG_VALUE %stack.0.x.addr, 0, !13, !DIExpression(), debug-location !14
+    ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
+    %1 = LEA64r %stack.0.x.addr, 1, _, 0, _
+    $rcx = COPY %1, debug-location !15
+    CALL64pcrel32 @escape, csr_win64, implicit $rsp, implicit $ssp, implicit $rcx, implicit-def $rsp, implicit-def $ssp, debug-location !15
+    ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
+    DBG_VALUE 1, _, !13, !DIExpression(), debug-location !16
+    MOV32mi $rip, 1, _, @global, _, 1, debug-location !17 :: (store (s32) into @global)
+    DBG_VALUE %stack.0.x.addr, 0, !13, !DIExpression(), debug-location !18
+    MOV32mi %stack.0.x.addr, 1, _, 0, _, 2, debug-location !18 :: (store (s32) into %ir.x.addr)
+    ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !19
+    $rcx = COPY %1, debug-location !19
+    CALL64pcrel32 @escape, csr_win64, implicit $rsp, implicit $ssp, implicit $rcx, implicit-def $rsp, implicit-def $ssp, debug-location !19
+    ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !19
+    RET 0, debug-location !20
+
+...

@@ -1,0 +1,45 @@
+The coverage reader should be able to handle archives, and archives embedded within
+MachO universal binaries.
+
+---
+Steps to re-generate these files on macOS:
+
+clang -fprofile-instr-generate -fcoverage-mapping -c obj1.c -o obj1_32.o -arch i386
+clang -fprofile-instr-generate -fcoverage-mapping -c obj2.c -o obj2_32.o -arch i386
+clang -fprofile-instr-generate -fcoverage-mapping -c obj1.c -o obj1_64.o -arch x86_64
+clang -fprofile-instr-generate -fcoverage-mapping -c obj2.c -o obj2_64.o -arch x86_64
+ar -q archive_32 obj1_32.o obj2_32.o
+ar -q archive_64 obj1_64.o obj2_64.o
+lipo -output universal_bin_wrapping_archives -create archive_32 archive_64
+---
+REQUIRES: zlib
+
+RUN: llvm-profdata merge %S/Inputs/universal_bin_wrapping_archives/universal_bin_wrapping_archives.proftext -o %t.profdata
+
+RUN: llvm-cov show %S/Inputs/universal_bin_wrapping_archives/universal_bin_wrapping_archives \
+RUN:   -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs/universal_bin_wrapping_archives -arch i386 \
+RUN:   | FileCheck %s --check-prefix=SHOW_ARCHIVE
+
+RUN: llvm-cov show %S/Inputs/universal_bin_wrapping_archives/universal_bin_wrapping_archives \
+RUN:   -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs/universal_bin_wrapping_archives -arch x86_64 \
+RUN:   | FileCheck %s --check-prefix=SHOW_ARCHIVE
+
+SHOW_ARCHIVE: {{.*}}obj1.c:
+SHOW_ARCHIVE-NEXT: 1|    100|void f1() {}
+SHOW_ARCHIVE: {{.*}}obj2.c:
+SHOW_ARCHIVE-NEXT: 1|    100|void f2() {}
+
+RUN: llvm-cov report %S/Inputs/universal_bin_wrapping_archives/universal_bin_wrapping_archives \
+RUN:   -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs/universal_bin_wrapping_archives %s -arch i386 \
+RUN:   | FileCheck %s --check-prefix=REPORT_ARCHIVE
+
+RUN: llvm-cov report %S/Inputs/universal_bin_wrapping_archives/universal_bin_wrapping_archives \
+RUN:   -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs/universal_bin_wrapping_archives %s -arch x86_64 \
+RUN:   | FileCheck %s --check-prefix=REPORT_ARCHIVE
+
+RUN: llvm-ar rcT %t.thin32.a %S/Inputs/universal_bin_wrapping_archives/obj1_32.o %S/Inputs/universal_bin_wrapping_archives/obj2_32.o
+RUN: llvm-cov report %t.thin32.a -instr-profile %t.profdata | FileCheck %s --check-prefix=REPORT_ARCHIVE
+
+REPORT_ARCHIVE: obj1.c 1 0 100.00% 1 0 100.00% 1 0 100.00%
+REPORT_ARCHIVE: obj2.c 1 0 100.00% 1 0 100.00% 1 0 100.00%
+REPORT_ARCHIVE: TOTAL 2 0 100.00% 2 0 100.00% 2 0 100.00%

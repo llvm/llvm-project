@@ -1,0 +1,65 @@
+; REQUIRES: x86-registered-target
+
+; Test case 1 - General options.
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Print basic details.
+; The following command prints basic details for all the logical elements
+; sorted by the debug information internal offset; it includes its lexical
+; level and debug info format.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=scopes,symbols,types,lines,instructions \
+; RUN:                         %p/Inputs/test-codeview-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=elements \
+; RUN:                         %p/Inputs/test-codeview-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} 'test-codeview-clang.o' -> COFF-x86-64
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'test.cpp'
+; ONE-NEXT: [002]               {Function} extern not_inlined 'foo' -> 'int'
+; ONE-NEXT: [003]                 {Parameter} 'ParamPtr' -> '* const int'
+; ONE-NEXT: [003]                 {Parameter} 'ParamUnsigned' -> 'unsigned'
+; ONE-NEXT: [003]                 {Parameter} 'ParamBool' -> 'bool'
+; ONE-NEXT: [003]                 {Block}
+; ONE-NEXT: [004]                   {Variable} 'CONSTANT' -> 'const int'
+; ONE-NEXT: [004]     5             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	$0x7, 0x4(%rsp)'
+; ONE-NEXT: [004]     6             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	$0x7, 0x1c(%rsp)'
+; ONE-NEXT: [004]                   {Code} 'jmp	0x8'
+; ONE-NEXT: [003]                 {TypeAlias} 'INTEGER' -> 'int'
+; ONE-NEXT: [003]     2           {Line}
+; ONE-NEXT: [003]                 {Code} 'subq	$0x20, %rsp'
+; ONE-NEXT: [003]                 {Code} 'andb	$0x1, %r8b'
+; ONE-NEXT: [003]                 {Code} 'movb	%r8b, 0x1b(%rsp)'
+; ONE-NEXT: [003]                 {Code} 'movl	%edx, 0x14(%rsp)'
+; ONE-NEXT: [003]                 {Code} 'movq	%rcx, 0x8(%rsp)'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'testb	$0x1, 0x1b(%rsp)'
+; ONE-NEXT: [003]                 {Code} 'je	0x15'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	0x14(%rsp), %eax'
+; ONE-NEXT: [003]                 {Code} 'movl	%eax, 0x1c(%rsp)'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	0x1c(%rsp), %eax'
+; ONE-NEXT: [003]                 {Code} 'addq	$0x20, %rsp'
+; ONE-NEXT: [003]                 {Code} 'retq'
+; ONE-NEXT: [002]               {TypeAlias} 'INTPTR' -> '* const int'

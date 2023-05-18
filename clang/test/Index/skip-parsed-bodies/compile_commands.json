@@ -1,0 +1,73 @@
+[
+{
+  "directory": ".",
+  "command": "/usr/bin/clang++ -fsyntax-only -fno-ms-compatibility -fno-delayed-template-parsing t1.cpp",
+  "file": "t1.cpp"
+},
+{
+  "directory": ".",
+  "command": "/usr/bin/clang++ -fsyntax-only -fno-ms-compatibility -fno-delayed-template-parsing t2.cpp -DBLAH",
+  "file": "t2.cpp"
+},
+{
+  "directory": ".",
+  "command": "/usr/bin/clang++ -fsyntax-only -fno-ms-compatibility -fno-delayed-template-parsing t3.cpp -DBLAH",
+  "file": "t3.cpp"
+}
+]
+
+// RUN: c-index-test -index-compile-db %s | FileCheck %s
+
+// CHECK:      [startedTranslationUnit]
+// CHECK-NEXT: [enteredMainFile]: t1.cpp
+// CHECK:      [indexDeclaration]: kind: c++-instance-method | name: method_decl | {{.*}} | isRedecl: 0 | isDef: 0 | isContainer: 0
+// CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: 1
+// CHECK-NEXT: [indexEntityReference]: kind: variable | name: some_val | {{.*}} | loc: .{{/|\\\\?}}t.h:9:27
+// CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 0 | isDef: 0 | isContainer: 0
+// CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 1 | isDef: 1 | isContainer: 1
+// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS |
+// CHECK-NEXT: [indexEntityReference]: kind: c++-class | name: C |
+// CHECK-NEXT: [indexEntityReference]: kind: variable | name: some_val | {{.*}} | loc: .{{/|\\\\?}}t.h:15:5
+// CHECK-NEXT: [indexDeclaration]: kind: function | name: foo1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: 1
+// CHECK-NEXT: [indexEntityReference]: kind: variable | name: some_val | {{.*}} | loc: .{{/|\\\\?}}t.h:19:5
+// CHECK-NEXT: [diagnostic]: {{.*}} undeclared identifier 'undef_val1'
+// CHECK-NEXT: [diagnostic]: {{.*}} undeclared identifier 'undef_val2'
+// CHECK-NEXT: [diagnostic]: {{.*}} undeclared identifier 'undef_val3'
+
+// CHECK-NEXT: [startedTranslationUnit]
+// CHECK-NEXT: [enteredMainFile]: t2.cpp
+// CHECK:      [indexDeclaration]: kind: c++-instance-method | name: method_decl | {{.*}} | isRedecl: 0 | isDef: 0 | isContainer: 0
+// CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
+// CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 0 | isDef: 0 | isContainer: 0
+// CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isContainer: skipped
+// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS |
+// CHECK-NEXT: [indexEntityReference]: kind: c++-class | name: C |
+// CHECK-NEXT: [indexDeclaration]: kind: function | name: foo1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
+// CHECK-NEXT: [ppIncludedFile]: .{{/|\\\\?}}pragma_once.h
+// CHECK-NEXT: [indexDeclaration]: kind: function | name: foo2 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: 1
+// CHECK-NEXT: [indexEntityReference]: kind: variable | name: some_val | {{.*}} | loc: .{{/|\\\\?}}t.h:25:5
+// CHECK:      [indexDeclaration]: kind: c++-instance-method | name: tsmeth | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: 1
+// CHECK-NEXT: [indexEntityReference]: kind: variable | name: some_val | {{.*}} | loc: .{{/|\\\\?}}pragma_once.h:8:7
+// CHECK:      [indexDeclaration]: kind: function | name: imp_foo | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: 1
+// CHECK-NEXT: [indexEntityReference]: kind: variable | name: some_val | {{.*}} | loc: .{{/|\\\\?}}imported.h:4:5
+// CHECK-NEXT: [diagnostic]: {{.*}} undeclared identifier 'undef_val4'
+// CHECK-NEXT: [diagnostic]: {{.*}} undeclared identifier 'undef_tsval'
+// CHECK-NEXT: [diagnostic]: {{.*}} undeclared identifier 'undef_impval'
+
+// CHECK-NEXT: [startedTranslationUnit]
+// CHECK-NEXT: [enteredMainFile]: t3.cpp
+// CHECK:      [indexDeclaration]: kind: c++-instance-method | name: method_decl | {{.*}} | isRedecl: 0 | isDef: 0 | isContainer: 0
+// CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
+// CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 0 | isDef: 0 | isContainer: 0
+// CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 1 | isDef: 1 | isContainer: skipped
+// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS |
+// CHECK-NEXT: [indexEntityReference]: kind: c++-class | name: C |
+// CHECK-NEXT: [indexDeclaration]: kind: function | name: foo1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
+// CHECK-NEXT: [ppIncludedFile]: .{{/|\\\\?}}pragma_once.h
+// CHECK-NEXT: [indexDeclaration]: kind: function | name: foo2 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
+// CHECK-NEXT: [indexDeclaration]: kind: variable | {{.*}} | loc: .{{/|\\\\?}}pragma_once.h:3:12
+// CHECK:      [indexDeclaration]: kind: c++-instance-method | name: tsmeth | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
+// CHECK-NOT:  [indexEntityReference]: kind: variable | name: some_val |
+// CHECK:      [indexDeclaration]: kind: function | name: imp_foo | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
+// CHECK-NOT:  [indexEntityReference]: kind: variable | name: some_val |
+// CHECK-NOT:  [diagnostic]: {{.*}} undeclared identifier

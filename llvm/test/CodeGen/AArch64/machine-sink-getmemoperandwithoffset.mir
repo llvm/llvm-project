@@ -1,0 +1,65 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-sink -o - %s | FileCheck %s
+--- |
+  define i8 @g() {
+  else.7:
+    br i1 undef, label %then.8, label %else.8, !make.implicit !0
+
+  then.8:                                           ; preds = %else.8, %else.7
+    %merge = phi i8 [ 1, %else.7 ], [ 0, %else.8 ]
+    ret i8 %merge ;1 ;%merge
+
+  else.8:                                           ; preds = %else.7
+    %icmp.8 = icmp eq i64 undef, undef
+  ;  ret i8 0 ; added
+    br i1 %icmp.8, label %else.11, label %then.8
+
+  else.11:                                          ; preds = %else.8
+    ret i8 undef
+  }
+
+  !0 = !{}
+...
+---
+name:            g
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32all }
+  - { id: 1, class: gpr32all }
+  - { id: 2, class: gpr32 }
+  - { id: 3, class: gpr32 }
+  - { id: 4, class: gpr32all }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: gpr32all }
+body:             |
+  ; Just check that the pass didn't crash/assert.
+  ; CHECK-LABEL: name: g
+  bb.0.else.7:
+    successors: %bb.1, %bb.2
+
+    %2:gpr32 = MOVi32imm 1
+  ; Sinking the below COPY instruction caused an assert to trigger before
+  ; requiring getMemOperandWithOffset to return false rather than assert
+  ; when handling non-memory operations.
+    %1:gpr32all = COPY %2
+    %3:gpr32 = COPY $wzr
+    CBNZW %3, %bb.2
+    B %bb.1
+
+  bb.1.then.8:
+    %0:gpr32all = PHI %1, %bb.0, %4, %bb.2
+    $w0 = COPY %0
+    RET_ReallyLR implicit $w0
+
+  bb.2.else.8:
+    successors: %bb.3, %bb.1
+
+    %5:gpr32 = COPY $wzr
+    %4:gpr32all = COPY %5
+    CBNZW %5, %bb.1
+    B %bb.3
+
+  bb.3.else.11:
+    %6:gpr32all = IMPLICIT_DEF
+    $w0 = COPY %6
+    RET_ReallyLR implicit $w0
+...

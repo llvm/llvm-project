@@ -1,0 +1,5 @@
+RUN: llvm-remarkutil instruction-count --parser=yaml %p/Inputs/made-up-fake-remarks.yaml | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/made-up-fake-remarks.yaml | llvm-remarkutil instruction-count --parser=bitstream | FileCheck %s
+
+; CHECK-LABEL: Function,InstructionCount
+; CHECK-EMPTY

@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head> <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>Polly - ChangeLog</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<div id="box">
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+<h1> ChangeLog </h1>
+<h2> trunk</h2>
+
+<ul>
+<li>Optimized isl for small integers, such that mostly cheap 32bit operations
+are used instead of costly arbitrary precision integers that often also involve
+malloc/free calls. As a result, the compile-time increase due to Polly has
+been largely reduced.</li>
+
+<li>Support for modulo operations: Accesses such as <pre>A[t%2][i]</pre> can
+    now be analyzed.
+</ul>
+
+<h2> 3.7 </h2>
+
+<ul>
+<li>libPluto support has been removed. It has not been tested regularly and
+due to it being copyleft license it had never a chance to become a a core
+piece of Polly. Experiments with different schedulers should use the jscop
+interface.</li>
+</ul>
+
+<h2> 3.6</h2>
+
+<ul>
+<li>Switch to the new isl AST generator (replacing CLooG)</li>
+<li>Run-time alias checks</li>
+<li>Computation of no-alias information for later LLVM optimizations
+(vectorizer, LICM, ...)</li>
+<li>Support for multi-dimensional arrays of parameteric size (still tested)</li>
+<li>New assumption tracking framework</li>
+<ul>
+<li>Accesses to multi-dimensional arrays of fixed size are within bounds</li>
+</ul>
+<li>Compile-time reduction</li>
+</ul>
+
+<h2> Older releases</h2>
+
+No changelog available. Please look at the <a
+href="https://repo.or.cz/w/polly-mirror.git">commit history</a>.
+
+</html>
+</div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+# RUN: llc -mtriple=i386-apple-ios9.0.0-simulator --frame-pointer=all -verify-machineinstrs -start-before=greedy -o - %s | FileCheck %s
+
+# The test used to fail with "Live segment doesn't end at a valid instruction"
+# See PR51655.
+
+---
+# CHECK: jne
+# CHECK: andl    $-16, %edx
+# CHECK: xorl    %ebx, %ebx
+# CHECK: movl    -16(%ebp), %esi
+# CHECK: xorl    %eax, %eax
+
+name:            test
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-restored: true }
+  - { id: 1, type: default, offset: 0, size: 4, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-restored: true }
+body:             |
+  bb.0:
+    successors: %bb.3(0x40000000), %bb.1(0x40000000)
+
+    %0:gr32_nosp = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1)
+    %1:gr32_nosp = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0, align 16)
+    %2:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    JCC_1 %bb.3, 5, implicit undef $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+    %2:gr32_abcd = AND32ri8 %2, -16, implicit-def dead $eflags
+    %3:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    %4:gr32 = LEA32r %0, 1, %1, -49, $noreg
+    %5:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    %6:gr32 = IMPLICIT_DEF
+    JMP_1 %bb.2
+
+  bb.2:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+
+    %7:vr128 = MOVUPSrm %4, 1, %3, 0, $noreg :: (load (s128), align 1)
+    %5:gr32_abcd = nuw ADD32ri8 %5, 64, implicit-def dead $eflags
+    %6:gr32 = ADD32ri8 %6, -4, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+    JMP_1 %bb.3
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+
+    %2:gr32_abcd = NEG32r %2, implicit-def dead $eflags
+    %8:gr32 = LEA32r %0, 1, %1, -5, $noreg
+    JMP_1 %bb.4
+
+  bb.4:
+    RET 0
+
+...

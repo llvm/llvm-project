@@ -1,0 +1,35 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define i32 @foo(i32 %a) {
+  entry:
+    %0 = icmp sle i32 %a, 10
+    br i1 %0, label %less, label %exit
+
+  less:
+    ret i32 0
+
+  exit:
+    ret i32 %a
+  }
+
+...
+---
+name:            foo
+body: |
+  bb.0.entry:
+    successors: %bb.1.less, %bb.2.exit
+
+    CMP32ri8 $edi, 10, implicit-def $eflags
+  ; CHECK: [[@LINE+1]]:36: duplicate 'implicit' register flag
+    JCC_1 %bb.2.exit, 15, implicit implicit $eflags
+
+  bb.1.less:
+    $eax = MOV32r0 implicit-def $eflags
+    RET64 $eax
+
+  bb.2.exit:
+    $eax = COPY $edi
+    RET64 $eax
+...

@@ -1,0 +1,20 @@
+## Ensure that the visibility of symbols added with --add-symbol can be
+## specified with the --new-symbol-visibility switch.
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-objcopy --new-symbol-visibility protected --add-symbol symbol_protected=.text:42 \
+# RUN:              --add-symbol symbol_hidden=.text:42,hidden %t.obj %t
+# RUN: llvm-readelf -s %t | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+
+# CHECK: PROTECTED {{.*}} symbol_protected
+# CHECK: HIDDEN {{.*}} symbol_hidden

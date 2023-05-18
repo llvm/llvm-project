@@ -1,0 +1,23 @@
+# RUN: llc -run-pass=xray-instrumentation -mtriple=x86_64-unknown-linux-gnu -o - %s | FileCheck %s
+#
+# Make sure we can handle empty first basic blocks.
+
+--- |
+
+  define i32 @foo() noinline uwtable "xray-instruction-threshold"="0" {
+  entry:
+    unreachable
+  }
+
+...
+
+---
+name: foo
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi'}
+body:            |
+  bb.0.entry:
+    liveins: $edi
+    ; CHECK-NOT: PATCHABLE_FUNCTION_ENTER
+...

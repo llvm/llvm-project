@@ -1,0 +1,145 @@
+# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -run-pass si-optimize-exec-masking -verify-machineinstrs -o -  %s | FileCheck %s
+--- |
+  define amdgpu_kernel void @undefined_physreg_sgpr_spill() #0 {
+    unreachable
+  }
+
+  define amdgpu_kernel void @undefined_physreg_sgpr_spill_reorder() #0 {
+    unreachable
+  }
+
+  attributes #0 = { nounwind "amdgpu-num-sgpr"="16" }
+
+...
+---
+
+# copy + s_and_b64 was turned into saveexec, deleting the copy,
+# leaving a spill of the undefined register.
+
+# CHECK-LABEL: name: undefined_physreg_sgpr_spill
+# CHECK: $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
+# CHECK-NEXT: SI_SPILL_S64_SAVE $sgpr0_sgpr1,
+# CHECK-NEXT: $sgpr2_sgpr3 = S_AND_B64 killed $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
+# CHECK: $exec = COPY killed $sgpr2_sgpr3
+name:            undefined_physreg_sgpr_spill
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '' }
+  - { reg: '$sgpr4_sgpr5', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
+      stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+constants:
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
+
+    $vgpr1_vgpr2 = COPY killed $sgpr4_sgpr5, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load (s8) from `ptr addrspace(4) undef`)
+    $vcc = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 1, killed $vgpr1, implicit $exec
+    $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
+    $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
+    SI_SPILL_S64_SAVE $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store (s64) into %stack.0, align 4, addrspace 5)
+    $sgpr2_sgpr3 = S_AND_B64 killed $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed $sgpr2_sgpr3
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+    liveins: $vgpr0, $vgpr1
+
+    $sgpr2_sgpr3 = S_MOV_B64 0
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr4_sgpr5 = IMPLICIT_DEF
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors:
+    liveins: $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
+
+    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load (s64) from %stack.0, align 4, addrspace 5)
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+
+  bb.3:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, $sgpr4_sgpr5
+
+    $vcc = COPY $vgpr1
+    S_ENDPGM 0
+
+...
+---
+
+# Move spill to after future save instruction
+# CHECK-LABEL: {{^}}name: undefined_physreg_sgpr_spill_reorder
+# CHECK: $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
+# CHECK: $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
+# CHECK: SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store (s64) into %stack.0, align 4, addrspace 5)
+# CHECK: $exec = COPY killed $sgpr2_sgpr3
+name:            undefined_physreg_sgpr_spill_reorder
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '' }
+  - { reg: '$sgpr4_sgpr5', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
+      stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+constants:
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
+
+    $vgpr1_vgpr2 = COPY killed $sgpr4_sgpr5, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load (s8) from `ptr addrspace(4) undef`)
+    $vcc = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
+    $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 1, killed $vgpr1, implicit $exec
+    $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
+    $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
+    $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
+    SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store (s64) into %stack.0, align 4, addrspace 5)
+    $exec = S_MOV_B64_term killed $sgpr2_sgpr3
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+    liveins: $vgpr0, $vgpr1
+
+    $sgpr2_sgpr3 = S_MOV_B64 0
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr4_sgpr5 = IMPLICIT_DEF
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors:
+    liveins: $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
+
+    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load (s64) from %stack.0, align 4, addrspace 5)
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+
+  bb.3:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, $sgpr4_sgpr5
+
+    $vcc = COPY $vgpr1
+    S_ENDPGM 0
+
+...

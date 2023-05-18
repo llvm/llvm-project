@@ -1,0 +1,219 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z14 -start-before=greedy %s -o - \
+# RUN:   | FileCheck %s
+#
+# Test folding of a memory operand into logical compare with an immediate.
+
+--- |
+  define i32 @fun0(ptr %src, i32 %arg) { ret i32 0 }
+  define i64 @fun1(ptr %src, i64 %arg) { ret i64 0 }
+  define i32 @fun2(ptr %src, i32 %arg) { ret i32 0 }
+  define i64 @fun3(ptr %src, i64 %arg) { ret i64 0 }
+...
+
+
+# CHECK-LABEL: fun0:
+# CHECK-LABEL: .LBB0_2:
+# CHECK:	msc     %r0, 160(%r15)                  # 4-byte Folded Reload
+---
+name:            fun0
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: grx32bit }
+  - { id: 1, class: grx32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: gr32bit }
+  - { id: 4, class: grx32bit }
+  - { id: 5, class: grx32bit }
+  - { id: 6, class: gr32bit }
+  - { id: 7, class: gr32bit }
+  - { id: 8, class: gr32bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%2' }
+  - { reg: '$r3l', virtual-reg: '%3' }
+frameInfo:
+  maxAlignment:    1
+  hasOpaqueSPAdjustment: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $r2d, $r3l
+  
+    %3:gr32bit = COPY $r3l
+    %2:addr64bit = COPY $r2d
+    %6:gr32bit = LHIMux 0
+    CHIMux %3, 0, implicit-def $cc
+    %8:gr32bit = LHIMux 0
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.1
+  
+  bb.1:
+    %8:gr32bit = LMux %2, 0, $noreg :: (load (s32) from %ir.src)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
+  
+  bb.2:
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
+    %6:gr32bit = MSRKC %8, %6, implicit-def $cc
+    %6:gr32bit = LOCHIMux %6, 1, 14, 6, implicit killed $cc
+    %7:gr32bit = NRK %3, %6, implicit-def dead $cc
+    $r2l = COPY %7
+    Return implicit $r2l
+
+...
+
+
+# CHECK-LABEL: fun1:
+# CHECK-LABEL: .LBB1_2:
+# CHECK:	msc     %r0, 160(%r15)                  # 4-byte Folded Reload
+---
+name:            fun1
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: grx32bit }
+  - { id: 1, class: grx32bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: gr32bit }
+  - { id: 4, class: grx32bit }
+  - { id: 5, class: grx32bit }
+  - { id: 6, class: gr32bit }
+  - { id: 7, class: gr32bit }
+  - { id: 8, class: gr32bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%2' }
+  - { reg: '$r3l', virtual-reg: '%3' }
+frameInfo:
+  maxAlignment:    1
+  hasOpaqueSPAdjustment: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $r2d, $r3l
+  
+    %3:gr32bit = COPY $r3l
+    %2:addr64bit = COPY $r2d
+    %6:gr32bit = LHIMux 0
+    CHIMux %3, 0, implicit-def $cc
+    %8:gr32bit = LHIMux 0
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.1
+  
+  bb.1:
+    %8:gr32bit = LMux %2, 0, $noreg :: (load (s32) from %ir.src)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
+  
+  bb.2:
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
+    %6:gr32bit = MSRKC %6, %8, implicit-def $cc
+    %6:gr32bit = LOCHIMux %6, 1, 14, 6, implicit killed $cc
+    %7:gr32bit = NRK %3, %6, implicit-def dead $cc
+    $r2l = COPY %7
+    Return implicit $r2l
+
+...
+
+
+# CHECK-LABEL: fun2:
+# CHECK-LABEL: .LBB2_2:
+# CHECK:	msgc    %r0, 160(%r15)                  # 8-byte Folded Reload
+---
+name:            fun2
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64bit }
+  - { id: 1, class: gr64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: gr64bit }
+  - { id: 4, class: gr64bit }
+  - { id: 5, class: gr64bit }
+  - { id: 6, class: gr64bit }
+  - { id: 7, class: gr64bit }
+  - { id: 8, class: gr64bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%2' }
+  - { reg: '$r3d', virtual-reg: '%3' }
+frameInfo:
+  maxAlignment:    1
+  hasOpaqueSPAdjustment: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $r2d, $r3d
+  
+    %3:gr64bit = COPY $r3d
+    %2:addr64bit = COPY $r2d
+    %6:gr64bit = LGHI 0
+    CGHI %3, 0, implicit-def $cc
+    %8:gr64bit = LGHI 0
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.1
+  
+  bb.1:
+    %8:gr64bit = LG %2, 0, $noreg :: (load (s64) from %ir.src)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
+  
+  bb.2:
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
+    %6:gr64bit = MSGRKC %8, %6, implicit-def $cc
+    %6:gr64bit = LOCGHI %6, 1, 14, 6, implicit killed $cc
+    %7:gr64bit = NGRK %3, %6, implicit-def dead $cc
+    $r2d = COPY %7
+    Return implicit $r2d
+
+...
+
+
+# CHECK-LABEL: fun3:
+# CHECK-LABEL: .LBB3_2:
+# CHECK:	msgc    %r0, 160(%r15)                  # 8-byte Folded Reload
+---
+name:            fun3
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64bit }
+  - { id: 1, class: gr64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: gr64bit }
+  - { id: 4, class: gr64bit }
+  - { id: 5, class: gr64bit }
+  - { id: 6, class: gr64bit }
+  - { id: 7, class: gr64bit }
+  - { id: 8, class: gr64bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%2' }
+  - { reg: '$r3d', virtual-reg: '%3' }
+frameInfo:
+  maxAlignment:    1
+  hasOpaqueSPAdjustment: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $r2d, $r3d
+  
+    %3:gr64bit = COPY $r3d
+    %2:addr64bit = COPY $r2d
+    %6:gr64bit = LGHI 0
+    CGHI %3, 0, implicit-def $cc
+    %8:gr64bit = LGHI 0
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.1
+  
+  bb.1:
+    %8:gr64bit = LG %2, 0, $noreg :: (load (s64) from %ir.src)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
+  
+  bb.2:
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def early-clobber $r15d
+    %6:gr64bit = MSGRKC %6, %8, implicit-def $cc
+    %6:gr64bit = LOCGHI %6, 1, 14, 6, implicit killed $cc
+    %7:gr64bit = NGRK %3, %6, implicit-def dead $cc
+    $r2d = COPY %7
+    Return implicit $r2d
+
+...

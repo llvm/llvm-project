@@ -1,0 +1,57 @@
+# RUN: yaml2obj %s -o %t
+
+## If there are no sections with different LMA to VMA,
+## we do not display LMA column.
+# RUN: llvm-objdump --section-headers %t | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT: Idx Name  Size     VMA              Type
+# CHECK-NEXT:   0       00000000 0000000000000000
+# CHECK-NEXT:   1 .text 00000004 0000000000001000 TEXT
+# CHECK-NEXT:   2 .init 00000004 0000000000001010 TEXT
+# CHECK-NEXT:   3 .data 00000004 0000000000002000 DATA
+
+## Check we can trigger displaying the LMA column with --show-lma.
+# RUN: llvm-objdump --section-headers --show-lma %t |\
+# RUN:   FileCheck %s --check-prefix=LMA
+
+# LMA:      Sections:
+# LMA-NEXT: Idx Name  Size     VMA              LMA              Type
+# LMA-NEXT:   0       00000000 0000000000000000 0000000000000000
+# LMA-NEXT:   1 .text 00000004 0000000000001000 0000000000001000 TEXT
+# LMA-NEXT:   2 .init 00000004 0000000000001010 0000000000001010 TEXT
+# LMA-NEXT:   3 .data 00000004 0000000000002000 0000000000002000 DATA
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         "00000000"
+    Address:         0x00001000
+  - Name:            .init
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         "00000000"
+    Address:         0x00001010
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "00000000"
+    Address:         0x00002000
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x00001000
+    FirstSec: .text
+    LastSec:  .init
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x00002000
+    FirstSec: .data
+    LastSec:  .data

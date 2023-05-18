@@ -1,0 +1,60 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55 -misched-dump-reserved-cycles=true \
+# RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s
+
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55 -misched-dump-reserved-cycles=false\
+# RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s --check-prefix=NODUMP
+
+# REQUIRES: asserts
+---
+name: f
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2
+    $x3 = ADDXrr $x0, $x0
+    $x4 = ADDXrr $x1, $x1
+    $x5 = ADDXrr $x2, $x2
+
+# It is enough to check the last one of the printout of the state of
+# the schedule boundary, just before the final schedule is printed.
+
+# CHECK-LABEL:   Ready @1c
+# CHECK-NEXT:   CortexA55UnitALU +1x1u
+# CHECK-NEXT: BotQ.A @1c
+# CHECK-NEXT:   Retired: 3
+# CHECK-NEXT:   Executed: 1c
+# CHECK-NEXT:   Critical: 1c, 3 MOps
+# CHECK-NEXT:   ExpectedLatency: 0c
+# CHECK-NEXT:   - Latency limited.
+# CHECK-NEXT: CortexA55UnitALU(0) = 1
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
+# CHECK-NEXT: CortexA55UnitB(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPDIV(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitFPMAC(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitLd(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
+# CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
+# CHECK-NEXT: ** ScheduleDAGMILive::schedule picking next node
+# CHECK-NEXT: *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   $x3 = ADDXrr $x0, $x0
+# CHECK-NEXT: SU(1):   $x4 = ADDXrr $x1, $x1
+# CHECK-NEXT: SU(2):   $x5 = ADDXrr $x2, $x2
+
+# NODUMP-LABEL:   Ready @1c
+# NODUMP-NEXT:   CortexA55UnitALU +1x1u
+# NODUMP-NEXT: BotQ.A @1c
+# NODUMP-NEXT:   Retired: 3
+# NODUMP-NEXT:   Executed: 1c
+# NODUMP-NEXT:   Critical: 1c, 3 MOps
+# NODUMP-NEXT:   ExpectedLatency: 0c
+# NODUMP-NEXT:   - Latency limited.
+# NODUMP-NEXT: ** ScheduleDAGMILive::schedule picking next node
+# NODUMP-NEXT: *** Final schedule for %bb.0 ***
+# NODUMP-NEXT: SU(0):   $x3 = ADDXrr $x0, $x0
+# NODUMP-NEXT: SU(1):   $x4 = ADDXrr $x1, $x1
+# NODUMP-NEXT: SU(2):   $x5 = ADDXrr $x2, $x2
+
