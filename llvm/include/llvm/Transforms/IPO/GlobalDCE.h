@@ -64,7 +64,6 @@ private:
   void MarkLive(GlobalValue &GV,
                 SmallVectorImpl<GlobalValue *> *Updates = nullptr);
   void PropagateLivenessInGlobalValues();
-  bool RemoveUnusedGlobalValue(GlobalValue &GV);
 
   // Dead virtual function elimination.
   void AddVirtualFunctionDependencies(Module &M);
