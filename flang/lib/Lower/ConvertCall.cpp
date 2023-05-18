@@ -1356,11 +1356,12 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
     if (auto array = normalisedResult.dyn_cast<fir::SequenceType>()) {
       resultShape = hlfir::ExprType::Shape{array.getShape()};
       elementType = array.getEleTy();
-    } else {
-      elementType = normalisedResult;
+      return hlfir::ExprType::get(builder.getContext(), resultShape,
+                                  elementType,
+                                  /*polymorphic=*/false);
     }
-    return hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
-                                /*polymorphic=*/false);
+    elementType = normalisedResult;
+    return elementType;
   };
 
   auto buildSumOperation = [](fir::FirOpBuilder &builder, mlir::Location loc,
