@@ -25,6 +25,9 @@
         "BRIDGEOS_DEPLOYMENT_TARGET",
         "DRIVERKIT_DEPLOYMENT_TARGET"
       ]
+    },
+    {
+      "name": "resource-dir-uses-major-version-only"
     }
   ]
 }
