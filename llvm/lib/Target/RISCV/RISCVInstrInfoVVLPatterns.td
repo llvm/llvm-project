@@ -2012,81 +2012,81 @@ foreach fvti = AllFloatVectors in {
                                 fvti.LMul.MX # "_TU")
              $passthru, (fvti.Scalar fvti.ScalarRegClass:$rs2),
              GPR:$vl, fvti.Log2SEW)>;
+}
 
-  // 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
-  defm : VPatConvertFP2IVL_V<riscv_vfcvt_xu_f_vl, "PseudoVFCVT_XU_F_V">;
-  defm : VPatConvertFP2IVL_V<riscv_vfcvt_x_f_vl, "PseudoVFCVT_X_F_V">;
-  defm : VPatConvertFP2I_RM_VL_V<riscv_vfcvt_rm_xu_f_vl, "PseudoVFCVT_RM_XU_F_V">;
-  defm : VPatConvertFP2I_RM_VL_V<any_riscv_vfcvt_rm_x_f_vl, "PseudoVFCVT_RM_X_F_V">;
+// 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
+defm : VPatConvertFP2IVL_V<riscv_vfcvt_xu_f_vl, "PseudoVFCVT_XU_F_V">;
+defm : VPatConvertFP2IVL_V<riscv_vfcvt_x_f_vl, "PseudoVFCVT_X_F_V">;
+defm : VPatConvertFP2I_RM_VL_V<riscv_vfcvt_rm_xu_f_vl, "PseudoVFCVT_RM_XU_F_V">;
+defm : VPatConvertFP2I_RM_VL_V<any_riscv_vfcvt_rm_x_f_vl, "PseudoVFCVT_RM_X_F_V">;
 
-  defm : VPatConvertFP2IVL_V<any_riscv_vfcvt_rtz_xu_f_vl, "PseudoVFCVT_RTZ_XU_F_V">;
-  defm : VPatConvertFP2IVL_V<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFCVT_RTZ_X_F_V">;
+defm : VPatConvertFP2IVL_V<any_riscv_vfcvt_rtz_xu_f_vl, "PseudoVFCVT_RTZ_XU_F_V">;
+defm : VPatConvertFP2IVL_V<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFCVT_RTZ_X_F_V">;
 
-  defm : VPatConvertI2FPVL_V<any_riscv_uint_to_fp_vl, "PseudoVFCVT_F_XU_V">;
-  defm : VPatConvertI2FPVL_V<any_riscv_sint_to_fp_vl, "PseudoVFCVT_F_X_V">;
+defm : VPatConvertI2FPVL_V<any_riscv_uint_to_fp_vl, "PseudoVFCVT_F_XU_V">;
+defm : VPatConvertI2FPVL_V<any_riscv_sint_to_fp_vl, "PseudoVFCVT_F_X_V">;
 
-  defm : VPatConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_xu_vl, "PseudoVFCVT_RM_F_XU_V">;
-  defm : VPatConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_x_vl, "PseudoVFCVT_RM_F_X_V">;
+defm : VPatConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_xu_vl, "PseudoVFCVT_RM_F_XU_V">;
+defm : VPatConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_x_vl, "PseudoVFCVT_RM_F_X_V">;
 
-  // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
-  defm : VPatWConvertFP2IVL_V<riscv_vfcvt_xu_f_vl, "PseudoVFWCVT_XU_F_V">;
-  defm : VPatWConvertFP2IVL_V<riscv_vfcvt_x_f_vl, "PseudoVFWCVT_X_F_V">;
-  defm : VPatWConvertFP2I_RM_VL_V<riscv_vfcvt_rm_xu_f_vl, "PseudoVFWCVT_RM_XU_F_V">;
-  defm : VPatWConvertFP2I_RM_VL_V<riscv_vfcvt_rm_x_f_vl, "PseudoVFWCVT_RM_X_F_V">;
+// 13.18. Widening Floating-Point/Integer Type-Convert Instructions
+defm : VPatWConvertFP2IVL_V<riscv_vfcvt_xu_f_vl, "PseudoVFWCVT_XU_F_V">;
+defm : VPatWConvertFP2IVL_V<riscv_vfcvt_x_f_vl, "PseudoVFWCVT_X_F_V">;
+defm : VPatWConvertFP2I_RM_VL_V<riscv_vfcvt_rm_xu_f_vl, "PseudoVFWCVT_RM_XU_F_V">;
+defm : VPatWConvertFP2I_RM_VL_V<riscv_vfcvt_rm_x_f_vl, "PseudoVFWCVT_RM_X_F_V">;
 
-  defm : VPatWConvertFP2IVL_V<any_riscv_vfcvt_rtz_xu_f_vl, "PseudoVFWCVT_RTZ_XU_F_V">;
-  defm : VPatWConvertFP2IVL_V<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFWCVT_RTZ_X_F_V">;
+defm : VPatWConvertFP2IVL_V<any_riscv_vfcvt_rtz_xu_f_vl, "PseudoVFWCVT_RTZ_XU_F_V">;
+defm : VPatWConvertFP2IVL_V<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFWCVT_RTZ_X_F_V">;
 
-  defm : VPatWConvertI2FPVL_V<any_riscv_uint_to_fp_vl, "PseudoVFWCVT_F_XU_V">;
-  defm : VPatWConvertI2FPVL_V<any_riscv_sint_to_fp_vl, "PseudoVFWCVT_F_X_V">;
+defm : VPatWConvertI2FPVL_V<any_riscv_uint_to_fp_vl, "PseudoVFWCVT_F_XU_V">;
+defm : VPatWConvertI2FPVL_V<any_riscv_sint_to_fp_vl, "PseudoVFWCVT_F_X_V">;
 
-  defm : VPatWConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_xu_vl, "PseudoVFWCVT_RM_F_XU_V">;
-  defm : VPatWConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_x_vl, "PseudoVFWCVT_RM_F_X_V">;
+defm : VPatWConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_xu_vl, "PseudoVFWCVT_RM_F_XU_V">;
+defm : VPatWConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_x_vl, "PseudoVFWCVT_RM_F_X_V">;
 
-  foreach fvtiToFWti = AllWidenableFloatVectors in {
-    defvar fvti = fvtiToFWti.Vti;
-    defvar fwti = fvtiToFWti.Wti;
-    def : Pat<(fwti.Vector (any_riscv_fpextend_vl
-                               (fvti.Vector fvti.RegClass:$rs1),
-                               (fvti.Mask V0),
-                               VLOpFrag)),
-              (!cast<Instruction>("PseudoVFWCVT_F_F_V_"#fvti.LMul.MX#"_MASK")
-                  (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
-                  (fvti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
-  }
+foreach fvtiToFWti = AllWidenableFloatVectors in {
+  defvar fvti = fvtiToFWti.Vti;
+  defvar fwti = fvtiToFWti.Wti;
+  def : Pat<(fwti.Vector (any_riscv_fpextend_vl
+                             (fvti.Vector fvti.RegClass:$rs1),
+                             (fvti.Mask V0),
+                             VLOpFrag)),
+            (!cast<Instruction>("PseudoVFWCVT_F_F_V_"#fvti.LMul.MX#"_MASK")
+                (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
+                (fvti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
+}
 
-  // 13.19 Narrowing Floating-Point/Integer Type-Convert Instructions
-  defm : VPatNConvertFP2IVL_W<riscv_vfcvt_xu_f_vl, "PseudoVFNCVT_XU_F_W">;
-  defm : VPatNConvertFP2IVL_W<riscv_vfcvt_x_f_vl, "PseudoVFNCVT_X_F_W">;
-  defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_xu_f_vl, "PseudoVFNCVT_RM_XU_F_W">;
-  defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_x_f_vl, "PseudoVFNCVT_RM_X_F_W">;
+// 13.19 Narrowing Floating-Point/Integer Type-Convert Instructions
+defm : VPatNConvertFP2IVL_W<riscv_vfcvt_xu_f_vl, "PseudoVFNCVT_XU_F_W">;
+defm : VPatNConvertFP2IVL_W<riscv_vfcvt_x_f_vl, "PseudoVFNCVT_X_F_W">;
+defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_xu_f_vl, "PseudoVFNCVT_RM_XU_F_W">;
+defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_x_f_vl, "PseudoVFNCVT_RM_X_F_W">;
 
-  defm : VPatNConvertFP2IVL_W<any_riscv_vfcvt_rtz_xu_f_vl, "PseudoVFNCVT_RTZ_XU_F_W">;
-  defm : VPatNConvertFP2IVL_W<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFNCVT_RTZ_X_F_W">;
+defm : VPatNConvertFP2IVL_W<any_riscv_vfcvt_rtz_xu_f_vl, "PseudoVFNCVT_RTZ_XU_F_W">;
+defm : VPatNConvertFP2IVL_W<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFNCVT_RTZ_X_F_W">;
 
-  defm : VPatNConvertI2FPVL_W<any_riscv_uint_to_fp_vl, "PseudoVFNCVT_F_XU_W">;
-  defm : VPatNConvertI2FPVL_W<any_riscv_sint_to_fp_vl, "PseudoVFNCVT_F_X_W">;
+defm : VPatNConvertI2FPVL_W<any_riscv_uint_to_fp_vl, "PseudoVFNCVT_F_XU_W">;
+defm : VPatNConvertI2FPVL_W<any_riscv_sint_to_fp_vl, "PseudoVFNCVT_F_X_W">;
 
-  defm : VPatNConvertI2FP_RM_VL_W<riscv_vfcvt_rm_f_xu_vl, "PseudoVFNCVT_RM_F_XU_W">;
-  defm : VPatNConvertI2FP_RM_VL_W<riscv_vfcvt_rm_f_x_vl, "PseudoVFNCVT_RM_F_X_W">;
+defm : VPatNConvertI2FP_RM_VL_W<riscv_vfcvt_rm_f_xu_vl, "PseudoVFNCVT_RM_F_XU_W">;
+defm : VPatNConvertI2FP_RM_VL_W<riscv_vfcvt_rm_f_x_vl, "PseudoVFNCVT_RM_F_X_W">;
 
-  foreach fvtiToFWti = AllWidenableFloatVectors in {
-    defvar fvti = fvtiToFWti.Vti;
-    defvar fwti = fvtiToFWti.Wti;
-    def : Pat<(fvti.Vector (any_riscv_fpround_vl
-                               (fwti.Vector fwti.RegClass:$rs1),
-                               (fwti.Mask V0), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX#"_MASK")
-                  (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
-                  (fwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
+foreach fvtiToFWti = AllWidenableFloatVectors in {
+  defvar fvti = fvtiToFWti.Vti;
+  defvar fwti = fvtiToFWti.Wti;
+  def : Pat<(fvti.Vector (any_riscv_fpround_vl
+                             (fwti.Vector fwti.RegClass:$rs1),
+                             (fwti.Mask V0), VLOpFrag)),
+            (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX#"_MASK")
+                (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
+                (fwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
 
-    def : Pat<(fvti.Vector (any_riscv_fncvt_rod_vl
-                               (fwti.Vector fwti.RegClass:$rs1),
-                               (fwti.Mask V0), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFNCVT_ROD_F_F_W_"#fvti.LMul.MX#"_MASK")
-                  (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
-                  (fwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
-  }
+  def : Pat<(fvti.Vector (any_riscv_fncvt_rod_vl
+                             (fwti.Vector fwti.RegClass:$rs1),
+                             (fwti.Mask V0), VLOpFrag)),
+            (!cast<Instruction>("PseudoVFNCVT_ROD_F_F_W_"#fvti.LMul.MX#"_MASK")
+                (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
+                (fwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
 }
 
 } // Predicates = [HasVInstructionsAnyF]
