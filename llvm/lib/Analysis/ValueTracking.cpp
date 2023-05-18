@@ -5103,6 +5103,49 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                         Known, Depth + 1, Q, TLI);
     break;
   }
+  case Instruction::PHI: {
+    const PHINode *P = cast<PHINode>(Op);
+    // Unreachable blocks may have zero-operand PHI nodes.
+    if (P->getNumIncomingValues() == 0)
+      break;
+
+    // Otherwise take the unions of the known bit sets of the operands,
+    // taking conservative care to avoid excessive recursion.
+    const unsigned PhiRecursionLimit = MaxAnalysisRecursionDepth - 2;
+
+    if (Depth < PhiRecursionLimit) {
+      // Skip if every incoming value references to ourself.
+      if (isa_and_nonnull<UndefValue>(P->hasConstantValue()))
+        break;
+
+      bool First = true;
+
+      for (Value *IncValue : P->incoming_values()) {
+        // Skip direct self references.
+        if (IncValue == P)
+          continue;
+
+        KnownFPClass KnownSrc;
+        // Recurse, but cap the recursion to two levels, because we don't want
+        // to waste time spinning around in loops. We need at least depth 2 to
+        // detect known sign bits.
+        computeKnownFPClass(IncValue, DemandedElts, InterestedClasses, KnownSrc,
+                            PhiRecursionLimit, Q, TLI);
+
+        if (First) {
+          Known = KnownSrc;
+          First = false;
+        } else {
+          Known |= KnownSrc;
+        }
+
+        if (Known.KnownFPClasses == fcAllFlags)
+          break;
+      }
+    }
+
+    break;
+  }
   default:
     break;
   }
