@@ -26,7 +26,7 @@
 // REDEFINE: FileCheck %s
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
-#ST = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed", "compressed"]}>
+#ST = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed", "compressed"]}>
 
 //
 // Trait for 3-d tensor element wise multiplication.

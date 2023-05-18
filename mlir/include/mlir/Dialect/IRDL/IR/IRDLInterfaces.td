@@ -30,9 +30,9 @@ def VerifyConstraintInterface : OpInterface<"VerifyConstraintInterface"> {
       }],
       "std::unique_ptr<::mlir::irdl::Constraint>",
       "getVerifier",
-      (ins "::mlir::SmallVector<Value> const&":$valueRes,
-      "::mlir::DenseMap<::mlir::irdl::TypeOp, std::unique_ptr<::mlir::DynamicTypeDefinition>> &":$types,
-      "::mlir::DenseMap<::mlir::irdl::AttributeOp, std::unique_ptr<::mlir::DynamicAttrDefinition>> &":$attrs)
+      (ins "::mlir::ArrayRef<Value>":$valueToConstr,
+      "::mlir::DenseMap<::mlir::irdl::TypeOp, std::unique_ptr<::mlir::DynamicTypeDefinition>> const&":$types,
+      "::mlir::DenseMap<::mlir::irdl::AttributeOp, std::unique_ptr<::mlir::DynamicAttrDefinition>> const&":$attrs)
     >
   ];
 }

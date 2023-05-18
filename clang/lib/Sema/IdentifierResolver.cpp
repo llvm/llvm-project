@@ -231,9 +231,12 @@ void IdentifierResolver::RemoveDecl(NamedDecl *D) {
   return toIdDeclInfo(Ptr)->RemoveDecl(D);
 }
 
-/// begin - Returns an iterator for decls with name 'Name'.
-IdentifierResolver::iterator
-IdentifierResolver::begin(DeclarationName Name) {
+llvm::iterator_range<IdentifierResolver::iterator>
+IdentifierResolver::decls(DeclarationName Name) {
+  return {begin(Name), end()};
+}
+
+IdentifierResolver::iterator IdentifierResolver::begin(DeclarationName Name) {
   if (IdentifierInfo *II = Name.getAsIdentifierInfo())
     readingIdentifier(*II);
 

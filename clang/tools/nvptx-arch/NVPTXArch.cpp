@@ -30,7 +30,6 @@ static void PrintVersion(raw_ostream &OS) {
 // and -help) will be hidden.
 static cl::OptionCategory NVPTXArchCategory("nvptx-arch options");
 
-#if DYNAMIC_CUDA
 typedef enum cudaError_enum {
   CUDA_SUCCESS = 0,
   CUDA_ERROR_NO_DEVICE = 100,
@@ -75,12 +74,6 @@ llvm::Error loadCUDA() {
 #undef DYNAMIC_INIT
   return llvm::Error::success();
 }
-#else
-
-#include "cuda.h"
-llvm::Error loadCUDA() { return llvm::Error::success(); }
-
-#endif
 
 static int handleError(CUresult Err) {
   const char *ErrStr = nullptr;

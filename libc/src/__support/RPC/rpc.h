@@ -97,6 +97,9 @@ template <bool Invert> struct Process {
   LIBC_INLINE Process &operator=(Process &&) = default;
   LIBC_INLINE ~Process() = default;
 
+  template <bool T> friend struct Port;
+
+protected:
   uint64_t port_count;
   uint32_t lane_size;
   cpp::Atomic<uint32_t> *inbox;
@@ -105,6 +108,7 @@ template <bool Invert> struct Process {
 
   cpp::Atomic<uint32_t> lock[DEFAULT_PORT_COUNT] = {0};
 
+public:
   /// Initialize the communication channels.
   LIBC_INLINE void reset(uint64_t port_count, uint32_t lane_size,
                          void *buffer) {
@@ -131,6 +135,7 @@ template <bool Invert> struct Process {
     return buffer_offset(port_count) + buffer_bytes(port_count, lane_size);
   }
 
+protected:
   /// The length of the packet is flexible because the server needs to look up
   /// the lane size at runtime. This helper indexes at the proper offset.
   LIBC_INLINE Packet &get_packet(uint64_t index) {
