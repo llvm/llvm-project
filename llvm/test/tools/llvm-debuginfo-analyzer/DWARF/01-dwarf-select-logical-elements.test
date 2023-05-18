@@ -71,3 +71,28 @@
 ; TWO-NEXT: [001]           {CompileUnit} 'test.cpp'
 ; TWO-NEXT: [004]     4     {TypeAlias} 'INTEGER' -> 'int'
 ; TWO-NEXT: [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
+
+; Select logical elements based on linkage names.
+; The following prints all symbols that
+; contain "_Z3fooPKijb" in their linkage names, using a tab layout
+; and given the number of matches.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select=_Z3fooPKijb \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols \
+; RUN:                         %p/Inputs/pr-57040-test-dwarf-clang.o \
+; RUN:                         %p/Inputs/pr-57040-test-dwarf-gcc.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=THREE %s
+
+; THREE:      Logical View:
+; THREE-NEXT: [000]           {File} 'pr-57040-test-dwarf-clang.o'
+; THREE-EMPTY:
+; THREE-NEXT: [001]           {CompileUnit} 'test.cpp'
+; THREE-NEXT: [002]     2     {Function} extern not_inlined 'foo' -> 'int'
+; THREE-EMPTY:
+; THREE:      Logical View:
+; THREE-NEXT: [000]           {File} 'pr-57040-test-dwarf-gcc.o'
+; THREE-EMPTY:
+; THREE-NEXT: [001]           {CompileUnit} 'test.cpp'
+; THREE-NEXT: [002]     2     {Function} extern not_inlined 'foo' -> 'int'

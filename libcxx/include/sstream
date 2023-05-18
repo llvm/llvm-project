@@ -41,6 +41,7 @@ public:
     // [stringbuf.members] Member functions:
     basic_string<char_type, traits_type, allocator_type> str() const;
     void str(const basic_string<char_type, traits_type, allocator_type>& s);
+    basic_string_view<char_type, traits_type> view() const noexcept; // C++20
 
 protected:
     // [stringbuf.virtuals] Overridden virtual functions:
@@ -92,6 +93,7 @@ public:
     basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const;
     basic_string<char_type, traits_type, allocator_type> str() const;
     void str(const basic_string<char_type, traits_type, allocator_type>& s);
+    basic_string_view<char_type, traits_type> view() const noexcept; // C++20
 };
 
 template <class charT, class traits, class Allocator>
@@ -132,6 +134,7 @@ public:
     basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const;
     basic_string<char_type, traits_type, allocator_type> str() const;
     void str(const basic_string<char_type, traits_type, allocator_type>& s);
+    basic_string_view<char_type, traits_type> view() const noexcept; // C++20
 };
 
 template <class charT, class traits, class Allocator>
@@ -172,6 +175,7 @@ public:
     basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const;
     basic_string<char_type, traits_type, allocator_type> str() const;
     void str(const basic_string<char_type, traits_type, allocator_type>& str);
+    basic_string_view<char_type, traits_type> view() const noexcept; // C++20
 };
 
 template <class charT, class traits, class Allocator>
@@ -253,6 +257,10 @@ public:
     // [stringbuf.members] Member functions:
     string_type str() const;
     void str(const string_type& __s);
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI
+    basic_string_view<char_type, traits_type> view() const noexcept;
+#endif
 
 protected:
     // [stringbuf.virtuals] Overridden virtual functions:
@@ -447,6 +455,9 @@ template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>
 basic_stringbuf<_CharT, _Traits, _Allocator>::str() const
 {
+#if _LIBCPP_STD_VER >= 20
+    return string_type(view(), __str_.get_allocator());
+#else // _LIBCPP_STD_VER >= 20
     if (__mode_ & ios_base::out)
     {
         if (__hm_ < this->pptr())
@@ -456,6 +467,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::str() const
     else if (__mode_ & ios_base::in)
         return string_type(this->eback(), this->egptr(), __str_.get_allocator());
     return string_type(__str_.get_allocator());
+#endif // _LIBCPP_STD_VER >= 20
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -490,6 +502,20 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::str(const string_type& __s)
         }
     }
 }
+
+#if _LIBCPP_STD_VER >= 20
+template <class _CharT, class _Traits, class _Allocator>
+_LIBCPP_HIDE_FROM_ABI basic_string_view<_CharT, _Traits>
+basic_stringbuf<_CharT, _Traits, _Allocator>::view() const noexcept {
+    if (__mode_ & ios_base::out) {
+        if (__hm_ < this->pptr())
+            __hm_ = this->pptr();
+        return basic_string_view<_CharT, _Traits>(this->pbase(), __hm_);
+    } else if (__mode_ & ios_base::in)
+        return basic_string_view<_CharT, _Traits>(this->eback(), this->egptr());
+    return basic_string_view<_CharT, _Traits>();
+}
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _CharT, class _Traits, class _Allocator>
 typename basic_stringbuf<_CharT, _Traits, _Allocator>::int_type
@@ -620,7 +646,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::seekoff(off_type __off,
     if (__wch & ios_base::out)
     {
         this->setp(this->pbase(), this->epptr());
-        this->pbump(__noff);
+        this->__pbump(__noff);
     }
     return pos_type(__noff);
 }
@@ -694,6 +720,12 @@ public:
     void str(const string_type& __s) {
         __sb_.str(__s);
     }
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI
+    basic_string_view<char_type, traits_type> view() const noexcept {
+        return __sb_.view();
+    }
+#endif
 };
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -775,6 +807,12 @@ public:
     void str(const string_type& __s) {
         __sb_.str(__s);
     }
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI
+    basic_string_view<char_type, traits_type> view() const noexcept {
+        return __sb_.view();
+    }
+#endif
 };
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -855,6 +893,12 @@ public:
     void str(const string_type& __s) {
         __sb_.str(__s);
     }
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI
+    basic_string_view<char_type, traits_type> view() const noexcept {
+        return __sb_.view();
+    }
+#endif
 };
 
 template <class _CharT, class _Traits, class _Allocator>

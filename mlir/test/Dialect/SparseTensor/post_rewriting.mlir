@@ -1,11 +1,11 @@
 // RUN: mlir-opt %s -post-sparsification-rewrite | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"]
+  lvlTypes = ["compressed"]
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed", "compressed"]
+  lvlTypes = ["compressed", "compressed"]
 }>
 
 // CHECK-LABEL: func.func @expand_dense(

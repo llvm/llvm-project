@@ -31,7 +31,7 @@
 !Filename = !llvm.ptr<i8>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ],
+  lvlTypes = [ "compressed", "compressed" ],
   posWidth = 32,
   crdWidth = 32
 }>

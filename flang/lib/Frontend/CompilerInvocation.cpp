@@ -774,8 +774,9 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // -pedantic
   if (args.hasArg(clang::driver::options::OPT_pedantic)) {
     res.setEnableConformanceChecks();
+    res.setEnableUsageChecks();
   }
-  // -std=f2018 (currently this implies -pedantic)
+  // -std=f2018
   // TODO: Set proper options when more fortran standards
   // are supported.
   if (args.hasArg(clang::driver::options::OPT_std_EQ)) {
@@ -1045,9 +1046,11 @@ void CompilerInvocation::setFortranOpts() {
   if (frontendOptions.needProvenanceRangeToCharBlockMappings)
     fortranOptions.needProvenanceRangeToCharBlockMappings = true;
 
-  if (getEnableConformanceChecks()) {
+  if (getEnableConformanceChecks())
     fortranOptions.features.WarnOnAllNonstandard();
-  }
+
+  if (getEnableUsageChecks())
+    fortranOptions.features.WarnOnAllUsage();
 }
 
 void CompilerInvocation::setSemanticsOpts(
@@ -1060,7 +1063,6 @@ void CompilerInvocation::setSemanticsOpts(
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
       .set_intrinsicModuleDirectories(fortranOptions.intrinsicModuleDirectories)
-      .set_warnOnNonstandardUsage(getEnableConformanceChecks())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix());
 

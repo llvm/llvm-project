@@ -177,10 +177,7 @@ public:
   bool isLoadFromStack(const MCInst &Inst) const {
     if (!isLoad(Inst))
       return false;
-    const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
-    unsigned NumDefs = InstInfo.getNumDefs();
-    for (unsigned I = NumDefs, E = InstInfo.getNumOperands(); I < E; ++I) {
-      const MCOperand &Operand = Inst.getOperand(I);
+    for (const MCOperand &Operand : useOperands(Inst)) {
       if (!Operand.isReg())
         continue;
       unsigned Reg = Operand.getReg();

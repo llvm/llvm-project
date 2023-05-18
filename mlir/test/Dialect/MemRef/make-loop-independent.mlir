@@ -36,9 +36,9 @@ func.func @make_alloca_loop_independent(%lb: index, %ub: index, %step: index) {
   return
 }
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.memref.make_loop_independent %0 {num_loops = 1}
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.memref.make_loop_independent %0 {num_loops = 1} : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -68,7 +68,7 @@ func.func @make_alloca_loop_independent_static(%step: index) {
   return
 }
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.memref.make_loop_independent %0 {num_loops = 1}
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["memref.alloca"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.memref.make_loop_independent %0 {num_loops = 1} : (!transform.any_op) -> !transform.any_op
 }

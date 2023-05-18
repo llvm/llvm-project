@@ -32,8 +32,8 @@ namespace internal {
 template <unsigned ORDER> struct Endian {
   static constexpr const bool IS_LITTLE = ORDER == __ORDER_LITTLE_ENDIAN__;
   static constexpr const bool IS_BIG = ORDER == __ORDER_BIG_ENDIAN__;
-  template <typename T> static T to_big_endian(T value);
-  template <typename T> static T to_little_endian(T value);
+  template <typename T> LIBC_INLINE static T to_big_endian(T value);
+  template <typename T> LIBC_INLINE static T to_little_endian(T value);
 };
 
 // Little Endian specializations

@@ -64,6 +64,18 @@ struct ParserOptionsSet {
 };
 
 class RISCVAsmParser : public MCTargetAsmParser {
+  // This tracks the parsing of the 4 operands that make up the vtype portion
+  // of vset(i)vli instructions which are separated by commas. The state names
+  // represent the next expected operand with Done meaning no other operands are
+  // expected.
+  enum VTypeState {
+    VTypeState_SEW,
+    VTypeState_LMUL,
+    VTypeState_TailPolicy,
+    VTypeState_MaskPolicy,
+    VTypeState_Done,
+  };
+
   SmallVector<FeatureBitset, 4> FeatureBitStack;
 
   SmallVector<ParserOptionsSet, 4> ParserOptionsStack;
@@ -104,6 +116,11 @@ class RISCVAsmParser : public MCTargetAsmParser {
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool ParseDirective(AsmToken DirectiveID) override;
+
+  bool parseVTypeToken(StringRef Identifier, VTypeState &State, unsigned &Sew,
+                       unsigned &Lmul, bool &Fractional, bool &TailAgnostic,
+                       bool &MaskAgnostic);
+  bool generateVTypeError(SMLoc ErrorLoc);
 
   // Helper to actually emit an instruction to the MCStreamer. Also, when
   // possible, compression of the instruction is performed.
@@ -246,6 +263,7 @@ public:
 
   static bool classifySymbolRef(const MCExpr *Expr,
                                 RISCVMCExpr::VariantKind &Kind);
+  static bool isSymbolDiff(const MCExpr *Expr);
 
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                  const MCInstrInfo &MII, const MCTargetOptions &Options)
@@ -562,8 +580,12 @@ public:
       return true;
     // Given only Imm, ensuring that the actually specified constant is either
     // a signed or unsigned 64-bit number is unfortunately impossible.
-    return IsConstantImm && VK == RISCVMCExpr::VK_RISCV_None &&
-           (isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm)));
+    if (IsConstantImm) {
+      return VK == RISCVMCExpr::VK_RISCV_None &&
+             (isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm)));
+    }
+
+    return RISCVAsmParser::isSymbolDiff(getImm());
   }
 
   bool isUImmLog2XLen() const {
@@ -1466,10 +1488,7 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(
-        ErrorLoc,
-        "operand must be "
-        "e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
+    return generateVTypeError(ErrorLoc);
   }
   case Match_InvalidVMaskRegister: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -2032,69 +2051,96 @@ OperandMatchResultTy RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
   return parseImmediate(Operands);
 }
 
+bool RISCVAsmParser::parseVTypeToken(StringRef Identifier, VTypeState &State,
+                                     unsigned &Sew, unsigned &Lmul,
+                                     bool &Fractional, bool &TailAgnostic,
+                                     bool &MaskAgnostic) {
+  switch (State) {
+  case VTypeState_SEW:
+    if (!Identifier.consume_front("e"))
+      break;
+    if (Identifier.getAsInteger(10, Sew))
+      break;
+    if (!RISCVVType::isValidSEW(Sew))
+      break;
+    State = VTypeState_LMUL;
+    return false;
+  case VTypeState_LMUL: {
+    if (!Identifier.consume_front("m"))
+      break;
+    Fractional = Identifier.consume_front("f");
+    if (Identifier.getAsInteger(10, Lmul))
+      break;
+    if (!RISCVVType::isValidLMUL(Lmul, Fractional))
+      break;
+    State = VTypeState_TailPolicy;
+    return false;
+  }
+  case VTypeState_TailPolicy:
+    if (Identifier == "ta")
+      TailAgnostic = true;
+    else if (Identifier == "tu")
+      TailAgnostic = false;
+    else
+      break;
+    State = VTypeState_MaskPolicy;
+    return false;
+  case VTypeState_MaskPolicy:
+    if (Identifier == "ma")
+      MaskAgnostic = true;
+    else if (Identifier == "mu")
+      MaskAgnostic = false;
+    else
+      break;
+    State = VTypeState_Done;
+    return false;
+  case VTypeState_Done:
+    // Extra token?
+    break;
+  }
+
+  return true;
+}
+
 OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   SMLoc S = getLoc();
 
-  SmallVector<AsmToken, 7> VTypeIElements;
-  // Put all the tokens for vtypei operand into VTypeIElements vector.
-  while (getLexer().isNot(AsmToken::EndOfStatement)) {
-    if (getLexer().isNot(AsmToken::Identifier))
-      goto MatchFail;
-    VTypeIElements.push_back(getLexer().getTok());
+  unsigned Sew = 0;
+  unsigned Lmul = 0;
+  bool Fractional = false;
+  bool TailAgnostic = false;
+  bool MaskAgnostic = false;
+
+  VTypeState State = VTypeState_SEW;
+
+  if (getLexer().isNot(AsmToken::Identifier))
+    return MatchOperand_NoMatch;
+
+  StringRef Identifier = getTok().getIdentifier();
+
+  if (parseVTypeToken(Identifier, State, Sew, Lmul, Fractional, TailAgnostic,
+                      MaskAgnostic))
+    return MatchOperand_NoMatch;
+
+  getLexer().Lex();
+
+  while (getLexer().is(AsmToken::Comma)) {
+    // Consume comma.
     getLexer().Lex();
-    if (getLexer().is(AsmToken::EndOfStatement))
+
+    if (getLexer().isNot(AsmToken::Identifier))
       break;
-    if (getLexer().isNot(AsmToken::Comma))
-      goto MatchFail;
-    AsmToken Comma = getLexer().getTok();
-    VTypeIElements.push_back(Comma);
+
+    Identifier = getTok().getIdentifier();
+
+    if (parseVTypeToken(Identifier, State, Sew, Lmul, Fractional, TailAgnostic,
+                        MaskAgnostic))
+      break;
+
     getLexer().Lex();
   }
 
-  if (VTypeIElements.size() == 7) {
-    // The VTypeIElements layout is:
-    // SEW comma LMUL comma TA comma MA
-    //  0    1    2     3    4   5    6
-    StringRef Name = VTypeIElements[0].getIdentifier();
-    if (!Name.consume_front("e"))
-      goto MatchFail;
-    unsigned Sew;
-    if (Name.getAsInteger(10, Sew))
-      goto MatchFail;
-    if (!RISCVVType::isValidSEW(Sew))
-      goto MatchFail;
-
-    Name = VTypeIElements[2].getIdentifier();
-    if (!Name.consume_front("m"))
-      goto MatchFail;
-    // "m" or "mf"
-    bool Fractional = Name.consume_front("f");
-    unsigned Lmul;
-    if (Name.getAsInteger(10, Lmul))
-      goto MatchFail;
-    if (!RISCVVType::isValidLMUL(Lmul, Fractional))
-      goto MatchFail;
-
-    // ta or tu
-    Name = VTypeIElements[4].getIdentifier();
-    bool TailAgnostic;
-    if (Name == "ta")
-      TailAgnostic = true;
-    else if (Name == "tu")
-      TailAgnostic = false;
-    else
-      goto MatchFail;
-
-    // ma or mu
-    Name = VTypeIElements[6].getIdentifier();
-    bool MaskAgnostic;
-    if (Name == "ma")
-      MaskAgnostic = true;
-    else if (Name == "mu")
-      MaskAgnostic = false;
-    else
-      goto MatchFail;
-
+  if (getLexer().is(AsmToken::EndOfStatement) && State == VTypeState_Done) {
     RISCVII::VLMUL VLMUL = RISCVVType::encodeLMUL(Lmul, Fractional);
 
     unsigned VTypeI =
@@ -2103,11 +2149,15 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
     return MatchOperand_Success;
   }
 
-// If NoMatch, unlex all the tokens that comprise a vtypei operand
-MatchFail:
-  while (!VTypeIElements.empty())
-    getLexer().UnLex(VTypeIElements.pop_back_val());
-  return MatchOperand_NoMatch;
+  generateVTypeError(S);
+  return MatchOperand_ParseFail;
+}
+
+bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
+  return Error(
+      ErrorLoc,
+      "operand must be "
+      "e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
 }
 
 OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
@@ -2544,6 +2594,16 @@ bool RISCVAsmParser::classifySymbolRef(const MCExpr *Expr,
   MCFixup Fixup;
   if (Expr->evaluateAsRelocatable(Res, nullptr, &Fixup))
     return Res.getRefKind() == RISCVMCExpr::VK_RISCV_None;
+  return false;
+}
+
+bool RISCVAsmParser::isSymbolDiff(const MCExpr *Expr) {
+  MCValue Res;
+  MCFixup Fixup;
+  if (Expr->evaluateAsRelocatable(Res, nullptr, &Fixup)) {
+    return Res.getRefKind() == RISCVMCExpr::VK_RISCV_None && Res.getSymA() &&
+           Res.getSymB();
+  }
   return false;
 }
 

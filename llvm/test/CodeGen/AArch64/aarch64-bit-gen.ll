@@ -144,3 +144,55 @@ define <16 x i8> @test_bit_v16i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C) {
   %or = or <16 x i8> %and, %and1
   ret <16 x i8> %or
 }
+
+define <4 x i32> @test_bit_sink_operand(<4 x i32> %src, <4 x i32> %dst, <4 x i32> %mask, i32 %scratch) {
+; CHECK-LABEL: test_bit_sink_operand:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    cinc w9, w0, lt
+; CHECK-NEXT:    asr w9, w9, #1
+; CHECK-NEXT:  .LBB11_1: // %do.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    bit v1.16b, v0.16b, v2.16b
+; CHECK-NEXT:    add x10, sp, #16
+; CHECK-NEXT:    bfi x10, x8, #2, #2
+; CHECK-NEXT:    mov x11, sp
+; CHECK-NEXT:    bfi x11, x8, #2, #2
+; CHECK-NEXT:    add w8, w8, #1
+; CHECK-NEXT:    cmp w8, #5
+; CHECK-NEXT:    str q1, [sp, #16]
+; CHECK-NEXT:    str w0, [x10]
+; CHECK-NEXT:    ldr q1, [sp, #16]
+; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    str w9, [x11]
+; CHECK-NEXT:    ldr q0, [sp]
+; CHECK-NEXT:    b.ne .LBB11_1
+; CHECK-NEXT:  // %bb.2: // %do.end
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+
+entry:
+  %0 = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %div = sdiv i32 %scratch, 2
+  br label %do.body
+
+do.body:
+  %dst.addr.0 = phi <4 x i32> [ %dst, %entry ], [ %vecins, %do.body ]
+  %src.addr.0 = phi <4 x i32> [ %src, %entry ], [ %vecins1, %do.body ]
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %do.body ]
+  %vbsl3.i = and <4 x i32> %src.addr.0, %mask
+  %vbsl4.i = and <4 x i32> %dst.addr.0, %0
+  %vbsl5.i = or <4 x i32> %vbsl3.i, %vbsl4.i
+  %vecins = insertelement <4 x i32> %vbsl5.i, i32 %scratch, i32 %i.0
+  %vecins1 = insertelement <4 x i32> %src.addr.0, i32 %div, i32 %i.0
+  %inc = add nuw nsw i32 %i.0, 1
+  %exitcond.not = icmp eq i32 %inc, 5
+  br i1 %exitcond.not, label %do.end, label %do.body
+
+do.end:
+  ret <4 x i32> %vecins
+}

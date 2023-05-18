@@ -551,10 +551,6 @@ protected:
   /// Device routines are specific to the
   bool HasEmittedDeclareTargetRegion = false;
 
-  /// Loads all the offload entries information from the host IR
-  /// metadata.
-  void loadOffloadInfoMetadata();
-
   /// Start scanning from statement \a S and emit all target regions
   /// found along the way.
   /// \param S Starting statement.

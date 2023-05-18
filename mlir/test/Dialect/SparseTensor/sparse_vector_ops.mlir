@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -sparsification -cse -sparse-vectorization="vl=8" -cse | \
 // RUN:   FileCheck %s
 
-#DenseVector = #sparse_tensor.encoding<{ dimLevelType = [ "dense" ] }>
+#DenseVector = #sparse_tensor.encoding<{ lvlTypes = [ "dense" ] }>
 
 #trait = {
   indexing_maps = [

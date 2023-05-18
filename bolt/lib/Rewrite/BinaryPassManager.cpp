@@ -488,6 +488,10 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<LowerAnnotations>(NeverPrint));
 
+  // Check for dirty state of MCSymbols caused by running calculateEmittedSize
+  // in parallel and restore them
+  Manager.registerPass(std::make_unique<CleanMCState>(NeverPrint));
+
   Manager.runPasses();
 }
 

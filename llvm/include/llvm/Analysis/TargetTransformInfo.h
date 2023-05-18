@@ -293,32 +293,26 @@ public:
     /// All the GEPs in a set have same base address.
     unsigned IsSameBaseAddress : 1;
     /// These properties only valid if SameBaseAddress is set.
-    /// True if distance between any two neigbouring pointers is same value.
-    unsigned IsUniformStride : 1;
+    /// True if all pointers are separated by a unit stride.
+    unsigned IsUnitStride : 1;
     /// True if distance between any two neigbouring pointers is a known value.
     unsigned IsKnownStride : 1;
     unsigned Reserved : 29;
 
     bool isSameBase() const { return IsSameBaseAddress; }
-    bool isUniformStride() const {
-      return IsSameBaseAddress && IsUniformStride;
-    }
+    bool isUnitStride() const { return IsSameBaseAddress && IsUnitStride; }
     bool isKnownStride() const { return IsSameBaseAddress && IsKnownStride; }
 
-    static PointersChainInfo getKnownUniformStrided() {
-      return {/*IsSameBaseAddress=*/1, /*IsUniformStride=*/1,
+    static PointersChainInfo getUnitStride() {
+      return {/*IsSameBaseAddress=*/1, /*IsUnitStride=*/1,
               /*IsKnownStride=*/1, 0};
     }
-    static PointersChainInfo getUniformStrided() {
-      return {/*IsSameBaseAddress=*/1, /*IsUniformStride=*/1,
-              /*IsKnownStride=*/0, 0};
-    }
-    static PointersChainInfo getKnownNonUniformStrided() {
-      return {/*IsSameBaseAddress=*/1, /*IsUniformStride=*/0,
+    static PointersChainInfo getKnownStride() {
+      return {/*IsSameBaseAddress=*/1, /*IsUnitStride=*/0,
               /*IsKnownStride=*/1, 0};
     }
-    static PointersChainInfo getNonUniformStrided() {
-      return {/*IsSameBaseAddress=*/1, /*IsUniformStride=*/0,
+    static PointersChainInfo getUnknownStride() {
+      return {/*IsSameBaseAddress=*/1, /*IsUnitStride=*/0,
               /*IsKnownStride=*/0, 0};
     }
   };

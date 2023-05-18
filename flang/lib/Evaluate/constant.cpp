@@ -346,6 +346,12 @@ StructureConstructor Constant<SomeDerived>::At(
   return {result().derivedTypeSpec(), values_.at(SubscriptsToOffset(index))};
 }
 
+bool Constant<SomeDerived>::operator==(
+    const Constant<SomeDerived> &that) const {
+  return result().derivedTypeSpec() == that.result().derivedTypeSpec() &&
+      shape() == that.shape() && values_ == that.values_;
+}
+
 auto Constant<SomeDerived>::Reshape(ConstantSubscripts &&dims) const
     -> Constant {
   return {result().derivedTypeSpec(), Base::Reshape(dims), std::move(dims)};

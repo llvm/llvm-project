@@ -335,6 +335,77 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// PrivateRecipeOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyPrivateLikeRegion(Operation *op, Region &region,
+                                             StringRef regionName, Type type,
+                                             unsigned expectNbArg,
+                                             bool optionalRegion,
+                                             bool verifyYield) {
+  if (optionalRegion && region.empty())
+    return success();
+
+  if (region.empty())
+    return op->emitOpError() << "expects non-empty " << regionName << " region";
+  Block &firstBlock = region.front();
+  if (expectNbArg == 1 && (firstBlock.getNumArguments() != 1 ||
+                           firstBlock.getArgument(0).getType() != type))
+    return op->emitOpError() << "expects " << regionName
+                             << " region with one "
+                                "argument of the privatization type";
+  if (expectNbArg == 2 && (firstBlock.getNumArguments() != 2 ||
+                           firstBlock.getArgument(0).getType() != type))
+    return op->emitOpError() << "expects " << regionName
+                             << " region with two "
+                                "arguments of the privatization type";
+
+  if (verifyYield) {
+    for (YieldOp yieldOp : region.getOps<acc::YieldOp>()) {
+      if (yieldOp.getOperands().size() != 1 ||
+          yieldOp.getOperands().getTypes()[0] != type)
+        return op->emitOpError() << "expects " << regionName
+                                 << " region to "
+                                    "yield a value of the privatization type";
+    }
+  }
+  return success();
+}
+
+LogicalResult acc::PrivateRecipeOp::verifyRegions() {
+  if (failed(verifyPrivateLikeRegion(*this, getInitRegion(), "init", getType(),
+                                     1, /*optional=*/false,
+                                     /*verifyYield=*/true)))
+    return failure();
+  if (failed(verifyPrivateLikeRegion(*this, getDestroyRegion(), "destroy",
+                                     getType(), 1, /*optional=*/true,
+                                     /*verifyYield=*/false)))
+    return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FirstprivateRecipeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
+  if (failed(verifyPrivateLikeRegion(*this, getInitRegion(), "init", getType(),
+                                     1, /*optional=*/false,
+                                     /*verifyYield=*/true)))
+    return failure();
+
+  if (failed(verifyPrivateLikeRegion(*this, getCopyRegion(), "copy", getType(),
+                                     2, /*optional=*/false,
+                                     /*verifyYield=*/false)))
+    return failure();
+  if (failed(verifyPrivateLikeRegion(*this, getDestroyRegion(), "destroy",
+                                     getType(), 1, /*optional=*/true,
+                                     /*verifyYield=*/false)))
+    return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
 

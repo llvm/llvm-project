@@ -646,7 +646,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "No exceptions"
-      command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
+      command: "libcxx/utils/ci/run-buildbot generic-no-exceptions"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -919,7 +919,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "AArch64 -fno-exceptions"
-      command: "libcxx/utils/ci/run-buildbot aarch64-noexceptions"
+      command: "libcxx/utils/ci/run-buildbot aarch64-no-exceptions"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -947,7 +947,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv8 -fno-exceptions"
-      command: "libcxx/utils/ci/run-buildbot armv8-noexceptions"
+      command: "libcxx/utils/ci/run-buildbot armv8-no-exceptions"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -975,7 +975,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv7 -fno-exceptions"
-      command: "libcxx/utils/ci/run-buildbot armv7-noexceptions"
+      command: "libcxx/utils/ci/run-buildbot armv7-no-exceptions"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"

@@ -223,7 +223,7 @@ public:
     if (DeclLoc == nullptr)
       return;
 
-    Env.setStorageLocation(*S, *DeclLoc);
+    Env.setStorageLocationStrict(*S, *DeclLoc);
   }
 
   void VisitDeclStmt(const DeclStmt *S) {
@@ -343,15 +343,13 @@ public:
       // This cast creates a new, boolean value from the integral value. We
       // model that with a fresh value in the environment, unless it's already a
       // boolean.
-      auto &Loc = Env.createStorageLocation(*S);
-      Env.setStorageLocation(*S, Loc);
-      if (auto *SubExprVal = dyn_cast_or_null<BoolValue>(
-              Env.getValue(*SubExpr, SkipPast::Reference)))
-        Env.setValue(Loc, *SubExprVal);
+      if (auto *SubExprVal =
+              dyn_cast_or_null<BoolValue>(Env.getValueStrict(*SubExpr)))
+        Env.setValueStrict(*S, *SubExprVal);
       else
         // FIXME: If integer modeling is added, then update this code to create
         // the boolean based on the integer model.
-        Env.setValue(Loc, Env.makeAtomicBoolValue());
+        Env.setValueStrict(*S, Env.makeAtomicBoolValue());
       break;
     }
 
@@ -425,29 +423,22 @@ public:
     switch (S->getOpcode()) {
     case UO_Deref: {
       const auto *SubExprVal =
-          cast_or_null<PointerValue>(Env.getValue(*SubExpr, SkipPast::None));
+          cast_or_null<PointerValue>(Env.getValueStrict(*SubExpr));
       if (SubExprVal == nullptr)
         break;
 
-      auto &Loc = Env.createStorageLocation(*S);
-      Env.setStorageLocation(*S, Loc);
-      Env.setValue(Loc,
-                   Env.create<ReferenceValue>(SubExprVal->getPointeeLoc()));
+      Env.setStorageLocationStrict(*S, SubExprVal->getPointeeLoc());
       break;
     }
     case UO_AddrOf: {
       // Do not form a pointer to a reference. If `SubExpr` is assigned a
       // `ReferenceValue` then form a value that points to the location of its
       // pointee.
-      StorageLocation *PointeeLoc =
-          Env.getStorageLocation(*SubExpr, SkipPast::Reference);
+      StorageLocation *PointeeLoc = Env.getStorageLocationStrict(*SubExpr);
       if (PointeeLoc == nullptr)
         break;
 
-      auto &PointerLoc = Env.createStorageLocation(*S);
-      auto &PointerVal = Env.create<PointerValue>(*PointeeLoc);
-      Env.setStorageLocation(*S, PointerLoc);
-      Env.setValue(PointerLoc, PointerVal);
+      Env.setValueStrict(*S, Env.create<PointerValue>(*PointeeLoc));
       break;
     }
     case UO_LNot: {

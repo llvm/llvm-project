@@ -101,7 +101,7 @@ define amdgpu_kernel void @flat_singlethread_unordered_load(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_unordered_load:
@@ -114,7 +114,7 @@ define amdgpu_kernel void @flat_singlethread_unordered_load(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_unordered_load:
@@ -260,7 +260,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_load(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_monotonic_load:
@@ -273,7 +273,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_load(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_monotonic_load:
@@ -419,7 +419,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_load(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_acquire_load:
@@ -432,7 +432,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_load(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_acquire_load:
@@ -578,7 +578,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_load(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_seq_cst_load:
@@ -591,7 +591,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_load(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_seq_cst_load:
@@ -722,7 +722,7 @@ define amdgpu_kernel void @flat_singlethread_unordered_store(
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_unordered_store:
@@ -732,7 +732,7 @@ define amdgpu_kernel void @flat_singlethread_unordered_store(
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_unordered_store:
@@ -862,7 +862,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_store(
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_monotonic_store:
@@ -872,7 +872,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_store(
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_monotonic_store:
@@ -1002,7 +1002,7 @@ define amdgpu_kernel void @flat_singlethread_release_store(
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_release_store:
@@ -1012,7 +1012,7 @@ define amdgpu_kernel void @flat_singlethread_release_store(
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_release_store:
@@ -1142,7 +1142,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_store(
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_seq_cst_store:
@@ -1152,7 +1152,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_store(
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_seq_cst_store:
@@ -1996,7 +1996,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_ret_atomicrmw(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_acquire_ret_atomicrmw:
@@ -2008,7 +2008,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_ret_atomicrmw(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_acquire_ret_atomicrmw:
@@ -2161,7 +2161,7 @@ define amdgpu_kernel void @flat_singlethread_acq_rel_ret_atomicrmw(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_acq_rel_ret_atomicrmw:
@@ -2173,7 +2173,7 @@ define amdgpu_kernel void @flat_singlethread_acq_rel_ret_atomicrmw(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_acq_rel_ret_atomicrmw:
@@ -2326,7 +2326,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_ret_atomicrmw(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_seq_cst_ret_atomicrmw:
@@ -2338,7 +2338,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_ret_atomicrmw(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_seq_cst_ret_atomicrmw:
@@ -4527,7 +4527,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_monotonic_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_monotonic_monotonic_ret_cmpxchg:
@@ -4538,7 +4538,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_monotonic_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_monotonic_monotonic_ret_cmpxchg:
@@ -4696,7 +4696,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_monotonic_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_acquire_monotonic_ret_cmpxchg:
@@ -4707,7 +4707,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_monotonic_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_acquire_monotonic_ret_cmpxchg:
@@ -4865,7 +4865,7 @@ define amdgpu_kernel void @flat_singlethread_release_monotonic_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_release_monotonic_ret_cmpxchg:
@@ -4876,7 +4876,7 @@ define amdgpu_kernel void @flat_singlethread_release_monotonic_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_release_monotonic_ret_cmpxchg:
@@ -5034,7 +5034,7 @@ define amdgpu_kernel void @flat_singlethread_acq_rel_monotonic_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_acq_rel_monotonic_ret_cmpxchg:
@@ -5045,7 +5045,7 @@ define amdgpu_kernel void @flat_singlethread_acq_rel_monotonic_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_acq_rel_monotonic_ret_cmpxchg:
@@ -5203,7 +5203,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_monotonic_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_seq_cst_monotonic_ret_cmpxchg:
@@ -5214,7 +5214,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_monotonic_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_seq_cst_monotonic_ret_cmpxchg:
@@ -5372,7 +5372,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_acquire_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_monotonic_acquire_ret_cmpxchg:
@@ -5383,7 +5383,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_acquire_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_monotonic_acquire_ret_cmpxchg:
@@ -5541,7 +5541,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_acquire_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_acquire_acquire_ret_cmpxchg:
@@ -5552,7 +5552,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_acquire_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_acquire_acquire_ret_cmpxchg:
@@ -5710,7 +5710,7 @@ define amdgpu_kernel void @flat_singlethread_release_acquire_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_release_acquire_ret_cmpxchg:
@@ -5721,7 +5721,7 @@ define amdgpu_kernel void @flat_singlethread_release_acquire_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_release_acquire_ret_cmpxchg:
@@ -5879,7 +5879,7 @@ define amdgpu_kernel void @flat_singlethread_acq_rel_acquire_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_acq_rel_acquire_ret_cmpxchg:
@@ -5890,7 +5890,7 @@ define amdgpu_kernel void @flat_singlethread_acq_rel_acquire_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_acq_rel_acquire_ret_cmpxchg:
@@ -6048,7 +6048,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_acquire_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_seq_cst_acquire_ret_cmpxchg:
@@ -6059,7 +6059,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_acquire_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_seq_cst_acquire_ret_cmpxchg:
@@ -6217,7 +6217,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_seq_cst_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_monotonic_seq_cst_ret_cmpxchg:
@@ -6228,7 +6228,7 @@ define amdgpu_kernel void @flat_singlethread_monotonic_seq_cst_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_monotonic_seq_cst_ret_cmpxchg:
@@ -6386,7 +6386,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_seq_cst_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_acquire_seq_cst_ret_cmpxchg:
@@ -6397,7 +6397,7 @@ define amdgpu_kernel void @flat_singlethread_acquire_seq_cst_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_acquire_seq_cst_ret_cmpxchg:
@@ -6555,7 +6555,7 @@ define amdgpu_kernel void @flat_singlethread_release_seq_cst_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_release_seq_cst_ret_cmpxchg:
@@ -6566,7 +6566,7 @@ define amdgpu_kernel void @flat_singlethread_release_seq_cst_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_release_seq_cst_ret_cmpxchg:
@@ -6724,7 +6724,7 @@ define amdgpu_kernel void @flat_singlethread_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_acq_rel_seq_cst_ret_cmpxchg:
@@ -6735,7 +6735,7 @@ define amdgpu_kernel void @flat_singlethread_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_acq_rel_seq_cst_ret_cmpxchg:
@@ -6893,7 +6893,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_seq_cst_seq_cst_ret_cmpxchg:
@@ -6904,7 +6904,7 @@ define amdgpu_kernel void @flat_singlethread_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_seq_cst_seq_cst_ret_cmpxchg:
@@ -7052,7 +7052,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_unordered_load(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_unordered_load:
@@ -7065,7 +7065,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_unordered_load(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_unordered_load:
@@ -7211,7 +7211,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_load(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_monotonic_load:
@@ -7224,7 +7224,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_load(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_monotonic_load:
@@ -7370,7 +7370,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_load(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_acquire_load:
@@ -7383,7 +7383,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_load(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_acquire_load:
@@ -7529,7 +7529,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_load(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_seq_cst_load:
@@ -7542,7 +7542,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_load(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_seq_cst_load:
@@ -7673,7 +7673,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_unordered_store(
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_unordered_store:
@@ -7683,7 +7683,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_unordered_store(
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_unordered_store:
@@ -7813,7 +7813,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_store(
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_monotonic_store:
@@ -7823,7 +7823,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_store(
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_monotonic_store:
@@ -7953,7 +7953,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_release_store(
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_release_store:
@@ -7963,7 +7963,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_release_store(
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_release_store:
@@ -8093,7 +8093,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_store(
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_seq_cst_store:
@@ -8103,7 +8103,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_store(
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_seq_cst_store:
@@ -8947,7 +8947,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_ret_atomicrmw(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_acquire_ret_atomicrmw:
@@ -8959,7 +8959,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_ret_atomicrmw(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_acquire_ret_atomicrmw:
@@ -9112,7 +9112,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acq_rel_ret_atomicrmw(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_acq_rel_ret_atomicrmw:
@@ -9124,7 +9124,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acq_rel_ret_atomicrmw(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_acq_rel_ret_atomicrmw:
@@ -9277,7 +9277,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_ret_atomicrmw(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_seq_cst_ret_atomicrmw:
@@ -9289,7 +9289,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_ret_atomicrmw(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_swap v2, v[0:1], v2 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_seq_cst_ret_atomicrmw:
@@ -11478,7 +11478,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_monotonic_ret_cmpx
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_monotonic_monotonic_ret_cmpxchg:
@@ -11489,7 +11489,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_monotonic_ret_cmpx
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_monotonic_monotonic_ret_cmpxchg:
@@ -11647,7 +11647,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_monotonic_ret_cmpxch
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_acquire_monotonic_ret_cmpxchg:
@@ -11658,7 +11658,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_monotonic_ret_cmpxch
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_acquire_monotonic_ret_cmpxchg:
@@ -11816,7 +11816,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_release_monotonic_ret_cmpxch
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_release_monotonic_ret_cmpxchg:
@@ -11827,7 +11827,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_release_monotonic_ret_cmpxch
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_release_monotonic_ret_cmpxchg:
@@ -11985,7 +11985,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acq_rel_monotonic_ret_cmpxch
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_acq_rel_monotonic_ret_cmpxchg:
@@ -11996,7 +11996,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acq_rel_monotonic_ret_cmpxch
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_acq_rel_monotonic_ret_cmpxchg:
@@ -12154,7 +12154,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_monotonic_ret_cmpxch
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_seq_cst_monotonic_ret_cmpxchg:
@@ -12165,7 +12165,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_monotonic_ret_cmpxch
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_seq_cst_monotonic_ret_cmpxchg:
@@ -12323,7 +12323,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_acquire_ret_cmpxch
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_monotonic_acquire_ret_cmpxchg:
@@ -12334,7 +12334,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_acquire_ret_cmpxch
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_monotonic_acquire_ret_cmpxchg:
@@ -12492,7 +12492,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_acquire_acquire_ret_cmpxchg:
@@ -12503,7 +12503,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_acquire_acquire_ret_cmpxchg:
@@ -12661,7 +12661,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_release_acquire_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_release_acquire_ret_cmpxchg:
@@ -12672,7 +12672,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_release_acquire_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_release_acquire_ret_cmpxchg:
@@ -12830,7 +12830,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_acq_rel_acquire_ret_cmpxchg:
@@ -12841,7 +12841,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_acq_rel_acquire_ret_cmpxchg:
@@ -12999,7 +12999,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_seq_cst_acquire_ret_cmpxchg:
@@ -13010,7 +13010,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_seq_cst_acquire_ret_cmpxchg:
@@ -13168,7 +13168,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_seq_cst_ret_cmpxch
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_monotonic_seq_cst_ret_cmpxchg:
@@ -13179,7 +13179,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_monotonic_seq_cst_ret_cmpxch
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_monotonic_seq_cst_ret_cmpxchg:
@@ -13337,7 +13337,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_acquire_seq_cst_ret_cmpxchg:
@@ -13348,7 +13348,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_acquire_seq_cst_ret_cmpxchg:
@@ -13506,7 +13506,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_release_seq_cst_ret_cmpxchg:
@@ -13517,7 +13517,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_release_seq_cst_ret_cmpxchg:
@@ -13675,7 +13675,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_acq_rel_seq_cst_ret_cmpxchg:
@@ -13686,7 +13686,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_acq_rel_seq_cst_ret_cmpxchg:
@@ -13844,7 +13844,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX940-NOTTGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-NOTTGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-NOTTGSPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-NOTTGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-NOTTGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX940-TGSPLIT-LABEL: flat_singlethread_one_as_seq_cst_seq_cst_ret_cmpxchg:
@@ -13855,7 +13855,7 @@ define amdgpu_kernel void @flat_singlethread_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX940-TGSPLIT-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX940-TGSPLIT-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:16 sc0
 ; GFX940-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
-; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2
+; GFX940-TGSPLIT-NEXT:    flat_store_dword v[0:1], v2 sc0 sc1
 ; GFX940-TGSPLIT-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: flat_singlethread_one_as_seq_cst_seq_cst_ret_cmpxchg:

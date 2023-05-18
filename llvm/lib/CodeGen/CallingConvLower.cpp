@@ -25,12 +25,15 @@
 
 using namespace llvm;
 
-CCState::CCState(CallingConv::ID CC, bool isVarArg, MachineFunction &mf,
-                 SmallVectorImpl<CCValAssign> &locs, LLVMContext &C)
-    : CallingConv(CC), IsVarArg(isVarArg), MF(mf),
-      TRI(*MF.getSubtarget().getRegisterInfo()), Locs(locs), Context(C) {
+CCState::CCState(CallingConv::ID CC, bool IsVarArg, MachineFunction &MF,
+                 SmallVectorImpl<CCValAssign> &Locs, LLVMContext &Context,
+                 bool NegativeOffsets)
+    : CallingConv(CC), IsVarArg(IsVarArg), MF(MF),
+      TRI(*MF.getSubtarget().getRegisterInfo()), Locs(Locs), Context(Context),
+      NegativeOffsets(NegativeOffsets) {
+
   // No stack is used.
-  StackOffset = 0;
+  StackSize = 0;
 
   clearByValRegsInfo();
   UsedRegs.resize((TRI.getNumRegs()+31)/32);
@@ -51,7 +54,7 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
   ensureMaxAlignment(Alignment);
   MF.getSubtarget().getTargetLowering()->HandleByVal(this, Size, Alignment);
   Size = unsigned(alignTo(Size, MinAlign));
-  unsigned Offset = AllocateStack(Size, Alignment);
+  uint64_t Offset = AllocateStack(Size, Alignment);
   addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
 }
 
@@ -197,7 +200,7 @@ static bool isValueTypeInRegForCC(CallingConv::ID CC, MVT VT) {
 
 void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
                                           MVT VT, CCAssignFn Fn) {
-  unsigned SavedStackOffset = StackOffset;
+  uint64_t SavedStackSize = StackSize;
   Align SavedMaxStackArgAlign = MaxStackArgAlign;
   unsigned NumLocs = Locs.size();
 
@@ -229,7 +232,7 @@ void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
   // Clear the assigned values and stack memory. We leave the registers marked
   // as allocated so that future queries don't return the same registers, i.e.
   // when i64 and f64 are both passed in GPRs.
-  StackOffset = SavedStackOffset;
+  StackSize = SavedStackSize;
   MaxStackArgAlign = SavedMaxStackArgAlign;
   Locs.truncate(NumLocs);
 }

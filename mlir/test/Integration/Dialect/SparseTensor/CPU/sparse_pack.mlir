@@ -22,17 +22,17 @@
 // TODO: Pack only support CodeGen Path
 
 #SortedCOO = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed-nu", "singleton" ]
 }>
 
 #SortedCOOI32 = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed-nu", "singleton" ],
   posWidth = 32,
   crdWidth = 32
 }>
 
 #BCOO = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed-hi-nu", "singleton" ]
+  lvlTypes = [ "dense", "compressed-hi-nu", "singleton" ]
 }>
 
 module {

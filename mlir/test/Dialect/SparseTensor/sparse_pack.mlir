@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --canonicalize --post-sparsification-rewrite="enable-runtime-library=false" --sparse-tensor-codegen -cse | FileCheck %s
 
 #COO = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed-nu", "singleton"],
+  lvlTypes = ["compressed-nu", "singleton"],
   crdWidth=32
 }>
 

@@ -183,6 +183,29 @@ protected:
   }
 
 public:
+  /// Return iterator range covering def operands.
+  iterator_range<MCInst::iterator> defOperands(MCInst &Inst) const {
+    return make_range(Inst.begin(),
+                      Inst.begin() + Info->get(Inst.getOpcode()).getNumDefs());
+  }
+
+  iterator_range<MCInst::const_iterator> defOperands(const MCInst &Inst) const {
+    return make_range(Inst.begin(),
+                      Inst.begin() + Info->get(Inst.getOpcode()).getNumDefs());
+  }
+
+  /// Return iterator range covering prime use operands.
+  iterator_range<MCInst::iterator> useOperands(MCInst &Inst) const {
+    return make_range(Inst.begin() + Info->get(Inst.getOpcode()).getNumDefs(),
+                      Inst.begin() + MCPlus::getNumPrimeOperands(Inst));
+  }
+
+  iterator_range<MCInst::const_iterator> useOperands(const MCInst &Inst) const {
+    return make_range(Inst.begin() + Info->get(Inst.getOpcode()).getNumDefs(),
+                      Inst.begin() + MCPlus::getNumPrimeOperands(Inst));
+  }
+
+public:
   class InstructionIterator {
   public:
     using iterator_category = std::bidirectional_iterator_tag;

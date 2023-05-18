@@ -227,6 +227,9 @@ public:
   /// Generate the location as converted from a CharBlock
   virtual mlir::Location genLocation(const Fortran::parser::CharBlock &) = 0;
 
+  /// Get the converter's current scope
+  virtual const Fortran::semantics::Scope &getCurrentScope() = 0;
+
   //===--------------------------------------------------------------------===//
   // FIR/MLIR
   //===--------------------------------------------------------------------===//
@@ -237,11 +240,13 @@ public:
   virtual mlir::ModuleOp &getModuleOp() = 0;
   /// Get the MLIRContext
   virtual mlir::MLIRContext &getMLIRContext() = 0;
-  /// Unique a symbol
+  /// Unique a symbol (add a containing scope specific prefix)
   virtual std::string mangleName(const Fortran::semantics::Symbol &) = 0;
-  /// Unique a derived type
+  /// Unique a derived type (add a containing scope specific prefix)
   virtual std::string
   mangleName(const Fortran::semantics::DerivedTypeSpec &) = 0;
+  /// Unique a compiler generated name (add a containing scope specific prefix)
+  virtual std::string mangleName(std::string &) = 0;
   /// Get the KindMap.
   virtual const fir::KindMapping &getKindMap() = 0;
 

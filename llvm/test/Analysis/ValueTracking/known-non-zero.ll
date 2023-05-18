@@ -1096,3 +1096,29 @@ define i1 @smax_nonzero_pos_arg_fail_nonstrict_pos(i8 %xx, i8 %yy, i8 %ind) {
   %r = icmp eq i8 %z, 0
   ret i1 %r
 }
+
+define i1 @mul_nonzero_contains_nonzero_mul(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nonzero_contains_nonzero_mul(
+; CHECK-NEXT:    ret i1 true
+;
+  %xx = or i8 %x, 16
+  %yy = or i8 %y, 8
+  %xy = mul i8 %xx, %yy
+  %nz = icmp ne i8 %xy, 0
+  ret i1 %nz
+}
+
+define i1 @src_mul_maybe_zero_no_nonzero_mul(i8 %x, i8 %y) {
+; CHECK-LABEL: @src_mul_maybe_zero_no_nonzero_mul(
+; CHECK-NEXT:    [[XX:%.*]] = or i8 [[X:%.*]], 96
+; CHECK-NEXT:    [[YY:%.*]] = or i8 [[Y:%.*]], 8
+; CHECK-NEXT:    [[XY:%.*]] = mul i8 [[XX]], [[YY]]
+; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[XY]], 0
+; CHECK-NEXT:    ret i1 [[NZ]]
+;
+  %xx = or i8 %x, 96
+  %yy = or i8 %y, 8
+  %xy = mul i8 %xx, %yy
+  %nz = icmp ne i8 %xy, 0
+  ret i1 %nz
+}

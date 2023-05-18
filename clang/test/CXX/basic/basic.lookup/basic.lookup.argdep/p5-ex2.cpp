@@ -8,7 +8,7 @@
 // RUN:   -fmodule-file=M=M.pcm
 // RUN: %clang_cc1 -std=c++20 Q.cpp -emit-module-interface -o Q.pcm
 // RUN: %clang_cc1 -std=c++20 Q-impl.cpp -fsyntax-only -fmodule-file=Q=Q.pcm \
-// RUN:   -fmodule-file=N=N.pcm -verify
+// RUN:   -fmodule-file=N=N.pcm -fmodule-file=M=M.pcm -verify
 
 //--- M.cpp
 export module M;

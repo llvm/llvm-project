@@ -6,11 +6,15 @@ module {
 
     // CHECK: irdl.type @complex {
     // CHECK:   %[[v0:[^ ]*]] = irdl.is f32
-    // CHECK:   irdl.parameters(%[[v0]])
+    // CHECK:   %[[v1:[^ ]*]] = irdl.is f64
+    // CHECK:   %[[v2:[^ ]*]] = irdl.any_of(%[[v0]], %[[v1]])
+    // CHECK:   irdl.parameters(%[[v2]])
     // CHECK: }
     irdl.type @complex {
       %0 = irdl.is f32
-      irdl.parameters(%0)
+      %1 = irdl.is f64
+      %2 = irdl.any_of(%0, %1)
+      irdl.parameters(%2)
     }
 
     // CHECK: irdl.operation @norm {
@@ -28,13 +32,17 @@ module {
 
     // CHECK: irdl.operation @mul {
     // CHECK:   %[[v0:[^ ]*]] = irdl.is f32
-    // CHECK:   %[[v3:[^ ]*]] = irdl.parametric @complex<%[[v0]]>
+    // CHECK:   %[[v1:[^ ]*]] = irdl.is f64
+    // CHECK:   %[[v2:[^ ]*]] = irdl.any_of(%[[v0]], %[[v1]])
+    // CHECK:   %[[v3:[^ ]*]] = irdl.parametric @complex<%[[v2]]>
     // CHECK:   irdl.operands(%[[v3]], %[[v3]])
     // CHECK:   irdl.results(%[[v3]])
     // CHECK: }
     irdl.operation @mul {
       %0 = irdl.is f32
-      %3 = irdl.parametric @complex<%0>
+      %1 = irdl.is f64
+      %2 = irdl.any_of(%0, %1)
+      %3 = irdl.parametric @complex<%2>
       irdl.operands(%3, %3)
       irdl.results(%3)
     }

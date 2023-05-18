@@ -813,22 +813,75 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   return nullptr;
 }
 
-/// \returns true if the test performed by llvm.is.fpclass(x, \p Mask) is
-/// equivalent to fcmp oeq x, 0.0 with the floating-point environment assumed
-/// for \p F for type \p Ty
-static bool fpclassTestIsFCmp0(FPClassTest Mask, const Function &F, Type *Ty) {
-  if (Mask == fcZero)
-    return F.getDenormalMode(Ty->getScalarType()->getFltSemantics()).Input ==
-           DenormalMode::IEEE;
+static bool inputDenormalIsIEEE(const Function &F, const Type *Ty) {
+  Ty = Ty->getScalarType();
+  return F.getDenormalMode(Ty->getFltSemantics()).Input == DenormalMode::IEEE;
+}
 
-  if (Mask == (fcZero | fcSubnormal)) {
-    DenormalMode::DenormalModeKind InputMode =
-        F.getDenormalMode(Ty->getScalarType()->getFltSemantics()).Input;
-    return InputMode == DenormalMode::PreserveSign ||
-           InputMode == DenormalMode::PositiveZero;
+static bool inputDenormalIsDAZ(const Function &F, const Type *Ty) {
+  Ty = Ty->getScalarType();
+  return F.getDenormalMode(Ty->getFltSemantics()).inputsAreZero();
+}
+
+/// \returns the compare predicate type if the test performed by
+/// llvm.is.fpclass(x, \p Mask) is equivalent to fcmp o__ x, 0.0 with the
+/// floating-point environment assumed for \p F for type \p Ty
+static FCmpInst::Predicate fpclassTestIsFCmp0(FPClassTest Mask,
+                                              const Function &F, Type *Ty) {
+  switch (static_cast<unsigned>(Mask)) {
+  case fcZero:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OEQ;
+    break;
+  case fcZero | fcSubnormal:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OEQ;
+    break;
+  case fcPositive | fcNegZero:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OGE;
+    break;
+  case fcPositive | fcNegZero | fcNegSubnormal:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OGE;
+    break;
+  case fcPosSubnormal | fcPosNormal | fcPosInf:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OGT;
+    break;
+  case fcNegative | fcPosZero:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OLE;
+    break;
+  case fcNegative | fcPosZero | fcPosSubnormal:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OLE;
+    break;
+  case fcNegSubnormal | fcNegNormal | fcNegInf:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OLT;
+    break;
+  case fcPosNormal | fcPosInf:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OGT;
+    break;
+  case fcNegNormal | fcNegInf:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OLT;
+    break;
+  case ~fcZero & ~fcNan:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_ONE;
+    break;
+  case ~(fcZero | fcSubnormal) & ~fcNan:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_ONE;
+    break;
+  default:
+    break;
   }
 
-  return false;
+  return FCmpInst::BAD_FCMP_PREDICATE;
 }
 
 Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
@@ -905,24 +958,30 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, FCmp);
   }
 
+  FCmpInst::Predicate PredType = FCmpInst::BAD_FCMP_PREDICATE;
+
+  // Try to replace with an fcmp with 0
+  //
+  // is.fpclass(x, fcZero) -> fcmp oeq x, 0.0
+  // is.fpclass(x, fcZero | fcNan) -> fcmp ueq x, 0.0
+  // is.fpclass(x, ~fcZero & ~fcNan) -> fcmp one x, 0.0
+  // is.fpclass(x, ~fcZero) -> fcmp une x, 0.0
+  //
+  // is.fpclass(x, fcPosSubnormal | fcPosNormal | fcPosInf) -> fcmp ogt x, 0.0
+  // is.fpclass(x, fcPositive | fcNegZero) -> fcmp oge x, 0.0
+  //
+  // is.fpclass(x, fcNegSubnormal | fcNegNormal | fcNegInf) -> fcmp olt x, 0.0
+  // is.fpclass(x, fcNegative | fcPosZero) -> fcmp ole x, 0.0
+  //
   if (!IsStrict && (IsOrdered || IsUnordered) &&
-      fpclassTestIsFCmp0(OrderedMask, *II.getFunction(), Src0->getType())) {
+      (PredType = fpclassTestIsFCmp0(OrderedMask, *II.getFunction(),
+                                     Src0->getType())) !=
+          FCmpInst::BAD_FCMP_PREDICATE) {
     Constant *Zero = ConstantFP::getZero(Src0->getType());
     // Equivalent of == 0.
-    Value *FCmp = IsUnordered ? Builder.CreateFCmpUEQ(Src0, Zero)
-                              : Builder.CreateFCmpOEQ(Src0, Zero);
-    FCmp->takeName(&II);
-    return replaceInstUsesWith(II, FCmp);
-  }
-
-  if (!IsStrict && (IsOrdered || IsUnordered) &&
-      fpclassTestIsFCmp0(OrderedInvertedMask, *II.getFunction(),
-                         Src0->getType())) {
-    Constant *Zero = ConstantFP::getZero(Src0->getType());
-
-    // Equivalent of !(x == 0).
-    Value *FCmp = IsUnordered ? Builder.CreateFCmpUNE(Src0, Zero)
-                              : Builder.CreateFCmpONE(Src0, Zero);
+    Value *FCmp = Builder.CreateFCmp(
+        IsUnordered ? FCmpInst::getUnorderedPredicate(PredType) : PredType,
+        Src0, Zero);
 
     FCmp->takeName(&II);
     return replaceInstUsesWith(II, FCmp);
@@ -1264,6 +1323,45 @@ foldShuffledIntrinsicOperands(IntrinsicInst *II,
   Value *NewIntrinsic =
       Builder.CreateIntrinsic(II->getIntrinsicID(), SrcTy, NewArgs, FPI);
   return new ShuffleVectorInst(NewIntrinsic, Mask);
+}
+
+/// Fold the following cases and accepts bswap and bitreverse intrinsics:
+///   bswap(logic_op(bswap(x), y)) --> logic_op(x, bswap(y))
+///   bswap(logic_op(bswap(x), bswap(y))) --> logic_op(x, y) (ignores multiuse)
+template <Intrinsic::ID IntrID>
+static Instruction *foldBitOrderCrossLogicOp(Value *V,
+                                             InstCombiner::BuilderTy &Builder) {
+  static_assert(IntrID == Intrinsic::bswap || IntrID == Intrinsic::bitreverse,
+                "This helper only supports BSWAP and BITREVERSE intrinsics");
+
+  Value *X, *Y;
+  // Find bitwise logic op. Check that it is a BinaryOperator explicitly so we
+  // don't match ConstantExpr that aren't meaningful for this transform.
+  if (match(V, m_OneUse(m_BitwiseLogic(m_Value(X), m_Value(Y)))) &&
+      isa<BinaryOperator>(V)) {
+    Value *OldReorderX, *OldReorderY;
+    BinaryOperator::BinaryOps Op = cast<BinaryOperator>(V)->getOpcode();
+
+    // If both X and Y are bswap/bitreverse, the transform reduces the number
+    // of instructions even if there's multiuse.
+    // If only one operand is bswap/bitreverse, we need to ensure the operand
+    // have only one use.
+    if (match(X, m_Intrinsic<IntrID>(m_Value(OldReorderX))) &&
+        match(Y, m_Intrinsic<IntrID>(m_Value(OldReorderY)))) {
+      return BinaryOperator::Create(Op, OldReorderX, OldReorderY);
+    }
+
+    if (match(X, m_OneUse(m_Intrinsic<IntrID>(m_Value(OldReorderX))))) {
+      Value *NewReorder = Builder.CreateUnaryIntrinsic(IntrID, Y);
+      return BinaryOperator::Create(Op, OldReorderX, NewReorder);
+    }
+
+    if (match(Y, m_OneUse(m_Intrinsic<IntrID>(m_Value(OldReorderY))))) {
+      Value *NewReorder = Builder.CreateUnaryIntrinsic(IntrID, X);
+      return BinaryOperator::Create(Op, NewReorder, OldReorderY);
+    }
+  }
+  return nullptr;
 }
 
 /// CallInst simplification. This mostly only handles folding of intrinsic
@@ -1669,6 +1767,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *V = Builder.CreateLShr(X, CV);
       return new TruncInst(V, IIOperand->getType());
     }
+
+    if (Instruction *crossLogicOpFold =
+            foldBitOrderCrossLogicOp<Intrinsic::bswap>(IIOperand, Builder)) {
+      return crossLogicOpFold;
+    }
+
     break;
   }
   case Intrinsic::masked_load:
@@ -2145,7 +2249,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
-    if (SignBitMustBeZero(Sign, &TLI)) {
+    if (SignBitMustBeZero(Sign, DL, &TLI)) {
       // If we know that the sign argument is positive, reduce to FABS:
       // copysign Mag, +Sign --> fabs Mag
       Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);

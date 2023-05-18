@@ -23,6 +23,7 @@ unittest("CodeGenTests") {
     "AMDGPUMetadataTest.cpp",
     "AllocationOrderTest.cpp",
     "AsmPrinterDwarfTest.cpp",
+    "CCStateTest.cpp",
     "DIEHashTest.cpp",
     "DIETest.cpp",
     "DwarfStringPoolEntryRefTest.cpp",

@@ -32,14 +32,23 @@ bool DWARFAbbreviationDeclarationSet::extract(DataExtractor Data,
   Offset = BeginOffset;
   DWARFAbbreviationDeclaration AbbrDecl;
   uint32_t PrevAbbrCode = 0;
-  while (AbbrDecl.extract(Data, OffsetPtr)) {
+  while (true) {
+    llvm::Expected<DWARFAbbreviationDeclaration::ExtractState> ES =
+        AbbrDecl.extract(Data, OffsetPtr);
+    if (!ES) {
+      // FIXME: We should propagate the error upwards.
+      llvm::consumeError(ES.takeError());
+      break;
+    }
+
+    if (*ES == DWARFAbbreviationDeclaration::ExtractState::Complete)
+      break;
+
     if (FirstAbbrCode == 0) {
       FirstAbbrCode = AbbrDecl.getCode();
-    } else {
-      if (PrevAbbrCode + 1 != AbbrDecl.getCode()) {
-        // Codes are not consecutive, can't do O(1) lookups.
-        FirstAbbrCode = UINT32_MAX;
-      }
+    } else if (PrevAbbrCode + 1 != AbbrDecl.getCode()) {
+      // Codes are not consecutive, can't do O(1) lookups.
+      FirstAbbrCode = UINT32_MAX;
     }
     PrevAbbrCode = AbbrDecl.getCode();
     Decls.push_back(std::move(AbbrDecl));

@@ -31,7 +31,7 @@
 !Filename = !llvm.ptr<i8>
 
 #SparseTensor = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed", "compressed" ]
+  lvlTypes = [ "compressed", "compressed", "compressed" ]
 }>
 
 #mttkrp = {

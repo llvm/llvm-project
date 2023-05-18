@@ -626,6 +626,30 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
     BC.MIB->setOffset(*Item.first, Item.second);
 }
 
+// Check for dirty state in MCSymbol objects that might be a consequence
+// of running calculateEmittedSize() in parallel, during split functions
+// pass. If an inconsistent state is found (symbol already registered or
+// already defined), clean it.
+void CleanMCState::runOnFunctions(BinaryContext &BC) {
+  MCContext &Ctx = *BC.Ctx;
+  for (const auto &SymMapEntry : Ctx.getSymbols()) {
+    const MCSymbol *S = SymMapEntry.second;
+    if (S->isDefined()) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
+                        << "\" is already defined\n");
+      const_cast<MCSymbol *>(S)->setUndefined();
+    }
+    if (S->isRegistered()) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
+                        << "\" is already registered\n");
+      const_cast<MCSymbol *>(S)->setIsRegistered(false);
+    }
+    LLVM_DEBUG(if (S->isVariable()) {
+      dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName() << "\" is variable\n";
+    });
+  }
+}
+
 // This peephole fixes jump instructions that jump to another basic
 // block with a single jump instruction, e.g.
 //

@@ -158,6 +158,8 @@ protected:
   bool LoadPlatformBinaryAndSetup(Process *process, lldb::addr_t addr,
                                   bool notify) override;
 
+  void UpdateKextandKernelsLocalScan();
+
   // Most of the ivars are assembled under FileSystem::EnumerateDirectory calls
   // where the function being called for each file/directory must be static.
   // We'll pass a this pointer as a baton and access the ivars directly.
@@ -193,6 +195,8 @@ public:
   KernelBinaryCollection m_kernel_dsyms_yaas;
 
   LazyBool m_ios_debug_session;
+
+  std::once_flag m_kext_scan_flag;
 
   PlatformDarwinKernel(const PlatformDarwinKernel &) = delete;
   const PlatformDarwinKernel &operator=(const PlatformDarwinKernel &) = delete;

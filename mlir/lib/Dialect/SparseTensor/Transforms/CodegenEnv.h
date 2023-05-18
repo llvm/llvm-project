@@ -79,11 +79,9 @@ public:
   const LatPoint &lat(LatPointId l) const { return latticeMerger.lat(l); }
   ArrayRef<LatPointId> set(LatSetId s) const { return latticeMerger.set(s); }
   DimLevelType dlt(TensorId t, LoopId i) const {
-    return latticeMerger.getDimLevelType(t, i);
+    return latticeMerger.getLvlType(t, i);
   }
-  DimLevelType dlt(TensorLoopId b) const {
-    return latticeMerger.getDimLevelType(b);
-  }
+  DimLevelType dlt(TensorLoopId b) const { return latticeMerger.getLvlType(b); }
 
   //
   // LoopEmitter delegates.

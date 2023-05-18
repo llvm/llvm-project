@@ -11,30 +11,30 @@
 // TODO: support slices on lib path
 
 #CSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ]
+  lvlTypes = [ "dense", "compressed" ]
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
+  lvlTypes = [ "dense", "compressed" ],
   slice = [ (1, 4, 1), (1, 4, 2) ]
 }>
 
 #CSR_SLICE_DYN = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
+  lvlTypes = [ "dense", "compressed" ],
   slice = [ (?, ?, ?), (?, ?, ?) ]
 }>
 
 #COO = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed-nu", "singleton" ]
 }>
 
 #COO_SLICE = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed-nu", "singleton" ],
   slice = [ (1, 4, 1), (1, 4, 2) ]
 }>
 
 #COO_SLICE_DYN = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed-nu", "singleton" ],
   slice = [ (?, ?, ?), (?, ?, ?) ]
 }>
 
