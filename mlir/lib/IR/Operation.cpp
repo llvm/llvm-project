@@ -91,7 +91,7 @@ Operation *Operation::create(Location location, OperationName name,
   unsigned numSuccessors = successors.size();
   unsigned numOperands = operands.size();
   unsigned numResults = resultTypes.size();
-  int opPropertiesAllocSize = name.getOpPropertyByteSize();
+  int opPropertiesAllocSize = llvm::alignTo<8>(name.getOpPropertyByteSize());
 
   // If the operation is known to have no operands, don't allocate an operand
   // storage.
