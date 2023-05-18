@@ -2712,8 +2712,7 @@ define i1 @test_class_is_nan_assume_ord(float %x) {
 ; CHECK-LABEL: @test_class_is_nan_assume_ord(
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
-; CHECK-NEXT:    [[CLASS:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ord = fcmp ord float %x, 0.0
   call void @llvm.assume(i1 %ord)
@@ -2738,8 +2737,7 @@ define i1 @test_class_is_nan_assume_not_eq_pinf(float %x) {
 ; CHECK-LABEL: @test_class_is_nan_assume_not_eq_pinf(
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp oeq float [[X:%.*]], 0x7FF0000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
-; CHECK-NEXT:    [[CLASS:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ord = fcmp oeq float %x, 0x7FF0000000000000
   call void @llvm.assume(i1 %ord)

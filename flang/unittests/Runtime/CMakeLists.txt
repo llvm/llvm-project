@@ -25,6 +25,7 @@ add_flang_unittest(FlangRuntimeTests
   RuntimeCrashTest.cpp
   Stop.cpp
   Time.cpp
+  TemporaryStack.cpp
   Transformational.cpp
 )
 

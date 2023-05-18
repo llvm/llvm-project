@@ -226,6 +226,7 @@ void AArch64Subtarget::initializeProperties() {
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 2;
+    DefaultSVETFOpts = TailFoldingOpts::Simple;
     break;
   case Neoverse512TVB:
     PrefFunctionAlignment = Align(16);

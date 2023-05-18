@@ -6789,7 +6789,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
   // Use the new VALU Opcode.
   auto NewInstr = BuildMI(*MBB, Inst, Inst.getDebugLoc(), get(NewOpcode))
                       .setMIFlags(Inst.getFlags());
-  if (isVOP3(NewOpcode)) {
+  if (isVOP3(NewOpcode) && !isVOP3(Opcode)) {
     // Intersperse VOP3 modifiers among the SALU operands.
     NewInstr->addOperand(Inst.getOperand(0));
     if (AMDGPU::getNamedOperandIdx(NewOpcode,

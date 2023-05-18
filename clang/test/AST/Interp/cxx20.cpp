@@ -143,9 +143,9 @@ namespace UninitializedFields {
     constexpr A() {}
   };
   constexpr A a; // expected-error {{must be initialized by a constant expression}} \
-                 // expected-note {{subobject 'a' is not initialized}} \
+                 // expected-note {{subobject of type 'int' is not initialized}} \
                  // ref-error {{must be initialized by a constant expression}} \
-                 // ref-note {{subobject 'a' is not initialized}}
+                 // ref-note {{subobject of type 'int' is not initialized}}
 
 
   class Base {
@@ -161,18 +161,18 @@ namespace UninitializedFields {
     constexpr Derived() : Base() {}   };
 
   constexpr Derived D; // expected-error {{must be initialized by a constant expression}} \
-                       // expected-note {{subobject 'a' is not initialized}} \
+                       // expected-note {{subobject of type 'int' is not initialized}} \
                        // ref-error {{must be initialized by a constant expression}} \
-                       // ref-note {{subobject 'a' is not initialized}}
+                       // ref-note {{subobject of type 'int' is not initialized}}
 
   class C2 {
   public:
     A a;
     constexpr C2() {}   };
   constexpr C2 c2; // expected-error {{must be initialized by a constant expression}} \
-                   // expected-note {{subobject 'a' is not initialized}} \
+                   // expected-note {{subobject of type 'int' is not initialized}} \
                    // ref-error {{must be initialized by a constant expression}} \
-                   // ref-note {{subobject 'a' is not initialized}}
+                   // ref-note {{subobject of type 'int' is not initialized}}
 
 
   // FIXME: These two are currently disabled because the array fields

@@ -461,13 +461,18 @@ bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
 /// Return true if the floating-point scalar value is not an infinity or if
 /// the floating-point vector value has no infinities. Return false if a value
 /// could ever be infinity.
-bool isKnownNeverInfinity(const Value *V, const DataLayout &DL,
-                          const TargetLibraryInfo *TLI = nullptr,
-                          unsigned Depth = 0, AssumptionCache *AC = nullptr,
-                          const Instruction *CtxI = nullptr,
-                          const DominatorTree *DT = nullptr,
-                          OptimizationRemarkEmitter *ORE = nullptr,
-                          bool UseInstrInfo = true);
+inline bool isKnownNeverInfinity(const Value *V, const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI = nullptr,
+                                 unsigned Depth = 0,
+                                 AssumptionCache *AC = nullptr,
+                                 const Instruction *CtxI = nullptr,
+                                 const DominatorTree *DT = nullptr,
+                                 OptimizationRemarkEmitter *ORE = nullptr,
+                                 bool UseInstrInfo = true) {
+  KnownFPClass Known = computeKnownFPClass(V, DL, fcInf, Depth, TLI, AC, CtxI,
+                                           DT, ORE, UseInstrInfo);
+  return Known.isKnownNeverInfinity();
+}
 
 /// Return true if the floating-point value can never contain a NaN or infinity.
 inline bool isKnownNeverInfOrNaN(
@@ -483,13 +488,17 @@ inline bool isKnownNeverInfOrNaN(
 /// Return true if the floating-point scalar value is not a NaN or if the
 /// floating-point vector value has no NaN elements. Return false if a value
 /// could ever be NaN.
-bool isKnownNeverNaN(const Value *V, const DataLayout &DL,
-                     const TargetLibraryInfo *TLI = nullptr, unsigned Depth = 0,
-                     AssumptionCache *AC = nullptr,
-                     const Instruction *CtxI = nullptr,
-                     const DominatorTree *DT = nullptr,
-                     OptimizationRemarkEmitter *ORE = nullptr,
-                     bool UseInstrInfo = true);
+inline bool isKnownNeverNaN(const Value *V, const DataLayout &DL,
+                            const TargetLibraryInfo *TLI, unsigned Depth = 0,
+                            AssumptionCache *AC = nullptr,
+                            const Instruction *CtxI = nullptr,
+                            const DominatorTree *DT = nullptr,
+                            OptimizationRemarkEmitter *ORE = nullptr,
+                            bool UseInstrInfo = true) {
+  KnownFPClass Known = computeKnownFPClass(V, DL, fcNan, Depth, TLI, AC, CtxI,
+                                           DT, ORE, UseInstrInfo);
+  return Known.isKnownNeverNaN();
+}
 
 /// Return true if we can prove that the specified FP value's sign bit is 0.
 ///
