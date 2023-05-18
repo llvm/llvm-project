@@ -136,8 +136,11 @@ bool ThreadPlanPython::MischiefManaged() {
     // I don't really need mischief_managed, since it's simpler to just call
     // SetPlanComplete in should_stop.
     mischief_managed = IsPlanComplete();
-    if (mischief_managed)
+    if (mischief_managed) {
+      // We need to cache the stop reason here we'll need it in GetDescription.
+      GetDescription(&m_stop_description, eDescriptionLevelBrief);
       m_implementation_sp.reset();
+    }
   }
   return mischief_managed;
 }
@@ -158,15 +161,40 @@ lldb::StateType ThreadPlanPython::GetPlanRunState() {
   return run_state;
 }
 
-// The ones below are not currently exported to Python.
 void ThreadPlanPython::GetDescription(Stream *s, lldb::DescriptionLevel level) {
-  s->Printf("Python thread plan implemented by class %s.",
+  Log *log = GetLog(LLDBLog::Thread);
+  LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
             m_class_name.c_str());
+  if (m_implementation_sp) {
+    ScriptInterpreter *script_interp = GetScriptInterpreter();
+    if (script_interp) {
+      bool script_error;
+      bool added_desc = script_interp->ScriptedThreadPlanGetStopDescription(
+          m_implementation_sp, s, script_error);
+      if (script_error || !added_desc)
+        s->Printf("Python thread plan implemented by class %s.",
+            m_class_name.c_str());
+    }
+    return;
+  }
+  // It's an error not to have a description, so if we get here, we should
+  // add something.
+  if (m_stop_description.Empty())
+    s->Printf("Python thread plan implemented by class %s.",
+              m_class_name.c_str());
+  s->PutCString(m_stop_description.GetData());
 }
 
+// The ones below are not currently exported to Python.
 bool ThreadPlanPython::WillStop() {
   Log *log = GetLog(LLDBLog::Thread);
   LLDB_LOGF(log, "%s called on Python Thread Plan: %s )", LLVM_PRETTY_FUNCTION,
             m_class_name.c_str());
   return true;
+}
+
+bool ThreadPlanPython::DoWillResume(lldb::StateType resume_state, 
+                                  bool current_plan) {
+  m_stop_description.Clear();
+  return true;                                  
 }
