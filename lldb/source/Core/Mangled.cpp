@@ -29,7 +29,7 @@
 #include "swift/Demangling/Demangle.h"
 #endif // LLDB_ENABLE_SWIFT
 // BEGIN SWIFT
-#include "lldb/Core/ThreadSafeDenseMap.h"
+#include "lldb/Utility/ThreadSafeDenseMap.h"
 // END SWIFT
 
 #include <mutex>
