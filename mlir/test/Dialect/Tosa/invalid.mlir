@@ -143,3 +143,11 @@ func.func @test_reshape_type_mismatch(%arg0 : tensor<13x21x3xf32>) -> () {
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 13, 21, 3, 1>} : (tensor<13x21x3xf32>) -> tensor<13x21x3x1xi32>
   return
 }
+
+// -----
+
+func.func @test_const_attribute_type_mismatch() -> tensor<100x100xf32> {
+  // expected-error@+1 {{'tosa.const' op failed to verify that all of {value, output} have same shape}}
+  %0 = "tosa.const"() {value = dense<0.000000e+00> : tensor<1x1xf32>} : () -> tensor<100x100xf32>
+  return %0 : tensor<100x100xf32>
+}
