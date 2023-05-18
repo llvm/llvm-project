@@ -48,11 +48,13 @@ Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
 
 MachOLinkGraphBuilder::MachOLinkGraphBuilder(
     const object::MachOObjectFile &Obj, Triple TT,
+    LinkGraph::FeatureVector Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(
-          std::string(Obj.getFileName()), std::move(TT), getPointerSize(Obj),
-          getEndianness(Obj), std::move(GetEdgeKindName))) {
+      G(std::make_unique<LinkGraph>(std::string(Obj.getFileName()),
+                                    std::move(TT), std::move(Features),
+                                    getPointerSize(Obj), getEndianness(Obj),
+                                    std::move(GetEdgeKindName))) {
   auto &MachHeader = Obj.getHeader64();
   SubsectionsViaSymbols = MachHeader.flags & MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
 }

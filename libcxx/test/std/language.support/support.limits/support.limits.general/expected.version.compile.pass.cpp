@@ -16,7 +16,7 @@
 // Test the feature test macros defined by <expected>
 
 /*  Constant              Value
-    __cpp_lib_expected    202202L [C++2b]
+    __cpp_lib_expected    202211L [C++2b]
 */
 
 #include <expected>
@@ -51,8 +51,8 @@
 # ifndef __cpp_lib_expected
 #   error "__cpp_lib_expected should be defined in c++2b"
 # endif
-# if __cpp_lib_expected != 202202L
-#   error "__cpp_lib_expected should have the value 202202L in c++2b"
+# if __cpp_lib_expected != 202211L
+#   error "__cpp_lib_expected should have the value 202211L in c++2b"
 # endif
 
 #endif // TEST_STD_VER > 20

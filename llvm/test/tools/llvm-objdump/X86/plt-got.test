@@ -1,0 +1,233 @@
+## If a symbol needing a PLT entry also needs a GLOB_DAT relocation, GNU ld's
+## x86 port places the PLT entry in .plt.got, relocated by a GLOB_DAT. The
+## JUMP_SLOT relocation is unused in this case.
+## Test that we synthesize @plt symbols for such PLT entries.
+# RUN: yaml2obj --docnum=1 %s -o %t.x86-64
+# RUN: llvm-objdump -d %t.x86-64 | FileCheck %s --check-prefix=64
+# RUN: yaml2obj --docnum=2 %s -o %t.x86-32
+# RUN: llvm-objdump -d %t.x86-32 | FileCheck %s --check-prefix=32
+
+# 64:      Disassembly of section .plt:
+# 64-EMPTY:
+# 64-NEXT: <.plt>:
+# 64:      <foo1@plt>:
+# 64:      <foo0@plt>:
+
+# 64:      Disassembly of section .plt.got:
+# 64-EMPTY:
+# 64-NEXT: <combined0@plt>:
+# 64:      <combined1@plt>:
+
+# 64:      <_start>:
+# 64-NEXT:   movq    {{.*}}(%rip), %rax
+# 64-NEXT:   movq    {{.*}}(%rip), %rax
+# 64-NEXT:   callq   {{.*}} <combined0@plt>
+# 64-NEXT:   callq   {{.*}} <combined1@plt>
+# 64-NEXT:   callq   {{.*}} <foo0@plt>
+# 64-NEXT:   callq   {{.*}} <foo1@plt>
+
+# 32:      Disassembly of section .plt:
+# 32-EMPTY:
+# 32-NEXT: <.plt>:
+# 32:      <foo1@plt>:
+# 32:      <foo0@plt>:
+
+# 32:      Disassembly of section .plt.got:
+# 32-EMPTY:
+# 32-NEXT: <combined0@plt>:
+# 32:      <combined1@plt>:
+
+# 32:      <_start>:
+# 32-NEXT:   movl    -0x8(%eax), %eax
+# 32-NEXT:   movl    -0x4(%eax), %eax
+# 32-NEXT:   calll   {{.*}} <combined0@plt>
+# 32-NEXT:   calll   {{.*}} <combined1@plt>
+# 32-NEXT:   calll   {{.*}} <foo0@plt>
+# 32-NEXT:   calll   {{.*}} <foo1@plt>
+
+## %t.x86-64 is linked with ld.bfd -pie -z now a.o b.so and
+## doesn't have .got.plt.
+## %t.x86-32 is linked with ld.bfd -pie -z lazy a.o b.so and
+## has .got.plt.
+
+## a.s
+## .globl _start; _start:
+## mov combined0@gotpcrel(%rip), %rax  # movl combined0@GOT(%eax), %eax  for x86-32
+## mov combined1@gotpcrel(%rip), %rax  # movl combined1@GOT(%eax), %eax  for x86-32
+## call combined0@plt
+## call combined1@plt
+## call foo0@plt
+## call foo1@plt
+
+## b.s
+## .globl foo0, foo1, combined0, combined1
+## foo0: foo1: combined0: combined1:
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+  Entry:           0x1040
+Sections:
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x340
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x2FF0
+        Symbol:          combined0
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x2FF8
+        Symbol:          combined1
+        Type:            R_X86_64_GLOB_DAT
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x370
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got
+    Relocations:
+      - Offset:          0x2FE0
+        Symbol:          foo1
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x2FE8
+        Symbol:          foo0
+        Type:            R_X86_64_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Offset:          0x1000
+    Content:         FF35CA1F0000FF25CC1F00000F1F4000FF25CA1F00006800000000E9E0FFFFFFFF25C21F00006801000000E9D0FFFFFF
+  - Name:            .plt.got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1030
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         FF25BA1F00006690FF25BA1F00006690
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1040
+    AddressAlign:    0x1
+    Content:         488B05A91F0000488B05AA1F0000E8DDFFFFFFE8E0FFFFFFE8C3FFFFFFE8AEFFFFFF
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2FC8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '682E000000000000000000000000000000000000000000001610000000000000261000000000000000000000000000000000000000000000'
+Symbols:
+  - Name:            _start
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1040
+DynamicSymbols:
+  - Name:            foo1
+    Binding:         STB_GLOBAL
+  - Name:            foo0
+    Binding:         STB_GLOBAL
+  - Name:            combined0
+    Binding:         STB_GLOBAL
+  - Name:            combined1
+    Binding:         STB_GLOBAL
+...
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_386
+  Entry:           0x1040
+Sections:
+  - Name:            .rel.dyn
+    Type:            SHT_REL
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x218
+    Link:            .dynsym
+    AddressAlign:    0x4
+    Relocations:
+      - Offset:          0x2FEC
+        Symbol:          combined0
+        Type:            R_386_GLOB_DAT
+      - Offset:          0x2FF0
+        Symbol:          combined1
+        Type:            R_386_GLOB_DAT
+  - Name:            .rel.plt
+    Type:            SHT_REL
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x228
+    Link:            .dynsym
+    AddressAlign:    0x4
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x3000
+        Symbol:          foo1
+        Type:            R_386_JUMP_SLOT
+      - Offset:          0x3004
+        Symbol:          foo0
+        Type:            R_386_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x10
+    EntSize:         0x4
+    Offset:          0x1000
+    Content:         FFB304000000FFA30800000000000000FFA30C0000006800000000E9E0FFFFFFFFA3100000006808000000E9D0FFFFFF
+  - Name:            .plt.got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1030
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         FFA3F8FFFFFF6690FFA3FCFFFFFF6690
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1040
+    AddressAlign:    0x1
+    Content:         8B80F8FFFFFF8B80FCFFFFFFE8DFFFFFFFE8E2FFFFFFE8C5FFFFFFE8B0FFFFFF
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2FEC
+    AddressAlign:    0x4
+    EntSize:         0x4
+    Content:         '0000000000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2FF4
+    AddressAlign:    0x4
+    EntSize:         0x4
+    Content:         442F000000000000000000001610000026100000
+Symbols:
+  - Name:            _GLOBAL_OFFSET_TABLE_
+    Type:            STT_OBJECT
+    Section:         .got.plt
+    Value:           0x2FF4
+  - Name:            _start
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1040
+DynamicSymbols:
+  - Name:            combined0
+    Binding:         STB_GLOBAL
+  - Name:            foo1
+    Binding:         STB_GLOBAL
+  - Name:            foo0
+    Binding:         STB_GLOBAL
+  - Name:            combined1
+    Binding:         STB_GLOBAL
+...

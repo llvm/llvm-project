@@ -10,7 +10,7 @@
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x=%t/x.pcm -verify %t/use.cpp \
 // RUN:            -DMODULE_NAME=x
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=y=%t/y.pcm -verify %t/use.cpp \
-// RUN:            -DMODULE_NAME=y
+// RUN:            -DMODULE_NAME=y -fmodule-file=x=%t/x.pcm
 //
 // RUN: mv %t/x.pcm %t/a.pcm
 //

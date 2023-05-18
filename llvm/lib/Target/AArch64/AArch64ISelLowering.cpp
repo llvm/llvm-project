@@ -6560,11 +6560,12 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     }
 
     // This will point to the next argument passed via stack.
-    unsigned StackOffset = CCInfo.getNextStackOffset();
+    unsigned VarArgsOffset = CCInfo.getStackSize();
     // We currently pass all varargs at 8-byte alignment, or 4 for ILP32
-    StackOffset = alignTo(StackOffset, Subtarget->isTargetILP32() ? 4 : 8);
-    FuncInfo->setVarArgsStackOffset(StackOffset);
-    FuncInfo->setVarArgsStackIndex(MFI.CreateFixedObject(4, StackOffset, true));
+    VarArgsOffset = alignTo(VarArgsOffset, Subtarget->isTargetILP32() ? 4 : 8);
+    FuncInfo->setVarArgsStackOffset(VarArgsOffset);
+    FuncInfo->setVarArgsStackIndex(
+        MFI.CreateFixedObject(4, VarArgsOffset, true));
 
     if (MFI.hasMustTailInVarArgFunc()) {
       SmallVector<MVT, 2> RegParmTypes;
@@ -6604,7 +6605,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     }
   }
 
-  unsigned StackArgSize = CCInfo.getNextStackOffset();
+  unsigned StackArgSize = CCInfo.getStackSize();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   if (DoesCalleeRestoreStack(CallConv, TailCallOpt)) {
     // This is a non-standard ABI so by fiat I say we're allowed to make full
@@ -7001,7 +7002,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
 
   // If the stack arguments for this call do not fit into our own save area then
   // the call cannot be made tail.
-  if (CCInfo.getNextStackOffset() > FuncInfo->getBytesInStackArgArea())
+  if (CCInfo.getStackSize() > FuncInfo->getBytesInStackArgArea())
     return false;
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -7165,7 +7166,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                        "site marked musttail");
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getNextStackOffset();
+  unsigned NumBytes = CCInfo.getStackSize();
 
   if (IsSibCall) {
     // Since we're not changing the ABI to make this a tail call, the memory
@@ -14336,6 +14337,43 @@ bool AArch64TargetLowering::shouldSinkOperands(
 
     return true;
   }
+  case Instruction::Or: {
+    // Pattern: Or(And(MaskValue, A), And(Not(MaskValue), B)) ->
+    // bitselect(MaskValue, A, B) where Not(MaskValue) = Xor(MaskValue, -1)
+    if (Subtarget->hasNEON()) {
+      Instruction *OtherAnd, *IA, *IB;
+      Value *MaskValue;
+      // MainAnd refers to And instruction that has 'Not' as one of its operands
+      if (match(I, m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
+                          m_OneUse(m_c_And(m_OneUse(m_Not(m_Value(MaskValue))),
+                                           m_Instruction(IA)))))) {
+        if (match(OtherAnd,
+                  m_c_And(m_Specific(MaskValue), m_Instruction(IB)))) {
+          Instruction *MainAnd = I->getOperand(0) == OtherAnd
+                                     ? cast<Instruction>(I->getOperand(1))
+                                     : cast<Instruction>(I->getOperand(0));
+
+          // Both Ands should be in same basic block as Or
+          if (I->getParent() != MainAnd->getParent() ||
+              I->getParent() != OtherAnd->getParent())
+            return false;
+
+          // Non-mask operands of both Ands should also be in same basic block
+          if (I->getParent() != IA->getParent() ||
+              I->getParent() != IB->getParent())
+            return false;
+
+          Ops.push_back(&MainAnd->getOperandUse(MainAnd->getOperand(0) == IA ? 1 : 0));
+          Ops.push_back(&I->getOperandUse(0));
+          Ops.push_back(&I->getOperandUse(1));
+
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
   case Instruction::Mul: {
     int NumZExts = 0, NumSExts = 0;
     for (auto &Op : I->operands()) {
@@ -17883,8 +17921,8 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
 // instruction can still be used profitably. This function puts the DAG into a
 // more appropriate form for those patterns to trigger.
 static SDValue performAddSubLongCombine(SDNode *N,
-                                        TargetLowering::DAGCombinerInfo &DCI,
-                                        SelectionDAG &DAG) {
+                                        TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -18218,9 +18256,9 @@ static SDValue performSubAddMULCombine(SDNode *N, SelectionDAG &DAG) {
 // for vectors of type <1 x i64> and <2 x i64> when SVE is available.
 // It will transform the add/sub to a scalable version, so that we can
 // make use of SVE's MLA/MLS that will be generated for that pattern
-static SDValue performMulAddSubCombine(SDNode *N,
-                                       TargetLowering::DAGCombinerInfo &DCI,
-                                       SelectionDAG &DAG) {
+static SDValue
+performSVEMulAddSubCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
   // Make sure that the types are legal
   if (!DCI.isAfterLegalizeDAG())
     return SDValue();
@@ -18266,28 +18304,64 @@ static SDValue performMulAddSubCombine(SDNode *N,
   return SDValue();
 }
 
+// Given a i64 add from a v1i64 extract, convert to a neon v1i64 add. This can
+// help, for example, to produce ssra from sshr+add.
+static SDValue performAddSubIntoVectorOp(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i64)
+    return SDValue();
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  // At least one of the operands should be an extract, and the other should be
+  // something that is easy to convert to v1i64 type (in this case a load).
+  if (Op0.getOpcode() != ISD::EXTRACT_VECTOR_ELT &&
+      Op0.getOpcode() != ISD::LOAD)
+    return SDValue();
+  if (Op1.getOpcode() != ISD::EXTRACT_VECTOR_ELT &&
+      Op1.getOpcode() != ISD::LOAD)
+    return SDValue();
+
+  SDLoc DL(N);
+  if (Op0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      Op0.getOperand(0).getValueType() == MVT::v1i64) {
+    Op0 = Op0.getOperand(0);
+    Op1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i64, Op1);
+  } else if (Op1.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+             Op1.getOperand(0).getValueType() == MVT::v1i64) {
+    Op0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i64, Op0);
+    Op1 = Op1.getOperand(0);
+  } else
+    return SDValue();
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64,
+                     DAG.getNode(N->getOpcode(), DL, MVT::v1i64, Op0, Op1),
+                     DAG.getConstant(0, DL, MVT::i64));
+}
+
 static SDValue performAddSubCombine(SDNode *N,
-                                    TargetLowering::DAGCombinerInfo &DCI,
-                                    SelectionDAG &DAG) {
-  if (SDValue Val = performMulAddSubCombine(N, DCI, DAG))
-    return Val;
+                                    TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
-  if (SDValue Val = performAddUADDVCombine(N, DAG))
+  if (SDValue Val = performAddUADDVCombine(N, DCI.DAG))
     return Val;
-  if (SDValue Val = performAddDotCombine(N, DAG))
+  if (SDValue Val = performAddDotCombine(N, DCI.DAG))
     return Val;
-  if (SDValue Val = performAddCSelIntoCSinc(N, DAG))
+  if (SDValue Val = performAddCSelIntoCSinc(N, DCI.DAG))
     return Val;
-  if (SDValue Val = performNegCSelCombine(N, DAG))
+  if (SDValue Val = performNegCSelCombine(N, DCI.DAG))
     return Val;
-  if (SDValue Val = performVectorAddSubExtCombine(N, DAG))
+  if (SDValue Val = performVectorAddSubExtCombine(N, DCI.DAG))
     return Val;
-  if (SDValue Val = performAddCombineForShiftedOperands(N, DAG))
+  if (SDValue Val = performAddCombineForShiftedOperands(N, DCI.DAG))
     return Val;
-  if (SDValue Val = performSubAddMULCombine(N, DAG))
+  if (SDValue Val = performSubAddMULCombine(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performSVEMulAddSubCombine(N, DCI))
+    return Val;
+  if (SDValue Val = performAddSubIntoVectorOp(N, DCI.DAG))
     return Val;
 
-  return performAddSubLongCombine(N, DCI, DAG);
+  return performAddSubLongCombine(N, DCI);
 }
 
 // Massage DAGs which we can use the high-half "long" operations on into
@@ -22312,7 +22386,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performVecReduceBitwiseCombine(N, DCI, DAG);
   case ISD::ADD:
   case ISD::SUB:
-    return performAddSubCombine(N, DCI, DAG);
+    return performAddSubCombine(N, DCI);
   case ISD::BUILD_VECTOR:
     return performBuildVectorCombine(N, DCI, DAG);
   case ISD::TRUNCATE:

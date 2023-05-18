@@ -10,37 +10,37 @@
 // RUN: --canonicalize --cse | FileCheck %s --check-prefix=CHECK-RWT
 
 #SparseVector64 = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"],
+  lvlTypes = ["compressed"],
   posWidth = 64,
   crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"],
+  lvlTypes = ["compressed"],
   posWidth = 32,
   crdWidth = 32
 }>
 
 #SparseVector = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"]
+  lvlTypes = ["compressed"]
 }>
 
 #SortedCOO2D = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed-nu", "singleton" ],
 }>
 
 #SortedCOO3D = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton-nu", "singleton" ]
+  lvlTypes = [ "compressed-nu", "singleton-nu", "singleton" ]
 
 }>
 
 #TsssPermuted = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed", "compressed" ],
+  lvlTypes = [ "compressed", "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
 #COOSlice = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed-nu", "singleton" ],
   slice = [ (2, 2, 1), (12, 13, 1) ]
 }>
 
@@ -115,13 +115,13 @@ func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32
 }
 
 #SparseSingleton64 = #sparse_tensor.encoding<{
-  dimLevelType = ["singleton"],
+  lvlTypes = ["singleton"],
   posWidth = 64,
   crdWidth = 64
 }>
 
 #SparseSingleton32 = #sparse_tensor.encoding<{
-  dimLevelType = ["singleton"],
+  lvlTypes = ["singleton"],
   posWidth = 32,
   crdWidth = 32
 }>

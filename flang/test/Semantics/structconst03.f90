@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Error tests for structure constructors: C1594 violations
 ! from assigning globally-visible data to POINTER components.
 ! test/Semantics/structconst04.f90 is this same test without type

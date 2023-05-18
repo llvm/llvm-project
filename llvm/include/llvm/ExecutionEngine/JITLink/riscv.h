@@ -202,6 +202,18 @@ enum EdgeKind_riscv : Edge::Kind {
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend)
   R_RISCV_32_PCREL,
+
+  /// An auipc/jalr pair eligible for linker relaxation.
+  ///
+  /// Linker relaxation will replace this with R_RISCV_RVC_JUMP or R_RISCV_JAL
+  /// if it succeeds, or with R_RISCV_CALL_PLT if it fails.
+  CallRelaxable,
+
+  /// Alignment requirement used by linker relaxation.
+  ///
+  /// Linker relaxation will use this to ensure all code sequences are properly
+  /// aligned and then remove these edges from the graph.
+  AlignRelaxable,
 };
 
 /// Returns a string name for the given riscv edge. For debugging purposes

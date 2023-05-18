@@ -4070,17 +4070,17 @@ let ExeDomain = SSEPackedInt, SchedRW = [SchedWriteVecMoveLS.XMM.MR] in {
 // As VEX does not have separate instruction contexts for address size
 // overrides, VMASKMOVDQU and VMASKMOVDQU64 would have a decode conflict.
 // Prefer VMASKMODDQU64.
-let Uses = [EDI], Predicates = [HasAVX], isAsmParserOnly = 1 in
-def VMASKMOVDQU : VPDI<0xF7, MRMSrcReg, (outs),
-           (ins VR128:$src, VR128:$mask),
-           "maskmovdqu\t{$mask, $src|$src, $mask}",
-           [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, EDI)]>,
-           VEX, WIG;
 let Uses = [RDI], Predicates = [HasAVX,In64BitMode] in
 def VMASKMOVDQU64 : VPDI<0xF7, MRMSrcReg, (outs),
            (ins VR128:$src, VR128:$mask),
            "maskmovdqu\t{$mask, $src|$src, $mask}",
            [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, RDI)]>,
+           VEX, WIG;
+let Uses = [EDI], Predicates = [HasAVX], isAsmParserOnly = 1 in
+def VMASKMOVDQU : VPDI<0xF7, MRMSrcReg, (outs),
+           (ins VR128:$src, VR128:$mask),
+           "maskmovdqu\t{$mask, $src|$src, $mask}",
+           [(int_x86_sse2_maskmov_dqu VR128:$src, VR128:$mask, EDI)]>,
            VEX, WIG;
 
 let Uses = [EDI], Predicates = [UseSSE2] in

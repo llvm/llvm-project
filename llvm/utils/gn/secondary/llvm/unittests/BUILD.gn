@@ -94,6 +94,9 @@ group("unittests") {
       "tools/llvm-exegesis/PowerPC:LLVMExegesisPowerPCTests",
     ]
   }
+  if (llvm_build_RISCV) {
+    deps += [ "Target/RISCV:RISCVTests" ]
+  }
   if (llvm_build_SystemZ) {
     deps += [ "MC/SystemZ:SystemZAsmLexerTests" ]
   }

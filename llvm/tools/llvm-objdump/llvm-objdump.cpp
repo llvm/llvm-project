@@ -917,34 +917,30 @@ static void addPltEntries(const ObjectFile &Obj,
   auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj);
   if (!ElfObj)
     return;
-  std::optional<SectionRef> Plt;
-  for (const SectionRef &Section : Obj.sections()) {
+  DenseMap<StringRef, SectionRef> Sections;
+  for (SectionRef Section : Obj.sections()) {
     Expected<StringRef> SecNameOrErr = Section.getName();
     if (!SecNameOrErr) {
       consumeError(SecNameOrErr.takeError());
       continue;
     }
-    if (*SecNameOrErr == ".plt")
-      Plt = Section;
+    Sections[*SecNameOrErr] = Section;
   }
-  if (!Plt)
-    return;
-  for (auto PltEntry : ElfObj->getPltAddresses()) {
-    if (PltEntry.first) {
-      SymbolRef Symbol(*PltEntry.first, ElfObj);
+  for (auto Plt : ElfObj->getPltEntries()) {
+    if (Plt.Symbol) {
+      SymbolRef Symbol(*Plt.Symbol, ElfObj);
       uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
       if (Expected<StringRef> NameOrErr = Symbol.getName()) {
         if (!NameOrErr->empty())
-          AllSymbols[*Plt].emplace_back(
-              PltEntry.second, Saver.save((*NameOrErr + "@plt").str()),
-              SymbolType);
+          AllSymbols[Sections[Plt.Section]].emplace_back(
+              Plt.Address, Saver.save((*NameOrErr + "@plt").str()), SymbolType);
         continue;
       } else {
         // The warning has been reported in disassembleObject().
         consumeError(NameOrErr.takeError());
       }
     }
-    reportWarning("PLT entry at 0x" + Twine::utohexstr(PltEntry.second) +
+    reportWarning("PLT entry at 0x" + Twine::utohexstr(Plt.Address) +
                       " references an invalid symbol",
                   Obj.getFileName());
   }

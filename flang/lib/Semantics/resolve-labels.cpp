@@ -961,8 +961,7 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
                        TargetStatementEnum::CompatibleDo)) ||
         (doTarget.isExecutableConstructEndStmt &&
             ParentScope(scopes, doTarget.proxyForScope) == scope)) {
-      if (context.warnOnNonstandardUsage() ||
-          context.ShouldWarn(
+      if (context.ShouldWarn(
               common::LanguageFeature::OldLabelDoEndStatements)) {
         context
             .Say(position,

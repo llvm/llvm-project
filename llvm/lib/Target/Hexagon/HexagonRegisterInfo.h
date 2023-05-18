@@ -71,8 +71,6 @@ public:
   const MCPhysReg *getCallerSavedRegs(const MachineFunction *MF,
         const TargetRegisterClass *RC) const;
 
-  Register getFirstCallerSavedNonParamReg() const;
-
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF,
                      unsigned Kind = 0) const override;

@@ -12,7 +12,8 @@
 // RUN:  -fmodule-file=B=%t/B.pcm -fmodule-file=C=%t/C.pcm -o %t/AOK1.pcm
 
 // RUN: %clang_cc1 -std=c++20 -S %t/import-diags-tu4.cpp \
-// RUN:  -fmodule-file=AOK1=%t/AOK1.pcm -fmodule-file=C=%t/C.pcm -o %t/tu_3.s -verify
+// RUN:  -fmodule-file=AOK1=%t/AOK1.pcm -fmodule-file=B=%t/B.pcm \
+// RUN:  -fmodule-file=C=%t/C.pcm -o %t/tu_3.s -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/import-diags-tu5.cpp \
 // RUN:  -fmodule-file=B=%t/B.pcm -fmodule-file=C=%t/C.pcm -o %t/BC.pcm -verify

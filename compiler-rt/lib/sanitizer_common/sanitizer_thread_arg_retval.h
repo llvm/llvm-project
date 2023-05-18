@@ -69,8 +69,8 @@ class SANITIZER_MUTEX ThreadArgRetval {
   template <typename JoinFn /* returns true on success */>
   void Join(uptr thread, const JoinFn& fn) {
     // Remember internal id of the thread to prevent re-use of the thread
-    // between fn() and AfterJoin() calls. Locking JoinFn, like in
-    // Detach(), implementation can cause deadlock.
+    // between fn() and DetachLocked() calls. We can't just lock JoinFn
+    // like in Detach() implementation.
     auto gen = BeforeJoin(thread);
     if (fn())
       AfterJoin(thread, gen);

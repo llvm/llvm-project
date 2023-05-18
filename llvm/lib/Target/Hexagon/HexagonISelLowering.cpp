@@ -453,7 +453,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                            "Not eligible for Tail Call\n"));
   }
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getNextStackOffset();
+  unsigned NumBytes = CCInfo.getStackSize();
   SmallVector<std::pair<unsigned, SDValue>, 16> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
@@ -907,7 +907,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
     if (RegSaveAreaSizePlusPadding > 0) {
       // The offset to saved register area should be 8 byte aligned.
-      int RegAreaStart = HEXAGON_LRFP_SIZE + CCInfo.getNextStackOffset();
+      int RegAreaStart = HEXAGON_LRFP_SIZE + CCInfo.getStackSize();
       if (!(RegAreaStart % 8))
         RegAreaStart = (RegAreaStart + 7) & -8;
 
@@ -922,7 +922,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
     } else {
       // This will point to the next argument passed via stack, when
       // there is no saved register area.
-      int Offset = HEXAGON_LRFP_SIZE + CCInfo.getNextStackOffset();
+      int Offset = HEXAGON_LRFP_SIZE + CCInfo.getStackSize();
       int FI = MFI.CreateFixedObject(Hexagon_PointerSize, Offset, true);
       HMFI.setRegSavedAreaStartFrameIndex(FI);
       HMFI.setVarArgsFrameIndex(FI);
@@ -932,7 +932,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
   if (IsVarArg && !Subtarget.isEnvironmentMusl()) {
     // This will point to the next argument passed via stack.
-    int Offset = HEXAGON_LRFP_SIZE + CCInfo.getNextStackOffset();
+    int Offset = HEXAGON_LRFP_SIZE + CCInfo.getStackSize();
     int FI = MFI.CreateFixedObject(Hexagon_PointerSize, Offset, true);
     HMFI.setVarArgsFrameIndex(FI);
   }

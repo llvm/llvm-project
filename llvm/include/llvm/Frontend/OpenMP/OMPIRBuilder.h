@@ -418,8 +418,14 @@ public:
 
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
-  /// before any other method and only once!
-  void initialize();
+  /// before any other method and only once! This internal state includes
+  /// Types used in the OpenMPIRBuilder generated from OMPKinds.def as well
+  /// as loading offload metadata for device from the OpenMP host IR file
+  /// passed in as the HostFilePath argument.
+  /// \param HostFilePath The path to the host IR file, used to load in
+  /// offload metadata for the device, allowing host and device to
+  /// maintain the same metadata mapping.
+  void initialize(StringRef HostFilePath = {});
 
   void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
 

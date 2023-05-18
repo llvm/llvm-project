@@ -1411,7 +1411,7 @@ define i1 @iszero_d_strictfp(double %x) strictfp {
 ; CHECK-64-LABEL: iszero_d_strictfp:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    movq %xmm0, %rax
-; CHECK-64-NEXT:    shlq $1, %rax
+; CHECK-64-NEXT:    shlq %rax
 ; CHECK-64-NEXT:    testq %rax, %rax
 ; CHECK-64-NEXT:    sete %al
 ; CHECK-64-NEXT:    retq

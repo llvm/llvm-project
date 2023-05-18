@@ -6,6 +6,7 @@ declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
 declare float @llvm.fma.f32(float, float, float)
 declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>)
+declare <4 x double> @llvm.fma.v4f64(<4 x double>, <4 x double>, <4 x double>)
 
 ; This test checks combinations of FNEG and FMA intrinsics
 
@@ -147,4 +148,87 @@ define <8 x float> @test8(float %a, <8 x float> %b, <8 x float> %c)  {
   %t2 = shufflevector <8 x float> %t1, <8 x float> undef, <8 x i32> zeroinitializer
   %t3 = tail call nsz <8 x float> @llvm.fma.v8f32(<8 x float> %t2, <8 x float> %b, <8 x float> %c)
   ret <8 x float> %t3
+}
+
+define <4 x double> @test9(<4 x double> %a) {
+; X32-LABEL: test9:
+; X32:       # %bb.0:
+; X32-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; X32-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm1
+; X32-NEXT:    retl
+;
+; X64-LABEL: test9:
+; X64:       # %bb.0:
+; X64-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; X64-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm1
+; X64-NEXT:    retq
+  %t = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %a, <4 x double> <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>, <4 x double> <double -5.000000e-01, double -5.000000e-01, double -5.000000e-01, double -5.000000e-01>)
+  ret <4 x double> %t
+}
+
+define <4 x double> @test10(<4 x double> %a, <4 x double> %b) {
+; X32-LABEL: test10:
+; X32:       # %bb.0:
+; X32-NEXT:    vmovapd {{.*#+}} ymm2 = <-9.5E+0,u,-5.5E+0,-2.5E+0>
+; X32-NEXT:    vmovapd %ymm2, %ymm3
+; X32-NEXT:    vfmadd213pd {{.*#+}} ymm3 = (ymm0 * ymm3) + ymm1
+; X32-NEXT:    vfnmadd213pd {{.*#+}} ymm2 = -(ymm0 * ymm2) + ymm1
+; X32-NEXT:    vaddpd %ymm2, %ymm3, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test10:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovapd {{.*#+}} ymm2 = <-9.5E+0,u,-5.5E+0,-2.5E+0>
+; X64-NEXT:    vmovapd %ymm2, %ymm3
+; X64-NEXT:    vfmadd213pd {{.*#+}} ymm3 = (ymm0 * ymm3) + ymm1
+; X64-NEXT:    vfnmadd213pd {{.*#+}} ymm2 = -(ymm0 * ymm2) + ymm1
+; X64-NEXT:    vaddpd %ymm2, %ymm3, %ymm0
+; X64-NEXT:    retq
+  %t0 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %a, <4 x double> <double -95.00000e-01, double undef, double -55.00000e-01, double -25.00000e-01>, <4 x double> %b)
+  %t1 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %a, <4 x double> <double 95.00000e-01, double undef, double 55.00000e-01, double 25.00000e-01>, <4 x double> %b)
+  %t2 = fadd <4 x double> %t0, %t1
+  ret <4 x double> %t2
+}
+
+define <4 x double> @test11(<4 x double> %a) {
+; X32-LABEL: test11:
+; X32:       # %bb.0:
+; X32-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [5.0E-1,2.5E+0,5.0E-1,2.5E+0]
+; X32-NEXT:    # ymm1 = mem[0,1,0,1]
+; X32-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm1
+; X32-NEXT:    retl
+;
+; X64-LABEL: test11:
+; X64:       # %bb.0:
+; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [5.0E-1,2.5E+0,5.0E-1,2.5E+0]
+; X64-NEXT:    # ymm1 = mem[0,1,0,1]
+; X64-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm1
+; X64-NEXT:    retq
+  %t0 = fadd <4 x double> %a, <double 5.000000e-01, double 25.00000e-01, double 5.000000e-01, double 25.00000e-01>
+  %t1 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %t0, <4 x double> <double 5.000000e-01, double 25.00000e-01, double 5.000000e-01, double 25.00000e-01>, <4 x double> <double -5.000000e-01, double -25.00000e-01, double -5.000000e-01, double -25.00000e-01>)
+  ret <4 x double> %t1
+}
+
+define <4 x double> @test12(<4 x double> %a, <4 x double> %b) {
+; X32-LABEL: test12:
+; X32:       # %bb.0:
+; X32-NEXT:    vmovapd {{.*#+}} ymm2 = [-7.5E+0,-2.5E+0,-5.5E+0,-9.5E+0]
+; X32-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm2 * ymm0) + mem
+; X32-NEXT:    vfmadd132pd {{.*#+}} ymm1 = (ymm1 * mem) + ymm2
+; X32-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test12:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovapd {{.*#+}} ymm2 = [-7.5E+0,-2.5E+0,-5.5E+0,-9.5E+0]
+; X64-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm2 * ymm0) + mem
+; X64-NEXT:    vfmadd132pd {{.*#+}} ymm1 = (ymm1 * mem) + ymm2
+; X64-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %t0 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %a, <4 x double> <double 75.00000e-01, double 25.00000e-01, double 55.00000e-01, double 95.00000e-01>, <4 x double> <double -75.00000e-01, double undef, double -55.00000e-01, double -95.00000e-01>)
+  %t1 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %b, <4 x double> <double undef, double 25.00000e-01, double 55.00000e-01, double 95.00000e-01>, <4 x double> <double -75.00000e-01, double -25.00000e-01, double -55.00000e-01, double -95.00000e-01>)
+  %t2 = fadd <4 x double> %t0, %t1
+  ret <4 x double> %t2
 }

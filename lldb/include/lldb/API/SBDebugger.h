@@ -245,7 +245,7 @@ public:
 
   uint32_t GetIndexOfTarget(lldb::SBTarget target);
 
-  lldb::SBTarget FindTargetWithProcessID(pid_t pid);
+  lldb::SBTarget FindTargetWithProcessID(lldb::pid_t pid);
 
   lldb::SBTarget FindTargetWithFileAndArch(const char *filename,
                                            const char *arch);

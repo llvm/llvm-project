@@ -355,10 +355,15 @@ public:
   /// \brief Mark \p UniVal as a value that is always uniform.
   void addUniformOverride(const InstructionT &Instr);
 
-  /// \brief Mark \p DivVal as a value that is always divergent.
+  /// \brief Examine \p I for divergent outputs and add to the worklist.
+  void markDivergent(const InstructionT &I);
+
+  /// \brief Mark \p DivVal as a divergent value.
   /// \returns Whether the tracked divergence state of \p DivVal changed.
-  bool markDivergent(const InstructionT &I);
   bool markDivergent(ConstValueRefT DivVal);
+
+  /// \brief Mark outputs of \p Instr as divergent.
+  /// \returns Whether the tracked divergence state of any output has changed.
   bool markDefsDivergent(const InstructionT &Instr);
 
   /// \brief Propagate divergence to all instructions in the region.
@@ -774,21 +779,23 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
 }
 
 template <typename ContextT>
-bool GenericUniformityAnalysisImpl<ContextT>::markDivergent(
+void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     const InstructionT &I) {
+  if (isAlwaysUniform(I))
+    return;
+  bool Marked = false;
   if (I.isTerminator()) {
-    if (DivergentTermBlocks.insert(I.getParent()).second) {
+    Marked = DivergentTermBlocks.insert(I.getParent()).second;
+    if (Marked) {
       LLVM_DEBUG(dbgs() << "marked divergent term block: "
                         << Context.print(I.getParent()) << "\n");
-      return true;
     }
-    return false;
+  } else {
+    Marked = markDefsDivergent(I);
   }
 
-  if (isAlwaysUniform(I))
-    return false;
-
-  return markDefsDivergent(I);
+  if (Marked)
+    Worklist.push_back(&I);
 }
 
 template <typename ContextT>
@@ -828,8 +835,7 @@ void GenericUniformityAnalysisImpl<ContextT>::analyzeCycleExitDivergence(
   for (auto *Exit : Exits) {
     for (auto &Phi : Exit->phis()) {
       if (usesValueFromCycle(Phi, DefCycle)) {
-        if (markDivergent(Phi))
-          Worklist.push_back(&Phi);
+        markDivergent(Phi);
       }
     }
   }
@@ -889,8 +895,7 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushAllDefs(
     if (I.isTerminator())
       break;
 
-    if (markDivergent(I))
-      Worklist.push_back(&I);
+    markDivergent(I);
   }
 }
 
@@ -910,8 +915,7 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
     // https://reviews.llvm.org/D19013
     if (ContextT::isConstantOrUndefValuePhi(Phi))
       continue;
-    if (markDivergent(Phi))
-      Worklist.push_back(&Phi);
+    markDivergent(Phi);
   }
 }
 

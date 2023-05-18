@@ -6,8 +6,6 @@
 ; RUN: opt -passes='loop(indvars,licm,loop-deletion,loop-idiom,loop-instsimplify,loop-reduce,simple-loop-unswitch),loop-unroll' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-LOOP
 ; RUN: opt -passes='instsimplify,verify' -S -debug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=NPM-REQUIRED
 
-; REQUIRES: asserts
-
 ; This test verifies that we don't run target independent IR-level
 ; optimizations on optnone functions.
 
@@ -43,7 +41,6 @@ attributes #0 = { optnone noinline }
 ; NPM-O1-DAG: Skipping pass: SROA
 ; NPM-O1-DAG: Skipping pass: EarlyCSEPass
 ; NPM-O1-DAG: Skipping pass: LowerExpectIntrinsicPass
-; NPM-O1-DAG: Skipping pass: PromotePass
 ; NPM-O1-DAG: Skipping pass: InstCombinePass
 
 ; Additional IR passes run at -O2 and higher.

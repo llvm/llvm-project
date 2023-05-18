@@ -177,8 +177,9 @@ private:
     hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
                          uint64_t StartOffset, uint64_t EndOffset);
 
-    std::optional<int64_t>
-    getVariableRelocAdjustment(const DWARFDie &DIE) override;
+    std::optional<int64_t> getExprOpAddressRelocAdjustment(
+        DWARFUnit &U, const DWARFExpression::Operation &Op,
+        uint64_t StartOffset, uint64_t EndOffset) override;
     std::optional<int64_t>
     getSubprogramRelocAdjustment(const DWARFDie &DIE) override;
 

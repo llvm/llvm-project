@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMOPS_GPUTRANSFORMOPS_H
 #define MLIR_DIALECT_GPU_TRANSFORMOPS_GPUTRANSFORMOPS_H
 
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"

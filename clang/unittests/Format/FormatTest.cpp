@@ -10679,6 +10679,7 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   // Not template parameters.
   verifyFormat("return a < b && c > d;");
   verifyFormat("a < 0 ? b : a > 0 ? c : d;");
+  verifyFormat("ratio{-1, 2} < ratio{-1, 3} == -1 / 3 > -1 / 2;");
   verifyFormat("void f() {\n"
                "  while (a < b && c > d) {\n"
                "  }\n"
@@ -13830,6 +13831,20 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
             "    : b(0) {\n"
             "}",
             format("A()\n:b(0)\n{\n}", NoColumnLimit));
+
+  FormatStyle NoColumnLimitWrapAfterFunction = NoColumnLimit;
+  NoColumnLimitWrapAfterFunction.BreakBeforeBraces = FormatStyle::BS_Custom;
+  NoColumnLimitWrapAfterFunction.BraceWrapping.AfterFunction = true;
+  verifyFormat("class C {\n"
+               "#pragma foo\n"
+               "  int foo { return 0; }\n"
+               "};",
+               NoColumnLimitWrapAfterFunction);
+  verifyFormat("class C {\n"
+               "#pragma foo\n"
+               "  void foo {}\n"
+               "};",
+               NoColumnLimitWrapAfterFunction);
 
   FormatStyle DoNotMergeNoColumnLimit = NoColumnLimit;
   DoNotMergeNoColumnLimit.AllowShortFunctionsOnASingleLine =
@@ -20119,9 +20134,7 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
                "  int i = 5;\n"
                "  }\n"
                "#ifdef _DEBUG\n"
-               "void bar()\n"
-               "  {\n"
-               "  }\n"
+               "void bar() {}\n"
                "#else\n"
                "void bar()\n"
                "  {\n"

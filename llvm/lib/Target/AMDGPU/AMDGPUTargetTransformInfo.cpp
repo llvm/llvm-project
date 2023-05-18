@@ -1086,9 +1086,12 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num: {
-    Module *M = II->getParent()->getParent()->getParent();
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
+    unsigned NewAS = SrcTy->getPointerAddressSpace();
+    if (!AMDGPU::isExtendedGlobalAddrSpace(NewAS))
+      return nullptr;
+    Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getDeclaration(M, II->getIntrinsicID(),
                                                   {DestTy, SrcTy, DestTy});
     II->setArgOperand(0, NewV);

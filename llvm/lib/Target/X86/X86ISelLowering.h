@@ -1439,11 +1439,11 @@ namespace llvm {
     bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                               bool MathUsed) const override;
 
-    bool storeOfVectorConstantIsCheap(EVT MemVT, unsigned NumElem,
+    bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT, unsigned NumElem,
                                       unsigned AddrSpace) const override {
       // If we can replace more than 2 scalar stores, there will be a reduction
       // in instructions even after we add a vector constant load.
-      return NumElem > 2;
+      return IsZero || NumElem > 2;
     }
 
     bool isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,

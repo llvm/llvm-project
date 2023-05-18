@@ -97,7 +97,6 @@ body:             |
 
 ...
 
-# FIXME :: BELOW INLINE ASM SHOULD BE DIVERGENT
 ---
 name:            asm_mixed_sgpr_vgpr
 registers:
@@ -116,7 +115,9 @@ body:             |
     ; CHECK-LABEL: MachineUniformityInfo for function: asm_mixed_sgpr_vgpr
     ; CHECK: DIVERGENT: %0:
     ; CHECK: DIVERGENT: %3:
+    ; CHECK-NOT: DIVERGENT: %1:
     ; CHECK: DIVERGENT: %2:
+    ; CHECK-NOT: DIVERGENT: %4:
     ; CHECK: DIVERGENT: %5:
     %0:_(s32) = COPY $vgpr0
     %6:_(p1) = G_IMPLICIT_DEF

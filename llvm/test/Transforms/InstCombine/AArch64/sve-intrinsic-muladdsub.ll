@@ -37,6 +37,16 @@ define <vscale x 16 x i8> @combine_mla_i8(<vscale x 16 x i1> %p, <vscale x 16 x 
   ret <vscale x 16 x i8> %2
 }
 
+define <vscale x 16 x i8> @combine_mla_i8_u(<vscale x 16 x i1> %p, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) #0 {
+; CHECK-LABEL: @combine_mla_i8_u(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.mla.u.nxv16i8(<vscale x 16 x i1> [[P:%.*]], <vscale x 16 x i8> [[C:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1> %p, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  %2 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.add.u.nxv16i8(<vscale x 16 x i1> %p, <vscale x 16 x i8> %c, <vscale x 16 x i8> %1)
+  ret <vscale x 16 x i8> %2
+}
+
 define <vscale x 8 x half> @combine_fmad(<vscale x 16 x i1> %p, <vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) #0 {
 ; CHECK-LABEL: @combine_fmad(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[P:%.*]])
@@ -90,6 +100,16 @@ define <vscale x 16 x i8> @combine_mls_i8(<vscale x 16 x i1> %p, <vscale x 16 x 
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.mul.nxv16i8(<vscale x 16 x i1> %p, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   %2 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sub.nxv16i8(<vscale x 16 x i1> %p, <vscale x 16 x i8> %c, <vscale x 16 x i8> %1)
+  ret <vscale x 16 x i8> %2
+}
+
+define <vscale x 16 x i8> @combine_mls_i8_u(<vscale x 16 x i1> %p, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) #0 {
+; CHECK-LABEL: @combine_mls_i8_u(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.mls.u.nxv16i8(<vscale x 16 x i1> [[P:%.*]], <vscale x 16 x i8> [[C:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1> %p, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  %2 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1> %p, <vscale x 16 x i8> %c, <vscale x 16 x i8> %1)
   ret <vscale x 16 x i8> %2
 }
 
@@ -203,5 +223,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1>, 
 declare <vscale x 16 x i8> @llvm.aarch64.sve.mul.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.add.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.sub.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 16 x i8> @llvm.aarch64.sve.add.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 
 attributes #0 = { "target-features"="+sve" }

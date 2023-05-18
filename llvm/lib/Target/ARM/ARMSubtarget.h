@@ -305,8 +305,6 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "ARMGenSubtargetInfo.inc"
 
-  void computeIssueWidth();
-
   /// @{
   /// These functions are obsolete, please consider adding subtarget features
   /// or properties instead of calling them.

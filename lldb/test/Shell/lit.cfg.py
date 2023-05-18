@@ -24,7 +24,7 @@ config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
-config.suffixes = ['.test', '.cpp', '.s']
+config.suffixes = ['.test', '.cpp', '.s', '.m']
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
@@ -134,6 +134,14 @@ if config.lldb_system_debugserver:
 
 if config.have_lldb_server:
     config.available_features.add('lldb-server')
+
+if config.objc_gnustep_dir:
+    config.available_features.add('objc-gnustep')
+    if platform.system() == 'Windows':
+        # objc.dll must be in PATH since Windows has no rpath
+        config.environment['PATH'] = os.path.pathsep.join((
+            os.path.join(config.objc_gnustep_dir, 'lib'),
+            config.environment.get('PATH','')))
 
 # NetBSD permits setting dbregs either if one is root
 # or if user_set_dbregs is enabled

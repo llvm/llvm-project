@@ -1287,3 +1287,51 @@ func.func @host_data_ops(%a: !llvm.ptr<f32>, %ifCond: i1) -> () {
 // CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr<f32>) {
 // CHECK: } attributes {if_present}
 // CHECK: acc.host_data if(%[[IFCOND]]) dataOperands(%[[PTR]] : !llvm.ptr<f32>)
+
+// -----
+
+acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
+^bb0(%arg0: !llvm.ptr<i32>):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
+  llvm.store %c0, %0 : !llvm.ptr<i32>
+  acc.yield %0 : !llvm.ptr<i32>
+}
+
+// CHECK: acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
+// CHECK: %[[C1:.*]] = arith.constant 1 : i32
+// CHECK: %[[C0:.*]] = arith.constant 0 : i32
+// CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[C1]] x i32 : (i32) -> !llvm.ptr<i32>
+// CHECK: llvm.store %[[C0]], %[[ALLOCA]] : !llvm.ptr<i32>
+// CHECK: acc.yield %[[ALLOCA]] : !llvm.ptr<i32>
+
+// -----
+
+func.func private @destroy_struct(!llvm.struct<(i32, i32)>) -> ()
+
+acc.private.recipe @privatization_struct_i32_i64 : !llvm.struct<(i32, i32)> init {
+^bb0(%arg0 : !llvm.struct<(i32, i32)>):
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.mlir.undef : !llvm.struct<(i32, i32)>
+  %1 = llvm.insertvalue %c1, %0[0] : !llvm.struct<(i32, i32)>
+  %2 = llvm.insertvalue %c1, %1[1] : !llvm.struct<(i32, i32)>
+  acc.yield %2 : !llvm.struct<(i32, i32)>
+} destroy {
+^bb0(%arg0: !llvm.struct<(i32, i32)>):
+  func.call @destroy_struct(%arg0) : (!llvm.struct<(i32, i32)>) -> ()
+  acc.terminator
+}
+
+// CHECK: func.func private @destroy_struct(!llvm.struct<(i32, i32)>)
+
+// CHECK: acc.private.recipe @privatization_struct_i32_i64 : !llvm.struct<(i32, i32)> init {
+// CHECK:   %[[C1:.*]] = arith.constant 1 : i32
+// CHECK:   %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.struct<(i32, i32)>
+// CHECK:   %[[UNDEF1:.*]] = llvm.insertvalue %[[C1]], %[[UNDEF]][0] : !llvm.struct<(i32, i32)> 
+// CHECK:   %[[UNDEF2:.*]] = llvm.insertvalue %[[C1]], %[[UNDEF1]][1] : !llvm.struct<(i32, i32)> 
+// CHECK:   acc.yield %[[UNDEF2]] : !llvm.struct<(i32, i32)>
+// CHECK: } destroy {
+// CHECK: ^bb0(%[[ARG0:.*]]: !llvm.struct<(i32, i32)>):
+// CHECK:   func.call @destroy_struct(%[[ARG0]]) : (!llvm.struct<(i32, i32)>) -> ()
+// CHECK:   acc.terminator

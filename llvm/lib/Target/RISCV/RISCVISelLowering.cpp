@@ -12170,7 +12170,33 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       break;
 
     auto *Store = cast<StoreSDNode>(N);
+    EVT MemVT = Store->getMemoryVT();
     SDValue Val = Store->getValue();
+
+    // Using vector to store zeros requires e.g.:
+    //   vsetivli   zero, 2, e64, m1, ta, ma
+    //   vmv.v.i    v8, 0
+    //   vse64.v    v8, (a0)
+    // If sufficiently aligned, we can use at most one scalar store to zero
+    // initialize any power-of-two size up to XLen bits.
+    if (DCI.isBeforeLegalize() && !Store->isTruncatingStore() &&
+        !Store->isIndexed() && ISD::isBuildVectorAllZeros(Val.getNode()) &&
+        MemVT.getVectorElementType().bitsLE(Subtarget.getXLenVT()) &&
+        isPowerOf2_64(MemVT.getSizeInBits()) &&
+        MemVT.getSizeInBits() <= Subtarget.getXLen()) {
+      assert(!MemVT.isScalableVector());
+      auto NewVT = MVT::getIntegerVT(MemVT.getSizeInBits());
+      if (allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                         NewVT, *Store->getMemOperand())) {
+        SDLoc DL(N);
+        SDValue Chain = Store->getChain();
+        auto NewV = DAG.getConstant(0, DL, NewVT);
+        return DAG.getStore(Chain, DL, NewV, Store->getBasePtr(),
+                            Store->getPointerInfo(), Store->getOriginalAlign(),
+                            Store->getMemOperand()->getFlags());
+      }
+    }
+
     // Combine store of vmv.x.s/vfmv.f.s to vse with VL of 1.
     // vfmv.f.s is represented as extract element from 0. Match it late to avoid
     // any illegal types.
@@ -12180,7 +12206,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
          isNullConstant(Val.getOperand(1)))) {
       SDValue Src = Val.getOperand(0);
       MVT VecVT = Src.getSimpleValueType();
-      EVT MemVT = Store->getMemoryVT();
       // VecVT should be scalable and memory VT should match the element type.
       if (VecVT.isScalableVector() &&
           MemVT == VecVT.getVectorElementType()) {
@@ -14417,7 +14442,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     // If all registers are allocated, then all varargs must be passed on the
     // stack and we don't need to save any argregs.
     if (ArgRegs.size() == Idx) {
-      VaArgOffset = CCInfo.getNextStackOffset();
+      VaArgOffset = CCInfo.getStackSize();
       VarArgsSaveSize = 0;
     } else {
       VarArgsSaveSize = XLenInBytes * (ArgRegs.size() - Idx);
@@ -14487,7 +14512,7 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
     return false;
 
   // Do not tail call opt if the stack is used to pass parameters.
-  if (CCInfo.getNextStackOffset() != 0)
+  if (CCInfo.getStackSize() != 0)
     return false;
 
   // Do not tail call opt if any parameters need to be passed indirectly.
@@ -14574,7 +14599,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
                        "site marked musttail");
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = ArgCCInfo.getNextStackOffset();
+  unsigned NumBytes = ArgCCInfo.getStackSize();
 
   // Create local copies for byval args
   SmallVector<SDValue, 8> ByValArgs;

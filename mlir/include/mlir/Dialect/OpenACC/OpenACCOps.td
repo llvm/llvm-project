@@ -13,10 +13,12 @@
 #ifndef OPENACC_OPS
 #define OPENACC_OPS
 
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinTypes.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/OpenACC/OpenACCBase.td"
 include "mlir/Dialect/OpenACC/OpenACCOpsTypes.td"
 include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td"
@@ -29,31 +31,33 @@ class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
   Op<OpenACC_Dialect, mnemonic, traits>;
 
 // Reduction operation enumeration.
-def OpenACC_ReductionOpAdd     : I32EnumAttrCase<"redop_add", 0>;
-def OpenACC_ReductionOpMul     : I32EnumAttrCase<"redop_mul", 1>;
-def OpenACC_ReductionOpMax     : I32EnumAttrCase<"redop_max", 2>;
-def OpenACC_ReductionOpMin     : I32EnumAttrCase<"redop_min", 3>;
-def OpenACC_ReductionOpAnd     : I32EnumAttrCase<"redop_and", 4>;
-def OpenACC_ReductionOpOr      : I32EnumAttrCase<"redop_or", 5>;
-def OpenACC_ReductionOpXor     : I32EnumAttrCase<"redop_xor", 6>;
-def OpenACC_ReductionOpLogEqv  : I32EnumAttrCase<"redop_leqv", 7>;
-def OpenACC_ReductionOpLogNeqv : I32EnumAttrCase<"redop_lneqv", 8>;
-def OpenACC_ReductionOpLogAnd  : I32EnumAttrCase<"redop_land", 9>;
-def OpenACC_ReductionOpLogOr   : I32EnumAttrCase<"redop_lor", 10>;
+def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"redop_add", 0>;
+def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"redop_mul", 1>;
+def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"redop_max", 2>;
+def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"redop_min", 3>;
+def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"redop_and", 4>;
+def OpenACC_ReductionOperatorOr      : I32EnumAttrCase<"redop_or", 5>;
+def OpenACC_ReductionOperatorXor     : I32EnumAttrCase<"redop_xor", 6>;
+def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"redop_leqv", 7>;
+def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"redop_lneqv", 8>;
+def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"redop_land", 9>;
+def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"redop_lor", 10>;
 
-def OpenACC_ReductionOp : I32EnumAttr<"ReductionOp",
+def OpenACC_ReductionOperator : I32EnumAttr<"ReductionOperator",
     "built-in reduction operations supported by OpenACC",
-    [OpenACC_ReductionOpAdd, OpenACC_ReductionOpMul, OpenACC_ReductionOpMax,
-     OpenACC_ReductionOpMin, OpenACC_ReductionOpAnd, OpenACC_ReductionOpOr,
-     OpenACC_ReductionOpXor, OpenACC_ReductionOpLogEqv,
-     OpenACC_ReductionOpLogNeqv, OpenACC_ReductionOpLogAnd,
-     OpenACC_ReductionOpLogOr
+    [OpenACC_ReductionOperatorAdd, OpenACC_ReductionOperatorMul,
+     OpenACC_ReductionOperatorMax, OpenACC_ReductionOperatorMin,
+     OpenACC_ReductionOperatorAnd, OpenACC_ReductionOperatorOr,
+     OpenACC_ReductionOperatorXor, OpenACC_ReductionOperatorLogEqv,
+     OpenACC_ReductionOperatorLogNeqv, OpenACC_ReductionOperatorLogAnd,
+     OpenACC_ReductionOperatorLogOr
     ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::acc";
 }
-def OpenACC_ReductionOpAttr : EnumAttr<OpenACC_Dialect, OpenACC_ReductionOp,
-                                       "reduction_op">;
+def OpenACC_ReductionOperatorAttr : EnumAttr<OpenACC_Dialect,
+                                             OpenACC_ReductionOperator,
+                                             "reduction_operator">;
 
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
@@ -397,6 +401,128 @@ def OpenACC_UpdateHostOp : OpenACC_DataExitOp<"update_host",
 }
 
 //===----------------------------------------------------------------------===//
+// 2.5.13 private clause
+//===----------------------------------------------------------------------===//
+
+def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
+    [IsolatedFromAbove, Symbol]> {
+  let summary = "privatization recipe";
+
+  let description = [{
+    Declares an OpenACC privatization recipe. The operation requires one
+    mandatory and one optional region.
+
+      1. The initializer region specifies how to allocate and initialize a new
+         private value. For example in Fortran, a derived-type might have a
+         default initialization. The region has an argument that contains the
+         value that need to be privatized. This is useful if the type is not
+         known at compile time and the private value is needed to create its
+         copy.
+      2. The destroy region specifies how to destruct the value when it reaches
+         its end of life. It takes the privatized value as argument.
+
+    A single privatization recipe can be used for multiple operand if they have
+    the same type and do not require a specific default initialization.
+
+    Example:
+
+    ```mlir
+    acc.private.recipe @privatization_f32 : f32 init {
+    ^bb0(%0: f32):
+      // init region contains a sequence of operations to create and
+      // initialize the copy if needed. It yields the create copy.
+    } destroy {
+    ^bb0(%0: f32)
+      // destroy region contains a sequences of operations to destruct the
+      // created copy.
+    }
+
+    // The privatization symbol is then used in the corresponding operation.
+    acc.parallel private(@privatization_f32 -> %a : f32) {
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$type);
+
+  let regions = (region AnyRegion:$initRegion,
+                        AnyRegion:$destroyRegion);
+
+  let assemblyFormat = [{
+    $sym_name `:` $type attr-dict-with-keyword `init` $initRegion
+    (`destroy` $destroyRegion^)?
+  }];
+
+  let hasRegionVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.5.14 firstprivate clause
+//===----------------------------------------------------------------------===//
+
+def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
+    [IsolatedFromAbove, Symbol]> {
+  let summary = "privatization recipe";
+
+  let description = [{
+    Declares an OpenACC privatization recipe with copy of the initial value.
+    The operation requires two mandatory regions and one optional.
+
+      1. The initializer region specifies how to allocate and initialize a new
+         private value. For example in Fortran, a derived-type might have a
+         default initialization. The region has an argument that contains the
+         value that need to be privatized. This is useful if the type is not
+         known at compile time and the private value is needed to create its
+         copy.
+      2. The copy region specifies how to copy the initial value to the newly
+         created private value. It takes the initial value and the privatized
+         value as arguments.
+      3. The destroy region specifies how to destruct the value when it reaches
+         its end of life. It takes the privatized value as argument.
+
+    A single privatization recipe can be used for multiple operand if they have
+    the same type and do not require a specific default initialization.
+
+    Example:
+
+    ```mlir
+    acc.firstprivate.recipe @privatization_f32 : f32 init {
+    ^bb0(%0: f32):
+      // init region contains a sequence of operations to create and
+      // initialize the copy if needed. It yields the create copy.
+    } copy {
+    ^bb0(%0: f32, %1: !llvm.ptr<f32>):
+      // copy region contains a sequence of operations to copy the initial value
+      // of the firstprivate value to the newly created value.
+    } destroy {
+    ^bb0(%0: f32)
+      // destroy region contains a sequences of operations to destruct the
+      // created copy.
+    }
+
+    // The privatization symbol is then used in the corresponding operation.
+    acc.parallel firstprivate(@privatization_f32 -> %a : f32) {
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$type);
+
+  let regions = (region AnyRegion:$initRegion, AnyRegion:$copyRegion,
+                        AnyRegion:$destroyRegion);
+
+  let assemblyFormat = [{
+    $sym_name `:` $type attr-dict-with-keyword `init` $initRegion
+    `copy` $copyRegion
+    (`destroy` $destroyRegion^)?
+  }];
+
+  let hasRegionVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.5.1 parallel Construct
 //===----------------------------------------------------------------------===//
 
@@ -427,7 +553,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
                        Optional<I1>:$ifCond,
                        Optional<I1>:$selfCond,
                        UnitAttr:$selfAttr,
-                       OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
                        Variadic<AnyType>:$gangPrivateOperands,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
@@ -492,7 +618,7 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
                        Optional<I1>:$ifCond,
                        Optional<I1>:$selfCond,
                        UnitAttr:$selfAttr,
-                       OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
                        Variadic<AnyType>:$gangPrivateOperands,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
@@ -827,7 +953,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
                        UnitAttr:$hasVector,
                        Variadic<IntOrIndex>:$tileOperands,
                        Variadic<AnyType>:$privateOperands,
-                       OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands);
 
   let results = (outs Variadic<AnyType>:$results);
@@ -859,8 +985,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 }
 
 // Yield operation for the acc.loop and acc.parallel operations.
-def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
-    ParentOneOf<["ParallelOp, LoopOp, SerialOp"]>]> {
+def OpenACC_YieldOp : OpenACC_Op<"yield", [ReturnLike, Terminator,
+    ParentOneOf<["ParallelOp, LoopOp, SerialOp, PrivateRecipeOp, FirstprivateRecipeOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{

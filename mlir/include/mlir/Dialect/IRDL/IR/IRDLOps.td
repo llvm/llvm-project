@@ -15,6 +15,7 @@
 
 include "IRDL.td"
 include "IRDLTypes.td"
+include "IRDLInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -264,7 +265,8 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
 //===----------------------------------------------------------------------===//
 
 class IRDL_ConstraintOp<string mnemonic, list<Trait> traits = []>
-    : IRDL_Op<mnemonic, traits> {
+    : IRDL_Op<mnemonic, [VerifyConstraintInterface,
+        DeclareOpInterfaceMethods<VerifyConstraintInterface>] # traits> {
 }
 
 def IRDL_Is : IRDL_ConstraintOp<"is",
@@ -354,5 +356,74 @@ def IRDL_Any : IRDL_ConstraintOp<"any",
   let assemblyFormat = " attr-dict ";
 }
 
+def IRDL_AnyOf : IRDL_ConstraintOp<"any_of",
+                  [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
+                   SameOperandsAndResultType]> {
+  let summary = "Constraints to the union of the provided constraints";
+  let description = [{
+    `irdl.any_of` defines a constraint that accepts any type or attribute that
+    satisfies at least one of its provided type constraints.
+
+    Example:
+
+    ```mlir
+    irdl.dialect cmath {
+      irdl.type complex {
+        %0 = irdl.is i32
+        %1 = irdl.is i64
+        %2 = irdl.is f32
+        %3 = irdl.is f64
+        %4 = irdl.any_of(%0, %1, %2, %3)
+        irdl.parameters(%4)
+      }
+    }
+    ```
+
+    The above program defines a type `complex` inside the dialect `cmath` that
+    can have a single type parameter that can be either `i32`, `i64`, `f32` or
+    `f32`.
+  }];
+
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args);
+  let results = (outs IRDL_AttributeType:$output);
+  let assemblyFormat = [{ `(` $args `)` ` ` attr-dict }];
+}
+
+def IRDL_AllOf : IRDL_ConstraintOp<"all_of",
+                 [ParentOneOf<["TypeOp", "AttributeOp", "OperationOp"]>,
+                  SameOperandsAndResultType]> {
+  let summary = "Constraints to the intersection of the provided constraints";
+  let description = [{
+    `irdl.all_of` defines a constraint that accepts any type or attribute that
+    satisfies all of its provided constraints.
+
+    Example:
+
+    ```mlir
+    irdl.dialect cmath {
+      irdl.type complex_f32 {
+        %0 = irdl.is i32
+        %1 = irdl.is f32
+        %2 = irdl.any_of(%0, %1) // is 32-bit
+
+        %3 = irdl.is f32
+        %4 = irdl.is f64
+        %5 = irdl.any_of(%3, %4) // is a float
+
+        %6 = irdl.all_of(%2, %5) // is a 32-bit float
+        irdl.parameters(%6)
+      }
+    }
+    ```
+
+    The above program defines a type `complex` inside the dialect `cmath` that
+    can has one parameter that must be 32-bit long and a float (in other
+    words, that must be `f32`).
+  }];
+
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args);
+  let results = (outs IRDL_AttributeType:$output);
+  let assemblyFormat = [{ `(` $args `)` ` ` attr-dict }];
+}
 
 #endif // MLIR_DIALECT_IRDL_IR_IRDLOPS

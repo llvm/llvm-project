@@ -22,7 +22,7 @@
 // REDEFINE: FileCheck %s
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
-#CSR = #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ] }>
+#CSR = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
 
 #trait_scale = {
   indexing_maps = [

@@ -1928,7 +1928,7 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
   // At the point, we are able to handle the call's arguments in fast isel.
 
   // Get a count of how many bytes are to be pushed on the stack.
-  NumBytes = CCInfo.getNextStackOffset();
+  NumBytes = CCInfo.getStackSize();
 
   // Issue CALLSEQ_START
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
