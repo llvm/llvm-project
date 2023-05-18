@@ -91,73 +91,78 @@ static int bytesSincePreviousTabOrLineBegin(StringRef SourceLine, size_t i) {
 ///        printableTextForNextCharacter.
 ///
 /// \param SourceLine The line of source
-/// \param i Pointer to byte index,
+/// \param I Pointer to byte index,
 /// \param TabStop used to expand tabs
 /// \return pair(printable text, 'true' iff original text was printable)
 ///
 static std::pair<SmallString<16>, bool>
-printableTextForNextCharacter(StringRef SourceLine, size_t *i,
+printableTextForNextCharacter(StringRef SourceLine, size_t *I,
                               unsigned TabStop) {
-  assert(i && "i must not be null");
-  assert(*i<SourceLine.size() && "must point to a valid index");
+  assert(I && "I must not be null");
+  assert(*I < SourceLine.size() && "must point to a valid index");
 
-  if (SourceLine[*i]=='\t') {
+  if (SourceLine[*I] == '\t') {
     assert(0 < TabStop && TabStop <= DiagnosticOptions::MaxTabStop &&
            "Invalid -ftabstop value");
-    unsigned col = bytesSincePreviousTabOrLineBegin(SourceLine, *i);
-    unsigned NumSpaces = TabStop - col%TabStop;
+    unsigned Col = bytesSincePreviousTabOrLineBegin(SourceLine, *I);
+    unsigned NumSpaces = TabStop - (Col % TabStop);
     assert(0 < NumSpaces && NumSpaces <= TabStop
            && "Invalid computation of space amt");
-    ++(*i);
+    ++(*I);
 
-    SmallString<16> expandedTab;
-    expandedTab.assign(NumSpaces, ' ');
-    return std::make_pair(expandedTab, true);
+    SmallString<16> ExpandedTab;
+    ExpandedTab.assign(NumSpaces, ' ');
+    return std::make_pair(ExpandedTab, true);
   }
 
-  unsigned char const *begin, *end;
-  begin = reinterpret_cast<unsigned char const *>(&*(SourceLine.begin() + *i));
-  end = begin + (SourceLine.size() - *i);
+  const unsigned char *Begin = SourceLine.bytes_begin() + *I;
 
-  if (llvm::isLegalUTF8Sequence(begin, end)) {
-    llvm::UTF32 c;
-    llvm::UTF32 *cptr = &c;
-    unsigned char const *original_begin = begin;
-    unsigned char const *cp_end =
-        begin + llvm::getNumBytesForUTF8(SourceLine[*i]);
+  // Fast path for the common ASCII case.
+  if (*Begin < 0x80 && llvm::sys::locale::isPrint(*Begin)) {
+    ++(*I);
+    return std::make_pair(SmallString<16>(Begin, Begin + 1), true);
+  }
+  unsigned CharSize = llvm::getNumBytesForUTF8(*Begin);
+  const unsigned char *End = Begin + CharSize;
 
-    llvm::ConversionResult res = llvm::ConvertUTF8toUTF32(
-        &begin, cp_end, &cptr, cptr + 1, llvm::strictConversion);
-    (void)res;
-    assert(llvm::conversionOK == res);
-    assert(0 < begin-original_begin
-           && "we must be further along in the string now");
-    *i += begin-original_begin;
+  // Convert it to UTF32 and check if it's printable.
+  if (End <= SourceLine.bytes_end() && llvm::isLegalUTF8Sequence(Begin, End)) {
+    llvm::UTF32 C;
+    llvm::UTF32 *CPtr = &C;
 
-    if (!llvm::sys::locale::isPrint(c)) {
-      // If next character is valid UTF-8, but not printable
-      SmallString<16> expandedCP("<U+>");
-      while (c) {
-        expandedCP.insert(expandedCP.begin()+3, llvm::hexdigit(c%16));
-        c/=16;
-      }
-      while (expandedCP.size() < 8)
-        expandedCP.insert(expandedCP.begin()+3, llvm::hexdigit(0));
-      return std::make_pair(expandedCP, false);
+    // Begin and end before conversion.
+    unsigned char const *OriginalBegin = Begin;
+    llvm::ConversionResult Res = llvm::ConvertUTF8toUTF32(
+        &Begin, End, &CPtr, CPtr + 1, llvm::strictConversion);
+    (void)Res;
+    assert(Res == llvm::conversionOK);
+    assert(OriginalBegin < Begin);
+    assert((Begin - OriginalBegin) == CharSize);
+
+    (*I) += (Begin - OriginalBegin);
+
+    // Valid, multi-byte, printable UTF8 character.
+    if (llvm::sys::locale::isPrint(C))
+      return std::make_pair(SmallString<16>(OriginalBegin, End), true);
+
+    // Valid but not printable.
+    SmallString<16> Str("<U+>");
+    while (C) {
+      Str.insert(Str.begin() + 3, llvm::hexdigit(C % 16));
+      C /= 16;
     }
-
-    // If next character is valid UTF-8, and printable
-    return std::make_pair(SmallString<16>(original_begin, cp_end), true);
-
+    while (Str.size() < 8)
+      Str.insert(Str.begin() + 3, llvm::hexdigit(0));
+    return std::make_pair(Str, false);
   }
 
-  // If next byte is not valid UTF-8 (and therefore not printable)
-  SmallString<16> expandedByte("<XX>");
-  unsigned char byte = SourceLine[*i];
-  expandedByte[1] = llvm::hexdigit(byte / 16);
-  expandedByte[2] = llvm::hexdigit(byte % 16);
-  ++(*i);
-  return std::make_pair(expandedByte, false);
+  // Otherwise, not printable since it's not valid UTF8.
+  SmallString<16> ExpandedByte("<XX>");
+  unsigned char Byte = SourceLine[*I];
+  ExpandedByte[1] = llvm::hexdigit(Byte / 16);
+  ExpandedByte[2] = llvm::hexdigit(Byte % 16);
+  ++(*I);
+  return std::make_pair(ExpandedByte, false);
 }
 
 static void expandTabs(std::string &SourceLine, unsigned TabStop) {
