@@ -93,6 +93,8 @@ add_libc_test(
     libc.src.__support.fixedvector
 )
 
+# This test fails with a segmentation fault on NVPTX.
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
 add_libc_test(
   char_vector_test
   SUITE
@@ -102,6 +104,7 @@ add_libc_test(
   DEPENDS
     libc.src.__support.char_vector
 )
+endif()
 
 add_executable(
   libc_str_to_float_comparison_test
