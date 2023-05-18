@@ -675,6 +675,13 @@ bool fromJSON(const llvm::json::Value &Params, DocumentRangeFormattingParams &R,
 }
 
 bool fromJSON(const llvm::json::Value &Params,
+              DocumentRangesFormattingParams &R, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", R.textDocument) &&
+         O.map("ranges", R.ranges);
+}
+
+bool fromJSON(const llvm::json::Value &Params,
               DocumentOnTypeFormattingParams &R, llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("textDocument", R.textDocument) &&
