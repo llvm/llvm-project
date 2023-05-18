@@ -1564,6 +1564,11 @@ def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tr
     Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Print a template comparison tree for differing templates">,
     MarshallingInfoFlag<DiagnosticOpts<"ShowTemplateTree">>;
+defm safe_buffer_usage_suggestions : BoolFOption<"safe-buffer-usage-suggestions",
+  DiagnosticOpts<"ShowSafeBufferUsageSuggestions">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option],
+          "Display suggestions to update code associated with -Wunsafe-buffer-usage warnings">,
+  NegFlag<SetFalse>>;
 def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">, Group<f_clang_Group>,
   HelpText<"Discard value names in LLVM IR">, Flags<[NoXarchOption]>;
 def fno_discard_value_names : Flag<["-"], "fno-discard-value-names">, Group<f_clang_Group>,
