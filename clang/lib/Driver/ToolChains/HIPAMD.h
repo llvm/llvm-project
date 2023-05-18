@@ -89,6 +89,9 @@ public:
   const ToolChain &HostTC;
   void checkTargetID(const llvm::opt::ArgList &DriverArgs) const override;
 
+  static int getHIPCC_VERBOSE();
+  void emitHIPCC_VERBOSE();
+
 protected:
   Tool *buildLinker() const override;
 };
