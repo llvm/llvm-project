@@ -56,7 +56,8 @@ mlir::LogicalResult CIRGenFunction::buildCompoundStmt(const CompoundStmt &S) {
 // Build CIR for a statement. useCurrentScope should be true if no
 // new scopes need be created when finding a compound statement.
 mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
-                                              bool useCurrentScope) {
+                                              bool useCurrentScope,
+                                              ArrayRef<const Attr *> Attrs) {
   if (mlir::succeeded(buildSimpleStmt(S, useCurrentScope)))
     return mlir::success();
 
@@ -146,6 +147,9 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
   case Stmt::CoreturnStmtClass:
     return buildCoreturnStmt(cast<CoreturnStmt>(*S));
 
+  case Stmt::CXXForRangeStmtClass:
+    return buildCXXForRangeStmt(cast<CXXForRangeStmt>(*S), Attrs);
+
   case Stmt::IndirectGotoStmtClass:
   case Stmt::ReturnStmtClass:
   // When implemented, GCCAsmStmtClass should fall-through to MSAsmStmtClass.
@@ -158,7 +162,6 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
   case Stmt::ObjCForCollectionStmtClass:
   case Stmt::ObjCAutoreleasePoolStmtClass:
   case Stmt::CXXTryStmtClass:
-  case Stmt::CXXForRangeStmtClass:
   case Stmt::SEHTryStmtClass:
   case Stmt::OMPMetaDirectiveClass:
   case Stmt::OMPCanonicalLoopClass:
@@ -661,6 +664,12 @@ static mlir::LogicalResult buildLoopCondYield(mlir::OpBuilder &builder,
   assert((trueBB && falseBB) && "expected both blocks to exist");
   builder.create<mlir::cir::BrCondOp>(loc, cond, trueBB, falseBB);
   return mlir::success();
+}
+
+mlir::LogicalResult
+CIRGenFunction::buildCXXForRangeStmt(const CXXForRangeStmt &S,
+                                     ArrayRef<const Attr *> Attrs) {
+  llvm_unreachable("NYI");
 }
 
 mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
