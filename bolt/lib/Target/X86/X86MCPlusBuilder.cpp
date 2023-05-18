@@ -1148,13 +1148,9 @@ public:
       break;
     }
 
-    const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
-    for (int I = 0, E = MCII.getNumDefs(); I != E; ++I) {
-      const MCOperand &Operand = Inst.getOperand(I);
-      if (Operand.isReg() && Operand.getReg() == X86::RSP)
-        return true;
-    }
-    return false;
+    return any_of(defOperands(Inst), [](const MCOperand &Op) {
+      return Op.isReg() && Op.getReg() == X86::RSP;
+    });
   }
 
   bool
@@ -1287,19 +1283,11 @@ public:
 
     // If potential leak, check if it is not just writing to itself/sp/bp
     if (DoesLeak) {
-      for (int I = 0, E = NumDefs; I != E; ++I) {
-        const MCOperand &Operand = Inst.getOperand(I);
-        if (HasFramePointer && Operand.isReg() &&
-            SPBPAliases[Operand.getReg()]) {
-          DoesLeak = false;
-          break;
-        }
-        if (!HasFramePointer && Operand.isReg() &&
-            SPAliases[Operand.getReg()]) {
-          DoesLeak = false;
-          break;
-        }
-      }
+      DoesLeak = !any_of(defOperands(Inst), [&](const MCOperand &Operand) {
+        assert(Operand.isReg());
+        MCPhysReg Reg = Operand.getReg();
+        return HasFramePointer ? SPBPAliases[Reg] : SPAliases[Reg];
+      });
     }
     return DoesLeak;
   }
@@ -3121,17 +3109,9 @@ public:
     // Check if the target address expression used in the original indirect call
     // uses the stack pointer, which we are going to clobber.
     static BitVector SPAliases(getAliases(X86::RSP));
-    bool UsesSP = false;
-    // Skip defs.
-    for (unsigned I = Info->get(CallInst.getOpcode()).getNumDefs(),
-                  E = MCPlus::getNumPrimeOperands(CallInst);
-         I != E; ++I) {
-      const MCOperand &Operand = CallInst.getOperand(I);
-      if (Operand.isReg() && SPAliases[Operand.getReg()]) {
-        UsesSP = true;
-        break;
-      }
-    }
+    bool UsesSP = any_of(useOperands(CallInst), [&](const MCOperand &Op) {
+      return Op.isReg() && SPAliases[Op.getReg()];
+    });
 
     InstructionListType Insts;
     MCPhysReg TempReg = getIntArgRegister(0);
