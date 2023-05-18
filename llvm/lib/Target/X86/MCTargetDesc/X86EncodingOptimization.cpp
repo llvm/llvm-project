@@ -19,15 +19,10 @@
 
 using namespace llvm;
 
-static bool shouldExchange(const MCInst &MI, unsigned OpIdx1, unsigned OpIdx2) {
-  return !X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx1).getReg()) &&
-         X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx2).getReg());
-}
-
 bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
   unsigned OpIdx1, OpIdx2;
-  unsigned NewOpc;
   unsigned Opcode = MI.getOpcode();
+  unsigned NewOpc = 0;
 #define FROM_TO(FROM, TO, IDX1, IDX2)                                          \
   case X86::FROM:                                                              \
     NewOpc = X86::TO;                                                          \
@@ -35,7 +30,7 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
     OpIdx2 = IDX2;                                                             \
     break;
 #define TO_REV(FROM) FROM_TO(FROM, FROM##_REV, 0, 1)
-  switch (MI.getOpcode()) {
+  switch (Opcode) {
   default: {
     // If the instruction is a commutable arithmetic instruction we might be
     // able to commute the operands to get a 2 byte VEX prefix.
@@ -51,10 +46,7 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
       return false;
     OpIdx1 = 1;
     OpIdx2 = 2;
-    if (!shouldExchange(MI, OpIdx1, OpIdx2))
-      return false;
-    std::swap(MI.getOperand(OpIdx1), MI.getOperand(OpIdx2));
-    return true;
+    break;
   }
     // Commute operands to get a smaller encoding by using VEX.R instead of
     // VEX.B if one of the registers is extended, but other isn't.
@@ -78,9 +70,13 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
 #undef TO_REV
 #undef FROM_TO
   }
-  if (!shouldExchange(MI, OpIdx1, OpIdx2))
+  if (X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx1).getReg()) ||
+      !X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx2).getReg()))
     return false;
-  MI.setOpcode(NewOpc);
+  if (NewOpc)
+    MI.setOpcode(NewOpc);
+  else
+    std::swap(MI.getOperand(OpIdx1), MI.getOperand(OpIdx2));
   return true;
 }
 
