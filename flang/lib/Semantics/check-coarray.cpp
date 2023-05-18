@@ -140,6 +140,11 @@ static void CheckEventVariable(
 void CoarrayChecker::Leave(const parser::ChangeTeamStmt &x) {
   CheckNamesAreDistinct(std::get<std::list<parser::CoarrayAssociation>>(x.t));
   CheckTeamType(context_, std::get<parser::TeamValue>(x.t));
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
+}
+
+void CoarrayChecker::Leave(const parser::EndChangeTeamStmt &x) {
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
 }
 
 void CoarrayChecker::Leave(const parser::SyncAllStmt &x) {
@@ -225,6 +230,14 @@ void CoarrayChecker::Leave(const parser::EventWaitStmt &x) {
         },
         eventWaitSpec.u);
   }
+}
+
+void CoarrayChecker::Leave(const parser::UnlockStmt &x) {
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
+}
+
+void CoarrayChecker::Leave(const parser::CriticalStmt &x) {
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
 }
 
 void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
