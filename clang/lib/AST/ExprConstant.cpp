@@ -2119,7 +2119,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   EvalInfo &Info, SourceLocation DiagLoc,
                                   QualType Type, const APValue &Value,
                                   ConstantExprKind Kind,
-                                  const FieldDecl *SubobjectDecl,
+                                  SourceLocation SubobjectLoc,
                                   CheckedTemporaries &CheckedTemps);
 
 /// Check that this reference or pointer core constant expression is a valid
@@ -2266,8 +2266,8 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
       APValue *V = MTE->getOrCreateValue(false);
       assert(V && "evasluation result refers to uninitialised temporary");
       if (!CheckEvaluationResult(CheckEvaluationResultKind::ConstantExpression,
-                                 Info, MTE->getExprLoc(), TempType, *V, Kind,
-                                 /*SubobjectDecl=*/nullptr, CheckedTemps))
+                                 Info, MTE->getExprLoc(), TempType, *V,
+                                 Kind, SourceLocation(), CheckedTemps))
         return false;
     }
   }
@@ -2350,13 +2350,13 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   EvalInfo &Info, SourceLocation DiagLoc,
                                   QualType Type, const APValue &Value,
                                   ConstantExprKind Kind,
-                                  const FieldDecl *SubobjectDecl,
+                                  SourceLocation SubobjectLoc,
                                   CheckedTemporaries &CheckedTemps) {
   if (!Value.hasValue()) {
-    assert(SubobjectDecl && "SubobjectDecl shall be non-null");
-    Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized) << SubobjectDecl;
-    Info.Note(SubobjectDecl->getLocation(),
-              diag::note_constexpr_subobject_declared_here);
+    Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
+      << true << Type;
+    if (SubobjectLoc.isValid())
+      Info.Note(SubobjectLoc, diag::note_constexpr_subobject_declared_here);
     return false;
   }
 
@@ -2373,19 +2373,20 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
     for (unsigned I = 0, N = Value.getArrayInitializedElts(); I != N; ++I) {
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
                                  Value.getArrayInitializedElt(I), Kind,
-                                 SubobjectDecl, CheckedTemps))
+                                 SubobjectLoc, CheckedTemps))
         return false;
     }
     if (!Value.hasArrayFiller())
       return true;
     return CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
-                                 Value.getArrayFiller(), Kind, SubobjectDecl,
+                                 Value.getArrayFiller(), Kind, SubobjectLoc,
                                  CheckedTemps);
   }
   if (Value.isUnion() && Value.getUnionField()) {
     return CheckEvaluationResult(
         CERK, Info, DiagLoc, Value.getUnionField()->getType(),
-        Value.getUnionValue(), Kind, Value.getUnionField(), CheckedTemps);
+        Value.getUnionValue(), Kind, Value.getUnionField()->getLocation(),
+        CheckedTemps);
   }
   if (Value.isStruct()) {
     RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
@@ -2394,7 +2395,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
       for (const CXXBaseSpecifier &BS : CD->bases()) {
         if (!CheckEvaluationResult(CERK, Info, DiagLoc, BS.getType(),
                                    Value.getStructBase(BaseIndex), Kind,
-                                   /*SubobjectDecl=*/nullptr, CheckedTemps))
+                                   BS.getBeginLoc(), CheckedTemps))
           return false;
         ++BaseIndex;
       }
@@ -2404,8 +2405,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
         continue;
 
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, I->getType(),
-                                 Value.getStructField(I->getFieldIndex()), Kind,
-                                 I, CheckedTemps))
+                                 Value.getStructField(I->getFieldIndex()),
+                                 Kind, I->getLocation(), CheckedTemps))
         return false;
     }
   }
@@ -2439,7 +2440,7 @@ static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
   CheckedTemporaries CheckedTemps;
   return CheckEvaluationResult(CheckEvaluationResultKind::ConstantExpression,
                                Info, DiagLoc, Type, Value, Kind,
-                               /*SubobjectDecl=*/nullptr, CheckedTemps);
+                               SourceLocation(), CheckedTemps);
 }
 
 /// Check that this evaluated value is fully-initialized and can be loaded by
@@ -2449,7 +2450,7 @@ static bool CheckFullyInitialized(EvalInfo &Info, SourceLocation DiagLoc,
   CheckedTemporaries CheckedTemps;
   return CheckEvaluationResult(
       CheckEvaluationResultKind::FullyInitialized, Info, DiagLoc, Type, Value,
-      ConstantExprKind::Normal, /*SubobjectDecl=*/nullptr, CheckedTemps);
+      ConstantExprKind::Normal, SourceLocation(), CheckedTemps);
 }
 
 /// Enforce C++2a [expr.const]/4.17, which disallows new-expressions unless

@@ -929,6 +929,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     } else {
       CoverageFilename = llvm::sys::path::filename(Output.getBaseInput());
     }
+    if (llvm::sys::path::is_relative(CoverageFilename))
+      (void)D.getVFS().makeAbsolute(CoverageFilename);
     llvm::sys::path::replace_extension(CoverageFilename, "gcno");
     if (EmitCovNotes) {
       CmdArgs.push_back("-coverage-notes-file");
