@@ -1,5 +1,8 @@
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
 
+@_ZTIFvvE = linkonce_odr constant i32 2
+@__llvm_rtti_proxy = private unnamed_addr constant ptr @_ZTIFvvE
+
 define void @f0() "patchable-function-entry"="0" "branch-target-enforcement"="true" {
 ; CHECK-LABEL: f0:
 ; CHECK-NEXT: .Lfunc_begin0:
@@ -85,3 +88,22 @@ sw.bb4:
   call void asm sideeffect "", ""()
   ret void
 }
+
+;; Test the interaction with -fsanitize=function.
+; CHECK:      .type sanitize_function,@function
+; CHECK-NEXT: .Ltmp{{.*}}:
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   .word   3238382334  // 0xc105cafe
+; CHECK-NEXT:   .word   .L__llvm_rtti_proxy-sanitize_function
+; CHECK-NEXT: sanitize_function:
+; CHECK-NEXT: .Lfunc_begin{{.*}}:
+; CHECK-NEXT:   .cfi_startproc
+; CHECK-NEXT:   // %bb.0:
+; CHECK-NEXT:   hint #34
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   ret
+define void @sanitize_function(ptr noundef %x) "patchable-function-prefix"="1" "patchable-function-entry"="1" "branch-target-enforcement"="true" !func_sanitize !0 {
+  ret void
+}
+
+!0 = !{i32 3238382334, ptr @__llvm_rtti_proxy}
