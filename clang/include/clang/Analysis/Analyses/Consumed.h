@@ -155,6 +155,10 @@ namespace consumed {
     ConsumedStateMap(const ConsumedStateMap &Other)
         : Reachable(Other.Reachable), From(Other.From), VarMap(Other.VarMap) {}
 
+    // The copy assignment operator is defined as deleted pending further
+    // motivation.
+    ConsumedStateMap &operator=(const ConsumedStateMap &) = delete;
+
     /// Warn if any of the parameters being tracked are not in the state
     /// they were declared to be in upon return from a function.
     void checkParamsForReturnTypestate(SourceLocation BlameLoc,
