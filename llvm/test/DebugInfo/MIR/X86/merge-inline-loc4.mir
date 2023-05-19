@@ -101,7 +101,7 @@ body:             |
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     frame-setup CFI_INSTRUCTION def_cfa_offset 16
     renamable $eax = MOV32rm $rip, 1, $noreg, @q1, $noreg, debug-location !12 :: (dereferenceable load (s32) from @q1, !tbaa !13)
-    CMP32ri8 renamable $eax, 4, implicit-def $eflags, debug-location !17
+    CMP32ri renamable $eax, 4, implicit-def $eflags, debug-location !17
     JCC_1 %bb.2, 12, implicit killed $eflags, debug-location !20
     JMP_1 %bb.1, debug-location !20
 
@@ -117,7 +117,7 @@ body:             |
     renamable $eax = nsw IMUL32rri killed renamable $eax, 152, implicit-def dead $eflags, debug-location !22
     renamable $eax = nsw ADD32ri8 killed renamable $eax, 100, implicit-def dead $eflags, debug-location !23
     MOV32mr $rip, 1, $noreg, @g1, $noreg, killed renamable $eax, debug-location !24 :: (store (s32) into @g1, !tbaa !13)
-    CMP32mi8 $rip, 1, $noreg, @q2, $noreg, 6, implicit-def $eflags, debug-location !26 :: (dereferenceable load (s32) from @q2, !tbaa !13)
+    CMP32mi $rip, 1, $noreg, @q2, $noreg, 6, implicit-def $eflags, debug-location !26 :: (dereferenceable load (s32) from @q2, !tbaa !13)
     JCC_1 %bb.4, 12, implicit killed $eflags, debug-location !25
     JMP_1 %bb.3, debug-location !25
 
