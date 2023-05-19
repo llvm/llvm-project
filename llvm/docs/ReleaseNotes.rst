@@ -181,7 +181,7 @@ Changes to the RISC-V Backend
 * Zve32f is no longer allowed with Zfinx. Zve64d is no longer allowed with
   Zdinx.
 * Assembly support was added for the experimental Zfbfmin (scalar BF16
-  conversions) extension.
+  conversions) and Zvfbfmin (vector BF16 conversions) extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------

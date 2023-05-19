@@ -451,6 +451,14 @@ def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
 def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMultiply()">;
 
+def FeatureStdExtZvfbfmin
+    : SubtargetFeature<"experimental-zvfbfmin", "HasStdExtZvfbfmin", "true",
+                       "'Zvbfmin' (Vector BF16 Converts)",
+                       [FeatureStdExtZve32f]>;
+def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
+                                  AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
+                                  "'Zvfbfmin' (Vector BF16 Converts)">;
+
 def FeatureStdExtZvfh
     : SubtargetFeature<"experimental-zvfh", "HasStdExtZvfh", "true",
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
