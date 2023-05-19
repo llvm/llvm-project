@@ -109,3 +109,11 @@ void test4() {
     b,
   };
 }
+
+// Verify no crash
+void test5_GH62711() {
+  // CHECK:      VAArgExpr {{.*}} 'int' contains-errors
+  // CHECK-NEXT: | `-ImplicitCastExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: |   `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  if (__builtin_va_arg(undef, int) << 1);
+}
