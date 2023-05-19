@@ -186,6 +186,11 @@ ChangeStatus &llvm::operator&=(ChangeStatus &L, ChangeStatus R) {
 }
 ///}
 
+bool AA::isGPU(const Module &M) {
+  Triple T(M.getTargetTriple());
+  return T.isAMDGPU() || T.isNVPTX();
+}
+
 bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
                       const AbstractAttribute &QueryingAA) {
   // We are looking for volatile instructions or non-relaxed atomics.
