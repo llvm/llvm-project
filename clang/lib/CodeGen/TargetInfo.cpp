@@ -1293,15 +1293,6 @@ public:
                                 std::string &AsmString,
                                 unsigned NumOutputs) const override;
 
-  llvm::Constant *
-  getUBSanFunctionSignature(CodeGen::CodeGenModule &CGM) const override {
-    unsigned Sig = (0xeb << 0) |  // jmp rel8
-                   (0x06 << 8) |  //           .+0x08
-                   ('v' << 16) |
-                   ('2' << 24);
-    return llvm::ConstantInt::get(CGM.Int32Ty, Sig);
-  }
-
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
     return "movl\t%ebp, %ebp"
            "\t\t// marker for objc_retainAutoreleaseReturnValue";
@@ -2537,15 +2528,6 @@ public:
     }
 
     return TargetCodeGenInfo::isNoProtoCallVariadic(args, fnType);
-  }
-
-  llvm::Constant *
-  getUBSanFunctionSignature(CodeGen::CodeGenModule &CGM) const override {
-    unsigned Sig = (0xeb << 0) | // jmp rel8
-                   (0x06 << 8) | //           .+0x08
-                   ('v' << 16) |
-                   ('2' << 24);
-    return llvm::ConstantInt::get(CGM.Int32Ty, Sig);
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
