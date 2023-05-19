@@ -68,9 +68,9 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; FLATSCR-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; FLATSCR-NEXT:    s_cbranch_execz .LBB0_2
 ; FLATSCR-NEXT:  ; %bb.1: ; %if.then4.i
-; FLATSCR-NEXT:    s_movk_i32 vcc_lo, 0x4000
+; FLATSCR-NEXT:    s_movk_i32 s1, 0x4000
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0x41c64e6d
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, vcc_lo offset:4
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s1 offset:4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_nc_u32_e32 v0, v1, v0
 ; FLATSCR-NEXT:    v_mad_u64_u32 v[0:1], s0, v0, s0, 0x3039
@@ -95,9 +95,9 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF11-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; MUBUF11-NEXT:    s_cbranch_execz .LBB0_2
 ; MUBUF11-NEXT:  ; %bb.1: ; %if.then4.i
-; MUBUF11-NEXT:    s_movk_i32 vcc_lo, 0x4000
+; MUBUF11-NEXT:    s_movk_i32 s1, 0x4000
 ; MUBUF11-NEXT:    s_mov_b32 s0, 0x41c64e6d
-; MUBUF11-NEXT:    scratch_load_b64 v[0:1], off, vcc_lo offset:4
+; MUBUF11-NEXT:    scratch_load_b64 v[0:1], off, s1 offset:4
 ; MUBUF11-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF11-NEXT:    v_add_nc_u32_e32 v2, v1, v0
 ; MUBUF11-NEXT:    v_mad_u64_u32 v[0:1], null, v2, s0, 0x3039
@@ -123,9 +123,9 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; FLATSCR11-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; FLATSCR11-NEXT:    s_cbranch_execz .LBB0_2
 ; FLATSCR11-NEXT:  ; %bb.1: ; %if.then4.i
-; FLATSCR11-NEXT:    s_movk_i32 vcc_lo, 0x4000
+; FLATSCR11-NEXT:    s_movk_i32 s1, 0x4000
 ; FLATSCR11-NEXT:    s_mov_b32 s0, 0x41c64e6d
-; FLATSCR11-NEXT:    scratch_load_b64 v[0:1], off, vcc_lo offset:4
+; FLATSCR11-NEXT:    scratch_load_b64 v[0:1], off, s1 offset:4
 ; FLATSCR11-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR11-NEXT:    v_add_nc_u32_e32 v2, v1, v0
 ; FLATSCR11-NEXT:    v_mad_u64_u32 v[0:1], null, v2, s0, 0x3039

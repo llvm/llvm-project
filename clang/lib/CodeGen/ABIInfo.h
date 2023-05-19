@@ -117,6 +117,9 @@ protected:
   CodeGenTypes &CGT;
   bool SwiftErrorInRegister;
 
+  bool occupiesMoreThan(ArrayRef<llvm::Type *> scalarTypes,
+                        unsigned maxAllRegisters) const;
+
 public:
   SwiftABIInfo(CodeGen::CodeGenTypes &CGT, bool SwiftErrorInRegister)
       : CGT(CGT), SwiftErrorInRegister(SwiftErrorInRegister) {}

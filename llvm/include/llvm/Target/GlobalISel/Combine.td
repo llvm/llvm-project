@@ -469,13 +469,25 @@ def simplify_add_to_sub: GICombineRule <
 >;
 
 // Fold fp_op(cst) to the constant result of the floating point operation.
-def constant_fp_op_matchinfo: GIDefMatchData<"const ConstantFP *">;
-def constant_fp_op: GICombineRule <
-  (defs root:$root, constant_fp_op_matchinfo:$info),
-  (match (wip_match_opcode G_FNEG, G_FABS, G_FPTRUNC, G_FSQRT, G_FLOG2):$root,
-    [{ return Helper.matchCombineConstantFoldFpUnary(*${root}, ${info}); }]),
-  (apply [{ Helper.applyCombineConstantFoldFpUnary(*${root}, ${info}); }])
+class constant_fold_unary_fp_op_rule<Instruction opcode> : GICombineRule <
+  (defs root:$dst),
+  (match (opcode $dst, $src0):$root, (G_FCONSTANT $src0, $cst)),
+  (apply [{ Helper.applyCombineConstantFoldFpUnary(*${root}, ${cst}.getFPImm()); }])
 >;
+
+def constant_fold_fneg : constant_fold_unary_fp_op_rule<G_FNEG>;
+def constant_fold_fabs : constant_fold_unary_fp_op_rule<G_FABS>;
+def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
+def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
+def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
+
+def constant_fold_fp_ops : GICombineGroup<[
+  constant_fold_fneg,
+  constant_fold_fabs,
+  constant_fold_fsqrt,
+  constant_fold_flog2,
+  constant_fold_fptrunc
+]>;
 
 // Fold int2ptr(ptr2int(x)) -> x
 def p2i_to_i2p: GICombineRule<
@@ -1073,7 +1085,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         trunc_lshr_buildvector_fold,
                                         bitcast_bitcast_fold, fptrunc_fpext_fold]>;
 
-def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
+def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
                                      addo_by_0, adde_to_addo,
                                      combine_minmax_nan]>;

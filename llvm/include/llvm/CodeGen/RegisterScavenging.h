@@ -223,6 +223,7 @@ private:
   /// No more than InstrLimit instructions are inspected.
   Register findSurvivorReg(MachineBasicBlock::iterator StartMI,
                            BitVector &Candidates,
+                           ArrayRef<MCPhysReg> AllocationOrder,
                            unsigned InstrLimit,
                            MachineBasicBlock::iterator &UseMI);
 

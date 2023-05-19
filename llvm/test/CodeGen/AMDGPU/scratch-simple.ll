@@ -34,7 +34,7 @@
 ; GFX9-FLATSCR-PAL-DAG: s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GFX9-FLATSCR-PAL-DAG: v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-FLATSCR-PAL-DAG: v_mov_b32_e32 v0, 0xbf20e7f4
-; GFX9-FLATSCR-PAL-DAG: s_mov_b32 vcc_hi, 0
+; GFX9-FLATSCR-PAL-DAG: s_mov_b32 s1, 0
 ; GFX9-FLATSCR-PAL-DAG: s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-PAL-DAG: s_and_b32 s3, s3, 0xffff
 ; GFX9-FLATSCR-PAL-DAG: s_add_u32 flat_scratch_lo, s2, s0
@@ -102,7 +102,7 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-DAG: s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GFX9-FLATSCR-PAL-DAG: v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-FLATSCR-PAL-DAG: v_mov_b32_e32 v0, 0xbf20e7f4
-; GFX9-FLATSCR-PAL-DAG: s_mov_b32 vcc_hi, 0
+; GFX9-FLATSCR-PAL-DAG: s_mov_b32 s1, 0
 ; GFX9-FLATSCR-PAL-DAG: s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-PAL-DAG: s_and_b32 s3, s3, 0xffff
 ; GFX9-FLATSCR-PAL-DAG: s_add_u32 flat_scratch_lo, s2, s0
@@ -155,7 +155,7 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-DAG: s_load_dwordx2 s[2:3], s[2:3], 0x10
 ; GFX9-FLATSCR-PAL-DAG: v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-FLATSCR-PAL-DAG: v_mov_b32_e32 v0, 0xbf20e7f4
-; GFX9-FLATSCR-PAL-DAG: s_mov_b32 vcc_hi, 0
+; GFX9-FLATSCR-PAL-DAG: s_mov_b32 s1, 0
 ; GFX9-FLATSCR-PAL-DAG: s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-PAL-DAG: s_and_b32 s3, s3, 0xffff
 ; GFX9-FLATSCR-PAL-DAG: s_add_u32 flat_scratch_lo, s2, s0
@@ -237,7 +237,7 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-DAG: s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-FLATSCR-PAL-DAG: v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-FLATSCR-PAL-DAG: v_mov_b32_e32 v0, 0xbf20e7f4
-; GFX9-FLATSCR-PAL-DAG: s_mov_b32 vcc_hi, 0
+; GFX9-FLATSCR-PAL-DAG: s_mov_b32 s1, 0
 ; GFX9-FLATSCR-PAL-DAG: s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-PAL-DAG: s_and_b32 s1, s1, 0xffff
 ; GFX9-FLATSCR-PAL-DAG: s_add_u32 flat_scratch_lo, s0, s5
@@ -293,7 +293,7 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-DAG: s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-FLATSCR-PAL-DAG: v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-FLATSCR-PAL-DAG: v_mov_b32_e32 v0, 0xbf20e7f4
-; GFX9-FLATSCR-PAL-DAG: s_mov_b32 vcc_hi, 0
+; GFX9-FLATSCR-PAL-DAG: s_mov_b32 s1, 0
 ; GFX9-FLATSCR-PAL-DAG: s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-PAL-DAG: s_and_b32 s1, s1, 0xffff
 ; GFX9-FLATSCR-PAL-DAG: s_add_u32 flat_scratch_lo, s0, s5
@@ -316,7 +316,6 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; SIVI: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 ; SIVI: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 
-; GFX9PLUS-NOT: s_mov_b32 s5
 ; GFX9_10-MUBUF-DAG: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 ; GFX9_10-MUBUF-DAG: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 
@@ -350,7 +349,7 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-FLATSCR-PAL-DAG: s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-FLATSCR-PAL-DAG: v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-FLATSCR-PAL-DAG: v_mov_b32_e32 v0, 0xbf20e7f4
-; GFX9-FLATSCR-PAL-DAG: s_mov_b32 vcc_hi, 0
+; GFX9-FLATSCR-PAL-DAG: s_mov_b32 s1, 0
 ; GFX9-FLATSCR-PAL-DAG: s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-PAL-DAG: s_and_b32 s1, s1, 0xffff
 ; GFX9-FLATSCR-PAL-DAG: s_add_u32 flat_scratch_lo, s0, s5
