@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SparseTensorStorageLayout.h"
+#include "SparseTensorDescriptor.h"
 #include "CodegenUtils.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -115,118 +115,4 @@ Value sparse_tensor::SparseTensorDescriptor::getCrdMemRefOrView(
       /*offset=*/ValueRange{constantIndex(builder, loc, lvl - cooStart)},
       /*size=*/ValueRange{size},
       /*step=*/ValueRange{stride});
-}
-
-//===----------------------------------------------------------------------===//
-// Public methods.
-//===----------------------------------------------------------------------===//
-
-constexpr FieldIndex kDataFieldStartingIdx = 0;
-
-void sparse_tensor::foreachFieldInSparseTensor(
-    const SparseTensorEncodingAttr enc,
-    llvm::function_ref<bool(FieldIndex, SparseTensorFieldKind, Level,
-                            DimLevelType)>
-        callback) {
-  assert(enc);
-
-#define RETURN_ON_FALSE(fidx, kind, dim, dlt)                                  \
-  if (!(callback(fidx, kind, dim, dlt)))                                       \
-    return;
-
-  const auto lvlTypes = enc.getLvlTypes();
-  const Level lvlRank = enc.getLvlRank();
-  const Level cooStart = getCOOStart(enc);
-  const Level end = cooStart == lvlRank ? cooStart : cooStart + 1;
-  FieldIndex fieldIdx = kDataFieldStartingIdx;
-  // Per-dimension storage.
-  for (Level l = 0; l < end; l++) {
-    // Dimension level types apply in order to the reordered dimension.
-    // As a result, the compound type can be constructed directly in the given
-    // order.
-    const auto dlt = lvlTypes[l];
-    if (isCompressedDLT(dlt) || isCompressedWithHiDLT(dlt)) {
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, dlt);
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, dlt);
-    } else if (isSingletonDLT(dlt)) {
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, dlt);
-    } else {
-      assert(isDenseDLT(dlt)); // no fields
-    }
-  }
-  // The values array.
-  RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::ValMemRef, -1u,
-                  DimLevelType::Undef);
-
-  // Put metadata at the end.
-  RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::StorageSpec, -1u,
-                  DimLevelType::Undef);
-
-#undef RETURN_ON_FALSE
-}
-
-void sparse_tensor::foreachFieldAndTypeInSparseTensor(
-    SparseTensorType stt,
-    llvm::function_ref<bool(Type, FieldIndex, SparseTensorFieldKind, Level,
-                            DimLevelType)>
-        callback) {
-  assert(stt.hasEncoding());
-  // Construct the basic types.
-  const Type crdType = stt.getCrdType();
-  const Type posType = stt.getPosType();
-  const Type eltType = stt.getElementType();
-
-  const Type metaDataType = StorageSpecifierType::get(stt.getEncoding());
-  // memref<? x pos>  positions
-  const Type posMemType = MemRefType::get({ShapedType::kDynamic}, posType);
-  // memref<? x crd>  coordinates
-  const Type crdMemType = MemRefType::get({ShapedType::kDynamic}, crdType);
-  // memref<? x eltType> values
-  const Type valMemType = MemRefType::get({ShapedType::kDynamic}, eltType);
-
-  foreachFieldInSparseTensor(
-      stt.getEncoding(),
-      [metaDataType, posMemType, crdMemType, valMemType,
-       callback](FieldIndex fieldIdx, SparseTensorFieldKind fieldKind,
-                 Level lvl, DimLevelType dlt) -> bool {
-        switch (fieldKind) {
-        case SparseTensorFieldKind::StorageSpec:
-          return callback(metaDataType, fieldIdx, fieldKind, lvl, dlt);
-        case SparseTensorFieldKind::PosMemRef:
-          return callback(posMemType, fieldIdx, fieldKind, lvl, dlt);
-        case SparseTensorFieldKind::CrdMemRef:
-          return callback(crdMemType, fieldIdx, fieldKind, lvl, dlt);
-        case SparseTensorFieldKind::ValMemRef:
-          return callback(valMemType, fieldIdx, fieldKind, lvl, dlt);
-        };
-        llvm_unreachable("unrecognized field kind");
-      });
-}
-
-unsigned sparse_tensor::getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
-  unsigned numFields = 0;
-  foreachFieldInSparseTensor(enc,
-                             [&numFields](FieldIndex, SparseTensorFieldKind,
-                                          Level, DimLevelType) -> bool {
-                               numFields++;
-                               return true;
-                             });
-  return numFields;
-}
-
-unsigned
-sparse_tensor::getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
-  unsigned numFields = 0; // one value memref
-  foreachFieldInSparseTensor(enc,
-                             [&numFields](FieldIndex fidx,
-                                          SparseTensorFieldKind, Level,
-                                          DimLevelType) -> bool {
-                               if (fidx >= kDataFieldStartingIdx)
-                                 numFields++;
-                               return true;
-                             });
-  numFields -= 1; // the last field is MetaData field
-  assert(numFields ==
-         getNumFieldsFromEncoding(enc) - kDataFieldStartingIdx - 1);
-  return numFields;
 }
