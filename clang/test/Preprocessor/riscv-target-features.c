@@ -69,6 +69,7 @@
 // CHECK-NOT: __riscv_ssaia {{.*$}}
 // CHECK-NOT: __riscv_zfbfmin {{.*$}}
 // CHECK-NOT: __riscv_zvfbfmin {{.*$}}
+// CHECK-NOT: __riscv_zvfbfwma {{.*$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32i -x c -E -dM %s \
 // RUN: -o - | FileCheck %s
@@ -692,3 +693,11 @@
 // RUN: -march=rv64ifzvfbfmin0p6 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZVFBFMIN-EXT %s
 // CHECK-ZVFBFMIN-EXT: __riscv_zvfbfmin 6000{{$}}
+
+// RUN: %clang -target riscv32 -menable-experimental-extensions \
+// RUN: -march=rv32ifzvfbfwma0p6 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZVFBFWMA-EXT %s
+// RUN: %clang -target riscv64 -menable-experimental-extensions \
+// RUN: -march=rv64ifzvfbfwma0p6 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZVFBFWMA-EXT %s
+// CHECK-ZVFBFWMA-EXT: __riscv_zvfbfwma 6000{{$}}
