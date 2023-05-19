@@ -40,7 +40,7 @@ define i32 @baz(i32 %0) {
 ; CHECK-GISEL:   %0:gr32 = COPY $edi
 ; CHECK-GISEL:   %10:gr32 = MOV32ri 1
 ; CHECK-GISEL:   %11:gr32 = MOV32r0 implicit-def $eflags
-; CHECK-GISEL:   %2:gr32 = SUB32ri %0:gr32(tied-def 0), 0, implicit-def $eflags
+; CHECK-GISEL:   %2:gr32 = SUB32ri8 %0:gr32(tied-def 0), 0, implicit-def $eflags
 ; CHECK-GISEL: bb.5 (%ir-block.1):
 ; CHECK-GISEL: ; predecessors: %bb.1
 ; CHECK-GISEL:   successors: %bb.4(0x55555555), %bb.2(0x2aaaaaab); %bb.4(66.67%), %bb.2(33.33%)

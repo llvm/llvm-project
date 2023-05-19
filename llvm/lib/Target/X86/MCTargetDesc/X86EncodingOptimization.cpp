@@ -370,7 +370,7 @@ bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
 
 /// Simplify FOO $imm, %{al,ax,eax,rax} to FOO $imm, for instruction with
 /// a short fixed-register form.
-static bool optimizeToFixedRegisterForm(MCInst &MI) {
+bool X86::optimizeToFixedRegisterForm(MCInst &MI) {
   unsigned NewOpc;
   switch (MI.getOpcode()) {
   default:
@@ -423,78 +423,4 @@ static bool optimizeToFixedRegisterForm(MCInst &MI) {
   MI.setOpcode(NewOpc);
   MI.addOperand(Saved);
   return true;
-}
-
-static bool optimizeToShortImmediateForm(MCInst &MI) {
-  unsigned NewOpc;
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-    FROM_TO(ADC16mi, ADC16mi8)
-    FROM_TO(ADC16ri, ADC16ri8)
-    FROM_TO(ADC32mi, ADC32mi8)
-    FROM_TO(ADC32ri, ADC32ri8)
-    FROM_TO(ADC64mi32, ADC64mi8)
-    FROM_TO(ADC64ri32, ADC64ri8)
-    FROM_TO(SBB16mi, SBB16mi8)
-    FROM_TO(SBB16ri, SBB16ri8)
-    FROM_TO(SBB32mi, SBB32mi8)
-    FROM_TO(SBB32ri, SBB32ri8)
-    FROM_TO(SBB64mi32, SBB64mi8)
-    FROM_TO(SBB64ri32, SBB64ri8)
-    FROM_TO(ADD16mi, ADD16mi8)
-    FROM_TO(ADD16ri, ADD16ri8)
-    FROM_TO(ADD32mi, ADD32mi8)
-    FROM_TO(ADD32ri, ADD32ri8)
-    FROM_TO(ADD64mi32, ADD64mi8)
-    FROM_TO(ADD64ri32, ADD64ri8)
-    FROM_TO(AND16mi, AND16mi8)
-    FROM_TO(AND16ri, AND16ri8)
-    FROM_TO(AND32mi, AND32mi8)
-    FROM_TO(AND32ri, AND32ri8)
-    FROM_TO(AND64mi32, AND64mi8)
-    FROM_TO(AND64ri32, AND64ri8)
-    FROM_TO(OR16mi, OR16mi8)
-    FROM_TO(OR16ri, OR16ri8)
-    FROM_TO(OR32mi, OR32mi8)
-    FROM_TO(OR32ri, OR32ri8)
-    FROM_TO(OR64mi32, OR64mi8)
-    FROM_TO(OR64ri32, OR64ri8)
-    FROM_TO(SUB16mi, SUB16mi8)
-    FROM_TO(SUB16ri, SUB16ri8)
-    FROM_TO(SUB32mi, SUB32mi8)
-    FROM_TO(SUB32ri, SUB32ri8)
-    FROM_TO(SUB64mi32, SUB64mi8)
-    FROM_TO(SUB64ri32, SUB64ri8)
-    FROM_TO(XOR16mi, XOR16mi8)
-    FROM_TO(XOR16ri, XOR16ri8)
-    FROM_TO(XOR32mi, XOR32mi8)
-    FROM_TO(XOR32ri, XOR32ri8)
-    FROM_TO(XOR64mi32, XOR64mi8)
-    FROM_TO(XOR64ri32, XOR64ri8)
-    FROM_TO(CMP16mi, CMP16mi8)
-    FROM_TO(CMP16ri, CMP16ri8)
-    FROM_TO(CMP32mi, CMP32mi8)
-    FROM_TO(CMP32ri, CMP32ri8)
-    FROM_TO(CMP64mi32, CMP64mi8)
-    FROM_TO(CMP64ri32, CMP64ri8)
-  }
-  MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1);
-  if (LastOp.isExpr()) {
-    const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(LastOp.getExpr());
-    if (!SRE || SRE->getKind() != MCSymbolRefExpr::VK_X86_ABS8)
-      return false;
-  } else if (LastOp.isImm()) {
-    if (!isInt<8>(LastOp.getImm()))
-      return false;
-  }
-  MI.setOpcode(NewOpc);
-  return true;
-}
-
-bool X86::optimizeToFixedRegisterOrShortImmediateForm(MCInst &MI) {
-  // We may optimize twice here.
-  bool ShortImm = optimizeToShortImmediateForm(MI);
-  bool FixedReg = optimizeToFixedRegisterForm(MI);
-  return ShortImm || FixedReg;
 }
