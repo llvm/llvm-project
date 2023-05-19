@@ -697,6 +697,13 @@ private:
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
                          uint32_t ThreadLimitClause[3]) const override {
+    // Honor OMP_TEAMS_THREAD_LIMIT environment variable for BigJumpLoop kernel
+    // type.
+    int32_t TeamsThreadLimitEnvVar = GenericDevice.getOMPTeamsThreadLimit();
+    if (isBigJumpLoopMode() && TeamsThreadLimitEnvVar > 0)
+      return std::min(static_cast<int32_t>(ConstWGSize),
+                      TeamsThreadLimitEnvVar);
+
     if (isNoLoopMode() || isBigJumpLoopMode() || isXTeamReductionsMode())
       return ConstWGSize;
 
@@ -740,9 +747,14 @@ private:
         NumGroups =
             getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads);
 
+      // Honor OMP_NUM_TEAMS environment variable for BigJumpLoop kernel type.
+      int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
+      if (isBigJumpLoopMode() && NumTeamsEnvVar > 0 &&
+          NumTeamsEnvVar <= GenericDevice.getBlockLimit())
+        NumGroups = std::min(static_cast<uint64_t>(NumTeamsEnvVar), NumGroups);
       // Honor num_teams clause but lower it if tripcount dictates to
-      if (NumTeamsClause[0] > 0 &&
-          NumTeamsClause[0] <= GenericDevice.getBlockLimit()) {
+      else if (NumTeamsClause[0] > 0 &&
+               NumTeamsClause[0] <= GenericDevice.getBlockLimit()) {
         NumGroups =
             std::min(static_cast<uint64_t>(NumTeamsClause[0]), NumGroups);
       } else {

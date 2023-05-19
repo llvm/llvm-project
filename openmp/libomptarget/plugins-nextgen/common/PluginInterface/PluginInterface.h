@@ -768,6 +768,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   uint32_t getDefaultNumBlocks() const {
     return GridValues.GV_Default_Num_Teams;
   }
+
+  int32_t getOMPNumTeams() const { return OMP_NumTeams; }
+  int32_t getOMPTeamsThreadLimit() const { return OMP_TeamsThreadLimit; }
+
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).

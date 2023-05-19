@@ -3432,6 +3432,16 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   else
     GenerateArg(Args, OPT_fno_openmp_target_big_jump_loop, SA);
 
+  if (Opts.OpenMPTargetNoLoop)
+    GenerateArg(Args, OPT_fopenmp_target_no_loop, SA);
+  else
+    GenerateArg(Args, OPT_fno_openmp_target_no_loop, SA);
+
+  if (Opts.OpenMPTargetXteamReduction)
+    GenerateArg(Args, OPT_fopenmp_target_xteam_reduction, SA);
+  else
+    GenerateArg(Args, OPT_fno_openmp_target_xteam_reduction, SA);
+
   if (Opts.OpenMPThreadSubscription)
     GenerateArg(Args, OPT_fopenmp_assume_threads_oversubscription, SA);
 
@@ -3884,7 +3894,15 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   Opts.OpenMPTargetBigJumpLoop =
       Args.hasFlag(options::OPT_fopenmp_target_big_jump_loop,
-                   options::OPT_fno_openmp_target_big_jump_loop, false);
+                   options::OPT_fno_openmp_target_big_jump_loop, true);
+
+  Opts.OpenMPTargetNoLoop =
+      Args.hasFlag(options::OPT_fopenmp_target_no_loop,
+                   options::OPT_fno_openmp_target_no_loop, true);
+
+  Opts.OpenMPTargetXteamReduction =
+      Args.hasFlag(options::OPT_fopenmp_target_xteam_reduction,
+                   options::OPT_fno_openmp_target_xteam_reduction, true);
 
   // Set the value of the debugging flag used in the new offloading device RTL.
   // Set either by a specific value or to a default if not specified.

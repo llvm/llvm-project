@@ -7222,10 +7222,13 @@ void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
 namespace {
 class NoLoopChecker final : public ConstStmtVisitor<NoLoopChecker> {
 public:
-  NoLoopChecker() : NoLoopCheckStatus{CodeGenModule::NxSuccess} {}
+  NoLoopChecker()
+      : NoLoopCheckStatus{CodeGenModule::NxSuccess}, HasNestedGenericCall{
+                                                         false} {}
   CodeGenModule::NoLoopXteamErr getNoLoopCheckStatus() const {
     return NoLoopCheckStatus;
   }
+  bool hasNestedGenericCall() const { return HasNestedGenericCall; }
 
   // Reject if there is a nested OpenMP parallel directive
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D) {
@@ -7240,7 +7243,8 @@ public:
   }
 
   void VisitCallExpr(const CallExpr *C) {
-    // Reject if calling an OpenMP API
+    // Set status if calling an OpenMP API
+    // Set status if there is a call other than to an OpenMP function.
     if (C) {
       auto *FD = dyn_cast_or_null<FunctionDecl>(C->getCalleeDecl());
       if (FD) {
@@ -7251,6 +7255,7 @@ public:
           return;
         }
       }
+      HasNestedGenericCall = true;
     }
     for (const Stmt *Child : C->children())
       if (Child)
@@ -7273,6 +7278,7 @@ public:
 
 private:
   CodeGenModule::NoLoopXteamErr NoLoopCheckStatus;
+  bool HasNestedGenericCall;
 };
 
 /// Ensure no-loop codegen can handle the step. The visitor will reject any
@@ -7404,6 +7410,9 @@ void CodeGenModule::emitNxResult(std::string StatusMsg,
     break;
   case NxOptionDisabled:
     StatusMsg += "Command line option disabled";
+    break;
+  case NxOptionDisabledOrHasCall:
+    StatusMsg += "Command line option disabled or has a nested call";
     break;
   case NxUnsupportedDirective:
     StatusMsg += "Unsupported directive";
@@ -7690,20 +7699,21 @@ const Expr *CodeGenModule::getBinaryExprStep(const Expr *Inc,
   llvm_unreachable("Unexpected operator type in step computation");
 }
 
-CodeGenModule::NoLoopXteamErr
+std::pair<CodeGenModule::NoLoopXteamErr, bool>
 CodeGenModule::getNoLoopForStmtStatus(const OMPExecutableDirective &D,
                                       const Stmt *OMPStmt) {
   NoLoopChecker Checker;
   Checker.Visit(OMPStmt);
+  bool HasNestedGenericCall = Checker.hasNestedGenericCall();
   NoLoopXteamErr NxStatus = NxSuccess;
   if ((NxStatus = Checker.getNoLoopCheckStatus()))
-    return NxStatus;
+    return std::make_pair(NxStatus, HasNestedGenericCall);
 
   // Now ensure that code generation will handle this construct
 
   const ForStmt *FStmt = getSingleForStmt(OMPStmt);
   if (FStmt == nullptr)
-    return NxNoSingleForStmt;
+    return std::make_pair(NxNoSingleForStmt, HasNestedGenericCall);
 
   assert(isa<OMPLoopDirective>(D) && "Expected a loop directive");
   const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
@@ -7711,15 +7721,15 @@ CodeGenModule::getNoLoopForStmtStatus(const OMPExecutableDirective &D,
   // Ensure loop init and condition are supported
   const VarDecl *VD = checkLoopInit(LD);
   if (VD == nullptr)
-    return NxUnsupportedLoopInit;
+    return std::make_pair(NxUnsupportedLoopInit, HasNestedGenericCall);
 
   if (!checkLoopStep(LD.getInc(), VD))
-    return NxUnsupportedLoopStep;
+    return std::make_pair(NxUnsupportedLoopStep, HasNestedGenericCall);
 
   if (!checkLoopStop(LD, *FStmt))
-    return NxUnsupportedLoopStop;
+    return std::make_pair(NxUnsupportedLoopStop, HasNestedGenericCall);
 
-  return NxSuccess;
+  return std::make_pair(NxSuccess, HasNestedGenericCall);
 }
 
 int CodeGenModule::getWorkGroupSizeSPMDHelper(const OMPExecutableDirective &D) {
@@ -7819,13 +7829,13 @@ int CodeGenModule::computeOptKernelBlockSize(
   return 1024;
 }
 
-CodeGenModule::NoLoopXteamErr
+std::pair<CodeGenModule::NoLoopXteamErr, bool>
 CodeGenModule::getXteamRedForStmtStatus(const OMPExecutableDirective &D,
                                         const Stmt *OMPStmt,
                                         const XteamRedVarMap &RVM) {
-  NoLoopXteamErr NxStatus = NxSuccess;
-  if ((NxStatus = getNoLoopForStmtStatus(D, OMPStmt)))
-    return NxStatus;
+  auto [NxStatus, HasNestedGenericCall] = getNoLoopForStmtStatus(D, OMPStmt);
+  if (NxStatus)
+    return std::make_pair(NxStatus, HasNestedGenericCall);
   // The above check ensures that there is only one statement corresponding to
   // the directive
   const ForStmt *FStmt = getSingleForStmt(OMPStmt);
@@ -7833,8 +7843,8 @@ CodeGenModule::getXteamRedForStmtStatus(const OMPExecutableDirective &D,
   XteamRedExprChecker Chk(RVM);
   Chk.Visit(FStmt);
   if (!Chk.isSupported())
-    return NxUnsupportedRedExpr;
-  return NxSuccess;
+    return std::make_pair(NxUnsupportedRedExpr, HasNestedGenericCall);
+  return std::make_pair(NxSuccess, HasNestedGenericCall);
 }
 
 CodeGenModule::NoLoopXteamErr
@@ -8099,10 +8109,6 @@ CodeGenModule::checkTargetTeamsNest(const OMPExecutableDirective &D,
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   NoLoopXteamErr NxStatus = NxSuccess;
-  if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
-      !getLangOpts().OpenMPNoNestedParallelism ||
-      !getLangOpts().OpenMPNoThreadState)
-    return NxOptionDisabled;
 
   OptKernelNestDirectives NestDirs;
   if ((NxStatus = checkNest(D, &NestDirs)))
@@ -8121,12 +8127,12 @@ CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   if (!InnermostDir.hasAssociatedStmt())
     return NxNoStmt;
 
-  if ((NxStatus = getNoLoopForStmtStatus(InnermostDir,
-                                         InnermostDir.getAssociatedStmt())))
+  std::pair<NoLoopXteamErr, bool> ForStmtStatus =
+      getNoLoopForStmtStatus(InnermostDir, InnermostDir.getAssociatedStmt());
+  if ((NxStatus = ForStmtStatus.first))
     return NxStatus;
 
-  // Now that an optimized kernel will be generated, set the nest map
-  addOptKernelNestMap(NestDirs);
+  bool HasNestedGenericCall = ForStmtStatus.second;
 
   // Now we should determine whether this qualifies as a NoLoop or a
   // BigJumpLoop kernel. BigJumpLoop is enabled whenever NoLoop is
@@ -8138,19 +8144,17 @@ CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   // as the key.
   const ForStmt *FStmt = getSingleForStmt(InnermostDir.getAssociatedStmt());
   assert(FStmt && "For stmt cannot be null");
-  if (hasNumTeamsClause(NestDirs) || getLangOpts().OpenMPTargetBigJumpLoop) {
-    assert(!isBigJumpLoopKernel(FStmt) && "Big-Jump-Loop already set!");
-    BigJumpLoopKernels.insert(
-        std::make_pair(FStmt, NoLoopKernelInfo(/*BlockSize=*/0, NestDirs)));
-    int BlockSize =
-        getLangOpts().OpenMPIsDevice
-            ? computeOptKernelBlockSize(NestDirs, /*isXteamRed=*/false)
-            : 0;
-    if (BlockSize > 0)
-      updateBigJumpLoopKernel(FStmt, BlockSize);
 
-  } else {
+  if (getLangOpts().OpenMPTargetIgnoreEnvVars &&
+      ((getLangOpts().OpenMPNoNestedParallelism &&
+        getLangOpts().OpenMPNoThreadState) ||
+       !HasNestedGenericCall) &&
+      !hasNumTeamsClause(NestDirs) && getLangOpts().OpenMPTargetNoLoop) {
     assert(!isNoLoopKernel(FStmt) && "No-Loop already set!");
+
+    // Now that an optimized kernel will be generated, set the nest map
+    addOptKernelNestMap(NestDirs);
+
     NoLoopKernels.insert(
         std::make_pair(FStmt, NoLoopKernelInfo(/*BlockSize=*/0, NestDirs)));
     int BlockSize =
@@ -8159,16 +8163,36 @@ CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
             : 0;
     if (BlockSize > 0)
       updateNoLoopKernel(FStmt, BlockSize);
+    return NxSuccess;
   }
-  return NxSuccess;
+
+  if (((getLangOpts().OpenMPNoNestedParallelism &&
+        getLangOpts().OpenMPNoThreadState) ||
+       !HasNestedGenericCall) &&
+      getLangOpts().OpenMPTargetBigJumpLoop) {
+    assert(!isBigJumpLoopKernel(FStmt) && "Big-Jump-Loop already set!");
+
+    // Now that an optimized kernel will be generated, set the nest map
+    addOptKernelNestMap(NestDirs);
+
+    BigJumpLoopKernels.insert(
+        std::make_pair(FStmt, NoLoopKernelInfo(/*BlockSize=*/0, NestDirs)));
+    int BlockSize =
+        getLangOpts().OpenMPIsDevice
+            ? computeOptKernelBlockSize(NestDirs, /*isXteamRed=*/false)
+            : 0;
+    if (BlockSize > 0)
+      updateBigJumpLoopKernel(FStmt, BlockSize);
+    return NxSuccess;
+  }
+  return NxOptionDisabledOrHasCall;
 }
 
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   NoLoopXteamErr NxStatus = NxSuccess;
   if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
-      !getLangOpts().OpenMPNoNestedParallelism ||
-      !getLangOpts().OpenMPNoThreadState)
+      !getLangOpts().OpenMPTargetXteamReduction)
     return NxOptionDisabled;
 
   OptKernelNestDirectives NestDirs;
@@ -8193,35 +8217,42 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   if (!InnermostDir.hasAssociatedStmt())
     return NxNoStmt;
 
-  if ((NxStatus = getXteamRedForStmtStatus(InnermostDir,
-                                           InnermostDir.getAssociatedStmt(),
-                                           RedVarMapPair.second)))
+  auto ForStmtStatus = getXteamRedForStmtStatus(
+      InnermostDir, InnermostDir.getAssociatedStmt(), RedVarMapPair.second);
+  if ((NxStatus = ForStmtStatus.first))
     return NxStatus;
 
-  // Now that an optimized kernel will be generated, set the nest map
-  addOptKernelNestMap(NestDirs);
+  bool HasNestedGenericCall = ForStmtStatus.second;
 
-  // Create a map from the ForStmt, some of the info will be populated later
-  const ForStmt *FStmt = getSingleForStmt(InnermostDir.getAssociatedStmt());
-  assert(FStmt && "For stmt cannot be null");
-  assert(!isXteamRedKernel(FStmt) && "Xteam reduction already set!");
-  XteamRedKernels.insert(
-      std::make_pair(FStmt, XteamRedKernelInfo(/*ThreadStartIndex=*/nullptr,
-                                               /*NumTeams=*/nullptr,
-                                               /*BlockSize=*/0, NestDirs,
-                                               RedVarMapPair.second)));
+  if (((getLangOpts().OpenMPNoNestedParallelism &&
+        getLangOpts().OpenMPNoThreadState) ||
+       !HasNestedGenericCall)) {
+    const ForStmt *FStmt = getSingleForStmt(InnermostDir.getAssociatedStmt());
+    assert(FStmt && "For stmt cannot be null");
+    assert(!isXteamRedKernel(FStmt) && "Xteam reduction already set!");
 
-  // The blocksize has to be computed after adding this kernel to the metadata
-  // above, since the computation below depends on that metadata. Compute block
-  // size during device compilation only.
-  int BlockSize = getLangOpts().OpenMPIsDevice
-                      ? computeOptKernelBlockSize(NestDirs, /*isXteamRed=*/true)
-                      : 0;
-  if (BlockSize > 0)
-    updateXteamRedKernel(FStmt, BlockSize);
+    // Now that an optimized kernel will be generated, set the nest map
+    addOptKernelNestMap(NestDirs);
 
-  // All checks passed
-  return NxSuccess;
+    // Create a map from the ForStmt, some of the info will be populated later
+    XteamRedKernels.insert(
+        std::make_pair(FStmt, XteamRedKernelInfo(/*ThreadStartIndex=*/nullptr,
+                                                 /*NumTeams=*/nullptr,
+                                                 /*BlockSize=*/0, NestDirs,
+                                                 RedVarMapPair.second)));
+
+    // The blocksize has to be computed after adding this kernel to the metadata
+    // above, since the computation below depends on that metadata. Compute
+    // block size during device compilation only.
+    int BlockSize =
+        getLangOpts().OpenMPIsDevice
+            ? computeOptKernelBlockSize(NestDirs, /*isXteamRed=*/true)
+            : 0;
+    if (BlockSize > 0)
+      updateXteamRedKernel(FStmt, BlockSize);
+    return NxSuccess;
+  }
+  return NxOptionDisabledOrHasCall;
 }
 
 bool CodeGenModule::isXteamRedKernel(const OMPExecutableDirective &D) {

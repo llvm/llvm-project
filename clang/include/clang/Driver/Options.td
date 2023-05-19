@@ -2716,6 +2716,22 @@ def fno_openmp_target_big_jump_loop : Flag<["-"], "fno-openmp-target-big-jump-lo
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
   HelpText<"Do not use the big-jump-loop code generation technique">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetBigJumpLoop">>;
+def fopenmp_target_no_loop : Flag<["-"], "fopenmp-target-no-loop">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Use the no-loop code generation technique if possible">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetNoLoop">>;
+def fno_openmp_target_no_loop : Flag<["-"], "fno-openmp-target-no-loop">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Do not use the no-loop code generation technique">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetNoLoop">>;
+def fopenmp_target_xteam_reduction : Flag<["-"], "fopenmp-target-xteam-reduction">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Use the cross-team code generation technique if possible">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamReduction">>;
+def fno_openmp_target_xteam_reduction : Flag<["-"], "fno-openmp-target-xteam-reduction">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Do not use the cross-team reduction code generation technique">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamReduction">>;
 
 //===----------------------------------------------------------------------===//
 // Shared cc1 + fc1 OpenMP Target Options

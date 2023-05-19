@@ -91,7 +91,7 @@ CodeGenFunction::EmitBigJumpLoopStartingIndex(const ForStmt &FStmt) {
   llvm::Value *WorkGroupSize =
       CGM.isXteamRedKernel(&FStmt)
           ? RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt))
-          : RT.getXteamRedBlockSize(*this, CGM.getBigJumpLoopBlockSize(&FStmt));
+          : RT.getGPUNumThreads(*this);
 
   // workgroup_id
   llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
@@ -149,7 +149,7 @@ void CodeGenFunction::EmitBigJumpLoopInc(const ForStmt &FStmt,
   llvm::Value *BlockSize =
       CGM.isXteamRedKernel(&FStmt)
           ? RT.getXteamRedBlockSize(*this, CGM.getXteamRedBlockSize(&FStmt))
-          : RT.getXteamRedBlockSize(*this, CGM.getBigJumpLoopBlockSize(&FStmt));
+          : RT.getGPUNumThreads(*this);
 
   llvm::Value *NumBlocks = CGM.isXteamRedKernel(&FStmt)
                                ? CGM.getXteamRedNumTeams(&FStmt)
@@ -334,11 +334,9 @@ void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
   llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
 
   // workgroup_size
-  assert((CGM.isNoLoopKernel(D) || CGM.isBigJumpLoopKernel(D)) &&
-         "Unexpected optimized kernel type");
-  llvm::Value *WorkGroupSize = llvm::ConstantInt::get(
-      Int32Ty, CGM.isNoLoopKernel(D) ? CGM.getNoLoopBlockSize(D)
-                                     : CGM.getBigJumpLoopBlockSize(D));
+  assert(CGM.isNoLoopKernel(D) && "Unexpected optimized kernel type");
+  llvm::Value *WorkGroupSize =
+      llvm::ConstantInt::get(Int32Ty, CGM.getNoLoopBlockSize(D));
 
   // workgroup_id
   llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);

@@ -302,6 +302,7 @@ public:
     NxSuccess,
     NxNonSPMD,
     NxOptionDisabled,
+    NxOptionDisabledOrHasCall,
     NxUnsupportedDirective,
     NxUnsupportedSplitDirective,
     NxNoStmt,
@@ -2073,16 +2074,17 @@ private:
                                       OptKernelNestDirectives *NestDirs);
 
   /// Top level checker for no-loop on the for statement
-  NoLoopXteamErr getNoLoopForStmtStatus(const OMPExecutableDirective &,
-                                        const Stmt *);
+  std::pair<NoLoopXteamErr, bool>
+  getNoLoopForStmtStatus(const OMPExecutableDirective &, const Stmt *);
 
   // Compute the block size used by optimized kernels.
   int computeOptKernelBlockSize(const OptKernelNestDirectives &NestDirs,
                                 bool isXteamRed);
 
   /// Top level checker for xteam reduction of the loop
-  NoLoopXteamErr getXteamRedForStmtStatus(const OMPExecutableDirective &,
-                                          const Stmt *, const XteamRedVarMap &);
+  std::pair<NoLoopXteamErr, bool>
+  getXteamRedForStmtStatus(const OMPExecutableDirective &, const Stmt *,
+                           const XteamRedVarMap &);
 
   /// Are clauses on a combined OpenMP construct compatible with no-loop
   /// codegen?

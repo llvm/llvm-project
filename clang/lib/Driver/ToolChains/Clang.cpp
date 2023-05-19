@@ -6311,10 +6311,22 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-fno-openmp-target-ignore-env-vars");
 
       if (Args.hasFlag(options::OPT_fopenmp_target_big_jump_loop,
-                       options::OPT_fno_openmp_target_big_jump_loop, false))
+                       options::OPT_fno_openmp_target_big_jump_loop, true))
         CmdArgs.push_back("-fopenmp-target-big-jump-loop");
       else
         CmdArgs.push_back("-fno-openmp-target-big-jump-loop");
+
+      if (Args.hasFlag(options::OPT_fopenmp_target_no_loop,
+                       options::OPT_fno_openmp_target_no_loop, true))
+        CmdArgs.push_back("-fopenmp-target-no-loop");
+      else
+        CmdArgs.push_back("-fno-openmp-target-no-loop");
+
+      if (Args.hasFlag(options::OPT_fopenmp_target_xteam_reduction,
+                       options::OPT_fno_openmp_target_xteam_reduction, true))
+        CmdArgs.push_back("-fopenmp-target-xteam-reduction");
+      else
+        CmdArgs.push_back("-fno-openmp-target-xteam-reduction");
 
       // When in OpenMP offloading mode with NVPTX target, forward
       // cuda-mode flag
