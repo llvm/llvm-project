@@ -235,21 +235,13 @@ class BinOpRI8<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   let ImmT = Imm8; // Always 8-bit immediate.
 }
 
-// BinOpRI8_F - Binary instructions with inputs "reg, imm8", where the pattern
-// has EFLAGS as a result.
-class BinOpRI8_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-                  SDPatternOperator opnode, Format f>
-  : BinOpRI8<opcode, mnemonic, typeinfo, f, (outs), WriteALU,
-             [(set EFLAGS,
-               (opnode typeinfo.RegClass:$src1, typeinfo.Imm8Operator:$src2))]>;
+// BinOpRI8_F - Binary instructions with inputs "reg, imm8".
+class BinOpRI8_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo, Format f>
+  : BinOpRI8<opcode, mnemonic, typeinfo, f, (outs), WriteALU, []>;
 
-// BinOpRI8_RF - Binary instructions with inputs "reg, imm8", where the pattern
-// has both a regclass and EFLAGS as a result.
-class BinOpRI8_RF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-                  SDPatternOperator opnode, Format f>
-  : BinOpRI8<opcode, mnemonic, typeinfo, f, (outs typeinfo.RegClass:$dst), WriteALU,
-             [(set typeinfo.RegClass:$dst, EFLAGS,
-               (opnode typeinfo.RegClass:$src1, typeinfo.Imm8Operator:$src2))]>;
+// BinOpRI8_RF - Binary instructions with inputs "reg, imm8".
+class BinOpRI8_RF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo, Format f>
+  : BinOpRI8<opcode, mnemonic, typeinfo, f, (outs typeinfo.RegClass:$dst), WriteALU, []>;
 
 // BinOpRI8_RFF - Binary instructions with inputs "reg, imm8".
 class BinOpRI8_RFF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo, Format f>
@@ -347,28 +339,17 @@ class BinOpMI8<string mnemonic, X86TypeInfo typeinfo,
   let ImmT = Imm8; // Always 8-bit immediate.
 }
 
-// BinOpMI8_RMW - Binary instructions with inputs "[mem], imm8", where the
-// pattern implicitly use EFLAGS.
-class BinOpMI8_RMW<string mnemonic, X86TypeInfo typeinfo,
-                   SDPatternOperator opnode, Format f>
-  : BinOpMI8<mnemonic, typeinfo, f,
-             [(store (opnode (load addr:$dst),
-                             typeinfo.Imm8Operator:$src), addr:$dst),
-              (implicit EFLAGS)]>,
-    Sched<[WriteALURMW]>;
+// BinOpMI8_RMW - Binary instructions with inputs "[mem], imm8".
+class BinOpMI8_RMW<string mnemonic, X86TypeInfo typeinfo, Format f>
+  : BinOpMI8<mnemonic, typeinfo, f, []>, Sched<[WriteALURMW]>;
 
 // BinOpMI8_RMW_FF - Binary instructions with inputs "[mem], imm8".
 class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo, Format f>
   : BinOpMI8<mnemonic, typeinfo, f, []>, Sched<[WriteADCRMW]>;
 
-// BinOpMI8_F - Binary instructions with inputs "[mem], imm8", where the pattern
-// has EFLAGS as a result.
-class BinOpMI8_F<string mnemonic, X86TypeInfo typeinfo,
-                 SDPatternOperator opnode, Format f>
-  : BinOpMI8<mnemonic, typeinfo, f,
-             [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
-                                    typeinfo.Imm8Operator:$src))]>,
-    Sched<[WriteALU.Folded]>;
+// BinOpMI8_F - Binary instructions with inputs "[mem], imm8"
+class BinOpMI8_F<string mnemonic, X86TypeInfo typeinfo, Format f>
+  : BinOpMI8<mnemonic, typeinfo, f, []>, Sched<[WriteALU.Folded]>;
 
 // BinOpAI - Binary instructions with input imm, that implicitly use A reg and
 // implicitly define Areg and EFLAGS.
@@ -876,14 +857,14 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
       def NAME#32rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, opnodeflag>;
       def NAME#64rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, opnodeflag>;
 
-      let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
+      let isConvertibleToThreeAddress = ConvertibleToThreeAddress, hasSideEffects= 0 in {
         def NAME#8ri   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM>;
 
         // NOTE: These are order specific, we want the ri8 forms to be listed
         // first so that they are slightly preferred to the ri forms.
-        def NAME#16ri8 : BinOpRI8_RF<0x82, mnemonic, Xi16, opnodeflag, RegMRM>;
-        def NAME#32ri8 : BinOpRI8_RF<0x82, mnemonic, Xi32, opnodeflag, RegMRM>;
-        def NAME#64ri8 : BinOpRI8_RF<0x82, mnemonic, Xi64, opnodeflag, RegMRM>;
+        def NAME#16ri8 : BinOpRI8_RF<0x82, mnemonic, Xi16, RegMRM>;
+        def NAME#32ri8 : BinOpRI8_RF<0x82, mnemonic, Xi32, RegMRM>;
+        def NAME#64ri8 : BinOpRI8_RF<0x82, mnemonic, Xi64, RegMRM>;
 
         def NAME#16ri  : BinOpRI_RF<0x80, mnemonic, Xi16, opnodeflag, RegMRM>;
         def NAME#32ri  : BinOpRI_RF<0x80, mnemonic, Xi32, opnodeflag, RegMRM>;
@@ -891,34 +872,34 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
       }
     } // Constraints = "$src1 = $dst"
 
-    let mayLoad = 1, mayStore = 1 in {
+    let mayLoad = 1, mayStore = 1, hasSideEffects = 0 in {
       def NAME#8mr    : BinOpMR_RMW<BaseOpc, mnemonic, Xi8 , opnode>;
       def NAME#16mr   : BinOpMR_RMW<BaseOpc, mnemonic, Xi16, opnode>;
       def NAME#32mr   : BinOpMR_RMW<BaseOpc, mnemonic, Xi32, opnode>;
       def NAME#64mr   : BinOpMR_RMW<BaseOpc, mnemonic, Xi64, opnode>;
+
+      // NOTE: These are order specific, we want the mi8 forms to be listed
+      // first so that they are slightly preferred to the mi forms.
+      def NAME#16mi8  : BinOpMI8_RMW<mnemonic, Xi16, MemMRM>;
+      def NAME#32mi8  : BinOpMI8_RMW<mnemonic, Xi32, MemMRM>;
+      let Predicates = [In64BitMode] in
+      def NAME#64mi8  : BinOpMI8_RMW<mnemonic, Xi64, MemMRM>;
+
+      def NAME#8mi    : BinOpMI_RMW<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+      def NAME#16mi   : BinOpMI_RMW<0x80, mnemonic, Xi16, opnode, MemMRM>;
+      def NAME#32mi   : BinOpMI_RMW<0x80, mnemonic, Xi32, opnode, MemMRM>;
+      let Predicates = [In64BitMode] in
+      def NAME#64mi32 : BinOpMI_RMW<0x80, mnemonic, Xi64, opnode, MemMRM>;
     }
-
-    // NOTE: These are order specific, we want the mi8 forms to be listed
-    // first so that they are slightly preferred to the mi forms.
-    def NAME#16mi8  : BinOpMI8_RMW<mnemonic, Xi16, opnode, MemMRM>;
-    def NAME#32mi8  : BinOpMI8_RMW<mnemonic, Xi32, opnode, MemMRM>;
-    let Predicates = [In64BitMode] in
-    def NAME#64mi8  : BinOpMI8_RMW<mnemonic, Xi64, opnode, MemMRM>;
-
-    def NAME#8mi    : BinOpMI_RMW<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-    def NAME#16mi   : BinOpMI_RMW<0x80, mnemonic, Xi16, opnode, MemMRM>;
-    def NAME#32mi   : BinOpMI_RMW<0x80, mnemonic, Xi32, opnode, MemMRM>;
-    let Predicates = [In64BitMode] in
-    def NAME#64mi32 : BinOpMI_RMW<0x80, mnemonic, Xi64, opnode, MemMRM>;
 
     // These are for the disassembler since 0x82 opcode behaves like 0x80, but
     // not in 64-bit mode.
     let Predicates = [Not64BitMode], isCodeGenOnly = 1, ForceDisassemble = 1,
         hasSideEffects = 0 in {
       let Constraints = "$src1 = $dst" in
-        def NAME#8ri8 : BinOpRI8_RF<0x82, mnemonic, Xi8, null_frag, RegMRM>;
+        def NAME#8ri8 : BinOpRI8_RF<0x82, mnemonic, Xi8, RegMRM>;
       let mayLoad = 1, mayStore = 1 in
-        def NAME#8mi8 : BinOpMI8_RMW<mnemonic, Xi8, null_frag, MemMRM>;
+        def NAME#8mi8 : BinOpMI8_RMW<mnemonic, Xi8, MemMRM>;
     }
   } // Defs = [EFLAGS]
 
@@ -965,7 +946,7 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
 
       def NAME#8ri   : BinOpRI_RFF<0x80, mnemonic, Xi8 , opnode, RegMRM>;
 
-      let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
+      let isConvertibleToThreeAddress = ConvertibleToThreeAddress, hasSideEffects = 0 in {
         // NOTE: These are order specific, we want the ri8 forms to be listed
         // first so that they are slightly preferred to the ri forms.
         def NAME#16ri8 : BinOpRI8_RFF<0x82, mnemonic, Xi16, RegMRM>;
@@ -985,6 +966,7 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
 
     // NOTE: These are order specific, we want the mi8 forms to be listed
     // first so that they are slightly preferred to the mi forms.
+    let mayLoad = 1, mayStore = 1, hasSideEffects = 0 in {
     def NAME#16mi8  : BinOpMI8_RMW_FF<mnemonic, Xi16, MemMRM>;
     def NAME#32mi8  : BinOpMI8_RMW_FF<mnemonic, Xi32, MemMRM>;
     let Predicates = [In64BitMode] in
@@ -995,6 +977,7 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
     def NAME#32mi   : BinOpMI_RMW_FF<0x80, mnemonic, Xi32, opnode, MemMRM>;
     let Predicates = [In64BitMode] in
     def NAME#64mi32 : BinOpMI_RMW_FF<0x80, mnemonic, Xi64, opnode, MemMRM>;
+    }
 
     // These are for the disassembler since 0x82 opcode behaves like 0x80, but
     // not in 64-bit mode.
@@ -1047,12 +1030,12 @@ multiclass ArithBinOp_F<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
 
     def NAME#8ri   : BinOpRI_F<0x80, mnemonic, Xi8 , opnode, RegMRM>;
 
-    let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
+    let isConvertibleToThreeAddress = ConvertibleToThreeAddress, hasSideEffects = 0 in {
       // NOTE: These are order specific, we want the ri8 forms to be listed
       // first so that they are slightly preferred to the ri forms.
-      def NAME#16ri8 : BinOpRI8_F<0x82, mnemonic, Xi16, opnode, RegMRM>;
-      def NAME#32ri8 : BinOpRI8_F<0x82, mnemonic, Xi32, opnode, RegMRM>;
-      def NAME#64ri8 : BinOpRI8_F<0x82, mnemonic, Xi64, opnode, RegMRM>;
+      def NAME#16ri8 : BinOpRI8_F<0x82, mnemonic, Xi16, RegMRM>;
+      def NAME#32ri8 : BinOpRI8_F<0x82, mnemonic, Xi32, RegMRM>;
+      def NAME#64ri8 : BinOpRI8_F<0x82, mnemonic, Xi64, RegMRM>;
 
       def NAME#16ri  : BinOpRI_F<0x80, mnemonic, Xi16, opnode, RegMRM>;
       def NAME#32ri  : BinOpRI_F<0x80, mnemonic, Xi32, opnode, RegMRM>;
@@ -1066,24 +1049,26 @@ multiclass ArithBinOp_F<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
 
     // NOTE: These are order specific, we want the mi8 forms to be listed
     // first so that they are slightly preferred to the mi forms.
-    def NAME#16mi8  : BinOpMI8_F<mnemonic, Xi16, opnode, MemMRM>;
-    def NAME#32mi8  : BinOpMI8_F<mnemonic, Xi32, opnode, MemMRM>;
-    let Predicates = [In64BitMode] in
-    def NAME#64mi8  : BinOpMI8_F<mnemonic, Xi64, opnode, MemMRM>;
+    let mayLoad = 1, hasSideEffects = 0 in {
+      def NAME#16mi8  : BinOpMI8_F<mnemonic, Xi16, MemMRM>;
+      def NAME#32mi8  : BinOpMI8_F<mnemonic, Xi32, MemMRM>;
+      let Predicates = [In64BitMode] in
+      def NAME#64mi8  : BinOpMI8_F<mnemonic, Xi64, MemMRM>;
 
-    def NAME#8mi    : BinOpMI_F<0x80, mnemonic, Xi8 , opnode, MemMRM>;
-    def NAME#16mi   : BinOpMI_F<0x80, mnemonic, Xi16, opnode, MemMRM>;
-    def NAME#32mi   : BinOpMI_F<0x80, mnemonic, Xi32, opnode, MemMRM>;
-    let Predicates = [In64BitMode] in
-    def NAME#64mi32 : BinOpMI_F<0x80, mnemonic, Xi64, opnode, MemMRM>;
+      def NAME#8mi    : BinOpMI_F<0x80, mnemonic, Xi8 , opnode, MemMRM>;
+      def NAME#16mi   : BinOpMI_F<0x80, mnemonic, Xi16, opnode, MemMRM>;
+      def NAME#32mi   : BinOpMI_F<0x80, mnemonic, Xi32, opnode, MemMRM>;
+      let Predicates = [In64BitMode] in
+      def NAME#64mi32 : BinOpMI_F<0x80, mnemonic, Xi64, opnode, MemMRM>;
+    }
 
     // These are for the disassembler since 0x82 opcode behaves like 0x80, but
     // not in 64-bit mode.
     let Predicates = [Not64BitMode], isCodeGenOnly = 1, ForceDisassemble = 1,
         hasSideEffects = 0 in {
-      def NAME#8ri8 : BinOpRI8_F<0x82, mnemonic, Xi8, null_frag, RegMRM>;
+      def NAME#8ri8 : BinOpRI8_F<0x82, mnemonic, Xi8, RegMRM>;
       let mayLoad = 1 in
-        def NAME#8mi8 : BinOpMI8_F<mnemonic, Xi8, null_frag, MemMRM>;
+        def NAME#8mi8 : BinOpMI8_F<mnemonic, Xi8, MemMRM>;
     }
   } // Defs = [EFLAGS]
 
@@ -1159,31 +1144,19 @@ def : Pat<(store (X86adc_flag GR64:$src, (loadi64 addr:$dst), EFLAGS),
 multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode> {
   def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
             (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
-  def : Pat<(OpNodeFlag GR16:$src1, i16relocImmSExt8_su:$src2),
-            (!cast<Instruction>(NAME#"16ri8") GR16:$src1, i16relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2),
             (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
-  def : Pat<(OpNodeFlag GR32:$src1, i32relocImmSExt8_su:$src2),
-            (!cast<Instruction>(NAME#"32ri8") GR32:$src1, i32relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
             (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
-  def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt8_su:$src2),
-            (!cast<Instruction>(NAME#"64ri8") GR64:$src1, i64relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
             (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
   def : Pat<(store (OpNode (load addr:$dst), relocImm8_su:$src), addr:$dst),
             (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
-  def : Pat<(store (OpNode (load addr:$dst), i16relocImmSExt8_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"16mi8") addr:$dst, i16relocImmSExt8_su:$src)>;
   def : Pat<(store (OpNode (load addr:$dst), relocImm16_su:$src), addr:$dst),
             (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
-  def : Pat<(store (OpNode (load addr:$dst), i32relocImmSExt8_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"32mi8") addr:$dst, i32relocImmSExt8_su:$src)>;
   def : Pat<(store (OpNode (load addr:$dst), relocImm32_su:$src), addr:$dst),
             (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
-  def : Pat<(store (OpNode (load addr:$dst), i64relocImmSExt8_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"64mi8") addr:$dst, i64relocImmSExt8_su:$src)>;
   def : Pat<(store (OpNode (load addr:$dst), i64relocImmSExt32_su:$src), addr:$dst),
             (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
 }
@@ -1191,31 +1164,19 @@ multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode> {
 multiclass ArithBinOp_RFF_relocImm_Pats<SDNode OpNodeFlag> {
   def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2, EFLAGS),
             (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
-  def : Pat<(OpNodeFlag GR16:$src1, i16relocImmSExt8_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"16ri8") GR16:$src1, i16relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2, EFLAGS),
             (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
-  def : Pat<(OpNodeFlag GR32:$src1, i32relocImmSExt8_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"32ri8") GR32:$src1, i32relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2, EFLAGS),
             (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
-  def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt8_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"64ri8") GR64:$src1, i64relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2, EFLAGS),
             (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
   def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm8_su:$src, EFLAGS), addr:$dst),
             (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
-  def : Pat<(store (OpNodeFlag (load addr:$dst), i16relocImmSExt8_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"16mi8") addr:$dst, i16relocImmSExt8_su:$src)>;
   def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm16_su:$src, EFLAGS), addr:$dst),
             (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
-  def : Pat<(store (OpNodeFlag (load addr:$dst), i32relocImmSExt8_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"32mi8") addr:$dst, i32relocImmSExt8_su:$src)>;
   def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm32_su:$src, EFLAGS), addr:$dst),
             (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
-  def : Pat<(store (OpNodeFlag (load addr:$dst), i64relocImmSExt8_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"64mi8") addr:$dst, i64relocImmSExt8_su:$src)>;
   def : Pat<(store (OpNodeFlag (load addr:$dst), i64relocImmSExt32_su:$src, EFLAGS), addr:$dst),
             (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
 }
@@ -1223,31 +1184,19 @@ multiclass ArithBinOp_RFF_relocImm_Pats<SDNode OpNodeFlag> {
 multiclass ArithBinOp_F_relocImm_Pats<SDNode OpNodeFlag> {
   def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
             (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
-  def : Pat<(OpNodeFlag GR16:$src1, i16relocImmSExt8_su:$src2),
-            (!cast<Instruction>(NAME#"16ri8") GR16:$src1, i16relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2),
             (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
-  def : Pat<(OpNodeFlag GR32:$src1, i32relocImmSExt8_su:$src2),
-            (!cast<Instruction>(NAME#"32ri8") GR32:$src1, i32relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
             (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
-  def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt8_su:$src2),
-            (!cast<Instruction>(NAME#"64ri8") GR64:$src1, i64relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
             (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
   def : Pat<(OpNodeFlag (loadi8 addr:$src1), relocImm8_su:$src2),
             (!cast<Instruction>(NAME#"8mi") addr:$src1, relocImm8_su:$src2)>;
-  def : Pat<(OpNodeFlag (loadi16 addr:$src1), i16relocImmSExt8_su:$src2),
-            (!cast<Instruction>(NAME#"16mi8") addr:$src1, i16relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag (loadi16 addr:$src1), relocImm16_su:$src2),
             (!cast<Instruction>(NAME#"16mi") addr:$src1, relocImm16_su:$src2)>;
-  def : Pat<(OpNodeFlag (loadi32 addr:$src1), i32relocImmSExt8_su:$src2),
-            (!cast<Instruction>(NAME#"32mi8") addr:$src1, i32relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag (loadi32 addr:$src1), relocImm32_su:$src2),
             (!cast<Instruction>(NAME#"32mi") addr:$src1, relocImm32_su:$src2)>;
-  def : Pat<(OpNodeFlag (loadi64 addr:$src1), i64relocImmSExt8_su:$src2),
-            (!cast<Instruction>(NAME#"64mi8") addr:$src1, i64relocImmSExt8_su:$src2)>;
   def : Pat<(OpNodeFlag (loadi64 addr:$src1), i64relocImmSExt32_su:$src2),
             (!cast<Instruction>(NAME#"64mi32") addr:$src1, i64relocImmSExt32_su:$src2)>;
 }

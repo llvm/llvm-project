@@ -333,14 +333,14 @@ body:             |
     successors: %bb.6(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
-    CMP32mi8 renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_perf2, align 8)
+    CMP32mi renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_perf2, align 8)
     JCC_1 %bb.7, 5, implicit $eflags, debug-location !57
 
   bb.6.lor.lhs.false:
     successors: %bb.8(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
-    CMP32mi8 killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_bw)
+    CMP32mi killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_bw)
     JCC_1 %bb.8, 4, implicit $eflags, debug-location !57
 
   bb.7.if.then14:
@@ -375,7 +375,7 @@ body:             |
     liveins: $ecx
 
     $eax = MOV32rr killed $ecx
-    $rsp = ADD64ri8 $rsp, 8, implicit-def dead $eflags
+    $rsp = ADD64ri32 $rsp, 8, implicit-def dead $eflags
     $rbx = POP64r implicit-def $rsp, implicit $rsp
     $r12 = POP64r implicit-def $rsp, implicit $rsp
     $r13 = POP64r implicit-def $rsp, implicit $rsp
