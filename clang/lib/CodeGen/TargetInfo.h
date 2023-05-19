@@ -52,6 +52,11 @@ protected:
   // by returning true from TargetInfo::checkCallingConvention for them.
   std::unique_ptr<SwiftABIInfo> SwiftInfo;
 
+  // Returns ABI info helper for the target. This is for use by derived classes.
+  template <typename T> const T &getABIInfo() const {
+    return static_cast<const T &>(*Info);
+  }
+
 public:
   TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info);
   virtual ~TargetCodeGenInfo();
