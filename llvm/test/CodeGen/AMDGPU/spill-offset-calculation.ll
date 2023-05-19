@@ -290,7 +290,6 @@ define amdgpu_kernel void @test_sgpr_offset_subregs_kernel() {
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4088 ; 4-byte Folded Reload
-; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:4092 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
@@ -357,7 +356,6 @@ define amdgpu_kernel void @test_inst_offset_subregs_kernel() {
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
-; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v1, off, s[0:3], s4 offset:4 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
@@ -523,7 +521,6 @@ define void @test_sgpr_offset_subregs_function() {
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4084 ; 4-byte Folded Reload
-; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4088 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
@@ -590,7 +587,6 @@ define void @test_inst_offset_subregs_function() {
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_add_i32 s4, s32, 0x3ff00
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
-; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v1, off, s[0:3], s4 offset:4 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
