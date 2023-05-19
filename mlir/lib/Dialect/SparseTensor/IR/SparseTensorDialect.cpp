@@ -254,10 +254,12 @@ Type mlir::sparse_tensor::detail::getIntegerOrIndexType(MLIRContext *ctx,
 }
 
 Type SparseTensorEncodingAttr::getPosType() const {
+  assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
   return detail::getIntegerOrIndexType(getContext(), getPosWidth());
 }
 
 Type SparseTensorEncodingAttr::getCrdType() const {
+  assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
   return detail::getIntegerOrIndexType(getContext(), getCrdWidth());
 }
 
