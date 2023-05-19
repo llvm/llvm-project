@@ -45,7 +45,7 @@ define <4 x i32> @rot_v4i32_splat_2masks(<4 x i32> %x) {
 ; AVX512-LABEL: rot_v4i32_splat_2masks:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vprold $31, %xmm0, %xmm0
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %2 = and <4 x i32> %1, <i32 4294901760, i32 4294901760, i32 4294901760, i32 4294901760>
@@ -123,7 +123,7 @@ define <4 x i32> @rot_v4i32_mask_ashr0(<4 x i32> %a0) {
 ; AVX512-LABEL: rot_v4i32_mask_ashr0:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 28>
   %2 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %1, <4 x i32> %1, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
@@ -151,7 +151,7 @@ define <4 x i32> @rot_v4i32_mask_ashr1(<4 x i32> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrad $25, %xmm0, %xmm0
 ; AVX512-NEXT:    vpbroadcastd %xmm0, %xmm0
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 28>
   %2 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %1, <4 x i32> %1, <4 x i32> <i32 1, i32 2, i32 3, i32 4>)

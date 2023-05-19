@@ -61,7 +61,7 @@ define <16 x i8> @splatconstant_rotr_v16i8(<16 x i8> %a) nounwind {
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsrlw $7, %xmm0, %xmm1
 ; GFNIAVX512-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
-; GFNIAVX512-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; GFNIAVX512-NEXT:    vpternlogd $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
 ; GFNIAVX512-NEXT:    retq
   %res = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a, <16 x i8> %a, <16 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>)
   ret <16 x i8> %res
@@ -256,7 +256,7 @@ define <64 x i8> @splatconstant_rotl_v64i8(<64 x i8> %a) nounwind {
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsrlw $7, %zmm0, %zmm1
 ; GFNIAVX512-NEXT:    vpaddb %zmm0, %zmm0, %zmm0
-; GFNIAVX512-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
+; GFNIAVX512-NEXT:    vpternlogd $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
 ; GFNIAVX512-NEXT:    retq
   %res = call <64 x i8> @llvm.fshl.v64i8(<64 x i8> %a, <64 x i8> %a, <64 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
   ret <64 x i8> %res
