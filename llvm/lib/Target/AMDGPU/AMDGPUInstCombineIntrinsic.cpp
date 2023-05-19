@@ -400,24 +400,6 @@ static APInt trimTrailingZerosInVector(InstCombiner &IC, Value *UseV,
   return DemandedElts;
 }
 
-// Trim elements of the end of the vector \p V, if they are
-// equal to the first element of the vector.
-static APInt defaultComponentBroadcast(Value *V) {
-  auto *VTy = cast<FixedVectorType>(V->getType());
-  unsigned VWidth = VTy->getNumElements();
-  APInt DemandedElts = APInt::getAllOnes(VWidth);
-  Value *FirstComponent = findScalarElement(V, 0);
-
-  for (int I = VWidth - 1; I > 0; --I) {
-    auto *Elt = findScalarElement(V, I);
-    if (Elt != FirstComponent)
-      break;
-    DemandedElts.clearBit(I);
-  }
-
-  return DemandedElts;
-}
-
 static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
                                                     IntrinsicInst &II,
                                                     APInt DemandedElts,
@@ -1177,11 +1159,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!isa<FixedVectorType>(II.getArgOperand(0)->getType()))
       break;
 
-    APInt DemandedElts;
-    if (ST->getGeneration() >= AMDGPUSubtarget::GFX12)
-      DemandedElts = defaultComponentBroadcast(II.getArgOperand(0));
-    else
-      DemandedElts = trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
+    APInt DemandedElts =
+        trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
 
     int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
     if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, DMaskIdx,
