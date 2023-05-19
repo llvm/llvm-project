@@ -780,7 +780,9 @@ bool Sema::AreConstraintExpressionsEqual(const NamedDecl *Old,
                                          const Expr *NewConstr) {
   if (OldConstr == NewConstr)
     return true;
-  if (Old && New && Old != New) {
+  // C++ [temp.constr.decl]p4
+  if (Old && New && Old != New &&
+      Old->getLexicalDeclContext() != New->getLexicalDeclContext()) {
     if (const Expr *SubstConstr =
             SubstituteConstraintExpression(*this, Old, OldConstr))
       OldConstr = SubstConstr;

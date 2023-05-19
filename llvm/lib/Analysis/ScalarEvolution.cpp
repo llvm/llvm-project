@@ -8335,29 +8335,12 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   // Get the trip count
   const SCEV *TCExpr = getTripCountFromExitCount(applyLoopGuards(ExitCount, L));
 
+  APInt Multiple = getNonZeroConstantMultiple(TCExpr);
   // If a trip multiple is huge (>=2^32), the trip count is still divisible by
   // the greatest power of 2 divisor less than 2^32.
-  auto GetSmallMultiple = [](unsigned TrailingZeros) {
-    return 1U << std::min((uint32_t)31, TrailingZeros);
-  };
-
-  const SCEVConstant *TC = dyn_cast<SCEVConstant>(TCExpr);
-  if (!TC) {
-    APInt Multiple = getNonZeroConstantMultiple(TCExpr);
-    return Multiple.getActiveBits() > 32
-               ? 1
-               : Multiple.zextOrTrunc(32).getZExtValue();
-  }
-
-  ConstantInt *Result = TC->getValue();
-  assert(Result && "SCEVConstant expected to have non-null ConstantInt");
-  assert(Result->getValue() != 0 && "trip count should never be zero");
-
-  // Guard against huge trip multiples.
-  if (Result->getValue().getActiveBits() > 32)
-    return GetSmallMultiple(Result->getValue().countTrailingZeros());
-
-  return (unsigned)Result->getZExtValue();
+  return Multiple.getActiveBits() > 32
+             ? 1U << std::min((unsigned)31, Multiple.countTrailingZeros())
+             : (unsigned)Multiple.zextOrTrunc(32).getZExtValue();
 }
 
 /// Returns the largest constant divisor of the trip count of this loop as a

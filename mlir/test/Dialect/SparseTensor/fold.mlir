@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s  --canonicalize --cse | FileCheck %s
 
-#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
 
 // CHECK-LABEL: func @sparse_nop_dense2dense_convert(
 //  CHECK-SAME: %[[A:.*]]: tensor<64xf32>)

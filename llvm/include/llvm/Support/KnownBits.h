@@ -342,8 +342,13 @@ public:
   /// Compute known bits from zero-extended multiply-hi.
   static KnownBits mulhu(const KnownBits &LHS, const KnownBits &RHS);
 
+  /// Compute known bits for sdiv(LHS, RHS).
+  static KnownBits sdiv(const KnownBits &LHS, const KnownBits &RHS,
+                        bool Exact = false);
+
   /// Compute known bits for udiv(LHS, RHS).
-  static KnownBits udiv(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits udiv(const KnownBits &LHS, const KnownBits &RHS,
+                        bool Exact = false);
 
   /// Compute known bits for urem(LHS, RHS).
   static KnownBits urem(const KnownBits &LHS, const KnownBits &RHS);

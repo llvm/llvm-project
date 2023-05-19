@@ -4,10 +4,9 @@
 define i64 @add_i64_ext_load(<1 x i64> %A, ptr %B) nounwind {
 ; CHECK-LABEL: add_i64_ext_load:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %a = extractelement <1 x i64> %A, i32 0
   %b = load i64, ptr %B
@@ -18,10 +17,9 @@ define i64 @add_i64_ext_load(<1 x i64> %A, ptr %B) nounwind {
 define i64 @sub_i64_ext_load(<1 x i64> %A, ptr %B) nounwind {
 ; CHECK-LABEL: sub_i64_ext_load:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    sub x0, x9, x8
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    sub d0, d0, d1
+; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %a = extractelement <1 x i64> %A, i32 0
   %b = load i64, ptr %B
@@ -32,11 +30,9 @@ define i64 @sub_i64_ext_load(<1 x i64> %A, ptr %B) nounwind {
 define void @add_i64_ext_load_store(<1 x i64> %A, ptr %B) nounwind {
 ; CHECK-LABEL: add_i64_ext_load_store:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    add x8, x9, x8
-; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %a = extractelement <1 x i64> %A, i32 0
   %b = load i64, ptr %B
@@ -61,11 +57,8 @@ define i64 @add_v2i64_ext_load(<2 x i64> %A, ptr %B) nounwind {
 define i64 @add_i64_ext_ext(<1 x i64> %A, <1 x i64> %B) nounwind {
 ; CHECK-LABEL: add_i64_ext_ext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %a = extractelement <1 x i64> %A, i32 0
   %b = extractelement <1 x i64> %B, i32 0
@@ -90,12 +83,10 @@ define i32 @add_i32_ext_load(<1 x i32> %A, ptr %B) nounwind {
 define i64 @add_i64_ext_ext_test1(<1 x i64> %A, <2 x i64> %B) nounwind {
 ; CHECK-LABEL: add_i64_ext_ext_test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    fmov x10, d1
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    add x0, x9, x8
+; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    dup v1.2d, v1.d[1]
+; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %a = extractelement <1 x i64> %A, i32 0
   %b = extractelement <2 x i64> %B, i32 0
@@ -108,12 +99,10 @@ define i64 @add_i64_ext_ext_test1(<1 x i64> %A, <2 x i64> %B) nounwind {
 define i64 @sub_i64_ext_ext_test1(<1 x i64> %A, <2 x i64> %B) nounwind {
 ; CHECK-LABEL: sub_i64_ext_ext_test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    fmov x10, d1
-; CHECK-NEXT:    sub x9, x9, x10
-; CHECK-NEXT:    sub x0, x9, x8
+; CHECK-NEXT:    sub d0, d0, d1
+; CHECK-NEXT:    dup v1.2d, v1.d[1]
+; CHECK-NEXT:    sub d0, d0, d1
+; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %a = extractelement <1 x i64> %A, i32 0
   %b = extractelement <2 x i64> %B, i32 0

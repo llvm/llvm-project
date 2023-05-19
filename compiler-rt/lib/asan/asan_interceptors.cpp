@@ -214,9 +214,11 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
   if (flags()->strict_init_order)
     StopInitOrderChecking();
   GET_STACK_TRACE_THREAD;
-  int detached = 0;
-  if (attr)
-    REAL(pthread_attr_getdetachstate)(attr, &detached);
+  bool detached = [attr]() {
+    int d = 0;
+    return attr && !REAL(pthread_attr_getdetachstate)(attr, &d) &&
+           IsStateDetached(d);
+  }();
 
   u32 current_tid = GetCurrentTidOrInvalid();
   AsanThread *t =
@@ -256,7 +258,7 @@ INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
 
 INTERCEPTOR(int, pthread_detach, void *thread) {
   int result;
-  asanThreadArgRetval().Detach((uptr)thread, [&](){
+  asanThreadArgRetval().Detach((uptr)thread, [&]() {
     result = REAL(pthread_detach)(thread);
     return !result;
   });

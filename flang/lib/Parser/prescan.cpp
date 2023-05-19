@@ -594,13 +594,18 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
-    do {
-    } while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_)));
+    while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+    }
+    if (InFixedFormSource()) {
+      SkipSpaces();
+    }
     if ((*at_ == '\'' || *at_ == '"') &&
         tokens.CharAt(tokens.SizeInChars() - 1) == '_') { // kind_"..."
       QuotedCharacterLiteral(tokens, start);
+      preventHollerith_ = false;
+    } else {
+      preventHollerith_ = true; // DO 10 H = ...
     }
-    preventHollerith_ = false;
   } else if (*at_ == '*') {
     if (EmitCharAndAdvance(tokens, '*') == '*') {
       EmitCharAndAdvance(tokens, '*');

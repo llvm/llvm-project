@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_IRDL_IR_IRDL_H_
 #define MLIR_DIALECT_IRDL_IR_IRDL_H_
 
+#include "mlir/Dialect/IRDL/IR/IRDLInterfaces.h"
 #include "mlir/Dialect/IRDL/IR/IRDLTraits.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"

@@ -94,11 +94,12 @@ static DescVector getDescriptions() {
   Descriptions[DW_OP_WASM_location] =
       Desc(Op::Dwarf4, Op::SizeLEB, Op::WasmLocationArg);
   Descriptions[DW_OP_GNU_push_tls_address] = Desc(Op::Dwarf3);
-  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_const_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_entry_value] = Desc(Op::Dwarf4, Op::SizeLEB);
 
+  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf5, Op::SizeLEB);
+  Descriptions[DW_OP_constx] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
   Descriptions[DW_OP_entry_value] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_regval_type] =

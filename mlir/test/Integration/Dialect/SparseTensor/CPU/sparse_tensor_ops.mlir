@@ -26,8 +26,8 @@
 // REDEFINE: FileCheck %s
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
-#ST1 = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed", "compressed"]}>
-#ST2 = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed", "dense"]}>
+#ST1 = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed", "compressed"]}>
+#ST2 = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed", "dense"]}>
 
 //
 // Trait for 3-d tensor operation.

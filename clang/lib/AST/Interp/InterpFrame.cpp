@@ -147,8 +147,8 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
 
 void InterpFrame::describe(llvm::raw_ostream &OS) {
   const FunctionDecl *F = getCallee();
-  auto *M = dyn_cast<CXXMethodDecl>(F);
-  if (M && M->isInstance() && !isa<CXXConstructorDecl>(F)) {
+  if (const auto *M = dyn_cast<CXXMethodDecl>(F);
+      M && M->isInstance() && !isa<CXXConstructorDecl>(F)) {
     print(OS, This, S.getCtx(), S.getCtx().getRecordType(M->getParent()));
     OS << "->";
   }

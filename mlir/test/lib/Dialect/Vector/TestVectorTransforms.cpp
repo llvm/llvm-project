@@ -679,6 +679,26 @@ struct TestVectorGatherLowering
   }
 };
 
+struct TestVectorTransferTensorSlicePatterns
+    : public PassWrapper<TestVectorTransferTensorSlicePatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorTransferTensorSlicePatterns)
+
+  StringRef getArgument() const final {
+    return "test-vector-transfer-tensor-slice-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test patterns that fold vector transfer and tensor slice ops";
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorTransferTensorSliceTransforms(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -713,6 +733,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestCreateVectorBroadcast>();
 
   PassRegistration<TestVectorGatherLowering>();
+
+  PassRegistration<TestVectorTransferTensorSlicePatterns>();
 }
 } // namespace test
 } // namespace mlir

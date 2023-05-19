@@ -1268,6 +1268,9 @@ void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
   for (const auto &UsedSymbolDecl : UsedSymbols)
     HI.UsedSymbolNames.push_back(getSymbolName(UsedSymbolDecl));
   llvm::sort(HI.UsedSymbolNames);
+  HI.UsedSymbolNames.erase(
+      std::unique(HI.UsedSymbolNames.begin(), HI.UsedSymbolNames.end()),
+      HI.UsedSymbolNames.end());
 }
 
 } // namespace
@@ -1529,16 +1532,11 @@ markup::Document HoverInfo::present() const {
     P.appendText("provides ");
 
     const std::vector<std::string>::size_type SymbolNamesLimit = 5;
-    auto Front =
-        llvm::ArrayRef(UsedSymbolNames)
-            .take_front(std::min(UsedSymbolNames.size(), SymbolNamesLimit));
+    auto Front = llvm::ArrayRef(UsedSymbolNames).take_front(SymbolNamesLimit);
 
-    for (const auto &Sym : Front) {
-      P.appendCode(Sym);
-      if (Sym != Front.back())
-        P.appendText(", ");
-    }
-
+    llvm::interleave(
+        Front, [&](llvm::StringRef Sym) { P.appendCode(Sym); },
+        [&] { P.appendText(", "); });
     if (UsedSymbolNames.size() > Front.size()) {
       P.appendText(" and ");
       P.appendText(std::to_string(UsedSymbolNames.size() - Front.size()));

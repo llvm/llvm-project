@@ -60,6 +60,24 @@ TEST_F(IntegerLiteralSeparatorTest, SingleQuoteAsSeparator) {
                "hil = 0xABCil;",
                Style);
 
+  verifyFormat("bd = 0b1'0000d;\n"
+               "dh = 1'234h;\n"
+               "dmin = 1'234min;\n"
+               "dns = 1'234ns;\n"
+               "ds = 1'234s;\n"
+               "dus = 1'234us;\n"
+               "hy = 0xA'BCy;",
+               "bd = 0b10000d;\n"
+               "dh = 1234h;\n"
+               "dmin = 1234min;\n"
+               "dns = 1234ns;\n"
+               "ds = 1234s;\n"
+               "dus = 1234us;\n"
+               "hy = 0xABCy;",
+               Style);
+
+  verifyFormat("hd = 0xAB'Cd;", "hd = 0xABCd;", Style);
+
   verifyFormat("d = 5'678_km;\n"
                "h = 0xD'EF_u16;",
                "d = 5678_km;\n"

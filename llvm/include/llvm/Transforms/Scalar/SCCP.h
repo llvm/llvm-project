@@ -20,19 +20,10 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_SCCP_H
 #define LLVM_TRANSFORMS_SCALAR_SCCP_H
 
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/IR/PassManager.h"
 
-#include <functional>
-
 namespace llvm {
-class AssumptionCache;
-class DataLayout;
 class Function;
-class Module;
-class TargetLibraryInfo;
-class TargetTransformInfo;
-struct AnalysisResultsForFn;
 
 /// This pass performs function-level constant propagation and merging.
 class SCCPPass : public PassInfoMixin<SCCPPass> {

@@ -625,8 +625,8 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
     }
   }
 
-  RS.enterBasicBlock(MBB);
-  RS.forward(MI);
+  RS.enterBasicBlockEnd(MBB);
+  RS.backward(MI);
 
   // Ideally we want to have three registers for a long reg_sequence copy
   // to hide 2 waitstates between v_mov_b32 and accvgpr_write.
@@ -6831,7 +6831,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
   // Use the new VALU Opcode.
   auto NewInstr = BuildMI(*MBB, Inst, Inst.getDebugLoc(), get(NewOpcode))
                       .setMIFlags(Inst.getFlags());
-  if (isVOP3(NewOpcode)) {
+  if (isVOP3(NewOpcode) && !isVOP3(Opcode)) {
     // Intersperse VOP3 modifiers among the SALU operands.
     NewInstr->addOperand(Inst.getOperand(0));
     if (AMDGPU::getNamedOperandIdx(NewOpcode,

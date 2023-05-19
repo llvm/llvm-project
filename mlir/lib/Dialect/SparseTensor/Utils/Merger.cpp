@@ -405,7 +405,7 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
     // Starts resetting from a dense level, so that the first bit (if kept)
     // is not undefined level-type.
     for (unsigned b = 0; b < be; b++) {
-      if (simple[b] && isDenseDLT(getDimLevelType(TensorLoopId{b}))) {
+      if (simple[b] && isDenseDLT(getLvlType(TensorLoopId{b}))) {
         offset = be - b - 1; // relative to the end
         break;
       }
@@ -417,7 +417,7 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
        b = b == 0 ? be - 1 : b - 1, i++) {
     // Slice on dense level has `locate` property as well, and can be optimized.
     if (simple[b] && !isSparseLvlWithNonTrivialIdxExp(b)) {
-      const auto dlt = getDimLevelType(b);
+      const auto dlt = getLvlType(b);
       if (!isCompressedDLT(dlt) && !isSingletonDLT(dlt) && !isCompressedWithHiDLT(dlt)) {
         if (reset)
           simple.reset(b);
@@ -584,7 +584,7 @@ bool Merger::isSingleCondition(TensorId t, ExprId e) const {
 
 bool Merger::hasAnySparse(const BitVector &bits) const {
   for (TensorLoopId b : bits.set_bits()) {
-    const auto dlt = getDimLevelType(b);
+    const auto dlt = getLvlType(b);
     if (isCompressedDLT(dlt) || isSingletonDLT(dlt) || isCompressedWithHiDLT(dlt))
       return true;
   }

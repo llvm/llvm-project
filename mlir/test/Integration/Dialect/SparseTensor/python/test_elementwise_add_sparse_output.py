@@ -20,7 +20,7 @@ from tools import sparse_compiler
 # handle sparse tensor outputs.
 _KERNEL_STR = """
 #DCSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ]
+  lvlTypes = [ "compressed", "compressed" ]
 }>
 
 #trait_add_elt = {

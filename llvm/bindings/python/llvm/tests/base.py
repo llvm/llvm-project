@@ -4,17 +4,18 @@ import unittest
 
 
 POSSIBLE_TEST_BINARIES = [
-    'libreadline.so.5',
-    'libreadline.so.6',
+    "libreadline.so.5",
+    "libreadline.so.6",
 ]
 
 POSSIBLE_TEST_BINARY_PATHS = [
-    '/usr/lib/debug',
-    '/lib',
-    '/usr/lib',
-    '/usr/local/lib',
-    '/lib/i386-linux-gnu',
+    "/usr/lib/debug",
+    "/lib",
+    "/usr/lib",
+    "/usr/local/lib",
+    "/lib/i386-linux-gnu",
 ]
+
 
 class TestBase(unittest.TestCase):
     if sys.version_info.major == 2:
@@ -33,7 +34,8 @@ class TestBase(unittest.TestCase):
                 if os.path.exists(path):
                     return path
 
-        raise Exception('No suitable test binaries available!')
+        raise Exception("No suitable test binaries available!")
+
     get_test_binary.__test__ = False
 
     def get_test_file(self):

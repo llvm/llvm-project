@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -904,7 +903,6 @@ class GPUTransformDialectExtension
           GPUTransformDialectExtension> {
 public:
   GPUTransformDialectExtension() {
-    declareDependentDialect<pdl::PDLDialect>();
     declareGeneratedDialect<scf::SCFDialect>();
     declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<GPUDialect>();

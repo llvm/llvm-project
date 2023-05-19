@@ -94,6 +94,7 @@ C++20 Feature Support
 - Clang now implements `[temp.deduct]p9`. Substitution failures inside lambdas from
   unevaluated contexts will be surfaced as errors. They were previously handled as
   SFINAE.
+- Clang now supports `requires cplusplus20` for module maps.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -108,6 +109,7 @@ C++23 Feature Support
   longer have to be constexpr compatible but rather support a less restricted requirements for constexpr
   functions. Which include allowing non-literal types as return values and parameters, allow calling of
   non-constexpr functions and constructors.
+- Clang now supports `requires cplusplus23` for module maps.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -280,9 +282,7 @@ Improvements to Clang's diagnostics
   Clang ABI >= 15.
   (`#62353: <https://github.com/llvm/llvm-project/issues/62353>`_,
   fallout from the non-POD packing ABI fix in LLVM 15).
-- Clang constexpr evaluator now prints subobject's name instead of its type in notes
-  when a constexpr variable has uninitialized subobjects after its constructor call.
-  (`#58601 <https://github.com/llvm/llvm-project/issues/58601>`_)
+
 
 Bug Fixes in This Version
 -------------------------

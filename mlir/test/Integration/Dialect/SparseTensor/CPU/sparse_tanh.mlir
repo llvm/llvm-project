@@ -29,7 +29,7 @@
 // REDEFINE: FileCheck %s
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
-#SparseVector = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
+#SparseVector = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
 
 #trait_op = {
   indexing_maps = [

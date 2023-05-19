@@ -1,11 +1,16 @@
-; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=disabled -S | FileCheck %s -check-prefix=CHECK-NOTF
-; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=default -S | FileCheck %s -check-prefix=CHECK-NOTF
-; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=all -S | FileCheck %s -check-prefix=CHECK-TF
-; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=disabled+simple+reductions+recurrences+reverse -S | FileCheck %s -check-prefix=CHECK-TF
-; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=all+noreductions -S | FileCheck %s -check-prefix=CHECK-TF-NORED
-; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=all+norecurrences -S | FileCheck %s -check-prefix=CHECK-TF-NOREC
-; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=all+noreverse -S | FileCheck %s -check-prefix=CHECK-TF-NOREV
-; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding=reductions -S | FileCheck %s -check-prefix=CHECK-TF-ONLYRED
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -sve-tail-folding=disabled -S | FileCheck %s -check-prefix=CHECK-NOTF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -sve-tail-folding=default -S | FileCheck %s -check-prefix=CHECK-NOTF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -S | FileCheck %s -check-prefix=CHECK-NOTF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -sve-tail-folding=all -S | FileCheck %s -check-prefix=CHECK-TF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -sve-tail-folding=simple+reductions+recurrences+reverse -S | FileCheck %s -check-prefix=CHECK-TF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -S -mcpu=neoverse-v1 -sve-tail-folding=default+reductions+recurrences+reverse | FileCheck %s -check-prefix=CHECK-TF
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -sve-tail-folding=all+noreductions -S | FileCheck %s -check-prefix=CHECK-TF-NORED
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -sve-tail-folding=all+norecurrences -S | FileCheck %s -check-prefix=CHECK-TF-NOREC
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -sve-tail-folding=all+noreverse -S | FileCheck %s -check-prefix=CHECK-TF-NOREV
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -sve-tail-folding=reductions -S | FileCheck %s -check-prefix=CHECK-TF-ONLYRED
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -S -sve-tail-folding=default -mcpu=neoverse-v1 | FileCheck %s -check-prefix=CHECK-NEOVERSE-V1
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -S -mcpu=neoverse-v1 -sve-tail-folding=default | FileCheck %s -check-prefix=CHECK-NEOVERSE-V1
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -S -mcpu=neoverse-v1 | FileCheck %s -check-prefix=CHECK-NEOVERSE-V1
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -57,6 +62,14 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-TF-ONLYRED:       vector.body:
 ; CHECK-TF-ONLYRED-NOT:     %{{.*}} = phi <vscale x 4 x i1>
 ; CHECK-TF-ONLYRED:         store <vscale x 4 x i32> %[[SPLAT]], ptr
+
+; CHECK-NEOVERSE-V1-LABEL: @simple_memset(
+; CHECK-NEOVERSE-V1:       vector.ph:
+; CHECK-NEOVERSE-V1:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
+; CHECK-NEOVERSE-V1:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEOVERSE-V1:       vector.body:
+; CHECK-NEOVERSE-V1:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
+; CHECK-NEOVERSE-V1:         call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %[[SPLAT]], {{.*}} %[[ACTIVE_LANE_MASK]]
 
 entry:
   br label %while.body
@@ -129,6 +142,15 @@ define float @fadd_red_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-TF-ONLYRED:         %[[SEL:.*]] = select fast <vscale x 4 x i1> %[[ACTIVE_LANE_MASK]], <vscale x 4 x float> %[[ADD]], <vscale x 4 x float> %[[VEC_PHI]]
 ; CHECK-TF-ONLYRED:       middle.block:
 ; CHECK-TF-ONLYRED-NEXT:    call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> %[[SEL]])
+
+; CHECK-NEOVERSE-V1-LABEL: @fadd_red_fast
+; CHECK-NEOVERSE-V1:       vector.body:
+; CHECK-NEOVERSE-V1-NOT:     %{{.*}} = phi <vscale x 4 x i1>
+; CHECK-NEOVERSE-V1:         %[[LOAD:.*]] = load <vscale x 4 x float>
+; CHECK-NEOVERSE-V1:         %[[ADD:.*]] = fadd fast <vscale x 4 x float> %[[LOAD]]
+; CHECK-NEOVERSE-V1:       middle.block:
+; CHECK-NEOVERSE-V1-NEXT:    call fast float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> %[[ADD]])
+
 entry:
   br label %for.body
 
@@ -225,6 +247,19 @@ define void @add_recur(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-ONLYRED:         %[[ADD:.*]] = add nsw <vscale x 4 x i32> %[[LOAD]], %[[SPLICE]]
 ; CHECK-TF-ONLYRED:         store <vscale x 4 x i32> %[[ADD]]
 
+; CHECK-NEOVERSE-V1-LABEL: @add_recur
+; CHECK-NEOVERSE-V1:       entry:
+; CHECK-NEOVERSE-V1:         %[[PRE:.*]] = load i32, ptr %src, align 4
+; CHECK-NEOVERSE-V1:       vector.ph:
+; CHECK-NEOVERSE-V1:         %[[RECUR_INIT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %[[PRE]]
+; CHECK-NEOVERSE-V1:       vector.body:
+; CHECK-NEOVERSE-V1-NOT:     %{{.*}} = phi <vscale x 4 x i1>
+; CHECK-NEOVERSE-V1:         %[[VECTOR_RECUR:.*]] = phi <vscale x 4 x i32> [ %[[RECUR_INIT]], %vector.ph ], [ %[[LOAD:.*]], %vector.body ]
+; CHECK-NEOVERSE-V1:         %[[LOAD]] = load <vscale x 4 x i32>
+; CHECK-NEOVERSE-V1:         %[[SPLICE:.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %[[VECTOR_RECUR]], <vscale x 4 x i32> %[[LOAD]], i32 -1)
+; CHECK-NEOVERSE-V1:         %[[ADD:.*]] = add nsw <vscale x 4 x i32> %[[LOAD]], %[[SPLICE]]
+; CHECK-NEOVERSE-V1:         store <vscale x 4 x i32> %[[ADD]]
+
 entry:
   %.pre = load i32, ptr %src, align 4
   br label %for.body
@@ -275,6 +310,12 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-NOREV:         %[[LOAD:.*]] = load <8 x float>, ptr
 ; CHECK-TF-NOREV:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-TF-NOREV:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
+; CHECK-NEOVERSE-V1-LABEL: @interleave(
+; CHECK-NEOVERSE-V1:       vector.body:
+; CHECK-NEOVERSE-V1:         %[[LOAD:.*]] = load <8 x float>, ptr
+; CHECK-NEOVERSE-V1:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEOVERSE-V1:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 
 entry:
   br label %for.body
@@ -334,6 +375,12 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-TF-NOREC:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 2 x i1>
 ; CHECK-TF-NOREC:         %[[REVERSE_MASK:.*]] = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %[[ACTIVE_LANE_MASK]])
 ; CHECK-TF-NOREC:         %[[MASKED_LOAD:.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0({{.*}} <vscale x 2 x i1> %reverse
+
+; CHECK-TF-NEOVERSE-V1-LABEL: @reverse(
+; CHECK-TF-NEOVERSE-V1:       vector.body:
+; CHECK-TF-NEOVERSE-V1-NOT:     %{{.*}} = phi <vscale x 4 x i1>
+; CHECK-TF-NEOVERSE-V1:         %[[LOAD:.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* %18, align 8
+; CHECK-TF-NEOVERSE-V1:         %{{.*}} = call <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double> %[[LOAD]])
 
 entry:
   br label %for.body

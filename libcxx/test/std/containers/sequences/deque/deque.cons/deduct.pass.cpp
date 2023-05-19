@@ -13,12 +13,16 @@
 //    deque(InputIterator, InputIterator, Allocator = Allocator())
 //    -> deque<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
+// template<ranges::input_range R, class Allocator = allocator<ranges::range_value_t<R>>>
+//   deque(from_range_t, R&&, Allocator = Allocator())
+//     -> deque<ranges::range_value_t<R>, Allocator>; // C++23
 
+#include <array>
+#include <cassert>
+#include <climits> // INT_MAX
+#include <cstddef>
 #include <deque>
 #include <iterator>
-#include <cassert>
-#include <cstddef>
-#include <climits> // INT_MAX
 
 #include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
@@ -121,6 +125,21 @@ int main(int, char**)
         static_assert(std::is_same_v<decltype(deq), decltype(source)>);
         }
     }
+
+#if TEST_STD_VER >= 23
+    {
+      {
+        std::deque c(std::from_range, std::array<int, 0>());
+        static_assert(std::is_same_v<decltype(c), std::deque<int>>);
+      }
+
+      {
+        using Alloc = test_allocator<int>;
+        std::deque c(std::from_range, std::array<int, 0>(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::deque<int, Alloc>>);
+      }
+    }
+#endif
 
     SequenceContainerDeductionGuidesSfinaeAway<std::deque, std::deque<int>>();
 

@@ -8,6 +8,7 @@
 declare i32 @llvm.bitreverse.i32(i32) readnone
 declare i64 @llvm.bitreverse.i64(i64) readnone
 declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) readnone
+declare i32 @llvm.bswap.i32(i32) readnone
 
 ; fold (bitreverse undef) -> undef
 define i32 @test_undef() nounwind {

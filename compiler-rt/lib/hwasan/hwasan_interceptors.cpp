@@ -68,9 +68,10 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
             void *(*callback)(void *), void *param) {
   EnsureMainThreadIDIsCorrect();
   ScopedTaggingDisabler tagging_disabler;
-  int detached = 0;
-  if (attr)
-    pthread_attr_getdetachstate(attr, &detached);
+  bool detached = [attr]() {
+    int d = 0;
+    return attr && !pthread_attr_getdetachstate(attr, &d) && IsStateDetached(d);
+  }();
   ThreadStartArg *A = (ThreadStartArg *)InternalAlloc(sizeof(ThreadStartArg));
   ScopedBlockSignals block(&A->starting_sigset_);
   // ASAN uses the same approach to disable leaks from pthread_create.

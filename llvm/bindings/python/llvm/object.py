@@ -1,10 +1,10 @@
-#===- object.py - Python Object Bindings --------------------*- python -*--===#
+# ===- object.py - Python Object Bindings --------------------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
+# ===------------------------------------------------------------------------===#
 
 r"""
 Object File Interface
@@ -96,6 +96,7 @@ __all__ = [
     "Symbol",
 ]
 
+
 class ObjectFile(LLVMObject):
     """Represents an object/binary file."""
 
@@ -113,7 +114,7 @@ class ObjectFile(LLVMObject):
             contents = MemoryBuffer(filename=filename)
 
         if contents is None:
-            raise Exception('No input found.')
+            raise Exception("No input found.")
 
         ptr = lib.LLVMCreateObjectFile(contents)
         LLVMObject.__init__(self, ptr, disposer=lib.LLVMDisposeObjectFile)
@@ -175,6 +176,7 @@ class ObjectFile(LLVMObject):
 
         lib.LLVMDisposeSymbolIterator(symbols)
 
+
 class Section(LLVMObject):
     """Represents a section in an object file."""
 
@@ -196,7 +198,7 @@ class Section(LLVMObject):
         This is typically something like '.dynsym' or '.rodata'.
         """
         if self.expired:
-            raise Exception('Section instance has expired.')
+            raise Exception("Section instance has expired.")
 
         return lib.LLVMGetSectionName(self)
 
@@ -204,14 +206,14 @@ class Section(LLVMObject):
     def size(self):
         """The size of the section, in long bytes."""
         if self.expired:
-            raise Exception('Section instance has expired.')
+            raise Exception("Section instance has expired.")
 
         return lib.LLVMGetSectionSize(self)
 
     @CachedProperty
     def contents(self):
         if self.expired:
-            raise Exception('Section instance has expired.')
+            raise Exception("Section instance has expired.")
 
         siz = self.size
 
@@ -224,14 +226,14 @@ class Section(LLVMObject):
     def address(self):
         """The address of this section, in long bytes."""
         if self.expired:
-            raise Exception('Section instance has expired.')
+            raise Exception("Section instance has expired.")
 
         return lib.LLVMGetSectionAddress(self)
 
     def has_symbol(self, symbol):
         """Returns whether a Symbol instance is present in this Section."""
         if self.expired:
-            raise Exception('Section instance has expired.')
+            raise Exception("Section instance has expired.")
 
         assert isinstance(symbol, Symbol)
         return lib.LLVMGetSectionContainsSymbol(self, symbol)
@@ -245,7 +247,7 @@ class Section(LLVMObject):
         on iterators for more.
         """
         if self.expired:
-            raise Exception('Section instance has expired.')
+            raise Exception("Section instance has expired.")
 
         relocations = lib.LLVMGetRelocations(self)
         last = None
@@ -274,10 +276,10 @@ class Section(LLVMObject):
         limitation. When called, the properties of the Section are fetched so
         they are still available after the Section has been marked inactive.
         """
-        getattr(self, 'name')
-        getattr(self, 'size')
-        getattr(self, 'contents')
-        getattr(self, 'address')
+        getattr(self, "name")
+        getattr(self, "size")
+        getattr(self, "contents")
+        getattr(self, "address")
 
     def expire(self):
         """Expire the section.
@@ -286,8 +288,10 @@ class Section(LLVMObject):
         """
         self.expired = True
 
+
 class Symbol(LLVMObject):
     """Represents a symbol in an object file."""
+
     def __init__(self, ptr, object_file):
         assert isinstance(ptr, c_object_p)
         assert isinstance(object_file, ObjectFile)
@@ -305,7 +309,7 @@ class Symbol(LLVMObject):
         mangling could be in effect.
         """
         if self.expired:
-            raise Exception('Symbol instance has expired.')
+            raise Exception("Symbol instance has expired.")
 
         return lib.LLVMGetSymbolName(self)
 
@@ -313,7 +317,7 @@ class Symbol(LLVMObject):
     def address(self):
         """The address of this symbol, in long bytes."""
         if self.expired:
-            raise Exception('Symbol instance has expired.')
+            raise Exception("Symbol instance has expired.")
 
         return lib.LLVMGetSymbolAddress(self)
 
@@ -321,7 +325,7 @@ class Symbol(LLVMObject):
     def size(self):
         """The size of the symbol, in long bytes."""
         if self.expired:
-            raise Exception('Symbol instance has expired.')
+            raise Exception("Symbol instance has expired.")
 
         return lib.LLVMGetSymbolSize(self)
 
@@ -342,9 +346,9 @@ class Symbol(LLVMObject):
 
     def cache(self):
         """Cache all cacheable properties."""
-        getattr(self, 'name')
-        getattr(self, 'address')
-        getattr(self, 'size')
+        getattr(self, "name")
+        getattr(self, "address")
+        getattr(self, "size")
 
     def expire(self):
         """Mark the object as expired to prevent future API accesses.
@@ -354,8 +358,10 @@ class Symbol(LLVMObject):
         """
         self.expired = True
 
+
 class Relocation(LLVMObject):
     """Represents a relocation definition."""
+
     def __init__(self, ptr):
         """Create a new relocation instance.
 
@@ -374,7 +380,7 @@ class Relocation(LLVMObject):
     def offset(self):
         """The offset of this relocation, in long bytes."""
         if self.expired:
-            raise Exception('Relocation instance has expired.')
+            raise Exception("Relocation instance has expired.")
 
         return lib.LLVMGetRelocationOffset(self)
 
@@ -382,7 +388,7 @@ class Relocation(LLVMObject):
     def symbol(self):
         """The Symbol corresponding to this Relocation."""
         if self.expired:
-            raise Exception('Relocation instance has expired.')
+            raise Exception("Relocation instance has expired.")
 
         ptr = lib.LLVMGetRelocationSymbol(self)
         return Symbol(ptr)
@@ -391,7 +397,7 @@ class Relocation(LLVMObject):
     def type_number(self):
         """The relocation type, as a long."""
         if self.expired:
-            raise Exception('Relocation instance has expired.')
+            raise Exception("Relocation instance has expired.")
 
         return lib.LLVMGetRelocationType(self)
 
@@ -399,14 +405,14 @@ class Relocation(LLVMObject):
     def type_name(self):
         """The relocation type's name, as a str."""
         if self.expired:
-            raise Exception('Relocation instance has expired.')
+            raise Exception("Relocation instance has expired.")
 
         return lib.LLVMGetRelocationTypeName(self)
 
     @CachedProperty
     def value_string(self):
         if self.expired:
-            raise Exception('Relocation instance has expired.')
+            raise Exception("Relocation instance has expired.")
 
         return lib.LLVMGetRelocationValueString(self)
 
@@ -416,12 +422,13 @@ class Relocation(LLVMObject):
 
     def cache(self):
         """Cache all cacheable properties on this instance."""
-        getattr(self, 'address')
-        getattr(self, 'offset')
-        getattr(self, 'symbol')
-        getattr(self, 'type')
-        getattr(self, 'type_name')
-        getattr(self, 'value_string')
+        getattr(self, "address")
+        getattr(self, "offset")
+        getattr(self, "symbol")
+        getattr(self, "type")
+        getattr(self, "type_name")
+        getattr(self, "value_string")
+
 
 def register_library(library):
     """Register function prototypes with LLVM library instance."""
@@ -503,6 +510,7 @@ def register_library(library):
 
     library.LLVMGetRelocationValueString.argtypes = [c_object_p]
     library.LLVMGetRelocationValueString.restype = c_char_p
+
 
 lib = get_library()
 register_library(lib)

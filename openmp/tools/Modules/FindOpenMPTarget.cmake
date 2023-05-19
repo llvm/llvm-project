@@ -79,7 +79,7 @@ be used to override the standard flag searching for a given compiler.
 # TODO: Test more compilers
 
 cmake_policy(PUSH)
-cmake_policy(VERSION 3.20.0)
+cmake_policy(VERSION 3.13.4)
 
 find_package(OpenMP ${OpenMPTarget_FIND_VERSION} REQUIRED)
 

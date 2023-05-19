@@ -170,7 +170,7 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
 }
 
 def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>, NoMemoryEffect]> {
   let summary = "Designate a Fortran variable";
 
   let description = [{
@@ -593,7 +593,7 @@ def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndR
   let assemblyFormat = "$val attr-dict `:` type($val)";
 }
 
-def hlfir_ElementalOp : hlfir_Op<"elemental", []> {
+def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects]> {
   let summary = "elemental expression";
   let description = [{
     Represent an elemental expression as a function of the indices.
@@ -605,6 +605,11 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", []> {
 
     The shape and typeparams operands represent the extents and type
     parameters of the resulting array value.
+
+    Currently there is no way to control the iteration order of a hlfir
+    elemental operation and so operations in the body of the elemental must
+    not have side effects. If this is changed, an attribute must be added so
+    that the elemental inlining pass can skip these impure elementals.
 
 
     Example: Y + X,  with Integer :: X(10, 20), Y(10,20)
@@ -652,7 +657,7 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", []> {
 
 }
 
-def hlfir_YieldElementOp : hlfir_Op<"yield_element", [Terminator, HasParent<"ElementalOp">]> {
+def hlfir_YieldElementOp : hlfir_Op<"yield_element", [Terminator, HasParent<"ElementalOp">, Pure]> {
   let summary = "Yield the elemental value in an ElementalOp";
   let description = [{
     Yield the element value of the current elemental expression iteration
@@ -670,9 +675,17 @@ def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]
   let description = [{
     Given an hlfir.expr array value, hlfir.apply allow retrieving
     the value for an element given one based indices.
+
     When hlfir.apply is used on an hlfir.elemental, and if the hlfir.elemental
     operation evaluation can be moved to the location of the hlfir.apply, it is
     as if the hlfir.elemental body was evaluated given the hlfir.apply indices.
+    Therefore, apply operations on hlfir.elemental expressions should be located
+    such that evaluating the hlfir.elemental at the position of the hlfir.apply
+    operation produces the same result as evaluating the hlfir.elemental at its
+    location in the instruction stream. Attention should be paid to
+    hlfir.elemental memory side effects (in practice these are unlikely).
+    "10.1.4 Evaluation of operations" says that expression evaluation shall not
+    impact/be impacted by other expression evaluation in the statement.
   }];
 
   let arguments = (ins hlfir_ExprType:$expr,
@@ -717,7 +730,7 @@ def hlfir_NullOp : hlfir_Op<"null", [NoMemoryEffect, fir_FortranVariableOpInterf
   }];
 }
 
-def hlfir_DestroyOp : hlfir_Op<"destroy", []> {
+def hlfir_DestroyOp : hlfir_Op<"destroy", [MemoryEffects<[MemFree]>]> {
   let summary = "Mark the last use of an hlfir.expr";
   let description = [{
     Mark the last use of an hlfir.expr. This will be the point at which the
@@ -913,6 +926,11 @@ def hlfir_OrderedAssignmentTreeOpInterface : OpInterface<"OrderedAssignmentTreeO
   let extraClassDeclaration = [{
     /// Interface verifier imlementation.
     mlir::LogicalResult verifyImpl();
+
+    mlir::Block* getSubTreeBlock() {
+      mlir::Region* region = getSubTreeRegion();
+      return region && !region->empty()? &region->front() : nullptr;
+    }
   }];
 
   let verify = [{
@@ -987,7 +1005,8 @@ def hlfir_RegionAssignOp : hlfir_Op<"region_assign", [hlfir_OrderedAssignmentTre
 
 def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp",
     "ElementalAddrOp", "ForallOp", "ForallMaskOp", "WhereOp", "ElseWhereOp"]>,
-    SingleBlockImplicitTerminator<"fir::FirEndOp">]> {
+    SingleBlockImplicitTerminator<"fir::FirEndOp">, RecursivelySpeculatable,
+        RecursiveMemoryEffects]> {
 
   let summary = "Yield a value or variable inside a forall, where or region assignment";
 
@@ -1115,6 +1134,13 @@ def hlfir_ForallOp : hlfir_Op<"forall", [hlfir_OrderedAssignmentTreeOpInterface]
 
     A Fortran forall with several indices is represented as a nest
     of hlfir.forall.
+
+    All the regions contained in the hlfir.forall must only contain
+    code that is pure from a Fortran point of view, except for the
+    assignment effect of the hlfir.region_assign.
+    This matches Fortran constraint C1037, but requires the outer
+    controls to be evaluated outside of the hlfir.forall (these
+    controls may have side effects as per Fortran 2018 10.1.4 section).
 
     Example: FORALL(I=1:10) X(I) = FOO(I)
     ```

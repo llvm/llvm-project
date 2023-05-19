@@ -109,6 +109,110 @@ define <vscale x 2 x i64> @add_imm_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64>
 }
 
 ;
+; MLA
+;
+
+define <vscale x 16 x i8> @mla_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: mla_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mla z0.b, p0/m, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.mla.u.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                 <vscale x 16 x i8> %a,
+                                                                 <vscale x 16 x i8> %b,
+                                                                 <vscale x 16 x i8> %c)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @mla_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: mla_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.mla.u.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                 <vscale x 8 x i16> %a,
+                                                                 <vscale x 8 x i16> %b,
+                                                                 <vscale x 8 x i16> %c)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @mla_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: mla_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                 <vscale x 4 x i32> %a,
+                                                                 <vscale x 4 x i32> %b,
+                                                                 <vscale x 4 x i32> %c)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @mla_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
+; CHECK-LABEL: mla_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.mla.u.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                 <vscale x 2 x i64> %a,
+                                                                 <vscale x 2 x i64> %b,
+                                                                 <vscale x 2 x i64> %c)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; MLS
+;
+
+define <vscale x 16 x i8> @mls_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: mls_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mls z0.b, p0/m, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.mls.u.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                 <vscale x 16 x i8> %a,
+                                                                 <vscale x 16 x i8> %b,
+                                                                 <vscale x 16 x i8> %c)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @mls_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: mls_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mls z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.mls.u.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                 <vscale x 8 x i16> %a,
+                                                                 <vscale x 8 x i16> %b,
+                                                                 <vscale x 8 x i16> %c)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @mls_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: mls_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mls z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mls.u.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                 <vscale x 4 x i32> %a,
+                                                                 <vscale x 4 x i32> %b,
+                                                                 <vscale x 4 x i32> %c)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @mls_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
+; CHECK-LABEL: mls_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mls z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.mls.u.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                 <vscale x 2 x i64> %a,
+                                                                 <vscale x 2 x i64> %b,
+                                                                 <vscale x 2 x i64> %c)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; MUL
 ;
 
@@ -1200,10 +1304,21 @@ define <vscale x 2 x i64> @umulh_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %
   ret <vscale x 2 x i64> %out
 }
 
+
 declare <vscale x 16 x  i8> @llvm.aarch64.sve.add.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
 declare <vscale x  8 x i16> @llvm.aarch64.sve.add.u.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>)
 declare <vscale x  4 x i32> @llvm.aarch64.sve.add.u.nxv4i32(<vscale x  4 x i1>, <vscale x  4 x i32>, <vscale x  4 x i32>)
 declare <vscale x  2 x i64> @llvm.aarch64.sve.add.u.nxv2i64(<vscale x  2 x i1>, <vscale x  2 x i64>, <vscale x  2 x i64>)
+
+declare <vscale x 16 x  i8> @llvm.aarch64.sve.mla.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
+declare <vscale x  8 x i16> @llvm.aarch64.sve.mla.u.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>, <vscale x  8 x i16>)
+declare <vscale x  4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x  4 x i1>, <vscale x  4 x i32>, <vscale x  4 x i32>, <vscale x  4 x i32>)
+declare <vscale x  2 x i64> @llvm.aarch64.sve.mla.u.nxv2i64(<vscale x  2 x i1>, <vscale x  2 x i64>, <vscale x  2 x i64>, <vscale x  2 x i64>)
+
+declare <vscale x 16 x  i8> @llvm.aarch64.sve.mls.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
+declare <vscale x  8 x i16> @llvm.aarch64.sve.mls.u.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>, <vscale x  8 x i16>)
+declare <vscale x  4 x i32> @llvm.aarch64.sve.mls.u.nxv4i32(<vscale x  4 x i1>, <vscale x  4 x i32>, <vscale x  4 x i32>, <vscale x  4 x i32>)
+declare <vscale x  2 x i64> @llvm.aarch64.sve.mls.u.nxv2i64(<vscale x  2 x i1>, <vscale x  2 x i64>, <vscale x  2 x i64>, <vscale x  2 x i64>)
 
 declare <vscale x 16 x  i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x  i8>, <vscale x 16 x  i8>)
 declare <vscale x  8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x  8 x i1>, <vscale x  8 x i16>, <vscale x  8 x i16>)
