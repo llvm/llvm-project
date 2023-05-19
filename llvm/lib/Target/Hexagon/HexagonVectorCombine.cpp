@@ -147,6 +147,8 @@ public:
   KnownBits getKnownBits(const Value *V,
                          const Instruction *CtxI = nullptr) const;
 
+  bool isSafeToClone(const Instruction &In) const;
+
   template <typename T = std::vector<Instruction *>>
   bool isSafeToMoveBeforeInBB(const Instruction &In,
                               BasicBlock::const_iterator To,
@@ -190,6 +192,7 @@ public:
 
 private:
   using InstList = std::vector<Instruction *>;
+  using InstMap = DenseMap<Instruction*, Instruction*>;
 
   struct AddrInfo {
     AddrInfo(const AddrInfo &) = default;
@@ -219,10 +222,11 @@ private:
 
   struct MoveGroup {
     MoveGroup(const AddrInfo &AI, Instruction *B, bool Hvx, bool Load)
-        : Base(B), Main{AI.Inst}, IsHvx(Hvx), IsLoad(Load) {}
+        : Base(B), Main{AI.Inst}, Clones{}, IsHvx(Hvx), IsLoad(Load) {}
     Instruction *Base; // Base instruction of the parent address group.
     InstList Main;     // Main group of instructions.
     InstList Deps;     // List of dependencies.
+    InstMap Clones;    // Map from original Deps to cloned ones.
     bool IsHvx;        // Is this group of HVX instructions?
     bool IsLoad;       // Is this a load group?
   };
@@ -326,7 +330,9 @@ private:
   bool createAddressGroups();
   MoveList createLoadGroups(const AddrList &Group) const;
   MoveList createStoreGroups(const AddrList &Group) const;
-  bool move(const MoveGroup &Move) const;
+  bool moveTogether(MoveGroup &Move) const;
+  template <typename T> InstMap cloneBefore(Instruction *To, T &&Insts) const;
+
   void realignLoadGroup(IRBuilderBase &Builder, const ByteSpan &VSpan,
                         int ScLen, Value *AlignVal, Value *AlignAddr) const;
   void realignStoreGroup(IRBuilderBase &Builder, const ByteSpan &VSpan,
@@ -832,7 +838,8 @@ auto AlignVectors::getUpwardDeps(Instruction *In, Instruction *Base) const
   while (!WorkQ.empty()) {
     Instruction *D = WorkQ.front();
     WorkQ.pop_front();
-    Deps.insert(D);
+    if (D != In)
+      Deps.insert(D);
     for (Value *Op : D->operands()) {
       if (auto *I = dyn_cast<Instruction>(Op)) {
         if (I->getParent() == Parent && Base->comesBefore(I))
@@ -912,19 +919,14 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
     if (Base->getParent() != Info.Inst->getParent())
       return false;
 
-    auto isSafeToMoveToBase = [&](const Instruction *I) {
-      return HVC.isSafeToMoveBeforeInBB(*I, Base->getIterator());
+    auto isSafeToCopyAtBase = [&](const Instruction *I) {
+      return HVC.isSafeToMoveBeforeInBB(*I, Base->getIterator()) &&
+             HVC.isSafeToClone(*I);
     };
     DepList Deps = getUpwardDeps(Info.Inst, Base);
-    if (!llvm::all_of(Deps, isSafeToMoveToBase))
+    if (!llvm::all_of(Deps, isSafeToCopyAtBase))
       return false;
 
-    // The dependencies will be moved together with the load, so make sure
-    // that none of them could be moved independently in another group.
-    Deps.erase(Info.Inst);
-    auto inAddrMap = [&](Instruction *I) { return AddrGroups.count(I) > 0; };
-    if (llvm::any_of(Deps, inAddrMap))
-      return false;
     Move.Main.push_back(Info.Inst);
     llvm::append_range(Move.Deps, Deps);
     return true;
@@ -1009,21 +1011,29 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
   return StoreGroups;
 }
 
-auto AlignVectors::move(const MoveGroup &Move) const -> bool {
+auto AlignVectors::moveTogether(MoveGroup &Move) const -> bool {
+  // Move all instructions to be adjacent.
   assert(!Move.Main.empty() && "Move group should have non-empty Main");
   Instruction *Where = Move.Main.front();
 
   if (Move.IsLoad) {
-    // Move all deps to before Where, keeping order.
-    for (Instruction *D : Move.Deps)
-      D->moveBefore(Where);
+    // Move all the loads (and dependencies) to where the first load is.
+    // Clone all deps to before Where, keeping order.
+    Move.Clones = cloneBefore(Where, Move.Deps);
     // Move all main instructions to after Where, keeping order.
     ArrayRef<Instruction *> Main(Move.Main);
-    for (Instruction *M : Main.drop_front(1)) {
-      M->moveAfter(Where);
+    for (Instruction *M : Main) {
+      if (M != Where)
+        M->moveAfter(Where);
+      for (auto [Old, New]: Move.Clones)
+        M->replaceUsesOfWith(Old, New);
       Where = M;
     }
+    // Replace Deps with the clones.
+    for (int i = 0, e = Move.Deps.size(); i != e; ++i)
+      Move.Deps[i] = Move.Clones[Move.Deps[i]];
   } else {
+    // Move all the stores to where the last store is.
     // NOTE: Deps are empty for "store" groups. If they need to be
     // non-empty, decide on the order.
     assert(Move.Deps.empty());
@@ -1036,6 +1046,23 @@ auto AlignVectors::move(const MoveGroup &Move) const -> bool {
   }
 
   return Move.Main.size() + Move.Deps.size() > 1;
+}
+
+template <typename T>
+auto AlignVectors::cloneBefore(Instruction *To, T &&Insts) const -> InstMap {
+  InstMap Map;
+
+  for (Instruction *I : Insts) {
+    assert(HVC.isSafeToClone(*I));
+    Instruction *C = I->clone();
+    C->setName(Twine("c.") + I->getName() + ".");
+    C->insertBefore(To);
+
+    for (auto [Old, New] : Map)
+      C->replaceUsesOfWith(Old, New);
+    Map.insert(std::make_pair(I, C));
+  }
+  return Map;
 }
 
 auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
@@ -1150,9 +1177,11 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
     // Move In and its upward dependencies to before To.
     assert(In->getParent() == To->getParent());
     DepList Deps = getUpwardDeps(In, To);
+    In->moveBefore(To);
     // DepList is sorted with respect to positions in the basic block.
-    for (Instruction *I : Deps)
-      I->moveBefore(To);
+    InstMap Map = cloneBefore(In, Deps);
+    for (auto [Old, New] : Map)
+      In->replaceUsesOfWith(Old, New);
   };
 
   // Generate necessary loads at appropriate locations.
@@ -1424,6 +1453,16 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
                               AI.Offset - WithMinOffset.Offset);
   }
 
+  // Update the AlignAddr/AlignVal to use cloned dependencies.
+  if (auto *I = dyn_cast<Instruction>(AlignAddr)) {
+    for (auto [Old, New] : Move.Clones)
+      I->replaceUsesOfWith(Old, New);
+  }
+  if (auto *I = dyn_cast<Instruction>(AlignVal)) {
+    for (auto [Old, New] : Move.Clones)
+      I->replaceUsesOfWith(Old, New);
+  }
+
   // The aligned loads/stores will use blocks that are either scalars,
   // or HVX vectors. Let "sector" be the unified term for such a block.
   // blend(scalar, vector) -> sector...
@@ -1499,11 +1538,11 @@ auto AlignVectors::run() -> bool {
   });
 
   for (auto &M : LoadGroups)
-    Changed |= move(M);
+    Changed |= moveTogether(M);
   for (auto &M : StoreGroups)
-    Changed |= move(M);
+    Changed |= moveTogether(M);
 
-  LLVM_DEBUG(dbgs() << "After move:\n" << HVC.F);
+  LLVM_DEBUG(dbgs() << "After moveTogether:\n" << HVC.F);
 
   for (auto &M : LoadGroups)
     Changed |= realignGroup(M);
@@ -2720,6 +2759,16 @@ auto HexagonVectorCombine::getKnownBits(const Value *V,
     -> KnownBits {
   return computeKnownBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT, /*ORE=*/nullptr,
                           /*UseInstrInfo=*/true);
+}
+
+auto HexagonVectorCombine::isSafeToClone(const Instruction &In) const -> bool {
+  if (In.mayHaveSideEffects() || In.isAtomic() || In.isVolatile() ||
+      In.isFenceLike() || In.mayReadOrWriteMemory()) {
+    return false;
+  }
+  if (isa<CallBase>(In) || isa<AllocaInst>(In))
+    return false;
+  return true;
 }
 
 template <typename T>
