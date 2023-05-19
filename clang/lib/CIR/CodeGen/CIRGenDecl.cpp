@@ -252,12 +252,19 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
     return;
   }
 
-  if (!emission.IsConstantAggregate)
-    llvm_unreachable("NYI");
-
   // FIXME(cir): migrate most of this file to use mlir::TypedAttr directly.
   auto typedConstant = constant.dyn_cast<mlir::TypedAttr>();
   assert(typedConstant && "expected typed attribute");
+  if (!emission.IsConstantAggregate) {
+    // For simple scalar/complex initialization, store the value directly.
+    LValue lv = makeAddrLValue(Loc, type);
+    assert(Init && "expected initializer");
+    auto initLoc = getLoc(Init->getSourceRange());
+    lv.setNonGC(true);
+    return buildStoreThroughLValue(
+        RValue::get(builder.getConstant(initLoc, typedConstant)), lv);
+  }
+
   emitStoresForConstant(CGM, D, Loc, type.isVolatileQualified(), builder,
                         typedConstant, /*IsAutoInit=*/false);
 }

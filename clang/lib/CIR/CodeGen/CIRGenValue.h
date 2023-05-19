@@ -223,6 +223,7 @@ public:
   }
 
   bool isNonGC() const { return NonGC; }
+  void setNonGC(bool Value) { NonGC = Value; }
 
   bool isNontemporal() const { return Nontemporal; }
 
