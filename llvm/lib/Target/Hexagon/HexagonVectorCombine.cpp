@@ -9,6 +9,7 @@
 // that assist in vector-based optimizations.
 //
 // AlignVectors: replace unaligned vector loads and stores with aligned ones.
+// HvxIdioms: recognize various opportunities to generate HVX intrinsic code.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APInt.h"
@@ -168,6 +169,20 @@ private:
 };
 
 class AlignVectors {
+  // This code tries to replace unaligned vector loads/stores with aligned
+  // ones.
+  // Consider unaligned load:
+  //   %v = original_load %some_addr, align <bad>
+  //   %user = %v
+  // It will generate
+  //      = load ..., align <good>
+  //      = load ..., align <good>
+  //      = valign
+  //      etc.
+  //   %synthesize = combine/shuffle the loaded data so that it looks
+  //                 exactly like what "original_load" has loaded.
+  //   %user = %synthesize
+  // Similarly for stores.
 public:
   AlignVectors(const HexagonVectorCombine &HVC_) : HVC(HVC_) {}
 
@@ -214,6 +229,21 @@ private:
   using MoveList = std::vector<MoveGroup>;
 
   struct ByteSpan {
+    // A representation of "interesting" bytes within a given span of memory.
+    // These bytes are those that are loaded or stored, and they don't have
+    // to cover the entire span of memory.
+    //
+    // The representation works by picking a contiguous sequence of bytes
+    // from somewhere within a llvm::Value, and placing it at a given offset
+    // within the span.
+    //
+    // The sequence of bytes from llvm:Value is represented by Segment.
+    // Block is Segment, plus where it goes in the span.
+    //
+    // An important feature of ByteSpan is being able to make a "section",
+    // i.e. creating another ByteSpan corresponding to a range of offsets
+    // relative to the source span.
+
     struct Segment {
       // Segment of a Value: 'Len' bytes starting at byte 'Begin'.
       Segment(Value *Val, int Begin, int Len)
@@ -232,7 +262,7 @@ private:
       Block(const Block &Blk) = default;
       Block &operator=(const Block &Blk) = default;
       Segment Seg; // Value segment.
-      int Pos;     // Position (offset) of the segment in the Block.
+      int Pos;     // Position (offset) of the block in the span.
     };
 
     int extent() const;
@@ -487,6 +517,36 @@ template <typename Pred, typename T> void erase_if(T &&container, Pred p) {
 } // namespace
 
 // --- Begin AlignVectors
+
+// For brevity, only consider loads. We identify a group of loads where we
+// know the relative differences between their addresses, so we know how they
+// are laid out in memory (relative to one another). These loads can overlap,
+// can be shorter or longer than the desired vector length.
+// Ultimately we want to generate a sequence of aligned loads that will load
+// every byte that the original loads loaded, and have the program use these
+// loaded values instead of the original loads.
+// We consider the contiguous memory area spanned by all these loads.
+//
+// Let's say that a single aligned vector load can load 16 bytes at a time.
+// If the program wanted to use a byte at offset 13 from the beginning of the
+// original span, it will be a byte at offset 13+x in the aligned data for
+// some x>=0. This may happen to be in the first aligned load, or in the load
+// following it. Since we generally don't know what the that alignment value
+// is at compile time, we proactively do valigns on the aligned loads, so that
+// byte that was at offset 13 is still at offset 13 after the valigns.
+//
+// This will be the starting point for making the rest of the program use the
+// data loaded by the new loads.
+// For each original load, and its users:
+//   %v = load ...
+//   ... = %v
+//   ... = %v
+// we create
+//   %new_v = extract/combine/shuffle data from loaded/valigned vectors so
+//            it contains the same value as %v did before
+// then replace all users of %v with %new_v.
+//   ... = %new_v
+//   ... = %new_v
 
 auto AlignVectors::ByteSpan::extent() const -> int {
   if (size() == 0)
@@ -1004,12 +1064,16 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   // In any case we need to have a mapping from the blocks of VSpan (the
   // span covered by the pre-existing loads) to ASpan (the span covered
   // by the aligned loads). There is a small problem, though: ASpan needs
-  // to have pointers to the loads/valigns, but we don't know where to put
-  // them yet. We can't use nullptr, because when we create sections of
-  // ASpan (corresponding to blocks from VSpan), for each block in the
-  // section we need to know which blocks of ASpan they are a part of.
-  // To have 1-1 mapping between blocks of ASpan and the temporary value
-  // pointers, use the addresses of the blocks themselves.
+  // to have pointers to the loads/valigns, but we don't have these loads
+  // because we don't know where to put them yet. We find out by creating
+  // a section of ASpan that corresponds to values (blocks) from VSpan,
+  // and checking where the new load should be placed. We need to attach
+  // this location information to each block in ASpan somehow, so we put
+  // distincts values for Seg.Val in each ASpan.Blocks[i], and use a map
+  // to store the location for each Seg.Val.
+  // The distinct values happen to be Blocks[i].Seg.Val = &Blocks[i],
+  // which helps with printing ByteSpans without crashing when printing
+  // Segments with these temporary identifiers in place of Val.
 
   // Populate the blocks first, to avoid reallocations of the vector
   // interfering with generating the placeholder addresses.
@@ -1037,7 +1101,7 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
     for (const Use &U : Uses) {
       auto *I = dyn_cast<Instruction>(U.getUser());
       assert(I != nullptr && "Load used in a non-instruction?");
-      // Make sure we only consider at users in this block, but we need
+      // Make sure we only consider users in this block, but we need
       // to remember if there were users outside the block too. This is
       // because if no users are found, aligned loads will not be created.
       if (I->getParent() == BaseBlock) {
