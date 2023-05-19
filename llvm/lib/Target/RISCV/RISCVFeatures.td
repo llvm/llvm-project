@@ -611,6 +611,21 @@ def FeatureStdExtSsaia
                        "excluding the machine-level CSRs and behavior not "
                        "directly visible to supervisor level.)", []>;
 
+def FeatureStdExtZfbfmin
+    : SubtargetFeature<"experimental-zfbfmin", "HasStdExtZfbfmin", "true",
+                       "'Zfbfmin' (Scalar BF16 Converts)",
+                       [FeatureStdExtF]>;
+def HasStdExtZfbfmin : Predicate<"Subtarget->hasStdExtZfbfmin()">,
+                                 AssemblerPredicate<(all_of FeatureStdExtZfbfmin),
+                                 "'Zfbfmin' (Scalar BF16 Converts)">;
+
+def HasHalfFPLoadStoreMove
+    : Predicate<"Subtarget->hasHalfFPLoadStoreMove()">,
+                AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZfhmin, FeatureStdExtZfbfmin),
+                                    "'Zfh' (Half-Precision Floating-Point) or "
+                                    "'Zfhmin' (Half-Precision Floating-Point Minimal) or "
+                                    "'Zfbfmin' (Scalar BF16 Converts)">;
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
