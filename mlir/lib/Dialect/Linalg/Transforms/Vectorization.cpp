@@ -1301,6 +1301,7 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
   LogicalResult status =
       cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation())
           .reifyResultShapes(rewriter, reifiedReturnShapes);
+  (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
   auto emptyOp = rewriter.create<tensor::EmptyOp>(loc, reifiedReturnShapes[0],
                                                   padValue.getType());
