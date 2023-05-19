@@ -5634,9 +5634,8 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
       return ConstantFP::getZero(Op0->getType());
 
     // +normal number * (-)0.0 --> (-)0.0
-    // TODO: Use computeKnownFPClass
-    if (isKnownNeverInfinity(Op0, Q.DL, Q.TLI) &&
-        isKnownNeverNaN(Op0, Q.DL, Q.TLI) &&
+    if (isKnownNeverInfOrNaN(Op0, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT) &&
+        // TODO: Check SignBit from computeKnownFPClass when it's more complete.
         SignBitMustBeZero(Op0, Q.DL, Q.TLI))
       return Op1;
   }
