@@ -46,9 +46,9 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fno-offload-lto \
 // RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=NO-LTO %s
-// NO-LTO: error: The combination of '-fno-offload-lto' and '-fopenmp-target-jit' is incompatible
+// NO-LTO: error: the combination of '-fno-offload-lto' and '-fopenmp-target-jit' is incompatible
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -foffload-lto=thin \
 // RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=THIN-LTO %s
-// THIN-LTO: error: The combination of '-foffload-lto=' and '-fopenmp-target-jit' is incompatible
+// THIN-LTO: error: the combination of '-foffload-lto=' and '-fopenmp-target-jit' is incompatible
