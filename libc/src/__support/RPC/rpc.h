@@ -423,14 +423,15 @@ template <bool T>
 LIBC_INLINE void Port<T>::send_n(const void *const *src, uint64_t *size) {
   // TODO: We could send the first bytes in this call and potentially save an
   // extra send operation.
-  // TODO: We may need a way for the CPU to send different strings per thread.
   uint64_t num_sends = 0;
   send([&](Buffer *buffer, uint32_t id) {
     reinterpret_cast<uint64_t *>(buffer->data)[0] = lane_value(size, id);
     num_sends = is_process_gpu() ? lane_value(size, id)
                                  : max(lane_value(size, id), num_sends);
   });
-  for (uint64_t idx = 0; idx < num_sends; idx += sizeof(Buffer::data)) {
+  uint64_t idx = 0;
+  uint64_t mask = process.get_packet(index).header.mask;
+  while (gpu::ballot(mask, idx < num_sends)) {
     send([=](Buffer *buffer, uint32_t id) {
       const uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
                                ? sizeof(Buffer::data)
@@ -440,8 +441,8 @@ LIBC_INLINE void Port<T>::send_n(const void *const *src, uint64_t *size) {
             buffer->data,
             reinterpret_cast<const uint8_t *>(lane_value(src, id)) + idx, len);
     });
+    idx += sizeof(Buffer::data);
   }
-  gpu::sync_lane(process.get_packet(index).header.mask);
 }
 
 /// Helper routine to simplify the interface when sending from the GPU using
@@ -468,7 +469,9 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
     num_recvs = is_process_gpu() ? lane_value(size, id)
                                  : max(lane_value(size, id), num_recvs);
   });
-  for (uint64_t idx = 0; idx < num_recvs; idx += sizeof(Buffer::data)) {
+  uint64_t idx = 0;
+  uint64_t mask = process.get_packet(index).header.mask;
+  while (gpu::ballot(mask, idx < num_recvs)) {
     recv([=](Buffer *buffer, uint32_t id) {
       uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
                          ? sizeof(Buffer::data)
@@ -477,8 +480,8 @@ LIBC_INLINE void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
         inline_memcpy(reinterpret_cast<uint8_t *>(lane_value(dst, id)) + idx,
                       buffer->data, len);
     });
+    idx += sizeof(Buffer::data);
   }
-  return;
 }
 
 /// Attempts to open a port to use as the client. The client can only open a
