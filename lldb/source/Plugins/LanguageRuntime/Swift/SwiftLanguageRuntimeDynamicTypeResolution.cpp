@@ -293,7 +293,7 @@ public:
                 ss.str().c_str());
     }
 
-    if (log && log->GetVerbose()) {
+    if (type_info && log && log->GetVerbose()) {
       std::stringstream ss;
       type_info->dump(ss);
       log->Printf("[TargetReflectionContext::getTypeInfo] Found "
@@ -3253,12 +3253,21 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
     return nullptr;
   }
   const swift::reflection::TypeRef *type_ref = type_ref_or_err.getType();
-  if (log && log->GetVerbose()) {
-    std::stringstream ss;
-    type_ref->dump(ss);
-    LLDB_LOGF(log, "[SwiftLanguageRuntimeImpl::GetTypeRef] Found typeref for "
+  if (type_ref) {
+    if (log && log->GetVerbose()) {
+      std::stringstream ss;
+      type_ref->dump(ss);
+      LLDB_LOGF(log,
+                "[SwiftLanguageRuntimeImpl::GetTypeRef] Found typeref for "
                 "type: %s:\n%s",
                 type.GetMangledTypeName().GetCString(), ss.str().c_str());
+    }
+  } else {
+    LLDB_LOGF(
+        log,
+        "[SwiftLanguageRuntimeImpl::GetTypeRef] could not find typeref for "
+        "type: %s:\n",
+        type.GetMangledTypeName().GetCString());
   }
   return type_ref;
 }
