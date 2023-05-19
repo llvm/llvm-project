@@ -17,6 +17,8 @@ typedef __rvv_uint64m1_t vuint64m1_t;
 typedef __rvv_float32m1_t vfloat32m1_t;
 typedef __rvv_float64m1_t vfloat64m1_t;
 
+typedef __rvv_int32m2_t vint32m2_t;
+
 // Define valid fixed-width RVV types
 typedef vint8m1_t fixed_int8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
 typedef vint16m1_t fixed_int16m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
@@ -44,6 +46,8 @@ typedef uint64_t gnu_uint64m1_t __attribute__((vector_size(__riscv_v_fixed_vlen 
 
 typedef float gnu_float32m1_t __attribute__((vector_size(__riscv_v_fixed_vlen / 8)));
 typedef double gnu_float64m1_t __attribute__((vector_size(__riscv_v_fixed_vlen / 8)));
+
+typedef int32_t gnu_int32m2_t __attribute__((vector_size((__riscv_v_fixed_vlen * 2) / 8)));
 
 // Attribute must have a single argument
 typedef vint8m1_t no_argument __attribute__((riscv_rvv_vector_bits));         // expected-error {{'riscv_rvv_vector_bits' attribute takes one argument}}
@@ -216,6 +220,11 @@ TEST_CAST_VECTOR(uint32m1)
 TEST_CAST_VECTOR(uint64m1)
 TEST_CAST_VECTOR(float32m1)
 TEST_CAST_VECTOR(float64m1)
+
+// Test that casts only work for LMUL=1 types and don't crash.
+vint32m2_t to_vint32m2_t_from_gnut(gnu_int32m2_t x) { return x; } // expected-error-re {{returning 'gnu_int32m2_t' (vector of {{[0-9]+}} 'int32_t' values) from a function with incompatible result type 'vint32m2_t' (aka '__rvv_int32m2_t')}}
+
+gnu_int32m2_t to_gnut_from_svint32_t(vint32m2_t x) { return x; } // expected-error-re {{returning 'vint32m2_t' (aka '__rvv_int32m2_t') from a function with incompatible result type 'gnu_int32m2_t' (vector of {{[0-9]+}} 'int32_t' values)}}
 
 // --------------------------------------------------------------------------//
 // Test the scalable and fixed-length types can be used interchangeably

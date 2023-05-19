@@ -41,6 +41,9 @@ public:
         const Target &target,
         const OptionGroupValueObjectDisplay &display_opts);
 
+    bool ShouldSuppressResult(
+        const OptionGroupValueObjectDisplay &display_opts) const;
+
     bool top_level;
     bool unwind_on_error;
     bool ignore_breakpoints;

@@ -10,6 +10,7 @@
 
 #include "CommandObjectExpression.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/OptionParser.h"
@@ -21,6 +22,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
 using namespace lldb;
@@ -200,13 +202,6 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
     const Target &target, const OptionGroupValueObjectDisplay &display_opts) {
   EvaluateExpressionOptions options;
   options.SetCoerceToId(display_opts.use_objc);
-  // Explicitly disabling persistent results takes precedence over the
-  // m_verbosity/use_objc logic.
-  if (suppress_persistent_result != eLazyBoolCalculate)
-    options.SetSuppressPersistentResult(suppress_persistent_result ==
-                                        eLazyBoolYes);
-  else if (m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact)
-    options.SetSuppressPersistentResult(display_opts.use_objc);
   options.SetUnwindOnError(unwind_on_error);
   options.SetIgnoreBreakpoints(ignore_breakpoints);
   options.SetKeepInMemory(true);
@@ -240,6 +235,17 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
   else
     options.SetTimeout(std::nullopt);
   return options;
+}
+
+bool CommandObjectExpression::CommandOptions::ShouldSuppressResult(
+    const OptionGroupValueObjectDisplay &display_opts) const {
+  // Explicitly disabling persistent results takes precedence over the
+  // m_verbosity/use_objc logic.
+  if (suppress_persistent_result != eLazyBoolCalculate)
+    return suppress_persistent_result == eLazyBoolYes;
+
+  return display_opts.use_objc &&
+         m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact;
 }
 
 CommandObjectExpression::CommandObjectExpression(
@@ -424,8 +430,12 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
     return false;
   }
 
-  const EvaluateExpressionOptions eval_options =
+  EvaluateExpressionOptions eval_options =
       m_command_options.GetEvaluateExpressionOptions(target, m_varobj_options);
+  // This command manually removes the result variable, make sure expression
+  // evaluation doesn't do it first.
+  eval_options.SetSuppressPersistentResult(false);
+
   ExpressionResults success = target.EvaluateExpression(
       expr, frame, result_valobj_sp, eval_options, &m_fixed_expression);
 
@@ -454,14 +464,25 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
           }
         }
 
+        bool suppress_result =
+            m_command_options.ShouldSuppressResult(m_varobj_options);
+
         DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
             m_command_options.m_verbosity, format));
-        options.SetHideRootName(eval_options.GetSuppressPersistentResult());
+        options.SetHideRootName(suppress_result);
         options.SetVariableFormatDisplayLanguage(
             result_valobj_sp->GetPreferredDisplayLanguage());
 
         result_valobj_sp->Dump(output_stream, options);
 
+        if (suppress_result)
+          if (auto result_var_sp =
+                  target.GetPersistentVariable(result_valobj_sp->GetName())) {
+            auto language = result_valobj_sp->GetPreferredDisplayLanguage();
+            if (auto *persistent_state =
+                    target.GetPersistentExpressionStateForLanguage(language))
+              persistent_state->RemovePersistentVariable(result_var_sp);
+          }
         result.SetStatus(eReturnStatusSuccessFinishResult);
       }
     } else {

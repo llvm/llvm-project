@@ -18,6 +18,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -1276,6 +1277,65 @@ bool Archive::isEmpty() const {
 
 bool Archive::hasSymbolTable() const { return !SymbolTable.empty(); }
 
+static Error getGlobalSymtabLocAndSize(const MemoryBufferRef &Data,
+                                       uint64_t GlobalSymtabOffset,
+                                       const char *&GlobalSymtabLoc,
+                                       uint64_t &Size, const char *BitMessage) {
+  uint64_t BufferSize = Data.getBufferSize();
+  uint64_t GlobalSymtabContentOffset =
+      GlobalSymtabOffset + sizeof(BigArMemHdrType);
+  if (GlobalSymtabContentOffset > BufferSize)
+    return malformedError(
+        Twine(BitMessage) + " global symbol table header at offset 0x" +
+        Twine::utohexstr(GlobalSymtabOffset) + " and size 0x" +
+        Twine::utohexstr(sizeof(BigArMemHdrType)) +
+        " goes past the end of file");
+
+  GlobalSymtabLoc = Data.getBufferStart() + GlobalSymtabOffset;
+  const BigArMemHdrType *GlobalSymHdr =
+      reinterpret_cast<const BigArMemHdrType *>(GlobalSymtabLoc);
+  StringRef RawOffset = getFieldRawString(GlobalSymHdr->Size);
+  if (RawOffset.getAsInteger(10, Size))
+    return malformedError(Twine(BitMessage) + " global symbol table size \"" +
+                          RawOffset + "\" is not a number");
+
+  if (GlobalSymtabContentOffset + Size > BufferSize)
+    return malformedError(
+        Twine(BitMessage) + " global symbol table content at offset 0x" +
+        Twine::utohexstr(GlobalSymtabContentOffset) + " and size 0x" +
+        Twine::utohexstr(Size) + " goes past the end of file");
+
+  return Error::success();
+}
+
+struct GlobalSymtabInfo {
+  uint64_t SymNum;
+  StringRef SymbolTable;
+  StringRef SymbolOffsetTable;
+  StringRef StringTable;
+};
+
+static void
+appendGlobalSymbolTableInfo(SmallVector<GlobalSymtabInfo> &SymtabInfos,
+                            const char *GlobalSymtabLoc, uint64_t Size) {
+  // In a big archive, a global symbol table contains the following information:
+  // - The number of symbols.
+  // - The array of offsets into the archive file. The length is eight
+  //   times the number of symbols.
+  // - The name-string table. The size is:
+  //   Size-(8*(the number of symbols + 1)).
+
+  StringRef SymbolTable =
+      StringRef(GlobalSymtabLoc + sizeof(BigArMemHdrType), Size);
+  uint64_t SymNum = read64be(GlobalSymtabLoc + sizeof(BigArMemHdrType));
+  StringRef SymbolOffsetTable = StringRef(SymbolTable.data() + 8, 8 * SymNum);
+  unsigned SymOffsetsSize = 8 * (SymNum + 1);
+  uint64_t SymbolTableStringSize = Size - SymOffsetsSize;
+  StringRef StringTable =
+      StringRef(SymbolTable.data() + SymOffsetsSize, SymbolTableStringSize);
+  SymtabInfos.push_back({SymNum, SymbolTable, SymbolOffsetTable, StringTable});
+}
+
 BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
     : Archive(Source, Err) {
   ErrorAsOutParameter ErrAsOutParam(&Err);
@@ -1302,55 +1362,73 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
     Err = malformedError("malformed AIX big archive: last member offset \"" +
                          RawOffset + "\" is not a number");
 
-  // Calculate the global symbol table.
-  uint64_t GlobSymOffset = 0;
+  uint64_t GlobSymtab32Offset = 0;
   RawOffset = getFieldRawString(ArFixLenHdr->GlobSymOffset);
-  if (RawOffset.getAsInteger(10, GlobSymOffset))
-    // TODO: add test case.
-    Err = malformedError(
-        "malformed AIX big archive: global symbol table offset \"" + RawOffset +
-        "\" is not a number");
-
-  if (Err)
+  if (RawOffset.getAsInteger(10, GlobSymtab32Offset)) {
+    Err = malformedError("global symbol table "
+                         "offset of 32-bit members \"" +
+                         RawOffset + "\" is not a number");
     return;
+  }
 
-  if (GlobSymOffset > 0) {
-    uint64_t GlobalSymTblContentOffset =
-        GlobSymOffset + sizeof(BigArMemHdrType);
-    if (GlobalSymTblContentOffset > BufferSize) {
-      Err = malformedError("global symbol table header at offset 0x" +
-                           Twine::utohexstr(GlobSymOffset) + " and size 0x" +
-                           Twine::utohexstr(sizeof(BigArMemHdrType)) +
-                           " goes past the end of file");
-      return;
-    }
+  uint64_t GlobSymtab64Offset = 0;
+  RawOffset = getFieldRawString(ArFixLenHdr->GlobSym64Offset);
+  if (RawOffset.getAsInteger(10, GlobSymtab64Offset)) {
+    Err = malformedError("global symbol table "
+                         "offset of 64-bit members\"" +
+                         RawOffset + "\" is not a number");
+    return;
+  }
 
-    const char *GlobSymTblLoc = Data.getBufferStart() + GlobSymOffset;
-    const BigArMemHdrType *GlobalSymHdr =
-        reinterpret_cast<const BigArMemHdrType *>(GlobSymTblLoc);
-    RawOffset = getFieldRawString(GlobalSymHdr->Size);
-    uint64_t Size;
-    if (RawOffset.getAsInteger(10, Size)) {
-      // TODO: add test case.
-      Err = malformedError(
-          "malformed AIX big archive: global symbol table size \"" + RawOffset +
-          "\" is not a number");
+  const char *GlobSymtab32Loc = nullptr;
+  const char *GlobSymtab64Loc = nullptr;
+  uint64_t GlobSymtab32Size = 0;
+  uint64_t GlobSymtab64Size = 0;
+  const MemoryBufferRef &MemBuffRef = getMemoryBufferRef();
+
+  if (GlobSymtab32Offset) {
+    Err =
+        getGlobalSymtabLocAndSize(MemBuffRef, GlobSymtab32Offset,
+                                  GlobSymtab32Loc, GlobSymtab32Size, "32-bit");
+    if (Err)
       return;
-    }
-    if (GlobalSymTblContentOffset + Size > BufferSize) {
-      Err = malformedError("global symbol table content at offset 0x" +
-                           Twine::utohexstr(GlobalSymTblContentOffset) +
-                           " and size 0x" + Twine::utohexstr(Size) +
-                           " goes past the end of file");
+  }
+
+  if (GlobSymtab64Offset) {
+    Err =
+        getGlobalSymtabLocAndSize(MemBuffRef, GlobSymtab64Offset,
+                                  GlobSymtab64Loc, GlobSymtab64Size, "64-bit");
+    if (Err)
       return;
-    }
-    SymbolTable = StringRef(GlobSymTblLoc + sizeof(BigArMemHdrType), Size);
-    unsigned SymNum = getNumberOfSymbols();
-    unsigned SymOffsetsSize = 8 * (SymNum + 1);
-    uint64_t SymbolTableStringSize = Size - SymOffsetsSize;
-    StringTable =
-        StringRef(GlobSymTblLoc + sizeof(BigArMemHdrType) + SymOffsetsSize,
-                  SymbolTableStringSize);
+  }
+
+  SmallVector<GlobalSymtabInfo> SymtabInfos;
+
+  if (GlobSymtab32Offset)
+    appendGlobalSymbolTableInfo(SymtabInfos, GlobSymtab32Loc, GlobSymtab32Size);
+  if (GlobSymtab64Offset)
+    appendGlobalSymbolTableInfo(SymtabInfos, GlobSymtab64Loc, GlobSymtab64Size);
+
+  if (SymtabInfos.size() == 1) {
+    SymbolTable = SymtabInfos[0].SymbolTable;
+    StringTable = SymtabInfos[0].StringTable;
+  } else if (SymtabInfos.size() == 2) {
+    // In order to let the Archive::Symbol::getNext() work for both 32-bit and
+    // 64-bit global symbol tables, we need to merge them into a single table.
+    raw_string_ostream Out(MergedGlobalSymtabBuf);
+    uint64_t SymNum = SymtabInfos[0].SymNum + SymtabInfos[1].SymNum;
+    write(Out, SymNum, support::big);
+    // Merge symbol offset.
+    Out << SymtabInfos[0].SymbolOffsetTable;
+    Out << SymtabInfos[1].SymbolOffsetTable;
+    // Merge string table.
+    Out << SymtabInfos[0].StringTable;
+    Out << SymtabInfos[1].StringTable;
+    SymbolTable = MergedGlobalSymtabBuf;
+    // The size of the symbol offset to the member file is 8 bytes.
+    StringTable = StringRef(SymbolTable.begin() + (SymNum + 1) * 8,
+                            SymtabInfos[0].StringTable.size() +
+                                SymtabInfos[1].StringTable.size());
   }
 
   child_iterator I = child_begin(Err, false);
