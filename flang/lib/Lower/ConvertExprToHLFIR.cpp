@@ -594,8 +594,17 @@ private:
     llvm::SmallVector<mlir::Value> extents;
     auto seqTy = hlfir::getFortranElementOrSequenceType(fieldType)
                      .cast<fir::SequenceType>();
-    for (auto extent : seqTy.getShape())
+    for (auto extent : seqTy.getShape()) {
+      if (extent == fir::SequenceType::getUnknownExtent()) {
+        // We have already generated invalid hlfir.declare
+        // without the type parameters and probably invalid storage
+        // for the variable (e.g. fir.alloca without type parameters).
+        // So this TODO here is a little bit late, but it matches
+        // the non-HLFIR path.
+        TODO(loc, "array component shape depending on length parameters");
+      }
       extents.push_back(builder.createIntegerConstant(loc, idxTy, extent));
+    }
     if (!hasNonDefaultLowerBounds(componentSym))
       return builder.create<fir::ShapeOp>(loc, extents);
 
