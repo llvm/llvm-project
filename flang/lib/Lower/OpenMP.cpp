@@ -1538,6 +1538,11 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   // Collect the loops to collapse.
   auto *doConstructEval = &eval.getFirstNestedEvaluation();
+  if (doConstructEval->getIf<Fortran::parser::DoConstruct>()
+          ->IsDoConcurrent()) {
+    TODO(converter.getCurrentLocation(),
+         "Do Concurrent in Worksharing loop construct");
+  }
 
   std::int64_t collapseValue =
       Fortran::lower::getCollapseValue(loopOpClauseList);

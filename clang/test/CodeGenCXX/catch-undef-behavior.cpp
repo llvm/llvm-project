@@ -402,13 +402,13 @@ void indirect_function_call(void (*p)(int)) {
   // CHECK: [[PTR:%.+]] = bitcast void (i32)* {{.*}} to <{ i32, i32 }>*
 
   // Signature check
-  // CHECK-NEXT: [[SIGPTR:%.+]] = getelementptr <{ i32, i32 }>, <{ i32, i32 }>* [[PTR]], i32 0, i32 0
+  // CHECK-NEXT: [[SIGPTR:%.+]] = getelementptr <{ i32, i32 }>, <{ i32, i32 }>* [[PTR]], i32 -1, i32 0
   // CHECK-NEXT: [[SIG:%.+]] = load i32, i32* [[SIGPTR]]
-  // CHECK-NEXT: [[SIGCMP:%.+]] = icmp eq i32 [[SIG]], 846595819
+  // CHECK-NEXT: [[SIGCMP:%.+]] = icmp eq i32 [[SIG]], -1056584962
   // CHECK-NEXT: br i1 [[SIGCMP]]
 
   // RTTI pointer check
-  // CHECK: [[RTTIPTR:%.+]] = getelementptr <{ i32, i32 }>, <{ i32, i32 }>* [[PTR]], i32 0, i32 1
+  // CHECK: [[RTTIPTR:%.+]] = getelementptr <{ i32, i32 }>, <{ i32, i32 }>* [[PTR]], i32 -1, i32 1
   // CHECK-NEXT: [[RTTIEncIntTrunc:%.+]] = load i32, i32* [[RTTIPTR]]
   // CHECK-NEXT: [[RTTIEncInt:%.+]] = sext i32 [[RTTIEncIntTrunc]] to i64
   // CHECK-NEXT: [[FuncAddrInt:%.+]] = ptrtoint void (i32)* {{.*}} to i64
@@ -750,4 +750,4 @@ void ThisAlign::this_align_lambda_2() {
 
 // CHECK: attributes [[NR_NUW]] = { noreturn nounwind }
 
-// CHECK-FUNCSAN: ![[FUNCSAN]] = !{i32 846595819, i8** [[PROXY]]}
+// CHECK-FUNCSAN: ![[FUNCSAN]] = !{i32 -1056584962, i8** [[PROXY]]}

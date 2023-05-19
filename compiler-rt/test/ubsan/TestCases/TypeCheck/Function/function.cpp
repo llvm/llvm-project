@@ -61,7 +61,7 @@ void make_valid_call() {
 
 void make_invalid_call() {
   // CHECK: function.cpp:[[@LINE+4]]:3: runtime error: call to function f() through pointer to incorrect function type 'void (*)(int)'
-  // CHECK-NEXT: function.cpp:[[@LINE-11]]: note: f() defined here
+  // CHECK-NEXT: function.cpp:[[@LINE-11]]:{{(11:)?}} note: f() defined here
   // NOSYM: function.cpp:[[@LINE+2]]:3: runtime error: call to function (unknown) through pointer to incorrect function type 'void (*)(int)'
   // NOSYM-NEXT: ({{.*}}+0x{{.*}}): note: (unknown) defined here
   reinterpret_cast<void (*)(int)>(reinterpret_cast<uintptr_t>(f))(42);

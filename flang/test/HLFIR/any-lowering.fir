@@ -5,9 +5,8 @@
 func.func @_QPany1(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.logical<4>> {fir.bindc_name = "s"}) {
   %0:2 = hlfir.declare %arg0 {uniq_name = "_QFany1Ea"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
   %1:2 = hlfir.declare %arg1 {uniq_name = "_QFany1Es"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-  %2 = hlfir.any %0#0 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !hlfir.expr<!fir.logical<4>>
-  hlfir.assign %2 to %1#0 : !hlfir.expr<!fir.logical<4>>, !fir.ref<!fir.logical<4>>
-  hlfir.destroy %2 : !hlfir.expr<!fir.logical<4>>
+  %2 = hlfir.any %0#0 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.logical<4>
+  hlfir.assign %2 to %1#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
   return
 }
 // CHECK-LABEL: func.func @_QPany1(

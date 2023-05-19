@@ -14,4 +14,4 @@ void g(void (*p)() noexcept) {
   p();
 }
 
-// CHECK: ![[FUNCSAN]] = !{i32 846595819, ptr [[PROXY]]}
+// CHECK: ![[FUNCSAN]] = !{i32 -1056584962, ptr [[PROXY]]}

@@ -2524,9 +2524,6 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
         Constructor->getConstexprKind(), InheritedConstructor(),
         TrailingRequiresClause);
     Method->setRangeEnd(Constructor->getEndLoc());
-    if (Constructor->isDefaultConstructor() ||
-        Constructor->isCopyOrMoveConstructor())
-      Method->setIneligibleOrNotSelected(true);
   } else if (CXXDestructorDecl *Destructor = dyn_cast<CXXDestructorDecl>(D)) {
     Method = CXXDestructorDecl::Create(
         SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
@@ -2549,8 +2546,6 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
         SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo, SC,
         D->UsesFPIntrin(), D->isInlineSpecified(), D->getConstexprKind(),
         D->getEndLoc(), TrailingRequiresClause);
-    if (D->isMoveAssignmentOperator() || D->isCopyAssignmentOperator())
-      Method->setIneligibleOrNotSelected(true);
   }
 
   if (D->isInlined())
@@ -2752,6 +2747,22 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // FIXME: Is this necessary?
   if (IsExplicitSpecialization && !isFriend)
     SemaRef.CompleteMemberSpecialization(Method, Previous);
+
+  // If the method is a special member function, we need to mark it as
+  // ineligible so that Owner->addDecl() won't mark the class as non trivial.
+  // At the end of the class instantiation, we calculate eligibility again and
+  // then we adjust trivility if needed.
+  // We need this check to happen only after the method parameters are set,
+  // because being e.g. a copy constructor depends on the instantiated
+  // arguments.
+  if (auto *Constructor = dyn_cast<CXXConstructorDecl>(Method)) {
+    if (Constructor->isDefaultConstructor() ||
+        Constructor->isCopyOrMoveConstructor())
+      Method->setIneligibleOrNotSelected(true);
+  } else if (Method->isCopyAssignmentOperator() ||
+             Method->isMoveAssignmentOperator()) {
+    Method->setIneligibleOrNotSelected(true);
+  }
 
   // If there's a function template, let our caller handle it.
   if (FunctionTemplate) {
