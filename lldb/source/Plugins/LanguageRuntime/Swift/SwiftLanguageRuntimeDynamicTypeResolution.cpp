@@ -3259,12 +3259,22 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
 
   // Demangle the mangled name.
   swift::Demangle::Demangler dem;
-  ConstString mangled_name = type.GetMangledTypeName();
+  llvm::StringRef mangled_name = type.GetMangledTypeName().GetStringRef();
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!ts)
     return nullptr;
+
+  // List of commonly used types known to have been been annotated with
+  // @_originallyDefinedIn to a different module.
+  static llvm::StringMap<llvm::StringRef> known_types_with_redefined_modules = {
+      {"$s14CoreFoundation7CGFloatVD", "$s12CoreGraphics7CGFloatVD"}};
+
+  auto it = known_types_with_redefined_modules.find(mangled_name);
+  if (it != known_types_with_redefined_modules.end()) 
+    mangled_name = it->second;
+
   swift::Demangle::NodePointer node =
-      module_holder->GetCanonicalDemangleTree(dem, mangled_name.GetStringRef());
+      module_holder->GetCanonicalDemangleTree(dem, mangled_name);
   if (!node)
     return nullptr;
 
