@@ -459,6 +459,14 @@ def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
                                   "'Zvfbfmin' (Vector BF16 Converts)">;
 
+def FeatureStdExtZvfbfwma
+    : SubtargetFeature<"experimental-zvfbfwma", "HasStdExtZvfbfwma", "true",
+                       "'Zvfbfwma' (Vector BF16 widening mul-add)",
+                       [FeatureStdExtZve32f]>;
+def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
+                                  AssemblerPredicate<(all_of FeatureStdExtZvfbfwma),
+                                  "'Zvfbfwma' (Vector BF16 widening mul-add)">;
+
 def FeatureStdExtZvfh
     : SubtargetFeature<"experimental-zvfh", "HasStdExtZvfh", "true",
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
@@ -629,10 +637,12 @@ def HasStdExtZfbfmin : Predicate<"Subtarget->hasStdExtZfbfmin()">,
 
 def HasHalfFPLoadStoreMove
     : Predicate<"Subtarget->hasHalfFPLoadStoreMove()">,
-                AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZfhmin, FeatureStdExtZfbfmin),
+                AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZfhmin,
+                                    FeatureStdExtZfbfmin, FeatureStdExtZvfbfwma),
                                     "'Zfh' (Half-Precision Floating-Point) or "
                                     "'Zfhmin' (Half-Precision Floating-Point Minimal) or "
-                                    "'Zfbfmin' (Scalar BF16 Converts)">;
+                                    "'Zfbfmin' (Scalar BF16 Converts) or "
+                                    "'Zvfbfwma' (Vector BF16 widening mul-add)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
