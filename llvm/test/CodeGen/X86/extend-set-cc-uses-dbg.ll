@@ -9,7 +9,7 @@ bb:
   ; CHECK: $eax = MOV32rm killed {{.*}} $rdi, {{.*}} debug-location !7 :: (load (s32) from %ir.p)
   ; CHECK-NEXT: $rax = KILL killed renamable $eax, debug-location !7
   ; CHECK-NEXT: MOV64mr $rsp, 1, $noreg, -8, $noreg, $rax :: (store (s64) into %stack.0)
-  ; CHECK-NEXT: SUB64ri8 renamable $rax, 3, implicit-def $eflags, debug-location !7
+  ; CHECK-NEXT: SUB64ri32 renamable $rax, 3, implicit-def $eflags, debug-location !7
 
   switch i32 %tmp, label %bb7 [
     i32 0, label %bb1

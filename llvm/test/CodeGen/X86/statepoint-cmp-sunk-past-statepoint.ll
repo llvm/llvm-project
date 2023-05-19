@@ -62,7 +62,7 @@ zero:
 ; CHECK:      bb.5
 ; CHECK:        %3:gr64 = COPY %10
 ; CHECK-LV:     %4:gr64 = COPY killed %10
-; CHECK-LV:     %4:gr64 = nuw ADD64ri8 %4, 8, implicit-def dead $eflags
+; CHECK-LV:     %4:gr64 = nuw ADD64ri32 %4, 8, implicit-def dead $eflags
 ; CHECK-LIS:    %4:gr64 = LEA64r %10, 1, $noreg, 8, $noreg
 ; CHECK:        TEST64rr killed %1, %1, implicit-def $eflags
 ; CHECK:        JCC_1 %bb.1, 5, implicit killed $eflags

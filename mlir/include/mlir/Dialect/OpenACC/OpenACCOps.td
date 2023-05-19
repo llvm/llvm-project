@@ -31,17 +31,17 @@ class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
   Op<OpenACC_Dialect, mnemonic, traits>;
 
 // Reduction operation enumeration.
-def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"redop_add", 0>;
-def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"redop_mul", 1>;
-def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"redop_max", 2>;
-def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"redop_min", 3>;
-def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"redop_and", 4>;
-def OpenACC_ReductionOperatorOr      : I32EnumAttrCase<"redop_or", 5>;
-def OpenACC_ReductionOperatorXor     : I32EnumAttrCase<"redop_xor", 6>;
-def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"redop_leqv", 7>;
-def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"redop_lneqv", 8>;
-def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"redop_land", 9>;
-def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"redop_lor", 10>;
+def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"AccAdd", 0, "add">;
+def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"AccMul", 1, "mul">;
+def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"AccMax", 2, "max">;
+def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"AccMin", 3, "min">;
+def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"AccIand", 4, "iand">;
+def OpenACC_ReductionOperatorOr      : I32EnumAttrCase<"AccIor", 5, "ior">;
+def OpenACC_ReductionOperatorXor     : I32EnumAttrCase<"AccXor", 6, "xor">;
+def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"AccEqv", 7, "eqv">;
+def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"AccNeqv", 8, "neqv">;
+def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"AccLand", 9, "land">;
+def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"AccLor", 10, "lor">;
 
 def OpenACC_ReductionOperator : I32EnumAttr<"ReductionOperator",
     "built-in reduction operations supported by OpenACC",
@@ -57,7 +57,9 @@ def OpenACC_ReductionOperator : I32EnumAttr<"ReductionOperator",
 }
 def OpenACC_ReductionOperatorAttr : EnumAttr<OpenACC_Dialect,
                                              OpenACC_ReductionOperator,
-                                             "reduction_operator">;
+                                             "reduction_operator"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
 
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
@@ -517,6 +519,85 @@ def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
     $sym_name `:` $type attr-dict-with-keyword `init` $initRegion
     `copy` $copyRegion
     (`destroy` $destroyRegion^)?
+  }];
+
+  let hasRegionVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.5.15 reduction clause
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
+    [IsolatedFromAbove, Symbol]> {
+  let summary = "reduction recipe";
+
+  let description = [{
+    Declares an OpenACC reduction recipe. The operation requires two
+    mandatory regions.
+
+      1. The initializer region specifies how to initialize the local reduction
+         value. The region has an argument that contains the value of the
+         reduction accumulator at the start of the reduction. It is expected to
+         `acc.yield` the new value.
+      2. The reduction region contains a sequences of operations to combine two
+         values of the reduction type into one. It has two arguments and it is
+         expected to `acc.yield` the combined value.
+
+    Example:
+
+    ```mlir
+    acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
+    ^bb0(%0: i64):
+      // init region contains a sequence of operations to initialize the local
+      // reduction value as specified in 2.5.15
+      %c0 = arith.constant 0 : i64
+      acc.yield %c0 : i64
+    } combiner {
+    ^bb0(%0: i64, %1: i64)
+      // combiner region contains a sequence of operations to combine
+      // two values into one.
+      %2 = arith.addi %0, %1 : i64
+      acc.yield %2 : i64
+    }
+
+    // The reduction symbol is then used in the corresponding operation.
+    acc.parallel reduction(@reduction_add_i64 -> %a : i64) {
+    }
+    ```
+
+    The following table lists the valid operators and the initialization values
+    according to OpenACC 3.3:
+
+    |------------------------------------------------|
+    |        C/C++          |        Fortran         |
+    |-----------------------|------------------------|
+    | operator | init value | operator | init value  |
+    |     +    |      0     |     +    |      0      |
+    |     *    |      1     |     *    |      1      |
+    |    max   |    least   |    max   |    least    |
+    |    min   |   largest  |    min   |   largest   |
+    |     &    |     ~0     |   iand   | all bits on |
+    |     |    |      0     |    ior   |      0      |
+    |     ^    |      0     |   ieor   |      0      |
+    |    &&    |      1     |   .and.  |    .true.   |
+    |    ||    |      0     |    .or.  |   .false.   |
+    |          |            |   .eqv.  |    .true.   |
+    |          |            |  .neqv.  |   .false.   |
+    -------------------------------------------------|
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$type,
+                       OpenACC_ReductionOperatorAttr:$reductionOperator);
+
+  let regions = (region AnyRegion:$initRegion,
+                        AnyRegion:$combinerRegion);
+
+  let assemblyFormat = [{
+    $sym_name `:` $type attr-dict-with-keyword
+    `reduction_operator` $reductionOperator
+    `init` $initRegion `combiner` $combinerRegion
   }];
 
   let hasRegionVerifier = 1;
@@ -986,7 +1067,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
 // Yield operation for the acc.loop and acc.parallel operations.
 def OpenACC_YieldOp : OpenACC_Op<"yield", [ReturnLike, Terminator,
-    ParentOneOf<["ParallelOp, LoopOp, SerialOp, PrivateRecipeOp, FirstprivateRecipeOp"]>]> {
+    ParentOneOf<["FirstprivateRecipeOp, LoopOp, ParallelOp, PrivateRecipeOp, ReductionRecipeOp, SerialOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
+// RUN:            -fsafe-buffer-usage-suggestions -verify %s
 
 // XFAIL: *
 

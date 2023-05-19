@@ -298,19 +298,32 @@ DimLevelType SparseTensorEncodingAttr::getLvlType(Level l) const {
   return getLvlTypes()[l];
 }
 
+bool SparseTensorEncodingAttr::isSlice() const {
+  assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
+  return !getDimSlices().empty();
+}
+
+SparseTensorDimSliceAttr
+SparseTensorEncodingAttr::getDimSlice(Dimension dim) const {
+  assert(isSlice() && "Is not a slice");
+  const auto dimSlices = getDimSlices();
+  assert(dim < dimSlices.size() && "Dimension is out of bounds");
+  return dimSlices[dim];
+}
+
 std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticDimSliceOffset(Dimension dim) const {
-  return getDimSlices()[dim].getStaticOffset();
+  return getDimSlice(dim).getStaticOffset();
 }
 
 std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticDimSliceSize(Dimension dim) const {
-  return getDimSlices()[dim].getStaticSize();
+  return getDimSlice(dim).getStaticSize();
 }
 
 std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticDimSliceStride(Dimension dim) const {
-  return getDimSlices()[dim].getStaticStride();
+  return getDimSlice(dim).getStaticStride();
 }
 
 std::optional<uint64_t>

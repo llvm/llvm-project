@@ -241,6 +241,30 @@ test_ld64_gotlo12_external:
         ldr   x0, [x0, :got_lo12:external_data]
         .size test_ld64_gotlo12_external, .-test_ld64_gotlo12_external
 
+# Check R_AARCH64_TSTBR14 for tbz
+#
+# jitlink-check: decode_operand(test_tstbr14_tbz, 2) = \
+# jitlink-check:     (test_tstbr14_tbz_target - test_tstbr14_tbz)[16:2]
+        .globl test_tstbr14_tbz, test_tstbr14_tbz_target
+        .p2align 2
+test_tstbr14_tbz:
+        tbz x0, 0, test_tstbr14_tbz_target
+        .skip (1 << 14)
+test_tstbr14_tbz_target:
+        .size test_tstbr14_tbz, .-test_tstbr14_tbz
+
+# Check R_AARCH64_TSTBR14 for tbnz
+#
+# jitlink-check: decode_operand(test_tstbr14_tbnz, 2) = \
+# jitlink-check:     (test_tstbr14_tbnz_target - test_tstbr14_tbnz)[16:2]
+        .globl test_tstbr14_tbnz, test_tstbr14_tbnz_target
+        .p2align 2
+test_tstbr14_tbnz:
+        tbnz x0, 0, test_tstbr14_tbnz_target
+        .skip (1 << 14)
+test_tstbr14_tbnz_target:
+        .size test_tstbr14_tbnz, .-test_tstbr14_tbnz
+
 # Check R_AARCH64_CONDBR19 for compare and branch instructions
 #
 # jitlink-check: decode_operand(test_condbr19_cbz, 1) = \

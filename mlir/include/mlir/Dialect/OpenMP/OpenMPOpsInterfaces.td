@@ -104,11 +104,12 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
             "bool":$assumeTeamsOversubscription,
             "bool":$assumeThreadsOversubscription,
             "bool":$assumeNoThreadState,
-            "bool":$assumeNoNestedParallelism), [{}], [{
+            "bool":$assumeNoNestedParallelism,
+            "uint32_t":$openmpDeviceVersion), [{}], [{
         $_op->setAttr(("omp." + mlir::omp::FlagsAttr::getMnemonic()).str(),
                   mlir::omp::FlagsAttr::get($_op->getContext(), debugKind,
                       assumeTeamsOversubscription, assumeThreadsOversubscription,
-                      assumeNoThreadState, assumeNoNestedParallelism));
+                      assumeNoThreadState, assumeNoNestedParallelism, openmpDeviceVersion));
       }]>,
     InterfaceMethod<
       /*description=*/[{

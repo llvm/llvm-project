@@ -33,13 +33,16 @@ public:
   Value *MaybeMask;
   // The EVL Value, if we're looking at a vp intrinsic.
   Value *MaybeEVL;
+  // The Stride Value, if we're looking at a strided load/store.
+  Value *MaybeStride;
 
   InterestingMemoryOperand(Instruction *I, unsigned OperandNo, bool IsWrite,
                            class Type *OpType, MaybeAlign Alignment,
                            Value *MaybeMask = nullptr,
-                           Value *MaybeEVL = nullptr)
+                           Value *MaybeEVL = nullptr,
+                           Value *MaybeStride = nullptr)
       : IsWrite(IsWrite), OpType(OpType), Alignment(Alignment),
-        MaybeMask(MaybeMask), MaybeEVL(MaybeEVL) {
+        MaybeMask(MaybeMask), MaybeEVL(MaybeEVL), MaybeStride(MaybeStride) {
     const DataLayout &DL = I->getModule()->getDataLayout();
     TypeStoreSize = DL.getTypeStoreSizeInBits(OpType);
     PtrUse = &I->getOperandUse(OperandNo);

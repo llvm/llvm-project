@@ -11825,6 +11825,8 @@ def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit : Note<
   "change type of '%0' to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information">;
+def note_safe_buffer_usage_suggestions_disabled : Note<
+  "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
 def err_loongarch_builtin_requires_la32 : Error<
   "this builtin requires target: loongarch32">;
 

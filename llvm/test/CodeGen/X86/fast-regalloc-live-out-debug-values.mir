@@ -139,7 +139,7 @@ body:             |
   ; CHECK:   $rbp = frame-setup MOV64rr $rsp
   ; CHECK:   CFI_INSTRUCTION def_cfa_register $rbp
   ; CHECK:   frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp, debug-location !13
-  ; CHECK:   $rsp = frame-setup SUB64ri8 $rsp, 40, implicit-def dead $eflags
+  ; CHECK:   $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
   ; CHECK:   CFI_INSTRUCTION offset $rbx, -24
   ; CHECK:   renamable $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg, debug-location !13 :: (dereferenceable load (s32) from %ir.a.addr)
   ; CHECK:   renamable $rax = KILL killed renamable $eax, debug-location !13

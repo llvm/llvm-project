@@ -268,37 +268,37 @@ void f() {
 // CHECK-128-NEXT: @global_f64 ={{.*}} global <2 x double> zeroinitializer, align 8
 
 // CHECK-256:      @global_i8 ={{.*}} global <32 x i8> zeroinitializer, align 8
-// CHECK-NEXT-256: @global_i16 ={{.*}} global <16 x i16> zeroinitializer, align 8
-// CHECK-NEXT-256: @global_i32 ={{.*}} global <8 x i32> zeroinitializer, align 8
-// CHECK-NEXT-256: @global_i64 ={{.*}} global <4 x i64> zeroinitializer, align 8
-// CHECK-NEXT-256: @global_u8 ={{.*}} global <32 x i8> zeroinitializer, align 8
-// CHECK-NEXT-256: @global_u16 ={{.*}} global <16 x i16> zeroinitializer, align 8
-// CHECK-NEXT-256: @global_u32 ={{.*}} global <8 x i32> zeroinitializer, align 8
-// CHECK-NEXT-256: @global_u64 ={{.*}} global <4 x i64> zeroinitializer, align 8
-// CHECK-NEXT-256: @global_f32 ={{.*}} global <8 x float> zeroinitializer, align 8
-// CHECK-NEXT-256: @global_f64 ={{.*}} global <4 x double> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i16 ={{.*}} global <16 x i16> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i32 ={{.*}} global <8 x i32> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_i64 ={{.*}} global <4 x i64> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u8 ={{.*}} global <32 x i8> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u16 ={{.*}} global <16 x i16> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u32 ={{.*}} global <8 x i32> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_u64 ={{.*}} global <4 x i64> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_f32 ={{.*}} global <8 x float> zeroinitializer, align 8
+// CHECK-256-NEXT: @global_f64 ={{.*}} global <4 x double> zeroinitializer, align 8
 
 // CHECK-512:      @global_i8 ={{.*}} global <64 x i8> zeroinitializer, align 8
-// CHECK-NEXT-512: @global_i16 ={{.*}} global <32 x i16> zeroinitializer, align 8
-// CHECK-NEXT-512: @global_i32 ={{.*}} global <16 x i32> zeroinitializer, align 8
-// CHECK-NEXT-512: @global_i64 ={{.*}} global <8 x i64> zeroinitializer, align 8
-// CHECK-NEXT-512: @global_u8 ={{.*}} global <64 x i8> zeroinitializer, align 8
-// CHECK-NEXT-512: @global_u16 ={{.*}} global <32 x i16> zeroinitializer, align 8
-// CHECK-NEXT-512: @global_u32 ={{.*}} global <16 x i32> zeroinitializer, align 8
-// CHECK-NEXT-512: @global_u64 ={{.*}} global <8 x i64> zeroinitializer, align 8
-// CHECK-NEXT-512: @global_f32 ={{.*}} global <16 x float> zeroinitializer, align 8
-// CHECK-NEXT-512: @global_f64 ={{.*}} global <8 x double> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i16 ={{.*}} global <32 x i16> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i32 ={{.*}} global <16 x i32> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_i64 ={{.*}} global <8 x i64> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u8 ={{.*}} global <64 x i8> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u16 ={{.*}} global <32 x i16> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u32 ={{.*}} global <16 x i32> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_u64 ={{.*}} global <8 x i64> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_f32 ={{.*}} global <16 x float> zeroinitializer, align 8
+// CHECK-512-NEXT: @global_f64 ={{.*}} global <8 x double> zeroinitializer, align 8
 
 // CHECK-1024:      @global_i8 ={{.*}} global <128 x i8> zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_i16 ={{.*}} global <64 x i16> zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_i32 ={{.*}} global <32 x i32> zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_i64 ={{.*}} global <16 x i64> zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_u8 ={{.*}} global <128 x i8> zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_u16 ={{.*}} global <64 x i16> zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_u32 ={{.*}} global <32 x i32> zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_u64 ={{.*}} global <16 x i64> zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_f32 ={{.*}} global <32 x float> zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_f64 ={{.*}} global <16 x double> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i16 ={{.*}} global <64 x i16> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i32 ={{.*}} global <32 x i32> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_i64 ={{.*}} global <16 x i64> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u8 ={{.*}} global <128 x i8> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u16 ={{.*}} global <64 x i16> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u32 ={{.*}} global <32 x i32> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_u64 ={{.*}} global <16 x i64> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_f32 ={{.*}} global <32 x float> zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_f64 ={{.*}} global <16 x double> zeroinitializer, align 8
 
 //===----------------------------------------------------------------------===//
 // Global arrays
@@ -326,37 +326,37 @@ void f() {
 // CHECK-128-NEXT: @global_arr_f64 ={{.*}} global [3 x <2 x double>] zeroinitializer, align 8
 
 // CHECK-256:      @global_arr_i8 ={{.*}} global [3 x <32 x i8>] zeroinitializer, align 8
-// CHECK-NEXT-256: @global_arr_i16 ={{.*}} global [3 x <16 x i16>] zeroinitializer, align 8
-// CHECK-NEXT-256: @global_arr_i32 ={{.*}} global [3 x <8 x i32>] zeroinitializer, align 8
-// CHECK-NEXT-256: @global_arr_i64 ={{.*}} global [3 x <4 x i64>] zeroinitializer, align 8
-// CHECK-NEXT-256: @global_arr_u8 ={{.*}} global [3 x <32 x i8>] zeroinitializer, align 8
-// CHECK-NEXT-256: @global_arr_u16 ={{.*}} global [3 x <16 x i16>] zeroinitializer, align 8
-// CHECK-NEXT-256: @global_arr_u32 ={{.*}} global [3 x <8 x i32>] zeroinitializer, align 8
-// CHECK-NEXT-256: @global_arr_u64 ={{.*}} global [3 x <4 x i64>] zeroinitializer, align 8
-// CHECK-NEXT-256: @global_arr_f32 ={{.*}} global [3 x <8 x float>] zeroinitializer, align 8
-// CHECK-NEXT-256: @global_arr_f64 ={{.*}} global [3 x <4 x double>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i16 ={{.*}} global [3 x <16 x i16>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i32 ={{.*}} global [3 x <8 x i32>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_i64 ={{.*}} global [3 x <4 x i64>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u8 ={{.*}} global [3 x <32 x i8>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u16 ={{.*}} global [3 x <16 x i16>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u32 ={{.*}} global [3 x <8 x i32>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_u64 ={{.*}} global [3 x <4 x i64>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_f32 ={{.*}} global [3 x <8 x float>] zeroinitializer, align 8
+// CHECK-256-NEXT: @global_arr_f64 ={{.*}} global [3 x <4 x double>] zeroinitializer, align 8
 
 // CHECK-512:      @global_arr_i8 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
-// CHECK-NEXT-512: @global_arr_i16 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
-// CHECK-NEXT-512: @global_arr_i32 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
-// CHECK-NEXT-512: @global_arr_i64 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
-// CHECK-NEXT-512: @global_arr_u8 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
-// CHECK-NEXT-512: @global_arr_u16 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
-// CHECK-NEXT-512: @global_arr_u32 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
-// CHECK-NEXT-512: @global_arr_u64 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
-// CHECK-NEXT-512: @global_arr_f32 ={{.*}} global [3 x <16 x float>] zeroinitializer, align 8
-// CHECK-NEXT-512: @global_arr_f64 ={{.*}} global [3 x <8 x double>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i16 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i32 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_i64 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u8 ={{.*}} global [3 x <64 x i8>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u16 ={{.*}} global [3 x <32 x i16>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u32 ={{.*}} global [3 x <16 x i32>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_u64 ={{.*}} global [3 x <8 x i64>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_f32 ={{.*}} global [3 x <16 x float>] zeroinitializer, align 8
+// CHECK-512-NEXT: @global_arr_f64 ={{.*}} global [3 x <8 x double>] zeroinitializer, align 8
 
 // CHECK-1024:      @global_arr_i8 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_arr_i16 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_arr_i32 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_arr_i64 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_arr_u8 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_arr_u16 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_arr_u32 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_arr_u64 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_arr_f32 ={{.*}} global [3 x <32 x float>] zeroinitializer, align 8
-// CHECK-NEXT-1024: @global_arr_f64 ={{.*}} global [3 x <16 x double>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i16 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i32 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_i64 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u8 ={{.*}} global [3 x <128 x i8>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u16 ={{.*}} global [3 x <64 x i16>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u32 ={{.*}} global [3 x <32 x i32>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_u64 ={{.*}} global [3 x <16 x i64>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_f32 ={{.*}} global [3 x <32 x float>] zeroinitializer, align 8
+// CHECK-1024-NEXT: @global_arr_f64 ={{.*}} global [3 x <16 x double>] zeroinitializer, align 8
 
 //===----------------------------------------------------------------------===//
 // Local variables
@@ -473,11 +473,3 @@ void f() {
 // CHECK-1024-NEXT:  %local_arr_u64 = alloca [3 x <16 x i64>], align 8
 // CHECK-1024-NEXT:  %local_arr_f32 = alloca [3 x <32 x float>], align 8
 // CHECK-1024-NEXT:  %local_arr_f64 = alloca [3 x <16 x double>], align 8
-
-//===----------------------------------------------------------------------===//
-// ILP32 ABI
-//===----------------------------------------------------------------------===//
-// CHECK-ILP32: @global_i32 ={{.*}} global <16 x i32> zeroinitializer, align 8
-// CHECK-ILP32: @global_i64 ={{.*}} global <8 x i64> zeroinitializer, align 8
-// CHECK-ILP32: @global_u32 ={{.*}} global <16 x i32> zeroinitializer, align 8
-// CHECK-ILP32: @global_u64 ={{.*}} global <8 x i64> zeroinitializer, align 8

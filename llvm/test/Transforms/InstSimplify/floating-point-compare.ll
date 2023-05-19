@@ -393,6 +393,34 @@ define i1 @fabs_fcmp-nnan_is_positive_or_zero(double %x) {
   ret i1 %cmp
 }
 
+define i1 @fabs_fcmp_oge0-assume-nnan_is_positive_or_zero(double %x) {
+; CHECK-LABEL: @fabs_fcmp_oge0-assume-nnan_is_positive_or_zero(
+; CHECK-NEXT:    [[FABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord double [[FABS]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = tail call double @llvm.fabs.f64(double %x)
+  %ord = fcmp ord double %fabs, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp oge double %fabs, 0.0
+  ret i1 %cmp
+}
+
+define i1 @fabs_fcmp_olt0_-assume-nnan_is_positive_or_zero(double %x) {
+; CHECK-LABEL: @fabs_fcmp_olt0_-assume-nnan_is_positive_or_zero(
+; CHECK-NEXT:    [[FABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord double [[FABS]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs = tail call double @llvm.fabs.f64(double %x)
+  %ord = fcmp ord double %fabs, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp olt double %fabs, 0.0
+  ret i1 %cmp
+}
+
 define <2 x i1> @fabs_fcmp-nnan_is_positive_or_zero_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fabs_fcmp-nnan_is_positive_or_zero_vec(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
@@ -577,6 +605,88 @@ define i1 @maxnum_non_nan(float %x) {
 ;
   %min = call float @llvm.maxnum.f32(float %x, float 42.0)
   %cmp = fcmp uno float %min, 12.0
+  ret i1 %cmp
+}
+
+define i1 @assume_nonnan_ord(float %x) {
+; CHECK-LABEL: @assume_nonnan_ord(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 true
+;
+  %ord = fcmp ord float %x, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp ord float %x, 1.0
+  ret i1 %cmp
+}
+
+define i1 @assume_nonnan_x2_ord(float %x, float %y) {
+; CHECK-LABEL: @assume_nonnan_x2_ord(
+; CHECK-NEXT:    [[ORD_X:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD_X]])
+; CHECK-NEXT:    [[ORD_Y:%.*]] = fcmp ord float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD_Y]])
+; CHECK-NEXT:    ret i1 true
+;
+  %ord.x = fcmp ord float %x, 0.0
+  call void @llvm.assume(i1 %ord.x)
+  %ord.y = fcmp ord float %y, 0.0
+  call void @llvm.assume(i1 %ord.y)
+  %cmp = fcmp ord float %x, %y
+  ret i1 %cmp
+}
+
+define i1 @assume_nonan_x2_uno(float %x, float %y) {
+; CHECK-LABEL: @assume_nonan_x2_uno(
+; CHECK-NEXT:    [[ORD_X:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD_X]])
+; CHECK-NEXT:    [[ORD_Y:%.*]] = fcmp ord float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD_Y]])
+; CHECK-NEXT:    ret i1 false
+;
+  %ord.x = fcmp ord float %x, 0.0
+  call void @llvm.assume(i1 %ord.x)
+  %ord.y = fcmp ord float %y, 0.0
+  call void @llvm.assume(i1 %ord.y)
+  %cmp = fcmp uno float %x, %y
+  ret i1 %cmp
+}
+
+define i1 @assume_nan_ord(float %x) {
+; CHECK-LABEL: @assume_nan_ord(
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %uno = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno)
+  %cmp = fcmp ord float %x, 1.0
+  ret i1 %cmp
+}
+
+define i1 @assume_nonnan_uno(float %x) {
+; CHECK-LABEL: @assume_nonnan_uno(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 false
+;
+  %ord = fcmp ord float %x, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp uno float %x, 1.0
+  ret i1 %cmp
+}
+
+define i1 @assume_nan_uno(float %x) {
+; CHECK-LABEL: @assume_nan_uno(
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %uno = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno)
+  %cmp = fcmp uno float %x, 1.0
   ret i1 %cmp
 }
 
@@ -1147,3 +1257,4 @@ declare float @llvm.maxnum.f32(float, float)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.sqrt.f32(float)
 declare half @llvm.fabs.f16(half)
+declare void @llvm.assume(i1 noundef)

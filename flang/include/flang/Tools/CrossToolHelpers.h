@@ -61,7 +61,8 @@ void setOffloadModuleInterfaceAttributes(
     if (Opts.OpenMPIsDevice) {
       offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
-          Opts.OpenMPNoNestedParallelism);
+          Opts.OpenMPNoNestedParallelism,
+          50 /* Default OpenMP Device version */);
 
       if (!Opts.OMPHostIRFile.empty())
         offloadMod.setHostIRFilePath(Opts.OMPHostIRFile);
