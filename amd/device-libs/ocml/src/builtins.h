@@ -90,23 +90,38 @@
 #define BUILTIN_FLOOR_F16 __builtin_floorf16
 #define BUILTIN_FLOOR_2F16 __builtin_elementwise_floor
 
-#define BUILTIN_FRACTION_F32(X) ({ \
-    float _fract_x = X; \
-    float _fract_r = __builtin_amdgcn_fractf(_fract_x); \
-    _fract_r = BUILTIN_ISINF_F32(_fract_x) ? 0.0f : _fract_r; \
-    _fract_r; \
+// These will codegen to v_fract_{f16|f32|f64} as appropriate.
+#define BUILTIN_FRACTION_F32(X) ({                              \
+    const float _x = X;                                         \
+    const float _floor_x = BUILTIN_FLOOR_F32(_x);               \
+    float _f = BUILTIN_MIN_F32(_x - _floor_x, 0x1.fffffep-1f);  \
+    if (!FINITE_ONLY_OPT()) {                                   \
+        _f = BUILTIN_ISNAN_F32(_x) ? _x : _f;                   \
+        _f = BUILTIN_ISINF_F32(x) ? 0.0f : _f;                  \
+    }                                                           \
+    _f;                                                         \
 })
-#define BUILTIN_FRACTION_F64(X) ({ \
-    double _fract_x = X; \
-    double _fract_r = __builtin_amdgcn_fract(_fract_x); \
-    _fract_r = BUILTIN_ISINF_F64(_fract_x) ? 0.0 : _fract_r; \
-    _fract_r; \
+
+#define BUILTIN_FRACTION_F64(X) ({                                      \
+    const double _x = X;                                                \
+    const double _floor_x = BUILTIN_FLOOR_F64(x);                       \
+    double _f = BUILTIN_MIN_F64(_x - _floor_x, 0x1.fffffffffffffp-1);   \
+    if (!FINITE_ONLY_OPT()) {                                           \
+        _f = BUILTIN_ISNAN_F64(x) ? _x : _f;                            \
+        _f = BUILTIN_ISINF_F64(x) ? 0.0 : _f;                           \
+    }                                                                   \
+    _f;                                                                 \
 })
-#define BUILTIN_FRACTION_F16(X) ({ \
-    half _fract_x = X; \
-    half _fract_r = __builtin_amdgcn_fracth(_fract_x); \
-    _fract_r = BUILTIN_ISINF_F16(_fract_x) ? 0.0h : _fract_r; \
-    _fract_r; \
+
+#define BUILTIN_FRACTION_F16(X) ({                                      \
+    const half _x = X;                                                  \
+    const half _floor_x = BUILTIN_FLOOR_F16(_x);                        \
+    half _f = BUILTIN_MIN_F16(_x - _floor_x, 0x1.ffcp-1h);              \
+    if (!FINITE_ONLY_OPT()) {                                           \
+        _f = BUILTIN_ISNAN_F16(_x) ? _x : _f;                           \
+        _f = BUILTIN_ISINF_F16(_x) ? 0.0h : _f;                         \
+    }                                                                   \
+    _f;                                                                 \
 })
 
 #define BUILTIN_MAD_U32(A,B,C) ((A)*(B)+(C))
