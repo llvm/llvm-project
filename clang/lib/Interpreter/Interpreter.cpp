@@ -540,6 +540,7 @@ public:
           E->getBeginLoc(), Args, E->getEndLoc());
     }
     }
+    llvm_unreachable("Unhandled Interpreter::InterfaceKind");
   }
 
   Interpreter::InterfaceKind VisitRecordType(const RecordType *Ty) {
