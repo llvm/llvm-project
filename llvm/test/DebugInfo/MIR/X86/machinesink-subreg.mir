@@ -69,7 +69,7 @@ body:             |
     ; CHECK-NEXT:  JMP_1
 
     %2:gr64 = COPY $rdi
-    %5:gr64 = ADD64ri8 %2, 1, implicit-def dead $eflags
+    %5:gr64 = ADD64ri32 %2, 1, implicit-def dead $eflags
     CMP32ri $esi, 0, implicit-def $eflags
     DBG_VALUE %5.sub_32bit, $noreg, !16, !13, debug-location !17
     CMP32ri $esi, 0, implicit-def $eflags
@@ -80,7 +80,7 @@ body:             |
   bb.1.block1:
     successors: %bb.2.exit
 
-    %1:gr64 = ADD64ri8 %5, 4, implicit-def dead $eflags
+    %1:gr64 = ADD64ri32 %5, 4, implicit-def dead $eflags
     JMP_1 %bb.2.exit
 
   bb.2.exit:

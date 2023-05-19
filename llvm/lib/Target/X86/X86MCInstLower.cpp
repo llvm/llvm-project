@@ -405,8 +405,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       X86::optimizeVPCMPWithImmediateOneOrSix(OutMI) ||
       X86::optimizeMOVSX(OutMI) || X86::optimizeINCDEC(OutMI, In64BitMode) ||
       X86::optimizeMOV(OutMI, In64BitMode) ||
-      X86::optimizeToFixedRegisterForm(OutMI) ||
-      X86::optimizeToShortImmediateForm(OutMI))
+      X86::optimizeToFixedRegisterOrShortImmediateForm(OutMI))
     return;
 
   // Handle a few special cases to eliminate operand modifiers.
