@@ -402,9 +402,11 @@ private:
 public:
   // FIXME(cir): move this to CIRGenBuider.h
   mlir::Value buildAlloca(llvm::StringRef name, clang::QualType ty,
-                          mlir::Location loc, clang::CharUnits alignment);
+                          mlir::Location loc, clang::CharUnits alignment,
+                          bool insertIntoFnEntryBlock = false);
   mlir::Value buildAlloca(llvm::StringRef name, mlir::Type ty,
-                          mlir::Location loc, clang::CharUnits alignment);
+                          mlir::Location loc, clang::CharUnits alignment,
+                          bool insertIntoFnEntryBlock = false);
   mlir::Value buildAlloca(llvm::StringRef name, mlir::Type ty,
                           mlir::Location loc, clang::CharUnits alignment,
                           mlir::OpBuilder::InsertPoint ip);
@@ -679,6 +681,10 @@ public:
   void setAddrOfLocalVar(const clang::VarDecl *VD, Address Addr) {
     assert(!LocalDeclMap.count(VD) && "Decl already exists in LocalDeclMap!");
     LocalDeclMap.insert({VD, Addr});
+    // Add to the symbol table if not there already.
+    if (symbolTable.count(VD))
+      return;
+    symbolTable.insert(VD, Addr.getPointer());
   }
 
   /// True if an insertion point is defined. If not, this indicates that the
@@ -1628,7 +1634,12 @@ public:
   /// more efficient if the caller knows that the address will not be exposed.
   mlir::cir::AllocaOp CreateTempAlloca(mlir::Type Ty, mlir::Location Loc,
                                        const Twine &Name = "tmp",
-                                       mlir::Value ArraySize = nullptr);
+                                       mlir::Value ArraySize = nullptr,
+                                       bool insertIntoFnEntryBlock = false);
+  mlir::cir::AllocaOp
+  CreateTempAllocaInFnEntryBlock(mlir::Type Ty, mlir::Location Loc,
+                                 const Twine &Name = "tmp",
+                                 mlir::Value ArraySize = nullptr);
   Address CreateTempAlloca(mlir::Type Ty, CharUnits align, mlir::Location Loc,
                            const Twine &Name = "tmp",
                            mlir::Value ArraySize = nullptr,

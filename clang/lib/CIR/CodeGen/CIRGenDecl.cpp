@@ -35,6 +35,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
          "not implemented");
   assert(!D.hasAttr<AnnotateAttr>() && "not implemented");
 
+  auto loc = getLoc(D.getSourceRange());
   bool NRVO =
       getContext().getLangOpts().ElideConstructors && D.isNRVOVariable();
   AutoVarEmission emission(D);
@@ -100,8 +101,18 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
             RD->isNonTrivialToPrimitiveDestroy()) {
           // In LLVM: Create a flag that is used to indicate when the NRVO was
           // applied to this variable. Set it to zero to indicate that NRVO was
-          // not applied.
-          llvm_unreachable("NYI");
+          // not applied. For now, use the same approach for CIRGen until we can
+          // be sure it's worth doing something more aggressive.
+          auto falseNVRO = builder.getFalse(loc);
+          Address NRVOFlag = CreateTempAlloca(
+              falseNVRO.getType(), CharUnits::One(), loc, "nrvo",
+              /*ArraySize=*/nullptr, &allocaAddr);
+          assert(builder.getInsertionBlock());
+          builder.createStore(loc, falseNVRO, NRVOFlag);
+
+          // Record the NRVO flag for this variable.
+          NRVOFlags[&D] = NRVOFlag.getPointer();
+          emission.NRVOFlag = NRVOFlag.getPointer();
         }
       }
     } else {
@@ -112,8 +123,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
       CharUnits allocaAlignment = alignment;
       // Create the temp alloca and declare variable using it.
       mlir::Value addrVal;
-      address = CreateTempAlloca(allocaTy, allocaAlignment,
-                                 getLoc(D.getSourceRange()), D.getName(),
+      address = CreateTempAlloca(allocaTy, allocaAlignment, loc, D.getName(),
                                  /*ArraySize=*/nullptr, &allocaAddr);
       if (failed(declare(address, &D, Ty, getLoc(D.getSourceRange()), alignment,
                          addrVal))) {

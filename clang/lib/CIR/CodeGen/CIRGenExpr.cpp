@@ -1869,11 +1869,13 @@ mlir::Value CIRGenFunction::buildOpOnBoolExpr(const Expr *cond,
 }
 
 mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
-                                        mlir::Location loc,
-                                        CharUnits alignment) {
-  return buildAlloca(
-      name, ty, loc, alignment,
-      builder.getBestAllocaInsertPoint(currLexScope->getEntryBlock()));
+                                        mlir::Location loc, CharUnits alignment,
+                                        bool insertIntoFnEntryBlock) {
+  mlir::Block *entryBlock = insertIntoFnEntryBlock
+                                ? &CurFn.getRegion().front()
+                                : currLexScope->getEntryBlock();
+  return buildAlloca(name, ty, loc, alignment,
+                     builder.getBestAllocaInsertPoint(entryBlock));
 }
 
 mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
@@ -1898,9 +1900,10 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
 }
 
 mlir::Value CIRGenFunction::buildAlloca(StringRef name, QualType ty,
-                                        mlir::Location loc,
-                                        CharUnits alignment) {
-  return buildAlloca(name, getCIRType(ty), loc, alignment);
+                                        mlir::Location loc, CharUnits alignment,
+                                        bool insertIntoFnEntryBlock) {
+  return buildAlloca(name, getCIRType(ty), loc, alignment,
+                     insertIntoFnEntryBlock);
 }
 
 mlir::Value CIRGenFunction::buildLoadOfScalar(LValue lvalue,
@@ -2068,14 +2071,24 @@ Address CIRGenFunction::CreateTempAlloca(mlir::Type Ty, CharUnits Align,
 /// This creates an alloca and inserts it into the entry block if \p ArraySize
 /// is nullptr, otherwise inserts it at the current insertion point of the
 /// builder.
-mlir::cir::AllocaOp CIRGenFunction::CreateTempAlloca(mlir::Type Ty,
-                                                     mlir::Location Loc,
-                                                     const Twine &Name,
-                                                     mlir::Value ArraySize) {
+mlir::cir::AllocaOp
+CIRGenFunction::CreateTempAlloca(mlir::Type Ty, mlir::Location Loc,
+                                 const Twine &Name, mlir::Value ArraySize,
+                                 bool insertIntoFnEntryBlock) {
   if (ArraySize)
     assert(0 && "NYI");
   return cast<mlir::cir::AllocaOp>(
-      buildAlloca(Name.str(), Ty, Loc, CharUnits()).getDefiningOp());
+      buildAlloca(Name.str(), Ty, Loc, CharUnits(), insertIntoFnEntryBlock)
+          .getDefiningOp());
+}
+
+/// Just like CreateTempAlloca above, but place the alloca into the function
+/// entry basic block instead.
+mlir::cir::AllocaOp CIRGenFunction::CreateTempAllocaInFnEntryBlock(
+    mlir::Type Ty, mlir::Location Loc, const Twine &Name,
+    mlir::Value ArraySize) {
+  return CreateTempAlloca(Ty, Loc, Name, ArraySize,
+                          /*insertIntoFnEntryBlock=*/true);
 }
 
 /// Given an object of the given canonical type, can we safely copy a
