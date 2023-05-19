@@ -157,10 +157,37 @@ public:
     return convert<10>(val, buffer);
   }
 
-  template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
+  template <typename T, cpp::enable_if_t<cpp::is_integral_v<T> &&
+                                             (sizeof(T) <= sizeof(uintmax_t)),
+                                         int> = 0>
   LIBC_INLINE static cpp::optional<cpp::string_view>
   hex(T val, cpp::span<char> buffer, bool lowercase = true) {
     return convert<16>(val, buffer, lowercase);
+  }
+
+  template <typename T,
+            cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
+                                 (sizeof(T) > sizeof(uintmax_t)) &&
+                                 sizeof(T) % sizeof(uintmax_t) == 0,
+                             int> = 0>
+  LIBC_INLINE static cpp::optional<cpp::string_view>
+  hex(T val, cpp::span<char> buffer, bool lowercase = true) {
+    // We will assume the buffer is exactly sized, which will be the case if
+    // it was sized using the bufsize method.
+    constexpr size_t BLOCKS = sizeof(T) / sizeof(uintmax_t);
+    constexpr size_t UINTMAX_BUFSIZE = bufsize<16, uintmax_t>();
+    // We will zero out the buffer. This specialization is not used to
+    // implement a public function so zeroing out byte-by-byte does not
+    // have any affect on runtime or user expectations.
+    for (size_t i = 0; i < buffer.size(); ++i)
+      buffer[i] = '0';
+    for (size_t i = 0; i < BLOCKS; ++i, val >>= (sizeof(uintmax_t) * 8)) {
+      uintmax_t block_val = static_cast<uintmax_t>(val);
+      hex(block_val,
+          buffer.subspan((BLOCKS - i - 1) * UINTMAX_BUFSIZE, UINTMAX_BUFSIZE),
+          lowercase);
+    }
+    return cpp::string_view(buffer.data(), buffer.size());
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>

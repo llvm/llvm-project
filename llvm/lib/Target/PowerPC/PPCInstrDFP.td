@@ -24,5 +24,17 @@ defm DSUB : XForm_28r<59, 514, (outs f8rc:$RST), (ins f8rc:$RA, f8rc:$RB),
 
 defm DSUBQ : XForm_28r<63, 514, (outs fpairrc:$RST), (ins fpairrc:$RA, fpairrc:$RB),
                        "dsubq",  "$RST, $RA, $RB", IIC_FPGeneral, []>;
+
+defm DMUL : XForm_28r<59, 34, (outs f8rc:$RST), (ins f8rc:$RA, f8rc:$RB),
+                      "dmul",  "$RST, $RA, $RB", IIC_FPGeneral, []>;
+
+defm DMULQ : XForm_28r<63, 34, (outs fpairrc:$RST), (ins fpairrc:$RA, fpairrc:$RB),
+                       "dmulq",  "$RST, $RA, $RB", IIC_FPGeneral, []>;
+
+defm DDIV : XForm_28r<59, 546, (outs f8rc:$RST), (ins f8rc:$RA, f8rc:$RB),
+                      "ddiv",  "$RST, $RA, $RB", IIC_FPGeneral, []>;
+
+defm DDIVQ : XForm_28r<63, 546, (outs fpairrc:$RST), (ins fpairrc:$RA, fpairrc:$RB),
+                       "ddivq",  "$RST, $RA, $RB", IIC_FPGeneral, []>;
 }
 

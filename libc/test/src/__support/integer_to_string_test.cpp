@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/UInt.h"
+#include "src/__support/UInt128.h"
 #include "src/__support/integer_to_string.h"
 
 #include "test/UnitTest/Test.h"
@@ -246,4 +248,43 @@ TEST(LlvmLibcIntegerToStringTest, UINT64_Base_36) {
             string_view("UVWXYZ"));
   EXPECT_EQ(*IntegerToString::convert<36>(uint64_t(0xffffffffffffffff), buf),
             string_view("3w5e11264sgsf"));
+}
+
+TEST(LlvmLibcIntegerToStringTest, UINT128_Base_16) {
+  char buf[IntegerToString::hex_bufsize<UInt128>()];
+  EXPECT_EQ(*IntegerToString::hex(static_cast<UInt128>(0), buf),
+            string_view("00000000000000000000000000000000"));
+  EXPECT_EQ(*IntegerToString::hex(static_cast<UInt128>(0x12345), buf),
+            string_view("00000000000000000000000000012345"));
+  EXPECT_EQ((*IntegerToString::hex(static_cast<UInt128>(0x1234) << 112, buf)),
+            string_view("12340000000000000000000000000000"));
+  EXPECT_EQ((*IntegerToString::hex(static_cast<UInt128>(0x1234) << 48, buf)),
+            string_view("00000000000000001234000000000000"));
+  EXPECT_EQ((*IntegerToString::hex(static_cast<UInt128>(0x1234) << 52, buf)),
+            string_view("00000000000000012340000000000000"));
+}
+
+TEST(LlvmLibcIntegerToStringTest, UINT256_Base_16) {
+  using UInt256 = __llvm_libc::cpp::UInt<256>;
+  char buf[IntegerToString::hex_bufsize<UInt256>()];
+  EXPECT_EQ(
+      *IntegerToString::hex(static_cast<UInt256>(0), buf),
+      string_view(
+          "0000000000000000000000000000000000000000000000000000000000000000"));
+  EXPECT_EQ(
+      *IntegerToString::hex(static_cast<UInt256>(0x12345), buf),
+      string_view(
+          "0000000000000000000000000000000000000000000000000000000000012345"));
+  EXPECT_EQ(
+      (*IntegerToString::hex(static_cast<UInt256>(0x1234) << 112, buf)),
+      string_view(
+          "0000000000000000000000000000000012340000000000000000000000000000"));
+  EXPECT_EQ(
+      (*IntegerToString::hex(static_cast<UInt256>(0x1234) << 116, buf)),
+      string_view(
+          "0000000000000000000000000000000123400000000000000000000000000000"));
+  EXPECT_EQ(
+      (*IntegerToString::hex(static_cast<UInt256>(0x1234) << 240, buf)),
+      string_view(
+          "1234000000000000000000000000000000000000000000000000000000000000"));
 }

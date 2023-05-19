@@ -42,12 +42,9 @@ _Float16 x, y, z;
 // ZHINX-SAME: () #[[ATTR0:[0-9]+]] {
 // ZHINX-NEXT:  entry:
 // ZHINX-NEXT:    [[TMP0:%.*]] = load half, ptr @y, align 2
-// ZHINX-NEXT:    [[EXT:%.*]] = fpext half [[TMP0]] to float
 // ZHINX-NEXT:    [[TMP1:%.*]] = load half, ptr @z, align 2
-// ZHINX-NEXT:    [[EXT1:%.*]] = fpext half [[TMP1]] to float
-// ZHINX-NEXT:    [[ADD:%.*]] = fadd float [[EXT]], [[EXT1]]
-// ZHINX-NEXT:    [[UNPROMOTION:%.*]] = fptrunc float [[ADD]] to half
-// ZHINX-NEXT:    store half [[UNPROMOTION]], ptr @x, align 2
+// ZHINX-NEXT:    [[ADD:%.*]] = fadd half [[TMP0]], [[TMP1]]
+// ZHINX-NEXT:    store half [[ADD]], ptr @x, align 2
 // ZHINX-NEXT:    ret void
 //
 void f16_add() {
