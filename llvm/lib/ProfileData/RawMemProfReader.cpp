@@ -487,7 +487,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
       DIInliningInfo DI = DIOr.get();
 
       // Drop frames which we can't symbolize or if they belong to the runtime.
-      if (DI.getFrame(0).FunctionName == DILineInfo::BadString ||
+      if (DI.getFrame(0).ShortFunctionName == DILineInfo::BadString ||
           isRuntimePath(DI.getFrame(0).FileName)) {
         AllVAddrsToDiscard.insert(VAddr);
         continue;
@@ -497,7 +497,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
            I++) {
         const auto &DIFrame = DI.getFrame(I);
         const uint64_t Guid =
-            IndexedMemProfRecord::getGUID(DIFrame.FunctionName);
+            IndexedMemProfRecord::getGUID(DIFrame.ShortFunctionName);
         const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
@@ -506,7 +506,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
         // This is because there can be many unique frames, particularly for
         // callsite frames.
         if (KeepSymbolName)
-          GuidToSymbolName.insert({Guid, DIFrame.FunctionName});
+          GuidToSymbolName.insert({Guid, DIFrame.ShortFunctionName});
 
         const FrameId Hash = F.hash();
         IdToFrame.insert({Hash, F});
