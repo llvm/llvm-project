@@ -508,7 +508,6 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::Address;
     Res |= SanitizerKind::PointerCompare;
     Res |= SanitizerKind::PointerSubtract;
-    Res |= SanitizerKind::Function;
     Res |= SanitizerKind::Leak;
     Res |= SanitizerKind::SafeStack;
     Res |= SanitizerKind::Scudo;

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s
 
 // CHECK: @[[PROXY:.*]] = private unnamed_addr constant ptr @_ZTIFvvE
 // CHECK: define{{.*}} void @_Z3funv() #0 !func_sanitize ![[FUNCSAN:.*]] {
