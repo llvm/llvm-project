@@ -30,6 +30,10 @@ type t_array_char
   integer :: scalar_i
   character(5) :: array_char_comp(10,20)
 end type
+
+type t_complex
+   complex :: array_comp(2:11,3:22)
+end type
 end module
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -329,4 +333,37 @@ subroutine test_array_ref_chain(a)
 ! CHECK:  %[[VAL_18:.*]] = arith.constant 4 : index
 ! CHECK:  %[[VAL_19:.*]] = arith.constant 5 : index
 ! CHECK:  %[[VAL_20:.*]] = hlfir.designate %[[VAL_14]]{"array_comp"} <%[[VAL_17]]> (%[[VAL_18]], %[[VAL_19]])  shape %[[VAL_13]] : (!fir.box<!fir.array<10x!fir.type<_QMcomp_refTt_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<2>, index, index, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
+end subroutine
+
+subroutine test_scalar_array_complex_chain(a)
+  use comp_ref
+  type(t_complex) :: a
+  print *, a%array_comp%im
+! CHECK-LABEL:   func.func @_QPtest_scalar_array_complex_chain(
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_scalar_array_complex_chainEa"} : (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>) -> (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>, !fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>)
+! CHECK:           %[[VAL_7:.*]] = arith.constant 10 : index
+! CHECK:           %[[VAL_8:.*]] = arith.constant 20 : index
+! CHECK:           %[[VAL_9:.*]] = arith.constant 2 : index
+! CHECK:           %[[VAL_10:.*]] = arith.constant 3 : index
+! CHECK:           %[[VAL_11:.*]] = fir.shape_shift %[[VAL_9]], %[[VAL_7]], %[[VAL_10]], %[[VAL_8]] : (index, index, index, index) -> !fir.shapeshift<2>
+! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_13:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_9]], %[[VAL_7]] : index
+! CHECK:           %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_13]] : index
+! CHECK:           %[[VAL_16:.*]] = arith.addi %[[VAL_10]], %[[VAL_8]] : index
+! CHECK:           %[[VAL_17:.*]] = arith.subi %[[VAL_16]], %[[VAL_13]] : index
+! CHECK:           %[[VAL_18:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_19:.*]] = arith.subi %[[VAL_15]], %[[VAL_9]] : index
+! CHECK:           %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_12]] : index
+! CHECK:           %[[VAL_21:.*]] = arith.divsi %[[VAL_20]], %[[VAL_12]] : index
+! CHECK:           %[[VAL_22:.*]] = arith.cmpi sgt, %[[VAL_21]], %[[VAL_18]] : index
+! CHECK:           %[[VAL_23:.*]] = arith.select %[[VAL_22]], %[[VAL_21]], %[[VAL_18]] : index
+! CHECK:           %[[VAL_24:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_25:.*]] = arith.subi %[[VAL_17]], %[[VAL_10]] : index
+! CHECK:           %[[VAL_26:.*]] = arith.addi %[[VAL_25]], %[[VAL_12]] : index
+! CHECK:           %[[VAL_27:.*]] = arith.divsi %[[VAL_26]], %[[VAL_12]] : index
+! CHECK:           %[[VAL_28:.*]] = arith.cmpi sgt, %[[VAL_27]], %[[VAL_24]] : index
+! CHECK:           %[[VAL_29:.*]] = arith.select %[[VAL_28]], %[[VAL_27]], %[[VAL_24]] : index
+! CHECK:           %[[VAL_30:.*]] = fir.shape %[[VAL_23]], %[[VAL_29]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[VAL_31:.*]] = hlfir.designate %[[VAL_1]]#0{"array_comp"} <%[[VAL_11]]> (%[[VAL_9]]:%[[VAL_15]]:%[[VAL_12]], %[[VAL_10]]:%[[VAL_17]]:%[[VAL_12]]) imag shape %[[VAL_30]] : (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>, !fir.shapeshift<2>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<10x20xf32>>
 end subroutine
