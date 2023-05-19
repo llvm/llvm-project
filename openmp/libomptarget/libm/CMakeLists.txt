@@ -45,6 +45,13 @@ endforeach()
 # prepare variables used by build_static_device_bc_lib
 set(triple "amdgcn-amd-amdhsa")
 set(systemarch "amdgcn")
+set(abi_nums "400" "500")
+foreach(abi_num ${abi_nums})
+  if("${abi_num}" STREQUAL "400")
+    set(clang_abi_opt "-mcode-object-version=4")
+  else()
+    set(clang_abi_opt "-mcode-object-version=5")
+  endif()
 foreach(mcpu ${amdgpu_mcpus})
   set(cpu_target x86_64-pc-linux-gnu)
   if(${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "ppc64le")
@@ -63,8 +70,9 @@ foreach(mcpu ${amdgpu_mcpus})
     --cuda-device-only
     -nocudalib
     -O${optimization_level}
+    ${clang_abi_opt}
   )
-  set(libm-bc ${CMAKE_BINARY_DIR}/libm-amdgcn-${mcpu}.bc)
+  set(libm-bc ${CMAKE_BINARY_DIR}/libm-${abi_num}-${mcpu}.bc)
   set(openmp_c_cmd ${CLANG_TOOL} ${omp_common_args}
       ${CMAKE_CURRENT_SOURCE_DIR}/src/libm.c)
   add_custom_command(
@@ -72,12 +80,13 @@ foreach(mcpu ${amdgpu_mcpus})
     COMMAND ${openmp_c_cmd} -o ${libm-bc}
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/libm.c"
     COMMENT "Built libm file ${libm-bc}")
-  add_custom_target(libm-target-${mcpu} ALL DEPENDS ${libm-bc})
+  add_custom_target(libm-target-${abi_num}-${mcpu} ALL DEPENDS ${libm-bc})
   if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang")
     add_custom_command(OUTPUT ${libm-bc}
       DEPENDS clang
       APPEND)
   endif()
+endforeach()
 endforeach()
 
 

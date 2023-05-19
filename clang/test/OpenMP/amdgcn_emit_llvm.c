@@ -1,7 +1,7 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -fopenmp -fno-openmp-new-driver -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 -emit-llvm -S %s -o - | FileCheck %s -check-prefix=LL
-// RUN: %clang -fopenmp -fno-openmp-new-driver -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 -S %s -o - | FileCheck %s -check-prefix=S
+// RUN: %clang -fopenmp --no-offload-new-driver -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 -emit-llvm -S %s -o - | FileCheck %s -check-prefix=LL
+// RUN: %clang -fopenmp --no-offload-new-driver -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 -S %s -o - | FileCheck %s -check-prefix=S
 
 #ifndef HEADER
 #define HEADER

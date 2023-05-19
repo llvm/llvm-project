@@ -2222,7 +2222,7 @@ bool tools::GetSDLFromOffloadArchive(
     const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args, SmallVector<std::string, 8> LibraryPaths,
     StringRef Lib, StringRef Arch, StringRef Target, bool isBitCodeSDL,
-    bool postClangLink) {
+    bool postClangLink, bool unpackage) {
 
   // We don't support bitcode archive bundles for nvptx
   if (isBitCodeSDL && Arch.contains("nvptx"))
@@ -2269,6 +2269,31 @@ bool tools::GetSDLFromOffloadArchive(
   auto EC = llvm::identify_magic(ArchiveOfBundles, Magic);
   if (EC || Magic != llvm::file_magic::archive)
     return false;
+
+  if (unpackage) {
+    std::string OutputLib =
+        D.GetTemporaryPath(Twine("lib" + llvm::sys::path::filename(Lib) + "-" +
+                                 Arch + "-" + Target)
+                               .str(),
+                           "a");
+
+    ArgStringList UPArgs;
+    const char *UPProgram = DriverArgs.MakeArgString(
+        T.getToolChain().GetProgramPath("clang-offload-packager"));
+    UPArgs.push_back(C.getArgs().MakeArgString(ArchiveOfBundles.c_str()));
+    UPArgs.push_back(C.getArgs().MakeArgString("--archive"));
+    std::string OutputArg("--image=file=" + OutputLib +
+                          ",triple=amdgcn-amd-amdhsa,arch=" + Target.str() +
+                          ",kind=openmp");
+    UPArgs.push_back(C.getArgs().MakeArgString(OutputArg));
+
+    C.addCommand(std::make_unique<Command>(
+        JA, T, ResponseFileSupport::AtFileCurCP(), UPProgram, UPArgs, Inputs,
+        InputInfo(&JA, C.getArgs().MakeArgString(OutputLib))));
+
+    CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
+    return true;
+  }
 
   StringRef Prefix = isBitCodeSDL ? "libbc-" : "lib";
   std::string OutputLib =
@@ -2327,6 +2352,17 @@ bool tools::GetSDLFromOffloadArchive(
   return true;
 }
 
+// Wrapper function used by opaque-offload-linker  for adding SDLs
+// during link phase.
+void tools::AddStaticDeviceLibsLinking(
+    Compilation &C, const Tool &T, const JobAction &JA,
+    const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args, StringRef Arch, StringRef TargetID,
+    bool isBitCodeSDL, bool postClangLink, bool unpackage) {
+  AddStaticDeviceLibs(&C, &T, &JA, &Inputs, C.getDriver(), DriverArgs, CC1Args,
+                      Arch, TargetID, isBitCodeSDL, postClangLink, unpackage);
+}
+
 // Wrapper function used by driver for adding SDLs during link phase.
 void tools::AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
                                        const JobAction &JA,
@@ -2380,7 +2416,8 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
                                 const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
                                 StringRef Arch, StringRef Target,
-                                bool isBitCodeSDL, bool postClangLink) {
+                                bool isBitCodeSDL, bool postClangLink,
+                                bool unpackage) {
 
   SmallVector<std::string, 8> LibraryPaths;
   // Add search directories from LIBRARY_PATH env variable
@@ -2439,7 +2476,7 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
                    isBitCodeSDL, postClangLink)) {
       GetSDLFromOffloadArchive(*C, D, *T, *JA, *Inputs, DriverArgs, CC1Args,
                                LibraryPaths, SDLName, Arch, Target,
-                               isBitCodeSDL, postClangLink);
+                               isBitCodeSDL, postClangLink, unpackage);
     }
   }
 }

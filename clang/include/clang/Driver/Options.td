@@ -2930,6 +2930,10 @@ def offload_new_driver : Flag<["--"], "offload-new-driver">, Flags<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"OffloadingNewDriver">>, HelpText<"Use the new driver for offloading compilation.">;
 def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
   HelpText<"Don't Use the new driver for offloading compilation.">;
+def opaque_offload_linker : Flag<["--"], "opaque-offload-linker">, Flags<[CC1Option]>, Group<f_Group>,
+  HelpText<"Build/link omp offload binary, construct opaque cmd list instead of single clang-linker-wrapper cmd.">;
+def no_opaque_offload_linker : Flag<["--"], "no-opaque-offload-linker">, Flags<[CC1Option]>, Group<f_Group>,
+  HelpText<"Build/link omp offload binary, using single clang-linker-wrapper cmd.">;
 def offload_device_only : Flag<["--"], "offload-device-only">, Flags<[FlangOption]>,
   HelpText<"Only compile for the offloading device.">;
 def offload_host_only : Flag<["--"], "offload-host-only">, Flags<[FlangOption]>,

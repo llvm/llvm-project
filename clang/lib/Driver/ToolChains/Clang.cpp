@@ -8,6 +8,7 @@
 
 #include "Clang.h"
 #include "AMDGPU.h"
+#include "AMDGPUOpenMP.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "Arch/CSKY.h"
@@ -4644,9 +4645,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
   bool IsHostOffloadingAction =
-      (JA.isHostOffloading(C.getActiveOffloadKinds()) &&
-       Args.hasFlag(options::OPT_offload_new_driver,
-                    options::OPT_no_offload_new_driver, false));
+      JA.isHostOffloading(C.getActiveOffloadKinds()) &&
+      Args.hasFlag(options::OPT_offload_new_driver,
+                   options::OPT_no_offload_new_driver,
+                   JA.isHostOffloading(Action::OFK_OpenMP));
 
   bool IsRDCMode =
       Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
@@ -4956,10 +4958,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-llvm-uselists");
 
     if (IsUsingLTO) {
-      if (IsDeviceOffloadAction &&
-          !Args.hasFlag(options::OPT_offload_new_driver,
-                        options::OPT_no_offload_new_driver, false) &&
-          !Triple.isAMDGPU()) {
+      if (IsDeviceOffloadAction && !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Args.getLastArg(options::OPT_foffload_lto,
                                options::OPT_foffload_lto_EQ)
@@ -6430,7 +6429,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Forward the new driver to change offloading code generation.
   if (Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver, false))
+                   options::OPT_no_offload_new_driver,
+                   JA.isHostOffloading(Action::OFK_OpenMP)))
     CmdArgs.push_back("--offload-new-driver");
 
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
@@ -6840,8 +6840,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
-                             // TODO add c++23 and c++26 when MSVC supports it.
-                             .Case("c++latest", "-std=c++26")
+                             .Case("c++latest", "-std=c++2b")
                              .Default("");
       if (LanguageStandard.empty())
         D.Diag(clang::diag::warn_drv_unused_argument)
@@ -8757,11 +8756,296 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs, Inputs, Output));
 }
 
+static const char *getOutputFileName(Compilation &C, StringRef Base,
+                                     const char *Postfix,
+                                     const char *Extension) {
+  const char *OutputFileName;
+  if (C.getDriver().isSaveTempsEnabled()) {
+    OutputFileName =
+        C.getArgs().MakeArgString(Base.str() + Postfix + "." + Extension);
+  } else {
+    std::string TmpName =
+        C.getDriver().GetTemporaryPath(Base.str() + Postfix, Extension);
+    OutputFileName = C.addTempFile(C.getArgs().MakeArgString(TmpName));
+  }
+  return OutputFileName;
+}
+
+static void addSubArchs(Compilation &C, const ArgList &Args,
+                        const llvm::Triple &Triple,
+                        SmallVectorImpl<StringRef> &subarchs) {
+  // process OPT_offload_arch_EQ subarch specification
+  for (auto itr : C.getDriver().getOffloadArchs(
+           C, C.getArgs(), Action::OFK_OpenMP, nullptr, true))
+    subarchs.push_back(itr);
+
+  // process OPT_Xopenmp_target_EQ subarch specification with march
+  for (auto itr : Args.getAllArgValues(options::OPT_Xopenmp_target_EQ)) {
+    SmallVector<StringRef> marchs;
+    StringRef vstr = StringRef(itr);
+    if (vstr.startswith("-march=") || vstr.startswith("--march=")) {
+      vstr.split('=').second.split(marchs, ',');
+      for (auto march : marchs)
+        subarchs.push_back(getProcessorFromTargetID(Triple, march));
+    }
+  }
+}
+
+/// This is an alternative to LinkerWrapper::ConstructJob.
+/// This is called when driver option --opaque-offload-wrapper is specified.
+
+/// opaque-offload-wrapper requires heterogeneous objects have bitcode
+/// because offload LTO is implemented by merging all offloaded bitcodes
+/// and then linking in system bitcode libraries followed by opt and then
+/// the GPU backend is called only once for each TargetID.
+
+/// foreach(TargetID) {
+///   foreach(input) {
+///     1 "unpackage" each .o input to create targetID specific bitcode
+///   }
+///   2 build-select-link to create a merged bc with corrected attributes.
+///   3 llvm-link with -internalize -as-needed with system bitcode libraries.
+///   4 opt
+///   5 llc
+///   6 lld
+/// }
+/// 7 clang-offload-wrapper to output x.img
+/// 8 clang (host) -cc1 -embed x.img -x host.bc -o x.o
+/// 9 ld.lld  x.o ... -o linkerwrapper ouput
+///
+void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
+                                       const InputInfo &Output,
+                                       const InputInfoList &Inputs,
+                                       const ArgList &Args,
+                                       const llvm::Triple &TheTriple,
+                                       const char *LinkingOutput) const {
+
+  const ToolChain &TC = getToolChain();
+  const Driver &D = getToolChain().getDriver();
+  RocmInstallationDetector RocmInstallation(D, TheTriple, Args, true, true);
+  std::string OutputFilePrefix, OutputFile;
+
+  SmallVector<StringRef> subarchs;
+  llvm::SmallVector<std::pair<StringRef, const char *>, 4> TargetIDLLDMap;
+
+  addSubArchs(C, Args, TheTriple, subarchs);
+
+  for (StringRef TargetID : subarchs) {
+    // ---------- Step 1 unpackage each input -----------
+    const char *UnpackageExec = Args.MakeArgString(
+        getToolChain().GetProgramPath("clang-offload-packager"));
+
+    SmallVector<std::string> UnpackagedFiles;
+
+    for (const auto &II : Inputs) {
+      if (II.isFilename()) {
+        OutputFile = llvm::sys::path::stem(II.getFilename()).str();
+        OutputFilePrefix = llvm::sys::path::filename(
+                               Args.getLastArgValue(options::OPT_o, "a.out"))
+                               .str() +
+                           "-openmp-" + TheTriple.str();
+
+        // generate command to unpackage each II.getFilename()
+        auto UnpackagedFileName =
+            getOutputFileName(C, OutputFilePrefix, "-unpackaged", "bc");
+        // push unpacked file names to argument list for clang-build-select
+        UnpackagedFiles.push_back(UnpackagedFileName);
+        ArgStringList UnpackageCmdArgs;
+        UnpackageCmdArgs.push_back(II.getFilename());
+
+        ArgStringList Features;
+        SmallVector<StringRef> FeatureArgs;
+        getTargetFeatures(TC.getDriver(), TC.getTriple(), Args, Features,
+                          false);
+        llvm::copy_if(Features, std::back_inserter(FeatureArgs),
+                      [](StringRef Arg) { return !Arg.startswith("-target"); });
+
+        if (TheTriple.isAMDGPU()) {
+          for (StringRef Feature :
+               llvm::split(TargetID.split(':').second, ':')) {
+            FeatureArgs.emplace_back(
+                Args.MakeArgString(Feature.take_back() + Feature.drop_back()));
+          }
+        }
+
+        SmallVector<std::string> Parts{
+            "file=" + std::string(UnpackagedFileName),
+            "triple=" + TheTriple.str(),
+            "arch=" + getProcessorFromTargetID(TheTriple, TargetID).str(),
+            "kind=openmp",
+        };
+
+        for (StringRef Feature : FeatureArgs)
+          Parts.emplace_back("feature=" + Feature.str());
+
+        UnpackageCmdArgs.push_back(
+            Args.MakeArgString("--image=" + llvm::join(Parts, ",")));
+
+        C.addCommand(std::make_unique<Command>(
+            JA, *this, ResponseFileSupport::AtFileCurCP(), UnpackageExec,
+            UnpackageCmdArgs, Inputs,
+            InputInfo(&JA, Args.MakeArgString(UnpackagedFileName))));
+      }
+    }
+
+    // ---------- Step 2 clang-build-select-link -----------
+    // Look for Static Device Libs (SDLs) in args, and add temp files for
+    // the extracted Device-specific Archive Libs (DAL) to inputs
+    ArgStringList CbslArgs;
+    AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CbslArgs, "amdgcn",
+                               TargetID,
+                               /* bitcode SDL?*/ true,
+                               /* PostClang Link? */ false,
+                               /* Unpackage? */ true);
+
+    auto PreLinkFileName = amdgpu::dlr::getCbslCommandArgs(
+        C, Args, CbslArgs, UnpackagedFiles, OutputFilePrefix);
+
+    const char *CbslExec = Args.MakeArgString(
+        getToolChain().GetProgramPath("clang-build-select-link"));
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::AtFileCurCP(), CbslExec, CbslArgs,
+        Inputs, InputInfo(&JA, Args.MakeArgString(PreLinkFileName))));
+
+    // ---------- Step 3 llvm-link internalize as-needed -----------
+    ArgStringList LastLinkArgs;
+    auto LinkOutputFileName = amdgpu::dlr::getLinkCommandArgs(
+        C, Args, LastLinkArgs, TC, TheTriple, TargetID, OutputFilePrefix,
+        PreLinkFileName, RocmInstallation);
+
+    const char *LinkExec =
+        Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::AtFileCurCP(), LinkExec, LastLinkArgs,
+        Inputs, InputInfo(&JA, Args.MakeArgString(LinkOutputFileName))));
+
+    // ---------- Step 4 opt  -----------
+    ArgStringList OptArgs;
+    auto OptOutputFileName = amdgpu::dlr::getOptCommandArgs(
+        C, Args, OptArgs, TC.getTriple(), TargetID, OutputFilePrefix,
+        LinkOutputFileName);
+
+    const char *OptExec =
+        Args.MakeArgString(getToolChain().GetProgramPath("opt"));
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::AtFileCurCP(), OptExec, OptArgs, Inputs,
+        InputInfo(&JA, Args.MakeArgString(OptOutputFileName))));
+
+    // ---------- Step 5 llc  -----------
+    ArgStringList LlcArgs;
+    auto LlcOutputFileName = amdgpu::dlr::getLlcCommandArgs(
+        C, Args, LlcArgs, TC.getTriple(), TargetID, OutputFilePrefix,
+        OptOutputFileName);
+
+    const char *LlcExec =
+        Args.MakeArgString(getToolChain().GetProgramPath("llc"));
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::AtFileCurCP(), LlcExec, LlcArgs, Inputs,
+        InputInfo(&JA, Args.MakeArgString(LlcOutputFileName))));
+
+    // ---------- Step 6 lld  -----------
+    ArgStringList LldArgs;
+    auto LldOutputFileName = amdgpu::dlr::getLldCommandArgs(
+        C, Output, Args, LldArgs, TC.getTriple(), TargetID, LlcOutputFileName,
+        OutputFilePrefix);
+
+    // create vector of pairs of TargetID,lldname for step 7 inputs.
+    TargetIDLLDMap.push_back(
+        std::pair<StringRef, const char *>(TargetID, LldOutputFileName));
+
+    const char *LldExec =
+        Args.MakeArgString(getToolChain().GetProgramPath("lld"));
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::AtFileCurCP(), LldExec, LldArgs, Inputs,
+        InputInfo(&JA, Args.MakeArgString(LldOutputFileName))));
+
+  } //  End loop for each subarch
+
+  // -------- Step 7 clang-offload-wrapper to build device image
+  auto CowOutputFileName = getOutputFileName(C, OutputFile, "-wrapped", "bc");
+  ArgStringList CowArgs;
+  const char *CowExec = Args.MakeArgString(
+      getToolChain().GetProgramPath("clang-offload-wrapper"));
+
+  const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+
+  // Add the "effective" target triple.
+  CowArgs.push_back("-target");
+  CowArgs.push_back(Args.MakeArgString(Triple.getTriple()));
+
+  // Add the output file name.
+  assert(CowOutputFileName != nullptr && "Invalid output.");
+  CowArgs.push_back("-o");
+  CowArgs.push_back(CowOutputFileName);
+
+  // a vector of pairs of TargetID,lldName
+  for (auto &TM : TargetIDLLDMap) {
+    CowArgs.push_back(Args.MakeArgString(Twine("--offload-arch=") + TM.first));
+    CowArgs.push_back(TM.second);
+  }
+
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), CowExec, CowArgs, Inputs,
+      InputInfo(&JA, Args.MakeArgString(CowOutputFileName))));
+
+  // ---------- Step 8 clang -cc1 host backend -----------
+  ArgStringList HbeArgs;
+  const char *HbeOutputFileName =
+      getOutputFileName(C, OutputFilePrefix, "-hbe", "o");
+  const char *HbeExec =
+      Args.MakeArgString(getToolChain().GetProgramPath("clang"));
+
+  HbeArgs.push_back("-cc1");
+  HbeArgs.push_back("-triple");
+  HbeArgs.push_back(Args.MakeArgString(getToolChain().getTripleString()));
+  HbeArgs.push_back("-emit-obj");
+  HbeArgs.push_back("-o");
+  HbeArgs.push_back(Args.MakeArgString(HbeOutputFileName));
+  HbeArgs.push_back("-x");
+  HbeArgs.push_back("ir");
+  HbeArgs.push_back(Args.MakeArgString(CowOutputFileName));
+
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), HbeExec, HbeArgs, Inputs,
+      InputInfo(&JA, Args.MakeArgString(HbeOutputFileName))));
+
+  // ---------- Step 9 final host link  -----------
+  InputInfoList LinkInputs;
+  for (const auto &II : Inputs)
+    LinkInputs.push_back(II);
+
+  LinkInputs.push_back(
+      InputInfo(types::TY_Object, HbeOutputFileName, HbeOutputFileName));
+
+  Linker->ConstructJob(C, JA, Output, LinkInputs, Args, LinkingOutput);
+}
+
 void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfo &Output,
                                  const InputInfoList &Inputs,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
+  bool isAMDGPU = false;
+  auto offloadTC = C.getOffloadToolChains(Action::OFK_OpenMP);
+  const auto openMPTCs = llvm::make_range(offloadTC.first, offloadTC.second);
+  const ToolChain *TC;
+  for (auto &I : openMPTCs) {
+    TC = I.second;
+    if (TC->getTriple().isAMDGPU()) {
+      isAMDGPU = true;
+      break;
+    }
+  }
+
+  if (!openMPTCs.empty() &&
+      Args.hasFlag(options::OPT_opaque_offload_linker,
+                   options::OPT_no_opaque_offload_linker, isAMDGPU)) {
+    ConstructOpaqueJob(C, JA, Output, Inputs, Args, TC->getTriple(),
+                       LinkingOutput);
+    return;
+  }
+  // This following is the upstream LinkerWrapper ConstructJob
+
   const Driver &D = getToolChain().getDriver();
   const llvm::Triple TheTriple = getToolChain().getTriple();
   ArgStringList CmdArgs;
@@ -8782,77 +9066,22 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         RocmInstallationDetector RocmInstallation(D, TheTriple, Args, true,
                                                   true);
         const llvm::Triple triple = TC->getTriple();
+        const auto GPUArch = TC->getTargetID().str();
         const auto ArchKind = llvm::AMDGPU::parseArchAMDGCN(TC->getTargetID());
-        const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(ArchKind);
-        const StringRef LibDeviceFile =
-            RocmInstallation.getLibDeviceFile(CanonArch);
-        auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
-            getAMDGPUCodeObjectVersion(D, Args));
-        if (!RocmInstallation.checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
-                                                     ABIVer))
-          return;
-
-        bool DAZ = Args.hasFlag(
-            options::OPT_fgpu_flush_denormals_to_zero,
-            options::OPT_fno_gpu_flush_denormals_to_zero,
-            toolchains::AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(
-                ArchKind));
-        bool FiniteOnly =
-            Args.hasFlag(options::OPT_ffinite_math_only,
-                         options::OPT_fno_finite_math_only, false);
-        bool UnsafeMathOpt =
-            Args.hasFlag(options::OPT_funsafe_math_optimizations,
-                         options::OPT_fno_unsafe_math_optimizations, false);
-        bool FastRelaxedMath = Args.hasFlag(options::OPT_ffast_math,
-                                            options::OPT_fno_fast_math, false);
-        bool CorrectSqrt = Args.hasFlag(
-            options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
-            options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
-
-        bool Wave64 = toolchains::AMDGPUToolChain::isWave64(Args, ArchKind);
 
         bool AsanGpuRT = Args.hasFlag(options::OPT_fgpu_sanitize,
                                       options::OPT_fno_gpu_sanitize, true);
 
         llvm::SmallVector<std::string, 12> BCLibs =
-            RocmInstallation.getCommonBitcodeLibs(
-                Args, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-                FastRelaxedMath, CorrectSqrt, ABIVer, true);
+            amdgpu::dlr::getCommonDeviceLibNames(
+                Args, D, GPUArch, /* isOpenMP */ true, RocmInstallation);
 
-        if (AsanGpuRT && TC->getSanitizerArgs(Args).needsAsanRt()) {
-          std::string AsanRTL(RocmInstallation.getAsanRTLPath());
-          if (AsanRTL.empty()) {
-            TC->getDriver().Diag(diag::err_drv_no_asan_rt_lib);
-          } else {
-            BCLibs.push_back(AsanRTL);
-          }
-        }
-
-        std::vector<std::vector<std::string>> offloadArchList{
-            Args.getAllArgValues(options::OPT_offload_arch_EQ),
-            Args.getAllArgValues(options::OPT_Xopenmp_target_EQ)};
+        SmallVector<StringRef> subarchs;
+        addSubArchs(C, Args, triple, subarchs);
 
         std::set<std::string> bitcodeTarget;
-        if (!offloadArchList.empty()) {
-          for (auto itr : offloadArchList[0]) {
-            for (StringRef ArchVal : llvm::split(itr, ",")) {
-              StringRef TargetID(ArchVal);
-              bitcodeTarget.insert(
-                  "openmp-" + triple.str() + "-" +
-                  getProcessorFromTargetID(triple, TargetID).str());
-            }
-          }
-          auto itr = offloadArchList[1].begin();
-          while ((itr = std::find(itr, offloadArchList[1].end(),
-                                  triple.str())) != offloadArchList[1].end()) {
-            StringRef archOpt(*(itr + 1));
-            for (StringRef TargetID :
-                 llvm::split(archOpt.split("=").second, ","))
-              bitcodeTarget.insert(
-                  "openmp-" + triple.str() + "-" +
-                  getProcessorFromTargetID(triple, TargetID).str());
-            itr += 2;
-          }
+        for (const auto &sa : subarchs) {
+          bitcodeTarget.insert("openmp-" + triple.str() + "-" + sa.str());
         }
 
         for (StringRef prefix : bitcodeTarget)
