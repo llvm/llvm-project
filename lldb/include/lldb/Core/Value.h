@@ -145,6 +145,8 @@ public:
 
   void Clear();
 
+  static ValueType GetValueTypeFromAddressType(AddressType address_type);
+
 protected:
   Scalar m_value;
   CompilerType m_compiler_type;
