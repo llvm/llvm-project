@@ -465,7 +465,7 @@ define <64 x i8> @splatconstant_shift_v64i8(<64 x i8> %a) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsrlw $3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX512BW-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
+; AVX512BW-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %shift = ashr <64 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
