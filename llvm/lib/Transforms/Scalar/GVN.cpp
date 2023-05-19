@@ -473,6 +473,14 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
     return nextValueNumber++;
   }
 
+  // Do not combine convergent calls since they implicitly depend on the set of
+  // threads that is currently executing, and they might be in different basic
+  // blocks.
+  if (C->isConvergent()) {
+    valueNumbering[C] = nextValueNumber;
+    return nextValueNumber++;
+  }
+
   if (AA->doesNotAccessMemory(C)) {
     Expression exp = createExpr(C);
     uint32_t e = assignExpNewValueNum(exp).first;
@@ -2780,9 +2788,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
   if (auto *CallB = dyn_cast<CallBase>(CurInst)) {
     // We don't currently value number ANY inline asm calls.
     if (CallB->isInlineAsm())
-      return false;
-    // Don't do PRE on convergent calls.
-    if (CallB->isConvergent())
       return false;
   }
 
