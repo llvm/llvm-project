@@ -8,7 +8,7 @@ body:             |
 
     %0:gr32 = COPY killed $edi
     %1:gr32 = COPY killed %0
-    %4:gr32 = XOR32ri8 %1, 1, implicit-def dead $eflags
+    %4:gr32 = XOR32ri %1, 1, implicit-def dead $eflags
     DBG_VALUE %4
     %5:gr32 = COPY %4
     PUSH32r killed %1, implicit-def $esp, implicit $esp
@@ -22,6 +22,6 @@ body:             |
 
 # CHECK: PUSH32r %1, implicit-def $esp, implicit $esp
 # CHECK-NEXT: %2:gr32 = COPY killed %1
-# CHECK-NEXT: %2:gr32 = XOR32ri8 %2, 1, implicit-def dead $eflags
+# CHECK-NEXT: %2:gr32 = XOR32ri %2, 1, implicit-def dead $eflags
 # CHECK-NEXT: DBG_VALUE %2
 # CHECK-NEXT: %3:gr32 = COPY killed %2
