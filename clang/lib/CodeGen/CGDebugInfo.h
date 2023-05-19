@@ -829,7 +829,13 @@ public:
   ApplyDebugLocation(ApplyDebugLocation &&Other) : CGF(Other.CGF) {
     Other.CGF = nullptr;
   }
-  ApplyDebugLocation &operator=(ApplyDebugLocation &&) = default;
+
+  // Define copy assignment operator.
+  ApplyDebugLocation &operator=(ApplyDebugLocation &&Other) {
+    CGF = Other.CGF;
+    Other.CGF = nullptr;
+    return *this;
+  }
 
   ~ApplyDebugLocation();
 

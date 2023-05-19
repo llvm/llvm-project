@@ -51,6 +51,12 @@ public:
   BugReporterVisitor() = default;
   BugReporterVisitor(const BugReporterVisitor &) = default;
   BugReporterVisitor(BugReporterVisitor &&) {}
+
+  // The copy and move assignment operator is defined as deleted pending further
+  // motivation.
+  BugReporterVisitor &operator=(const BugReporterVisitor &) = delete;
+  BugReporterVisitor &operator=(BugReporterVisitor &&) = delete;
+
   virtual ~BugReporterVisitor();
 
   /// Return a diagnostic piece which should be associated with the
