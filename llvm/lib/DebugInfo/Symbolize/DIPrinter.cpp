@@ -285,9 +285,9 @@ static json::Object toJSON(const Request &Request, StringRef ErrorMsg = "") {
   return Json;
 }
 
-static json::Object toJSON(const DILineInfo &LineInfo) {
+static json::Object toJSON(const DILineInfo &LineInfo, const bool inlined = false) {
     json::Object Object = json::Object(
-        {{"inlined", I > 0},
+        {{"inlined", inlined},
          {"symbolTableFunctionName", LineInfo.SymbolTableFunctionName},
          {"shortFunctionName", LineInfo.ShortFunctionName},
          {"linkageFunctionName", LineInfo.LinkageFunctionName},
@@ -329,7 +329,7 @@ void JSONPrinter::print(const Request &Request, const DIInliningInfo &Info) {
   json::Array Array;
   for (uint32_t I = 0, N = Info.getNumberOfFrames(); I < N; ++I) {
     const DILineInfo &LineInfo = Info.getFrame(I);
-    json::Object Object = toJSON(LineInfo);
+    json::Object Object = toJSON(LineInfo, I > 0);
     SourceCode SourceCode(LineInfo.FileName, LineInfo.Line,
                           Config.SourceContextLines, LineInfo.Source);
     std::string FormattedSource;
