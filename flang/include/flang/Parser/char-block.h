@@ -64,6 +64,18 @@ public:
     return ' '; // non no-blank character
   }
 
+  std::size_t CountLeadingBlanks() const {
+    std::size_t n{size()};
+    std::size_t j{0};
+    for (; j < n; ++j) {
+      char ch{(*this)[j]};
+      if (ch != ' ' && ch != '\t') {
+        break;
+      }
+    }
+    return j;
+  }
+
   bool IsBlank() const { return FirstNonBlank() == ' '; }
 
   std::string ToString() const {
