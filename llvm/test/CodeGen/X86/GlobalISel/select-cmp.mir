@@ -104,8 +104,8 @@ body:             |
     ; CHECK: CMP8rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s8) = COPY $dil
     %1(s8) = COPY $sil
@@ -140,8 +140,8 @@ body:             |
     ; CHECK: CMP16rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s16) = COPY $di
     %1(s16) = COPY $si
@@ -176,8 +176,8 @@ body:             |
     ; CHECK: CMP64rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s64) = COPY $rdi
     %1(s64) = COPY $rsi
@@ -212,8 +212,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
@@ -248,8 +248,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 5, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
@@ -284,8 +284,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 7, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
@@ -320,8 +320,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 3, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
@@ -356,8 +356,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
@@ -392,8 +392,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
@@ -428,8 +428,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 15, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
@@ -464,8 +464,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 13, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
@@ -500,8 +500,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 12, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi
@@ -536,8 +536,8 @@ body:             |
     ; CHECK: CMP32rr [[COPY]], [[COPY1]], implicit-def $eflags
     ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 14, implicit $eflags
     ; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
-    ; CHECK: [[AND32ri8_:%[0-9]+]]:gr32 = AND32ri8 [[MOVZX32rr8_]], 1, implicit-def $eflags
-    ; CHECK: $eax = COPY [[AND32ri8_]]
+    ; CHECK: [[AND32ri_:%[0-9]+]]:gr32 = AND32ri [[MOVZX32rr8_]], 1, implicit-def $eflags
+    ; CHECK: $eax = COPY [[AND32ri_]]
     ; CHECK: RET 0, implicit $eax
     %0(s32) = COPY $edi
     %1(s32) = COPY $esi

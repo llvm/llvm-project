@@ -28,7 +28,7 @@ declare void @empty()
 ; DARWIN-NOT: pushl
 
 ; PEI-LABEL: name: test1_nofp
-; PEI:         $esp = frame-setup SUB32ri8 $esp, 12, implicit-def dead $eflags
+; PEI:         $esp = frame-setup SUB32ri $esp, 12, implicit-def dead $eflags
 ; PEI-NEXT:    frame-setup CFI_INSTRUCTION def_cfa_offset 16
 ; PEI-NOT:     frame-setup CFI_INSTRUCTION
 ; PEI:         ...

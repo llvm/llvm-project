@@ -42,99 +42,52 @@ define <2 x i64> @foo_reg_128(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2, <2 x i64
 declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>) #1
 
 define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
-; ADL-LABEL: foo_128:
-; ADL:       # %bb.0:
-; ADL-NEXT:    testl %edi, %edi
-; ADL-NEXT:    jle .LBB1_6
-; ADL-NEXT:  # %bb.1:
-; ADL-NEXT:    movl %edi, %edx
-; ADL-NEXT:    movl %edx, %eax
-; ADL-NEXT:    andl $3, %eax
-; ADL-NEXT:    cmpl $4, %edi
-; ADL-NEXT:    jae .LBB1_7
-; ADL-NEXT:  # %bb.2:
-; ADL-NEXT:    xorl %ecx, %ecx
-; ADL-NEXT:    jmp .LBB1_3
-; ADL-NEXT:  .LBB1_7:
-; ADL-NEXT:    andl $-4, %edx
-; ADL-NEXT:    leaq 48(%rsi), %rdi
-; ADL-NEXT:    xorl %ecx, %ecx
-; ADL-NEXT:    .p2align 4, 0x90
-; ADL-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
-; ADL-NEXT:    {vex} vpdpwssd -48(%rdi), %xmm1, %xmm0
-; ADL-NEXT:    vpmaddwd -32(%rdi), %xmm1, %xmm2
-; ADL-NEXT:    vpmaddwd -16(%rdi), %xmm1, %xmm3
-; ADL-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; ADL-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
-; ADL-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm2
-; ADL-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; ADL-NEXT:    addq $4, %rcx
-; ADL-NEXT:    addq $64, %rdi
-; ADL-NEXT:    cmpq %rcx, %rdx
-; ADL-NEXT:    jne .LBB1_8
-; ADL-NEXT:  .LBB1_3:
-; ADL-NEXT:    testq %rax, %rax
-; ADL-NEXT:    je .LBB1_6
-; ADL-NEXT:  # %bb.4: # %.preheader
-; ADL-NEXT:    shlq $4, %rcx
-; ADL-NEXT:    addq %rcx, %rsi
-; ADL-NEXT:    shlq $4, %rax
-; ADL-NEXT:    xorl %ecx, %ecx
-; ADL-NEXT:    .p2align 4, 0x90
-; ADL-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
-; ADL-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %xmm1, %xmm0
-; ADL-NEXT:    addq $16, %rcx
-; ADL-NEXT:    cmpq %rcx, %rax
-; ADL-NEXT:    jne .LBB1_5
-; ADL-NEXT:  .LBB1_6:
-; ADL-NEXT:    retq
-;
-; SPR-LABEL: foo_128:
-; SPR:       # %bb.0:
-; SPR-NEXT:    testl %edi, %edi
-; SPR-NEXT:    jle .LBB1_6
-; SPR-NEXT:  # %bb.1:
-; SPR-NEXT:    movl %edi, %edx
-; SPR-NEXT:    movl %edx, %eax
-; SPR-NEXT:    andl $3, %eax
-; SPR-NEXT:    cmpl $4, %edi
-; SPR-NEXT:    jae .LBB1_7
-; SPR-NEXT:  # %bb.2:
-; SPR-NEXT:    xorl %ecx, %ecx
-; SPR-NEXT:    jmp .LBB1_3
-; SPR-NEXT:  .LBB1_7:
-; SPR-NEXT:    andl $-4, %edx
-; SPR-NEXT:    leaq 48(%rsi), %rdi
-; SPR-NEXT:    xorl %ecx, %ecx
-; SPR-NEXT:    .p2align 4, 0x90
-; SPR-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    {vex} vpdpwssd -48(%rdi), %xmm1, %xmm0
-; SPR-NEXT:    vpmaddwd -32(%rdi), %xmm1, %xmm2
-; SPR-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; SPR-NEXT:    vpmaddwd -16(%rdi), %xmm1, %xmm2
-; SPR-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; SPR-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm2
-; SPR-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; SPR-NEXT:    addq $4, %rcx
-; SPR-NEXT:    addq $64, %rdi
-; SPR-NEXT:    cmpq %rcx, %rdx
-; SPR-NEXT:    jne .LBB1_8
-; SPR-NEXT:  .LBB1_3:
-; SPR-NEXT:    testq %rax, %rax
-; SPR-NEXT:    je .LBB1_6
-; SPR-NEXT:  # %bb.4: # %.preheader
-; SPR-NEXT:    shlq $4, %rcx
-; SPR-NEXT:    addq %rcx, %rsi
-; SPR-NEXT:    shlq $4, %rax
-; SPR-NEXT:    xorl %ecx, %ecx
-; SPR-NEXT:    .p2align 4, 0x90
-; SPR-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %xmm1, %xmm0
-; SPR-NEXT:    addq $16, %rcx
-; SPR-NEXT:    cmpq %rcx, %rax
-; SPR-NEXT:    jne .LBB1_5
-; SPR-NEXT:  .LBB1_6:
-; SPR-NEXT:    retq
+; AVX-LABEL: foo_128:
+; AVX:       # %bb.0:
+; AVX-NEXT:    testl %edi, %edi
+; AVX-NEXT:    jle .LBB1_6
+; AVX-NEXT:  # %bb.1:
+; AVX-NEXT:    movl %edi, %edx
+; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    andl $3, %eax
+; AVX-NEXT:    cmpl $4, %edi
+; AVX-NEXT:    jae .LBB1_7
+; AVX-NEXT:  # %bb.2:
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    jmp .LBB1_3
+; AVX-NEXT:  .LBB1_7:
+; AVX-NEXT:    andl $-4, %edx
+; AVX-NEXT:    leaq 48(%rsi), %rdi
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    {vex} vpdpwssd -48(%rdi), %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd -32(%rdi), %xmm1, %xmm2
+; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpmaddwd -16(%rdi), %xmm1, %xmm2
+; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm2
+; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    addq $4, %rcx
+; AVX-NEXT:    addq $64, %rdi
+; AVX-NEXT:    cmpq %rcx, %rdx
+; AVX-NEXT:    jne .LBB1_8
+; AVX-NEXT:  .LBB1_3:
+; AVX-NEXT:    testq %rax, %rax
+; AVX-NEXT:    je .LBB1_6
+; AVX-NEXT:  # %bb.4: # %.preheader
+; AVX-NEXT:    shlq $4, %rcx
+; AVX-NEXT:    addq %rcx, %rsi
+; AVX-NEXT:    shlq $4, %rax
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %xmm1, %xmm0
+; AVX-NEXT:    addq $16, %rcx
+; AVX-NEXT:    cmpq %rcx, %rax
+; AVX-NEXT:    jne .LBB1_5
+; AVX-NEXT:  .LBB1_6:
+; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: foo_128:
 ; AVX512:       # %bb.0:
@@ -476,99 +429,52 @@ define <4 x i64> @foo_reg_256(<4 x i64> %0, <4 x i64> %1, <4 x i64> %2, <4 x i64
 ; }
 
 define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
-; ADL-LABEL: foo_256:
-; ADL:       # %bb.0:
-; ADL-NEXT:    testl %edi, %edi
-; ADL-NEXT:    jle .LBB4_6
-; ADL-NEXT:  # %bb.1:
-; ADL-NEXT:    movl %edi, %edx
-; ADL-NEXT:    movl %edx, %eax
-; ADL-NEXT:    andl $3, %eax
-; ADL-NEXT:    cmpl $4, %edi
-; ADL-NEXT:    jae .LBB4_7
-; ADL-NEXT:  # %bb.2:
-; ADL-NEXT:    xorl %ecx, %ecx
-; ADL-NEXT:    jmp .LBB4_3
-; ADL-NEXT:  .LBB4_7:
-; ADL-NEXT:    andl $-4, %edx
-; ADL-NEXT:    leaq 96(%rsi), %rdi
-; ADL-NEXT:    xorl %ecx, %ecx
-; ADL-NEXT:    .p2align 4, 0x90
-; ADL-NEXT:  .LBB4_8: # =>This Inner Loop Header: Depth=1
-; ADL-NEXT:    {vex} vpdpwssd -96(%rdi), %ymm1, %ymm0
-; ADL-NEXT:    vpmaddwd -64(%rdi), %ymm1, %ymm2
-; ADL-NEXT:    vpmaddwd -32(%rdi), %ymm1, %ymm3
-; ADL-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; ADL-NEXT:    vpaddd %ymm3, %ymm0, %ymm0
-; ADL-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm2
-; ADL-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; ADL-NEXT:    addq $4, %rcx
-; ADL-NEXT:    subq $-128, %rdi
-; ADL-NEXT:    cmpq %rcx, %rdx
-; ADL-NEXT:    jne .LBB4_8
-; ADL-NEXT:  .LBB4_3:
-; ADL-NEXT:    testq %rax, %rax
-; ADL-NEXT:    je .LBB4_6
-; ADL-NEXT:  # %bb.4: # %.preheader
-; ADL-NEXT:    shlq $5, %rcx
-; ADL-NEXT:    addq %rcx, %rsi
-; ADL-NEXT:    shlq $5, %rax
-; ADL-NEXT:    xorl %ecx, %ecx
-; ADL-NEXT:    .p2align 4, 0x90
-; ADL-NEXT:  .LBB4_5: # =>This Inner Loop Header: Depth=1
-; ADL-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %ymm1, %ymm0
-; ADL-NEXT:    addq $32, %rcx
-; ADL-NEXT:    cmpq %rcx, %rax
-; ADL-NEXT:    jne .LBB4_5
-; ADL-NEXT:  .LBB4_6:
-; ADL-NEXT:    retq
-;
-; SPR-LABEL: foo_256:
-; SPR:       # %bb.0:
-; SPR-NEXT:    testl %edi, %edi
-; SPR-NEXT:    jle .LBB4_6
-; SPR-NEXT:  # %bb.1:
-; SPR-NEXT:    movl %edi, %edx
-; SPR-NEXT:    movl %edx, %eax
-; SPR-NEXT:    andl $3, %eax
-; SPR-NEXT:    cmpl $4, %edi
-; SPR-NEXT:    jae .LBB4_7
-; SPR-NEXT:  # %bb.2:
-; SPR-NEXT:    xorl %ecx, %ecx
-; SPR-NEXT:    jmp .LBB4_3
-; SPR-NEXT:  .LBB4_7:
-; SPR-NEXT:    andl $-4, %edx
-; SPR-NEXT:    leaq 96(%rsi), %rdi
-; SPR-NEXT:    xorl %ecx, %ecx
-; SPR-NEXT:    .p2align 4, 0x90
-; SPR-NEXT:  .LBB4_8: # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    {vex} vpdpwssd -96(%rdi), %ymm1, %ymm0
-; SPR-NEXT:    vpmaddwd -64(%rdi), %ymm1, %ymm2
-; SPR-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; SPR-NEXT:    vpmaddwd -32(%rdi), %ymm1, %ymm2
-; SPR-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; SPR-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm2
-; SPR-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; SPR-NEXT:    addq $4, %rcx
-; SPR-NEXT:    subq $-128, %rdi
-; SPR-NEXT:    cmpq %rcx, %rdx
-; SPR-NEXT:    jne .LBB4_8
-; SPR-NEXT:  .LBB4_3:
-; SPR-NEXT:    testq %rax, %rax
-; SPR-NEXT:    je .LBB4_6
-; SPR-NEXT:  # %bb.4: # %.preheader
-; SPR-NEXT:    shlq $5, %rcx
-; SPR-NEXT:    addq %rcx, %rsi
-; SPR-NEXT:    shlq $5, %rax
-; SPR-NEXT:    xorl %ecx, %ecx
-; SPR-NEXT:    .p2align 4, 0x90
-; SPR-NEXT:  .LBB4_5: # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %ymm1, %ymm0
-; SPR-NEXT:    addq $32, %rcx
-; SPR-NEXT:    cmpq %rcx, %rax
-; SPR-NEXT:    jne .LBB4_5
-; SPR-NEXT:  .LBB4_6:
-; SPR-NEXT:    retq
+; AVX-LABEL: foo_256:
+; AVX:       # %bb.0:
+; AVX-NEXT:    testl %edi, %edi
+; AVX-NEXT:    jle .LBB4_6
+; AVX-NEXT:  # %bb.1:
+; AVX-NEXT:    movl %edi, %edx
+; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    andl $3, %eax
+; AVX-NEXT:    cmpl $4, %edi
+; AVX-NEXT:    jae .LBB4_7
+; AVX-NEXT:  # %bb.2:
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    jmp .LBB4_3
+; AVX-NEXT:  .LBB4_7:
+; AVX-NEXT:    andl $-4, %edx
+; AVX-NEXT:    leaq 96(%rsi), %rdi
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB4_8: # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    {vex} vpdpwssd -96(%rdi), %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd -64(%rdi), %ymm1, %ymm2
+; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    vpmaddwd -32(%rdi), %ymm1, %ymm2
+; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm2
+; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    addq $4, %rcx
+; AVX-NEXT:    subq $-128, %rdi
+; AVX-NEXT:    cmpq %rcx, %rdx
+; AVX-NEXT:    jne .LBB4_8
+; AVX-NEXT:  .LBB4_3:
+; AVX-NEXT:    testq %rax, %rax
+; AVX-NEXT:    je .LBB4_6
+; AVX-NEXT:  # %bb.4: # %.preheader
+; AVX-NEXT:    shlq $5, %rcx
+; AVX-NEXT:    addq %rcx, %rsi
+; AVX-NEXT:    shlq $5, %rax
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB4_5: # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %ymm1, %ymm0
+; AVX-NEXT:    addq $32, %rcx
+; AVX-NEXT:    cmpq %rcx, %rax
+; AVX-NEXT:    jne .LBB4_5
+; AVX-NEXT:  .LBB4_6:
+; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: foo_256:
 ; AVX512:       # %bb.0:

@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @main(i32 %arg0, i32 %arg1) local_unnamed_addr !dbg !11 {
 entry:
 ; CHECK-LABEL: bb.0.entry:
-; INSTRREF: ADD32ri8 {{.*}} debug-instr-number 1
+; INSTRREF: ADD32ri {{.*}} debug-instr-number 1
   %0 = add i32 %arg0, 42, !dbg !26
   %1 = add i32 %arg1, 101, !dbg !26
   %cmp = icmp eq i32 %1, 0
