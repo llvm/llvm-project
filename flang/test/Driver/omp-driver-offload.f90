@@ -104,6 +104,12 @@
 ! CHECK-RTL-ALL: "-fopenmp-assume-threads-oversubscription" "-fopenmp-assume-no-thread-state" "-fopenmp-assume-no-nested-parallelism"
 ! CHECK-RTL-ALL: {{.*}}.f90"
 
+! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
+! RUN: -fopenmp-version=45 \
+! RUN: | FileCheck %s --check-prefixes=CHECK-OPENMP-VERSION
+! CHECK-OPENMP-VERSION: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" "-fopenmp-version=45" {{.*}}.f90"
+
 ! Test diagnostic error when host IR file is non-existent 
 ! RUN: not %flang_fc1 %s -o %t 2>&1 -fopenmp -fopenmp-is-device \
 ! RUN: -fopenmp-host-ir-file-path non-existant-file.bc \

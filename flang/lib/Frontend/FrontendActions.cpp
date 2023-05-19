@@ -285,6 +285,8 @@ bool CodeGenAction::beginSourceFileAction() {
                                         ci.getInvocation().getLangOpts());
     setOffloadModuleInterfaceTargetAttribute(*mlirModule, tm->getTargetCPU(),
                                              tm->getTargetFeatureString());
+    setOpenMPVersionAttribute(*mlirModule,
+                              ci.getInvocation().getLangOpts().OpenMPVersion);
   }
 
   const llvm::DataLayout &dl = tm->createDataLayout();
