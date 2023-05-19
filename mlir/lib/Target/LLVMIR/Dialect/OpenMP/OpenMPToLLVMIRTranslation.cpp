@@ -1629,15 +1629,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   if (!targetOpSupported(opInst))
     return failure();
 
-  bool isDevice = false;
-  if (auto offloadMod = dyn_cast<mlir::omp::OffloadModuleInterface>(
-          opInst.getParentOfType<mlir::ModuleOp>().getOperation())) {
-    isDevice = offloadMod.getIsDevice();
-  }
-
-  if (isDevice) // TODO: Implement device codegen.
-    return success();
-
   auto targetOp = cast<omp::TargetOp>(opInst);
   auto &targetRegion = targetOp.getRegion();
 

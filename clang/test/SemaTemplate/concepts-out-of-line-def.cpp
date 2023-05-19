@@ -399,3 +399,16 @@ inline void W0<T7, 0>::W1<T8>::f(const T9 &) {}
 } // namespace three_level
 
 } // namespace MultilevelTemplateWithPartialSpecialization
+
+namespace PR62697 {
+template<typename>
+concept c = true;
+
+template<typename T>
+struct s {
+    void f() requires c<void(T)>;
+};
+
+template<typename T>
+void s<T>::f() requires c<void(T)> { }
+}
