@@ -897,6 +897,11 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
     Argv.push_back("-nogpulib");
   }
 
+  if (getLanguage() == AMD_COMGR_LANGUAGE_HIP && env::shouldSaveTemps()) {
+    std::string save_tmps = "-save-temps=" + OutputDir.str().str();
+    Argv.push_back(strdup(save_tmps.c_str()));
+  }
+
   Argv.push_back(InputFilePath);
 
   Argv.push_back("-o");
