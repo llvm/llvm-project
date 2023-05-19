@@ -430,7 +430,7 @@ public:
 
   /// Error handling
   /// \{
-  bool HasErrors() const;
+  bool HasDiagnostics() const;
   bool HasClangImporterErrors() const;
 
   void AddDiagnostic(DiagnosticSeverity severity, llvm::StringRef message);
@@ -442,24 +442,51 @@ public:
     return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
   }
 
-  /// Return all errors and warnings that haven't been cleared.
-  Status GetAllErrors() const;
   /// Return only fatal errors.
   Status GetFatalErrors() const;
   /// Notify the Process about any Swift or ClangImporter errors.
   void DiagnoseWarnings(Process &process, Module &module) const override;
   
-
-  // NEVER call this without checking HasFatalErrors() first.
-  // This clears the fatal-error state which is terrible.
-  // We will assert if you clear an actual fatal error.
-  void ClearDiagnostics();
-
   bool SetColorizeDiagnostics(bool b);
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
                         uint32_t last_line = UINT32_MAX) const;
+
+  /// A set of indices into the diagnostic vectors to mark the start
+  /// of a transaction.
+  struct DiagnosticCursor {
+    size_t swift = 0;
+    size_t clang = 0;
+    size_t lldb = 0;
+    size_t m_num_swift_errors = 0;
+  };
+
+  /// A lightweight RAII abstraction that sits on top of a diagnostic
+  /// consumer that can be used capture diagnostics for one
+  /// transaction and restore (most of) the state of the consumer
+  /// after its destruction.  Clang errors and LLDB errors are
+  /// persistent and intentionally not reset by this.
+  class ScopedDiagnostics {
+    swift::DiagnosticConsumer &m_consumer;
+    const DiagnosticCursor m_cursor;
+
+  public:
+    ScopedDiagnostics(swift::DiagnosticConsumer &consumer);
+    ~ScopedDiagnostics();
+    /// Print all diagnostics that happened during the lifetime of
+    /// this object to diagnostic_manager. If none is found, print the
+    /// persistent diagnostics form the parent consumer.
+    void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
+                          uint32_t bufferID = UINT32_MAX,
+                          uint32_t first_line = 0,
+                          uint32_t last_line = UINT32_MAX) const;
+    bool HasErrors() const;
+    /// Return all errors and warnings that happened during the lifetime of this
+    /// object.
+    Status GetAllErrors() const;
+  };
+  std::unique_ptr<ScopedDiagnostics> getScopedDiagnosticConsumer();
   /// \}
 
   ConstString GetMangledTypeName(swift::TypeBase *);
@@ -828,6 +855,7 @@ protected:
 
   /// Called by the VALID_OR_RETURN macro to log all errors.
   void LogFatalErrors() const;
+  Status GetAllDiagnostics() const;
 
   llvm::TargetOptions *getTargetOptions();
 
