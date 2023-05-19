@@ -28,7 +28,6 @@ class LibcxxRangesRefViewDataFormatterTestCase(TestBase):
                 children=self.check_string_vec_children())
 
     @add_test_categories(["libc++"])
-    @skipIf(bugnumber="rdar://109455906") # The standalone build of LLDB doesn't test against custom libcxx builds
     def test_with_run_command(self):
         """Test that std::ranges::ref_view is formatted correctly when printed.
         """
