@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
@@ -11,6 +14,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_null_allocator;
@@ -178,7 +184,7 @@ T tmain(T argc) {
 #pragma omp parallel masked taskloop reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel masked taskloop reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp parallel masked taskloop reduction(- : da) // expected-error 2 {{const-qualified variable cannot be reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}} 
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel masked taskloop reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -300,7 +306,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel masked taskloop reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel masked taskloop reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp parallel masked taskloop reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel masked taskloop reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}

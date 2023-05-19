@@ -137,11 +137,6 @@ def ExynosResetFn   : TIIPredicate<
                                IsZeroFPIdiomFn]>>>>;
 def ExynosResetPred : MCSchedPredicate<ExynosResetFn>;
 
-// Identify EXTR as the alias for ROR (immediate).
-def ExynosRotateRightImmPred : MCSchedPredicate<
-                                 CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
-                                           CheckSameRegOperand<1, 2>]>>;
-
 // Identify cheap arithmetic and logic immediate instructions.
 def ExynosCheapFn : TIIPredicate<
                       "isExynosCheapAsMove",

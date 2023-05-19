@@ -182,10 +182,10 @@ def M5WriteAXW : SchedWriteVariant<[SchedVar<ExynosArithPred,   [M5WriteA1W]>,
 def M5WriteAXX : SchedWriteVariant<[SchedVar<ExynosArithPred,   [M5WriteA1X]>,
                                     SchedVar<ExynosLogicExPred, [M5WriteA1X]>,
                                     SchedVar<NoSchedPred,       [M5WriteAAX]>]>;
-def M5WriteAYW : SchedWriteVariant<[SchedVar<ExynosRotateRightImmPred, [M5WriteA1W]>,
-                                    SchedVar<NoSchedPred,              [M5WriteAFW]>]>;
-def M5WriteAYX : SchedWriteVariant<[SchedVar<ExynosRotateRightImmPred, [M5WriteA1X]>,
-                                    SchedVar<NoSchedPred,              [M5WriteAFX]>]>;
+def M5WriteAYW : SchedWriteVariant<[SchedVar<IsRORImmIdiomPred, [M5WriteA1W]>,
+                                    SchedVar<NoSchedPred,       [M5WriteAFW]>]>;
+def M5WriteAYX : SchedWriteVariant<[SchedVar<IsRORImmIdiomPred, [M5WriteA1X]>,
+                                    SchedVar<NoSchedPred,       [M5WriteAFX]>]>;
 
 def M5WriteB1 : SchedWriteRes<[M5UnitB]> { let Latency = 1; }
 def M5WriteBX : SchedWriteVariant<[SchedVar<ExynosBranchLinkLRPred, [M5WriteAC]>,

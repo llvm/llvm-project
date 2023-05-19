@@ -1,4 +1,4 @@
-//===- SparseTensorStorageLayout.h ------------------------------*- C++ -*-===//
+//===- SparseTensorDescriptor.h ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORBUILDER_H_
-#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORBUILDER_H_
+#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORDESCRIPTOR_H_
+#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORDESCRIPTOR_H_
 
-#include "mlir/Conversion/LLVMCommon/StructBuilder.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -27,198 +27,7 @@ namespace sparse_tensor {
 // layout scheme during "direct code generation" (i.e. when sparsification
 // generates the buffers as part of actual IR, in constrast with the library
 // approach where data structures are hidden behind opaque pointers).
-//
-// The sparse tensor storage scheme for a rank-dimensional tensor is organized
-// as a single compound type with the following fields. Note that every memref
-// with ? size actually behaves as a "vector", i.e. the stored size is the
-// capacity and the used size resides in the storage_specifier struct.
-//
-// struct {
-//   ; per-level l:
-//   ;  if dense:
-//        <nothing>
-//   ;  if compresed:
-//        memref<? x pos>  positions-l   ; positions for sparse level l
-//        memref<? x crd>  coordinates-l ; coordinates for sparse level l
-//   ;  if singleton:
-//        memref<? x crd>  coordinates-l ; coordinates for singleton level l
-//
-//   memref<? x eltType> values        ; values
-//
-//   struct sparse_tensor.storage_specifier {
-//     array<rank x int> lvlSizes    ; sizes/cardinalities for each level
-//     array<n x int> memSizes;      ; sizes/lengths for each data memref
-//   }
-// };
-//
-// In addition, for a "trailing COO region", defined as a compressed level
-// followed by one or more singleton levels, the default SOA storage that
-// is inherent to the TACO format is optimized into an AOS storage where
-// all coordinates of a stored element appear consecutively.  In such cases,
-// a special operation (sparse_tensor.coordinates_buffer) must be used to
-// access the AOS coordinates array. In the code below, the method `getCOOStart`
-// is used to find the start of the "trailing COO region".
-//
-// If the sparse tensor is a slice (produced by `tensor.extract_slice`
-// operation), instead of allocating a new sparse tensor for it, it reuses the
-// same sets of MemRefs but attaching a additional set of slicing-metadata for
-// per-dimension slice offset and stride.
-//
-// Examples.
-//
-// #CSR storage of 2-dim matrix yields
-//   memref<?xindex>                           ; positions-1
-//   memref<?xindex>                           ; coordinates-1
-//   memref<?xf64>                             ; values
-//   struct<(array<2 x i64>, array<3 x i64>)>) ; lvl0, lvl1, 3xsizes
-//
-// #COO storage of 2-dim matrix yields
-//   memref<?xindex>,                          ; positions-0, essentially [0,sz]
-//   memref<?xindex>                           ; AOS coordinates storage
-//   memref<?xf64>                             ; values
-//   struct<(array<2 x i64>, array<3 x i64>)>) ; lvl0, lvl1, 3xsizes
-//
-// Slice on #COO storage of 2-dim matrix yields
-//   ;; Inherited from the original sparse tensors
-//   memref<?xindex>,                          ; positions-0, essentially [0,sz]
-//   memref<?xindex>                           ; AOS coordinates storage
-//   memref<?xf64>                             ; values
-//   struct<(array<2 x i64>, array<3 x i64>,   ; lvl0, lvl1, 3xsizes
-//   ;; Extra slicing-metadata
-//           array<2 x i64>, array<2 x i64>)>) ; dim offset, dim stride.
-//
 //===----------------------------------------------------------------------===//
-
-enum class SparseTensorFieldKind : uint32_t {
-  StorageSpec = 0,
-  PosMemRef = 1,
-  CrdMemRef = 2,
-  ValMemRef = 3
-};
-
-static_assert(static_cast<uint32_t>(SparseTensorFieldKind::PosMemRef) ==
-              static_cast<uint32_t>(StorageSpecifierKind::PosMemSize));
-static_assert(static_cast<uint32_t>(SparseTensorFieldKind::CrdMemRef) ==
-              static_cast<uint32_t>(StorageSpecifierKind::CrdMemSize));
-static_assert(static_cast<uint32_t>(SparseTensorFieldKind::ValMemRef) ==
-              static_cast<uint32_t>(StorageSpecifierKind::ValMemSize));
-
-/// The type of field indices.  This alias is to help code be more
-/// self-documenting; unfortunately it is not type-checked, so it only
-/// provides documentation rather than doing anything to prevent mixups.
-using FieldIndex = unsigned;
-
-// TODO: Functions/methods marked with [NUMFIELDS] might should use
-// `FieldIndex` for their return type, via the same reasoning for why
-// `Dimension`/`Level` are used both for identifiers and ranks.
-
-/// For each field that will be allocated for the given sparse tensor
-/// encoding, calls the callback with the corresponding field index,
-/// field kind, level, and level-type (the last two are only for level
-/// memrefs).  The field index always starts with zero and increments
-/// by one between each callback invocation.  Ideally, all other methods
-/// should rely on this function to query a sparse tensor fields instead
-/// of relying on ad-hoc index computation.
-void foreachFieldInSparseTensor(
-    SparseTensorEncodingAttr,
-    llvm::function_ref<bool(
-        FieldIndex /*fieldIdx*/, SparseTensorFieldKind /*fieldKind*/,
-        Level /*lvl (if applicable)*/, DimLevelType /*DLT (if applicable)*/)>);
-
-/// Same as above, except that it also builds the Type for the corresponding
-/// field.
-void foreachFieldAndTypeInSparseTensor(
-    SparseTensorType,
-    llvm::function_ref<bool(Type /*fieldType*/, FieldIndex /*fieldIdx*/,
-                            SparseTensorFieldKind /*fieldKind*/,
-                            Level /*lvl (if applicable)*/,
-                            DimLevelType /*DLT (if applicable)*/)>);
-
-/// Gets the total number of fields for the given sparse tensor encoding.
-// TODO: See note [NUMFIELDS].
-unsigned getNumFieldsFromEncoding(SparseTensorEncodingAttr enc);
-
-/// Gets the total number of data fields (coordinate arrays, position
-/// arrays, and a value array) for the given sparse tensor encoding.
-// TODO: See note [NUMFIELDS].
-unsigned getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc);
-
-inline StorageSpecifierKind toSpecifierKind(SparseTensorFieldKind kind) {
-  assert(kind != SparseTensorFieldKind::StorageSpec);
-  return static_cast<StorageSpecifierKind>(kind);
-}
-
-inline SparseTensorFieldKind toFieldKind(StorageSpecifierKind kind) {
-  assert(kind != StorageSpecifierKind::LvlSize);
-  return static_cast<SparseTensorFieldKind>(kind);
-}
-
-/// Provides methods to access fields of a sparse tensor with the given
-/// encoding.
-class StorageLayout {
-public:
-  explicit StorageLayout(SparseTensorEncodingAttr enc) : enc(enc) {}
-
-  ///
-  /// Getters: get the field index for required field.
-  ///
-
-  FieldIndex getMemRefFieldIndex(SparseTensorFieldKind kind,
-                                 std::optional<Level> lvl) const {
-    return getFieldIndexAndStride(kind, lvl).first;
-  }
-
-  FieldIndex getMemRefFieldIndex(StorageSpecifierKind kind,
-                                 std::optional<Level> lvl) const {
-    return getMemRefFieldIndex(toFieldKind(kind), lvl);
-  }
-
-  // TODO: See note [NUMFIELDS].
-  static unsigned getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
-    return sparse_tensor::getNumFieldsFromEncoding(enc);
-  }
-
-  static void foreachFieldInSparseTensor(
-      const SparseTensorEncodingAttr enc,
-      llvm::function_ref<bool(FieldIndex, SparseTensorFieldKind, Level,
-                              DimLevelType)>
-          callback) {
-    return sparse_tensor::foreachFieldInSparseTensor(enc, callback);
-  }
-
-  std::pair<FieldIndex, unsigned>
-  getFieldIndexAndStride(SparseTensorFieldKind kind,
-                         std::optional<Level> lvl) const {
-    FieldIndex fieldIdx = -1u;
-    unsigned stride = 1;
-    if (kind == SparseTensorFieldKind::CrdMemRef) {
-      assert(lvl.has_value());
-      const Level cooStart = getCOOStart(enc);
-      const Level lvlRank = enc.getLvlRank();
-      if (lvl.value() >= cooStart && lvl.value() < lvlRank) {
-        lvl = cooStart;
-        stride = lvlRank - cooStart;
-      }
-    }
-    foreachFieldInSparseTensor(
-        enc,
-        [lvl, kind, &fieldIdx](FieldIndex fIdx, SparseTensorFieldKind fKind,
-                               Level fLvl, DimLevelType dlt) -> bool {
-          if ((lvl && fLvl == lvl.value() && kind == fKind) ||
-              (kind == fKind && fKind == SparseTensorFieldKind::ValMemRef)) {
-            fieldIdx = fIdx;
-            // Returns false to break the iteration.
-            return false;
-          }
-          return true;
-        });
-    assert(fieldIdx != -1u);
-    return std::pair<FieldIndex, unsigned>(fieldIdx, stride);
-  }
-
-private:
-  SparseTensorEncodingAttr enc;
-};
 
 class SparseTensorSpecifier {
 public:
@@ -249,10 +58,12 @@ private:
 template <typename ValueArrayRef>
 class SparseTensorDescriptorImpl {
 protected:
+  // TODO: Functions/methods marked with [NUMFIELDS] might should use
+  // `FieldIndex` for their return type, via the same reasoning for why
+  // `Dimension`/`Level` are used both for identifiers and ranks.
   SparseTensorDescriptorImpl(SparseTensorType stt, ValueArrayRef fields)
-      : rType(stt), fields(fields) {
-    assert(stt.hasEncoding() &&
-           getNumFieldsFromEncoding(stt.getEncoding()) == getNumFields());
+      : rType(stt), fields(fields), layout(stt) {
+    assert(layout.getNumFields() == getNumFields());
     // We should make sure the class is trivially copyable (and should be small
     // enough) such that we can pass it by value.
     static_assert(std::is_trivially_copyable_v<
@@ -263,7 +74,6 @@ public:
   FieldIndex getMemRefFieldIndex(SparseTensorFieldKind kind,
                                  std::optional<Level> lvl) const {
     // Delegates to storage layout.
-    StorageLayout layout(rType.getEncoding());
     return layout.getMemRefFieldIndex(kind, lvl);
   }
 
@@ -336,7 +146,6 @@ public:
   }
 
   std::pair<FieldIndex, unsigned> getCrdMemRefIndexAndStride(Level lvl) const {
-    StorageLayout layout(rType.getEncoding());
     return layout.getFieldIndexAndStride(SparseTensorFieldKind::CrdMemRef, lvl);
   }
 
@@ -352,6 +161,7 @@ public:
 protected:
   SparseTensorType rType;
   ValueArrayRef fields;
+  StorageLayout layout;
 };
 
 /// Uses ValueRange for immutable descriptors.
@@ -465,4 +275,4 @@ getMutDescriptorFromTensorTuple(Value tensor, SmallVectorImpl<Value> &fields) {
 } // namespace sparse_tensor
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORBUILDER_H_
+#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSODESCRIPTOR_H_

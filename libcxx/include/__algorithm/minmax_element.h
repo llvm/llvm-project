@@ -83,7 +83,7 @@ template <class _ForwardIterator, class _Compare>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_ForwardIterator, _ForwardIterator>
 minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) {
-  static_assert(__is_cpp17_forward_iterator<_ForwardIterator>::value,
+  static_assert(__has_forward_iterator_category<_ForwardIterator>::value,
                 "std::minmax_element requires a ForwardIterator");
   static_assert(__is_callable<_Compare, decltype(*__first), decltype(*__first)>::value,
                 "The comparator has to be callable");

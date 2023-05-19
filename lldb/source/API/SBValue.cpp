@@ -291,39 +291,34 @@ user_id_t SBValue::GetID() {
 const char *SBValue::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp)
-    name = value_sp->GetName().GetCString();
+  if (!value_sp)
+    return nullptr;
 
-  return name;
+  return value_sp->GetName().GetCString();
 }
 
 const char *SBValue::GetTypeName() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    name = value_sp->GetQualifiedTypeName().GetCString();
-  }
+  if (!value_sp)
+    return nullptr;
 
-  return name;
+  return value_sp->GetQualifiedTypeName().GetCString();
 }
 
 const char *SBValue::GetDisplayTypeName() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    name = value_sp->GetDisplayTypeName().GetCString();
-  }
+  if (!value_sp)
+    return nullptr;
 
-  return name;
+  return value_sp->GetDisplayTypeName().GetCString();
 }
 
 size_t SBValue::GetByteSize() {
@@ -357,14 +352,11 @@ bool SBValue::IsInScope() {
 const char *SBValue::GetValue() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    cstr = value_sp->GetValueAsCString();
-  }
-
-  return cstr;
+  if (!value_sp)
+    return nullptr;
+  return ConstString(value_sp->GetValueAsCString()).GetCString();
 }
 
 ValueType SBValue::GetValueType() {
@@ -382,14 +374,12 @@ ValueType SBValue::GetValueType() {
 const char *SBValue::GetObjectDescription() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    cstr = value_sp->GetObjectDescription();
-  }
+  if (!value_sp)
+    return nullptr;
 
-  return cstr;
+  return ConstString(value_sp->GetObjectDescription()).GetCString();
 }
 
 SBType SBValue::GetType() {
@@ -424,14 +414,12 @@ bool SBValue::GetValueDidChange() {
 const char *SBValue::GetSummary() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    cstr = value_sp->GetSummaryAsCString();
-  }
+  if (!value_sp)
+    return nullptr;
 
-  return cstr;
+  return ConstString(value_sp->GetSummaryAsCString()).GetCString();
 }
 
 const char *SBValue::GetSummary(lldb::SBStream &stream,
@@ -445,20 +433,18 @@ const char *SBValue::GetSummary(lldb::SBStream &stream,
     if (value_sp->GetSummaryAsCString(buffer, options.ref()) && !buffer.empty())
       stream.Printf("%s", buffer.c_str());
   }
-  const char *cstr = stream.GetData();
-  return cstr;
+  return ConstString(stream.GetData()).GetCString();
 }
 
 const char *SBValue::GetLocation() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *cstr = nullptr;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
-    cstr = value_sp->GetLocationAsCString();
-  }
-  return cstr;
+  if (!value_sp)
+    return nullptr;
+
+  return ConstString(value_sp->GetLocationAsCString()).GetCString();
 }
 
 // Deprecated - use the one that takes an lldb::SBError

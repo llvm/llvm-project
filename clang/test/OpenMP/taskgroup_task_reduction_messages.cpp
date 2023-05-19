@@ -1,10 +1,16 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -127,7 +133,7 @@ T tmain(T argc) {
   foo();
 #pragma omp taskgroup task_reduction(* : ca) // expected-error {{const-qualified variable cannot be task_reduction}}
   foo();
-#pragma omp taskgroup task_reduction(- : da) // expected-error {{const-qualified variable cannot be task_reduction}} expected-error {{const-qualified variable cannot be task_reduction}}
+#pragma omp taskgroup task_reduction(- : da) // expected-error 2 {{const-qualified variable cannot be task_reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   foo();
 #pragma omp taskgroup task_reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
@@ -156,7 +162,7 @@ T tmain(T argc) {
 #pragma omp taskgroup task_reduction(+ : fl)
     foo();
 #pragma omp parallel
-#pragma omp for reduction(- : fl)
+#pragma omp for reduction(- : fl) // omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
 #pragma omp taskgroup task_reduction(+ : fl)
     foo();
@@ -220,7 +226,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp taskgroup task_reduction(* : ca) // expected-error {{const-qualified variable cannot be task_reduction}}
   foo();
-#pragma omp taskgroup task_reduction(- : da) // expected-error {{const-qualified variable cannot be task_reduction}}
+#pragma omp taskgroup task_reduction(- : da) // expected-error {{const-qualified variable cannot be task_reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   foo();
 #pragma omp taskgroup task_reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
@@ -251,7 +257,7 @@ int main(int argc, char **argv) {
 #pragma omp taskgroup task_reduction(+ : fl)
     foo();
 #pragma omp parallel
-#pragma omp for reduction(- : fl)
+#pragma omp for reduction(- : fl) // omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
 #pragma omp taskgroup task_reduction(+ : fl)
     foo();

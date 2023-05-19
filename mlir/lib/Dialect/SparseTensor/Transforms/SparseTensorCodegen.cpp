@@ -16,7 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
-#include "SparseTensorStorageLayout.h"
+#include "SparseTensorDescriptor.h"
 
 #include "llvm/Support/FormatVariadic.h"
 

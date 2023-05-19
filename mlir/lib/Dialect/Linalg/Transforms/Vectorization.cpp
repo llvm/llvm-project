@@ -1280,6 +1280,55 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   return success();
 }
 
+/// Vectorize a `padOp` with (1) static result type, (2) constant padding value
+/// and (3) all-zero lowPad to
+///   `transfer_write_in_bounds(transfer_read_masked(pad_source, pad_value))`.
+static LogicalResult
+vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
+                       ArrayRef<int64_t> inputVectorSizes,
+                       SmallVectorImpl<Value> &newResults) {
+  auto padValue = padOp.getConstantPaddingValue();
+  Location loc = padOp.getLoc();
+  int64_t rank = inputVectorSizes.size();
+  auto maskType = VectorType::get(inputVectorSizes, rewriter.getI1Type());
+  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
+
+  // transfer_write_in_bounds(transfer_read_masked(pad_source, pad_value))
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(padOp);
+
+  ReifiedRankedShapedTypeDims reifiedReturnShapes;
+  LogicalResult status =
+      cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation())
+          .reifyResultShapes(rewriter, reifiedReturnShapes);
+  assert(succeeded(status) && "failed to reify result shapes");
+  auto emptyOp = rewriter.create<tensor::EmptyOp>(loc, reifiedReturnShapes[0],
+                                                  padValue.getType());
+  SmallVector<OpFoldResult> mixedSourceDims =
+      getMixedDimensions(rewriter, loc, padOp.getSource());
+  Value mask =
+      rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+  auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  auto transferReadOp = rewriter.create<vector::TransferReadOp>(
+      loc,
+      /*vectorType=*/vectorType,
+      /*source=*/padOp.getSource(),
+      /*indices=*/SmallVector<Value>(rank, zero),
+      /*padding=*/padValue,
+      /*inBounds=*/SmallVector<bool>(rank, true));
+  auto maskedOp = cast<vector::MaskOp>(
+      mlir::vector::maskOperation(rewriter, transferReadOp, mask));
+  Operation *write = rewriter.create<vector::TransferWriteOp>(
+      loc,
+      /*vector=*/maskedOp->getResult(0),
+      /*source=*/emptyOp,
+      /*indices=*/SmallVector<Value>(rank, zero),
+      /*inBounds=*/SmallVector<bool>(rank, true));
+  write = mlir::vector::maskOperation(rewriter, write, mask);
+  newResults.push_back(write->getResult(0));
+  return success();
+}
+
 // TODO: probably need some extra checks for reduction followed by consumer
 // ops that may not commute (e.g. linear reduction + non-linear instructions).
 static LogicalResult reductionPreconditions(LinalgOp op) {
@@ -1311,32 +1360,50 @@ static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
   return success();
 }
 
-LogicalResult
-mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
-                                            ArrayRef<int64_t> inputVectorSizes,
-                                            bool vectorizeNDExtract) {
+/// Returns success if `inputVectorSizes` is a valid masking configuraion for
+/// given `shape`, i.e., it meets:
+///   1. The numbers of elements in both array are equal.
+///   2. `inputVectorSizes` does nos have dynamic dimensions.
+///   3. All the values in `inputVectorSizes` are greater than or equal to
+///      static sizes in `shape`.
+static LogicalResult
+isValidMaskedInputVector(ArrayRef<int64_t> shape,
+                         ArrayRef<int64_t> inputVectorSizes) {
+  if (inputVectorSizes.size() != shape.size()) {
+    LDBG("Input vector sizes don't match the number of loops");
+    return failure();
+  }
+  if (ShapedType::isDynamicShape(inputVectorSizes)) {
+    LDBG("Input vector sizes can't have dynamic dimensions");
+    return failure();
+  }
+  if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
+                    [](std::tuple<int64_t, int64_t> sizePair) {
+                      int64_t staticSize = std::get<0>(sizePair);
+                      int64_t inputSize = std::get<1>(sizePair);
+                      return ShapedType::isDynamic(staticSize) ||
+                             staticSize <= inputSize;
+                    })) {
+    LDBG("Input vector sizes must be greater than or equal to iteration space "
+         "static sizes");
+    return failure();
+  }
+  return success();
+}
+
+static LogicalResult
+vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
+                              ArrayRef<int64_t> inputVectorSizes,
+                              bool vectorizeNDExtract) {
   // tensor with dimension of 0 cannot be vectorized.
   if (llvm::any_of(linalgOp.getStaticShape(),
                    [](int64_t dim) { return dim == 0; }))
     return failure();
   // Check API contract for input vector sizes.
-  if (!inputVectorSizes.empty()) {
-    assert(inputVectorSizes.size() == linalgOp.getNumLoops() &&
-           "Input vector sizes don't match the number of loops");
-    assert(!ShapedType::isDynamicShape(inputVectorSizes) &&
-           "Input vector sizes can't have dynamic dimensions");
-    assert(
-        llvm::all_of(
-            llvm::zip(linalgOp.getStaticLoopRanges(), inputVectorSizes),
-            [](std::tuple<int64_t, int64_t> sizePair) {
-              int64_t staticSize = std::get<0>(sizePair);
-              int64_t inputSize = std::get<1>(sizePair);
-              return ShapedType::isDynamic(staticSize) ||
-                     staticSize <= inputSize;
-            }) &&
-        "Input vector sizes must be greater than or equal to iteration space "
-        "static sizes");
-  }
+  if (!inputVectorSizes.empty() &&
+      failed(isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
+                                      inputVectorSizes)))
+    return failure();
 
   if (linalgOp.hasDynamicShape() &&
       failed(vectorizeDynamicLinalgOpPrecondition(linalgOp))) {
@@ -1392,6 +1459,45 @@ mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
   return success();
 }
 
+static LogicalResult
+vectorizePadOpPrecondition(tensor::PadOp padOp,
+                           ArrayRef<int64_t> inputVectorSizes) {
+  auto padValue = padOp.getConstantPaddingValue();
+  if (!padValue) {
+    LDBG("pad value is not constant: " << padOp << "\n");
+    return failure();
+  }
+
+  ArrayRef<int64_t> resultTensorShape = padOp.getResultType().getShape();
+  if (failed(isValidMaskedInputVector(resultTensorShape, inputVectorSizes)))
+    return failure();
+
+  if (llvm::any_of(padOp.getLow(), [](Value v) {
+        std::optional<int64_t> res = getConstantIntValue(v);
+        return !res.has_value() || res.value() != 0;
+      })) {
+    LDBG("low pad must all be zero: " << padOp << "\n");
+    return failure();
+  }
+
+  return success();
+}
+
+LogicalResult
+mlir::linalg::vectorizeOpPrecondition(Operation *op,
+                                      ArrayRef<int64_t> inputVectorSizes,
+                                      bool vectorizeNDExtract) {
+  return TypeSwitch<Operation *, LogicalResult>(op)
+      .Case<linalg::LinalgOp>([&](auto linalgOp) {
+        return vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
+                                             vectorizeNDExtract);
+      })
+      .Case<tensor::PadOp>([&](auto padOp) {
+        return vectorizePadOpPrecondition(padOp, inputVectorSizes);
+      })
+      .Default([](auto) { return failure(); });
+}
+
 /// Converts affine.apply Ops to arithmetic operations.
 static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
   OpBuilder::InsertionGuard g(rewriter);
@@ -1407,120 +1513,76 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
   }
 }
 
-FailureOr<vector::TransferWriteOp>
-mlir::linalg::maskedVectorize(RewriterBase &rewriter, tensor::PadOp padOp,
-                              ArrayRef<int64_t> inputVectorSizes) {
-  auto padValue = padOp.getConstantPaddingValue();
-  if (!padValue) {
-    LDBG("pad value is not constant: " << padOp << "\n");
-    return rewriter.notifyMatchFailure(padOp, "pad value is not constant");
-  }
-
-  ArrayRef<int64_t> resultTensorShape = padOp.getResultType().getShape();
-  if (!(resultTensorShape == inputVectorSizes)) {
-    LDBG("result tensor shape must match input vector sizes: " << padOp
-                                                               << "\n");
-    return rewriter.notifyMatchFailure(
-        padOp, "result tensor shape must match input vector sizes");
-  }
-  if (llvm::any_of(padOp.getLow(), [](Value v) {
-        std::optional<int64_t> res = getConstantIntValue(v);
-        return !res.has_value() || res.value() != 0;
-      })) {
-    LDBG("low pad must all be zero: " << padOp << "\n");
-    return rewriter.notifyMatchFailure(padOp, "low pad must all be zero");
-  }
-
-  Location loc = padOp.getLoc();
-  int64_t rank = inputVectorSizes.size();
-  auto maskType = VectorType::get(inputVectorSizes, rewriter.getI1Type());
-  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
-
-  // transfer_write_in_bounds(transfer_read_masked(pad_source, pad_value))
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(padOp);
-  auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto emptyOp =
-      rewriter.create<tensor::EmptyOp>(loc, padOp.getResultType(),
-                                       /*dynamicSizes=*/ValueRange{});
-  SmallVector<OpFoldResult> mixedSourceDims =
-      getMixedDimensions(rewriter, loc, padOp.getSource());
-  Value mask =
-      rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
-  auto transferReadOp = rewriter.create<vector::TransferReadOp>(
-      loc,
-      /*vectorType=*/vectorType,
-      /*source=*/padOp.getSource(),
-      /*indices=*/SmallVector<Value>(rank, zero),
-      /*padding=*/padValue,
-      /*inBounds=*/SmallVector<bool>(rank, true));
-  auto maskedOp = cast<vector::MaskOp>(
-      mlir::vector::maskOperation(rewriter, transferReadOp, mask));
-  auto transferWriteOp = rewriter.create<vector::TransferWriteOp>(
-      loc,
-      /*vector=*/maskedOp->getResult(0),
-      /*source=*/emptyOp,
-      /*indices=*/SmallVector<Value>(rank, zero),
-      /*inBounds=*/SmallVector<bool>(rank, true));
-  rewriter.replaceOp(padOp, transferWriteOp->getResults());
-  return transferWriteOp;
-}
-
-/// Emit a suitable vector form for a Linalg op. If provided, `inputVectorSizes`
-/// are used to vectorize this operation. `inputVectorSizes` must match the rank
-/// of the iteration space of the operation and the input vector sizes must be
-/// greater than or equal to their counterpart iteration space sizes, if static.
-/// `inputVectorShapes` also allows the vectorization of operations with dynamic
-/// shapes.
-LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
+/// Emit a suitable vector form for an operation. If provided,
+/// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
+/// must match the rank of the iteration space of the operation and the input
+/// vector sizes must be greater than or equal to their counterpart iteration
+/// space sizes, if static. `inputVectorShapes` also allows the vectorization of
+/// operations with dynamic shapes.
+LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes,
                                       bool vectorizeNDExtract) {
-  LDBG("Attempting to vectorize:\n" << linalgOp << "\n");
+  LDBG("Attempting to vectorize:\n" << *op << "\n");
   LDBG("Input vector sizes: ");
   LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << "\n");
 
-  if (failed(vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
-                                           vectorizeNDExtract))) {
+  if (failed(
+          vectorizeOpPrecondition(op, inputVectorSizes, vectorizeNDExtract))) {
     LDBG("Vectorization pre-conditions failed\n");
     return failure();
   }
 
   // Initialize vectorization state.
   VectorizationState state(rewriter);
-  if (failed(state.initState(rewriter, linalgOp, inputVectorSizes))) {
-    LDBG("Vectorization state couldn't be initialized\n");
-    return failure();
+  if (auto linalgOp = dyn_cast<linalg::LinalgOp>(op)) {
+    if (failed(state.initState(rewriter, linalgOp, inputVectorSizes))) {
+      LDBG("Vectorization state couldn't be initialized\n");
+      return failure();
+    }
   }
 
   SmallVector<Value> results;
-  // TODO: isaConvolutionOpInterface that can also infer from generic
-  // features. Will require stride/dilation attributes inference.
-  FailureOr<Operation *> convOr = vectorizeConvolution(rewriter, linalgOp);
-  if (succeeded(convOr)) {
-    llvm::append_range(results, (*convOr)->getResults());
-  } else {
-    if (failed(vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
-                                             vectorizeNDExtract)))
-      return failure();
-    LDBG("Vectorize generic by broadcasting to the canonical vector shape\n");
+  auto vectorizeResult =
+      TypeSwitch<Operation *, LogicalResult>(op)
+          .Case<linalg::LinalgOp>([&](auto linalgOp) {
+            // TODO: isaConvolutionOpInterface that can also infer from generic
+            // features. Will require stride/dilation attributes inference.
+            FailureOr<Operation *> convOr =
+                vectorizeConvolution(rewriter, linalgOp);
+            if (succeeded(convOr)) {
+              llvm::append_range(results, (*convOr)->getResults());
+              return success();
+            }
 
-    // Pre-process before proceeding.
-    convertAffineApply(rewriter, linalgOp);
+            LDBG("Vectorize generic by broadcasting to the canonical vector "
+                 "shape\n");
 
-    // TODO: 'vectorize' takes in a 'RewriterBase' which is up-casted to
-    // 'OpBuilder' when it is passed over to some methods like
-    // 'vectorizeAsLinalgGeneric'. This is highly problematic: if we erase an op
-    // within these methods, the actual rewriter won't be notified and we will
-    // end up with read-after-free issues!
-    if (failed(vectorizeAsLinalgGeneric(rewriter, state, linalgOp, results)))
-      return failure();
+            // Pre-process before proceeding.
+            convertAffineApply(rewriter, linalgOp);
+
+            // TODO: 'vectorize' takes in a 'RewriterBase' which is up-casted
+            // to 'OpBuilder' when it is passed over to some methods like
+            // 'vectorizeAsLinalgGeneric'. This is highly problematic: if we
+            // erase an op within these methods, the actual rewriter won't be
+            // notified and we will end up with read-after-free issues!
+            return vectorizeAsLinalgGeneric(rewriter, state, linalgOp, results);
+          })
+          .Case<tensor::PadOp>([&](auto padOp) {
+            return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes,
+                                          results);
+          })
+          .Default([](auto) { return failure(); });
+
+  if (failed(vectorizeResult)) {
+    LDBG("Vectorization failed\n");
+    return failure();
   }
 
   if (!results.empty())
-    rewriter.replaceOp(linalgOp, results);
+    rewriter.replaceOp(op, results);
   else
-    rewriter.eraseOp(linalgOp);
+    rewriter.eraseOp(op);
 
   return success();
 }

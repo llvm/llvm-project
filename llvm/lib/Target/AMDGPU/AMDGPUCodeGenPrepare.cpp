@@ -17,6 +17,7 @@
 #include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -24,14 +25,17 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "amdgpu-codegenprepare"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 namespace {
 
@@ -87,6 +91,7 @@ static cl::opt<bool> DisableIDivExpand(
 class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
   const GCNSubtarget *ST = nullptr;
+  const TargetLibraryInfo *TLInfo = nullptr;
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
   UniformityInfo *UA = nullptr;
@@ -122,6 +127,9 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// \returns True if type \p T needs to be promoted to 32 bit integer type,
   /// false otherwise.
   bool needsPromotionToI32(const Type *T) const;
+
+  /// Return true if \p T is a legal scalar floating point type.
+  bool isLegalFloatingTy(const Type *T) const;
 
   /// Promotes uniform binary operation \p I to equivalent 32 bit binary
   /// operation.
@@ -220,6 +228,9 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
 
   bool canWidenScalarExtLoad(LoadInst &I) const;
 
+  Value *matchFractPat(IntrinsicInst &I);
+  Value *applyFractPat(IRBuilder<> &Builder, Value *FractArg);
+
 public:
   static char ID;
 
@@ -237,6 +248,7 @@ public:
 
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
+  bool visitMinNum(IntrinsicInst &I);
 
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
@@ -246,6 +258,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
 
     // FIXME: Division expansion needs to preserve the dominator tree.
     if (!ExpandDiv64InIR)
@@ -299,6 +312,11 @@ bool AMDGPUCodeGenPrepare::needsPromotionToI32(const Type *T) const {
   }
 
   return false;
+}
+
+bool AMDGPUCodeGenPrepare::isLegalFloatingTy(const Type *Ty) const {
+  return Ty->isFloatTy() || Ty->isDoubleTy() ||
+         (Ty->isHalfTy() && ST->has16BitInsts());
 }
 
 // Return true if the op promoted to i32 should have nsw set.
@@ -1393,13 +1411,48 @@ bool AMDGPUCodeGenPrepare::visitICmpInst(ICmpInst &I) {
 }
 
 bool AMDGPUCodeGenPrepare::visitSelectInst(SelectInst &I) {
-  bool Changed = false;
+  if (ST->has16BitInsts() && needsPromotionToI32(I.getType())) {
+    if (UA->isUniform(&I))
+      return promoteUniformOpToI32(I);
+    return false;
+  }
 
-  if (ST->has16BitInsts() && needsPromotionToI32(I.getType()) &&
-      UA->isUniform(&I))
-    Changed |= promoteUniformOpToI32(I);
+  Value *Cond = I.getCondition();
+  Value *TrueVal = I.getTrueValue();
+  Value *FalseVal = I.getFalseValue();
+  Value *CmpVal;
+  FCmpInst::Predicate Pred;
 
-  return Changed;
+  // Match fract pattern with nan check.
+  if (!match(Cond, m_FCmp(Pred, m_Value(CmpVal), m_NonNaN())))
+    return false;
+
+  FPMathOperator *FPOp = dyn_cast<FPMathOperator>(&I);
+  if (!FPOp)
+    return false;
+
+  IRBuilder<> Builder(&I);
+  Builder.setFastMathFlags(FPOp->getFastMathFlags());
+
+  auto *IITrue = dyn_cast<IntrinsicInst>(TrueVal);
+  auto *IIFalse = dyn_cast<IntrinsicInst>(FalseVal);
+
+  Value *Fract = nullptr;
+  if (Pred == FCmpInst::FCMP_UNO && TrueVal == CmpVal && IIFalse &&
+      CmpVal == matchFractPat(*IIFalse)) {
+    // isnan(x) ? x : fract(x)
+    Fract = applyFractPat(Builder, CmpVal);
+  } else if (Pred == FCmpInst::FCMP_ORD && FalseVal == CmpVal && IITrue &&
+             CmpVal == matchFractPat(*IITrue)) {
+    // !isnan(x) ? fract(x) : x
+    Fract = applyFractPat(Builder, CmpVal);
+  } else
+    return false;
+
+  Fract->takeName(&I);
+  I.replaceAllUsesWith(Fract);
+  RecursivelyDeleteTriviallyDeadInstructions(&I, TLInfo);
+  return true;
 }
 
 static bool areInSameBB(const Value *A, const Value *B) {
@@ -1610,6 +1663,8 @@ bool AMDGPUCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   switch (I.getIntrinsicID()) {
   case Intrinsic::bitreverse:
     return visitBitreverseIntrinsicInst(I);
+  case Intrinsic::minnum:
+    return visitMinNum(I);
   default:
     return false;
   }
@@ -1623,6 +1678,84 @@ bool AMDGPUCodeGenPrepare::visitBitreverseIntrinsicInst(IntrinsicInst &I) {
     Changed |= promoteUniformBitreverseToI32(I);
 
   return Changed;
+}
+
+/// Match non-nan fract pattern.
+///   minnum(fsub(x, floor(x)), nextafter(1.0, -1.0)
+///
+/// If fract is a useful instruction for the subtarget. Does not account for the
+/// nan handling; the instruction has a nan check on the input value.
+Value *AMDGPUCodeGenPrepare::matchFractPat(IntrinsicInst &I) {
+  if (ST->hasFractBug())
+    return nullptr;
+
+  if (I.getIntrinsicID() != Intrinsic::minnum)
+    return nullptr;
+
+  Type *Ty = I.getType();
+  if (!isLegalFloatingTy(Ty->getScalarType()))
+    return nullptr;
+
+  Value *Arg0 = I.getArgOperand(0);
+  Value *Arg1 = I.getArgOperand(1);
+
+  const APFloat *C;
+  if (!match(Arg1, m_APFloat(C)))
+    return nullptr;
+
+  APFloat One(1.0);
+  bool LosesInfo;
+  One.convert(C->getSemantics(), APFloat::rmNearestTiesToEven, &LosesInfo);
+
+  // Match nextafter(1.0, -1)
+  One.next(true);
+  if (One != *C)
+    return nullptr;
+
+  Value *FloorSrc;
+  if (match(Arg0, m_FSub(m_Value(FloorSrc),
+                         m_Intrinsic<Intrinsic::floor>(m_Deferred(FloorSrc)))))
+    return FloorSrc;
+  return nullptr;
+}
+
+Value *AMDGPUCodeGenPrepare::applyFractPat(IRBuilder<> &Builder,
+                                           Value *FractArg) {
+  SmallVector<Value *, 4> FractVals;
+  extractValues(Builder, FractVals, FractArg);
+
+  SmallVector<Value *, 4> ResultVals(FractVals.size());
+
+  Type *Ty = FractArg->getType()->getScalarType();
+  for (unsigned I = 0, E = FractVals.size(); I != E; ++I) {
+    ResultVals[I] =
+        Builder.CreateIntrinsic(Intrinsic::amdgcn_fract, {Ty}, {FractVals[I]});
+  }
+
+  return insertValues(Builder, FractArg->getType(), ResultVals);
+}
+
+bool AMDGPUCodeGenPrepare::visitMinNum(IntrinsicInst &I) {
+  Value *FractArg = matchFractPat(I);
+  if (!FractArg)
+    return false;
+
+  // Match pattern for fract intrinsic in contexts where the nan check has been
+  // optimized out (and hope the knowledge the source can't be nan wasn't lost).
+  if (!I.hasNoNaNs() && !isKnownNeverNaN(FractArg, *DL, TLInfo))
+    return false;
+
+  IRBuilder<> Builder(&I);
+  FastMathFlags FMF = I.getFastMathFlags();
+  FMF.setNoNaNs();
+  Builder.setFastMathFlags(FMF);
+
+  Value *Fract = applyFractPat(Builder, FractArg);
+  Fract->takeName(&I);
+  I.replaceAllUsesWith(Fract);
+
+  RecursivelyDeleteTriviallyDeadInstructions(&I, TLInfo);
+  return true;
 }
 
 bool AMDGPUCodeGenPrepare::doInitialization(Module &M) {
@@ -1641,6 +1774,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
   ST = &TM.getSubtarget<GCNSubtarget>(F);
+  TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
@@ -1682,6 +1816,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
 INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
                       "AMDGPU IR optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
                     false, false)
