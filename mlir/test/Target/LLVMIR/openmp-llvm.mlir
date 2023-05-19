@@ -2472,10 +2472,37 @@ module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubsc
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 module attributes {omp.flags = #omp.flags<>} {}
 
 // -----
 
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
+module attributes {omp.flags = #omp.flags<openmp_device_version = 51>} {}
+
+// -----
+
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+module attributes {omp.version = #omp.version<version = 50>, omp.flags = #omp.flags<>} {}
+
+// -----
+
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// CHECK-NOT: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+module attributes {omp.version = #omp.version<version = 51>} {}
+
+// -----
 // CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
