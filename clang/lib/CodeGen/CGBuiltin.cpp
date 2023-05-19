@@ -18247,6 +18247,15 @@ static Value *MakeScopedAtomic(unsigned IntrinsicID, CodeGenFunction &CGF,
       {Ptr, CGF.EmitScalarExpr(E->getArg(1))});
 }
 
+static Value *MakeCpAsync(unsigned IntrinsicID, CodeGenFunction &CGF,
+                          const CallExpr *E, int SrcSize) {
+  Value *SrcSizeArg = E->getNumArgs() == 3 ? CGF.EmitScalarExpr(E->getArg(2))
+                                           : CGF.Builder.getInt32(SrcSize);
+  return CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(IntrinsicID),
+                                {CGF.EmitScalarExpr(E->getArg(0)),
+                                 CGF.EmitScalarExpr(E->getArg(1)), SrcSizeArg});
+}
+
 static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
                            const CallExpr *E, CodeGenFunction &CGF) {
   auto &C = CGF.CGM.getContext();
@@ -18910,6 +18919,18 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_ldu_h2: {
     return MakeHalfType(Intrinsic::nvvm_ldu_global_f, BuiltinID, E, *this);
   }
+  case NVPTX::BI__nvvm_cp_async_ca_shared_global_4:
+    return MakeCpAsync(Intrinsic::nvvm_cp_async_ca_shared_global_4, *this, E,
+                       4);
+  case NVPTX::BI__nvvm_cp_async_ca_shared_global_8:
+    return MakeCpAsync(Intrinsic::nvvm_cp_async_ca_shared_global_8, *this, E,
+                       8);
+  case NVPTX::BI__nvvm_cp_async_ca_shared_global_16:
+    return MakeCpAsync(Intrinsic::nvvm_cp_async_ca_shared_global_16, *this, E,
+                       16);
+  case NVPTX::BI__nvvm_cp_async_cg_shared_global_16:
+    return MakeCpAsync(Intrinsic::nvvm_cp_async_cg_shared_global_16, *this, E,
+                       16);
   default:
     return nullptr;
   }

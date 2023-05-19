@@ -1381,26 +1381,22 @@ def int_nvvm_cp_async_mbarrier_arrive_noinc_shared :
     Intrinsic<[],[llvm_shared_i64ptr_ty],[IntrConvergent, IntrNoCallback]>;
 
 def int_nvvm_cp_async_ca_shared_global_4 :
-    ClangBuiltin<"__nvvm_cp_async_ca_shared_global_4">,
-    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
+    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty, llvm_i32_ty],
     [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
      WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
     "llvm.nvvm.cp.async.ca.shared.global.4">;
 def int_nvvm_cp_async_ca_shared_global_8 :
-    ClangBuiltin<"__nvvm_cp_async_ca_shared_global_8">,
-    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
+    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty, llvm_i32_ty],
     [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
      WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
     "llvm.nvvm.cp.async.ca.shared.global.8">;
 def int_nvvm_cp_async_ca_shared_global_16 :
-    ClangBuiltin<"__nvvm_cp_async_ca_shared_global_16">,
-    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
+    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty, llvm_i32_ty],
     [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
      WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
     "llvm.nvvm.cp.async.ca.shared.global.16">;
 def int_nvvm_cp_async_cg_shared_global_16 :
-    ClangBuiltin<"__nvvm_cp_async_cg_shared_global_16">,
-    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty],
+    Intrinsic<[],[llvm_shared_i8ptr_ty, llvm_global_i8ptr_ty, llvm_i32_ty],
     [IntrArgMemOnly, IntrNoCallback, NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
      WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
     "llvm.nvvm.cp.async.cg.shared.global.16">;

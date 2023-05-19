@@ -968,10 +968,10 @@ TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_shared, "vWi*3", "", AND(SM_80,PT
 TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_noinc, "vWi*", "", AND(SM_80,PTX70))
 TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_noinc_shared, "vWi*3", "", AND(SM_80,PTX70))
 
-TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_4, "vv*3vC*1", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_8, "vv*3vC*1", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_16, "vv*3vC*1", "", AND(SM_80,PTX70))
-TARGET_BUILTIN(__nvvm_cp_async_cg_shared_global_16, "vv*3vC*1", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_4, "vv*3vC*1.", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_8, "vv*3vC*1.", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_16, "vv*3vC*1.", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_cg_shared_global_16, "vv*3vC*1.", "", AND(SM_80,PTX70))
 
 TARGET_BUILTIN(__nvvm_cp_async_commit_group, "v", "", AND(SM_80,PTX70))
 TARGET_BUILTIN(__nvvm_cp_async_wait_group, "vIi", "", AND(SM_80,PTX70))
