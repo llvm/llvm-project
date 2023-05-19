@@ -199,6 +199,16 @@ struct AccessTarget : public AccessedEntity {
         : Target(S.Target), Has(S.Has) {
       S.Target = nullptr;
     }
+
+    // The move assignment operator is defined as deleted pending further
+    // motivation.
+    SavedInstanceContext &operator=(SavedInstanceContext &&) = delete;
+
+    // The copy constrcutor and copy assignment operator is defined as deleted
+    // pending further motivation.
+    SavedInstanceContext(const SavedInstanceContext &) = delete;
+    SavedInstanceContext &operator=(const SavedInstanceContext &) = delete;
+
     ~SavedInstanceContext() {
       if (Target)
         Target->HasInstanceContext = Has;
