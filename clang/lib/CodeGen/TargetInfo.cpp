@@ -5049,9 +5049,10 @@ public:
                                llvm::Value *Address) const override;
 };
 
-class PPC64TargetCodeGenInfo : public DefaultTargetCodeGenInfo {
+class PPC64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  PPC64TargetCodeGenInfo(CodeGenTypes &CGT) : DefaultTargetCodeGenInfo(CGT) {}
+  PPC64TargetCodeGenInfo(CodeGenTypes &CGT)
+      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
     // This is recovered from gcc output.
@@ -5061,7 +5062,6 @@ public:
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
 };
-
 }
 
 // Return true if the ABI requires Ty to be passed sign- or zero-
@@ -8584,10 +8584,10 @@ public:
 
 namespace {
 
-class TCETargetCodeGenInfo : public DefaultTargetCodeGenInfo {
+class TCETargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   TCETargetCodeGenInfo(CodeGenTypes &CGT)
-    : DefaultTargetCodeGenInfo(CGT) {}
+      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
