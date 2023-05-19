@@ -266,4 +266,104 @@ define void @store_i64(ptr %p, i64 %v) {
   ret void
 }
 
+define void @merge_stores_i8_i16(ptr %p) {
+; ALL-LABEL: merge_stores_i8_i16:
+; ALL:       # %bb.0:
+; ALL-NEXT:    sb zero, 0(a0)
+; ALL-NEXT:    sb zero, 1(a0)
+; ALL-NEXT:    ret
+  store i8 0, ptr %p
+  %p2 = getelementptr i8, ptr %p, i32 1
+  store i8 0, ptr %p2
+  ret void
+}
 
+define void @merge_stores_i8_i32(ptr %p) {
+; ALL-LABEL: merge_stores_i8_i32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    sb zero, 0(a0)
+; ALL-NEXT:    sb zero, 1(a0)
+; ALL-NEXT:    sb zero, 2(a0)
+; ALL-NEXT:    sb zero, 3(a0)
+; ALL-NEXT:    ret
+  store i8 0, ptr %p
+  %p2 = getelementptr i8, ptr %p, i32 1
+  store i8 0, ptr %p2
+  %p3 = getelementptr i8, ptr %p, i32 2
+  store i8 0, ptr %p3
+  %p4 = getelementptr i8, ptr %p, i32 3
+  store i8 0, ptr %p4
+  ret void
+}
+
+define void @merge_stores_i8_i64(ptr %p) {
+; ALL-LABEL: merge_stores_i8_i64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    sb zero, 0(a0)
+; ALL-NEXT:    sb zero, 1(a0)
+; ALL-NEXT:    sb zero, 2(a0)
+; ALL-NEXT:    sb zero, 3(a0)
+; ALL-NEXT:    sb zero, 4(a0)
+; ALL-NEXT:    sb zero, 5(a0)
+; ALL-NEXT:    sb zero, 6(a0)
+; ALL-NEXT:    sb zero, 7(a0)
+; ALL-NEXT:    ret
+  store i8 0, ptr %p
+  %p2 = getelementptr i8, ptr %p, i32 1
+  store i8 0, ptr %p2
+  %p3 = getelementptr i8, ptr %p, i32 2
+  store i8 0, ptr %p3
+  %p4 = getelementptr i8, ptr %p, i32 3
+  store i8 0, ptr %p4
+  %p5 = getelementptr i8, ptr %p, i32 4
+  store i8 0, ptr %p5
+  %p6 = getelementptr i8, ptr %p, i32 5
+  store i8 0, ptr %p6
+  %p7 = getelementptr i8, ptr %p, i32 6
+  store i8 0, ptr %p7
+  %p8 = getelementptr i8, ptr %p, i32 7
+  store i8 0, ptr %p8
+  ret void
+}
+
+define void @merge_stores_i16_i32(ptr %p) {
+; ALL-LABEL: merge_stores_i16_i32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    sh zero, 0(a0)
+; ALL-NEXT:    sh zero, 2(a0)
+; ALL-NEXT:    ret
+  store i16 0, ptr %p
+  %p2 = getelementptr i16, ptr %p, i32 1
+  store i16 0, ptr %p2
+  ret void
+}
+
+define void @merge_stores_i16_i64(ptr %p) {
+; ALL-LABEL: merge_stores_i16_i64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    sh zero, 0(a0)
+; ALL-NEXT:    sh zero, 2(a0)
+; ALL-NEXT:    sh zero, 4(a0)
+; ALL-NEXT:    sh zero, 6(a0)
+; ALL-NEXT:    ret
+  store i16 0, ptr %p
+  %p2 = getelementptr i16, ptr %p, i32 1
+  store i16 0, ptr %p2
+  %p3 = getelementptr i16, ptr %p, i32 2
+  store i16 0, ptr %p3
+  %p4 = getelementptr i16, ptr %p, i32 3
+  store i16 0, ptr %p4
+  ret void
+}
+
+define void @merge_stores_i32_i64(ptr %p) {
+; ALL-LABEL: merge_stores_i32_i64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    sw zero, 0(a0)
+; ALL-NEXT:    sw zero, 4(a0)
+; ALL-NEXT:    ret
+  store i32 0, ptr %p
+  %p2 = getelementptr i32, ptr %p, i32 1
+  store i32 0, ptr %p2
+  ret void
+}
