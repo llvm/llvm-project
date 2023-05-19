@@ -156,7 +156,7 @@ public:
     ImmTyDppRowMask,
     ImmTyDppBankMask,
     ImmTyDppBoundCtrl,
-    ImmTyDppFi,
+    ImmTyDppFI,
     ImmTySwizzle,
     ImmTyGprIdxMode,
     ImmTyHigh,
@@ -382,10 +382,10 @@ public:
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isD16() const { return isImmTy(ImmTyD16); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
-  bool isBankMask() const { return isImmTy(ImmTyDppBankMask); }
-  bool isRowMask() const { return isImmTy(ImmTyDppRowMask); }
+  bool isDppBankMask() const { return isImmTy(ImmTyDppBankMask); }
+  bool isDppRowMask() const { return isImmTy(ImmTyDppRowMask); }
   bool isDppBoundCtrl() const { return isImmTy(ImmTyDppBoundCtrl); }
-  bool isFI() const { return isImmTy(ImmTyDppFi); }
+  bool isDppFI() const { return isImmTy(ImmTyDppFI); }
   bool isSDWADstSel() const { return isImmTy(ImmTySDWADstSel); }
   bool isSDWASrc0Sel() const { return isImmTy(ImmTySDWASrc0Sel); }
   bool isSDWASrc1Sel() const { return isImmTy(ImmTySDWASrc1Sel); }
@@ -1048,7 +1048,7 @@ public:
     case ImmTyDppRowMask: OS << "DppRowMask"; break;
     case ImmTyDppBankMask: OS << "DppBankMask"; break;
     case ImmTyDppBoundCtrl: OS << "DppBoundCtrl"; break;
-    case ImmTyDppFi: OS << "FI"; break;
+    case ImmTyDppFI: OS << "DppFI"; break;
     case ImmTySDWADstSel: OS << "SDWADstSel"; break;
     case ImmTySDWASrc0Sel: OS << "SDWASrc0Sel"; break;
     case ImmTySDWASrc1Sel: OS << "SDWASrc1Sel"; break;
@@ -1592,6 +1592,7 @@ public:
   OperandMatchResultTy parseNumericFormat(int64_t &Format);
   OperandMatchResultTy parseFlatOffset(OperandVector &Operands);
   OperandMatchResultTy parseR128A16(OperandVector &Operands);
+  OperandMatchResultTy parseBLGP(OperandVector &Operands);
   bool tryParseFmt(const char *Pref, int64_t MaxVal, int64_t &Val);
   bool matchDfmtNfmt(int64_t &Dfmt, int64_t &Nfmt, StringRef FormatStr, SMLoc Loc);
 
@@ -1791,10 +1792,10 @@ public:
   bool isSupportedDPPCtrl(StringRef Ctrl, const OperandVector &Operands);
   int64_t parseDPPCtrlSel(StringRef Ctrl);
   int64_t parseDPPCtrlPerm();
-  AMDGPUOperand::Ptr defaultRowMask() const;
-  AMDGPUOperand::Ptr defaultBankMask() const;
+  AMDGPUOperand::Ptr defaultDppRowMask() const;
+  AMDGPUOperand::Ptr defaultDppBankMask() const;
   AMDGPUOperand::Ptr defaultDppBoundCtrl() const;
-  AMDGPUOperand::Ptr defaultFI() const;
+  AMDGPUOperand::Ptr defaultDppFI() const;
   void cvtDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8 = false);
   void cvtDPP8(MCInst &Inst, const OperandVector &Operands) {
     cvtDPP(Inst, Operands, true);
@@ -6390,6 +6391,16 @@ OperandMatchResultTy AMDGPUAsmParser::parseR128A16(OperandVector &Operands) {
   return Res;
 }
 
+OperandMatchResultTy AMDGPUAsmParser::parseBLGP(OperandVector &Operands) {
+  OperandMatchResultTy Res =
+      parseIntWithPrefix("blgp", Operands, AMDGPUOperand::ImmTyBLGP);
+  if (Res == MatchOperand_NoMatch) {
+    Res =
+        parseOperandArrayWithPrefix("neg", Operands, AMDGPUOperand::ImmTyBLGP);
+  }
+  return Res;
+}
+
 //===----------------------------------------------------------------------===//
 // ds
 //===----------------------------------------------------------------------===//
@@ -8698,7 +8709,7 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultRowMask() const {
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultDppRowMask() const {
   return AMDGPUOperand::CreateImm(this, 0xf, SMLoc(), AMDGPUOperand::ImmTyDppRowMask);
 }
 
@@ -8706,7 +8717,7 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultEndpgmImmOperands() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyEndpgm);
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultBankMask() const {
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultDppBankMask() const {
   return AMDGPUOperand::CreateImm(this, 0xf, SMLoc(), AMDGPUOperand::ImmTyDppBankMask);
 }
 
@@ -8714,8 +8725,8 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultDppBoundCtrl() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDppBoundCtrl);
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultFI() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDppFi);
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultDppFI() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDppFI);
 }
 
 void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
@@ -8762,7 +8773,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     }
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
-    if (IsDPP8 && Op.isFI()) {
+    if (IsDPP8 && Op.isDppFI()) {
       Fi = Op.getImm();
     } else if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
@@ -8804,7 +8815,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
 
     if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::fi))
       addOptionalImmOperand(Inst, Operands, OptionalIdx,
-                            AMDGPUOperand::ImmTyDppFi);
+                            AMDGPUOperand::ImmTyDppFI);
   }
 }
 
@@ -8839,7 +8850,7 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
         Op.addImmOperands(Inst, 1);
       } else if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
         Op.addRegWithFPInputModsOperands(Inst, 2);
-      } else if (Op.isFI()) {
+      } else if (Op.isDppFI()) {
         Fi = Op.getImm();
       } else if (Op.isReg()) {
         Op.addRegOperands(Inst, 1);
@@ -8870,7 +8881,8 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBankMask, 0xf);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBoundCtrl);
     if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::fi)) {
-      addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppFi);
+      addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                            AMDGPUOperand::ImmTyDppFI);
     }
   }
 }
@@ -9117,26 +9129,8 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
     return parseTokenOp("off", Operands);
   case MCK_row_95_en:
     return parseTokenOp("row_en", Operands);
-  case MCK_ImmABID:
-    return parseIntWithPrefix("abid", Operands, AMDGPUOperand::ImmTyABID);
-  case MCK_ImmBankMask:
-    return parseIntWithPrefix("bank_mask", Operands,
-                              AMDGPUOperand::ImmTyDppBankMask);
-  case MCK_ImmBLGP: {
-    OperandMatchResultTy Res =
-        parseIntWithPrefix("blgp", Operands, AMDGPUOperand::ImmTyBLGP);
-    if (Res == MatchOperand_NoMatch) {
-      Res = parseOperandArrayWithPrefix("neg", Operands,
-                                        AMDGPUOperand::ImmTyBLGP);
-    }
-    return Res;
-  }
-  case MCK_ImmCBSZ:
-    return parseIntWithPrefix("cbsz", Operands, AMDGPUOperand::ImmTyCBSZ);
   case MCK_ImmCPol:
     return parseCPol(Operands);
-  case MCK_ImmFI:
-    return parseIntWithPrefix("fi", Operands, AMDGPUOperand::ImmTyDppFi);
   case MCK_gds:
     return parseNamedBit("gds", Operands, AMDGPUOperand::ImmTyGDS);
   case MCK_ImmNegHi:
@@ -9153,9 +9147,6 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
   case MCK_ImmOpSelHi:
     return parseOperandArrayWithPrefix("op_sel_hi", Operands,
                                        AMDGPUOperand::ImmTyOpSelHi);
-  case MCK_ImmRowMask:
-    return parseIntWithPrefix("row_mask", Operands,
-                              AMDGPUOperand::ImmTyDppRowMask);
   case MCK_tfe:
     return parseNamedBit("tfe", Operands, AMDGPUOperand::ImmTyTFE);
   }
