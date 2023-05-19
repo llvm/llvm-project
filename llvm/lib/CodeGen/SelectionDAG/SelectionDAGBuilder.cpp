@@ -4250,7 +4250,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     Chains[ChainI] = L.getValue(1);
 
     if (MemVTs[i] != ValueVTs[i])
-      L = DAG.getZExtOrTrunc(L, dl, ValueVTs[i]);
+      L = DAG.getPtrExtOrTrunc(L, dl, ValueVTs[i]);
 
     Values[i] = L;
   }
