@@ -204,9 +204,15 @@ public:
     return create<mlir::cir::ConstantOp>(loc, int64Ty,
                                          mlir::IntegerAttr::get(int64Ty, C));
   }
-  mlir::Value getBool(bool state, mlir::Location loc) {
+  mlir::cir::ConstantOp getBool(bool state, mlir::Location loc) {
     return create<mlir::cir::ConstantOp>(loc, getBoolTy(),
                                          getCIRBoolAttr(state));
+  }
+  mlir::cir::ConstantOp getFalse(mlir::Location loc) {
+    return getBool(false, loc);
+  }
+  mlir::cir::ConstantOp getTrue(mlir::Location loc) {
+    return getBool(true, loc);
   }
 
   // Creates constant nullptr for pointer type ty.
@@ -308,6 +314,12 @@ public:
   mlir::cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
                                  Address dst) {
     return create<mlir::cir::StoreOp>(loc, val, dst.getPointer());
+  }
+
+  mlir::cir::StoreOp createFlagStore(mlir::Location loc, bool val,
+                                     mlir::Value dst) {
+    auto flag = getBool(val, loc);
+    return create<mlir::cir::StoreOp>(loc, flag, dst);
   }
 };
 
