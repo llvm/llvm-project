@@ -881,10 +881,10 @@ public:
 
     template <class _InpIter>
     _LIBCPP_HIDE_FROM_ABI list(_InpIter __f, _InpIter __l,
-             __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>* = 0);
+             __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
     template <class _InpIter>
     _LIBCPP_HIDE_FROM_ABI list(_InpIter __f, _InpIter __l, const allocator_type& __a,
-             __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>* = 0);
+             __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
 
     _LIBCPP_HIDE_FROM_ABI list(const list& __c);
     _LIBCPP_HIDE_FROM_ABI list(const list& __c, const __type_identity_t<allocator_type>& __a);
@@ -916,7 +916,7 @@ public:
 
     template <class _InpIter>
     _LIBCPP_HIDE_FROM_ABI void assign(_InpIter __f, _InpIter __l,
-                    __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>* = 0);
+                    __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
     _LIBCPP_HIDE_FROM_ABI void assign(size_type __n, const value_type& __x);
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1033,7 +1033,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, size_type __n, const value_type& __x);
     template <class _InpIter>
     _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InpIter __f, _InpIter __l,
-                        __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>* = 0);
+                        __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(list& __c)
@@ -1139,7 +1139,7 @@ private:
 #if _LIBCPP_STD_VER >= 17
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 list(_InputIterator, _InputIterator)
@@ -1147,7 +1147,7 @@ list(_InputIterator, _InputIterator)
 
 template<class _InputIterator,
          class _Alloc,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Alloc>::value>
          >
 list(_InputIterator, _InputIterator, _Alloc)
@@ -1233,7 +1233,7 @@ list<_Tp, _Alloc>::list(size_type __n, const value_type& __x)
 template <class _Tp, class _Alloc>
 template <class _InpIter>
 list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l,
-                        __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>*)
+                        __enable_if_t<__has_input_iterator_category<_InpIter>::value>*)
 {
     _VSTD::__debug_db_insert_c(this);
     for (; __f != __l; ++__f)
@@ -1243,7 +1243,7 @@ list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l,
 template <class _Tp, class _Alloc>
 template <class _InpIter>
 list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l, const allocator_type& __a,
-                        __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>*)
+                        __enable_if_t<__has_input_iterator_category<_InpIter>::value>*)
     : base(__a)
 {
     _VSTD::__debug_db_insert_c(this);
@@ -1368,7 +1368,7 @@ template <class _Tp, class _Alloc>
 template <class _InpIter>
 void
 list<_Tp, _Alloc>::assign(_InpIter __f, _InpIter __l,
-                          __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>*)
+                          __enable_if_t<__has_input_iterator_category<_InpIter>::value>*)
 {
     iterator __i = begin();
     iterator __e = end();
@@ -1473,7 +1473,7 @@ template <class _Tp, class _Alloc>
 template <class _InpIter>
 typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
-                          __enable_if_t<__is_cpp17_input_iterator<_InpIter>::value>*)
+                          __enable_if_t<__has_input_iterator_category<_InpIter>::value>*)
 {
     _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
                          "list::insert(iterator, range) called with an iterator not referring to this list");

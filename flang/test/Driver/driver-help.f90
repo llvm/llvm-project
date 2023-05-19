@@ -51,6 +51,8 @@
 ! HELP-NEXT: -fno-version-loops-for-stride
 ! HELP-NEXT:                        Do not create unit-strided loops (default)
 ! HELP-NEXT: -fopenacc              Enable OpenACC
+! HELP-NEXT: -fopenmp-version=<value>
+! HELP-NEXT:                        Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
 ! HELP-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! HELP-NEXT: -freciprocal-math      Allow division operations to be reassociated
@@ -157,6 +159,8 @@
 ! HELP-FC1-NEXT:                        Path to the IR file produced by the frontend for the host.
 ! HELP-FC1-NEXT: -fopenmp-is-device     Generate code only for an OpenMP target device.
 ! HELP-FC1-NEXT: -fopenmp-target-debug  Enable debugging in the OpenMP offloading device RTL
+! HELP-FC1-NEXT: -fopenmp-version=<value>
+! HELP-FC1-NEXT:                        Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-FC1-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! HELP-FC1-NEXT: -freciprocal-math      Allow division operations to be reassociated

@@ -252,7 +252,7 @@ TEST_CALL(float64m1)
 // --------------------------------------------------------------------------//
 // Vector initialization
 
-#if __RISCV_RVV_VLEN_BITS == 256
+#if __riscv_v_fixed_vlen == 256
 
 typedef vint32m1_t int32x8 __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
 typedef vfloat64m1_t float64x4 __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));

@@ -597,7 +597,11 @@ const parser::Name *DirectiveAttributeVisitor<T>::GetLoopIndex(
     const parser::DoConstruct &x) {
   using Bounds = parser::LoopControl::Bounds;
   if (x.GetLoopControl()) {
-    return &std::get<Bounds>(x.GetLoopControl()->u).name.thing;
+    if (const Bounds * b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
+      return &b->name.thing;
+    } else {
+      return nullptr;
+    }
   } else {
     context_
         .Say(std::get<parser::Statement<parser::NonLabelDoStmt>>(x.t).source,

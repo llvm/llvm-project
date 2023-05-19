@@ -1555,7 +1555,7 @@ template<class _InputIterator,
          class _Hash = hash<__iter_key_type<_InputIterator>>,
          class _Pred = equal_to<__iter_key_type<_InputIterator>>,
          class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<!__is_allocator<_Hash>::value>,
          class = enable_if_t<!is_integral<_Hash>::value>,
          class = enable_if_t<!__is_allocator<_Pred>::value>,
@@ -1576,21 +1576,21 @@ unordered_map(initializer_list<pair<_Key, _Tp>>, typename allocator_traits<_Allo
   -> unordered_map<remove_const_t<_Key>, _Tp, _Hash, _Pred, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Allocator>::value>>
 unordered_map(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Allocator)
   -> unordered_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
                    hash<__iter_key_type<_InputIterator>>, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Allocator>::value>>
 unordered_map(_InputIterator, _InputIterator, _Allocator)
   -> unordered_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
                    hash<__iter_key_type<_InputIterator>>, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
 
 template<class _InputIterator, class _Hash, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<!__is_allocator<_Hash>::value>,
          class = enable_if_t<!is_integral<_Hash>::value>,
          class = enable_if_t<__is_allocator<_Allocator>::value>>
@@ -2331,7 +2331,7 @@ template<class _InputIterator,
          class _Hash = hash<__iter_key_type<_InputIterator>>,
          class _Pred = equal_to<__iter_key_type<_InputIterator>>,
          class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<!__is_allocator<_Hash>::value>,
          class = enable_if_t<!is_integral<_Hash>::value>,
          class = enable_if_t<!__is_allocator<_Pred>::value>,
@@ -2352,21 +2352,21 @@ unordered_multimap(initializer_list<pair<_Key, _Tp>>, typename allocator_traits<
   -> unordered_multimap<remove_const_t<_Key>, _Tp, _Hash, _Pred, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Allocator>::value>>
 unordered_multimap(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Allocator)
   -> unordered_multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
                         hash<__iter_key_type<_InputIterator>>, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Allocator>::value>>
 unordered_multimap(_InputIterator, _InputIterator, _Allocator)
   -> unordered_multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
                         hash<__iter_key_type<_InputIterator>>, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
 
 template<class _InputIterator, class _Hash, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<!__is_allocator<_Hash>::value>,
          class = enable_if_t<!is_integral<_Hash>::value>,
          class = enable_if_t<__is_allocator<_Allocator>::value>>

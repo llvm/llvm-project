@@ -1585,11 +1585,14 @@ void HWAddressSanitizer::instrumentGlobals() {
   Hasher.final(Hash);
   uint8_t Tag = Hash[0];
 
+  assert(TagMaskByte >= 16);
+
   for (GlobalVariable *GV : Globals) {
-    Tag &= TagMaskByte;
-    // Skip tag 0 in order to avoid collisions with untagged memory.
-    if (Tag == 0)
-      Tag = 1;
+    // Don't allow globals to be tagged with something that looks like a
+    // short-granule tag, otherwise we lose inter-granule overflow detection, as
+    // the fast path shadow-vs-address check succeeds.
+    if (Tag < 16 || Tag > TagMaskByte)
+      Tag = 16;
     instrumentGlobal(GV, Tag++);
   }
 }

@@ -148,6 +148,12 @@ public:
   public:
     Cleanup(const Cleanup &) = default;
     Cleanup(Cleanup &&) {}
+
+    // The copy and move assignment operator is defined as deleted pending
+    // further motivation.
+    Cleanup &operator=(const Cleanup &) = delete;
+    Cleanup &operator=(Cleanup &&) = delete;
+
     Cleanup() = default;
 
     virtual bool isRedundantBeforeReturn() { return false; }

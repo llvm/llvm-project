@@ -10,3 +10,13 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.dyadic_float
 )
+
+add_libc_test(
+  fpbits_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    fpbits_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+)

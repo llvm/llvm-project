@@ -931,7 +931,7 @@ public:
 template<class _InputIterator,
          class _Compare = less<__iter_value_type<_InputIterator>>,
          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
          class = enable_if_t<__is_allocator<_Allocator>::value, void>,
          class = enable_if_t<!__is_allocator<_Compare>::value, void>>
 set(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
@@ -945,7 +945,7 @@ set(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator())
   -> set<_Key, _Compare, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
 set(_InputIterator, _InputIterator, _Allocator)
   -> set<__iter_value_type<_InputIterator>,
@@ -1467,7 +1467,7 @@ public:
 template<class _InputIterator,
          class _Compare = less<__iter_value_type<_InputIterator>>,
          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
          class = enable_if_t<__is_allocator<_Allocator>::value, void>,
          class = enable_if_t<!__is_allocator<_Compare>::value, void>>
 multiset(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
@@ -1481,7 +1481,7 @@ multiset(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator(
   -> multiset<_Key, _Compare, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
 multiset(_InputIterator, _InputIterator, _Allocator)
   -> multiset<__iter_value_type<_InputIterator>,

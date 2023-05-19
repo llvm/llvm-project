@@ -95,6 +95,8 @@ VALUE_DIAGOPT(TabStop, 32, DefaultTabStop) /// The distance between tab stops.
 /// Column limit for formatting message diagnostics, or 0 if unused.
 VALUE_DIAGOPT(MessageLength, 32, 0)
 
+DIAGOPT(ShowSafeBufferUsageSuggestions, 1, 0)
+
 #undef DIAGOPT
 #undef ENUM_DIAGOPT
 #undef VALUE_DIAGOPT

@@ -371,7 +371,7 @@ uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofir
 // This function assumes that destructors do not throw, and that the allocator is bound to
 // the correct type.
 template<class _Alloc, class _BidirIter, class = __enable_if_t<
-    __is_cpp17_bidirectional_iterator<_BidirIter>::value
+    __has_bidirectional_iterator_category<_BidirIter>::value
 >>
 _LIBCPP_HIDE_FROM_ABI
 constexpr void __allocator_destroy_multidimensional(_Alloc& __alloc, _BidirIter __first, _BidirIter __last) noexcept {

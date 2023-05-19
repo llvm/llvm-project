@@ -60,201 +60,160 @@ Language *ObjCLanguage::CreateInstance(lldb::LanguageType language) {
   }
 }
 
-void ObjCLanguage::MethodName::Clear() {
-  m_full.Clear();
-  m_class.Clear();
-  m_category.Clear();
-  m_selector.Clear();
-  m_type = eTypeUnspecified;
-  m_category_is_valid = false;
-}
-
-bool ObjCLanguage::MethodName::SetName(llvm::StringRef name, bool strict) {
-  Clear();
+std::optional<const ObjCLanguage::MethodName>
+ObjCLanguage::MethodName::Create(llvm::StringRef name, bool strict) {
   if (name.empty())
-    return IsValid(strict);
+    return std::nullopt;
 
-  // If "strict" is true. then the method must be specified with a '+' or '-'
-  // at the beginning. If "strict" is false, then the '+' or '-' can be omitted
-  bool valid_prefix = false;
+  // Objective-C method minimum requirements:
+  //  - If `strict` is true, must start with '-' or '+' (1 char)
+  //  - Must be followed by '[' (1 char)
+  //  - Must have at least one character for class name (1 char)
+  //  - Must have a space between class name and method name (1 char)
+  //  - Must have at least one character for  method name (1 char)
+  //  - Must be end with ']' (1 char)
+  //  This means that the minimum size is 5 characters (6 if `strict`)
+  //  e.g. [a a] (-[a a] or +[a a] if `strict`)
 
-  if (name.size() > 1 && (name[0] == '+' || name[0] == '-')) {
-    valid_prefix = name[1] == '[';
-    if (name[0] == '+')
-      m_type = eTypeClassMethod;
-    else
-      m_type = eTypeInstanceMethod;
-  } else if (!strict) {
-    // "strict" is false, the name just needs to start with '['
-    valid_prefix = name[0] == '[';
-  }
+  // We can check length and ending invariants first
+  if (name.size() < (5 + (strict ? 1 : 0)) || name.back() != ']')
+    return std::nullopt;
 
-  if (valid_prefix) {
-    int name_len = name.size();
-    // Objective-C methods must have at least:
-    //      "-[" or "+[" prefix
-    //      One character for a class name
-    //      One character for the space between the class name
-    //      One character for the method name
-    //      "]" suffix
-    if (name_len >= (5 + (strict ? 1 : 0)) && name.back() == ']') {
-      m_full.SetString(name);
-    }
-  }
-  return IsValid(strict);
+  // Figure out type
+  Type type = eTypeUnspecified;
+  if (name.startswith("+["))
+    type = eTypeClassMethod;
+  else if (name.startswith("-["))
+    type = eTypeInstanceMethod;
+
+  // If there's no type and it's strict, this is invalid
+  if (strict && type == eTypeUnspecified)
+    return std::nullopt;
+
+  // If not strict and type unspecified, make sure we start with '['
+  if (type == eTypeUnspecified && name.front() != '[')
+    return std::nullopt;
+
+  // If we've gotten here, we're confident that this looks enough like an
+  // Objective-C method to treat it like one.
+  ObjCLanguage::MethodName method_name(name, type);
+  return method_name;
 }
 
-bool ObjCLanguage::MethodName::SetName(const char *name, bool strict) {
-  return SetName(llvm::StringRef(name), strict);
+llvm::StringRef ObjCLanguage::MethodName::GetClassName() const {
+  llvm::StringRef full = m_full;
+  const size_t class_start_pos = (full.front() == '[' ? 1 : 2);
+  const size_t paren_pos = full.find('(', class_start_pos);
+  // If there's a category we want to stop there
+  if (paren_pos != llvm::StringRef::npos)
+    return full.substr(class_start_pos, paren_pos - class_start_pos);
+
+  // Otherwise we find the space separating the class and method
+  const size_t space_pos = full.find(' ', class_start_pos);
+  return full.substr(class_start_pos, space_pos - class_start_pos);
 }
 
-ConstString ObjCLanguage::MethodName::GetClassName() {
-  if (!m_class) {
-    if (IsValid(false)) {
-      const char *full = m_full.GetCString();
-      const char *class_start = (full[0] == '[' ? full + 1 : full + 2);
-      const char *paren_pos = strchr(class_start, '(');
-      if (paren_pos) {
-        m_class.SetCStringWithLength(class_start, paren_pos - class_start);
-      } else {
-        // No '(' was found in the full name, we can definitively say that our
-        // category was valid (and empty).
-        m_category_is_valid = true;
-        const char *space_pos = strchr(full, ' ');
-        if (space_pos) {
-          m_class.SetCStringWithLength(class_start, space_pos - class_start);
-          if (!m_class_category) {
-            // No category in name, so we can also fill in the m_class_category
-            m_class_category = m_class;
-          }
-        }
-      }
-    }
-  }
-  return m_class;
+llvm::StringRef ObjCLanguage::MethodName::GetClassNameWithCategory() const {
+  llvm::StringRef full = m_full;
+  const size_t class_start_pos = (full.front() == '[' ? 1 : 2);
+  const size_t space_pos = full.find(' ', class_start_pos);
+  return full.substr(class_start_pos, space_pos - class_start_pos);
 }
 
-ConstString ObjCLanguage::MethodName::GetClassNameWithCategory() {
-  if (!m_class_category) {
-    if (IsValid(false)) {
-      const char *full = m_full.GetCString();
-      const char *class_start = (full[0] == '[' ? full + 1 : full + 2);
-      const char *space_pos = strchr(full, ' ');
-      if (space_pos) {
-        m_class_category.SetCStringWithLength(class_start,
-                                              space_pos - class_start);
-        // If m_class hasn't been filled in and the class with category doesn't
-        // contain a '(', then we can also fill in the m_class
-        if (!m_class && strchr(m_class_category.GetCString(), '(') == nullptr) {
-          m_class = m_class_category;
-          // No '(' was found in the full name, we can definitively say that
-          // our category was valid (and empty).
-          m_category_is_valid = true;
-        }
-      }
-    }
-  }
-  return m_class_category;
+llvm::StringRef ObjCLanguage::MethodName::GetSelector() const {
+  llvm::StringRef full = m_full;
+  const size_t space_pos = full.find(' ');
+  if (space_pos == llvm::StringRef::npos)
+    return llvm::StringRef();
+  const size_t closing_bracket = full.find(']', space_pos);
+  return full.substr(space_pos + 1, closing_bracket - space_pos - 1);
 }
 
-ConstString ObjCLanguage::MethodName::GetSelector() {
-  if (!m_selector) {
-    if (IsValid(false)) {
-      const char *full = m_full.GetCString();
-      const char *space_pos = strchr(full, ' ');
-      if (space_pos) {
-        ++space_pos; // skip the space
-        m_selector.SetCStringWithLength(space_pos, m_full.GetLength() -
-                                                       (space_pos - full) - 1);
-      }
-    }
-  }
-  return m_selector;
+llvm::StringRef ObjCLanguage::MethodName::GetCategory() const {
+  llvm::StringRef full = m_full;
+  const size_t open_paren_pos = full.find('(');
+  const size_t close_paren_pos = full.find(')');
+
+  if (open_paren_pos == llvm::StringRef::npos ||
+      close_paren_pos == llvm::StringRef::npos)
+    return llvm::StringRef();
+
+  return full.substr(open_paren_pos + 1,
+                     close_paren_pos - (open_paren_pos + 1));
 }
 
-ConstString ObjCLanguage::MethodName::GetCategory() {
-  if (!m_category_is_valid && !m_category) {
-    if (IsValid(false)) {
-      m_category_is_valid = true;
-      const char *full = m_full.GetCString();
-      const char *class_start = (full[0] == '[' ? full + 1 : full + 2);
-      const char *open_paren_pos = strchr(class_start, '(');
-      if (open_paren_pos) {
-        ++open_paren_pos; // Skip the open paren
-        const char *close_paren_pos = strchr(open_paren_pos, ')');
-        if (close_paren_pos)
-          m_category.SetCStringWithLength(open_paren_pos,
-                                          close_paren_pos - open_paren_pos);
-      }
-    }
-  }
-  return m_category;
-}
+std::string ObjCLanguage::MethodName::GetFullNameWithoutCategory() const {
+  llvm::StringRef full = m_full;
+  const size_t open_paren_pos = full.find('(');
+  const size_t close_paren_pos = full.find(')');
+  if (open_paren_pos == llvm::StringRef::npos ||
+      close_paren_pos == llvm::StringRef::npos)
+    return std::string();
 
-ConstString ObjCLanguage::MethodName::GetFullNameWithoutCategory(
-    bool empty_if_no_category) {
-  if (IsValid(false)) {
-    if (HasCategory()) {
-      StreamString strm;
-      if (m_type == eTypeClassMethod)
-        strm.PutChar('+');
-      else if (m_type == eTypeInstanceMethod)
-        strm.PutChar('-');
-      strm.Printf("[%s %s]", GetClassName().GetCString(),
-                  GetSelector().GetCString());
-      return ConstString(strm.GetString());
-    }
+  llvm::StringRef class_name = GetClassName();
+  llvm::StringRef selector_name = GetSelector();
 
-    if (!empty_if_no_category) {
-      // Just return the full name since it doesn't have a category
-      return GetFullName();
-    }
-  }
-  return ConstString();
+  // Compute the total size to avoid reallocations
+  // class name + selector name + '[' + ' ' + ']'
+  size_t total_size = class_name.size() + selector_name.size() + 3;
+  if (m_type != eTypeUnspecified)
+    total_size++; // For + or -
+
+  std::string name_sans_category;
+  name_sans_category.reserve(total_size);
+
+  if (m_type == eTypeClassMethod)
+    name_sans_category += '+';
+  else if (m_type == eTypeInstanceMethod)
+    name_sans_category += '-';
+
+  name_sans_category += '[';
+  name_sans_category.append(class_name.data(), class_name.size());
+  name_sans_category += ' ';
+  name_sans_category.append(selector_name.data(), selector_name.size());
+  name_sans_category += ']';
+
+  return name_sans_category;
 }
 
 std::vector<Language::MethodNameVariant>
 ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
   std::vector<Language::MethodNameVariant> variant_names;
-  ObjCLanguage::MethodName objc_method(method_name.GetCString(), false);
-  if (!objc_method.IsValid(false)) {
+  std::optional<const ObjCLanguage::MethodName> objc_method =
+      ObjCLanguage::MethodName::Create(method_name.GetStringRef(), false);
+  if (!objc_method)
     return variant_names;
-  }
 
-  variant_names.emplace_back(objc_method.GetSelector(),
+  variant_names.emplace_back(ConstString(objc_method->GetSelector()),
                              lldb::eFunctionNameTypeSelector);
 
-  const bool is_class_method =
-      objc_method.GetType() == MethodName::eTypeClassMethod;
-  const bool is_instance_method =
-      objc_method.GetType() == MethodName::eTypeInstanceMethod;
-  ConstString name_sans_category =
-      objc_method.GetFullNameWithoutCategory(/*empty_if_no_category*/ true);
+  const std::string name_sans_category =
+      objc_method->GetFullNameWithoutCategory();
 
-  if (is_class_method || is_instance_method) {
-    if (name_sans_category)
-      variant_names.emplace_back(name_sans_category,
+  if (objc_method->IsClassMethod() || objc_method->IsInstanceMethod()) {
+    if (!name_sans_category.empty())
+      variant_names.emplace_back(ConstString(name_sans_category.c_str()),
                                  lldb::eFunctionNameTypeFull);
   } else {
     StreamString strm;
 
-    strm.Printf("+%s", objc_method.GetFullName().GetCString());
+    strm.Printf("+%s", objc_method->GetFullName().c_str());
     variant_names.emplace_back(ConstString(strm.GetString()),
                                lldb::eFunctionNameTypeFull);
     strm.Clear();
 
-    strm.Printf("-%s", objc_method.GetFullName().GetCString());
+    strm.Printf("-%s", objc_method->GetFullName().c_str());
     variant_names.emplace_back(ConstString(strm.GetString()),
                                lldb::eFunctionNameTypeFull);
     strm.Clear();
 
-    if (name_sans_category) {
-      strm.Printf("+%s", name_sans_category.GetCString());
+    if (!name_sans_category.empty()) {
+      strm.Printf("+%s", name_sans_category.c_str());
       variant_names.emplace_back(ConstString(strm.GetString()),
                                  lldb::eFunctionNameTypeFull);
       strm.Clear();
 
-      strm.Printf("-%s", name_sans_category.GetCString());
+      strm.Printf("-%s", name_sans_category.c_str());
       variant_names.emplace_back(ConstString(strm.GetString()),
                                  lldb::eFunctionNameTypeFull);
     }
@@ -1020,7 +979,7 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
 
     friend class lldb_private::ObjCLanguage;
   };
-  
+
   class ObjCDebugInfoScavenger : public Language::ImageListTypeScavenger {
   public:
     CompilerType AdjustForInclusion(CompilerType &candidate) override {

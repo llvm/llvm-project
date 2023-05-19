@@ -870,7 +870,8 @@ public:
 
 /// Scan the function and return a list of gadgets found with provided kits.
 static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker>
-findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler) {
+findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
+            bool EmitSuggestions) {
 
   struct GadgetFinderCallback : MatchFinder::MatchCallback {
     FixableGadgetList FixableGadgets;
@@ -923,34 +924,43 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler) {
 
   // clang-format off
   M.addMatcher(
-    stmt(eachOf(
-      // A `FixableGadget` matcher and a `WarningGadget` matcher should not disable
-      // each other (they could if they were put in the same `anyOf` group).
-      // We also should make sure no two `FixableGadget` (resp. `WarningGadget`) matchers
-      // match for the same node, so that we can group them
-      // in one `anyOf` group (for better performance via short-circuiting).
-      forEachDescendantStmt(stmt(eachOf(
-#define FIXABLE_GADGET(x)                                                              \
-        x ## Gadget::matcher().bind(#x),
+      stmt(
+        forEachDescendantEvaluatedStmt(stmt(anyOf(
+          // Add Gadget::matcher() for every gadget in the registry.
+#define WARNING_GADGET(x)                                                      \
+          allOf(x ## Gadget::matcher().bind(#x),                               \
+                notInSafeBufferOptOut(&Handler)),
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-        // In parallel, match all DeclRefExprs so that to find out
-        // whether there are any uncovered by gadgets.
-        declRefExpr(anyOf(hasPointerType(), hasArrayType()), to(varDecl())).bind("any_dre")
-      ))),
-      forEachDescendantEvaluatedStmt(stmt(anyOf(
-        // Add Gadget::matcher() for every gadget in the registry.
-#define WARNING_GADGET(x)                                                              \
-        allOf(x ## Gadget::matcher().bind(#x), notInSafeBufferOptOut(&Handler)),
-#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-        // Also match DeclStmts because we'll need them when fixing
-        // their underlying VarDecls that otherwise don't have
-        // any backreferences to DeclStmts.
-        declStmt().bind("any_ds")
-      ))
-    ))),
+            // Avoid a hanging comma.
+            unless(stmt())
+        )))
+    ),
     &CB
   );
   // clang-format on
+
+  if (EmitSuggestions) {
+    // clang-format off
+    M.addMatcher(
+        stmt(
+          forEachDescendantStmt(stmt(eachOf(
+#define FIXABLE_GADGET(x)                                                      \
+            x ## Gadget::matcher().bind(#x),
+#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
+            // In parallel, match all DeclRefExprs so that to find out
+            // whether there are any uncovered by gadgets.
+            declRefExpr(anyOf(hasPointerType(), hasArrayType()),
+                        to(varDecl())).bind("any_dre"),
+            // Also match DeclStmts because we'll need them when fixing
+            // their underlying VarDecls that otherwise don't have
+            // any backreferences to DeclStmts.
+            declStmt().bind("any_ds")
+          )))
+      ),
+      &CB
+    );
+    // clang-format on
+  }
 
   M.match(*D->getBody(), D->getASTContext());
 
@@ -1601,15 +1611,32 @@ getNaiveStrategy(const llvm::SmallVectorImpl<const VarDecl *> &UnsafeVars) {
 
 void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
-                                   bool EmitFixits) {
+                                   bool EmitSuggestions) {
   assert(D && D->getBody());
-
   WarningGadgetSets UnsafeOps;
   FixableGadgetSets FixablesForUnsafeVars;
   DeclUseTracker Tracker;
 
   {
-    auto [FixableGadgets, WarningGadgets, TrackerRes] = findGadgets(D, Handler);
+    auto [FixableGadgets, WarningGadgets, TrackerRes] =
+      findGadgets(D, Handler, EmitSuggestions);
+
+    if (!EmitSuggestions) {
+      // Our job is very easy without suggestions. Just warn about
+      // every problematic operation and consider it done. No need to deal
+      // with fixable gadgets, no need to group operations by variable.
+      for (const auto &G : WarningGadgets) {
+        Handler.handleUnsafeOperation(G->getBaseStmt(),
+                                      /*IsRelatedToDecl=*/false);
+      }
+
+      // This return guarantees that most of the machine doesn't run when
+      // suggestions aren't requested.
+      assert(FixableGadgets.size() == 0 &&
+             "Fixable gadgets found but suggestions not requested!");
+      return;
+    }
+
     UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
     FixablesForUnsafeVars = groupFixablesByVar(std::move(FixableGadgets));
     Tracker = std::move(TrackerRes);
@@ -1617,36 +1644,33 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 
   std::map<const VarDecl *, FixItList> FixItsForVariable;
 
-  if (EmitFixits) {
-    // Filter out non-local vars and vars with unclaimed DeclRefExpr-s.
-    for (auto it = FixablesForUnsafeVars.byVar.cbegin();
-         it != FixablesForUnsafeVars.byVar.cend();) {
-      // FIXME: Support ParmVarDecl as well.
-      if (!it->first->isLocalVarDecl() || Tracker.hasUnclaimedUses(it->first)) {
-        it = FixablesForUnsafeVars.byVar.erase(it);
-      } else {
-        ++it;
-      }
+  // Filter out non-local vars and vars with unclaimed DeclRefExpr-s.
+  for (auto it = FixablesForUnsafeVars.byVar.cbegin();
+       it != FixablesForUnsafeVars.byVar.cend();) {
+    // FIXME: Support ParmVarDecl as well.
+    if (!it->first->isLocalVarDecl() || Tracker.hasUnclaimedUses(it->first)) {
+      it = FixablesForUnsafeVars.byVar.erase(it);
+    } else {
+      ++it;
     }
-
-    llvm::SmallVector<const VarDecl *, 16> UnsafeVars;
-    for (const auto &[VD, ignore] : FixablesForUnsafeVars.byVar)
-      UnsafeVars.push_back(VD);
-
-    Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
-    FixItsForVariable = getFixIts(FixablesForUnsafeVars, NaiveStrategy, Tracker,
-                                  D->getASTContext(), Handler);
-
-    // FIXME Detect overlapping FixIts.
   }
+
+  llvm::SmallVector<const VarDecl *, 16> UnsafeVars;
+  for (const auto &[VD, ignore] : FixablesForUnsafeVars.byVar)
+    UnsafeVars.push_back(VD);
+
+  Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
+  FixItsForVariable = getFixIts(FixablesForUnsafeVars, NaiveStrategy, Tracker,
+                                D->getASTContext(), Handler);
+
+  // FIXME Detect overlapping FixIts.
 
   for (const auto &G : UnsafeOps.noVar) {
     Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false);
   }
 
   for (const auto &[VD, WarningGadgets] : UnsafeOps.byVar) {
-    auto FixItsIt =
-        EmitFixits ? FixItsForVariable.find(VD) : FixItsForVariable.end();
+    auto FixItsIt = FixItsForVariable.find(VD);
     Handler.handleFixableVariable(VD, FixItsIt != FixItsForVariable.end()
                                           ? std::move(FixItsIt->second)
                                           : FixItList{});

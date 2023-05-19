@@ -7,8 +7,8 @@
 ## groups, we use `mov` instructions with a variety of immediates, with
 ## different immediate values for each group.
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/main.s -o %t/main.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/abs.s -o %t/abs.o
+# RUN: llvm-mc -emit-compact-unwind-non-canonical=true -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/main.s -o %t/main.o
+# RUN: llvm-mc -emit-compact-unwind-non-canonical=true -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/abs.s -o %t/abs.o
 # RUN: %lld -lSystem --icf=all -o %t/main %t/main.o %t/abs.o
 # RUN: llvm-objdump -d --syms --dwarf=frames %t/main | FileCheck %s
 

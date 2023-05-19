@@ -58,6 +58,7 @@ private:
     ELFMovwAbsG1,
     ELFMovwAbsG2,
     ELFMovwAbsG3,
+    ELFTstBr14,
     ELFCondBr19,
     ELFAbs32,
     ELFAbs64,
@@ -100,6 +101,8 @@ private:
       return ELFMovwAbsG2;
     case ELF::R_AARCH64_MOVW_UABS_G3:
       return ELFMovwAbsG3;
+    case ELF::R_AARCH64_TSTBR14:
+      return ELFTstBr14;
     case ELF::R_AARCH64_CONDBR19:
       return ELFCondBr19;
     case ELF::R_AARCH64_ABS32:
@@ -288,6 +291,15 @@ private:
             "MOVK/MOVZ (imm16, LSL #48) instruction");
 
       Kind = aarch64::MoveWide16;
+      break;
+    }
+    case ELFTstBr14: {
+      uint32_t Instr = *(const ulittle32_t *)FixupContent;
+      if (!aarch64::isTestAndBranchImm14(Instr))
+        return make_error<JITLinkError>("R_AARCH64_TSTBR14 target is not a "
+                                        "test and branch instruction");
+
+      Kind = aarch64::TestAndBranch14PCRel;
       break;
     }
     case ELFCondBr19: {

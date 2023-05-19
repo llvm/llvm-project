@@ -62,7 +62,7 @@ fill_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _SizeT __n, const 
   std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_fill_n),
       [&](_ForwardIterator __g_first, _SizeT __g_n, const _Tp& __g_value) {
-        if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value)
+        if constexpr (__has_random_access_iterator_category<_ForwardIterator>::value)
           std::fill(__policy, __g_first, __g_first + __g_n, __g_value);
         else
           std::fill_n(__g_first, __g_n, __g_value);

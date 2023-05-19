@@ -199,3 +199,12 @@ func.func @read_of_alias(%t: tensor<100xf32>, %pos1: index, %pos2: index,
   %3 = tensor.extract %0[%pos3] : tensor<100xf32>
   return %2, %3 : f32, f32
 }
+
+// -----
+
+// CHECK-LABEL: func @from_unranked_to_unranked
+func.func @from_unranked_to_unranked(%arg0: tensor<*xi32>) -> tensor<*xi32> {
+  // CHECK: return %arg{{.*}} : tensor<*xi32>
+  %0 = tensor.cast %arg0 : tensor<*xi32> to tensor<*xi32>
+  return %0 : tensor<*xi32>
+}

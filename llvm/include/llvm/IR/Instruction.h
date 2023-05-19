@@ -350,6 +350,9 @@ public:
   /// Sets the AA metadata on this instruction from the AAMDNodes structure.
   void setAAMetadata(const AAMDNodes &N);
 
+  /// Sets the nosanitize metadata on this instruction.
+  void setNoSanitizeMetadata();
+
   /// Retrieve total raw weight values of a branch.
   /// Returns true on success with profile total weights filled in.
   /// Returns false if no metadata was found.

@@ -2541,7 +2541,7 @@ void CodeGenFunction::InsertHelper(llvm::Instruction *I,
                                    llvm::BasicBlock::iterator InsertPt) const {
   LoopStack.InsertHelper(I);
   if (IsSanitizerScope)
-    CGM.getSanitizerMetadata()->disableSanitizerForInstruction(I);
+    I->setNoSanitizeMetadata();
 }
 
 void CGBuilderInserter::InsertHelper(
