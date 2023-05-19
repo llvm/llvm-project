@@ -988,13 +988,6 @@ def EndpgmMatchClass : AsmOperandClass {
   let IsOptional = 1;
 }
 
-def ExpTgtMatchClass : AsmOperandClass {
-  let Name = "ExpTgt";
-  let PredicateMethod = "isExpTgt";
-  let ParserMethod = "parseExpTgt";
-  let RenderMethod = "printExpTgt";
-}
-
 def SWaitMatchClass : AsmOperandClass {
   let Name = "SWaitCnt";
   let RenderMethod = "addImmOperands";
@@ -1268,24 +1261,22 @@ def op_sel_hi0 : NamedOperandU32Default0<"OpSelHi", NamedMatchClass<"OpSelHi">>;
 def neg_lo0 : NamedOperandU32Default0<"NegLo", NamedMatchClass<"NegLo">>;
 def neg_hi0 : NamedOperandU32Default0<"NegHi", NamedMatchClass<"NegHi">>;
 
-def dpp8 : NamedOperandU32<"DPP8", NamedMatchClass<"DPP8", 0>>;
-def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
+def dpp8 : CustomOperand<i32, 0, "DPP8">;
+def dpp_ctrl : CustomOperand<i32, 0, "DPPCtrl">;
 
-def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;
-def bank_mask : NamedOperandU32<"BankMask", NamedMatchClass<"BankMask">>;
+def row_mask : NamedIntOperand<i32, "row_mask", "DppRowMask">;
+def bank_mask : NamedIntOperand<i32, "bank_mask", "DppBankMask">;
 def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl",
     "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }">;
-def FI : NamedOperandU32<"FI", NamedMatchClass<"FI">>;
+def FI : NamedIntOperand<i32, "fi", "DppFI">;
 
-def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
-def cbsz : NamedOperandU32<"CBSZ", NamedMatchClass<"CBSZ">>;
-def abid : NamedOperandU32<"ABID", NamedMatchClass<"ABID">>;
+def blgp : CustomOperand<i32, 1, "BLGP">;
+def cbsz : NamedIntOperand<i32, "cbsz", "CBSZ">;
+def abid : NamedIntOperand<i32, "abid", "ABID">;
 
-def hwreg : NamedOperandU32<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
+def hwreg : CustomOperand<i32, 0, "Hwreg">;
 
-def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
-
-}
+def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
 def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
 def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;

@@ -310,3 +310,8 @@ def IsZeroIdiomFn     : TIIPredicate<"isZeroIdiom",
                                               CheckZeroOperand<2>]>>>],
                                       MCReturnStatement<FalsePred>>>;
 def IsZeroIdiomPred   : MCSchedPredicate<IsZeroIdiomFn>;
+
+// Identify EXTR as the alias for ROR (immediate).
+def IsRORImmIdiomPred : MCSchedPredicate<
+                          CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
+                                    CheckSameRegOperand<1, 2>]>>;

@@ -483,9 +483,6 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::Leak;
     Res |= SanitizerKind::Thread;
   }
-  if (IsX86 || IsX86_64) {
-    Res |= SanitizerKind::Function;
-  }
   if (IsAArch64 || IsX86 || IsX86_64) {
     Res |= SanitizerKind::SafeStack;
     Res |= SanitizerKind::Fuzzer;

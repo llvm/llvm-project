@@ -58,7 +58,8 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
-
+- A bug in evaluating the ineligibility of some special member functions has been fixed. This can
+  make some classes trivially copyable that were not trivially copyable before. (`#62555 <https://github.com/llvm/llvm-project/issues/62555>`_)
 
 What's New in Clang |release|?
 ==============================
@@ -77,8 +78,13 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-- Support for out-of-line definitions of constrained templates has been improved.
-  This partially fixes `#49620 <https://github.com/llvm/llvm-project/issues/49620>`_.
+- Implemented the rule introduced by `CA104 <https://wg21.link/P2103R0>`_  for comparison of
+  constraint-expressions. Improved support for out-of-line definitions of constrained templates.
+  This fixes:
+  `#49620 <https://github.com/llvm/llvm-project/issues/49620>`_,
+  `#60231 <https://github.com/llvm/llvm-project/issues/60231>`_,
+  `#61414 <https://github.com/llvm/llvm-project/issues/61414>`_,
+  `#61809 <https://github.com/llvm/llvm-project/issues/61809>`_.
 - Lambda templates with a requires clause directly after the template parameters now parse
   correctly if the requires clause consists of a variable with a dependent type.
   (`#61278 <https://github.com/llvm/llvm-project/issues/61278>`_)
@@ -192,6 +198,9 @@ Non-comprehensive list of changes in this release
   ``memcmp(&lhs, &rhs, sizeof(T)) == 0``.
 - Clang now ignores null directives outside of the include guard when deciding
   whether a file can be enabled for the multiple-include optimization.
+- Clang now support ``__builtin_FUNCSIG()`` which retruns the same information
+  as the ``__FUNCSIG__`` macro (available only with ``-fms-extensions`` flag).
+  This fixes (`#58951 <https://github.com/llvm/llvm-project/issues/58951>`_).
 
 New Compiler Flags
 ------------------
@@ -401,6 +410,9 @@ Bug Fixes in This Version
   when it had been instantiated from a partial template specialization with different
   template arguments on the containing class. This fixes:
   (`#60778 <https://github.com/llvm/llvm-project/issues/60778>`_).
+- Fix a crash when an enum constant has a dependent-type recovery expression for
+  C.
+  (`#62446 <https://github.com/llvm/llvm-project/issues/62446>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

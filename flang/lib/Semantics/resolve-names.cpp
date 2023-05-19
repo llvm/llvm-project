@@ -2329,6 +2329,10 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
                       .first->second};
   name.symbol = &symbol;
   symbol.attrs() = hostSymbol.attrs(); // TODO: except PRIVATE, PUBLIC?
+  // These attributes can be redundantly reapplied without error
+  // on the host-associated name, at most once (C815).
+  symbol.implicitAttrs() =
+      symbol.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
   symbol.flags() = hostSymbol.flags();
   return symbol;
 }
@@ -2422,6 +2426,13 @@ void ScopeHandler::ApplyImplicitRules(
     }
   }
   if (allowForwardReference && ImplicitlyTypeForwardRef(symbol)) {
+    return;
+  }
+  if (const auto *entity{symbol.detailsIf<EntityDetails>()};
+      entity && entity->isDummy()) {
+    // Dummy argument, no declaration or reference; if it turns
+    // out to be a subroutine, it's fine, and if it is a function
+    // or object, it'll be caught later.
     return;
   }
   if (!context().HasError(symbol)) {
@@ -7164,13 +7175,13 @@ void ResolveNamesVisitor::HandleProcedureName(
       symbol = &MakeSymbol(context().globalScope(), name.source, Attrs{});
     }
     Resolve(name, *symbol);
+    ConvertToProcEntity(*symbol);
     if (!symbol->attrs().test(Attr::INTRINSIC)) {
       if (CheckImplicitNoneExternal(name.source, *symbol)) {
         MakeExternal(*symbol);
       }
     }
     CheckEntryDummyUse(name.source, symbol);
-    ConvertToProcEntity(*symbol);
     SetProcFlag(name, *symbol, flag);
   } else if (CheckUseError(name)) {
     // error was reported
@@ -7186,9 +7197,7 @@ void ResolveNamesVisitor::HandleProcedureName(
     if (!SetProcFlag(name, *symbol, flag)) {
       return; // reported error
     }
-    if (!symbol->has<GenericDetails>()) {
-      CheckImplicitNoneExternal(name.source, *symbol);
-    }
+    CheckImplicitNoneExternal(name.source, *symbol);
     if (IsProcedure(*symbol) || symbol->has<DerivedTypeDetails>() ||
         symbol->has<AssocEntityDetails>()) {
       // Symbols with DerivedTypeDetails and AssocEntityDetails are accepted
@@ -7197,7 +7206,7 @@ void ResolveNamesVisitor::HandleProcedureName(
       // references that will be fixed later when analyzing expressions.
     } else if (symbol->has<ObjectEntityDetails>()) {
       // Symbols with ObjectEntityDetails are also accepted because this can be
-      // a mis-parsed array references that will be fixed later. Ensure that if
+      // a mis-parsed array reference that will be fixed later. Ensure that if
       // this is a symbol from a host procedure, a symbol with HostAssocDetails
       // is created for the current scope.
       // Operate on non ultimate symbol so that HostAssocDetails are also
@@ -7217,11 +7226,11 @@ void ResolveNamesVisitor::HandleProcedureName(
 
 bool ResolveNamesVisitor::CheckImplicitNoneExternal(
     const SourceName &name, const Symbol &symbol) {
-  if (isImplicitNoneExternal() && !symbol.attrs().test(Attr::EXTERNAL) &&
+  if (symbol.has<ProcEntityDetails>() && isImplicitNoneExternal() &&
+      !symbol.attrs().test(Attr::EXTERNAL) &&
       !symbol.attrs().test(Attr::INTRINSIC) && !symbol.HasExplicitInterface()) {
     Say(name,
-        "'%s' is an external procedure without the EXTERNAL"
-        " attribute in a scope with IMPLICIT NONE(EXTERNAL)"_err_en_US);
+        "'%s' is an external procedure without the EXTERNAL attribute in a scope with IMPLICIT NONE(EXTERNAL)"_err_en_US);
     return false;
   }
   return true;

@@ -42,9 +42,9 @@
 
 ;; The final assignment (X.B += 2) doesn't get stored back to the alloca. This
 ;; means that that the stack location isn't valid for the entire lifetime of X.
-; DBGVALUE: %2:gr64 = nsw ADD64ri8 %1, 2, implicit-def dead $eflags, debug-location
+; DBGVALUE: %2:gr64 = nsw ADD64ri32 %1, 2, implicit-def dead $eflags, debug-location
 ; DBGVALUE-NEXT: DBG_VALUE %2, $noreg, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location
-; INSTRREF: %2:gr64 = nsw ADD64ri8 %1, 2, implicit-def dead $eflags, debug-instr-number 1
+; INSTRREF: %2:gr64 = nsw ADD64ri32 %1, 2, implicit-def dead $eflags, debug-instr-number 1
 ; INSTRREF-NEXT: DBG_INSTR_REF ![[VAR]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location
 
 ;; Bits [0, 64) are still stack homed. FIXME, this particular reinstatement is

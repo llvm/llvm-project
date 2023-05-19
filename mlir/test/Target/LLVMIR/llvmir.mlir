@@ -53,15 +53,6 @@ llvm.mlir.global internal constant @int_gep() : !llvm.ptr<i32> {
   llvm.return %gepinit : !llvm.ptr<i32>
 }
 
-// CHECK: @string_array = internal constant [1 x ptr] [ptr @string_const]
-llvm.mlir.global internal constant @string_array() : !llvm.array<1 x ptr<i8>> {
-    %0 = llvm.mlir.undef : !llvm.array<1 x ptr<i8>>
-    %1 = llvm.mlir.addressof @string_const: !llvm.ptr<array<6 x i8>>
-    %2 = llvm.getelementptr %1[0, 0] : (!llvm.ptr<array<6 x i8>>) -> !llvm.ptr<i8>
-    %3 = llvm.insertvalue %2, %0[0] : !llvm.array<1 x ptr<i8>>
-    llvm.return %3 : !llvm.array<1 x ptr<i8>>
-}
-
 // CHECK{LITERAL}: @dense_float_vector = internal global <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
 llvm.mlir.global internal @dense_float_vector(dense<[1.0, 2.0, 3.0]> : vector<3xf32>) : vector<3xf32>
 

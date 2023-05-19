@@ -72,6 +72,15 @@ building the LLDB framework for macOS, the headers are processed with
 ``unifdef`` prior to being copied into the framework bundle to remove macros
 involving SWIG.
 
+Lifetime
+--------
+Many SB API methods will return strings in the form of ``const char *`` values.
+Once created, these strings are guaranteed to live until the end of the
+debugging session. LLDB owns these strings, clients should not attempt to free
+them. Doing so may cause LLDB to crash.
+Note that this only affects the C++ API as scripting languages usually
+will usually create native string types from the ``const char *`` value.
+
 API Instrumentation
 -------------------
 

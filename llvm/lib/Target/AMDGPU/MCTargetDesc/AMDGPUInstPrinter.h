@@ -131,14 +131,14 @@ private:
                  raw_ostream &O);
   void printDPPCtrl(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
-  void printRowMask(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
-  void printBankMask(const MCInst *MI, unsigned OpNo,
-                     const MCSubtargetInfo &STI, raw_ostream &O);
+  void printDppRowMask(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printDppBankMask(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printDppBoundCtrl(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
-  void printFI(const MCInst *MI, unsigned OpNo,
-               const MCSubtargetInfo &STI, raw_ostream &O);
+  void printDppFI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                  raw_ostream &O);
   void printSDWASel(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printSDWADstSel(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);

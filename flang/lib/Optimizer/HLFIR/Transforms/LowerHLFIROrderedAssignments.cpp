@@ -18,9 +18,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScheduleOrderedAssignments.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
 namespace hlfir {
@@ -38,12 +42,292 @@ static llvm::cl::opt<bool> dbgScheduleOnly(
     llvm::cl::desc("Only run ordered assignment scheduling with no codegen"),
     llvm::cl::init(false));
 
+namespace {
+/// Structure that visits an ordered assignment tree and generates code for
+/// it according to a schedule.
+class OrderedAssignmentRewriter {
+public:
+  OrderedAssignmentRewriter(fir::FirOpBuilder &builder,
+                            hlfir::OrderedAssignmentTreeOpInterface root)
+      : builder{builder}, root{root} {}
+
+  /// Generate code for the current run of the schedule.
+  void lowerRun(hlfir::Run &run) {
+    currentRun = &run;
+    walk(root);
+    currentRun = nullptr;
+    assert(constructStack.empty() && "must exit constructs after a run");
+    mapper.clear();
+  }
+
+private:
+  /// Walk the part of an order assignment tree node that needs
+  /// to be evaluated in the current run.
+  void walk(hlfir::OrderedAssignmentTreeOpInterface node);
+
+  /// Generate code when entering a given ordered assignment node.
+  void pre(hlfir::ForallOp forallOp);
+  void pre(hlfir::ForallIndexOp);
+  void pre(hlfir::ForallMaskOp);
+  void pre(hlfir::WhereOp whereOp);
+  void pre(hlfir::ElseWhereOp elseWhereOp);
+  void pre(hlfir::RegionAssignOp);
+
+  /// Generate code when leaving a given ordered assignment node.
+  void post(hlfir::ForallOp);
+  void post(hlfir::ForallMaskOp);
+
+  /// Is this an assignment to a vector subscripted entity?
+  static bool hasVectorSubscriptedLhs(hlfir::RegionAssignOp regionAssignOp);
+  /// Are they any leaf region in node that must be saved in the current run?
+  bool mustSavedRegionIn(hlfir::OrderedAssignmentTreeOpInterface node) const;
+  /// Should this node be evaluated in the current run? Saving a region in a
+  /// node does not imply the node needs to be evaluated.
+  bool
+  isRequiredInCurrentRun(hlfir::OrderedAssignmentTreeOpInterface node) const;
+
+  /// Generate a scalar value yielded by an ordered assignment tree region.
+  /// If the value was not saved in a previous run, this clone the region
+  /// code, except the final yield, at the current execution point.
+  /// If the value was saved in a previous run, this fetches the saved value
+  /// from the temporary storage and returns the value.
+  mlir::Value generateYieldedScalarValue(mlir::Region &region);
+
+  /// Generate an entity yielded by an ordered assignment tree region, and
+  /// optionally return the (uncloned) yield if there is any clean-up that
+  /// should be done after using the entity. Like, generateYieldedScalarValue,
+  /// this will return the saved value if the region was saved in a previous
+  /// run.
+  std::pair<mlir::Value, std::optional<hlfir::YieldOp>>
+  generateYieldedEntity(mlir::Region &region);
+
+  /// If \p maybeYield is present and has a clean-up, generate the clean-up
+  /// at the current insertion point (by cloning).
+  void generateCleanupIfAny(std::optional<hlfir::YieldOp> maybeYield);
+
+  fir::FirOpBuilder &builder;
+
+  /// Map containg the mapping between the original order assignment tree
+  /// operations and the operations that have been cloned in the current run.
+  /// It is reset between two runs.
+  mlir::IRMapping mapper;
+  /// Construct stack in the current run. This allows setting back the insertion
+  /// point correctly when leaving a node that requires a fir.do_loop or fir.if
+  /// operation.
+  llvm::SmallVector<mlir::Operation *> constructStack;
+  /// Root of the order assignment tree being lowered.
+  hlfir::OrderedAssignmentTreeOpInterface root;
+  /// Pointer to the current run of the schedule being lowered.
+  hlfir::Run *currentRun = nullptr;
+};
+} // namespace
+
+void OrderedAssignmentRewriter::walk(
+    hlfir::OrderedAssignmentTreeOpInterface node) {
+  if (mustSavedRegionIn(node))
+    TODO(node.getLoc(),
+         "creating temporary storage in FORALL or WHERE constructs");
+  if (isRequiredInCurrentRun(node) || mlir::isa<hlfir::ForallIndexOp>(node)) {
+    llvm::TypeSwitch<mlir::Operation *, void>(node.getOperation())
+        .Case<hlfir::ForallOp, hlfir::ForallIndexOp, hlfir::ForallMaskOp,
+              hlfir::RegionAssignOp, hlfir::WhereOp, hlfir::ElseWhereOp>(
+            [&](auto concreteOp) { pre(concreteOp); })
+        .Default([](auto) {});
+    if (auto *body = node.getSubTreeRegion()) {
+      for (mlir::Operation &op : body->getOps())
+        if (auto subNode =
+                mlir::dyn_cast<hlfir::OrderedAssignmentTreeOpInterface>(op))
+          walk(subNode);
+      llvm::TypeSwitch<mlir::Operation *, void>(node.getOperation())
+          .Case<hlfir::ForallOp, hlfir::ForallMaskOp>(
+              [&](auto concreteOp) { post(concreteOp); })
+          .Default([](auto) {});
+    }
+  }
+}
+
+void OrderedAssignmentRewriter::pre(hlfir::ForallOp forallOp) {
+  /// Create a fir.do_loop given the hlfir.forall control values.
+  mlir::Value rawLowerBound =
+      generateYieldedScalarValue(forallOp.getLbRegion());
+  mlir::Location loc = forallOp.getLoc();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value lb = builder.createConvert(loc, idxTy, rawLowerBound);
+  mlir::Value rawUpperBound =
+      generateYieldedScalarValue(forallOp.getUbRegion());
+  mlir::Value ub = builder.createConvert(loc, idxTy, rawUpperBound);
+  mlir::Value step;
+  if (forallOp.getStepRegion().empty()) {
+    step = builder.createIntegerConstant(loc, idxTy, 1);
+  } else {
+    step = generateYieldedScalarValue(forallOp.getStepRegion());
+    step = builder.createConvert(loc, idxTy, step);
+  }
+  auto doLoop = builder.create<fir::DoLoopOp>(loc, lb, ub, step);
+  builder.setInsertionPointToStart(doLoop.getBody());
+  mlir::Value oldIndex = forallOp.getForallIndexValue();
+  mlir::Value newIndex =
+      builder.createConvert(loc, oldIndex.getType(), doLoop.getInductionVar());
+  mapper.map(oldIndex, newIndex);
+  constructStack.push_back(doLoop);
+}
+
+void OrderedAssignmentRewriter::post(hlfir::ForallOp) {
+  assert(!constructStack.empty() && "must contain a loop");
+  builder.setInsertionPointAfter(constructStack.pop_back_val());
+}
+
+void OrderedAssignmentRewriter::pre(hlfir::ForallIndexOp forallIndexOp) {
+  mlir::Location loc = forallIndexOp.getLoc();
+  mlir::Type intTy = fir::unwrapRefType(forallIndexOp.getType());
+  mlir::Value indexVar =
+      builder.createTemporary(loc, intTy, forallIndexOp.getName());
+  mlir::Value newVal = mapper.lookupOrDefault(forallIndexOp.getIndex());
+  builder.createStoreWithConvert(loc, newVal, indexVar);
+  mapper.map(forallIndexOp, indexVar);
+}
+
+void OrderedAssignmentRewriter::pre(hlfir::ForallMaskOp forallMaskOp) {
+  mlir::Location loc = forallMaskOp.getLoc();
+  mlir::Value mask = generateYieldedScalarValue(forallMaskOp.getMaskRegion());
+  mask = builder.createConvert(loc, builder.getI1Type(), mask);
+  auto ifOp = builder.create<fir::IfOp>(loc, std::nullopt, mask, false);
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  constructStack.push_back(ifOp);
+}
+
+void OrderedAssignmentRewriter::post(hlfir::ForallMaskOp forallMaskOp) {
+  assert(!constructStack.empty() && "must contain an ifop");
+  builder.setInsertionPointAfter(constructStack.pop_back_val());
+}
+
+void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
+  mlir::Location loc = regionAssignOp.getLoc();
+  auto [rhs, oldRhsYield] =
+      generateYieldedEntity(regionAssignOp.getRhsRegion());
+  if (hasVectorSubscriptedLhs(regionAssignOp))
+    TODO(loc, "assignment to vector subscripted entity");
+  auto [lhs, oldLhsYield] =
+      generateYieldedEntity(regionAssignOp.getLhsRegion());
+  if (!regionAssignOp.getUserDefinedAssignment().empty())
+    TODO(loc, "user defined assignment inside FORALL or WHERE");
+  // TODO: preserve allocatable assignment aspects for forall once
+  // they are conveyed in hlfir.region_assign.
+  builder.create<hlfir::AssignOp>(loc, rhs, lhs);
+  generateCleanupIfAny(oldRhsYield);
+  generateCleanupIfAny(oldLhsYield);
+}
+
+void OrderedAssignmentRewriter::pre(hlfir::WhereOp whereOp) {
+  mlir::Location loc = whereOp.getLoc();
+  TODO(loc, "WHERE in HLFIR");
+}
+
+void OrderedAssignmentRewriter::pre(hlfir::ElseWhereOp elseWhereOp) {
+  mlir::Location loc = elseWhereOp.getLoc();
+  TODO(loc, "ELSEWHERE in HLFIR");
+}
+
+std::pair<mlir::Value, std::optional<hlfir::YieldOp>>
+OrderedAssignmentRewriter::generateYieldedEntity(mlir::Region &region) {
+  // TODO: if the region was saved, use that instead of generating code again.
+  assert(region.hasOneBlock() && "region must contain one block");
+  // Clone all operations except the final hlfir.yield.
+  mlir::Block::OpListType &ops = region.back().getOperations();
+  assert(!ops.empty() && "yield block cannot be empty");
+  auto end = ops.end();
+  for (auto opIt = ops.begin(); std::next(opIt) != end; ++opIt)
+    (void)builder.clone(*opIt, mapper);
+  auto oldYield = mlir::dyn_cast_or_null<hlfir::YieldOp>(
+      region.back().getOperations().back());
+  assert(oldYield && "region computing scalar must end with a YieldOp");
+  // Get the value for the yielded entity, it may be the result of an operation
+  // that was cloned, or it may be the same as the previous value if the yield
+  // operand was created before the ordered assignment tree.
+  mlir::Value newEntity = mapper.lookupOrDefault(oldYield.getEntity());
+  if (oldYield.getCleanup().empty())
+    return {newEntity, std::nullopt};
+  return {newEntity, oldYield};
+}
+
+mlir::Value
+OrderedAssignmentRewriter::generateYieldedScalarValue(mlir::Region &region) {
+  auto [value, maybeYield] = generateYieldedEntity(region);
+  assert(fir::isa_trivial(value.getType()) && "not a trivial scalar value");
+  generateCleanupIfAny(maybeYield);
+  return value;
+}
+
+void OrderedAssignmentRewriter::generateCleanupIfAny(
+    std::optional<hlfir::YieldOp> maybeYield) {
+  if (maybeYield.has_value())
+    if (!maybeYield->getCleanup().empty()) {
+      assert(maybeYield->getCleanup().hasOneBlock() &&
+             "region must contain one block");
+      for (auto &op : maybeYield->getCleanup().back().getOperations())
+        builder.clone(op, mapper);
+    }
+}
+
+bool OrderedAssignmentRewriter::hasVectorSubscriptedLhs(
+    hlfir::RegionAssignOp regionAssignOp) {
+  return mlir::isa<hlfir::ElementalAddrOp>(
+      regionAssignOp.getLhsRegion().back().back());
+}
+
+bool OrderedAssignmentRewriter::mustSavedRegionIn(
+    hlfir::OrderedAssignmentTreeOpInterface node) const {
+  for (auto &action : currentRun->actions)
+    if (hlfir::SaveEntity *savedEntity =
+            std::get_if<hlfir::SaveEntity>(&action))
+      if (node.getOperation() == savedEntity->yieldRegion->getParentOp())
+        return true;
+  return false;
+}
+
+bool OrderedAssignmentRewriter::isRequiredInCurrentRun(
+    hlfir::OrderedAssignmentTreeOpInterface node) const {
+  // hlfir.forall_index do not contain saved regions/assignments,
+  // but if their hlfir.forall parent was required, they are
+  // required (the forall indices needs to be mapped).
+  if (mlir::isa<hlfir::ForallIndexOp>(node))
+    return true;
+  for (auto &action : currentRun->actions)
+    if (hlfir::SaveEntity *savedEntity =
+            std::get_if<hlfir::SaveEntity>(&action)) {
+      // A SaveEntity action does not require evaluating the node that contains
+      // it, but it requires to evaluate all the parents of the nodes that
+      // contains it. For instance, an saving a bound in hlfir.forall B does not
+      // require creating the loops for B, but it requires creating the loops
+      // for any forall parent A of the forall B.
+      if (node->isProperAncestor(savedEntity->yieldRegion->getParentOp()))
+        return true;
+    } else {
+      auto assign = std::get<hlfir::RegionAssignOp>(action);
+      if (node->isAncestor(assign.getOperation()))
+        return true;
+    }
+  return false;
+}
+
+/// Lower an ordered assignment tree to fir.do_loop and hlfir.assign given
+/// a schedule.
+static void lower(hlfir::OrderedAssignmentTreeOpInterface root,
+                  mlir::PatternRewriter &rewriter, hlfir::Schedule &schedule) {
+  auto module = root->getParentOfType<mlir::ModuleOp>();
+  fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+  OrderedAssignmentRewriter assignmentRewriter(builder, root);
+  for (auto &run : schedule)
+    assignmentRewriter.lowerRun(run);
+}
+
 /// Shared rewrite entry point for all the ordered assignment tree root
 /// operations. It calls the scheduler and then apply the schedule.
-static mlir::LogicalResult
-rewrite(hlfir::OrderedAssignmentTreeOpInterface &root,
-        bool tryFusingAssignments, mlir::PatternRewriter &rewriter) {
-  (void)hlfir::buildEvaluationSchedule(root, tryFusingAssignments);
+static mlir::LogicalResult rewrite(hlfir::OrderedAssignmentTreeOpInterface root,
+                                   bool tryFusingAssignments,
+                                   mlir::PatternRewriter &rewriter) {
+  hlfir::Schedule schedule =
+      hlfir::buildEvaluationSchedule(root, tryFusingAssignments);
 
   LLVM_DEBUG(
       /// Debug option to print the scheduling debug info without doing
@@ -55,8 +339,9 @@ rewrite(hlfir::OrderedAssignmentTreeOpInterface &root,
         rewriter.eraseOp(root);
         return mlir::success();
       });
-  // TODO: lower to loops according to schedule.
-  return mlir::failure();
+  lower(root, rewriter, schedule);
+  rewriter.eraseOp(root);
+  return mlir::success();
 }
 
 namespace {

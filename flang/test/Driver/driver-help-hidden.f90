@@ -55,6 +55,8 @@
 ! CHECK-NEXT: -fno-version-loops-for-stride
 ! CHECK-NEXT:                        Do not create unit-strided loops (default)
 ! CHECK-NEXT: -fopenacc              Enable OpenACC
+! CHECK-NEXT: -fopenmp-version=<value>
+! CHECK-NEXT:                        Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
 ! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! CHECK-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! CHECK-NEXT: -freciprocal-math      Allow division operations to be reassociated

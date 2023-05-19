@@ -63,7 +63,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 void advance(_InputIter& __i, _Distance __orig_n) {
   typedef typename iterator_traits<_InputIter>::difference_type _Difference;
   _Difference __n = static_cast<_Difference>(_VSTD::__convert_to_integral(__orig_n));
-  _LIBCPP_ASSERT(__n >= 0 || __is_cpp17_bidirectional_iterator<_InputIter>::value,
+  _LIBCPP_ASSERT(__n >= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
                  "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
   _VSTD::__advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());
 }

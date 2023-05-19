@@ -397,6 +397,7 @@ def SI_IF: CFPseudoInstSI <
   let Constraints = "";
   let Size = 12;
   let hasSideEffects = 1;
+  let IsNeverUniform = 1;
 }
 
 def SI_ELSE : CFPseudoInstSI <
@@ -404,6 +405,7 @@ def SI_ELSE : CFPseudoInstSI <
   (ins SReg_1:$src, brtarget:$target), [], 1, 1> {
   let Size = 12;
   let hasSideEffects = 1;
+  let IsNeverUniform = 1;
 }
 
 def SI_WATERFALL_LOOP : CFPseudoInstSI <
@@ -981,25 +983,6 @@ def : Pat <
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//
-
-let OtherPredicates = [UnsafeFPMath] in {
-
-// Convert (x - floor(x)) to fract(x)
-def : GCNPat <
-  (f32 (fsub (f32 (VOP3Mods f32:$x, i32:$mods)),
-             (f32 (ffloor (f32 (VOP3Mods f32:$x, i32:$mods)))))),
-  (V_FRACT_F32_e64 $mods, $x)
->;
-
-// Convert (x + (-floor(x))) to fract(x)
-def : GCNPat <
-  (f64 (fadd (f64 (VOP3Mods f64:$x, i32:$mods)),
-             (f64 (fneg (f64 (ffloor (f64 (VOP3Mods f64:$x, i32:$mods)))))))),
-  (V_FRACT_F64_e64 $mods, $x)
->;
-
-} // End OtherPredicates = [UnsafeFPMath]
-
 
 multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16_inst_e64> {
   // f16_to_fp patterns

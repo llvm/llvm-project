@@ -19307,6 +19307,7 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
         if (!getLangOpts().CPlusPlus && !T.isNull())
           Diag(IdLoc, diag::warn_enum_value_overflow);
       } else if (!getLangOpts().CPlusPlus &&
+                 !EltTy->isDependentType() &&
                  !isRepresentableIntegerValue(Context, EnumVal, EltTy)) {
         // Enforce C99 6.7.2.2p2 even when we compute the next value.
         Diag(IdLoc, diag::ext_enum_value_not_int)

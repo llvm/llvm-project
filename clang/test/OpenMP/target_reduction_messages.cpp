@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
@@ -11,6 +14,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_null_allocator;
@@ -150,7 +156,7 @@ T tmain(T argc) {
   foo();
 #pragma omp target reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
-#pragma omp target reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp target reduction(- : da) // expected-error 2 {{const-qualified variable cannot be reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   foo();
 #pragma omp target reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
@@ -178,10 +184,10 @@ T tmain(T argc) {
 #pragma omp parallel
 #pragma omp for private(fl)
   for (int i = 0; i < 10; ++i)
-#pragma omp target reduction(+ : fl) allocate(omp_thread_mem_alloc: fl) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target' directive}} omp50-error 2 {{allocator must be specified in the 'uses_allocators' clause}}
+#pragma omp target reduction(+ : fl) allocate(omp_thread_mem_alloc: fl) // expected-warning 2 {{allocator with the 'thread' trait access has unspecified behavior on 'target' directive}} omp50-error 2 {{allocator must be specified in the 'uses_allocators' clause}} omp52-error 2 {{allocator must be specified in the 'uses_allocators' clause}}
     foo();
 #pragma omp parallel
-#pragma omp for reduction(- : fl)
+#pragma omp for reduction(- : fl) // omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
 #pragma omp target reduction(+ : fl)
     foo();
@@ -245,7 +251,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
-#pragma omp target reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp target reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   foo();
 #pragma omp target reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
@@ -278,14 +284,14 @@ int main(int argc, char **argv) {
 #pragma omp target reduction(+ : fl)
     foo();
 #pragma omp parallel
-#pragma omp for reduction(- : fl)
+#pragma omp for reduction(- : fl) // omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
 #pragma omp target reduction(+ : fl)
     foo();
   static int m;
 #pragma omp target reduction(+ : m) // OK
   m++;
-#pragma omp target reduction(task, + : m) // omp45-error 2 {{expected expression}} omp45-warning {{missing ':' after reduction identifier - ignoring}} omp50-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}}
+#pragma omp target reduction(task, + : m) // omp45-error 2 {{expected expression}} omp45-warning {{missing ':' after reduction identifier - ignoring}} omp50-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}} omp52-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}}
   m++;
 
   return tmain(argc) + tmain(fl); // expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<float>' requested here}}

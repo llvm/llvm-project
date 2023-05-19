@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
+// RUN:            -fsafe-buffer-usage-suggestions \
+// RUN:            -fdiagnostics-parseable-fixits \
+// RUN:            -fsyntax-only %s 2>&1 | FileCheck %s
 
 namespace std {
   class type_info;

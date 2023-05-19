@@ -95,8 +95,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 _SampleIterator sample(_PopulationIterator __first,
                        _PopulationIterator __last, _SampleIterator __output_iter,
                        _Distance __n, _UniformRandomNumberGenerator&& __g) {
-  static_assert(__is_cpp17_forward_iterator<_PopulationIterator>::value ||
-                __is_cpp17_random_access_iterator<_SampleIterator>::value,
+  static_assert(__has_forward_iterator_category<_PopulationIterator>::value ||
+                __has_random_access_iterator_category<_SampleIterator>::value,
                 "SampleIterator must meet the requirements of RandomAccessIterator");
 
   return std::__sample<_ClassicAlgPolicy>(

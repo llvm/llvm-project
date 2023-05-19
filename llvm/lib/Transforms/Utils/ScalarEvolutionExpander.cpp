@@ -522,6 +522,9 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
         // the struct fields.
         if (Ops.empty())
           break;
+        assert(
+            !STy->containsScalableVectorType() &&
+            "GEPs are not supported on structures containing scalable vectors");
         if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Ops[0]))
           if (SE.getTypeSizeInBits(C->getType()) <= 64) {
             const StructLayout &SL = *DL.getStructLayout(STy);

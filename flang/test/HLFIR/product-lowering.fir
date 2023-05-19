@@ -5,9 +5,8 @@
 func.func @_QPproduct1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "s"}) {
   %0:2 = hlfir.declare %arg0 {uniq_name = "_QFsum1Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %1:2 = hlfir.declare %arg1 {uniq_name = "_QFsum1Es"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2 = hlfir.product %0#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>) -> !hlfir.expr<i32>
-  hlfir.assign %2 to %1#0 : !hlfir.expr<i32>, !fir.ref<i32>
-  hlfir.destroy %2 : !hlfir.expr<i32>
+  %2 = hlfir.product %0#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>) -> i32
+  hlfir.assign %2 to %1#0 : i32, !fir.ref<i32>
   return
 }
 
@@ -77,9 +76,8 @@ func.func @_QPproduct3(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}
   %0:2 = hlfir.declare %arg0 {uniq_name = "_QFproduct3Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %1:2 = hlfir.declare %arg2 {uniq_name = "_QFproduct3Em"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
   %2:2 = hlfir.declare %arg1 {uniq_name = "_QFproduct3Es"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3 = hlfir.product %0#0 mask %1#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> !hlfir.expr<i32>
-  hlfir.assign %3 to %2#0 : !hlfir.expr<i32>, !fir.ref<i32>
-  hlfir.destroy %3 : !hlfir.expr<i32>
+  %3 = hlfir.product %0#0 mask %1#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> i32
+  hlfir.assign %3 to %2#0 : i32, !fir.ref<i32>
   return
 }
 
@@ -103,9 +101,8 @@ func.func @_QPproduct4(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}
   %0:2 = hlfir.declare %arg0 {uniq_name = "_QFproduct4Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   %1:2 = hlfir.declare %arg2 {uniq_name = "_QFproduct4Em"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
   %2:2 = hlfir.declare %arg1 {uniq_name = "_QFproduct4Es"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3 = hlfir.product %0#0 mask %1#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> !hlfir.expr<i32>
-  hlfir.assign %3 to %2#0 : !hlfir.expr<i32>, !fir.ref<i32>
-  hlfir.destroy %3 : !hlfir.expr<i32>
+  %3 = hlfir.product %0#0 mask %1#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> i32
+  hlfir.assign %3 to %2#0 : i32, !fir.ref<i32>
   return
 }
 

@@ -299,13 +299,13 @@ func.func @bad_concat_4(%arg0: !fir.ref<!fir.char<1,30>>) {
 // -----
 func.func @bad_any1(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.any' op result must have the same element type as MASK argument}}
-  %0 = hlfir.any %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<!fir.logical<8>>
+  %0 = hlfir.any %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> !fir.logical<8>
 }
 
 // -----
-func.func @bad_any2(%arg0: !hlfir.expr<?x?x!fir.logical<4>>) {
+func.func @bad_any2(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: i32) {
   // expected-error@+1 {{'hlfir.any' op result must have the same element type as MASK argument}}
-  %0 = hlfir.any %arg0 : (!hlfir.expr<?x?x!fir.logical<4>>) -> !hlfir.expr<?x!fir.logical<8>>
+  %0 = hlfir.any %arg0 dim %arg1 : (!hlfir.expr<?x?x!fir.logical<4>>, i32) -> !hlfir.expr<?x!fir.logical<8>>
 }
 
 // -----
@@ -314,11 +314,28 @@ func.func @bad_any3(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: i32){
   %0 = hlfir.any %arg0 dim %arg1 : (!hlfir.expr<?x?x!fir.logical<4>>, i32) -> !hlfir.expr<?x?x!fir.logical<4>>
 }
 
+// -----
+func.func @bad_any4(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.any' op result must be an array}}
+  %0 = hlfir.any %arg0 dim %arg1 : (!hlfir.expr<?x?x!fir.logical<4>>, i32) -> !hlfir.expr<!fir.logical<4>>
+}
+
+// -----
+func.func @bad_any5(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.any' op result must be of logical type}}
+  %0 = hlfir.any %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> i32
+}
+
+// -----
+func.func @bad_any6(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.any' op result must be of logical type}}
+  %0 = hlfir.any %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<!fir.logical<4>>
+}
 
 // -----
 func.func @bad_product1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.product' op result must have the same element type as ARRAY argument}}
-  %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<f32>
+  %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> f32
 }
 
 // -----
@@ -334,15 +351,33 @@ func.func @bad_product3(%arg0: !hlfir.expr<?x5x?xi32>, %arg1: i32, %arg2: !fir.b
 }
 
 // -----
-func.func @bad_product4(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+func.func @bad_product4(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.product' op result rank must be one less than ARRAY}}
-  %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+  %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
+// -----
+func.func @bad_product5(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.product' op result must be of numerical scalar type}}
+  %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !fir.logical<4>
+}
+
+// -----
+func.func @bad_product6(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.product' op result must be an array}}
+  %0 = hlfir.product %arg0 dim %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_product7(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.product' op result must be of numerical scalar type}}
+  %0 = hlfir.product %arg0 : (!hlfir.expr<?xi32>) -> !hlfir.expr<i32>
 }
 
 // -----
 func.func @bad_sum1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.sum' op result must have the same element type as ARRAY argument}}
-  %0 = hlfir.sum %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<f32>
+  %0 = hlfir.sum %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> f32
 }
 
 // -----
@@ -358,9 +393,27 @@ func.func @bad_sum3(%arg0: !hlfir.expr<?x5x?xi32>, %arg1: i32, %arg2: !fir.box<!
 }
 
 // -----
-func.func @bad_sum4(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+func.func @bad_sum4(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.sum' op result rank must be one less than ARRAY}}
-  %0 = hlfir.sum %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+  %0 = hlfir.sum %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
+// -----
+func.func @bad_sum5(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.sum' op result must be of numerical scalar type}}
+  %0 = hlfir.sum %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !fir.logical<4>
+}
+
+// -----
+func.func @bad_sum6(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.sum' op result must be an array}}
+  %0 = hlfir.sum %arg0 dim %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_sum7(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.sum' op result must be of numerical scalar type}}
+  %0 = hlfir.sum %arg0 : (!hlfir.expr<?xi32>) -> !hlfir.expr<i32>
 }
 
 // -----

@@ -528,7 +528,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(
   if (__size < __specs.__width_) {
     if (__zero_padding) {
       __specs.__alignment_ = __format_spec::__alignment::__right;
-      __specs.__fill_      = _CharT('0');
+      __specs.__fill_.__data[0] = _CharT('0');
     }
 
     __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__alignment_);
@@ -712,7 +712,7 @@ __format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__par
     // After the sign is written, zero padding is the same a right alignment
     // with '0'.
     __specs.__alignment_ = __format_spec::__alignment::__right;
-    __specs.__fill_      = _CharT('0');
+    __specs.__fill_.__data[0] = _CharT('0');
   }
 
   if (__num_trailing_zeros)

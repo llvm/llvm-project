@@ -1787,6 +1787,12 @@ public:
                           const FunctionDecl *Fn, Sema &S);
     SemaDiagnosticBuilder(SemaDiagnosticBuilder &&D);
     SemaDiagnosticBuilder(const SemaDiagnosticBuilder &) = default;
+
+    // The copy and move assignment operator is defined as deleted pending
+    // further motivation.
+    SemaDiagnosticBuilder &operator=(const SemaDiagnosticBuilder &) = delete;
+    SemaDiagnosticBuilder &operator=(SemaDiagnosticBuilder &&) = delete;
+
     ~SemaDiagnosticBuilder();
 
     bool isImmediate() const { return ImmediateDiag.has_value(); }
@@ -6000,8 +6006,8 @@ public:
   ExprResult BuildVAArgExpr(SourceLocation BuiltinLoc, Expr *E,
                             TypeSourceInfo *TInfo, SourceLocation RPLoc);
 
-  // __builtin_LINE(), __builtin_FUNCTION(), __builtin_FILE(),
-  // __builtin_COLUMN(), __builtin_source_location()
+  // __builtin_LINE(), __builtin_FUNCTION(), __builtin_FUNCSIG(),
+  // __builtin_FILE(), __builtin_COLUMN(), __builtin_source_location()
   ExprResult ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
@@ -13558,6 +13564,8 @@ private:
   bool CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
                                            unsigned BuiltinID,
                                            CallExpr *TheCall);
+  bool CheckNVPTXBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
+                                     CallExpr *TheCall);
 
   bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
