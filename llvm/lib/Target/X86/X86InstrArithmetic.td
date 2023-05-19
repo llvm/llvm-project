@@ -251,14 +251,9 @@ class BinOpRI8_RF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
              [(set typeinfo.RegClass:$dst, EFLAGS,
                (opnode typeinfo.RegClass:$src1, typeinfo.Imm8Operator:$src2))]>;
 
-// BinOpRI8_RFF - Binary instructions with inputs "reg, imm8", where the pattern
-// has both a regclass and EFLAGS as a result, and has EFLAGS as input.
-class BinOpRI8_RFF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-                   SDPatternOperator opnode, Format f>
-  : BinOpRI8<opcode, mnemonic, typeinfo, f, (outs typeinfo.RegClass:$dst), WriteADC,
-             [(set typeinfo.RegClass:$dst, EFLAGS,
-               (opnode typeinfo.RegClass:$src1, typeinfo.Imm8Operator:$src2,
-                       EFLAGS))]>;
+// BinOpRI8_RFF - Binary instructions with inputs "reg, imm8".
+class BinOpRI8_RFF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo, Format f>
+  : BinOpRI8<opcode, mnemonic, typeinfo, f, (outs typeinfo.RegClass:$dst), WriteADC, []>;
 
 // BinOpMR - Binary instructions with inputs "[mem], reg".
 class BinOpMR<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -362,15 +357,9 @@ class BinOpMI8_RMW<string mnemonic, X86TypeInfo typeinfo,
               (implicit EFLAGS)]>,
     Sched<[WriteALURMW]>;
 
-// BinOpMI8_RMW_FF - Binary instructions with inputs "[mem], imm8", where the
-// pattern sets EFLAGS and implicitly uses EFLAGS.
-class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo,
-                      SDPatternOperator opnode, Format f>
-  : BinOpMI8<mnemonic, typeinfo, f,
-             [(store (opnode (load addr:$dst),
-                             typeinfo.Imm8Operator:$src, EFLAGS), addr:$dst),
-              (implicit EFLAGS)]>,
-    Sched<[WriteADCRMW]>;
+// BinOpMI8_RMW_FF - Binary instructions with inputs "[mem], imm8".
+class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo, Format f>
+  : BinOpMI8<mnemonic, typeinfo, f, []>, Sched<[WriteADCRMW]>;
 
 // BinOpMI8_F - Binary instructions with inputs "[mem], imm8", where the pattern
 // has EFLAGS as a result.
@@ -979,9 +968,9 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
       let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
         // NOTE: These are order specific, we want the ri8 forms to be listed
         // first so that they are slightly preferred to the ri forms.
-        def NAME#16ri8 : BinOpRI8_RFF<0x82, mnemonic, Xi16, opnode, RegMRM>;
-        def NAME#32ri8 : BinOpRI8_RFF<0x82, mnemonic, Xi32, opnode, RegMRM>;
-        def NAME#64ri8 : BinOpRI8_RFF<0x82, mnemonic, Xi64, opnode, RegMRM>;
+        def NAME#16ri8 : BinOpRI8_RFF<0x82, mnemonic, Xi16, RegMRM>;
+        def NAME#32ri8 : BinOpRI8_RFF<0x82, mnemonic, Xi32, RegMRM>;
+        def NAME#64ri8 : BinOpRI8_RFF<0x82, mnemonic, Xi64, RegMRM>;
 
         def NAME#16ri  : BinOpRI_RFF<0x80, mnemonic, Xi16, opnode, RegMRM>;
         def NAME#32ri  : BinOpRI_RFF<0x80, mnemonic, Xi32, opnode, RegMRM>;
@@ -996,10 +985,10 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
 
     // NOTE: These are order specific, we want the mi8 forms to be listed
     // first so that they are slightly preferred to the mi forms.
-    def NAME#16mi8  : BinOpMI8_RMW_FF<mnemonic, Xi16, opnode, MemMRM>;
-    def NAME#32mi8  : BinOpMI8_RMW_FF<mnemonic, Xi32, opnode, MemMRM>;
+    def NAME#16mi8  : BinOpMI8_RMW_FF<mnemonic, Xi16, MemMRM>;
+    def NAME#32mi8  : BinOpMI8_RMW_FF<mnemonic, Xi32, MemMRM>;
     let Predicates = [In64BitMode] in
-    def NAME#64mi8  : BinOpMI8_RMW_FF<mnemonic, Xi64, opnode, MemMRM>;
+    def NAME#64mi8  : BinOpMI8_RMW_FF<mnemonic, Xi64, MemMRM>;
 
     def NAME#8mi    : BinOpMI_RMW_FF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
     def NAME#16mi   : BinOpMI_RMW_FF<0x80, mnemonic, Xi16, opnode, MemMRM>;
@@ -1012,9 +1001,9 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
     let Predicates = [Not64BitMode], isCodeGenOnly = 1, ForceDisassemble = 1,
         hasSideEffects = 0 in {
       let Constraints = "$src1 = $dst" in
-        def NAME#8ri8 : BinOpRI8_RFF<0x82, mnemonic, Xi8, null_frag, RegMRM>;
+        def NAME#8ri8 : BinOpRI8_RFF<0x82, mnemonic, Xi8, RegMRM>;
       let mayLoad = 1, mayStore = 1 in
-        def NAME#8mi8 : BinOpMI8_RMW_FF<mnemonic, Xi8, null_frag, MemMRM>;
+        def NAME#8mi8 : BinOpMI8_RMW_FF<mnemonic, Xi8, MemMRM>;
     }
   } // Uses = [EFLAGS], Defs = [EFLAGS]
 

@@ -424,3 +424,27 @@ bool X86::optimizeToFixedRegisterForm(MCInst &MI) {
   MI.addOperand(Saved);
   return true;
 }
+
+bool X86::optimizeToShortImmediateForm(MCInst &MI) {
+  unsigned NewOpc;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+    FROM_TO(ADC16mi, ADC16mi8)
+    FROM_TO(ADC16ri, ADC16ri8)
+    FROM_TO(ADC32mi, ADC32mi8)
+    FROM_TO(ADC32ri, ADC32ri8)
+    FROM_TO(ADC64mi32, ADC64mi8)
+    FROM_TO(ADC64ri32, ADC64ri8)
+    FROM_TO(SBB16mi, SBB16mi8)
+    FROM_TO(SBB16ri, SBB16ri8)
+    FROM_TO(SBB32mi, SBB32mi8)
+    FROM_TO(SBB32ri, SBB32ri8)
+    FROM_TO(SBB64mi32, SBB64mi8)
+    FROM_TO(SBB64ri32, SBB64ri8)
+  }
+  if (!isInt<8>(MI.getOperand(MI.getNumOperands() - 1).getImm()))
+    return false;
+  MI.setOpcode(NewOpc);
+  return true;
+}
