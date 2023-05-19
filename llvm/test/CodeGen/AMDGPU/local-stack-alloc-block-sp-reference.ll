@@ -61,9 +61,9 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
-; FLATSCR-NEXT:    s_movk_i32 vcc_hi, 0x2000
+; FLATSCR-NEXT:    s_movk_i32 s3, 0x2000
 ; FLATSCR-NEXT:    s_mov_b32 s2, 0
-; FLATSCR-NEXT:    scratch_store_dword off, v0, vcc_hi
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s3
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:  .LBB0_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -155,14 +155,14 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; FLATSCR-NEXT:    s_and_b32 s33, s33, 0xffffe000
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 0x8000
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
-; FLATSCR-NEXT:    s_add_i32 vcc_hi, s33, 0x2000
+; FLATSCR-NEXT:    s_add_i32 s1, s33, 0x2000
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
-; FLATSCR-NEXT:    scratch_store_dword off, v2, vcc_hi
+; FLATSCR-NEXT:    scratch_store_dword off, v2, s1
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:  .LBB1_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
-; FLATSCR-NEXT:    s_add_i32 vcc_hi, s33, 0x3000
-; FLATSCR-NEXT:    s_add_i32 s1, s0, vcc_hi
+; FLATSCR-NEXT:    s_add_i32 s3, s33, 0x3000
+; FLATSCR-NEXT:    s_add_i32 s1, s0, s3
 ; FLATSCR-NEXT:    s_add_i32 s0, s0, 1
 ; FLATSCR-NEXT:    s_cmpk_lt_u32 s0, 0x2120
 ; FLATSCR-NEXT:    scratch_store_byte off, v2, s1
@@ -275,9 +275,9 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s2, s5
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
-; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
+; FLATSCR-NEXT:    s_mov_b32 s3, 0
 ; FLATSCR-NEXT:    s_mov_b32 s2, 0
-; FLATSCR-NEXT:    scratch_store_dword off, v0, vcc_hi offset:1024
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s3 offset:1024
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:  .LBB2_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1

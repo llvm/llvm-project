@@ -6939,12 +6939,12 @@ define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_st
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@hi+12
-; GFX11-NEXT:    s_add_i32 vcc_lo, s33, 8
+; GFX11-NEXT:    s_add_i32 s2, s33, 8
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b8 off, v0, s33
 ; GFX11-NEXT:    scratch_store_b32 off, v1, s33 offset:4
-; GFX11-NEXT:    v_dual_mov_b32 v0, vcc_lo :: v_dual_mov_b32 v1, s33
+; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s33
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_clause 0x1
@@ -6986,11 +6986,11 @@ define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_st
 ; GFX10-SCRATCH-NEXT:    s_getpc_b64 s[0:1]
 ; GFX10-SCRATCH-NEXT:    s_add_u32 s0, s0, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@lo+4
 ; GFX10-SCRATCH-NEXT:    s_addc_u32 s1, s1, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@hi+12
-; GFX10-SCRATCH-NEXT:    s_add_i32 vcc_lo, s33, 8
+; GFX10-SCRATCH-NEXT:    s_add_i32 s2, s33, 8
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX10-SCRATCH-NEXT:    scratch_store_byte off, v0, s33
 ; GFX10-SCRATCH-NEXT:    scratch_store_dword off, v1, s33 offset:4
-; GFX10-SCRATCH-NEXT:    v_mov_b32_e32 v0, vcc_lo
+; GFX10-SCRATCH-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-SCRATCH-NEXT:    v_mov_b32_e32 v1, s33
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX10-SCRATCH-NEXT:    s_swappc_b64 s[30:31], s[0:1]
