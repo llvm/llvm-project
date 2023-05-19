@@ -11,7 +11,6 @@
 
 #include "ARMAsmBackend.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectWriter.h"
 
 namespace llvm {
@@ -33,8 +32,8 @@ public:
         /*Is64Bit=*/false, cantFail(MachO::getCPUType(TT)), Subtype);
   }
 
-  uint32_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
-                                         const MCContext *Ctxt) const override;
+  uint32_t generateCompactUnwindEncoding(
+      ArrayRef<MCCFIInstruction> Instrs) const override;
 };
 } // end namespace llvm
 
