@@ -149,6 +149,19 @@ struct regs {
 void use_regs() { regs r; }
 }
 
+void x() {
+  const bool b0 = true;
+  const bool b1 = false;
+}
+
+// CHECK: cir.func @_Z1xv() {
+// CHECK:   %0 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["b0", init] {alignment = 1 : i64}
+// CHECK:   %1 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["b1", init] {alignment = 1 : i64}
+// CHECK:   %2 = cir.const(#true) : !cir.bool
+// CHECK:   cir.store %2, %0 : !cir.bool, cir.ptr <!cir.bool>
+// CHECK:   %3 = cir.const(#false) : !cir.bool
+// CHECK:   cir.store %3, %1 : !cir.bool, cir.ptr <!cir.bool>
+
 // CHECK-DAG: #[[locScope]] = loc(fused[#[[locScopeA:loc[0-9]+]], #[[locScopeB:loc[0-9]+]]])
 // CHECK-DAG: #[[locScopeA]] = loc("{{.*}}basic.cpp":27:3)
 // CHECK-DAG: #[[locScopeB]] = loc("{{.*}}basic.cpp":31:3)
