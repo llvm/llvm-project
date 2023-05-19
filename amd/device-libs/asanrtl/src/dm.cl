@@ -114,14 +114,12 @@ first(__global void * v)
 }
 
 // The number of active lanes at this point
-REQUIRES_WAVE64
 static uint
 active_lane_count_w64(void)
 {
     return __builtin_popcountl(__builtin_amdgcn_read_exec());
 }
 
-REQUIRES_WAVE32
 static uint
 active_lane_count_w32(void)
 {
