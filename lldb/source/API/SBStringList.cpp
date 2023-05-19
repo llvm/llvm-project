@@ -106,7 +106,7 @@ const char *SBStringList::GetStringAtIndex(size_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
   if (IsValid()) {
-    return m_opaque_up->GetStringAtIndex(idx);
+    return ConstString(m_opaque_up->GetStringAtIndex(idx)).GetCString();
   }
   return nullptr;
 }
@@ -115,7 +115,7 @@ const char *SBStringList::GetStringAtIndex(size_t idx) const {
   LLDB_INSTRUMENT_VA(this, idx);
 
   if (IsValid()) {
-    return m_opaque_up->GetStringAtIndex(idx);
+    return ConstString(m_opaque_up->GetStringAtIndex(idx)).GetCString();
   }
   return nullptr;
 }

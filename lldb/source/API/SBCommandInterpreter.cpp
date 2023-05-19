@@ -516,14 +516,16 @@ const char *SBCommandInterpreter::GetArgumentTypeAsCString(
     const lldb::CommandArgumentType arg_type) {
   LLDB_INSTRUMENT_VA(arg_type);
 
-  return CommandObject::GetArgumentTypeAsCString(arg_type);
+  return ConstString(CommandObject::GetArgumentTypeAsCString(arg_type))
+      .GetCString();
 }
 
 const char *SBCommandInterpreter::GetArgumentDescriptionAsCString(
     const lldb::CommandArgumentType arg_type) {
   LLDB_INSTRUMENT_VA(arg_type);
 
-  return CommandObject::GetArgumentDescriptionAsCString(arg_type);
+  return ConstString(CommandObject::GetArgumentDescriptionAsCString(arg_type))
+      .GetCString();
 }
 
 bool SBCommandInterpreter::EventIsCommandInterpreterEvent(
