@@ -100,7 +100,7 @@ body:             |
     successors: %bb.1(0x30000000), %bb.2(0x50000000)
     liveins: $rdi
 
-    CMP64mi32 $rip, 1, _, @a, _, 0, implicit-def $eflags :: (dereferenceable load (s64) from @a, align 4)
+    CMP64mi8 $rip, 1, _, @a, _, 0, implicit-def $eflags :: (dereferenceable load (s64) from @a, align 4)
     JCC_1 %bb.1, 4, implicit $eflags
 
   bb.2 (%ir-block.5):

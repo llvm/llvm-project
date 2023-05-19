@@ -105,12 +105,28 @@ bool X86FrameLowering::hasFP(const MachineFunction &MF) const {
           (isWin64Prologue(MF) && MFI.hasCopyImplyingStackAdjustment()));
 }
 
-static unsigned getSUBriOpcode(bool IsLP64) {
-  return IsLP64 ? X86::SUB64ri32 : X86::SUB32ri;
+static unsigned getSUBriOpcode(bool IsLP64, int64_t Imm) {
+  if (IsLP64) {
+    if (isInt<8>(Imm))
+      return X86::SUB64ri8;
+    return X86::SUB64ri32;
+  } else {
+    if (isInt<8>(Imm))
+      return X86::SUB32ri8;
+    return X86::SUB32ri;
+  }
 }
 
-static unsigned getADDriOpcode(bool IsLP64) {
-  return IsLP64 ? X86::ADD64ri32 : X86::ADD32ri;
+static unsigned getADDriOpcode(bool IsLP64, int64_t Imm) {
+  if (IsLP64) {
+    if (isInt<8>(Imm))
+      return X86::ADD64ri8;
+    return X86::ADD64ri32;
+  } else {
+    if (isInt<8>(Imm))
+      return X86::ADD32ri8;
+    return X86::ADD32ri;
+  }
 }
 
 static unsigned getSUBrrOpcode(bool IsLP64) {
@@ -122,7 +138,14 @@ static unsigned getADDrrOpcode(bool IsLP64) {
 }
 
 static unsigned getANDriOpcode(bool IsLP64, int64_t Imm) {
-  return IsLP64 ? X86::AND64ri32 : X86::AND32ri;
+  if (IsLP64) {
+    if (isInt<8>(Imm))
+      return X86::AND64ri8;
+    return X86::AND64ri32;
+  }
+  if (isInt<8>(Imm))
+    return X86::AND32ri8;
+  return X86::AND32ri;
 }
 
 static unsigned getLEArOpcode(bool IsLP64) {
@@ -340,8 +363,8 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   } else {
     bool IsSub = Offset < 0;
     uint64_t AbsOffset = IsSub ? -Offset : Offset;
-    const unsigned Opc = IsSub ? getSUBriOpcode(Uses64BitFramePtr)
-                               : getADDriOpcode(Uses64BitFramePtr);
+    const unsigned Opc = IsSub ? getSUBriOpcode(Uses64BitFramePtr, AbsOffset)
+                               : getADDriOpcode(Uses64BitFramePtr, AbsOffset);
     MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
              .addReg(StackPtr)
              .addImm(AbsOffset);
@@ -377,8 +400,9 @@ int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
   unsigned Opc = PI->getOpcode();
   int Offset = 0;
 
-  if ((Opc == X86::ADD64ri32 || Opc == X86::ADD32ri) &&
-      PI->getOperand(0).getReg() == StackPtr) {
+  if ((Opc == X86::ADD64ri32 || Opc == X86::ADD64ri8 ||
+       Opc == X86::ADD32ri || Opc == X86::ADD32ri8) &&
+      PI->getOperand(0).getReg() == StackPtr){
     assert(PI->getOperand(1).getReg() == StackPtr);
     Offset = PI->getOperand(2).getImm();
   } else if ((Opc == X86::LEA32r || Opc == X86::LEA64_32r) &&
@@ -389,7 +413,8 @@ int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
              PI->getOperand(5).getReg() == X86::NoRegister) {
     // For LEAs we have: def = lea SP, FI, noreg, Offset, noreg.
     Offset = PI->getOperand(4).getImm();
-  } else if ((Opc == X86::SUB64ri32 || Opc == X86::SUB32ri) &&
+  } else if ((Opc == X86::SUB64ri32 || Opc == X86::SUB64ri8 ||
+              Opc == X86::SUB32ri || Opc == X86::SUB32ri8) &&
              PI->getOperand(0).getReg() == StackPtr) {
     assert(PI->getOperand(1).getReg() == StackPtr);
     Offset = -PI->getOperand(2).getImm();
@@ -808,7 +833,7 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   // save loop bound
   {
     const unsigned BoundOffset = alignDown(Offset, StackProbeSize);
-    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr);
+    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr, BoundOffset);
     BuildMI(MBB, MBBI, DL, TII.get(SUBOpc), FinalStackProbed)
         .addReg(FinalStackProbed)
         .addImm(BoundOffset)
@@ -1311,7 +1336,7 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
 
       {
         const unsigned SUBOpc =
-            getSUBriOpcode(Uses64BitFramePtr);
+            getSUBriOpcode(Uses64BitFramePtr, StackProbeSize);
         BuildMI(headMBB, DL, TII.get(SUBOpc), StackPtr)
             .addReg(StackPtr)
             .addImm(StackProbeSize)
@@ -1342,7 +1367,7 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
             .setMIFlag(MachineInstr::FrameSetup);
 
         const unsigned SUBOpc =
-            getSUBriOpcode(Uses64BitFramePtr);
+            getSUBriOpcode(Uses64BitFramePtr, StackProbeSize);
         BuildMI(bodyMBB, DL, TII.get(SUBOpc), StackPtr)
             .addReg(StackPtr)
             .addImm(StackProbeSize)
@@ -1775,7 +1800,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(8)
             .addUse(X86::NoRegister)
             .setMIFlag(MachineInstr::FrameSetup);
-        BuildMI(MBB, MBBI, DL, TII.get(X86::SUB64ri32), X86::RSP)
+        BuildMI(MBB, MBBI, DL, TII.get(X86::SUB64ri8), X86::RSP)
             .addUse(X86::RSP)
             .addImm(8)
             .setMIFlag(MachineInstr::FrameSetup);
@@ -2394,7 +2419,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
       if ((Opc != X86::POP32r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
           (Opc != X86::POP64r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
           (Opc != X86::BTR64ri8 || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::ADD64ri32 || !PI->getFlag(MachineInstr::FrameDestroy)))
+          (Opc != X86::ADD64ri8 || !PI->getFlag(MachineInstr::FrameDestroy)))
         break;
       FirstCSPop = PI;
     }
@@ -3768,7 +3793,7 @@ MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
 
   if (UsedReg == FramePtr) {
     // ADD $offset, %ebp
-    unsigned ADDri = getADDriOpcode(false);
+    unsigned ADDri = getADDriOpcode(false, EndOffset);
     BuildMI(MBB, MBBI, DL, TII.get(ADDri), FramePtr)
         .addReg(FramePtr)
         .addImm(EndOffset)

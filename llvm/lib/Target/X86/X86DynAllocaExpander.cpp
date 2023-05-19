@@ -189,10 +189,10 @@ void X86DynAllocaExpander::computeLowerings(MachineFunction &MF,
   }
 }
 
-static unsigned getSubOpcode(bool Is64Bit) {
+static unsigned getSubOpcode(bool Is64Bit, int64_t Amount) {
   if (Is64Bit)
-    return X86::SUB64ri32;
-  return X86::SUB32ri;
+    return isInt<8>(Amount) ? X86::SUB64ri8 : X86::SUB64ri32;
+  return isInt<8>(Amount) ? X86::SUB32ri8 : X86::SUB32ri;
 }
 
 void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
@@ -242,7 +242,8 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
           .addReg(RegA, RegState::Undef);
     } else {
       // Sub.
-      BuildMI(*MBB, I, DL, TII->get(getSubOpcode(Is64BitAlloca)), StackPtr)
+      BuildMI(*MBB, I, DL,
+              TII->get(getSubOpcode(Is64BitAlloca, Amount)), StackPtr)
           .addReg(StackPtr)
           .addImm(Amount);
     }
