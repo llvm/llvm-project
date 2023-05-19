@@ -152,7 +152,15 @@ std::string ObjCLanguage::MethodName::GetFullNameWithoutCategory() const {
 
   llvm::StringRef class_name = GetClassName();
   llvm::StringRef selector_name = GetSelector();
+
+  // Compute the total size to avoid reallocations
+  // class name + selector name + '[' + ' ' + ']'
+  size_t total_size = class_name.size() + selector_name.size() + 3;
+  if (m_type != eTypeUnspecified)
+    total_size++; // For + or -
+
   std::string name_sans_category;
+  name_sans_category.reserve(total_size);
 
   if (m_type == eTypeClassMethod)
     name_sans_category += '+';
