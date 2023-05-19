@@ -44,7 +44,7 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<__remove_cvref_t<_ExecutionPolicy>>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator
 copy_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __n, _ForwardOutIterator __result) {
-  if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value)
+  if constexpr (__has_random_access_iterator_category<_ForwardIterator>::value)
     return std::copy(__policy, __first, __first + __n, __result);
   else
     return std::copy_n(__first, __n, __result);
