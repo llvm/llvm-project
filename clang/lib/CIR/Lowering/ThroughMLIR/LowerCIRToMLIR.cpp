@@ -156,7 +156,9 @@ public:
       mlir::Type type =
           mlir::IntegerType::get(getContext(), 8, mlir::IntegerType::Signless);
       mlir::TypedAttr IntegerAttr;
-      if (op.getValue() == mlir::BoolAttr::get(getContext(), true))
+      if (op.getValue() ==
+          mlir::cir::BoolAttr::get(
+              getContext(), ::mlir::cir::BoolType::get(getContext()), true))
         IntegerAttr = mlir::IntegerAttr::get(type, 1);
       else
         IntegerAttr = mlir::IntegerAttr::get(type, 0);

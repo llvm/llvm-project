@@ -1,4 +1,6 @@
 // RUN: cir-tool %s | FileCheck %s
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
 
 cir.func @l0() {
   %0 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
@@ -28,7 +30,7 @@ cir.func @l0() {
       %5 = cir.const(1 : i32) : i32
       %6 = cir.binop(add, %4, %5) : i32
       cir.store %6, %0 : i32, cir.ptr <i32>
-      %7 = cir.const(true) : !cir.bool
+      %7 = cir.const(#true) : !cir.bool
       cir.if %7 {
         cir.yield break
       }
@@ -55,7 +57,7 @@ cir.func @l0() {
       %5 = cir.const(1 : i32) : i32
       %6 = cir.binop(add, %4, %5) : i32
       cir.store %6, %0 : i32, cir.ptr <i32>
-      %7 = cir.const(true) : !cir.bool
+      %7 = cir.const(#true) : !cir.bool
       cir.if %7 {
         cir.yield continue
       }
@@ -110,7 +112,7 @@ cir.func @l0() {
 // CHECK-NEXT:     %5 = cir.const(1 : i32) : i32
 // CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
 // CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
-// CHECK-NEXT:     %7 = cir.const(true) : !cir.bool
+// CHECK-NEXT:     %7 = cir.const(#true) : !cir.bool
 // CHECK-NEXT:     cir.if %7 {
 // CHECK-NEXT:       cir.yield break
 // CHECK-NEXT:     }
@@ -133,7 +135,7 @@ cir.func @l0() {
 // CHECK-NEXT:     %5 = cir.const(1 : i32) : i32
 // CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
 // CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
-// CHECK-NEXT:     %7 = cir.const(true) : !cir.bool
+// CHECK-NEXT:     %7 = cir.const(#true) : !cir.bool
 // CHECK-NEXT:     cir.if %7 {
 // CHECK-NEXT:       cir.yield continue
 // CHECK-NEXT:     }

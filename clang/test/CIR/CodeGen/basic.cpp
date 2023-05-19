@@ -58,8 +58,8 @@ int *p2() {
 void b0() { bool x = true, y = false; }
 
 // CHECK: cir.func @_Z2b0v() {
-// CHECK: %2 = cir.const(true) : !cir.bool
-// CHECK: %3 = cir.const(false) : !cir.bool
+// CHECK: %2 = cir.const(#true) : !cir.bool
+// CHECK: %3 = cir.const(#false) : !cir.bool
 
 void b1(int a) { bool b = a; }
 

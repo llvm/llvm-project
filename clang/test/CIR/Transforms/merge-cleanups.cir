@@ -1,6 +1,8 @@
 // RUN: cir-tool %s -cir-merge-cleanups -o %t.out.cir
 // RUN: FileCheck --input-file=%t.out.cir %s
 
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
 module  {
   cir.func @sw1(%arg0: i32, %arg1: i32) {
     %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
@@ -61,7 +63,7 @@ module  {
   cir.func @l0() {
     cir.scope {
       cir.loop while(cond :  {
-        %0 = cir.const(true) : !cir.bool
+        %0 = cir.const(#true) : !cir.bool
         cir.brcond %0 ^bb1, ^bb2
         ^bb1:
           cir.yield continue
@@ -81,7 +83,7 @@ module  {
   cir.func @l1() {
     cir.scope {
       cir.loop while(cond :  {
-        %0 = cir.const(false) : !cir.bool
+        %0 = cir.const(#false) : !cir.bool
         cir.brcond %0 ^bb1, ^bb2
         ^bb1:
           cir.yield continue

@@ -9,16 +9,20 @@ cir.func @p0() {
 
 // -----
 
-// expected-error@+2 {{'cir.const' op result type ('i32') must be '!cir.bool' for 'true'}}
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
+// expected-error@+2 {{op result type ('i32') must be '!cir.bool' for '#cir.bool<true> : !cir.bool'}}
 cir.func @b0() {
-  %1 = cir.const(true) : i32
+  %1 = cir.const(#true) : i32
   cir.return
 }
 
 // -----
 
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
 cir.func @if0() {
-  %0 = cir.const(true) : !cir.bool
+  %0 = cir.const(#true) : !cir.bool
   // expected-error@+1 {{'cir.if' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
   cir.if %0 {
     %6 = cir.const(3 : i32) : i32
@@ -29,8 +33,10 @@ cir.func @if0() {
 
 // -----
 
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
 cir.func @yield0() {
-  %0 = cir.const(true) : !cir.bool
+  %0 = cir.const(#true) : !cir.bool
   cir.if %0 { // expected-error {{custom op 'cir.if' expected at least one block with cir.yield or cir.return}}
     cir.br ^a
   ^a:
@@ -40,8 +46,10 @@ cir.func @yield0() {
 
 // -----
 
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
 cir.func @yieldfallthrough() {
-  %0 = cir.const(true) : !cir.bool
+  %0 = cir.const(#true) : !cir.bool
   cir.if %0 {
     cir.yield fallthrough // expected-error {{'cir.yield' op fallthrough only expected within 'cir.switch'}}
   }
@@ -50,8 +58,10 @@ cir.func @yieldfallthrough() {
 
 // -----
 
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
 cir.func @yieldbreak() {
-  %0 = cir.const(true) : !cir.bool
+  %0 = cir.const(#true) : !cir.bool
   cir.if %0 {
     cir.yield break // expected-error {{shall be dominated by 'cir.loop' or 'cir.switch'}}
   }
@@ -60,8 +70,10 @@ cir.func @yieldbreak() {
 
 // -----
 
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
 cir.func @yieldcontinue() {
-  %0 = cir.const(true) : !cir.bool
+  %0 = cir.const(#true) : !cir.bool
   cir.if %0 {
     cir.yield continue // expected-error {{shall be dominated by 'cir.loop'}}
   }
@@ -137,10 +149,12 @@ cir.func @cast4(%p: !cir.ptr<i32>) {
 
 // -----
 
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
 cir.func @b0() {
   cir.scope {
     cir.loop while(cond :  {  // expected-error {{cond region must be terminated with 'cir.yield' or 'cir.yield continue'}}
-      %0 = cir.const(true) : !cir.bool
+      %0 = cir.const(#true) : !cir.bool
       cir.brcond %0 ^bb1, ^bb2
       ^bb1:
         cir.yield break

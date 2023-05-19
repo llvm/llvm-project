@@ -92,6 +92,10 @@ public:
     return mlir::cir::ZeroAttr::get(getContext(), t);
   }
 
+  mlir::cir::BoolAttr getCIRBoolAttr(bool state) {
+    return mlir::cir::BoolAttr::get(getContext(), getBoolTy(), state);
+  }
+
   mlir::TypedAttr getNullPtrAttr(mlir::Type t) {
     assert(t.isa<mlir::cir::PointerType>() && "expected cir.ptr");
     return mlir::cir::NullAttr::get(getContext(), t);
@@ -180,8 +184,8 @@ public:
                                          mlir::IntegerAttr::get(int64Ty, C));
   }
   mlir::Value getBool(bool state, mlir::Location loc) {
-    return create<mlir::cir::ConstantOp>(
-        loc, getBoolTy(), mlir::BoolAttr::get(getContext(), state));
+    return create<mlir::cir::ConstantOp>(loc, getBoolTy(),
+                                         getCIRBoolAttr(state));
   }
 
   // Creates constant nullptr for pointer type ty.

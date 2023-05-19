@@ -42,6 +42,25 @@ def NullAttr : CIR_Attr<"Null", "null", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// BoolAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
+  let summary = "Represent true/false for !cir.bool types";
+  let description = [{
+    The BoolAttr represents a 'true' or 'false' value.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<
+                        "", "mlir::cir::BoolType">:$type,
+                    "bool":$value);
+
+  let assemblyFormat = [{
+    `<` $value `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ZeroAttr
 //===----------------------------------------------------------------------===//
 
