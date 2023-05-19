@@ -293,10 +293,14 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   ];
 
   let extraClassDeclaration = [{
-    /// Returns the type for position storage based on posWidth
+    /// Returns the type for position storage based on posWidth.
+    /// Asserts that the encoding is non-null (since there's nowhere
+    /// to get the `MLIRContext` from).
     Type getPosType() const;
 
-    /// Returns the type for coordinate storage based on crdWidth
+    /// Returns the type for coordinate storage based on crdWidth.
+    /// Asserts that the encoding is non-null (since there's nowhere
+    /// to get the `MLIRContext` from).
     Type getCrdType() const;
 
     /// Constructs a new encoding with the dimOrdering and higherOrdering
