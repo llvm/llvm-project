@@ -786,9 +786,10 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
             // scalar type.
             condVal = evaluateExprAsBool(S.getCond());
           } else {
+            auto boolTy = mlir::cir::BoolType::get(b.getContext());
             condVal = b.create<mlir::cir::ConstantOp>(
-                loc, mlir::cir::BoolType::get(b.getContext()),
-                b.getBoolAttr(true));
+                loc, boolTy,
+                mlir::cir::BoolAttr::get(b.getContext(), boolTy, true));
           }
           if (buildLoopCondYield(b, loc, condVal).failed())
             loopRes = mlir::failure();

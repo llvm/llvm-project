@@ -265,7 +265,7 @@ VoidTask silly_task() {
 // Call builtin coro end and return
 
 // CHECK-NEXT: %[[#CoroEndArg0:]] = cir.const(#cir.null : !cir.ptr<i8>)
-// CHECK-NEXT: %[[#CoroEndArg1:]] = cir.const(false) : !cir.bool
+// CHECK-NEXT: %[[#CoroEndArg1:]] = cir.const(#false) : !cir.bool
 // CHECK-NEXT: = cir.call @__builtin_coro_end(%[[#CoroEndArg0]], %[[#CoroEndArg1]])
 
 // CHECK: %[[#Tmp1:]] = cir.load %[[#VoidTaskAddr]]

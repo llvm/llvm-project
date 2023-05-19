@@ -123,7 +123,7 @@ public:
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
     mlir::Type Ty = CGF.getCIRType(E->getType());
     return Builder.create<mlir::cir::ConstantOp>(
-        CGF.getLoc(E->getExprLoc()), Ty, Builder.getBoolAttr(E->getValue()));
+        CGF.getLoc(E->getExprLoc()), Ty, Builder.getCIRBoolAttr(E->getValue()));
   }
 
   mlir::Value VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E) {
@@ -284,9 +284,9 @@ public:
 
       // NOTE: We likely want the code below, but loading/store booleans need to
       // work first. See CIRGenFunction::buildFromMemory().
-      value = Builder.create<mlir::cir::ConstantOp>(CGF.getLoc(E->getExprLoc()),
-                                                    CGF.getCIRType(type),
-                                                    Builder.getBoolAttr(true));
+      value = Builder.create<mlir::cir::ConstantOp>(
+          CGF.getLoc(E->getExprLoc()), CGF.getCIRType(type),
+          Builder.getCIRBoolAttr(true));
     } else if (type->isIntegerType()) {
       // QualType promotedType;
       bool canPerformLossyDemotionCheck = false;
