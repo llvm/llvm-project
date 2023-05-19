@@ -6743,8 +6743,9 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
   return false;
 }
 
-static bool impliesPoison(const Value *ValAssumedPoison, const Value *V,
-                          unsigned Depth) {
+static bool
+impliesPoison(Value *ValAssumedPoison, const Value *V, unsigned Depth,
+              SmallVectorImpl<Instruction *> *IgnoredInsts = nullptr) {
   if (isGuaranteedNotToBePoison(ValAssumedPoison))
     return true;
 
@@ -6755,17 +6756,30 @@ static bool impliesPoison(const Value *ValAssumedPoison, const Value *V,
   if (Depth >= MaxDepth)
     return false;
 
-  const auto *I = dyn_cast<Instruction>(ValAssumedPoison);
-  if (I && !canCreatePoison(cast<Operator>(I))) {
-    return all_of(I->operands(), [=](const Value *Op) {
-      return impliesPoison(Op, V, Depth + 1);
-    });
-  }
-  return false;
+  auto *I = dyn_cast<Instruction>(ValAssumedPoison);
+  if (!I || canCreatePoison(cast<Operator>(I),
+                            /*ConsiderFlagsAndMetadata*/ !IgnoredInsts))
+    return false;
+
+  for (Value *Op : I->operands())
+    if (!impliesPoison(Op, V, Depth + 1, IgnoredInsts))
+      return false;
+
+  if (IgnoredInsts && I->hasPoisonGeneratingFlagsOrMetadata())
+    IgnoredInsts->push_back(I);
+
+  return true;
 }
 
 bool llvm::impliesPoison(const Value *ValAssumedPoison, const Value *V) {
-  return ::impliesPoison(ValAssumedPoison, V, /* Depth */ 0);
+  return ::impliesPoison(const_cast<Value *>(ValAssumedPoison), V,
+                         /* Depth */ 0);
+}
+
+bool llvm::impliesPoisonIgnoreFlagsOrMetadata(
+    Value *ValAssumedPoison, const Value *V,
+    SmallVectorImpl<Instruction *> &IgnoredInsts) {
+  return ::impliesPoison(ValAssumedPoison, V, /* Depth */ 0, &IgnoredInsts);
 }
 
 static bool programUndefinedIfUndefOrPoison(const Value *V,
