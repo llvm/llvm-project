@@ -278,7 +278,7 @@ bool MarkupFilter::tryPC(const MarkupNode &Node) {
   }
 
   highlight();
-  printValue(LI->FunctionName);
+  printValue(LI->ShortFunctionName);
   OS << '[';
   printValue(LI->FileName);
   OS << ':';
@@ -348,7 +348,7 @@ bool MarkupFilter::tryBackTrace(const MarkupNode &Node) {
 
     DILineInfo LI = II->getFrame(I);
     if (LI) {
-      printValue(LI.FunctionName);
+      printValue(LI.ShortFunctionName);
       OS << ' ';
       printValue(LI.FileName);
       OS << ':';
