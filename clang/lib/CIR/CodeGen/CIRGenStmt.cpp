@@ -374,16 +374,18 @@ mlir::LogicalResult CIRGenFunction::buildIfStmt(const IfStmt &S) {
     if (S.getConditionVariable())
       buildDecl(*S.getConditionVariable());
 
-    // If the condition constant folds and can be elided, try to avoid
-    // emitting the condition and the dead arm of the if/else.
-    // FIXME: should this be done as part of a constant folder pass instead?
+    // During LLVM codegen, if the condition constant folds and can be elided,
+    // it tries to avoid emitting the condition and the dead arm of the if/else.
+    // TODO(cir): we skip this in CIRGen, but should implement this as part of
+    // SSCP or a specific CIR pass.
     bool CondConstant;
     if (ConstantFoldsToSimpleInteger(S.getCond(), CondConstant,
                                      S.isConstexpr())) {
-      llvm_unreachable("ConstantFoldsToSimpleInteger NYI");
+      assert(!UnimplementedFeature::constantFoldsToSimpleInteger());
     }
 
-    // TODO: PGO and likelihood.
+    assert(!UnimplementedFeature::emitCondLikelihoodViaExpectIntrinsic());
+    assert(!UnimplementedFeature::incrementProfileCounter());
     auto ifLoc = getIfLocs(*this, S.getThen(), S.getElse());
     return buildIfOnBoolExpr(S.getCond(), ifLoc, S.getThen(), S.getElse());
   };
