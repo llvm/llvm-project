@@ -33,7 +33,9 @@
 #ifndef LLVM_CLANG_INTERPRETER_VALUE_H
 #define LLVM_CLANG_INTERPRETER_VALUE_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
+
 // NOTE: Since the REPL itself could also include this runtime, extreme caution
 // should be taken when MAKING CHANGES to this file, especially when INCLUDE NEW
 // HEADERS, like <string>, <memory> and etc. (That pulls a large number of
