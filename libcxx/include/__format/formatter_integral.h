@@ -251,7 +251,7 @@ _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator __format_integer(
     // - Write data right aligned with '0' as fill character.
     __out_it             = __formatter::__copy(__begin, __first, _VSTD::move(__out_it));
     __specs.__alignment_ = __format_spec::__alignment::__right;
-    __specs.__fill_      = _CharT('0');
+    __specs.__fill_.__data[0] = _CharT('0');
     int32_t __size       = __first - __begin;
 
     __specs.__width_ -= _VSTD::min(__size, __specs.__width_);
