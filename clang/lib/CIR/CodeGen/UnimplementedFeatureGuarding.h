@@ -91,6 +91,7 @@ struct UnimplementedFeature {
   static bool addHeapAllocSiteMetadata() { return false; }
   static bool loopInfoStack() { return false; }
   static bool requiresCleanups() { return false; }
+  static bool constantFoldsToSimpleInteger() { return false; }
 };
 } // namespace cir
 
