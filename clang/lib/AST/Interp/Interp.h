@@ -104,6 +104,10 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 /// Checks that all fields are initialized after a constructor call.
 bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This);
 
+/// Checks if reinterpret casts are legal in the current context.
+bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
+                                   const Pointer &Ptr);
+
 /// Checks if the shift operation is legal.
 template <typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
@@ -1491,6 +1495,17 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
     S.Stk.push<T>(T(Result));
     return CheckFloatResult(S, OpPC, Status);
   }
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckPotentialReinterpretCast(S, OpPC, Ptr))
+    return false;
+
+  S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
