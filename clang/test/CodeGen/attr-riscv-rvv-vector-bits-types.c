@@ -473,11 +473,3 @@ void f() {
 // CHECK-1024-NEXT:  %local_arr_u64 = alloca [3 x <16 x i64>], align 8
 // CHECK-1024-NEXT:  %local_arr_f32 = alloca [3 x <32 x float>], align 8
 // CHECK-1024-NEXT:  %local_arr_f64 = alloca [3 x <16 x double>], align 8
-
-//===----------------------------------------------------------------------===//
-// ILP32 ABI
-//===----------------------------------------------------------------------===//
-// CHECK-ILP32: @global_i32 ={{.*}} global <16 x i32> zeroinitializer, align 8
-// CHECK-ILP32: @global_i64 ={{.*}} global <8 x i64> zeroinitializer, align 8
-// CHECK-ILP32: @global_u32 ={{.*}} global <16 x i32> zeroinitializer, align 8
-// CHECK-ILP32: @global_u64 ={{.*}} global <8 x i64> zeroinitializer, align 8
