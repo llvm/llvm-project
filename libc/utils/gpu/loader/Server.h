@@ -35,6 +35,7 @@ void handle_server() {
       uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
       void *strs[rpc::MAX_LANE_SIZE] = {nullptr};
       port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
+      port->send([](rpc::Buffer *) { /* void */ });
       for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
         if (strs[i]) {
           fwrite(strs[i], sizes[i], 1, stderr);
