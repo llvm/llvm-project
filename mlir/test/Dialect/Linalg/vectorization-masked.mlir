@@ -374,13 +374,13 @@ func.func @test_masked_vectorize_pad(
   %0 : tensor<?x?xf32>, %h0 : index, %h1 : index)
     -> tensor<2x4xf32>
 {
-  //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
-  //  CHECK-DAG: %[[c0_2:.*]] = arith.constant 0 : index
   //  CHECK-DAG: %[[c42:.*]] = arith.constant 4.243000e+01 : f32
+  //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
   //  CHECK-DAG: %[[empty:.*]] = tensor.empty() : tensor<2x4xf32>
   //      CHECK: %[[d0:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[d1:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[mask:.*]] = vector.create_mask %[[d0]], %[[d1]] : vector<2x4xi1>
+  //  CHECK-DAG: %[[c0_2:.*]] = arith.constant 0 : index
   //      CHECK: %[[masked_read:.*]] = vector.mask %[[mask]] {
   // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_2]], %[[c0_2]]], %[[c42]]
   // CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<2x4xf32>
@@ -394,6 +394,44 @@ func.func @test_masked_vectorize_pad(
       tensor.yield %cst : f32
     } : tensor<?x?xf32> to tensor<2x4xf32>
   return %1: tensor<2x4xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+    : (!transform.any_op) -> !transform.any_op
+  transform.structured.masked_vectorize %0 vector_sizes [2, 4] : !transform.any_op
+}
+
+// -----
+
+// CHECK-LABEL: func @test_masked_vectorize_dynamic_pad
+func.func @test_masked_vectorize_dynamic_pad(
+  %0 : tensor<?x?xf32>, %h0 : index, %h1 : index)
+    -> tensor<?x?xf32>
+{
+  //  CHECK-DAG: %[[c42:.*]] = arith.constant 4.243000e+01 : f32
+  //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+  //      CHECK: %[[empty:.*]] = tensor.empty({{.+}}) : tensor<?x?xf32>
+  //      CHECK: %[[d0:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
+  //      CHECK: %[[d1:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
+  //      CHECK: %[[mask:.*]] = vector.create_mask %[[d0]], %[[d1]] : vector<2x4xi1>
+  //  CHECK-DAG: %[[c0_2:.*]] = arith.constant 0 : index
+  //      CHECK: %[[masked_read:.*]] = vector.mask %[[mask]] {
+  // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_2]], %[[c0_2]]], %[[c42]]
+  // CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<2x4xf32>
+  // CHECK-SAME: } : vector<2x4xi1> -> vector<2x4xf32>
+  //      CHECK: %[[masked_write:.*]] = vector.mask %[[mask]] {
+  // CHECK-SAME: vector.transfer_write %[[masked_read]], %[[empty]][%[[c0_2]], %[[c0_2]]]
+  // CHECK-SAME:   {in_bounds = [true, true]} : vector<2x4xf32>, tensor<?x?xf32>
+  //      CHECK: return %[[masked_write]] : tensor<?x?xf32>
+  %cst = arith.constant 42.43 : f32
+  %c0 = arith.constant 0 : index
+  %1 = tensor.pad %0 low[0, %c0] high[%h0, %h1]  {
+    ^bb0(%hh1: index, %hh2: index):
+      tensor.yield %cst : f32
+    } : tensor<?x?xf32> to tensor<?x?xf32>
+  return %1: tensor<?x?xf32>
 }
 
 transform.sequence failures(propagate) {
