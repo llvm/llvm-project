@@ -771,7 +771,6 @@ SetupASTContext(SwiftASTContextForExpressions &swift_ast_context,
   // TODO: Find a way to get contraint-solver output sent to a stream
   //       so we can log it.
   // swift_ast_context.GetLanguageOptions().DebugConstraintSolver = true;
-  swift_ast_context.ClearDiagnostics();
 
   // No longer part of debugger support, set it separately.
   swift_ast_context.GetLanguageOptions().EnableDollarIdentifiers = true;
@@ -1217,15 +1216,15 @@ AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
 /// Attempt to parse an expression and import all the Swift modules
 /// the expression and its context depend on.
 static llvm::Expected<ParsedExpression> ParseAndImport(
-    SwiftASTContextForExpressions &swift_ast_context, Expression &expr,
+    SwiftASTContextForExpressions &swift_ast_context,
+    SwiftASTContext::ScopedDiagnostics &expr_diagnostics, Expression &expr,
     SwiftExpressionParser::SILVariableMap &variable_map, unsigned &buffer_id,
     DiagnosticManager &diagnostic_manager,
     SwiftExpressionParser &swift_expr_parser,
     lldb::StackFrameWP &stack_frame_wp, SymbolContext &sc,
-    ExecutionContextScope &exe_scope, 
+    ExecutionContextScope &exe_scope,
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
-    const EvaluateExpressionOptions &options,
-    bool repl, bool playground) {
+    const EvaluateExpressionOptions &options, bool repl, bool playground) {
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
@@ -1373,16 +1372,16 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   //        inserting them in.
   swift_ast_context.AddDebuggerClient(external_lookup);
 
-  if (swift_ast_context.HasErrors())
+  if (expr_diagnostics.HasErrors())
     return make_error<SwiftASTContextError>();
 
   // Resolve the file's imports, including the implicit ones returned from
   // GetImplicitImports.
   swift::performImportResolution(*source_file);
 
-  if (swift_ast_context.HasErrors())
+  if (expr_diagnostics.HasErrors())
     return make_error<ModuleImportError>(
-        swift_ast_context.GetAllErrors().AsCString(
+        expr_diagnostics.GetAllErrors().AsCString(
             "Explicit module import error"));
 
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
@@ -1654,20 +1653,24 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
 SwiftExpressionParser::ParseResult
 SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                              uint32_t first_line, uint32_t last_line) {
+  SwiftExpressionParser::SILVariableMap variable_map;
   using ParseResult = SwiftExpressionParser::ParseResult;
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
-  SwiftExpressionParser::SILVariableMap variable_map;
+  // Get a scoped diagnostics consumer for all diagnostics produced by
+  // this expression.
+  auto expr_diagnostics = m_swift_ast_ctx.getScopedDiagnosticConsumer();
+  m_swift_ast_ctx.GetDiagnosticEngine().resetHadAnyError();
 
   // Helper function to diagnose errors in m_swift_scratch_context.
   unsigned buffer_id = UINT32_MAX;
   auto DiagnoseSwiftASTContextError = [&]() {
-    assert((m_swift_ast_ctx.HasErrors() ||
+    assert((expr_diagnostics->HasErrors() ||
             m_swift_ast_ctx.HasClangImporterErrors()) &&
            "error expected");
-    m_swift_ast_ctx.PrintDiagnostics(diagnostic_manager, buffer_id, first_line,
-                                     last_line);
+    expr_diagnostics->PrintDiagnostics(diagnostic_manager, buffer_id,
+                                       first_line, last_line);
   };
 
   // In the case of playgrounds, we turn all rewriting functionality off.
@@ -1679,9 +1682,9 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   // Parse the expression and import all nececssary swift modules.
   auto parsed_expr = ParseAndImport(
-      m_swift_ast_ctx, m_expr, variable_map, buffer_id, diagnostic_manager,
-      *this, m_stack_frame_wp, m_sc, *m_exe_scope, m_local_variables, m_options,
-      repl, playground);
+      m_swift_ast_ctx, *expr_diagnostics, m_expr, variable_map, buffer_id,
+      diagnostic_manager, *this, m_stack_frame_wp, m_sc, *m_exe_scope,
+      m_local_variables, m_options, repl, playground);
 
   if (!parsed_expr) {
     bool retry = false;
@@ -1740,7 +1743,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (log)
     dumpModule("Module after type checking:");
 
-  if (m_swift_ast_ctx.HasErrors()) {
+  if (expr_diagnostics->HasErrors()) {
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
@@ -1917,7 +1920,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     log->PutCString(s.c_str());
   }
 
-  if (m_swift_ast_ctx.HasErrors()) {
+  if (expr_diagnostics->HasErrors()) {
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
@@ -1945,7 +1948,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     log->PutCString(s.c_str());
   }
 
-  if (m_swift_ast_ctx.HasErrors()) {
+  if (expr_diagnostics->HasErrors()) {
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
@@ -1973,7 +1976,8 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   // If IRGen failed without errors, the root cause may be a fatal
   // Clang diagnostic.
-  if (m_swift_ast_ctx.HasErrors() || m_swift_ast_ctx.HasClangImporterErrors()) {
+  if (expr_diagnostics->HasErrors() ||
+      m_swift_ast_ctx.HasClangImporterErrors()) {
     diagnostic_manager.PutString(eDiagnosticSeverityRemark,
                                  "couldn't IRGen expression");
     DiagnoseSwiftASTContextError();
@@ -2029,7 +2033,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                      nullptr);
   }
 
-  if (m_swift_ast_ctx.HasErrors())
+  if (expr_diagnostics->HasErrors())
     return ParseResult::unrecoverable_error;
 
   // The Parse succeeded!  Now put this module into the context's list
