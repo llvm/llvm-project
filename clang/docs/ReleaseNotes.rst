@@ -82,7 +82,7 @@ C++20 Feature Support
   This fixes:
   `#49620 <https://github.com/llvm/llvm-project/issues/49620>`_,
   `#60231 <https://github.com/llvm/llvm-project/issues/60231>`_,
-  `#61414 <https://github.com/llvm/llvm-project/issues/60414>`_,
+  `#61414 <https://github.com/llvm/llvm-project/issues/61414>`_,
   `#61809 <https://github.com/llvm/llvm-project/issues/61809>`_.
 - Lambda templates with a requires clause directly after the template parameters now parse
   correctly if the requires clause consists of a variable with a dependent type.
