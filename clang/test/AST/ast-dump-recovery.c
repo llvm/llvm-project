@@ -98,3 +98,14 @@ void test3() {
   // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
   ext(undef_var);
 }
+
+// Verify no crash.
+void test4() {
+  enum GH62446 {
+    // CHECK:      RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
+    // CHECK-NEXT: |-StringLiteral {{.*}} "a"
+    // CHECK-NEXT: `-IntegerLiteral {{.*}} 2
+    invalid_enum_value = "a" * 2,
+    b,
+  };
+}
