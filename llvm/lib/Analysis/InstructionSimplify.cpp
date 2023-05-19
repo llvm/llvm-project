@@ -4085,20 +4085,16 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       }
 
       // LHS == Inf
-      if (Pred == FCmpInst::FCMP_OEQ &&
-          isKnownNeverInfinity(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT))
+      if (Pred == FCmpInst::FCMP_OEQ && isKnownNeverInfinity(LHS, Q.DL, Q.TLI))
         return getFalse(RetTy);
       // LHS != Inf
-      if (Pred == FCmpInst::FCMP_UNE &&
-          isKnownNeverInfinity(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT))
+      if (Pred == FCmpInst::FCMP_UNE && isKnownNeverInfinity(LHS, Q.DL, Q.TLI))
         return getTrue(RetTy);
       // LHS == Inf || LHS == NaN
-      if (Pred == FCmpInst::FCMP_UEQ &&
-          isKnownNeverInfOrNaN(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT))
+      if (Pred == FCmpInst::FCMP_UEQ && isKnownNeverInfOrNaN(LHS, Q.DL, Q.TLI))
         return getFalse(RetTy);
       // LHS != Inf && LHS != NaN
-      if (Pred == FCmpInst::FCMP_ONE &&
-          isKnownNeverInfOrNaN(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT))
+      if (Pred == FCmpInst::FCMP_ONE && isKnownNeverInfOrNaN(LHS, Q.DL, Q.TLI))
         return getTrue(RetTy);
     }
     if (C->isNegative() && !C->isNegZero()) {
