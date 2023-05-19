@@ -7,34 +7,32 @@
 
 // CHECK-LABEL:   func.func @sparse_pack(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<6xf64>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<6x2xi32>)
-// CHECK-DAG:       %[[VAL_2:.*]] = memref.alloc() : memref<2xindex>
-// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK-DAG:       memref.store %[[VAL_3]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<2xindex>
-// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 6 : index
-// CHECK-DAG:       memref.store %[[VAL_5]], %[[VAL_2]]{{\[}}%[[VAL_4]]] : memref<2xindex>
-// CHECK:           %[[VAL_6:.*]] = memref.cast %[[VAL_2]] : memref<2xindex> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_1]] : memref<6x2xi32>
-// CHECK:           %[[VAL_8:.*]] = memref.collapse_shape %[[VAL_7]] {{\[\[}}0, 1]] : memref<6x2xi32> into memref<12xi32>
-// CHECK:           %[[VAL_9:.*]] = memref.cast %[[VAL_8]] : memref<12xi32> to memref<?xi32>
-// CHECK:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_0]] : memref<6xf64>
-// CHECK:           %[[VAL_11:.*]] = memref.cast %[[VAL_10]] : memref<6xf64> to memref<?xf64>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.storage_specifier.init
-// CHECK:           %[[VAL_13:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_14:.*]] = sparse_tensor.storage_specifier.set %[[VAL_12]]  lvl_sz at 0 with %[[VAL_13]]
-// CHECK:           %[[VAL_15:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_16:.*]] = sparse_tensor.storage_specifier.set %[[VAL_14]]  pos_mem_sz at 0 with %[[VAL_15]]
-// CHECK:           %[[VAL_17:.*]] = sparse_tensor.storage_specifier.set %[[VAL_16]]  crd_mem_sz at 0 with %[[VAL_5]]
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<2xindex>,
+// CHECK-SAME:      %[[VAL_2:.*]]: tensor<6x2xi32>)
+// CHECK-DAG:       %[[VAL_3:.*]] = bufferization.to_memref %[[VAL_1]] : memref<2xindex>
+// CHECK-DAG:       %[[VAL_4:.*]] = memref.cast %[[VAL_3]] : memref<2xindex> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_5:.*]] = bufferization.to_memref %[[VAL_2]] : memref<6x2xi32>
+// CHECK-DAG:       %[[VAL_6:.*]] = memref.collapse_shape %[[VAL_5]] {{\[\[}}0, 1]] : memref<6x2xi32> into memref<12xi32>
+// CHECK-DAG:       %[[VAL_7:.*]] = memref.cast %[[VAL_6]] : memref<12xi32> to memref<?xi32>
+// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<6xf64>
+// CHECK-DAG:       %[[VAL_9:.*]] = memref.cast %[[VAL_8]] : memref<6xf64> to memref<?xf64>
+// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.storage_specifier.init
+// CHECK-DAG:       %[[VAL_11:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_12:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[VAL_13:.*]] = arith.constant 100 : index
+// CHECK:           %[[VAL_14:.*]] = sparse_tensor.storage_specifier.set %[[VAL_10]]  lvl_sz at 0 with %[[VAL_13]]
+// CHECK:           %[[VAL_15:.*]] = sparse_tensor.storage_specifier.set %[[VAL_14]]  pos_mem_sz at 0 with %[[VAL_12]]
+// CHECK:           %[[VAL_16:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_11]]] : memref<?xindex>
+// CHECK:           %[[VAL_17:.*]] = sparse_tensor.storage_specifier.set %[[VAL_15]]  crd_mem_sz at 0 with %[[VAL_16]]
 // CHECK:           %[[VAL_18:.*]] = sparse_tensor.storage_specifier.set %[[VAL_17]]  lvl_sz at 1 with %[[VAL_13]]
-// CHECK:           %[[VAL_19:.*]] = sparse_tensor.storage_specifier.set %[[VAL_18]]  crd_mem_sz at 1 with %[[VAL_5]]
-// CHECK:           %[[VAL_20:.*]] = sparse_tensor.storage_specifier.set %[[VAL_19]]  val_mem_sz with %[[VAL_5]]
-// CHECK:           return %[[VAL_6]], %[[VAL_9]], %[[VAL_11]], %[[VAL_20]]
+// CHECK:           %[[VAL_19:.*]] = sparse_tensor.storage_specifier.set %[[VAL_18]]  crd_mem_sz at 1 with %[[VAL_16]]
+// CHECK:           %[[VAL_20:.*]] = sparse_tensor.storage_specifier.set %[[VAL_19]]  val_mem_sz with %[[VAL_16]]
+// CHECK:           return %[[VAL_4]], %[[VAL_7]], %[[VAL_9]], %[[VAL_20]]
 // CHECK:         }
-func.func @sparse_pack(%values: tensor<6xf64>, %coordinates: tensor<6x2xi32>)
+func.func @sparse_pack(%values: tensor<6xf64>, %pos:tensor<2xindex>, %coordinates: tensor<6x2xi32>)
                     -> tensor<100x100xf64, #COO> {
-  %0 = sparse_tensor.pack %values, %coordinates
-     : tensor<6xf64>, tensor<6x2xi32> to tensor<100x100xf64, #COO>
+  %0 = sparse_tensor.pack %values, %pos, %coordinates
+     : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32> to tensor<100x100xf64, #COO>
   return %0 : tensor<100x100xf64, #COO>
 }
 
@@ -68,7 +66,6 @@ func.func @sparse_pack(%values: tensor<6xf64>, %coordinates: tensor<6x2xi32>)
 // CHECK:           %[[VAL_19:.*]] = bufferization.to_tensor %[[VAL_20:.*]] : memref<6xf64>
 // CHECK:           %[[VAL_21:.*]] = bufferization.to_tensor %[[VAL_17]] : memref<6x2xi32>
 // CHECK:           %[[VAL_22:.*]] = sparse_tensor.storage_specifier
-// CHECK:       memref.dealloc %[[VAL_0]] : memref<?xindex>
 // CHECK:           return %[[VAL_19]], %[[VAL_21]], %[[VAL_22]] : tensor<6xf64>, tensor<6x2xi32>, index
 // CHECK:         }
 func.func @sparse_unpack(%sp: tensor<100x100xf64, #COO>) -> (tensor<6xf64>, tensor<6x2xi32>, index) {

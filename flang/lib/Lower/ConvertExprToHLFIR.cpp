@@ -594,8 +594,17 @@ private:
     llvm::SmallVector<mlir::Value> extents;
     auto seqTy = hlfir::getFortranElementOrSequenceType(fieldType)
                      .cast<fir::SequenceType>();
-    for (auto extent : seqTy.getShape())
+    for (auto extent : seqTy.getShape()) {
+      if (extent == fir::SequenceType::getUnknownExtent()) {
+        // We have already generated invalid hlfir.declare
+        // without the type parameters and probably invalid storage
+        // for the variable (e.g. fir.alloca without type parameters).
+        // So this TODO here is a little bit late, but it matches
+        // the non-HLFIR path.
+        TODO(loc, "array component shape depending on length parameters");
+      }
       extents.push_back(builder.createIntegerConstant(loc, idxTy, extent));
+    }
     if (!hasNonDefaultLowerBounds(componentSym))
       return builder.create<fir::ShapeOp>(loc, extents);
 
@@ -641,6 +650,31 @@ private:
              "Fortran designators can only have one ranked part");
       return changeElementType(baseType, componentBaseType);
     }
+
+    if (partInfo.complexPart && partInfo.componentShape) {
+      // Treat ...array_comp%im/re as ...array_comp(:,:,...)%im/re
+      // so that the codegen has the full slice triples for the component
+      // readily available.
+      fir::FirOpBuilder &builder = getBuilder();
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+
+      llvm::SmallVector<mlir::Value> resultExtents;
+      // Collect <lb, ub> pairs from the component shape.
+      auto bounds = hlfir::genBounds(loc, builder, partInfo.componentShape);
+      for (auto &boundPair : bounds) {
+        // The default subscripts are <lb, ub, 1>:
+        partInfo.subscripts.emplace_back(hlfir::DesignateOp::Triplet{
+            boundPair.first, boundPair.second, one});
+        auto extentValue = builder.genExtentFromTriplet(
+            loc, boundPair.first, boundPair.second, one, idxTy);
+        resultExtents.push_back(extentValue);
+      }
+      // The result shape is: <max((ub - lb + 1) / 1, 0), ...>.
+      partInfo.resultShape = builder.genShape(loc, resultExtents);
+      return componentBaseType;
+    }
+
     // scalar%array_comp or scalar%scalar. In any case the shape of this
     // part-ref is coming from the component.
     partInfo.resultShape = partInfo.componentShape;

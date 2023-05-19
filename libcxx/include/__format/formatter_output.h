@@ -14,6 +14,7 @@
 #include <__algorithm/ranges_fill_n.h>
 #include <__algorithm/ranges_for_each.h>
 #include <__algorithm/ranges_transform.h>
+#include <__bit/countl.h>
 #include <__charconv/to_chars_integral.h>
 #include <__charconv/to_chars_result.h>
 #include <__chrono/statically_widen.h>
@@ -165,6 +166,46 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value)
     return std::ranges::fill_n(_VSTD::move(__out_it), __n, __value);
   }
 }
+
+#  ifndef _LIBCPP_HAS_NO_UNICODE
+template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
+  requires(same_as<_CharT, char>)
+_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+  std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));
+  if (__bytes == 0)
+    return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+
+  for (size_t __i = 0; __i < __n; ++__i)
+    __out_it = __formatter::__copy(
+        std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + __bytes, std::move(__out_it));
+  return __out_it;
+}
+
+#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
+  requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
+_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+  if (!__unicode::__is_high_surrogate(__value.__data[0]))
+    return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+
+  for (size_t __i = 0; __i < __n; ++__i)
+    __out_it = __formatter::__copy(
+        std::addressof(__value.__data[0]), std::addressof(__value.__data[0]) + 2, std::move(__out_it));
+  return __out_it;
+}
+
+template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
+  requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
+_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+  return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+}
+#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  else    // _LIBCPP_HAS_NO_UNICODE
+template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
+_LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+  return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
+}
+#  endif   // _LIBCPP_HAS_NO_UNICODE
 
 template <class _OutIt, class _CharT>
 _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, const char* __begin, const char* __first,

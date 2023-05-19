@@ -42,19 +42,21 @@ define target("aarch64.svcount") @test_alloca_store_reload(target("aarch64.svcou
 ; CHECKO3-NEXT:    ret
 ; CHECK-O0-LABEL: test_alloca_store_reload:
 ; CHECK-O0:       // %bb.0:
-; CHECK-O0-NEXT:    sub sp, sp, #16
-; CHECK-O0-NEXT:    add x8, sp, #14
-; CHECK-O0-NEXT:    str p0, [x8]
-; CHECK-O0-NEXT:    ldr p0, [x8]
-; CHECK-O0-NEXT:    add sp, sp, #16
+; CHECK-O0-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-O0-NEXT:    addvl sp, sp, #-1
+; CHECK-O0-NEXT:    str p0, [sp, #7, mul vl]
+; CHECK-O0-NEXT:    ldr p0, [sp, #7, mul vl]
+; CHECK-O0-NEXT:    addvl sp, sp, #1
+; CHECK-O0-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-O0-NEXT:    ret
 ;
 ; CHECK-O3-LABEL: test_alloca_store_reload:
 ; CHECK-O3:       // %bb.0:
-; CHECK-O3-NEXT:    sub sp, sp, #16
-; CHECK-O3-NEXT:    add x8, sp, #14
-; CHECK-O3-NEXT:    str p0, [x8]
-; CHECK-O3-NEXT:    add sp, sp, #16
+; CHECK-O3-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-O3-NEXT:    addvl sp, sp, #-1
+; CHECK-O3-NEXT:    str p0, [sp, #7, mul vl]
+; CHECK-O3-NEXT:    addvl sp, sp, #1
+; CHECK-O3-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-O3-NEXT:    ret
   %ptr = alloca target("aarch64.svcount"), align 1
   store target("aarch64.svcount") %val, ptr %ptr

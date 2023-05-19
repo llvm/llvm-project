@@ -646,14 +646,6 @@ for postfix in ["2", "1", ""]:
   config.substitutions.append( ("%xdynamiclib_filename" + postfix, 'lib%xdynamiclib_namespec{}.so'.format(postfix)) )
   config.substitutions.append( ("%xdynamiclib_namespec", '%basename_t.dynamic') )
 
-# Provide a substitution that can be used to tell Clang to use a static libstdc++.
-# The substitution expands to nothing on non Linux platforms.
-# FIXME: This should check the target OS, not the host OS.
-if config.host_os == 'Linux':
-  config.substitutions.append( ("%linux_static_libstdcplusplus", "-stdlib=libstdc++ -static-libstdc++") )
-else:
-  config.substitutions.append( ("%linux_static_libstdcplusplus", "") )
-
 config.default_sanitizer_opts = []
 if config.host_os == 'Darwin':
   # On Darwin, we default to `abort_on_error=1`, which would make tests run

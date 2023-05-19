@@ -14677,7 +14677,6 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
   InstSetVector PostProcessInserts;
   SmallSetVector<CmpInst *, 8> PostProcessCmps;
-  SmallDenseSet<Instruction *, 4> KeyNodes;
   // Vectorizes Inserts in `PostProcessInserts` and if `VecctorizeCmps` is true
   // also vectorizes `PostProcessCmps`.
   auto VectorizeInsertsAndCmps = [&](bool VectorizeCmps) {
@@ -14696,6 +14695,13 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     return isa<InsertElementInst, InsertValueInst>(I) &&
            PostProcessInserts.contains(I);
   };
+  // Returns true if `I` is an instruction without users, like terminator, or
+  // function call with ignored return value, store. Ignore unused instructions
+  // (basing on instruction type, except for CallInst and InvokeInst).
+  auto HasNoUsers = [](Instruction *I) {
+    return I->use_empty() &&
+           (I->getType()->isVoidTy() || isa<CallInst, InvokeInst>(I));
+  };
   for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; ++it) {
     // Skip instructions with scalable type. The num of elements is unknown at
     // compile-time for scalable type.
@@ -14707,7 +14713,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       continue;
     // We may go through BB multiple times so skip the one we have checked.
     if (!VisitedInstrs.insert(&*it).second) {
-      if (it->use_empty() && KeyNodes.contains(&*it) &&
+      if (HasNoUsers(&*it) &&
           VectorizeInsertsAndCmps(/*VectorizeCmps=*/it->isTerminator())) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.
@@ -14755,12 +14761,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       continue;
     }
 
-    // Ran into an instruction without users, like terminator, or function call
-    // with ignored return value, store. Ignore unused instructions (basing on
-    // instruction type, except for CallInst and InvokeInst).
-    if (it->use_empty() &&
-        (it->getType()->isVoidTy() || isa<CallInst, InvokeInst>(it))) {
-      KeyNodes.insert(&*it);
+    if (HasNoUsers(&*it)) {
       bool OpsChanged = false;
       auto *SI = dyn_cast<StoreInst>(it);
       bool TryToVectorizeRoot = ShouldStartVectorizeHorAtStore || !SI;

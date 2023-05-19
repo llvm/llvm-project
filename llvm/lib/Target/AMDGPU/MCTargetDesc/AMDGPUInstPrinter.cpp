@@ -1003,16 +1003,16 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printRowMask(const MCInst *MI, unsigned OpNo,
-                                     const MCSubtargetInfo &STI,
-                                     raw_ostream &O) {
+void AMDGPUInstPrinter::printDppRowMask(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
   O << " row_mask:";
   printU4ImmOperand(MI, OpNo, STI, O);
 }
 
-void AMDGPUInstPrinter::printBankMask(const MCInst *MI, unsigned OpNo,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
+void AMDGPUInstPrinter::printDppBankMask(const MCInst *MI, unsigned OpNo,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
   O << " bank_mask:";
   printU4ImmOperand(MI, OpNo, STI, O);
 }
@@ -1026,9 +1026,8 @@ void AMDGPUInstPrinter::printDppBoundCtrl(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printFI(const MCInst *MI, unsigned OpNo,
-                                const MCSubtargetInfo &STI,
-                                raw_ostream &O) {
+void AMDGPUInstPrinter::printDppFI(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   using namespace llvm::AMDGPU::DPP;
   unsigned Imm = MI->getOperand(OpNo).getImm();
   if (Imm == DPP_FI_1 || Imm == DPP8_FI_1) {

@@ -13,7 +13,6 @@ end subroutine
 ! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
 ! CHECK-NEXT:    %[[SUM_RES:.*]] = hlfir.sum %[[A_VAR]]#0
 ! CHECK-NEXT:    hlfir.assign %[[SUM_RES]] to %[[RES_VAR]]#0
-! CHECK-NEXT:    hlfir.destroy %[[SUM_RES]]
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
 

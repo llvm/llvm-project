@@ -199,9 +199,10 @@ public:
 
   /// Return a constant used by UBSan as a signature to identify functions
   /// possessing type information, or 0 if the platform is unsupported.
+  /// This magic number is invalid instruction encoding in many targets.
   virtual llvm::Constant *
   getUBSanFunctionSignature(CodeGen::CodeGenModule &CGM) const {
-    return nullptr;
+    return llvm::ConstantInt::get(CGM.Int32Ty, 0xc105cafe);
   }
 
   /// Determine whether a call to an unprototyped functions under

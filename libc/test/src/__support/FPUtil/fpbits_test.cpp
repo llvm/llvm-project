@@ -197,9 +197,9 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
 }
 #else
 TEST(LlvmLibcFPBitsTest, LongDoubleType) {
-  if constexpr (sizeof(long double) == sizeof(double))
-    return; // The tests for the "double" type cover for this case.
-
+#if defined(LONG_DOUBLE_IS_DOUBLE)
+  return; // The tests for the "double" type cover for this case.
+#else
   EXPECT_STREQ(FPBits<long double>::inf().str().c_str(), "(+Infinity)");
   EXPECT_STREQ(FPBits<long double>::neg_inf().str().c_str(), "(-Infinity)");
   EXPECT_STREQ(
@@ -262,5 +262,6 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
   EXPECT_STREQ(negnum.str().c_str(),
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
+#endif
 }
 #endif

@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple=i686 %s -o - | FileCheck --check-prefixes=CHECK,32 %s
 ; RUN: llc -mtriple=x86_64 %s -o - | FileCheck --check-prefixes=CHECK,64 %s
 
+@_ZTIFvvE = linkonce_odr constant i32 1
+@__llvm_rtti_proxy = private unnamed_addr constant ptr @_ZTIFvvE
+
 ;; -fpatchable-function-entry=0 -fcf-protection=branch
 define void @f0() "patchable-function-entry"="0" {
 ; CHECK-LABEL: f0:
@@ -83,6 +86,25 @@ entry:
   ret void
 }
 
+;; Test the interaction with -fsanitize=function.
+; CHECK:      .type sanitize_function,@function
+; CHECK-NEXT: .Ltmp{{.*}}:
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   .long   3238382334
+; CHECK-NEXT:   .long   .L__llvm_rtti_proxy-sanitize_function
+; CHECK-NEXT: sanitize_function:
+; CHECK-NEXT: .Lfunc_begin{{.*}}:
+; CHECK-NEXT:   .cfi_startproc
+; CHECK-NEXT:   # %bb.0:
+; 32-NEXT:      endbr32
+; 64-NEXT:      endbr64
+; CHECK-NEXT:   nop
+; CHECK-NEXT:   ret
+define void @sanitize_function(ptr noundef %x) "patchable-function-prefix"="1" "patchable-function-entry"="1" !func_sanitize !1 {
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 
 !0 = !{i32 8, !"cf-protection-branch", i32 1}
+!1 = !{i32 3238382334, ptr @__llvm_rtti_proxy}

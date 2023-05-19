@@ -121,9 +121,9 @@ body:             |
     ; CHECK-LABEL: bb.1.nou:
     ; CHECK:       [[SUNKVREG:%[0-9]+]]:gr64 = COPY [[ARG0VREG]]
     ; CHECK-NEXT:  DBG_VALUE [[SUNKVREG]], $noreg, [[VARNUM]]
-    ; CHECK-NEXT:  ADD64ri8
+    ; CHECK-NEXT:  ADD64ri32
     ; CHECK-NEXT:  JMP_1
-    %1:gr64 = ADD64ri8 %5, 4, implicit-def dead $eflags
+    %1:gr64 = ADD64ri32 %5, 4, implicit-def dead $eflags
     JMP_1 %bb.2.exit
 
   bb.2.exit:
@@ -161,7 +161,7 @@ body:             |
     ; CHECK-NEXT:  JMP_1
 
     %2:gr64 = COPY $rdi
-    %5:gr64 = ADD64ri8 %2, 1, implicit-def dead $eflags
+    %5:gr64 = ADD64ri32 %2, 1, implicit-def dead $eflags
     CMP32ri $esi, 0, implicit-def $eflags
     DBG_VALUE %5, $noreg, !103, !17, debug-location !104
     CMP32ri $esi, 0, implicit-def $eflags
@@ -175,11 +175,11 @@ body:             |
     ; This block should receive no DBG_VALUE.
     ; CHECK-LABEL: bb.1.block1:
     ; CHECK-NOT:   DBG_VALUE
-    ; CHECK:       [[SUNKVREG2:%[0-9]+]]:gr64 = ADD64ri8 [[TEST2VREG]]
+    ; CHECK:       [[SUNKVREG2:%[0-9]+]]:gr64 = ADD64ri32 [[TEST2VREG]]
     ; CHECK-NOT:   DBG_VALUE
-    ; CHECK-NEXT:  ADD64ri8
+    ; CHECK-NEXT:  ADD64ri32
     ; CHECK: JMP_1 %bb.2
-    %1:gr64 = ADD64ri8 %5, 4, implicit-def dead $eflags
+    %1:gr64 = ADD64ri32 %5, 4, implicit-def dead $eflags
     JMP_1 %bb.2.exit
 
   bb.2.exit:
@@ -226,9 +226,9 @@ body:             |
     ; CHECK-NOT:   DBG_VALUE
     ; CHECK:       COPY [[TEST3VREG]]
     ; CHECK-NOT:   DBG_VALUE
-    ; CHECK-NEXT:  ADD64ri8
+    ; CHECK-NEXT:  ADD64ri32
     ; CHECK: JMP_1 %bb.2
-    %1:gr64 = ADD64ri8 %5, 4, implicit-def dead $eflags
+    %1:gr64 = ADD64ri32 %5, 4, implicit-def dead $eflags
     JMP_1 %bb.2.exit
 
   bb.2.exit:
