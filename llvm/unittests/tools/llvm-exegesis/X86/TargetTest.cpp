@@ -12,12 +12,18 @@
 #include <memory>
 
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "SubprocessMemory.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include "llvm/MC/MCInstPrinter.h"
+
+#ifdef __linux__
+#include <sys/mman.h>
+#include <sys/syscall.h>
+#endif // __linux__
 
 namespace llvm {
 
@@ -77,6 +83,10 @@ Matcher<MCInst> OpcodeIs(unsigned Opcode) {
 
 Matcher<MCInst> IsMovImmediate(unsigned Opcode, int64_t Reg, int64_t Value) {
   return AllOf(OpcodeIs(Opcode), ElementsAre(IsReg(Reg), IsImm(Value)));
+}
+
+Matcher<MCInst> IsMovRegToReg(unsigned Opcode, int64_t Reg1, int64_t Reg2) {
+  return AllOf(OpcodeIs(Opcode), ElementsAre(IsReg(Reg1), IsReg(Reg2)));
 }
 
 Matcher<MCInst> IsMovValueToStack(unsigned Opcode, int64_t Value,
@@ -575,6 +585,83 @@ TEST_F(X86Core2TargetTest, AllowAsBackToBack) {
   EXPECT_FALSE(
       State.getExegesisTarget().allowAsBackToBack(getInstr(X86::LEA64r)));
 }
+
+#ifdef __linux__
+TEST_F(X86Core2TargetTest, GenerateLowerMunmapTest) {
+  std::vector<MCInst> GeneratedCode;
+  State.getExegesisTarget().generateLowerMunmap(GeneratedCode);
+  EXPECT_THAT(GeneratedCode,
+              ElementsAre(IsMovImmediate(X86::MOV64ri, X86::RDI, 0),
+                          OpcodeIs(X86::LEA64r), OpcodeIs(X86::SHR64ri),
+                          OpcodeIs(X86::SHL64ri), OpcodeIs(X86::SUB64ri32),
+                          IsMovImmediate(X86::MOV64ri, X86::RAX, SYS_munmap),
+                          OpcodeIs(X86::SYSCALL)));
+}
+
+TEST_F(X86Core2TargetTest, GenerateUpperMunmapTest) {
+  std::vector<MCInst> GeneratedCode;
+  State.getExegesisTarget().generateUpperMunmap(GeneratedCode);
+  EXPECT_THAT(
+      GeneratedCode,
+      ElementsAreArray({OpcodeIs(X86::LEA64r), OpcodeIs(X86::MOV64rr),
+                        OpcodeIs(X86::ADD64rr), OpcodeIs(X86::SHR64ri),
+                        OpcodeIs(X86::SHL64ri), OpcodeIs(X86::ADD64ri32),
+                        IsMovImmediate(X86::MOV64ri, X86::RSI,
+                                       0x0000800000000000 - getpagesize()),
+                        OpcodeIs(X86::SUB64rr),
+                        IsMovImmediate(X86::MOV64ri, X86::RAX, SYS_munmap),
+                        OpcodeIs(X86::SYSCALL)}));
+}
+
+TEST_F(X86Core2TargetTest, GenerateExitSyscallTest) {
+  EXPECT_THAT(State.getExegesisTarget().generateExitSyscall(127),
+              ElementsAre(IsMovImmediate(X86::MOV64ri, X86::RDI, 127),
+                          IsMovImmediate(X86::MOV64ri, X86::RAX, SYS_exit),
+                          OpcodeIs(X86::SYSCALL)));
+}
+
+TEST_F(X86Core2TargetTest, GenerateMmapTest) {
+  EXPECT_THAT(State.getExegesisTarget().generateMmap(0x1000, 4096, 0x2000),
+              ElementsAre(IsMovImmediate(X86::MOV64ri, X86::RDI, 0x1000),
+                          IsMovImmediate(X86::MOV64ri, X86::RSI, 4096),
+                          IsMovImmediate(X86::MOV64ri, X86::RDX,
+                                         PROT_READ | PROT_WRITE),
+                          IsMovImmediate(X86::MOV64ri, X86::R10,
+                                         MAP_SHARED | MAP_FIXED_NOREPLACE),
+                          IsMovImmediate(X86::MOV64ri, X86::R8, 0x2000),
+                          OpcodeIs(X86::MOV32rm),
+                          IsMovImmediate(X86::MOV64ri, X86::R9, 0),
+                          IsMovImmediate(X86::MOV64ri, X86::RAX, SYS_mmap),
+                          OpcodeIs(X86::SYSCALL)));
+}
+
+TEST_F(X86Core2TargetTest, GenerateMmapAuxMemTest) {
+  std::vector<MCInst> GeneratedCode;
+  State.getExegesisTarget().generateMmapAuxMem(GeneratedCode);
+  EXPECT_THAT(
+      GeneratedCode,
+      ElementsAre(
+          IsMovImmediate(
+              X86::MOV64ri, X86::RDI,
+              State.getExegesisTarget().getAuxiliaryMemoryStartAddress()),
+          IsMovImmediate(X86::MOV64ri, X86::RSI,
+                         SubprocessMemory::AuxiliaryMemorySize),
+          IsMovImmediate(X86::MOV64ri, X86::RDX, PROT_READ | PROT_WRITE),
+          IsMovImmediate(X86::MOV64ri, X86::R10,
+                         MAP_SHARED | MAP_FIXED_NOREPLACE),
+          OpcodeIs(X86::MOV64rr), IsMovImmediate(X86::MOV64ri, X86::R9, 0),
+          IsMovImmediate(X86::MOV64ri, X86::RAX, SYS_mmap),
+          OpcodeIs(X86::SYSCALL)));
+}
+
+TEST_F(X86Core2TargetTest, MoveArgumentRegistersTest) {
+  std::vector<MCInst> GeneratedCode;
+  State.getExegesisTarget().moveArgumentRegisters(GeneratedCode);
+  EXPECT_THAT(GeneratedCode,
+              ElementsAre(IsMovRegToReg(X86::MOV64rr, X86::R12, X86::RDI),
+                          IsMovRegToReg(X86::MOV64rr, X86::R13, X86::RSI)));
+}
+#endif // __linux__
 
 } // namespace
 } // namespace exegesis

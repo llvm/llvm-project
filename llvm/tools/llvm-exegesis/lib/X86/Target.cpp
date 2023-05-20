@@ -11,6 +11,7 @@
 #include "../ParallelSnippetGenerator.h"
 #include "../SerialSnippetGenerator.h"
 #include "../SnippetGenerator.h"
+#include "../SubprocessMemory.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
@@ -36,8 +37,16 @@
 #include <float.h> // For _clearfp in ~X86SavedState().
 #endif
 
+#ifdef __linux__
+#include <sys/mman.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
+
 namespace llvm {
 namespace exegesis {
+
+static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
 
 // If a positive value is specified, we are going to use the LBR in
 // latency-mode.
@@ -686,6 +695,8 @@ public:
     return ExegesisTarget::createCounter(CounterName, State, ProcessID);
   }
 
+  enum ArgumentRegisters { CodeSize = X86::R12, AuxiliaryMemoryFD = X86::R13 };
+
 private:
   void addTargetSpecificPasses(PassManagerBase &PM) const override;
 
@@ -708,6 +719,34 @@ private:
 
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override;
+
+#ifdef __linux__
+  void generateLowerMunmap(std::vector<MCInst> &GeneratedCode) const override;
+
+  void generateUpperMunmap(std::vector<MCInst> &GeneratedCode) const override;
+
+  std::vector<MCInst> generateExitSyscall(unsigned ExitCode) const override;
+
+  std::vector<MCInst>
+  generateMmap(intptr_t Address, size_t Length,
+               intptr_t FileDescriptorAddress) const override;
+
+  void generateMmapAuxMem(std::vector<MCInst> &GeneratedCode) const override;
+
+  void moveArgumentRegisters(std::vector<MCInst> &GeneratedCode) const override;
+
+  std::vector<MCInst> generateMemoryInitialSetup() const override;
+
+  std::vector<MCInst> setStackRegisterToAuxMem() const override;
+
+  intptr_t getAuxiliaryMemoryStartAddress() const override;
+
+  std::vector<MCInst> configurePerfCounter(long Request, bool SaveRegisters) const override;
+
+  std::vector<unsigned> getArgumentRegisters() const override;
+
+  std::vector<unsigned> getRegistersNeedSaving() const override;
+#endif // __linux__
 
   ArrayRef<unsigned> getUnavailableRegisters() const override {
     if (DisableUpperSSERegisters)
@@ -941,6 +980,223 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
     return CI.loadImplicitRegAndFinalize(X86::FLDCW16m, 0x37f);
   return {}; // Not yet implemented.
 }
+
+#ifdef __linux__
+
+void generateSyscall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
+  GeneratedCode.push_back(
+      loadImmediate(X86::RAX, 64, APInt(64, SyscallNumber)));
+  GeneratedCode.push_back(MCInstBuilder(X86::SYSCALL));
+}
+
+void generateRoundToNearestPage(unsigned int Register,
+                                std::vector<MCInst> &GeneratedCode) {
+  int PageSizeShift = static_cast<int>(round(log2(getpagesize())));
+  // Round down to the nearest page by getting rid of the least significant bits
+  // representing location in the page. Shift right to get rid of this info and
+  // then shift back left.
+  GeneratedCode.push_back(MCInstBuilder(X86::SHR64ri)
+                              .addReg(Register)
+                              .addReg(Register)
+                              .addImm(PageSizeShift));
+  GeneratedCode.push_back(MCInstBuilder(X86::SHL64ri)
+                              .addReg(Register)
+                              .addReg(Register)
+                              .addImm(PageSizeShift));
+}
+
+void generateGetInstructionPointer(unsigned int ResultRegister,
+                                   std::vector<MCInst> &GeneratedCode) {
+  // Use a load effective address to get the current instruction pointer and put
+  // it into the result register.
+  GeneratedCode.push_back(MCInstBuilder(X86::LEA64r)
+                              .addReg(ResultRegister)
+                              .addReg(X86::RIP)
+                              .addImm(1)
+                              .addReg(0)
+                              .addImm(0)
+                              .addReg(0));
+}
+
+void ExegesisX86Target::generateLowerMunmap(
+    std::vector<MCInst> &GeneratedCode) const {
+  // Unmap starting at address zero
+  GeneratedCode.push_back(loadImmediate(X86::RDI, 64, APInt(64, 0)));
+  // Get the current instruction pointer so we know where to unmap up to.
+  generateGetInstructionPointer(X86::RSI, GeneratedCode);
+  generateRoundToNearestPage(X86::RSI, GeneratedCode);
+  // Subtract a page from the end of the unmap so we don't unmap the currently
+  // executing section.
+  GeneratedCode.push_back(MCInstBuilder(X86::SUB64ri32)
+                              .addReg(X86::RSI)
+                              .addReg(X86::RSI)
+                              .addImm(getpagesize()));
+  generateSyscall(SYS_munmap, GeneratedCode);
+}
+
+void ExegesisX86Target::generateUpperMunmap(
+    std::vector<MCInst> &GeneratedCode) const {
+  generateGetInstructionPointer(X86::R8, GeneratedCode);
+  // Load in the size of the snippet to RDI from from the argument register.
+  GeneratedCode.push_back(MCInstBuilder(X86::MOV64rr)
+                              .addReg(X86::RDI)
+                              .addReg(ArgumentRegisters::CodeSize));
+  // Add the length of the snippet (in %RDI) to the current instruction pointer
+  // (%R8) to get the address where we should start unmapping at.
+  GeneratedCode.push_back(MCInstBuilder(X86::ADD64rr)
+                              .addReg(X86::RDI)
+                              .addReg(X86::RDI)
+                              .addReg(X86::R8));
+  generateRoundToNearestPage(X86::RDI, GeneratedCode);
+  // Add a one page to the start address to ensure that we're above the snippet
+  // since the above function rounds down.
+  GeneratedCode.push_back(MCInstBuilder(X86::ADD64ri32)
+                              .addReg(X86::RDI)
+                              .addReg(X86::RDI)
+                              .addImm(getpagesize()));
+  // Unmap to just one page under the ceiling of the address space.
+  GeneratedCode.push_back(loadImmediate(
+      X86::RSI, 64, APInt(64, VAddressSpaceCeiling - getpagesize())));
+  GeneratedCode.push_back(MCInstBuilder(X86::SUB64rr)
+                              .addReg(X86::RSI)
+                              .addReg(X86::RSI)
+                              .addReg(X86::RDI));
+  generateSyscall(SYS_munmap, GeneratedCode);
+}
+
+std::vector<MCInst>
+ExegesisX86Target::generateExitSyscall(unsigned ExitCode) const {
+  std::vector<MCInst> ExitCallCode;
+  ExitCallCode.push_back(loadImmediate(X86::RDI, 64, APInt(64, ExitCode)));
+  generateSyscall(SYS_exit, ExitCallCode);
+  return ExitCallCode;
+}
+
+std::vector<MCInst>
+ExegesisX86Target::generateMmap(intptr_t Address, size_t Length,
+                                intptr_t FileDescriptorAddress) const {
+  std::vector<MCInst> MmapCode;
+  MmapCode.push_back(loadImmediate(X86::RDI, 64, APInt(64, Address)));
+  MmapCode.push_back(loadImmediate(X86::RSI, 64, APInt(64, Length)));
+  MmapCode.push_back(
+      loadImmediate(X86::RDX, 64, APInt(64, PROT_READ | PROT_WRITE)));
+  MmapCode.push_back(
+      loadImmediate(X86::R10, 64, APInt(64, MAP_SHARED | MAP_FIXED_NOREPLACE)));
+  // Copy file descriptor location from aux memory into R8
+  MmapCode.push_back(
+      loadImmediate(X86::R8, 64, APInt(64, FileDescriptorAddress)));
+  // Dereference file descriptor into FD argument register
+  MmapCode.push_back(MCInstBuilder(X86::MOV32rm)
+                         .addReg(X86::R8D)
+                         .addReg(X86::R8)
+                         .addImm(1)
+                         .addReg(0)
+                         .addImm(0)
+                         .addReg(0));
+  MmapCode.push_back(loadImmediate(X86::R9, 64, APInt(64, 0)));
+  generateSyscall(SYS_mmap, MmapCode);
+  return MmapCode;
+}
+
+void ExegesisX86Target::generateMmapAuxMem(
+    std::vector<MCInst> &GeneratedCode) const {
+  GeneratedCode.push_back(
+      loadImmediate(X86::RDI, 64, APInt(64, getAuxiliaryMemoryStartAddress())));
+  GeneratedCode.push_back(loadImmediate(
+      X86::RSI, 64, APInt(64, SubprocessMemory::AuxiliaryMemorySize)));
+  GeneratedCode.push_back(
+      loadImmediate(X86::RDX, 64, APInt(64, PROT_READ | PROT_WRITE)));
+  GeneratedCode.push_back(
+      loadImmediate(X86::R10, 64, APInt(64, MAP_SHARED | MAP_FIXED_NOREPLACE)));
+  GeneratedCode.push_back(MCInstBuilder(X86::MOV64rr)
+                              .addReg(X86::R8)
+                              .addReg(ArgumentRegisters::AuxiliaryMemoryFD));
+  GeneratedCode.push_back(loadImmediate(X86::R9, 64, APInt(64, 0)));
+  generateSyscall(SYS_mmap, GeneratedCode);
+}
+
+void ExegesisX86Target::moveArgumentRegisters(
+    std::vector<MCInst> &GeneratedCode) const {
+  GeneratedCode.push_back(MCInstBuilder(X86::MOV64rr)
+                              .addReg(ArgumentRegisters::CodeSize)
+                              .addReg(X86::RDI));
+  GeneratedCode.push_back(MCInstBuilder(X86::MOV64rr)
+                              .addReg(ArgumentRegisters::AuxiliaryMemoryFD)
+                              .addReg(X86::RSI));
+}
+
+std::vector<MCInst> ExegesisX86Target::generateMemoryInitialSetup() const {
+  std::vector<MCInst> MemoryInitialSetupCode;
+  moveArgumentRegisters(MemoryInitialSetupCode);
+  generateLowerMunmap(MemoryInitialSetupCode);
+  generateUpperMunmap(MemoryInitialSetupCode);
+  generateMmapAuxMem(MemoryInitialSetupCode);
+  return MemoryInitialSetupCode;
+}
+
+std::vector<MCInst> ExegesisX86Target::setStackRegisterToAuxMem() const {
+  // Moves %rsp to the end of the auxiliary memory
+  return {MCInstBuilder(X86::MOV64ri)
+              .addReg(X86::RSP)
+              .addImm(getAuxiliaryMemoryStartAddress() +
+                      SubprocessMemory::AuxiliaryMemorySize)};
+}
+
+intptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
+  // Return the second to last page in the virtual address space to try and
+  // prevent interference with memory annotations in the snippet
+  return VAddressSpaceCeiling - 2 * getpagesize();
+}
+
+void generateRegisterStackPush(unsigned int Register,
+                               std::vector<MCInst> &GeneratedCode) {
+  GeneratedCode.push_back(MCInstBuilder(X86::PUSH64r).addReg(Register));
+}
+
+void generateRegisterStackPop(unsigned int Register,
+                              std::vector<MCInst> &GeneratedCode) {
+  GeneratedCode.push_back(MCInstBuilder(X86::POP64r).addReg(Register));
+}
+
+std::vector<MCInst>
+ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const {
+  std::vector<MCInst> ConfigurePerfCounterCode;
+  if(SaveRegisters) {
+    // Preservie RAX, RDI, and RSI by pushing them to the stack.
+    generateRegisterStackPush(X86::RAX, ConfigurePerfCounterCode);
+    generateRegisterStackPush(X86::RDI, ConfigurePerfCounterCode);
+    generateRegisterStackPush(X86::RSI, ConfigurePerfCounterCode);
+  }
+  ConfigurePerfCounterCode.push_back(
+      loadImmediate(X86::RDI, 64, APInt(64, getAuxiliaryMemoryStartAddress())));
+  ConfigurePerfCounterCode.push_back(MCInstBuilder(X86::MOV32rm)
+                                         .addReg(X86::EDI)
+                                         .addReg(X86::RDI)
+                                         .addImm(1)
+                                         .addReg(0)
+                                         .addImm(0)
+                                         .addReg(0));
+  ConfigurePerfCounterCode.push_back(
+      loadImmediate(X86::RSI, 64, APInt(64, Request)));
+  generateSyscall(SYS_ioctl, ConfigurePerfCounterCode);
+  if(SaveRegisters) {
+    // Restore RAX, RDI, and RSI, in reverse order.
+    generateRegisterStackPop(X86::RSI, ConfigurePerfCounterCode);
+    generateRegisterStackPop(X86::RIP, ConfigurePerfCounterCode);
+    generateRegisterStackPop(X86::RAX, ConfigurePerfCounterCode);
+  }
+  return ConfigurePerfCounterCode;
+}
+
+std::vector<unsigned> ExegesisX86Target::getArgumentRegisters() const {
+  return {X86::RDI, X86::RSI};
+}
+
+std::vector<unsigned> ExegesisX86Target::getRegistersNeedSaving() const {
+  return {X86::RAX, X86::RDI, X86::RSI};
+}
+
+#endif // __linux__
 
 // Instruction can have some variable operands, and we may want to see how
 // different operands affect performance. So for each operand position,
