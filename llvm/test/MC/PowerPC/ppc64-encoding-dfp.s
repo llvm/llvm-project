@@ -26,3 +26,27 @@
 # CHECK-BE: dsubq. 2, 6, 4                 # encoding: [0xfc,0x46,0x24,0x05]
 # CHECK-LE: dsubq. 2, 6, 4                 # encoding: [0x05,0x24,0x46,0xfc]
             dsubq. 2, 6, 4
+# CHECK-BE: dmul 2, 3, 4                   # encoding: [0xec,0x43,0x20,0x44]
+# CHECK-LE: dmul 2, 3, 4                   # encoding: [0x44,0x20,0x43,0xec]
+            dmul 2, 3, 4
+# CHECK-BE: dmul. 2, 3, 4                  # encoding: [0xec,0x43,0x20,0x45]
+# CHECK-LE: dmul. 2, 3, 4                  # encoding: [0x45,0x20,0x43,0xec]
+            dmul. 2, 3, 4
+# CHECK-BE: dmulq 2, 6, 4                  # encoding: [0xfc,0x46,0x20,0x44]
+# CHECK-LE: dmulq 2, 6, 4                  # encoding: [0x44,0x20,0x46,0xfc]
+            dmulq 2, 6, 4
+# CHECK-BE: dmulq. 2, 6, 4                 # encoding: [0xfc,0x46,0x20,0x45]
+# CHECK-LE: dmulq. 2, 6, 4                 # encoding: [0x45,0x20,0x46,0xfc]
+            dmulq. 2, 6, 4
+# CHECK-BE: ddiv 2, 3, 4                   # encoding: [0xec,0x43,0x24,0x44]
+# CHECK-LE: ddiv 2, 3, 4                   # encoding: [0x44,0x24,0x43,0xec]
+            ddiv 2, 3, 4
+# CHECK-BE: ddiv. 2, 3, 4                  # encoding: [0xec,0x43,0x24,0x45]
+# CHECK-LE: ddiv. 2, 3, 4                  # encoding: [0x45,0x24,0x43,0xec]
+            ddiv. 2, 3, 4
+# CHECK-BE: ddivq 2, 6, 4                  # encoding: [0xfc,0x46,0x24,0x44]
+# CHECK-LE: ddivq 2, 6, 4                  # encoding: [0x44,0x24,0x46,0xfc]
+            ddivq 2, 6, 4
+# CHECK-BE: ddivq. 2, 6, 4                 # encoding: [0xfc,0x46,0x24,0x45]
+# CHECK-LE: ddivq. 2, 6, 4                 # encoding: [0x45,0x24,0x46,0xfc]
+            ddivq. 2, 6, 4

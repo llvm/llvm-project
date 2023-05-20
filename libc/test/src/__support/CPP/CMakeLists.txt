@@ -101,8 +101,6 @@ add_libc_test(
 
 add_libc_test(
   string_test
-  # This test relies on 'realloc' which is not implemented for hermetic tests.
-  UNIT_TEST_ONLY
   SUITE
     libc-cpp-utils-tests
   SRCS
