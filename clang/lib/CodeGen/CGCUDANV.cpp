@@ -24,7 +24,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -722,9 +721,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   // handle so CUDA runtime can figure out what to call on the GPU side.
   std::unique_ptr<llvm::MemoryBuffer> CudaGpuBinary = nullptr;
   if (!CudaGpuBinaryFileName.empty()) {
-    auto VFS = CGM.getFileSystem();
-    auto CudaGpuBinaryOrErr =
-        VFS->getBufferForFile(CudaGpuBinaryFileName, -1, false);
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> CudaGpuBinaryOrErr =
+        llvm::MemoryBuffer::getFileOrSTDIN(CudaGpuBinaryFileName);
     if (std::error_code EC = CudaGpuBinaryOrErr.getError()) {
       CGM.getDiags().Report(diag::err_cannot_open_file)
           << CudaGpuBinaryFileName << EC.message();
