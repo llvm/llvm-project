@@ -110,15 +110,16 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "C++23"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
+  - label: "C++26"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx26"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -136,7 +137,8 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -186,6 +188,24 @@ steps:
   # All other supported configurations of libc++.
   #
   - wait
+
+  - label: "C++23"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
 
   - label: "C++20"
     command: "libcxx/utils/ci/run-buildbot generic-cxx20"
@@ -308,7 +328,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -326,7 +347,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -344,7 +366,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -362,7 +385,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -402,7 +426,8 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -420,7 +445,8 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -438,7 +464,8 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -456,7 +483,8 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -474,7 +502,8 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -492,7 +521,8 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -512,7 +542,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -530,7 +561,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -548,7 +580,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -566,7 +599,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -584,7 +618,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -602,7 +637,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -620,7 +656,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -638,7 +675,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -656,7 +694,8 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
-          ENABLE_CLANG_TIDY: "On"
+          # TODO(LLVM-17) enable clang-tidy.
+          # ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -674,7 +713,8 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -693,7 +733,8 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
+        # TODO(LLVM-17) enable clang-tidy.
+        # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"

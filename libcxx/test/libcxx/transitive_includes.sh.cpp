@@ -40,7 +40,7 @@ import re
 # To re-generate the list of expected headers, temporarily set this to True, re-generate
 # the file and run this test.
 # Note that this needs to be done for all supported language versions of libc++:
-# for std in c++03 c++11 c++14 c++17 c++20 c++23; do <build>/bin/llvm-lit --param std=$std ${path_to_this_file}; done
+# for std in c++03 c++11 c++14 c++17 c++20 c++23 c++26; do <build>/bin/llvm-lit --param std=$std ${path_to_this_file}; done
 regenerate_expected_results = False
 # Used because the sequence of tokens RUN : can't appear anywhere or it'll confuse Lit.
 RUN = "RUN"

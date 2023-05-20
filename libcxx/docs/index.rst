@@ -44,6 +44,7 @@ Getting Started with libc++
    Status/Cxx17
    Status/Cxx20
    Status/Cxx23
+   Status/Cxx2c
    Status/Format
    Status/Parallelism
    Status/Ranges
@@ -150,6 +151,7 @@ C++ Dialect Support
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
 * :ref:`C++23 - In Progress <cxx23-status>`
+* :ref:`C++2c - In Progress <cxx2c-status>`
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
 

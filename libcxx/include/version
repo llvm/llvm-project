@@ -433,6 +433,10 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_unreachable                          202202L
 #endif
 
+#if _LIBCPP_STD_VER >= 26
+
+#endif
+
 // clang-format on
 
 #endif // _LIBCPP_VERSIONH

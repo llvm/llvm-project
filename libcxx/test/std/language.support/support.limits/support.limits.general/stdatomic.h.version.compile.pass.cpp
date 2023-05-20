@@ -48,7 +48,7 @@
 #   error "__cpp_lib_stdatomic_h should not be defined before c++23"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_stdatomic_h
 #   error "__cpp_lib_stdatomic_h should be defined in c++23"
@@ -57,5 +57,14 @@
 #   error "__cpp_lib_stdatomic_h should have the value 202011L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_stdatomic_h
+#   error "__cpp_lib_stdatomic_h should be defined in c++26"
+# endif
+# if __cpp_lib_stdatomic_h != 202011L
+#   error "__cpp_lib_stdatomic_h should have the value 202011L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 
