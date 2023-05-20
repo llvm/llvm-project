@@ -1438,7 +1438,7 @@ namespace dr398 { // dr398: yes
 
 namespace dr399 { // dr399: 11
                   // NB: reuse dr244 test 
-  struct B {}; // expected-note {{type 'dr244::B' found by destructor name lookup}}
+  struct B {}; // expected-note {{type 'dr399::B' found by destructor name lookup}}
   struct D : B {};
 
   D D_object;
@@ -1453,8 +1453,8 @@ namespace dr399 { // dr399: 11
     B_ptr->~B_alias();
     B_ptr->B_alias::~B();
     B_ptr->B_alias::~B_alias();
-    B_ptr->dr244::~B(); // expected-error {{refers to a member in namespace}}
-    B_ptr->dr244::~B_alias(); // expected-error {{refers to a member in namespace}}
+    B_ptr->dr399::~B(); // expected-error {{refers to a member in namespace}}
+    B_ptr->dr399::~B_alias(); // expected-error {{refers to a member in namespace}}
   }
 
   template<typename T, typename U>

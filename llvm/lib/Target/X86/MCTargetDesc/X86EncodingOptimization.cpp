@@ -484,6 +484,9 @@ static bool optimizeToShortImmediateForm(MCInst &MI) {
     FROM_TO(IMUL32rri, IMUL32rri8)
     FROM_TO(IMUL64rmi32, IMUL64rmi8)
     FROM_TO(IMUL64rri32, IMUL64rri8)
+    FROM_TO(PUSH16i, PUSH16i8)
+    FROM_TO(PUSH32i, PUSH32i8)
+    FROM_TO(PUSH64i32, PUSH64i8)
   }
   MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1);
   if (LastOp.isExpr()) {

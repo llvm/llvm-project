@@ -32,6 +32,55 @@ namespace dr1213 { // dr1213: 7
 }
 
 #if __cplusplus >= 201103L
+namespace dr1223 { // dr1227: yes open
+struct M;
+template <typename T>
+struct V;
+struct S {
+  S* operator()();
+  int N;
+  int M;
+#if __cplusplus > 202002L
+  template <typename T>
+  static constexpr auto V = 0;
+  void f(char);
+  void f(int);
+  void mem(S s) {
+    auto(s)()->M; //expected-warning {{expression result unused}}
+    auto(s)()->V<int>; //expected-warning {{expression result unused}}
+    auto(s)()->f(0);
+  }
+#endif
+};
+void f(S s) {
+  {
+#if __cplusplus > 202002L
+    auto(s)()->N; //expected-warning {{expression result unused}}
+#endif
+    auto(s)()->M;
+  }
+  {
+    S(s)()->N; //expected-warning {{expression result unused}}
+    S(s)()->M; //expected-warning {{expression result unused}}
+  }
+}
+
+struct A {
+    A(int*);
+    A *operator()();
+};
+typedef struct BB { int C[2]; } *B, C;
+void g() {
+    A a(B ()->C);
+    A b(auto ()->C);
+    static_assert(sizeof(B ()->C[1] == sizeof(int)), "");
+    sizeof(auto () -> C[1]); // expected-error{{function cannot return array type 'C[1]'}}
+}
+
+}
+#endif
+
+#if __cplusplus >= 201103L
 namespace dr1227 { // dr1227: yes
 template <class T> struct A { using X = typename T::X; }; // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
 template <class T> typename T::X f(typename A<T>::X);
