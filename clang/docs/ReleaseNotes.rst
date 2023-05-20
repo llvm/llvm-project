@@ -392,8 +392,8 @@ Bug Fixes in This Version
 - Fix crash when attempting to perform parenthesized initialization of an
   aggregate with a base class with only non-public constructors.
   (`#62296 <https://github.com/llvm/llvm-project/issues/62296>`_)
-- Fix crash when redefine variant with invalid type as another invalid type.
-  (`#62447 <https://github.com/llvm/llvm-project/issues/62447>`_)
+- - Fix crash when redefining a variable with an invalid type again with an
+  invalid type. (`#62447 <https://github.com/llvm/llvm-project/issues/62447>`_)
 - Fix a stack overflow issue when evaluating ``consteval`` default arguments.
   (`#60082` <https://github.com/llvm/llvm-project/issues/60082>`_)
 - Fix the assertion hit when generating code for global variable initializer of
@@ -468,6 +468,8 @@ Bug Fixes to C++ Support
 - Some predefined expressions are now treated as string literals in MSVC
   compatibility mode.
   (`#114 <https://github.com/llvm/llvm-project/issues/114>`_)
+- Fix parsing of `auto(x)`, when it is surrounded by parentheses.
+  (`#62494 <https://github.com/llvm/llvm-project/issues/62494>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

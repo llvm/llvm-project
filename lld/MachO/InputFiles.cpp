@@ -655,6 +655,8 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
   bool isWeakDefCanBeHidden =
       (sym.n_desc & (N_WEAK_DEF | N_WEAK_REF)) == (N_WEAK_DEF | N_WEAK_REF);
 
+  assert(!(sym.n_desc & N_ARM_THUMB_DEF) && "ARM32 arch is not supported");
+
   if (sym.n_type & N_EXT) {
     // -load_hidden makes us treat global symbols as linkage unit scoped.
     // Duplicates are reported but the symbol does not go in the export trie.
@@ -697,16 +699,14 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
       isPrivateExtern = true;
     return symtab->addDefined(
         name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
-        isPrivateExtern, sym.n_desc & N_ARM_THUMB_DEF,
-        sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP,
-        isWeakDefCanBeHidden);
+        isPrivateExtern, sym.n_desc & REFERENCED_DYNAMICALLY,
+        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden);
   }
   bool includeInSymtab = !isPrivateLabel(name) && !isEhFrameSection(isec);
   return make<Defined>(
       name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
       /*isExternal=*/false, /*isPrivateExtern=*/false, includeInSymtab,
-      sym.n_desc & N_ARM_THUMB_DEF, sym.n_desc & REFERENCED_DYNAMICALLY,
-      sym.n_desc & N_NO_DEAD_STRIP);
+      sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP);
 }
 
 // Absolute symbols are defined symbols that do not have an associated
@@ -714,18 +714,20 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 template <class NList>
 static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
                                      StringRef name, bool forceHidden) {
+  assert(!(sym.n_desc & N_ARM_THUMB_DEF) && "ARM32 arch is not supported");
+
   if (sym.n_type & N_EXT) {
     bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
-    return symtab->addDefined(
-        name, file, nullptr, sym.n_value, /*size=*/0,
-        /*isWeakDef=*/false, isPrivateExtern, sym.n_desc & N_ARM_THUMB_DEF,
-        /*isReferencedDynamically=*/false, sym.n_desc & N_NO_DEAD_STRIP,
-        /*isWeakDefCanBeHidden=*/false);
+    return symtab->addDefined(name, file, nullptr, sym.n_value, /*size=*/0,
+                              /*isWeakDef=*/false, isPrivateExtern,
+                              /*isReferencedDynamically=*/false,
+                              sym.n_desc & N_NO_DEAD_STRIP,
+                              /*isWeakDefCanBeHidden=*/false);
   }
   return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
                        /*isWeakDef=*/false,
                        /*isExternal=*/false, /*isPrivateExtern=*/false,
-                       /*includeInSymtab=*/true, sym.n_desc & N_ARM_THUMB_DEF,
+                       /*includeInSymtab=*/true,
                        /*isReferencedDynamically=*/false,
                        sym.n_desc & N_NO_DEAD_STRIP);
 }
@@ -1366,7 +1368,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       make<Defined>("EH_Frame", isec->getFile(), isec, /*value=*/0,
                     isec->getSize(), /*isWeakDef=*/false, /*isExternal=*/false,
                     /*isPrivateExtern=*/false, /*includeInSymtab=*/false,
-                    /*isThumb=*/false, /*isReferencedDynamically=*/false,
+                    /*isReferencedDynamically=*/false,
                     /*noDeadStrip=*/false);
     else if (isec->symbols[0]->value != 0)
       fatal("found symbol at unexpected offset in __eh_frame");
@@ -2184,7 +2186,6 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
 
   return symtab->addDefined(name, &file, /*isec=*/nullptr, /*value=*/0,
                             /*size=*/0, objSym.isWeak(), isPrivateExtern,
-                            /*isThumb=*/false,
                             /*isReferencedDynamically=*/false,
                             /*noDeadStrip=*/false,
                             /*isWeakDefCanBeHidden=*/false);

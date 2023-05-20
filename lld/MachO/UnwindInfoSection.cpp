@@ -307,7 +307,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
                           r.addend, /*size=*/0, /*isWeakDef=*/false,
                           /*isExternal=*/false, /*isPrivateExtern=*/false,
                           /*includeInSymtab=*/true,
-                          /*isThumb=*/false, /*isReferencedDynamically=*/false,
+                          /*isReferencedDynamically=*/false,
                           /*noDeadStrip=*/false);
         s->used = true;
         in.got->addEntry(s);

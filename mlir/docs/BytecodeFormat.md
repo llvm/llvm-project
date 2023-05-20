@@ -314,6 +314,12 @@ offsets provides more effective compression.
 
 The IR section contains the encoded form of operations within the bytecode.
 
+```
+ir_section {
+  block: block; // Single block without arguments.
+}
+```
+
 #### Operation Encoding
 
 ```
@@ -334,7 +340,9 @@ op {
   successors: varint[],
 
   regionEncoding: varint?, // (numRegions << 1) | (isIsolatedFromAbove)
-  regions: region[]
+
+  // regions are stored in a section if isIsolatedFromAbove
+  regions: (region | region_section)[]
 }
 ```
 

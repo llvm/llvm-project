@@ -976,14 +976,9 @@ void AsmPrinter::emitFunctionHeader() {
     assert(MD->getNumOperands() == 2);
 
     auto *PrologueSig = mdconst::extract<Constant>(MD->getOperand(0));
-    auto *FTRTTIProxy = mdconst::extract<Constant>(MD->getOperand(1));
+    auto *TypeHash = mdconst::extract<Constant>(MD->getOperand(1));
     emitGlobalConstant(F.getParent()->getDataLayout(), PrologueSig);
-
-    const MCExpr *Proxy = lowerConstant(FTRTTIProxy);
-    const MCExpr *FnExp = MCSymbolRefExpr::create(CurrentFnSym, OutContext);
-    const MCExpr *PCRel = MCBinaryExpr::createSub(Proxy, FnExp, OutContext);
-    // Use 32 bit since only small code model is supported.
-    OutStreamer->emitValue(PCRel, 4u);
+    emitGlobalConstant(F.getParent()->getDataLayout(), TypeHash);
   }
 
   if (isVerbose()) {
