@@ -140,7 +140,10 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
 
   LValue This;
   if (IsArrow) {
-    llvm_unreachable("NYI");
+    LValueBaseInfo BaseInfo;
+    assert(!UnimplementedFeature::tbaa());
+    Address ThisValue = buildPointerWithAlignment(Base, &BaseInfo);
+    This = makeAddrLValue(ThisValue, Base->getType(), BaseInfo);
   } else {
     This = buildLValue(Base);
   }
