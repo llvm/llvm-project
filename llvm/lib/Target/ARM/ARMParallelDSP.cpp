@@ -64,7 +64,6 @@ namespace {
     Value*        LHS;
     Value*        RHS;
     bool          Exchange = false;
-    bool          ReadOnly = true;
     bool          Paired = false;
     SmallVector<LoadInst*, 2> VecLd;    // Container for loads to widen.
 
