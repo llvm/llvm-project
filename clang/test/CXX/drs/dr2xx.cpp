@@ -500,6 +500,7 @@ namespace dr243 { // dr243: yes
 }
 
 namespace dr244 { // dr244: 11
+                  // NB: this test is reused by dr399
   struct B {}; // expected-note {{type 'dr244::B' found by destructor name lookup}}
   struct D : B {};
 
