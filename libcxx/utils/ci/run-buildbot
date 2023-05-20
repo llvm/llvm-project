@@ -282,6 +282,12 @@ generic-cxx23)
     check-runtimes
     check-abi-list
 ;;
+generic-cxx26)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx26.cmake"
+    check-runtimes
+    check-abi-list
+;;
 #
 # Other compiler support
 #
