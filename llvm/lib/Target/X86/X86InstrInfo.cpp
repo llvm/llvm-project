@@ -218,14 +218,11 @@ bool X86InstrInfo::isDataInvariantLoad(MachineInstr &MI) {
   // However, they set flags and are perhaps the most surprisingly constant
   // time operations so we call them out here separately.
   case X86::IMUL16rm:
-  case X86::IMUL16rmi8:
   case X86::IMUL16rmi:
   case X86::IMUL32rm:
-  case X86::IMUL32rmi8:
   case X86::IMUL32rmi:
   case X86::IMUL64rm:
   case X86::IMUL64rmi32:
-  case X86::IMUL64rmi8:
 
   // Bit scanning and counting instructions that are somewhat surprisingly
   // constant time as they scan across bits and do other fairly complex

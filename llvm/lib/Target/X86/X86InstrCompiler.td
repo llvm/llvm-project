@@ -2084,12 +2084,6 @@ def : Pat<(mul GR16:$src1, imm:$src2),
           (IMUL16rri GR16:$src1, imm:$src2)>;
 def : Pat<(mul GR32:$src1, imm:$src2),
           (IMUL32rri GR32:$src1, imm:$src2)>;
-def : Pat<(mul GR16:$src1, i16immSExt8:$src2),
-          (IMUL16rri8 GR16:$src1, i16immSExt8:$src2)>;
-def : Pat<(mul GR32:$src1, i32immSExt8:$src2),
-          (IMUL32rri8 GR32:$src1, i32immSExt8:$src2)>;
-def : Pat<(mul GR64:$src1, i64immSExt8:$src2),
-          (IMUL64rri8 GR64:$src1, i64immSExt8:$src2)>;
 def : Pat<(mul GR64:$src1, i64immSExt32:$src2),
           (IMUL64rri32 GR64:$src1, i64immSExt32:$src2)>;
 
@@ -2098,12 +2092,6 @@ def : Pat<(mul (loadi16 addr:$src1), imm:$src2),
           (IMUL16rmi addr:$src1, imm:$src2)>;
 def : Pat<(mul (loadi32 addr:$src1), imm:$src2),
           (IMUL32rmi addr:$src1, imm:$src2)>;
-def : Pat<(mul (loadi16 addr:$src1), i16immSExt8:$src2),
-          (IMUL16rmi8 addr:$src1, i16immSExt8:$src2)>;
-def : Pat<(mul (loadi32 addr:$src1), i32immSExt8:$src2),
-          (IMUL32rmi8 addr:$src1, i32immSExt8:$src2)>;
-def : Pat<(mul (loadi64 addr:$src1), i64immSExt8:$src2),
-          (IMUL64rmi8 addr:$src1, i64immSExt8:$src2)>;
 def : Pat<(mul (loadi64 addr:$src1), i64immSExt32:$src2),
           (IMUL64rmi32 addr:$src1, i64immSExt32:$src2)>;
 
