@@ -52,6 +52,17 @@ RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
 
 RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix UPDATE-DWARF
 
+RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+
+RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix DWARF
+
+RUN: dsymutil --linker llvm --update -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+
+RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix UPDATE-DWARF
+
+
 CHECK-NOT: error:
 
 DWARF: DW_TAG_compile_unit
