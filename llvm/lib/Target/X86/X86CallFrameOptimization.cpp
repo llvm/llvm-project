@@ -521,15 +521,6 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
     case X86::MOV32mi:
     case X86::MOV64mi32:
       PushOpcode = Is64Bit ? X86::PUSH64i32 : X86::PUSH32i;
-      // If the operand is a small (8-bit) immediate, we can use a
-      // PUSH instruction with a shorter encoding.
-      // Note that isImm() may fail even though this is a MOVmi, because
-      // the operand can also be a symbol.
-      if (PushOp.isImm()) {
-        int64_t Val = PushOp.getImm();
-        if (isInt<8>(Val))
-          PushOpcode = Is64Bit ? X86::PUSH64i8 : X86::PUSH32i8;
-      }
       Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode)).add(PushOp);
       Push->cloneMemRefs(MF, *Store);
       break;
