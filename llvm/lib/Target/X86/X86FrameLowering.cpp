@@ -1756,7 +1756,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
         } else {
           // No initial context, store null so that there's no pointer that
           // could be misused.
-          BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64i8))
+          BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64i32))
               .addImm(0)
               .setMIFlag(MachineInstr::FrameSetup);
         }
