@@ -91,3 +91,7 @@ void test7_g() {
   int x[5];
   test7_f(&x); // expected-warning {{incompatible pointer types passing 'int (*)[5]' to parameter of type 'int (*)[10]}}
 }
+
+char d;
+char test8_gh62447[d.undef == 8]; // expected-error {{member reference base type 'char' is not a structure or union}}
+char test8_gh62447[d.undef == 4]; // expected-error {{member reference base type 'char' is not a structure or union}}
