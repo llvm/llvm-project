@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s
 
-// CHECK: @[[PROXY:.*]] = private unnamed_addr constant ptr @_ZTIFvvE
 // CHECK: define{{.*}} void @_Z3funv() #0 !func_sanitize ![[FUNCSAN:.*]] {
 void fun() {}
 
@@ -14,14 +13,18 @@ void fun() {}
 // CHECK: [[LABEL1]]:
 // CHECK: getelementptr <{ i32, i32 }>, ptr {{.*}}, i32 -1, i32 1, !nosanitize
 // CHECK: load i32, ptr {{.*}}, align {{.*}}, !nosanitize
-// CHECK: icmp eq ptr {{.*}}, @_ZTIFvvE, !nosanitize
+// CHECK: icmp eq i32 {{.*}}, -1522505972, !nosanitize
 // CHECK: br i1 {{.*}}, label %[[LABEL3:.*]], label %[[LABEL2:[^,]*]], {{.*}}!nosanitize
 // CHECK: [[LABEL2]]:
-// CHECK: call void @__ubsan_handle_function_type_mismatch_v1_abort(ptr {{.*}}, i64 {{.*}}, i64 {{.*}}, i64 {{.*}}) #{{.*}}, !nosanitize
-// CHECK-NOT: unreachable
-// CHECK: br label %[[LABEL3]], !nosanitize
-// CHECK: [[LABEL3]]:
+// CHECK: call void @__ubsan_handle_function_type_mismatch_abort(ptr @[[#]], i64 %[[#]]) #[[#]], !nosanitize
+// CHECK-NEXT: unreachable, !nosanitize
+// CHECK-EMPTY:
+// CHECK-NEXT: [[LABEL3]]:
 // CHECK: br label %[[LABEL4]], !nosanitize
+// CHECK-EMPTY:
+// CHECK-NEXT: [[LABEL4]]:
+// CHECK-NEXT:   call void
+// CHECK-NEXT:   ret void
 void caller(void (*f)()) { f(); }
 
-// CHECK: ![[FUNCSAN]] = !{i32 -1056584962, ptr @[[PROXY]]}
+// CHECK: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1522505972}

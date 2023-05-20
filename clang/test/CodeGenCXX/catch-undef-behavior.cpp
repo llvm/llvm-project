@@ -16,8 +16,6 @@ struct S {
 // Check that type mismatch handler is not modified by ASan.
 // CHECK-ASAN: private unnamed_addr global { { ptr, i32, i32 }, ptr, ptr, i8 } { {{.*}}, ptr [[TYPE_DESCR]], {{.*}} }
 
-// CHECK-FUNCSAN: [[PROXY:@.+]] = private unnamed_addr constant ptr @_ZTIFvPFviEE
-
 struct T : S {};
 
 // CHECK-LABEL: @_Z17reference_binding
@@ -404,16 +402,11 @@ void indirect_function_call(void (*p)(int)) {
   // CHECK-NEXT: [[SIGCMP:%.+]] = icmp eq i32 [[SIG]], -1056584962
   // CHECK-NEXT: br i1 [[SIGCMP]]
 
-  // RTTI pointer check
-  // CHECK: [[RTTIPTR:%.+]] = getelementptr <{ i32, i32 }>, ptr [[PTR]], i32 -1, i32 1
-  // CHECK-NEXT: [[RTTIEncIntTrunc:%.+]] = load i32, ptr [[RTTIPTR]]
-  // CHECK-NEXT: [[RTTIEncInt:%.+]] = sext i32 [[RTTIEncIntTrunc]] to i64
-  // CHECK-NEXT: [[FuncAddrInt:%.+]] = ptrtoint ptr {{.*}} to i64
-  // CHECK-NEXT: [[IndirectGVInt:%.+]] = add i64 [[RTTIEncInt]], [[FuncAddrInt]]
-  // CHECK-NEXT: [[IndirectGV:%.+]] = inttoptr i64 [[IndirectGVInt]] to ptr
-  // CHECK-NEXT: [[RTTI:%.+]] = load ptr, ptr [[IndirectGV]], align 8
-  // CHECK-NEXT: [[RTTICMP:%.+]] = icmp eq ptr [[RTTI]], @_ZTIFviE
-  // CHECK-NEXT: br i1 [[RTTICMP]]
+  // CalleeTypeHash check
+  // CHECK: [[CalleeTypeHashPtr:%.+]] = getelementptr <{ i32, i32 }>, ptr [[PTR]], i32 -1, i32 1
+  // CHECK-NEXT: [[CalleeTypeHash:%.+]] = load i32, ptr [[CalleeTypeHashPtr]]
+  // CHECK-NEXT: [[CalleeTypeHashMatch:%.+]] = icmp eq i32 [[CalleeTypeHash]], 27004076
+  // CHECK-NEXT: br i1 [[CalleeTypeHashMatch]]
 
   p(42);
 }
@@ -747,4 +740,4 @@ void ThisAlign::this_align_lambda_2() {
 
 // CHECK: attributes [[NR_NUW]] = { noreturn nounwind }
 
-// CHECK-FUNCSAN: ![[FUNCSAN]] = !{i32 -1056584962, ptr [[PROXY]]}
+// CHECK-FUNCSAN: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1302768377}
