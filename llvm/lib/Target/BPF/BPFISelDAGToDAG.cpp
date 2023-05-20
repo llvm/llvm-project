@@ -77,7 +77,6 @@ private:
 
   // Node preprocessing cases
   void PreprocessLoad(SDNode *Node, SelectionDAG::allnodes_iterator &I);
-  void PreprocessCopyToReg(SDNode *Node);
   void PreprocessTrunc(SDNode *Node, SelectionDAG::allnodes_iterator &I);
 
   // Find constants from a constant structure
