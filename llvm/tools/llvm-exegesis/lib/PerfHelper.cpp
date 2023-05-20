@@ -107,21 +107,20 @@ StringRef PerfEvent::getPfmEventString() const {
   return FullQualifiedEventString;
 }
 
-Counter::Counter(PerfEvent &&E) : Event(std::move(E)){
+Counter::Counter(PerfEvent &&E, pid_t ProcessID) : Event(std::move(E)) {
   assert(Event.valid());
   IsDummyEvent = Event.name() == PerfEvent::DummyEventString;
   if (!IsDummyEvent)
-    initRealEvent(E);
+    initRealEvent(E, ProcessID);
 }
 
 #ifdef HAVE_LIBPFM
-void Counter::initRealEvent(const PerfEvent &E) {
-  const pid_t Pid = 0;    // measure current process/thread.
+void Counter::initRealEvent(const PerfEvent &E, pid_t ProcessID) {
   const int Cpu = -1;     // measure any processor.
   const int GroupFd = -1; // no grouping of counters.
   const uint32_t Flags = 0;
   perf_event_attr AttrCopy = *Event.attribute();
-  FileDescriptor = perf_event_open(&AttrCopy, Pid, Cpu, GroupFd, Flags);
+  FileDescriptor = perf_event_open(&AttrCopy, ProcessID, Cpu, GroupFd, Flags);
   if (FileDescriptor == -1) {
     errs() << "Unable to open event. ERRNO: " << strerror(errno)
            << ". Make sure your kernel allows user "
@@ -180,7 +179,7 @@ Counter::readOrError(StringRef /*unused*/) const {
 int Counter::numValues() const { return 1; }
 #else
 
-void Counter::initRealEvent(const PerfEvent &) {}
+void Counter::initRealEvent(const PerfEvent &, pid_t ProcessID) {}
 
 Counter::~Counter() = default;
 
