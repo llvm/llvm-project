@@ -2477,3 +2477,69 @@ func.func @foldShrsi0(%x : i64) -> i64 {
   %r = arith.shrsi %x, %c0 : i64
   return %r : i64
 }
+
+// CHECK-LABEL: @foldOrXor1
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK:   %[[ONE:.*]] = arith.constant true
+//       CHECK:   return %[[ONE]]
+func.func @foldOrXor1(%arg0: i1) -> i1 {
+  %0 = arith.constant true
+  %1 = arith.xori %arg0, %0 : i1
+  %2 = arith.ori %arg0, %1 : i1
+  return %2 : i1
+}
+
+// CHECK-LABEL: @foldOrXor2
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK:   %[[ONE:.*]] = arith.constant true
+//       CHECK:   return %[[ONE]]
+func.func @foldOrXor2(%arg0: i1) -> i1 {
+  %0 = arith.constant true
+  %1 = arith.xori %0, %arg0 : i1
+  %2 = arith.ori %arg0, %1 : i1
+  return %2 : i1
+}
+
+// CHECK-LABEL: @foldOrXor3
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK:   %[[ONE:.*]] = arith.constant true
+//       CHECK:   return %[[ONE]]
+func.func @foldOrXor3(%arg0: i1) -> i1 {
+  %0 = arith.constant true
+  %1 = arith.xori %arg0, %0 : i1
+  %2 = arith.ori %1, %arg0 : i1
+  return %2 : i1
+}
+
+// CHECK-LABEL: @foldOrXor4
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK:   %[[ONE:.*]] = arith.constant true
+//       CHECK:   return %[[ONE]]
+func.func @foldOrXor4(%arg0: i1) -> i1 {
+  %0 = arith.constant true
+  %1 = arith.xori %0, %arg0 : i1
+  %2 = arith.ori %1, %arg0 : i1
+  return %2 : i1
+}
+
+// CHECK-LABEL: @foldOrXor5
+//  CHECK-SAME: (%[[ARG:.*]]: i32)
+//       CHECK:   %[[ONE:.*]] = arith.constant -1
+//       CHECK:   return %[[ONE]]
+func.func @foldOrXor5(%arg0: i32) -> i32 {
+  %0 = arith.constant -1 : i32
+  %1 = arith.xori %arg0, %0 : i32
+  %2 = arith.ori %arg0, %1 : i32
+  return %2 : i32
+}
+
+// CHECK-LABEL: @foldOrXor6
+//  CHECK-SAME: (%[[ARG:.*]]: index)
+//       CHECK:   %[[ONE:.*]] = arith.constant -1
+//       CHECK:   return %[[ONE]]
+func.func @foldOrXor6(%arg0: index) -> index {
+  %0 = arith.constant -1 : index
+  %1 = arith.xori %arg0, %0 : index
+  %2 = arith.ori %arg0, %1 : index
+  return %2 : index
+}

@@ -214,10 +214,10 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x10, 0x41, 0x05, 0x90, 0x82, 0x14, 0xe4, 0x00
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x08, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe1
   ; GFX9-FLATSCR-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-  ; GFX9-FLATSCR-NEXT:   $vcc_lo = S_ADD_I32 $sgpr33, 8192, implicit-def $scc
-  ; GFX9-FLATSCR-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $vcc_lo, implicit $exec
-  ; GFX9-FLATSCR-NEXT:   $vcc_hi = S_ADD_I32 $sgpr33, 16384, implicit-def $scc
-  ; GFX9-FLATSCR-NEXT:   $vgpr0 = V_OR_B32_e32 killed $vcc_hi, $vgpr1, implicit $exec
+  ; GFX9-FLATSCR-NEXT:   $sgpr5 = S_ADD_I32 $sgpr33, 8192, implicit-def $scc
+  ; GFX9-FLATSCR-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr5, implicit $exec
+  ; GFX9-FLATSCR-NEXT:   $sgpr4 = S_ADD_I32 $sgpr33, 16384, implicit-def $scc
+  ; GFX9-FLATSCR-NEXT:   $vgpr0 = V_OR_B32_e32 killed $sgpr4, $vgpr1, implicit $exec
   ; GFX9-FLATSCR-NEXT:   S_BRANCH %bb.1
   ; GFX9-FLATSCR-NEXT: {{  $}}
   ; GFX9-FLATSCR-NEXT: bb.1:

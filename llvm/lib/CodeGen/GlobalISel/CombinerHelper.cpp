@@ -1288,9 +1288,9 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
          LegalizerHelper::LegalizeResult::Legalized;
 }
 
-static std::optional<APFloat>
-constantFoldFpUnary(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                    const APFloat &Val) {
+static APFloat constantFoldFpUnary(const MachineInstr &MI,
+                                   const MachineRegisterInfo &MRI,
+                                   const APFloat &Val) {
   APFloat Result(Val);
   switch (MI.getOpcode()) {
   default:
@@ -1333,25 +1333,12 @@ constantFoldFpUnary(const MachineInstr &MI, const MachineRegisterInfo &MRI,
   return Result;
 }
 
-bool CombinerHelper::matchCombineConstantFoldFpUnary(MachineInstr &MI,
-                                                     const ConstantFP *&Cst) {
-  Register SrcReg = MI.getOperand(1).getReg();
-  const ConstantFP *MaybeCst = getConstantFPVRegVal(SrcReg, MRI);
-  if (!MaybeCst)
-    return false;
-
-  if (auto Folded = constantFoldFpUnary(MI, MRI, MaybeCst->getValue())) {
-    Cst = ConstantFP::get(Builder.getContext(), *Folded);
-    return true;
-  }
-
-  return false;
-}
-
 void CombinerHelper::applyCombineConstantFoldFpUnary(MachineInstr &MI,
                                                      const ConstantFP *Cst) {
   Builder.setInstrAndDebugLoc(MI);
-  Builder.buildFConstant(MI.getOperand(0), *Cst);
+  APFloat Folded = constantFoldFpUnary(MI, MRI, Cst->getValue());
+  const ConstantFP *NewCst = ConstantFP::get(Builder.getContext(), Folded);
+  Builder.buildFConstant(MI.getOperand(0), *NewCst);
   MI.eraseFromParent();
 }
 

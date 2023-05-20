@@ -812,6 +812,18 @@ OpFoldResult arith::OrIOp::fold(FoldAdaptor adaptor) {
     if (rhsAttr.getValue().isAllOnes())
       return rhsAttr;
 
+  APInt intValue;
+  /// or(x, xor(x, 1)) -> 1
+  if (matchPattern(getRhs(), m_Op<XOrIOp>(matchers::m_Val(getLhs()),
+                                          m_ConstantInt(&intValue))) &&
+      intValue.isAllOnes())
+    return getRhs().getDefiningOp<XOrIOp>().getRhs();
+  /// or(xor(x, 1), x) -> 1
+  if (matchPattern(getLhs(), m_Op<XOrIOp>(matchers::m_Val(getRhs()),
+                                          m_ConstantInt(&intValue))) &&
+      intValue.isAllOnes())
+    return getLhs().getDefiningOp<XOrIOp>().getRhs();
+
   return constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(),
       [](APInt a, const APInt &b) { return std::move(a) | b; });

@@ -107,6 +107,21 @@ FeatureBitset expandImpliedFeatures(const FeatureBitset &Features) {
   }
   return Result;
 }
+
+void reportFunctionRemoved(Function &F, unsigned Feature) {
+  OptimizationRemarkEmitter ORE(&F);
+  ORE.emit([&]() {
+    // Note: we print the function name as part of the diagnostic because if
+    // debug info is not present, users get "<unknown>:0:0" as the debug
+    // loc. If we didn't print the function name there would be no way to
+    // tell which function got removed.
+    return OptimizationRemark(DEBUG_TYPE, "AMDGPUIncompatibleFnRemoved", &F)
+           << "removing function '" << F.getName() << "': +"
+           << getFeatureName(Feature)
+           << " is not supported on the current target";
+  });
+  return;
+}
 } // end anonymous namespace
 
 bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
@@ -143,21 +158,20 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   // GPU's feature set. We only check a predetermined set of features.
   for (unsigned Feature : FeaturesToCheck) {
     if (ST->hasFeature(Feature) && !GPUFeatureBits.test(Feature)) {
-      OptimizationRemarkEmitter ORE(&F);
-      ORE.emit([&]() {
-        // Note: we print the function name as part of the diagnostic because if
-        // debug info is not present, users get "<unknown>:0:0" as the debug
-        // loc. If we didn't print the function name there would be no way to
-        // tell which function got removed.
-        return OptimizationRemark(DEBUG_TYPE, "AMDGPUIncompatibleFnRemoved", &F)
-               << "removing function '" << F.getName() << "': +"
-               << getFeatureName(Feature)
-               << " is not supported on the current target";
-      });
+      reportFunctionRemoved(F, Feature);
       return true;
     }
   }
 
+  // Delete FeatureWavefrontSize32 functions for
+  // gfx9 and below targets that don't support the mode.
+  // gfx10+ is implied to support both wave32 and 64 features.
+  // They are not in the feature set. So, we need a separate check
+  if (ST->getGeneration() < AMDGPUSubtarget::GFX10 &&
+      ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+    reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize32);
+    return true;
+  }
   return false;
 }
 

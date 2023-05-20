@@ -3242,7 +3242,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
-  Res |= SanitizerKind::Function;
   Res |= SanitizerKind::ObjCCast;
 
   // Prior to 10.9, macOS shipped a version of the C++ standard library without

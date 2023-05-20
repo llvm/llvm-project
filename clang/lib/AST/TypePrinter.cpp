@@ -1392,9 +1392,11 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
         // clang::DirectoryLookup::LookupFile when the file path is relative
         // path.
         llvm::sys::path::Style Style =
-            !llvm::sys::path::is_absolute(WrittenFile) && Policy.MSVCFormatting
-                ? llvm::sys::path::Style::windows_backslash
-                : llvm::sys::path::Style::native;
+            llvm::sys::path::is_absolute(WrittenFile)
+                ? llvm::sys::path::Style::native
+                : (Policy.MSVCFormatting
+                       ? llvm::sys::path::Style::windows_backslash
+                       : llvm::sys::path::Style::posix);
         llvm::sys::path::native(WrittenFile, Style);
         OS << WrittenFile << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
       }

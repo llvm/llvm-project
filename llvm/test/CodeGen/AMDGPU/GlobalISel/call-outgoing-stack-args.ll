@@ -160,11 +160,11 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
 ; FLATSCR-NEXT:    s_mov_b32 s8, 0
+; FLATSCR-NEXT:    s_mov_b32 s12, 0
+; FLATSCR-NEXT:    s_mov_b32 s11, 0
 ; FLATSCR-NEXT:    s_mov_b32 s10, 0
 ; FLATSCR-NEXT:    s_mov_b32 s9, 0
-; FLATSCR-NEXT:    s_mov_b32 vcc_lo, 0
-; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
-; FLATSCR-NEXT:    s_mov_b32 s11, 0
+; FLATSCR-NEXT:    s_mov_b32 s13, 0
 ; FLATSCR-NEXT:    s_mov_b32 s7, 0
 ; FLATSCR-NEXT:    s_mov_b32 s5, 0
 ; FLATSCR-NEXT:    s_mov_b32 s3, 0
@@ -174,11 +174,11 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    s_mov_b32 s4, 0
 ; FLATSCR-NEXT:    s_mov_b32 s6, 0
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s8 offset:8
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s10 offset:16
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s9 offset:24
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_lo offset:32
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], vcc_hi offset:40
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s11 offset:48
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s12 offset:16
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s11 offset:24
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s10 offset:32
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s9 offset:40
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s13 offset:48
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s7 offset:56
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s5 offset:64
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s3 offset:72
@@ -188,11 +188,11 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s4 offset:104
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s6 offset:112
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s8 offset:120
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s10 offset:128
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s9 offset:8
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s12 offset:128
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s11 offset:8
 ; FLATSCR-NEXT:    s_nop 0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, vcc_lo offset:16
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[4:5], off, vcc_hi offset:24
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s10 offset:16
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[4:5], off, s9 offset:24
 ; FLATSCR-NEXT:    s_mov_b32 s37, 0
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[6:7], off, s37 offset:32
 ; FLATSCR-NEXT:    s_mov_b32 s36, 0
