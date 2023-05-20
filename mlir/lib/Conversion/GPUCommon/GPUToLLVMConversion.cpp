@@ -238,22 +238,22 @@ protected:
       "mgpuSpMVBufferSize",
       llvmIntPtrType,
       {llvmPointerType, llvmPointerType, llvmPointerType, llvmPointerType,
-       llvmPointerType /* void *stream */}};
+       llvmInt32Type, llvmPointerType /* void *stream */}};
   FunctionCallBuilder spMVCallBuilder = {
       "mgpuSpMV",
       llvmVoidType,
       {llvmPointerType, llvmPointerType, llvmPointerType, llvmPointerType,
-       llvmPointerType, llvmPointerType /* void *stream */}};
+       llvmInt32Type, llvmPointerType, llvmPointerType /* void *stream */}};
   FunctionCallBuilder spMMBufferSizeCallBuilder = {
       "mgpuSpMMBufferSize",
       llvmIntPtrType,
       {llvmPointerType, llvmPointerType, llvmPointerType, llvmPointerType,
-       llvmPointerType /* void *stream */}};
+       llvmInt32Type, llvmPointerType /* void *stream */}};
   FunctionCallBuilder spMMCallBuilder = {
       "mgpuSpMM",
       llvmVoidType,
       {llvmPointerType, llvmPointerType, llvmPointerType, llvmPointerType,
-       llvmPointerType, llvmPointerType /* void *stream */}};
+       llvmInt32Type, llvmPointerType, llvmPointerType /* void *stream */}};
 };
 
 /// A rewrite pattern to convert gpu.host_register operations into a GPU runtime
@@ -1186,6 +1186,16 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
+// Returns the element type of the defining spmat op.
+// TODO: safer and more flexible to store data type in actual op instead?
+static Type getSpMatElemType(Value spMat) {
+  if (auto op = spMat.getDefiningOp<gpu::CreateCooOp>())
+    return op.getValues().getType().cast<MemRefType>().getElementType();
+  if (auto op = spMat.getDefiningOp<gpu::CreateCsrOp>())
+    return op.getValues().getType().cast<MemRefType>().getElementType();
+  llvm_unreachable("cannot find spmat def");
+}
+
 LogicalResult ConvertCreateSparseEnvOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::CreateSparseEnvOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
@@ -1379,12 +1389,16 @@ LogicalResult ConvertSpMVBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
       failed(isAsyncWithOneDependency(rewriter, op)))
     return failure();
   Location loc = op.getLoc();
+  Type dType = getSpMatElemType(op.getSpmatA());
+  auto dw = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
+                                              dType.getIntOrFloatBitWidth());
   auto stream = adaptor.getAsyncDependencies().front();
-  auto bufferSize = spMVBufferSizeCallBuilder
-                        .create(loc, rewriter,
-                                {adaptor.getEnv(), adaptor.getSpmatA(),
-                                 adaptor.getDnX(), adaptor.getDnY(), stream})
-                        .getResult();
+  auto bufferSize =
+      spMVBufferSizeCallBuilder
+          .create(loc, rewriter,
+                  {adaptor.getEnv(), adaptor.getSpmatA(), adaptor.getDnX(),
+                   adaptor.getDnY(), dw, stream})
+          .getResult();
   rewriter.replaceOp(op, {bufferSize, stream});
   return success();
 }
@@ -1396,6 +1410,9 @@ LogicalResult ConvertSpMVOpToGpuRuntimeCallPattern::matchAndRewrite(
       failed(isAsyncWithOneDependency(rewriter, op)))
     return failure();
   Location loc = op.getLoc();
+  Type dType = getSpMatElemType(op.getSpmatA());
+  auto dw = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
+                                              dType.getIntOrFloatBitWidth());
   auto stream = adaptor.getAsyncDependencies().front();
   Value pBuf =
       MemRefDescriptor(adaptor.getBuffer()).allocatedPtr(rewriter, loc);
@@ -1403,7 +1420,8 @@ LogicalResult ConvertSpMVOpToGpuRuntimeCallPattern::matchAndRewrite(
     pBuf = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pBuf);
   spMVCallBuilder.create(loc, rewriter,
                          {adaptor.getEnv(), adaptor.getSpmatA(),
-                          adaptor.getDnX(), adaptor.getDnY(), pBuf, stream});
+                          adaptor.getDnX(), adaptor.getDnY(), dw, pBuf,
+                          stream});
   rewriter.replaceOp(op, {stream});
   return success();
 }
@@ -1415,12 +1433,15 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
       failed(isAsyncWithOneDependency(rewriter, op)))
     return failure();
   Location loc = op.getLoc();
+  Type dType = getSpMatElemType(op.getSpmatA());
+  auto dw = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
+                                              dType.getIntOrFloatBitWidth());
   auto stream = adaptor.getAsyncDependencies().front();
   auto bufferSize =
       spMMBufferSizeCallBuilder
           .create(loc, rewriter,
                   {adaptor.getEnv(), adaptor.getSpmatA(), adaptor.getDnmatB(),
-                   adaptor.getDnmatC(), stream})
+                   adaptor.getDnmatC(), dw, stream})
           .getResult();
   rewriter.replaceOp(op, {bufferSize, stream});
   return success();
@@ -1433,6 +1454,9 @@ LogicalResult ConvertSpMMOpToGpuRuntimeCallPattern::matchAndRewrite(
       failed(isAsyncWithOneDependency(rewriter, op)))
     return failure();
   Location loc = op.getLoc();
+  Type dType = getSpMatElemType(op.getSpmatA());
+  auto dw = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
+                                              dType.getIntOrFloatBitWidth());
   auto stream = adaptor.getAsyncDependencies().front();
   Value pBuf =
       MemRefDescriptor(adaptor.getBuffer()).allocatedPtr(rewriter, loc);
@@ -1440,7 +1464,7 @@ LogicalResult ConvertSpMMOpToGpuRuntimeCallPattern::matchAndRewrite(
     pBuf = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pBuf);
   spMMCallBuilder.create(loc, rewriter,
                          {adaptor.getEnv(), adaptor.getSpmatA(),
-                          adaptor.getDnmatB(), adaptor.getDnmatC(), pBuf,
+                          adaptor.getDnmatB(), adaptor.getDnmatC(), dw, pBuf,
                           stream});
   rewriter.replaceOp(op, {stream});
   return success();
