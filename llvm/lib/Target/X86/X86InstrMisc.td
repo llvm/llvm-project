@@ -92,13 +92,13 @@ def PUSH32rmr: I<0xFF, MRM6r, (outs), (ins GR32:$reg), "push{l}\t$reg",[]>,
 
 def PUSH16i8 : Ii8<0x6a, RawFrm, (outs), (ins i16i8imm:$imm),
                    "push{w}\t$imm", []>, OpSize16;
-def PUSHi16  : Ii16<0x68, RawFrm, (outs), (ins i16imm:$imm),
+def PUSH16i  : Ii16<0x68, RawFrm, (outs), (ins i16imm:$imm),
                    "push{w}\t$imm", []>, OpSize16;
 
 def PUSH32i8 : Ii8<0x6a, RawFrm, (outs), (ins i32i8imm:$imm),
                    "push{l}\t$imm", []>, OpSize32,
                    Requires<[Not64BitMode]>;
-def PUSHi32  : Ii32<0x68, RawFrm, (outs), (ins i32imm:$imm),
+def PUSH32i  : Ii32<0x68, RawFrm, (outs), (ins i32imm:$imm),
                    "push{l}\t$imm", []>, OpSize32,
                    Requires<[Not64BitMode]>;
 } // mayStore, SchedRW
