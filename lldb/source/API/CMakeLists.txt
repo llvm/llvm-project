@@ -6,6 +6,11 @@ if(LLDB_BUILD_FRAMEWORK)
 endif()
 
 if(LLDB_ENABLE_PYTHON)
+  if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
+    # Work around an issue with the Python headers, which have a modular include
+    # inside an extern "C" block.
+    remove_module_flags()
+  endif()
   get_target_property(python_bindings_dir swig_wrapper_python BINARY_DIR)
   set(lldb_python_wrapper ${python_bindings_dir}/LLDBWrapPython.cpp)
 endif()

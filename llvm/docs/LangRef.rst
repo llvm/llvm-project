@@ -744,8 +744,14 @@ Variables and aliases can have a
 
 :ref:`Scalable vectors <t_vector>` cannot be global variables or members of
 arrays because their size is unknown at compile time. They are allowed in
-structs to facilitate intrinsics returning multiple values. Structs containing
-scalable vectors cannot be used in loads, stores, allocas, or GEPs.
+structs to facilitate intrinsics returning multiple values. Generally, structs
+containing scalable vectors are not considered "sized" and cannot be used in
+loads, stores, allocas, or GEPs. The only exception to this rule is for structs
+that contain scalable vectors of the same type (e.g. ``{<vscale x 2 x i32>,
+<vscale x 2 x i32>}`` contains the same type while ``{<vscale x 2 x i32>,
+<vscale x 2 x i64>}`` doesn't). These kinds of structs (we may call them
+homogeneous scalable vector structs) are considered sized and can be used in
+loads, stores, allocas, but not GEPs.
 
 Syntax::
 
@@ -10286,6 +10292,11 @@ it is always present. If not specified, the target can choose to align the
 allocation on any convenient boundary compatible with the type.
 
 '``type``' may be any sized type.
+
+Structs containing scalable vectors cannot be used in allocas unless all
+fields are the same scalable vector type (e.g. ``{<vscale x 2 x i32>,
+<vscale x 2 x i32>}`` contains the same type while ``{<vscale x 2 x i32>,
+<vscale x 2 x i64>}`` doesn't).
 
 Semantics:
 """"""""""

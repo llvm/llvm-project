@@ -47,7 +47,8 @@ const char *SBStream::GetData() {
   if (m_is_file || m_opaque_up == nullptr)
     return nullptr;
 
-  return static_cast<StreamString *>(m_opaque_up.get())->GetData();
+  return ConstString(static_cast<StreamString *>(m_opaque_up.get())->GetData())
+      .GetCString();
 }
 
 // If this stream is not redirected to a file, it will maintain a local cache

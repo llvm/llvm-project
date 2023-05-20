@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'Zvk',
-// Vector Cryptography Instructions extension, version 0.3.
+// Vector Cryptography Instructions extension, version 0.5.1.
 //
 //===----------------------------------------------------------------------===//
 

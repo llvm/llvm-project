@@ -2161,9 +2161,11 @@ public:
 namespace {
 class UnsafeBufferUsageReporter : public UnsafeBufferUsageHandler {
   Sema &S;
+  bool SuggestSuggestions;  // Recommend -fsafe-buffer-usage-suggestions?
 
 public:
-  UnsafeBufferUsageReporter(Sema &S) : S(S) {}
+  UnsafeBufferUsageReporter(Sema &S, bool SuggestSuggestions)
+    : S(S), SuggestSuggestions(SuggestSuggestions) {}
 
   void handleUnsafeOperation(const Stmt *Operation,
                              bool IsRelatedToDecl) override {
@@ -2197,20 +2199,30 @@ public:
       }
     } else {
       if (isa<CallExpr>(Operation)) {
+        // note_unsafe_buffer_operation doesn't have this mode yet.
+        assert(!IsRelatedToDecl && "Not implemented yet!");
         MsgParam = 3;
       }
       Loc = Operation->getBeginLoc();
       Range = Operation->getSourceRange();
     }
-    if (IsRelatedToDecl)
+    if (IsRelatedToDecl) {
+      assert(!SuggestSuggestions &&
+             "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
-    else
+    } else {
       S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
+      if (SuggestSuggestions) {
+        S.Diag(Loc, diag::note_safe_buffer_usage_suggestions_disabled);
+      }
+    }
   }
 
   // FIXME: rename to handleUnsafeVariable
   void handleFixableVariable(const VarDecl *Variable,
                              FixItList &&Fixes) override {
+    assert(!SuggestSuggestions &&
+           "Unsafe buffer usage fixits displayed without suggestions!");
     S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
         << Variable << (Variable->getType()->isPointerType() ? 0 : 1)
         << Variable->getSourceRange();
@@ -2350,19 +2362,28 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     // exit if having uncompilable errors or ignoring all warnings:
     return;
 
-  // Whether -Wunsafe-buffer-usage should emit fix-its:
-  const bool UnsafeBufferEmitFixits =
-      Diags.getDiagnosticOptions().ShowFixits && S.getLangOpts().CPlusPlus20;
-  UnsafeBufferUsageReporter R(S);
+  DiagnosticOptions &DiagOpts = Diags.getDiagnosticOptions();
+
+  // UnsafeBufferUsage analysis settings.
+  bool UnsafeBufferUsageCanEmitSuggestions = S.getLangOpts().CPlusPlus20;
+  bool UnsafeBufferUsageShouldEmitSuggestions =  // Should != Can.
+      UnsafeBufferUsageCanEmitSuggestions &&
+      DiagOpts.ShowSafeBufferUsageSuggestions;
+  bool UnsafeBufferUsageShouldSuggestSuggestions =
+      UnsafeBufferUsageCanEmitSuggestions &&
+      !DiagOpts.ShowSafeBufferUsageSuggestions;
+  UnsafeBufferUsageReporter R(S, UnsafeBufferUsageShouldSuggestSuggestions);
 
   // The Callback function that performs analyses:
   auto CallAnalyzers = [&](const Decl *Node) -> void {
-    // Perform unsafe buffer analysis:
+    // Perform unsafe buffer usage analysis:
     if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation,
                          Node->getBeginLoc()) ||
         !Diags.isIgnored(diag::warn_unsafe_buffer_variable,
-                         Node->getBeginLoc()))
-      clang::checkUnsafeBufferUsage(Node, R, UnsafeBufferEmitFixits);
+                         Node->getBeginLoc())) {
+      clang::checkUnsafeBufferUsage(Node, R,
+                                    UnsafeBufferUsageShouldEmitSuggestions);
+    }
 
     // More analysis ...
   };

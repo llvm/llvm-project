@@ -10491,6 +10491,9 @@ def err_omp_lastprivate_incomplete_type : Error<
   "a lastprivate variable with incomplete type %0">;
 def err_omp_reduction_incomplete_type : Error<
   "a reduction list item with incomplete type %0">;
+def warn_omp_minus_in_reduction_deprecated : Warning<
+  "minus(-) operator for reductions is deprecated; use + or user defined reduction instead">,
+  InGroup<Deprecated>;
 def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
 def err_omp_unexpected_call_to_omp_runtime_api
@@ -11822,6 +11825,8 @@ def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit : Note<
   "change type of '%0' to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information">;
+def note_safe_buffer_usage_suggestions_disabled : Note<
+  "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
 def err_loongarch_builtin_requires_la32 : Error<
   "this builtin requires target: loongarch32">;
 

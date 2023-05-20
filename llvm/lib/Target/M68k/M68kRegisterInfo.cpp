@@ -213,7 +213,7 @@ bool M68kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 bool M68kRegisterInfo::requiresRegisterScavenging(
     const MachineFunction &MF) const {
-  return true;
+  return false;
 }
 
 bool M68kRegisterInfo::trackLivenessAfterRegAlloc(

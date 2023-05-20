@@ -171,10 +171,8 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64-O0-NEXT:    v_writelane_b32 v5, s5, 2
 ; W64-O0-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    v_readfirstlane_b32 s8, v0
@@ -546,10 +544,8 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    v_writelane_b32 v13, s5, 2
 ; W64-O0-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    v_readfirstlane_b32 s8, v0
@@ -599,10 +595,8 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    v_writelane_b32 v13, s5, 10
 ; W64-O0-NEXT:  .LBB1_4: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    v_readfirstlane_b32 s8, v0
@@ -645,15 +639,10 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    s_cbranch_execnz .LBB1_4
 ; W64-O0-NEXT:  ; %bb.6:
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    v_readlane_b32 s4, v13, 9
 ; W64-O0-NEXT:    v_readlane_b32 s5, v13, 10
@@ -1040,10 +1029,8 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    v_writelane_b32 v8, s5, 3
 ; W64-O0-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    v_readfirstlane_b32 s8, v0
@@ -1114,10 +1101,8 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    v_writelane_b32 v8, s5, 14
 ; W64-O0-NEXT:  .LBB2_5: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    v_readfirstlane_b32 s8, v0
@@ -1169,7 +1154,6 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_nop 0
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    v_readlane_b32 s4, v8, 10
 ; W64-O0-NEXT:    v_readlane_b32 s5, v8, 11

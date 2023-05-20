@@ -204,7 +204,7 @@ void Prescanner::Statement() {
       NormalizeCompilerDirectiveCommentMarker(*preprocessed);
       preprocessed->ToLowerCase();
       SourceFormChange(preprocessed->ToString());
-      preprocessed->ClipComment(true /* skip first ! */)
+      preprocessed->ClipComment(*this, true /* skip first ! */)
           .CheckBadFortranCharacters(messages_)
           .CheckBadParentheses(messages_)
           .Emit(cooked_);
@@ -220,7 +220,7 @@ void Prescanner::Statement() {
         }
       }
       preprocessed->ToLowerCase()
-          .ClipComment()
+          .ClipComment(*this)
           .CheckBadFortranCharacters(messages_)
           .CheckBadParentheses(messages_)
           .Emit(cooked_);
@@ -1140,7 +1140,8 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
     return std::nullopt;
   }
   *sp = '\0';
-  if (const char *ss{IsCompilerDirectiveSentinel(sentinel)}) {
+  if (const char *ss{IsCompilerDirectiveSentinel(
+          sentinel, static_cast<std::size_t>(sp - sentinel))}) {
     std::size_t payloadOffset = p - start;
     return {LineClassification{
         LineClassification::Kind::CompilerDirective, payloadOffset, ss}};
@@ -1168,7 +1169,7 @@ Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
       if (*p == '!') {
         break;
       }
-      if (const char *sp{IsCompilerDirectiveSentinel(sentinel)}) {
+      if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
         std::size_t offset = p - start;
         return {LineClassification{
             LineClassification::Kind::CompilerDirective, offset, sp}};
@@ -1192,17 +1193,16 @@ Prescanner &Prescanner::AddCompilerDirectiveSentinel(const std::string &dir) {
 }
 
 const char *Prescanner::IsCompilerDirectiveSentinel(
-    const char *sentinel) const {
+    const char *sentinel, std::size_t len) const {
   std::uint64_t packed{0};
-  std::size_t n{0};
-  for (; sentinel[n] != '\0'; ++n) {
-    packed = (packed << 8) | (sentinel[n] & 0xff);
+  for (std::size_t j{0}; j < len; ++j) {
+    packed = (packed << 8) | (sentinel[j] & 0xff);
   }
-  if (n == 0 || !compilerDirectiveBloomFilter_.test(packed % prime1) ||
+  if (len == 0 || !compilerDirectiveBloomFilter_.test(packed % prime1) ||
       !compilerDirectiveBloomFilter_.test(packed % prime2)) {
     return nullptr;
   }
-  const auto iter{compilerDirectiveSentinels_.find(std::string(sentinel, n))};
+  const auto iter{compilerDirectiveSentinels_.find(std::string(sentinel, len))};
   return iter == compilerDirectiveSentinels_.end() ? nullptr : iter->c_str();
 }
 

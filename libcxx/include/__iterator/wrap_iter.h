@@ -265,7 +265,7 @@ __wrap_iter<_Iter1> operator+(typename __wrap_iter<_Iter1>::difference_type __n,
 
 #if _LIBCPP_STD_VER <= 17
 template <class _It>
-struct __is_cpp17_contiguous_iterator<__wrap_iter<_It> > : true_type {};
+struct __libcpp_is_contiguous_iterator<__wrap_iter<_It> > : true_type {};
 #endif
 
 template <class _It>

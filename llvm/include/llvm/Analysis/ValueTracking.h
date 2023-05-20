@@ -461,18 +461,13 @@ bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
 /// Return true if the floating-point scalar value is not an infinity or if
 /// the floating-point vector value has no infinities. Return false if a value
 /// could ever be infinity.
-inline bool isKnownNeverInfinity(const Value *V, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI = nullptr,
-                                 unsigned Depth = 0,
-                                 AssumptionCache *AC = nullptr,
-                                 const Instruction *CtxI = nullptr,
-                                 const DominatorTree *DT = nullptr,
-                                 OptimizationRemarkEmitter *ORE = nullptr,
-                                 bool UseInstrInfo = true) {
-  KnownFPClass Known = computeKnownFPClass(V, DL, fcInf, Depth, TLI, AC, CtxI,
-                                           DT, ORE, UseInstrInfo);
-  return Known.isKnownNeverInfinity();
-}
+bool isKnownNeverInfinity(const Value *V, const DataLayout &DL,
+                          const TargetLibraryInfo *TLI = nullptr,
+                          unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                          const Instruction *CtxI = nullptr,
+                          const DominatorTree *DT = nullptr,
+                          OptimizationRemarkEmitter *ORE = nullptr,
+                          bool UseInstrInfo = true);
 
 /// Return true if the floating-point value can never contain a NaN or infinity.
 inline bool isKnownNeverInfOrNaN(
@@ -934,6 +929,13 @@ bool canCreatePoison(const Operator *Op, bool ConsiderFlagsAndMetadata = true);
 /// For example, if ValAssumedPoison is `icmp X, 10` and V is `icmp X, 5`,
 /// impliesPoison returns true.
 bool impliesPoison(const Value *ValAssumedPoison, const Value *V);
+
+/// Return true if V is poison given that ValAssumedPoison is already poison.
+/// Poison generating flags or metadata are ignored in the process of implying.
+/// And the ignored instructions will be recorded in IgnoredInsts.
+bool impliesPoisonIgnoreFlagsOrMetadata(
+    Value *ValAssumedPoison, const Value *V,
+    SmallVectorImpl<Instruction *> &IgnoredInsts);
 
 /// Return true if this function can prove that V does not have undef bits
 /// and is never poison. If V is an aggregate value or vector, check whether

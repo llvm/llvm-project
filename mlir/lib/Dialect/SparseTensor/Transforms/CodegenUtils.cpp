@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
-#include "SparseTensorStorageLayout.h"
+#include "SparseTensorDescriptor.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -664,7 +664,7 @@ Value sparse_tensor::reshapeValuesToLevels(OpBuilder &builder, Location loc,
 Value sparse_tensor::genToPositions(OpBuilder &builder, Location loc,
                                     Value tensor, Level lvl) {
   const auto srcTp = getSparseTensorType(tensor);
-  const Type posTp = srcTp.getEncoding().getPosType();
+  const Type posTp = srcTp.getPosType();
   const Type memTp = get1DMemRefType(posTp, /*withLayout=*/false);
   return builder.create<ToPositionsOp>(loc, memTp, tensor,
                                        builder.getIndexAttr(lvl));
@@ -673,7 +673,7 @@ Value sparse_tensor::genToPositions(OpBuilder &builder, Location loc,
 Value sparse_tensor::genToCoordinates(OpBuilder &builder, Location loc,
                                       Value tensor, Level lvl, Level cooStart) {
   const auto srcTp = getSparseTensorType(tensor);
-  const Type crdTp = srcTp.getEncoding().getCrdType();
+  const Type crdTp = srcTp.getCrdType();
   const Type memTp = get1DMemRefType(crdTp, /*withLayout=*/lvl >= cooStart);
   return builder.create<ToCoordinatesOp>(loc, memTp, tensor,
                                          builder.getIndexAttr(lvl));
@@ -682,7 +682,7 @@ Value sparse_tensor::genToCoordinates(OpBuilder &builder, Location loc,
 Value sparse_tensor::genToCoordinatesBuffer(OpBuilder &builder, Location loc,
                                             Value tensor) {
   const auto srcTp = getSparseTensorType(tensor);
-  const Type crdTp = srcTp.getEncoding().getCrdType();
+  const Type crdTp = srcTp.getCrdType();
   const Type memTp = get1DMemRefType(crdTp, /*withLayout=*/false);
   return builder.create<ToCoordinatesBufferOp>(loc, memTp, tensor);
 }

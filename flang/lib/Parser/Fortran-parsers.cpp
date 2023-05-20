@@ -1217,7 +1217,6 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name...
 constexpr auto beginDirective{skipStuffBeforeStatement >> "!"_ch};
-constexpr auto endDirective{space >> endOfLine};
 constexpr auto ignore_tkr{
     "DIR$ IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
                              maybe(parenthesized(many(letter))), name))};
@@ -1231,7 +1230,7 @@ TYPE_PARSER(beginDirective >>
         construct<CompilerDirective>(
             "DIR$" >> many(construct<CompilerDirective::NameValue>(name,
                           maybe(("="_tok || ":"_tok) >> digitString64))))) /
-        endDirective)
+        endOfStmt)
 
 TYPE_PARSER(extension<LanguageFeature::CrayPointer>(
     "nonstandard usage: based POINTER"_port_en_US,

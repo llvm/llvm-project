@@ -206,13 +206,13 @@ public:
 
 #if _LIBCPP_STD_VER >= 23
     template <class _InputIterator,
-              class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>>
+              class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>>
     _LIBCPP_HIDE_FROM_ABI
     stack(_InputIterator __first, _InputIterator __last) : c(__first, __last) {}
 
     template <class _InputIterator,
               class _Alloc,
-              class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+              class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
               class = __enable_if_t<uses_allocator<container_type, _Alloc>::value>>
     _LIBCPP_HIDE_FROM_ABI
     stack(_InputIterator __first, _InputIterator __last, const _Alloc& __alloc) : c(__first, __last, __alloc) {}
@@ -286,13 +286,13 @@ stack(_Container, _Alloc)
 
 #if _LIBCPP_STD_VER >= 23
 template<class _InputIterator,
-         class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>>
+         class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>>
 stack(_InputIterator, _InputIterator)
     -> stack<__iter_value_type<_InputIterator>>;
 
 template<class _InputIterator,
          class _Alloc,
-         class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = __enable_if_t<__is_allocator<_Alloc>::value>>
 stack(_InputIterator, _InputIterator, _Alloc)
     -> stack<__iter_value_type<_InputIterator>, deque<__iter_value_type<_InputIterator>, _Alloc>>;

@@ -1,21 +1,19 @@
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-ctor-dtor < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf -s - 2>&1 | FileCheck %s -check-prefix=CHECK-VIS
 
-; Make sure there's no crash or error if amdgcn.device.init or
-; amdgcn.device.fini already exist.
+; Make sure that we don't modify the functions if amdgcn.device.init or
+; amdgcn.device.fini already exit.
 
 @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo, ptr null }]
 @llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @bar, ptr null }]
 
 ; CHECK-LABEL: amdgpu_kernel void @amdgcn.device.init() #0 {
 ; CHECK-NEXT:   store volatile i32 1, ptr addrspace(1) null
-; CHECK-NEXT:   call void @foo()
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 
 ; CHECK-LABEL: define amdgpu_kernel void @amdgcn.device.fini() #1 {
 ; CHECK-NEXT:    store volatile i32 0, ptr addrspace(1) null
-; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    ret void
 ; CHECK-NEXT:  }
 

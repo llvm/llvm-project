@@ -329,7 +329,7 @@ def hlfir_AnyOp : hlfir_Op<"any", []> {
     Optional<AnyIntegerType>:$dim
   );
 
-  let results = (outs hlfir_ExprType);
+  let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
     $mask  (`dim` $dim^)?  attr-dict `:` functional-type(operands, results)
@@ -355,7 +355,7 @@ def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
                       "::mlir::arith::FastMathFlags::none">:$fastmath
   );
 
-  let results = (outs hlfir_ExprType);
+  let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
     $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
@@ -400,7 +400,7 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
                       "::mlir::arith::FastMathFlags::none">:$fastmath
   );
 
-  let results = (outs hlfir_ExprType);
+  let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
     $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)

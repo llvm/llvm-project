@@ -65,6 +65,9 @@ func.func @test_unary_f32(%arg0 : tensor<4xf32>) -> () {
 
   // CHECK: "tosa.cast"(%arg0) : (tensor<4xf32>) -> tensor<4xi32>
   %12 = "tosa.cast"(%arg0) : (tensor<4xf32>) -> tensor<*xi32>
+
+  // CHECK: "tosa.erf"(%arg0) : (tensor<4xf32>) -> tensor<4xf32>
+  %13 = "tosa.erf"(%arg0) : (tensor<4xf32>) -> tensor<*xf32>
   return
 }
 

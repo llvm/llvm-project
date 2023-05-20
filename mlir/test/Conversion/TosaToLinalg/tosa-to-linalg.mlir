@@ -258,6 +258,10 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   // CHECK: arith.divf
   %23 = "tosa.reciprocal"(%0) : (tensor<1xf32>) -> tensor<1xf32>
 
+  // CHECK: linalg.generic
+  // CHECK: math.erf
+  %24 = "tosa.erf"(%0) : (tensor<1xf32>) -> tensor<1xf32>
+
   return
 }
 

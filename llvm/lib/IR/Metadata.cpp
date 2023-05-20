@@ -1612,6 +1612,11 @@ void Instruction::setAAMetadata(const AAMDNodes &N) {
   setMetadata(LLVMContext::MD_noalias, N.NoAlias);
 }
 
+void Instruction::setNoSanitizeMetadata() {
+  setMetadata(llvm::LLVMContext::MD_nosanitize,
+              llvm::MDNode::get(getContext(), std::nullopt));
+}
+
 MDNode *Instruction::getMetadataImpl(unsigned KindID) const {
   // Handle 'dbg' as a special case since it is not stored in the hash table.
   if (KindID == LLVMContext::MD_dbg)

@@ -53,7 +53,7 @@ for_each_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __size, 
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_for_each_n),
       [&](_ForwardIterator __g_first, _Size __g_size, _Function __g_func) {
-        if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value) {
+        if constexpr (__has_random_access_iterator_category<_ForwardIterator>::value) {
           std::for_each(__policy, std::move(__g_first), __g_first + __g_size, std::move(__g_func));
         } else {
           std::for_each_n(std::move(__g_first), __g_size, std::move(__g_func));

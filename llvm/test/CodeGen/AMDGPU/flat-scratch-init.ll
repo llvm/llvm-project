@@ -42,16 +42,16 @@ define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; FLAT_SCR_OPT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; FLAT_SCR_OPT-NEXT:    v_mov_b32_e32 v0, 0
-; FLAT_SCR_OPT-NEXT:    s_mov_b32 vcc_lo, 0
-; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, vcc_lo offset:4
+; FLAT_SCR_OPT-NEXT:    s_mov_b32 s0, 0
+; FLAT_SCR_OPT-NEXT:    scratch_store_dword off, v0, s0 offset:4
 ; FLAT_SCR_OPT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLAT_SCR_OPT-NEXT:    s_endpgm
 ;
 ; FLAT_SCR_ARCH-LABEL: stack_object_in_kernel_no_calls:
 ; FLAT_SCR_ARCH:       ; %bb.0:
 ; FLAT_SCR_ARCH-NEXT:    v_mov_b32_e32 v0, 0
-; FLAT_SCR_ARCH-NEXT:    s_mov_b32 vcc_lo, 0
-; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v0, vcc_lo offset:4
+; FLAT_SCR_ARCH-NEXT:    s_mov_b32 s0, 0
+; FLAT_SCR_ARCH-NEXT:    scratch_store_dword off, v0, s0 offset:4
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLAT_SCR_ARCH-NEXT:    s_endpgm
   %alloca = alloca i32, addrspace(5)

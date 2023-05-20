@@ -362,7 +362,9 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     if (Fortran::lower::isDerivedTypeWithLenParameters(sym))
       TODO(loc, "component with length parameters in structure constructor");
 
-    if (Fortran::semantics::IsBuiltinCPtr(sym)) {
+    // Special handling for scalar c_ptr/c_funptr constants. The array constant
+    // must fall through to genConstantValue() below.
+    if (Fortran::semantics::IsBuiltinCPtr(sym) && sym->Rank() == 0) {
       // Builtin c_ptr and c_funptr have special handling because initial
       // values are handled for them as an extension.
       mlir::Value addr = fir::getBase(Fortran::lower::genExtAddrInInitializer(

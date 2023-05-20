@@ -287,15 +287,16 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           bool is_objc_method = false;
           if (cu_language == eLanguageTypeObjC ||
               cu_language == eLanguageTypeObjC_plus_plus) {
-            ObjCLanguage::MethodName objc_method(name, true);
-            if (objc_method.IsValid(true)) {
+            std::optional<const ObjCLanguage::MethodName> objc_method =
+                ObjCLanguage::MethodName::Create(name, true);
+            if (objc_method) {
               is_objc_method = true;
               ConstString class_name_with_category(
-                  objc_method.GetClassNameWithCategory());
-              ConstString objc_selector_name(objc_method.GetSelector());
+                  objc_method->GetClassNameWithCategory());
+              ConstString objc_selector_name(objc_method->GetSelector());
               ConstString objc_fullname_no_category_name(
-                  objc_method.GetFullNameWithoutCategory(true));
-              ConstString class_name_no_category(objc_method.GetClassName());
+                  objc_method->GetFullNameWithoutCategory().c_str());
+              ConstString class_name_no_category(objc_method->GetClassName());
               set.function_fullnames.Insert(ConstString(name), ref);
               if (class_name_with_category)
                 set.objc_class_selectors.Insert(class_name_with_category, ref);

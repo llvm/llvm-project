@@ -138,7 +138,7 @@ struct __is_simple_comparator<ranges::greater&> : true_type {};
 
 template <class _Compare, class _Iter, class _Tp = typename iterator_traits<_Iter>::value_type>
 using __use_branchless_sort =
-    integral_constant<bool, __is_cpp17_contiguous_iterator<_Iter>::value && sizeof(_Tp) <= sizeof(void*) &&
+    integral_constant<bool, __libcpp_is_contiguous_iterator<_Iter>::value && sizeof(_Tp) <= sizeof(void*) &&
                                 is_arithmetic<_Tp>::value && __is_simple_comparator<_Compare>::value>;
 
 namespace __detail {
