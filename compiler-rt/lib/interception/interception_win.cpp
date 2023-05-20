@@ -564,17 +564,17 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 9;
     case 0xf2:
       switch (*(u32 *)(address + 1)) {
-        case 0x2444110f:  // f2 0f 11 44 24 XX    movsd   mmword ptr [rsp + XX],
-                          // xmm0
-        case 0x244c110f:  //  f2 0f 11 4c 24 XX       movsd  QWORD PTR
-                          //  [rsp+0x8],xmm1
-        case 0x2454110f:  //  f2 0f 11 54 24 XX       movsd  QWORD PTR
-                          //  [rsp+0x8],xmm2
-        case 0x245c110f:  //  f2 0f 11 5c 24 XX       movsd  QWORD PTR
-                          //  [rsp+0x8],xmm3
-        case 0x2464110f:  //  f2 0f 11 64 24 XX       movsd  QWORD PTR
-                          //  [rsp+0x8],xmm4
-          return 6;
+          case 0x2444110f:  // f2 0f 11 44 24 XX    movsd   mmword ptr [rsp +
+                            // XX], xmm0
+          case 0x244c110f:  //  f2 0f 11 4c 24 XX       movsd  QWORD PTR
+                            //  [rsp+0x8],xmm1
+          case 0x2454110f:  //  f2 0f 11 54 24 XX       movsd  QWORD PTR
+                            //  [rsp+0x8],xmm2
+          case 0x245c110f:  //  f2 0f 11 5c 24 XX       movsd  QWORD PTR
+                            //  [rsp+0x8],xmm3
+          case 0x2464110f:  //  f2 0f 11 64 24 XX       movsd  QWORD PTR
+                            //  [rsp+0x8],xmm4
+            return 6;
       }
       break;
 
@@ -705,15 +705,16 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
 
     case 0xec8148:    // 48 81 EC XX XX XX XX : sub rsp, XXXXXXXX
       return 7;
-    case 0x788141: // 41 81 78 YY XX XX XX XX cmp DWORD PTR [r8+YY], XX XX XX XX
-    case 0x798141: // r9
-    case 0x7a8141: //r10
-    case 0x7b8141: //r11
-    case 0x7c8141: //r12
-    case 0x7d8141: //r13
-    case 0x7e8141: //r14
-    case 0x7f8141: // 41 81 78 YY XX XX XX XX cmp DWORD P [r15+YY], XX XX XX XX
-    case 0x247c81: // 81 7c 24 YY XX XX XX XX cmp DWORD P [rsp+YY], XX XX XX XX
+    case 0x788141:  // 41 81 78 YY XX XX XX XX cmp DWORD PTR [r8+YY], XX XX XX
+                    // XX
+    case 0x798141:  // r9
+    case 0x7a8141:  // r10
+    case 0x7b8141:  // r11
+    case 0x7c8141:  // r12
+    case 0x7d8141:  // r13
+    case 0x7e8141:  // r14
+    case 0x7f8141:  // 41 81 78 YY XX XX XX XX cmp DWORD P [r15+YY], XX XX XX XX
+    case 0x247c81:  // 81 7c 24 YY XX XX XX XX cmp DWORD P [rsp+YY], XX XX XX XX
       return 8;
 
     case 0x058b48:    // 48 8b 05 XX XX XX XX :
