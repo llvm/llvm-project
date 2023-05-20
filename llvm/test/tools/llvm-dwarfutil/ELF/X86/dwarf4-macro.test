@@ -39,16 +39,28 @@
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
 #RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACINFO
 
+#RUN: llvm-dwarfutil --linker llvm --garbage-collection %p/Inputs/dwarf4-macro.out %t1
+#RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+#RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACINFO
+
 ## Check that macro table preserved during simple copying.
 #
 #RUN: llvm-dwarfutil --no-garbage-collection %p/Inputs/dwarf4-macro.out %t1
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
 #RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACINFO
 
+#RUN: llvm-dwarfutil --linker llvm --no-garbage-collection %p/Inputs/dwarf4-macro.out %t1
+#RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+#RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACINFO
+
 ## Check that macro table preserved during updating accelerator tables.
 #RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %p/Inputs/dwarf4-macro.out %t1
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
-#RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefixes=MACINFO,NAMES
+#RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefixes=MACINFO
+
+#RUN: llvm-dwarfutil --linker llvm --no-garbage-collection --build-accelerator=DWARF %p/Inputs/dwarf4-macro.out %t1
+#RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+#RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefixes=MACINFO
 
 #CHECK: No errors.
 
@@ -2228,6 +2240,3 @@
 #MACINFO-NEXT: DW_MACINFO_define - lineno: 0 macro: __STDC_UTF_32__ 1
 #MACINFO-NEXT: DW_MACINFO_define - lineno: 0 macro: __GCC_HAVE_DWARF2_CFI_ASM 1
 
-
-#NAMES: .debug_names contents
-#NAMES: Name Index
