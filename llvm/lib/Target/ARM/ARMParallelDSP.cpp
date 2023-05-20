@@ -152,10 +152,6 @@ namespace {
       MulPairs.push_back(std::make_pair(Mul0, Mul1));
     }
 
-    /// Return true if enough mul operations are found that can be executed in
-    /// parallel.
-    bool CreateParallelPairs();
-
     /// Return the add instruction which is the root of the reduction.
     Instruction *getRoot() { return Root; }
 
