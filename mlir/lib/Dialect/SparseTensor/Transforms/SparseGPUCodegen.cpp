@@ -347,6 +347,19 @@ static bool isAdmissibleCSR(SparseTensorType &aTp) {
           aTp.getCrdWidth() == 64);
 }
 
+/// Test for admissible types on operands (with output parameter `isCOO`).
+static bool areAdmissibleTypes(SparseTensorType aTp, SparseTensorType bTp,
+                               SparseTensorType cTp, bool enableRT,
+                               bool &isCOO) {
+  if (bTp.hasEncoding() || cTp.hasEncoding())
+    return false;
+  if (isAdmissibleCOO(aTp)) {
+    isCOO = true;
+    return enableRT; // TODO: CreateCooAoSOp was deprecated, find another way
+  }
+  return isAdmissibleCSR(aTp);
+}
+
 /// Generates the first positions/coordinates of a sparse matrix.
 static Value genFirstPosOrCrds(OpBuilder &builder, Location loc, Value a,
                                bool isCOO, bool enableRT) {
@@ -371,17 +384,17 @@ static Value genSecondCrds(OpBuilder &builder, Location loc, Value a,
 /// Generates the sparse matrix multiplication.
 static Operation *genSpMat(OpBuilder &builder, Location loc, Type handleTp,
                            Type tokenTp, Value token, Value szY, Value szX,
-                           Value nnzA, Value rowA, Value colA, Value valA,
+                           Value nseA, Value rowA, Value colA, Value valA,
                            bool isCOO, bool enableRT) {
   if (isCOO) {
     // Library uses SoA COO, direct IR uses AoS COO.
     if (enableRT)
       return builder.create<gpu::CreateCooOp>(loc, handleTp, tokenTp, token,
-                                              szY, szX, nnzA, rowA, colA, valA);
+                                              szY, szX, nseA, rowA, colA, valA);
     llvm_unreachable("gpu::CreateCooAoSOp is deprecated");
   }
   return builder.create<gpu::CreateCsrOp>(loc, handleTp, tokenTp, token, szY,
-                                          szX, nnzA, rowA, colA, valA);
+                                          szX, nseA, rowA, colA, valA);
 }
 
 /// Match and rewrite SpMV kernel.
@@ -393,29 +406,19 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   Value y = op.getOperand(2); // we have y = Ax
   SmallVector<Value> tokens;
 
-  // Only admissible sparse matrix format and dense vectors for now.
+  // Only admissible sparse matrix format and dense vectors.
   bool isCOO = false;
   SparseTensorType aTp = getSparseTensorType(a);
   SparseTensorType xTp = getSparseTensorType(x);
   SparseTensorType yTp = getSparseTensorType(y);
-  if (xTp.hasEncoding() || yTp.hasEncoding())
+  if (!areAdmissibleTypes(aTp, xTp, yTp, enableRT, isCOO))
     return failure();
-  if (isAdmissibleCOO(aTp)) {
-    isCOO = true;
-    // TODO: CreateCooAoSOp was deprecated, find another way
-    if (!enableRT)
-      return failure();
-  } else if (isAdmissibleCSR(aTp)) {
-    isCOO = false;
-  } else {
-    return failure();
-  }
 
   // Start sparse kernel and copy data from host to device.
   //   a : memR/memC/memV -> rowA,colA,valA
   //   x : memX           -> vecX
   //   y : memY           -> vecY
-  Value nnzA = rewriter.create<NumberOfEntriesOp>(loc, a);
+  Value nseA = rewriter.create<NumberOfEntriesOp>(loc, a);
   Value szY = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
   Value szX = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
   Value memR = genFirstPosOrCrds(rewriter, loc, a, isCOO, enableRT);
@@ -441,7 +444,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   Value handle = env.getResult(0);
   token = env.getAsyncToken();
   Operation *spGenA = genSpMat(rewriter, loc, handleTp, tokenTp, token, szY,
-                               szX, nnzA, rowA, colA, valA, isCOO, enableRT);
+                               szX, nseA, rowA, colA, valA, isCOO, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
   auto dvecX = rewriter.create<gpu::CreateDnVecOp>(loc, handleTp, tokenTp,
@@ -500,7 +503,105 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 /// Match and rewrite SpMM kernel.
 static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
                                  linalg::GenericOp op, bool enableRT) {
-  return failure(); // TODO: implement
+  Location loc = op.getLoc();
+  Value a = op.getOperand(0);
+  Value b = op.getOperand(1);
+  Value c = op.getOperand(2); // we have C = AB
+  SmallVector<Value> tokens;
+
+  // Only admissible sparse matrix format and dense matrices.
+  bool isCOO = false;
+  SparseTensorType aTp = getSparseTensorType(a);
+  SparseTensorType bTp = getSparseTensorType(b);
+  SparseTensorType cTp = getSparseTensorType(c);
+  if (!areAdmissibleTypes(aTp, bTp, cTp, enableRT, isCOO))
+    return failure();
+
+  // Start sparse kernel and copy data from host to device.
+  //   a : memR/memC/memV -> rowA,colA,valA
+  //   b : bufB           -> matA
+  //   c : bufC           -> matC
+  Value nseA = rewriter.create<NumberOfEntriesOp>(loc, a);
+  Value szm = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
+  Value szk = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
+  Value szn = linalg::createOrFoldDimOp(rewriter, loc, b, 1);
+  Value memR = genFirstPosOrCrds(rewriter, loc, a, isCOO, enableRT);
+  Value memC = genSecondCrds(rewriter, loc, a, isCOO, enableRT);
+  Value memV = genToValues(rewriter, loc, a);
+  Value rowA = genAllocCopy(rewriter, loc, memR, tokens);
+  Value colA = memC ? genAllocCopy(rewriter, loc, memC, tokens) : Value();
+  Value valA = genAllocCopy(rewriter, loc, memV, tokens);
+  Value bufB = genTensorToMemref(rewriter, loc, b);
+  Value matB = genAllocCopy(rewriter, loc, bufB, tokens);
+  Value bufC = genTensorToMemref(rewriter, loc, c);
+  Value matC = genAllocCopy(rewriter, loc, bufC, tokens);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+
+  // Create sparse environment and sparse matrix/dense matrix handles.
+  Type indexTp = rewriter.getIndexType();
+  Type handleTp = rewriter.getType<gpu::SparseHandleType>();
+  Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
+  Value token = genFirstWait(rewriter, loc);
+  auto env =
+      rewriter.create<gpu::CreateSparseEnvOp>(loc, handleTp, tokenTp, token);
+  Value handle = env.getResult(0);
+  token = env.getAsyncToken();
+  Operation *spGenA = genSpMat(rewriter, loc, handleTp, tokenTp, token, szm,
+                               szk, nseA, rowA, colA, valA, isCOO, enableRT);
+  Value spMatA = spGenA->getResult(0);
+  token = spGenA->getResult(1);
+  auto dmatB = rewriter.create<gpu::CreateDnMatOp>(loc, handleTp, tokenTp,
+                                                   token, szk, szn, matB);
+  Value dnB = dmatB.getResult(0);
+  token = dmatB.getAsyncToken();
+  auto dmatC = rewriter.create<gpu::CreateDnMatOp>(loc, handleTp, tokenTp,
+                                                   token, szm, szn, matC);
+  Value dnC = dmatC.getResult(0);
+  token = dmatC.getAsyncToken();
+
+  // Precompute buffersize for SpMM.
+  auto bufferComp = rewriter.create<gpu::SpMMBufferSizeOp>(
+      loc, indexTp, tokenTp, token, handle, spMatA, dnB, dnC);
+  Value bufferSz = bufferComp.getResult(0);
+  token = bufferComp.getAsyncToken();
+  auto buf = genAllocBuffer(rewriter, loc, bufferSz, token);
+  Value buffer = buf.getResult(0);
+  token = buf.getAsyncToken();
+
+  // Perform the SpMM.
+  auto spmmComp = rewriter.create<gpu::SpMMOp>(loc, tokenTp, token, handle,
+                                               spMatA, dnB, dnC, buffer);
+  token = spmmComp.getAsyncToken();
+
+  // Copy data back to host and free all the resoures.
+  token = rewriter.create<gpu::DestroySpMatOp>(loc, tokenTp, token, spMatA)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroyDnMatOp>(loc, tokenTp, token, dnB)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroyDnMatOp>(loc, tokenTp, token, dnC)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
+              .getAsyncToken();
+  tokens.push_back(token);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+  token = genFirstWait(rewriter, loc);
+  token = genCopyMemRef(rewriter, loc, bufC, matC, token);
+  token = genDeallocMemRef(rewriter, loc, rowA, token);
+  if (colA)
+    token = genDeallocMemRef(rewriter, loc, colA, token);
+  token = genDeallocMemRef(rewriter, loc, valA, token);
+  token = genDeallocMemRef(rewriter, loc, buffer, token);
+  token = genDeallocMemRef(rewriter, loc, matB, token);
+  token = genDeallocMemRef(rewriter, loc, matC, token);
+  tokens.push_back(token);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+
+  // Done.
+  rewriter.replaceOp(op, op.getDpsInitOperand(0)->get());
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -610,7 +711,7 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// Proof-of-concept rewriter. This rule recognizes certain math kernels
-/// and replaces these with corresponding calls into the sparse library.
+/// and replaces these with corresponding calls into a sparse library.
 struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
   using OpRewritePattern<linalg::GenericOp>::OpRewritePattern;
 
