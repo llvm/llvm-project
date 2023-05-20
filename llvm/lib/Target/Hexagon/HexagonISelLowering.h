@@ -545,7 +545,6 @@ private:
   SDValue LowerHvxCttz(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxMulLoHi(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxSelect(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxShift(SDValue Op, SelectionDAG &DAG) const;
