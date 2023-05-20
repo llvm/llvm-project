@@ -657,6 +657,15 @@ public:
       F.CalledDone = true;
     }
 
+    // The move assignment operator is defined as deleted pending
+    // further motivation.
+    Filter &operator=(Filter &&) = delete;
+
+    // The copy constrcutor and copy assignment operator is defined as deleted
+    // pending further motivation.
+    Filter(const Filter &) = delete;
+    Filter &operator=(const Filter &) = delete;
+
     ~Filter() {
       assert(CalledDone &&
              "LookupResult::Filter destroyed without done() call");

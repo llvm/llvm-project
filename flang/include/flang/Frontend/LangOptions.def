@@ -34,6 +34,8 @@ LANGOPT(NoSignedZeros, 1, false)
 LANGOPT(AssociativeMath, 1, false)
 /// Allow division operations to be reassociated
 LANGOPT(ReciprocalMath, 1, false)
+/// Specify version of OpenMP standard
+LANGOPT(OpenMPVersion, 32, 0)
 /// Generate code only for OpenMP target device
 LANGOPT(OpenMPIsDevice, 1, false)
 /// Enable debugging in the OpenMP offloading device RTL

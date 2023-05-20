@@ -393,6 +393,34 @@ define i1 @fabs_fcmp-nnan_is_positive_or_zero(double %x) {
   ret i1 %cmp
 }
 
+define i1 @fabs_fcmp_oge0-assume-nnan_is_positive_or_zero(double %x) {
+; CHECK-LABEL: @fabs_fcmp_oge0-assume-nnan_is_positive_or_zero(
+; CHECK-NEXT:    [[FABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord double [[FABS]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = tail call double @llvm.fabs.f64(double %x)
+  %ord = fcmp ord double %fabs, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp oge double %fabs, 0.0
+  ret i1 %cmp
+}
+
+define i1 @fabs_fcmp_olt0_-assume-nnan_is_positive_or_zero(double %x) {
+; CHECK-LABEL: @fabs_fcmp_olt0_-assume-nnan_is_positive_or_zero(
+; CHECK-NEXT:    [[FABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord double [[FABS]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs = tail call double @llvm.fabs.f64(double %x)
+  %ord = fcmp ord double %fabs, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp olt double %fabs, 0.0
+  ret i1 %cmp
+}
+
 define <2 x i1> @fabs_fcmp-nnan_is_positive_or_zero_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fabs_fcmp-nnan_is_positive_or_zero_vec(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
@@ -577,6 +605,88 @@ define i1 @maxnum_non_nan(float %x) {
 ;
   %min = call float @llvm.maxnum.f32(float %x, float 42.0)
   %cmp = fcmp uno float %min, 12.0
+  ret i1 %cmp
+}
+
+define i1 @assume_nonnan_ord(float %x) {
+; CHECK-LABEL: @assume_nonnan_ord(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 true
+;
+  %ord = fcmp ord float %x, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp ord float %x, 1.0
+  ret i1 %cmp
+}
+
+define i1 @assume_nonnan_x2_ord(float %x, float %y) {
+; CHECK-LABEL: @assume_nonnan_x2_ord(
+; CHECK-NEXT:    [[ORD_X:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD_X]])
+; CHECK-NEXT:    [[ORD_Y:%.*]] = fcmp ord float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD_Y]])
+; CHECK-NEXT:    ret i1 true
+;
+  %ord.x = fcmp ord float %x, 0.0
+  call void @llvm.assume(i1 %ord.x)
+  %ord.y = fcmp ord float %y, 0.0
+  call void @llvm.assume(i1 %ord.y)
+  %cmp = fcmp ord float %x, %y
+  ret i1 %cmp
+}
+
+define i1 @assume_nonan_x2_uno(float %x, float %y) {
+; CHECK-LABEL: @assume_nonan_x2_uno(
+; CHECK-NEXT:    [[ORD_X:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD_X]])
+; CHECK-NEXT:    [[ORD_Y:%.*]] = fcmp ord float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD_Y]])
+; CHECK-NEXT:    ret i1 false
+;
+  %ord.x = fcmp ord float %x, 0.0
+  call void @llvm.assume(i1 %ord.x)
+  %ord.y = fcmp ord float %y, 0.0
+  call void @llvm.assume(i1 %ord.y)
+  %cmp = fcmp uno float %x, %y
+  ret i1 %cmp
+}
+
+define i1 @assume_nan_ord(float %x) {
+; CHECK-LABEL: @assume_nan_ord(
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %uno = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno)
+  %cmp = fcmp ord float %x, 1.0
+  ret i1 %cmp
+}
+
+define i1 @assume_nonnan_uno(float %x) {
+; CHECK-LABEL: @assume_nonnan_uno(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
+; CHECK-NEXT:    ret i1 false
+;
+  %ord = fcmp ord float %x, 0.0
+  call void @llvm.assume(i1 %ord)
+  %cmp = fcmp uno float %x, 1.0
+  ret i1 %cmp
+}
+
+define i1 @assume_nan_uno(float %x) {
+; CHECK-LABEL: @assume_nan_uno(
+; CHECK-NEXT:    [[UNO:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[UNO]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %uno = fcmp uno float %x, 0.0
+  call void @llvm.assume(i1 %uno)
+  %cmp = fcmp uno float %x, 1.0
   ret i1 %cmp
 }
 
@@ -935,6 +1045,149 @@ define i1 @known_positive_olt_with_negative_constant(double %a) {
   ret i1 %cmp
 }
 
+define i1 @known_positive_nsz_olt_with_negative_constant(double %mag, double %a) {
+; CHECK-LABEL: @known_positive_nsz_olt_with_negative_constant(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @llvm.sqrt.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call double @llvm.copysign.f64(double [[MAG:%.*]], double [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[COPYSIGN]], -1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call nsz double @llvm.sqrt.f64(double %a)
+  %copysign = call double @llvm.copysign.f64(double %mag, double %sqrt)
+  %cmp = fcmp olt double %copysign, -1.0
+  ret i1 %cmp
+}
+
+define i1 @known_positive_maybe_neg0_olt_with_negative_constant(double %mag, double %a) {
+; CHECK-LABEL: @known_positive_maybe_neg0_olt_with_negative_constant(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call double @llvm.copysign.f64(double [[MAG:%.*]], double [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[COPYSIGN]], -1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %a)
+  %copysign = call double @llvm.copysign.f64(double %mag, double %sqrt)
+  %cmp = fcmp olt double %copysign, -1.0
+  ret i1 %cmp
+}
+
+define i1 @known_positive_nsz_uge_with_negative_constant(double %mag, double %a) {
+; CHECK-LABEL: @known_positive_nsz_uge_with_negative_constant(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @llvm.sqrt.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call double @llvm.copysign.f64(double [[MAG:%.*]], double [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge double [[COPYSIGN]], -1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call nsz double @llvm.sqrt.f64(double %a)
+  %copysign = call double @llvm.copysign.f64(double %mag, double %sqrt)
+  %cmp = fcmp uge double %copysign, -1.0
+  ret i1 %cmp
+}
+
+define i1 @known_positive_maybe_neg0_uge_with_negative_constant(double %mag, double %a) {
+; CHECK-LABEL: @known_positive_maybe_neg0_uge_with_negative_constant(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call double @llvm.copysign.f64(double [[MAG:%.*]], double [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge double [[COPYSIGN]], -1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %a)
+  %copysign = call double @llvm.copysign.f64(double %mag, double %sqrt)
+  %cmp = fcmp uge double %copysign, -1.0
+  ret i1 %cmp
+}
+
+define i1 @known_positive_nsz_oge_with_zero_constant(double %mag, double %a) {
+; CHECK-LABEL: @known_positive_nsz_oge_with_zero_constant(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @llvm.sqrt.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call double @llvm.copysign.f64(double [[MAG:%.*]], double [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[COPYSIGN]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call nsz double @llvm.sqrt.f64(double %a)
+  %copysign = call double @llvm.copysign.f64(double %mag, double %sqrt)
+  %cmp = fcmp oge double %copysign, 0.0
+  ret i1 %cmp
+}
+
+define i1 @known_positive_maybe_neg0_oge_with_zero_constant(double %mag, double %a) {
+; CHECK-LABEL: @known_positive_maybe_neg0_oge_with_zero_constant(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call double @llvm.copysign.f64(double [[MAG:%.*]], double [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[COPYSIGN]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %a)
+  %copysign = call double @llvm.copysign.f64(double %mag, double %sqrt)
+  %cmp = fcmp oge double %copysign, 0.0
+  ret i1 %cmp
+}
+
+define i1 @known_positive_nsz_olt_with_zero_constant(double %mag, double %a) {
+; CHECK-LABEL: @known_positive_nsz_olt_with_zero_constant(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @llvm.sqrt.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call double @llvm.copysign.f64(double [[MAG:%.*]], double [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[COPYSIGN]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call nsz double @llvm.sqrt.f64(double %a)
+  %copysign = call double @llvm.copysign.f64(double %mag, double %sqrt)
+  %cmp = fcmp olt double %copysign, 0.0
+  ret i1 %cmp
+}
+
+define i1 @known_positive_maybe_neg0_olt_with_zero_constant(double %mag, double %a) {
+; CHECK-LABEL: @known_positive_maybe_neg0_olt_with_zero_constant(
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call double @llvm.copysign.f64(double [[MAG:%.*]], double [[SQRT]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[COPYSIGN]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call double @llvm.sqrt.f64(double %a)
+  %copysign = call double @llvm.copysign.f64(double %mag, double %sqrt)
+  %cmp = fcmp olt double %copysign, 0.0
+  ret i1 %cmp
+}
+
+define i1 @assumed_positive_olt_with_negative_constant(double %a) {
+; CHECK-LABEL: @assumed_positive_olt_with_negative_constant(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge double [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[A]], -1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %assume.cmp = fcmp oge double %a, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %cmp = fcmp olt double %a, -1.0
+  ret i1 %cmp
+}
+
+define i1 @assumed_positive_ole_with_negative_constant(double %a) {
+; CHECK-LABEL: @assumed_positive_ole_with_negative_constant(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge double [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole double [[A]], -1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %assume.cmp = fcmp oge double %a, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %cmp = fcmp ole double %a, -1.0
+  ret i1 %cmp
+}
+
+define i1 @assumed_positive_oeq_with_negative_constant(double %a) {
+; CHECK-LABEL: @assumed_positive_oeq_with_negative_constant(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge double [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[A]], -1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %assume.cmp = fcmp oge double %a, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %cmp = fcmp oeq double %a, -1.0
+  ret i1 %cmp
+}
+
 define <2 x i1> @known_positive_ole_with_negative_constant_splat_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @known_positive_ole_with_negative_constant_splat_vec(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
@@ -950,6 +1203,45 @@ define i1 @known_positive_ugt_with_negative_constant(i32 %a) {
 ;
   %call = uitofp i32 %a to float
   %cmp = fcmp ugt float %call, -3.0
+  ret i1 %cmp
+}
+
+define i1 @assumed_positive_ugt_with_negative_constant(float %a) {
+; CHECK-LABEL: @assumed_positive_ugt_with_negative_constant(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[A]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %assume.cmp = fcmp ogt float %a, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %cmp = fcmp ugt float %a, -3.0
+  ret i1 %cmp
+}
+
+define i1 @assumed_positive_uge_with_negative_constant(float %a) {
+; CHECK-LABEL: @assumed_positive_uge_with_negative_constant(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[A]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %assume.cmp = fcmp ogt float %a, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %cmp = fcmp uge float %a, -3.0
+  ret i1 %cmp
+}
+
+define i1 @assumed_positive_une_with_negative_constant(float %a) {
+; CHECK-LABEL: @assumed_positive_une_with_negative_constant(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[A]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %assume.cmp = fcmp ogt float %a, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %cmp = fcmp une float %a, -3.0
   ret i1 %cmp
 }
 
@@ -1131,6 +1423,58 @@ define <2 x i1> @is_finite_commute(<2 x i8> %x) {
   ret <2 x i1> %r
 }
 
+define i1 @fcmp_oge_0_assumed_oge_zero(float %x) {
+; CHECK-LABEL: @fcmp_oge_0_assumed_oge_zero(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oge float [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %assume.cmp = fcmp oge float %x, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %r = fcmp oge float %x, 0.000000e+00
+  ret i1 %r
+}
+
+define i1 @fcmp_ult_0_assumed_oge_zero(float %x) {
+; CHECK-LABEL: @fcmp_ult_0_assumed_oge_zero(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp ult float [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %assume.cmp = fcmp oge float %x, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %r = fcmp ult float %x, 0.000000e+00
+  ret i1 %r
+}
+
+define i1 @fcmp_uge_0_assumed_oge_zero(float %x) {
+; CHECK-LABEL: @fcmp_uge_0_assumed_oge_zero(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp uge float [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %assume.cmp = fcmp oge float %x, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %r = fcmp uge float %x, 0.000000e+00
+  ret i1 %r
+}
+
+define i1 @fcmp_olt_0_assumed_oge_zero(float %x) {
+; CHECK-LABEL: @fcmp_olt_0_assumed_oge_zero(
+; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp olt float [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %assume.cmp = fcmp oge float %x, 0.0
+  call void @llvm.assume(i1 %assume.cmp)
+  %r = fcmp olt float %x, 0.000000e+00
+  ret i1 %r
+}
+
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)
@@ -1146,4 +1490,7 @@ declare float @llvm.maximum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.sqrt.f32(float)
+declare double @llvm.sqrt.f64(double)
+declare double @llvm.copysign.f64(double, double)
 declare half @llvm.fabs.f16(half)
+declare void @llvm.assume(i1 noundef)

@@ -18,8 +18,6 @@
 #include "kmp_str.h"
 #include "kmp_collapse.h"
 
-#include <cmath>
-
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
 #endif
@@ -27,11 +25,18 @@
 // OMPTODO: different style of comments (see kmp_sched)
 // OMPTODO: OMPT/OMPD
 
+// avoid inadevertently using a library based abs
+template <typename T> T __kmp_abs(const T val) {
+  return (val < 0) ? -val: val;
+}
+kmp_uint32 __kmp_abs(const kmp_uint32 val) { return val; }
+kmp_uint64 __kmp_abs(const kmp_uint64 val) { return val; }
+
 //----------------------------------------------------------------------------
 // Common functions for working with rectangular and non-rectangular loops
 //----------------------------------------------------------------------------
 
-template <typename T> int sign(T val) { return (T(0) < val) - (val < T(0)); }
+template <typename T> int __kmp_sign(T val) { return (T(0) < val) - (val < T(0)); }
 
 //----------Loop canonicalization---------------------------------------------
 
@@ -131,7 +136,7 @@ kmp_loop_nest_iv_t kmp_calculate_trip_count_XX(
       // kmp_loop_nest_iv_t anyway
       bounds->trip_count =
           static_cast<kmp_loop_nest_iv_t>(bounds->ub0 - bounds->lb0) /
-              std::abs(bounds->step) +
+              __kmp_abs(bounds->step) +
           1;
     }
   } else if (bounds->comparison == comparison_t::comp_greater_or_eq) {
@@ -144,7 +149,7 @@ kmp_loop_nest_iv_t kmp_calculate_trip_count_XX(
       // kmp_loop_nest_iv_t anyway
       bounds->trip_count =
           static_cast<kmp_loop_nest_iv_t>(bounds->lb0 - bounds->ub0) /
-              std::abs(bounds->step) +
+              __kmp_abs(bounds->step) +
           1;
     }
   } else {
@@ -658,16 +663,16 @@ void kmp_calc_new_bounds_XX(
     T old_lb1 = bbounds.lb1;
     T old_ub1 = bbounds.ub1;
 
-    if (sign(old_lb1) != sign(old_ub1)) {
+    if (__kmp_sign(old_lb1) != __kmp_sign(old_ub1)) {
       // With this shape we can adjust to a rectangle:
       bbounds.lb1 = 0;
       bbounds.ub1 = 0;
     } else {
       // get upper and lower bounds to be parallel
       // with values in the old range.
-      // Note: std::abs didn't work here.
-      if (((sign(old_lb1) == -1) && (old_lb1 < old_ub1)) ||
-          ((sign(old_lb1) == 1) && (old_lb1 > old_ub1))) {
+      // Note: abs didn't work here.
+      if (((old_lb1 < 0) && (old_lb1 < old_ub1)) ||
+          ((old_lb1 > 0) && (old_lb1 > old_ub1))) {
         bbounds.lb1 = old_ub1;
       } else {
         bbounds.ub1 = old_lb1;
@@ -804,13 +809,13 @@ kmp_calc_number_of_iterations_XX(const bounds_infoXX_template<T> *bounds,
     iterations =
         (static_cast<T>(original_ivs[ind]) - bounds->lb0 -
          bounds->lb1 * static_cast<T>(original_ivs[bounds->outer_iv])) /
-        std::abs(bounds->step);
+        __kmp_abs(bounds->step);
   } else {
     KMP_DEBUG_ASSERT(bounds->comparison == comparison_t::comp_greater_or_eq);
     iterations = (bounds->lb0 +
                   bounds->lb1 * static_cast<T>(original_ivs[bounds->outer_iv]) -
                   static_cast<T>(original_ivs[ind])) /
-                 std::abs(bounds->step);
+                 __kmp_abs(bounds->step);
   }
 
   return iterations;

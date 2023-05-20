@@ -164,6 +164,9 @@ enum class GPUAddressSpace : unsigned {
   Local = 5,
 };
 
+/// Return true iff \p M target a GPU (and we can use GPU AS reasoning).
+bool isGPU(const Module &M);
+
 /// Flags to distinguish intra-procedural queries from *potentially*
 /// inter-procedural queries. Not that information can be valid for both and
 /// therefore both bits might be set.

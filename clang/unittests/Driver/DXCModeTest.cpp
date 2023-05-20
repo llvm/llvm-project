@@ -137,8 +137,9 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     auto *A = TranslatedArgs->getLastArg(
         clang::driver::options::OPT_dxil_validator_version);
     EXPECT_NE(A, nullptr);
-    if (A)
+    if (A) {
       EXPECT_STREQ(A->getValue(), "1.1");
+    }
   }
   EXPECT_EQ(Diags.getNumErrors(), 0u);
 

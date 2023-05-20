@@ -5448,6 +5448,25 @@ LogicalResult MaskOp::verify() {
   return success();
 }
 
+/// Folds vector.mask ops with an all-true mask.
+LogicalResult MaskOp::fold(FoldAdaptor adaptor,
+                           SmallVectorImpl<OpFoldResult> &results) {
+  MaskFormat maskFormat = getMaskFormat(getMask());
+  if (isEmpty())
+    return failure();
+
+  if (maskFormat != MaskFormat::AllTrue)
+    return failure();
+
+  // Move maskable operation outside of the `vector.mask` region.
+  Operation *maskableOp = getMaskableOp();
+  maskableOp->dropAllUses();
+  maskableOp->moveBefore(getOperation());
+
+  results.push_back(maskableOp->getResult(0));
+  return success();
+}
+
 // Elides empty vector.mask operations with or without return values. Propagates
 // the yielded values by the vector.yield terminator, if any, or erases the op,
 // otherwise.
@@ -5460,10 +5479,10 @@ class ElideEmptyMaskOp : public OpRewritePattern<MaskOp> {
     if (maskingOp.getMaskableOp())
       return failure();
 
-    Block *block = maskOp.getMaskBlock();
-    if (block->getOperations().size() > 1)
+    if (!maskOp.isEmpty())
       return failure();
 
+    Block *block = maskOp.getMaskBlock();
     auto terminator = cast<vector::YieldOp>(block->front());
     if (terminator.getNumOperands() == 0)
       rewriter.eraseOp(maskOp);

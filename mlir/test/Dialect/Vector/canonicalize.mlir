@@ -2147,4 +2147,16 @@ func.func @empty_vector_mask_with_return(%a : vector<8xf32>, %mask : vector<8xi1
   return %0 : vector<8xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @all_true_vector_mask
+//  CHECK-SAME:     %[[IN:.*]]: vector<3x4xf32>
+func.func @all_true_vector_mask(%a : vector<3x4xf32>) -> vector<3x4xf32> {
+//   CHECK-NOT:   vector.mask
+//       CHECK:   %[[ADD:.*]] = arith.addf %[[IN]], %[[IN]] : vector<3x4xf32>
+//       CHECK:   return %[[ADD]] : vector<3x4xf32>
+  %all_true = vector.constant_mask [3, 4] : vector<3x4xi1>
+  %0 = vector.mask %all_true { arith.addf %a, %a : vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
+  return %0 : vector<3x4xf32>
+}
 

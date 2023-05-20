@@ -980,10 +980,11 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   if (attrs.name) {
     bool type_handled = false;
     if (tag == DW_TAG_subprogram || tag == DW_TAG_inlined_subroutine) {
-      ObjCLanguage::MethodName objc_method(attrs.name.GetStringRef(), true);
-      if (objc_method.IsValid(true)) {
+      std::optional<const ObjCLanguage::MethodName> objc_method =
+          ObjCLanguage::MethodName::Create(attrs.name.GetStringRef(), true);
+      if (objc_method) {
         CompilerType class_opaque_type;
-        ConstString class_name(objc_method.GetClassName());
+        ConstString class_name(objc_method->GetClassName());
         if (class_name) {
           TypeSP complete_objc_class_type_sp(
               dwarf->FindCompleteObjCDefinitionTypeForDIE(DWARFDIE(),
@@ -2617,13 +2618,19 @@ PropertyAttributes::PropertyAttributes(const DWARFDIE &die) {
   // Check if the property getter/setter were provided as full names.
   // We want basenames, so we extract them.
   if (prop_getter_name && prop_getter_name[0] == '-') {
-    ObjCLanguage::MethodName prop_getter_method(prop_getter_name, true);
-    prop_getter_name = prop_getter_method.GetSelector().GetCString();
+    std::optional<const ObjCLanguage::MethodName> prop_getter_method =
+        ObjCLanguage::MethodName::Create(prop_getter_name, true);
+    if (prop_getter_method)
+      prop_getter_name =
+          ConstString(prop_getter_method->GetSelector()).GetCString();
   }
 
   if (prop_setter_name && prop_setter_name[0] == '-') {
-    ObjCLanguage::MethodName prop_setter_method(prop_setter_name, true);
-    prop_setter_name = prop_setter_method.GetSelector().GetCString();
+    std::optional<const ObjCLanguage::MethodName> prop_setter_method =
+        ObjCLanguage::MethodName::Create(prop_setter_name, true);
+    if (prop_setter_method)
+      prop_setter_name =
+          ConstString(prop_setter_method->GetSelector()).GetCString();
   }
 
   // If the names haven't been provided, they need to be filled in.

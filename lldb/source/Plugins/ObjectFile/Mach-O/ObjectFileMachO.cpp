@@ -1362,9 +1362,11 @@ void ObjectFileMachO::SanitizeSegmentCommand(
     // shared cache file, and not the specific image we are
     // examining. Let's fix this up so that it looks like a normal
     // image.
-    if (strncmp(seg_cmd.segname, "__TEXT", sizeof(seg_cmd.segname)) == 0)
+    if (strncmp(seg_cmd.segname, GetSegmentNameTEXT().GetCString(),
+                sizeof(seg_cmd.segname)) == 0)
       m_text_address = seg_cmd.vmaddr;
-    if (strncmp(seg_cmd.segname, "__LINKEDIT", sizeof(seg_cmd.segname)) == 0)
+    if (strncmp(seg_cmd.segname, GetSegmentNameLINKEDIT().GetCString(),
+                sizeof(seg_cmd.segname)) == 0)
       m_linkedit_original_offset = seg_cmd.fileoff;
 
     seg_cmd.fileoff = seg_cmd.vmaddr - m_text_address;
@@ -2606,9 +2608,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   std::set<lldb::addr_t> resolver_addresses;
 
   if (dyld_trie_data.GetByteSize() > 0) {
-    ConstString text_segment_name("__TEXT");
     SectionSP text_segment_sp =
-        GetSectionList()->FindSectionByName(text_segment_name);
+        GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
     lldb::addr_t text_segment_file_addr = LLDB_INVALID_ADDRESS;
     if (text_segment_sp)
       text_segment_file_addr = text_segment_sp->GetFileAddress();
@@ -5270,10 +5271,9 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
         }
       } break;
       case LC_MAIN: {
-        ConstString text_segment_name("__TEXT");
         uint64_t entryoffset = m_data.GetU64(&offset);
         SectionSP text_segment_sp =
-            GetSectionList()->FindSectionByName(text_segment_name);
+            GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
         if (text_segment_sp) {
           done = true;
           start_address = text_segment_sp->GetFileAddress() + entryoffset;

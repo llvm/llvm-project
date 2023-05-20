@@ -125,7 +125,7 @@ SwiftABIInfo::~SwiftABIInfo() = default;
 /// registers when expanded?
 ///
 /// This is intended to be the basis of a reasonable basic implementation
-/// of should{Pass,Return}IndirectlyForSwift.
+/// of should{Pass,Return}Indirectly.
 ///
 /// For most targets, a limit of four total registers is reasonable; this
 /// limits the amount of code required in order to move around the value
@@ -134,15 +134,14 @@ SwiftABIInfo::~SwiftABIInfo() = default;
 /// immediately within the callee.  But some targets may need to further
 /// limit the register count due to an inability to support that many
 /// return registers.
-static bool occupiesMoreThan(CodeGenTypes &cgt,
-                             ArrayRef<llvm::Type*> scalarTypes,
-                             unsigned maxAllRegisters) {
+bool SwiftABIInfo::occupiesMoreThan(ArrayRef<llvm::Type *> scalarTypes,
+                                    unsigned maxAllRegisters) const {
   unsigned intCount = 0, fpCount = 0;
   for (llvm::Type *type : scalarTypes) {
     if (type->isPointerTy()) {
       intCount++;
     } else if (auto intTy = dyn_cast<llvm::IntegerType>(type)) {
-      auto ptrWidth = cgt.getTarget().getPointerWidth(LangAS::Default);
+      auto ptrWidth = CGT.getTarget().getPointerWidth(LangAS::Default);
       intCount += (intTy->getBitWidth() + ptrWidth - 1) / ptrWidth;
     } else {
       assert(type->isVectorTy() || type->isFloatingPointTy());
@@ -155,7 +154,7 @@ static bool occupiesMoreThan(CodeGenTypes &cgt,
 
 bool SwiftABIInfo::shouldPassIndirectly(ArrayRef<llvm::Type *> ComponentTys,
                                         bool AsReturnValue) const {
-  return occupiesMoreThan(CGT, ComponentTys, /*total=*/4);
+  return occupiesMoreThan(ComponentTys, /*total=*/4);
 }
 
 bool SwiftABIInfo::isLegalVectorType(CharUnits VectorSize, llvm::Type *EltTy,
@@ -830,19 +829,18 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
 // This is a very simple ABI that relies a lot on DefaultABIInfo.
 //===----------------------------------------------------------------------===//
 
+enum class WebAssemblyABIKind {
+  MVP = 0,
+  ExperimentalMV = 1,
+};
+
 class WebAssemblyABIInfo final : public ABIInfo {
-public:
-  enum ABIKind {
-    MVP = 0,
-    ExperimentalMV = 1,
-  };
-
-private:
   DefaultABIInfo defaultInfo;
-  ABIKind Kind;
+  WebAssemblyABIKind Kind;
 
 public:
-  explicit WebAssemblyABIInfo(CodeGen::CodeGenTypes &CGT, ABIKind Kind)
+  explicit WebAssemblyABIInfo(CodeGen::CodeGenTypes &CGT,
+                              WebAssemblyABIKind Kind)
       : ABIInfo(CGT), defaultInfo(CGT), Kind(Kind) {}
 
 private:
@@ -866,7 +864,7 @@ private:
 class WebAssemblyTargetCodeGenInfo final : public TargetCodeGenInfo {
 public:
   explicit WebAssemblyTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT,
-                                        WebAssemblyABIInfo::ABIKind K)
+                                        WebAssemblyABIKind K)
       : TargetCodeGenInfo(std::make_unique<WebAssemblyABIInfo>(CGT, K)) {
     SwiftInfo =
         std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
@@ -931,7 +929,7 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
     if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
     // For the experimental multivalue ABI, fully expand all other aggregates
-    if (Kind == ABIKind::ExperimentalMV) {
+    if (Kind == WebAssemblyABIKind::ExperimentalMV) {
       const RecordType *RT = Ty->getAs<RecordType>();
       assert(RT);
       bool HasBitField = false;
@@ -964,7 +962,7 @@ ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
       if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
       // For the experimental multivalue ABI, return all other aggregates
-      if (Kind == ABIKind::ExperimentalMV)
+      if (Kind == WebAssemblyABIKind::ExperimentalMV)
         return ABIArgInfo::getDirect();
     }
   }
@@ -1249,7 +1247,7 @@ public:
     // integer registers and three fp registers.  Oddly, it'll use up to
     // four vector registers for vectors, but those can overlap with the
     // scalar registers.
-    return occupiesMoreThan(CGT, ComponentTys, /*total=*/3);
+    return occupiesMoreThan(ComponentTys, /*total=*/3);
   }
 };
 
@@ -1292,15 +1290,6 @@ public:
                                 std::vector<LValue> &ResultRegDests,
                                 std::string &AsmString,
                                 unsigned NumOutputs) const override;
-
-  llvm::Constant *
-  getUBSanFunctionSignature(CodeGen::CodeGenModule &CGM) const override {
-    unsigned Sig = (0xeb << 0) |  // jmp rel8
-                   (0x06 << 8) |  //           .+0x08
-                   ('v' << 16) |
-                   ('2' << 24);
-    return llvm::ConstantInt::get(CGM.Int32Ty, Sig);
-  }
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
     return "movl\t%ebp, %ebp"
@@ -2486,10 +2475,6 @@ public:
         std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/true);
   }
 
-  const X86_64ABIInfo &getABIInfo() const {
-    return static_cast<const X86_64ABIInfo&>(TargetCodeGenInfo::getABIInfo());
-  }
-
   /// Disable tail call on x86-64. The epilogue code before the tail jump blocks
   /// autoreleaseRV/retainRV and autoreleaseRV/unsafeClaimRV optimizations.
   bool markARCOptimizedReturnCallsAsNoTail() const override { return true; }
@@ -2526,7 +2511,7 @@ public:
       bool HasAVXType = false;
       for (CallArgList::const_iterator
              it = args.begin(), ie = args.end(); it != ie; ++it) {
-        if (getABIInfo().isPassedUsingAVXType(it->Ty)) {
+        if (getABIInfo<X86_64ABIInfo>().isPassedUsingAVXType(it->Ty)) {
           HasAVXType = true;
           break;
         }
@@ -2537,15 +2522,6 @@ public:
     }
 
     return TargetCodeGenInfo::isNoProtoCallVariadic(args, fnType);
-  }
-
-  llvm::Constant *
-  getUBSanFunctionSignature(CodeGen::CodeGenModule &CGM) const override {
-    unsigned Sig = (0xeb << 0) | // jmp rel8
-                   (0x06 << 8) | //           .+0x08
-                   ('v' << 16) |
-                   ('2' << 24);
-    return llvm::ConstantInt::get(CGM.Int32Ty, Sig);
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
@@ -4991,21 +4967,19 @@ PPC32TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 // PowerPC-64
 
 namespace {
+enum class PPC64_SVR4_ABIKind {
+  ELFv1 = 0,
+  ELFv2,
+};
+
 /// PPC64_SVR4_ABIInfo - The 64-bit PowerPC ELF (SVR4) ABI information.
 class PPC64_SVR4_ABIInfo : public ABIInfo {
-public:
-  enum ABIKind {
-    ELFv1 = 0,
-    ELFv2
-  };
-
-private:
   static const unsigned GPRBits = 64;
-  ABIKind Kind;
+  PPC64_SVR4_ABIKind Kind;
   bool IsSoftFloatABI;
 
 public:
-  PPC64_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, ABIKind Kind,
+  PPC64_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, PPC64_SVR4_ABIKind Kind,
                      bool SoftFloatABI)
       : ABIInfo(CGT), Kind(Kind), IsSoftFloatABI(SoftFloatABI) {}
 
@@ -5053,8 +5027,7 @@ public:
 class PPC64_SVR4_TargetCodeGenInfo : public TargetCodeGenInfo {
 
 public:
-  PPC64_SVR4_TargetCodeGenInfo(CodeGenTypes &CGT,
-                               PPC64_SVR4_ABIInfo::ABIKind Kind,
+  PPC64_SVR4_TargetCodeGenInfo(CodeGenTypes &CGT, PPC64_SVR4_ABIKind Kind,
                                bool SoftFloatABI)
       : TargetCodeGenInfo(
             std::make_unique<PPC64_SVR4_ABIInfo>(CGT, Kind, SoftFloatABI)) {
@@ -5071,9 +5044,10 @@ public:
                                llvm::Value *Address) const override;
 };
 
-class PPC64TargetCodeGenInfo : public DefaultTargetCodeGenInfo {
+class PPC64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  PPC64TargetCodeGenInfo(CodeGenTypes &CGT) : DefaultTargetCodeGenInfo(CGT) {}
+  PPC64TargetCodeGenInfo(CodeGenTypes &CGT)
+      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
     // This is recovered from gcc output.
@@ -5083,7 +5057,6 @@ public:
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
 };
-
 }
 
 // Return true if the ABI requires Ty to be passed sign- or zero-
@@ -5153,7 +5126,7 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   // Likewise for ELFv2 homogeneous aggregates.
   const Type *Base = nullptr;
   uint64_t Members = 0;
-  if (!AlignAsType && Kind == ELFv2 &&
+  if (!AlignAsType && Kind == PPC64_SVR4_ABIKind::ELFv2 &&
       isAggregateTypeForABI(Ty) && isHomogeneousAggregate(Ty, Base, Members))
     AlignAsType = Base;
 
@@ -5347,7 +5320,7 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
     // ELFv2 homogeneous aggregates are passed as array types.
     const Type *Base = nullptr;
     uint64_t Members = 0;
-    if (Kind == ELFv2 &&
+    if (Kind == PPC64_SVR4_ABIKind::ELFv2 &&
         isHomogeneousAggregate(Ty, Base, Members)) {
       llvm::Type *BaseTy = CGT.ConvertType(QualType(Base, 0));
       llvm::Type *CoerceTy = llvm::ArrayType::get(BaseTy, Members);
@@ -5417,7 +5390,7 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
     // ELFv2 homogeneous aggregates are returned as array types.
     const Type *Base = nullptr;
     uint64_t Members = 0;
-    if (Kind == ELFv2 &&
+    if (Kind == PPC64_SVR4_ABIKind::ELFv2 &&
         isHomogeneousAggregate(RetTy, Base, Members)) {
       llvm::Type *BaseTy = CGT.ConvertType(QualType(Base, 0));
       llvm::Type *CoerceTy = llvm::ArrayType::get(BaseTy, Members);
@@ -5426,7 +5399,7 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
 
     // ELFv2 small aggregates are returned in up to two registers.
     uint64_t Bits = getContext().getTypeSize(RetTy);
-    if (Kind == ELFv2 && Bits <= 2 * GPRBits) {
+    if (Kind == PPC64_SVR4_ABIKind::ELFv2 && Bits <= 2 * GPRBits) {
       if (Bits == 0)
         return ABIArgInfo::getIgnore();
 
@@ -5507,23 +5480,22 @@ PPC64TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 
 namespace {
 
+enum class AArch64ABIKind {
+  AAPCS = 0,
+  DarwinPCS,
+  Win64,
+};
+
 class AArch64ABIInfo : public ABIInfo {
-public:
-  enum ABIKind {
-    AAPCS = 0,
-    DarwinPCS,
-    Win64
-  };
-
-private:
-  ABIKind Kind;
+  AArch64ABIKind Kind;
 
 public:
-  AArch64ABIInfo(CodeGenTypes &CGT, ABIKind Kind) : ABIInfo(CGT), Kind(Kind) {}
+  AArch64ABIInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
+      : ABIInfo(CGT), Kind(Kind) {}
 
 private:
-  ABIKind getABIKind() const { return Kind; }
-  bool isDarwinPCS() const { return Kind == DarwinPCS; }
+  AArch64ABIKind getABIKind() const { return Kind; }
+  bool isDarwinPCS() const { return Kind == AArch64ABIKind::DarwinPCS; }
 
   ABIArgInfo classifyReturnType(QualType RetTy, bool IsVariadic) const;
   ABIArgInfo classifyArgumentType(QualType RetTy, bool IsVariadic,
@@ -5559,8 +5531,8 @@ private:
       llvm::report_fatal_error("Passing SVE types to variadic functions is "
                                "currently not supported");
 
-    return Kind == Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
-                         : isDarwinPCS() ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
+    return Kind == AArch64ABIKind::Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
+           : isDarwinPCS()               ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
                                          : EmitAAPCSVAArg(VAListAddr, Ty, CGF);
   }
 
@@ -5583,7 +5555,7 @@ public:
 
 class AArch64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  AArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIInfo::ABIKind Kind)
+  AArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind Kind)
       : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGT, Kind)) {
     SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGT);
   }
@@ -5651,7 +5623,7 @@ public:
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
 public:
-  WindowsAArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIInfo::ABIKind K)
+  WindowsAArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIKind K)
       : AArch64TargetCodeGenInfo(CGT, K) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
@@ -5809,12 +5781,13 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
   // Homogeneous Floating-point Aggregates (HFAs) need to be expanded.
   const Type *Base = nullptr;
   uint64_t Members = 0;
-  bool IsWin64 = Kind == Win64 || CallingConvention == llvm::CallingConv::Win64;
+  bool IsWin64 = Kind == AArch64ABIKind::Win64 ||
+                 CallingConvention == llvm::CallingConv::Win64;
   bool IsWinVariadic = IsWin64 && IsVariadic;
   // In variadic functions on Windows, all composite types are treated alike,
   // no special handling of HFAs/HVAs.
   if (!IsWinVariadic && isHomogeneousAggregate(Ty, Base, Members)) {
-    if (Kind != AArch64ABIInfo::AAPCS)
+    if (Kind != AArch64ABIKind::AAPCS)
       return ABIArgInfo::getDirect(
           llvm::ArrayType::get(CGT.ConvertType(QualType(Base, 0)), Members));
 
@@ -5837,7 +5810,7 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
       return coerceToIntArray(Ty, getContext(), getVMContext());
     }
     unsigned Alignment;
-    if (Kind == AArch64ABIInfo::AAPCS) {
+    if (Kind == AArch64ABIKind::AAPCS) {
       Alignment = getContext().getTypeUnadjustedAlign(Ty);
       Alignment = Alignment < 128 ? 64 : 128;
     } else {
@@ -6316,21 +6289,19 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 namespace {
 
-class ARMABIInfo : public ABIInfo {
-public:
-  enum ABIKind {
-    APCS = 0,
-    AAPCS = 1,
-    AAPCS_VFP = 2,
-    AAPCS16_VFP = 3,
-  };
+enum class ARMABIKind {
+  APCS = 0,
+  AAPCS = 1,
+  AAPCS_VFP = 2,
+  AAPCS16_VFP = 3,
+};
 
-private:
-  ABIKind Kind;
+class ARMABIInfo : public ABIInfo {
+  ARMABIKind Kind;
   bool IsFloatABISoftFP;
 
 public:
-  ARMABIInfo(CodeGenTypes &CGT, ABIKind Kind) : ABIInfo(CGT), Kind(Kind) {
+  ARMABIInfo(CodeGenTypes &CGT, ARMABIKind Kind) : ABIInfo(CGT), Kind(Kind) {
     setCCs();
     IsFloatABISoftFP = CGT.getCodeGenOpts().FloatABI == "softfp" ||
         CGT.getCodeGenOpts().FloatABI == ""; // default
@@ -6362,7 +6333,7 @@ public:
     }
   }
 
-  ABIKind getABIKind() const { return Kind; }
+  ARMABIKind getABIKind() const { return Kind; }
 
   bool allowBFloatArgsAndRet() const override {
     return !IsFloatABISoftFP && getTarget().hasBFloat16Type();
@@ -6407,13 +6378,9 @@ public:
 
 class ARMTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  ARMTargetCodeGenInfo(CodeGenTypes &CGT, ARMABIInfo::ABIKind K)
+  ARMTargetCodeGenInfo(CodeGenTypes &CGT, ARMABIKind K)
       : TargetCodeGenInfo(std::make_unique<ARMABIInfo>(CGT, K)) {
     SwiftInfo = std::make_unique<ARMSwiftABIInfo>(CGT);
-  }
-
-  const ARMABIInfo &getABIInfo() const {
-    return static_cast<const ARMABIInfo&>(TargetCodeGenInfo::getABIInfo());
   }
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
@@ -6434,7 +6401,8 @@ public:
   }
 
   unsigned getSizeOfUnwindException() const override {
-    if (getABIInfo().isEABI()) return 88;
+    if (getABIInfo<ARMABIInfo>().isEABI())
+      return 88;
     return TargetCodeGenInfo::getSizeOfUnwindException();
   }
 
@@ -6501,8 +6469,8 @@ public:
 
     Fn->addFnAttr("interrupt", Kind);
 
-    ARMABIInfo::ABIKind ABI = cast<ARMABIInfo>(getABIInfo()).getABIKind();
-    if (ABI == ARMABIInfo::APCS)
+    ARMABIKind ABI = getABIInfo<ARMABIInfo>().getABIKind();
+    if (ABI == ARMABIKind::APCS)
       return;
 
     // AAPCS guarantees that sp will be 8-byte aligned on any public interface,
@@ -6516,7 +6484,7 @@ public:
 
 class WindowsARMTargetCodeGenInfo : public ARMTargetCodeGenInfo {
 public:
-  WindowsARMTargetCodeGenInfo(CodeGenTypes &CGT, ARMABIInfo::ABIKind K)
+  WindowsARMTargetCodeGenInfo(CodeGenTypes &CGT, ARMABIKind K)
       : ARMTargetCodeGenInfo(CGT, K) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
@@ -6576,10 +6544,14 @@ llvm::CallingConv::ID ARMABIInfo::getLLVMDefaultCC() const {
 /// as the C calling convention.
 llvm::CallingConv::ID ARMABIInfo::getABIDefaultCC() const {
   switch (getABIKind()) {
-  case APCS: return llvm::CallingConv::ARM_APCS;
-  case AAPCS: return llvm::CallingConv::ARM_AAPCS;
-  case AAPCS_VFP: return llvm::CallingConv::ARM_AAPCS_VFP;
-  case AAPCS16_VFP: return llvm::CallingConv::ARM_AAPCS_VFP;
+  case ARMABIKind::APCS:
+    return llvm::CallingConv::ARM_APCS;
+  case ARMABIKind::AAPCS:
+    return llvm::CallingConv::ARM_AAPCS;
+  case ARMABIKind::AAPCS_VFP:
+    return llvm::CallingConv::ARM_AAPCS_VFP;
+  case ARMABIKind::AAPCS16_VFP:
+    return llvm::CallingConv::ARM_AAPCS_VFP;
   }
   llvm_unreachable("bad ABI kind");
 }
@@ -6625,8 +6597,8 @@ ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
     }
   }
   unsigned Align = 0;
-  if (getABIKind() == ARMABIInfo::AAPCS ||
-      getABIKind() == ARMABIInfo::AAPCS_VFP) {
+  if (getABIKind() == ARMABIKind::AAPCS ||
+      getABIKind() == ARMABIKind::AAPCS_VFP) {
     // For alignment adjusted HFAs, cap the argument alignment to 8, leave it
     // default otherwise.
     Align = getContext().getTypeUnadjustedAlignInChars(Ty).getQuantity();
@@ -6684,7 +6656,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
     uint64_t Members = 0;
     if (isHomogeneousAggregate(Ty, Base, Members))
       return classifyHomogeneousAggregate(Ty, Base, Members);
-  } else if (getABIKind() == ARMABIInfo::AAPCS16_VFP) {
+  } else if (getABIKind() == ARMABIKind::AAPCS16_VFP) {
     // WatchOS does have homogeneous aggregates. Note that we intentionally use
     // this convention even for a variadic function: the backend will use GPRs
     // if needed.
@@ -6698,7 +6670,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
     }
   }
 
-  if (getABIKind() == ARMABIInfo::AAPCS16_VFP &&
+  if (getABIKind() == ARMABIKind::AAPCS16_VFP &&
       getContext().getTypeSizeInChars(Ty) > CharUnits::fromQuantity(16)) {
     // WatchOS is adopting the 64-bit AAPCS rule on composite types: if they're
     // bigger than 128-bits, they get placed in space allocated by the caller,
@@ -6713,15 +6685,15 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   // than ABI alignment.
   uint64_t ABIAlign = 4;
   uint64_t TyAlign;
-  if (getABIKind() == ARMABIInfo::AAPCS_VFP ||
-      getABIKind() == ARMABIInfo::AAPCS) {
+  if (getABIKind() == ARMABIKind::AAPCS_VFP ||
+      getABIKind() == ARMABIKind::AAPCS) {
     TyAlign = getContext().getTypeUnadjustedAlignInChars(Ty).getQuantity();
     ABIAlign = std::clamp(TyAlign, (uint64_t)4, (uint64_t)8);
   } else {
     TyAlign = getContext().getTypeAlignInChars(Ty).getQuantity();
   }
   if (getContext().getTypeSizeInChars(Ty) > CharUnits::fromQuantity(64)) {
-    assert(getABIKind() != ARMABIInfo::AAPCS16_VFP && "unexpected byval");
+    assert(getABIKind() != ARMABIKind::AAPCS16_VFP && "unexpected byval");
     return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign),
                                    /*ByVal=*/true,
                                    /*Realign=*/TyAlign > ABIAlign);
@@ -6872,7 +6844,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
   }
 
   // Are we following APCS?
-  if (getABIKind() == APCS) {
+  if (getABIKind() == ARMABIKind::APCS) {
     if (isEmptyRecord(getContext(), RetTy, false))
       return ABIArgInfo::getIgnore();
 
@@ -6931,7 +6903,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
     if (Size <= 16)
       return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
     return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
-  } else if (Size <= 128 && getABIKind() == AAPCS16_VFP) {
+  } else if (Size <= 128 && getABIKind() == ARMABIKind::AAPCS16_VFP) {
     llvm::Type *Int32Ty = llvm::Type::getInt32Ty(getVMContext());
     llvm::Type *CoerceTy =
         llvm::ArrayType::get(Int32Ty, llvm::alignTo(Size, 32) / 32);
@@ -7061,8 +7033,8 @@ bool ARMABIInfo::isEffectivelyAAPCS_VFP(unsigned callConvention,
   if (callConvention != llvm::CallingConv::C)
     return (callConvention == llvm::CallingConv::ARM_AAPCS_VFP);
   else
-    return (getABIKind() == AAPCS_VFP) ||
-           (acceptHalf && (getABIKind() == AAPCS16_VFP));
+    return (getABIKind() == ARMABIKind::AAPCS_VFP) ||
+           (acceptHalf && (getABIKind() == ARMABIKind::AAPCS16_VFP));
 }
 
 Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
@@ -7090,7 +7062,7 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // ARMv7k passes structs bigger than 16 bytes indirectly, in space
   // allocated by the caller.
   } else if (TySize > CharUnits::fromQuantity(16) &&
-             getABIKind() == ARMABIInfo::AAPCS16_VFP &&
+             getABIKind() == ARMABIKind::AAPCS16_VFP &&
              !isHomogeneousAggregate(Ty, Base, Members)) {
     IsIndirect = true;
 
@@ -7098,11 +7070,11 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // The ABI alignment for 64-bit or 128-bit vectors is 8 for AAPCS and 4 for
   // APCS. For AAPCS, the ABI alignment is at least 4-byte and at most 8-byte.
   // Our callers should be prepared to handle an under-aligned address.
-  } else if (getABIKind() == ARMABIInfo::AAPCS_VFP ||
-             getABIKind() == ARMABIInfo::AAPCS) {
+  } else if (getABIKind() == ARMABIKind::AAPCS_VFP ||
+             getABIKind() == ARMABIKind::AAPCS) {
     TyAlignForABI = std::max(TyAlignForABI, CharUnits::fromQuantity(4));
     TyAlignForABI = std::min(TyAlignForABI, CharUnits::fromQuantity(8));
-  } else if (getABIKind() == ARMABIInfo::AAPCS16_VFP) {
+  } else if (getABIKind() == ARMABIKind::AAPCS16_VFP) {
     // ARMv7k allows type alignment up to 16 bytes.
     TyAlignForABI = std::max(TyAlignForABI, CharUnits::fromQuantity(4));
     TyAlignForABI = std::min(TyAlignForABI, CharUnits::fromQuantity(16));
@@ -7434,10 +7406,6 @@ public:
 
 class SystemZTargetCodeGenInfo : public TargetCodeGenInfo {
   ASTContext &Ctx;
-
-  const SystemZABIInfo &getABIInfo() const {
-    return static_cast<const SystemZABIInfo&>(TargetCodeGenInfo::getABIInfo());
-  }
 
   // These are used for speeding up the search for a visible vector ABI.
   mutable bool HasVisibleVecABIFlag = false;
@@ -7887,8 +7855,9 @@ bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
     // it will be passed in a vector register. A wide (>16 bytes) vector will
     // be passed via "hidden" pointer where any extra alignment is not
     // required (per GCC).
-    const Type *SingleEltTy =
-      getABIInfo().GetSingleElementType(QualType(Ty, 0)).getTypePtr();
+    const Type *SingleEltTy = getABIInfo<SystemZABIInfo>()
+                                  .GetSingleElementType(QualType(Ty, 0))
+                                  .getTypePtr();
     bool SingleVecEltStruct = SingleEltTy != Ty && SingleEltTy->isVectorType() &&
       Ctx.getTypeSize(SingleEltTy) == Ctx.getTypeSize(Ty);
     if (Ty->isVectorType() || SingleVecEltStruct)
@@ -8604,10 +8573,10 @@ public:
 
 namespace {
 
-class TCETargetCodeGenInfo : public DefaultTargetCodeGenInfo {
+class TCETargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   TCETargetCodeGenInfo(CodeGenTypes &CGT)
-    : DefaultTargetCodeGenInfo(CGT) {}
+      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
@@ -9074,13 +9043,17 @@ Address HexagonABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 namespace {
 class LanaiABIInfo : public DefaultABIInfo {
+  struct CCState {
+    unsigned FreeRegs;
+  };
+
 public:
   LanaiABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
 
   bool shouldUseInReg(QualType Ty, CCState &State) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
-    CCState State(FI);
+    CCState State;
     // Lanai uses 4 registers to pass arguments unless the function has the
     // regparm attribute set.
     if (FI.getHasRegParm()) {
@@ -10092,6 +10065,10 @@ SparcV9TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 namespace {
 
 class ARCABIInfo : public DefaultABIInfo {
+  struct CCState {
+    unsigned FreeRegs;
+  };
+
 public:
   using DefaultABIInfo::DefaultABIInfo;
 
@@ -10114,7 +10091,7 @@ private:
   }
 
   void computeInfo(CGFunctionInfo &FI) const override {
-    CCState State(FI);
+    CCState State;
     // ARC uses 8 registers to pass arguments.
     State.FreeRegs = 8;
 
@@ -11853,10 +11830,6 @@ class BPFTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   BPFTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<BPFABIInfo>(CGT)) {}
-
-  const BPFABIInfo &getABIInfo() const {
-    return static_cast<const BPFABIInfo&>(TargetCodeGenInfo::getABIInfo());
-  }
 };
 
 }
@@ -12342,21 +12315,21 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be: {
-    AArch64ABIInfo::ABIKind Kind = AArch64ABIInfo::AAPCS;
+    AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
     if (getTarget().getABI() == "darwinpcs")
-      Kind = AArch64ABIInfo::DarwinPCS;
+      Kind = AArch64ABIKind::DarwinPCS;
     else if (Triple.isOSWindows())
       return SetCGInfo(
-          new WindowsAArch64TargetCodeGenInfo(Types, AArch64ABIInfo::Win64));
+          new WindowsAArch64TargetCodeGenInfo(Types, AArch64ABIKind::Win64));
 
     return SetCGInfo(new AArch64TargetCodeGenInfo(Types, Kind));
   }
 
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64: {
-    WebAssemblyABIInfo::ABIKind Kind = WebAssemblyABIInfo::MVP;
+    WebAssemblyABIKind Kind = WebAssemblyABIKind::MVP;
     if (getTarget().getABI() == "experimental-mv")
-      Kind = WebAssemblyABIInfo::ExperimentalMV;
+      Kind = WebAssemblyABIKind::ExperimentalMV;
     return SetCGInfo(new WebAssemblyTargetCodeGenInfo(Types, Kind));
   }
 
@@ -12366,21 +12339,21 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   case llvm::Triple::thumbeb: {
     if (Triple.getOS() == llvm::Triple::Win32) {
       return SetCGInfo(
-          new WindowsARMTargetCodeGenInfo(Types, ARMABIInfo::AAPCS_VFP));
+          new WindowsARMTargetCodeGenInfo(Types, ARMABIKind::AAPCS_VFP));
     }
 
-    ARMABIInfo::ABIKind Kind = ARMABIInfo::AAPCS;
+    ARMABIKind Kind = ARMABIKind::AAPCS;
     StringRef ABIStr = getTarget().getABI();
     if (ABIStr == "apcs-gnu")
-      Kind = ARMABIInfo::APCS;
+      Kind = ARMABIKind::APCS;
     else if (ABIStr == "aapcs16")
-      Kind = ARMABIInfo::AAPCS16_VFP;
+      Kind = ARMABIKind::AAPCS16_VFP;
     else if (CodeGenOpts.FloatABI == "hard" ||
              (CodeGenOpts.FloatABI != "soft" &&
               (Triple.getEnvironment() == llvm::Triple::GNUEABIHF ||
                Triple.getEnvironment() == llvm::Triple::MuslEABIHF ||
                Triple.getEnvironment() == llvm::Triple::EABIHF)))
-      Kind = ARMABIInfo::AAPCS_VFP;
+      Kind = ARMABIKind::AAPCS_VFP;
 
     return SetCGInfo(new ARMTargetCodeGenInfo(Types, Kind));
   }
@@ -12408,9 +12381,9 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
       return SetCGInfo(new AIXTargetCodeGenInfo(Types, /*Is64Bit*/ true));
 
     if (Triple.isOSBinFormatELF()) {
-      PPC64_SVR4_ABIInfo::ABIKind Kind = PPC64_SVR4_ABIInfo::ELFv1;
+      PPC64_SVR4_ABIKind Kind = PPC64_SVR4_ABIKind::ELFv1;
       if (getTarget().getABI() == "elfv2")
-        Kind = PPC64_SVR4_ABIInfo::ELFv2;
+        Kind = PPC64_SVR4_ABIKind::ELFv2;
       bool IsSoftFloat = CodeGenOpts.FloatABI == "soft";
 
       return SetCGInfo(
@@ -12419,9 +12392,9 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     return SetCGInfo(new PPC64TargetCodeGenInfo(Types));
   case llvm::Triple::ppc64le: {
     assert(Triple.isOSBinFormatELF() && "PPC64 LE non-ELF not supported!");
-    PPC64_SVR4_ABIInfo::ABIKind Kind = PPC64_SVR4_ABIInfo::ELFv2;
+    PPC64_SVR4_ABIKind Kind = PPC64_SVR4_ABIKind::ELFv2;
     if (getTarget().getABI() == "elfv1")
-      Kind = PPC64_SVR4_ABIInfo::ELFv1;
+      Kind = PPC64_SVR4_ABIKind::ELFv1;
     bool IsSoftFloat = CodeGenOpts.FloatABI == "soft";
 
     return SetCGInfo(

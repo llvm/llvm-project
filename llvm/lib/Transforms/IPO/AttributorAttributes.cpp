@@ -1124,8 +1124,7 @@ struct AAPointerInfoImpl
     // outlive a GPU kernel. This is true for shared, constant, and local
     // globals on AMD and NVIDIA GPUs.
     auto HasKernelLifetime = [&](Value *V, Module &M) {
-      Triple T(M.getTargetTriple());
-      if (!(T.isAMDGPU() || T.isNVPTX()))
+      if (!AA::isGPU(M))
         return false;
       switch (AA::GPUAddressSpace(V->getType()->getPointerAddressSpace())) {
       case AA::GPUAddressSpace::Shared:
@@ -8662,7 +8661,8 @@ protected:
   /// Determine the underlying locations kinds for \p Ptr, e.g., globals or
   /// arguments, and update the state and access map accordingly.
   void categorizePtrValue(Attributor &A, const Instruction &I, const Value &Ptr,
-                          AAMemoryLocation::StateType &State, bool &Changed);
+                          AAMemoryLocation::StateType &State, bool &Changed,
+                          unsigned AccessAS = 0);
 
   /// Used to allocate access sets.
   BumpPtrAllocator &Allocator;
@@ -8670,14 +8670,24 @@ protected:
 
 void AAMemoryLocationImpl::categorizePtrValue(
     Attributor &A, const Instruction &I, const Value &Ptr,
-    AAMemoryLocation::StateType &State, bool &Changed) {
+    AAMemoryLocation::StateType &State, bool &Changed, unsigned AccessAS) {
   LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Categorize pointer locations for "
                     << Ptr << " ["
                     << getMemoryLocationsAsStr(State.getAssumed()) << "]\n");
 
   auto Pred = [&](Value &Obj) {
+    unsigned ObjectAS = Obj.getType()->getPointerAddressSpace();
     // TODO: recognize the TBAA used for constant accesses.
     MemoryLocationsKind MLK = NO_LOCATIONS;
+
+    // Filter accesses to constant (GPU) memory if we have an AS at the access
+    // site or the object is known to actually have the associated AS.
+    if ((AccessAS == (unsigned)AA::GPUAddressSpace::Constant ||
+         (ObjectAS == (unsigned)AA::GPUAddressSpace::Constant &&
+          isIdentifiedObject(&Obj))) &&
+        AA::isGPU(*I.getModule()))
+      return true;
+
     if (isa<UndefValue>(&Obj))
       return true;
     if (isa<Argument>(&Obj)) {
@@ -8701,8 +8711,8 @@ void AAMemoryLocationImpl::categorizePtrValue(
       else
         MLK = NO_GLOBAL_EXTERNAL_MEM;
     } else if (isa<ConstantPointerNull>(&Obj) &&
-               !NullPointerIsDefined(getAssociatedFunction(),
-                                     Ptr.getType()->getPointerAddressSpace())) {
+               (!NullPointerIsDefined(getAssociatedFunction(), AccessAS) ||
+                !NullPointerIsDefined(getAssociatedFunction(), ObjectAS))) {
       return true;
     } else if (isa<AllocaInst>(&Obj)) {
       MLK = NO_LOCAL_MEM;
@@ -8840,7 +8850,8 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Categorize memory access with pointer: "
                << I << " [" << *Ptr << "]\n");
-    categorizePtrValue(A, I, *Ptr, AccessedLocs, Changed);
+    categorizePtrValue(A, I, *Ptr, AccessedLocs, Changed,
+                       Ptr->getType()->getPointerAddressSpace());
     return AccessedLocs.getAssumed();
   }
 

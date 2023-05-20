@@ -123,6 +123,10 @@ public:
   bool hasStdExtZfhOrZfhminOrZhinxOrZhinxmin() const {
     return hasStdExtZfhOrZfhmin() || hasStdExtZhinxOrZhinxmin();
   }
+  bool hasHalfFPLoadStoreMove() const {
+    return HasStdExtZfh || HasStdExtZfhmin || HasStdExtZfbfmin ||
+           HasStdExtZvfbfwma;
+  }
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }

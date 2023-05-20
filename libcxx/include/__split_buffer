@@ -162,12 +162,12 @@ public:
 
   template <class _InputIter>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-      __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIter>::value>
+      __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value>
       __construct_at_end(_InputIter __first, _InputIter __last);
 
   template <class _ForwardIterator>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-      __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value>
+      __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value>
       __construct_at_end(_ForwardIterator __first, _ForwardIterator __last);
 
   template <class _Iterator, class _Sentinel>
@@ -284,7 +284,7 @@ __split_buffer<_Tp, _Allocator>::__construct_at_end(size_type __n, const_referen
 
 template <class _Tp, class _Allocator>
 template <class _InputIter>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIter>::value>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value>
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_InputIter __first, _InputIter __last)
 {
   __construct_at_end_with_sentinel(__first, __last);
@@ -313,7 +313,7 @@ void __split_buffer<_Tp, _Allocator>::__construct_at_end_with_sentinel(_Iterator
 }
 template <class _Tp, class _Allocator>
 template <class _ForwardIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value>
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last)
 {
   __construct_at_end_with_size(__first, std::distance(__first, __last));

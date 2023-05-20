@@ -451,31 +451,41 @@ mlir::LogicalResult hlfir::AnyOp::verify() {
   assert(results.size() == 1);
 
   mlir::Value mask = getMask();
+  mlir::Value dim = getDim();
   fir::SequenceType maskTy =
       hlfir::getFortranElementOrSequenceType(mask.getType())
           .cast<fir::SequenceType>();
   mlir::Type logicalTy = maskTy.getEleTy();
   llvm::ArrayRef<int64_t> maskShape = maskTy.getShape();
-  hlfir::ExprType resultTy = results[0].cast<hlfir::ExprType>();
 
-  // Result is of the same type as MASK
-  if (resultTy.getElementType() != logicalTy)
-    return emitOpError(
-        "result must have the same element type as MASK argument");
-
-  if (resultTy.isArray()) {
+  mlir::Type resultType = results[0];
+  if (mlir::isa<fir::LogicalType>(resultType)) {
     // Result is of the same type as MASK
-    if (resultTy.getEleTy() != logicalTy)
+    if (resultType != logicalTy)
       return emitOpError(
           "result must have the same element type as MASK argument");
 
-    llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+  } else if (auto resultExpr =
+                 mlir::dyn_cast_or_null<hlfir::ExprType>(resultType)) {
+    // Result should only be in hlfir.expr form if it is an array
+    if (maskShape.size() > 1 && dim != nullptr) {
+      if (!resultExpr.isArray())
+        return emitOpError("result must be an array");
 
-    // Result has rank n-1
-    if (resultShape.size() != (maskShape.size() - 1))
-      return emitOpError("result rank must be one less than MASK");
+      if (resultExpr.getEleTy() != logicalTy)
+        return emitOpError(
+            "result must have the same element type as MASK argument");
+
+      llvm::ArrayRef<int64_t> resultShape = resultExpr.getShape();
+      // Result has rank n-1
+      if (resultShape.size() != (maskShape.size() - 1))
+        return emitOpError("result rank must be one less than MASK");
+    } else {
+      return emitOpError("result must be of logical type");
+    }
+  } else {
+    return emitOpError("result must be of logical type");
   }
-
   return mlir::success();
 }
 
@@ -538,6 +548,7 @@ static mlir::LogicalResult verifyReductionOp(ReductionOp reductionOp) {
   assert(results.size() == 1);
 
   mlir::Value array = reductionOp->getArray();
+  mlir::Value dim = reductionOp->getDim();
   mlir::Value mask = reductionOp->getMask();
 
   fir::SequenceType arrayTy =
@@ -545,7 +556,6 @@ static mlir::LogicalResult verifyReductionOp(ReductionOp reductionOp) {
           .cast<fir::SequenceType>();
   mlir::Type numTy = arrayTy.getEleTy();
   llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
-  hlfir::ExprType resultTy = results[0].cast<hlfir::ExprType>();
 
   if (mask) {
     fir::SequenceType maskSeq =
@@ -572,25 +582,35 @@ static mlir::LogicalResult verifyReductionOp(ReductionOp reductionOp) {
     }
   }
 
-  if (resultTy.isArray()) {
+  mlir::Type resultType = results[0];
+  if (hlfir::isFortranScalarNumericalType(resultType)) {
     // Result is of the same type as ARRAY
-    if (resultTy.getEleTy() != numTy)
+    if (resultType != numTy)
       return reductionOp->emitOpError(
           "result must have the same element type as ARRAY argument");
 
-    llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+  } else if (auto resultExpr =
+                 mlir::dyn_cast_or_null<hlfir::ExprType>(resultType)) {
+    if (arrayShape.size() > 1 && dim != nullptr) {
+      if (!resultExpr.isArray())
+        return reductionOp->emitOpError("result must be an array");
 
-    // Result has rank n-1
-    if (resultShape.size() != (arrayShape.size() - 1))
+      if (resultExpr.getEleTy() != numTy)
+        return reductionOp->emitOpError(
+            "result must have the same element type as ARRAY argument");
+
+      llvm::ArrayRef<int64_t> resultShape = resultExpr.getShape();
+      // Result has rank n-1
+      if (resultShape.size() != (arrayShape.size() - 1))
+        return reductionOp->emitOpError(
+            "result rank must be one less than ARRAY");
+    } else {
       return reductionOp->emitOpError(
-          "result rank must be one less than ARRAY");
+          "result must be of numerical scalar type");
+    }
   } else {
-    // Result is of the same type as ARRAY
-    if (resultTy.getElementType() != numTy)
-      return reductionOp->emitOpError(
-          "result must have the same element type as ARRAY argument");
+    return reductionOp->emitOpError("result must be of numerical scalar type");
   }
-
   return mlir::success();
 }
 

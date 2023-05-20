@@ -63,6 +63,14 @@ bool Type::isOpaquePointerTy() const {
   return false;
 }
 
+bool Type::isScalableTy() const {
+  if (const auto *STy = dyn_cast<StructType>(this)) {
+    SmallPtrSet<Type *, 4> Visited;
+    return STy->containsScalableVectorType(&Visited);
+  }
+  return getTypeID() == ScalableVectorTyID || isScalableTargetExtTy();
+}
+
 const fltSemantics &Type::getFltSemantics() const {
   switch (getTypeID()) {
   case HalfTyID: return APFloat::IEEEhalf();
@@ -450,16 +458,49 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   return ST;
 }
 
-bool StructType::containsScalableVectorType() const {
+bool StructType::containsScalableVectorType(
+    SmallPtrSetImpl<Type *> *Visited) const {
+  if ((getSubclassData() & SCDB_ContainsScalableVector) != 0)
+    return true;
+
+  if ((getSubclassData() & SCDB_NotContainsScalableVector) != 0)
+    return false;
+
+  if (Visited && !Visited->insert(const_cast<StructType *>(this)).second)
+    return false;
+
   for (Type *Ty : elements()) {
-    if (isa<ScalableVectorType>(Ty))
+    if (isa<ScalableVectorType>(Ty)) {
+      const_cast<StructType *>(this)->setSubclassData(
+          getSubclassData() | SCDB_ContainsScalableVector);
       return true;
-    if (auto *STy = dyn_cast<StructType>(Ty))
-      if (STy->containsScalableVectorType())
+    }
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      if (STy->containsScalableVectorType(Visited)) {
+        const_cast<StructType *>(this)->setSubclassData(
+            getSubclassData() | SCDB_ContainsScalableVector);
         return true;
+      }
+    }
   }
 
+  // For structures that are opaque, return false but do not set the
+  // SCDB_NotContainsScalableVector flag since it may gain scalable vector type
+  // when it becomes non-opaque.
+  if (!isOpaque())
+    const_cast<StructType *>(this)->setSubclassData(
+        getSubclassData() | SCDB_NotContainsScalableVector);
   return false;
+}
+
+bool StructType::containsHomogeneousScalableVectorTypes() const {
+  Type *FirstTy = getNumElements() > 0 ? elements()[0] : nullptr;
+  if (!FirstTy || !isa<ScalableVectorType>(FirstTy))
+    return false;
+  for (Type *Ty : elements())
+    if (Ty != FirstTy)
+      return false;
+  return true;
 }
 
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
@@ -581,10 +622,19 @@ bool StructType::isSized(SmallPtrSetImpl<Type*> *Visited) const {
   // Okay, our struct is sized if all of the elements are, but if one of the
   // elements is opaque, the struct isn't sized *yet*, but may become sized in
   // the future, so just bail out without caching.
+  // The ONLY special case inside a struct that is considered sized is when the
+  // elements are homogeneous of a scalable vector type.
+  if (containsHomogeneousScalableVectorTypes()) {
+    const_cast<StructType *>(this)->setSubclassData(getSubclassData() |
+                                                    SCDB_IsSized);
+    return true;
+  }
   for (Type *Ty : elements()) {
     // If the struct contains a scalable vector type, don't consider it sized.
-    // This prevents it from being used in loads/stores/allocas/GEPs.
-    if (isa<ScalableVectorType>(Ty))
+    // This prevents it from being used in loads/stores/allocas/GEPs. The ONLY
+    // special case right now is a structure of homogenous scalable vector
+    // types and is handled by the if-statement before this for-loop.
+    if (Ty->isScalableTy())
       return false;
     if (!Ty->isSized(Visited))
       return false;

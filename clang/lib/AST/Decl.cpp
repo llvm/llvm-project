@@ -3301,7 +3301,7 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(
     QualType T = Ty;
     while (const auto *TD = T->getAs<TypedefType>())
       T = TD->getDecl()->getUnderlyingType();
-    IdentifierInfo *II = T->getAs<EnumType>()->getDecl()->getIdentifier();
+    IdentifierInfo *II = T->castAs<EnumType>()->getDecl()->getIdentifier();
     if (II && II->isStr("__hot_cold_t"))
       Consume();
   }

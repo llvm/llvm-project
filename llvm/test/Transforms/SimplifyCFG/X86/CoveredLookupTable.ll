@@ -11,7 +11,7 @@ define i3 @coveredswitch_test(i3 %input) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[INPUT:%.*]], -4
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i24
-; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul i24 [[SWITCH_CAST]], 3
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i24 [[SWITCH_CAST]], 3
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i24 7507338, [[SWITCH_SHIFTAMT]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i24 [[SWITCH_DOWNSHIFT]] to i3
 ; CHECK-NEXT:    ret i3 [[SWITCH_MASKED]]

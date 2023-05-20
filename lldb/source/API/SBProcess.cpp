@@ -507,14 +507,13 @@ int SBProcess::GetExitStatus() {
 const char *SBProcess::GetExitDescription() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *exit_desc = nullptr;
   ProcessSP process_sp(GetSP());
-  if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
-    exit_desc = process_sp->GetExitDescription();
-  }
-  return exit_desc;
+  if (!process_sp)
+    return nullptr;
+
+  std::lock_guard<std::recursive_mutex> guard(
+      process_sp->GetTarget().GetAPIMutex());
+  return ConstString(process_sp->GetExitDescription()).GetCString();
 }
 
 lldb::pid_t SBProcess::GetProcessID() {
@@ -747,7 +746,9 @@ SBProcess::GetRestartedReasonAtIndexFromEvent(const lldb::SBEvent &event,
                                               size_t idx) {
   LLDB_INSTRUMENT_VA(event, idx);
 
-  return Process::ProcessEventData::GetRestartedReasonAtIndex(event.get(), idx);
+  return ConstString(Process::ProcessEventData::GetRestartedReasonAtIndex(
+                         event.get(), idx))
+      .GetCString();
 }
 
 SBProcess SBProcess::GetProcessFromEvent(const SBEvent &event) {

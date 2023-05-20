@@ -9,13 +9,14 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGABBREV_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGABBREV_H
 
-#include <list>
-#include <map>
-
+#include "DWARFDefines.h"
 #include "lldb/lldb-private.h"
 
-#include "DWARFAbbreviationDeclaration.h"
-#include "DWARFDefines.h"
+#include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
+
+#include <map>
+
+using DWARFAbbreviationDeclaration = llvm::DWARFAbbreviationDeclaration;
 
 typedef std::vector<DWARFAbbreviationDeclaration>
     DWARFAbbreviationDeclarationColl;
