@@ -110,12 +110,10 @@ X86DynAllocaExpander::getLowering(int64_t CurrentOffset,
 
 static bool isPushPop(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case X86::PUSH32i8:
   case X86::PUSH32r:
   case X86::PUSH32rmm:
   case X86::PUSH32rmr:
-  case X86::PUSHi32:
-  case X86::PUSH64i8:
+  case X86::PUSH32i:
   case X86::PUSH64r:
   case X86::PUSH64rmm:
   case X86::PUSH64rmr:

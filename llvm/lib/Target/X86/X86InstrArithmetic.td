@@ -487,11 +487,7 @@ class IMulOpRRI8<bits<8> opcode, string mnemonic, X86TypeInfo info,
                  X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcReg, info, (outs info.RegClass:$dst),
         (ins info.RegClass:$src1, info.Imm8Operand:$src2), mnemonic,
-        "{$src2, $src1, $dst|$dst, $src1, $src2}",
-        [(set info.RegClass:$dst, EFLAGS,
-         (X86smul_flag info.RegClass:$src1,
-                       info.Imm8NoSuOperator:$src2))]>,
-    Sched<[sched]>{
+        "{$src2, $src1, $dst|$dst, $src1, $src2}", []>, Sched<[sched]> {
   let ImmT = Imm8;
 }
 
@@ -513,11 +509,7 @@ class IMulOpRMI8<bits<8> opcode, string mnemonic, X86TypeInfo info,
                  X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcMem, info, (outs info.RegClass:$dst),
         (ins info.MemOperand:$src1, info.Imm8Operand:$src2), mnemonic,
-        "{$src2, $src1, $dst|$dst, $src1, $src2}",
-        [(set info.RegClass:$dst, EFLAGS,
-         (X86smul_flag (info.LoadNode addr:$src1),
-                        info.Imm8NoSuOperator:$src2))]>,
-    Sched<[sched.Folded]>{
+        "{$src2, $src1, $dst|$dst, $src1, $src2}", []>, Sched<[sched.Folded]> {
   let ImmT = Imm8;
 }
 
@@ -688,7 +680,6 @@ def IMUL32rm : IMulOpRM<0xAF, "imul", Xi32, WriteIMul32Reg>;
 def IMUL64rm : IMulOpRM<0xAF, "imul", Xi64, WriteIMul64Reg>;
 } // Constraints = "$src1 = $dst"
 } // Defs = [EFLAGS]
-} // hasSideEffects
 
 // Surprisingly enough, these are not two address instructions!
 let Defs = [EFLAGS] in {
@@ -700,10 +691,10 @@ let Defs = [EFLAGS] in {
 def IMUL16rri8 : IMulOpRRI8<0x6B, "imul", Xi16, WriteIMul16Imm>;
 // GR16 = GR16*I16
 def IMUL16rri  : IMulOpRRI<0x69, "imul", Xi16, WriteIMul16Imm>;
-// GR32 = GR32*I32
-def IMUL32rri  : IMulOpRRI<0x69, "imul", Xi32, WriteIMul32Imm>;
 // GR32 = GR32*I8
 def IMUL32rri8 : IMulOpRRI8<0x6B, "imul", Xi32, WriteIMul32Imm>;
+// GR32 = GR32*I32
+def IMUL32rri  : IMulOpRRI<0x69, "imul", Xi32, WriteIMul32Imm>;
 // GR64 = GR64*I8
 def IMUL64rri8 : IMulOpRRI8<0x6B, "imul", Xi64, WriteIMul64Imm>;
 // GR64 = GR64*I32
@@ -711,6 +702,7 @@ def IMUL64rri32 : IMulOpRRI<0x69, "imul", Xi64, WriteIMul64Imm>;
 
 // Memory-Integer Signed Integer Multiply
 // GR16 = [mem16]*I8
+let mayLoad = 1 in {
 def IMUL16rmi8 : IMulOpRMI8<0x6B, "imul", Xi16, WriteIMul16Imm>;
 // GR16 = [mem16]*I16
 def IMUL16rmi  : IMulOpRMI<0x69, "imul", Xi16, WriteIMul16Imm>;
@@ -722,7 +714,9 @@ def IMUL32rmi  : IMulOpRMI<0x69, "imul", Xi32, WriteIMul32Imm>;
 def IMUL64rmi8 : IMulOpRMI8<0x6B, "imul", Xi64, WriteIMul64Imm>;
 // GR64 = [mem64]*I32
 def IMUL64rmi32 : IMulOpRMI<0x69, "imul", Xi64, WriteIMul64Imm>;
+} // mayLoad
 } // Defs = [EFLAGS]
+} // hasSideEffects
 
 // unsigned division/remainder
 let hasSideEffects = 1 in { // so that we don't speculatively execute
