@@ -15,7 +15,6 @@
 #define LLVM_CODEGEN_COMPLEXDEINTERLEAVING_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/PatternMatch.h"
 
 namespace llvm {
 
