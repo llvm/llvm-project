@@ -216,7 +216,6 @@ simply return a class member.
       return &InstrInfo.getRegisterInfo();
     }
     virtual const DataLayout *getDataLayout() const { return &DataLayout; }
-    static unsigned getModuleMatchQuality(const Module &M);
 
     // Pass Pipeline Configuration
     virtual bool addInstSelector(PassManagerBase &PM, bool Fast);
