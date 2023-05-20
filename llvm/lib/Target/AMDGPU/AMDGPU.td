@@ -791,6 +791,12 @@ def FeatureVGPRSingleUseHintInsts : SubtargetFeature<"vgpr-singleuse-hint",
   "Has single-use VGPR hint instructions"
 >;
 
+def FeatureForceVALUThrottle : SubtargetFeature<"force-valu-throttle",
+  "HasForceVALUThrottle",
+  "true",
+  "Always apply VALU throttle to VALU sequences"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1423,6 +1429,11 @@ def FeatureISAVersion11_0_2 : FeatureSet<
 def FeatureISAVersion11_0_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
     [])>;
+
+def FeatureISAVersion11_0_5 : FeatureSet<
+  !listconcat(FeatureISAVersion11_0_Common.Features,
+    [FeatureGFX11FullVGPRs,
+     FeatureForceVALUThrottle])>;
 
 // Features for GFX 11.5.0
 def FeatureISAVersion11_5_0 : FeatureSet<
