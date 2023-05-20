@@ -16,7 +16,6 @@
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
 
