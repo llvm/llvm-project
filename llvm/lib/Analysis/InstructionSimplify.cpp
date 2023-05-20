@@ -4091,10 +4091,14 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       if (Pred == FCmpInst::FCMP_UNE && isKnownNeverInfinity(LHS, Q.DL, Q.TLI))
         return getTrue(RetTy);
       // LHS == Inf || LHS == NaN
-      if (Pred == FCmpInst::FCMP_UEQ && isKnownNeverInfOrNaN(LHS, Q.DL, Q.TLI))
+      if (Pred == FCmpInst::FCMP_UEQ &&
+          isKnownNeverInfinity(LHS, Q.DL, Q.TLI) &&
+          isKnownNeverNaN(LHS, Q.DL, Q.TLI))
         return getFalse(RetTy);
       // LHS != Inf && LHS != NaN
-      if (Pred == FCmpInst::FCMP_ONE && isKnownNeverInfOrNaN(LHS, Q.DL, Q.TLI))
+      if (Pred == FCmpInst::FCMP_ONE &&
+          isKnownNeverInfinity(LHS, Q.DL, Q.TLI) && // xxxx fixme
+          isKnownNeverNaN(LHS, Q.DL, Q.TLI))
         return getTrue(RetTy);
     }
     if (C->isNegative() && !C->isNegZero()) {
