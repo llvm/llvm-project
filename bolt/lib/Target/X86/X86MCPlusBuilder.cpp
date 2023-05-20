@@ -270,7 +270,7 @@ public:
     case X86::PUSHFS16:
     case X86::PUSHGS16:
     case X86::PUSHSS16:
-    case X86::PUSHi16:
+    case X86::PUSH16i:
       return 2;
     case X86::PUSH32i8:
     case X86::PUSH32r:
@@ -284,7 +284,7 @@ public:
     case X86::PUSHFS32:
     case X86::PUSHGS32:
     case X86::PUSHSS32:
-    case X86::PUSHi32:
+    case X86::PUSH32i:
       return 4;
     case X86::PUSH64i32:
     case X86::PUSH64i8:
@@ -2548,8 +2548,8 @@ public:
     default: {
       switch (getPushSize(Inst)) {
 
-      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSHi16}}}; break;
-      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSHi32}}}; break;
+      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSH16i}}}; break;
+      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSH32i}}}; break;
       case 8: I = {8, false, {{CHECK8, X86::PUSH64i8},
                               {CHECK32, X86::PUSH64i32},
                               {NOCHECK, Inst.getOpcode()}}}; break;

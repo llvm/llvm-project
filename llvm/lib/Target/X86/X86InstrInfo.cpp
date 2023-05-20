@@ -436,7 +436,7 @@ int X86InstrInfo::getSPAdjust(const MachineInstr &MI) const {
   case X86::PUSH32r:
   case X86::PUSH32rmm:
   case X86::PUSH32rmr:
-  case X86::PUSHi32:
+  case X86::PUSH32i:
     return 4;
   case X86::PUSH64i8:
   case X86::PUSH64r:
