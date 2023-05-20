@@ -118,9 +118,9 @@ class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
-          bool includeInSymtab, bool isThumb, bool isReferencedDynamically,
-          bool noDeadStrip, bool canOverrideWeakDef = false,
-          bool isWeakDefCanBeHidden = false, bool interposable = false);
+          bool includeInSymtab, bool isReferencedDynamically, bool noDeadStrip,
+          bool canOverrideWeakDef = false, bool isWeakDefCanBeHidden = false,
+          bool interposable = false);
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
@@ -154,8 +154,6 @@ public:
   bool includeInSymtab : 1;
   // Whether this symbol was folded into a different symbol during ICF.
   bool wasIdenticalCodeFolded : 1;
-  // Only relevant when compiling for Thumb-supporting arm32 archs.
-  bool thumb : 1;
   // Symbols marked referencedDynamically won't be removed from the output's
   // symbol table by tools like strip. In theory, this could be set on arbitrary
   // symbols in input object files. In practice, it's used solely for the
