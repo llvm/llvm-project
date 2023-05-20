@@ -156,6 +156,7 @@ public:
 
   RankedTensorType getRankedTensorType() const { return rType; }
   ValueArrayRef getFields() const { return fields; }
+  StorageLayout getLayout() const { return layout; }
 
 protected:
   SparseTensorType rType;

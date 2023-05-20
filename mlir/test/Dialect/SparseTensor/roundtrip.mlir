@@ -33,28 +33,20 @@ func.func @sparse_pack(%data: tensor<6xf64>, %pos: tensor<2xi32>, %index: tensor
 #SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"], crdWidth=32}>
 // CHECK-LABEL: func @sparse_unpack(
 //  CHECK-SAME: %[[T:.*]]: tensor<100xf64, #
-//       CHECK: %[[D:.*]], %[[I:.*]], %[[N:.*]] = sparse_tensor.unpack %[[T]]
-//       CHECK: return %[[D]], %[[I]], %[[N]]
-func.func @sparse_unpack(%sp : tensor<100xf64, #SparseVector>)
-                       -> (tensor<6xf64>, tensor<6x1xi32>, i32) {
-  %data, %indices, %nnz = sparse_tensor.unpack %sp : tensor<100xf64, #SparseVector>
-                                                  to tensor<6xf64>, tensor<6x1xi32>, i32
-  return %data, %indices, %nnz : tensor<6xf64>, tensor<6x1xi32>, i32
-}
-
-// -----
-
-#BatchedSparseVector = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed-hi"], crdWidth=32}>
-
-// CHECK-LABEL: func @sparse_unpack(
-//  CHECK-SAME: %[[T:.*]]: tensor<2x100xf64, #
-//       CHECK: %[[D:.*]], %[[I:.*]], %[[N:.*]] = sparse_tensor.unpack %[[T]] batched_lvls = 1
-//       CHECK: return %[[D]], %[[I]], %[[N]]
-func.func @sparse_unpack(%sp : tensor<2x100xf64, #BatchedSparseVector>)
-                           -> (tensor<2x6xf64>, tensor<2x6x1xi32>, i32) {
-  %data, %indices, %nnz = sparse_tensor.unpack %sp batched_lvls=1
-       : tensor<2x100xf64, #BatchedSparseVector> to tensor<2x6xf64>, tensor<2x6x1xi32>, i32
-  return %data, %indices, %nnz : tensor<2x6xf64>, tensor<2x6x1xi32>, i32
+//  CHECK-SAME: %[[OD:.*]]: tensor<6xf64>
+//  CHECK-SAME: %[[OP:.*]]: tensor<2xindex>
+//  CHECK-SAME: %[[OI:.*]]: tensor<6x1xi32>
+//       CHECK: %[[D:.*]], %[[P:.*]]:2 = sparse_tensor.unpack %[[T]]
+//       CHECK: return %[[D]], %[[P]]#0, %[[P]]#1
+func.func @sparse_unpack(%sp : tensor<100xf64, #SparseVector>,
+                         %od : tensor<6xf64>,
+                         %op : tensor<2xindex>,
+                         %oi : tensor<6x1xi32>)
+                       -> (tensor<6xf64>, tensor<2xindex>, tensor<6x1xi32>) {
+  %rd, %rp, %ri = sparse_tensor.unpack %sp : tensor<100xf64, #SparseVector>
+                  outs(%od, %op, %oi : tensor<6xf64>, tensor<2xindex>, tensor<6x1xi32>)
+                  -> tensor<6xf64>, tensor<2xindex>, tensor<6x1xi32>
+  return %rd, %rp, %ri : tensor<6xf64>, tensor<2xindex>, tensor<6x1xi32>
 }
 
 // -----
