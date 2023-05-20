@@ -324,6 +324,9 @@ private:
   /// Parse a single LBR entry as output by perf script -Fbrstack
   ErrorOr<LBREntry> parseLBREntry();
 
+  /// Parse LBR sample, returns the number of traces.
+  uint64_t parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
+
   /// Parse and pre-aggregate branch events.
   std::error_code parseBranchEvents();
 
