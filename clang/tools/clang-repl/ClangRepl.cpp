@@ -23,10 +23,6 @@
 #include "llvm/Support/TargetSelect.h" // llvm::Initialize*
 #include <optional>
 
-static llvm::cl::opt<bool> CudaEnabled("cuda", llvm::cl::Hidden);
-static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
-static llvm::cl::opt<std::string> OffloadArch("offload-arch", llvm::cl::Hidden);
-
 static llvm::cl::list<std::string>
     ClangArgs("Xcc",
               llvm::cl::desc("Argument to pass to the CompilerInvocation"),
@@ -94,36 +90,9 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
-  clang::IncrementalCompilerBuilder CB;
-  CB.SetCompilerArgs(ClangArgv);
-
-  std::unique_ptr<clang::CompilerInstance> DeviceCI;
-  if (CudaEnabled) {
-    // initialize NVPTX backend
-    LLVMInitializeNVPTXTargetInfo();
-    LLVMInitializeNVPTXTarget();
-    LLVMInitializeNVPTXTargetMC();
-    LLVMInitializeNVPTXAsmPrinter();
-
-    if (!CudaPath.empty())
-      CB.SetCudaSDK(CudaPath);
-
-    if (OffloadArch.empty()) {
-      OffloadArch = "sm_35";
-    }
-    CB.SetOffloadArch(OffloadArch);
-
-    DeviceCI = ExitOnErr(CB.CreateCudaDevice());
-  }
-
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
-  std::unique_ptr<clang::CompilerInstance> CI;
-  if (CudaEnabled) {
-    CI = ExitOnErr(CB.CreateCudaHost());
-  } else {
-    CI = ExitOnErr(CB.CreateCpp());
-  }
+  auto CI = ExitOnErr(clang::IncrementalCompilerBuilder::create(ClangArgv));
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -132,23 +101,8 @@ int main(int argc, const char **argv) {
 
   // Load any requested plugins.
   CI->LoadRequestedPlugins();
-  if (CudaEnabled)
-    DeviceCI->LoadRequestedPlugins();
 
-  std::unique_ptr<clang::Interpreter> Interp;
-  if (CudaEnabled) {
-    Interp = ExitOnErr(
-        clang::Interpreter::createWithCUDA(std::move(CI), std::move(DeviceCI)));
-
-    if (CudaPath.empty()) {
-      ExitOnErr(Interp->LoadDynamicLibrary("libcudart.so"));
-    } else {
-      auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
-      ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
-    }
-  } else
-    Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
-
+  auto Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
   for (const std::string &input : OptInputs) {
     if (auto Err = Interp->ParseAndExecute(input))
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
