@@ -303,18 +303,36 @@ DictionaryAttr Operation::getAttrDictionary() {
 void Operation::setAttrs(DictionaryAttr newAttrs) {
   assert(newAttrs && "expected valid attribute dictionary");
   if (getPropertiesStorageSize()) {
-    attrs = DictionaryAttr::get(getContext(), {});
-    for (const NamedAttribute &attr : newAttrs)
-      setAttr(attr.getName(), attr.getValue());
-    return;
+    // We're spliting the providing DictionaryAttr by removing the inherentAttr
+    // which will be stored in the properties.
+    SmallVector<NamedAttribute> discardableAttrs;
+    discardableAttrs.reserve(newAttrs.size());
+    for (NamedAttribute attr : newAttrs) {
+      if (std::optional<Attribute> inherentAttr =
+              getInherentAttr(attr.getName()))
+        setInherentAttr(attr.getName(), attr.getValue());
+      else
+        discardableAttrs.push_back(attr);
+    }
+    if (discardableAttrs.size() != newAttrs.size())
+      newAttrs = DictionaryAttr::get(getContext(), discardableAttrs);
   }
   attrs = newAttrs;
 }
 void Operation::setAttrs(ArrayRef<NamedAttribute> newAttrs) {
   if (getPropertiesStorageSize()) {
-    setAttrs(DictionaryAttr::get(getContext(), {}));
-    for (const NamedAttribute &attr : newAttrs)
-      setAttr(attr.getName(), attr.getValue());
+    // We're spliting the providing array of attributes by removing the inherentAttr
+    // which will be stored in the properties.
+    SmallVector<NamedAttribute> discardableAttrs;
+    discardableAttrs.reserve(newAttrs.size());
+    for (NamedAttribute attr : newAttrs) {
+      if (std::optional<Attribute> inherentAttr =
+              getInherentAttr(attr.getName()))
+        setInherentAttr(attr.getName(), attr.getValue());
+      else
+        discardableAttrs.push_back(attr);
+    }
+    attrs = DictionaryAttr::get(getContext(), discardableAttrs);
     return;
   }
   attrs = DictionaryAttr::get(getContext(), newAttrs);

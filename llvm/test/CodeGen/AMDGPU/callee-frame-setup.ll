@@ -379,8 +379,8 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 ; GCN-NEXT:     v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; MUBUF-NEXT:   v_mov_b32_e32 [[OFFSET:v[0-9]+]], 0x2000{{$}}
 ; MUBUF-NEXT:   buffer_store_dword [[ZERO]], [[OFFSET]], s[0:3], s33 offen{{$}}
-; FLATSCR-NEXT: s_add_i32 vcc_hi, s33, 0x2000
-; FLATSCR-NEXT: scratch_store_dword off, [[ZERO]], vcc_hi
+; FLATSCR-NEXT: s_add_i32 s1, s33, 0x2000
+; FLATSCR-NEXT: scratch_store_dword off, [[ZERO]], s1
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:   s_add_i32 s32, s32, 0xffe80000
 ; FLATSCR-NEXT: s_addk_i32 s32, 0xa000

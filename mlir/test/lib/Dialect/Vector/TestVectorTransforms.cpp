@@ -298,23 +298,33 @@ struct TestScalarVectorTransferLoweringPatterns
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestScalarVectorTransferLoweringPatterns)
 
+  TestScalarVectorTransferLoweringPatterns() = default;
+  TestScalarVectorTransferLoweringPatterns(
+      const TestScalarVectorTransferLoweringPatterns &pass)
+      : PassWrapper(pass) {}
+
   StringRef getArgument() const final {
     return "test-scalar-vector-transfer-lowering";
   }
   StringRef getDescription() const final {
     return "Test lowering of scalar vector transfers to memref loads/stores.";
   }
-  TestScalarVectorTransferLoweringPatterns() = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<affine::AffineDialect, memref::MemRefDialect,
                     tensor::TensorDialect, vector::VectorDialect>();
   }
 
+  Option<bool> allowMultipleUses{
+      *this, "allow-multiple-uses",
+      llvm::cl::desc("Fold transfer operations with multiple uses"),
+      llvm::cl::init(false)};
+
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    vector::populateScalarVectorTransferLoweringPatterns(patterns);
+    vector::populateScalarVectorTransferLoweringPatterns(
+        patterns, /*benefit=*/1, allowMultipleUses.getValue());
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };

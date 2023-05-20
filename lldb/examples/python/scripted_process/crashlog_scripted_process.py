@@ -11,7 +11,13 @@ from lldb.macosx.crashlog import CrashLog,CrashLogParser
 class CrashLogScriptedProcess(ScriptedProcess):
     def set_crashlog(self, crashlog):
         self.crashlog = crashlog
-        self.pid = self.crashlog.process_id
+        if self.crashlog.process_id:
+            if type(self.crashlog.process_id) is int:
+                self.pid = self.crashlog.process_id
+            elif type(self.crashlog.process_id) is str:
+                self.pid = int(self.crashlog.process_id, 0)
+            else:
+                self.pid = super().get_process_id()
         self.addr_mask = self.crashlog.addr_mask
         self.crashed_thread_idx = self.crashlog.crashed_thread_idx
         self.loaded_images = []

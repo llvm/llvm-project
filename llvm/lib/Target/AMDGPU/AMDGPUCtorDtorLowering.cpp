@@ -31,22 +31,82 @@ static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
   StringRef InitOrFiniKernelName = "amdgcn.device.init";
   if (!IsCtor)
     InitOrFiniKernelName = "amdgcn.device.fini";
-  if (Function *F = M.getFunction(InitOrFiniKernelName))
-    return F;
+  if (M.getFunction(InitOrFiniKernelName))
+    return nullptr;
 
   Function *InitOrFiniKernel = Function::createWithDefaultAttr(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
-      GlobalValue::ExternalLinkage, 0, InitOrFiniKernelName, &M);
-  BasicBlock *InitOrFiniKernelBB =
-      BasicBlock::Create(M.getContext(), "", InitOrFiniKernel);
-  ReturnInst::Create(M.getContext(), InitOrFiniKernelBB);
-
+      GlobalValue::WeakODRLinkage, 0, InitOrFiniKernelName, &M);
   InitOrFiniKernel->setCallingConv(CallingConv::AMDGPU_KERNEL);
   if (IsCtor)
     InitOrFiniKernel->addFnAttr("device-init");
   else
     InitOrFiniKernel->addFnAttr("device-fini");
   return InitOrFiniKernel;
+}
+
+// The linker will provide the associated symbols to allow us to traverse the
+// global constructors / destructors in priority order. We create the IR
+// required to call each callback in this section. This is equivalent to the
+// following code.
+//
+// extern "C" void * __init_array_start[];
+// extern "C" void * __init_array_end[];
+//
+// using InitCallback = void();
+//
+// void call_init_array_callbacks() {
+//   for (auto start = __init_array_start; start != __init_array_end; ++start)
+//     reinterpret_cast<InitCallback *>(*start)();
+static void createInitOrFiniCalls(Function &F, bool IsCtor) {
+  Module &M = *F.getParent();
+  LLVMContext &C = M.getContext();
+
+  IRBuilder<> IRB(BasicBlock::Create(C, "entry", &F));
+  auto *LoopBB = BasicBlock::Create(C, "while.entry", &F);
+  auto *ExitBB = BasicBlock::Create(C, "while.end", &F);
+  Type *PtrTy = IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS);
+
+  auto *Begin = M.getOrInsertGlobal(
+      IsCtor ? "__init_array_start" : "__fini_array_start",
+      ArrayType::get(PtrTy, 0), [&]() {
+        return new GlobalVariable(
+            M, ArrayType::get(PtrTy, 0),
+            /*isConstant=*/true, GlobalValue::ExternalLinkage,
+            /*Initializer=*/nullptr,
+            IsCtor ? "__init_array_start" : "__fini_array_start",
+            /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
+            /*AddressSpace=*/1);
+      });
+  auto *End = M.getOrInsertGlobal(
+      IsCtor ? "__init_array_end" : "__fini_array_end",
+      ArrayType::get(PtrTy, 0), [&]() {
+        return new GlobalVariable(
+            M, ArrayType::get(PtrTy, 0),
+            /*isConstant=*/true, GlobalValue::ExternalLinkage,
+            /*Initializer=*/nullptr,
+            IsCtor ? "__init_array_end" : "__fini_array_end",
+            /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
+            /*AddressSpace=*/1);
+      });
+
+  // The constructor type is suppoed to allow using the argument vectors, but
+  // for now we just call them with no arguments.
+  auto *CallBackTy = FunctionType::get(IRB.getVoidTy(), {});
+
+  IRB.CreateCondBr(IRB.CreateICmpNE(Begin, End), LoopBB, ExitBB);
+  IRB.SetInsertPoint(LoopBB);
+  auto *CallBackPHI = IRB.CreatePHI(PtrTy, 2, "ptr");
+  auto *CallBack = IRB.CreateLoad(CallBackTy->getPointerTo(F.getAddressSpace()),
+                                  CallBackPHI, "callback");
+  IRB.CreateCall(CallBackTy, CallBack);
+  auto *NewCallBack = IRB.CreateConstGEP1_64(PtrTy, CallBackPHI, 1, "next");
+  auto *EndCmp = IRB.CreateICmpEQ(NewCallBack, End, "end");
+  CallBackPHI->addIncoming(Begin, &F.getEntryBlock());
+  CallBackPHI->addIncoming(NewCallBack, LoopBB);
+  IRB.CreateCondBr(EndCmp, ExitBB, LoopBB);
+  IRB.SetInsertPoint(ExitBB);
+  IRB.CreateRetVoid();
 }
 
 static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
@@ -59,22 +119,10 @@ static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
     return false;
 
   Function *InitOrFiniKernel = createInitOrFiniKernelFunction(M, IsCtor);
-  IRBuilder<> IRB(InitOrFiniKernel->getEntryBlock().getTerminator());
+  if (!InitOrFiniKernel)
+    return false;
 
-  FunctionType *ConstructorTy = InitOrFiniKernel->getFunctionType();
-
-  for (Value *V : GA->operands()) {
-    auto *CS = cast<ConstantStruct>(V);
-    bool AlreadyRegistered =
-        llvm::any_of(CS->getOperand(1)->uses(), [=](Use &U) {
-          if (auto *CB = dyn_cast<CallBase>(U.getUser()))
-            if (CB->getCaller() == InitOrFiniKernel)
-              return true;
-          return false;
-        });
-    if (!AlreadyRegistered)
-      IRB.CreateCall(ConstructorTy, CS->getOperand(1));
-  }
+  createInitOrFiniCalls(*InitOrFiniKernel, IsCtor);
 
   appendToUsed(M, {InitOrFiniKernel});
   return true;

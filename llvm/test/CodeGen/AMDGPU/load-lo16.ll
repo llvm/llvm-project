@@ -2038,8 +2038,8 @@ define void @load_private_lo_v2i16_reglo_vreg_to_offset(i32 %reg) #0 {
 ; GFX900-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; GFX900-FLATSCR-NEXT:    scratch_store_dword off, v1, s32 offset:4
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT:    s_add_i32 vcc_hi, s32, 44
-; GFX900-FLATSCR-NEXT:    scratch_load_short_d16 v0, off, vcc_hi offset:4054 glc
+; GFX900-FLATSCR-NEXT:    s_add_i32 s0, s32, 44
+; GFX900-FLATSCR-NEXT:    scratch_load_short_d16 v0, off, s0 offset:4054 glc
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -2106,8 +2106,8 @@ define void @load_private_lo_v2i16_reglo_vreg_sexti8_to_offset(i32 %reg) #0 {
 ; GFX900-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; GFX900-FLATSCR-NEXT:    scratch_store_dword off, v1, s32 offset:4
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT:    s_add_i32 vcc_hi, s32, 44
-; GFX900-FLATSCR-NEXT:    scratch_load_sbyte_d16 v0, off, vcc_hi offset:4055 glc
+; GFX900-FLATSCR-NEXT:    s_add_i32 s0, s32, 44
+; GFX900-FLATSCR-NEXT:    scratch_load_sbyte_d16 v0, off, s0 offset:4055 glc
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -2175,8 +2175,8 @@ define void @load_private_lo_v2i16_reglo_vreg_zexti8_to_offset(i32 %reg) #0 {
 ; GFX900-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; GFX900-FLATSCR-NEXT:    scratch_store_dword off, v1, s32 offset:4
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT:    s_add_i32 vcc_hi, s32, 44
-; GFX900-FLATSCR-NEXT:    scratch_load_ubyte_d16 v0, off, vcc_hi offset:4055 glc
+; GFX900-FLATSCR-NEXT:    s_add_i32 s0, s32, 44
+; GFX900-FLATSCR-NEXT:    scratch_load_ubyte_d16 v0, off, s0 offset:4055 glc
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -2244,8 +2244,8 @@ define void @load_private_lo_v2f16_reglo_vreg_sexti8_to_offset(i32 %reg) #0 {
 ; GFX900-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; GFX900-FLATSCR-NEXT:    scratch_store_dword off, v1, s32 offset:4
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT:    s_add_i32 vcc_hi, s32, 44
-; GFX900-FLATSCR-NEXT:    scratch_load_sbyte_d16 v0, off, vcc_hi offset:4055 glc
+; GFX900-FLATSCR-NEXT:    s_add_i32 s0, s32, 44
+; GFX900-FLATSCR-NEXT:    scratch_load_sbyte_d16 v0, off, s0 offset:4055 glc
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -2314,8 +2314,8 @@ define void @load_private_lo_v2f16_reglo_vreg_zexti8_to_offset(i32 %reg) #0 {
 ; GFX900-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; GFX900-FLATSCR-NEXT:    scratch_store_dword off, v1, s32 offset:4
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-FLATSCR-NEXT:    s_add_i32 vcc_hi, s32, 44
-; GFX900-FLATSCR-NEXT:    scratch_load_ubyte_d16 v0, off, vcc_hi offset:4055 glc
+; GFX900-FLATSCR-NEXT:    s_add_i32 s0, s32, 44
+; GFX900-FLATSCR-NEXT:    scratch_load_ubyte_d16 v0, off, s0 offset:4055 glc
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
