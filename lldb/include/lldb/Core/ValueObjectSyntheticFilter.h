@@ -82,6 +82,10 @@ public:
                                   : lldb::eNoDynamicValues);
   }
 
+  lldb::VariableSP GetVariable() override {
+    return m_parent != nullptr ? m_parent->GetVariable() : nullptr;
+  }
+
   ValueObject *GetParent() override {
     return ((m_parent != nullptr) ? m_parent->GetParent() : nullptr);
   }
