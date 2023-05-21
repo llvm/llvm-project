@@ -648,7 +648,7 @@
 // EHCONTGUARD: -ehcontguard
 
 // RUN: %clang_cl /guard:cf /guard:ehcont -Wall -Wno-msvc-not-found -### -- %s 2>&1 | \
-// RUN:   FileCheck -check-prefix=BOTHGUARD %s --implicit-check-not=warning
+// RUN:   FileCheck -check-prefix=BOTHGUARD %s --implicit-check-not=warning:
 // BOTHGUARD: -cfguard
 // BOTHGUARD-SAME: -ehcontguard
 // BOTHGUARD: -guard:cf
