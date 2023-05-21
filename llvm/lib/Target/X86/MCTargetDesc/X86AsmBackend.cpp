@@ -8,7 +8,7 @@
 
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86FixupKinds.h"
-#include "MCTargetDesc/X86InstrRelaxTables.h"
+#include "MCTargetDesc/X86EncodingOptimization.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -209,11 +209,15 @@ public:
 };
 } // end anonymous namespace
 
-static unsigned getRelaxedOpcodeBranch(const MCInst &Inst, bool Is16BitMode) {
-  unsigned Op = Inst.getOpcode();
-  switch (Op) {
+static bool isRelaxableBranch(unsigned Opcode) {
+  return Opcode == X86::JCC_1 || Opcode == X86::JMP_1;
+}
+
+static unsigned getRelaxedOpcodeBranch(unsigned Opcode,
+                                       bool Is16BitMode = false) {
+  switch (Opcode) {
   default:
-    return Op;
+    llvm_unreachable("invalid opcode for branch");
   case X86::JCC_1:
     return (Is16BitMode) ? X86::JCC_2 : X86::JCC_4;
   case X86::JMP_1:
@@ -221,35 +225,26 @@ static unsigned getRelaxedOpcodeBranch(const MCInst &Inst, bool Is16BitMode) {
   }
 }
 
-static unsigned getRelaxedOpcodeArith(const MCInst &Inst) {
-  unsigned Op = Inst.getOpcode();
-  return X86::getRelaxedOpcodeArith(Op);
+static unsigned getRelaxedOpcode(const MCInst &MI, bool Is16BitMode) {
+  unsigned Opcode = MI.getOpcode();
+  return isRelaxableBranch(Opcode) ? getRelaxedOpcodeBranch(Opcode, Is16BitMode)
+                                   : X86::getOpcodeForLongImmediateForm(Opcode);
 }
 
-static unsigned getRelaxedOpcode(const MCInst &Inst, bool Is16BitMode) {
-  unsigned R = getRelaxedOpcodeArith(Inst);
-  if (R != Inst.getOpcode())
-    return R;
-  return getRelaxedOpcodeBranch(Inst, Is16BitMode);
-}
-
-static X86::CondCode getCondFromBranch(const MCInst &MI,
-                                       const MCInstrInfo &MCII) {
+static X86::CondCode getCondFromBranch(const MCInst &MI) {
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
   default:
     return X86::COND_INVALID;
-  case X86::JCC_1: {
-    const MCInstrDesc &Desc = MCII.get(Opcode);
+  case X86::JCC_1:
     return static_cast<X86::CondCode>(
-        MI.getOperand(Desc.getNumOperands() - 1).getImm());
-  }
+        MI.getOperand(MI.getNumOperands() - 1).getImm());
   }
 }
 
 static X86::SecondMacroFusionInstKind
-classifySecondInstInMacroFusion(const MCInst &MI, const MCInstrInfo &MCII) {
-  X86::CondCode CC = getCondFromBranch(MI, MCII);
+classifySecondInstInMacroFusion(const MCInst &MI) {
+  X86::CondCode CC = getCondFromBranch(MI);
   return classifySecondCondCodeInMacroFusion(CC);
 }
 
@@ -356,7 +351,7 @@ bool X86AsmBackend::isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const {
   const X86::FirstMacroFusionInstKind CmpKind =
       X86::classifyFirstOpcodeInMacroFusion(Cmp.getOpcode());
   const X86::SecondMacroFusionInstKind BranchKind =
-      classifySecondInstInMacroFusion(Jcc, *MCII);
+      classifySecondInstInMacroFusion(Jcc);
   return X86::isMacroFused(CmpKind, BranchKind);
 }
 
@@ -721,24 +716,12 @@ void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
 }
 
-bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst,
+bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
                                       const MCSubtargetInfo &STI) const {
-  // Branches can always be relaxed in either mode.
-  if (getRelaxedOpcodeBranch(Inst, false) != Inst.getOpcode())
-    return true;
-
-  // Check if this instruction is ever relaxable.
-  if (getRelaxedOpcodeArith(Inst) == Inst.getOpcode())
-    return false;
-
-
-  // Check if the relaxable operand has an expression. For the current set of
-  // relaxable instructions, the relaxable operand is always the last operand.
-  unsigned RelaxableOp = Inst.getNumOperands() - 1;
-  if (Inst.getOperand(RelaxableOp).isExpr())
-    return true;
-
-  return false;
+  unsigned Opcode = MI.getOpcode();
+  return isRelaxableBranch(Opcode) ||
+         (X86::getOpcodeForLongImmediateForm(Opcode) != Opcode &&
+          MI.getOperand(MI.getNumOperands() - 1).isExpr());
 }
 
 bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -768,15 +751,6 @@ void X86AsmBackend::relaxInstruction(MCInst &Inst,
   Inst.setOpcode(RelaxedOp);
 }
 
-/// Return true if this instruction has been fully relaxed into it's most
-/// general available form.
-static bool isFullyRelaxed(const MCRelaxableFragment &RF) {
-  auto &Inst = RF.getInst();
-  auto &STI = *RF.getSubtargetInfo();
-  bool Is16BitMode = STI.hasFeature(X86::Is16Bit);
-  return getRelaxedOpcode(Inst, Is16BitMode) == Inst.getOpcode();
-}
-
 bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
                                             MCCodeEmitter &Emitter,
                                             unsigned &RemainingSize) const {
@@ -786,7 +760,7 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
   // larger value for one of the fixups then can be encoded.  The outer loop
   // will also catch this before moving to the next instruction, but we need to
   // prevent padding this single instruction as well.
-  if (!isFullyRelaxed(RF))
+  if (mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
     return false;
 
   const unsigned OldSize = RF.getContents().size();
@@ -833,7 +807,7 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
 bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
                                                 MCCodeEmitter &Emitter,
                                                 unsigned &RemainingSize) const {
-  if (isFullyRelaxed(RF))
+  if (!mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
     // TODO: There are lots of other tricks we could apply for increasing
     // encoding size without impacting performance.
     return false;
@@ -949,7 +923,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
         // We don't need to worry about larger positive offsets as none of the
         // possible offsets between this and our align are visible, and the
         // ones afterwards aren't changing.
-        if (!isFullyRelaxed(RF))
+        if (mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
           break;
       }
       Relaxable.clear();
