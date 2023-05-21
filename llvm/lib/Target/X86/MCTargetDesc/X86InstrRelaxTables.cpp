@@ -65,8 +65,8 @@ static const X86InstrRelaxTableEntry InstrRelaxTable[] = {
   { X86::OR64mi8,    X86::OR64mi32    },
   { X86::OR64ri8,    X86::OR64ri32    },
   // PUSH
-  { X86::PUSH16i8,   X86::PUSHi16     },
-  { X86::PUSH32i8,   X86::PUSHi32     },
+  { X86::PUSH16i8,   X86::PUSH16i     },
+  { X86::PUSH32i8,   X86::PUSH32i     },
   { X86::PUSH64i8,   X86::PUSH64i32   },
   // SBB
   { X86::SBB16mi8,   X86::SBB16mi     },
