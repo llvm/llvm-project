@@ -53,6 +53,7 @@ void registerTestOperationEqualPass();
 void registerTestPrintDefUsePass();
 void registerTestPrintInvalidPass();
 void registerTestPrintNestingPass();
+void registerTestPreserveUseListOrders();
 void registerTestReducer();
 void registerTestSpirvEntryPointABIPass();
 void registerTestSpirvModuleCombinerPass();
@@ -167,6 +168,7 @@ void registerTestPasses() {
   registerTestPrintDefUsePass();
   registerTestPrintInvalidPass();
   registerTestPrintNestingPass();
+  registerTestPreserveUseListOrders();
   registerTestReducer();
   registerTestSpirvEntryPointABIPass();
   registerTestSpirvModuleCombinerPass();
