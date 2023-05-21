@@ -678,7 +678,7 @@ INTERCEPTOR(int, fstat, int fd, void *buf) {
 #define MSAN_MAYBE_INTERCEPT_FSTAT
 #endif
 
-#if SANITIZER_STAT_LINUX
+#if SANITIZER_GLIBC
 INTERCEPTOR(int, fstat64, int fd, void *buf) {
   ENSURE_MSAN_INITED();
   int res = REAL(fstat64)(fd, buf);
@@ -825,6 +825,7 @@ INTERCEPTOR(int, __getrlimit, int resource, void *rlim) {
   INTERCEPTOR_GETRLIMIT_BODY(__getrlimit, resource, rlim);
 }
 
+#if SANITIZER_GLIBC
 INTERCEPTOR(int, getrlimit64, int resource, void *rlim) {
   if (msan_init_is_running) return REAL(getrlimit64)(resource, rlim);
   ENSURE_MSAN_INITED();
@@ -832,6 +833,9 @@ INTERCEPTOR(int, getrlimit64, int resource, void *rlim) {
   if (!res) __msan_unpoison(rlim, __sanitizer::struct_rlimit64_sz);
   return res;
 }
+#else
+#define MSAN_MAYBE_INTERCEPT_GETRLIMIT64 INTERCEPT_FUNCTION(getrlimit64)
+#endif
 
 INTERCEPTOR(int, prlimit, int pid, int resource, void *new_rlimit,
             void *old_rlimit) {
@@ -844,6 +848,7 @@ INTERCEPTOR(int, prlimit, int pid, int resource, void *new_rlimit,
   return res;
 }
 
+#if SANITIZER_GLIBC
 INTERCEPTOR(int, prlimit64, int pid, int resource, void *new_rlimit,
             void *old_rlimit) {
   if (msan_init_is_running)
@@ -854,6 +859,9 @@ INTERCEPTOR(int, prlimit64, int pid, int resource, void *new_rlimit,
   if (!res) __msan_unpoison(old_rlimit, __sanitizer::struct_rlimit64_sz);
   return res;
 }
+#else
+#define MSAN_MAYBE_INTERCEPT_PRLIMIT64 INTERCEPT_FUNCTION(prlimit64)
+#endif
 
 #define MSAN_MAYBE_INTERCEPT___GETRLIMIT INTERCEPT_FUNCTION(__getrlimit)
 #define MSAN_MAYBE_INTERCEPT_GETRLIMIT64 INTERCEPT_FUNCTION(getrlimit64)
@@ -1777,9 +1785,13 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_FGETS_UNLOCKED;
   INTERCEPT_FUNCTION(getrlimit);
   MSAN_MAYBE_INTERCEPT___GETRLIMIT;
+#if SANITIZER_GLIBC
   MSAN_MAYBE_INTERCEPT_GETRLIMIT64;
+#endif
   MSAN_MAYBE_INTERCEPT_PRLIMIT;
+#if SANITIZER_GLIBC
   MSAN_MAYBE_INTERCEPT_PRLIMIT64;
+#endif
   INTERCEPT_FUNCTION(gethostname);
   MSAN_MAYBE_INTERCEPT_EPOLL_WAIT;
   MSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;
