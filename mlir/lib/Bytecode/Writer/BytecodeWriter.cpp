@@ -734,8 +734,18 @@ void BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
     bool isIsolatedFromAbove = op->hasTrait<OpTrait::IsIsolatedFromAbove>();
     emitter.emitVarIntWithFlag(numRegions, isIsolatedFromAbove);
 
-    for (Region &region : op->getRegions())
-      writeRegion(emitter, &region);
+    for (Region &region : op->getRegions()) {
+      // If the region is not isolated from above, or we are emitting bytecode
+      // targetting version <2, we don't use a section.
+      if (!isIsolatedFromAbove || config.bytecodeVersion < 2) {
+        writeRegion(emitter, &region);
+        continue;
+      }
+
+      EncodingEmitter regionEmitter;
+      writeRegion(regionEmitter, &region);
+      emitter.emitSection(bytecode::Section::kIR, std::move(regionEmitter));
+    }
   }
 }
 

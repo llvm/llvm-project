@@ -425,68 +425,38 @@ static bool optimizeToFixedRegisterForm(MCInst &MI) {
   return true;
 }
 
+unsigned X86::getOpcodeForShortImmediateForm(unsigned Opcode) {
+#define ENTRY(LONG, SHORT)                                                     \
+  case X86::LONG:                                                              \
+    return X86::SHORT;
+  switch (Opcode) {
+  default:
+    return Opcode;
+#include "X86EncodingOptimizationForImmediate.def"
+  }
+}
+
+unsigned X86::getOpcodeForLongImmediateForm(unsigned Opcode) {
+#define ENTRY(LONG, SHORT)                                                     \
+  case X86::SHORT:                                                             \
+    return X86::LONG;
+  switch (Opcode) {
+  default:
+    return Opcode;
+#include "X86EncodingOptimizationForImmediate.def"
+  }
+}
+
 static bool optimizeToShortImmediateForm(MCInst &MI) {
   unsigned NewOpc;
+#define ENTRY(LONG, SHORT)                                                     \
+  case X86::LONG:                                                              \
+    NewOpc = X86::SHORT;                                                       \
+    break;
   switch (MI.getOpcode()) {
   default:
     return false;
-    FROM_TO(ADC16mi, ADC16mi8)
-    FROM_TO(ADC16ri, ADC16ri8)
-    FROM_TO(ADC32mi, ADC32mi8)
-    FROM_TO(ADC32ri, ADC32ri8)
-    FROM_TO(ADC64mi32, ADC64mi8)
-    FROM_TO(ADC64ri32, ADC64ri8)
-    FROM_TO(SBB16mi, SBB16mi8)
-    FROM_TO(SBB16ri, SBB16ri8)
-    FROM_TO(SBB32mi, SBB32mi8)
-    FROM_TO(SBB32ri, SBB32ri8)
-    FROM_TO(SBB64mi32, SBB64mi8)
-    FROM_TO(SBB64ri32, SBB64ri8)
-    FROM_TO(ADD16mi, ADD16mi8)
-    FROM_TO(ADD16ri, ADD16ri8)
-    FROM_TO(ADD32mi, ADD32mi8)
-    FROM_TO(ADD32ri, ADD32ri8)
-    FROM_TO(ADD64mi32, ADD64mi8)
-    FROM_TO(ADD64ri32, ADD64ri8)
-    FROM_TO(AND16mi, AND16mi8)
-    FROM_TO(AND16ri, AND16ri8)
-    FROM_TO(AND32mi, AND32mi8)
-    FROM_TO(AND32ri, AND32ri8)
-    FROM_TO(AND64mi32, AND64mi8)
-    FROM_TO(AND64ri32, AND64ri8)
-    FROM_TO(OR16mi, OR16mi8)
-    FROM_TO(OR16ri, OR16ri8)
-    FROM_TO(OR32mi, OR32mi8)
-    FROM_TO(OR32ri, OR32ri8)
-    FROM_TO(OR64mi32, OR64mi8)
-    FROM_TO(OR64ri32, OR64ri8)
-    FROM_TO(SUB16mi, SUB16mi8)
-    FROM_TO(SUB16ri, SUB16ri8)
-    FROM_TO(SUB32mi, SUB32mi8)
-    FROM_TO(SUB32ri, SUB32ri8)
-    FROM_TO(SUB64mi32, SUB64mi8)
-    FROM_TO(SUB64ri32, SUB64ri8)
-    FROM_TO(XOR16mi, XOR16mi8)
-    FROM_TO(XOR16ri, XOR16ri8)
-    FROM_TO(XOR32mi, XOR32mi8)
-    FROM_TO(XOR32ri, XOR32ri8)
-    FROM_TO(XOR64mi32, XOR64mi8)
-    FROM_TO(XOR64ri32, XOR64ri8)
-    FROM_TO(CMP16mi, CMP16mi8)
-    FROM_TO(CMP16ri, CMP16ri8)
-    FROM_TO(CMP32mi, CMP32mi8)
-    FROM_TO(CMP32ri, CMP32ri8)
-    FROM_TO(CMP64mi32, CMP64mi8)
-    FROM_TO(CMP64ri32, CMP64ri8)
-    FROM_TO(IMUL16rmi, IMUL16rmi8)
-    FROM_TO(IMUL16rri, IMUL16rri8)
-    FROM_TO(IMUL32rmi, IMUL32rmi8)
-    FROM_TO(IMUL32rri, IMUL32rri8)
-    FROM_TO(IMUL64rmi32, IMUL64rmi8)
-    FROM_TO(IMUL64rri32, IMUL64rri8)
-    FROM_TO(PUSH16i, PUSH16i8)
-    FROM_TO(PUSH32i, PUSH32i8)
-    FROM_TO(PUSH64i32, PUSH64i8)
+#include "X86EncodingOptimizationForImmediate.def"
   }
   MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1);
   if (LastOp.isExpr()) {

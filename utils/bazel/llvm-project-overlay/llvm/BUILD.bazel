@@ -2233,6 +2233,7 @@ gentbl(
             # distinction between these two.
             "lib/Target/" + target["name"] + "/*.def",
             "lib/Target/" + target["name"] + "/*.inc",
+            "lib/Target/" + target["name"] + "/MCTargetDesc/*.def",
         ]),
         copts = llvm_copts,
         features = [
