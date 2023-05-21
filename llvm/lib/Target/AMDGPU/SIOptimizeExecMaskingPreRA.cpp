@@ -96,8 +96,8 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
   if (Reg.isVirtual())
     return isDefBetween(LIS->getInterval(Reg), AndIdx, SelIdx);
 
-  for (MCRegUnitIterator UI(Reg.asMCReg(), &TRI); UI.isValid(); ++UI) {
-    if (isDefBetween(LIS->getRegUnit(*UI), AndIdx, SelIdx))
+  for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg())) {
+    if (isDefBetween(LIS->getRegUnit(Unit), AndIdx, SelIdx))
       return true;
   }
 
@@ -320,8 +320,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
   // Instead just check that the def segments are adjacent.
   SlotIndex StartIdx = LIS->getInstructionIndex(SaveExecMI);
   SlotIndex EndIdx = LIS->getInstructionIndex(*AndExecMI);
-  for (MCRegUnitIterator UI(ExecReg, TRI); UI.isValid(); ++UI) {
-    LiveRange &RegUnit = LIS->getRegUnit(*UI);
+  for (MCRegUnit Unit : TRI->regunits(ExecReg)) {
+    LiveRange &RegUnit = LIS->getRegUnit(Unit);
     if (RegUnit.find(StartIdx) != std::prev(RegUnit.find(EndIdx)))
       return false;
   }

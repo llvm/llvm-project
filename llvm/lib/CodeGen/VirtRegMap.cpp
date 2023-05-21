@@ -514,8 +514,8 @@ bool VirtRegRewriter::subRegLiveThrough(const MachineInstr &MI,
   SlotIndex MIIndex = LIS->getInstructionIndex(MI);
   SlotIndex BeforeMIUses = MIIndex.getBaseIndex();
   SlotIndex AfterMIDefs = MIIndex.getBoundaryIndex();
-  for (MCRegUnitIterator Unit(SuperPhysReg, TRI); Unit.isValid(); ++Unit) {
-    const LiveRange &UnitRange = LIS->getRegUnit(*Unit);
+  for (MCRegUnit Unit : TRI->regunits(SuperPhysReg)) {
+    const LiveRange &UnitRange = LIS->getRegUnit(Unit);
     // If the regunit is live both before and after MI,
     // we assume it is live through.
     // Generally speaking, this is not true, because something like
@@ -633,9 +633,8 @@ void VirtRegRewriter::rewrite() {
     // Don't bother maintaining accurate LiveIntervals for registers which were
     // already allocated.
     for (Register PhysReg : RewriteRegs) {
-      for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid();
-           ++Units) {
-        LIS->removeRegUnit(*Units);
+      for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+        LIS->removeRegUnit(Unit);
       }
     }
   }

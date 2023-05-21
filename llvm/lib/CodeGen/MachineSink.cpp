@@ -1785,9 +1785,8 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
           }
 
           // Record debug use of each reg unit.
-          for (auto RI = MCRegUnitIterator(MO.getReg(), TRI); RI.isValid();
-               ++RI)
-            MIUnits[*RI].push_back(MO.getReg());
+          for (MCRegUnit Unit : TRI->regunits(MO.getReg()))
+            MIUnits[Unit].push_back(MO.getReg());
         }
       }
       if (IsValid) {
@@ -1837,8 +1836,8 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // writes any of those units then the corresponding DBG_VALUEs must sink.
     MapVector<MachineInstr *, MIRegs::second_type> DbgValsToSinkMap;
     for (auto &MO : MI.all_defs()) {
-      for (auto RI = MCRegUnitIterator(MO.getReg(), TRI); RI.isValid(); ++RI) {
-        for (const auto &MIRegs : SeenDbgInstrs.lookup(*RI)) {
+      for (MCRegUnit Unit : TRI->regunits(MO.getReg())) {
+        for (const auto &MIRegs : SeenDbgInstrs.lookup(Unit)) {
           auto &Regs = DbgValsToSinkMap[MIRegs.first];
           for (unsigned Reg : MIRegs.second)
             Regs.push_back(Reg);

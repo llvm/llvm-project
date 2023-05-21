@@ -487,8 +487,8 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
 
   // Collect all interfering virtregs first.
   SmallVector<const LiveInterval *, 8> Intfs;
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // We usually have the interfering VRegs cached so collectInterferingVRegs()
     // should be fast, we may need to recalculate if when different physregs
     // overlap the same register unit so we had different SubRanges queried
@@ -1404,9 +1404,9 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
   GapWeight.assign(NumGaps, 0.0f);
 
   // Add interference from each overlapping register.
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    if (!Matrix->query(const_cast<LiveInterval&>(SA->getParent()), *Units)
-          .checkInterference())
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    if (!Matrix->query(const_cast<LiveInterval &>(SA->getParent()), Unit)
+             .checkInterference())
       continue;
 
     // We know that VirtReg is a continuous interval from FirstInstr to
@@ -1417,7 +1417,7 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
     // StartIdx and after StopIdx.
     //
     LiveIntervalUnion::SegmentIter IntI =
-      Matrix->getLiveUnions()[*Units] .find(StartIdx);
+        Matrix->getLiveUnions()[Unit].find(StartIdx);
     for (unsigned Gap = 0; IntI.valid() && IntI.start() < StopIdx; ++IntI) {
       // Skip the gaps before IntI.
       while (Uses[Gap+1].getBoundaryIndex() < IntI.start())
@@ -1439,8 +1439,8 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
   }
 
   // Add fixed interference.
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    const LiveRange &LR = LIS->getRegUnit(*Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    const LiveRange &LR = LIS->getRegUnit(Unit);
     LiveRange::const_iterator I = LR.find(StartIdx);
     LiveRange::const_iterator E = LR.end();
 
@@ -1771,8 +1771,8 @@ bool RAGreedy::mayRecolorAllInterferences(
     SmallLISet &RecoloringCandidates, const SmallVirtRegSet &FixedRegisters) {
   const TargetRegisterClass *CurRC = MRI->getRegClass(VirtReg.reg());
 
-  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
-    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
+  for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // If there is LastChanceRecoloringMaxInterference or more interferences,
     // chances are one would not be recolorable.
     if (Q.interferingVRegs(LastChanceRecoloringMaxInterference).size() >=

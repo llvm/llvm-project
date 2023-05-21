@@ -3110,9 +3110,8 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
     DefIdx = V->def;
   } else {
     // Find last def.
-    for (MCRegUnitIterator Units(Reg.asMCReg(), this); Units.isValid();
-         ++Units) {
-      LiveRange &LR = LIS->getRegUnit(*Units);
+    for (MCRegUnit Unit : regunits(Reg.asMCReg())) {
+      LiveRange &LR = LIS->getRegUnit(Unit);
       if (VNInfo *V = LR.getVNInfoAt(UseIdx)) {
         if (!DefIdx.isValid() ||
             MDT.dominates(LIS->getInstructionFromIndex(DefIdx),
