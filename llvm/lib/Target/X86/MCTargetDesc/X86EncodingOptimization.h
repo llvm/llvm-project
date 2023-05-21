@@ -23,6 +23,8 @@ bool optimizeMOVSX(MCInst &MI);
 bool optimizeINCDEC(MCInst &MI, bool In64BitMode);
 bool optimizeMOV(MCInst &MI, bool In64BitMode);
 bool optimizeToFixedRegisterOrShortImmediateForm(MCInst &MI);
+unsigned getOpcodeForShortImmediateForm(unsigned Opcode);
+unsigned getOpcodeForLongImmediateForm(unsigned Opcode);
 } // namespace X86
 } // namespace llvm
 #endif

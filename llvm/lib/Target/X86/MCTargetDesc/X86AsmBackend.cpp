@@ -8,7 +8,7 @@
 
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86FixupKinds.h"
-#include "MCTargetDesc/X86InstrRelaxTables.h"
+#include "MCTargetDesc/X86EncodingOptimization.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -221,13 +221,13 @@ static unsigned getRelaxedOpcodeBranch(const MCInst &Inst, bool Is16BitMode) {
   }
 }
 
-static unsigned getRelaxedOpcodeArith(const MCInst &Inst) {
+static unsigned getOpcodeForLongImmediateForm(const MCInst &Inst) {
   unsigned Op = Inst.getOpcode();
-  return X86::getRelaxedOpcodeArith(Op);
+  return X86::getOpcodeForLongImmediateForm(Op);
 }
 
 static unsigned getRelaxedOpcode(const MCInst &Inst, bool Is16BitMode) {
-  unsigned R = getRelaxedOpcodeArith(Inst);
+  unsigned R = getOpcodeForLongImmediateForm(Inst);
   if (R != Inst.getOpcode())
     return R;
   return getRelaxedOpcodeBranch(Inst, Is16BitMode);
@@ -728,7 +728,7 @@ bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst,
     return true;
 
   // Check if this instruction is ever relaxable.
-  if (getRelaxedOpcodeArith(Inst) == Inst.getOpcode())
+  if (getOpcodeForLongImmediateForm(Inst) == Inst.getOpcode())
     return false;
 
 
