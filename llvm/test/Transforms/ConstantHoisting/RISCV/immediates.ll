@@ -122,3 +122,13 @@ define i64 @test13(i64 %a) nounwind "target-features"="+zbs" {
   %2 = and i64 %1, -281474976710657 ; ~(1 << 48)
   ret i64 %2
 }
+
+; Check that we don't hoist mul by a power of 2.
+define i64 @test14(i64 %a) nounwind {
+; CHECK-LABEL: test14
+; CHECK: mul i64 %a, 2048
+  %1 = mul i64 %a, 2048
+  %2 = mul i64 %1, 2048
+  ret i64 %2
+}
+
