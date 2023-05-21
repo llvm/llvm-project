@@ -479,7 +479,9 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
 
     assert(isInt<16>(BranchImm));
 
-    *TargetPtr &= 0xfff8001fU;
+    uint32_t RawInstr = *(support::little32_t *)TargetPtr;
+    *(support::little32_t *)TargetPtr = RawInstr & 0xfff8001fU;
+
     // Immediate:15:2 goes in bits 18:5 of TBZ, TBNZ
     or32le(TargetPtr, (BranchImm & 0x0000FFFC) << 3);
     break;
