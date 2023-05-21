@@ -20,6 +20,15 @@ namespace llvm {
 /// but not necessarily virtual registers.
 using MCPhysReg = uint16_t;
 
+/// Register units are used to compute register aliasing. Every register has at
+/// least one register unit, but it can have more. Two registers overlap if and
+/// only if they have a common register unit.
+///
+/// A target with a complicated sub-register structure will typically have many
+/// fewer register units than actual registers. MCRI::getNumRegUnits() returns
+/// the number of register units in the target.
+using MCRegUnit = unsigned;
+
 /// Wrapper class representing physical registers. Should be passed by value.
 class MCRegister {
   friend hash_code hash_value(const MCRegister &);

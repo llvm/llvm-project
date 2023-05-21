@@ -27,6 +27,7 @@
 
 namespace llvm {
 
+class MCRegUnitIterator;
 class MCSubRegIterator;
 class MCSuperRegIterator;
 
@@ -252,6 +253,9 @@ public:
   detail::concat_range<const MCPhysReg, iterator_range<MCSubRegIterator>,
                        iterator_range<MCSuperRegIterator>>
   sub_and_superregs_inclusive(MCRegister Reg) const;
+
+  /// Returns an iterator range over all regunits for \p Reg.
+  iterator_range<MCRegUnitIterator> regunits(MCRegister Reg) const;
 
   // These iterators are allowed to sub-class DiffListIterator and access
   // internal list pointers.
@@ -615,23 +619,19 @@ inline bool MCRegisterInfo::isSuperRegister(MCRegister RegA, MCRegister RegB) co
 //                               Register Units
 //===----------------------------------------------------------------------===//
 
-// Register units are used to compute register aliasing. Every register has at
-// least one register unit, but it can have more. Two registers overlap if and
-// only if they have a common register unit.
-//
-// A target with a complicated sub-register structure will typically have many
-// fewer register units than actual registers. MCRI::getNumRegUnits() returns
-// the number of register units in the target.
-
 // MCRegUnitIterator enumerates a list of register units for Reg. The list is
 // in ascending numerical order.
-class MCRegUnitIterator : public MCRegisterInfo::DiffListIterator {
+class MCRegUnitIterator
+    : public iterator_adaptor_base<MCRegUnitIterator,
+                                   MCRegisterInfo::DiffListIterator,
+                                   std::forward_iterator_tag, const MCRegUnit> {
   // The value must be kept in sync with RegisterInfoEmitter.cpp.
   static constexpr unsigned RegUnitBits = 12;
+  // Cache the current value, so that we can return a reference to it.
+  MCRegUnit Val;
 
 public:
-  /// MCRegUnitIterator - Create an iterator that traverses the register units
-  /// in Reg.
+  /// Constructs an end iterator.
   MCRegUnitIterator() = default;
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
@@ -641,13 +641,20 @@ public:
     unsigned RU = MCRI->get(Reg).RegUnits;
     unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);
     unsigned Offset = RU >> RegUnitBits;
-    init(FirstRU, MCRI->DiffLists + Offset);
+    I.init(FirstRU, MCRI->DiffLists + Offset);
+    Val = MCRegUnit(*I);
   }
 
+  const MCRegUnit &operator*() const { return Val; }
+
+  using iterator_adaptor_base::operator++;
   MCRegUnitIterator &operator++() {
-    MCRegisterInfo::DiffListIterator::operator++();
+    Val = MCRegUnit(*++I);
     return *this;
   }
+
+  /// Returns true if this iterator is not yet at the end.
+  bool isValid() const { return I.isValid(); }
 };
 
 /// MCRegUnitMaskIterator enumerates a list of register units and their
@@ -808,6 +815,11 @@ inline detail::concat_range<const MCPhysReg, iterator_range<MCSubRegIterator>,
                             iterator_range<MCSuperRegIterator>>
 MCRegisterInfo::sub_and_superregs_inclusive(MCRegister Reg) const {
   return concat<const MCPhysReg>(subregs_inclusive(Reg), superregs(Reg));
+}
+
+inline iterator_range<MCRegUnitIterator>
+MCRegisterInfo::regunits(MCRegister Reg) const {
+  return make_range({Reg, this}, MCRegUnitIterator());
 }
 
 } // end namespace llvm

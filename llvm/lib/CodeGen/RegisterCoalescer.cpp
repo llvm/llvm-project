@@ -1539,9 +1539,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     // no live-ranges would have been created for ECX.
     // Fix that!
     SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
-    for (MCRegUnitIterator Units(NewMI.getOperand(0).getReg(), TRI);
-         Units.isValid(); ++Units)
-      if (LiveRange *LR = LIS->getCachedRegUnit(*Units))
+    for (MCRegUnit Unit : TRI->regunits(NewMI.getOperand(0).getReg()))
+      if (LiveRange *LR = LIS->getCachedRegUnit(Unit))
         LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
   }
 
@@ -1555,8 +1554,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
   for (unsigned i = 0, e = NewMIImplDefs.size(); i != e; ++i) {
     MCRegister Reg = NewMIImplDefs[i];
-    for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
-      if (LiveRange *LR = LIS->getCachedRegUnit(*Units))
+    for (MCRegUnit Unit : TRI->regunits(Reg))
+      if (LiveRange *LR = LIS->getCachedRegUnit(Unit))
         LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
   }
 
@@ -2158,14 +2157,14 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
   // Deny any overlapping intervals.  This depends on all the reserved
   // register live ranges to look like dead defs.
   if (!MRI->isConstantPhysReg(DstReg)) {
-    for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI) {
+    for (MCRegUnit Unit : TRI->regunits(DstReg)) {
       // Abort if not all the regunits are reserved.
-      for (MCRegUnitRootIterator RI(*UI, TRI); RI.isValid(); ++RI) {
+      for (MCRegUnitRootIterator RI(Unit, TRI); RI.isValid(); ++RI) {
         if (!MRI->isReserved(*RI))
           return false;
       }
-      if (RHS.overlaps(LIS->getRegUnit(*UI))) {
-        LLVM_DEBUG(dbgs() << "\t\tInterference: " << printRegUnit(*UI, TRI)
+      if (RHS.overlaps(LIS->getRegUnit(Unit))) {
+        LLVM_DEBUG(dbgs() << "\t\tInterference: " << printRegUnit(Unit, TRI)
                           << '\n');
         return false;
       }
@@ -2244,8 +2243,8 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     deleteInstr(CopyMI);
 
     // Create a new dead def at the new def location.
-    for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI) {
-      LiveRange &LR = LIS->getRegUnit(*UI);
+    for (MCRegUnit Unit : TRI->regunits(DstReg)) {
+      LiveRange &LR = LIS->getRegUnit(Unit);
       LR.createDeadDef(DestRegIdx, LIS->getVNInfoAllocator());
     }
   }
