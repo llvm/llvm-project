@@ -100,8 +100,7 @@ Available checks are:
      by Clang (and by ISO/IEC/IEEE 60559 / IEEE 754) as producing either an
      infinity or NaN value, so is not included in ``-fsanitize=undefined``.
   -  ``-fsanitize=function``: Indirect call of a function through a
-     function pointer of the wrong type (Darwin/Linux, C++ and x86/x86_64
-     only).
+     function pointer of the wrong type (C++ only).
   -  ``-fsanitize=implicit-unsigned-integer-truncation``,
      ``-fsanitize=implicit-signed-integer-truncation``: Implicit conversion from
      integer of larger bit width to smaller bit width, if that results in data
@@ -223,8 +222,8 @@ Minimal Runtime
 
 There is a minimal UBSan runtime available suitable for use in production
 environments. This runtime has a small attack surface. It only provides very
-basic issue logging and deduplication, and does not support
-``-fsanitize=function`` and ``-fsanitize=vptr`` checking.
+basic issue logging and deduplication, and does not support ``-fsanitize=vptr``
+checking.
 
 To use the minimal runtime, add ``-fsanitize-minimal-runtime`` to the clang
 command line options. For example, if you're used to compiling with

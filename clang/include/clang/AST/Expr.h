@@ -4691,14 +4691,22 @@ public:
 };
 
 /// Represents a function call to one of __builtin_LINE(), __builtin_COLUMN(),
-/// __builtin_FUNCTION(), __builtin_FILE(), __builtin_FILE_NAME(),
-/// or __builtin_source_location().
+/// __builtin_FUNCTION(), __builtin_FUNCSIG(), __builtin_FILE(),
+/// __builtin_FILE_NAME() or __builtin_source_location().
 class SourceLocExpr final : public Expr {
   SourceLocation BuiltinLoc, RParenLoc;
   DeclContext *ParentContext;
 
 public:
-  enum IdentKind { Function, File, FileName, Line, Column, SourceLocStruct };
+  enum IdentKind {
+    Function,
+    FuncSig,
+    File,
+    FileName,
+    Line,
+    Column,
+    SourceLocStruct
+  };
 
   SourceLocExpr(const ASTContext &Ctx, IdentKind Type, QualType ResultTy,
                 SourceLocation BLoc, SourceLocation RParenLoc,
@@ -4724,6 +4732,7 @@ public:
     case File:
     case FileName:
     case Function:
+    case FuncSig:
     case SourceLocStruct:
       return false;
     case Line:

@@ -1435,3 +1435,83 @@ namespace dr398 { // dr398: yes
     }
   }
 }
+
+namespace dr399 { // dr399: 11
+                  // NB: reuse dr244 test 
+  struct B {}; // expected-note {{type 'dr399::B' found by destructor name lookup}}
+  struct D : B {};
+
+  D D_object;
+  typedef B B_alias;
+  B* B_ptr = &D_object;
+
+  void f() {
+    D_object.~B(); // expected-error {{does not match the type 'D' of the object being destroyed}}
+    D_object.B::~B();
+    D_object.D::~B(); // FIXME: Missing diagnostic for this.
+    B_ptr->~B();
+    B_ptr->~B_alias();
+    B_ptr->B_alias::~B();
+    B_ptr->B_alias::~B_alias();
+    B_ptr->dr399::~B(); // expected-error {{refers to a member in namespace}}
+    B_ptr->dr399::~B_alias(); // expected-error {{refers to a member in namespace}}
+  }
+
+  template<typename T, typename U>
+  void f(T *B_ptr, U D_object) {
+    D_object.~B(); // FIXME: Missing diagnostic for this.
+    D_object.B::~B();
+    D_object.D::~B(); // FIXME: Missing diagnostic for this.
+    B_ptr->~B();
+    B_ptr->~B_alias();
+    B_ptr->B_alias::~B();
+    B_ptr->B_alias::~B_alias();
+    B_ptr->dr399::~B(); // expected-error {{does not refer to a type name}}
+    B_ptr->dr399::~B_alias(); // expected-error {{does not refer to a type name}}
+  }
+  template void f<B, D>(B*, D);
+
+  namespace N {
+    template<typename T> struct E {};
+    typedef E<int> F;
+  }
+  void g(N::F f) {
+    typedef N::F G; // expected-note {{found by destructor name lookup}}
+    f.~G();
+    f.G::~E(); // expected-error {{ISO C++ requires the name after '::~' to be found in the same scope as the name before '::~'}}
+    f.G::~F(); // expected-error {{undeclared identifier 'F' in destructor name}}
+    f.G::~G();
+    // This is technically ill-formed; E is looked up in 'N::' and names the
+    // class template, not the injected-class-name of the class. But that's
+    // probably a bug in the standard.
+    f.N::F::~E(); // expected-error {{ISO C++ requires the name after '::~' to be found in the same scope as the name before '::~'}}
+    // This is valid; we look up the second F in the same scope in which we
+    // found the first one, that is, 'N::'.
+    f.N::F::~F();
+    // This is technically ill-formed; G is looked up in 'N::' and is not found.
+    // Rejecting this seems correct, but most compilers accept, so we do also.
+    f.N::F::~G(); // expected-error {{qualified destructor name only found in lexical scope; omit the qualifier to find this type name by unqualified lookup}}
+  }
+
+  // Bizarrely, compilers perform lookup in the scope for qualified destructor
+  // names, if the nested-name-specifier is non-dependent. Ensure we diagnose
+  // this.
+  namespace QualifiedLookupInScope {
+    namespace N {
+      template <typename> struct S { struct Inner {}; };
+    }
+    template <typename U> void f(typename N::S<U>::Inner *p) {
+      typedef typename N::S<U>::Inner T;
+      p->::dr399::QualifiedLookupInScope::N::S<U>::Inner::~T(); // expected-error {{no type named 'T' in}}
+    }
+    template void f<int>(N::S<int>::Inner *); // expected-note {{instantiation of}}
+
+    template <typename U> void g(U *p) {
+      typedef U T;
+      p->T::~T();
+      p->U::~T();
+      p->::dr399::QualifiedLookupInScope::N::S<int>::Inner::~T(); // expected-error {{'T' does not refer to a type name}}
+    }
+    template void g(N::S<int>::Inner *);
+  }
+}

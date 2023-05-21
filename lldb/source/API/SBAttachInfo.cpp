@@ -94,7 +94,7 @@ void SBAttachInfo::SetResumeCount(uint32_t c) {
 const char *SBAttachInfo::GetProcessPluginName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetProcessPluginName();
+  return ConstString(m_opaque_sp->GetProcessPluginName()).GetCString();
 }
 
 void SBAttachInfo::SetProcessPluginName(const char *plugin_name) {

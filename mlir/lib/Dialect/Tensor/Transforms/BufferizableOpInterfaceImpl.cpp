@@ -94,6 +94,11 @@ struct CastOpInterface
         bufferization::getBufferType(castOp.getResult(), options);
     if (failed(resultMemRefType))
       return failure();
+    if (resultBuffer->getType() == *resultMemRefType) {
+      // This cast is a no-op.
+      replaceOpWithBufferizedValues(rewriter, op, *resultBuffer);
+      return success();
+    }
 
     // Replace the op with a memref.cast.
     assert(memref::CastOp::areCastCompatible(resultBuffer->getType(),

@@ -45,14 +45,11 @@ InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) {
     bool Fractional;
     std::tie(LMul, Fractional) =
         RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(VT));
-    if (Fractional)
-      Cost = 1;
-    else
-      Cost = LMul;
+    Cost = Fractional ? 1 : LMul;
   } else {
-    Cost = VT.getSizeInBits() / ST->getRealMinVLen();
+    Cost = divideCeil(VT.getSizeInBits(), ST->getRealMinVLen());
   }
-  return std::max<unsigned>(Cost, 1);
+  return Cost;
 }
 
 InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
@@ -145,8 +142,8 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     Takes12BitImm = true;
     break;
   case Instruction::Mul:
-    // Negated power of 2 is a shift and a negate.
-    if (Imm.isNegatedPowerOf2())
+    // Power of 2 is a shift. Negated power of 2 is a shift and a negate.
+    if (Imm.isPowerOf2() || Imm.isNegatedPowerOf2())
       return TTI::TCC_Free;
     // FIXME: There is no MULI instruction.
     Takes12BitImm = true;

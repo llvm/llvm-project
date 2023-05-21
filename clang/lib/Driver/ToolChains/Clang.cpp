@@ -3689,10 +3689,13 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   // modules support by default.
   bool HaveStdCXXModules =
       IsCXX && Std &&
-      (Std->containsValue("c++2a") || Std->containsValue("c++20") ||
-       Std->containsValue("c++2b") || Std->containsValue("c++23") ||
-       Std->containsValue("c++2c") || Std->containsValue("c++26") ||
-       Std->containsValue("c++latest"));
+      (Std->containsValue("c++2a") || Std->containsValue("gnu++2a") ||
+       Std->containsValue("c++20") || Std->containsValue("gnu++20") ||
+       Std->containsValue("c++2b") || Std->containsValue("gnu++2b") ||
+       Std->containsValue("c++23") || Std->containsValue("gnu++23") ||
+       Std->containsValue("c++2c") || Std->containsValue("gnu++2c") ||
+       Std->containsValue("c++26") || Std->containsValue("gnu++26") ||
+       Std->containsValue("c++latest") || Std->containsValue("gnu++latest"));
   bool HaveModules = HaveStdCXXModules;
 
   // -fmodules enables the use of precompiled modules (off by default).
@@ -7060,6 +7063,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     A->claim();
   }
 
+  Args.addOptInFlag(CmdArgs, options::OPT_fsafe_buffer_usage_suggestions,
+                    options::OPT_fno_safe_buffer_usage_suggestions);
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
   if (!StatsFile.empty()) {
@@ -7870,7 +7876,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   if (Args.hasArg(options::OPT__SLASH_kernel))
     CmdArgs.push_back("-fms-kernel");
 
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
+  for (const Arg *A : Args.filtered(options::OPT__SLASH_guard)) {
     StringRef GuardArgs = A->getValue();
     // The only valid options are "cf", "cf,nochecks", "cf-", "ehcont" and
     // "ehcont-".
@@ -7889,6 +7895,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     } else {
       D.Diag(diag::err_drv_invalid_value) << A->getSpelling() << GuardArgs;
     }
+    A->claim();
   }
 }
 

@@ -1564,6 +1564,11 @@ def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tr
     Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Print a template comparison tree for differing templates">,
     MarshallingInfoFlag<DiagnosticOpts<"ShowTemplateTree">>;
+defm safe_buffer_usage_suggestions : BoolFOption<"safe-buffer-usage-suggestions",
+  DiagnosticOpts<"ShowSafeBufferUsageSuggestions">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option],
+          "Display suggestions to update code associated with -Wunsafe-buffer-usage warnings">,
+  NegFlag<SetFalse>>;
 def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">, Group<f_clang_Group>,
   HelpText<"Discard value names in LLVM IR">, Flags<[NoXarchOption]>;
 def fno_discard_value_names : Flag<["-"], "fno-discard-value-names">, Group<f_clang_Group>,
@@ -2645,8 +2650,8 @@ def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>,
 def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, FlangOption, FC1Option]>,
   HelpText<"Parse OpenMP pragmas and generate parallel code.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>, Flags<[NoArgumentUnused]>;
-def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
-  HelpText<"Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50.">;
+def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, FlangOption, FC1Option]>,
+  HelpText<"Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang">;
 defm openmp_extensions: BoolFOption<"openmp-extensions",
   LangOpts<"OpenMPExtensions">, DefaultTrue,
   PosFlag<SetTrue, [CC1Option, NoArgumentUnused],

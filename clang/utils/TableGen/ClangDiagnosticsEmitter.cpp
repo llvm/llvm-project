@@ -653,6 +653,14 @@ private:
           Root(O.Root) {
       O.Root = nullptr;
     }
+    // The move assignment operator is defined as deleted pending further
+    // motivation.
+    DiagText &operator=(DiagText &&) = delete;
+
+    // The copy constrcutor and copy assignment operator is defined as deleted
+    // pending further motivation.
+    DiagText(const DiagText &) = delete;
+    DiagText &operator=(const DiagText &) = delete;
 
     ~DiagText() {
       for (Piece *P : AllocatedPieces)

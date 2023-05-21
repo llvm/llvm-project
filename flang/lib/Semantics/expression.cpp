@@ -2307,10 +2307,11 @@ static bool CheckCompatibleArgument(bool isElemental,
               return true;
             } else if (!isElemental && actual.Rank() != x.type.Rank() &&
                 !x.type.attrs().test(
-                    characteristics::TypeAndShape::Attr::AssumedRank)) {
+                    characteristics::TypeAndShape::Attr::AssumedRank) &&
+                !x.ignoreTKR.test(common::IgnoreTKR::Rank)) {
               return false;
             } else if (auto actualType{actual.GetType()}) {
-              return x.type.type().IsTkCompatibleWith(*actualType);
+              return x.type.type().IsTkCompatibleWith(*actualType, x.ignoreTKR);
             }
             return false;
           },

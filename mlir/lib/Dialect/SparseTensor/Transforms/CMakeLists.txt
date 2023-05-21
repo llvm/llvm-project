@@ -10,7 +10,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   SparseTensorConversion.cpp
   SparseTensorPasses.cpp
   SparseTensorRewriting.cpp
-  SparseTensorStorageLayout.cpp
+  SparseTensorDescriptor.cpp
   SparseVectorization.cpp
   Sparsification.cpp
   SparsificationAndBufferizationPass.cpp

@@ -24,8 +24,8 @@
 // CHECK-UNDEFINED-WIN64: "--dependent-lib={{[^"]*}}ubsan_standalone{{(-x86_64)?}}.lib"
 // CHECK-UNDEFINED-WIN64-MINGW: "--dependent-lib={{[^"]*}}libclang_rt.ubsan_standalone{{(-x86_64)?}}.a"
 // CHECK-UNDEFINED-WIN-CXX: "--dependent-lib={{[^"]*}}ubsan_standalone_cxx{{[^"]*}}.lib"
-// CHECK-UNDEFINED-MSVC-SAME: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){17}"}}
-// CHECK-UNDEFINED-WIN64-MINGW-SAME: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|vptr),?){18}"}}
+// CHECK-UNDEFINED-MSVC-SAME: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
+// CHECK-UNDEFINED-WIN64-MINGW-SAME: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr),?){19}"}}
 
 // RUN: %clang --target=i386-pc-win32 -fsanitize-coverage=bb %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-COVERAGE-WIN32
 // CHECK-COVERAGE-WIN32: "--dependent-lib={{[^"]*}}ubsan_standalone{{(-i386)?}}.lib"
@@ -525,9 +525,10 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-thread-atomics -fno-sanitize-thread-atomics %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ATOMICS-BOTH-OFF
 // CHECK-TSAN-ATOMICS-BOTH-OFF: -cc1{{.*}}tsan-instrument-atomics=0
 
-// RUN: %clang --target=x86_64-apple-darwin10 -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FSAN-DARWIN
-// RUN: %clang --target=i386-apple-darwin10 -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FSAN-DARWIN
-// CHECK-FSAN-DARWIN: -cc1{{.*}}"-fsanitize=function" "-fsanitize-recover=function"
+// RUN: %clang --target=x86_64-apple-darwin10 -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
+// RUN: %clang --target=aarch64-unknown-linux-gnu -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
+// RUN: %clang --target=riscv64-pc-freebsd -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FUNCTION
+// CHECK-FUNCTION: -cc1{{.*}}"-fsanitize=function" "-fsanitize-recover=function"
 
 // RUN: %clang --target=x86_64-apple-darwin10 -mmacosx-version-min=10.8 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-OLD
 // CHECK-VPTR-DARWIN-OLD: unsupported option '-fsanitize=vptr' for target 'x86_64-apple-darwin10'
@@ -791,10 +792,6 @@
 // FUNCTION-SOLARIS: "-fsanitize=function"
 
 
-// RUN: %clang --target=x86_64-scei-ps4 -fsanitize=function -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FSAN-UBSAN-PS4
-// CHECK-FSAN-UBSAN-PS4: unsupported option '-fsanitize=function' for target 'x86_64-scei-ps4'
-// RUN: %clang --target=x86_64-scei-ps4 -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FSAN-PS4
-// CHECK-FSAN-PS4: unsupported option '-fsanitize=function' for target 'x86_64-scei-ps4'
 // RUN: %clang --target=x86_64-scei-ps4 -fsanitize=dataflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DFSAN-PS4
 // CHECK-DFSAN-PS4: unsupported option '-fsanitize=dataflow' for target 'x86_64-scei-ps4'
 // RUN: %clang --target=x86_64-scei-ps4 -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-PS4
@@ -844,7 +841,7 @@
 // CHECK-TSAN-MINIMAL: error: invalid argument '-fsanitize-minimal-runtime' not allowed with '-fsanitize=thread'
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-MINIMAL
-// CHECK-UBSAN-MINIMAL: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){17}"}}
+// CHECK-UBSAN-MINIMAL: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
 // CHECK-UBSAN-MINIMAL: "-fsanitize-minimal-runtime"
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=integer -fsanitize-trap=integer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTSAN-TRAP
@@ -858,8 +855,7 @@
 // CHECK-MEMTAG-MINIMAL: "-fsanitize=memtag-stack,memtag-heap,memtag-globals"
 // CHECK-MEMTAG-MINIMAL: "-fsanitize-minimal-runtime"
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize=function -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MINIMAL
-// CHECK-UBSAN-FUNCTION-MINIMAL: error: invalid argument '-fsanitize=function' not allowed with '-fsanitize-minimal-runtime'
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize=function -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck /dev/null --implicit-check-not=error:
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize=vptr -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-VPTR-MINIMAL
 // CHECK-UBSAN-VPTR-MINIMAL: error: invalid argument '-fsanitize=vptr' not allowed with '-fsanitize-minimal-runtime'

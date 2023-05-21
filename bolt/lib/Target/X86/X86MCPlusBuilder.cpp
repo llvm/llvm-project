@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86InstrRelaxTables.h"
+#include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86MCSymbolizer.h"
 #include "bolt/Core/MCPlus.h"
@@ -49,10 +49,6 @@ static cl::opt<bool> X86StripRedundantAddressSize(
 } // namespace opts
 
 namespace {
-
-unsigned getShortArithOpcode(unsigned Opcode) {
-  return X86::getShortOpcodeArith(Opcode);
-}
 
 bool isMOVSX64rm32(const MCInst &Inst) {
   return Inst.getOpcode() == X86::MOVSX64rm32;
@@ -270,7 +266,7 @@ public:
     case X86::PUSHFS16:
     case X86::PUSHGS16:
     case X86::PUSHSS16:
-    case X86::PUSHi16:
+    case X86::PUSH16i:
       return 2;
     case X86::PUSH32i8:
     case X86::PUSH32r:
@@ -284,7 +280,7 @@ public:
     case X86::PUSHFS32:
     case X86::PUSHGS32:
     case X86::PUSHSS32:
-    case X86::PUSHi32:
+    case X86::PUSH32i:
       return 4;
     case X86::PUSH64i32:
     case X86::PUSH64i8:
@@ -1714,7 +1710,7 @@ public:
       }
     } else {
       // If it's arithmetic instruction check if signed operand fits in 1 byte.
-      const unsigned ShortOpcode = getShortArithOpcode(OldOpcode);
+      const unsigned ShortOpcode = X86::getOpcodeForShortImmediateForm(OldOpcode);
       if (ShortOpcode != OldOpcode &&
           Inst.getOperand(MCPlus::getNumPrimeOperands(Inst) - 1).isImm()) {
         int64_t Imm =
@@ -2548,8 +2544,8 @@ public:
     default: {
       switch (getPushSize(Inst)) {
 
-      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSHi16}}}; break;
-      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSHi32}}}; break;
+      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSH16i}}}; break;
+      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSH32i}}}; break;
       case 8: I = {8, false, {{CHECK8, X86::PUSH64i8},
                               {CHECK32, X86::PUSH64i32},
                               {NOCHECK, Inst.getOpcode()}}}; break;

@@ -370,7 +370,7 @@ bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
 
 /// Simplify FOO $imm, %{al,ax,eax,rax} to FOO $imm, for instruction with
 /// a short fixed-register form.
-bool X86::optimizeToFixedRegisterForm(MCInst &MI) {
+static bool optimizeToFixedRegisterForm(MCInst &MI) {
   unsigned NewOpc;
   switch (MI.getOpcode()) {
   default:
@@ -423,4 +423,57 @@ bool X86::optimizeToFixedRegisterForm(MCInst &MI) {
   MI.setOpcode(NewOpc);
   MI.addOperand(Saved);
   return true;
+}
+
+unsigned X86::getOpcodeForShortImmediateForm(unsigned Opcode) {
+#define ENTRY(LONG, SHORT)                                                     \
+  case X86::LONG:                                                              \
+    return X86::SHORT;
+  switch (Opcode) {
+  default:
+    return Opcode;
+#include "X86EncodingOptimizationForImmediate.def"
+  }
+}
+
+unsigned X86::getOpcodeForLongImmediateForm(unsigned Opcode) {
+#define ENTRY(LONG, SHORT)                                                     \
+  case X86::SHORT:                                                             \
+    return X86::LONG;
+  switch (Opcode) {
+  default:
+    return Opcode;
+#include "X86EncodingOptimizationForImmediate.def"
+  }
+}
+
+static bool optimizeToShortImmediateForm(MCInst &MI) {
+  unsigned NewOpc;
+#define ENTRY(LONG, SHORT)                                                     \
+  case X86::LONG:                                                              \
+    NewOpc = X86::SHORT;                                                       \
+    break;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+#include "X86EncodingOptimizationForImmediate.def"
+  }
+  MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1);
+  if (LastOp.isExpr()) {
+    const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(LastOp.getExpr());
+    if (!SRE || SRE->getKind() != MCSymbolRefExpr::VK_X86_ABS8)
+      return false;
+  } else if (LastOp.isImm()) {
+    if (!isInt<8>(LastOp.getImm()))
+      return false;
+  }
+  MI.setOpcode(NewOpc);
+  return true;
+}
+
+bool X86::optimizeToFixedRegisterOrShortImmediateForm(MCInst &MI) {
+  // We may optimize twice here.
+  bool ShortImm = optimizeToShortImmediateForm(MI);
+  bool FixedReg = optimizeToFixedRegisterForm(MI);
+  return ShortImm || FixedReg;
 }

@@ -1147,9 +1147,11 @@ template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   bool haveDivergentArgs = false;
 
-  if (DivergentValues.empty()) {
-    assert(DivergentTermBlocks.empty());
-    assert(DivergentExitCycles.empty());
+  // Control flow instructions may be divergent even if their inputs are
+  // uniform. Thus, although exceedingly rare, it is possible to have a program
+  // with no divergent values but with divergent control structures.
+  if (DivergentValues.empty() && DivergentTermBlocks.empty() &&
+      DivergentExitCycles.empty()) {
     OS << "ALL VALUES UNIFORM\n";
     return;
   }

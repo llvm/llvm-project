@@ -10,9 +10,8 @@ end subroutine
 ! CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i32>
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.product %[[ARRAY]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>) -> !hlfir.expr<i32>
-! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<i32>, !fir.ref<i32>
-! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.product %[[ARRAY]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>) -> i32
+! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
 
@@ -44,9 +43,8 @@ end subroutine
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG2]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.product %[[ARRAY]]#0 mask %[[MASK]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> !hlfir.expr<i32>
-! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<i32>, !fir.ref<i32>
-! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.product %[[ARRAY]]#0 mask %[[MASK]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.logical<4>>) -> i32
+! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
 
@@ -56,15 +54,13 @@ subroutine product4(a, s, m)
   logical :: m(:)
   s = PRODUCT(a, m)
 end subroutine
-
 ! CHECK-LABEL: func.func @_QPproduct4(
 ! CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "s"}, %arg2: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "m"})
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG2]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.product %[[ARRAY]]#0 mask %[[MASK]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> !hlfir.expr<i32>
-! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<i32>, !fir.ref<i32>
-! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.product %[[ARRAY]]#0 mask %[[MASK]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> i32
+! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
 
@@ -74,7 +70,6 @@ subroutine product5(s)
   integer :: a(2,2) = reshape((/1, 2, 3, 4/), [2,2])
   s = PRODUCT(a, 1, .true.)
 end subroutine
-
 ! CHECK-LABEL: func.func @_QPproduct5(
 ! CHECK:           %[[ARG0:.*]]: !fir.ref<!fir.array<2xi32>>
 ! CHECK-DAG:     %[[ADDR:.*]] = fir.address_of({{.*}}) : !fir.ref<!fir.array<2x2xi32>>
@@ -96,7 +91,6 @@ subroutine product6(a, s, d)
   real :: a(:,:), s(:)
   s = PRODUCT(a, (d))
 end subroutine
-
 ! CHECK-LABEL: func.func @_QPproduct6(
 ! CHECK:           %[[ARG0:.*]]:  !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "s"}, %[[ARG2:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "d"})
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]

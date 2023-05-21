@@ -4396,7 +4396,7 @@ static void diagnoseVarDeclTypeMismatch(Sema &S, VarDecl *New, VarDecl* Old) {
 /// is attached.
 void Sema::MergeVarDeclTypes(VarDecl *New, VarDecl *Old,
                              bool MergeTypeWithOld) {
-  if (New->isInvalidDecl() || Old->isInvalidDecl())
+  if (New->isInvalidDecl() || Old->isInvalidDecl() || New->getType()->containsErrors() || Old->getType()->containsErrors())
     return;
 
   QualType MergedT;
@@ -19307,6 +19307,7 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
         if (!getLangOpts().CPlusPlus && !T.isNull())
           Diag(IdLoc, diag::warn_enum_value_overflow);
       } else if (!getLangOpts().CPlusPlus &&
+                 !EltTy->isDependentType() &&
                  !isRepresentableIntegerValue(Context, EnumVal, EltTy)) {
         // Enforce C99 6.7.2.2p2 even when we compute the next value.
         Diag(IdLoc, diag::ext_enum_value_not_int)

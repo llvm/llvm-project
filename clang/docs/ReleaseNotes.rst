@@ -58,7 +58,8 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
-
+- A bug in evaluating the ineligibility of some special member functions has been fixed. This can
+  make some classes trivially copyable that were not trivially copyable before. (`#62555 <https://github.com/llvm/llvm-project/issues/62555>`_)
 
 What's New in Clang |release|?
 ==============================
@@ -77,8 +78,13 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-- Support for out-of-line definitions of constrained templates has been improved.
-  This partially fixes `#49620 <https://github.com/llvm/llvm-project/issues/49620>`_.
+- Implemented the rule introduced by `CA104 <https://wg21.link/P2103R0>`_  for comparison of
+  constraint-expressions. Improved support for out-of-line definitions of constrained templates.
+  This fixes:
+  `#49620 <https://github.com/llvm/llvm-project/issues/49620>`_,
+  `#60231 <https://github.com/llvm/llvm-project/issues/60231>`_,
+  `#61414 <https://github.com/llvm/llvm-project/issues/61414>`_,
+  `#61809 <https://github.com/llvm/llvm-project/issues/61809>`_.
 - Lambda templates with a requires clause directly after the template parameters now parse
   correctly if the requires clause consists of a variable with a dependent type.
   (`#61278 <https://github.com/llvm/llvm-project/issues/61278>`_)
@@ -192,6 +198,9 @@ Non-comprehensive list of changes in this release
   ``memcmp(&lhs, &rhs, sizeof(T)) == 0``.
 - Clang now ignores null directives outside of the include guard when deciding
   whether a file can be enabled for the multiple-include optimization.
+- Clang now support ``__builtin_FUNCSIG()`` which retruns the same information
+  as the ``__FUNCSIG__`` macro (available only with ``-fms-extensions`` flag).
+  This fixes (`#58951 <https://github.com/llvm/llvm-project/issues/58951>`_).
 
 New Compiler Flags
 ------------------
@@ -383,6 +392,8 @@ Bug Fixes in This Version
 - Fix crash when attempting to perform parenthesized initialization of an
   aggregate with a base class with only non-public constructors.
   (`#62296 <https://github.com/llvm/llvm-project/issues/62296>`_)
+- - Fix crash when redefining a variable with an invalid type again with an
+  invalid type. (`#62447 <https://github.com/llvm/llvm-project/issues/62447>`_)
 - Fix a stack overflow issue when evaluating ``consteval`` default arguments.
   (`#60082` <https://github.com/llvm/llvm-project/issues/60082>`_)
 - Fix the assertion hit when generating code for global variable initializer of
@@ -401,6 +412,12 @@ Bug Fixes in This Version
   when it had been instantiated from a partial template specialization with different
   template arguments on the containing class. This fixes:
   (`#60778 <https://github.com/llvm/llvm-project/issues/60778>`_).
+- Fix a crash when an enum constant has a dependent-type recovery expression for
+  C.
+  (`#62446 <https://github.com/llvm/llvm-project/issues/62446>`_).
+- Propagate the value-dependent bit for VAArgExpr. Fixes a crash where a
+  __builtin_va_arg call has invalid arguments.
+  (`#62711 <https://github.com/llvm/llvm-project/issues/62711>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -451,6 +468,8 @@ Bug Fixes to C++ Support
 - Some predefined expressions are now treated as string literals in MSVC
   compatibility mode.
   (`#114 <https://github.com/llvm/llvm-project/issues/114>`_)
+- Fix parsing of `auto(x)`, when it is surrounded by parentheses.
+  (`#62494 <https://github.com/llvm/llvm-project/issues/62494>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -322,30 +322,68 @@ mgpuDestroySpMat(void *m, CUstream /*stream*/) {
   CUSPARSE_REPORT_IF_ERROR(cusparseDestroySpMat(mat))
 }
 
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t
-mgpuSpMVBufferSize(void *h, void *a, void *x, void *y, CUstream /*stream*/) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpMVBufferSize(
+    void *h, void *a, void *x, void *y, int32_t dw, CUstream /*stream*/) {
   cusparseHandle_t handle = reinterpret_cast<cusparseHandle_t>(h);
   cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
   cusparseDnVecDescr_t vecX = reinterpret_cast<cusparseDnVecDescr_t>(x);
   cusparseDnVecDescr_t vecY = reinterpret_cast<cusparseDnVecDescr_t>(y);
+  cudaDataType_t dtp = dataTp(dw);
   double alpha = 1.0;
   double beta = 1.0;
   size_t bufferSize = 0;
   CUSPARSE_REPORT_IF_ERROR(cusparseSpMV_bufferSize(
       handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, vecX, &beta, vecY,
-      CUDA_R_64F, CUSPARSE_SPMV_ALG_DEFAULT, &bufferSize))
+      dtp, CUSPARSE_SPMV_ALG_DEFAULT, &bufferSize))
   return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
 }
 
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
-mgpuSpMV(void *h, void *a, void *x, void *y, void *b, CUstream /*stream*/) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSpMV(void *h, void *a, void *x,
+                                                   void *y, int32_t dw,
+                                                   void *buf,
+                                                   CUstream /*stream*/) {
   cusparseHandle_t handle = reinterpret_cast<cusparseHandle_t>(h);
   cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
   cusparseDnVecDescr_t vecX = reinterpret_cast<cusparseDnVecDescr_t>(x);
   cusparseDnVecDescr_t vecY = reinterpret_cast<cusparseDnVecDescr_t>(y);
+  cudaDataType_t dtp = dataTp(dw);
   double alpha = 1.0;
   double beta = 1.0;
   CUSPARSE_REPORT_IF_ERROR(
       cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, vecX,
-                   &beta, vecY, CUDA_R_64F, CUSPARSE_SPMV_ALG_DEFAULT, b))
+                   &beta, vecY, dtp, CUSPARSE_SPMV_ALG_DEFAULT, buf))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpMMBufferSize(
+    void *h, void *a, void *b, void *c, int32_t dw, CUstream /*stream*/) {
+  cusparseHandle_t handle = reinterpret_cast<cusparseHandle_t>(h);
+  cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
+  cusparseDnMatDescr_t matB = reinterpret_cast<cusparseDnMatDescr_t>(b);
+  cusparseDnMatDescr_t matC = reinterpret_cast<cusparseDnMatDescr_t>(c);
+  cudaDataType_t dtp = dataTp(dw);
+  double alpha = 1.0;
+  double beta = 1.0;
+  size_t bufferSize = 0;
+  CUSPARSE_REPORT_IF_ERROR(cusparseSpMM_bufferSize(
+      handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+      CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, matB, &beta, matC, dtp,
+      CUSPARSE_SPMM_ALG_DEFAULT, &bufferSize))
+  return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSpMM(void *h, void *a, void *b,
+                                                   void *c, int32_t dw,
+                                                   void *buf,
+                                                   CUstream /*stream*/) {
+  cusparseHandle_t handle = reinterpret_cast<cusparseHandle_t>(h);
+  cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
+  cusparseDnMatDescr_t matB = reinterpret_cast<cusparseDnMatDescr_t>(b);
+  cusparseDnMatDescr_t matC = reinterpret_cast<cusparseDnMatDescr_t>(c);
+  cudaDataType_t dtp = dataTp(dw);
+  double alpha = 1.0;
+  double beta = 1.0;
+  CUSPARSE_REPORT_IF_ERROR(
+      cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+                   CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, matB, &beta,
+                   matC, dtp, CUSPARSE_SPMM_ALG_DEFAULT, buf))
 }

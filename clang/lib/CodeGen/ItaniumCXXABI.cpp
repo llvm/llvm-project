@@ -2189,7 +2189,7 @@ Address ItaniumCXXABI::InitializeArrayCookie(CodeGenFunction &CGF,
       (expr->getOperatorNew()->isReplaceableGlobalAllocationFunction() ||
        CGM.getCodeGenOpts().SanitizeAddressPoisonCustomArrayCookie)) {
     // The store to the CookiePtr does not need to be instrumented.
-    CGM.getSanitizerMetadata()->disableSanitizerForInstruction(SI);
+    SI->setNoSanitizeMetadata();
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(CGM.VoidTy, NumElementsPtr.getType(), false);
     llvm::FunctionCallee F =

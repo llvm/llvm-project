@@ -323,3 +323,124 @@ define void @scalable.store.nxv4f32(ptr align 4 %p, <vscale x 4 x float> %arg, <
   tail call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> %arg, ptr %p, <vscale x 4 x i1> %mask, i32 %evl)
   ret void
 }
+
+; Test vp strided load stores.
+declare <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.i32(ptr, i32, <vscale x 4 x i1>, i32)
+declare void @llvm.experimental.vp.strided.store.nxv4f32.i32(<vscale x 4 x float>, ptr, i32, <vscale x 4 x i1>, i32)
+
+define <vscale x 4 x float> @scalable.strided.load.nxv4f32(ptr align 4 %p, i32 %stride, <vscale x 4 x i1> %mask, i32 %evl) sanitize_address {
+; CHECK-LABEL: @scalable.strided.load.nxv4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[EVL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP14:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[STRIDE:%.*]] to i64
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP13:%.*]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP13]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[IV]], [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[TMP11]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP12]], i64 4)
+; CHECK-NEXT:    br label [[TMP13]]
+; CHECK:       13:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.p0.i32(ptr [[P]], i32 [[STRIDE]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+; DISABLED-LABEL: @scalable.strided.load.nxv4f32(
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.p0.i32(ptr [[P:%.*]], i32 [[STRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
+; DISABLED-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+  %res = tail call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.i32(ptr %p, i32 %stride, <vscale x 4 x i1> %mask, i32 %evl)
+  ret <vscale x 4 x float> %res
+}
+
+define void @scalable.strided.store.nxv4f32(<vscale x 4 x float> %arg, ptr align 4 %p, i32 %stride, <vscale x 4 x i1> %mask, i32 %evl) sanitize_address {
+; CHECK-LABEL: @scalable.strided.store.nxv4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[EVL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP14:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[STRIDE:%.*]] to i64
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP13:%.*]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP13]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[IV]], [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[TMP11]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP12]], i64 4)
+; CHECK-NEXT:    br label [[TMP13]]
+; CHECK:       13:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    tail call void @llvm.experimental.vp.strided.store.nxv4f32.p0.i32(<vscale x 4 x float> [[ARG:%.*]], ptr [[P]], i32 [[STRIDE]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    ret void
+;
+; DISABLED-LABEL: @scalable.strided.store.nxv4f32(
+; DISABLED-NEXT:    tail call void @llvm.experimental.vp.strided.store.nxv4f32.p0.i32(<vscale x 4 x float> [[ARG:%.*]], ptr [[P:%.*]], i32 [[STRIDE:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
+; DISABLED-NEXT:    ret void
+;
+  tail call void @llvm.experimental.vp.strided.store.nxv4f32.i32(<vscale x 4 x float> %arg, ptr %p, i32 %stride, <vscale x 4 x i1> %mask, i32 %evl)
+  ret void
+}
+
+; Test the stride is a multiple of the pointer alignment.
+define <vscale x 4 x float> @scalable.strided.load.nxv4f32.align(ptr align 4 %p, <vscale x 4 x i1> %mask, i32 %evl) sanitize_address {
+; CHECK-LABEL: @scalable.strided.load.nxv4f32.align(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[EVL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP13:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP12:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP12]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[IV]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
+; CHECK-NEXT:    call void @__asan_load4(i64 [[TMP11]])
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP13]]
+; CHECK:       13:
+; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.p0.i32(ptr [[P]], i32 4, <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+; DISABLED-LABEL: @scalable.strided.load.nxv4f32.align(
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.p0.i32(ptr [[P:%.*]], i32 4, <vscale x 4 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
+; DISABLED-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+  %res = tail call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.i32(ptr %p, i32 4, <vscale x 4 x i1> %mask, i32 %evl)
+  ret <vscale x 4 x float> %res
+}

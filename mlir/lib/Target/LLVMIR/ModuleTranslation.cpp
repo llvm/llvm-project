@@ -741,22 +741,6 @@ LogicalResult ModuleTranslation::convertGlobals() {
         if (failed(convertOperation(op, builder)) ||
             !isa<llvm::Constant>(lookupValue(op.getResult(0))))
           return emitError(op.getLoc(), "unemittable constant value");
-        // When emitting an LLVM constant, a new constant is created and the old
-        // constant may become dangling and take space. We should remove the
-        // dangling constants to avoid memory explosion especially for constant
-        // arrays whose number of elements is large.
-        // TODO: handle ops other than InsertValueOp with ConstantArray.
-        if (auto ivOp = dyn_cast<LLVM::InsertValueOp>(op)) {
-          Value container = ivOp.getContainer();
-          if (auto cst =
-                  dyn_cast<llvm::ConstantArray>(lookupValue(container))) {
-            // GlobalValue shouldn't be treated like other constants.
-            if (isa<llvm::GlobalValue>(cst))
-              continue;
-            if (cst->hasZeroLiveUses())
-              cst->destroyConstant();
-          }
-        }
       }
       ReturnOp ret = cast<ReturnOp>(initializer->getTerminator());
       llvm::Constant *cst =

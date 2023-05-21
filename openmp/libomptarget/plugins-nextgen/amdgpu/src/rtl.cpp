@@ -2110,7 +2110,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Print information about the device.
   Error obtainInfoImpl(InfoQueueTy &Info) override {
     char TmpChar[1000];
-    const char *TmpCharPtr;
+    const char *TmpCharPtr = "Unknown";
     uint16_t Major, Minor;
     uint32_t TmpUInt, TmpUInt2;
     uint32_t CacheSize[4];
@@ -2153,8 +2153,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       case HSA_DEVICE_TYPE_DSP:
         TmpCharPtr = "DSP";
         break;
-      default:
-        TmpCharPtr = "Unknown";
       }
       Info.add("Device Type", TmpCharPtr);
     }

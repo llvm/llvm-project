@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++98 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++98 %s -Wuninitialized
@@ -11,6 +14,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++98 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void xxx(int argc) {
@@ -159,7 +165,7 @@ T tmain(T argc) {
 #pragma omp simd reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp simd reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp simd reduction(- : da) // expected-error 2 {{const-qualified variable cannot be reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp simd reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -284,7 +290,7 @@ int main(int argc, char **argv) {
 #pragma omp simd reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp simd reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp simd reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp simd reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -331,7 +337,7 @@ int main(int argc, char **argv) {
 #pragma omp simd reduction(+ : fl)
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp simd reduction(task, + : fl) // omp45-error 2 {{expected expression}} omp45-warning {{missing ':' after reduction identifier - ignoring}} omp50-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}}
+#pragma omp simd reduction(task, + : fl) // omp45-error 2 {{expected expression}} omp45-warning {{missing ':' after reduction identifier - ignoring}} omp50-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}} omp52-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}}
   for (int i = 0; i < 10; ++i)
     foo();
 

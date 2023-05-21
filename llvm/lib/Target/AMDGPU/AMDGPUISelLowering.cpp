@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -5166,4 +5167,23 @@ bool AMDGPUTargetLowering::isConstantUnsignedBitfieldExtractLegal(
     unsigned Opc, LLT Ty1, LLT Ty2) const {
   return (Ty1 == LLT::scalar(32) || Ty1 == LLT::scalar(64)) &&
          Ty2 == LLT::scalar(32);
+}
+
+/// Whether it is profitable to sink the operands of an
+/// Instruction I to the basic block of I.
+/// This helps using several modifiers (like abs and neg) more often.
+bool AMDGPUTargetLowering::shouldSinkOperands(
+    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+  using namespace PatternMatch;
+
+  for (auto &Op : I->operands()) {
+    // Ensure we are not already sinking this operand.
+    if (any_of(Ops, [&](Use *U) { return U->get() == Op.get(); }))
+      continue;
+
+    if (match(&Op, m_FAbs(m_Value())) || match(&Op, m_FNeg(m_Value())))
+      Ops.push_back(&Op);
+  }
+
+  return !Ops.empty();
 }
