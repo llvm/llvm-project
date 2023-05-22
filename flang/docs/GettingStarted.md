@@ -180,6 +180,76 @@ directory:
 ninja check-flang
 ```
 
+### Building flang runtime for accelerators
+Flang runtime can be built for accelerators in experimental mode, i.e.
+complete enabling is WIP.  CUDA and OpenMP target offload builds
+are currently supported.
+
+#### Building out-of-tree
+
+##### CUDA build
+Clang with NVPTX backend and NVCC compilers are supported.
+
+```bash
+cd llvm-project/flang
+mkdir -rf build_flang_runtime
+mkdir build_flang_runtime
+cd build_flang_runtime
+
+cmake \
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CUDA_COMPILER=clang \
+  ../runtime/
+make -j FortranRuntime
+```
+
+```bash
+cd llvm-project/flang
+mkdir -rf build_flang_runtime
+mkdir build_flang_runtime
+cd build_flang_runtime
+
+cmake \
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CUDA_COMPILER=nvcc \
+  ../runtime/
+make -j FortranRuntime
+```
+
+The result of the build is a "fat" library with the host and device
+code.  Note that the packaging of the libraries is different
+between [Clang](https://clang.llvm.org/docs/OffloadingDesign.html#linking-target-device-code) and NVCC, so the library must be linked using
+compatible compiler drivers.
+
+##### OpenMP target offload build
+Only Clang compiler is currently supported.
+
+```
+cd llvm-project/flang
+mkdir -rf build_flang_runtime
+mkdir build_flang_runtime
+cd build_flang_runtime
+
+cmake \
+  -DFLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD="host_device" \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DFLANG_OMP_DEVICE_ARCHITECTURES="all" \
+  ../runtime/
+make -j FortranRuntime
+```
+
+The result of the build is a "device-only" library, i.e. the host
+part of the library is just a container for the device code.
+The resulting library may be linked to user programs using
+Clang-like device linking pipeline.
+
 ## Supported C++ compilers
 
 Flang is written in C++17.
