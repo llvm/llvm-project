@@ -1,3 +1,6 @@
+// Work around "Cannot represent a difference across sections"
+// UNSUPPORTED: target=powerpc64-{{.*}}
+
 // RUN: %clangxx -DDETERMINE_UNIQUE %s -o %t-unique
 // RUN: %clangxx -std=c++17 -fsanitize=function %s -O3 -g -DSHARED_LIB -fPIC -shared -o %t-so.so
 // RUN: %clangxx -std=c++17 -fsanitize=function %s -O3 -g -o %t %t-so.so
