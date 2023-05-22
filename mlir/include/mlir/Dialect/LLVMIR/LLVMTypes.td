@@ -12,6 +12,7 @@
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
 
 /// Base class for all LLVM dialect types.
 class LLVMType<string typeName, string typeMnemonic, list<Trait> traits = []>
@@ -24,7 +25,8 @@ class LLVMType<string typeName, string typeMnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def LLVMArrayType : LLVMType<"LLVMArray", "array", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getTypeSize"]>]> {
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getTypeSize"]>,
+    DeclareTypeInterfaceMethods<DestructurableTypeInterface>]> {
   let summary = "LLVM array type";
   let description = [{
     The `!llvm.array` type represents a fixed-size array of element types.

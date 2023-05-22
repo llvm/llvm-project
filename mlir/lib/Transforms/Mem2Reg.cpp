@@ -578,8 +578,6 @@ void MemorySlotPromoter::promoteSlot() {
 LogicalResult mlir::tryToPromoteMemorySlots(
     ArrayRef<PromotableAllocationOpInterface> allocators,
     RewriterBase &rewriter, Mem2RegStatistics statistics) {
-  DominanceInfo dominance;
-
   bool promotedAny = false;
 
   for (PromotableAllocationOpInterface allocator : allocators) {

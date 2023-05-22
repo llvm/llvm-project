@@ -12,6 +12,7 @@ add_mlir_library(MLIRTransforms
   OpStats.cpp
   PrintIR.cpp
   SCCP.cpp
+  SROA.cpp
   StripDebugInfo.cpp
   SymbolDCE.cpp
   SymbolPrivatize.cpp

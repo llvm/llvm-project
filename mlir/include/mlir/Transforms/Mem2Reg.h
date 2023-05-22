@@ -17,8 +17,11 @@
 
 namespace mlir {
 
+/// Statistics collected while applying mem2reg.
 struct Mem2RegStatistics {
+  /// Total amount of memory slots promoted.
   llvm::Statistic *promotedAmount = nullptr;
+  /// Total amount of new block arguments inserted in blocks.
   llvm::Statistic *newBlockArgumentAmount = nullptr;
 };
 
