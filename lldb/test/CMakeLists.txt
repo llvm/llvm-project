@@ -122,6 +122,14 @@ if(TARGET clang)
 
   if (TARGET libcxx OR ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES))
     set(LLDB_HAS_LIBCXX ON)
+    if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+      set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+      set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+      set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
+    else()
+      set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+      set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+    endif()
     add_lldb_test_dependency(cxx)
   endif()
 
@@ -134,9 +142,18 @@ if(TARGET clang)
     # FIXME: Standalone builds should import the cxx target as well.
     if(LLDB_BUILT_STANDALONE)
       # For now check that the include directory exists.
-      set(cxx_dir "${LLVM_BINARY_DIR}/include/c++")
-      if(NOT EXISTS ${cxx_dir})
-        message(WARNING "LLDB test suite requires libc++ in llvm/projects/libcxx or an existing build symlinked to ${cxx_dir}")
+      set(cxx_dir "${LLDB_TEST_LIBCXX_ROOT_DIR}/include/c++")
+      if(EXISTS ${cxx_dir})
+        # These variables make sure the API tests can run against a custom
+        # build of libcxx even for standalone builds.
+        set(LLDB_HAS_LIBCXX ON)
+        set(LIBCXX_LIBRARY_DIR "${LLDB_TEST_LIBCXX_ROOT_DIR}/lib${LIBCXX_LIBDIR_SUFFIX}")
+        set(LIBCXX_GENERATED_INCLUDE_DIR "${LLDB_TEST_LIBCXX_ROOT_DIR}/include/c++/v1")
+      else()
+        message(FATAL_ERROR
+            "Couldn't find libcxx build in '${LLDB_TEST_LIBCXX_ROOT_DIR}'. To run the "
+            "test-suite for a standalone LLDB build please build libcxx and point "
+            "LLDB_TEST_LIBCXX_ROOT_DIR to it.")
       endif()
     else()
       # We require libcxx for the test suite, so if we aren't building it,
