@@ -296,11 +296,11 @@ func.func @contract_one_sided_unit_reduction_dim(%arg0 : vector<1x2xi32>, %arg1 
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   %f = transform.structured.match ops{["func.func"]} in %module_op 
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 
   %f2 = transform.vector.lower_contraction %f
     lowering_strategy = "dot"
-      : (!pdl.operation) -> !pdl.operation
+      : (!transform.any_op) -> !transform.any_op
 }

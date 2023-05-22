@@ -165,18 +165,18 @@ out_of_bounds:
 }
 
 
-; TODO: x + iv < 4 ==> iv < 4 - x
+; x + iv < 4 ==> iv < 4 - x
 define i32 @test_02(ptr %p, ptr %x_p, ptr %length_p) {
 ; CHECK-LABEL: define i32 @test_02
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[X_P:%.*]], ptr [[LENGTH_P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, ptr [[LENGTH_P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub nsw i32 4, [[X]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[ARITH:%.*]] = add nsw i32 [[X]], [[IV]]
-; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[ARITH]], 4
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[IV]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
@@ -391,18 +391,18 @@ failed:
   ret i32 -2
 }
 
-; TODO: iv + x < 4 ==> iv < 4 - x
+; iv + x < 4 ==> iv < 4 - x
 define i32 @test_04(ptr %p, ptr %x_p, ptr %length_p) {
 ; CHECK-LABEL: define i32 @test_04
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[X_P:%.*]], ptr [[LENGTH_P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, ptr [[LENGTH_P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub nsw i32 4, [[X]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[ARITH:%.*]] = add nsw i32 [[IV]], [[X]]
-; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[ARITH]], 4
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[IV]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]

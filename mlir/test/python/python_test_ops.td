@@ -57,6 +57,23 @@ def AttributedOp : TestOp<"attributed_op"> {
                    UnitAttr:$unit);
 }
 
+def AttributesOp : TestOp<"attributes_op"> {
+  let arguments = (ins BoolAttr:$x_bool,
+                   I16Attr: $x_i16,
+                   I32Attr: $x_i32,
+                   I64Attr: $x_i64,
+                   SI16Attr: $x_si16,
+                   SI32Attr: $x_si32,
+                   F32Attr: $x_f32,
+                   F64Attr: $x_f64,
+                   StrAttr: $x_str,
+                   I32ArrayAttr: $x_i32_array,
+                   I64ArrayAttr: $x_i64_array,
+                   F32ArrayAttr: $x_f32_array,
+                   F64ArrayAttr: $x_f64_array,
+                   DenseI64ArrayAttr: $x_i64_dense);
+}
+
 def PropertyOp : TestOp<"property_op"> {
   let arguments = (ins I32Attr:$property,
                    I32:$idx);

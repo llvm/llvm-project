@@ -1087,6 +1087,54 @@ struct ParallelInsertSliceOpInterface
   }
 };
 
+/// Bufferization of tensor.splat. Bufferizes to a new allocation that is filled
+/// with a linalg.map. Similar to tensor.generate.
+struct SplatOpInterface
+    : public BufferizableOpInterface::ExternalModel<SplatOpInterface,
+                                                    tensor::SplatOp> {
+
+  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
+    return true;
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options) const {
+    OpBuilder::InsertionGuard g(rewriter);
+    auto splatOp = cast<tensor::SplatOp>(op);
+
+    // Should the buffer be deallocated?
+    bool dealloc =
+        shouldDeallocateOpResult(cast<OpResult>(splatOp.getResult()), options);
+
+    // TODO: Implement memory space for this op.
+    if (options.defaultMemorySpace != Attribute())
+      return op->emitError("memory space not implemented yet");
+
+    // Allocate memory.
+    Location loc = op->getLoc();
+    FailureOr<Value> tensorAlloc =
+        allocateTensorForShapedValue(rewriter, loc, splatOp.getResult(),
+                                     /*escape=*/!dealloc, options,
+                                     /*copy=*/false);
+    if (failed(tensorAlloc))
+      return failure();
+
+    // Create linalg::MapOp.
+    auto tensorType = cast<RankedTensorType>(tensorAlloc->getType());
+    auto linalgOp =
+        rewriter.create<linalg::MapOp>(loc, tensorType, /*inputs=*/ValueRange(),
+                                       /*init=*/*tensorAlloc);
+    Block &linalgBody = linalgOp.getMapper().emplaceBlock();
+
+    // Create linalg::IndexOps.
+    rewriter.setInsertionPointToStart(&linalgBody);
+    rewriter.create<linalg::YieldOp>(loc, splatOp.getInput());
+    rewriter.replaceOp(splatOp, linalgOp.getResult()[0]);
+
+    return success();
+  }
+};
+
 } // namespace
 } // namespace tensor
 } // namespace mlir
@@ -1110,6 +1158,7 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
         *ctx);
     RankOp::attachInterface<RankOpInterface>(*ctx);
     ReshapeOp::attachInterface<ReshapeOpInterface>(*ctx);
+    SplatOp::attachInterface<SplatOpInterface>(*ctx);
 
     // Load additional dialects of which ops may get created.
     ctx->loadDialect<arith::ArithDialect, linalg::LinalgDialect>();

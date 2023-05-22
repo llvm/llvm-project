@@ -160,8 +160,8 @@ N: David Majnemer
 E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
 
-N: Dylan McKay
-E: me@dylanmckay.io
+N: Ben Shi
+E: 2283975856@qq.com, powerman1st@163.com
 D: AVR Backend
 
 N: Kazushi Marukawa

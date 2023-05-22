@@ -2,6 +2,11 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.private.recipe @privatization_10x10xf32 : !fir.ref<!fir.array<10x10xf32>> init {
+! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x10xf32>>):
+! CHECK: acc.yield %{{.*}} : !fir.ref<!fir.array<10x10xf32>>
+! CHECK: }
+
 program acc_loop
 
   integer :: i, j
@@ -154,7 +159,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.loop private(%{{.*}} : !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.loop private(@privatization_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
@@ -164,7 +169,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.loop private(%{{.*}}, %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.loop private(@privatization_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
@@ -174,7 +179,7 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.loop private(%{{.*}}, %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
+!CHECK:      acc.loop private(@privatization_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>) {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}

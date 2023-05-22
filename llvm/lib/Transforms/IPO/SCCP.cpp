@@ -13,7 +13,7 @@
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -107,13 +107,15 @@ static void findReturnsToZap(Function &F,
 
 static bool runIPSCCP(
     Module &M, const DataLayout &DL, FunctionAnalysisManager *FAM,
+    std::function<BlockFrequencyInfo &(Function &)> GetBFI,
     std::function<const TargetLibraryInfo &(Function &)> GetTLI,
     std::function<TargetTransformInfo &(Function &)> GetTTI,
     std::function<AssumptionCache &(Function &)> GetAC,
     function_ref<AnalysisResultsForFn(Function &)> getAnalysis,
     bool IsFuncSpecEnabled) {
   SCCPSolver Solver(DL, GetTLI, M.getContext());
-  FunctionSpecializer Specializer(Solver, M, FAM, GetTLI, GetTTI, GetAC);
+  FunctionSpecializer Specializer(Solver, M, FAM, GetBFI, GetTLI, GetTTI,
+                                  GetAC);
 
   // Loop over all functions, marking arguments to those with their addresses
   // taken or that are external as overdefined.
@@ -381,21 +383,23 @@ PreservedAnalyses IPSCCPPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto GetTLI = [&FAM](Function &F) -> const TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
+  auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
+    return FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
   auto GetTTI = [&FAM](Function &F) -> TargetTransformInfo & {
     return FAM.getResult<TargetIRAnalysis>(F);
   };
   auto GetAC = [&FAM](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  auto getAnalysis = [&FAM, this](Function &F) -> AnalysisResultsForFn {
+  auto getAnalysis = [&FAM](Function &F) -> AnalysisResultsForFn {
     DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     return {
         std::make_unique<PredicateInfo>(F, DT, FAM.getResult<AssumptionAnalysis>(F)),
-        &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F),
-        isFuncSpecEnabled() ? &FAM.getResult<LoopAnalysis>(F) : nullptr };
+        &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F) };
   };
 
-  if (!runIPSCCP(M, DL, &FAM, GetTLI, GetTTI, GetAC, getAnalysis,
+  if (!runIPSCCP(M, DL, &FAM, GetBFI, GetTLI, GetTTI, GetAC, getAnalysis,
                  isFuncSpecEnabled()))
     return PreservedAnalyses::all();
 

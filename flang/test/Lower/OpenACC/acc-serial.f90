@@ -2,6 +2,13 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.private.recipe @privatization_10x10xf32 : !fir.ref<!fir.array<10x10xf32>> init {
+! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x10xf32>>):
+! CHECK: acc.yield %{{.*}} : !fir.ref<!fir.array<10x10xf32>>
+! CHECK: }
+
+! CHECK-LABEL: func.func @_QPacc_serial()
+
 subroutine acc_serial
   integer :: i, j
 
@@ -234,7 +241,7 @@ subroutine acc_serial
   !$acc serial private(a) firstprivate(b) private(c)
   !$acc end serial
 
-! CHECK:      acc.serial firstprivate(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) private(%[[A]], %[[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
+! CHECK:      acc.serial firstprivate(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) private(@privatization_10x10xf32 -> %[[A]] : !fir.ref<!fir.array<10x10xf32>>, @privatization_10x10xf32 -> %[[C]] : !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 

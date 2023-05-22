@@ -356,8 +356,19 @@ struct KnownFPClass {
   }
 
   void fabs() {
-    KnownFPClasses &= (fcPositive | fcNan);
-    SignBit = false;
+    if (KnownFPClasses & fcNegZero)
+      KnownFPClasses |= fcPosZero;
+
+    if (KnownFPClasses & fcNegInf)
+      KnownFPClasses |= fcPosInf;
+
+    if (KnownFPClasses & fcNegSubnormal)
+      KnownFPClasses |= fcPosSubnormal;
+
+    if (KnownFPClasses & fcNegNormal)
+      KnownFPClasses |= fcPosNormal;
+
+    signBitMustBeZero();
   }
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.

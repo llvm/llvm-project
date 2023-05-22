@@ -70,13 +70,16 @@ public:
   }
 
   void fixPLTEdge(Edge &E, Symbol &PLTStubs) {
-    assert(E.getKind() == R_RISCV_CALL_PLT && "Not a R_RISCV_CALL_PLT edge?");
+    assert((E.getKind() == R_RISCV_CALL || E.getKind() == R_RISCV_CALL_PLT ||
+            E.getKind() == CallRelaxable) &&
+           "Not a PLT edge?");
     E.setKind(R_RISCV_CALL);
     E.setTarget(PLTStubs);
   }
 
   bool isExternalBranchEdge(Edge &E) const {
-    return (E.getKind() == R_RISCV_CALL || E.getKind() == R_RISCV_CALL_PLT) &&
+    return (E.getKind() == R_RISCV_CALL || E.getKind() == R_RISCV_CALL_PLT ||
+            E.getKind() == CallRelaxable) &&
            !E.getTarget().isDefined();
   }
 

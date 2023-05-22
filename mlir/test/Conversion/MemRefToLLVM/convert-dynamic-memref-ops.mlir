@@ -86,10 +86,7 @@ func.func @dynamic_alloca(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 //   CHECK-DAG:  %[[N:.*]] = builtin.unrealized_conversion_cast %[[Narg]]
 //  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : i64
 //  CHECK-NEXT:  %[[num_elems:.*]] = llvm.mul %[[N]], %[[M]] : i64
-//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr
-//  CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[num_elems]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-//  CHECK-NEXT:  %[[sz_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr to i64
-//  CHECK-NEXT:  %[[allocated:.*]] = llvm.alloca %[[sz_bytes]] x f32 : (i64) -> !llvm.ptr
+//  CHECK-NEXT:  %[[allocated:.*]] = llvm.alloca %[[num_elems]] x f32 : (i64) -> !llvm.ptr
 //  CHECK-NEXT:  llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[allocated]], %{{.*}}[0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[allocated]], %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>

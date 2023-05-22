@@ -106,6 +106,8 @@ STATISTIC(NumMinMaxHoisted,
           "Number of min/max expressions hoisted out of the loop");
 STATISTIC(NumGEPsHoisted,
           "Number of geps reassociated and hoisted out of the loop");
+STATISTIC(NumAddSubHoisted, "Number of add/subtract expressions reassociated "
+                            "and hoisted out of the loop");
 
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
@@ -2525,10 +2527,89 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   return true;
 }
 
+/// Try to turn things like "LV + C1 < C2" into "LV < C2 - C1". Here
+/// C1 and C2 are loop invariants and LV is a loop-variant.
+static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
+                     Value *InvariantRHS, ICmpInst &ICmp, Loop &L,
+                     ICFLoopSafetyInfo &SafetyInfo, MemorySSAUpdater &MSSAU,
+                     AssumptionCache *AC, DominatorTree *DT) {
+  assert(ICmpInst::isSigned(Pred) && "Not supported yet!");
+  assert(!L.isLoopInvariant(VariantLHS) && "Precondition.");
+  assert(L.isLoopInvariant(InvariantRHS) && "Precondition.");
+
+  // Try to represent VariantLHS as sum of invariant and variant operands.
+  using namespace PatternMatch;
+  Value *VariantOp, *InvariantOp;
+  if (!match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+    return false;
+
+  // LHS itself is a loop-variant, try to represent it in the form:
+  // "VariantOp + InvariantOp". If it is possible, then we can reassociate.
+  if (L.isLoopInvariant(VariantOp))
+    std::swap(VariantOp, InvariantOp);
+  if (L.isLoopInvariant(VariantOp) || !L.isLoopInvariant(InvariantOp))
+    return false;
+
+  // In order to turn "LV + C1 < C2" into "LV < C2 - C1", we need to be able to
+  // freely move values from left side of inequality to right side (just as in
+  // normal linear arithmetics). Overflows make things much more complicated, so
+  // we want to avoid this.
+  auto &DL = L.getHeader()->getModule()->getDataLayout();
+  bool ProvedNoOverflowAfterReassociate =
+      computeOverflowForSignedSub(InvariantRHS, InvariantOp, DL, AC, &ICmp,
+                                  DT) == llvm::OverflowResult::NeverOverflows;
+  if (!ProvedNoOverflowAfterReassociate)
+    return false;
+  auto *Preheader = L.getLoopPreheader();
+  assert(Preheader && "Loop is not in simplify form?");
+  IRBuilder<> Builder(Preheader->getTerminator());
+  Value *NewCmpOp = Builder.CreateSub(InvariantRHS, InvariantOp, "invariant.op",
+                                      /*HasNUW*/ false, /*HasNSW*/ true);
+  ICmp.setPredicate(Pred);
+  ICmp.setOperand(0, VariantOp);
+  ICmp.setOperand(1, NewCmpOp);
+  eraseInstruction(cast<Instruction>(*VariantLHS), SafetyInfo, MSSAU);
+  return true;
+}
+
+/// Reassociate and hoist add/sub expressions.
+static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
+                        MemorySSAUpdater &MSSAU, AssumptionCache *AC,
+                        DominatorTree *DT) {
+  using namespace PatternMatch;
+  ICmpInst::Predicate Pred;
+  Value *LHS, *RHS;
+  if (!match(&I, m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
+    return false;
+
+  // TODO: Support unsigned predicates?
+  if (!ICmpInst::isSigned(Pred))
+    return false;
+
+  // Put variant operand to LHS position.
+  if (L.isLoopInvariant(LHS)) {
+    std::swap(LHS, RHS);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+  // We want to delete the initial operation after reassociation, so only do it
+  // if it has no other uses.
+  if (L.isLoopInvariant(LHS) || !L.isLoopInvariant(RHS) || !LHS->hasOneUse())
+    return false;
+
+  // TODO: We could go with smarter context, taking common dominator of all I's
+  // users instead of I itself.
+  if (hoistAdd(Pred, LHS, RHS, cast<ICmpInst>(I), L, SafetyInfo, MSSAU, AC, DT))
+    return true;
+
+  // TODO: Support Sub.
+
+  return false;
+}
+
 static bool hoistArithmetics(Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
-                             MemorySSAUpdater &MSSAU,
-                             AssumptionCache *AC, DominatorTree *DT) {
+                             MemorySSAUpdater &MSSAU, AssumptionCache *AC,
+                             DominatorTree *DT) {
   // Optimize complex patterns, such as (x < INV1 && x < INV2), turning them
   // into (x < min(INV1, INV2)), and hoisting the invariant part of this
   // expression out of the loop.
@@ -2542,6 +2623,13 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
   if (hoistGEP(I, L, SafetyInfo, MSSAU, AC, DT)) {
     ++NumHoisted;
     ++NumGEPsHoisted;
+    return true;
+  }
+
+  // Try to hoist add/sub's by reassociation.
+  if (hoistAddSub(I, L, SafetyInfo, MSSAU, AC, DT)) {
+    ++NumHoisted;
+    ++NumAddSubHoisted;
     return true;
   }
 

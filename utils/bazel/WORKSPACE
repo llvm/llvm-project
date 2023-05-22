@@ -27,13 +27,6 @@ load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
 
 llvm_configure(name = "llvm-project")
 
-load("@llvm-raw//utils/bazel:terminfo.bzl", "llvm_terminfo_from_env")
-
-maybe(
-    llvm_terminfo_from_env,
-    name = "llvm_terminfo",
-)
-
 maybe(
     http_archive,
     name = "llvm_zlib",

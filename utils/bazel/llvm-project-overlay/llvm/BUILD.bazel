@@ -274,11 +274,6 @@ cc_library(
     deps = [
         ":config",
         ":Demangle",
-        # We unconditionally depend on the custom LLVM terminfo wrapper. This
-        # will be an empty library unless terminfo is enabled, in which case it
-        # will both provide the necessary dependencies and configuration
-        # defines.
-        "@llvm_terminfo//:terminfo",
         # We unconditionally depend on the custom LLVM zlib wrapper. This will
         # be an empty library unless zlib is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.

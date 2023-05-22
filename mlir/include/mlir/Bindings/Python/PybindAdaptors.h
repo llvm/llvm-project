@@ -236,6 +236,27 @@ struct type_caster<MlirPassManager> {
   }
 };
 
+/// Casts object <-> MlirTypeID.
+template <>
+struct type_caster<MlirTypeID> {
+  PYBIND11_TYPE_CASTER(MlirTypeID, _("MlirTypeID"));
+  bool load(handle src, bool) {
+    py::object capsule = mlirApiObjectToCapsule(src);
+    value = mlirPythonCapsuleToTypeID(capsule.ptr());
+    return !mlirTypeIDIsNull(value);
+  }
+  static handle cast(MlirTypeID v, return_value_policy, handle) {
+    if (v.ptr == nullptr)
+      return py::none();
+    py::object capsule =
+        py::reinterpret_steal<py::object>(mlirPythonTypeIDToCapsule(v));
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+        .attr("TypeID")
+        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+        .release();
+  };
+};
+
 /// Casts object <-> MlirType.
 template <>
 struct type_caster<MlirType> {

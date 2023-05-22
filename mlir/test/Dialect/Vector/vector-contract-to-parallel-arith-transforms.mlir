@@ -52,11 +52,11 @@ func.func @parallel_contract_lowering_scalar(%arg0: vector<1x1xf32>, %arg1: vect
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   %f = transform.structured.match ops{["func.func"]} in %module_op 
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 
   %f2 = transform.vector.lower_contraction %f
     lowering_strategy = "parallelarith"
-      : (!pdl.operation) -> !pdl.operation
+      : (!transform.any_op) -> !transform.any_op
 }

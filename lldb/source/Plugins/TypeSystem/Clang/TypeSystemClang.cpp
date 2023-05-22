@@ -5115,6 +5115,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::RvvBool16:
     case clang::BuiltinType::RvvBool32:
     case clang::BuiltinType::RvvBool64:
+    case clang::BuiltinType::RvvInt32m1x2:
       break;
 
     // WebAssembly builtin types.

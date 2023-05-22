@@ -437,6 +437,43 @@ LogicalResult acc::ReductionRecipeOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
+// Custom parser and printer verifier for private clause
+//===----------------------------------------------------------------------===//
+
+static ParseResult parsePrivatizationList(
+    mlir::OpAsmParser &parser,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
+    llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &privatizationSymbols) {
+  llvm::SmallVector<SymbolRefAttr> privatizationVec;
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseAttribute(privatizationVec.emplace_back()) ||
+            parser.parseArrow() ||
+            parser.parseOperand(operands.emplace_back()) ||
+            parser.parseColonType(types.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
+  llvm::SmallVector<mlir::Attribute> privatizations(privatizationVec.begin(),
+                                                    privatizationVec.end());
+  privatizationSymbols = ArrayAttr::get(parser.getContext(), privatizations);
+  return success();
+}
+
+static void
+printPrivatizationList(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                       mlir::OperandRange privateOperands,
+                       mlir::TypeRange privateTypes,
+                       std::optional<mlir::ArrayAttr> privatizations) {
+  for (unsigned i = 0, e = privatizations->size(); i < e; ++i) {
+    if (i != 0)
+      p << ", ";
+    p << (*privatizations)[i] << " -> " << privateOperands[i] << " : "
+      << privateOperands[i].getType();
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
@@ -452,6 +489,45 @@ static LogicalResult checkDataOperands(Op op,
       return op.emitError(
           "expect data entry/exit operation or acc.getdeviceptr "
           "as defining op");
+  return success();
+}
+
+static LogicalResult
+checkPrivatizationList(Operation *op,
+                       std::optional<mlir::ArrayAttr> privatizations,
+                       mlir::OperandRange privateOperands) {
+  if (!privateOperands.empty()) {
+    if (!privatizations || privatizations->size() != privateOperands.size())
+      return op->emitOpError() << "expected as many privatizations symbol "
+                                  "reference as private operands";
+  } else {
+    if (privatizations)
+      return op->emitOpError() << "unexpected privatizations symbol reference";
+    return success();
+  }
+
+  llvm::DenseSet<Value> privates;
+  for (auto args : llvm::zip(privateOperands, *privatizations)) {
+    mlir::Value privateOperand = std::get<0>(args);
+
+    if (!privates.insert(privateOperand).second)
+      return op->emitOpError() << "private operand appears more than once";
+
+    mlir::Type varType = privateOperand.getType();
+    auto symbolRef = std::get<1>(args).cast<SymbolRefAttr>();
+    auto decl =
+        SymbolTable::lookupNearestSymbolFrom<PrivateRecipeOp>(op, symbolRef);
+    if (!decl)
+      return op->emitOpError() << "expected symbol reference " << symbolRef
+                               << " to point to a private declaration";
+
+    if (decl.getType() && decl.getType() != varType)
+      return op->emitOpError()
+             << "expected private (" << varType
+             << ") to be the same type as private declaration ("
+             << decl.getType() << ")";
+  }
+
   return success();
 }
 
@@ -471,6 +547,9 @@ Value ParallelOp::getDataOperand(unsigned i) {
 }
 
 LogicalResult acc::ParallelOp::verify() {
+  if (failed(checkPrivatizationList(*this, getPrivatizations(),
+                                    getGangPrivateOperands())))
+    return failure();
   return checkDataOperands<acc::ParallelOp>(*this, getDataClauseOperands());
 }
 
@@ -646,6 +725,10 @@ LogicalResult acc::LoopOp::verify() {
   // Gang, worker and vector are incompatible with seq.
   if (getSeq() && (getHasGang() || getHasWorker() || getHasVector()))
     return emitError("gang, worker or vector cannot appear with the seq attr");
+
+  if (failed(checkPrivatizationList(*this, getPrivatizations(),
+                                    getPrivateOperands())))
+    return failure();
 
   // Check non-empty body().
   if (getRegion().empty())

@@ -47,13 +47,13 @@ public:
   bool supportsInstrumentType(StringRef Type) const override;
 
   /// Create a Instrument for RISC-V target
-  SharedInstrument createInstrument(StringRef Desc, StringRef Data) override;
+  UniqueInstrument createInstrument(StringRef Desc, StringRef Data) override;
 
   /// Using the Instrument, returns a SchedClassID to use instead of
   /// the SchedClassID that belongs to the MCI or the original SchedClassID.
   unsigned
   getSchedClassID(const MCInstrInfo &MCII, const MCInst &MCI,
-                  const SmallVector<SharedInstrument> &IVec) const override;
+                  const SmallVector<Instrument *> &IVec) const override;
 };
 
 } // namespace mca

@@ -215,4 +215,158 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
   ];
 }
 
+def DestructurableAllocationOpInterface
+  : OpInterface<"DestructurableAllocationOpInterface"> {
+  let description = [{
+    Describes operations allocating memory slots of aggregates that can be
+    destructured into multiple smaller allocations.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns the list of slots for which destructuring should be attempted,
+        specifying in which way the slot should be destructured into subslots.
+        The subslots are indexed by attributes. This computes the type of the
+        pointer for each subslot to be generated. The type of the memory slot
+        must implement `DestructurableTypeInterface`.
+
+        No IR mutation is allowed in this method.
+      }],
+      "::llvm::SmallVector<::mlir::DestructurableMemorySlot>",
+      "getDestructurableSlots",
+      (ins)
+    >,
+    InterfaceMethod<[{
+        Destructures this slot into multiple subslots. The newly generated slots
+        may belong to a different allocator. The original slot must still exist
+        at the end of this call. Only generates subslots for the indices found in
+        `usedIndices` since all other subslots are unused.
+
+        The rewriter is located at the beginning of the block where the slot
+        pointer is defined. All IR mutations must happen through the rewriter.
+      }],
+      "::llvm::DenseMap<::mlir::Attribute, ::mlir::MemorySlot>",
+      "destructure",
+      (ins "const ::mlir::DestructurableMemorySlot &":$slot,
+           "const ::llvm::SmallPtrSetImpl<::mlir::Attribute> &":$usedIndices,
+           "::mlir::RewriterBase &":$rewriter)
+    >,
+    InterfaceMethod<[{
+        Hook triggered once the destructuring of a slot is complete, meaning the
+        original slot is no longer being refered to and could be deleted.
+        This will only be called for slots declared by this operation.
+
+        All IR mutations must happen through the rewriter.
+      }],
+      "void", "handleDestructuringComplete",
+      (ins "const ::mlir::DestructurableMemorySlot &":$slot,
+           "::mlir::RewriterBase &":$rewriter)
+    >,
+  ];
+}
+
+def SafeMemorySlotAccessOpInterface
+  : OpInterface<"SafeMemorySlotAccessOpInterface"> {
+  let description = [{
+    Describes operations using memory slots in a type-safe manner.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns whether all accesses in this operation to the provided slot are
+        done in a type-safe manner. To be type-safe, the access must only load
+        the value in this type as the type of the slot, and without assuming any
+        context around the slot. For example, a type-safe load must not load
+        outside the bounds of the slot.
+
+        If the type-safety of the accesses depends on the type-safety of the
+        accesses to further memory slots, the result of this method will be
+        conditioned to the type-safety of the accesses to the slots added by
+        this method to `mustBeSafelyUsed`.
+
+        No IR mutation is allowed in this method.
+      }],
+      "::mlir::LogicalResult",
+      "ensureOnlySafeAccesses",
+      (ins "const ::mlir::MemorySlot &":$slot,
+           "::mlir::SmallVectorImpl<::mlir::MemorySlot> &":$mustBeSafelyUsed)
+    >
+  ];
+}
+
+def DestructurableAccessorOpInterface
+  : OpInterface<"DestructurableAccessorOpInterface"> {
+  let description = [{
+    Describes operations that can access a sub-element of a destructurable slot.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        For a given destructurable memory slot, returns whether this operation can
+        rewire its uses of the slot to use the slots generated after
+        destructuring. This may involve creating new operations, and usually
+        amounts to checking if the pointer types match.
+
+        This method must also register the indices it will access within the
+        `usedIndices` set. If the accessor generates new slots mapping to
+        subelements, they must be registered in `mustBeSafelyUsed` to ensure
+        they are used in a locally type-safe manner.
+
+        No IR mutation is allowed in this method.
+      }],
+      "bool",
+      "canRewire",
+      (ins "const ::mlir::DestructurableMemorySlot &":$slot,
+           "::llvm::SmallPtrSetImpl<::mlir::Attribute> &":$usedIndices,
+           "::mlir::SmallVectorImpl<::mlir::MemorySlot> &":$mustBeSafelyUsed)
+    >,
+    InterfaceMethod<[{
+        Rewires the use of a slot to the generated subslots, without deleting
+        any operation. Returns whether the accessor should be deleted.
+
+        All IR mutations must happen through the rewriter. Deletion of
+        operations is not allowed, only the accessor can be scheduled for
+        deletion by returning the appropriate value.
+      }],
+      "::mlir::DeletionKind",
+      "rewire",
+      (ins "const ::mlir::DestructurableMemorySlot &":$slot,
+           "::llvm::DenseMap<::mlir::Attribute, ::mlir::MemorySlot> &":$subslots,
+           "::mlir::RewriterBase &":$rewriter)
+    >
+  ];
+}
+
+def DestructurableTypeInterface
+  : TypeInterface<"DestructurableTypeInterface"> {
+  let description = [{
+    Describes a type that can be broken down into indexable sub-element types.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Destructures the type into subelements into a map of index attributes to
+        types of subelements. Returns nothing if the type cannot be destructured.
+      }],
+      "::std::optional<::llvm::DenseMap<::mlir::Attribute, ::mlir::Type>>",
+      "getSubelementIndexMap",
+      (ins)
+    >,
+    InterfaceMethod<[{
+        Indicates which type is held at the provided index, returning a null
+        Type if no type could be computed. While this can return information
+        even when the type cannot be completely destructured, it must be coherent
+        with the types returned by `getSubelementIndexMap` when they exist.
+      }],
+      "::mlir::Type",
+      "getTypeAtIndex",
+      (ins "::mlir::Attribute":$index)
+    >
+  ];
+}
+
 #endif // MLIR_INTERFACES_MEMORYSLOTINTERFACES

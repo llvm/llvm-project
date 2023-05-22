@@ -2340,6 +2340,29 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
 // -----
 
+llvm.func @par_task_(%arg0: !llvm.ptr<i32> {fir.bindc_name = "a"}) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  omp.task   {
+    omp.parallel   {
+      llvm.store %0, %arg0 : !llvm.ptr<i32>
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: @par_task_
+// CHECK: %[[TASK_ALLOC:.*]] = call ptr @__kmpc_omp_task_alloc({{.*}}ptr @par_task_..omp_par.wrapper)
+// CHECK: call i32 @__kmpc_omp_task({{.*}}, ptr %[[TASK_ALLOC]])
+// CHECK-LABEL: define internal void @par_task_..omp_par
+// CHECK: %[[ARG_ALLOC:.*]] = alloca { ptr }, align 8
+// CHECK: call void ({{.*}}) @__kmpc_fork_call({{.*}}, ptr @par_task_..omp_par..omp_par, ptr %[[ARG_ALLOC]])
+// CHECK: define internal void @par_task_..omp_par..omp_par
+// CHECK: define i32 @par_task_..omp_par.wrapper
+// CHECK: call void @par_task_..omp_par
+// -----
+
 llvm.func @foo() -> ()
 
 llvm.func @omp_taskgroup(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
