@@ -10,6 +10,8 @@
 #ifndef TEST_CONTAINER_COMPARISONS
 #define TEST_CONTAINER_COMPARISONS
 
+#include <set>
+
 #include "test_comparisons.h"
 
 // Implementation detail of `test_sequence_container_spaceship`
@@ -183,7 +185,7 @@ constexpr void test_ordered_map_container_spaceship_with_type() {
   }
 }
 
-// Tests the `operator<=>` on ordered containers
+// Tests the `operator<=>` on ordered map containers
 template <template <typename...> typename Container>
 constexpr bool test_ordered_map_container_spaceship() {
   // The container should fulfill `std::three_way_comparable`
@@ -201,6 +203,109 @@ constexpr bool test_ordered_map_container_spaceship() {
   // Thanks to SFINAE, the following is not a compiler error but returns `false`
   struct NonComparable {};
   static_assert(!std::three_way_comparable<Container<int, NonComparable>>);
+
+  return true;
+}
+
+// Implementation detail of `test_ordered_set_container_spaceship`
+template <template <typename...> typename Container, typename Elem, typename Order, typename Compare>
+constexpr void test_ordered_set_spaceship_with_type(Compare comp) {
+  // Empty containers
+  {
+    Container<Elem, Compare> l1{{}, comp};
+    Container<Elem, Compare> l2{{}, comp};
+    assert(testOrder(l1, l2, Order::equivalent));
+  }
+  // Identical contents
+  {
+    Container<Elem, Compare> l1{{1, 1, 2}, comp};
+    Container<Elem, Compare> l2{{1, 1, 2}, comp};
+    assert(testOrder(l1, l2, Order::equivalent));
+  }
+  // Less, due to contained values
+  {
+    Container<Elem, Compare> l1{{1, 1, 2, 3}, comp};
+    Container<Elem, Compare> l2{{1, 2, 2, 4}, comp};
+    assert(testOrder(l1, l2, Order::less));
+  }
+  // Greater, due to contained values
+  {
+    Container<Elem, Compare> l1{{1, 2, 2, 4}, comp};
+    Container<Elem, Compare> l2{{1, 1, 2, 3}, comp};
+    assert(testOrder(l1, l2, Order::greater));
+  }
+  // Shorter list
+  {
+    Container<Elem, Compare> l1{{1, 1, 2, 2}, comp};
+    Container<Elem, Compare> l2{{1, 1, 2, 2, 3}, comp};
+    assert(testOrder(l1, l2, Order::less));
+  }
+  // Longer list
+  {
+    Container<Elem, Compare> l1{{1, 1, 2, 2, 3}, comp};
+    Container<Elem, Compare> l2{{1, 1, 2, 2}, comp};
+    assert(testOrder(l1, l2, Order::greater));
+  }
+  // Unordered
+  if constexpr (std::is_same_v< Container<Elem>, std::multiset<PartialOrder>>) {
+    if constexpr (std::is_same_v<Elem, PartialOrder> && std::is_same_v<Compare, decltype(std::less{})>) {
+      Container<Elem, Compare> l1{{1, std::numeric_limits<int>::min()}, comp};
+      Container<Elem, Compare> l2{{1, 2}, comp};
+      assert(testOrder(l1, l2, Order::unordered));
+    }
+    if constexpr (std::is_same_v<Elem, PartialOrder> && std::is_same_v<Compare, decltype(std::less{})>) {
+      Container<Elem, Compare> l1{{1, std::numeric_limits<int>::max()}, comp};
+      Container<Elem, Compare> l2{{1, 2}, comp};
+      assert(testOrder(l1, l2, Order::unordered));
+    }
+  }
+  if constexpr (std::is_same_v< Container<Elem>, std::set<PartialOrder>>) {
+    // Unodered values are not supported for `set`
+    if constexpr (std::is_same_v<Elem, PartialOrder> && std::is_same_v<Compare, decltype(std::less{})>) {
+      Container<Elem, Compare> l1{{1, std::numeric_limits<int>::min()}, comp};
+      Container<Elem, Compare> l2{{1, 2}, comp};
+      assert(testOrder(l1, l2, Order::less));
+    }
+    if constexpr (std::is_same_v<Elem, PartialOrder> && std::is_same_v<Compare, decltype(std::less{})>) {
+      Container<Elem, Compare> l1{{1, std::numeric_limits<int>::max()}, comp};
+      Container<Elem, Compare> l2{{1, 2}, comp};
+      assert(testOrder(l1, l2, Order::less));
+    }
+  }
+  if constexpr (std::is_same_v<Elem, PartialOrder> && std::is_same_v<Compare, decltype(std::greater{})>) {
+    Container<Elem, Compare> l1{{1, std::numeric_limits<int>::min()}, comp};
+    Container<Elem, Compare> l2{{1, 2}, comp};
+    assert(testOrder(l1, l2, Order::less));
+  }
+  if constexpr (std::is_same_v<Elem, PartialOrder> && std::is_same_v<Compare, decltype(std::greater{})>) {
+    Container<Elem, Compare> l1{{1, std::numeric_limits<int>::max()}, comp};
+    Container<Elem, Compare> l2{{1, 2}, comp};
+    assert(testOrder(l1, l2, Order::less));
+  }
+}
+
+// Tests the `operator<=>` on ordered set containers
+template <template <typename...> typename Container>
+constexpr bool test_ordered_set_container_spaceship() {
+  // Thanks to SFINAE, the following is not a compiler error but returns `false`
+  struct NonComparable {};
+  static_assert(!std::three_way_comparable<Container<NonComparable>>);
+
+  // The container should fulfill `std::three_way_comparable`
+  static_assert(std::three_way_comparable<Container<int>>);
+
+  // Test different comparison categories
+  test_ordered_set_spaceship_with_type<Container, int, std::strong_ordering>(std::less{});
+  test_ordered_set_spaceship_with_type<Container, int, std::strong_ordering>(std::greater{});
+  test_ordered_set_spaceship_with_type<Container, StrongOrder, std::strong_ordering>(std::less{});
+  test_ordered_set_spaceship_with_type<Container, StrongOrder, std::strong_ordering>(std::greater{});
+  test_ordered_set_spaceship_with_type<Container, WeakOrder, std::weak_ordering>(std::less{});
+  test_ordered_set_spaceship_with_type<Container, WeakOrder, std::weak_ordering>(std::greater{});
+  test_ordered_set_spaceship_with_type<Container, PartialOrder, std::partial_ordering>(std::less{});
+  test_ordered_set_spaceship_with_type<Container, PartialOrder, std::partial_ordering>(std::greater{});
+
+  // `LessAndEqComp` does not have `operator<=>`. Ordering is synthesized based on `operator<`
+  test_ordered_set_spaceship_with_type<Container, LessAndEqComp, std::weak_ordering>(std::less{});
 
   return true;
 }
