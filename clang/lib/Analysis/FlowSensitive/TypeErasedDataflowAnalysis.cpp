@@ -216,7 +216,8 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     // operator includes a branch that contains a noreturn destructor call.
     //
     // See `NoreturnDestructorTest` for concrete examples.
-    if (Block.succ_begin()->getReachableBlock()->hasNoReturnElement()) {
+    if (Block.succ_begin()->getReachableBlock() != nullptr &&
+        Block.succ_begin()->getReachableBlock()->hasNoReturnElement()) {
       auto &StmtToBlock = AC.CFCtx.getStmtToBlock();
       auto StmtBlock = StmtToBlock.find(Block.getTerminatorStmt());
       assert(StmtBlock != StmtToBlock.end());
