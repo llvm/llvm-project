@@ -371,8 +371,9 @@ public:
   mlir::LogicalResult
   matchAndRewrite(hlfir::WhereOp whereOp,
                   mlir::PatternRewriter &rewriter) const override {
-    TODO(whereOp.getLoc(), "WHERE construct or statement in HLFIR");
-    return mlir::failure();
+    auto root = mlir::cast<hlfir::OrderedAssignmentTreeOpInterface>(
+        whereOp.getOperation());
+    return ::rewrite(root, tryFusingAssignments, rewriter);
   }
   const bool tryFusingAssignments;
 };
