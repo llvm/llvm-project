@@ -1591,11 +1591,73 @@ multiclass RVVUnitStridedSegStoreTuple<string op> {
     }
   }
 }
+
+multiclass RVVUnitStridedSegLoadFFTuple<string op> {
+  foreach type = ["i"] in {
+    defvar eew = !cond(!eq(type, "i") : "32");
+      foreach nf = [2] in {
+        let Name = op # nf # "e" # eew # "ff_v_tuple",
+            OverloadedName = op # nf # "e" # eew # "ff_tuple",
+            IRName = op # nf # "ff",
+            MaskedIRName = op # nf # "ff_mask",
+            NF = nf,
+            ManualCodegen = [{
+    {
+      assert(((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+             (!IsMasked && (PolicyAttrs & RVV_VTA))) &&
+             "FIXME: Only handling default policy (TAMA) for now");
+
+      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
+
+      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
+      SmallVector<llvm::Value*, 12> Operands;
+
+      Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+
+      unsigned Offset = IsMasked ? 1 : 0;
+      Operands.push_back(Ops[Offset]); // Ptr
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 2]); // vl
+      if (IsMasked)
+        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      // Get alignment from the new vl operand
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(Offset + 1)->getType());
+
+      llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
+      for (unsigned I = 0; I < NF; ++I) {
+        llvm::Value *V = Builder.CreateExtractValue(LoadValue, {I});
+        ReturnTuple = Builder.CreateInsertValue(ReturnTuple, V, {I});
+      }
+
+      // Store new_vl
+      llvm::Value *V = Builder.CreateExtractValue(LoadValue, {NF});
+      Builder.CreateStore(V, Address(Ops[Offset + 1], V->getType(), Align));
+
+      if (ReturnValue.isNull())
+        return ReturnTuple;
+      else
+        return Builder.CreateStore(ReturnTuple, ReturnValue.getValue());
+    }
+    }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", T # "vPCePz", type>;
+      }
+    }
+  }
+}
+
 // TODO: Extend for policy
 let UnMaskedPolicyScheme = NonePolicy,
     MaskedPolicyScheme = NonePolicy,
     IsTuple = true in {
 defm : RVVUnitStridedSegLoadTuple<"vlseg">;
+defm : RVVUnitStridedSegLoadFFTuple<"vlseg">;
 }
 
 let UnMaskedPolicyScheme = NonePolicy,
