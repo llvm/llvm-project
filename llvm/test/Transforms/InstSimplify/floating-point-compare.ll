@@ -1332,6 +1332,34 @@ define i1 @is_infinite(float %x) {
   ret i1 %r
 }
 
+define i1 @is_infinite_assumed_finite(float %x) {
+; CHECK-LABEL: @is_infinite_assumed_finite(
+; CHECK-NEXT:    [[XABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[XABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
+; CHECK-NEXT:    ret i1 false
+;
+  %xabs = call float @llvm.fabs.f32(float %x)
+  %not.inf = fcmp one float %xabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %not.inf)
+  %r = fcmp oeq float %xabs, 0x7FF0000000000000
+  ret i1 %r
+}
+
+define i1 @une_inf_assumed_not_inf(float %x) {
+; CHECK-LABEL: @une_inf_assumed_not_inf(
+; CHECK-NEXT:    [[XABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[XABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
+; CHECK-NEXT:    ret i1 true
+;
+  %xabs = call float @llvm.fabs.f32(float %x)
+  %not.inf = fcmp one float %xabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %not.inf)
+  %r = fcmp une float %xabs, 0x7FF0000000000000
+  ret i1 %r
+}
+
 define <2 x i1> @is_infinite_neg(<2 x float> %x) {
 ; CHECK-LABEL: @is_infinite_neg(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
@@ -1359,6 +1387,20 @@ define i1 @is_infinite_or_nan2(float %x) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %xabs = call nnan ninf float @llvm.fabs.f32(float %x)
+  %r = fcmp ueq float %xabs, 0x7FF0000000000000
+  ret i1 %r
+}
+
+define i1 @is_infinite_or_nan2_assume(float %x) {
+; CHECK-LABEL: @is_infinite_or_nan2_assume(
+; CHECK-NEXT:    [[XABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_INF_OR_NAN:%.*]] = fcmp one float [[XABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_INF_OR_NAN]])
+; CHECK-NEXT:    ret i1 false
+;
+  %xabs = call float @llvm.fabs.f32(float %x)
+  %is.inf.or.nan = fcmp one float %xabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %is.inf.or.nan)
   %r = fcmp ueq float %xabs, 0x7FF0000000000000
   ret i1 %r
 }
@@ -1410,6 +1452,21 @@ define i1 @is_finite(i1 %c, double %x) {
 ;
   %xx = fmul nnan ninf double %x, %x
   %s = select i1 %c, double 42.0, double %xx
+  %r = fcmp one double %s, 0x7FF0000000000000
+  ret i1 %r
+}
+
+define i1 @is_finite_assume(i1 %c, double %x) {
+; CHECK-LABEL: @is_finite_assume(
+; CHECK-NEXT:    [[XABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[IS_INF_OR_NAN:%.*]] = fcmp one double [[XABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_INF_OR_NAN]])
+; CHECK-NEXT:    ret i1 true
+;
+  %xabs = call double @llvm.fabs.f64(double %x)
+  %is.inf.or.nan = fcmp one double %xabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %is.inf.or.nan)
+  %s = select i1 %c, double 42.0, double %x
   %r = fcmp one double %s, 0x7FF0000000000000
   ret i1 %r
 }
