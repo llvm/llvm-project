@@ -65,12 +65,14 @@ static void RegisterAllocation(const StackTrace &stack, void *p, uptr size) {
   m->stack_trace_id = StackDepotPut(stack);
   m->requested_size = size;
   atomic_store(reinterpret_cast<atomic_uint8_t *>(m), 1, memory_order_relaxed);
+  RunMallocHooks(p, size);
 }
 
 static void RegisterDeallocation(void *p) {
   if (!p) return;
   ChunkMetadata *m = Metadata(p);
   CHECK(m);
+  RunFreeHooks(p);
   atomic_store(reinterpret_cast<atomic_uint8_t *>(m), 0, memory_order_relaxed);
 }
 
@@ -104,7 +106,6 @@ void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
   if (cleared && allocator.FromPrimary(p))
     memset(p, 0, size);
   RegisterAllocation(stack, p, size);
-  RunMallocHooks(p, size);
   return p;
 }
 
@@ -119,7 +120,6 @@ static void *Calloc(uptr nmemb, uptr size, const StackTrace &stack) {
 }
 
 void Deallocate(void *p) {
-  RunFreeHooks(p);
   RegisterDeallocation(p);
   allocator.Deallocate(GetAllocatorCache(), p);
 }
