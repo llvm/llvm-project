@@ -159,6 +159,8 @@ public:
     bool mayBeModifiedByCall() const;
     /// Can the argument be read by the callee?
     bool mayBeReadByCall() const;
+    /// Does the argument have the specified IgnoreTKR flag?
+    bool testTKR(Fortran::common::IgnoreTKR flag) const;
     /// Is the argument INTENT(OUT)
     bool isIntentOut() const;
     /// Does the argument have the CONTIGUOUS attribute or have explicit shape?
