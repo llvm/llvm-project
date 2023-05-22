@@ -40,6 +40,7 @@ import shlex
 import string
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
@@ -1154,12 +1155,17 @@ def SymbolicateCrashLog(crash_log, options):
     futures = []
     loaded_images = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        def add_module(image, target):
-            return image, image.add_module(target)
+        with tempfile.TemporaryDirectory() as obj_dir:
 
-        for image in crash_log.images:
-            futures.append(executor.submit(add_module, image=image, target=target))
+            def add_module(image, target, obj_dir):
+                return image, image.add_module(target, obj_dir)
 
+            for image in crash_log.images:
+                futures.append(
+                    executor.submit(
+                        add_module, image=image, target=target, obj_dir=obj_dir
+                    )
+                )
         for future in concurrent.futures.as_completed(futures):
             image, err = future.result()
             if err:
