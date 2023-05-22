@@ -1744,6 +1744,57 @@ multiclass RVVStridedSegStoreTuple<string op> {
   }
 }
 
+multiclass RVVIndexedSegLoadTuple<string op> {
+  foreach type = ["i"] in {
+    foreach eew_info = [["32", "(Log2EEW:5)"]] in {
+      defvar eew = eew_info[0];
+      defvar eew_type = eew_info[1];
+      foreach nf = [2] in {
+        let Name = op # nf # "ei" # eew # "_v_tuple",
+            OverloadedName = op # nf # "ei" # eew # "_tuple",
+            IRName = op # nf,
+            MaskedIRName = op # nf # "_mask",
+            NF = nf,
+            ManualCodegen = [{
+    {
+      assert(((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+             (!IsMasked && (PolicyAttrs & RVV_VTA))) &&
+             "FIXME: Only handling default policy (TAMA) for now");
+
+      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
+
+      SmallVector<llvm::Value*, 12> Operands;
+
+      Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+
+      unsigned Offset = IsMasked ? 1 : 0;
+      Operands.push_back(Ops[Offset]); // Ptr
+      Operands.push_back(Ops[Offset + 1]); // Idx
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 2]); // VL
+      if (IsMasked)
+        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+      IntrinsicTypes = {ElementVectorType, Ops[Offset + 1]->getType(),
+                        Ops.back()->getType()};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+
+      if (ReturnValue.isNull())
+        return LoadValue;
+      else
+        return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+    }
+    }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", T # "vPCe" # eew_type # "Uv", type>;
+        }
+      }
+    }
+  }
+}
+
 // TODO: Extend for policy
 let UnMaskedPolicyScheme = NonePolicy,
     MaskedPolicyScheme = NonePolicy,
@@ -1751,6 +1802,8 @@ let UnMaskedPolicyScheme = NonePolicy,
 defm : RVVUnitStridedSegLoadTuple<"vlseg">;
 defm : RVVUnitStridedSegLoadFFTuple<"vlseg">;
 defm : RVVStridedSegLoadTuple<"vlsseg">;
+defm : RVVIndexedSegLoadTuple<"vluxseg">;
+defm : RVVIndexedSegLoadTuple<"vloxseg">;
 }
 
 let UnMaskedPolicyScheme = NonePolicy,
