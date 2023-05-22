@@ -7,30 +7,42 @@ struct Obj {
   virtual ~Obj();
 };
 
-template <typename T>
-struct StatusOr {
-  StatusOr(const T &);
-  StatusOr(T &&);
-};
-
 struct NonTemplate {
   NonTemplate(const Obj &);
   NonTemplate(Obj &&);
 };
 
+template <typename T> struct TemplateCtorPair {
+  TemplateCtorPair(const T &);
+  TemplateCtorPair(T &&value);
+};
+
+template <typename T> struct UrefCtor {
+  template <class U = T> UrefCtor(U &&value);
+};
+
 template <typename T>
 T Make();
 
-StatusOr<Obj> PositiveStatusOrConstValue() {
+NonTemplate PositiveNonTemplate() {
   const Obj obj = Make<Obj>();
-  return obj;
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: constness of 'obj' prevents automatic move [performance-no-automatic-move]
+  return obj; // selects `NonTemplate(const Obj&)`
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: constness of 'obj' prevents
+  // automatic move [performance-no-automatic-move]
 }
 
-NonTemplate PositiveNonTemplateConstValue() {
+TemplateCtorPair<Obj> PositiveTemplateCtorPair() {
   const Obj obj = Make<Obj>();
-  return obj;
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: constness of 'obj' prevents automatic move [performance-no-automatic-move]
+  return obj; // selects `TemplateCtorPair(const T&)`
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: constness of 'obj' prevents
+  // automatic move [performance-no-automatic-move]
+}
+
+UrefCtor<Obj> PositiveUrefCtor() {
+  const Obj obj = Make<Obj>();
+  return obj; // selects `UrefCtor(const T&&)`
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: constness of 'obj' prevents
+  // automatic move [performance-no-automatic-move]
 }
 
 Obj PositiveCantNrvo(bool b) {
@@ -51,22 +63,18 @@ NonTemplate PositiveNonTemplateLifetimeExtension() {
 }
 
 // FIXME: Ideally we would warn here too.
-StatusOr<Obj> PositiveStatusOrLifetimeExtension() {
+UrefCtor<Obj> PositiveUrefCtorLifetimeExtension() {
   const Obj &obj = Make<Obj>();
   return obj;
 }
 
 // Negatives.
 
-StatusOr<Obj> Temporary() {
-  return Make<Obj>();
-}
+UrefCtor<Obj> Temporary() { return Make<Obj>(); }
 
-StatusOr<Obj> ConstTemporary() {
-  return Make<const Obj>();
-}
+UrefCtor<Obj> ConstTemporary() { return Make<const Obj>(); }
 
-StatusOr<Obj> ConvertingMoveConstructor() {
+UrefCtor<Obj> ConvertingMoveConstructor() {
   Obj obj = Make<Obj>();
   return obj;
 }
@@ -85,21 +93,19 @@ Obj NotNrvo(bool b) {
   return obj2;
 }
 
-StatusOr<Obj> Ref() {
+UrefCtor<Obj> Ref() {
   Obj &obj = Make<Obj &>();
   return obj;
 }
 
-StatusOr<Obj> ConstRef() {
+UrefCtor<Obj> ConstRef() {
   const Obj &obj = Make<Obj &>();
   return obj;
 }
 
 const Obj global;
 
-StatusOr<Obj> Global() {
-  return global;
-}
+UrefCtor<Obj> Global() { return global; }
 
 struct FromConstRefOnly {
   FromConstRefOnly(const Obj &);
