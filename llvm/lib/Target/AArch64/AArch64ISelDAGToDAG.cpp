@@ -372,6 +372,9 @@ public:
   void SelectPredicatedLoad(SDNode *N, unsigned NumVecs, unsigned Scale,
                             unsigned Opc_rr, unsigned Opc_ri,
                             bool IsIntr = false);
+  void SelectContiguousMultiVectorLoad(SDNode *N, unsigned NumVecs,
+                                       unsigned Scale, unsigned Opc_rr,
+                                       unsigned Opc_ri);
   void SelectDestructiveMultiIntrinsic(SDNode *N, unsigned NumVecs,
                                        bool IsZmMulti, unsigned Opcode,
                                        bool HasPred = false);
@@ -1897,6 +1900,39 @@ void AArch64DAGToDAGISel::SelectPredicatedLoad(SDNode *N, unsigned NumVecs,
   const EVT ResTys[] = {MVT::Untyped, MVT::Other};
 
   SDNode *Load = CurDAG->getMachineNode(Opc, DL, ResTys, Ops);
+  SDValue SuperReg = SDValue(Load, 0);
+  for (unsigned i = 0; i < NumVecs; ++i)
+    ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
+                                   AArch64::zsub0 + i, DL, VT, SuperReg));
+
+  // Copy chain
+  unsigned ChainIdx = NumVecs;
+  ReplaceUses(SDValue(N, ChainIdx), SDValue(Load, 1));
+  CurDAG->RemoveDeadNode(N);
+}
+
+void AArch64DAGToDAGISel::SelectContiguousMultiVectorLoad(SDNode *N,
+                                                          unsigned NumVecs,
+                                                          unsigned Scale,
+                                                          unsigned Opc_ri,
+                                                          unsigned Opc_rr) {
+  assert(Scale < 4 && "Invalid scaling value.");
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Chain = N->getOperand(0);
+
+  // Use simplest addressing mode for now - base + 0 offset
+  SDValue PNg = N->getOperand(2);
+  SDValue Base = N->getOperand(3);
+  SDValue Offset = CurDAG->getTargetConstant(0, DL, MVT::i64);
+
+  SDValue Ops[] = {PNg,            // Predicate-as-counter
+                   Base,           // Memory operand
+                   Offset, Chain};
+
+  const EVT ResTys[] = {MVT::Untyped, MVT::Other};
+
+  SDNode *Load = CurDAG->getMachineNode(Opc_ri, DL, ResTys, Ops);
   SDValue SuperReg = SDValue(Load, 0);
   for (unsigned i = 0; i < NumVecs; ++i)
     ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
@@ -4780,6 +4816,74 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
         SelectPredicatedLoad(Node, 2, 3, AArch64::LD2D_IMM, AArch64::LD2D,
                              true);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sve_ld1_pn_x2: {
+      if (VT == MVT::nxv16i8) {
+        SelectContiguousMultiVectorLoad(Node, 2, 0, AArch64::LD1B_2Z_IMM, AArch64::LD1B_2Z);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectContiguousMultiVectorLoad(Node, 2, 1, AArch64::LD1H_2Z_IMM, AArch64::LD1H_2Z);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectContiguousMultiVectorLoad(Node, 2, 2, AArch64::LD1W_2Z_IMM, AArch64::LD1W_2Z);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectContiguousMultiVectorLoad(Node, 2, 3, AArch64::LD1D_2Z_IMM, AArch64::LD1D_2Z);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sve_ld1_pn_x4: {
+      if (VT == MVT::nxv16i8) {
+        SelectContiguousMultiVectorLoad(Node, 4, 0, AArch64::LD1B_4Z_IMM, AArch64::LD1B_4Z);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectContiguousMultiVectorLoad(Node, 4, 1, AArch64::LD1H_4Z_IMM, AArch64::LD1H_4Z);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectContiguousMultiVectorLoad(Node, 4, 2, AArch64::LD1W_4Z_IMM, AArch64::LD1W_4Z);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectContiguousMultiVectorLoad(Node, 4, 3, AArch64::LD1D_4Z_IMM, AArch64::LD1D_4Z);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sve_ldnt1_pn_x2: {
+      if (VT == MVT::nxv16i8) {
+        SelectContiguousMultiVectorLoad(Node, 2, 0, AArch64::LDNT1B_2Z_IMM, AArch64::LDNT1B_2Z);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectContiguousMultiVectorLoad(Node, 2, 1, AArch64::LDNT1H_2Z_IMM, AArch64::LDNT1H_2Z);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectContiguousMultiVectorLoad(Node, 2, 2, AArch64::LDNT1W_2Z_IMM, AArch64::LDNT1W_2Z);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectContiguousMultiVectorLoad(Node, 2, 3, AArch64::LDNT1D_2Z_IMM, AArch64::LDNT1D_2Z);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sve_ldnt1_pn_x4: {
+      if (VT == MVT::nxv16i8) {
+        SelectContiguousMultiVectorLoad(Node, 4, 0, AArch64::LDNT1B_4Z_IMM, AArch64::LDNT1B_4Z);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectContiguousMultiVectorLoad(Node, 4, 1, AArch64::LDNT1H_4Z_IMM, AArch64::LDNT1H_4Z);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectContiguousMultiVectorLoad(Node, 4, 2, AArch64::LDNT1W_4Z_IMM, AArch64::LDNT1W_4Z);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectContiguousMultiVectorLoad(Node, 4, 3, AArch64::LDNT1D_4Z_IMM, AArch64::LDNT1D_4Z);
         return;
       }
       break;
