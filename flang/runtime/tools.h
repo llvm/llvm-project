@@ -9,6 +9,7 @@
 #ifndef FORTRAN_RUNTIME_TOOLS_H_
 #define FORTRAN_RUNTIME_TOOLS_H_
 
+#include "freestanding-tools.h"
 #include "terminator.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
@@ -39,7 +40,7 @@ void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from);
 
 // Utility for dealing with elemental LOGICAL arguments
-inline bool IsLogicalElementTrue(
+inline RT_API_ATTRS bool IsLogicalElementTrue(
     const Descriptor &logical, const SubscriptValue at[]) {
   // A LOGICAL value is false if and only if all of its bytes are zero.
   const char *p{logical.Element<char>(at)};
@@ -52,7 +53,7 @@ inline bool IsLogicalElementTrue(
 }
 
 // Check array conformability; a scalar 'x' conforms.  Crashes on error.
-void CheckConformability(const Descriptor &to, const Descriptor &x,
+RT_API_ATTRS void CheckConformability(const Descriptor &to, const Descriptor &x,
     Terminator &, const char *funcName, const char *toName,
     const char *fromName);
 
@@ -66,7 +67,8 @@ template <int KIND> struct StoreIntegerAt {
 };
 
 // Validate a KIND= argument
-void CheckIntegerKind(Terminator &, int kind, const char *intrinsic);
+RT_API_ATTRS void CheckIntegerKind(
+    Terminator &, int kind, const char *intrinsic);
 
 template <typename TO, typename FROM>
 inline void PutContiguousConverted(TO *to, FROM *from, std::size_t count) {
@@ -75,7 +77,7 @@ inline void PutContiguousConverted(TO *to, FROM *from, std::size_t count) {
   }
 }
 
-static inline std::int64_t GetInt64(
+static inline RT_API_ATTRS std::int64_t GetInt64(
     const char *p, std::size_t bytes, Terminator &terminator) {
   switch (bytes) {
   case 1:
@@ -116,7 +118,7 @@ inline bool SetInteger(INT &x, int kind, std::int64_t value) {
 // arguments.
 template <template <TypeCategory, int> class FUNC, typename RESULT,
     typename... A>
-inline RESULT ApplyType(
+inline RT_API_ATTRS RESULT ApplyType(
     TypeCategory cat, int kind, Terminator &terminator, A &&...x) {
   switch (cat) {
   case TypeCategory::Integer:
@@ -217,7 +219,8 @@ inline RESULT ApplyType(
 // Maps a runtime INTEGER kind value to the appropriate instantiation of
 // a function object template and calls it with the supplied arguments.
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
-inline RESULT ApplyIntegerKind(int kind, Terminator &terminator, A &&...x) {
+inline RT_API_ATTRS RESULT ApplyIntegerKind(
+    int kind, Terminator &terminator, A &&...x) {
   switch (kind) {
   case 1:
     return FUNC<1>{}(std::forward<A>(x)...);
@@ -237,7 +240,7 @@ inline RESULT ApplyIntegerKind(int kind, Terminator &terminator, A &&...x) {
 }
 
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
-inline RESULT ApplyFloatingPointKind(
+inline RT_API_ATTRS RESULT ApplyFloatingPointKind(
     int kind, Terminator &terminator, A &&...x) {
   switch (kind) {
 #if 0 // TODO: REAL/COMPLEX (2 & 3)
@@ -265,7 +268,8 @@ inline RESULT ApplyFloatingPointKind(
 }
 
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
-inline RESULT ApplyCharacterKind(int kind, Terminator &terminator, A &&...x) {
+inline RT_API_ATTRS RESULT ApplyCharacterKind(
+    int kind, Terminator &terminator, A &&...x) {
   switch (kind) {
   case 1:
     return FUNC<1>{}(std::forward<A>(x)...);
@@ -279,7 +283,8 @@ inline RESULT ApplyCharacterKind(int kind, Terminator &terminator, A &&...x) {
 }
 
 template <template <int KIND> class FUNC, typename RESULT, typename... A>
-inline RESULT ApplyLogicalKind(int kind, Terminator &terminator, A &&...x) {
+inline RT_API_ATTRS RESULT ApplyLogicalKind(
+    int kind, Terminator &terminator, A &&...x) {
   switch (kind) {
   case 1:
     return FUNC<1>{}(std::forward<A>(x)...);
