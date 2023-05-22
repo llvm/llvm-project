@@ -9,6 +9,7 @@
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 
@@ -46,19 +47,19 @@ public:
   void runOnOperation() override {
     // Clone the module so that we can plug in this pass to any other
     // independently.
-    auto cloneModule = getOperation().clone();
+    OwningOpRef<ModuleOp> cloneModule = getOperation().clone();
 
     // 1. Compute the op numbering of the module.
-    computeOpNumbering(cloneModule);
+    computeOpNumbering(*cloneModule);
 
     // 2. Loop over all the values and shuffle the uses. While doing so, check
     // that each shuffle is correct.
-    if (failed(shuffleUses(cloneModule)))
+    if (failed(shuffleUses(*cloneModule)))
       return signalPassFailure();
 
     // 3. Do a bytecode roundtrip to version 3, which supports use-list order
     // preservation.
-    auto roundtripModuleOr = doRoundtripToBytecode(cloneModule, 3);
+    auto roundtripModuleOr = doRoundtripToBytecode(*cloneModule, 3);
     // If the bytecode roundtrip failed, try to roundtrip the original module
     // to version 2, which does not support use-list. If this also fails, the
     // original module had an issue unrelated to uselists.
