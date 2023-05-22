@@ -3817,18 +3817,12 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
     switch (IID) {
     default:
       break;
-    // sqrt(-0.0) = -0.0, no other negative results are possible.
     case Intrinsic::sqrt:
+    case Intrinsic::experimental_constrained_sqrt:
+      // sqrt(-0.0) = -0.0, no other negative results are possible.
+      // FIXME: Account for denormal-fp-math=preserve-sign denormal inputs
     case Intrinsic::canonicalize:
       return CannotBeNegativeZero(Call->getArgOperand(0), TLI, Depth + 1);
-    case Intrinsic::experimental_constrained_sqrt: {
-      // NOTE: This rounding mode restriction may be too strict.
-      const auto *CI = cast<ConstrainedFPIntrinsic>(Call);
-      if (CI->getRoundingMode() == RoundingMode::NearestTiesToEven)
-        return CannotBeNegativeZero(Call->getArgOperand(0), TLI, Depth + 1);
-      else
-        return false;
-    }
     // fabs(x) != -0.0
     case Intrinsic::fabs:
       return true;

@@ -399,6 +399,18 @@ void transferUnwrapCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
   }
 }
 
+void transferArrowOpCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
+                         LatticeTransferState &State) {
+  if (auto *OptionalVal =
+          getValueBehindPossiblePointer(*ObjectExpr, State.Env)) {
+    if (auto *Loc = maybeInitializeOptionalValueMember(
+            UnwrapExpr->getType()->getPointeeType(), *OptionalVal, State.Env)) {
+      State.Env.setValueStrict(*UnwrapExpr,
+                               State.Env.create<PointerValue>(*Loc));
+    }
+  }
+}
+
 void transferMakeOptionalCall(const CallExpr *E,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
@@ -774,23 +786,20 @@ auto buildTransferMatchSwitch() {
             transferUnwrapCall(E, E->getImplicitObjectArgument(), State);
           })
 
-      // optional::operator*, optional::operator->
-      // FIXME: This does something slightly strange for `operator->`.
-      // `transferUnwrapCall()` may create a new value of type `T` for the
-      // `optional<T>`, and it associates that value with `E`. In the case of
-      // `operator->`, `E` is a pointer. As a result, we associate an
-      // expression of pointer type with a storage location of non-pointer type
-      // `T`. This can confound other code that expects expressions of
-      // pointer type to be associated with `PointerValue`s, such as the
-      // centrally provided accessors `getImplicitObjectLocation()` and
-      // `getBaseObjectLocation()`, and this is the reason we need to use our
-      // own 'maybeSkipPointer()` and `getValueBehindPossiblePointer()` instead
-      // of these accessors.
-      .CaseOfCFGStmt<CallExpr>(valueOperatorCall(std::nullopt),
+      // optional::operator*
+      .CaseOfCFGStmt<CallExpr>(isOptionalOperatorCallWithName("*"),
                                [](const CallExpr *E,
                                   const MatchFinder::MatchResult &,
                                   LatticeTransferState &State) {
                                  transferUnwrapCall(E, E->getArg(0), State);
+                               })
+
+      // optional::operator->
+      .CaseOfCFGStmt<CallExpr>(isOptionalOperatorCallWithName("->"),
+                               [](const CallExpr *E,
+                                  const MatchFinder::MatchResult &,
+                                  LatticeTransferState &State) {
+                                 transferArrowOpCall(E, E->getArg(0), State);
                                })
 
       // optional::has_value

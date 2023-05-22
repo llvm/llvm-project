@@ -6,6 +6,7 @@
 # CHECK: llvm-jitlink error: No CIE found at address
 
 --- !mach-o
+IsLittleEndian:    true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

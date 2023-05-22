@@ -209,8 +209,8 @@ func.func @redpar_vecmattrans2x2(%arg0: memref<vector<2x2xf32>>, %arg1: memref<v
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   transform.vector.lower_contraction %module_op
     lowering_strategy = "outerproduct"
-      : (!pdl.operation) -> !pdl.operation
+      : (!transform.any_op) -> !transform.any_op
 }

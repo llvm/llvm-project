@@ -1021,6 +1021,73 @@ define i1 @isNotKnownNeverInfinity_fmuladd(double %x, double %y, double %z) {
   ret i1 %cmp
 }
 
+define i1 @not_inf_fabs_select_pzero_or_ninf(i1 %cond) {
+; CHECK-LABEL: define i1 @not_inf_fabs_select_pzero_or_ninf
+; CHECK-SAME: (i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float 0.000000e+00, float 0xFFF0000000000000
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    [[ONE:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[ONE]]
+;
+entry:
+  %select = select i1 %cond, float 0.000000e+00, float 0xFFF0000000000000
+  %fabs = call float @llvm.fabs.f32(float %select)
+  %one = fcmp one float %fabs, 0x7FF0000000000000
+  ret i1 %one
+}
+
+define i1 @not_inf_fabs_select_nzero_or_pinf(i1 %cond) {
+; CHECK-LABEL: define i1 @not_inf_fabs_select_nzero_or_pinf
+; CHECK-SAME: (i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float -0.000000e+00, float 0x7FF0000000000000
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    [[ONE:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[ONE]]
+;
+entry:
+  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %fabs = call float @llvm.fabs.f32(float %select)
+  %one = fcmp one float %fabs, 0x7FF0000000000000
+  ret i1 %one
+}
+
+define i1 @not_ninf_fabs_select_nzero_or_pinf(i1 %cond) {
+; CHECK-LABEL: define i1 @not_ninf_fabs_select_nzero_or_pinf
+; CHECK-SAME: (i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float -0.000000e+00, float 0x7FF0000000000000
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    [[ONE:%.*]] = fcmp one float [[FABS]], 0xFFF0000000000000
+; CHECK-NEXT:    ret i1 [[ONE]]
+;
+entry:
+  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %fabs = call float @llvm.fabs.f32(float %select)
+  %one = fcmp one float %fabs, 0xFFF0000000000000
+  ret i1 %one
+}
+
+define i1 @not_ninf_fneg_fabs_select_nzero_or_pinf(i1 %cond) {
+; CHECK-LABEL: define i1 @not_ninf_fneg_fabs_select_nzero_or_pinf
+; CHECK-SAME: (i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float -0.000000e+00, float 0x7FF0000000000000
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[ONE:%.*]] = fcmp one float [[FNEG_FABS]], 0xFFF0000000000000
+; CHECK-NEXT:    ret i1 [[ONE]]
+;
+entry:
+  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %fabs = call float @llvm.fabs.f32(float %select)
+  %fneg.fabs = fneg float %fabs
+  %one = fcmp one float %fneg.fabs, 0xFFF0000000000000
+  ret i1 %one
+}
+
+
 declare double @llvm.arithmetic.fence.f64(double)
 declare double @llvm.canonicalize.f64(double)
 declare double @llvm.ceil.f64(double)
@@ -1029,6 +1096,7 @@ declare double @llvm.cos.f64(double)
 declare double @llvm.exp2.f64(double)
 declare double @llvm.exp.f64(double)
 declare double @llvm.fabs.f64(double)
+declare float @llvm.fabs.f32(float)
 declare double @llvm.floor.f64(double)
 declare double @llvm.fma.f64(double, double, double)
 declare double @llvm.fmuladd.f64(double, double, double)
