@@ -1,5 +1,5 @@
 ! Test lowering of MATMUL intrinsic to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 subroutine matmul1(lhs, rhs, res)
   integer :: lhs(:,:), rhs(:,:), res(:,:)

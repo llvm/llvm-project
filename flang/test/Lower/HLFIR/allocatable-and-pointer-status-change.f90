@@ -1,6 +1,6 @@
 ! Test lowering of allocate, deallocate and pointer assignment statements to
 ! HLFIR.
-! RUN: bbc -emit-fir -hlfir -o - %s -I nw | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s -I nw | FileCheck %s
 
 subroutine allocation(x)
   character(*), allocatable :: x(:)

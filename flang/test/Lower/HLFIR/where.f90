@@ -1,5 +1,5 @@
 ! Test lowering of WHERE construct and statements to HLFIR.
-! RUN: bbc --hlfir -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module where_defs
   logical :: mask(10)

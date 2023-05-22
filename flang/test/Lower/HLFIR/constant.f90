@@ -1,5 +1,5 @@
 ! Test lowering of Constant<T>.
-! RUN: bbc -hlfir -emit-fir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_constant_scalar()
 subroutine test_constant_scalar()

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 ! Test OPTIONAL lowering on caller/callee
 module opt
