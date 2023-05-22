@@ -1407,22 +1407,38 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
     return builder.create<hlfir::ProductOp>(loc, resultTy, array, dim, mask);
   };
 
+  auto buildAnyOperation = [](fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Type resultTy, mlir::Value array,
+                              mlir::Value dim, mlir::Value mask) {
+    return builder.create<hlfir::AnyOp>(loc, resultTy, array, dim);
+  };
+
+  auto buildAllOperation = [](fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Type resultTy, mlir::Value array,
+                              mlir::Value dim, mlir::Value mask) {
+    return builder.create<hlfir::AllOp>(loc, resultTy, array, dim);
+  };
+
   auto buildReductionIntrinsic =
       [&](PreparedActualArguments &loweredActuals, mlir::Location loc,
           fir::FirOpBuilder &builder, CallContext &callContext,
           std::function<mlir::Operation *(fir::FirOpBuilder &, mlir::Location,
                                           mlir::Type, mlir::Value, mlir::Value,
                                           mlir::Value)>
-              buildFunc) -> std::optional<hlfir::EntityWithAttributes> {
+              buildFunc,
+          bool hasMask) -> std::optional<hlfir::EntityWithAttributes> {
     // shared logic for building the product and sum operations
     llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
-    assert(operands.size() == 3);
     // dim, mask can be NULL if these arguments were not given
     mlir::Value array = operands[0];
     mlir::Value dim = operands[1];
     if (dim)
       dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
-    mlir::Value mask = operands[2];
+
+    mlir::Value mask;
+    if (hasMask)
+      mask = operands[2];
+
     mlir::Type resultTy = computeResultType(array, *callContext.resultType);
     auto *intrinsicOp = buildFunc(builder, loc, resultTy, array, dim, mask);
     return {hlfir::EntityWithAttributes{intrinsicOp->getResult(0)}};
@@ -1431,11 +1447,11 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
   const std::string intrinsicName = callContext.getProcedureName();
   if (intrinsicName == "sum") {
     return buildReductionIntrinsic(loweredActuals, loc, builder, callContext,
-                                   buildSumOperation);
+                                   buildSumOperation, true);
   }
   if (intrinsicName == "product") {
     return buildReductionIntrinsic(loweredActuals, loc, builder, callContext,
-                                   buildProductOperation);
+                                   buildProductOperation, true);
   }
   if (intrinsicName == "matmul") {
     llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
@@ -1465,17 +1481,12 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
     return {hlfir::EntityWithAttributes{transposeOp.getResult()}};
   }
   if (intrinsicName == "any") {
-    llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
-    assert(operands.size() == 2);
-    // dim argument can be NULL if not given
-    mlir::Value mask = operands[0];
-    mlir::Value dim = operands[1];
-    if (dim)
-      dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
-    mlir::Type resultTy = computeResultType(mask, *callContext.resultType);
-    hlfir::AnyOp anyOp = builder.create<hlfir::AnyOp>(loc, resultTy, mask, dim);
-
-    return {hlfir::EntityWithAttributes{anyOp.getResult()}};
+    return buildReductionIntrinsic(loweredActuals, loc, builder, callContext,
+                                   buildAnyOperation, false);
+  }
+  if (intrinsicName == "all") {
+    return buildReductionIntrinsic(loweredActuals, loc, builder, callContext,
+                                   buildAllOperation, false);
   }
 
   // TODO add hlfir operations for other transformational intrinsics here
