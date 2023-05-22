@@ -2792,9 +2792,9 @@ let TargetPrefix = "aarch64" in {
   //
 
   def int_aarch64_sve_psel
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>,
-                               LLVMMatchType<0>, llvm_i32_ty],
+      : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
+                              [llvm_nxv16i1_ty,
+                               llvm_anyvector_ty, llvm_i32_ty],
                               [IntrNoMem]>;
 
   //
