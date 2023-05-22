@@ -564,7 +564,7 @@ llvm.func @test_byval_global() {
 
 // -----
 
-llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
+llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.noalias, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
   llvm.return %ptr : !llvm.ptr
 }
 
@@ -578,7 +578,7 @@ llvm.func @test_ignored_attrs(%ptr : !llvm.ptr, %x : i32) {
 
 // -----
 
-llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.noalias }) {
+llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.inalloca = i64 }) {
   llvm.return
 }
 
@@ -586,18 +586,5 @@ llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.noalias }) {
 // CHECK-NEXT: llvm.call
 llvm.func @test_disallow_arg_attr(%ptr : !llvm.ptr) {
   llvm.call @disallowed_arg_attr(%ptr) : (!llvm.ptr) -> ()
-  llvm.return
-}
-
-// -----
-
-llvm.func @disallowed_res_attr(%ptr : !llvm.ptr) -> (!llvm.ptr { llvm.noalias }) {
-  llvm.return %ptr : !llvm.ptr
-}
-
-// CHECK-LABEL: @test_disallow_res_attr
-// CHECK-NEXT: llvm.call
-llvm.func @test_disallow_res_attr(%ptr : !llvm.ptr) {
-  llvm.call @disallowed_res_attr(%ptr) : (!llvm.ptr) -> (!llvm.ptr)
   llvm.return
 }
