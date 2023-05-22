@@ -16,6 +16,7 @@
 
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include <optional>
 
 namespace llvm {
@@ -103,6 +104,7 @@ DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType);
 class LLVMStructType
     : public Type::TypeBase<LLVMStructType, Type, detail::LLVMStructTypeStorage,
                             DataLayoutTypeInterface::Trait,
+                            DestructurableTypeInterface::Trait,
                             TypeTrait::IsMutable> {
 public:
   /// Inherit base constructors.
@@ -198,6 +200,12 @@ public:
 
   LogicalResult verifyEntries(DataLayoutEntryListRef entries,
                               Location loc) const;
+
+  /// Destructs the struct into its indexed field types.
+  std::optional<DenseMap<Attribute, Type>> getSubelementIndexMap();
+
+  /// Returns which type is stored at a given integer index within the struct.
+  Type getTypeAtIndex(Attribute index);
 };
 
 //===----------------------------------------------------------------------===//
