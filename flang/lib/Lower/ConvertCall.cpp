@@ -1517,11 +1517,10 @@ public:
     // iterations are cleaned up inside the iterations.
     if (!callContext.resultType) {
       // Subroutine case. Generate call inside loop nest.
-      auto [innerLoop, oneBasedIndicesVector] =
-          hlfir::genLoopNest(loc, builder, shape);
-      mlir::ValueRange oneBasedIndices = oneBasedIndicesVector;
+      hlfir::LoopNest loopNest = hlfir::genLoopNest(loc, builder, shape);
+      mlir::ValueRange oneBasedIndices = loopNest.oneBasedIndices;
       auto insPt = builder.saveInsertionPoint();
-      builder.setInsertionPointToStart(innerLoop.getBody());
+      builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
       callContext.stmtCtx.pushScope();
       for (auto &preparedActual : loweredActuals)
         if (preparedActual)

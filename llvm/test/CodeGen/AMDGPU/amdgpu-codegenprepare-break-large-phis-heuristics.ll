@@ -12,19 +12,19 @@ define amdgpu_kernel void @constant_inc(<5 x double> %in, ptr %out, i1 %cond) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[X:%.*]] = insertelement <5 x double> [[IN:%.*]], double 3.140000e+00, i64 3
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ 3.140000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ 9.900000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ 6.140000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ poison, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ poison, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ 9.900000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ 6.140000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ poison, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ poison, [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP1]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP2]], i64 2
@@ -57,19 +57,19 @@ define amdgpu_kernel void @zeroinit_inc(<5 x double> %in, ptr %out, i1 %cond) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[X:%.*]] = insertelement <5 x double> [[IN:%.*]], double 3.140000e+00, i64 3
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP1]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP2]], i64 2
@@ -101,19 +101,19 @@ define amdgpu_kernel void @poison_inc(<5 x double> %in, ptr %out, i1 %cond) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[X:%.*]] = insertelement <5 x double> [[IN:%.*]], double 3.140000e+00, i64 3
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ poison, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ poison, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ poison, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ poison, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ poison, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ poison, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ poison, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ poison, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ poison, [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP1]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP2]], i64 2
@@ -145,25 +145,25 @@ define amdgpu_kernel void @shufflevec_inc_with_cst_op(<5 x double> %in, ptr %out
 ; CHECK:       then:
 ; CHECK-NEXT:    [[X:%.*]] = insertelement <5 x double> [[IN:%.*]], double 3.140000e+00, i64 3
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[SHUFFLED:%.*]] = shufflevector <5 x double> [[IN]], <5 x double> poison, <5 x i32> <i32 0, i32 3, i32 2, i32 1, i32 4>
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE01:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE12:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE23:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE34:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE45:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 0
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE5:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE7:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE9:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE01]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE12]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE23]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE34]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE45]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP1]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP2]], i64 2
@@ -196,26 +196,26 @@ define amdgpu_kernel void @shufflevec_inc_with_local_lhs(<5 x double> %in, ptr %
 ; CHECK:       then:
 ; CHECK-NEXT:    [[X:%.*]] = insertelement <5 x double> [[IN:%.*]], double 3.140000e+00, i64 3
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[LOCAL_SHUFFLE_SRC:%.*]] = insertelement <5 x double> [[IN]], double 3.250000e+00, i64 2
 ; CHECK-NEXT:    [[SHUFFLED:%.*]] = shufflevector <5 x double> [[LOCAL_SHUFFLE_SRC]], <5 x double> [[IN]], <5 x i32> <i32 7, i32 3, i32 2, i32 5, i32 4>
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE01:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE12:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE23:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE34:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE45:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 0
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE5:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE7:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE9:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE01]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE12]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE23]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE34]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE45]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP1]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP2]], i64 2
@@ -249,26 +249,26 @@ define amdgpu_kernel void @shufflevec_inc_with_local_rhs(<5 x double> %in, ptr %
 ; CHECK:       then:
 ; CHECK-NEXT:    [[X:%.*]] = insertelement <5 x double> [[IN:%.*]], double 3.140000e+00, i64 3
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[LOCAL_SHUFFLE_SRC:%.*]] = insertelement <5 x double> [[IN]], double 3.250000e+00, i64 2
 ; CHECK-NEXT:    [[SHUFFLED:%.*]] = shufflevector <5 x double> [[IN]], <5 x double> [[LOCAL_SHUFFLE_SRC]], <5 x i32> <i32 7, i32 3, i32 2, i32 5, i32 4>
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE01:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE12:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE23:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE34:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE45:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 0
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE5:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE7:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE9:%.*]] = extractelement <5 x double> [[SHUFFLED]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE01]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE12]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE23]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE34]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE45]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP1]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP2]], i64 2
@@ -340,24 +340,24 @@ define amdgpu_kernel void @trivial_insertelt_chain(<5 x double> %in, ptr %out, i
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <5 x double> [[TMP1]], double [[Z:%.*]], i64 3
 ; CHECK-NEXT:    [[X_4:%.*]] = insertelement <5 x double> [[TMP2]], double [[X]], i64 4
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X_4]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X_4]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X_4]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X_4]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X_4]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X_4]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X_4]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X_4]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X_4]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE01:%.*]] = extractelement <5 x double> [[IN:%.*]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE12:%.*]] = extractelement <5 x double> [[IN]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE23:%.*]] = extractelement <5 x double> [[IN]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE34:%.*]] = extractelement <5 x double> [[IN]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE45:%.*]] = extractelement <5 x double> [[IN]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[IN:%.*]], i64 0
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[IN]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE5:%.*]] = extractelement <5 x double> [[IN]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE7:%.*]] = extractelement <5 x double> [[IN]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE9:%.*]] = extractelement <5 x double> [[IN]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE01]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE12]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE23]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE34]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE45]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP3]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP4]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP5]], i64 2
@@ -394,24 +394,24 @@ define amdgpu_kernel void @trivial_folded_insertelt_chain(<5 x double> %in, ptr 
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <5 x double> <double 3.140000e+00, double 9.900000e+00, double 6.140000e+00, double poison, double poison>, double [[X:%.*]], i64 3
 ; CHECK-NEXT:    [[X_4:%.*]] = insertelement <5 x double> [[TMP0]], double [[X]], i64 4
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X_4]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X_4]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X_4]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X_4]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X_4]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X_4]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X_4]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X_4]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X_4]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE01:%.*]] = extractelement <5 x double> [[IN:%.*]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE12:%.*]] = extractelement <5 x double> [[IN]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE23:%.*]] = extractelement <5 x double> [[IN]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE34:%.*]] = extractelement <5 x double> [[IN]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE45:%.*]] = extractelement <5 x double> [[IN]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[IN:%.*]], i64 0
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[IN]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE5:%.*]] = extractelement <5 x double> [[IN]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE7:%.*]] = extractelement <5 x double> [[IN]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE9:%.*]] = extractelement <5 x double> [[IN]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE01]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE12]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE23]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE34]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE45]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP1]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP2]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP3]], i64 2
@@ -446,24 +446,24 @@ define amdgpu_kernel void @insertelt_shufflevec(<5 x double> %in, ptr %out, i1 %
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <5 x double> [[X_1]], <5 x double> <double poison, double poison, double poison, double 6.140000e+00, double 9.900000e+00>, <5 x i32> <i32 0, i32 1, i32 poison, i32 8, i32 9>
 ; CHECK-NEXT:    [[X_4:%.*]] = insertelement <5 x double> [[TMP0]], double [[X]], i64 2
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X_4]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X_4]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X_4]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X_4]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X_4]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X_4]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X_4]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X_4]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X_4]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE01:%.*]] = extractelement <5 x double> [[IN:%.*]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE12:%.*]] = extractelement <5 x double> [[IN]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE23:%.*]] = extractelement <5 x double> [[IN]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE34:%.*]] = extractelement <5 x double> [[IN]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE45:%.*]] = extractelement <5 x double> [[IN]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[IN:%.*]], i64 0
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[IN]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE5:%.*]] = extractelement <5 x double> [[IN]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE7:%.*]] = extractelement <5 x double> [[IN]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE9:%.*]] = extractelement <5 x double> [[IN]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE01]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE12]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE23]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE34]], [[ELSE]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE45]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP1]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP2]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP3]], i64 2
@@ -571,19 +571,19 @@ define amdgpu_kernel void @used_by_breakable_phi(<5 x double> %in, ptr %out, i1 
 ; CHECK:       then:
 ; CHECK-NEXT:    [[X:%.*]] = insertelement <5 x double> [[IN:%.*]], double 3.140000e+00, i64 3
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = extractelement <5 x double> [[X]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE1:%.*]] = extractelement <5 x double> [[X]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE3:%.*]] = extractelement <5 x double> [[X]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE2:%.*]] = extractelement <5 x double> [[X]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE4:%.*]] = extractelement <5 x double> [[X]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE6:%.*]] = extractelement <5 x double> [[X]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE8:%.*]] = extractelement <5 x double> [[X]], i64 4
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[FINALLY]]
 ; CHECK:       finally:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE0]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE1]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE3]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE2]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE4]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE6]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE8]], [[THEN]] ], [ 0.000000e+00, [[ELSE]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = insertelement <5 x double> poison, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE0]], double [[TMP1]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE1]], double [[TMP2]], i64 2
@@ -593,17 +593,17 @@ define amdgpu_kernel void @used_by_breakable_phi(<5 x double> %in, ptr %out, i1 
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[THEN1:%.*]], label [[END:%.*]]
 ; CHECK:       then1:
 ; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE01:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 0
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE12:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 1
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE23:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 2
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE34:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 3
-; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE45:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 4
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE22:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 1
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE43:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 2
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE64:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 3
+; CHECK-NEXT:    [[LARGEPHI_EXTRACTSLICE85:%.*]] = extractelement <5 x double> [[LARGEPHI_INSERTSLICE4]], i64 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE01]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE12]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE23]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE34]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE45]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE22]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE43]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE64]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi double [ [[LARGEPHI_EXTRACTSLICE85]], [[THEN1]] ], [ 0.000000e+00, [[FINALLY]] ]
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE06:%.*]] = insertelement <5 x double> poison, double [[TMP5]], i64 0
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE17:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE06]], double [[TMP6]], i64 1
 ; CHECK-NEXT:    [[LARGEPHI_INSERTSLICE28:%.*]] = insertelement <5 x double> [[LARGEPHI_INSERTSLICE17]], double [[TMP7]], i64 2

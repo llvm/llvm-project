@@ -2107,12 +2107,12 @@ def int_aarch64_sve_ptest_last  : AdvSIMD_SVE_PTEST_Intrinsic;
 // Reinterpreting data
 //
 
-def int_aarch64_sve_convert_from_svbool : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+def int_aarch64_sve_convert_from_svbool : DefaultAttrsIntrinsic<[llvm_any_ty],
                                                     [llvm_nxv16i1_ty],
                                                     [IntrNoMem]>;
 
 def int_aarch64_sve_convert_to_svbool : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
-                                                  [llvm_anyvector_ty],
+                                                  [llvm_any_ty],
                                                   [IntrNoMem]>;
 
 //
@@ -2600,6 +2600,46 @@ def int_aarch64_sve_bfmmla  : SVE_4Vec_BF16;
 def int_aarch64_sve_bfdot_lane_v2   : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalb_lane_v2 : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalt_lane_v2 : SVE_4Vec_BF16_Indexed;
+
+//
+// SVE2.1 - Contiguous loads to multiple consecutive vectors
+//
+
+  class SVE2p1_Load_PN_X2_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [llvm_aarch64_svcount_ty, llvm_ptr_ty],
+                [IntrReadMem, IntrArgMemOnly]>;
+
+  class SVE2p1_Load_PN_X4_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                             LLVMMatchType<0>, LLVMMatchType<0>],
+                [llvm_aarch64_svcount_ty, llvm_ptr_ty],
+                [IntrReadMem, IntrArgMemOnly]>;
+
+def int_aarch64_sve_ld1_pn_x2 : SVE2p1_Load_PN_X2_Intrinsic;
+def int_aarch64_sve_ld1_pn_x4 : SVE2p1_Load_PN_X4_Intrinsic;
+def int_aarch64_sve_ldnt1_pn_x2 : SVE2p1_Load_PN_X2_Intrinsic;
+def int_aarch64_sve_ldnt1_pn_x4 : SVE2p1_Load_PN_X4_Intrinsic;
+
+//
+// SVE2.1 - Contiguous stores to multiple consecutive vectors
+//
+
+  class SVE2p1_Store_PN_X2_Intrinsic
+    : DefaultAttrsIntrinsic<[], [ llvm_anyvector_ty, LLVMMatchType<0>,
+                                  llvm_aarch64_svcount_ty, llvm_ptr_ty ],
+                [IntrWriteMem, IntrArgMemOnly]>;
+
+  class SVE2p1_Store_PN_X4_Intrinsic
+    : DefaultAttrsIntrinsic<[], [ llvm_anyvector_ty, LLVMMatchType<0>,
+                                  LLVMMatchType<0>, LLVMMatchType<0>,
+                                  llvm_aarch64_svcount_ty, llvm_ptr_ty],
+                [IntrWriteMem, IntrArgMemOnly]>;
+
+def int_aarch64_sve_st1_pn_x2 : SVE2p1_Store_PN_X2_Intrinsic;
+def int_aarch64_sve_st1_pn_x4 : SVE2p1_Store_PN_X4_Intrinsic;
+def int_aarch64_sve_stnt1_pn_x2 : SVE2p1_Store_PN_X2_Intrinsic;
+def int_aarch64_sve_stnt1_pn_x4 : SVE2p1_Store_PN_X4_Intrinsic;
 }
 
 //
@@ -2752,9 +2792,9 @@ let TargetPrefix = "aarch64" in {
   //
 
   def int_aarch64_sve_psel
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>,
-                               LLVMMatchType<0>, llvm_i32_ty],
+      : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
+                              [llvm_nxv16i1_ty,
+                               llvm_anyvector_ty, llvm_i32_ty],
                               [IntrNoMem]>;
 
   //
@@ -2925,6 +2965,21 @@ let TargetPrefix = "aarch64" in {
                              LLVMMatchType<0>, LLVMMatchType<0>,
                              LLVMMatchType<0>, LLVMMatchType<0>],
                             [IntrNoMem]>;
+
+  class SVE2_VG2_Sel_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [llvm_aarch64_svcount_ty, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>], [IntrNoMem]>;
+
+  class SVE2_VG4_Sel_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                             LLVMMatchType<0>, LLVMMatchType<0>],
+                [llvm_aarch64_svcount_ty, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>], [IntrNoMem]>;
 
   class SME2_CVT_VG2_SINGLE_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMSubdivide2VectorType<0>],
@@ -3385,4 +3440,9 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_uunpk_x2 : SME2_VG2_Unpk_Intrinsic;
   def int_aarch64_sve_sunpk_x4 : SME2_VG4_Unpk_Intrinsic;
   def int_aarch64_sve_uunpk_x4 : SME2_VG4_Unpk_Intrinsic;
+
+  // 2-way and 4-way vector selects
+  def int_aarch64_sve_sel_x2  : SVE2_VG2_Sel_Intrinsic;
+  def int_aarch64_sve_sel_x4  : SVE2_VG4_Sel_Intrinsic;
+
 }
