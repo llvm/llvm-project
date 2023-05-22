@@ -60,26 +60,6 @@ class MergeHandlesOp:
     )
 
 
-class PDLMatchOp:
-
-  def __init__(
-      self,
-      result_type: Type,
-      target: Union[Operation, Value],
-      pattern_name: Union[Attribute, str],
-      *,
-      loc=None,
-      ip=None,
-  ):
-    super().__init__(
-        result_type,
-        _get_op_result_or_value(target),
-        pattern_name,
-        loc=loc,
-        ip=ip,
-    )
-
-
 class ReplicateOp:
 
   def __init__(
@@ -150,28 +130,6 @@ class SequenceOp:
   @property
   def bodyExtraArgs(self) -> BlockArgumentList:
     return self.body.arguments[1:]
-
-
-class WithPDLPatternsOp:
-
-  def __init__(self,
-               target: Union[Operation, Value, Type],
-               *,
-               loc=None,
-               ip=None):
-    root = _get_op_result_or_value(target) if not isinstance(target,
-                                                             Type) else None
-    root_type = target if isinstance(target, Type) else root.type
-    super().__init__(root=root, loc=loc, ip=ip)
-    self.regions[0].blocks.append(root_type)
-
-  @property
-  def body(self) -> Block:
-    return self.regions[0].blocks[0]
-
-  @property
-  def bodyTarget(self) -> Value:
-    return self.body.arguments[0]
 
 
 class YieldOp:
