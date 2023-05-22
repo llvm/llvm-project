@@ -37,6 +37,12 @@ public:
   Option<unsigned> rngSeed{*this, "rng-seed",
                            llvm::cl::desc("Specify an input random seed"),
                            llvm::cl::init(1)};
+
+  LogicalResult initialize(MLIRContext *context) override {
+    rng.seed(static_cast<unsigned>(rngSeed));
+    return success();
+  }
+
   void runOnOperation() override {
     // Clone the module so that we can plug in this pass to any other
     // independently.
@@ -199,7 +205,6 @@ private:
     SmallVector<unsigned> permutation(numUses);
     unsigned zero = 0;
     std::iota(permutation.begin(), permutation.end(), zero);
-    auto rng = std::default_random_engine(rngSeed);
     std::shuffle(permutation.begin(), permutation.end(), rng);
     return permutation;
   }
@@ -209,6 +214,8 @@ private:
 
   /// Map each operation to its global ID.
   DenseMap<Operation *, uint32_t> opNumbering;
+
+  std::default_random_engine rng;
 };
 } // namespace
 
