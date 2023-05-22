@@ -57,5 +57,5 @@ define internal void @bar.5() {
   ret void
 }
 
-; CHECK: attributes #0 = { "device-init" }
-; CHECK: attributes #1 = { "device-fini" }
+; CHECK: attributes #0 = { "amdgpu-flat-work-group-size"="1,1" "device-init" }
+; CHECK: attributes #1 = { "amdgpu-flat-work-group-size"="1,1" "device-fini" }
