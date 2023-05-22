@@ -48,15 +48,23 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
           hasParameter(0, hasType(rValueReferenceType(
                               pointee(type(equalsBoundNode("SrcT")))))))))));
 
+  // A matcher for `DstT::DstT(const Src&&)`, which typically comes from an
+  // instantiation of `template <typename U> DstT::DstT(U&&)`.
+  const auto ConstRefRefCtor = cxxConstructorDecl(
+      parameterCountIs(1),
+      hasParameter(0,
+                   hasType(rValueReferenceType(pointee(isConstQualified())))));
+
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               returnStmt(hasReturnValue(
-                   ignoringElidableConstructorCall(ignoringParenImpCasts(
-                       cxxConstructExpr(
-                           hasDeclaration(LValueRefCtor),
-                           hasArgument(0, ignoringParenImpCasts(declRefExpr(
-                                              to(NonNrvoConstLocalVariable)))))
-                           .bind("ctor_call")))))),
+      traverse(
+          TK_AsIs,
+          returnStmt(hasReturnValue(
+              ignoringElidableConstructorCall(ignoringParenImpCasts(
+                  cxxConstructExpr(
+                      hasDeclaration(anyOf(LValueRefCtor, ConstRefRefCtor)),
+                      hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                         to(NonNrvoConstLocalVariable)))))
+                      .bind("ctor_call")))))),
       this);
 }
 
