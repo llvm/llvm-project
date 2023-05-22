@@ -342,9 +342,7 @@ defvar vbool32_t = nxv2i1;
 defvar vbool64_t = nxv1i1;
 
 // There is no need to define register classes for fractional LMUL.
-def LMULList {
-  list<int> m = [1, 2, 4, 8];
-}
+defvar LMULList = [1, 2, 4, 8];
 
 //===----------------------------------------------------------------------===//
 // Utility classes for segment load/store.
@@ -576,7 +574,7 @@ def VM : VReg<VMaskVTs,
            (add (sequence "V%u", 8, 31),
                 (sequence "V%u", 0, 7)), 1>;
 
-foreach m = LMULList.m in {
+foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
     def "VRN" # nf # "M" # m # "NoV0": VReg<[untyped],
                                (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
