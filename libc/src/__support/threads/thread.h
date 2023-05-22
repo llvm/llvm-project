@@ -228,7 +228,7 @@ struct Thread {
 extern thread_local Thread self;
 
 // Platforms should implement this function.
-void thread_exit(ThreadReturnValue retval, ThreadStyle style);
+[[noreturn]] void thread_exit(ThreadReturnValue retval, ThreadStyle style);
 
 namespace internal {
 // Internal namespace containing utilities which are to be used by platform
