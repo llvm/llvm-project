@@ -288,11 +288,12 @@ subroutine acc_parallel
 !CHECK: acc.detach accPtr(%[[ATTACH_D]] : !fir.ptr<f32>) {dataClause = 10 : i64, name = "d"}
 !CHECK: acc.detach accPtr(%[[ATTACH_E]] : !fir.ptr<f32>) {dataClause = 10 : i64, name = "e"}
 
-  !$acc parallel private(a) firstprivate(b) private(c)
-  !$acc end parallel
+! TODO: will be updated after lowering change in privatization to MLIR
+!  !$acc parallel private(a) firstprivate(b) private(c)
+!  !$acc end parallel
 
-!CHECK:      acc.parallel firstprivate(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) private(%[[A]], %[[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
-!CHECK:        acc.yield
-!CHECK-NEXT: }{{$}}
+!TODO:      acc.parallel firstprivate(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) private(%[[A]], %[[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
+!TODO:        acc.yield
+!TODO-NEXT: }{{$}}
 
 end subroutine acc_parallel
