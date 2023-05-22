@@ -104,34 +104,34 @@ def INT_BAR_SYNC : NVPTXInst<(outs), (ins i32imm:$i), "bar.sync \t$i;",
 
 def INT_BAR_WARP_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "bar.warp.sync \t$i;",
                              [(int_nvvm_bar_warp_sync imm:$i)]>,
-        Requires<[hasPTX60, hasSM30]>;
+        Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BAR_WARP_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "bar.warp.sync \t$i;",
                              [(int_nvvm_bar_warp_sync Int32Regs:$i)]>,
-        Requires<[hasPTX60, hasSM30]>;
+        Requires<[hasPTX<60>, hasSM<30>]>;
 
 def INT_BARRIER_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "barrier.sync \t$i;",
                                    [(int_nvvm_barrier_sync imm:$i)]>,
-        Requires<[hasPTX60, hasSM30]>;
+        Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BARRIER_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "barrier.sync \t$i;",
                                    [(int_nvvm_barrier_sync Int32Regs:$i)]>,
-        Requires<[hasPTX60, hasSM30]>;
+        Requires<[hasPTX<60>, hasSM<30>]>;
 
 def INT_BARRIER_SYNC_CNT_RR : NVPTXInst<(outs), (ins Int32Regs:$id, Int32Regs:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt Int32Regs:$id, Int32Regs:$cnt)]>,
-        Requires<[hasPTX60, hasSM30]>;
+        Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BARRIER_SYNC_CNT_RI : NVPTXInst<(outs), (ins Int32Regs:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt Int32Regs:$id, imm:$cnt)]>,
-        Requires<[hasPTX60, hasSM30]>;
+        Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BARRIER_SYNC_CNT_IR : NVPTXInst<(outs), (ins i32imm:$id, Int32Regs:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt imm:$id, Int32Regs:$cnt)]>,
-        Requires<[hasPTX60, hasSM30]>;
+        Requires<[hasPTX<60>, hasSM<30>]>;
 def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
-        Requires<[hasPTX60, hasSM30]>;
+        Requires<[hasPTX<60>, hasSM<30>]>;
 
 class SHFL_INSTR<bit sync, string mode, string reg, bit return_pred,
                  bit offset_imm, bit mask_imm, bit threadmask_imm>
@@ -182,7 +182,7 @@ foreach sync = [false, true] in {
             foreach threadmask_imm = THREADMASK_INFO<sync>.ret in {
               def : SHFL_INSTR<sync, mode, regclass, return_pred,
                                offset_imm, mask_imm, threadmask_imm>,
-                    Requires<!if(sync, [hasSM30, hasPTX60], [hasSM30, hasSHFL])>;
+                    Requires<!if(sync, [hasSM<30>, hasPTX<60>], [hasSM<30>, hasSHFL])>;
             }
           }
         }
@@ -196,7 +196,7 @@ multiclass VOTE<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
   def : NVPTXInst<(outs regclass:$dest), (ins Int1Regs:$pred),
               "vote." # mode # " \t$dest, $pred;",
               [(set regclass:$dest, (IntOp Int1Regs:$pred))]>,
-        Requires<[hasPTX60, hasSM30]>;
+        Requires<[hasPTX<60>, hasSM<30>]>;
 }
 
 defm VOTE_ALL : VOTE<Int1Regs, "all.pred", int_nvvm_vote_all>;
@@ -209,11 +209,11 @@ multiclass VOTE_SYNC<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
   def i : NVPTXInst<(outs regclass:$dest), (ins i32imm:$mask, Int1Regs:$pred),
               "vote.sync." # mode # " \t$dest, $pred, $mask;",
               [(set regclass:$dest, (IntOp imm:$mask, Int1Regs:$pred))]>,
-          Requires<[hasPTX60, hasSM30]>;
+          Requires<[hasPTX<60>, hasSM<30>]>;
   def r : NVPTXInst<(outs regclass:$dest), (ins Int32Regs:$mask, Int1Regs:$pred),
               "vote.sync." # mode #" \t$dest, $pred, $mask;",
               [(set regclass:$dest, (IntOp Int32Regs:$mask, Int1Regs:$pred))]>,
-          Requires<[hasPTX60, hasSM30]>;
+          Requires<[hasPTX<60>, hasSM<30>]>;
 }
 
 defm VOTE_SYNC_ALL : VOTE_SYNC<Int1Regs, "all.pred", int_nvvm_vote_all_sync>;
@@ -226,19 +226,19 @@ multiclass MATCH_ANY_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic IntO
   def ii : NVPTXInst<(outs Int32Regs:$dest), (ins i32imm:$mask, ImmOp:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
               [(set Int32Regs:$dest, (IntOp imm:$mask, imm:$value))]>,
-           Requires<[hasPTX60, hasSM70]>;
+           Requires<[hasPTX<60>, hasSM<70>]>;
   def ir : NVPTXInst<(outs Int32Regs:$dest), (ins Int32Regs:$mask, ImmOp:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
               [(set Int32Regs:$dest, (IntOp Int32Regs:$mask, imm:$value))]>,
-           Requires<[hasPTX60, hasSM70]>;
+           Requires<[hasPTX<60>, hasSM<70>]>;
   def ri : NVPTXInst<(outs Int32Regs:$dest), (ins i32imm:$mask, regclass:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
               [(set Int32Regs:$dest, (IntOp imm:$mask, regclass:$value))]>,
-           Requires<[hasPTX60, hasSM70]>;
+           Requires<[hasPTX<60>, hasSM<70>]>;
   def rr : NVPTXInst<(outs Int32Regs:$dest), (ins Int32Regs:$mask, regclass:$value),
               "match.any.sync." # ptxtype # " \t$dest, $value, $mask;",
               [(set Int32Regs:$dest, (IntOp Int32Regs:$mask, regclass:$value))]>,
-           Requires<[hasPTX60, hasSM70]>;
+           Requires<[hasPTX<60>, hasSM<70>]>;
 }
 
 defm MATCH_ANY_SYNC_32 : MATCH_ANY_SYNC<Int32Regs, "b32", int_nvvm_match_any_sync_i32,
@@ -252,22 +252,22 @@ multiclass MATCH_ALLP_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic Int
                      (ins i32imm:$mask, ImmOp:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
               [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp imm:$mask, imm:$value))]>,
-           Requires<[hasPTX60, hasSM70]>;
+           Requires<[hasPTX<60>, hasSM<70>]>;
   def ir : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins Int32Regs:$mask, ImmOp:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
               [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, imm:$value))]>,
-           Requires<[hasPTX60, hasSM70]>;
+           Requires<[hasPTX<60>, hasSM<70>]>;
   def ri : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins i32imm:$mask, regclass:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
               [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp imm:$mask, regclass:$value))]>,
-           Requires<[hasPTX60, hasSM70]>;
+           Requires<[hasPTX<60>, hasSM<70>]>;
   def rr : NVPTXInst<(outs Int32Regs:$dest, Int1Regs:$pred),
                      (ins Int32Regs:$mask, regclass:$value),
               "match.all.sync." # ptxtype # " \t$dest|$pred, $value, $mask;",
               [(set Int32Regs:$dest, Int1Regs:$pred, (IntOp Int32Regs:$mask, regclass:$value))]>,
-           Requires<[hasPTX60, hasSM70]>;
+           Requires<[hasPTX<60>, hasSM<70>]>;
 }
 defm MATCH_ALLP_SYNC_32 : MATCH_ALLP_SYNC<Int32Regs, "b32", int_nvvm_match_all_sync_i32p,
                                          i32imm>;
@@ -278,7 +278,7 @@ multiclass REDUX_SYNC<string BinOp, string PTXType, Intrinsic Intrin> {
   def : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$src, Int32Regs:$mask),
           "redux.sync." # BinOp # "." # PTXType # " $dst, $src, $mask;",
           [(set Int32Regs:$dst, (Intrin Int32Regs:$src, Int32Regs:$mask))]>,
-        Requires<[hasPTX70, hasSM80]>;
+        Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm REDUX_SYNC_UMIN : REDUX_SYNC<"min", "u32", int_nvvm_redux_sync_umin>;
@@ -312,11 +312,11 @@ multiclass CP_ASYNC_MBARRIER_ARRIVE<string NoInc, string AddrSpace, Intrinsic In
   def _32 : NVPTXInst<(outs), (ins Int32Regs:$addr),
             !strconcat("cp.async.mbarrier.arrive", NoInc, AddrSpace, ".b64 [$addr];"),
             [(Intrin Int32Regs:$addr)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs), (ins Int64Regs:$addr),
             !strconcat("cp.async.mbarrier.arrive", NoInc, AddrSpace, ".b64 [$addr];"),
             [(Intrin Int64Regs:$addr)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm CP_ASYNC_MBARRIER_ARRIVE :
@@ -332,28 +332,28 @@ multiclass CP_ASYNC_SHARED_GLOBAL_I<string cc, string cpsize, Intrinsic Intrin, 
   def _32 : NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src),
             !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ";"),
             [(Intrin Int32Regs:$dst, Int32Regs:$src)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src),
             !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ";"),
             [(Intrin Int64Regs:$dst, Int64Regs:$src)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   // Variant with src_size parameter
   def _32s : NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src, Int32Regs:$src_size),
              !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
              [(IntrinS Int32Regs:$dst, Int32Regs:$src, Int32Regs:$src_size)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _32si: NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src, i32imm:$src_size),
              !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
              [(IntrinS Int32Regs:$dst, Int32Regs:$src, imm:$src_size)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64s : NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src, Int32Regs:$src_size),
              !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
              [(IntrinS Int64Regs:$dst, Int64Regs:$src, Int32Regs:$src_size)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64si: NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src, i32imm:$src_size),
              !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
              [(IntrinS Int64Regs:$dst, Int64Regs:$src, imm:$src_size)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm CP_ASYNC_CA_SHARED_GLOBAL_4 :
@@ -374,17 +374,17 @@ defm CP_ASYNC_CG_SHARED_GLOBAL_16 :
 
 def CP_ASYNC_COMMIT_GROUP :
   NVPTXInst<(outs), (ins), "cp.async.commit_group;", [(int_nvvm_cp_async_commit_group)]>,
-  Requires<[hasPTX70, hasSM80]>;
+  Requires<[hasPTX<70>, hasSM<80>]>;
 
 def CP_ASYNC_WAIT_GROUP :
   NVPTXInst<(outs), (ins i32imm:$n), "cp.async.wait_group $n;",
   [(int_nvvm_cp_async_wait_group (i32 timm:$n))]>,
-  Requires<[hasPTX70, hasSM80]>;
+  Requires<[hasPTX<70>, hasSM<80>]>;
 
 def CP_ASYNC_WAIT_ALL :
   NVPTXInst<(outs), (ins), "cp.async.wait_all;",
   [(int_nvvm_cp_async_wait_all)]>,
-  Requires<[hasPTX70, hasSM80]>;
+  Requires<[hasPTX<70>, hasSM<80>]>;
 
 //-----------------------------------
 // MBarrier Functions
@@ -394,11 +394,11 @@ multiclass MBARRIER_INIT<string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs), (ins Int32Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.init", AddrSpace, ".b64 [$addr], $count;"),
     [(Intrin Int32Regs:$addr, Int32Regs:$count)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs), (ins Int64Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.init", AddrSpace, ".b64 [$addr], $count;"),
     [(Intrin Int64Regs:$addr, Int32Regs:$count)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm MBARRIER_INIT : MBARRIER_INIT<"", int_nvvm_mbarrier_init>;
@@ -409,11 +409,11 @@ multiclass MBARRIER_INVAL<string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs), (ins Int32Regs:$addr),
            !strconcat("mbarrier.inval", AddrSpace, ".b64 [$addr];"),
     [(Intrin Int32Regs:$addr)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs), (ins Int64Regs:$addr),
            !strconcat("mbarrier.inval", AddrSpace, ".b64 [$addr];"),
     [(Intrin Int64Regs:$addr)]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm MBARRIER_INVAL : MBARRIER_INVAL<"", int_nvvm_mbarrier_inval>;
@@ -424,11 +424,11 @@ multiclass MBARRIER_ARRIVE<string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs Int64Regs:$state), (ins Int32Regs:$addr),
            !strconcat("mbarrier.arrive", AddrSpace, ".b64 $state, [$addr];"),
     [(set Int64Regs:$state, (Intrin Int32Regs:$addr))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int64Regs:$state), (ins Int64Regs:$addr),
            !strconcat("mbarrier.arrive", AddrSpace, ".b64 $state, [$addr];"),
     [(set Int64Regs:$state, (Intrin Int64Regs:$addr))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm MBARRIER_ARRIVE : MBARRIER_ARRIVE<"", int_nvvm_mbarrier_arrive>;
@@ -441,13 +441,13 @@ multiclass MBARRIER_ARRIVE_NOCOMPLETE<string AddrSpace, Intrinsic Intrin> {
            !strconcat("mbarrier.arrive.noComplete", AddrSpace,
                       ".b64 $state, [$addr], $count;"),
     [(set Int64Regs:$state, (Intrin Int32Regs:$addr, Int32Regs:$count))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int64Regs:$state),
            (ins Int64Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.arrive.noComplete", AddrSpace,
                       ".b64 $state, [$addr], $count;"),
     [(set Int64Regs:$state, (Intrin Int64Regs:$addr, Int32Regs:$count))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm MBARRIER_ARRIVE_NOCOMPLETE :
@@ -460,12 +460,12 @@ multiclass MBARRIER_ARRIVE_DROP<string AddrSpace, Intrinsic Intrin> {
            !strconcat("mbarrier.arrive_drop", AddrSpace,
                       ".b64 $state, [$addr];"),
            [(set Int64Regs:$state, (Intrin Int32Regs:$addr))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int64Regs:$state), (ins Int64Regs:$addr),
            !strconcat("mbarrier.arrive_drop", AddrSpace,
                       ".b64 $state, [$addr];"),
            [(set Int64Regs:$state, (Intrin Int64Regs:$addr))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm MBARRIER_ARRIVE_DROP :
@@ -479,13 +479,13 @@ multiclass MBARRIER_ARRIVE_DROP_NOCOMPLETE<string AddrSpace, Intrinsic Intrin> {
            !strconcat("mbarrier.arrive_drop.noComplete", AddrSpace,
                       ".b64 $state, [$addr], $count;"),
            [(set Int64Regs:$state, (Intrin Int32Regs:$addr, Int32Regs:$count))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int64Regs:$state),
            (ins Int64Regs:$addr, Int32Regs:$count),
            !strconcat("mbarrier.arrive_drop.noComplete", AddrSpace,
                       ".b64 $state, [$addr], $count;"),
            [(set Int64Regs:$state, (Intrin Int64Regs:$addr, Int32Regs:$count))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm MBARRIER_ARRIVE_DROP_NOCOMPLETE :
@@ -498,11 +498,11 @@ multiclass MBARRIER_TEST_WAIT<string AddrSpace, Intrinsic Intrin> {
   def _32 : NVPTXInst<(outs Int1Regs:$res), (ins Int32Regs:$addr, Int64Regs:$state),
            !strconcat("mbarrier.test_wait", AddrSpace, ".b64 $res, [$addr], $state;"),
            [(set Int1Regs:$res, (Intrin Int32Regs:$addr, Int64Regs:$state))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   def _64 : NVPTXInst<(outs Int1Regs:$res), (ins Int64Regs:$addr, Int64Regs:$state),
            !strconcat("mbarrier.test_wait", AddrSpace, ".b64 $res, [$addr], $state;"),
            [(set Int1Regs:$res, (Intrin Int64Regs:$addr, Int64Regs:$state))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
 defm MBARRIER_TEST_WAIT :
@@ -514,7 +514,7 @@ class MBARRIER_PENDING_COUNT<Intrinsic Intrin> :
            NVPTXInst<(outs Int32Regs:$res), (ins Int64Regs:$state),
            "mbarrier.pending_count.b64 $res, $state;",
            [(set Int32Regs:$res, (Intrin Int64Regs:$state))]>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
 
 def MBARRIER_PENDING_COUNT :
   MBARRIER_PENDING_COUNT<int_nvvm_mbarrier_pending_count>;
@@ -603,26 +603,26 @@ def INT_NVVM_FMIN_FTZ_F : F_MATH_2<"min.ftz.f32 \t$dst, $src0, $src1;",
   Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmin_ftz_f>;
 def INT_NVVM_FMIN_NAN_F : F_MATH_2<"min.NaN.f32 \t$dst, $src0, $src1;",
   Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmin_nan_f,
-  [hasPTX70, hasSM80]>;
+  [hasPTX<70>, hasSM<80>]>;
 def INT_NVVM_FMIN_FTZ_NAN_F : F_MATH_2<"min.ftz.NaN.f32 \t$dst, $src0, $src1;",
   Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmin_ftz_nan_f,
-  [hasPTX70, hasSM80]>;
+  [hasPTX<70>, hasSM<80>]>;
 def INT_NVVM_FMIN_XORSIGN_ABS_F :
   F_MATH_2<"min.xorsign.abs.f32 \t$dst, $src0, $src1;",
     Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmin_xorsign_abs_f,
-    [hasPTX72, hasSM86]>;
+    [hasPTX<72>, hasSM<86>]>;
 def INT_NVVM_FMIN_FTZ_XORSIGN_ABS_F :
   F_MATH_2<"min.ftz.xorsign.abs.f32 \t$dst, $src0, $src1;",
     Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmin_ftz_xorsign_abs_f,
-    [hasPTX72, hasSM86]>;
+    [hasPTX<72>, hasSM<86>]>;
 def INT_NVVM_FMIN_NAN_XORSIGN_ABS_F :
   F_MATH_2<"min.NaN.xorsign.abs.f32 \t$dst, $src0, $src1;",
     Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmin_nan_xorsign_abs_f,
-    [hasPTX72, hasSM86]>;
+    [hasPTX<72>, hasSM<86>]>;
 def INT_NVVM_FMIN_FTZ_NAN_XORSIGN_ABS_F :
   F_MATH_2<"min.ftz.NaN.xorsign.abs.f32 \t$dst, $src0, $src1;",
     Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmin_ftz_nan_xorsign_abs_f,
-    [hasPTX72, hasSM86]>;
+    [hasPTX<72>, hasSM<86>]>;
 
 def INT_NVVM_FMAX_F : F_MATH_2<"max.f32 \t$dst, $src0, $src1;", Float32Regs,
   Float32Regs, Float32Regs, int_nvvm_fmax_f>;
@@ -630,26 +630,26 @@ def INT_NVVM_FMAX_FTZ_F : F_MATH_2<"max.ftz.f32 \t$dst, $src0, $src1;",
   Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmax_ftz_f>;
 def INT_NVVM_FMAX_NAN_F : F_MATH_2<"max.NaN.f32 \t$dst, $src0, $src1;",
   Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmax_nan_f,
-  [hasPTX70, hasSM80]>;
+  [hasPTX<70>, hasSM<80>]>;
 def INT_NVVM_FMAX_FTZ_NAN_F : F_MATH_2<"max.ftz.NaN.f32 \t$dst, $src0, $src1;",
   Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmax_ftz_nan_f,
-  [hasPTX70, hasSM80]>;
+  [hasPTX<70>, hasSM<80>]>;
 def INT_NVVM_FMAX_XORSIGN_ABS_F :
   F_MATH_2<"max.xorsign.abs.f32 \t$dst, $src0, $src1;",
     Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmax_xorsign_abs_f,
-    [hasPTX72, hasSM86]>;
+    [hasPTX<72>, hasSM<86>]>;
 def INT_NVVM_FMAX_FTZ_XORSIGN_ABS_F :
   F_MATH_2<"max.ftz.xorsign.abs.f32 \t$dst, $src0, $src1;",
     Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmax_ftz_xorsign_abs_f,
-    [hasPTX72, hasSM86]>;
+    [hasPTX<72>, hasSM<86>]>;
 def INT_NVVM_FMAX_NAN_XORSIGN_ABS_F :
   F_MATH_2<"max.NaN.xorsign.abs.f32 \t$dst, $src0, $src1;",
     Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmax_nan_xorsign_abs_f,
-    [hasPTX72, hasSM86]>;
+    [hasPTX<72>, hasSM<86>]>;
 def INT_NVVM_FMAX_FTZ_NAN_XORSIGN_ABS_F :
   F_MATH_2<"max.ftz.NaN.xorsign.abs.f32 \t$dst, $src0, $src1;",
     Float32Regs, Float32Regs, Float32Regs, int_nvvm_fmax_ftz_nan_xorsign_abs_f,
-    [hasPTX72, hasSM86]>;
+    [hasPTX<72>, hasSM<86>]>;
 
 def INT_NVVM_FMIN_D : F_MATH_2<"min.f64 \t$dst, $src0, $src1;", Float64Regs,
   Float64Regs, Float64Regs, int_nvvm_fmin_d>;
@@ -661,7 +661,7 @@ def INT_NVVM_FMAX_D : F_MATH_2<"max.f64 \t$dst, $src0, $src1;", Float64Regs,
 //
 
 class MIN_MAX_TUPLE<string V, Intrinsic I, NVPTXRegClass RC,
-                    list<Predicate> Preds = [hasPTX70, hasSM80]> {
+                    list<Predicate> Preds = [hasPTX<70>, hasSM<80>]> {
   string Variant = V;
   Intrinsic Intr = I;
   NVPTXRegClass RegClass = RC;
@@ -680,16 +680,16 @@ multiclass MIN_MAX<string IntName> {
       int_nvvm_fmin_ftz_nan_f16, int_nvvm_fmax_ftz_nan_f16), Float16Regs>,
     MIN_MAX_TUPLE<"_xorsign_abs_f16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_xorsign_abs_f16, int_nvvm_fmax_xorsign_abs_f16),
-      Float16Regs, [hasPTX72, hasSM86]>,
+      Float16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_ftz_xorsign_abs_f16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_ftz_xorsign_abs_f16, int_nvvm_fmax_ftz_xorsign_abs_f16),
-      Float16Regs, [hasPTX72, hasSM86]>,
+      Float16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_NaN_xorsign_abs_f16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_nan_xorsign_abs_f16, int_nvvm_fmax_nan_xorsign_abs_f16),
-      Float16Regs, [hasPTX72, hasSM86]>,
+      Float16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_ftz_NaN_xorsign_abs_f16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_ftz_nan_xorsign_abs_f16,
-      int_nvvm_fmax_ftz_nan_xorsign_abs_f16), Float16Regs, [hasPTX72, hasSM86]>,
+      int_nvvm_fmax_ftz_nan_xorsign_abs_f16), Float16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_f16x2", !if(!eq(IntName, "min"), int_nvvm_fmin_f16x2,
       int_nvvm_fmax_f16x2), Float16x2Regs>,
     MIN_MAX_TUPLE<"_ftz_f16x2", !if(!eq(IntName, "min"),
@@ -700,38 +700,38 @@ multiclass MIN_MAX<string IntName> {
       int_nvvm_fmin_ftz_nan_f16x2, int_nvvm_fmax_ftz_nan_f16x2), Float16x2Regs>,
     MIN_MAX_TUPLE<"_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_xorsign_abs_f16x2, int_nvvm_fmax_xorsign_abs_f16x2),
-      Float16x2Regs, [hasPTX72, hasSM86]>,
+      Float16x2Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_ftz_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_ftz_xorsign_abs_f16x2, int_nvvm_fmax_ftz_xorsign_abs_f16x2),
-      Float16x2Regs, [hasPTX72, hasSM86]>,
+      Float16x2Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_NaN_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_nan_xorsign_abs_f16x2, int_nvvm_fmax_nan_xorsign_abs_f16x2),
-      Float16x2Regs, [hasPTX72, hasSM86]>,
+      Float16x2Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_ftz_NaN_xorsign_abs_f16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_ftz_nan_xorsign_abs_f16x2,
       int_nvvm_fmax_ftz_nan_xorsign_abs_f16x2),
-      Float16x2Regs, [hasPTX72, hasSM86]>,
+      Float16x2Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_bf16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_bf16, int_nvvm_fmax_bf16), Int16Regs>,
     MIN_MAX_TUPLE<"_NaN_bf16", !if(!eq(IntName, "min"), int_nvvm_fmin_nan_bf16,
       int_nvvm_fmax_nan_bf16), Int16Regs>,
     MIN_MAX_TUPLE<"_xorsign_abs_bf16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_xorsign_abs_bf16, int_nvvm_fmax_xorsign_abs_bf16),
-      Int16Regs, [hasPTX72, hasSM86]>,
+      Int16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_NaN_xorsign_abs_bf16", !if(!eq(IntName, "min"),
       int_nvvm_fmin_nan_xorsign_abs_bf16, int_nvvm_fmax_nan_xorsign_abs_bf16),
-      Int16Regs, [hasPTX72, hasSM86]>,
+      Int16Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_bf16x2", !if(!eq(IntName, "min"), int_nvvm_fmin_bf16x2,
       int_nvvm_fmax_bf16x2), Int32Regs>,
     MIN_MAX_TUPLE<"_NaN_bf16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_nan_bf16x2, int_nvvm_fmax_nan_bf16x2), Int32Regs>,
     MIN_MAX_TUPLE<"_xorsign_abs_bf16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_xorsign_abs_bf16x2, int_nvvm_fmax_xorsign_abs_bf16x2),
-      Int32Regs, [hasPTX72, hasSM86]>,
+      Int32Regs, [hasPTX<72>, hasSM<86>]>,
     MIN_MAX_TUPLE<"_NaN_xorsign_abs_bf16x2", !if(!eq(IntName, "min"),
       int_nvvm_fmin_nan_xorsign_abs_bf16x2,
       int_nvvm_fmax_nan_xorsign_abs_bf16x2),
-      Int32Regs, [hasPTX72, hasSM86]>] in {
+      Int32Regs, [hasPTX<72>, hasSM<86>]>] in {
         def P.Variant : F_MATH_2<!strconcat(
           IntName, !subst("_", ".", P.Variant), " \t$dst, $src0, $src1;"),
           P.RegClass, P.RegClass, P.RegClass, P.Intr, P.Predicates>;
@@ -866,13 +866,13 @@ def INT_NVVM_FABS_D : F_MATH_1<"abs.f64 \t$dst, $src0;", Float64Regs,
 //
 
 def INT_NVVM_ABS_BF16 : F_MATH_1<"abs.bf16 \t$dst, $src0;", Int16Regs,
-  Int16Regs, int_nvvm_abs_bf16, [hasPTX70, hasSM80]>;
+  Int16Regs, int_nvvm_abs_bf16, [hasPTX<70>, hasSM<80>]>;
 def INT_NVVM_ABS_BF16X2 : F_MATH_1<"abs.bf16x2 \t$dst, $src0;", Int32Regs,
-  Int32Regs, int_nvvm_abs_bf16x2, [hasPTX70, hasSM80]>;
+  Int32Regs, int_nvvm_abs_bf16x2, [hasPTX<70>, hasSM<80>]>;
 def INT_NVVM_NEG_BF16 : F_MATH_1<"neg.bf16 \t$dst, $src0;", Int16Regs,
-  Int16Regs, int_nvvm_neg_bf16, [hasPTX70, hasSM80]>;
+  Int16Regs, int_nvvm_neg_bf16, [hasPTX<70>, hasSM<80>]>;
 def INT_NVVM_NEG_BF16X2 : F_MATH_1<"neg.bf16x2 \t$dst, $src0;", Int32Regs,
-  Int32Regs, int_nvvm_neg_bf16x2, [hasPTX70, hasSM80]>;
+  Int32Regs, int_nvvm_neg_bf16x2, [hasPTX<70>, hasSM<80>]>;
 
 //
 // Round
@@ -918,9 +918,9 @@ def INT_NVVM_EX2_APPROX_F : F_MATH_1<"ex2.approx.f32 \t$dst, $src0;",
 def INT_NVVM_EX2_APPROX_D : F_MATH_1<"ex2.approx.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_ex2_approx_d>;
 def INT_NVVM_EX2_APPROX_F16 : F_MATH_1<"ex2.approx.f16 \t$dst, $src0;",
-  Float16Regs, Float16Regs, int_nvvm_ex2_approx_f16, [hasPTX70, hasSM75]>;
+  Float16Regs, Float16Regs, int_nvvm_ex2_approx_f16, [hasPTX<70>, hasSM<75>]>;
 def INT_NVVM_EX2_APPROX_F16X2 : F_MATH_1<"ex2.approx.f16x2 \t$dst, $src0;",
-  Float16x2Regs, Float16x2Regs, int_nvvm_ex2_approx_f16x2, [hasPTX70, hasSM75]>;
+  Float16x2Regs, Float16x2Regs, int_nvvm_ex2_approx_f16x2, [hasPTX<70>, hasSM<75>]>;
 
 def INT_NVVM_LG2_APPROX_FTZ_F : F_MATH_1<"lg2.approx.ftz.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_lg2_approx_ftz_f>;
@@ -971,39 +971,39 @@ multiclass FMA_INST {
     FMA_TUPLE<"_rp_f32", int_nvvm_fma_rp_f, Float32Regs>,
     FMA_TUPLE<"_rp_ftz_f32", int_nvvm_fma_rp_ftz_f, Float32Regs>,
 
-    FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, Float16Regs, [hasPTX42, hasSM53]>,
+    FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, Float16Regs, [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_ftz_f16", int_nvvm_fma_rn_ftz_f16, Float16Regs,
-      [hasPTX42, hasSM53]>,
+      [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_sat_f16", int_nvvm_fma_rn_sat_f16, Float16Regs,
-      [hasPTX42, hasSM53]>,
+      [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_ftz_sat_f16", int_nvvm_fma_rn_ftz_sat_f16, Float16Regs,
-      [hasPTX42, hasSM53]>,
+      [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_relu_f16", int_nvvm_fma_rn_relu_f16, Float16Regs,
-      [hasPTX70, hasSM80]>,
+      [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_ftz_relu_f16", int_nvvm_fma_rn_ftz_relu_f16, Float16Regs,
-      [hasPTX70, hasSM80]>,
+      [hasPTX<70>, hasSM<80>]>,
 
     FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, Float16x2Regs,
-      [hasPTX42, hasSM53]>,
+      [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_ftz_f16x2", int_nvvm_fma_rn_ftz_f16x2, Float16x2Regs,
-      [hasPTX42, hasSM53]>,
+      [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_sat_f16x2", int_nvvm_fma_rn_sat_f16x2, Float16x2Regs,
-      [hasPTX42, hasSM53]>,
+      [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_ftz_sat_f16x2", int_nvvm_fma_rn_ftz_sat_f16x2,
-      Float16x2Regs, [hasPTX42, hasSM53]>,
+      Float16x2Regs, [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_relu_f16x2", int_nvvm_fma_rn_relu_f16x2, Float16x2Regs,
-      [hasPTX70, hasSM80]>,
+      [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_ftz_relu_f16x2", int_nvvm_fma_rn_ftz_relu_f16x2,
-      Float16x2Regs, [hasPTX70, hasSM80]>,
+      Float16x2Regs, [hasPTX<70>, hasSM<80>]>,
 
-    FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, Int16Regs, [hasPTX70, hasSM80]>,
+    FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, Int16Regs, [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, Int16Regs,
-      [hasPTX70, hasSM80]>,
+      [hasPTX<70>, hasSM<80>]>,
 
     FMA_TUPLE<"_rn_bf16x2", int_nvvm_fma_rn_bf16x2, Int32Regs,
-      [hasPTX70, hasSM80]>,
+      [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_relu_bf16x2", int_nvvm_fma_rn_relu_bf16x2, Int32Regs,
-      [hasPTX70, hasSM80]>
+      [hasPTX<70>, hasSM<80>]>
   ] in {
     def P.Variant :
       F_MATH_3<!strconcat("fma",
@@ -1408,7 +1408,7 @@ class INT_FNS_MBO<dag ins, dag Operands>
   : NVPTXInst<(outs Int32Regs:$dst), ins,
                "fns.b32 \t$dst, $mask, $base, $offset;",
                [(set Int32Regs:$dst, Operands )]>,
-    Requires<[hasPTX60, hasSM30]>;
+    Requires<[hasPTX<60>, hasSM<30>]>;
 
 def INT_FNS_rrr : INT_FNS_MBO<(ins Int32Regs:$mask, Int32Regs:$base, Int32Regs:$offset),
                      (int_nvvm_fns Int32Regs:$mask, Int32Regs:$base, Int32Regs:$offset)>;
@@ -1670,13 +1670,13 @@ defm INT_PTX_ATOM_LOAD_MAX_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".s32", ".max",
 defm INT_PTX_ATOM_LOAD_MAX_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global",
   ".s32", ".max", atomic_load_max_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_MAX_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".s64",
-  ".max", atomic_load_max_64_g, i64imm, imm, [hasSM32]>;
+  ".max", atomic_load_max_64_g, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_MAX_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".s64",
-  ".max", atomic_load_max_64_s, i64imm, imm, [hasSM32]>;
+  ".max", atomic_load_max_64_s, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_MAX_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".s64", ".max",
-  atomic_load_max_64_gen, i64imm, imm, [hasSM32]>;
+  atomic_load_max_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_MAX_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global",
-  ".s64", ".max", atomic_load_max_64_gen, i64imm, imm, [hasSM32]>;
+  ".s64", ".max", atomic_load_max_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_UMAX_G_32 : F_ATOMIC_2<Int32Regs, ".global", ".u32",
   ".max", atomic_load_umax_32_g, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_UMAX_S_32 : F_ATOMIC_2<Int32Regs, ".shared", ".u32",
@@ -1686,13 +1686,13 @@ defm INT_PTX_ATOM_LOAD_UMAX_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".u32", ".max",
 defm INT_PTX_ATOM_LOAD_UMAX_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global",
   ".u32", ".max", atomic_load_umax_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_UMAX_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".u64",
-  ".max", atomic_load_umax_64_g, i64imm, imm, [hasSM32]>;
+  ".max", atomic_load_umax_64_g, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_UMAX_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".u64",
-  ".max", atomic_load_umax_64_s, i64imm, imm, [hasSM32]>;
+  ".max", atomic_load_umax_64_s, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_UMAX_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".u64", ".max",
-  atomic_load_umax_64_gen, i64imm, imm, [hasSM32]>;
+  atomic_load_umax_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_UMAX_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global",
-  ".u64", ".max", atomic_load_umax_64_gen, i64imm, imm, [hasSM32]>;
+  ".u64", ".max", atomic_load_umax_64_gen, i64imm, imm, [hasSM<32>]>;
 
 // atom_min
 
@@ -1730,13 +1730,13 @@ defm INT_PTX_ATOM_LOAD_MIN_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".s32", ".min",
 defm INT_PTX_ATOM_LOAD_MIN_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global",
   ".s32", ".min", atomic_load_min_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_MIN_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".s64",
-  ".min", atomic_load_min_64_g, i64imm, imm, [hasSM32]>;
+  ".min", atomic_load_min_64_g, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_MIN_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".s64",
-  ".min", atomic_load_min_64_s, i64imm, imm, [hasSM32]>;
+  ".min", atomic_load_min_64_s, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_MIN_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".s64", ".min",
-  atomic_load_min_64_gen, i64imm, imm, [hasSM32]>;
+  atomic_load_min_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_MIN_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global",
-  ".s64", ".min", atomic_load_min_64_gen, i64imm, imm, [hasSM32]>;
+  ".s64", ".min", atomic_load_min_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_UMIN_G_32 : F_ATOMIC_2<Int32Regs, ".global", ".u32",
   ".min", atomic_load_umin_32_g, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_UMIN_S_32 : F_ATOMIC_2<Int32Regs, ".shared", ".u32",
@@ -1746,13 +1746,13 @@ defm INT_PTX_ATOM_LOAD_UMIN_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".u32", ".min",
 defm INT_PTX_ATOM_LOAD_UMIN_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global",
   ".u32", ".min", atomic_load_umin_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_LOAD_UMIN_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".u64",
-  ".min", atomic_load_umin_64_g, i64imm, imm, [hasSM32]>;
+  ".min", atomic_load_umin_64_g, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_UMIN_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".u64",
-  ".min", atomic_load_umin_64_s, i64imm, imm, [hasSM32]>;
+  ".min", atomic_load_umin_64_s, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_UMIN_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".u64", ".min",
-  atomic_load_umin_64_gen, i64imm, imm, [hasSM32]>;
+  atomic_load_umin_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_LOAD_UMIN_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global",
-  ".u64", ".min", atomic_load_umin_64_gen, i64imm, imm, [hasSM32]>;
+  ".u64", ".min", atomic_load_umin_64_gen, i64imm, imm, [hasSM<32>]>;
 
 // atom_inc  atom_dec
 
@@ -1810,13 +1810,13 @@ defm INT_PTX_ATOM_AND_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".b32", ".and",
 defm INT_PTX_ATOM_AND_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global", ".b32",
   ".and", atomic_load_and_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_AND_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".b64", ".and",
-  atomic_load_and_64_g, i64imm, imm, [hasSM32]>;
+  atomic_load_and_64_g, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_AND_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".b64", ".and",
-  atomic_load_and_64_s, i64imm, imm, [hasSM32]>;
+  atomic_load_and_64_s, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_AND_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".b64", ".and",
-  atomic_load_and_64_gen, i64imm, imm, [hasSM32]>;
+  atomic_load_and_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_AND_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global", ".b64",
-  ".and", atomic_load_and_64_gen, i64imm, imm, [hasSM32]>;
+  ".and", atomic_load_and_64_gen, i64imm, imm, [hasSM<32>]>;
 
 // atom_or
 
@@ -1842,13 +1842,13 @@ defm INT_PTX_ATOM_OR_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global", ".b32",
 defm INT_PTX_ATOM_OR_S_32 : F_ATOMIC_2<Int32Regs, ".shared", ".b32", ".or",
   atomic_load_or_32_s, i32imm, imm>;
 defm INT_PTX_ATOM_OR_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".b64", ".or",
-  atomic_load_or_64_g, i64imm, imm, [hasSM32]>;
+  atomic_load_or_64_g, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_OR_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".b64", ".or",
-  atomic_load_or_64_gen, i64imm, imm, [hasSM32]>;
+  atomic_load_or_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_OR_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global", ".b64",
-  ".or", atomic_load_or_64_gen, i64imm, imm, [hasSM32]>;
+  ".or", atomic_load_or_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_OR_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".b64", ".or",
-  atomic_load_or_64_s, i64imm, imm, [hasSM32]>;
+  atomic_load_or_64_s, i64imm, imm, [hasSM<32>]>;
 
 // atom_xor
 
@@ -1874,13 +1874,13 @@ defm INT_PTX_ATOM_XOR_GEN_32 : F_ATOMIC_2<Int32Regs, "", ".b32", ".xor",
 defm INT_PTX_ATOM_XOR_GEN_32_USE_G : F_ATOMIC_2<Int32Regs, ".global", ".b32",
   ".xor", atomic_load_xor_32_gen, i32imm, imm>;
 defm INT_PTX_ATOM_XOR_G_64 : F_ATOMIC_2<Int64Regs, ".global", ".b64", ".xor",
-  atomic_load_xor_64_g, i64imm, imm, [hasSM32]>;
+  atomic_load_xor_64_g, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_XOR_S_64 : F_ATOMIC_2<Int64Regs, ".shared", ".b64", ".xor",
-  atomic_load_xor_64_s, i64imm, imm, [hasSM32]>;
+  atomic_load_xor_64_s, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_XOR_GEN_64 : F_ATOMIC_2<Int64Regs, "", ".b64", ".xor",
-  atomic_load_xor_64_gen, i64imm, imm, [hasSM32]>;
+  atomic_load_xor_64_gen, i64imm, imm, [hasSM<32>]>;
 defm INT_PTX_ATOM_XOR_GEN_64_USE_G : F_ATOMIC_2<Int64Regs, ".global", ".b64",
-  ".xor", atomic_load_xor_64_gen, i64imm, imm, [hasSM32]>;
+  ".xor", atomic_load_xor_64_gen, i64imm, imm, [hasSM<32>]>;
 
 // atom_cas
 
@@ -2484,12 +2484,12 @@ def ISSPACEP_CONST_32
   : NVPTXInst<(outs Int1Regs:$d), (ins Int32Regs:$a),
               "isspacep.const \t$d, $a;",
               [(set Int1Regs:$d, (int_nvvm_isspacep_const Int32Regs:$a))]>,
-    Requires<[hasPTX31]>;
+    Requires<[hasPTX<31>]>;
 def ISSPACEP_CONST_64
   : NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
               "isspacep.const \t$d, $a;",
               [(set Int1Regs:$d, (int_nvvm_isspacep_const Int64Regs:$a))]>,
-    Requires<[hasPTX31]>;
+    Requires<[hasPTX<31>]>;
 def ISSPACEP_GLOBAL_32
   : NVPTXInst<(outs Int1Regs:$d), (ins Int32Regs:$a),
               "isspacep.global \t$d, $a;",
@@ -6342,16 +6342,16 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
     // fp16 -> fp16/fp32 @ m16n16k16
     !and(!eq(geom, "m16n16k16"),
          !or(!eq(ptx_elt_type, "f16"),
-             !eq(ptx_elt_type, "f32"))) : [hasSM70, hasPTX60],
+             !eq(ptx_elt_type, "f32"))) : [hasSM<70>, hasPTX<60>],
 
     !and(!eq(geom,"m8n8k4"),
-         !eq(ptx_elt_type, "f64")) : [hasSM80, hasPTX70],
+         !eq(ptx_elt_type, "f64")) : [hasSM<80>, hasPTX<70>],
 
     // fp16 -> fp16/fp32 @ m8n32k16/m32n8k16
     !and(!or(!eq(geom, "m8n32k16"),
              !eq(geom, "m32n8k16")),
          !or(!eq(ptx_elt_type, "f16"),
-             !eq(ptx_elt_type, "f32"))) : [hasSM70, hasPTX61],
+             !eq(ptx_elt_type, "f32"))) : [hasSM<70>, hasPTX<61>],
 
     // u8/s8 -> s32 @ m16n16k16/m8n32k16/m32n8k16
     !and(!or(!eq(geom,"m16n16k16"),
@@ -6359,39 +6359,39 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
              !eq(geom,"m32n8k16")),
          !or(!eq(ptx_elt_type, "u8"),
              !eq(ptx_elt_type, "s8"),
-             !eq(ptx_elt_type, "s32"))) : [hasSM72, hasPTX63],
+             !eq(ptx_elt_type, "s32"))) : [hasSM<72>, hasPTX<63>],
 
     !and(!or(!eq(geom,"m16n16k16"),
              !eq(geom,"m8n32k16"),
              !eq(geom,"m32n8k16")),
-         !eq(ptx_elt_type, "bf16")) : [hasSM80, hasPTX70],
+         !eq(ptx_elt_type, "bf16")) : [hasSM<80>, hasPTX<70>],
 
     !and(!eq(geom,"m16n16k8"),
-         !eq(ptx_elt_type, "tf32")) : [hasSM80, hasPTX70],
+         !eq(ptx_elt_type, "tf32")) : [hasSM<80>, hasPTX<70>],
 
     !and(!eq(geom,"m16n16k8"),
-         !eq(ptx_elt_type, "f32")) : [hasSM80, hasPTX70],
+         !eq(ptx_elt_type, "f32")) : [hasSM<80>, hasPTX<70>],
 
     // b1 -> s32 @ m8n8k128(b1)
     !and(!ne(op,"mma"),
-         !eq(geom,"m8n8k128")) : [hasSM75, hasPTX63],
+         !eq(geom,"m8n8k128")) : [hasSM<75>, hasPTX<63>],
 
     // u4/s4 -> s32 @ m8n8k32 (u4/s4)
     !and(!ne(op,"mma"),
-         !eq(geom,"m8n8k32")) : [hasSM75, hasPTX63],
+         !eq(geom,"m8n8k32")) : [hasSM<75>, hasPTX<63>],
 
     !or(!eq(geom,"m16n8k8"),
-        !eq(geom,"m8n8k16")) : [hasSM75, hasPTX65],
+        !eq(geom,"m8n8k16")) : [hasSM<75>, hasPTX<65>],
 
     !and(!ne(ptx_elt_type,"f64"),
-         !eq(geom, "m8n8k4")) : [hasSM70, hasPTX64],
+         !eq(geom, "m8n8k4")) : [hasSM<70>, hasPTX<64>],
 
     // mma m8n8k32 requires higher PTX version
     !and(!eq(op,"mma"),
-         !eq(geom,"m8n8k32")) : [hasSM75, hasPTX65],
+         !eq(geom,"m8n8k32")) : [hasSM<75>, hasPTX<65>],
 
     !and(!eq(ptx_elt_type,"f64"),
-         !eq(geom, "m8n8k4")) : [hasSM80, hasPTX70],
+         !eq(geom, "m8n8k4")) : [hasSM<80>, hasPTX<70>],
 
     !and(!eq(op,"mma"),
          !or(!eq(geom, "m16n8k16"),
@@ -6400,11 +6400,11 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
              !eq(geom, "m16n8k64"),
              !eq(geom, "m8n8k128"),
              !eq(geom, "m16n8k128"),
-             !eq(geom, "m16n8k256"))) : [hasSM80, hasPTX70],
+             !eq(geom, "m16n8k256"))) : [hasSM<80>, hasPTX<70>],
 
     !and(!eq(op,"ldmatrix"),
          !eq(ptx_elt_type,"b16"),
-         !eq(geom, "m8n8")) : [hasSM75, hasPTX65]);
+         !eq(geom, "m8n8")) : [hasSM<75>, hasPTX<65>]);
 
   // template DAGs for instruction inputs/output.
   dag Outs = !dag(outs, ptx_regs, reg_names);
@@ -6545,7 +6545,7 @@ class MMA_OP_PREDICATES<WMMA_REGINFO FragA, string b1op> {
   WMMA_REGINFO Frag = FragA;
   list<Predicate> ret = !listconcat(
     FragA.Predicates,
-    !if(!eq(b1op, ".and.popc"), [hasSM80,hasPTX71],[])
+    !if(!eq(b1op, ".and.popc"), [hasSM<80>,hasPTX<71>],[])
   );
 }
 // WMMA.MMA
