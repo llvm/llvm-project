@@ -104,7 +104,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     }
   }
 
-  lldb::addr_t offset = 0;
+  lldb::offset_t offset = 0;
   success =
       options_dict.GetValueForKeyAsInteger(GetKey(OptionNames::Offset), offset);
   if (!success) {
@@ -197,8 +197,8 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
     for (auto lookup : m_lookups) {
       names_sp->AddItem(StructuredData::StringSP(
           new StructuredData::String(lookup.GetName().GetStringRef())));
-      name_masks_sp->AddItem(StructuredData::IntegerSP(
-          new StructuredData::Integer(lookup.GetNameTypeMask())));
+      name_masks_sp->AddItem(StructuredData::UnsignedIntegerSP(
+          new StructuredData::UnsignedInteger(lookup.GetNameTypeMask())));
     }
     options_dict_sp->AddItem(GetKey(OptionNames::SymbolNameArray), names_sp);
     options_dict_sp->AddItem(GetKey(OptionNames::NameMaskArray), name_masks_sp);

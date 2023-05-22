@@ -381,7 +381,7 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
     }
     // clang-format on
     image_infos[i].address =
-        image->GetValueForKey("load_address")->GetAsInteger()->GetValue();
+        image->GetValueForKey("load_address")->GetUnsignedIntegerValue();
     image_infos[i].file_spec.SetFile(
         image->GetValueForKey("pathname")->GetAsString()->GetValue(),
         FileSpec::Style::native);
@@ -389,13 +389,13 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
     StructuredData::Dictionary *mh =
         image->GetValueForKey("mach_header")->GetAsDictionary();
     image_infos[i].header.magic =
-        mh->GetValueForKey("magic")->GetAsInteger()->GetValue();
+        mh->GetValueForKey("magic")->GetUnsignedIntegerValue();
     image_infos[i].header.cputype =
-        mh->GetValueForKey("cputype")->GetAsInteger()->GetValue();
+        mh->GetValueForKey("cputype")->GetUnsignedIntegerValue();
     image_infos[i].header.cpusubtype =
-        mh->GetValueForKey("cpusubtype")->GetAsInteger()->GetValue();
+        mh->GetValueForKey("cpusubtype")->GetUnsignedIntegerValue();
     image_infos[i].header.filetype =
-        mh->GetValueForKey("filetype")->GetAsInteger()->GetValue();
+        mh->GetValueForKey("filetype")->GetUnsignedIntegerValue();
 
     if (image->HasKey("min_version_os_name")) {
       std::string os_name =
@@ -438,19 +438,19 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
 
     if (mh->HasKey("flags"))
       image_infos[i].header.flags =
-          mh->GetValueForKey("flags")->GetAsInteger()->GetValue();
+          mh->GetValueForKey("flags")->GetUnsignedIntegerValue();
     else
       image_infos[i].header.flags = 0;
 
     if (mh->HasKey("ncmds"))
       image_infos[i].header.ncmds =
-          mh->GetValueForKey("ncmds")->GetAsInteger()->GetValue();
+          mh->GetValueForKey("ncmds")->GetUnsignedIntegerValue();
     else
       image_infos[i].header.ncmds = 0;
 
     if (mh->HasKey("sizeofcmds"))
       image_infos[i].header.sizeofcmds =
-          mh->GetValueForKey("sizeofcmds")->GetAsInteger()->GetValue();
+          mh->GetValueForKey("sizeofcmds")->GetUnsignedIntegerValue();
     else
       image_infos[i].header.sizeofcmds = 0;
 
@@ -463,35 +463,32 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
           segments->GetItemAtIndex(j)->GetAsDictionary();
       segment.name =
           ConstString(seg->GetValueForKey("name")->GetAsString()->GetValue());
-      segment.vmaddr =
-          seg->GetValueForKey("vmaddr")->GetAsInteger()->GetValue();
-      segment.vmsize =
-          seg->GetValueForKey("vmsize")->GetAsInteger()->GetValue();
+      segment.vmaddr = seg->GetValueForKey("vmaddr")->GetUnsignedIntegerValue();
+      segment.vmsize = seg->GetValueForKey("vmsize")->GetUnsignedIntegerValue();
       segment.fileoff =
-          seg->GetValueForKey("fileoff")->GetAsInteger()->GetValue();
+          seg->GetValueForKey("fileoff")->GetUnsignedIntegerValue();
       segment.filesize =
-          seg->GetValueForKey("filesize")->GetAsInteger()->GetValue();
+          seg->GetValueForKey("filesize")->GetUnsignedIntegerValue();
       segment.maxprot =
-          seg->GetValueForKey("maxprot")->GetAsInteger()->GetValue();
+          seg->GetValueForKey("maxprot")->GetUnsignedIntegerValue();
 
       // Fields that aren't used by DynamicLoaderDarwin so debugserver doesn't
       // currently send them in the reply.
 
       if (seg->HasKey("initprot"))
         segment.initprot =
-            seg->GetValueForKey("initprot")->GetAsInteger()->GetValue();
+            seg->GetValueForKey("initprot")->GetUnsignedIntegerValue();
       else
         segment.initprot = 0;
 
       if (seg->HasKey("flags"))
-        segment.flags =
-            seg->GetValueForKey("flags")->GetAsInteger()->GetValue();
+        segment.flags = seg->GetValueForKey("flags")->GetUnsignedIntegerValue();
       else
         segment.flags = 0;
 
       if (seg->HasKey("nsects"))
         segment.nsects =
-            seg->GetValueForKey("nsects")->GetAsInteger()->GetValue();
+            seg->GetValueForKey("nsects")->GetUnsignedIntegerValue();
       else
         segment.nsects = 0;
 

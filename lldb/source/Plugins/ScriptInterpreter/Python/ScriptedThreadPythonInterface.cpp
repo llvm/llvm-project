@@ -69,7 +69,7 @@ lldb::tid_t ScriptedThreadPythonInterface::GetThreadID() {
   if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return LLDB_INVALID_THREAD_ID;
 
-  return obj->GetIntegerValue(LLDB_INVALID_THREAD_ID);
+  return obj->GetUnsignedIntegerValue(LLDB_INVALID_THREAD_ID);
 }
 
 std::optional<std::string> ScriptedThreadPythonInterface::GetName() {
@@ -89,7 +89,7 @@ lldb::StateType ScriptedThreadPythonInterface::GetState() {
   if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return eStateInvalid;
 
-  return static_cast<StateType>(obj->GetIntegerValue(eStateInvalid));
+  return static_cast<StateType>(obj->GetUnsignedIntegerValue(eStateInvalid));
 }
 
 std::optional<std::string> ScriptedThreadPythonInterface::GetQueue() {
