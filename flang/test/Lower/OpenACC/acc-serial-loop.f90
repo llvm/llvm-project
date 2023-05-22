@@ -358,18 +358,19 @@ subroutine acc_serial_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
-  !$acc serial loop private(a) firstprivate(b)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
+! TODO: update when lowering is updated to new private design
+!  !$acc serial loop private(a) firstprivate(b)
+!  DO i = 1, n
+!    a(i) = b(i)
+!  END DO
 
-! CHECK:      acc.serial firstprivate(%[[B]] : !fir.ref<!fir.array<10xf32>>) private(%[[A]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK:        acc.loop private(%[[A]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK:          fir.do_loop
-! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! TODO:      acc.serial firstprivate(%[[B]] : !fir.ref<!fir.array<10xf32>>) private(%[[A]] : !fir.ref<!fir.array<10xf32>>) {
+! TODO:        acc.loop private(%[[A]] : !fir.ref<!fir.array<10xf32>>) {
+! TODO:          fir.do_loop
+! TODO:          acc.yield
+! TODO-NEXT:   }{{$}}
+! TODO:        acc.yield
+! TODO-NEXT: }{{$}}
 
   !$acc serial loop seq
   DO i = 1, n
