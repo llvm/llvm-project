@@ -306,8 +306,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::driver::options::OPT_fsyntax_only:
       opts.programAction = ParseSyntaxOnly;
       break;
-    case clang::driver::options::OPT_emit_mlir:
-      opts.programAction = EmitMLIR;
+    case clang::driver::options::OPT_emit_fir:
+      opts.programAction = EmitFIR;
+      break;
+    case clang::driver::options::OPT_emit_hlfir:
+      opts.programAction = EmitHLFIR;
       break;
     case clang::driver::options::OPT_emit_llvm:
       opts.programAction = EmitLLVM;
@@ -911,7 +914,8 @@ bool CompilerInvocation::createFromArgs(
   }
 
   // -flang-experimental-hlfir
-  if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir)) {
+  if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir) ||
+      args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
     res.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
