@@ -391,6 +391,7 @@ cc_library(
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:LinalgDialect",
+        "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:Support",
     ],
