@@ -371,7 +371,8 @@ public:
                             unsigned Opc_rr, unsigned Opc_ri,
                             bool IsIntr = false);
   void SelectDestructiveMultiIntrinsic(SDNode *N, unsigned NumVecs,
-                                       bool IsZmMulti, unsigned Opcode);
+                                       bool IsZmMulti, unsigned Opcode,
+                                       bool HasPred = false);
   void SelectPExtPair(SDNode *N, unsigned Opc);
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
@@ -1709,11 +1710,13 @@ void AArch64DAGToDAGISel::SelectCVTIntrinsic(SDNode *N, unsigned NumVecs,
 void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
                                                           unsigned NumVecs,
                                                           bool IsZmMulti,
-                                                          unsigned Opcode) {
+                                                          unsigned Opcode,
+                                                          bool HasPred) {
   assert(Opcode != 0 && "Unexpected opcode");
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+  unsigned FirstVecIdx = HasPred ? 2 : 1;
 
   auto GetMultiVecOperand = [=](unsigned StartIdx) {
     SmallVector<SDValue, 4> Regs(N->op_begin() + StartIdx,
@@ -1721,16 +1724,20 @@ void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
     return createZMulTuple(Regs);
   };
 
-  SDValue Zdn = GetMultiVecOperand(1);
+  SDValue Zdn = GetMultiVecOperand(FirstVecIdx);
 
   SDValue Zm;
   if (IsZmMulti)
-    Zm = GetMultiVecOperand(NumVecs + 1);
+    Zm = GetMultiVecOperand(NumVecs + FirstVecIdx);
   else
-    Zm = N->getOperand(NumVecs + 1);
+    Zm = N->getOperand(NumVecs + FirstVecIdx);
 
-  SDNode *Intrinsic = CurDAG->getMachineNode(Opcode, DL, MVT::Untyped, Zdn, Zm);
-
+  SDNode *Intrinsic;
+  if (HasPred)
+    Intrinsic = CurDAG->getMachineNode(Opcode, DL, MVT::Untyped,
+                                       N->getOperand(1), Zdn, Zm);
+  else
+    Intrinsic = CurDAG->getMachineNode(Opcode, DL, MVT::Untyped, Zdn, Zm);
   SDValue SuperReg = SDValue(Intrinsic, 0);
   for (unsigned i = 0; i < NumVecs; ++i)
     ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
@@ -5329,6 +5336,20 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::aarch64_sve_uzpq_x4:
       SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true,
                                 AArch64::UZP_VG4_4Z4Z_Q);
+      return;
+    case Intrinsic::aarch64_sve_sel_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::SEL_VG2_2ZC2Z2Z_B, AArch64::SEL_VG2_2ZC2Z2Z_H,
+               AArch64::SEL_VG2_2ZC2Z2Z_S, AArch64::SEL_VG2_2ZC2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op, /*HasPred=*/true);
+      return;
+    case Intrinsic::aarch64_sve_sel_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::SEL_VG4_4ZC4Z4Z_B, AArch64::SEL_VG4_4ZC4Z4Z_H,
+               AArch64::SEL_VG4_4ZC4Z4Z_S, AArch64::SEL_VG4_4ZC4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op, /*HasPred=*/true);
       return;
     case Intrinsic::aarch64_sve_frinta_x2:
       SelectFrintFromVT(Node, 2, AArch64::FRINTA_2Z2Z_S);
