@@ -152,6 +152,10 @@ public:
     assert(blockIDs.count(block) && "block not numbered");
     return blockIDs[block];
   }
+  unsigned getNumber(Operation *op) {
+    assert(operationIDs.count(op) && "operation not numbered");
+    return operationIDs[op];
+  }
   unsigned getNumber(OperationName opName) {
     assert(opNames.count(opName) && "opName not numbered");
     return opNames[opName]->number;
@@ -224,7 +228,8 @@ private:
   llvm::SpecificBumpPtrAllocator<DialectResourceNumbering> resourceAllocator;
   llvm::SpecificBumpPtrAllocator<TypeNumbering> typeAllocator;
 
-  /// The value ID for each Block and Value.
+  /// The value ID for each Operation, Block and Value.
+  DenseMap<Operation *, unsigned> operationIDs;
   DenseMap<Block *, unsigned> blockIDs;
   DenseMap<Value, unsigned> valueIDs;
 
