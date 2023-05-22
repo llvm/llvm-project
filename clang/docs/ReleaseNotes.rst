@@ -420,6 +420,8 @@ Bug Fixes in This Version
   (`#62711 <https://github.com/llvm/llvm-project/issues/62711>`_).
 - Fix crash on attempt to initialize union with flexible array member.
   (`#61746 <https://github.com/llvm/llvm-project/issues/61746>`_).
+- Clang `TextNodeDumper` enabled through `-ast-dump` flag no longer evaluates the
+  initializer of constexpr `VarDecl` if the declaration has a dependent type.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
