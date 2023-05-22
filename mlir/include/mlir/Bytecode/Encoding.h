@@ -14,7 +14,9 @@
 #ifndef MLIR_BYTECODE_ENCODING_H
 #define MLIR_BYTECODE_ENCODING_H
 
+#include "mlir/IR/Value.h"
 #include <cstdint>
+#include <type_traits>
 
 namespace mlir {
 namespace bytecode {
