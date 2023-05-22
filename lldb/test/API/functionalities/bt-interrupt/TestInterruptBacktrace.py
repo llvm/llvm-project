@@ -6,7 +6,7 @@ and make sure "GetNumFrames" isn't interrupted.
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
+from lldbsuite.test.decorators import *
 
 class TestInterruptingBacktrace(TestBase):
 
