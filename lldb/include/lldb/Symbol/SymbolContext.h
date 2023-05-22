@@ -250,8 +250,8 @@ public:
   /// For C++ the name is "this", for Objective-C the name is "self".
   ///
   /// \return
-  ///     Returns a string for the name of the instance variable.
-  ConstString GetInstanceVariableName();
+  ///     Returns a StringRef for the name of the instance variable.
+  llvm::StringRef GetInstanceVariableName();
 
   /// Sorts the types in TypeMap according to SymbolContext to TypeList
   ///
