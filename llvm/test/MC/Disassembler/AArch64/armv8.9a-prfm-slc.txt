@@ -22,6 +22,10 @@
 // CHECK: prfm pstslckeep, [x3]
 // NO-SLC: prfm #22, [x3]
 
+[0x77,0x00,0x80,0xf9]
+// CHECK: prfm pstslcstrm, [x3]
+// NO-SLC: prfm #23, [x3]
+
 [0x06,0x00,0x00,0xd8]
 // CHECK: prfm pldslckeep, #0
 // NO-SLC: prfm #6, #0
