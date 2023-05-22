@@ -100,7 +100,7 @@ Available checks are:
      by Clang (and by ISO/IEC/IEEE 60559 / IEEE 754) as producing either an
      infinity or NaN value, so is not included in ``-fsanitize=undefined``.
   -  ``-fsanitize=function``: Indirect call of a function through a
-     function pointer of the wrong type (C++ only).
+     function pointer of the wrong type.
   -  ``-fsanitize=implicit-unsigned-integer-truncation``,
      ``-fsanitize=implicit-signed-integer-truncation``: Implicit conversion from
      integer of larger bit width to smaller bit width, if that results in data
