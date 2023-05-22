@@ -513,7 +513,7 @@ function(add_integration_test test_name)
       ${LIBC_BUILD_DIR}/include
   )
   target_compile_options(${fq_build_target_name}
-                         PRIVATE -fpie -ffreestanding ${INTEGRATION_TEST_COMPILE_OPTIONS})
+      PRIVATE -fpie -ffreestanding -fno-exceptions -fno-rtti ${INTEGRATION_TEST_COMPILE_OPTIONS})
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_compile_options(${fq_build_target_name} PRIVATE
