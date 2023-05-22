@@ -2107,12 +2107,12 @@ def int_aarch64_sve_ptest_last  : AdvSIMD_SVE_PTEST_Intrinsic;
 // Reinterpreting data
 //
 
-def int_aarch64_sve_convert_from_svbool : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+def int_aarch64_sve_convert_from_svbool : DefaultAttrsIntrinsic<[llvm_any_ty],
                                                     [llvm_nxv16i1_ty],
                                                     [IntrNoMem]>;
 
 def int_aarch64_sve_convert_to_svbool : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
-                                                  [llvm_anyvector_ty],
+                                                  [llvm_any_ty],
                                                   [IntrNoMem]>;
 
 //

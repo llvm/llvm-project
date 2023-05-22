@@ -737,6 +737,11 @@ instCombineConvertFromSVBool(InstCombiner &IC, IntrinsicInst &II) {
   if (auto BinOpCombine = tryCombineFromSVBoolBinOp(IC, II))
     return BinOpCombine;
 
+  // Ignore converts to/from svcount_t.
+  if (isa<TargetExtType>(II.getArgOperand(0)->getType()) ||
+      isa<TargetExtType>(II.getType()))
+    return std::nullopt;
+
   SmallVector<Instruction *, 32> CandidatesForRemoval;
   Value *Cursor = II.getOperand(0), *EarliestReplacement = nullptr;
 
