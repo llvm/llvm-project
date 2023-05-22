@@ -123,13 +123,10 @@ public:
 private:
   TerminatorVisitorRetTy extendFlowCondition(const Expr &Cond) {
     // The terminator sub-expression might not be evaluated.
-    if (Env.getStorageLocation(Cond, SkipPast::None) == nullptr)
+    if (Env.getValueStrict(Cond) == nullptr)
       transfer(StmtToEnv, Cond, Env);
 
-    // FIXME: The flow condition must be an r-value, so `SkipPast::None` should
-    // suffice.
-    auto *Val =
-        cast_or_null<BoolValue>(Env.getValue(Cond, SkipPast::Reference));
+    auto *Val = cast_or_null<BoolValue>(Env.getValueStrict(Cond));
     // Value merging depends on flow conditions from different environments
     // being mutually exclusive -- that is, they cannot both be true in their
     // entirety (even if they may share some clauses). So, we need *some* value
@@ -303,18 +300,14 @@ builtinTransferInitializer(const CFGInitializer &Elt,
   auto *InitStmt = Init->getInit();
   assert(InitStmt != nullptr);
 
-  auto *InitStmtLoc = Env.getStorageLocation(*InitStmt, SkipPast::Reference);
-  if (InitStmtLoc == nullptr)
-    return;
-
-  auto *InitStmtVal = Env.getValue(*InitStmtLoc);
-  if (InitStmtVal == nullptr)
-    return;
-
   if (Member->getType()->isReferenceType()) {
+    auto *InitStmtLoc = Env.getStorageLocationStrict(*InitStmt);
+    if (InitStmtLoc == nullptr)
+      return;
+
     auto &MemberLoc = ThisLoc.getChild(*Member);
     Env.setValue(MemberLoc, Env.create<ReferenceValue>(*InitStmtLoc));
-  } else {
+  } else if (auto *InitStmtVal = Env.getValueStrict(*InitStmt)) {
     auto &MemberLoc = ThisLoc.getChild(*Member);
     Env.setValue(MemberLoc, *InitStmtVal);
   }
