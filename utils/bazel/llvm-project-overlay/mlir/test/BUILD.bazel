@@ -386,6 +386,8 @@ cc_library(
         "//llvm:Support",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:BytecodeReader",
+        "//mlir:BytecodeWriter",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:LinalgDialect",
