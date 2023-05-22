@@ -1,4 +1,4 @@
-import os,json,struct,signal,uuid
+import os, json, struct, signal, uuid, tempfile
 
 from typing import Any, Dict
 
@@ -38,16 +38,17 @@ class CrashLogScriptedProcess(ScriptedProcess):
                         for image in self.crashlog.find_images_with_identifier(ident):
                             image.resolve = True
 
-        for image in self.crashlog.images:
-            if image not in self.loaded_images:
-                if image.uuid == uuid.UUID(int=0):
-                    continue
-                err = image.add_module(self.target)
-                if err:
-                    # Append to SBCommandReturnObject
-                    print(err)
-                else:
-                    self.loaded_images.append(image)
+        with tempfile.TemporaryDirectory() as obj_dir:
+            for image in self.crashlog.images:
+                if image not in self.loaded_images:
+                    if image.uuid == uuid.UUID(int=0):
+                        continue
+                    err = image.add_module(self.target, obj_dir)
+                    if err:
+                        # Append to SBCommandReturnObject
+                        print(err)
+                    else:
+                        self.loaded_images.append(image)
 
         for thread in self.crashlog.threads:
             if hasattr(thread, 'app_specific_backtrace') and thread.app_specific_backtrace:
