@@ -23,6 +23,10 @@ namespace fir {
 class FirOpBuilder;
 }
 
+namespace mlir {
+class IRMapping;
+}
+
 namespace hlfir {
 
 class AssociateOp;
@@ -359,13 +363,18 @@ hlfir::ElementalOp genElementalOp(mlir::Location loc,
                                   mlir::ValueRange typeParams,
                                   const ElementalKernelGenerator &genKernel);
 
+/// Structure to describe a loop nest.
+struct LoopNest {
+  fir::DoLoopOp outerLoop;
+  fir::DoLoopOp innerLoop;
+  llvm::SmallVector<mlir::Value> oneBasedIndices;
+};
+
 /// Generate a fir.do_loop nest looping from 1 to extents[i].
-/// Return the inner fir.do_loop and the indices of the loops.
-std::pair<fir::DoLoopOp, llvm::SmallVector<mlir::Value>>
-genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-            mlir::ValueRange extents);
-inline std::pair<fir::DoLoopOp, llvm::SmallVector<mlir::Value>>
-genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape) {
+LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
+                     mlir::ValueRange extents);
+inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
+                            mlir::Value shape) {
   return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape));
 }
 
@@ -378,6 +387,20 @@ hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         hlfir::ElementalOp elemental,
                                         mlir::ValueRange oneBasedIndices);
+
+/// Inline the body of an hlfir.elemental without cloning the resulting
+/// hlfir.yield_element, and return the cloned operand of the
+/// hlfir.yield_element. The mapper must be provided to cover complex cases
+/// where the inlined elemental is not defined in the current context and uses
+/// values that have been cloned already.
+/// A callback is provided to indicate if an hlfir.apply inside the
+/// hlfir.elemental must be immediately replaced by the inlining of the
+/// applied hlfir.elemental.
+mlir::Value inlineElementalOp(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    hlfir::ElementalOp elemental, mlir::ValueRange oneBasedIndices,
+    mlir::IRMapping &mapper,
+    const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
