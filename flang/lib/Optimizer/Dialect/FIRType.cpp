@@ -382,8 +382,15 @@ mlir::Type unwrapSeqOrBoxedSeqType(mlir::Type ty) {
   return ty;
 }
 
+unsigned getBoxRank(mlir::Type boxTy) {
+  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy);
+  if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
+    return seqTy.getDimension();
+  return 0;
+}
+
 /// Return the ISO_C_BINDING intrinsic module value of type \p ty.
-int getTypeCode(mlir::Type ty, fir::KindMapping &kindMap) {
+int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
   unsigned width = 0;
   if (mlir::IntegerType intTy = ty.dyn_cast<mlir::IntegerType>()) {
     switch (intTy.getWidth()) {
@@ -471,6 +478,50 @@ int getTypeCode(mlir::Type ty, fir::KindMapping &kindMap) {
   if (ty.isa<fir::RecordType>())
     return CFI_type_struct;
   llvm_unreachable("unsupported type");
+}
+
+std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
+                            llvm::StringRef prefix) {
+  std::stringstream name;
+  name << prefix.str();
+  if (!prefix.empty())
+    name << "_";
+  ty = fir::unwrapRefType(ty);
+  while (ty) {
+    if (fir::isa_trivial(ty)) {
+      if (ty.isIntOrIndex()) {
+        name << 'i' << ty.getIntOrFloatBitWidth();
+      } else if (ty.isa<mlir::FloatType>()) {
+        name << 'f' << ty.getIntOrFloatBitWidth();
+      } else if (fir::isa_complex(ty)) {
+        name << 'z';
+        if (auto cplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(ty)) {
+          auto floatTy = cplxTy.getElementType().cast<mlir::FloatType>();
+          name << floatTy.getWidth();
+        } else if (auto cplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(ty)) {
+          name << kindMap.getRealBitsize(cplxTy.getFKind());
+        }
+      } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(ty)) {
+        name << 'l' << kindMap.getLogicalBitsize(logTy.getFKind());
+      } else {
+        llvm::report_fatal_error("unsupported type");
+      }
+      break;
+    } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(ty)) {
+      name << 'c' << kindMap.getCharacterBitsize(charTy.getFKind());
+      if (charTy.getLen() != fir::CharacterType::singleton())
+        name << "x" << charTy.getLen();
+      break;
+    } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
+      for (auto extent : seqTy.getShape())
+        name << extent << 'x';
+      ty = seqTy.getEleTy();
+    } else {
+      // TODO: add support for RecordType/BaseBoxType
+      llvm::report_fatal_error("unsupported type");
+    }
+  }
+  return name.str();
 }
 
 } // namespace fir

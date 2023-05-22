@@ -15,10 +15,10 @@ transform.sequence failures(propagate) {
 
 // expected-note @below {{nested in another possible top-level op}}
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-error @below {{expects operands to be provided for a nested op}}
   transform.sequence failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
+  ^bb1(%arg1: !transform.any_op):
   }
 }
 
@@ -34,7 +34,7 @@ transform.sequence failures(propagate) {
 
 // expected-error @below {{expected children ops to implement TransformOpInterface}}
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-note @below {{op without interface}}
   arith.constant 42.0 : f32
 }
@@ -42,8 +42,8 @@ transform.sequence failures(propagate) {
 // -----
 
 // expected-error @below {{expects the types of the terminator operands to match the types of the result}}
-%0 = transform.sequence -> !pdl.operation failures(propagate) {
-^bb0(%arg0: !pdl.operation):
+%0 = transform.sequence -> !transform.any_op failures(propagate) {
+^bb0(%arg0: !transform.any_op):
   // expected-note @below {{terminator}}
   transform.yield
 }
@@ -54,7 +54,7 @@ transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{expects the type of the block argument to match the type of the operand}}
   transform.sequence %arg0: !transform.any_op failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
+  ^bb1(%arg1: !transform.op<"builtin.module">):
     transform.yield
   }
 }
@@ -82,10 +82,10 @@ transform.sequence failures(propagate) {
 
 // expected-note @below {{nested in another possible top-level op}}
 transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-error @below {{expects operands to be provided for a nested op}}
   transform.sequence failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
+  ^bb1(%arg1: !transform.any_op):
   }
 }
 
@@ -93,14 +93,14 @@ transform.with_pdl_patterns {
 
 // expected-error @below {{expects only one non-pattern op in its body}}
 transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-note @below {{first non-pattern op}}
   transform.sequence failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
+  ^bb1(%arg1: !transform.any_op):
   }
   // expected-note @below {{second non-pattern op}}
   transform.sequence failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
+  ^bb1(%arg1: !transform.any_op):
   }
 }
 
@@ -108,7 +108,7 @@ transform.with_pdl_patterns {
 
 // expected-error @below {{expects only pattern and top-level transform ops in its body}}
 transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-note @below {{offending op}}
   "test.something"() : () -> ()
 }
@@ -117,10 +117,10 @@ transform.with_pdl_patterns {
 
 // expected-note @below {{parent operation}}
 transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
    // expected-error @below {{op cannot be nested}}
-  transform.with_pdl_patterns %arg0 : !pdl.operation {
-  ^bb1(%arg1: !pdl.operation):
+  transform.with_pdl_patterns %arg0 : !transform.any_op {
+  ^bb1(%arg1: !transform.any_op):
   }
 }
 
@@ -128,7 +128,7 @@ transform.with_pdl_patterns {
 
 // expected-error @below {{op expects at least one non-pattern op}}
 transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   pdl.pattern @some : benefit(1) {
     %0 = pdl.operation "test.foo"
     pdl.rewrite %0 with "transform.dialect"
@@ -138,10 +138,10 @@ transform.with_pdl_patterns {
 // -----
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-error @below {{op expects at least one non-pattern op}}
-  with_pdl_patterns %arg0 : !pdl.operation {
-  ^bb1(%arg1: !pdl.operation):
+  with_pdl_patterns %arg0 : !transform.any_op {
+  ^bb1(%arg1: !transform.any_op):
   }
 }
 
@@ -155,7 +155,7 @@ transform.sequence failures(propagate) {
 
 // expected-error @below {{expects a single-block region}}
 "transform.test_transform_unrestricted_op_no_interface"() ({
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   "test.potential_terminator"() : () -> ()
 ^bb1:
   "test.potential_terminator"() : () -> ()
@@ -164,59 +164,59 @@ transform.sequence failures(propagate) {
 // -----
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_self_handle_or_forward_operand
+  %0 = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
 }
 
 // -----
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_self_handle_or_forward_operand
+  %0 = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
   // expected-note @below {{used here as operand #0}}
-  transform.sequence %0 : !pdl.operation failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    test_consume_operand_of_op_kind_or_fail %arg1, "transform.test_produce_self_handle_or_forward_operand"
+  transform.sequence %0 : !transform.any_op failures(propagate) {
+  ^bb1(%arg1: !transform.any_op):
+    test_consume_operand_of_op_kind_or_fail %arg1, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
   }
 }
 
 // -----
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_self_handle_or_forward_operand
+  %0 = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
-  transform.sequence %0 : !pdl.operation failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
+  transform.sequence %0 : !transform.any_op failures(propagate) {
+  ^bb1(%arg1: !transform.any_op):
     // expected-note @below {{used here as operand #0}}
-    test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
+    test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
   }
 }
 
 // -----
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_self_handle_or_forward_operand
+  %0 = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
   // expected-note @below {{used here as operand #0}}
-  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand"
+  test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
   // expected-note @below {{used here as operand #0}}
-  transform.sequence %0 : !pdl.operation failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    transform.sequence %arg1 : !pdl.operation failures(propagate) {
-    ^bb2(%arg2: !pdl.operation):
-      test_consume_operand_of_op_kind_or_fail %arg2, "transform.test_produce_self_handle_or_forward_operand"
+  transform.sequence %0 : !transform.any_op failures(propagate) {
+  ^bb1(%arg1: !transform.any_op):
+    transform.sequence %arg1 : !transform.any_op failures(propagate) {
+    ^bb2(%arg2: !transform.any_op):
+      test_consume_operand_of_op_kind_or_fail %arg2, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
     }
   }
 }
@@ -224,7 +224,7 @@ transform.sequence failures(propagate) {
 // -----
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   // expected-error @below {{expects at least one region}}
   transform.alternatives
 }
@@ -232,13 +232,13 @@ transform.sequence failures(propagate) {
 // -----
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   // expected-error @below {{expects terminator operands to have the same type as results of the operation}}
-  %2 = transform.alternatives %arg1 : !pdl.operation -> !pdl.operation {
-  ^bb2(%arg2: !pdl.operation):
-    transform.yield %arg2 : !pdl.operation
+  %2 = transform.alternatives %arg1 : !transform.any_op -> !transform.any_op {
+  ^bb2(%arg2: !transform.any_op):
+    transform.yield %arg2 : !transform.any_op
   }, {
-  ^bb2(%arg2: !pdl.operation):
+  ^bb2(%arg2: !transform.any_op):
     // expected-note @below {{terminator}}
     transform.yield
   }
@@ -255,16 +255,16 @@ transform.alternatives {
 // -----
 
 transform.sequence failures(propagate) {
-^bb0(%arg0: !pdl.operation):
+^bb0(%arg0: !transform.any_op):
   // expected-error @below {{result #0 has more than one potential consumer}}
-  %0 = test_produce_self_handle_or_forward_operand
+  %0 = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
   // expected-note @below {{used here as operand #0}}
-  transform.foreach %0 : !pdl.operation {
-  ^bb1(%arg1: !pdl.operation):
-    transform.test_consume_operand %arg1 : !pdl.operation
+  transform.foreach %0 : !transform.any_op {
+  ^bb1(%arg1: !transform.any_op):
+    transform.test_consume_operand %arg1 : !transform.any_op
   }
   // expected-note @below {{used here as operand #0}}
-  transform.test_consume_operand %0 : !pdl.operation
+  transform.test_consume_operand %0 : !transform.any_op
 }
 
 // -----

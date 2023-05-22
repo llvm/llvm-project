@@ -1,0 +1,128 @@
+! Test scheduling of WHERE in lower-hlfir-ordered-assignments pass.
+
+! RUN: bbc -hlfir -o - -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only %s 2>&1 | FileCheck %s
+! REQUIRES: asserts
+
+subroutine no_conflict(x, y)
+  real :: x(:), y(:)
+  where (y.gt.0) x = y
+end subroutine
+
+subroutine fake_conflict(x, y)
+  ! The conflict here could be avoided because the read and write are
+  ! aligned, so there would not be any read after write at the element
+  ! level, but this will require a bit more work to detect this (like
+  ! comparing the hlfir.designate operations).
+  real :: x(:), y(:)
+  where (x.gt.y) x = y
+end subroutine
+
+subroutine only_once(x, y, z)
+  interface
+    impure function call_me_only_once()
+      logical :: call_me_only_once(10)
+    end function
+  end interface
+  real :: x(:), y(:), z(:)
+  where (call_me_only_once())
+    x = y
+    z = y
+  end where
+end subroutine
+
+subroutine rhs_lhs_conflict(x, y)
+  real :: x(:, :), y(:, :)
+  where (y.gt.0.) x = transpose(x)
+end subroutine
+
+subroutine where_construct_no_conflict(x, y, z, mask1, mask2)
+  real :: x(:), y(:), z(:)
+  logical :: mask1(:), mask2(:)
+  where (mask1)
+    x = y
+  elsewhere (mask2)
+    z = y
+  end where
+end subroutine
+
+subroutine where_construct_conflict(x, y)
+  real :: x(:, :), y(:, :)
+  where (y.gt.0.)
+    x = y
+  elsewhere (x.gt.0)
+    y = x
+  end where
+end subroutine
+
+subroutine where_construct_conflict_2(x, y)
+  real :: x(:, :), y(:, :)
+  where (x.gt.0.)
+    x = y
+  elsewhere (y.gt.0)
+    y = x
+  end where
+end subroutine
+
+subroutine where_vector_subscript_conflict_1(x, vec1)
+  real :: x(10)
+  integer :: vec1(10)
+  where (x(vec1).lt.0.) x = 42.
+end subroutine
+
+subroutine where_vector_subscript_conflict_2(x, vec1)
+  integer :: x(10)
+  real :: y(10)
+  where (y(x).lt.0.) x = 0
+end subroutine
+
+subroutine where_in_forall_conflict(x)
+  real :: x(:, :)
+  forall (i = 1:10)
+    where (x(i, :).gt.0) x(:, i) = x(i, :)
+  end forall
+end subroutine
+
+!CHECK-LABEL: ------------ scheduling where in _QPno_conflict ------------
+!CHECK-NEXT: run 1 evaluate: where/region_assign1
+!CHECK-LABEL: ------------ scheduling where in _QPfake_conflict ------------
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 0
+!CHECK-NEXT: run 1 save    : where/mask
+!CHECK-NEXT: run 2 evaluate: where/region_assign1
+!CHECK-LABEL: ------------ scheduling where in _QPonly_once ------------
+!CHECK-NEXT: unknown effect: %9 = fir.call @llvm.stacksave() fastmath<contract> : () -> !fir.ref<i8>
+!CHECK-NEXT: run 1 save  (w): where/mask
+!CHECK-NEXT: run 2 evaluate: where/region_assign1
+!CHECK-NEXT: run 3 evaluate: where/region_assign2
+!CHECK-LABEL: ------------ scheduling where in _QPrhs_lhs_conflict ------------
+!CHECK-NEXT: unknown effect: %2 = hlfir.transpose %0#0 : (!fir.box<!fir.array<?x?xf32>>) -> !hlfir.expr<?x?xf32>
+!CHECK-NEXT: run 1 save  (w): where/region_assign1/rhs
+!CHECK-NEXT: run 2 evaluate: where/region_assign1
+!CHECK-LABEL: ------------ scheduling where in _QPwhere_construct_no_conflict ------------
+!CHECK-NEXT: run 1 evaluate: where/region_assign1
+!CHECK-NEXT: run 2 evaluate: where/elsewhere1/region_assign1
+!CHECK-LABEL: ------------ scheduling where in _QPwhere_construct_conflict ------------
+!CHECK-NEXT: run 1 evaluate: where/region_assign1
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1
+!CHECK-NEXT: run 2 save    : where/mask
+!CHECK-NEXT: run 3 evaluate: where/elsewhere1/region_assign1
+!CHECK-LABEL: ------------ scheduling where in _QPwhere_construct_conflict_2 ------------
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0
+!CHECK-NEXT: run 1 save    : where/mask
+!CHECK-NEXT: run 2 evaluate: where/region_assign1
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1
+!CHECK-NEXT: run 3 save    : where/elsewhere1/mask
+!CHECK-NEXT: run 4 evaluate: where/elsewhere1/region_assign1
+!CHECK-LABEL: ------------ scheduling where in _QPwhere_vector_subscript_conflict_1 ------------
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.ref<!fir.array<10xf32>>' at index: 0 W:<block argument> of type '!fir.ref<!fir.array<10xf32>>' at index: 0
+!CHECK-NEXT: run 1 save    : where/mask
+!CHECK-NEXT: run 2 evaluate: where/region_assign1
+!CHECK-LABEL: ------------ scheduling where in _QPwhere_vector_subscript_conflict_2 ------------
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.ref<!fir.array<10xi32>>' at index: 0 W:<block argument> of type '!fir.ref<!fir.array<10xi32>>' at index: 0
+!CHECK-NEXT: run 1 save    : where/mask
+!CHECK-NEXT: run 2 evaluate: where/region_assign1
+!CHECK-LABEL: ------------ scheduling forall in _QPwhere_in_forall_conflict ------------
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0
+!CHECK-NEXT: run 1 save    : forall/where1/mask
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0
+!CHECK-NEXT: run 1 save    : forall/where1/region_assign1/rhs
+!CHECK-NEXT: run 2 evaluate: forall/where1/region_assign1

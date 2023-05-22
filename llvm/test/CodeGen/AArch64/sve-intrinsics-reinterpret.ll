@@ -55,6 +55,14 @@ define <vscale x 16 x i1> @reinterpret_bool_from_q(<vscale x 1 x i1> %arg) {
   ret <vscale x 16 x i1> %res
 }
 
+define <vscale x 16 x i1> @reinterpret_bool_from_svcount(target("aarch64.svcount") %pg) "target-features"="+sme2" {
+; CHECK-LABEL: reinterpret_bool_from_svcount:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") %pg)
+  ret <vscale x 16 x i1> %out
+}
+
 ;
 ; Converting from svbool_t
 ;
@@ -99,6 +107,15 @@ define <vscale x 1 x i1> @reinterpret_bool_to_q(<vscale x 16 x i1> %pg) {
   ret <vscale x 1 x i1> %out
 }
 
+define target("aarch64.svcount") @reinterpret_bool_to_svcount(<vscale x 16 x i1> %pg) "target-features"="+sme2" {
+; CHECK-LABEL: reinterpret_bool_to_svcount:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %out = call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> %pg)
+  ret target("aarch64.svcount") %out
+}
+
+
 ; Reinterpreting a ptrue should not introduce an `and` instruction.
 define <vscale x 16 x i1> @reinterpret_ptrue() {
 ; CHECK-LABEL: reinterpret_ptrue:
@@ -142,9 +159,11 @@ declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv1i1(<vscale x 1 x i1>)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount"))
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1>)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1>)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1>)
 declare <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1>)
 declare <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1>)
+declare target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1>)

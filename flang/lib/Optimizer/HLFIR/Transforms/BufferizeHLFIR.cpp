@@ -552,12 +552,11 @@ struct ElementalOpConversion
                         adaptor.getTypeparams());
     // Generate a loop nest looping around the fir.elemental shape and clone
     // fir.elemental region inside the inner loop.
-    auto [innerLoop, oneBasedLoopIndices] =
-        hlfir::genLoopNest(loc, builder, extents);
+    hlfir::LoopNest loopNest = hlfir::genLoopNest(loc, builder, extents);
     auto insPt = builder.saveInsertionPoint();
-    builder.setInsertionPointToStart(innerLoop.getBody());
-    auto yield =
-        hlfir::inlineElementalOp(loc, builder, elemental, oneBasedLoopIndices);
+    builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+    auto yield = hlfir::inlineElementalOp(loc, builder, elemental,
+                                          loopNest.oneBasedIndices);
     hlfir::Entity elementValue(yield.getElementValue());
     // Skip final AsExpr if any. It would create an element temporary,
     // which is no needed since the element will be assigned right away in
@@ -572,7 +571,7 @@ struct ElementalOpConversion
     rewriter.eraseOp(yield);
     // Assign the element value to the temp element for this iteration.
     auto tempElement =
-        hlfir::getElementAt(loc, builder, temp, oneBasedLoopIndices);
+        hlfir::getElementAt(loc, builder, temp, loopNest.oneBasedIndices);
     builder.create<hlfir::AssignOp>(loc, elementValue, tempElement);
     // hlfir.yield_element implicitly marks the end-of-life its operand if
     // it is an expression created in the hlfir.elemental (since it is its

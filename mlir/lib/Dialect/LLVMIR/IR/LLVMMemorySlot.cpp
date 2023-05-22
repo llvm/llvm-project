@@ -12,6 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Matchers.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 
 using namespace mlir;
@@ -53,6 +57,57 @@ void LLVM::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
                                              RewriterBase &rewriter) {
   if (defaultValue && defaultValue.use_empty())
     rewriter.eraseOp(defaultValue.getDefiningOp());
+  rewriter.eraseOp(*this);
+}
+
+SmallVector<DestructurableMemorySlot> LLVM::AllocaOp::getDestructurableSlots() {
+  if (!mlir::matchPattern(getArraySize(), m_One()))
+    return {};
+
+  Type elemType = getAllocaElementType(*this);
+  auto destructurable = dyn_cast<DestructurableTypeInterface>(elemType);
+  if (!destructurable)
+    return {};
+
+  std::optional<DenseMap<Attribute, Type>> destructuredType =
+      destructurable.getSubelementIndexMap();
+  if (!destructuredType)
+    return {};
+
+  DenseMap<Attribute, Type> allocaTypeMap;
+  for (Attribute index : llvm::make_first_range(destructuredType.value()))
+    allocaTypeMap.insert({index, LLVM::LLVMPointerType::get(getContext())});
+
+  return {DestructurableMemorySlot{{getResult(), elemType}, {allocaTypeMap}}};
+}
+
+DenseMap<Attribute, MemorySlot>
+LLVM::AllocaOp::destructure(const DestructurableMemorySlot &slot,
+                            const SmallPtrSetImpl<Attribute> &usedIndices,
+                            RewriterBase &rewriter) {
+  assert(slot.ptr == getResult());
+  Type elemType =
+      getElemType() ? *getElemType() : getResult().getType().getElementType();
+
+  rewriter.setInsertionPointAfter(*this);
+
+  auto destructurableType = cast<DestructurableTypeInterface>(elemType);
+  DenseMap<Attribute, MemorySlot> slotMap;
+  for (Attribute index : usedIndices) {
+    Type elemType = destructurableType.getTypeAtIndex(index);
+    assert(elemType && "used index must exist");
+    auto subAlloca = rewriter.create<LLVM::AllocaOp>(
+        getLoc(), LLVM::LLVMPointerType::get(getContext()), elemType,
+        getArraySize());
+    slotMap.try_emplace<MemorySlot>(index, {subAlloca.getResult(), elemType});
+  }
+
+  return slotMap;
+}
+
+void LLVM::AllocaOp::handleDestructuringComplete(
+    const DestructurableMemorySlot &slot, RewriterBase &rewriter) {
+  assert(slot.ptr == getResult());
   rewriter.eraseOp(*this);
 }
 
@@ -115,10 +170,21 @@ DeletionKind LLVM::StoreOp::removeBlockingUses(
   // `canUsesBeRemoved` checked this blocking use must be the stored slot
   // pointer.
   for (Operation *user : slot.ptr.getUsers())
-    if (auto declareOp = llvm::dyn_cast<LLVM::DbgDeclareOp>(user))
+    if (auto declareOp = dyn_cast<LLVM::DbgDeclareOp>(user))
       rewriter.create<LLVM::DbgValueOp>(declareOp->getLoc(), getValue(),
                                         declareOp.getVarInfo());
   return DeletionKind::Delete;
+}
+
+LogicalResult LLVM::LoadOp::ensureOnlySafeAccesses(
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+  return success(getAddr() != slot.ptr || getType() == slot.elemType);
+}
+
+LogicalResult LLVM::StoreOp::ensureOnlySafeAccesses(
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+  return success(getAddr() != slot.ptr ||
+                 getValue().getType() == slot.elemType);
 }
 
 //===----------------------------------------------------------------------===//
@@ -189,16 +255,16 @@ DeletionKind LLVM::DbgDeclareOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+//===----------------------------------------------------------------------===//
+// Interfaces for GEPOp
+//===----------------------------------------------------------------------===//
+
 static bool hasAllZeroIndices(LLVM::GEPOp gepOp) {
   return llvm::all_of(gepOp.getIndices(), [](auto index) {
     auto indexAttr = index.template dyn_cast<IntegerAttr>();
     return indexAttr && indexAttr.getValue() == 0;
   });
 }
-
-//===----------------------------------------------------------------------===//
-// Interfaces for GEPOp
-//===----------------------------------------------------------------------===//
 
 bool LLVM::GEPOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
@@ -212,4 +278,172 @@ bool LLVM::GEPOp::canUsesBeRemoved(
 DeletionKind LLVM::GEPOp::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
   return DeletionKind::Delete;
+}
+
+/// Returns the type the resulting pointer of the GEP points to. If such a type
+/// is not clear, returns null type.
+static Type computeReachedGEPType(LLVM::GEPOp gep) {
+  if (gep.getIndices().empty())
+    return {};
+
+  // Ensures all indices are static and fetches them.
+  SmallVector<IntegerAttr> indices;
+  for (auto index : gep.getIndices()) {
+    IntegerAttr indexInt = index.dyn_cast<IntegerAttr>();
+    if (!indexInt)
+      return {};
+    indices.push_back(indexInt);
+  }
+
+  // Check the pointer indexing only targets the first element.
+  if (indices[0].getInt() != 0)
+    return {};
+
+  // Set the initial type currently being used for indexing. This will be
+  // updated as the indices get walked over.
+  std::optional<Type> maybeSelectedType = gep.getElemType();
+  if (!maybeSelectedType)
+    return {};
+  Type selectedType = *maybeSelectedType;
+
+  // Follow the indexed elements in the gep.
+  for (IntegerAttr index : llvm::drop_begin(indices)) {
+    // Ensure the structure of the type being indexed can be reasoned about.
+    // This includes rejecting any potential typed pointer.
+    auto destructurable = selectedType.dyn_cast<DestructurableTypeInterface>();
+    if (!destructurable)
+      return {};
+
+    // Follow the type at the index the gep is accessing, making it the new type
+    // used for indexing.
+    Type field = destructurable.getTypeAtIndex(index);
+    if (!field)
+      return {};
+    selectedType = field;
+  }
+
+  // When there are no more indices, the type currently being used for indexing
+  // is the type of the value pointed at by the returned indexed pointer.
+  return selectedType;
+}
+
+LogicalResult LLVM::GEPOp::ensureOnlySafeAccesses(
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+  if (getBase() != slot.ptr)
+    return success();
+  if (slot.elemType != getElemType())
+    return failure();
+  Type reachedType = computeReachedGEPType(*this);
+  if (!reachedType)
+    return failure();
+  mustBeSafelyUsed.emplace_back<MemorySlot>({getResult(), reachedType});
+  return success();
+}
+
+bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
+                            SmallPtrSetImpl<Attribute> &usedIndices,
+                            SmallVectorImpl<MemorySlot> &mustBeSafelyUsed) {
+  auto basePtrType = getBase().getType().dyn_cast<LLVM::LLVMPointerType>();
+  if (!basePtrType)
+    return false;
+
+  // Typed pointers are not supported. This should be removed once typed
+  // pointers are removed from the LLVM dialect.
+  if (!basePtrType.isOpaque())
+    return false;
+
+  if (getBase() != slot.ptr || slot.elemType != getElemType())
+    return false;
+  Type reachedType = computeReachedGEPType(*this);
+  if (!reachedType || getIndices().size() < 2)
+    return false;
+  auto firstLevelIndex = cast<IntegerAttr>(getIndices()[1]);
+  assert(slot.elementPtrs.contains(firstLevelIndex));
+  if (!slot.elementPtrs.at(firstLevelIndex).isa<LLVM::LLVMPointerType>())
+    return false;
+  mustBeSafelyUsed.emplace_back<MemorySlot>({getResult(), reachedType});
+  usedIndices.insert(firstLevelIndex);
+  return true;
+}
+
+DeletionKind LLVM::GEPOp::rewire(const DestructurableMemorySlot &slot,
+                                 DenseMap<Attribute, MemorySlot> &subslots,
+                                 RewriterBase &rewriter) {
+  IntegerAttr firstLevelIndex = getIndices()[1].dyn_cast<IntegerAttr>();
+  const MemorySlot &newSlot = subslots.at(firstLevelIndex);
+
+  ArrayRef<int32_t> remainingIndices = getRawConstantIndices().slice(2);
+
+  // If the GEP would become trivial after this transformation, eliminate it.
+  // A GEP should only be eliminated if it has no indices (except the first
+  // pointer index), as simplifying GEPs with all-zero indices would eliminate
+  // structure information useful for further destruction.
+  if (remainingIndices.empty()) {
+    rewriter.replaceAllUsesWith(getResult(), newSlot.ptr);
+    return DeletionKind::Delete;
+  }
+
+  rewriter.updateRootInPlace(*this, [&]() {
+    // Rewire the indices by popping off the second index.
+    // Start with a single zero, then add the indices beyond the second.
+    SmallVector<int32_t> newIndices(1);
+    newIndices.append(remainingIndices.begin(), remainingIndices.end());
+    setRawConstantIndices(newIndices);
+
+    // Rewire the pointed type.
+    setElemType(newSlot.elemType);
+
+    // Rewire the pointer.
+    getBaseMutable().assign(newSlot.ptr);
+  });
+
+  return DeletionKind::Keep;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for destructurable types
+//===----------------------------------------------------------------------===//
+
+std::optional<DenseMap<Attribute, Type>>
+LLVM::LLVMStructType::getSubelementIndexMap() {
+  Type i32 = IntegerType::get(getContext(), 32);
+  DenseMap<Attribute, Type> destructured;
+  for (const auto &[index, elemType] : llvm::enumerate(getBody()))
+    destructured.insert({IntegerAttr::get(i32, index), elemType});
+  return destructured;
+}
+
+Type LLVM::LLVMStructType::getTypeAtIndex(Attribute index) {
+  auto indexAttr = index.dyn_cast<IntegerAttr>();
+  if (!indexAttr || !indexAttr.getType().isInteger(32))
+    return {};
+  int32_t indexInt = indexAttr.getInt();
+  ArrayRef<Type> body = getBody();
+  if (indexInt < 0 || body.size() <= static_cast<uint32_t>(indexInt))
+    return {};
+  return body[indexInt];
+}
+
+std::optional<DenseMap<Attribute, Type>>
+LLVM::LLVMArrayType::getSubelementIndexMap() const {
+  constexpr size_t maxArraySizeForDestructuring = 16;
+  if (getNumElements() > maxArraySizeForDestructuring)
+    return {};
+  int32_t numElements = getNumElements();
+
+  Type i32 = IntegerType::get(getContext(), 32);
+  DenseMap<Attribute, Type> destructured;
+  for (int32_t index = 0; index < numElements; ++index)
+    destructured.insert({IntegerAttr::get(i32, index), getElementType()});
+  return destructured;
+}
+
+Type LLVM::LLVMArrayType::getTypeAtIndex(Attribute index) const {
+  auto indexAttr = index.dyn_cast<IntegerAttr>();
+  if (!indexAttr || !indexAttr.getType().isInteger(32))
+    return {};
+  int32_t indexInt = indexAttr.getInt();
+  if (indexInt < 0 || getNumElements() <= static_cast<uint32_t>(indexInt))
+    return {};
+  return getElementType();
 }

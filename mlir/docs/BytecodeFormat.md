@@ -339,10 +339,19 @@ op {
   numSuccessors: varint?,
   successors: varint[],
 
+  numUseListOrders: varint?,
+  useListOrders: uselist[],
+
   regionEncoding: varint?, // (numRegions << 1) | (isIsolatedFromAbove)
 
   // regions are stored in a section if isIsolatedFromAbove
   regions: (region | region_section)[]
+}
+
+uselist {
+  indexInRange: varint?,
+  useListEncoding: varint, // (numIndices << 1) | (isIndexPairEncoding)
+  indices: varint[]
 }
 ```
 
@@ -377,6 +386,26 @@ definition of that value from the start of the first ancestor isolated region.
 If the operation has successors, the number of successors and the indexes of the
 successor blocks within the parent region are encoded.
 
+##### Use-list orders
+
+The reference use-list order is assumed to be the reverse of the global
+enumeration of all the op operands that one would obtain with a pre-order walk
+of the IR. This order is naturally obtained by building blocks of operations
+op-by-op. However, some transformations may shuffle the use-lists with respect
+to this reference ordering. If any of the results of the operation have a
+use-list order that is not sorted with respect to the reference use-list order,
+an encoding is emitted such that it is possible to reconstruct such order after
+parsing the bytecode. The encoding represents an index map from the reference
+operand order to the current use-list order. A bit flag is used to detect if
+this encoding is of type index-pair or not. When the bit flag is set to zero,
+the element at `i` represent the position of the use `i` of the reference list
+into the current use-list. When the bit flag is set to `1`, the encoding
+represent index pairs `(i, j)`, which indicate that the use at position `i` of
+the reference list is mapped to position `j` in the current use-list. When only
+less than half of the elements in the current use-list are shuffled with respect
+to the reference use-list, the index-pair encoding is used to reduce the
+bytecode memory requirements.
+
 ##### Regions
 
 If the operation has regions, the number of regions and if the regions are
@@ -410,6 +439,8 @@ block {
 block_arguments {
   numArgs: varint?,
   args: block_argument[]
+  numUseListOrders: varint?,
+  useListOrders: uselist[],
 }
 
 block_argument {
@@ -421,3 +452,6 @@ block_argument {
 A block is encoded with an array of operations and block arguments. The first
 field is an encoding that combines the number of operations in the block, with a
 flag indicating if the block has arguments.
+
+Use-list orders are attached to block arguments similarly to how they are
+attached to operation results.

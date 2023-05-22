@@ -459,6 +459,9 @@ SanitizerMask WebAssembly::getSupportedSanitizers() const {
   if (getTriple().isOSEmscripten()) {
     Res |= SanitizerKind::Vptr | SanitizerKind::Leak | SanitizerKind::Address;
   }
+  // -fsanitize=function places two words before the function label, which are
+  // -unsupported.
+  Res &= ~SanitizerKind::Function;
   return Res;
 }
 

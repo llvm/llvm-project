@@ -764,26 +764,62 @@ hlfir::inlineElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
   return yield;
 }
 
-std::pair<fir::DoLoopOp, llvm::SmallVector<mlir::Value>>
-hlfir::genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                   mlir::ValueRange extents) {
+mlir::Value hlfir::inlineElementalOp(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    hlfir::ElementalOp elemental, mlir::ValueRange oneBasedIndices,
+    mlir::IRMapping &mapper,
+    const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline) {
+  mlir::Region &region = elemental.getRegion();
+  // hlfir.elemental region is a SizedRegion<1>.
+  assert(region.hasOneBlock() && "elemental region must have one block");
+  mapper.map(elemental.getIndices(), oneBasedIndices);
+  mlir::Block::OpListType &ops = region.back().getOperations();
+  assert(!ops.empty() && "elemental block cannot be empty");
+  auto end = ops.end();
+  for (auto opIt = ops.begin(); std::next(opIt) != end; ++opIt) {
+    if (auto apply = mlir::dyn_cast<hlfir::ApplyOp>(*opIt))
+      if (auto appliedElemental =
+              apply.getExpr().getDefiningOp<hlfir::ElementalOp>())
+        if (mustRecursivelyInline(appliedElemental)) {
+          llvm::SmallVector<mlir::Value> clonedApplyIndices;
+          for (auto indice : apply.getIndices())
+            clonedApplyIndices.push_back(mapper.lookupOrDefault(indice));
+          mlir::Value inlined = inlineElementalOp(
+              loc, builder, appliedElemental, clonedApplyIndices, mapper,
+              mustRecursivelyInline);
+          mapper.map(apply.getResult(), inlined);
+          continue;
+        }
+    (void)builder.clone(*opIt, mapper);
+  }
+  auto oldYield = mlir::dyn_cast_or_null<hlfir::YieldElementOp>(
+      region.back().getOperations().back());
+  assert(oldYield && "must terminate with yieldElementalOp");
+  return mapper.lookupOrDefault(oldYield.getElementValue());
+}
+
+hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
+                                   fir::FirOpBuilder &builder,
+                                   mlir::ValueRange extents) {
+  hlfir::LoopNest loopNest;
   assert(!extents.empty() && "must have at least one extent");
   auto insPt = builder.saveInsertionPoint();
-  llvm::SmallVector<mlir::Value> indices(extents.size());
+  loopNest.oneBasedIndices.assign(extents.size(), mlir::Value{});
   // Build loop nest from column to row.
   auto one = builder.create<mlir::arith::ConstantIndexOp>(loc, 1);
   mlir::Type indexType = builder.getIndexType();
   unsigned dim = extents.size() - 1;
-  fir::DoLoopOp innerLoop;
   for (auto extent : llvm::reverse(extents)) {
     auto ub = builder.createConvert(loc, indexType, extent);
-    innerLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one);
-    builder.setInsertionPointToStart(innerLoop.getBody());
+    loopNest.innerLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one);
+    builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
     // Reverse the indices so they are in column-major order.
-    indices[dim--] = innerLoop.getInductionVar();
+    loopNest.oneBasedIndices[dim--] = loopNest.innerLoop.getInductionVar();
+    if (!loopNest.outerLoop)
+      loopNest.outerLoop = loopNest.innerLoop;
   }
   builder.restoreInsertionPoint(insPt);
-  return {innerLoop, indices};
+  return loopNest;
 }
 
 static fir::ExtendedValue

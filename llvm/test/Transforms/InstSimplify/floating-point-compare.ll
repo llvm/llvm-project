@@ -1475,6 +1475,36 @@ define i1 @fcmp_olt_0_assumed_oge_zero(float %x) {
   ret i1 %r
 }
 
+define i1 @ogt_zero_fabs_select_negone_or_pinf(i1 %cond) {
+; CHECK-LABEL: @ogt_zero_fabs_select_negone_or_pinf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float -1.000000e+00, float 0x7FF0000000000000
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    [[ONE:%.*]] = fcmp ogt float [[FABS]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[ONE]]
+;
+entry:
+  %select = select i1 %cond, float -1.0, float 0x7FF0000000000000
+  %fabs = call float @llvm.fabs.f32(float %select)
+  %one = fcmp ogt float %fabs, 0.0
+  ret i1 %one
+}
+
+define i1 @ogt_zero_fabs_select_one_or_ninf(i1 %cond) {
+; CHECK-LABEL: @ogt_zero_fabs_select_one_or_ninf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float 1.000000e+00, float 0xFFF0000000000000
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    [[ONE:%.*]] = fcmp ogt float [[FABS]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[ONE]]
+;
+entry:
+  %select = select i1 %cond, float 1.0, float 0xFFF0000000000000
+  %fabs = call float @llvm.fabs.f32(float %select)
+  %one = fcmp ogt float %fabs, 0.0
+  ret i1 %one
+}
+
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)

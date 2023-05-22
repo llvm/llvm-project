@@ -18,6 +18,7 @@ add_mlir_library(MLIRTestIR
   TestSymbolUses.cpp
   TestRegions.cpp
   TestTypes.cpp
+  TestUseListOrders.cpp
   TestVisitors.cpp
   TestVisitorsGeneric.cpp
 

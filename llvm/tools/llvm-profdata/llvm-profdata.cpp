@@ -3070,6 +3070,12 @@ int llvm_profdata_main(int argc, char **argvNonConst,
              << "Available commands: merge, show, overlap\n";
       return 0;
     }
+
+    if (strcmp(argv[1], "--version") == 0) {
+      outs() << ProgName << '\n';
+      cl::PrintVersionMessage();
+      return 0;
+    }
   }
 
   if (argc < 2)

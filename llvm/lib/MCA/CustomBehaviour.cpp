@@ -42,14 +42,14 @@ CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
   return std::vector<std::unique_ptr<View>>();
 }
 
-SharedInstrument InstrumentManager::createInstrument(llvm::StringRef Desc,
+UniqueInstrument InstrumentManager::createInstrument(llvm::StringRef Desc,
                                                      llvm::StringRef Data) {
-  return std::make_shared<Instrument>(Desc, Data);
+  return std::make_unique<Instrument>(Desc, Data);
 }
 
 unsigned InstrumentManager::getSchedClassID(
     const MCInstrInfo &MCII, const MCInst &MCI,
-    const llvm::SmallVector<SharedInstrument> &IVec) const {
+    const llvm::SmallVector<Instrument *> &IVec) const {
   return MCII.get(MCI.getOpcode()).getSchedClass();
 }
 

@@ -19,6 +19,8 @@ add_mlir_interface(ViewLikeInterface)
 set(LLVM_TARGET_DEFINITIONS MemorySlotInterfaces.td)
 mlir_tablegen(MemorySlotOpInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(MemorySlotOpInterfaces.cpp.inc -gen-op-interface-defs)
+mlir_tablegen(MemorySlotTypeInterfaces.h.inc -gen-type-interface-decls)
+mlir_tablegen(MemorySlotTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_public_tablegen_target(MLIRMemorySlotInterfacesIncGen)
 add_dependencies(mlir-generic-headers MLIRMemorySlotInterfacesIncGen)
 
