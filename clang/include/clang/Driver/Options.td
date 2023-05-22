@@ -3495,7 +3495,7 @@ def mwatchos_version_min_EQ : Joined<["-"], "mwatchos-version-min=">, Group<m_Gr
 def mwatchos_simulator_version_min_EQ : Joined<["-"], "mwatchos-simulator-version-min=">;
 def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=">, Alias<mwatchos_simulator_version_min_EQ>;
 def march_EQ : Joined<["-"], "march=">, Group<m_Group>, Flags<[CoreOption]>,
-  HelpText<"For a list of availible architectures for the target use '-mcpu=help'">;
+  HelpText<"For a list of available architectures for the target use '-mcpu=help'">;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Flags<[NoXarchOption]>;
 def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>, Flags<[CC1Option]>,
   Values<"att,intel">,
@@ -3520,7 +3520,7 @@ def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>, Flags<[NoXarchOption]>
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;
 def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>, 
-  HelpText<"For a list of availible CPUs for the target use '-mcpu=help'">;
+  HelpText<"For a list of available CPUs for the target use '-mcpu=help'">;
 def mmcu_EQ : Joined<["-"], "mmcu=">, Group<m_Group>;
 def msim : Flag<["-"], "msim">, Group<m_Group>;
 def mdynamic_no_pic : Joined<["-"], "mdynamic-no-pic">, Group<m_Group>;
