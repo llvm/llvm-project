@@ -877,12 +877,11 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            const RVVTypes &OutInTypes,
                            const std::vector<int64_t> &NewIntrinsicTypes,
                            const std::vector<StringRef> &RequiredFeatures,
-                           unsigned NF, Policy NewPolicyAttrs, bool IsTuple)
+                           unsigned NF, Policy NewPolicyAttrs)
     : IRName(IRName), IsMasked(IsMasked),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL), Scheme(Scheme),
       SupportOverloading(SupportOverloading), HasBuiltinAlias(HasBuiltinAlias),
-      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs),
-      IsTuple(IsTuple) {
+      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs) {
 
   // Init BuiltinName, Name and OverloadedName
   BuiltinName = NewName.str();
