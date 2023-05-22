@@ -2,6 +2,7 @@ if(LIBC_TESTS_CAN_USE_MPFR)
   add_library(libcMPFRWrapper
     MPFRUtils.cpp
     MPFRUtils.h
+    mpfr_inc.h
   )
   add_compile_options(
     -O3

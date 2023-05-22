@@ -777,8 +777,23 @@ bool Prescanner::PadOutCharacterLiteral(TokenSequence &tokens) {
   return false;
 }
 
+static bool IsAtProcess(const char *p) {
+  static const char pAtProc[]{"process"};
+  for (std::size_t i{0}; i < sizeof pAtProc - 1; ++i) {
+    if (ToLowerCaseLetter(*++p) != pAtProc[i])
+      return false;
+  }
+  return true;
+}
+
 bool Prescanner::IsFixedFormCommentLine(const char *start) const {
   const char *p{start};
+
+  // The @process directive must start in column 1.
+  if (*p == '@' && IsAtProcess(p)) {
+    return true;
+  }
+
   if (IsFixedFormCommentChar(*p) || *p == '%' || // VAX %list, %eject, &c.
       ((*p == 'D' || *p == 'd') &&
           !features_.IsEnabled(LanguageFeature::OldDebugLines))) {
@@ -810,6 +825,8 @@ const char *Prescanner::IsFreeFormComment(const char *p) const {
   p = SkipWhiteSpaceAndCComments(p);
   if (*p == '!' || *p == '\n') {
     return p;
+  } else if (*p == '@') {
+    return IsAtProcess(p) ? p : nullptr;
   } else {
     return nullptr;
   }

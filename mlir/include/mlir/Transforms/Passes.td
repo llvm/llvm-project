@@ -199,10 +199,10 @@ def Mem2Reg : Pass<"mem2reg"> {
   let statistics = [
     Statistic<"promotedAmount",
               "promoted slots",
-              "Number of promoted memory slot">,
+              "Total amount of memory slot promoted">,
     Statistic<"newBlockArgumentAmount",
               "new block args",
-              "Total number of block arguments added">,
+              "Total amount of new block argument inserted in blocks">,
   ];
 }
 
@@ -227,6 +227,42 @@ def SCCP : Pass<"sccp"> {
     in [“Constant Propagation with Conditional Branches”](https://dl.acm.org/doi/10.1145/103135.103136) (1991).
   }];
   let constructor = "mlir::createSCCPPass()";
+}
+
+def SROA : Pass<"sroa"> {
+  let summary = "Scalar Replacement of Aggregates";
+  let description = [{
+    Scalar Replacement of Aggregates. Replaces allocations of aggregates into
+    independant allocations of its elements.
+
+    Allocators must implement `DestructurableAllocationOpInterface` to provide
+    the list of memory slots for which destructuring should be attempted.
+
+    This pass will only be applied if all accessors of the aggregate implement
+    the `DestructurableAccessorOpInterface`. If the accessors provide a view
+    into the struct, users of the view must ensure it is used in a type-safe
+    manner and within bounds by implementing `TypeSafeOpInterface`.
+  }];
+
+  let statistics = [
+    Statistic<
+      "destructuredAmount",
+      "destructured slots",
+      "Total amount of memory slots destructured"
+    >,
+    Statistic<
+      "slotsWithMemoryBenefit",
+      "slots with memory benefit",
+      "Total amount of memory slots in which the destructured size was smaller "
+      "than the total size after eliminating unused fields"
+    >,
+    Statistic<
+      "maxSubelementAmount",
+      "max subelement number",
+      "Maximal number of sub-elements a successfully destructured slot "
+      "initially had"
+    >,
+  ];
 }
 
 def StripDebugInfo : Pass<"strip-debuginfo"> {

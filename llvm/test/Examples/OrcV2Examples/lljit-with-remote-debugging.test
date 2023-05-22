@@ -2,6 +2,7 @@
 # Instructions for debugging can be found in LLJITWithRemoteDebugging.cpp
 
 # REQUIRES: default_triple
+# UNSUPPORTED: target=powerpc64{{.*}}
 
 # RUN: LLJITWithRemoteDebugging %p/Inputs/argc_sub1_elf.ll | FileCheck --check-prefix=CHECK0 %s
 # CHECK0: Parsing input IR code from: {{.*}}/Inputs/argc_sub1_elf.ll

@@ -145,26 +145,8 @@ def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 
 def True : Predicate<"true">;
 
-def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
-def hasPTX42 : Predicate<"Subtarget->getPTXVersion() >= 42">;
-def hasPTX43 : Predicate<"Subtarget->getPTXVersion() >= 43">;
-def hasPTX60 : Predicate<"Subtarget->getPTXVersion() >= 60">;
-def hasPTX61 : Predicate<"Subtarget->getPTXVersion() >= 61">;
-def hasPTX63 : Predicate<"Subtarget->getPTXVersion() >= 63">;
-def hasPTX64 : Predicate<"Subtarget->getPTXVersion() >= 64">;
-def hasPTX65 : Predicate<"Subtarget->getPTXVersion() >= 65">;
-def hasPTX70 : Predicate<"Subtarget->getPTXVersion() >= 70">;
-def hasPTX71 : Predicate<"Subtarget->getPTXVersion() >= 71">;
-def hasPTX72 : Predicate<"Subtarget->getPTXVersion() >= 72">;
-
-def hasSM30 : Predicate<"Subtarget->getSmVersion() >= 30">;
-def hasSM32 : Predicate<"Subtarget->getSmVersion() >= 32">;
-def hasSM53 : Predicate<"Subtarget->getSmVersion() >= 53">;
-def hasSM70 : Predicate<"Subtarget->getSmVersion() >= 70">;
-def hasSM72 : Predicate<"Subtarget->getSmVersion() >= 72">;
-def hasSM75 : Predicate<"Subtarget->getSmVersion() >= 75">;
-def hasSM80 : Predicate<"Subtarget->getSmVersion() >= 80">;
-def hasSM86 : Predicate<"Subtarget->getSmVersion() >= 86">;
+class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
+class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
 
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"
@@ -245,12 +227,12 @@ multiclass ADD_SUB_INT_CARRY<string OpcStr, SDNode OpNode> {
       NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, Int64Regs:$b),
                 !strconcat(OpcStr, ".s64 \t$dst, $a, $b;"),
                 [(set Int64Regs:$dst, (OpNode Int64Regs:$a, Int64Regs:$b))]>,
-      Requires<[hasPTX43]>;
+      Requires<[hasPTX<43>]>;
     def i64ri :
       NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, i64imm:$b),
                 !strconcat(OpcStr, ".s64 \t$dst, $a, $b;"),
                 [(set Int64Regs:$dst, (OpNode Int64Regs:$a, imm:$b))]>,
-      Requires<[hasPTX43]>;
+      Requires<[hasPTX<43>]>;
   }
 }
 
@@ -580,7 +562,7 @@ multiclass CVT_FROM_FLOAT_SM80<string FromName, RegisterClass RC> {
                 (ins Float32Regs:$src, CvtMode:$mode),
                 !strconcat("cvt${mode:base}${mode:relu}.",
                 FromName, ".f32 \t$dst, $src;"), []>,
-                Requires<[hasPTX70, hasSM80]>;
+                Requires<[hasPTX<70>, hasSM<80>]>;
   }
 
   defm CVT_bf16 : CVT_FROM_FLOAT_SM80<"bf16", Int16Regs>;
@@ -591,7 +573,7 @@ multiclass CVT_FROM_FLOAT_SM80<string FromName, RegisterClass RC> {
                 (ins Float32Regs:$src1, Float32Regs:$src2,  CvtMode:$mode),
                 !strconcat("cvt${mode:base}${mode:relu}.",
                 FromName, ".f32 \t$dst, $src1, $src2;"), []>,
-    Requires<[hasPTX70, hasSM80]>;
+    Requires<[hasPTX<70>, hasSM<80>]>;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", Float16x2Regs>;
@@ -1045,7 +1027,7 @@ class FNEG_F16_F16X2<string OpcStr, ValueType T, RegisterClass RC, Predicate Pre
       NVPTXInst<(outs RC:$dst), (ins RC:$src),
                 !strconcat(OpcStr, " \t$dst, $src;"),
                 [(set RC:$dst, (fneg (T RC:$src)))]>,
-                Requires<[useFP16Math, hasPTX60, hasSM53, Pred]>;
+                Requires<[useFP16Math, hasPTX<60>, hasSM<53>, Pred]>;
 def FNEG16_ftz   : FNEG_F16_F16X2<"neg.ftz.f16", f16, Float16Regs, doF32FTZ>;
 def FNEG16       : FNEG_F16_F16X2<"neg.f16", f16, Float16Regs, True>;
 def FNEG16x2_ftz : FNEG_F16_F16X2<"neg.ftz.f16x2", v2f16, Float16x2Regs, doF32FTZ>;

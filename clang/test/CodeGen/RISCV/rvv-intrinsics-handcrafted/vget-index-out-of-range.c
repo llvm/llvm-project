@@ -339,3 +339,8 @@ vfloat16m4_t test_vget_v_f16m8_f16m4(vfloat16m8_t src) {
   // expected-error@+1 {{argument value 2 is outside the valid range [0, 1]}}
   return __riscv_vget_v_f16m8_f16m4(src, 2);
 }
+
+vint32m1_t test_vget_v_i32m1x2_i32m1(vint32m1x2_t src) {
+  // expected-error@+1 {{argument value 2 is outside the valid range [0, 1]}}
+  return __riscv_vget_v_i32m1x2_i32m1(src, 2);
+}

@@ -230,10 +230,11 @@ TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
 
 InstructionCost TargetTransformInfo::getPointersChainCost(
     ArrayRef<const Value *> Ptrs, const Value *Base,
-    const TTI::PointersChainInfo &Info, TTI::TargetCostKind CostKind) const {
+    const TTI::PointersChainInfo &Info, Type *AccessTy,
+    TTI::TargetCostKind CostKind) const {
   assert((Base || !Info.isSameBase()) &&
          "If pointers have same base address it has to be provided.");
-  return TTIImpl->getPointersChainCost(Ptrs, Base, Info, CostKind);
+  return TTIImpl->getPointersChainCost(Ptrs, Base, Info, AccessTy, CostKind);
 }
 
 unsigned TargetTransformInfo::getEstimatedNumberOfCaseClusters(

@@ -93,6 +93,11 @@ bool Value::isUsedOutsideOfBlock(Block *block) {
   });
 }
 
+/// Shuffles the use-list order according to the provided indices.
+void Value::shuffleUseList(ArrayRef<unsigned> indices) {
+  getImpl()->shuffleUseList(indices);
+}
+
 //===----------------------------------------------------------------------===//
 // OpResult
 //===----------------------------------------------------------------------===//

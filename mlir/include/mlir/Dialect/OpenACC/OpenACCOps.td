@@ -636,7 +636,8 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
                        UnitAttr:$selfAttr,
                        OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
-                       Variadic<AnyType>:$gangPrivateOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$gangPrivateOperands,
+                       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
@@ -659,7 +660,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
             type($gangFirstPrivateOperands) `)`
       | `num_gangs` `(` $numGangs `:` type($numGangs) `)`
       | `num_workers` `(` $numWorkers `:` type($numWorkers) `)`
-      | `private` `(` $gangPrivateOperands `:` type($gangPrivateOperands) `)`
+      | `private` `(` custom<PrivatizationList>(
+            $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
+        `)`
       | `vector_length` `(` $vectorLength `:` type($vectorLength) `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
       | `self` `(` $selfCond `)`
@@ -701,7 +704,8 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
                        UnitAttr:$selfAttr,
                        OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
-                       Variadic<AnyType>:$gangPrivateOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$gangPrivateOperands,
+                       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
@@ -722,7 +726,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       | `async` `(` $async `:` type($async) `)`
       | `firstprivate` `(` $gangFirstPrivateOperands `:`
             type($gangFirstPrivateOperands) `)`
-      | `private` `(` $gangPrivateOperands `:` type($gangPrivateOperands) `)`
+      | `private` `(` custom<PrivatizationList>(
+            $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
+        `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
@@ -1033,7 +1039,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
                        UnitAttr:$hasWorker,
                        UnitAttr:$hasVector,
                        Variadic<IntOrIndex>:$tileOperands,
-                       Variadic<AnyType>:$privateOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
+                       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
                        OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands);
 
@@ -1053,7 +1060,9 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
         `gang` `` custom<GangClause>($gangNum, type($gangNum), $gangStatic, type($gangStatic), $hasGang)
       | `worker` `` custom<WorkerClause>($workerNum, type($workerNum), $hasWorker)
       | `vector` `` custom<VectorClause>($vectorLength, type($vectorLength), $hasVector)
-      | `private` `(` $privateOperands `:` type($privateOperands) `)`
+      | `private` `(` custom<PrivatizationList>(
+            $privateOperands, type($privateOperands), $privatizations)
+        `)`
       | `tile` `(` $tileOperands `:` type($tileOperands) `)`
       | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )

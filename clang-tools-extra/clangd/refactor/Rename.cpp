@@ -515,7 +515,8 @@ std::optional<InvalidName> checkName(const NamedDecl &RenameDecl,
   else {
     // Name conflict detection.
     // Function conflicts are subtle (overloading), so ignore them.
-    if (RenameDecl.getKind() != Decl::Function) {
+    if (RenameDecl.getKind() != Decl::Function &&
+        RenameDecl.getKind() != Decl::CXXMethod) {
       if (auto *Conflict = lookupSiblingWithName(ASTCtx, RenameDecl, NewName))
         Result = InvalidName{
             InvalidName::Conflict,

@@ -1503,6 +1503,368 @@ defm : RVVStridedSegLoad<"vlsseg">;
 defm : RVVIndexedSegLoad<"vluxseg">;
 defm : RVVIndexedSegLoad<"vloxseg">;
 }
+
+multiclass RVVUnitStridedSegLoadTuple<string op> {
+  foreach type = ["i"] in {
+    defvar eew = !cond(!eq(type, "i") : "32");
+      foreach nf = [2] in {
+        let Name = op # nf # "e" # eew # "_v_tuple",
+            OverloadedName = op # nf # "e" # eew # "_tuple",
+            IRName = op # nf,
+            MaskedIRName = op # nf # "_mask",
+            NF = nf,
+            ManualCodegen = [{
+    {
+      assert(((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+            (!IsMasked && (PolicyAttrs & RVV_VTA))) &&
+            "FIXME: Only handling default policy (TAMA) for now");
+
+      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
+      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
+      SmallVector<llvm::Value*, 12> Operands;
+
+      Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+
+      unsigned Offset = IsMasked ? 1 : 0;
+      Operands.push_back(Ops[Offset]); // Ptr
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 1]); // VL
+      if (IsMasked)
+        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      if (ReturnValue.isNull())
+        return LoadValue;
+      else
+        return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+    }
+    }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", T # "vPCe", type>;
+      }
+    }
+  }
+}
+
+multiclass RVVUnitStridedSegStoreTuple<string op> {
+  foreach type = ["i"] in {
+    defvar eew = !cond(!eq(type, "i") : "32");
+    foreach nf = [2] in {
+      let Name = op # nf # "e" # eew # "_v_tuple",
+          OverloadedName = op # nf # "e" # eew # "_tuple",
+          IRName = op # nf,
+          MaskedIRName = op # nf # "_mask",
+          NF = nf,
+          HasMaskedOffOperand = false,
+          ManualCodegen = [{
+    {
+      // Masked
+      // Builtin: (mask, ptr, v_tuple, vl)
+      // Intrinsic: (val0, val1, ..., ptr, mask, vl)
+      // Unmasked
+      // Builtin: (ptr, v_tuple, vl)
+      // Intrinsic: (val0, val1, ..., ptr, vl)
+      unsigned Offset = IsMasked ? 1 : 0;
+      llvm::Value *VTupleOperand = Ops[Offset + 1];
+
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I) {
+        llvm::Value *V = Builder.CreateExtractValue(VTupleOperand, {I});
+        Operands.push_back(V);
+      }
+      Operands.push_back(Ops[Offset]); // Ptr
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 2]); // VL
+
+      IntrinsicTypes = {Operands[0]->getType(), Operands.back()->getType()};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      return Builder.CreateCall(F, Operands, "");
+   }
+      }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", "0Pe" # T # "v", type>;
+      }
+    }
+  }
+}
+
+multiclass RVVUnitStridedSegLoadFFTuple<string op> {
+  foreach type = ["i"] in {
+    defvar eew = !cond(!eq(type, "i") : "32");
+      foreach nf = [2] in {
+        let Name = op # nf # "e" # eew # "ff_v_tuple",
+            OverloadedName = op # nf # "e" # eew # "ff_tuple",
+            IRName = op # nf # "ff",
+            MaskedIRName = op # nf # "ff_mask",
+            NF = nf,
+            ManualCodegen = [{
+    {
+      assert(((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+             (!IsMasked && (PolicyAttrs & RVV_VTA))) &&
+             "FIXME: Only handling default policy (TAMA) for now");
+
+      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
+
+      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
+      SmallVector<llvm::Value*, 12> Operands;
+
+      Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+
+      unsigned Offset = IsMasked ? 1 : 0;
+      Operands.push_back(Ops[Offset]); // Ptr
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 2]); // vl
+      if (IsMasked)
+        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      // Get alignment from the new vl operand
+      clang::CharUnits Align =
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(Offset + 1)->getType());
+
+      llvm::Value *ReturnTuple = llvm::PoisonValue::get(ResultType);
+      for (unsigned I = 0; I < NF; ++I) {
+        llvm::Value *V = Builder.CreateExtractValue(LoadValue, {I});
+        ReturnTuple = Builder.CreateInsertValue(ReturnTuple, V, {I});
+      }
+
+      // Store new_vl
+      llvm::Value *V = Builder.CreateExtractValue(LoadValue, {NF});
+      Builder.CreateStore(V, Address(Ops[Offset + 1], V->getType(), Align));
+
+      if (ReturnValue.isNull())
+        return ReturnTuple;
+      else
+        return Builder.CreateStore(ReturnTuple, ReturnValue.getValue());
+    }
+    }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", T # "vPCePz", type>;
+      }
+    }
+  }
+}
+
+multiclass RVVStridedSegLoadTuple<string op> {
+  foreach type = ["i"] in {
+    defvar eew = !cond(!eq(type, "i") : "32");
+      foreach nf = [2] in {
+        let Name = op # nf # "e" # eew # "_v_tuple",
+            OverloadedName = op # nf # "e" # eew # "_tuple",
+            IRName = op # nf,
+            MaskedIRName = op # nf # "_mask",
+            NF = nf,
+            ManualCodegen = [{
+    {
+      assert(((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+             (!IsMasked && (PolicyAttrs & RVV_VTA))) &&
+             "FIXME: Only handling default policy (TAMA) for now");
+
+      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
+
+      IntrinsicTypes = {ElementVectorType, Ops.back()->getType()};
+      SmallVector<llvm::Value*, 12> Operands;
+
+      Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+
+      unsigned Offset = IsMasked ? 1 : 0;
+      Operands.push_back(Ops[Offset]); // Ptr
+      Operands.push_back(Ops[Offset + 1]); // Stride
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 2]); // VL
+      if (IsMasked)
+        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+
+      if (ReturnValue.isNull())
+        return LoadValue;
+      else
+        return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+    }
+    }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", T # "vPCet", type>;
+      }
+    }
+  }
+}
+
+multiclass RVVStridedSegStoreTuple<string op> {
+  foreach type = ["i"] in {
+    defvar eew = !cond(!eq(type, "i") : "32");
+      foreach nf = [2] in {
+        let Name = op # nf # "e" # eew # "_v_tuple",
+            OverloadedName = op # nf # "e" # eew # "_tuple",
+            IRName = op # nf,
+            MaskedIRName = op # nf # "_mask",
+            NF = nf,
+            HasMaskedOffOperand = false,
+            MaskedPolicyScheme = NonePolicy,
+            ManualCodegen = [{
+    {
+      // Masked
+      // Builtin: (mask, ptr, stride, v_tuple, vl)
+      // Intrinsic: (val0, val1, ..., ptr, stride, mask, vl)
+      // Unmasked
+      // Builtin: (ptr, stride, v_tuple, vl)
+      // Intrinsic: (val0, val1, ..., ptr, stride, vl)
+      unsigned Offset = IsMasked ? 1 : 0;
+      llvm::Value *VTupleOperand = Ops[Offset + 2];
+
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I) {
+        llvm::Value *V = Builder.CreateExtractValue(VTupleOperand, {I});
+        Operands.push_back(V);
+      }
+      Operands.push_back(Ops[Offset]); // Ptr
+      Operands.push_back(Ops[Offset + 1]); // Stride
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 3]); // VL
+
+      IntrinsicTypes = {Operands[0]->getType(), Operands.back()->getType()};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      return Builder.CreateCall(F, Operands, "");
+    }
+            }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", "0Pet" # T # "v", type>;
+      }
+    }
+  }
+}
+
+multiclass RVVIndexedSegLoadTuple<string op> {
+  foreach type = ["i"] in {
+    foreach eew_info = [["32", "(Log2EEW:5)"]] in {
+      defvar eew = eew_info[0];
+      defvar eew_type = eew_info[1];
+      foreach nf = [2] in {
+        let Name = op # nf # "ei" # eew # "_v_tuple",
+            OverloadedName = op # nf # "ei" # eew # "_tuple",
+            IRName = op # nf,
+            MaskedIRName = op # nf # "_mask",
+            NF = nf,
+            ManualCodegen = [{
+    {
+      assert(((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+             (!IsMasked && (PolicyAttrs & RVV_VTA))) &&
+             "FIXME: Only handling default policy (TAMA) for now");
+
+      llvm::Type *ElementVectorType = cast<StructType>(ResultType)->elements()[0];
+
+      SmallVector<llvm::Value*, 12> Operands;
+
+      Operands.append(NF, llvm::PoisonValue::get(ElementVectorType));
+
+      unsigned Offset = IsMasked ? 1 : 0;
+      Operands.push_back(Ops[Offset]); // Ptr
+      Operands.push_back(Ops[Offset + 1]); // Idx
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 2]); // VL
+      if (IsMasked)
+        Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+      IntrinsicTypes = {ElementVectorType, Ops[Offset + 1]->getType(),
+                        Ops.back()->getType()};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+
+      if (ReturnValue.isNull())
+        return LoadValue;
+      else
+        return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+    }
+    }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", T # "vPCe" # eew_type # "Uv", type>;
+        }
+      }
+    }
+  }
+}
+
+multiclass RVVIndexedSegStoreTuple<string op> {
+  foreach type = ["i"] in {
+    foreach eew_info = [["32", "(Log2EEW:5)"]] in {
+      defvar eew = eew_info[0];
+      defvar eew_type = eew_info[1];
+      foreach nf = [2] in {
+        let Name = op # nf # "ei" # eew # "_v_tuple",
+            OverloadedName = op # nf # "ei" # eew # "_tuple",
+            IRName = op # nf,
+            MaskedIRName = op # nf # "_mask",
+            NF = nf,
+            HasMaskedOffOperand = false,
+            MaskedPolicyScheme = NonePolicy,
+            ManualCodegen = [{
+    {
+      // Masked
+      // Builtin: (mask, ptr, index, v_tuple, vl)
+      // Intrinsic: (val0, val1, ..., ptr, index, mask, vl)
+      // Unmasked
+      // Builtin: (ptr, index, v_tuple, vl)
+      // Intrinsic: (val0, val1, ..., ptr, index, vl)
+      unsigned Offset = IsMasked ? 1 : 0;
+      llvm::Value *VTupleOperand = Ops[Offset + 2];
+
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I) {
+        llvm::Value *V = Builder.CreateExtractValue(VTupleOperand, {I});
+        Operands.push_back(V);
+      }
+      Operands.push_back(Ops[Offset]); // Ptr
+      Operands.push_back(Ops[Offset + 1]); // Idx
+      if (IsMasked)
+        Operands.push_back(Ops[0]);
+      Operands.push_back(Ops[Offset + 3]); // VL
+
+      IntrinsicTypes = {Operands[0]->getType(), Ops[Offset + 1]->getType(),
+                        Operands.back()->getType()};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      return Builder.CreateCall(F, Operands, "");
+    }
+            }] in {
+          defvar T = "(Tuple:" # nf # ")";
+          def : RVVBuiltin<"v", "0Pe" # eew_type # "Uv" # T # "v", type>;
+        }
+      }
+    }
+  }
+}
+
+// TODO: Extend for policy
+let UnMaskedPolicyScheme = NonePolicy,
+    MaskedPolicyScheme = NonePolicy,
+    IsTuple = true in {
+defm : RVVUnitStridedSegLoadTuple<"vlseg">;
+defm : RVVUnitStridedSegLoadFFTuple<"vlseg">;
+defm : RVVStridedSegLoadTuple<"vlsseg">;
+defm : RVVIndexedSegLoadTuple<"vluxseg">;
+defm : RVVIndexedSegLoadTuple<"vloxseg">;
+}
+
+let UnMaskedPolicyScheme = NonePolicy,
+    MaskedPolicyScheme = NonePolicy,
+    IsTuple = true in {
+defm : RVVUnitStridedSegStoreTuple<"vsseg">;
+defm : RVVStridedSegStoreTuple<"vssseg">;
+defm : RVVIndexedSegStoreTuple<"vsuxseg">;
+defm : RVVIndexedSegStoreTuple<"vsoxseg">;
+}
+
+
 let UnMaskedPolicyScheme = NonePolicy,
     MaskedPolicyScheme = NonePolicy in {
 defm : RVVUnitStridedSegStore<"vsseg">;
@@ -2174,6 +2536,11 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vget_v", MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
+        if (isa<StructType>(Ops[0]->getType())) // For tuple type
+          // Extract value from index (operand 1) of vtuple (operand 0)
+          return Builder.CreateExtractValue(
+            Ops[0],
+            {(unsigned)cast<ConstantInt>(Ops[1])->getZExtValue()});
         auto *VecTy = cast<ScalableVectorType>(ResultType);
         auto *OpVecTy = cast<ScalableVectorType>(Ops[0]->getType());
         // Mask to only valid indices.
@@ -2191,11 +2558,22 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilxfd", dst_lmul # "v">;
       def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUvKz", "csil", dst_lmul # "Uv">;
     }
+    foreach nf = [2] in {
+      let Log2LMUL = [0] in {
+        defvar T = "(Tuple:" # nf # ")";
+        def : RVVBuiltin<T # "vv", "v" # T # "vKz", "i", "v">;
+      }
+    }
   }
 
   let Name = "vset_v", Log2LMUL = [0, 1, 2], MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
+        if (isa<StructType>(ResultType)) // For tuple type
+          // Insert value (operand 2) into index (operand 1) of vtuple (operand 0)
+          return Builder.CreateInsertValue(
+            Ops[0], Ops[2],
+            {(unsigned)cast<ConstantInt>(Ops[1])->getZExtValue()});
         auto *ResVecTy = cast<ScalableVectorType>(ResultType);
         auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
         // Mask to only valid indices.
@@ -2212,6 +2590,12 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
       def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilxfd">;
       def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
+    }
+    foreach nf = [2] in {
+      let Log2LMUL = [0] in {
+        defvar T = "(Tuple:" # nf # ")";
+        def : RVVBuiltin<T # "vv", T # "v" # T # "vKzv", "i", "v">;
+      }
     }
   }
 }

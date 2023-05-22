@@ -1611,6 +1611,17 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   if (!OtherBr || BBI == OtherBB->begin())
     return false;
 
+  auto OtherStoreIsMergeable = [&](StoreInst *OtherStore) -> bool {
+    if (!OtherStore ||
+        OtherStore->getPointerOperand() != SI.getPointerOperand())
+      return false;
+
+    auto *SIVTy = SI.getValueOperand()->getType();
+    auto *OSVTy = OtherStore->getValueOperand()->getType();
+    return CastInst::isBitOrNoopPointerCastable(OSVTy, SIVTy, DL) &&
+           SI.hasSameSpecialState(OtherStore);
+  };
+
   // If the other block ends in an unconditional branch, check for the 'if then
   // else' case. There is an instruction before the branch.
   StoreInst *OtherStore = nullptr;
@@ -1626,8 +1637,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
     // If this isn't a store, isn't a store to the same location, or is not the
     // right kind of store, bail out.
     OtherStore = dyn_cast<StoreInst>(BBI);
-    if (!OtherStore || OtherStore->getOperand(1) != SI.getOperand(1) ||
-        !SI.isSameOperationAs(OtherStore))
+    if (!OtherStoreIsMergeable(OtherStore))
       return false;
   } else {
     // Otherwise, the other block ended with a conditional branch. If one of the
@@ -1641,12 +1651,10 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
     // lives in OtherBB.
     for (;; --BBI) {
       // Check to see if we find the matching store.
-      if ((OtherStore = dyn_cast<StoreInst>(BBI))) {
-        if (OtherStore->getOperand(1) != SI.getOperand(1) ||
-            !SI.isSameOperationAs(OtherStore))
-          return false;
+      OtherStore = dyn_cast<StoreInst>(BBI);
+      if (OtherStoreIsMergeable(OtherStore))
         break;
-      }
+
       // If we find something that may be using or overwriting the stored
       // value, or if we run out of instructions, we can't do the transform.
       if (BBI->mayReadFromMemory() || BBI->mayThrow() ||
@@ -1664,14 +1672,17 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   }
 
   // Insert a PHI node now if we need it.
-  Value *MergedVal = OtherStore->getOperand(0);
+  Value *MergedVal = OtherStore->getValueOperand();
   // The debug locations of the original instructions might differ. Merge them.
   DebugLoc MergedLoc = DILocation::getMergedLocation(SI.getDebugLoc(),
                                                      OtherStore->getDebugLoc());
-  if (MergedVal != SI.getOperand(0)) {
-    PHINode *PN = PHINode::Create(MergedVal->getType(), 2, "storemerge");
-    PN->addIncoming(SI.getOperand(0), SI.getParent());
-    PN->addIncoming(OtherStore->getOperand(0), OtherBB);
+  if (MergedVal != SI.getValueOperand()) {
+    PHINode *PN =
+        PHINode::Create(SI.getValueOperand()->getType(), 2, "storemerge");
+    PN->addIncoming(SI.getValueOperand(), SI.getParent());
+    Builder.SetInsertPoint(OtherStore);
+    PN->addIncoming(Builder.CreateBitOrPointerCast(MergedVal, PN->getType()),
+                    OtherBB);
     MergedVal = InsertNewInstBefore(PN, DestBB->front());
     PN->setDebugLoc(MergedLoc);
   }

@@ -3494,7 +3494,8 @@ def mappletvsimulator_version_min_EQ : Joined<["-"], "mappletvsimulator-version-
 def mwatchos_version_min_EQ : Joined<["-"], "mwatchos-version-min=">, Group<m_Group>;
 def mwatchos_simulator_version_min_EQ : Joined<["-"], "mwatchos-simulator-version-min=">;
 def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=">, Alias<mwatchos_simulator_version_min_EQ>;
-def march_EQ : Joined<["-"], "march=">, Group<m_Group>, Flags<[CoreOption]>;
+def march_EQ : Joined<["-"], "march=">, Group<m_Group>, Flags<[CoreOption]>,
+  HelpText<"For a list of available architectures for the target use '-mcpu=help'">;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Flags<[NoXarchOption]>;
 def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>, Flags<[CC1Option]>,
   Values<"att,intel">,
@@ -3518,7 +3519,8 @@ def mthreads : Joined<["-"], "mthreads">, Group<m_Group>, Flags<[NoXarchOption]>
 def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>, Flags<[NoXarchOption]>,
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;
-def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>;
+def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>, 
+  HelpText<"For a list of available CPUs for the target use '-mcpu=help'">;
 def mmcu_EQ : Joined<["-"], "mmcu=">, Group<m_Group>;
 def msim : Flag<["-"], "msim">, Group<m_Group>;
 def mdynamic_no_pic : Joined<["-"], "mdynamic-no-pic">, Group<m_Group>;
@@ -5830,7 +5832,7 @@ def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignme
   Group<f_Group>, CodeGenOpts<"EnableAssignmentTracking">,
   NormalizedValuesScope<"CodeGenOptions::AssignmentTrackingOpts">,
   Values<"disabled,enabled,forced">, NormalizedValues<["Disabled","Enabled","Forced"]>,
-  MarshallingInfoEnum<CodeGenOpts<"AssignmentTrackingMode">, "Enabled">;
+  MarshallingInfoEnum<CodeGenOpts<"AssignmentTrackingMode">, "Disabled">;
 
 } // let Flags = [CC1Option, NoDriverOption]
 

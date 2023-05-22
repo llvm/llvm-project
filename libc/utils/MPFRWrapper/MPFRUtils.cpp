@@ -19,16 +19,7 @@
 #include <memory>
 #include <stdint.h>
 
-#ifdef CUSTOM_MPFR_INCLUDER
-// Some downstream repos are monoliths carrying MPFR sources in their third
-// party directory. In such repos, including the MPFR header as
-// `#include <mpfr.h>` is either disallowed or not possible. If that is the
-// case, a file named `CustomMPFRIncluder.h` should be added through which the
-// MPFR header can be included in manner allowed in that repo.
-#include "CustomMPFRIncluder.h"
-#else
-#include <mpfr.h>
-#endif
+#include "mpfr_inc.h"
 
 template <typename T> using FPBits = __llvm_libc::fputil::FPBits<T>;
 

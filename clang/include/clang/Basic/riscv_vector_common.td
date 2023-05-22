@@ -231,6 +231,9 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
 
   // Number of fields for Load/Store Segment instructions.
   int NF = 1;
+
+  // Set to true if the builtin is associated with tuple types.
+  bit IsTuple = false;
 }
 
 // This is the code emitted in the header.

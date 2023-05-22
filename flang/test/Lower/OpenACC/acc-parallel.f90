@@ -2,6 +2,13 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.private.recipe @privatization_10x10xf32 : !fir.ref<!fir.array<10x10xf32>> init {
+! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x10xf32>>):
+! CHECK: acc.yield %{{.*}} : !fir.ref<!fir.array<10x10xf32>>
+! CHECK: }
+
+! CHECK-LABEL: func.func @_QPacc_parallel()
+
 subroutine acc_parallel
   integer :: i, j
 
@@ -288,11 +295,11 @@ subroutine acc_parallel
 !CHECK: acc.detach accPtr(%[[ATTACH_D]] : !fir.ptr<f32>) {dataClause = 10 : i64, name = "d"}
 !CHECK: acc.detach accPtr(%[[ATTACH_E]] : !fir.ptr<f32>) {dataClause = 10 : i64, name = "e"}
 
-  !$acc parallel private(a) firstprivate(b) private(c)
-  !$acc end parallel
+!$acc parallel private(a) firstprivate(b) private(c)
+!$acc end parallel
 
-!CHECK:      acc.parallel firstprivate(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) private(%[[A]], %[[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
-!CHECK:        acc.yield
-!CHECK-NEXT: }{{$}}
+! CHECK:      acc.parallel firstprivate(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) private(@privatization_10x10xf32 -> %[[A]] : !fir.ref<!fir.array<10x10xf32>>, @privatization_10x10xf32 -> %[[C]] : !fir.ref<!fir.array<10x10xf32>>) {
+! CHECK:        acc.yield
+! CHECK-NEXT: }{{$}}
 
 end subroutine acc_parallel

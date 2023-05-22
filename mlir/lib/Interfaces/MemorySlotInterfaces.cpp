@@ -9,3 +9,4 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 
 #include "mlir/Interfaces/MemorySlotOpInterfaces.cpp.inc"
+#include "mlir/Interfaces/MemorySlotTypeInterfaces.cpp.inc"

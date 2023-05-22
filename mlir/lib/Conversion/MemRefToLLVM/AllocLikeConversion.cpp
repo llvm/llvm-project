@@ -156,6 +156,10 @@ Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
                              elementPtrType, *getTypeConverter());
 }
 
+void AllocLikeOpLLVMLowering::setRequiresNumElements() {
+  requiresNumElements = true;
+}
+
 LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(
     Operation *op, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
@@ -169,13 +173,14 @@ LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(
   // zero-dimensional memref, assume a scalar (size 1).
   SmallVector<Value, 4> sizes;
   SmallVector<Value, 4> strides;
-  Value sizeBytes;
+  Value size;
+
   this->getMemRefDescriptorSizes(loc, memRefType, operands, rewriter, sizes,
-                                 strides, sizeBytes);
+                                 strides, size, !requiresNumElements);
 
   // Allocate the underlying buffer.
   auto [allocatedPtr, alignedPtr] =
-      this->allocateBuffer(rewriter, loc, sizeBytes, op);
+      this->allocateBuffer(rewriter, loc, size, op);
 
   // Create the MemRef descriptor.
   auto memRefDescriptor = this->createMemRefDescriptor(
