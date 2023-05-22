@@ -131,6 +131,27 @@ def testAttributes():
     del op.unit
     print(f"Unit: {op.unit}")
 
+# CHECK-LABEL: TEST: attrBuilder
+@run
+def attrBuilder():
+  with Context() as ctx, Location.unknown():
+    ctx.allow_unregistered_dialects = True
+    op = test.AttributesOp(x_bool=True,
+                           x_i16=1,
+                           x_i32=2,
+                           x_i64=3,
+                           x_si16=-1,
+                           x_si32=-2,
+                           x_f32=1.5,
+                           x_f64=2.5,
+                           x_str='x_str',
+                           x_i32_array=[1, 2, 3],
+                           x_i64_array=[4, 5, 6],
+                           x_f32_array=[1.5, -2.5, 3.5],
+                           x_f64_array=[4.5, 5.5, -6.5],
+                           x_i64_dense=[1, 2, 3, 4, 5, 6])
+    print(op)
+
 
 # CHECK-LABEL: TEST: inferReturnTypes
 @run
