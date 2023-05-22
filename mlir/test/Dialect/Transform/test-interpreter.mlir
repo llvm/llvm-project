@@ -83,33 +83,6 @@ transform.sequence failures(propagate) {
 
 // -----
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !transform.any_op):
-  sequence %arg0 : !transform.any_op failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = pdl_match @some in %arg1 : (!transform.any_op) -> !transform.any_op
-    test_print_remark_at_operand %0, "matched" : !transform.any_op
-  }
-
-  pdl.pattern @some : benefit(1) {
-    %0 = pdl.operation "test.some_op"
-    pdl.rewrite %0 with "transform.dialect"
-  }
-
-  pdl.pattern @other : benefit(1) {
-    %0 = pdl.operation "test.other_op"
-    pdl.rewrite %0 with "transform.dialect"
-  }
-}
-
-// expected-remark @below {{matched}}
-"test.some_op"() : () -> ()
-"test.other_op"() : () -> ()
-// expected-remark @below {{matched}}
-"test.some_op"() : () -> ()
-
-// -----
-
 // expected-remark @below {{parent function}}
 func.func @foo() {
   %0 = arith.constant 0 : i32

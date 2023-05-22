@@ -1242,6 +1242,61 @@ void transform::detail::forwardTerminatorOperands(
 // Utilities for PossibleTopLevelTransformOpTrait.
 //===----------------------------------------------------------------------===//
 
+/// Appends to `effects` the memory effect instances on `target` with the same
+/// resource and effect as the ones the operation `iface` having on `source`.
+static void
+remapEffects(MemoryEffectOpInterface iface, BlockArgument source, Value target,
+             SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  SmallVector<MemoryEffects::EffectInstance> nestedEffects;
+  iface.getEffectsOnValue(source, nestedEffects);
+  for (const auto &effect : nestedEffects)
+    effects.emplace_back(effect.getEffect(), target, effect.getResource());
+}
+
+/// Appends to `effects` the same effects as the operations of `block` have on
+/// block arguments but associated with `operands.`
+static void
+remapArgumentEffects(Block &block, ValueRange operands,
+                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  for (Operation &op : block) {
+    auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
+    if (!iface)
+      continue;
+
+    for (auto &&[source, target] : llvm::zip(block.getArguments(), operands)) {
+      remapEffects(iface, source, target, effects);
+    }
+
+    SmallVector<MemoryEffects::EffectInstance> nestedEffects;
+    iface.getEffectsOnResource(transform::PayloadIRResource::get(),
+                               nestedEffects);
+    llvm::append_range(effects, nestedEffects);
+  }
+}
+
+void transform::detail::getPotentialTopLevelEffects(
+    Operation *operation, Value root, Block &body,
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(operation->getOperands(), effects);
+  transform::producesHandle(operation->getResults(), effects);
+
+  if (!root) {
+    for (Operation &op : body) {
+      auto iface = dyn_cast<MemoryEffectOpInterface>(&op);
+      if (!iface)
+        continue;
+
+      SmallVector<MemoryEffects::EffectInstance, 2> nestedEffects;
+      iface.getEffects(effects);
+    }
+    return;
+  }
+
+  // Carry over all effects on arguments of the entry block as those on the
+  // operands, this is the same value just remapped.
+  remapArgumentEffects(body, operation->getOperands(), effects);
+}
+
 LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
     TransformState &state, Operation *op, Region &region) {
   SmallVector<Operation *> targets;
