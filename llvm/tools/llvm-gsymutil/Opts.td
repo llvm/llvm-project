@@ -49,3 +49,6 @@ defm json_summary_file :
 defm symtab_file :
   Eq<"symtab-file",
      "Specify a separate file for symbol table to GSYM conversion.\nIn case the symbol table and debug info are not in the same binary. Does not support universal binary.">;
+def preserve_long_name :
+  FF<"preserve-long-name",
+     "During GSYM conversion, preserve long symbol names (from the symbol table) if a symbol exists in both DWARF and symbol table.\nThis will increase the string table size in the GSYM file and can slow down the conversion.">;

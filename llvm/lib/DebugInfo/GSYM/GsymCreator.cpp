@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -21,8 +22,9 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymCreator::GsymCreator(bool Quiet)
-    : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
+GsymCreator::GsymCreator(bool Quiet, bool PreserveLongName)
+    : StrTab(StringTableBuilder::ELF), Quiet(Quiet),
+      PreserveLongName(PreserveLongName) {
   insertFile(StringRef());
 }
 
@@ -298,7 +300,14 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
             // address ranges that have debug info are last in
             // the sort.
             if (!(Prev == Curr)) {
-              if (Prev.hasRichInfo() && Curr.hasRichInfo())
+              if (PreserveLongName && isSubStrOfMangledName(
+                          StringOffsetMap.find(Prev.Name)->second.val(),
+                          StringOffsetMap.find(Curr.Name)->second.val())) {
+                // Check if latter (DWARF) has truncated name
+                // replace with the former (symbol table).
+                Curr.updateName(Prev.Name);
+              }
+              if (Prev.hasRichInfo() && Curr.hasRichInfo()) {
                 Out.Report(
                     "Duplicate address ranges with different debug info.",
                     [&](raw_ostream &OS) {
@@ -308,7 +317,7 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
                          << Prev << "\nIn favor of this one:\n"
                          << Curr << "\n";
                     });
-
+              }
               // We want to swap the current entry with the previous since
               // later entries with the same range always have more debug info
               // or different debug info.
@@ -611,4 +620,26 @@ GsymCreator::createSegment(uint64_t SegmentSize, size_t &FuncIdx) const {
     SegmentFuncInfosSize += alignTo(GC->copyFunctionInfo(*this, FuncIdx), 4);
   }
   return std::move(GC);
+}
+
+static bool isMangled(StringRef name) {
+  return name.size() > 1 && name[0] == '_' && name[1] == 'Z';
+}
+
+bool GsymCreator::isSubStrOfMangledName(StringRef longName,
+                                        StringRef shortName) {
+  if (isMangled(shortName) || !isMangled(longName)) {
+    return false;
+  }
+  std::string demangled = llvm::demangle(longName.str());
+  StringRef demangledLongName = StringRef(demangled);
+  // Either there's no namespace in longName
+  // Or longName is <namespace>::shortName(func_parameters)
+  // eg. make_ftype
+  // long: (anonymous namespace)::make_ftype(char*, int)
+  return (demangledLongName == shortName ||
+          demangledLongName.starts_with(shortName.str() + '(') ||
+          demangledLongName.ends_with("::" + shortName.str()) ||
+          demangledLongName.find("::" + shortName.str() + '(') !=
+              std::string::npos);
 }

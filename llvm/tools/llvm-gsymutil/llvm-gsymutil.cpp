@@ -101,6 +101,7 @@ static bool UseMergedFunctions = false;
 static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 static std::string SymbolTableFilename;
+static bool PreserveLongName;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -198,6 +199,9 @@ static void parseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_symtab_file_EQ))
     SymbolTableFilename = A->getValue();
+
+  // Preserve the longer name from symbol table over the DWARF
+  PreserveLongName = Args.hasArg(OPT_preserve_long_name);
 }
 
 /// @}
@@ -334,7 +338,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
 
-  GsymCreator Gsym(Quiet);
+  GsymCreator Gsym(Quiet, PreserveLongName);
 
   // See if we can figure out the base address for a given object file, and if
   // we can, then set the base address to use to this value. This will ease

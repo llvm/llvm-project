@@ -127,6 +127,13 @@ struct FunctionInfo {
     return Name != 0;
   }
 
+  /// Update the Name of FunctionInfo.
+  ///
+  /// FunctionInfo from DWARF has rich info but the name can be truncated
+  /// Allow update the name if we find a longer name from symbol table.
+  /// \param NewName The new name for the FunctionInfo.
+  void updateName(uint32_t NewName) { Name = NewName; }
+
   /// Decode an object from a binary data stream.
   ///
   /// \param Data The binary stream to read the data from. This object must
