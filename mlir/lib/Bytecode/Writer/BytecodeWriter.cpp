@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Bytecode/BytecodeWriter.h"
-#include "../Encoding.h"
 #include "IRNumbering.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/MapVector.h"
@@ -471,6 +471,12 @@ private:
   void writeStringSection(EncodingEmitter &emitter);
 
   //===--------------------------------------------------------------------===//
+  // Helpers
+
+  void writeUseListOrders(EncodingEmitter &emitter, uint8_t &opEncodingMask,
+                          ValueRange range);
+
+  //===--------------------------------------------------------------------===//
   // Fields
 
   /// The builder used for the string section.
@@ -667,6 +673,14 @@ void BytecodeWriter::writeBlock(EncodingEmitter &emitter, Block *block) {
       emitter.emitVarInt(numberingState.getNumber(arg.getType()));
       emitter.emitVarInt(numberingState.getNumber(arg.getLoc()));
     }
+    if (config.bytecodeVersion > 2) {
+      uint64_t maskOffset = emitter.size();
+      uint8_t encodingMask = 0;
+      emitter.emitByte(0);
+      writeUseListOrders(emitter, encodingMask, args);
+      if (encodingMask)
+        emitter.patchByte(maskOffset, encodingMask);
+    }
   }
 
   // Emit the operations within the block.
@@ -718,6 +732,11 @@ void BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
       emitter.emitVarInt(numberingState.getNumber(successor));
   }
 
+  // Emit the use-list orders to bytecode, so we can reconstruct the same order
+  // at parsing.
+  if (config.bytecodeVersion > 2)
+    writeUseListOrders(emitter, opEncodingMask, ValueRange(op->getResults()));
+
   // Check for regions.
   unsigned numRegions = op->getNumRegions();
   if (numRegions)
@@ -745,6 +764,94 @@ void BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
       EncodingEmitter regionEmitter;
       writeRegion(regionEmitter, &region);
       emitter.emitSection(bytecode::Section::kIR, std::move(regionEmitter));
+    }
+  }
+}
+
+void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
+                                        uint8_t &opEncodingMask,
+                                        ValueRange range) {
+  // Loop over the results and store the use-list order per result index.
+  DenseMap<unsigned, llvm::SmallVector<unsigned>> map;
+  for (auto item : llvm::enumerate(range)) {
+    auto value = item.value();
+    // No need to store a custom use-list order if the result does not have
+    // multiple uses.
+    if (value.use_empty() || value.hasOneUse())
+      continue;
+
+    // For each result, assemble the list of pairs (use-list-index,
+    // global-value-index). While doing so, detect if the global-value-index is
+    // already ordered with respect to the use-list-index.
+    bool alreadyOrdered = true;
+    auto &firstUse = *value.use_begin();
+    uint64_t prevID = bytecode::getUseID(
+        firstUse, numberingState.getNumber(firstUse.getOwner()));
+    llvm::SmallVector<std::pair<unsigned, uint64_t>> useListPairs(
+        {{0, prevID}});
+
+    for (auto use : llvm::drop_begin(llvm::enumerate(value.getUses()))) {
+      uint64_t currentID = bytecode::getUseID(
+          use.value(), numberingState.getNumber(use.value().getOwner()));
+      // The use-list order achieved when building the IR at parsing always
+      // pushes new uses on front. Hence, if the order by unique ID is
+      // monotonically decreasing, a roundtrip to bytecode preserves such order.
+      alreadyOrdered &= (prevID > currentID);
+      useListPairs.push_back({use.index(), currentID});
+      prevID = currentID;
+    }
+
+    // Do not emit if the order is already sorted.
+    if (alreadyOrdered)
+      continue;
+
+    // Sort the use indices by the unique ID indices in descending order.
+    std::sort(
+        useListPairs.begin(), useListPairs.end(),
+        [](auto elem1, auto elem2) { return elem1.second > elem2.second; });
+
+    map.try_emplace(item.index(), llvm::map_range(useListPairs, [](auto elem) {
+                      return elem.first;
+                    }));
+  }
+
+  if (map.empty())
+    return;
+
+  opEncodingMask |= bytecode::OpEncodingMask::kHasUseListOrders;
+  // Emit the number of results that have a custom use-list order if the number
+  // of results is greater than one.
+  if (range.size() != 1)
+    emitter.emitVarInt(map.size());
+
+  for (const auto &item : map) {
+    auto resultIdx = item.getFirst();
+    auto useListOrder = item.getSecond();
+
+    // Compute the number of uses that are actually shuffled. If those are less
+    // than half of the total uses, encoding the index pair `(src, dst)` is more
+    // space efficient.
+    size_t shuffledElements =
+        llvm::count_if(llvm::enumerate(useListOrder),
+                       [](auto item) { return item.index() != item.value(); });
+    bool indexPairEncoding = shuffledElements < (useListOrder.size() / 2);
+
+    // For single result, we don't need to store the result index.
+    if (range.size() != 1)
+      emitter.emitVarInt(resultIdx);
+
+    if (indexPairEncoding) {
+      emitter.emitVarIntWithFlag(shuffledElements * 2, indexPairEncoding);
+      for (auto pair : llvm::enumerate(useListOrder)) {
+        if (pair.index() != pair.value()) {
+          emitter.emitVarInt(pair.value());
+          emitter.emitVarInt(pair.index());
+        }
+      }
+    } else {
+      emitter.emitVarIntWithFlag(useListOrder.size(), indexPairEncoding);
+      for (const auto &index : useListOrder)
+        emitter.emitVarInt(index);
     }
   }
 }
