@@ -14,6 +14,7 @@ class LibCxxFunctionSteppingIntoCallableTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfDarwin
     @add_test_categories(["libc++"])
     def test(self):
         """Test that std::function as defined by libc++ is correctly printed by LLDB"""
