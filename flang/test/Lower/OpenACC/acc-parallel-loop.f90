@@ -442,18 +442,19 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
-  !$acc parallel loop private(a) firstprivate(b)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
+! TODO: will be updated after lowering change in privatization to MLIR
+!  !$acc parallel loop private(a) firstprivate(b)
+!  DO i = 1, n
+!    a(i) = b(i)
+!  END DO
 
-! CHECK:      acc.parallel firstprivate(%[[B]] : !fir.ref<!fir.array<10xf32>>) private(%[[A]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK:        acc.loop private(%[[A]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK:          fir.do_loop
-! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! TODO:      acc.parallel firstprivate(%[[B]] : !fir.ref<!fir.array<10xf32>>) private(%[[A]] : !fir.ref<!fir.array<10xf32>>) {
+! TODO:        acc.loop private(%[[A]] : !fir.ref<!fir.array<10xf32>>) {
+! TODO:          fir.do_loop
+! TODO:          acc.yield
+! TODO-NEXT:   }{{$}}
+! TODO:        acc.yield
+! TODO-NEXT: }{{$}}
 
   !$acc parallel loop seq
   DO i = 1, n
