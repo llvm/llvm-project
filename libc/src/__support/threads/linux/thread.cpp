@@ -117,7 +117,11 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
   return reinterpret_cast<void *>(mmap_result);
 }
 
-LIBC_INLINE void free_stack(void *stack, size_t stacksize, size_t guardsize) {
+// This must always be inlined as we may be freeing the calling threads stack in
+// which case a normal return from the top the stack would cause an invalid
+// memory read.
+static __attribute__((always_inline)) inline void
+free_stack(void *stack, size_t stacksize, size_t guardsize) {
   uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
   stackaddr -= guardsize;
   stack = reinterpret_cast<void *>(stackaddr);
@@ -137,7 +141,11 @@ struct alignas(STACK_ALIGNMENT) StartArgs {
   void *arg;
 };
 
-static void cleanup_thread_resources(ThreadAttributes *attrib) {
+// This must always be inlined as we may be freeing the calling threads stack in
+// which case a normal return from the top the stack would cause an invalid
+// memory read.
+static __attribute__((always_inline)) inline void
+cleanup_thread_resources(ThreadAttributes *attrib) {
   // Cleanup the TLS before the stack as the TLS information is stored on
   // the stack.
   cleanup_tls(attrib->tls, attrib->tls_size);
@@ -496,14 +504,18 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
     // Set the CLEAR_TID address to nullptr to prevent the kernel
     // from signalling at a non-existent futex location.
     __llvm_libc::syscall_impl(SYS_set_tid_address, 0);
+    // Return value for detached thread should be unused. We need to avoid
+    // referencing `style` or `retval.*` because they may be stored on the stack
+    // and we have deallocated our stack!
+    __llvm_libc::syscall_impl(SYS_exit, 0);
+    __builtin_unreachable();
   }
 
-  // TODO: We may have deallocated the stack. Can we reference local variables
-  // that may have spilled?
   if (style == ThreadStyle::POSIX)
     __llvm_libc::syscall_impl(SYS_exit, retval.posix_retval);
   else
     __llvm_libc::syscall_impl(SYS_exit, retval.stdc_retval);
+  __builtin_unreachable();
 }
 
 } // namespace __llvm_libc
