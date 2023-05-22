@@ -704,7 +704,8 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
                        UnitAttr:$selfAttr,
                        OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
-                       Variadic<AnyType>:$gangPrivateOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$gangPrivateOperands,
+                       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
@@ -725,7 +726,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       | `async` `(` $async `:` type($async) `)`
       | `firstprivate` `(` $gangFirstPrivateOperands `:`
             type($gangFirstPrivateOperands) `)`
-      | `private` `(` $gangPrivateOperands `:` type($gangPrivateOperands) `)`
+      | `private` `(` custom<PrivatizationList>(
+            $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
+        `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
