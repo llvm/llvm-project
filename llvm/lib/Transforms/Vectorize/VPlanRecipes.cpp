@@ -169,6 +169,14 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
                    State.Builder.GetInsertBlock());
 }
 
+void VPLiveOut::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
+  O << "Live-out ";
+  getPhi()->printAsOperand(O);
+  O << " = ";
+  getOperand(0)->printAsOperand(O, SlotTracker);
+  O << "\n";
+}
+
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
   assert(InsertPos->getParent() &&
