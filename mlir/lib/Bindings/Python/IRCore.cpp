@@ -17,6 +17,7 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/PybindAdaptors.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -1808,6 +1809,24 @@ PyType PyType::createFromCapsule(py::object capsule) {
 }
 
 //------------------------------------------------------------------------------
+// PyTypeID.
+//------------------------------------------------------------------------------
+
+py::object PyTypeID::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonTypeIDToCapsule(*this));
+}
+
+PyTypeID PyTypeID::createFromCapsule(py::object capsule) {
+  MlirTypeID mlirTypeID = mlirPythonCapsuleToTypeID(capsule.ptr());
+  if (mlirTypeIDIsNull(mlirTypeID))
+    throw py::error_already_set();
+  return PyTypeID(mlirTypeID);
+}
+bool PyTypeID::operator==(const PyTypeID &other) const {
+  return mlirTypeIDEqual(typeID, other.typeID);
+}
+
+//------------------------------------------------------------------------------
 // PyValue and subclases.
 //------------------------------------------------------------------------------
 
@@ -3268,16 +3287,47 @@ void mlir::python::populateIRCore(py::module &m) {
             return printAccum.join();
           },
           "Returns the assembly form of the type.")
-      .def("__repr__", [](PyType &self) {
-        // Generally, assembly formats are not printed for __repr__ because
-        // this can cause exceptionally long debug output and exceptions.
-        // However, types are an exception as they typically have compact
-        // assembly forms and printing them is useful.
-        PyPrintAccumulator printAccum;
-        printAccum.parts.append("Type(");
-        mlirTypePrint(self, printAccum.getCallback(), printAccum.getUserData());
-        printAccum.parts.append(")");
-        return printAccum.join();
+      .def("__repr__",
+           [](PyType &self) {
+             // Generally, assembly formats are not printed for __repr__ because
+             // this can cause exceptionally long debug output and exceptions.
+             // However, types are an exception as they typically have compact
+             // assembly forms and printing them is useful.
+             PyPrintAccumulator printAccum;
+             printAccum.parts.append("Type(");
+             mlirTypePrint(self, printAccum.getCallback(),
+                           printAccum.getUserData());
+             printAccum.parts.append(")");
+             return printAccum.join();
+           })
+      .def_property_readonly("typeid", [](PyType &self) -> MlirTypeID {
+        MlirTypeID mlirTypeID = mlirTypeGetTypeID(self);
+        if (!mlirTypeIDIsNull(mlirTypeID))
+          return mlirTypeID;
+        auto origRepr =
+            pybind11::repr(pybind11::cast(self)).cast<std::string>();
+        throw py::value_error(
+            (origRepr + llvm::Twine(" has no typeid.")).str());
+      });
+
+  //----------------------------------------------------------------------------
+  // Mapping of PyTypeID.
+  //----------------------------------------------------------------------------
+  py::class_<PyTypeID>(m, "TypeID", py::module_local())
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyTypeID::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyTypeID::createFromCapsule)
+      // Note, this tests whether the underlying TypeIDs are the same,
+      // not whether the wrapper MlirTypeIDs are the same, nor whether
+      // the Python objects are the same (i.e., PyTypeID is a value type).
+      .def("__eq__",
+           [](PyTypeID &self, PyTypeID &other) { return self == other; })
+      .def("__eq__",
+           [](PyTypeID &self, const py::object &other) { return false; })
+      // Note, this gives the hash value of the underlying TypeID, not the
+      // hash value of the Python object, nor the hash value of the
+      // MlirTypeID wrapper.
+      .def("__hash__", [](PyTypeID &self) {
+        return static_cast<size_t>(mlirTypeIDHashValue(self));
       });
 
   //----------------------------------------------------------------------------

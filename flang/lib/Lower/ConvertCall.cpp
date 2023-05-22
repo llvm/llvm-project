@@ -956,8 +956,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an
     // addendum if needed.
-    mlir::Type boxEleType =
-        entity.getType().cast<fir::BaseBoxType>().getEleTy();
+    fir::BaseBoxType actualBoxType = entity.getType().cast<fir::BaseBoxType>();
+    mlir::Type boxEleType = actualBoxType.getEleTy();
     // For now, assume it is not OK to pass the allocatable/pointer
     // descriptor to a non pointer/allocatable dummy. That is a strict
     // interpretation of 18.3.6 point 4 that stipulates the descriptor
@@ -968,14 +968,30 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     // polymorphic might unconditionally read the addendum. Intrinsic type
     // descriptors may not have an addendum, the rebox below will create a
     // descriptor with an addendum in such case.
-    const bool actualBoxHasAddendum =
-        fir::unwrapRefType(boxEleType).isa<fir::RecordType, mlir::NoneType>();
+    const bool actualBoxHasAddendum = fir::boxHasAddendum(actualBoxType);
     const bool needToAddAddendum =
         fir::isUnlimitedPolymorphicType(dummyType) && !actualBoxHasAddendum;
-    if (needToAddAddendum || actualBoxHasAllocatableOrPointerFlag)
+    mlir::Type reboxType = dummyType;
+    if (needToAddAddendum || actualBoxHasAllocatableOrPointerFlag) {
+      if (fir::getBoxRank(dummyType) != fir::getBoxRank(actualBoxType)) {
+        // This may happen only with IGNORE_TKR(R).
+        if (!arg.testTKR(Fortran::common::IgnoreTKR::Rank))
+          DIE("actual and dummy arguments must have equal ranks");
+        // Only allow it for unlimited polymorphic dummy arguments
+        // for now.
+        if (!fir::isUnlimitedPolymorphicType(dummyType))
+          TODO(loc, "actual/dummy rank mismatch for not unlimited polymorphic "
+                    "dummy.");
+        auto elementType = fir::updateTypeForUnlimitedPolymorphic(boxEleType);
+        if (fir::isAssumedType(dummyType))
+          reboxType = fir::BoxType::get(elementType);
+        else
+          reboxType = fir::ClassType::get(elementType);
+      }
       entity = hlfir::Entity{builder.create<fir::ReboxOp>(
-          loc, dummyType, entity, /*shape=*/mlir::Value{},
+          loc, reboxType, entity, /*shape=*/mlir::Value{},
           /*slice=*/mlir::Value{})};
+    }
     addr = entity;
   } else {
     addr = hlfir::genVariableRawAddress(loc, builder, entity);

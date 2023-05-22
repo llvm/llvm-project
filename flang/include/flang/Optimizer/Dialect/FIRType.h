@@ -330,6 +330,9 @@ inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
          fir::isUnlimitedPolymorphicType(boxTy);
 }
 
+/// Get the rank from a !fir.box type.
+unsigned getBoxRank(mlir::Type boxTy);
+
 /// Return the inner type of the given type.
 mlir::Type unwrapInnerType(mlir::Type ty);
 

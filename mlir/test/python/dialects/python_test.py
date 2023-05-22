@@ -299,6 +299,14 @@ def testCustomType():
 
     # The following cast must not assert.
     b = test.TestType(a)
+    # Instance custom types should have typeids
+    assert isinstance(b.typeid, TypeID)
+    # Subclasses of ir.Type should not have a static_typeid
+    # CHECK: 'TestType' object has no attribute 'static_typeid'
+    try:
+      b.static_typeid
+    except AttributeError as e:
+      print(e)
 
     i8 = IntegerType.get_signless(8)
     try:
@@ -352,6 +360,12 @@ def testTensorValue():
 
       # CHECK: False
       print(tt.is_null())
+
+      # Classes of custom types that inherit from concrete types should have
+      # static_typeid
+      assert isinstance(test.TestTensorType.static_typeid, TypeID)
+      # And it should be equal to the in-tree concrete type
+      assert test.TestTensorType.static_typeid == t.type.typeid
 
 
 # CHECK-LABEL: TEST: inferReturnTypeComponents

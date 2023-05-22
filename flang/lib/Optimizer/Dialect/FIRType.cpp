@@ -382,6 +382,13 @@ mlir::Type unwrapSeqOrBoxedSeqType(mlir::Type ty) {
   return ty;
 }
 
+unsigned getBoxRank(mlir::Type boxTy) {
+  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy);
+  if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
+    return seqTy.getDimension();
+  return 0;
+}
+
 /// Return the ISO_C_BINDING intrinsic module value of type \p ty.
 int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
   unsigned width = 0;
