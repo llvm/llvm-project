@@ -1556,6 +1556,73 @@ bool AMDGPUCodeGenPrepare::canBreakPHINode(const PHINode &I) {
   return BreakPhiNodesCache[&I] = true;
 }
 
+/// Helper class for "break large PHIs" (visitPHINode).
+///
+/// This represents a slice of a PHI's incoming value, which is made up of:
+///   - The type of the slice (Ty)
+///   - The index in the incoming value's vector where the slice starts (Idx)
+///   - The number of elements in the slice (NumElts).
+/// It also keeps track of the NewPHI node inserted for this particular slice.
+///
+/// Slice examples:
+///   <4 x i64> -> Split into four i64 slices.
+///     -> [i64, 0, 1], [i64, 1, 1], [i64, 2, 1], [i64, 3, 1]
+///   <5 x i16> -> Split into 2 <2 x i16> slices + a i16 tail.
+///     -> [<2 x i16>, 0, 2], [<2 x i16>, 2, 2], [i16, 4, 1]
+class VectorSlice {
+public:
+  VectorSlice(Type *Ty, unsigned Idx, unsigned NumElts)
+      : Ty(Ty), Idx(Idx), NumElts(NumElts) {}
+
+  Type *Ty = nullptr;
+  unsigned Idx = 0;
+  unsigned NumElts = 0;
+  PHINode *NewPHI = nullptr;
+
+  /// Slice \p Inc according to the information contained within this slice.
+  /// This is cached, so if called multiple times for the same \p BB & \p Inc
+  /// pair, it returns the same Sliced value as well.
+  ///
+  /// Note this *intentionally* does not return the same value for, say,
+  /// [%bb.0, %0] & [%bb.1, %0] as:
+  ///   - It could cause issues with dominance (e.g. if bb.1 is seen first, then
+  ///   the value in bb.1 may not be reachable from bb.0 if it's its
+  ///   predecessor.)
+  ///   - We also want to make our extract instructions as local as possible so
+  ///   the DAG has better chances of folding them out. Duplicating them like
+  ///   that is beneficial in that regard.
+  ///
+  /// This is both a minor optimization to avoid creating duplicate
+  /// instructions, but also a requirement for correctness. It is not forbidden
+  /// for a PHI node to have the same [BB, Val] pair multiple times. If we
+  /// returned a new value each time, those previously identical pairs would all
+  /// have different incoming values (from the same block) and it'd cause a "PHI
+  /// node has multiple entries for the same basic block with different incoming
+  /// values!" verifier error.
+  Value *getSlicedVal(BasicBlock *BB, Value *Inc, StringRef NewValName) {
+    Value *&Res = SlicedVals[{BB, Inc}];
+    if (Res)
+      return Res;
+
+    IRBuilder<> B(BB->getTerminator());
+    if (Instruction *IncInst = dyn_cast<Instruction>(Inc))
+      B.SetCurrentDebugLocation(IncInst->getDebugLoc());
+
+    if (NumElts > 1) {
+      SmallVector<int, 4> Mask;
+      for (unsigned K = Idx; K < (Idx + NumElts); ++K)
+        Mask.push_back(K);
+      Res = B.CreateShuffleVector(Inc, Mask, NewValName);
+    } else
+      Res = B.CreateExtractElement(Inc, Idx, NewValName);
+
+    return Res;
+  }
+
+private:
+  SmallDenseMap<std::pair<BasicBlock *, Value *>, Value *> SlicedVals;
+};
+
 bool AMDGPUCodeGenPrepare::visitPHINode(PHINode &I) {
   // Break-up fixed-vector PHIs into smaller pieces.
   // Default threshold is 32, so it breaks up any vector that's >32 bits into
@@ -1577,14 +1644,6 @@ bool AMDGPUCodeGenPrepare::visitPHINode(PHINode &I) {
   if (!ForceScalarizeLargePHIs && !canBreakPHINode(I))
     return false;
 
-  struct VectorSlice {
-    Type *Ty = nullptr;
-    unsigned Idx = 0;
-    unsigned NumElts = 0;
-    std::vector<Value *> IncomingValues = {};
-    PHINode *NewPHI = nullptr;
-  };
-
   std::vector<VectorSlice> Slices;
 
   Type *EltTy = FVT->getElementType();
@@ -1599,47 +1658,36 @@ bool AMDGPUCodeGenPrepare::visitPHINode(PHINode &I) {
       Type *SubVecTy = FixedVectorType::get(EltTy, SubVecSize);
       for (unsigned End = alignDown(NumElts, SubVecSize); Idx < End;
            Idx += SubVecSize)
-        Slices.push_back(VectorSlice{SubVecTy, Idx, SubVecSize});
+        Slices.emplace_back(SubVecTy, Idx, SubVecSize);
     }
 
     // Scalarize all remaining elements.
     for (; Idx < NumElts; ++Idx)
-      Slices.push_back(VectorSlice{EltTy, Idx, 1});
+      Slices.emplace_back(EltTy, Idx, 1);
   }
 
   if (Slices.size() == 1)
     return false;
 
-  // Break up this PHI's incoming values.
-  for (unsigned Idx = 0; Idx < I.getNumIncomingValues(); ++Idx) {
-    Value *Inc = I.getIncomingValue(Idx);
-
-    IRBuilder<> B(I.getIncomingBlock(Idx)->getTerminator());
-    if (Instruction *IncInst = dyn_cast<Instruction>(Inc))
-      B.SetCurrentDebugLocation(IncInst->getDebugLoc());
-
-    unsigned NameSuffix = 0;
-    for (VectorSlice &S : Slices) {
-      const auto ValName =
-          "largephi.extractslice" + std::to_string(NameSuffix++);
-      if (S.NumElts > 1) {
-        SmallVector<int, 4> Mask;
-        for (unsigned K = S.Idx; K < (S.Idx + S.NumElts); ++K)
-          Mask.push_back(K);
-        S.IncomingValues.push_back(B.CreateShuffleVector(Inc, Mask, ValName));
-      } else
-        S.IncomingValues.push_back(B.CreateExtractElement(Inc, S.Idx, ValName));
-    }
-  }
-
-  // Now create one PHI per vector piece.
-  IRBuilder<> B(I.getParent()->getFirstNonPHI());
+  // Create one PHI per vector piece. The "VectorSlice" class takes care of
+  // creating the necessary instruction to extract the relevant slices of each
+  // incoming value.
+  IRBuilder<> B(I.getParent());
   B.SetCurrentDebugLocation(I.getDebugLoc());
 
+  unsigned IncNameSuffix = 0;
   for (VectorSlice &S : Slices) {
+    // We need to reset the build on each iteration, because getSlicedVal may
+    // have inserted something into I's BB.
+    B.SetInsertPoint(I.getParent()->getFirstNonPHI());
     S.NewPHI = B.CreatePHI(S.Ty, I.getNumIncomingValues());
-    for (const auto &[Idx, BB] : enumerate(I.blocks()))
-      S.NewPHI->addIncoming(S.IncomingValues[Idx], BB);
+
+    for (const auto &[Idx, BB] : enumerate(I.blocks())) {
+      S.NewPHI->addIncoming(S.getSlicedVal(BB, I.getIncomingValue(Idx),
+                                           "largephi.extractslice" +
+                                               std::to_string(IncNameSuffix++)),
+                            BB);
+    }
   }
 
   // And replace this PHI with a vector of all the previous PHI values.
