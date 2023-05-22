@@ -2249,14 +2249,6 @@ static mlir::Type getBoxScalarEleTy(mlir::Type boxTy) {
   return eleTy;
 }
 
-/// Get the rank from a !fir.box type
-static unsigned getBoxRank(mlir::Type boxTy) {
-  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy);
-  if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
-    return seqTy.getDimension();
-  return 0;
-}
-
 /// Test if \p t1 and \p t2 are compatible character types (if they can
 /// represent the same type at runtime).
 static bool areCompatibleCharacterTypes(mlir::Type t1, mlir::Type t2) {
@@ -2276,9 +2268,9 @@ mlir::LogicalResult fir::ReboxOp::verify() {
   auto outBoxTy = getType();
   if (fir::isa_unknown_size_box(outBoxTy))
     return emitOpError("result type must not have unknown rank or type");
-  auto inputRank = getBoxRank(inputBoxTy);
+  auto inputRank = fir::getBoxRank(inputBoxTy);
   auto inputEleTy = getBoxScalarEleTy(inputBoxTy);
-  auto outRank = getBoxRank(outBoxTy);
+  auto outRank = fir::getBoxRank(outBoxTy);
   auto outEleTy = getBoxScalarEleTy(outBoxTy);
 
   if (auto sliceVal = getSlice()) {
