@@ -2764,9 +2764,6 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueStruct) {
 }
 
 TEST_P(UncheckedOptionalAccessTest, OptionalValueInitialization) {
-  // FIXME: Fix when to initialize `value`. All unwrapping should be safe in
-  // this example, but `value` initialization is done multiple times during the
-  // fixpoint iterations and joining the environment won't correctly merge them.
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -2786,7 +2783,7 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueInitialization) {
       }
       // Now we merge the two values. UncheckedOptionalAccessModel::merge() will
       // throw away the "value" property.
-      foo->value(); // [[unsafe]]
+      foo->value();
     }
   )");
 }
