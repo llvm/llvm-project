@@ -263,7 +263,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     IRInterfaces.cpp
     IRModule.cpp
     IRTypes.cpp
-    PybindUtils.cpp
     Pass.cpp
 
     # Headers must be included explicitly so they are installed.

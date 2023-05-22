@@ -10,8 +10,8 @@
 #include "Globals.h"
 #include "PybindUtils.h"
 
-#include <vector>
 #include <optional>
+#include <vector>
 
 #include "mlir-c/Bindings/Python/Interop.h"
 
@@ -76,9 +76,9 @@ void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
                                     py::object pyClass) {
   py::object &found = dialectClassMap[dialectNamespace];
   if (found) {
-    throw SetPyError(PyExc_RuntimeError, llvm::Twine("Dialect namespace '") +
-                                             dialectNamespace +
-                                             "' is already registered.");
+    throw std::runtime_error((llvm::Twine("Dialect namespace '") +
+                              dialectNamespace + "' is already registered.")
+                                 .str());
   }
   found = std::move(pyClass);
 }
@@ -87,9 +87,9 @@ void PyGlobals::registerOperationImpl(const std::string &operationName,
                                       py::object pyClass) {
   py::object &found = operationClassMap[operationName];
   if (found) {
-    throw SetPyError(PyExc_RuntimeError, llvm::Twine("Operation '") +
-                                             operationName +
-                                             "' is already registered.");
+    throw std::runtime_error((llvm::Twine("Operation '") + operationName +
+                              "' is already registered.")
+                                 .str());
   }
   found = std::move(pyClass);
 }
