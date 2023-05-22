@@ -49,6 +49,8 @@ public:
 
   std::string getCodeRange() const;
 
+  uint32_t getFirstAbbrCode() const { return FirstAbbrCode; }
+
 private:
   void clear();
 };
