@@ -362,6 +362,21 @@ public:
 
 } // end anonymous namespace
 
+static bool isFromBitcast(const Value* I, DenseSet<const Value*> &appears) const {
+  if(appears.count(I) > 0) {
+    return false;
+  }
+  appears.insert(I);
+  if(isa<Instruction>(I)) {
+    if(isa<BitCastInst>(I)) {
+      return true;
+    }
+    return isFromBitcast((dyn_cast<Instruction>(I))->getOperand(0), appears);
+  }
+  return false;
+
+}
+
 /// Check the first operand of the tbaa tag node, if it is a MDNode, we treat
 /// it as struct-path aware TBAA format, otherwise, we treat it as scalar TBAA
 /// format.
@@ -380,6 +395,16 @@ AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
   // If accesses may alias, chain to the next AliasAnalysis.
   if (Aliases(LocA.AATags.TBAA, LocB.AATags.TBAA))
     return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
+
+  if (isa<GetElementPtrInst>(LocA.Ptr) && isa<GetElementPtrInst>(LocB.Ptr)) {
+    const GetElementPtrInst* AI = dyn_cast<GetElementPtrInst>(LocA.Ptr);
+    const GetElementPtrInst* BI = dyn_cast<GetElementPtrInst>(LocB.Ptr);
+    DenseSet<const Value*> appears;
+    if(isFromBitcast(AI->getPointerOperand(), appears)
+        || isFromBitcast(BI->getPointerOperand(), appears)) {
+      return AAResultBase::alias(LocA, LocB, AAQI);
+    }
+  }
 
   // Otherwise return a definitive result.
   return AliasResult::NoAlias;
