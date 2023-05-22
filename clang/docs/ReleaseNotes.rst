@@ -418,6 +418,8 @@ Bug Fixes in This Version
 - Propagate the value-dependent bit for VAArgExpr. Fixes a crash where a
   __builtin_va_arg call has invalid arguments.
   (`#62711 <https://github.com/llvm/llvm-project/issues/62711>`_).
+- Fix crash on attempt to initialize union with flexible array member.
+  (`#61746 <https://github.com/llvm/llvm-project/issues/61746>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

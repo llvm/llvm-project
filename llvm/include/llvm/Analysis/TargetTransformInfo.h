@@ -320,9 +320,11 @@ public:
 
   /// Estimate the cost of a chain of pointers (typically pointer operands of a
   /// chain of loads or stores within same block) operations set when lowered.
+  /// \p AccessTy is the type of the loads/stores that will ultimately use the
+  /// \p Ptrs.
   InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
-                       const PointersChainInfo &Info,
+                       const PointersChainInfo &Info, Type *AccessTy,
                        TargetCostKind CostKind = TTI::TCK_RecipThroughput
 
   ) const;
@@ -1663,7 +1665,7 @@ public:
                                      TTI::TargetCostKind CostKind) = 0;
   virtual InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
-                       const TTI::PointersChainInfo &Info,
+                       const TTI::PointersChainInfo &Info, Type *AccessTy,
                        TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
@@ -2024,8 +2026,9 @@ public:
   InstructionCost getPointersChainCost(ArrayRef<const Value *> Ptrs,
                                        const Value *Base,
                                        const PointersChainInfo &Info,
+                                       Type *AccessTy,
                                        TargetCostKind CostKind) override {
-    return Impl.getPointersChainCost(Ptrs, Base, Info, CostKind);
+    return Impl.getPointersChainCost(Ptrs, Base, Info, AccessTy, CostKind);
   }
   unsigned getInliningThresholdMultiplier() override {
     return Impl.getInliningThresholdMultiplier();
