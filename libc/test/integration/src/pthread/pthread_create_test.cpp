@@ -103,10 +103,8 @@ static void *successThread(void *Arg) {
 
   {
     // Allocate some bytes on the stack on most of the stack and make sure we
-    // have read/write permissions on the memory. -EXEC_PAGESIZE / 2 just as a
-    // buffer so we don't go beyond our limits (no nested function calls / not
-    // much other data on the stack so should be enough).
-    size_t test_stacksize = expec_stacksize - EXEC_PAGESIZE / 2;
+    // have read/write permissions on the memory.
+    size_t test_stacksize = expec_stacksize - 1024;
     volatile uint8_t *bytes_on_stack =
         (volatile uint8_t *)__builtin_alloca(test_stacksize);
 
