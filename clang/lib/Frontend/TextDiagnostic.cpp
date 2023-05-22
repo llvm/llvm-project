@@ -615,9 +615,6 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str,
   const unsigned Length = std::min(Str.find('\n'), Str.size());
   bool TextNormal = true;
 
-  // The string used to indent each line.
-  SmallString<16> IndentStr;
-  IndentStr.assign(Indentation, ' ');
   bool Wrapped = false;
   for (unsigned WordStart = 0, WordEnd; WordStart < Length;
        WordStart = WordEnd) {
@@ -646,7 +643,7 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str,
     // This word does not fit on the current line, so wrap to the next
     // line.
     OS << '\n';
-    OS.write(&IndentStr[0], Indentation);
+    OS.indent(Indentation);
     applyTemplateHighlighting(OS, Str.substr(WordStart, WordLength),
                               TextNormal, Bold);
     Column = Indentation + WordLength;
@@ -1188,12 +1185,8 @@ void TextDiagnostic::emitSnippetAndCaret(
           ? std::max(4u, getNumDisplayWidth(DisplayLineNo + MaxLines))
           : 0;
   auto indentForLineNumbers = [&] {
-    if (MaxLineNoDisplayWidth > 0) {
-      OS << ' ';
-      for (unsigned I = 0; I != MaxLineNoDisplayWidth; ++I)
-        OS << ' ';
-      OS << " | ";
-    }
+    if (MaxLineNoDisplayWidth > 0)
+      OS.indent(MaxLineNoDisplayWidth + 2) << "| ";
   };
 
   for (unsigned LineNo = Lines.first; LineNo != Lines.second + 1;
@@ -1307,11 +1300,8 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
   // Emit line number.
   if (MaxLineNoDisplayWidth > 0) {
     unsigned LineNoDisplayWidth = getNumDisplayWidth(LineNo);
-    OS << ' ';
-    for (unsigned I = LineNoDisplayWidth; I < MaxLineNoDisplayWidth; ++I)
-      OS << ' ';
-    OS << LineNo;
-    OS << " | ";
+    OS.indent(MaxLineNoDisplayWidth - LineNoDisplayWidth + 1)
+        << LineNo << " | ";
   }
 
   // Print the source line one character at a time.
