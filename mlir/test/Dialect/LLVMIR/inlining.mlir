@@ -12,15 +12,16 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   llvm.intr.dbg.value #variable = %0 : i32
   llvm.intr.dbg.declare #variableAddr = %ptr : !llvm.ptr
   %byte = llvm.mlir.constant(43 : i8) : i8
-  %volatile = llvm.mlir.constant(1 : i1) : i1
-  "llvm.intr.memset"(%ptr, %byte, %0, %volatile) : (!llvm.ptr, i8, i32, i1) -> ()
-  "llvm.intr.memmove"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
-  "llvm.intr.memcpy"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  %true = llvm.mlir.constant(1 : i1) : i1
+  "llvm.intr.memset"(%ptr, %byte, %0, %true) : (!llvm.ptr, i8, i32, i1) -> ()
+  "llvm.intr.memmove"(%ptr, %ptr, %0, %true) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  "llvm.intr.memcpy"(%ptr, %ptr, %0, %true) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  "llvm.intr.assume"(%true) : (i1) -> ()
   llvm.fence release
   %2 = llvm.atomicrmw add %ptr, %0 monotonic : !llvm.ptr, i32
   %3 = llvm.cmpxchg %ptr, %0, %1 acq_rel monotonic : !llvm.ptr, i32
   llvm.inline_asm has_side_effects "foo", "bar" : () -> ()
-  llvm.cond_br %volatile, ^bb1, ^bb2
+  llvm.cond_br %true, ^bb1, ^bb2
 ^bb1:
   llvm.unreachable
 ^bb2:
@@ -39,6 +40,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: "llvm.intr.memset"(%[[PTR]]
 // CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]
 // CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
+// CHECK: "llvm.intr.assume"
 // CHECK: llvm.fence release
 // CHECK: llvm.atomicrmw add %[[PTR]], %[[CST]] monotonic
 // CHECK: llvm.cmpxchg %[[PTR]], %[[CST]], %[[RES]] acq_rel monotonic
