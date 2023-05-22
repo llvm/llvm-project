@@ -726,6 +726,10 @@ LogicalResult acc::LoopOp::verify() {
   if (getSeq() && (getHasGang() || getHasWorker() || getHasVector()))
     return emitError("gang, worker or vector cannot appear with the seq attr");
 
+  if (failed(checkPrivatizationList(*this, getPrivatizations(),
+                                    getPrivateOperands())))
+    return failure();
+
   // Check non-empty body().
   if (getRegion().empty())
     return emitError("expected non-empty body.");

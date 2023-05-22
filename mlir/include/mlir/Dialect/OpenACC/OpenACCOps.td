@@ -1039,7 +1039,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
                        UnitAttr:$hasWorker,
                        UnitAttr:$hasVector,
                        Variadic<IntOrIndex>:$tileOperands,
-                       Variadic<AnyType>:$privateOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
+                       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
                        OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands);
 
@@ -1059,7 +1060,9 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
         `gang` `` custom<GangClause>($gangNum, type($gangNum), $gangStatic, type($gangStatic), $hasGang)
       | `worker` `` custom<WorkerClause>($workerNum, type($workerNum), $hasWorker)
       | `vector` `` custom<VectorClause>($vectorLength, type($vectorLength), $hasVector)
-      | `private` `(` $privateOperands `:` type($privateOperands) `)`
+      | `private` `(` custom<PrivatizationList>(
+            $privateOperands, type($privateOperands), $privatizations)
+        `)`
       | `tile` `(` $tileOperands `:` type($tileOperands) `)`
       | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )

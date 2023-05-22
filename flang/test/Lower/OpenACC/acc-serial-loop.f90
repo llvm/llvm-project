@@ -371,7 +371,7 @@ subroutine acc_serial_loop
   END DO
 
 ! CHECK:      acc.serial firstprivate(%[[B]] : !fir.ref<!fir.array<10xf32>>) private(@privatization_10xf32 -> %[[A]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK:        acc.loop private(%[[A]] : !fir.ref<!fir.array<10xf32>>) {
+! CHECK:        acc.loop private(@privatization_10xf32 -> %[[A]] : !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
