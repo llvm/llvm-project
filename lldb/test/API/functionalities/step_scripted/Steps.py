@@ -98,7 +98,7 @@ class StepReportsStopOthers():
     
     def __init__(self, thread_plan, args_data, dict):
         self.thread_plan = thread_plan
-        self.key = args_data.GetValueForKey("token").GetStringValue(1000)
+        self.key = str(args_data.GetValueForKey("token").GetUnsignedIntegerValue(1000))
         
     def should_stop(self, event):
         self.thread_plan.SetPlanComplete(True)

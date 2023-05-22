@@ -2370,7 +2370,7 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheBaseAddress() {
   if (!value)
     return LLDB_INVALID_ADDRESS;
 
-  return value->GetIntegerValue(LLDB_INVALID_ADDRESS);
+  return value->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
 }
 
 void AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded() {

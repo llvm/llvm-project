@@ -461,7 +461,7 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
             success = true;
           }
           if (node->GetType() == eStructuredDataTypeInteger) {
-            strm.Printf("0x%" PRIx64, node->GetAsInteger()->GetValue());
+            strm.Printf("0x%" PRIx64, node->GetUnsignedIntegerValue());
             success = true;
           }
           if (node->GetType() == eStructuredDataTypeFloat) {
