@@ -2,6 +2,13 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.private.recipe @privatization_10x10xf32 : !fir.ref<!fir.array<10x10xf32>> init {
+! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x10xf32>>):
+! CHECK: acc.yield %{{.*}} : !fir.ref<!fir.array<10x10xf32>>
+! CHECK: }
+
+! CHECK-LABEL: func.func @_QPacc_serial()
+
 subroutine acc_serial
   integer :: i, j
 
@@ -231,12 +238,11 @@ subroutine acc_serial
 ! CHECK: acc.detach accPtr(%[[ATTACH_D]] : !fir.ptr<f32>) {dataClause = 10 : i64, name = "d"}
 ! CHECK: acc.detach accPtr(%[[ATTACH_E]] : !fir.ptr<f32>) {dataClause = 10 : i64, name = "e"}
 
-! TODO: update when lowering is updated to new private design
-!  !$acc serial private(a) firstprivate(b) private(c)
-!  !$acc end serial
+  !$acc serial private(a) firstprivate(b) private(c)
+  !$acc end serial
 
-! TODO:      acc.serial firstprivate(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) private(%[[A]], %[[C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
-! TODO:        acc.yield
-! TODO-NEXT: }{{$}}
+! CHECK:      acc.serial firstprivate(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) private(@privatization_10x10xf32 -> %[[A]] : !fir.ref<!fir.array<10x10xf32>>, @privatization_10x10xf32 -> %[[C]] : !fir.ref<!fir.array<10x10xf32>>) {
+! CHECK:        acc.yield
+! CHECK-NEXT: }{{$}}
 
 end subroutine
