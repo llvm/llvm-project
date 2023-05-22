@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -72,23 +71,8 @@ void OpenMPDialect::initialize() {
   MemRefType::attachInterface<PointerLikeModel<MemRefType>>(*getContext());
   LLVM::LLVMPointerType::attachInterface<
       PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
-
-  // Attach default offload module interface to module op to access
-  // offload functionality through
   mlir::ModuleOp::attachInterface<mlir::omp::OffloadModuleDefaultModel>(
       *getContext());
-
-  // Attach default declare target interfaces to operations which can be marked
-  // as declare target (Global Operations and Functions/Subroutines in dialects
-  // that Fortran (or other languages that lower to MLIR) translates too
-  mlir::LLVM::GlobalOp::attachInterface<
-      mlir::omp::DeclareTargetDefaultModel<mlir::LLVM::GlobalOp>>(
-      *getContext());
-  mlir::LLVM::LLVMFuncOp::attachInterface<
-      mlir::omp::DeclareTargetDefaultModel<mlir::LLVM::LLVMFuncOp>>(
-      *getContext());
-  mlir::func::FuncOp::attachInterface<
-      mlir::omp::DeclareTargetDefaultModel<mlir::func::FuncOp>>(*getContext());
 }
 
 //===----------------------------------------------------------------------===//

@@ -47,9 +47,6 @@ private:
   void registerAttributes();
   // Register the Types of this dialect.
   void registerTypes();
-  // Register external interfaces on operations of
-  // this dialect.
-  void registerOpExternalInterfaces();
 };
 
 /// The FIR codegen dialect is a dialect containing a small set of transient

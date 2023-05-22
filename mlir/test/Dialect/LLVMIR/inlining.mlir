@@ -12,15 +12,16 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   llvm.intr.dbg.value #variable = %0 : i32
   llvm.intr.dbg.declare #variableAddr = %ptr : !llvm.ptr
   %byte = llvm.mlir.constant(43 : i8) : i8
-  %volatile = llvm.mlir.constant(1 : i1) : i1
-  "llvm.intr.memset"(%ptr, %byte, %0, %volatile) : (!llvm.ptr, i8, i32, i1) -> ()
-  "llvm.intr.memmove"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
-  "llvm.intr.memcpy"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  %true = llvm.mlir.constant(1 : i1) : i1
+  "llvm.intr.memset"(%ptr, %byte, %0, %true) : (!llvm.ptr, i8, i32, i1) -> ()
+  "llvm.intr.memmove"(%ptr, %ptr, %0, %true) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  "llvm.intr.memcpy"(%ptr, %ptr, %0, %true) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  "llvm.intr.assume"(%true) : (i1) -> ()
   llvm.fence release
   %2 = llvm.atomicrmw add %ptr, %0 monotonic : !llvm.ptr, i32
   %3 = llvm.cmpxchg %ptr, %0, %1 acq_rel monotonic : !llvm.ptr, i32
   llvm.inline_asm has_side_effects "foo", "bar" : () -> ()
-  llvm.cond_br %volatile, ^bb1, ^bb2
+  llvm.cond_br %true, ^bb1, ^bb2
 ^bb1:
   llvm.unreachable
 ^bb2:
@@ -39,6 +40,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: "llvm.intr.memset"(%[[PTR]]
 // CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]
 // CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
+// CHECK: "llvm.intr.assume"
 // CHECK: llvm.fence release
 // CHECK: llvm.atomicrmw add %[[PTR]], %[[CST]] monotonic
 // CHECK: llvm.cmpxchg %[[PTR]], %[[CST]], %[[RES]] acq_rel monotonic
@@ -564,7 +566,7 @@ llvm.func @test_byval_global() {
 
 // -----
 
-llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
+llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.noalias, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
   llvm.return %ptr : !llvm.ptr
 }
 
@@ -578,7 +580,7 @@ llvm.func @test_ignored_attrs(%ptr : !llvm.ptr, %x : i32) {
 
 // -----
 
-llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.noalias }) {
+llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.inalloca = i64 }) {
   llvm.return
 }
 
@@ -586,18 +588,5 @@ llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.noalias }) {
 // CHECK-NEXT: llvm.call
 llvm.func @test_disallow_arg_attr(%ptr : !llvm.ptr) {
   llvm.call @disallowed_arg_attr(%ptr) : (!llvm.ptr) -> ()
-  llvm.return
-}
-
-// -----
-
-llvm.func @disallowed_res_attr(%ptr : !llvm.ptr) -> (!llvm.ptr { llvm.noalias }) {
-  llvm.return %ptr : !llvm.ptr
-}
-
-// CHECK-LABEL: @test_disallow_res_attr
-// CHECK-NEXT: llvm.call
-llvm.func @test_disallow_res_attr(%ptr : !llvm.ptr) {
-  llvm.call @disallowed_res_attr(%ptr) : (!llvm.ptr) -> (!llvm.ptr)
   llvm.return
 }
