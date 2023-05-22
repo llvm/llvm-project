@@ -5,9 +5,8 @@
 define void @v2i8(ptr %p, ptr %q) {
 ; CHECK-LABEL: v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lh a0, 0(a0)
+; CHECK-NEXT:    sh a0, 0(a1)
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %p
   store <2 x i8> %v, ptr %q
@@ -17,9 +16,8 @@ define void @v2i8(ptr %p, ptr %q) {
 define void @v2i16(ptr %p, ptr %q) {
 ; CHECK-LABEL: v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vse16.v v8, (a1)
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    ret
   %v = load <2 x i16>, ptr %p
   store <2 x i16> %v, ptr %q
@@ -27,12 +25,18 @@ define void @v2i16(ptr %p, ptr %q) {
 }
 
 define void @v2i32(ptr %p, ptr %q) {
-; CHECK-LABEL: v2i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vse32.v v8, (a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    vse32.v v8, (a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    sd a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <2 x i32>, ptr %p
   store <2 x i32> %v, ptr %q
   ret void
@@ -53,9 +57,8 @@ define void @v2i64(ptr %p, ptr %q) {
 define void @v2f16(ptr %p, ptr %q) {
 ; CHECK-LABEL: v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vse16.v v8, (a1)
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    ret
   %v = load <2 x half>, ptr %p
   store <2 x half> %v, ptr %q
@@ -63,12 +66,18 @@ define void @v2f16(ptr %p, ptr %q) {
 }
 
 define void @v2f32(ptr %p, ptr %q) {
-; CHECK-LABEL: v2f32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vse32.v v8, (a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v2f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    vse32.v v8, (a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v2f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    sd a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <2 x float>, ptr %p
   store <2 x float> %v, ptr %q
   ret void
@@ -89,9 +98,8 @@ define void @v2f64(ptr %p, ptr %q) {
 define void @v4i8(ptr %p, ptr %q) {
 ; CHECK-LABEL: v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:    ret
   %v = load <4 x i8>, ptr %p
   store <4 x i8> %v, ptr %q
@@ -99,12 +107,18 @@ define void @v4i8(ptr %p, ptr %q) {
 }
 
 define void @v4i16(ptr %p, ptr %q) {
-; CHECK-LABEL: v4i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vse16.v v8, (a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV32-NEXT:    vle16.v v8, (a0)
+; RV32-NEXT:    vse16.v v8, (a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    sd a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <4 x i16>, ptr %p
   store <4 x i16> %v, ptr %q
   ret void
@@ -135,12 +149,18 @@ define void @v4i64(ptr %p, ptr %q) {
 }
 
 define void @v4f16(ptr %p, ptr %q) {
-; CHECK-LABEL: v4f16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vse16.v v8, (a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v4f16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV32-NEXT:    vle16.v v8, (a0)
+; RV32-NEXT:    vse16.v v8, (a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v4f16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    sd a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <4 x half>, ptr %p
   store <4 x half> %v, ptr %q
   ret void
@@ -171,12 +191,18 @@ define void @v4f64(ptr %p, ptr %q) {
 }
 
 define void @v8i8(ptr %p, ptr %q) {
-; CHECK-LABEL: v8i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vse8.v v8, (a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vle8.v v8, (a0)
+; RV32-NEXT:    vse8.v v8, (a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    sd a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <8 x i8>, ptr %p
   store <8 x i8> %v, ptr %q
   ret void
@@ -233,9 +259,8 @@ define void @v2i8_align1(ptr %p, ptr %q) {
 define void @v2i8_align2(ptr %p, ptr %q) {
 ; CHECK-LABEL: v2i8_align2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lh a0, 0(a0)
+; CHECK-NEXT:    sh a0, 0(a1)
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %p, align 2
   store <2 x i8> %v, ptr %q
@@ -245,9 +270,8 @@ define void @v2i8_align2(ptr %p, ptr %q) {
 define void @v2i8_align4(ptr %p, ptr %q) {
 ; CHECK-LABEL: v2i8_align4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lh a0, 0(a0)
+; CHECK-NEXT:    sh a0, 0(a1)
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %p, align 4
   store <2 x i8> %v, ptr %q
@@ -259,7 +283,8 @@ define void @v2i8_volatile_load(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lh a0, 0(a0)
+; CHECK-NEXT:    sh a0, 0(a1)
 ; CHECK-NEXT:    ret
   %v = load volatile <2 x i8>, ptr %p
   store <2 x i8> %v, ptr %q
@@ -269,15 +294,10 @@ define void @v2i8_volatile_load(ptr %p, ptr %q) {
 define void @v2i8_volatile_store(ptr %p, ptr %q) {
 ; CHECK-LABEL: v2i8_volatile_store:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lh a0, 0(a0)
+; CHECK-NEXT:    sh a0, 0(a1)
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %p
   store volatile <2 x i8> %v, ptr %q
   ret void
 }
-
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; RV32: {{.*}}
-; RV64: {{.*}}
