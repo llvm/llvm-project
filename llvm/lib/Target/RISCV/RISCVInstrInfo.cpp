@@ -1469,9 +1469,14 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::PATCHPOINT:
     // The size of the patchpoint intrinsic is the number of bytes requested
     return PatchPointOpers(&MI).getNumPatchBytes();
-  case TargetOpcode::STATEPOINT:
+  case TargetOpcode::STATEPOINT: {
     // The size of the statepoint intrinsic is the number of bytes requested
-    return StatepointOpers(&MI).getNumPatchBytes();
+    unsigned NumBytes = StatepointOpers(&MI).getNumPatchBytes();
+    // A statepoint is at least a PseudoCALL
+    if (NumBytes < 8)
+      NumBytes = 8;
+    return NumBytes;
+  }
   default:
     return get(Opcode).getSize();
   }
