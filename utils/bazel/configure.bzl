@@ -5,7 +5,6 @@
 """Helper macros to configure the LLVM overlay project."""
 
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-load(":terminfo.bzl", "llvm_terminfo_disable", "llvm_terminfo_system")
 
 # Directory of overlay files relative to WORKSPACE
 DEFAULT_OVERLAY_PATH = "llvm-project-overlay"
@@ -173,15 +172,3 @@ llvm_configure = repository_rule(
         "targets": attr.string_list(default = DEFAULT_TARGETS),
     },
 )
-
-def llvm_disable_optional_support_deps():
-    maybe(
-        llvm_terminfo_disable,
-        name = "llvm_terminfo",
-    )
-
-def llvm_use_system_support_deps():
-    maybe(
-        llvm_terminfo_system,
-        name = "llvm_terminfo",
-    )
