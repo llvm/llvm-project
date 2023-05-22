@@ -1027,3 +1027,13 @@ OpFoldResult tosa::NegateOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
+
+OpFoldResult tosa::AbsOp::fold(FoldAdaptor adaptor) {
+  auto input = getInput1();
+  // Element-wise abs(abs(x)) = abs(x)
+  if (auto op = input.getDefiningOp<tosa::AbsOp>()) {
+    return input;
+  }
+
+  return {};
+}
