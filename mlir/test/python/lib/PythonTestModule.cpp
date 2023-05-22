@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PythonTestCAPI.h"
+#include "mlir-c/BuiltinTypes.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
 
 namespace py = pybind11;
@@ -40,6 +41,9 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
             return cls(mlirPythonTestTestTypeGet(ctx));
           },
           py::arg("cls"), py::arg("context") = py::none());
+  mlir_type_subclass(m, "TestTensorType", mlirTypeIsARankedTensor,
+                     py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+                         .attr("RankedTensorType"));
   mlir_value_subclass(m, "TestTensorValue",
                       mlirTypeIsAPythonTestTestTensorValue)
       .def("is_null", [](MlirValue &self) { return mlirValueIsNull(self); });
