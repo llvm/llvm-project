@@ -850,30 +850,26 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
   if (DiagOpts->ShowSourceRanges && !Ranges.empty()) {
     FileID CaretFileID = Loc.getExpansionLoc().getFileID();
     bool PrintedRange = false;
+    const SourceManager &SM = Loc.getManager();
 
     for (const auto &R : Ranges) {
       // Ignore invalid ranges.
       if (!R.isValid())
         continue;
 
-      auto &SM = Loc.getManager();
       SourceLocation B = SM.getExpansionLoc(R.getBegin());
       CharSourceRange ERange = SM.getExpansionRange(R.getEnd());
       SourceLocation E = ERange.getEnd();
-      bool IsTokenRange = ERange.isTokenRange();
 
-      std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(B);
-      std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(E);
-
-      // If the start or end of the range is in another file, just discard
-      // it.
-      if (BInfo.first != CaretFileID || EInfo.first != CaretFileID)
+      // If the start or end of the range is in another file, just
+      // discard it.
+      if (SM.getFileID(B) != CaretFileID || SM.getFileID(E) != CaretFileID)
         continue;
 
       // Add in the length of the token, so that we cover multi-char
       // tokens.
       unsigned TokSize = 0;
-      if (IsTokenRange)
+      if (ERange.isTokenRange())
         TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
 
       FullSourceLoc BF(B, SM), EF(E, SM);
