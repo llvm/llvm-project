@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/Fortran-features.h"
+#include "flang/Common/OpenMP-features.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -391,7 +392,7 @@ int main(int argc, char **argv) {
   // enable parsing of OpenMP
   if (enableOpenMP) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
-    options.predefinitions.emplace_back("_OPENMP", "201511");
+    Fortran::common::setOpenMPMacro(setOpenMPVersion, options.predefinitions);
   }
 
   // enable parsing of OpenACC
