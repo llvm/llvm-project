@@ -431,14 +431,9 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
 
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
-  // rank-1 Fortran arrays of integer, real, or logical. The tensor
-  // type does not support nested structures which are needed for
-  // complex numbers.
-  // To get multidimensional arrays to work, we will have to use column major
-  // array ordering with the tensor type (so it matches column major ordering
-  // with the Fortran fir.array). By default, tensor types assume row major
-  // ordering. How to create this tensor type is to be determined.
-  if (symTy.isa<fir::SequenceType>() && sym.Rank() == 1 &&
+  // Fortran arrays of integer, real, or logical. The tensor type does
+  // not support nested structures which are needed for complex numbers.
+  if (symTy.isa<fir::SequenceType>() &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
     mlir::Type eleTy = symTy.cast<fir::SequenceType>().getEleTy();
     if (eleTy.isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>()) {
