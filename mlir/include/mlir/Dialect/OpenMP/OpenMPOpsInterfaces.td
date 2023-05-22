@@ -47,6 +47,74 @@ def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
   ];
 }
 
+def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
+  let description = [{
+    OpenMP operations that support declare target have this interface.
+    For example, FuncOp's and llvm.GlobalOp/fir.GlobalOp's. This
+    interface allows simple manipulation and introspection of the
+    declare target attribute that can be applied to these operations.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/[{
+        Set the declare target attribute on the current operation with the
+        specified attribute arguments.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setDeclareTarget",
+      (ins "mlir::omp::DeclareTargetDeviceType":$deviceType,
+            "mlir::omp::DeclareTargetCaptureClause":$captureClause), [{}], [{
+        $_op->setAttr("omp.declare_target",
+                  mlir::omp::DeclareTargetAttr::get(
+                      $_op->getContext(),
+                      mlir::omp::DeclareTargetDeviceTypeAttr::get(
+                          $_op->getContext(), deviceType),
+                      mlir::omp::DeclareTargetCaptureClauseAttr::get(
+                          $_op->getContext(), captureClause)));
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Checks if the declare target attribute has been applied and exists on the
+        current operation. Returns true if it exists on it, otherwise returns
+        false.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isDeclareTarget",
+      (ins), [{}], [{
+        return $_op->hasAttr("omp.declare_target");
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Returns the DeclareTargetDeviceType segment of the DeclareTarget attribute if it
+        exists on the current operation. Otherwise it returns null.
+      }],
+      /*retTy=*/"mlir::omp::DeclareTargetDeviceType",
+      /*methodName=*/"getDeclareTargetDeviceType",
+      (ins), [{}], [{
+        if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
+          if (auto dAttr = dTar.dyn_cast_or_null<mlir::omp::DeclareTargetAttr>())
+            return dAttr.getDeviceType().getValue();
+        return {};
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Returns the DeclareTargetCaptureClause segment of the DeclareTarget attribute if it
+        exists on the current operation. Otherwise it returns null.
+      }],
+      /*retTy=*/"mlir::omp::DeclareTargetCaptureClause",
+      /*methodName=*/"getDeclareTargetCaptureClause",
+      (ins), [{}], [{
+        if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
+          if (auto dAttr = dTar.dyn_cast_or_null<mlir::omp::DeclareTargetAttr>())
+            return dAttr.getCaptureClause().getValue();
+        return {};
+      }]>
+  ];
+}
+
 def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
   let description = [{
     Operations that represent a module for offloading (host or device)
