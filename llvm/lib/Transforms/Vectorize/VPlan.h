@@ -686,6 +686,11 @@ public:
   }
 
   PHINode *getPhi() const { return Phi; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the VPLiveOut to \p O.
+  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
