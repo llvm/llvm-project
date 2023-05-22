@@ -1,5 +1,5 @@
 ! Test lowering of whole allocatable and pointers to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 subroutine passing_allocatable(x)
   interface

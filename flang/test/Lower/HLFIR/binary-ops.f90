@@ -1,5 +1,5 @@
 ! Test lowering of binary intrinsic operations to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 subroutine int_add(x, y, z)
  integer :: x, y, z

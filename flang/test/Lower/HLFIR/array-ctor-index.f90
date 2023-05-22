@@ -1,5 +1,5 @@
 ! Check that the implied-do index value is converted to proper type.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 function test1(k)
   integer*1 :: k
