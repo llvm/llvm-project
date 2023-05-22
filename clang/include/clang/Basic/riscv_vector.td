@@ -2536,6 +2536,11 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vget_v", MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
       {
+        if (isa<StructType>(Ops[0]->getType())) // For tuple type
+          // Extract value from index (operand 1) of vtuple (operand 0)
+          return Builder.CreateExtractValue(
+            Ops[0],
+            {(unsigned)cast<ConstantInt>(Ops[1])->getZExtValue()});
         auto *VecTy = cast<ScalableVectorType>(ResultType);
         auto *OpVecTy = cast<ScalableVectorType>(Ops[0]->getType());
         // Mask to only valid indices.
@@ -2552,6 +2557,12 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     foreach dst_lmul = ["(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
       def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilxfd", dst_lmul # "v">;
       def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUvKz", "csil", dst_lmul # "Uv">;
+    }
+    foreach nf = [2] in {
+      let Log2LMUL = [0] in {
+        defvar T = "(Tuple:" # nf # ")";
+        def : RVVBuiltin<T # "vv", "v" # T # "vKz", "i", "v">;
+      }
     }
   }
 
