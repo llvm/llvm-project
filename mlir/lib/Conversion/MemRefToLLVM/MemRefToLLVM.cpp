@@ -85,13 +85,15 @@ private:
 struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
   AllocaOpLowering(LLVMTypeConverter &converter)
       : AllocLikeOpLLVMLowering(memref::AllocaOp::getOperationName(),
-                                converter) {}
+                                converter) {
+    setRequiresNumElements();
+  }
 
   /// Allocates the underlying buffer using the right call. `allocatedBytePtr`
   /// is set to null for stack allocations. `accessAlignment` is set if
   /// alignment is needed post allocation (for eg. in conjunction with malloc).
   std::tuple<Value, Value> allocateBuffer(ConversionPatternRewriter &rewriter,
-                                          Location loc, Value sizeBytes,
+                                          Location loc, Value size,
                                           Operation *op) const override {
 
     // With alloca, one gets a pointer to the element type right away.
@@ -104,9 +106,9 @@ struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
     auto elementPtrType =
         getTypeConverter()->getPointerType(elementType, addrSpace);
 
-    auto allocatedElementPtr = rewriter.create<LLVM::AllocaOp>(
-        loc, elementPtrType, elementType, sizeBytes,
-        allocaOp.getAlignment().value_or(0));
+    auto allocatedElementPtr =
+        rewriter.create<LLVM::AllocaOp>(loc, elementPtrType, elementType, size,
+                                        allocaOp.getAlignment().value_or(0));
 
     return std::make_tuple(allocatedElementPtr, allocatedElementPtr);
   }
