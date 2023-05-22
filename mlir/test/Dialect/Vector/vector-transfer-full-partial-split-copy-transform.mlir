@@ -107,10 +107,10 @@ func.func @split_vector_transfer_read_strided_2d(
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   transform.vector.split_transfer_full_partial %module_op
     split_transfer_strategy = "linalg-copy"
-      : (!pdl.operation) -> !pdl.operation
+      : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -168,10 +168,10 @@ func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf3
 // CHECK:         }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   transform.vector.split_transfer_full_partial %module_op
     split_transfer_strategy = "linalg-copy"
-      : (!pdl.operation) -> !pdl.operation
+      : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -236,8 +236,8 @@ func.func @split_vector_transfer_write_strided_2d(
 // CHECK:         }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   transform.vector.split_transfer_full_partial %module_op
     split_transfer_strategy = "linalg-copy"
-      : (!pdl.operation) -> !pdl.operation
+      : (!transform.any_op) -> !transform.any_op
 }

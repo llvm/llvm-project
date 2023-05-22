@@ -791,11 +791,7 @@ void VPlan::print(raw_ostream &O) const {
   if (!LiveOuts.empty())
     O << "\n";
   for (const auto &KV : LiveOuts) {
-    O << "Live-out ";
-    KV.second->getPhi()->printAsOperand(O);
-    O << " = ";
-    KV.second->getOperand(0)->printAsOperand(O, SlotTracker);
-    O << "\n";
+    KV.second->print(O, SlotTracker);
   }
 
   O << "}\n";
