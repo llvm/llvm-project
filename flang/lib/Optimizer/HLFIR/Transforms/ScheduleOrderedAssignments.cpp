@@ -568,6 +568,12 @@ static llvm::raw_ostream &printRegionId(llvm::raw_ostream &os,
       os << "rhs";
     else if (&assign.getLhsRegion() == &yieldRegion)
       os << "lhs";
+  } else if (auto where = mlir::dyn_cast<hlfir::WhereOp>(parent)) {
+    if (&where.getMaskRegion() == &yieldRegion)
+      os << "mask";
+  } else if (auto elseWhereOp = mlir::dyn_cast<hlfir::ElseWhereOp>(parent)) {
+    if (&elseWhereOp.getMaskRegion() == &yieldRegion)
+      os << "mask";
   } else {
     os << "unknown";
   }
