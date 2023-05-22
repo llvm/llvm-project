@@ -184,7 +184,7 @@ void InstrumentRegionCommentConsumer::HandleComment(SMLoc Loc,
     return;
   }
 
-  SharedInstrument I = IM.createInstrument(InstrumentKind, Data);
+  UniqueInstrument I = IM.createInstrument(InstrumentKind, Data);
   if (!I) {
     if (Data.empty())
       SM.PrintMessage(Loc, llvm::SourceMgr::DK_Error,
@@ -202,7 +202,7 @@ void InstrumentRegionCommentConsumer::HandleComment(SMLoc Loc,
   if (Regions.isRegionActive(InstrumentKind))
     Regions.endRegion(InstrumentKind, Loc);
   // Start new instrumentation region
-  Regions.beginRegion(InstrumentKind, Loc, I);
+  Regions.beginRegion(InstrumentKind, Loc, std::move(I));
 }
 
 } // namespace mca
