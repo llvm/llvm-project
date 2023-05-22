@@ -340,6 +340,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     }
     // clang-format off
     if (isa<LLVM::AllocaOp,
+            LLVM::AssumeOp,
             LLVM::AtomicRMWOp,
             LLVM::AtomicCmpXchgOp,
             LLVM::CallOp,
