@@ -65,6 +65,20 @@ void foo(void) {
   vs8 = ui << vs8;
   vus8 = 1 << vus8;
 
+  vc8 = vc8 << c;
+  vuc8 = vuc8 << uc;
+  vs8 = vs8 << s;
+  vus8 = vus8 << us;
+  vi8 = vi8 << i;
+  vui8 = vui8 << ui;
+
+  vc8 = vc8 << i;
+  vuc8 = vuc8 << i;
+  vs8 = vs8 << i;
+  vus8 = vus8 << i;
+  vi8 = vi8 << i;
+  vui8 = vui8 << i;
+
   vc8 = vc8 << vc8;
 #ifdef ERR
   vi8 = vi8 << vuc8; // expected-error {{vector operands do not have the same elements sizes}}
