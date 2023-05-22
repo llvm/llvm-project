@@ -2926,6 +2926,21 @@ let TargetPrefix = "aarch64" in {
                              LLVMMatchType<0>, LLVMMatchType<0>],
                             [IntrNoMem]>;
 
+  class SVE2_VG2_Sel_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                [llvm_aarch64_svcount_ty, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>], [IntrNoMem]>;
+
+  class SVE2_VG4_Sel_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                             LLVMMatchType<0>, LLVMMatchType<0>],
+                [llvm_aarch64_svcount_ty, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>, LLVMMatchType<0>,
+                 LLVMMatchType<0>], [IntrNoMem]>;
+
   class SME2_CVT_VG2_SINGLE_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMSubdivide2VectorType<0>],
                             [llvm_anyvector_ty, LLVMMatchType<0>],
@@ -3385,4 +3400,9 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_uunpk_x2 : SME2_VG2_Unpk_Intrinsic;
   def int_aarch64_sve_sunpk_x4 : SME2_VG4_Unpk_Intrinsic;
   def int_aarch64_sve_uunpk_x4 : SME2_VG4_Unpk_Intrinsic;
+
+  // 2-way and 4-way vector selects
+  def int_aarch64_sve_sel_x2  : SVE2_VG2_Sel_Intrinsic;
+  def int_aarch64_sve_sel_x4  : SVE2_VG4_Sel_Intrinsic;
+
 }
