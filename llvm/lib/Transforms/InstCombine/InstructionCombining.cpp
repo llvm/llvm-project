@@ -2471,25 +2471,7 @@ static bool isMustTailCall(Value *V) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  if (RI.getNumOperands() == 0) // ret void
-    return nullptr;
-
-  Value *ResultOp = RI.getOperand(0);
-  Type *VTy = ResultOp->getType();
-  if (!VTy->isIntegerTy() || isa<Constant>(ResultOp))
-    return nullptr;
-
-  // Don't replace result of musttail calls.
-  if (isMustTailCall(ResultOp))
-    return nullptr;
-
-  // There might be assume intrinsics dominating this return that completely
-  // determine the value. If so, constant fold it.
-  KnownBits Known = computeKnownBits(ResultOp, 0, &RI);
-  if (Known.isConstant())
-    return replaceOperand(RI, 0,
-        Constant::getIntegerValue(VTy, Known.getConstant()));
-
+  // Nothing for now.
   return nullptr;
 }
 
