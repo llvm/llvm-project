@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -20,7 +19,6 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -3758,17 +3756,6 @@ mlir::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
-}
-
-//===----------------------------------------------------------------------===//
-// FIROpsDialect
-//===----------------------------------------------------------------------===//
-
-void fir::FIROpsDialect::registerOpExternalInterfaces() {
-  // Attach default declare target interfaces to operations which can be marked
-  // as declare target.
-  fir::GlobalOp::attachInterface<
-      mlir::omp::DeclareTargetDefaultModel<fir::GlobalOp>>(*getContext());
 }
 
 // Tablegen operators
