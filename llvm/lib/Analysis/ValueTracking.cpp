@@ -1353,20 +1353,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::Shl: {
+    bool NUW = Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(I));
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    auto KF = [NSW](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
-      KnownBits Result = KnownBits::shl(KnownVal, KnownAmt);
-      // If this shift has "nsw" keyword, then the result is either a poison
-      // value or has the same sign bit as the first operand.
-      if (NSW) {
-        if (KnownVal.Zero.isSignBitSet())
-          Result.Zero.setSignBit();
-        if (KnownVal.One.isSignBitSet())
-          Result.One.setSignBit();
-        if (Result.hasConflict())
-          Result.setAllZero();
-      }
-      return Result;
+    auto KF = [NUW, NSW](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
+      return KnownBits::shl(KnownVal, KnownAmt, NUW, NSW);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
