@@ -34,8 +34,11 @@ enum ActionKind {
   /// -fsyntax-only
   ParseSyntaxOnly,
 
-  /// Emit a .mlir file
-  EmitMLIR,
+  /// Emit FIR mlir file
+  EmitFIR,
+
+  /// Emit HLFIR mlir file
+  EmitHLFIR,
 
   /// Emit an .ll file
   EmitLLVM,
