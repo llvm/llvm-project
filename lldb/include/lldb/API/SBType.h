@@ -240,7 +240,9 @@ protected:
 
   SBType(const lldb_private::CompilerType &);
   SBType(const lldb::TypeSP &);
+#ifndef SWIG
   SBType(const lldb::TypeImplSP &);
+#endif
 };
 
 class SBTypeList {

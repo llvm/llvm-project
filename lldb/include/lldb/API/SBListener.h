@@ -37,6 +37,7 @@ public:
                                        const char *broadcaster_class,
                                        uint32_t event_mask);
 
+  // TODO: This returns uint32_t in the interface files. :/
   bool StopListeningForEventClass(SBDebugger &debugger,
                                   const char *broadcaster_class,
                                   uint32_t event_mask);

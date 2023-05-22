@@ -25,7 +25,9 @@ public:
 
   SBExecutionContext(const lldb::SBExecutionContext &rhs);
 
+#ifndef SWIG
   SBExecutionContext(lldb::ExecutionContextRefSP exe_ctx_ref_sp);
+#endif
 
   SBExecutionContext(const lldb::SBTarget &target);
 

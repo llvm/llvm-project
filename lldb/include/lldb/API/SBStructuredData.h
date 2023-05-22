@@ -22,7 +22,9 @@ public:
 
   SBStructuredData(const lldb::EventSP &event_sp);
 
+#ifndef SWIG
   SBStructuredData(const lldb_private::StructuredDataImpl &impl);
+#endif
 
   ~SBStructuredData();
 
