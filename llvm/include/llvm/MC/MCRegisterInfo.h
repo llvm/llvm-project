@@ -111,8 +111,8 @@ struct MCRegisterDesc {
   // sub-register in SubRegs.
   uint32_t SubRegIndices;
 
-  // Points to the list of register units. The low bits hold the first regunit
-  // number, the high bits hold an offset into DiffLists. See MCRegUnitIterator.
+  // RegUnits - Points to the list of register units. The low 4 bits holds the
+  // Scale, the high bits hold an offset into DiffLists. See MCRegUnitIterator.
   uint32_t RegUnits;
 
   /// Index into list with lane mask sequences. The sequence contains a lanemask
@@ -161,7 +161,7 @@ private:
   unsigned NumClasses;                        // Number of entries in the array
   unsigned NumRegUnits;                       // Number of regunits.
   const MCPhysReg (*RegUnitRoots)[2];         // Pointer to regunit root table.
-  const int16_t *DiffLists;                   // Pointer to the difflists array
+  const MCPhysReg *DiffLists;                 // Pointer to the difflists array
   const LaneBitmask *RegUnitMaskSequences;    // Pointer to lane mask sequences
                                               // for register units.
   const char *RegStrings;                     // Pointer to the string table.
@@ -194,17 +194,29 @@ public:
   /// Don't use this class directly, use one of the specialized sub-classes
   /// defined below.
   class DiffListIterator {
-    unsigned Val = 0;
-    const int16_t *List = nullptr;
+    uint16_t Val = 0;
+    const MCPhysReg *List = nullptr;
 
   protected:
     /// Create an invalid iterator. Call init() to point to something useful.
     DiffListIterator() = default;
 
-    /// Point the iterator to InitVal, decoding subsequent values from DiffList.
-    void init(unsigned InitVal, const int16_t *DiffList) {
+    /// init - Point the iterator to InitVal, decoding subsequent values from
+    /// DiffList. The iterator will initially point to InitVal, sub-classes are
+    /// responsible for skipping the seed value if it is not part of the list.
+    void init(MCPhysReg InitVal, const MCPhysReg *DiffList) {
       Val = InitVal;
       List = DiffList;
+    }
+
+    /// advance - Move to the next list position, return the applied
+    /// differential. This function does not detect the end of the list, that
+    /// is the caller's responsibility (by checking for a 0 return value).
+    MCRegister advance() {
+      assert(isValid() && "Cannot move off the end of the list.");
+      MCPhysReg D = *List++;
+      Val += D;
+      return D;
     }
 
   public:
@@ -216,11 +228,8 @@ public:
 
     /// Pre-increment to move to the next position.
     void operator++() {
-      assert(isValid() && "Cannot move off the end of the list.");
-      int16_t D = *List++;
-      Val += D;
       // The end of the list is encoded as a 0 differential.
-      if (!D)
+      if (!advance())
         List = nullptr;
     }
 
@@ -240,8 +249,8 @@ public:
     mc_difflist_iterator(MCRegisterInfo::DiffListIterator Iter) : Iter(Iter) {}
 
     // Allow conversion between instantiations where valid.
-    mc_difflist_iterator(unsigned InitVal, const int16_t *DiffList) {
-      Iter.init(InitVal, DiffList);
+    mc_difflist_iterator(MCRegister Reg, const MCPhysReg *DiffList) {
+      Iter.init(Reg, DiffList);
       Val = *Iter;
     }
 
@@ -342,11 +351,16 @@ public:
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
   void InitMCRegisterInfo(const MCRegisterDesc *D, unsigned NR, unsigned RA,
-                          unsigned PC, const MCRegisterClass *C, unsigned NC,
-                          const MCPhysReg (*RURoots)[2], unsigned NRU,
-                          const int16_t *DL, const LaneBitmask *RUMS,
-                          const char *Strings, const char *ClassStrings,
-                          const uint16_t *SubIndices, unsigned NumIndices,
+                          unsigned PC,
+                          const MCRegisterClass *C, unsigned NC,
+                          const MCPhysReg (*RURoots)[2],
+                          unsigned NRU,
+                          const MCPhysReg *DL,
+                          const LaneBitmask *RUMS,
+                          const char *Strings,
+                          const char *ClassStrings,
+                          const uint16_t *SubIndices,
+                          unsigned NumIndices,
                           const SubRegCoveredBits *SubIdxRanges,
                           const uint16_t *RET) {
     Desc = D;
@@ -661,9 +675,6 @@ inline bool MCRegisterInfo::isSuperRegister(MCRegister RegA, MCRegister RegB) co
 // MCRegUnitIterator enumerates a list of register units for Reg. The list is
 // in ascending numerical order.
 class MCRegUnitIterator : public MCRegisterInfo::DiffListIterator {
-  // The value must be kept in sync with RegisterInfoEmitter.cpp.
-  static constexpr unsigned RegUnitBits = 12;
-
 public:
   /// MCRegUnitIterator - Create an iterator that traverses the register units
   /// in Reg.
@@ -674,9 +685,18 @@ public:
     assert(MCRegister::isPhysicalRegister(Reg.id()));
     // Decode the RegUnits MCRegisterDesc field.
     unsigned RU = MCRI->get(Reg).RegUnits;
-    unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);
-    unsigned Offset = RU >> RegUnitBits;
-    init(FirstRU, MCRI->DiffLists + Offset);
+    unsigned Scale = RU & 15;
+    unsigned Offset = RU >> 4;
+
+    // Initialize the iterator to Reg * Scale, and the List pointer to
+    // DiffLists + Offset.
+    init(Reg * Scale, MCRI->DiffLists + Offset);
+
+    // That may not be a valid unit, we need to advance by one to get the real
+    // unit number. The first differential can be 0 which would normally
+    // terminate the list, but since we know every register has at least one
+    // unit, we can allow a 0 differential here.
+    advance();
   }
 
   MCRegUnitIterator &operator++() {
