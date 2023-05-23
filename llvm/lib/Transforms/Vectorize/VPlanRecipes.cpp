@@ -603,6 +603,33 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
+  switch (OpType) {
+  case OperationType::PossiblyExactOp:
+    if (ExactFlags.IsExact)
+      O << " exact";
+    break;
+  case OperationType::OverflowingBinOp:
+    if (WrapFlags.HasNUW)
+      O << " nuw";
+    if (WrapFlags.HasNSW)
+      O << " nsw";
+    break;
+  case OperationType::FPMathOp:
+    getFastMathFlags().print(O);
+    break;
+  case OperationType::GEPOp:
+    if (GEPFlags.IsInBounds)
+      O << " inbounds";
+    break;
+  case OperationType::Other:
+    break;
+  }
+  O << " ";
+}
+#endif
+
 void VPWidenRecipe::execute(VPTransformState &State) {
   auto &I = *cast<Instruction>(getUnderlyingValue());
   auto &Builder = State.Builder;
@@ -699,7 +726,8 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
   const Instruction *UI = getUnderlyingInstr();
-  O << " = " << UI->getOpcodeName() << " ";
+  O << " = " << UI->getOpcodeName();
+  printFlags(O);
   if (auto *Cmp = dyn_cast<CmpInst>(UI))
     O << Cmp->getPredicate() << " ";
   printOperands(O, SlotTracker);
@@ -864,7 +892,8 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 
   O << " ";
   printAsOperand(O, SlotTracker);
-  O << " = getelementptr ";
+  O << " = getelementptr";
+  printFlags(O);
   printOperands(O, SlotTracker);
 }
 #endif
@@ -973,14 +1002,17 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
     O << " = ";
   }
   if (auto *CB = dyn_cast<CallBase>(getUnderlyingInstr())) {
-    O << "call @" << CB->getCalledFunction()->getName() << "(";
+    O << "call";
+    printFlags(O);
+    O << "@" << CB->getCalledFunction()->getName() << "(";
     interleaveComma(make_range(op_begin(), op_begin() + (getNumOperands() - 1)),
                     O, [&O, &SlotTracker](VPValue *Op) {
                       Op->printAsOperand(O, SlotTracker);
                     });
     O << ")";
   } else {
-    O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode()) << " ";
+    O << Instruction::getOpcodeName(getUnderlyingInstr()->getOpcode());
+    printFlags(O);
     printOperands(O, SlotTracker);
   }
 
