@@ -1774,12 +1774,9 @@ bool operator<=(const forward_list<_Tp, _Alloc>& __x,
 
 #else // #if _LIBCPP_STD_VER <= 17
 
-template<class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI
-__synth_three_way_result<_Tp>
-operator<=>(const forward_list<_Tp, _Allocator>& __x,
-            const forward_list<_Tp, _Allocator>& __y)
-{
+template <class _Tp, class _Allocator>
+_LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp>
+operator<=>(const forward_list<_Tp, _Allocator>& __x, const forward_list<_Tp, _Allocator>& __y) {
     return std::lexicographical_compare_three_way(
         __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Tp, _Tp>);
 }

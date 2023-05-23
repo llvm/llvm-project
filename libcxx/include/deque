@@ -2920,11 +2920,9 @@ operator<=(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y)
 
 #else // _LIBCPP_STD_VER <= 17
 
-template<class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI
-__synth_three_way_result<_Tp>
-operator<=>(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y)
-{
+template <class _Tp, class _Allocator>
+_LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp>
+operator<=>(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y) {
     return std::lexicographical_compare_three_way(
         __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Tp, _Tp>);
 }
