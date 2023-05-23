@@ -297,7 +297,7 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
   dict_sp = object_sp->GetAsDictionary();
   ASSERT_TRUE(bool(dict_sp));
 
-  int num_packets;
+  size_t num_packets;
   ASSERT_TRUE(dict_sp->GetValueForKeyAsInteger("num_packets", num_packets))
       << ss.GetString();
   ASSERT_EQ(10, num_packets);
