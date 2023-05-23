@@ -653,6 +653,8 @@ public:
   Instruction *SimplifyAnyMemSet(AnyMemSetInst *MI);
 
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
+
+  bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
 };
 
 class Negator final {
