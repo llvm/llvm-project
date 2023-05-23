@@ -1,16 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify
 
-namespace dr2516 { // dr2516: yes
-                   // NB: reusing 1482 test
-#if __cplusplus >= 201103L
-template <typename T> struct S {
-  typedef char I;
-};
-enum E2 : S<E2>::I { e };
-// expected-error@-1 {{use of undeclared identifier 'E2'}}
-#endif
-} // namespace dr2516
-
 namespace dr2518 { // dr2518: 17
 
 template <class T>
