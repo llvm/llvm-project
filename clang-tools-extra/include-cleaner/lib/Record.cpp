@@ -11,6 +11,9 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Basic/FileEntry.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -20,8 +23,17 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/StringSaver.h"
+#include <algorithm>
+#include <assert.h>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -262,32 +274,14 @@ public:
     if (!Pragma)
       return false;
 
-    if (Pragma->consume_front("private")) {
-      auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin()));
-      if (!FE)
-        return false;
-      StringRef PublicHeader;
-      if (Pragma->consume_front(", include ")) {
-        // We always insert using the spelling from the pragma.
-        PublicHeader = save(Pragma->startswith("<") || Pragma->startswith("\"")
-                                ? (*Pragma)
-                                : ("\"" + *Pragma + "\"").str());
-      }
-      Out->IWYUPublic.insert({FE->getLastRef().getUniqueID(), PublicHeader});
-      return false;
-    }
-    FileID CommentFID = SM.getFileID(Range.getBegin());
-    int CommentLine = SM.getLineNumber(SM.getFileID(Range.getBegin()),
-                                       SM.getFileOffset(Range.getBegin()));
+    auto [CommentFID, CommentOffset] = SM.getDecomposedLoc(Range.getBegin());
+    int CommentLine = SM.getLineNumber(CommentFID, CommentOffset);
+    auto Filename = SM.getBufferName(Range.getBegin());
     // Record export pragma.
     if (Pragma->startswith("export")) {
-      ExportStack.push_back({CommentLine, CommentFID,
-                             save(SM.getFileEntryForID(CommentFID)->getName()),
-                             false});
+      ExportStack.push_back({CommentLine, CommentFID, save(Filename), false});
     } else if (Pragma->startswith("begin_exports")) {
-      ExportStack.push_back({CommentLine, CommentFID,
-                             save(SM.getFileEntryForID(CommentFID)->getName()),
-                             true});
+      ExportStack.push_back({CommentLine, CommentFID, save(Filename), true});
     } else if (Pragma->startswith("end_exports")) {
       // FIXME: be robust on unmatching cases. We should only pop the stack if
       // the begin_exports and end_exports is in the same file.
@@ -306,6 +300,29 @@ public:
         assert(KeepStack.back().Block);
         KeepStack.pop_back();
       }
+    }
+
+    auto FE = SM.getFileEntryRefForID(CommentFID);
+    if (!FE) {
+      // FIXME: Support IWYU pragmas in virtual files. Our mappings rely on
+      // "persistent" UniqueIDs and that is not the case for virtual files.
+      return false;
+    }
+    auto CommentUID = FE->getUniqueID();
+    if (Pragma->consume_front("private")) {
+      StringRef PublicHeader;
+      if (Pragma->consume_front(", include ")) {
+        // We always insert using the spelling from the pragma.
+        PublicHeader = save(Pragma->startswith("<") || Pragma->startswith("\"")
+                                ? (*Pragma)
+                                : ("\"" + *Pragma + "\"").str());
+      }
+      Out->IWYUPublic.insert({CommentUID, PublicHeader});
+      return false;
+    }
+    if (Pragma->consume_front("always_keep")) {
+      Out->AlwaysKeep.insert(CommentUID);
+      return false;
     }
     return false;
   }
@@ -399,6 +416,14 @@ bool PragmaIncludes::isSelfContained(const FileEntry *FE) const {
 
 bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
   return IWYUPublic.contains(FE->getUniqueID());
+}
+
+bool PragmaIncludes::shouldKeep(unsigned HashLineNumber) const {
+  return ShouldKeep.contains(HashLineNumber);
+}
+
+bool PragmaIncludes::shouldKeep(const FileEntry *FE) const {
+  return AlwaysKeep.contains(FE->getUniqueID());
 }
 
 namespace {

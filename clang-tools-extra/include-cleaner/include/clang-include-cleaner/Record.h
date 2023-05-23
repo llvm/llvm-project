@@ -59,9 +59,8 @@ public:
 
   /// Returns true if the given #include of the main-file should never be
   /// removed.
-  bool shouldKeep(unsigned HashLineNumber) const {
-    return ShouldKeep.contains(HashLineNumber);
-  }
+  bool shouldKeep(unsigned HashLineNumber) const;
+  bool shouldKeep(const FileEntry *FE) const;
 
   /// Returns the public mapping include for the given physical header file.
   /// Returns "" if there is none.
@@ -113,6 +112,8 @@ private:
 
   /// Contains all non self-contained files detected during the parsing.
   llvm::DenseSet<llvm::sys::fs::UniqueID> NonSelfContainedFiles;
+  // Files with an always_keep pragma.
+  llvm::DenseSet<llvm::sys::fs::UniqueID> AlwaysKeep;
 
   /// Owns the strings.
   llvm::BumpPtrAllocator Arena;

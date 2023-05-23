@@ -502,5 +502,20 @@ TEST_F(PragmaIncludeTest, SelfContained) {
   EXPECT_FALSE(PI.isSelfContained(FM.getFile("unguarded.h").get()));
 }
 
+TEST_F(PragmaIncludeTest, AlwaysKeep) {
+  Inputs.Code = R"cpp(
+  #include "always_keep.h"
+  #include "usual.h"
+  )cpp";
+  Inputs.ExtraFiles["always_keep.h"] = R"cpp(
+  #pragma once
+  // IWYU pragma: always_keep
+  )cpp";
+  Inputs.ExtraFiles["usual.h"] = "#pragma once";
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("always_keep.h").get()));
+  EXPECT_FALSE(PI.shouldKeep(FM.getFile("usual.h").get()));
+}
 } // namespace
 } // namespace clang::include_cleaner
