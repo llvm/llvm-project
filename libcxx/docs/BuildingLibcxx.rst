@@ -10,7 +10,7 @@ Building libc++
 .. _build instructions:
 
 The instructions on this page are aimed at vendors who ship libc++ as part of an
-operating system distribution, a toolchain or similar shipping vehicules. If you
+operating system distribution, a toolchain or similar shipping vehicles. If you
 are a user merely trying to use libc++ in your program, you most likely want to
 refer to your vendor's documentation, or to the general documentation for using
 libc++ :ref:`here <using-libcxx>`.
