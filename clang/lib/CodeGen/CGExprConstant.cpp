@@ -2189,6 +2189,11 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
 
     llvm::ArrayType *Desired =
         cast<llvm::ArrayType>(CGM.getTypes().ConvertType(DestType));
+
+    // Fix the type of incomplete arrays if the initializer isn't empty.
+    if (DestType->isIncompleteArrayType() && !Elts.empty())
+      Desired = llvm::ArrayType::get(Desired->getElementType(), Elts.size());
+
     return EmitArrayConstant(CGM, Desired, CommonElementType, NumElements, Elts,
                              Filler);
   }
