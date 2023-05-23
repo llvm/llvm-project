@@ -258,6 +258,9 @@ bool ScriptedThread::CalculateStopInfo() {
     stop_info_sp =
         StopInfo::CreateStopReasonWithSignal(*this, signal, description.data());
   } break;
+  case lldb::eStopReasonTrace: {
+    stop_info_sp = StopInfo::CreateStopReasonToTrace(*this);
+  } break;
   case lldb::eStopReasonException: {
 #if defined(__APPLE__)
     StructuredData::Dictionary *mach_exception;
