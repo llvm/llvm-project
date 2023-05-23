@@ -68,21 +68,20 @@ bool isIgnored(llvm::StringRef HeaderPath, HeaderFilter IgnoreHeaders) {
   return false;
 }
 
-bool mayConsiderUnused(
-    const Inclusion &Inc, ParsedAST &AST,
-    const include_cleaner::PragmaIncludes *PI) {
-  if (PI && PI->shouldKeep(Inc.HashLine + 1))
-      return false;
-  // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
-  // System headers are likely to be standard library headers.
-  // Until we have good support for umbrella headers, don't warn about them.
-  if (Inc.Written.front() == '<')
-    return tooling::stdlib::Header::named(Inc.Written).has_value();
+bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
+                       const include_cleaner::PragmaIncludes *PI) {
   assert(Inc.HeaderID);
   auto HID = static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID);
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
+  if (PI && (PI->shouldKeep(Inc.HashLine + 1) || PI->shouldKeep(*FE)))
+    return false;
+  // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
+  // System headers are likely to be standard library headers.
+  // Until we have good support for umbrella headers, don't warn about them.
+  if (Inc.Written.front() == '<')
+    return tooling::stdlib::Header::named(Inc.Written).has_value();
   if (PI) {
     // Check if main file is the public interface for a private header. If so we
     // shouldn't diagnose it as unused.
