@@ -525,33 +525,6 @@ void test31(void) {
   gi = OBJECT_SIZE_BUILTIN(&dsv[9].snd[0], 1);
 }
 
-// CHECK-LABEL: @test32
-static struct DynStructVar D32 = {
-  .fst = {},
-  .snd = { 0, 1, 2, },
-};
-unsigned long test32(void) {
-  // CHECK: ret i64 19
-  return OBJECT_SIZE_BUILTIN(&D32, 1);
-}
-// CHECK-LABEL: @test33
-static struct DynStructVar D33 = {
-  .fst = {},
-  .snd = {},
-};
-unsigned long test33(void) {
-  // CHECK: ret i64 16
-  return OBJECT_SIZE_BUILTIN(&D33, 1);
-}
-// CHECK-LABEL: @test34
-static struct DynStructVar D34 = {
-  .fst = {},
-};
-unsigned long test34(void) {
-  // CHECK: ret i64 16
-  return OBJECT_SIZE_BUILTIN(&D34, 1);
-}
-
 // CHECK-LABEL: @PR30346
 void PR30346(void) {
   struct sa_family_t {};
