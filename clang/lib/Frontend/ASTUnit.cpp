@@ -785,7 +785,8 @@ void ASTUnit::ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
     WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-    const FileSystemOptions &FileSystemOpts, bool UseDebugInfo,
+    const FileSystemOptions &FileSystemOpts,
+    std::shared_ptr<HeaderSearchOptions> HSOpts, bool UseDebugInfo,
     bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
     bool AllowASTWithCompilerErrors, bool UserFilesAreVolatile,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
@@ -810,7 +811,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                                      AST->getFileManager(),
                                      UserFilesAreVolatile);
   AST->ModuleCache = new InMemoryModuleCache;
-  AST->HSOpts = std::make_shared<HeaderSearchOptions>();
+  AST->HSOpts = HSOpts ? HSOpts : std::make_shared<HeaderSearchOptions>();
   AST->HSOpts->ModuleFormat = std::string(PCHContainerRdr.getFormats().front());
   AST->HeaderInfo.reset(new HeaderSearch(AST->HSOpts,
                                          AST->getSourceManager(),
