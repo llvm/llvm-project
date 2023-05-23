@@ -443,7 +443,8 @@ LIBC_INLINE void Port<T>::send_n(const void *const *src, uint64_t *size) {
     inline_memcpy(&buffer->data[1], lane_value(src, id), len);
   });
   uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
-  while (gpu::ballot(process.get_packet(index).header.mask, idx < num_sends)) {
+  uint64_t mask = process.get_packet(index).header.mask;
+  while (gpu::ballot(mask, idx < num_sends)) {
     send([=](Buffer *buffer, uint32_t id) {
       uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
                          ? sizeof(Buffer::data)
