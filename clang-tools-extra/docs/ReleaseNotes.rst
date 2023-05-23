@@ -202,9 +202,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Fixed false-positive in :doc:`bugprone-branch-clone
-  <clang-tidy/checks/bugprone/branch-clone>` check by ignoring duplicated
-  switch cases marked with the ``[[fallthrough]]`` attribute.
+- Fixed false-positives in :doc:`bugprone-branch-clone
+  <clang-tidy/checks/bugprone/branch-clone>` check by ignoring auto-generated
+  code, template instances, implicit code patterns and duplicated switch cases
+  marked with the ``[[fallthrough]]`` attribute.
 
 - Improved :doc:`readability-redundant-string-cstr
   <clang-tidy/checks/readability/redundant-string-cstr>` check to recognise
