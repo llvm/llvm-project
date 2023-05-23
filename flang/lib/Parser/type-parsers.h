@@ -137,5 +137,8 @@ constexpr Parser<OpenACCDeclarativeConstruct> openaccDeclarativeConstruct;
 constexpr Parser<OpenMPConstruct> openmpConstruct;
 constexpr Parser<OpenMPDeclarativeConstruct> openmpDeclarativeConstruct;
 constexpr Parser<OmpEndLoopDirective> ompEndLoopDirective;
+constexpr Parser<IntrinsicVectorTypeSpec> intrinsicVectorTypeSpec; // Extension
+constexpr Parser<VectorTypeSpec> vectorTypeSpec; // Extension
+constexpr Parser<UnsignedTypeSpec> unsignedTypeSpec; // Extension
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_TYPE_PARSERS_H_
