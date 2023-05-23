@@ -514,6 +514,13 @@ public:
     llvm_unreachable("NYI");
   }
 
+  /// Perform a pointer to boolean conversion.
+  mlir::Value buildPointerToBoolConversion(mlir::Value V, QualType QT) {
+    // An extra pass should make this into a `cir.cmp V, nullptr` before
+    // lowering to LLVM.
+    return CGF.getBuilder().createPtrToBoolCast(V);
+  }
+
   // Comparisons.
 #define VISITCOMP(CODE)                                                        \
   mlir::Value VisitBin##CODE(const BinaryOperator *E) { return buildCmp(E); }
@@ -804,8 +811,8 @@ public:
         loc, boolTy, mlir::cir::CastKind::int_to_bool, srcVal);
   }
 
-  /// EmitConversionToBool - Convert the specified expression value to a
-  /// boolean (i1) truth value.  This is equivalent to "Val != 0".
+  /// Convert the specified expression value to a boolean (!cir.bool) truth
+  /// value. This is equivalent to "Val != 0".
   mlir::Value buildConversionToBool(mlir::Value Src, QualType SrcType,
                                     mlir::Location loc) {
     assert(SrcType.isCanonical() && "EmitScalarConversion strips typedefs");
@@ -1140,7 +1147,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
 
   case CK_PointerToBoolean:
-    llvm_unreachable("NYI");
+    return buildPointerToBoolConversion(Visit(E), E->getType());
   case CK_FloatingToBoolean:
     llvm_unreachable("NYI");
   case CK_MemberPointerToBoolean:
