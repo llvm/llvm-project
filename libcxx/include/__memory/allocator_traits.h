@@ -412,7 +412,7 @@ struct __asan_annotate_container_with_allocator
 #   if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1600
       : true_type {};
 #   else
-      // TODO LLVM18: Remove the special-casing
+      // TODO(LLVM-18): Remove the special-casing
       : false_type {};
 #   endif
 
