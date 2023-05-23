@@ -906,8 +906,7 @@ define i64 @ustest_f64i64_mm(double %x) {
 ; CHECK-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-NEXT:    csel x8, xzr, x8, eq
 ; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    csel x9, x8, xzr, gt
-; CHECK-NEXT:    csel x0, x8, x9, eq
+; CHECK-NEXT:    csel x0, xzr, x8, lt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -963,8 +962,7 @@ define i64 @ustest_f32i64_mm(float %x) {
 ; CHECK-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-NEXT:    csel x8, xzr, x8, eq
 ; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    csel x9, x8, xzr, gt
-; CHECK-NEXT:    csel x0, x8, x9, eq
+; CHECK-NEXT:    csel x0, xzr, x8, lt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -1026,8 +1024,7 @@ define i64 @ustest_f16i64_mm(half %x) {
 ; CHECK-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-NEXT:    csel x8, xzr, x8, eq
 ; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    csel x9, x8, xzr, gt
-; CHECK-NEXT:    csel x0, x8, x9, eq
+; CHECK-NEXT:    csel x0, xzr, x8, lt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
