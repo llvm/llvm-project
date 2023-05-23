@@ -264,7 +264,7 @@
 .attribute arch, "rv32i_ssaia1p0"
 # CHECK: attribute      5, "rv32i2p1_ssaia1p0"
 
-.attribute arch, "rv32if_zfbfmin0p6"
+.attribute arch, "rv32i_zfbfmin0p6"
 # CHECK: .attribute     5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin0p6"
 
 .attribute arch, "rv32i_zvfbfmin0p6"
