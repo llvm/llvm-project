@@ -672,6 +672,18 @@ void Module::setRtLibUseGOT() {
   addModuleFlag(ModFlagBehavior::Max, "RtLibUseGOT", 1);
 }
 
+bool Module::getDirectAccessExternalData() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(
+      getModuleFlag("direct-access-external-data"));
+  if (Val)
+    return cast<ConstantInt>(Val->getValue())->getZExtValue() > 0;
+  return getPICLevel() == PICLevel::NotPIC;
+}
+
+void Module::setDirectAccessExternalData(bool Value) {
+  addModuleFlag(ModFlagBehavior::Max, "direct-access-external-data", Value);
+}
+
 UWTableKind Module::getUwtable() const {
   if (auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("uwtable")))
     return UWTableKind(cast<ConstantInt>(Val->getValue())->getZExtValue());

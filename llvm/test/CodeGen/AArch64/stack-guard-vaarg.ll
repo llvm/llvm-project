@@ -36,3 +36,6 @@ declare void @llvm.va_end(ptr)
 declare void @llvm.lifetime.end(i64, ptr nocapture)
 
 attributes #0 = { noinline nounwind optnone ssp }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 7, !"direct-access-external-data", i32 1}
