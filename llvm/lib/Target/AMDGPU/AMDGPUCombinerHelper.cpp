@@ -380,3 +380,56 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
 
   MI.eraseFromParent();
 }
+
+// TODO: Should return converted value / extension source and avoid introducing
+// intermediate fptruncs in the apply function.
+static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
+                                  Register Reg) {
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (Def->getOpcode() == TargetOpcode::G_FPEXT) {
+    Register SrcReg = Def->getOperand(1).getReg();
+    return MRI.getType(SrcReg) == LLT::scalar(16);
+  }
+
+  if (Def->getOpcode() == TargetOpcode::G_FCONSTANT) {
+    APFloat Val = Def->getOperand(1).getFPImm()->getValueAPF();
+    bool LosesInfo = true;
+    Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
+    return !LosesInfo;
+  }
+
+  return false;
+}
+
+bool AMDGPUCombinerHelper::matchExpandPromotedF16FMed3(MachineInstr &MI,
+                                                       Register Src0,
+                                                       Register Src1,
+                                                       Register Src2) {
+  assert(MI.getOpcode() == TargetOpcode::G_FPTRUNC);
+  Register SrcReg = MI.getOperand(1).getReg();
+  if (!MRI.hasOneNonDBGUse(SrcReg) || MRI.getType(SrcReg) != LLT::scalar(32))
+    return false;
+
+  return isFPExtFromF16OrConst(MRI, Src0) && isFPExtFromF16OrConst(MRI, Src1) &&
+         isFPExtFromF16OrConst(MRI, Src2);
+}
+
+void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
+                                                       Register Src0,
+                                                       Register Src1,
+                                                       Register Src2) {
+  Builder.setInstrAndDebugLoc(MI);
+
+  // We expect fptrunc (fpext x) to fold out, and to constant fold any constant
+  // sources.
+  Src0 = Builder.buildFPTrunc(LLT::scalar(16), Src0).getReg(0);
+  Src1 = Builder.buildFPTrunc(LLT::scalar(16), Src1).getReg(0);
+  Src2 = Builder.buildFPTrunc(LLT::scalar(16), Src2).getReg(0);
+
+  LLT Ty = MRI.getType(Src0);
+  auto A1 = Builder.buildFMinNumIEEE(Ty, Src0, Src1);
+  auto B1 = Builder.buildFMaxNumIEEE(Ty, Src0, Src1);
+  auto C1 = Builder.buildFMaxNumIEEE(Ty, A1, Src2);
+  Builder.buildFMinNumIEEE(MI.getOperand(0), B1, C1);
+  MI.eraseFromParent();
+}

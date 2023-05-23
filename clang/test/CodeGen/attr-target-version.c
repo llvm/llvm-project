@@ -119,7 +119,7 @@ int hoo(void) {
 // CHECK-LABEL: @fmv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 0
-// CHECK-LABEL: @fmv_one._Mls64Msimd(
+// CHECK-LABEL: @fmv_one._MsimdMls64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 // CHECK-LABEL: @fmv_one._Mdpb(
@@ -137,7 +137,7 @@ int hoo(void) {
 // CHECK-LABEL: @fmv_two._Mdgh(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
-// CHECK-LABEL: @fmv_two._Mfp16Msimd(
+// CHECK-LABEL: @fmv_two._MsimdMfp16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 4
 // CHECK-LABEL: @fmv_two(
@@ -229,10 +229,10 @@ int hoo(void) {
 // CHECK-NEXT:    ret ptr @fmv
 // CHECK-LABEL: @fmv_one.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    ret ptr @fmv_one._Mls64Msimd
+// CHECK-NEXT:    ret ptr @fmv_one._MsimdMls64
 // CHECK-LABEL: @fmv_two.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    ret ptr @fmv_two._Mfp16Msimd
+// CHECK-NEXT:    ret ptr @fmv_two._MsimdMfp16
 // CHECK-LABEL: @fmv_e(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 20
@@ -262,7 +262,7 @@ int hoo(void) {
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @fmv_inline._Mfp16MfcmaMsmeMfp16
+// CHECK-NEXT:    ret ptr @fmv_inline._Mfp16Mfp16MfcmaMsme
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 893353197568
@@ -407,7 +407,7 @@ int hoo(void) {
 // CHECK-LABEL: @fmv_inline._Msha1MpmullMf64mm(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
-// CHECK-LABEL: @fmv_inline._Mfp16MfcmaMsmeMfp16(
+// CHECK-LABEL: @fmv_inline._Mfp16Mfp16MfcmaMsme(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 // CHECK-LABEL: @fmv_inline._Msha3Mi8mmMf32mm(

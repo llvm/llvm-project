@@ -17,8 +17,7 @@ class stop_handler:
         increment = 1
         value = self.extra_args.GetValueForKey("increment")
         if value:
-            incr_as_str = value.GetStringValue(100)
-            increment = int(incr_as_str)
+            increment = value.GetUnsignedIntegerValue()
         else:
             stream.Print("Could not find increment in extra_args\n")
         frame = exe_ctx.GetFrame()

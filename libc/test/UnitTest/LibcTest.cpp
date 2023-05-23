@@ -13,6 +13,13 @@
 #include "src/__support/UInt128.h"
 #include "test/UnitTest/TestLogger.h"
 
+#if __STDC_HOSTED__
+#include <time.h>
+#else
+static long clock() { return 0; }
+#define CLOCKS_PER_SEC 1
+#endif
+
 namespace __llvm_libc {
 namespace testing {
 
@@ -149,11 +156,13 @@ int Test::runTests(const char *TestFilter) {
       continue;
     }
     tlog << GREEN << "[ RUN      ] " << RESET << TestName << '\n';
+    [[maybe_unused]] const auto start_time = clock();
     RunContext Ctx;
     T->SetUp();
     T->setContext(&Ctx);
     T->Run();
     T->TearDown();
+    [[maybe_unused]] const auto end_time = clock();
     auto Result = Ctx.status();
     switch (Result) {
     case RunContext::Result_Fail:
@@ -161,7 +170,19 @@ int Test::runTests(const char *TestFilter) {
       ++FailCount;
       break;
     case RunContext::Result_Pass:
-      tlog << GREEN << "[       OK ] " << RESET << TestName << '\n';
+      tlog << GREEN << "[       OK ] " << RESET << TestName;
+#if __STDC_HOSTED__
+      tlog << " (took ";
+      if (start_time > end_time) {
+        tlog << "unknown - try rerunning)\n";
+      } else {
+        const auto duration = end_time - start_time;
+        const uint64_t duration_ms = duration * 1000 / CLOCKS_PER_SEC;
+        tlog << duration_ms << " ms)\n";
+      }
+#else
+      tlog << '\n';
+#endif
       break;
     }
     ++TestCount;

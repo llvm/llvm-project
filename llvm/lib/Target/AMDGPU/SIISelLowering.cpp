@@ -772,6 +772,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::INSERT_VECTOR_ELT,
                        ISD::FCOPYSIGN});
 
+  if (Subtarget->has16BitInsts() && !Subtarget->hasMed3_16())
+    setTargetDAGCombine(ISD::FP_ROUND);
+
   // All memory operations. Some folding on the pointer operand is done to help
   // matching the constant offsets in the addressing modes.
   setTargetDAGCombine({ISD::LOAD,
@@ -11106,6 +11109,71 @@ SITargetLowering::performInsertVectorEltCombine(SDNode *N,
   return DAG.getBuildVector(VecVT, SL, Ops);
 }
 
+/// Return the source of an fp_extend from f16 to f32, or a converted FP
+/// constant.
+static SDValue strictFPExtFromF16(SelectionDAG &DAG, SDValue Src) {
+  if (Src.getOpcode() == ISD::FP_EXTEND &&
+      Src.getOperand(0).getValueType() == MVT::f16) {
+    return Src.getOperand(0);
+  }
+
+  if (auto *CFP = dyn_cast<ConstantFPSDNode>(Src)) {
+    APFloat Val = CFP->getValueAPF();
+    bool LosesInfo = true;
+    Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
+    if (!LosesInfo)
+      return DAG.getConstantFP(Val, SDLoc(Src), MVT::f16);
+  }
+
+  return SDValue();
+}
+
+SDValue SITargetLowering::performFPRoundCombine(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
+  assert(Subtarget->has16BitInsts() && !Subtarget->hasMed3_16() &&
+         "combine only useful on gfx8");
+
+  SDValue TruncSrc = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::f16)
+    return SDValue();
+
+  if (TruncSrc.getOpcode() != AMDGPUISD::FMED3 ||
+      TruncSrc.getValueType() != MVT::f32 || !TruncSrc.hasOneUse() ||
+      !isNullConstant(N->getOperand(1)))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+
+  // Optimize f16 fmed3 pattern performed on f32. On gfx8 there is no f16 fmed3,
+  // and expanding it with min/max saves 1 instruction vs. casting to f32 and
+  // casting back.
+
+  // fptrunc (f32 (fmed3 (fpext f16:a, fpext f16:b, fpext f16:c))) =>
+  // fmin(fmax(a, b), fmax(fmin(a, b), c))
+  SDValue A = strictFPExtFromF16(DAG, TruncSrc.getOperand(0));
+  if (!A)
+    return SDValue();
+
+  SDValue B = strictFPExtFromF16(DAG, TruncSrc.getOperand(1));
+  if (!B)
+    return SDValue();
+
+  SDValue C = strictFPExtFromF16(DAG, TruncSrc.getOperand(2));
+  if (!C)
+    return SDValue();
+
+  // This changes signaling nan behavior. If an input is a signaling nan, it
+  // would have been quieted by the fpext originally. We don't care because
+  // these are unconstrained ops. If we needed to insert quieting canonicalizes
+  // we would be worse off than just doing the promotion.
+  SDValue A1 = DAG.getNode(ISD::FMINNUM_IEEE, SL, VT, A, B);
+  SDValue B1 = DAG.getNode(ISD::FMAXNUM_IEEE, SL, VT, A, B);
+  SDValue C1 = DAG.getNode(ISD::FMAXNUM_IEEE, SL, VT, A1, C);
+  return DAG.getNode(ISD::FMINNUM_IEEE, SL, VT, B1, C1);
+}
+
 unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
                                           const SDNode *N0,
                                           const SDNode *N1) const {
@@ -11861,6 +11929,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performExtractVectorEltCombine(N, DCI);
   case ISD::INSERT_VECTOR_ELT:
     return performInsertVectorEltCombine(N, DCI);
+  case ISD::FP_ROUND:
+    return performFPRoundCombine(N, DCI);
   case ISD::LOAD: {
     if (SDValue Widended = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widended;

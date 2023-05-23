@@ -293,15 +293,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   ];
 
   let extraClassDeclaration = [{
-    /// Returns the type for position storage based on posWidth.
-    /// Asserts that the encoding is non-null (since there's nowhere
-    /// to get the `MLIRContext` from).
-    Type getPosType() const;
-
-    /// Returns the type for coordinate storage based on crdWidth.
-    /// Asserts that the encoding is non-null (since there's nowhere
-    /// to get the `MLIRContext` from).
-    Type getCrdType() const;
+    //
+    // Factory methods.
+    //
 
     /// Constructs a new encoding with the dimOrdering and higherOrdering
     /// reset to the default/identity.
@@ -311,18 +305,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// reset to the default.
     SparseTensorEncodingAttr withoutBitWidths() const;
 
-    /// Returns true if every level is dense.  Also returns true for
-    /// the null encoding (since dense-tensors are always all-dense).
-    bool isAllDense() const;
-
-    /// Returns true if every level is ordered.  Also returns true for
-    /// the null encoding (since dense-tensors are always all-ordered).
-    bool isAllOrdered() const;
-
-    /// Returns true if the encoding has an identity dimension ordering.
-    /// Also returns true for the null encoding (since dense-tensors
-    /// always have the identity ordering).
-    bool hasIdDimOrdering() const;
+    //
+    // lvlTypes methods.
+    //
 
     /// Returns the number of storage levels.  Asserts that the encoding
     /// is non-null (since there is no fixed result that's valid for
@@ -340,6 +325,41 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonDLT(getLvlType(l)); }
     bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedDLT(getLvlType(l)); }
     bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueDLT(getLvlType(l)); }
+
+    /// Returns true if every level is dense.  Also returns true for
+    /// the null encoding (since dense-tensors are always all-dense).
+    bool isAllDense() const;
+
+    /// Returns true if every level is ordered.  Also returns true for
+    /// the null encoding (since dense-tensors are always all-ordered).
+    bool isAllOrdered() const;
+
+    //
+    // dimOrdering/higherOrdering methods.
+    //
+
+    /// Returns true if the encoding has an identity dimension ordering.
+    /// Also returns true for the null encoding (since dense-tensors
+    /// always have the identity ordering).
+    bool hasIdDimOrdering() const;
+
+    //
+    // posWidth/crdWidth methods.
+    //
+
+    /// Returns the type for position storage based on posWidth.
+    /// Asserts that the encoding is non-null (since there's nowhere
+    /// to get the `MLIRContext` from).
+    Type getPosType() const;
+
+    /// Returns the type for coordinate storage based on crdWidth.
+    /// Asserts that the encoding is non-null (since there's nowhere
+    /// to get the `MLIRContext` from).
+    Type getCrdType() const;
+
+    //
+    // dimSlices methods.
+    //
 
     bool isSlice() const;
 

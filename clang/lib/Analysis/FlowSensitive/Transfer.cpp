@@ -224,8 +224,7 @@ public:
       break;
     }
     case BO_Comma: {
-      if (auto *Loc = Env.getStorageLocation(*RHS, SkipPast::None))
-        Env.setStorageLocation(*S, *Loc);
+      propagateValueOrStorageLocation(*RHS, *S, Env);
       break;
     }
     default:
@@ -397,13 +396,9 @@ public:
       // CK_ConstructorConversion, and CK_UserDefinedConversion.
     case CK_NoOp: {
       // FIXME: Consider making `Environment::getStorageLocation` skip noop
-      // expressions (this and other similar expressions in the file) instead of
-      // assigning them storage locations.
-      auto *SubExprLoc = Env.getStorageLocation(*SubExpr, SkipPast::None);
-      if (SubExprLoc == nullptr)
-        break;
-
-      Env.setStorageLocation(*S, *SubExprLoc);
+      // expressions (this and other similar expressions in the file) instead
+      // of assigning them storage locations.
+      propagateValueOrStorageLocation(*SubExpr, *S, Env);
       break;
     }
     case CK_NullToPointer:

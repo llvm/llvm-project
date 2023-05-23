@@ -1,5 +1,8 @@
 // RUN: %libomp-compile-and-run
 
+// Support for collapse of non-rectangular loop nests was added in GCC 11
+// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8, gcc-9, gcc-10
+
 #define N 10
 int arr[N][N][N];
 

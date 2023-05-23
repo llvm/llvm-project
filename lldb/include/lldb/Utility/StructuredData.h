@@ -26,6 +26,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace lldb_private {
@@ -48,10 +49,13 @@ namespace lldb_private {
 /// that may be present.
 
 class StructuredData {
+  template <typename N> class Integer;
+
 public:
   class Object;
   class Array;
-  class Integer;
+  using UnsignedInteger = Integer<uint64_t>;
+  using SignedInteger = Integer<int64_t>;
   class Float;
   class Boolean;
   class String;
@@ -60,12 +64,15 @@ public:
 
   typedef std::shared_ptr<Object> ObjectSP;
   typedef std::shared_ptr<Array> ArraySP;
-  typedef std::shared_ptr<Integer> IntegerSP;
+  typedef std::shared_ptr<UnsignedInteger> UnsignedIntegerSP;
+  typedef std::shared_ptr<SignedInteger> SignedIntegerSP;
   typedef std::shared_ptr<Float> FloatSP;
   typedef std::shared_ptr<Boolean> BooleanSP;
   typedef std::shared_ptr<String> StringSP;
   typedef std::shared_ptr<Dictionary> DictionarySP;
   typedef std::shared_ptr<Generic> GenericSP;
+
+  typedef std::variant<UnsignedIntegerSP, SignedIntegerSP> IntegerSP;
 
   class Object : public std::enable_shared_from_this<Object> {
   public:
@@ -94,14 +101,28 @@ public:
                   : nullptr);
     }
 
-    Integer *GetAsInteger() {
-      return ((m_type == lldb::eStructuredDataTypeInteger)
-                  ? static_cast<Integer *>(this)
+    UnsignedInteger *GetAsUnsignedInteger() {
+      // NOTE: For backward compatibility, eStructuredDataTypeInteger is
+      // the same as eStructuredDataTypeUnsignedInteger.
+      return ((m_type == lldb::eStructuredDataTypeInteger ||
+               m_type == lldb::eStructuredDataTypeUnsignedInteger)
+                  ? static_cast<UnsignedInteger *>(this)
                   : nullptr);
     }
 
-    uint64_t GetIntegerValue(uint64_t fail_value = 0) {
-      Integer *integer = GetAsInteger();
+    SignedInteger *GetAsSignedInteger() {
+      return ((m_type == lldb::eStructuredDataTypeSignedInteger)
+                  ? static_cast<SignedInteger *>(this)
+                  : nullptr);
+    }
+
+    uint64_t GetUnsignedIntegerValue(uint64_t fail_value = 0) {
+      UnsignedInteger *integer = GetAsUnsignedInteger();
+      return ((integer != nullptr) ? integer->GetValue() : fail_value);
+    }
+
+    int64_t GetSignedIntegerValue(int64_t fail_value = 0) {
+      SignedInteger *integer = GetAsSignedInteger();
       return ((integer != nullptr) ? integer->GetValue() : fail_value);
     }
 
@@ -202,9 +223,16 @@ public:
     bool GetItemAtIndexAsInteger(size_t idx, IntType &result) const {
       ObjectSP value_sp = GetItemAtIndex(idx);
       if (value_sp.get()) {
-        if (auto int_value = value_sp->GetAsInteger()) {
-          result = static_cast<IntType>(int_value->GetValue());
-          return true;
+        if constexpr (std::numeric_limits<IntType>::is_signed) {
+          if (auto signed_value = value_sp->GetAsSignedInteger()) {
+            result = static_cast<IntType>(signed_value->GetValue());
+            return true;
+          }
+        } else {
+          if (auto unsigned_value = value_sp->GetAsUnsignedInteger()) {
+            result = static_cast<IntType>(unsigned_value->GetValue());
+            return true;
+          }
         }
       }
       return false;
@@ -281,6 +309,26 @@ public:
 
     void AddItem(const ObjectSP &item) { m_items.push_back(item); }
 
+    template <typename T> void AddIntegerItem(T value) {
+      static_assert(std::is_integral<T>::value ||
+                        std::is_floating_point<T>::value,
+                    "value type should be integral");
+      if constexpr (std::numeric_limits<T>::is_signed)
+        AddItem(std::make_shared<SignedInteger>(value));
+      else
+        AddItem(std::make_shared<UnsignedInteger>(value));
+    }
+
+    void AddFloatItem(double value) { AddItem(std::make_shared<Float>(value)); }
+
+    void AddStringItem(llvm::StringRef value) {
+      AddItem(std::make_shared<String>(std::move(value)));
+    }
+
+    void AddBooleanItem(bool value) {
+      AddItem(std::make_shared<Boolean>(value));
+    }
+
     void Serialize(llvm::json::OStream &s) const override;
 
     void GetDescription(lldb_private::Stream &s) const override;
@@ -290,25 +338,36 @@ public:
     collection m_items;
   };
 
-  class Integer : public Object {
-  public:
-    Integer(uint64_t i = 0)
-        : Object(lldb::eStructuredDataTypeInteger), m_value(i) {}
+private:
+  template <typename N> class Integer : public Object {
+    static_assert(std::is_integral<N>::value, "N must be an integral type");
 
+  public:
+    Integer(N i = 0)
+        : Object(std::numeric_limits<N>::is_signed
+                     ? lldb::eStructuredDataTypeSignedInteger
+                     : lldb::eStructuredDataTypeUnsignedInteger),
+          m_value(i) {}
     ~Integer() override = default;
 
-    void SetValue(uint64_t value) { m_value = value; }
+    void SetValue(N value) { m_value = value; }
 
-    uint64_t GetValue() { return m_value; }
+    N GetValue() { return m_value; }
 
-    void Serialize(llvm::json::OStream &s) const override;
+    void Serialize(llvm::json::OStream &s) const override {
+      s.value(static_cast<N>(m_value));
+    }
 
-    void GetDescription(lldb_private::Stream &s) const override;
+    void GetDescription(lldb_private::Stream &s) const override {
+      s.Printf(std::numeric_limits<N>::is_signed ? "%" PRId64 : "%" PRIu64,
+               static_cast<N>(m_value));
+    }
 
   protected:
-    uint64_t m_value;
+    N m_value;
   };
 
+public:
   class Float : public Object {
   public:
     Float(double d = 0.0)
@@ -429,9 +488,16 @@ public:
     bool GetValueForKeyAsInteger(llvm::StringRef key, IntType &result) const {
       ObjectSP value_sp = GetValueForKey(key);
       if (value_sp) {
-        if (auto int_value = value_sp->GetAsInteger()) {
-          result = static_cast<IntType>(int_value->GetValue());
-          return true;
+        if constexpr (std::numeric_limits<IntType>::is_signed) {
+          if (auto signed_value = value_sp->GetAsSignedInteger()) {
+            result = static_cast<IntType>(signed_value->GetValue());
+            return true;
+          }
+        } else {
+          if (auto unsigned_value = value_sp->GetAsUnsignedInteger()) {
+            result = static_cast<IntType>(unsigned_value->GetValue());
+            return true;
+          }
         }
       }
       return false;
@@ -522,8 +588,14 @@ public:
       m_dict[key_cs] = std::move(value_sp);
     }
 
-    void AddIntegerItem(llvm::StringRef key, uint64_t value) {
-      AddItem(key, std::make_shared<Integer>(value));
+    template <typename T> void AddIntegerItem(llvm::StringRef key, T value) {
+      static_assert(std::is_integral<T>::value ||
+                        std::is_floating_point<T>::value,
+                    "value type should be integral");
+      if constexpr (std::numeric_limits<T>::is_signed)
+        AddItem(key, std::make_shared<SignedInteger>(value));
+      else
+        AddItem(key, std::make_shared<UnsignedInteger>(value));
     }
 
     void AddFloatItem(llvm::StringRef key, double value) {

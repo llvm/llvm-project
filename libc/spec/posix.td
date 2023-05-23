@@ -984,7 +984,7 @@ def POSIX : StandardSpec<"POSIX"> {
       >,
       FunctionSpec<
           "pthread_exit",
-          RetValSpec<VoidType>,
+          RetValSpec<NoReturn>,
           [ArgSpec<VoidPtr>]
       >,
       FunctionSpec<
