@@ -325,11 +325,11 @@ public:
             MlirType t = mlirComplexTypeGet(elementType);
             return PyComplexType(elementType.getContext(), t);
           }
-          throw SetPyError(
-              PyExc_ValueError,
-              Twine("invalid '") +
-                  py::repr(py::cast(elementType)).cast<std::string>() +
-                  "' and expected floating point or integer type.");
+          throw py::value_error(
+              (Twine("invalid '") +
+               py::repr(py::cast(elementType)).cast<std::string>() +
+               "' and expected floating point or integer type.")
+                  .str());
         },
         "Create a complex type");
     c.def_property_readonly(
@@ -432,8 +432,7 @@ public:
 private:
   void requireHasRank() {
     if (!mlirShapedTypeHasRank(*this)) {
-      throw SetPyError(
-          PyExc_ValueError,
+      throw py::value_error(
           "calling this method requires that the type has a rank.");
     }
   }

@@ -93,9 +93,10 @@ public:
   static MlirAffineExpr castFrom(PyAffineExpr &orig) {
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr = py::repr(py::cast(orig)).cast<std::string>();
-      throw SetPyError(PyExc_ValueError,
-                       Twine("Cannot cast affine expression to ") +
-                           DerivedTy::pyClassName + " (from " + origRepr + ")");
+      throw py::value_error((Twine("Cannot cast affine expression to ") +
+                             DerivedTy::pyClassName + " (from " + origRepr +
+                             ")")
+                                .str());
     }
     return orig;
   }
