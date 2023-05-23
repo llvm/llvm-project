@@ -31,6 +31,32 @@ def _checkBaseSubstitutions(substitutions):
     for s in ['%{cxx}', '%{compile_flags}', '%{link_flags}', '%{flags}', '%{exec}']:
         assert s in substitutions, "Required substitution {} was not provided".format(s)
 
+def _executeScriptInternal(test, litConfig, commands):
+  """
+  Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
+
+  TODO: This really should be easier to access from Lit itself
+  """
+  parsedCommands = parseScript(test, preamble=commands)
+
+  _, tmpBase = _getTempPaths(test)
+  execDir = os.path.dirname(test.getExecPath())
+  res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir)
+  if isinstance(res, lit.Test.Result): # Handle failure to parse the Lit test
+    res = ('', res.output, 127, None)
+  (out, err, exitCode, timeoutInfo) = res
+
+  # TODO: As a temporary workaround until https://reviews.llvm.org/D81892 lands, manually
+  #       split any stderr output that is included in stdout. It shouldn't be there, but
+  #       the Lit internal shell conflates stderr and stdout.
+  conflatedErrorOutput = re.search("(# command stderr:.+$)", out, flags=re.DOTALL)
+  if conflatedErrorOutput:
+    conflatedErrorOutput = conflatedErrorOutput.group(0)
+    out = out[:-len(conflatedErrorOutput)]
+    err += conflatedErrorOutput
+
+  return (out, err, exitCode, timeoutInfo, parsedCommands)
+
 def parseScript(test, preamble):
     """
     Extract the script from a test, with substitutions applied.
