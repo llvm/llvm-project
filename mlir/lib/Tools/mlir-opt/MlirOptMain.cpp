@@ -139,6 +139,11 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Run the verifier after each transformation pass"),
         cl::location(verifyPassesFlag), cl::init(true));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> verifyRoundtrip(
+        "verify-roundtrip",
+        cl::desc("Round-trip the IR after parsing and ensure it succeeds"),
+        cl::location(verifyRoundtripFlag), cl::init(false));
+
     static cl::list<std::string> passPlugins(
         "load-pass-plugin", cl::desc("Load passes from plugin library"));
     /// Set the callback to load a pass plugin.
@@ -213,6 +218,104 @@ void MlirOptMainConfigCLOptions::setDialectPluginsCallback(
   });
 }
 
+LogicalResult loadIRDLDialects(StringRef irdlFile, MLIRContext &ctx) {
+  DialectRegistry registry;
+  registry.insert<irdl::IRDLDialect>();
+  ctx.appendDialectRegistry(registry);
+
+  // Set up the input file.
+  std::string errorMessage;
+  std::unique_ptr<MemoryBuffer> file = openInputFile(irdlFile, &errorMessage);
+  if (!file) {
+    emitError(UnknownLoc::get(&ctx)) << errorMessage;
+    return failure();
+  }
+
+  // Give the buffer to the source manager.
+  // This will be picked up by the parser.
+  SourceMgr sourceMgr;
+  sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
+
+  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &ctx);
+
+  // Parse the input file.
+  OwningOpRef<ModuleOp> module(parseSourceFile<ModuleOp>(sourceMgr, &ctx));
+
+  // Load IRDL dialects.
+  return irdl::loadDialects(module.get());
+}
+
+// Return success if the module can correctly round-trip. This intended to test
+// that the custom printers/parsers are complete.
+static LogicalResult doVerifyRoundTrip(Operation *op,
+                                       const MlirOptMainConfig &config,
+                                       bool useBytecode) {
+  // We use a new context to avoid resource handle renaming issue in the diff.
+  MLIRContext roundtripContext;
+  OwningOpRef<Operation *> roundtripModule;
+  roundtripContext.appendDialectRegistry(
+      op->getContext()->getDialectRegistry());
+  if (op->getContext()->allowsUnregisteredDialects())
+    roundtripContext.allowUnregisteredDialects();
+  StringRef irdlFile = config.getIrdlFile();
+  if (!irdlFile.empty() && failed(loadIRDLDialects(irdlFile, roundtripContext)))
+    return failure();
+
+  // Print a first time with custom format (or bytecode) and parse it back to
+  // the roundtripModule.
+  {
+    std::string buffer;
+    llvm::raw_string_ostream ostream(buffer);
+    if (useBytecode) {
+      if (failed(writeBytecodeToFile(op, ostream))) {
+        op->emitOpError() << "failed to write bytecode, cannot verify round-trip.\n";
+        return failure();
+      }
+    } else {
+      op->print(ostream,
+                OpPrintingFlags().printGenericOpForm(false).enableDebugInfo());
+    }
+    FallbackAsmResourceMap fallbackResourceMap;
+    ParserConfig parseConfig(&roundtripContext, /*verifyAfterParse=*/true,
+                             &fallbackResourceMap);
+    roundtripModule =
+        parseSourceString<Operation *>(ostream.str(), parseConfig);
+    if (!roundtripModule) {
+      op->emitOpError() << "failed to parse bytecode back, cannot verify round-trip.\n";
+      return failure();
+    }
+  }
+
+  // Print in the generic form for the reference module and the round-tripped
+  // one and compare the outputs.
+  std::string reference, roundtrip;
+  {
+    llvm::raw_string_ostream ostreamref(reference);
+    op->print(ostreamref,
+              OpPrintingFlags().printGenericOpForm().enableDebugInfo());
+    llvm::raw_string_ostream ostreamrndtrip(roundtrip);
+    roundtripModule.get()->print(
+        ostreamrndtrip,
+        OpPrintingFlags().printGenericOpForm().enableDebugInfo());
+  }
+  if (reference != roundtrip) {
+    // TODO implement a diff.
+    return op->emitOpError() << "roundTrip testing roundtripped module differs from reference:\n<<<<<<Reference\n"
+                             << reference << "\n=====\n"
+                             << roundtrip << "\n>>>>>roundtripped\n";
+  }
+
+  return success();
+}
+
+static LogicalResult doVerifyRoundTrip(Operation *op,
+                                       const MlirOptMainConfig &config) {
+  // Textual round-trip isn't fully robust at the moment (for example implicit
+  // terminator are losing location informations).
+
+  return doVerifyRoundTrip(op, config, /*useBytecode=*/true);
+}
+
 /// Perform the actions on the input file indicated by the command line flags
 /// within the specified context.
 ///
@@ -247,10 +350,16 @@ performActions(raw_ostream &os,
   TimingScope parserTiming = timing.nest("Parser");
   OwningOpRef<Operation *> op = parseSourceFileForTool(
       sourceMgr, parseConfig, !config.shouldUseExplicitModule());
-  context->enableMultithreading(wasThreadingEnabled);
+  parserTiming.stop();
   if (!op)
     return failure();
-  parserTiming.stop();
+
+  // Perform round-trip verification if requested
+  if (config.shouldVerifyRoundtrip() &&
+      failed(doVerifyRoundTrip(op.get(), config)))
+    return failure();
+
+  context->enableMultithreading(wasThreadingEnabled);
 
   // Prepare the pass manager, applying command-line and reproducer options.
   PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
@@ -284,33 +393,6 @@ performActions(raw_ostream &os,
   op.get()->print(os, asmState);
   os << '\n';
   return success();
-}
-
-LogicalResult loadIRDLDialects(StringRef irdlFile, MLIRContext &ctx) {
-  DialectRegistry registry;
-  registry.insert<irdl::IRDLDialect>();
-  ctx.appendDialectRegistry(registry);
-
-  // Set up the input file.
-  std::string errorMessage;
-  std::unique_ptr<MemoryBuffer> file = openInputFile(irdlFile, &errorMessage);
-  if (!file) {
-    emitError(UnknownLoc::get(&ctx)) << errorMessage;
-    return failure();
-  }
-
-  // Give the buffer to the source manager.
-  // This will be picked up by the parser.
-  SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
-
-  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &ctx);
-
-  // Parse the input file.
-  OwningOpRef<ModuleOp> module(parseSourceFile<ModuleOp>(sourceMgr, &ctx));
-
-  // Load IRDL dialects.
-  return irdl::loadDialects(module.get());
 }
 
 /// Parses the memory buffer.  If successfully, run a series of passes against
