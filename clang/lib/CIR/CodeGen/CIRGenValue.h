@@ -248,6 +248,14 @@ public:
     return Address(getPointer(), ElementType, getAlignment());
   }
 
+  void setAddress(Address address) {
+    assert(isSimple());
+    V = address.getPointer();
+    ElementType = address.getElementType();
+    Alignment = address.getAlignment().getQuantity();
+    // TODO(cir): IsKnownNonNull = address.isKnownNonNull();
+  }
+
   LValueBaseInfo getBaseInfo() const { return BaseInfo; }
   void setBaseInfo(LValueBaseInfo Info) { BaseInfo = Info; }
 

@@ -243,7 +243,10 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   }
 
   if (MD->isVirtual()) {
-    llvm_unreachable("NYI");
+    Address NewThisAddr =
+        CGM.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
+            *this, CalleeDecl, This.getAddress(), useVirtualCall);
+    This.setAddress(NewThisAddr);
   }
 
   return buildCXXMemberOrOperatorCall(

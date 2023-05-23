@@ -118,6 +118,16 @@ public:
     return CGF.CXXStructorImplicitParamDecl;
   }
 
+  /// Perform ABI-specific "this" argument adjustment required prior to
+  /// a call of a virtual function.
+  /// The "VirtualCall" argument is true iff the call itself is virtual.
+  virtual Address adjustThisArgumentForVirtualFunctionCall(CIRGenFunction &CGF,
+                                                           GlobalDecl GD,
+                                                           Address This,
+                                                           bool VirtualCall) {
+    return This;
+  }
+
   /// Build a parameter variable suitable for 'this'.
   void buildThisParam(CIRGenFunction &CGF, FunctionArgList &Params);
 
