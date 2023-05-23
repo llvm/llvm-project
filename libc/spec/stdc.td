@@ -408,6 +408,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"log10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"log10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
+          FunctionSpec<"log1p", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"log1pf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
           FunctionSpec<"log2", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
