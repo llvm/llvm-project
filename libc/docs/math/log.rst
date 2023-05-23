@@ -343,7 +343,7 @@ so when `C > 2^{-M - 1}` is a power of 2, we can always choose:
 .. math::
   s = -\frac{1}{2}, \quad \text{i.e.} \quad r = \frac{1}{2}.
 
-This reduction works well to avoid catastropic cancellation happening when
+This reduction works well to avoid catastrophic cancellation happening when
 `e_x = -1`.
 
 This also works when `C = 2^{-M - 1}` if we relax the condition on `u` to
