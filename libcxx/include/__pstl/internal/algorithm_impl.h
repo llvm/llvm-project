@@ -4162,7 +4162,7 @@ bool __brick_lexicographical_compare(
     _RandomAccessIterator2 __last2,
     _Compare __comp,
     /* __is_vector = */ std::true_type) noexcept {
-  if (__first2 == __last2) {        // if second sequence is empty
+  if (__first2 == __last2) { // if second sequence is empty
     return false;
   } else if (__first1 == __last1) { // if first sequence is empty
     return true;
@@ -4213,7 +4213,7 @@ bool __pattern_lexicographical_compare(
     _Compare __comp) noexcept {
   using __backend_tag = typename decltype(__tag)::__backend_tag;
 
-  if (__first2 == __last2) {        // if second sequence is empty
+  if (__first2 == __last2) { // if second sequence is empty
     return false;
   } else if (__first1 == __last1) { // if first sequence is empty
     return true;

@@ -1743,12 +1743,6 @@ define void @ashr_out_of_range(ptr %A) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=26135
 define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-LABEL: @ashr_out_of_range_1(
-; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, ptr [[A]], i64 -1
-; CHECK-NEXT:    [[B24_LOBIT:%.*]] = ashr i177 [[L]], 175
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i177 [[B24_LOBIT]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP1]]
-; CHECK-NEXT:    store i177 0, ptr [[G62]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %L = load i177, ptr %A, align 4

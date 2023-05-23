@@ -15,9 +15,9 @@
 
 using namespace lldb_private;
 
-ExpressionVariable::ExpressionVariable(LLVMCastKind kind)
-    : m_flags(0), m_kind(kind) {}
-ExpressionVariable::~ExpressionVariable() = default;
+char ExpressionVariable::ID;
+
+ExpressionVariable::ExpressionVariable() : m_flags(0) {}
 
 uint8_t *ExpressionVariable::GetValueBytes() {
   std::optional<uint64_t> byte_size = m_frozen_sp->GetByteSize();
@@ -32,8 +32,8 @@ uint8_t *ExpressionVariable::GetValueBytes() {
   return nullptr;
 }
 
-PersistentExpressionState::PersistentExpressionState(LLVMCastKind kind)
-    : m_kind(kind) {}
+char PersistentExpressionState::ID;
+
 PersistentExpressionState::~PersistentExpressionState() = default;
 
 lldb::addr_t PersistentExpressionState::LookupSymbol(ConstString name) {

@@ -23,6 +23,9 @@
 # Theses numbers are available in all runners, making it easier to update the
 # version number.
 env:
+    # LLVM POST-BRANCH bump version
+    # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
+    # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
     LLVM_STABLE_VERSION: "16"
     LLVM_HEAD_VERSION: "17"
     GCC_STABLE_VERSION: "12"
@@ -107,8 +110,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "C++2b"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+  - label: "C++23"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -258,14 +261,14 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Clang 15"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
         CC: "clang-15"
         CXX: "clang++-15"
-        # TODO LLVM18: Enable clang-tidy
+        # TODO(LLVM-18): Enable clang-tidy
         # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
@@ -277,7 +280,7 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Clang 16"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -1029,7 +1032,7 @@ steps:
   - group: "FreeBSD"
     steps:
     - label: "FreeBSD 13 amd64"
-      command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx23"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"

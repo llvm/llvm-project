@@ -8,7 +8,6 @@ import unittest
 
 
 class ShellTest(unittest.TestCase):
-
     def test_encode_decode_are_same(self):
         def test(value):
             self.assertEqual(sut.encode(sut.decode(value)), value)
@@ -22,20 +21,26 @@ class ShellTest(unittest.TestCase):
             self.assertEqual(sut.decode(sut.encode(value)), value)
 
         test([])
-        test(['clang'])
-        test(['clang', 'this', 'and', 'that'])
-        test(['clang', 'this and', 'that'])
-        test(['clang', "it's me", 'again'])
-        test(['clang', 'some "words" are', 'quoted'])
+        test(["clang"])
+        test(["clang", "this", "and", "that"])
+        test(["clang", "this and", "that"])
+        test(["clang", "it's me", "again"])
+        test(["clang", 'some "words" are', "quoted"])
 
     def test_encode(self):
-        self.assertEqual(sut.encode(['clang', "it's me", 'again']),
-                         'clang "it\'s me" again')
-        self.assertEqual(sut.encode(['clang', "it(s me", 'again)']),
-                         'clang "it(s me" "again)"')
-        self.assertEqual(sut.encode(['clang', 'redirect > it']),
-                         'clang "redirect > it"')
-        self.assertEqual(sut.encode(['clang', '-DKEY="VALUE"']),
-                         'clang -DKEY=\\"VALUE\\"')
-        self.assertEqual(sut.encode(['clang', '-DKEY="value with spaces"']),
-                         'clang -DKEY=\\"value with spaces\\"')
+        self.assertEqual(
+            sut.encode(["clang", "it's me", "again"]), 'clang "it\'s me" again'
+        )
+        self.assertEqual(
+            sut.encode(["clang", "it(s me", "again)"]), 'clang "it(s me" "again)"'
+        )
+        self.assertEqual(
+            sut.encode(["clang", "redirect > it"]), 'clang "redirect > it"'
+        )
+        self.assertEqual(
+            sut.encode(["clang", '-DKEY="VALUE"']), 'clang -DKEY=\\"VALUE\\"'
+        )
+        self.assertEqual(
+            sut.encode(["clang", '-DKEY="value with spaces"']),
+            'clang -DKEY=\\"value with spaces\\"',
+        )

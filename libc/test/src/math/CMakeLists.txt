@@ -1268,6 +1268,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+ log_test
+ NEED_MPFR
+ SUITE
+   libc_math_unittests
+ SRCS
+   log_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.include.math
+   libc.src.math.log
+   libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   logf_test
   NEED_MPFR
   SUITE
@@ -1279,6 +1293,20 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.logf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+log2_test
+ NEED_MPFR
+ SUITE
+   libc_math_unittests
+ SRCS
+   log2_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.include.math
+   libc.src.math.log2
+   libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1307,8 +1335,6 @@ add_fp_unittest(
    libc.include.math
    libc.src.math.log10
    libc.src.__support.FPUtil.fp_bits
- FLAGS
-   FMA_OPT__ONLY
 )
 
 add_fp_unittest(
@@ -1323,6 +1349,20 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.log10f
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+log1p_test
+ NEED_MPFR
+ SUITE
+   libc_math_unittests
+ SRCS
+   log1p_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.include.math
+   libc.src.math.log1p
+   libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(

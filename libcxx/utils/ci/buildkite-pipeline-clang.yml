@@ -14,6 +14,7 @@
 # in various configurations.
 #
 env:
+    # LLVM RELEASE bump version
     LLVM_HEAD_VERSION: "17"
 steps:
   - label: "Building clang"
@@ -63,14 +64,14 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "C++2b"
+  - label: "C++23"
     commands:
       - "buildkite-agent artifact download install.tar.xz ."
       - "tar -xvf install.tar.xz"
       - "export CC=$(pwd)/install/bin/clang"
       - "export CXX=$(pwd)/install/bin/clang++"
       - "chmod +x install/bin/clang install/bin/clang++"
-      - "libcxx/utils/ci/run-buildbot generic-cxx2b"
+      - "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
       - "**/test-results.xml"
       - "**/crash_diagnostics/*"

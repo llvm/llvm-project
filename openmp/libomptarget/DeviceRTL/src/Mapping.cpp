@@ -98,7 +98,8 @@ uint32_t getNumberOfWarpsInBlock() {
 ///
 ///{
 #pragma omp begin declare variant match(                                       \
-    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+        device = {arch(nvptx, nvptx64)},                                       \
+            implementation = {extension(match_any)})
 
 uint32_t getNumHardwareThreadsInBlock() {
   return __nvvm_read_ptx_sreg_ntid_x();

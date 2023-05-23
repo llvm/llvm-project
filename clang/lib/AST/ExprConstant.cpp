@@ -10174,6 +10174,8 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
   if (!EvaluateLValue(E->getSubExpr(), Array, Info))
     return false;
 
+  assert(ArrayType && "unexpected type for array initializer");
+
   // Get a pointer to the first element of the array.
   Array.addArray(Info, E, ArrayType);
 
@@ -11733,14 +11735,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   auto CheckedHandleSizeof = [&](QualType Ty, CharUnits &Result) {
     if (Ty.isNull() || Ty->isIncompleteType() || Ty->isFunctionType())
       return false;
-    bool Ret = HandleSizeof(Info, ExprLoc, Ty, Result);
-    if (Ty->isStructureType() &&
-        Ty->getAsStructureType()->getDecl()->hasFlexibleArrayMember()) {
-      const auto *VD =
-          cast<VarDecl>(LVal.getLValueBase().get<const ValueDecl *>());
-      Result += VD->getFlexibleArrayInitChars(Info.Ctx);
-    }
-    return Ret;
+    return HandleSizeof(Info, ExprLoc, Ty, Result);
   };
 
   // We want to evaluate the size of the entire object. This is a valid fallback

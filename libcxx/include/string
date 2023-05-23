@@ -119,7 +119,7 @@ public:
         explicit basic_string(const T& t, const Allocator& a = Allocator());                    // C++17, constexpr since C++20
     basic_string(const value_type* s, const allocator_type& a = allocator_type());              // constexpr since C++20
     basic_string(const value_type* s, size_type n, const allocator_type& a = allocator_type()); // constexpr since C++20
-    basic_string(nullptr_t) = delete; // C++2b
+    basic_string(nullptr_t) = delete; // C++23
     basic_string(size_type n, value_type c, const allocator_type& a = allocator_type());        // constexpr since C++20
     template<class InputIterator>
         basic_string(InputIterator begin, InputIterator end,
@@ -140,7 +140,7 @@ public:
              allocator_type::propagate_on_container_move_assignment::value ||
              allocator_type::is_always_equal::value );                                          // C++17, constexpr since C++20
     basic_string& operator=(const value_type* s);                                               // constexpr since C++20
-    basic_string& operator=(nullptr_t) = delete; // C++2b
+    basic_string& operator=(nullptr_t) = delete; // C++23
     basic_string& operator=(value_type c);                                                      // constexpr since C++20
     basic_string& operator=(initializer_list<value_type>);                                      // constexpr since C++20
 
@@ -342,9 +342,9 @@ public:
     constexpr bool ends_with(charT c) const noexcept;                                           // C++20
     constexpr bool ends_with(const charT* s) const;                                             // C++20
 
-    constexpr bool contains(basic_string_view<charT, traits> sv) const noexcept;                // C++2b
-    constexpr bool contains(charT c) const noexcept;                                            // C++2b
-    constexpr bool contains(const charT* s) const;                                              // C++2b
+    constexpr bool contains(basic_string_view<charT, traits> sv) const noexcept;                // C++23
+    constexpr bool contains(charT c) const noexcept;                                            // C++23
+    constexpr bool contains(const charT* s) const;                                              // C++23
 };
 
 template<class InputIterator,

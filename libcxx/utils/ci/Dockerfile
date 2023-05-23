@@ -66,6 +66,7 @@ RUN locale-gen
 # LLVM 15, we still need to have Clang 12 in this Docker image because the LLVM
 # 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
 # though.
+# LLVM POST-BRANCH bump version
 ENV LLVM_HEAD_VERSION=17
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
@@ -84,12 +85,12 @@ RUN apt-get update && apt-get install -y clang-tools-$(($LLVM_HEAD_VERSION - 3))
 RUN apt-get update && apt-get install -y clang-format-$(($LLVM_HEAD_VERSION - 2)) clang-format-$(($LLVM_HEAD_VERSION - 1))
 
 # Install clang-tidy
-# TODO LLVM 17 revert D148831 to only install $(($LLVM_HEAD_VERSION - 1)) and $LLVM_HEAD_VERSION
+# TODO(LLVM-17) revert D148831 to only install $(($LLVM_HEAD_VERSION - 1)) and $LLVM_HEAD_VERSION
 # The usage of the ToT version is needed due to module issues with Clang 16
 RUN apt-get update && apt-get install -y clang-tidy-$(($LLVM_HEAD_VERSION - 2)) clang-tidy-$(($LLVM_HEAD_VERSION - 1)) clang-tidy-$LLVM_HEAD_VERSION
 
 # Install llvm-dev and libclang-dev to compile custom clang-tidy checks
-# TODO LLVM 17 revert D148831 to only install $(($LLVM_HEAD_VERSION - 1)) and $LLVM_HEAD_VERSION
+# TODO(LLVM-17) revert D148831 to only install $(($LLVM_HEAD_VERSION - 1)) and $LLVM_HEAD_VERSION
 # The usage of the ToT version is needed due to module issues with Clang 16
 RUN apt-get update && apt-get install -y llvm-$(($LLVM_HEAD_VERSION - 2))-dev llvm-$(($LLVM_HEAD_VERSION - 1))-dev     llvm-$LLVM_HEAD_VERSION-dev \
                                      libclang-$(($LLVM_HEAD_VERSION - 2))-dev libclang-$(($LLVM_HEAD_VERSION - 1))-dev libclang-$LLVM_HEAD_VERSION-dev

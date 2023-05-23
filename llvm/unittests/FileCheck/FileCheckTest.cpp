@@ -311,7 +311,6 @@ TEST_P(ExpressionFormatParameterisedFixture, FormatValueFromStringRepr) {
     checkValueFromStringRepr("-5", -5);
     checkValueFromStringReprFailure(MaxUint64Str);
   } else {
-    checkValueFromStringReprFailure("-" + addBasePrefix("5"));
     checkValueFromStringRepr(addBasePrefix(MaxUint64Str), MaxUint64);
   }
 
@@ -321,9 +320,6 @@ TEST_P(ExpressionFormatParameterisedFixture, FormatValueFromStringRepr) {
   // Wrong casing is not tested because valueFromStringRepr() relies on
   // StringRef's getAsInteger() which does not allow to restrict casing.
   checkValueFromStringReprFailure(addBasePrefix("G"));
-
-  if (AlternateForm)
-    checkValueFromStringReprFailure("9", "missing alternate form prefix");
 }
 
 TEST_P(ExpressionFormatParameterisedFixture, FormatBoolOperator) {

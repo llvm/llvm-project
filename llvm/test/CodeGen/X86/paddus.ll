@@ -131,7 +131,7 @@ define <16 x i8> @test5(<16 x i8> %x) {
 ;
 ; AVX512-LABEL: test5:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpltub %xmm0, %xmm1, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqu8 %xmm0, %xmm1 {%k1}
@@ -350,7 +350,7 @@ define <32 x i8> @test11(<32 x i8> %x) {
 ;
 ; AVX512-LABEL: test11:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm1
 ; AVX512-NEXT:    vpcmpltub %ymm0, %ymm1, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqu8 %ymm0, %ymm1 {%k1}
@@ -658,7 +658,7 @@ define <64 x i8> @test17(<64 x i8> %x) {
 ;
 ; AVX512-LABEL: test17:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm1
 ; AVX512-NEXT:    vpcmpltub %zmm0, %zmm1, %k1
 ; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k1}
@@ -852,7 +852,7 @@ define <8 x i16> @test23(<8 x i16> %x) {
 ;
 ; AVX512-LABEL: test23:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpltuw %xmm0, %xmm1, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
@@ -1103,7 +1103,7 @@ define <16 x i16> @test29(<16 x i16> %x) {
 ;
 ; AVX512-LABEL: test29:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm1
 ; AVX512-NEXT:    vpcmpltuw %ymm0, %ymm1, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqu16 %ymm0, %ymm1 {%k1}
@@ -1467,7 +1467,7 @@ define <32 x i16> @test35(<32 x i16> %x) {
 ;
 ; AVX512-LABEL: test35:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm1
 ; AVX512-NEXT:    vpcmpltuw %zmm0, %zmm1, %k1
 ; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovdqu16 %zmm0, %zmm1 {%k1}

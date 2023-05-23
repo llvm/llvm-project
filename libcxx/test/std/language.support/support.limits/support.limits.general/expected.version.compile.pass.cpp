@@ -16,7 +16,7 @@
 // Test the feature test macros defined by <expected>
 
 /*  Constant              Value
-    __cpp_lib_expected    202211L [C++2b]
+    __cpp_lib_expected    202211L [C++23]
 */
 
 #include <expected>
@@ -25,34 +25,34 @@
 #if TEST_STD_VER < 14
 
 # ifdef __cpp_lib_expected
-#   error "__cpp_lib_expected should not be defined before c++2b"
+#   error "__cpp_lib_expected should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_expected
-#   error "__cpp_lib_expected should not be defined before c++2b"
+#   error "__cpp_lib_expected should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 17
 
 # ifdef __cpp_lib_expected
-#   error "__cpp_lib_expected should not be defined before c++2b"
+#   error "__cpp_lib_expected should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 20
 
 # ifdef __cpp_lib_expected
-#   error "__cpp_lib_expected should not be defined before c++2b"
+#   error "__cpp_lib_expected should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER > 20
 
 # ifndef __cpp_lib_expected
-#   error "__cpp_lib_expected should be defined in c++2b"
+#   error "__cpp_lib_expected should be defined in c++23"
 # endif
 # if __cpp_lib_expected != 202211L
-#   error "__cpp_lib_expected should have the value 202211L in c++2b"
+#   error "__cpp_lib_expected should have the value 202211L in c++23"
 # endif
 
 #endif // TEST_STD_VER > 20

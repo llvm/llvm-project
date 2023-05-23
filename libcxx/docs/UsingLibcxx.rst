@@ -173,7 +173,7 @@ that this function is provided by the static or shared library, so it is only av
 to a platform where the compiled library is sufficiently recent. On older platforms, the program will
 terminate in an unspecified unsuccessful manner, but the quality of diagnostics won't be great.
 However, users can also override that mechanism at two different levels. First, the mechanism can be
-overriden at compile-time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
+overridden at compile-time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
 When that macro is defined, it will be called with a format string as the first argument, followed by
 a series of arguments to format using printf-style formatting. Compile-time customization may be
 interesting to get precise control over code generation, however it is also inconvenient to use in

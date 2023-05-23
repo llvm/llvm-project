@@ -127,7 +127,7 @@ def get_unsupported_line(includee):
         "14": ['UNSUPPORTED: c++03, c++11'],
         "17": ['UNSUPPORTED: c++03, c++11, c++14'],
         "20": ['UNSUPPORTED: c++03, c++11, c++14, c++17'],
-        "2b": ['UNSUPPORTED: c++03, c++11, c++14, c++17, c++20'],
+        "23": ['UNSUPPORTED: c++03, c++11, c++14, c++17, c++20'],
     }[v]
 
 

@@ -694,7 +694,7 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_PR32045) {
       "  %A = ashr i32 %a, -1\n"
       "  ret i32 %A\n"
       "}\n");
-  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 1u);
+  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 32u);
 }
 
 // No guarantees for canonical IR in this analysis, so this just bails out.

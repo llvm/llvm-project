@@ -5899,138 +5899,65 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
 #endif
 }
 
-llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
-  if (!m_min_os_version) {
-    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
-      const lldb::offset_t load_cmd_offset = offset;
+static llvm::VersionTuple FindMinimumVersionInfo(DataExtractor &data,
+                                                 lldb::offset_t offset,
+                                                 size_t ncmds) {
+  for (size_t i = 0; i < ncmds; i++) {
+    const lldb::offset_t load_cmd_offset = offset;
+    llvm::MachO::load_command lc = {};
+    if (data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+      break;
 
-      llvm::MachO::version_min_command lc = {};
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
-        break;
-      if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS) {
-        if (m_data.GetU32(&offset, &lc.version,
-                          (sizeof(lc) / sizeof(uint32_t)) - 2)) {
-          const uint32_t xxxx = lc.version >> 16;
-          const uint32_t yy = (lc.version >> 8) & 0xffu;
-          const uint32_t zz = lc.version & 0xffu;
-          if (xxxx) {
-            m_min_os_version = llvm::VersionTuple(xxxx, yy, zz);
-            break;
-          }
-        }
-      } else if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
-        // struct build_version_command {
-        //     uint32_t    cmd;            /* LC_BUILD_VERSION */
-        //     uint32_t    cmdsize;        /* sizeof(struct
-        //     build_version_command) plus */
-        //                                 /* ntools * sizeof(struct
-        //                                 build_tool_version) */
-        //     uint32_t    platform;       /* platform */
-        //     uint32_t    minos;          /* X.Y.Z is encoded in nibbles
-        //     xxxx.yy.zz */ uint32_t    sdk;            /* X.Y.Z is encoded in
-        //     nibbles xxxx.yy.zz */ uint32_t    ntools;         /* number of
-        //     tool entries following this */
-        // };
-
-        offset += 4; // skip platform
-        uint32_t minos = m_data.GetU32(&offset);
-
-        const uint32_t xxxx = minos >> 16;
-        const uint32_t yy = (minos >> 8) & 0xffu;
-        const uint32_t zz = minos & 0xffu;
-        if (xxxx) {
-          m_min_os_version = llvm::VersionTuple(xxxx, yy, zz);
-          break;
-        }
-      }
-
-      offset = load_cmd_offset + lc.cmdsize;
+    uint32_t version = 0;
+    if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
+        lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS ||
+        lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS ||
+        lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS) {
+      // struct version_min_command {
+      //   uint32_t cmd; // LC_VERSION_MIN_*
+      //   uint32_t cmdsize;
+      //   uint32_t version; // X.Y.Z encoded in nibbles xxxx.yy.zz
+      //   uint32_t sdk;
+      // };
+      // We want to read version.
+      version = data.GetU32(&offset);
+    } else if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
+      // struct build_version_command {
+      //   uint32_t cmd; // LC_BUILD_VERSION
+      //   uint32_t cmdsize;
+      //   uint32_t platform;
+      //   uint32_t minos; // X.Y.Z encoded in nibbles xxxx.yy.zz
+      //   uint32_t sdk;
+      //   uint32_t ntools;
+      // };
+      // We want to read minos.
+      offset += sizeof(uint32_t);     // Skip over platform
+      version = data.GetU32(&offset); // Extract minos
     }
 
-    if (!m_min_os_version) {
-      // Set version to an empty value so we don't keep trying to
-      m_min_os_version = llvm::VersionTuple();
+    if (version) {
+      const uint32_t xxxx = version >> 16;
+      const uint32_t yy = (version >> 8) & 0xffu;
+      const uint32_t zz = version & 0xffu;
+      if (xxxx)
+        return llvm::VersionTuple(xxxx, yy, zz);
     }
+    offset = load_cmd_offset + lc.cmdsize;
   }
+  return llvm::VersionTuple();
+}
 
+llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
+  if (!m_min_os_version)
+    m_min_os_version = FindMinimumVersionInfo(
+        m_data, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_min_os_version;
 }
 
 llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
-  if (!m_sdk_versions) {
-    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
-      const lldb::offset_t load_cmd_offset = offset;
-
-      llvm::MachO::version_min_command lc = {};
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
-        break;
-      if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS) {
-        if (m_data.GetU32(&offset, &lc.version,
-                          (sizeof(lc) / sizeof(uint32_t)) - 2)) {
-          const uint32_t xxxx = lc.sdk >> 16;
-          const uint32_t yy = (lc.sdk >> 8) & 0xffu;
-          const uint32_t zz = lc.sdk & 0xffu;
-          if (xxxx) {
-            m_sdk_versions = llvm::VersionTuple(xxxx, yy, zz);
-            break;
-          } else {
-            GetModule()->ReportWarning("minimum OS version load command with "
-                                       "invalid (0) version found.");
-          }
-        }
-      }
-      offset = load_cmd_offset + lc.cmdsize;
-    }
-
-    if (!m_sdk_versions) {
-      offset = MachHeaderSizeFromMagic(m_header.magic);
-      for (uint32_t i = 0; i < m_header.ncmds; ++i) {
-        const lldb::offset_t load_cmd_offset = offset;
-
-        llvm::MachO::version_min_command lc = {};
-        if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
-          break;
-        if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
-          // struct build_version_command {
-          //     uint32_t    cmd;            /* LC_BUILD_VERSION */
-          //     uint32_t    cmdsize;        /* sizeof(struct
-          //     build_version_command) plus */
-          //                                 /* ntools * sizeof(struct
-          //                                 build_tool_version) */
-          //     uint32_t    platform;       /* platform */
-          //     uint32_t    minos;          /* X.Y.Z is encoded in nibbles
-          //     xxxx.yy.zz */ uint32_t    sdk;            /* X.Y.Z is encoded
-          //     in nibbles xxxx.yy.zz */ uint32_t    ntools;         /* number
-          //     of tool entries following this */
-          // };
-
-          offset += 4; // skip platform
-          uint32_t minos = m_data.GetU32(&offset);
-
-          const uint32_t xxxx = minos >> 16;
-          const uint32_t yy = (minos >> 8) & 0xffu;
-          const uint32_t zz = minos & 0xffu;
-          if (xxxx) {
-            m_sdk_versions = llvm::VersionTuple(xxxx, yy, zz);
-            break;
-          }
-        }
-        offset = load_cmd_offset + lc.cmdsize;
-      }
-    }
-
-    if (!m_sdk_versions)
-      m_sdk_versions = llvm::VersionTuple();
-  }
-
+  if (!m_sdk_versions)
+    m_sdk_versions = FindMinimumVersionInfo(
+        m_data, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_sdk_versions;
 }
 

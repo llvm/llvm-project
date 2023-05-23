@@ -877,9 +877,10 @@ public:
   static MlirType castFrom(PyType &orig) {
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr = pybind11::repr(pybind11::cast(orig)).cast<std::string>();
-      throw SetPyError(PyExc_ValueError, llvm::Twine("Cannot cast type to ") +
-                                             DerivedTy::pyClassName +
-                                             " (from " + origRepr + ")");
+      throw py::value_error((llvm::Twine("Cannot cast type to ") +
+                             DerivedTy::pyClassName + " (from " + origRepr +
+                             ")")
+                                .str());
     }
     return orig;
   }
@@ -898,9 +899,8 @@ public:
         "static_typeid", [](py::object & /*class*/) -> MlirTypeID {
           if (DerivedTy::getTypeIdFunction)
             return DerivedTy::getTypeIdFunction();
-          throw SetPyError(PyExc_AttributeError,
-                           DerivedTy::pyClassName +
-                               llvm::Twine(" has no typeid."));
+          throw py::attribute_error(
+              (DerivedTy::pyClassName + llvm::Twine(" has no typeid.")).str());
         });
     cls.def_property_readonly("typeid", [](PyType &self) {
       return py::cast(self).attr("typeid").cast<MlirTypeID>();
@@ -990,9 +990,10 @@ public:
   static MlirAttribute castFrom(PyAttribute &orig) {
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr = pybind11::repr(pybind11::cast(orig)).cast<std::string>();
-      throw SetPyError(PyExc_ValueError,
-                       llvm::Twine("Cannot cast attribute to ") +
-                           DerivedTy::pyClassName + " (from " + origRepr + ")");
+      throw py::value_error((llvm::Twine("Cannot cast attribute to ") +
+                             DerivedTy::pyClassName + " (from " + origRepr +
+                             ")")
+                                .str());
     }
     return orig;
   }

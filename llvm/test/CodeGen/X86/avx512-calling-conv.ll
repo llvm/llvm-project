@@ -286,7 +286,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _func8xi1
-; SKX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; SKX-NEXT:    popq %rax
 ; SKX-NEXT:    retq
 ;
@@ -310,7 +310,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; FASTISEL-NEXT:    vpmovm2w %k0, %xmm0
 ; FASTISEL-NEXT:    vzeroupper
 ; FASTISEL-NEXT:    callq _func8xi1
-; FASTISEL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; FASTISEL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; FASTISEL-NEXT:    popq %rax
 ; FASTISEL-NEXT:    retq
   %cmpRes = icmp sgt <8 x i32>%a, %b

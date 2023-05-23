@@ -114,10 +114,10 @@
 
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SHARED_MUTEX)
 #   ifndef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should be defined in c++2b"
+#     error "__cpp_lib_shared_mutex should be defined in c++23"
 #   endif
 #   if __cpp_lib_shared_mutex != 201505L
-#     error "__cpp_lib_shared_mutex should have the value 201505L in c++2b"
+#     error "__cpp_lib_shared_mutex should have the value 201505L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
@@ -127,10 +127,10 @@
 
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SHARED_MUTEX)
 #   ifndef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should be defined in c++2b"
+#     error "__cpp_lib_shared_timed_mutex should be defined in c++23"
 #   endif
 #   if __cpp_lib_shared_timed_mutex != 201402L
-#     error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++2b"
+#     error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex

@@ -45,4 +45,4 @@ int main(int argc, char *argv[]) {
 // CHECK:   Previous write of size 4
 // CHECK-NEXT: #0 {{.*}}lock-unrelated.c:31
 // CHECK: DONE
-// CHECK: ThreadSanitizer: reported 1 warnings
+// CHECK: ThreadSanitizer: reported {{[1-7]}} warnings

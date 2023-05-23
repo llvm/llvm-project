@@ -39,10 +39,11 @@ Getting Started with libc++
    BuildingLibcxx
    TestingLibcxx
    Contributing
+   ReleaseProcedure
    Status/Cxx14
    Status/Cxx17
    Status/Cxx20
-   Status/Cxx2b
+   Status/Cxx23
    Status/Format
    Status/Parallelism
    Status/Ranges
@@ -93,6 +94,9 @@ reasons, but some of the major ones are:
   design decision from first principles based on experience.
   Further, both projects are apparently abandoned: STLport 5.2.1 was
   released in Oct'08, and STDCXX 4.2.1 in May'08.
+
+..
+  LLVM RELEASE bump version
 
 .. _SupportedPlatforms:
 
@@ -145,7 +149,7 @@ C++ Dialect Support
 * :ref:`C++14 - Complete <cxx14-status>`
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
-* :ref:`C++2b - In Progress <cxx2b-status>`
+* :ref:`C++23 - In Progress <cxx23-status>`
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
 

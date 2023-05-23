@@ -612,7 +612,7 @@ define <16 x i16> @blend_splat1_mask_cond_v16i16(<16 x i16> %x, <16 x i16> %y, <
 ;
 ; AVX512VL-LABEL: blend_splat1_mask_cond_v16i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vpcmpeqw %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpternlogq $202, %ymm2, %ymm1, %ymm0
@@ -651,7 +651,7 @@ define <16 x i8> @blend_splat1_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x
 ;
 ; AVX512VL-LABEL: blend_splat1_mask_cond_v16i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpternlogq $202, %xmm2, %xmm1, %xmm0
@@ -756,7 +756,7 @@ define <8 x i16> @blend_splatmax_mask_cond_v8i16(<8 x i16> %x, <8 x i16> %y, <8 
 ;
 ; AVX512VL-LABEL: blend_splatmax_mask_cond_v8i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpternlogq $202, %xmm2, %xmm1, %xmm0
@@ -803,7 +803,7 @@ define <32 x i8> @blend_splatmax_mask_cond_v32i8(<32 x i8> %x, <32 x i8> %y, <32
 ;
 ; AVX512VL-LABEL: blend_splatmax_mask_cond_v32i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpternlogq $202, %ymm2, %ymm1, %ymm0
@@ -941,7 +941,7 @@ define <16 x i16> @blend_splat_mask_cond_v16i16(<16 x i16> %x, <16 x i16> %y, <1
 ;
 ; AVX512VL-LABEL: blend_splat_mask_cond_v16i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vpcmpeqw %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpternlogq $202, %ymm2, %ymm1, %ymm0
@@ -980,7 +980,7 @@ define <16 x i8> @blend_splat_mask_cond_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x 
 ;
 ; AVX512VL-LABEL: blend_splat_mask_cond_v16i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX512VL-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpternlogq $202, %xmm2, %xmm1, %xmm0

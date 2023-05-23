@@ -61,10 +61,10 @@
 
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
 #   ifndef __cpp_lib_latch
-#     error "__cpp_lib_latch should be defined in c++2b"
+#     error "__cpp_lib_latch should be defined in c++23"
 #   endif
 #   if __cpp_lib_latch != 201907L
-#     error "__cpp_lib_latch should have the value 201907L in c++2b"
+#     error "__cpp_lib_latch should have the value 201907L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_latch

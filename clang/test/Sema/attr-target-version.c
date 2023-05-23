@@ -15,14 +15,21 @@ int __attribute__((target_version("aes"))) foo(void) { return 1; }
 //expected-note@+1 {{previous definition is here}}
 int __attribute__((target_version("default"))) foo(void) { return 2; }
 
-//expected-note@+1 {{previous declaration is here}}
+//expected-note@+1 {{previous definition is here}}
 int __attribute__((target_version("sha3 + pmull "))) foo(void) { return 1; }
+//expected-note@-1 {{previous definition is here}}
 
-//expected-error@+1 {{multiversioning attributes cannot be combined}}
+//expected-error@+1 {{redefinition of 'foo'}}
 int __attribute__((target("dotprod"))) foo(void) { return -1; }
+//expected-warning@-1 {{attribute declaration must precede definition}}
 
 //expected-error@+1 {{redefinition of 'foo'}}
 int foo(void) { return 2; }
+
+//expected-note@+1 {{previous definition is here}}
+__attribute__ ((target("bf16,sve,sve2,dotprod"))) int func(void) { return 1; }
+//expected-error@+1 {{redefinition of 'func'}}
+__attribute__ ((target("default"))) int func(void) { return 0; }
 
 //expected-note@+1 {{previous declaration is here}}
 void __attribute__((target_version("bti+flagm2"))) one(void) {}
