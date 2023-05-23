@@ -177,6 +177,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.log10
     libc.src.math.log10f
     libc.src.math.log1pf
+    libc.src.math.log2
     libc.src.math.log2f
     libc.src.math.log
     libc.src.math.logf
