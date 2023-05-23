@@ -79,10 +79,7 @@ func.func @static_alloca() -> memref<32x18xf32> {
 // CHECK: %[[sz2:.*]] = llvm.mlir.constant(18 : index) : i64
 // CHECK: %[[st2:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK: %[[num_elems:.*]] = llvm.mlir.constant(576 : index) : i64
-// CHECK: %[[null:.*]] = llvm.mlir.null : !llvm.ptr
-// CHECK: %[[gep:.*]] = llvm.getelementptr %[[null]][%[[num_elems]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: %[[size_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr to i64
-// CHECK: %[[allocated:.*]] = llvm.alloca %[[size_bytes]] x f32 : (i64) -> !llvm.ptr
+// CHECK: %[[allocated:.*]] = llvm.alloca %[[num_elems]] x f32 : (i64) -> !llvm.ptr
  %0 = memref.alloca() : memref<32x18xf32>
 
  // Test with explicitly specified alignment. llvm.alloca takes care of the

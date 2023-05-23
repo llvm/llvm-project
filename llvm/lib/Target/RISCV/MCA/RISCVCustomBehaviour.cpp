@@ -73,7 +73,7 @@ bool RISCVInstrumentManager::supportsInstrumentType(
   return Type == RISCVLMULInstrument::DESC_NAME;
 }
 
-SharedInstrument
+UniqueInstrument
 RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
                                          llvm::StringRef Data) {
   if (Desc != RISCVLMULInstrument::DESC_NAME) {
@@ -86,19 +86,19 @@ RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
                       << Data << '\n');
     return nullptr;
   }
-  return std::make_shared<RISCVLMULInstrument>(Data);
+  return std::make_unique<RISCVLMULInstrument>(Data);
 }
 
 unsigned RISCVInstrumentManager::getSchedClassID(
     const MCInstrInfo &MCII, const MCInst &MCI,
-    const llvm::SmallVector<SharedInstrument> &IVec) const {
+    const llvm::SmallVector<Instrument *> &IVec) const {
   unsigned short Opcode = MCI.getOpcode();
   unsigned SchedClassID = MCII.get(Opcode).getSchedClass();
 
   for (const auto &I : IVec) {
     // Unknown Instrument kind
     if (I->getDesc() == RISCVLMULInstrument::DESC_NAME) {
-      uint8_t LMUL = static_cast<RISCVLMULInstrument *>(I.get())->getLMUL();
+      uint8_t LMUL = static_cast<RISCVLMULInstrument *>(I)->getLMUL();
       const RISCVVInversePseudosTable::PseudoInfo *RVV =
           RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL);
       // Not a RVV instr

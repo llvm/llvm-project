@@ -40,7 +40,7 @@ public:
 
   static lldb_private::Language *CreateInstance(lldb::LanguageType language);
 
-  ConstString GetInstanceVariableName() override { return ConstString("self"); }
+  llvm::StringRef GetInstanceVariableName() override { return "self"; }
 
   static llvm::StringRef GetPluginNameStatic() { return "objcplusplus"; }
 

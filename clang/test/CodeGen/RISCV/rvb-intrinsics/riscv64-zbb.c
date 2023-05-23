@@ -50,6 +50,18 @@ long clz_64(long a) {
   return __builtin_riscv_clz_64(a);
 }
 
+// RV64ZBB-LABEL: @ctz_32(
+// RV64ZBB-NEXT:  entry:
+// RV64ZBB-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// RV64ZBB-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
+// RV64ZBB-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// RV64ZBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false)
+// RV64ZBB-NEXT:    ret i32 [[TMP1]]
+//
+int ctz_32(int a) {
+  return __builtin_riscv_ctz_32(a);
+}
+
 // RV64ZBB-LABEL: @ctz_64(
 // RV64ZBB-NEXT:  entry:
 // RV64ZBB-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8

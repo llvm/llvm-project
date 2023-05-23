@@ -314,10 +314,8 @@ to find bugs in local development builds, whereas ``-fsanitize=cfi-icall``
 is a security hardening mechanism designed to be deployed in release builds.
 
 ``-fsanitize=function`` has a higher space and time overhead due to a more
-complex type check at indirect call sites, as well as a need for run-time
-type information (RTTI), which may make it unsuitable for deployment. Because
-of the need for RTTI, ``-fsanitize=function`` can only be used with C++
-programs, whereas ``-fsanitize=cfi-icall`` can protect both C and C++ programs.
+complex type check at indirect call sites, which may make it unsuitable for
+deployment.
 
 On the other hand, ``-fsanitize=function`` conforms more closely with the C++
 standard and user expectations around interaction with shared libraries;

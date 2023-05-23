@@ -44,6 +44,21 @@ public:
   /// of the SSA machinery.
   IROperandBase *getNextOperandUsingThisValue() { return nextUse; }
 
+  /// Initialize the use-def chain by setting the back address to self and
+  /// nextUse to nullptr.
+  void initChainWithUse(IROperandBase **self) {
+    assert(this == *self);
+    back = self;
+    nextUse = nullptr;
+  }
+
+  /// Link the current node to next.
+  void linkTo(IROperandBase *next) {
+    nextUse = next;
+    if (nextUse)
+      nextUse->back = &nextUse;
+  }
+
 protected:
   IROperandBase(Operation *owner) : owner(owner) {}
   IROperandBase(IROperandBase &&other) : owner(other.owner) {
@@ -192,6 +207,30 @@ public:
       use_begin()->set(newValue);
   }
 
+  /// Shuffle the use-list chain according to the provided indices vector, which
+  /// need to represent a valid shuffle. That is, a vector of unique integers in
+  /// range [0, numUses - 1]. Users of this function need to guarantee the
+  /// validity of the indices vector.
+  void shuffleUseList(ArrayRef<unsigned> indices) {
+    assert((size_t)std::distance(getUses().begin(), getUses().end()) ==
+               indices.size() &&
+           "indices vector expected to have a number of elements equal to the "
+           "number of uses");
+    SmallVector<detail::IROperandBase *> shuffled(indices.size());
+    detail::IROperandBase *ptr = firstUse;
+    for (size_t idx = 0; idx < indices.size();
+         idx++, ptr = ptr->getNextOperandUsingThisValue())
+      shuffled[indices[idx]] = ptr;
+
+    initFirstUse(shuffled.front());
+    auto *current = firstUse;
+    for (auto &next : llvm::drop_begin(shuffled)) {
+      current->linkTo(next);
+      current = next;
+    }
+    current->linkTo(nullptr);
+  }
+
   //===--------------------------------------------------------------------===//
   // Uses
   //===--------------------------------------------------------------------===//
@@ -234,6 +273,12 @@ protected:
   OperandType *getFirstUse() const { return (OperandType *)firstUse; }
 
 private:
+  /// Set use as the first use of the chain.
+  void initFirstUse(detail::IROperandBase *use) {
+    firstUse = use;
+    firstUse->initChainWithUse(&firstUse);
+  }
+
   detail::IROperandBase *firstUse = nullptr;
 
   /// Allow access to `firstUse`.

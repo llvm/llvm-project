@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IRNumbering.h"
-#include "../Encoding.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
-#include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -109,6 +107,12 @@ static void groupByDialectPerByte(T range) {
 }
 
 IRNumberingState::IRNumberingState(Operation *op) {
+  // Compute a global operation ID numbering according to the pre-order walk of
+  // the IR. This is used as reference to construct use-list orders.
+  unsigned operationID = 0;
+  op->walk<WalkOrder::PreOrder>(
+      [&](Operation *op) { operationIDs.try_emplace(op, operationID++); });
+
   // Number the root operation.
   number(*op);
 

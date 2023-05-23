@@ -2,7 +2,9 @@
 ; RUN: opt < %s -passes=slp-vectorizer -mtriple=riscv64 -mattr=+v \
 ; RUN: -riscv-v-slp-max-vf=0 -S | FileCheck %s
 
-; FIXME: This should not be vectorized
+; This shouldn't be vectorized as the extra address computation required for the
+; vector store make it unprofitable (vle/vse don't have an offset in their
+; addressing modes)
 
 %struct.2i32 = type { i32, i32 }
 
@@ -10,7 +12,9 @@ define void @splat_store_v2i32(ptr %dest, i64 %i) {
 ; CHECK-LABEL: @splat_store_v2i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr [[STRUCT_2I32:%.*]], ptr [[DEST:%.*]], i64 [[I:%.*]], i32 0
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 1>, ptr [[P1]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr [[STRUCT_2I32]], ptr [[DEST]], i64 [[I]], i32 1
+; CHECK-NEXT:    store i32 1, ptr [[P2]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

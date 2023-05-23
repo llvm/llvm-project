@@ -944,6 +944,8 @@ def Tosa_AbsOp : Tosa_Op<"abs", [
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

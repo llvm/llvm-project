@@ -322,7 +322,6 @@ class VSCodeTestCaseBase(TestBase):
             launchCommands=launchCommands,
             sourceMap=sourceMap,
             runInTerminal=runInTerminal,
-            expectFailure=expectFailure,
             postRunCommands=postRunCommands)
 
         if expectFailure:

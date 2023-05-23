@@ -14,12 +14,11 @@ add_libc_fuzzer(
     StringParserOutputDiff.h
   DEPENDS
     libc.src.stdlib.atof
-  COMPILE_OPTIONS
-    -DLLVM_LIBC_ATOF_DIF_FUZZ_SKIP_GLIBC_HEX_SUBNORMAL_ERR
 )
 
 add_libc_fuzzer(
   strtofloat_fuzz
+  NEED_MPFR
   SRCS
     strtofloat_fuzz.cpp
   DEPENDS

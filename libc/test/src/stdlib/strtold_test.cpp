@@ -147,6 +147,16 @@ TEST_F(LlvmLibcStrToLDTest, Float64SpecificFailures) {
                             UInt128(0x8803000000000000)));
 }
 
+TEST_F(LlvmLibcStrToLDTest, Float80SpecificFailures) {
+  run_test("7777777777777777777777777777777777777777777777777777777777777777777"
+           "777777777777777777777777777777777",
+           100,
+           SELECT_CONST(uint64_t(0x54ac729b8fcaf734),
+                        (UInt128(0x414ae394dc) << 40) + UInt128(0x7e57b9a0c2),
+                        (UInt128(0x414ac729b8fcaf73) << 64) +
+                            UInt128(0x4184a3d793224129)));
+}
+
 TEST_F(LlvmLibcStrToLDTest, MaxSizeNumbers) {
   run_test("1.1897314953572317650e4932", 26,
            SELECT_CONST(uint64_t(0x7FF0000000000000),

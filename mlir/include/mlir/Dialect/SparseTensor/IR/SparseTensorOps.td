@@ -93,7 +93,6 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
     //     of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
     //                   |0.0, 0.0, 0.0, 0.0|
     ```
-    ```
   }];
 
   let assemblyFormat =

@@ -630,7 +630,15 @@ public:
           // report the error elsewhere
           return *symbol;
         }
-        SayAlreadyDeclared(name, *symbol);
+        Symbol &errSym{*symbol};
+        if (auto *d{symbol->detailsIf<GenericDetails>()}) {
+          if (d->specific()) {
+            errSym = *d->specific();
+          } else if (d->derivedType()) {
+            errSym = *d->derivedType();
+          }
+        }
+        SayAlreadyDeclared(name, errSym);
       }
       // replace the old symbol with a new one with correct details
       EraseSymbol(*symbol);
@@ -2899,9 +2907,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
 
   auto checkAmbiguousDerivedType{[this, location, localName](
                                      const Symbol *t1, const Symbol *t2) {
-    if (!t1 || !t2) {
-      return true;
-    } else {
+    if (t1 && t2) {
       t1 = &t1->GetUltimate();
       t2 = &t2->GetUltimate();
       if (&t1 != &t2) {
@@ -2912,6 +2918,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
         return false;
       }
     }
+    return true;
   }};
 
   auto *localGeneric{localUltimate.detailsIf<GenericDetails>()};
@@ -2919,29 +2926,18 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
   auto combine{false};
   if (localGeneric) {
     if (useGeneric) {
-      if (!checkAmbiguousDerivedType(
-              localGeneric->derivedType(), useGeneric->derivedType())) {
-        return;
-      }
-      combine = true;
+      combine = checkAmbiguousDerivedType(
+          localGeneric->derivedType(), useGeneric->derivedType());
     } else if (useUltimate.has<DerivedTypeDetails>()) {
-      if (checkAmbiguousDerivedType(
-              &useUltimate, localGeneric->derivedType())) {
-        combine = true;
-      } else {
-        return;
-      }
+      combine =
+          checkAmbiguousDerivedType(&useUltimate, localGeneric->derivedType());
     } else if (&useUltimate == &BypassGeneric(localUltimate).GetUltimate()) {
       return; // nothing to do; used subprogram is local's specific
     }
   } else if (useGeneric) {
     if (localUltimate.has<DerivedTypeDetails>()) {
-      if (checkAmbiguousDerivedType(
-              &localUltimate, useGeneric->derivedType())) {
-        combine = true;
-      } else {
-        return;
-      }
+      combine =
+          checkAmbiguousDerivedType(&localUltimate, useGeneric->derivedType());
     } else if (&localUltimate == &BypassGeneric(useUltimate).GetUltimate()) {
       // Local is the specific of the used generic; replace it.
       EraseSymbol(localSymbol);
@@ -2989,14 +2985,19 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
   // cases are handled above without needing to make a local copy of the
   // generic.)
 
+  std::optional<parser::MessageFixedText> msg;
   if (localGeneric) {
     if (localSymbol.has<UseDetails>()) {
       // Create a local copy of a previously use-associated generic so that
       // it can be locally extended without corrupting the original.
       GenericDetails generic;
       generic.CopyFrom(*localGeneric);
-      if (localGeneric->specific()) {
-        generic.set_specific(*localGeneric->specific());
+      if (Symbol * spec{localGeneric->specific()};
+          spec && !spec->attrs().test(Attr::PRIVATE)) {
+        generic.set_specific(*spec);
+      } else if (Symbol * dt{generic.derivedType()};
+                 dt && dt->attrs().test(Attr::PRIVATE)) {
+        generic.clear_derivedType();
       }
       EraseSymbol(localSymbol);
       Symbol &newSymbol{MakeSymbol(
@@ -3012,43 +3013,67 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       localSymbol.flags() = useSymbol.flags();
       AddGenericUse(*localGeneric, localName, useUltimate);
       localGeneric->CopyFrom(*useGeneric);
-      if (useGeneric->specific()) {
-        if (!localGeneric->specific()) {
-          localGeneric->set_specific(
-              *const_cast<Symbol *>(useGeneric->specific()));
+      if (const Symbol * useSpec{useGeneric->specific()};
+          useSpec && !useSpec->attrs().test(Attr::PRIVATE)) {
+        if (localGeneric->derivedType()) {
+          msg =
+              "Cannot use-associate generic interface '%s' with specific procedure of the same name when another such interface and derived type are in scope"_err_en_US;
+        } else if (!localGeneric->specific()) {
+          localGeneric->set_specific(*const_cast<Symbol *>(useSpec));
         } else if (&localGeneric->specific()->GetUltimate() !=
-            &useGeneric->specific()->GetUltimate()) {
-          Say(location,
-              "Cannot use-associate generic interface '%s' with specific procedure of the same name when another such generic is in scope"_err_en_US,
-              localName)
-              .Attach(
-                  localSymbol.name(), "Previous USE of '%s'"_en_US, localName);
+            &useSpec->GetUltimate()) {
+          msg =
+              "Cannot use-associate generic interface '%s' with specific procedure of the same name when another such interface and procedure are in scope"_err_en_US;
+        }
+      } else if (const Symbol * useDT{useGeneric->derivedType()};
+                 useDT && !useDT->attrs().test(Attr::PRIVATE)) {
+        if (localGeneric->specific()) {
+          msg =
+              "Cannot use-associate generic interface '%s' with derived type of the same name when another such interface and procedure are in scope"_err_en_US;
+        } else if (!localGeneric->derivedType()) {
+          localGeneric->set_derivedType(*const_cast<Symbol *>(useDT));
+        } else if (&localGeneric->derivedType()->GetUltimate() !=
+            &useDT->GetUltimate()) {
+          msg =
+              "Cannot use-associate generic interface '%s' with derived type of the same name when another such interface and derived type are in scope"_err_en_US;
         }
       }
     } else {
       CHECK(useUltimate.has<DerivedTypeDetails>());
-      localGeneric->set_derivedType(
-          AddGenericUse(*localGeneric, localName, useUltimate));
+      if (!localGeneric->derivedType()) {
+        localGeneric->set_derivedType(
+            AddGenericUse(*localGeneric, localName, useUltimate));
+      } else if (&localGeneric->derivedType()->GetUltimate() != &useUltimate) {
+        msg =
+            "Cannot use-associate derived type '%s' when a generic interface and derived type of the same name are in scope"_err_en_US;
+      }
     }
   } else {
     CHECK(useGeneric && localUltimate.has<DerivedTypeDetails>());
     CHECK(localSymbol.has<UseDetails>());
     // Create a local copy of the use-associated generic, then extend it
     // with the local derived type.
-    GenericDetails generic;
-    generic.CopyFrom(*useGeneric);
-    if (useGeneric->specific()) {
-      generic.set_specific(*const_cast<Symbol *>(useGeneric->specific()));
+    if (!useGeneric->derivedType() ||
+        &useGeneric->derivedType()->GetUltimate() == &localUltimate) {
+      GenericDetails generic;
+      generic.CopyFrom(*useGeneric);
+      EraseSymbol(localSymbol);
+      Symbol &newSymbol{MakeSymbol(localName,
+          useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
+          std::move(generic))};
+      newSymbol.flags() = useUltimate.flags();
+      auto &newUseGeneric{newSymbol.get<GenericDetails>()};
+      AddGenericUse(newUseGeneric, localName, useUltimate);
+      newUseGeneric.AddUse(localSymbol);
+      newUseGeneric.set_derivedType(localSymbol);
+    } else if (useGeneric->derivedType()) {
+      msg =
+          "Cannot use-associate generic interface '%s' with derived type of the same name when another such derived type is in scope"_err_en_US;
     }
-    EraseSymbol(localSymbol);
-    Symbol &newSymbol{MakeSymbol(localName,
-        useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
-        std::move(generic))};
-    newSymbol.flags() = useUltimate.flags();
-    auto &newUseGeneric{newSymbol.get<GenericDetails>()};
-    AddGenericUse(newUseGeneric, localName, useUltimate);
-    newUseGeneric.AddUse(localSymbol);
-    newUseGeneric.set_derivedType(localSymbol);
+  }
+  if (msg) {
+    Say(location, std::move(*msg), localName)
+        .Attach(localSymbol.name(), "Previous USE of '%s'"_en_US, localName);
   }
 }
 

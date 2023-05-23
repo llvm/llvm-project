@@ -644,10 +644,14 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects]> {
   let extraClassDeclaration = [{
       mlir::Block *getBody() { return &getRegion().front(); }
 
-      // Get the indices iterating over the shape.
+      /// Get the indices iterating over the shape.
       mlir::Block::BlockArgListType getIndices() {
        return getBody()->getArguments();
       }
+
+      /// Must this elemental be evaluated in order?
+      /// TODO: add attribute and set it in lowering.
+      bool isOrdered() {return true;}
   }];
 
   let skipDefaultBuilders = 1;

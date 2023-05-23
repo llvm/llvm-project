@@ -115,6 +115,7 @@ set(LLVM_LINK_COMPONENTS
   BitReader
   BitWriter
   Core
+  Support
 )
 add_llvm_executable( prepare_builtins utils/prepare-builtins.cpp )
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )

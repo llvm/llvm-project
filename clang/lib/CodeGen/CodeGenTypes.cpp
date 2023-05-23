@@ -630,13 +630,22 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
-    {
-      ASTContext::BuiltinVectorTypeInfo Info =
-          Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-      return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
-                                           Info.EC.getKnownMinValue() *
-                                           Info.NumVectors);
-    }
+      {
+        ASTContext::BuiltinVectorTypeInfo Info =
+            Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
+        // Tuple types are expressed as aggregregate types of the same scalable
+        // vector type (e.g. vint32m1x2_t is two vint32m1_t, which is {<vscale x
+        // 2 x i32>, <vscale x 2 x i32>}).
+        if (Info.NumVectors != 1) {
+          llvm::Type *EltTy = llvm::ScalableVectorType::get(
+              ConvertType(Info.ElementType), Info.EC.getKnownMinValue());
+          llvm::SmallVector<llvm::Type *, 4> EltTys(Info.NumVectors, EltTy);
+          return llvm::StructType::get(getLLVMContext(), EltTys);
+        }
+        return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
+                                             Info.EC.getKnownMinValue() *
+                                                 Info.NumVectors);
+      }
 #define WASM_REF_TYPE(Name, MangledName, Id, SingletonId, AS)                  \
   case BuiltinType::Id: {                                                      \
     if (BuiltinType::Id == BuiltinType::WasmExternRef)                         \

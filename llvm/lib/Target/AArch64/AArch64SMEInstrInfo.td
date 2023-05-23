@@ -632,8 +632,8 @@ defm SQRSHRN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshrn", 0b100, int_aarch64_
 defm UQRSHRN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"uqrshrn", 0b101, int_aarch64_sve_uqrshrn_x4>;
 defm SQRSHRUN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshrun", 0b110, int_aarch64_sve_sqrshrun_x4>;
 
-defm SEL_VG2_2ZP2Z2Z: sme2_sel_vector_vg2<"sel">;
-defm SEL_VG4_4ZP4Z4Z: sme2_sel_vector_vg4<"sel">;
+defm SEL_VG2_2ZC2Z2Z: sme2_sel_vector_vg2<"sel">;
+defm SEL_VG4_4ZC4Z4Z: sme2_sel_vector_vg4<"sel">;
 
 def  LD1B_VG2_M2ZPXX : sme2_ld_vector_vg2_multi_scalar_scalar<0b00, 0b0,    ZZ_b_strided,    GPR64shifted8, "ld1b">;
 def  LD1B_VG4_M4ZPXX : sme2_ld_vector_vg4_multi_scalar_scalar<0b00, 0b0,    ZZZZ_b_strided,  GPR64shifted8, "ld1b">;

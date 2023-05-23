@@ -1,3 +1,6 @@
+cmake_policy(PUSH)
+cmake_policy(SET CMP0057 NEW)
+
 function(get_system_libs return_var)
   message(AUTHOR_WARNING "get_system_libs no longer needed")
   set(${return_var} "" PARENT_SCOPE)
@@ -343,3 +346,5 @@ function(explicit_map_components_to_libraries out_libs)
   endforeach(c)
   set(${out_libs} ${result} PARENT_SCOPE)
 endfunction(explicit_map_components_to_libraries)
+
+cmake_policy(POP)

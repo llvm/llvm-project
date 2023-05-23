@@ -38,8 +38,3 @@ http_archive(
 load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
 
 llvm_configure(name = "llvm-project")
-
-# Disables optional dependencies for Support like zlib and terminfo. You may
-# instead want to configure them using the macros in the corresponding bzl
-# files.
-llvm_disable_optional_support_deps()

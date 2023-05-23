@@ -30,7 +30,7 @@ func.func @transfer_write_rank_reducing(%arg : memref<1x1x3x2xi8, strided<[6, 6,
 
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   transform.vector.apply_rank_reducing_subview_patterns %module_op
-      : (!pdl.operation) -> !pdl.operation
+      : (!transform.any_op) -> !transform.any_op
 }
