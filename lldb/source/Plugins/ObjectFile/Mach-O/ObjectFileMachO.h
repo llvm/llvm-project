@@ -269,7 +269,6 @@ protected:
   static lldb_private::ConstString GetSectionNameEHFrame();
 
   llvm::MachO::dysymtab_command m_dysymtab;
-  std::vector<llvm::MachO::segment_command_64> m_mach_segments;
   std::vector<llvm::MachO::section_64> m_mach_sections;
   std::optional<llvm::VersionTuple> m_min_os_version;
   std::optional<llvm::VersionTuple> m_sdk_versions;
