@@ -729,10 +729,7 @@ define i1 @select5(i32 %x) {
 
 define i1 @select6(i32 %x) {
 ; CHECK-LABEL: @select6(
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[X]], i32 4
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[S]], 0
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ;
   %c = icmp sgt i32 %x, 0
   %s = select i1 %c, i32 %x, i32 4
