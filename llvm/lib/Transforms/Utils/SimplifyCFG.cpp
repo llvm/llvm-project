@@ -6505,8 +6505,10 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // If the default is unreachable, all case values are s>= MinCaseVal. Then
     // we can try to attach nsw.
     bool MayWrap = true;
-    if (!DefaultIsReachable)
-      MaxCaseVal->getValue().ssub_ov(MinCaseVal->getValue(), MayWrap);
+    if (!DefaultIsReachable) {
+      APInt Res = MaxCaseVal->getValue().ssub_ov(MinCaseVal->getValue(), MayWrap);
+      (void)Res;
+    }
 
     TableIndex = Builder.CreateSub(SI->getCondition(), TableIndexOffset,
                                    "switch.tableidx", /*HasNUW =*/false,
