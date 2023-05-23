@@ -40,9 +40,10 @@ _warningFlags = [
   # TODO(mordante) investigate a solution for this issue.
   '-Wno-tautological-compare',
 
-  # -Wstringop-overread and -Wstringop-overflow seem to be a bit buggy currently
+  # -Wmismatched-new-delete, -Wstringop-overread and -Wstringop-overflow seem to be a bit buggy currently
   '-Wno-stringop-overread',
   '-Wno-stringop-overflow',
+  '-Wno-mismatched-new-delete',
 
   # These warnings should be enabled in order to support the MSVC
   # team using the test suite; They enable the warnings below and
