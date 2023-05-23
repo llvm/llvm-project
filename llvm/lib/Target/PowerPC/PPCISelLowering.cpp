@@ -15044,6 +15044,7 @@ SDValue PPCTargetLowering::combineStoreFPToInt(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc dl(N);
   unsigned Opcode = N->getOperand(1).getOpcode();
+  (void)Opcode;
 
   assert((Opcode == ISD::FP_TO_SINT || Opcode == ISD::FP_TO_UINT)
          && "Not a FP_TO_INT Instruction!");
