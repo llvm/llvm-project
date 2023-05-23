@@ -37,8 +37,13 @@ static cl::opt<bool> PartialProfile(
     "partial-profile", cl::Hidden, cl::init(false),
     cl::desc("Specify the current profile is used as a partial profile."));
 
+// TODO: Remove this support completely after ensuring that disabling by
+// default has no unexpected effects. This causes the global number of basic
+// blocks to be recorded in the ThinLTO summary, which breaks caching in the
+// distributed ThinLTO case.
 cl::opt<bool> ScalePartialSampleProfileWorkingSetSize(
-    "scale-partial-sample-profile-working-set-size", cl::Hidden, cl::init(true),
+    "scale-partial-sample-profile-working-set-size", cl::Hidden,
+    cl::init(false),
     cl::desc(
         "If true, scale the working set size of the partial sample profile "
         "by the partial profile ratio to reflect the size of the program "
