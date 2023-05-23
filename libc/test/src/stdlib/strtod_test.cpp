@@ -223,6 +223,11 @@ TEST_F(LlvmLibcStrToDTest, FuzzFailures) {
   // Same as above but for hex.
   run_test("0x0164810157p2047", 17, uint64_t(0x7ff0000000000000), ERANGE);
 
+  // This test ensures that only the correct number of characters is accepted.
+  // An exponent symbol followed by a sign isn't a valid exponent.
+  run_test("2e+", 1, uint64_t(0x4000000000000000));
+  run_test("0x2p+", 3, uint64_t(0x4000000000000000));
+
   // This bug was in the handling of very large exponents in the exponent
   // marker. Previously anything greater than 10,000 would be set to 10,000.
   // This caused incorrect behavior if there were more than 10,000 '0's in the

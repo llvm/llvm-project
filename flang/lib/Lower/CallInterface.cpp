@@ -1175,6 +1175,20 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeReadByCall() const {
     return true;
   return characteristics->GetIntent() != Fortran::common::Intent::Out;
 }
+
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::testTKR(
+    Fortran::common::IgnoreTKR flag) const {
+  if (!characteristics)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  if (!dummy)
+    return false;
+  return dummy->ignoreTKR.test(flag);
+}
+
 template <typename T>
 bool Fortran::lower::CallInterface<T>::PassedEntity::isIntentOut() const {
   if (!characteristics)

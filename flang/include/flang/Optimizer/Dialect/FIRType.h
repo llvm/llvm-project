@@ -330,6 +330,9 @@ inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
          fir::isUnlimitedPolymorphicType(boxTy);
 }
 
+/// Get the rank from a !fir.box type.
+unsigned getBoxRank(mlir::Type boxTy);
+
 /// Return the inner type of the given type.
 mlir::Type unwrapInnerType(mlir::Type ty);
 
@@ -359,7 +362,7 @@ bool hasAbstractResult(mlir::FunctionType ty);
 mlir::Type fromRealTypeID(mlir::MLIRContext *context, llvm::Type::TypeID typeID,
                           fir::KindTy kind);
 
-int getTypeCode(mlir::Type ty, KindMapping &kindMap);
+int getTypeCode(mlir::Type ty, const KindMapping &kindMap);
 
 inline bool BaseBoxType::classof(mlir::Type type) {
   return type.isa<fir::BoxType, fir::ClassType>();
@@ -412,6 +415,14 @@ inline bool isBoxAddress(mlir::Type t) {
 inline bool isBoxAddressOrValue(mlir::Type t) {
   return fir::unwrapRefType(t).isa<fir::BaseBoxType>();
 }
+
+/// Return a string representation of `ty`. The fir.ref is omitted in the
+/// representation.
+///
+/// fir.array<10x10xf32> -> prefix_10x10xf32
+/// fir.ref<i32> -> i32
+std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
+                            llvm::StringRef prefix = "");
 
 } // namespace fir
 

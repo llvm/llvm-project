@@ -572,10 +572,11 @@ llvm::ConstantInt *
 CodeGenFunction::getUBSanFunctionTypeHash(QualType Ty) const {
   // Remove any (C++17) exception specifications, to allow calling e.g. a
   // noexcept function through a non-noexcept pointer.
-  auto ProtoTy = getContext().getFunctionTypeWithExceptionSpec(Ty, EST_None);
+  if (!isa<FunctionNoProtoType>(Ty))
+    Ty = getContext().getFunctionTypeWithExceptionSpec(Ty, EST_None);
   std::string Mangled;
   llvm::raw_string_ostream Out(Mangled);
-  CGM.getCXXABI().getMangleContext().mangleTypeName(ProtoTy, Out, false);
+  CGM.getCXXABI().getMangleContext().mangleTypeName(Ty, Out, false);
   return llvm::ConstantInt::get(CGM.Int32Ty,
                                 static_cast<uint32_t>(llvm::xxHash64(Mangled)));
 }
@@ -945,7 +946,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   // If we are checking function types, emit a function type signature as
   // prologue data.
-  if (FD && getLangOpts().CPlusPlus && SanOpts.has(SanitizerKind::Function)) {
+  if (FD && SanOpts.has(SanitizerKind::Function)) {
     if (llvm::Constant *PrologueSig = getPrologueSignature(CGM, FD)) {
       llvm::LLVMContext &Ctx = Fn->getContext();
       llvm::MDBuilder MDB(Ctx);

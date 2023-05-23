@@ -273,7 +273,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
   }
   TokenSequence result{input, 0, j};
   for (; j < tokens; ++j) {
-    const CharBlock &token{input.TokenAt(j)};
+    CharBlock token{input.TokenAt(j)};
     if (token.IsBlank() || !IsLegalIdentifierStart(token[0])) {
       result.Put(input, j);
       continue;
@@ -283,14 +283,15 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       result.Put(input, j);
       continue;
     }
-    Definition &def{it->second};
-    if (def.isDisabled()) {
+    Definition *def{&it->second};
+    if (def->isDisabled()) {
       result.Put(input, j);
       continue;
     }
-    if (!def.isFunctionLike()) {
-      if (def.isPredefined()) {
-        std::string name{def.replacement().TokenAt(0).ToString()};
+    if (!def->isFunctionLike()) {
+      bool isRenaming{false};
+      if (def->isPredefined()) {
+        std::string name{def->replacement().TokenAt(0).ToString()};
         std::string repl;
         if (name == "__FILE__") {
           repl = "\""s +
@@ -309,18 +310,38 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
           continue;
         }
       }
-      def.set_isDisabled(true);
+      def->set_isDisabled(true);
       TokenSequence replaced{
-          TokenPasting(ReplaceMacros(def.replacement(), prescanner))};
-      def.set_isDisabled(false);
-      if (!replaced.empty()) {
-        ProvenanceRange from{def.replacement().GetProvenanceRange()};
-        ProvenanceRange use{input.GetTokenProvenanceRange(j)};
-        ProvenanceRange newRange{
-            allSources_.AddMacroCall(from, use, replaced.ToString())};
-        result.Put(replaced, newRange);
+          TokenPasting(ReplaceMacros(def->replacement(), prescanner))};
+      def->set_isDisabled(false);
+      // Allow a keyword-like macro replacement to be the name of
+      // a function-like macro, possibly surrounded by blanks.
+      std::size_t k{0}, repTokens{replaced.SizeInTokens()};
+      for (; k < repTokens && replaced.TokenAt(k).IsBlank(); ++k) {
       }
-      continue;
+      if (k < repTokens) {
+        token = replaced.TokenAt(k);
+        for (++k; k < repTokens && replaced.TokenAt(k).IsBlank(); ++k) {
+        }
+        if (k == repTokens && IsLegalIdentifierStart(token[0])) {
+          auto it{definitions_.find(token)};
+          if (it != definitions_.end() && !it->second.isDisabled() &&
+              it->second.isFunctionLike()) {
+            def = &it->second;
+            isRenaming = true;
+          }
+        }
+      }
+      if (!isRenaming) {
+        if (!replaced.empty()) {
+          ProvenanceRange from{def->replacement().GetProvenanceRange()};
+          ProvenanceRange use{input.GetTokenProvenanceRange(j)};
+          ProvenanceRange newRange{
+              allSources_.AddMacroCall(from, use, replaced.ToString())};
+          result.Put(replaced, newRange);
+        }
+        continue;
+      }
     }
     // Possible function-like macro call.  Skip spaces and newlines to see
     // whether '(' is next.
@@ -354,13 +375,13 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
         }
       }
     }
-    if (argStart.size() == 1 && k == argStart[0] && def.argumentCount() == 0) {
+    if (argStart.size() == 1 && k == argStart[0] && def->argumentCount() == 0) {
       // Subtle: () is zero arguments, not one empty argument,
       // unless one argument was expected.
       argStart.clear();
     }
-    if (k >= tokens || argStart.size() < def.argumentCount() ||
-        (argStart.size() > def.argumentCount() && !def.isVariadic())) {
+    if (k >= tokens || argStart.size() < def->argumentCount() ||
+        (argStart.size() > def->argumentCount() && !def->isVariadic())) {
       result.Put(input, j);
       continue;
     }
@@ -371,12 +392,12 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
           (n + 1 == argStart.size() ? k : argStart[n + 1] - 1) - at};
       args.emplace_back(TokenSequence(input, at, count));
     }
-    def.set_isDisabled(true);
+    def->set_isDisabled(true);
     TokenSequence replaced{
-        ReplaceMacros(def.Apply(args, prescanner), prescanner)};
-    def.set_isDisabled(false);
+        ReplaceMacros(def->Apply(args, prescanner), prescanner)};
+    def->set_isDisabled(false);
     if (!replaced.empty()) {
-      ProvenanceRange from{def.replacement().GetProvenanceRange()};
+      ProvenanceRange from{def->replacement().GetProvenanceRange()};
       ProvenanceRange use{input.GetIntervalProvenanceRange(j, k - j)};
       ProvenanceRange newRange{
           allSources_.AddMacroCall(from, use, replaced.ToString())};

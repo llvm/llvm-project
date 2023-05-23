@@ -323,7 +323,7 @@ endfunction(add_libc_long_running_testsuite)
 function(add_libc_fuzzer target_name)
   cmake_parse_arguments(
     "LIBC_FUZZER"
-    "" # No optional arguments
+    "NEED_MPFR" # Optional arguments
     "" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
@@ -336,6 +336,16 @@ function(add_libc_fuzzer target_name)
     message(FATAL_ERROR "'add_libc_fuzzer' target requires a DEPENDS list of "
                         "'add_entrypoint_object' targets.")
   endif()
+
+  list(APPEND LIBC_FUZZER_LINK_LIBRARIES "")
+  if(LIBC_FUZZER_NEED_MPFR)
+    if(NOT LIBC_TESTS_CAN_USE_MPFR)
+      message(VERBOSE "Fuzz test ${name} will be skipped as MPFR library is not available.")
+      return()
+    endif()
+    list(APPEND LIBC_FUZZER_LINK_LIBRARIES mpfr gmp)
+  endif()
+
 
   get_fq_target_name(${target_name} fq_target_name)
   get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
@@ -372,7 +382,10 @@ function(add_libc_fuzzer target_name)
       ${LIBC_BUILD_DIR}/include
   )
 
-  target_link_libraries(${fq_target_name} PRIVATE ${link_object_files})
+  target_link_libraries(${fq_target_name} PRIVATE 
+    ${link_object_files} 
+    ${LIBC_FUZZER_LINK_LIBRARIES}
+  )
 
   set_target_properties(${fq_target_name}
       PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -500,7 +513,7 @@ function(add_integration_test test_name)
       ${LIBC_BUILD_DIR}/include
   )
   target_compile_options(${fq_build_target_name}
-                         PRIVATE -fpie -ffreestanding ${INTEGRATION_TEST_COMPILE_OPTIONS})
+      PRIVATE -fpie -ffreestanding -fno-exceptions -fno-rtti ${INTEGRATION_TEST_COMPILE_OPTIONS})
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_compile_options(${fq_build_target_name} PRIVATE

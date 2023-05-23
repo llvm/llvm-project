@@ -961,9 +961,9 @@ static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
   SmallVector<int> NewMask(SubMask.size(), PoisonMaskElem);
   int TermValue = std::min(Mask.size(), SubMask.size());
   for (int I = 0, E = SubMask.size(); I < E; ++I) {
-    if ((!ExtendingManyInputs &&
-         (SubMask[I] >= TermValue || Mask[SubMask[I]] >= TermValue)) ||
-        SubMask[I] == PoisonMaskElem)
+    if (SubMask[I] == PoisonMaskElem ||
+        (!ExtendingManyInputs &&
+         (SubMask[I] >= TermValue || Mask[SubMask[I]] >= TermValue)))
       continue;
     NewMask[I] = Mask[SubMask[I]];
   }

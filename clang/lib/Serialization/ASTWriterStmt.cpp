@@ -317,7 +317,10 @@ void ASTStmtWriter::VisitGCCAsmStmt(GCCAsmStmt *S) {
     Record.AddStmt(S->getClobberStringLiteral(I));
 
   // Labels
-  for (auto *E : S->labels()) Record.AddStmt(E);
+  for (unsigned I = 0, N = S->getNumLabels(); I != N; ++I) {
+    Record.AddIdentifierRef(S->getLabelIdentifier(I));
+    Record.AddStmt(S->getLabelExpr(I));
+  }
 
   Code = serialization::STMT_GCCASM;
 }

@@ -9,6 +9,12 @@ declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
 declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
 declare <3 x half> @llvm.canonicalize.v3f16(<3 x half>) #0
 declare <4 x half> @llvm.canonicalize.v4f16(<4 x half>) #0
+declare <6 x half> @llvm.canonicalize.v6f16(<6 x half>) #0
+declare <8 x half> @llvm.canonicalize.v8f16(<8 x half>) #0
+declare <12 x half> @llvm.canonicalize.v12f16(<12 x half>) #0
+declare <16 x half> @llvm.canonicalize.v16f16(<16 x half>) #0
+declare <32 x half> @llvm.canonicalize.v32f16(<32 x half>) #0
+declare <64 x half> @llvm.canonicalize.v64f16(<64 x half>) #0
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(1) %out) #1 {
@@ -2225,6 +2231,807 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
   %vec2 = insertelement <4 x half> %vec1, half %val2, i32 3
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec2)
   ret <4 x half> %canonicalized
+}
+
+define <6 x half> @v_test_canonicalize_var_v6f16(<6 x half> %val) #1 {
+; VI-LABEL: v_test_canonicalize_var_v6f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f16_sdwa v3, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v4, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v5, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v2, v2, v2
+; VI-NEXT:    v_max_f16_e32 v1, v1, v1
+; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v5
+; VI-NEXT:    v_or_b32_e32 v1, v1, v4
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_canonicalize_var_v6f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-LABEL: v_test_canonicalize_var_v6f16:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; CI-NEXT:    s_setpc_b64 s[30:31]
+  %canonicalized = call <6 x half> @llvm.canonicalize.v6f16(<6 x half> %val)
+  ret <6 x half> %canonicalized
+}
+
+define <8 x half> @v_test_canonicalize_var_v8f16(<8 x half> %val) #1 {
+; VI-LABEL: v_test_canonicalize_var_v8f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f16_sdwa v4, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v5, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v6, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v7, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v3, v3, v3
+; VI-NEXT:    v_max_f16_e32 v2, v2, v2
+; VI-NEXT:    v_max_f16_e32 v1, v1, v1
+; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v7
+; VI-NEXT:    v_or_b32_e32 v1, v1, v6
+; VI-NEXT:    v_or_b32_e32 v2, v2, v5
+; VI-NEXT:    v_or_b32_e32 v3, v3, v4
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_canonicalize_var_v8f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-LABEL: v_test_canonicalize_var_v8f16:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; CI-NEXT:    s_setpc_b64 s[30:31]
+  %canonicalized = call <8 x half> @llvm.canonicalize.v8f16(<8 x half> %val)
+  ret <8 x half> %canonicalized
+}
+
+define <12 x half> @v_test_canonicalize_var_v12f16(<12 x half> %val) #1 {
+; VI-LABEL: v_test_canonicalize_var_v12f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f16_sdwa v6, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v7, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v8, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v9, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v10, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v11, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v5, v5, v5
+; VI-NEXT:    v_max_f16_e32 v4, v4, v4
+; VI-NEXT:    v_max_f16_e32 v3, v3, v3
+; VI-NEXT:    v_max_f16_e32 v2, v2, v2
+; VI-NEXT:    v_max_f16_e32 v1, v1, v1
+; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v11
+; VI-NEXT:    v_or_b32_e32 v1, v1, v10
+; VI-NEXT:    v_or_b32_e32 v2, v2, v9
+; VI-NEXT:    v_or_b32_e32 v3, v3, v8
+; VI-NEXT:    v_or_b32_e32 v4, v4, v7
+; VI-NEXT:    v_or_b32_e32 v5, v5, v6
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_canonicalize_var_v12f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v4, v4, v4
+; GFX9-NEXT:    v_pk_max_f16 v5, v5, v5
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-LABEL: v_test_canonicalize_var_v12f16:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; CI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; CI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; CI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; CI-NEXT:    v_cvt_f16_f32_e32 v11, v11
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
+; CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
+; CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
+; CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
+; CI-NEXT:    s_setpc_b64 s[30:31]
+  %canonicalized = call <12 x half> @llvm.canonicalize.v12f16(<12 x half> %val)
+  ret <12 x half> %canonicalized
+}
+
+define <16 x half> @v_test_canonicalize_var_v16f16(<16 x half> %val) #1 {
+; VI-LABEL: v_test_canonicalize_var_v16f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f16_sdwa v8, v7, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v9, v6, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v10, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v11, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v12, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v13, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v14, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v15, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v7, v7, v7
+; VI-NEXT:    v_max_f16_e32 v6, v6, v6
+; VI-NEXT:    v_max_f16_e32 v5, v5, v5
+; VI-NEXT:    v_max_f16_e32 v4, v4, v4
+; VI-NEXT:    v_max_f16_e32 v3, v3, v3
+; VI-NEXT:    v_max_f16_e32 v2, v2, v2
+; VI-NEXT:    v_max_f16_e32 v1, v1, v1
+; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v15
+; VI-NEXT:    v_or_b32_e32 v1, v1, v14
+; VI-NEXT:    v_or_b32_e32 v2, v2, v13
+; VI-NEXT:    v_or_b32_e32 v3, v3, v12
+; VI-NEXT:    v_or_b32_e32 v4, v4, v11
+; VI-NEXT:    v_or_b32_e32 v5, v5, v10
+; VI-NEXT:    v_or_b32_e32 v6, v6, v9
+; VI-NEXT:    v_or_b32_e32 v7, v7, v8
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_canonicalize_var_v16f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v4, v4, v4
+; GFX9-NEXT:    v_pk_max_f16 v5, v5, v5
+; GFX9-NEXT:    v_pk_max_f16 v6, v6, v6
+; GFX9-NEXT:    v_pk_max_f16 v7, v7, v7
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-LABEL: v_test_canonicalize_var_v16f16:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; CI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; CI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; CI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; CI-NEXT:    v_cvt_f16_f32_e32 v11, v11
+; CI-NEXT:    v_cvt_f16_f32_e32 v12, v12
+; CI-NEXT:    v_cvt_f16_f32_e32 v13, v13
+; CI-NEXT:    v_cvt_f16_f32_e32 v14, v14
+; CI-NEXT:    v_cvt_f16_f32_e32 v15, v15
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
+; CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
+; CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
+; CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
+; CI-NEXT:    v_cvt_f32_f16_e32 v12, v12
+; CI-NEXT:    v_cvt_f32_f16_e32 v13, v13
+; CI-NEXT:    v_cvt_f32_f16_e32 v14, v14
+; CI-NEXT:    v_cvt_f32_f16_e32 v15, v15
+; CI-NEXT:    s_setpc_b64 s[30:31]
+  %canonicalized = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> %val)
+  ret <16 x half> %canonicalized
+}
+
+define <32 x half> @v_test_canonicalize_var_v32f16(<32 x half> %val) #1 {
+; VI-LABEL: v_test_canonicalize_var_v32f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f16_sdwa v20, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v1, v1, v1
+; VI-NEXT:    v_or_b32_e32 v1, v1, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v2, v2, v2
+; VI-NEXT:    v_or_b32_e32 v2, v2, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v3, v3, v3
+; VI-NEXT:    v_or_b32_e32 v3, v3, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v4, v4, v4
+; VI-NEXT:    v_or_b32_e32 v4, v4, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v5, v5, v5
+; VI-NEXT:    v_or_b32_e32 v5, v5, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v6, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v6, v6, v6
+; VI-NEXT:    v_or_b32_e32 v6, v6, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v7, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v7, v7, v7
+; VI-NEXT:    v_or_b32_e32 v7, v7, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v8, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v8, v8, v8
+; VI-NEXT:    v_or_b32_e32 v8, v8, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v9, v9 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v9, v9, v9
+; VI-NEXT:    v_or_b32_e32 v9, v9, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v10, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v10, v10, v10
+; VI-NEXT:    v_max_f16_sdwa v16, v15, v15 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v17, v14, v14 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v18, v13, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_sdwa v19, v12, v12 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_or_b32_e32 v10, v10, v20
+; VI-NEXT:    v_max_f16_sdwa v20, v11, v11 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v15, v15, v15
+; VI-NEXT:    v_max_f16_e32 v14, v14, v14
+; VI-NEXT:    v_max_f16_e32 v13, v13, v13
+; VI-NEXT:    v_max_f16_e32 v12, v12, v12
+; VI-NEXT:    v_max_f16_e32 v11, v11, v11
+; VI-NEXT:    v_or_b32_e32 v11, v11, v20
+; VI-NEXT:    v_or_b32_e32 v12, v12, v19
+; VI-NEXT:    v_or_b32_e32 v13, v13, v18
+; VI-NEXT:    v_or_b32_e32 v14, v14, v17
+; VI-NEXT:    v_or_b32_e32 v15, v15, v16
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_canonicalize_var_v32f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v4, v4, v4
+; GFX9-NEXT:    v_pk_max_f16 v5, v5, v5
+; GFX9-NEXT:    v_pk_max_f16 v6, v6, v6
+; GFX9-NEXT:    v_pk_max_f16 v7, v7, v7
+; GFX9-NEXT:    v_pk_max_f16 v8, v8, v8
+; GFX9-NEXT:    v_pk_max_f16 v9, v9, v9
+; GFX9-NEXT:    v_pk_max_f16 v10, v10, v10
+; GFX9-NEXT:    v_pk_max_f16 v11, v11, v11
+; GFX9-NEXT:    v_pk_max_f16 v12, v12, v12
+; GFX9-NEXT:    v_pk_max_f16 v13, v13, v13
+; GFX9-NEXT:    v_pk_max_f16 v14, v14, v14
+; GFX9-NEXT:    v_pk_max_f16 v15, v15, v15
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-LABEL: v_test_canonicalize_var_v32f16:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; CI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; CI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; CI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; CI-NEXT:    v_cvt_f16_f32_e32 v11, v11
+; CI-NEXT:    v_cvt_f16_f32_e32 v12, v12
+; CI-NEXT:    v_cvt_f16_f32_e32 v13, v13
+; CI-NEXT:    v_cvt_f16_f32_e32 v14, v14
+; CI-NEXT:    v_cvt_f16_f32_e32 v15, v15
+; CI-NEXT:    v_cvt_f16_f32_e32 v16, v16
+; CI-NEXT:    v_cvt_f16_f32_e32 v17, v17
+; CI-NEXT:    v_cvt_f16_f32_e32 v18, v18
+; CI-NEXT:    v_cvt_f16_f32_e32 v19, v19
+; CI-NEXT:    v_cvt_f16_f32_e32 v20, v20
+; CI-NEXT:    v_cvt_f16_f32_e32 v21, v21
+; CI-NEXT:    v_cvt_f16_f32_e32 v22, v22
+; CI-NEXT:    v_cvt_f16_f32_e32 v23, v23
+; CI-NEXT:    v_cvt_f16_f32_e32 v24, v24
+; CI-NEXT:    v_cvt_f16_f32_e32 v25, v25
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v26
+; CI-NEXT:    v_cvt_f16_f32_e32 v27, v27
+; CI-NEXT:    v_cvt_f16_f32_e32 v28, v28
+; CI-NEXT:    v_cvt_f16_f32_e32 v29, v29
+; CI-NEXT:    v_cvt_f16_f32_e32 v30, v30
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
+; CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
+; CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
+; CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
+; CI-NEXT:    v_cvt_f32_f16_e32 v12, v12
+; CI-NEXT:    v_cvt_f32_f16_e32 v13, v13
+; CI-NEXT:    v_cvt_f32_f16_e32 v14, v14
+; CI-NEXT:    v_cvt_f32_f16_e32 v15, v15
+; CI-NEXT:    v_cvt_f32_f16_e32 v16, v16
+; CI-NEXT:    v_cvt_f32_f16_e32 v17, v17
+; CI-NEXT:    v_cvt_f32_f16_e32 v18, v18
+; CI-NEXT:    v_cvt_f32_f16_e32 v19, v19
+; CI-NEXT:    v_cvt_f32_f16_e32 v20, v20
+; CI-NEXT:    v_cvt_f32_f16_e32 v21, v21
+; CI-NEXT:    v_cvt_f32_f16_e32 v22, v22
+; CI-NEXT:    v_cvt_f32_f16_e32 v23, v23
+; CI-NEXT:    v_cvt_f32_f16_e32 v24, v24
+; CI-NEXT:    v_cvt_f32_f16_e32 v25, v25
+; CI-NEXT:    v_cvt_f32_f16_e32 v26, v26
+; CI-NEXT:    v_cvt_f32_f16_e32 v27, v27
+; CI-NEXT:    v_cvt_f32_f16_e32 v28, v28
+; CI-NEXT:    v_cvt_f32_f16_e32 v29, v29
+; CI-NEXT:    v_cvt_f32_f16_e32 v30, v30
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v31, v31
+; CI-NEXT:    v_cvt_f32_f16_e32 v31, v31
+; CI-NEXT:    s_setpc_b64 s[30:31]
+  %canonicalized = call <32 x half> @llvm.canonicalize.v32f16(<32 x half> %val)
+  ret <32 x half> %canonicalized
+}
+
+define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
+; VI-LABEL: v_test_canonicalize_var_v64f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_max_f16_sdwa v31, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v1, v1, v1
+; VI-NEXT:    v_or_b32_e32 v1, v1, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v2, v2, v2
+; VI-NEXT:    v_or_b32_e32 v2, v2, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v3, v3, v3
+; VI-NEXT:    v_or_b32_e32 v3, v3, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v4, v4, v4
+; VI-NEXT:    v_or_b32_e32 v4, v4, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v5, v5, v5
+; VI-NEXT:    v_or_b32_e32 v5, v5, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v6, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v6, v6, v6
+; VI-NEXT:    v_or_b32_e32 v6, v6, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v7, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v7, v7, v7
+; VI-NEXT:    v_or_b32_e32 v7, v7, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v8, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v8, v8, v8
+; VI-NEXT:    v_or_b32_e32 v8, v8, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v9, v9 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v9, v9, v9
+; VI-NEXT:    v_or_b32_e32 v9, v9, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v10, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v10, v10, v10
+; VI-NEXT:    v_or_b32_e32 v10, v10, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v11, v11 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v11, v11, v11
+; VI-NEXT:    v_or_b32_e32 v11, v11, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v12, v12 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v12, v12, v12
+; VI-NEXT:    v_or_b32_e32 v12, v12, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v13, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v13, v13, v13
+; VI-NEXT:    v_or_b32_e32 v13, v13, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v14, v14 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v14, v14, v14
+; VI-NEXT:    v_or_b32_e32 v14, v14, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v15, v15 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v15, v15, v15
+; VI-NEXT:    v_or_b32_e32 v15, v15, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v16, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v16, v16, v16
+; VI-NEXT:    v_or_b32_e32 v16, v16, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v17, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v17, v17, v17
+; VI-NEXT:    v_or_b32_e32 v17, v17, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v18, v18 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v18, v18, v18
+; VI-NEXT:    v_or_b32_e32 v18, v18, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v19, v19 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v19, v19, v19
+; VI-NEXT:    v_or_b32_e32 v19, v19, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v20, v20 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v20, v20, v20
+; VI-NEXT:    v_or_b32_e32 v20, v20, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v21, v21 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v21, v21, v21
+; VI-NEXT:    v_or_b32_e32 v21, v21, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v22, v22 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v22, v22, v22
+; VI-NEXT:    v_or_b32_e32 v22, v22, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v23, v23 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v23, v23, v23
+; VI-NEXT:    v_or_b32_e32 v23, v23, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v24, v24 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v24, v24, v24
+; VI-NEXT:    v_or_b32_e32 v24, v24, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v25, v25 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v25, v25, v25
+; VI-NEXT:    v_or_b32_e32 v25, v25, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v26, v26 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v26, v26, v26
+; VI-NEXT:    v_or_b32_e32 v26, v26, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v27, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v27, v27, v27
+; VI-NEXT:    v_or_b32_e32 v27, v27, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v28, v28 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v28, v28, v28
+; VI-NEXT:    v_or_b32_e32 v28, v28, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v29, v29 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v29, v29, v29
+; VI-NEXT:    v_or_b32_e32 v29, v29, v31
+; VI-NEXT:    v_max_f16_sdwa v31, v30, v30 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v30, v30, v30
+; VI-NEXT:    v_or_b32_e32 v30, v30, v31
+; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_max_f16_sdwa v32, v31, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_max_f16_e32 v31, v31, v31
+; VI-NEXT:    v_or_b32_e32 v31, v31, v32
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_canonicalize_var_v64f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v4, v4, v4
+; GFX9-NEXT:    v_pk_max_f16 v5, v5, v5
+; GFX9-NEXT:    v_pk_max_f16 v6, v6, v6
+; GFX9-NEXT:    v_pk_max_f16 v7, v7, v7
+; GFX9-NEXT:    v_pk_max_f16 v8, v8, v8
+; GFX9-NEXT:    v_pk_max_f16 v9, v9, v9
+; GFX9-NEXT:    v_pk_max_f16 v10, v10, v10
+; GFX9-NEXT:    v_pk_max_f16 v11, v11, v11
+; GFX9-NEXT:    v_pk_max_f16 v12, v12, v12
+; GFX9-NEXT:    v_pk_max_f16 v13, v13, v13
+; GFX9-NEXT:    v_pk_max_f16 v14, v14, v14
+; GFX9-NEXT:    v_pk_max_f16 v15, v15, v15
+; GFX9-NEXT:    v_pk_max_f16 v16, v16, v16
+; GFX9-NEXT:    v_pk_max_f16 v17, v17, v17
+; GFX9-NEXT:    v_pk_max_f16 v18, v18, v18
+; GFX9-NEXT:    v_pk_max_f16 v19, v19, v19
+; GFX9-NEXT:    v_pk_max_f16 v20, v20, v20
+; GFX9-NEXT:    v_pk_max_f16 v21, v21, v21
+; GFX9-NEXT:    v_pk_max_f16 v22, v22, v22
+; GFX9-NEXT:    v_pk_max_f16 v23, v23, v23
+; GFX9-NEXT:    v_pk_max_f16 v24, v24, v24
+; GFX9-NEXT:    v_pk_max_f16 v25, v25, v25
+; GFX9-NEXT:    v_pk_max_f16 v26, v26, v26
+; GFX9-NEXT:    v_pk_max_f16 v27, v27, v27
+; GFX9-NEXT:    v_pk_max_f16 v28, v28, v28
+; GFX9-NEXT:    v_pk_max_f16 v29, v29, v29
+; GFX9-NEXT:    v_pk_max_f16 v30, v30, v30
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v31, v31, v31
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; CI-LABEL: v_test_canonicalize_var_v64f16:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; CI-NEXT:    v_or_b32_e32 v1, v1, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v2, v4
+; CI-NEXT:    v_cvt_f16_f32_e32 v4, v5
+; CI-NEXT:    v_cvt_f16_f32_e32 v5, v7
+; CI-NEXT:    v_cvt_f16_f32_e32 v7, v9
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; CI-NEXT:    v_or_b32_e32 v2, v3, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v3, v6
+; CI-NEXT:    v_cvt_f16_f32_e32 v6, v10
+; CI-NEXT:    v_cvt_f16_f32_e32 v9, v13
+; CI-NEXT:    v_cvt_f16_f32_e32 v10, v18
+; CI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; CI-NEXT:    v_or_b32_e32 v3, v4, v3
+; CI-NEXT:    v_cvt_f16_f32_e32 v4, v8
+; CI-NEXT:    v_cvt_f16_f32_e32 v8, v14
+; CI-NEXT:    v_cvt_f16_f32_e32 v13, v21
+; CI-NEXT:    v_cvt_f16_f32_e32 v14, v26
+; CI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; CI-NEXT:    v_or_b32_e32 v4, v5, v4
+; CI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; CI-NEXT:    v_cvt_f16_f32_e32 v6, v12
+; CI-NEXT:    v_or_b32_e32 v5, v7, v5
+; CI-NEXT:    v_cvt_f16_f32_e32 v7, v11
+; CI-NEXT:    v_cvt_f16_f32_e32 v11, v17
+; CI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; CI-NEXT:    v_cvt_f16_f32_e32 v12, v22
+; CI-NEXT:    v_or_b32_e32 v6, v7, v6
+; CI-NEXT:    v_lshlrev_b32_e32 v7, 16, v8
+; CI-NEXT:    v_cvt_f16_f32_e32 v8, v16
+; CI-NEXT:    v_or_b32_e32 v7, v9, v7
+; CI-NEXT:    v_cvt_f16_f32_e32 v9, v15
+; CI-NEXT:    v_cvt_f16_f32_e32 v15, v25
+; CI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
+; CI-NEXT:    v_cvt_f16_f32_e32 v25, v29
+; CI-NEXT:    v_or_b32_e32 v8, v9, v8
+; CI-NEXT:    v_lshlrev_b32_e32 v9, 16, v10
+; CI-NEXT:    v_cvt_f16_f32_e32 v10, v20
+; CI-NEXT:    v_or_b32_e32 v9, v11, v9
+; CI-NEXT:    v_cvt_f16_f32_e32 v11, v19
+; CI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:4
+; CI-NEXT:    buffer_load_dword v17, off, s[0:3], s32
+; CI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:12
+; CI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:8
+; CI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; CI-NEXT:    v_or_b32_e32 v10, v11, v10
+; CI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
+; CI-NEXT:    v_cvt_f16_f32_e32 v12, v24
+; CI-NEXT:    v_or_b32_e32 v11, v13, v11
+; CI-NEXT:    v_cvt_f16_f32_e32 v13, v23
+; CI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:20
+; CI-NEXT:    buffer_load_dword v21, off, s[0:3], s32 offset:16
+; CI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:28
+; CI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:24
+; CI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
+; CI-NEXT:    v_cvt_f16_f32_e32 v24, v30
+; CI-NEXT:    v_or_b32_e32 v12, v13, v12
+; CI-NEXT:    v_lshlrev_b32_e32 v13, 16, v14
+; CI-NEXT:    v_or_b32_e32 v13, v15, v13
+; CI-NEXT:    v_cvt_f16_f32_e32 v14, v28
+; CI-NEXT:    v_cvt_f16_f32_e32 v15, v27
+; CI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:36
+; CI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:32
+; CI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 offset:44
+; CI-NEXT:    buffer_load_dword v29, off, s[0:3], s32 offset:40
+; CI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
+; CI-NEXT:    v_or_b32_e32 v14, v15, v14
+; CI-NEXT:    v_lshlrev_b32_e32 v15, 16, v24
+; CI-NEXT:    v_or_b32_e32 v15, v25, v15
+; CI-NEXT:    s_waitcnt vmcnt(11)
+; CI-NEXT:    v_cvt_f16_f32_e32 v16, v16
+; CI-NEXT:    s_waitcnt vmcnt(10)
+; CI-NEXT:    v_cvt_f16_f32_e32 v17, v17
+; CI-NEXT:    s_waitcnt vmcnt(9)
+; CI-NEXT:    v_cvt_f16_f32_e32 v18, v18
+; CI-NEXT:    s_waitcnt vmcnt(8)
+; CI-NEXT:    v_cvt_f16_f32_e32 v19, v19
+; CI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
+; CI-NEXT:    v_or_b32_e32 v16, v17, v16
+; CI-NEXT:    v_lshlrev_b32_e32 v17, 16, v18
+; CI-NEXT:    v_or_b32_e32 v17, v19, v17
+; CI-NEXT:    s_waitcnt vmcnt(7)
+; CI-NEXT:    v_cvt_f16_f32_e32 v18, v20
+; CI-NEXT:    s_waitcnt vmcnt(6)
+; CI-NEXT:    v_cvt_f16_f32_e32 v19, v21
+; CI-NEXT:    s_waitcnt vmcnt(5)
+; CI-NEXT:    v_cvt_f16_f32_e32 v20, v22
+; CI-NEXT:    s_waitcnt vmcnt(4)
+; CI-NEXT:    v_cvt_f16_f32_e32 v21, v23
+; CI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
+; CI-NEXT:    v_or_b32_e32 v18, v19, v18
+; CI-NEXT:    v_lshlrev_b32_e32 v19, 16, v20
+; CI-NEXT:    v_or_b32_e32 v19, v21, v19
+; CI-NEXT:    s_waitcnt vmcnt(3)
+; CI-NEXT:    v_cvt_f16_f32_e32 v20, v26
+; CI-NEXT:    s_waitcnt vmcnt(2)
+; CI-NEXT:    v_cvt_f16_f32_e32 v21, v27
+; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v28
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v27, v29
+; CI-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
+; CI-NEXT:    v_or_b32_e32 v20, v21, v20
+; CI-NEXT:    v_lshlrev_b32_e32 v21, 16, v26
+; CI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:52
+; CI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:48
+; CI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:60
+; CI-NEXT:    buffer_load_dword v22, off, s[0:3], s32 offset:56
+; CI-NEXT:    v_or_b32_e32 v21, v27, v21
+; CI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:132
+; CI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:128
+; CI-NEXT:    s_waitcnt vmcnt(5)
+; CI-NEXT:    v_cvt_f16_f32_e32 v24, v24
+; CI-NEXT:    s_waitcnt vmcnt(4)
+; CI-NEXT:    v_cvt_f16_f32_e32 v25, v25
+; CI-NEXT:    s_waitcnt vmcnt(3)
+; CI-NEXT:    v_cvt_f16_f32_e32 v23, v23
+; CI-NEXT:    s_waitcnt vmcnt(2)
+; CI-NEXT:    v_cvt_f16_f32_e32 v22, v22
+; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v26
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v27, v27
+; CI-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
+; CI-NEXT:    v_or_b32_e32 v24, v25, v24
+; CI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; CI-NEXT:    v_or_b32_e32 v26, v27, v26
+; CI-NEXT:    v_add_i32_e32 v27, vcc, 0x7c, v0
+; CI-NEXT:    buffer_store_dword v26, v27, s[0:3], 0 offen
+; CI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:124
+; CI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:120
+; CI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; CI-NEXT:    v_or_b32_e32 v22, v22, v23
+; CI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:88
+; CI-NEXT:    s_waitcnt vmcnt(2)
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v26
+; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    v_cvt_f16_f32_e32 v27, v27
+; CI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; CI-NEXT:    v_or_b32_e32 v26, v27, v26
+; CI-NEXT:    v_add_i32_e32 v27, vcc, 0x78, v0
+; CI-NEXT:    buffer_store_dword v26, v27, s[0:3], 0 offen
+; CI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:116
+; CI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:112
+; CI-NEXT:    s_waitcnt vmcnt(3)
+; CI-NEXT:    v_cvt_f16_f32_e32 v23, v23
+; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v26
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v27, v27
+; CI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; CI-NEXT:    v_or_b32_e32 v26, v27, v26
+; CI-NEXT:    v_add_i32_e32 v27, vcc, 0x74, v0
+; CI-NEXT:    buffer_store_dword v26, v27, s[0:3], 0 offen
+; CI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:108
+; CI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:104
+; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    v_cvt_f16_f32_e32 v25, v26
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v27
+; CI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:92
+; CI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
+; CI-NEXT:    v_or_b32_e32 v25, v26, v25
+; CI-NEXT:    v_add_i32_e32 v26, vcc, 0x70, v0
+; CI-NEXT:    buffer_store_dword v25, v26, s[0:3], 0 offen
+; CI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:100
+; CI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:96
+; CI-NEXT:    s_waitcnt vmcnt(3)
+; CI-NEXT:    v_cvt_f16_f32_e32 v27, v27
+; CI-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
+; CI-NEXT:    v_or_b32_e32 v23, v23, v27
+; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    v_cvt_f16_f32_e32 v25, v25
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v26
+; CI-NEXT:    v_add_i32_e32 v27, vcc, 0x68, v0
+; CI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
+; CI-NEXT:    v_or_b32_e32 v25, v26, v25
+; CI-NEXT:    v_add_i32_e32 v26, vcc, 0x6c, v0
+; CI-NEXT:    buffer_store_dword v25, v26, s[0:3], 0 offen
+; CI-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:68
+; CI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:64
+; CI-NEXT:    buffer_store_dword v23, v27, s[0:3], 0 offen
+; CI-NEXT:    buffer_load_dword v23, off, s[0:3], s32 offset:76
+; CI-NEXT:    buffer_load_dword v27, off, s[0:3], s32 offset:72
+; CI-NEXT:    buffer_load_dword v28, off, s[0:3], s32 offset:84
+; CI-NEXT:    buffer_load_dword v29, off, s[0:3], s32 offset:80
+; CI-NEXT:    s_waitcnt vmcnt(3)
+; CI-NEXT:    v_cvt_f16_f32_e32 v23, v23
+; CI-NEXT:    v_cvt_f16_f32_e32 v25, v25
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v26
+; CI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; CI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
+; CI-NEXT:    v_or_b32_e32 v25, v26, v25
+; CI-NEXT:    s_waitcnt vmcnt(2)
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v27
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v27, v29
+; CI-NEXT:    v_or_b32_e32 v23, v26, v23
+; CI-NEXT:    v_cvt_f16_f32_e32 v26, v28
+; CI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; CI-NEXT:    v_or_b32_e32 v26, v27, v26
+; CI-NEXT:    v_add_i32_e32 v27, vcc, 0x64, v0
+; CI-NEXT:    buffer_store_dword v26, v27, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v26, vcc, 0x60, v0
+; CI-NEXT:    buffer_store_dword v23, v26, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v23, vcc, 0x5c, v0
+; CI-NEXT:    buffer_store_dword v25, v23, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v23, vcc, 0x58, v0
+; CI-NEXT:    buffer_store_dword v22, v23, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v22, vcc, 0x54, v0
+; CI-NEXT:    buffer_store_dword v24, v22, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v22, vcc, 0x50, v0
+; CI-NEXT:    buffer_store_dword v21, v22, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v21, vcc, 0x4c, v0
+; CI-NEXT:    buffer_store_dword v20, v21, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v20, vcc, 0x48, v0
+; CI-NEXT:    buffer_store_dword v19, v20, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v19, vcc, 0x44, v0
+; CI-NEXT:    buffer_store_dword v18, v19, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v18, vcc, 64, v0
+; CI-NEXT:    buffer_store_dword v17, v18, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v17, vcc, 60, v0
+; CI-NEXT:    buffer_store_dword v16, v17, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v16, vcc, 56, v0
+; CI-NEXT:    buffer_store_dword v15, v16, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v15, vcc, 52, v0
+; CI-NEXT:    buffer_store_dword v14, v15, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v14, vcc, 48, v0
+; CI-NEXT:    buffer_store_dword v13, v14, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v13, vcc, 44, v0
+; CI-NEXT:    buffer_store_dword v12, v13, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v12, vcc, 40, v0
+; CI-NEXT:    buffer_store_dword v11, v12, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v11, vcc, 36, v0
+; CI-NEXT:    buffer_store_dword v10, v11, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v10, vcc, 32, v0
+; CI-NEXT:    buffer_store_dword v9, v10, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v9, vcc, 28, v0
+; CI-NEXT:    buffer_store_dword v8, v9, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v8, vcc, 24, v0
+; CI-NEXT:    buffer_store_dword v7, v8, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v7, vcc, 20, v0
+; CI-NEXT:    buffer_store_dword v6, v7, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v6, vcc, 16, v0
+; CI-NEXT:    buffer_store_dword v5, v6, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v5, vcc, 12, v0
+; CI-NEXT:    buffer_store_dword v4, v5, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v4, vcc, 8, v0
+; CI-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen
+; CI-NEXT:    v_add_i32_e32 v3, vcc, 4, v0
+; CI-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
+; CI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    s_setpc_b64 s[30:31]
+  %canonicalized = call <64 x half> @llvm.canonicalize.v64f16(<64 x half> %val)
+  ret <64 x half> %canonicalized
 }
 
 attributes #0 = { nounwind readnone }
