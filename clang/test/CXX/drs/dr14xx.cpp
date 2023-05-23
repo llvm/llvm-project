@@ -488,6 +488,17 @@ namespace dr1479 { // dr1479: yes
   int operator"" _a(const char*, std::size_t = 0); // expected-error {{literal operator cannot have a default argument}}
 }
 
+namespace dr1482 { // dr1482: yes
+                   // NB: sup 2516, test reused there
+#if __cplusplus >= 201103L
+template <typename T> struct S {
+  typedef char I;
+};
+enum E2 : S<E2>::I { e };
+// expected-error@-1 {{use of undeclared identifier 'E2'}}
+#endif
+} // namespace dr1482
+
 namespace dr1490 {  // dr1490: 3.7 c++11
   // List-initialization from a string literal
 
