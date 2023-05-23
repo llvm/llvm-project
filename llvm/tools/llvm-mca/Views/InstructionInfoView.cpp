@@ -117,8 +117,13 @@ void InstructionInfoView::collectData(
     InstructionInfoViewData &IIVDEntry = std::get<1>(I);
     const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
 
-    // Obtain the scheduling class information from the instruction.
-    unsigned SchedClassID = MCDesc.getSchedClass();
+    // Obtain the scheduling class information from the instruction
+    // and instruments.
+    auto IVecIt = InstToInstruments.find(&Inst);
+    unsigned SchedClassID =
+        IVecIt == InstToInstruments.end()
+            ? MCDesc.getSchedClass()
+            : IM.getSchedClassID(MCII, Inst, IVecIt->second);
     unsigned CPUID = SM.getProcessorID();
 
     // Try to solve variant scheduling classes.
