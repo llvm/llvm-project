@@ -431,7 +431,7 @@ SwiftRuntimeReporting::GetBacktracesFromExtendedStopInfo(
     std::vector<lldb::addr_t> PCs;
     auto trace = thread->GetObjectForDotSeparatedPath("trace")->GetAsArray();
     trace->ForEach([&PCs](StructuredData::Object *PC) -> bool {
-      PCs.push_back(PC->GetAsInteger()->GetValue());
+      PCs.push_back(PC->GetAsUnsignedInteger()->GetValue());
       return true;
     });
 

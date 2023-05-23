@@ -536,7 +536,7 @@ InstrumentationRuntimeTSan::FormatDescription(StructuredData::ObjectSP report,
   } else if (description == "external-race") {
     auto tag = report->GetAsDictionary()
                    ->GetValueForKey("tag")
-                   ->GetAsInteger()
+                   ->GetAsUnsignedInteger()
                    ->GetValue();
     static const unsigned long kSwiftAccessRaceTag = 0x1;
     if (tag == kSwiftAccessRaceTag) {
