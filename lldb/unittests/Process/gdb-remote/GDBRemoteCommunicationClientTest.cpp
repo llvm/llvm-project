@@ -300,7 +300,7 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
   size_t num_packets;
   ASSERT_TRUE(dict_sp->GetValueForKeyAsInteger("num_packets", num_packets))
       << ss.GetString();
-  ASSERT_EQ(10, num_packets);
+  ASSERT_EQ(10, (int)num_packets);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
