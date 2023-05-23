@@ -561,7 +561,30 @@ void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
       }
     }
   }
+
   Assign(to, from, terminator, PolymorphicLHS);
+}
+
+void RTNAME(CopyOutAssign)(Descriptor &to, const Descriptor &from,
+    bool skipToInit, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  // Initialize the "to" if it is of derived type that needs initialization.
+  if (!skipToInit) {
+    if (const DescriptorAddendum * addendum{to.Addendum()}) {
+      if (const auto *derived{addendum->derivedType()}) {
+        if (!derived->noInitializationNeeded()) {
+          if (ReturnError(terminator, Initialize(to, *derived, terminator)) !=
+              StatOk) {
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  // Copyout from the temporary must not cause any finalizations
+  // for LHS.
+  Assign(to, from, terminator, NoAssignFlags);
 }
 
 void RTNAME(AssignExplicitLengthCharacter)(Descriptor &to,

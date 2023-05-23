@@ -156,5 +156,15 @@ bool RTNAME(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
   return false;
 }
 
+void RTNAME(DestroyWithoutFinalization)(const Descriptor &descriptor) {
+  if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (!derived->noDestructionNeeded()) {
+        Destroy(descriptor, /*finalize=*/false, *derived);
+      }
+    }
+  }
+}
+
 } // extern "C"
 } // namespace Fortran::runtime
