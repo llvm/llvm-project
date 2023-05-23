@@ -1307,8 +1307,6 @@ add_fp_unittest(
    libc.include.math
    libc.src.math.log10
    libc.src.__support.FPUtil.fp_bits
- FLAGS
-   FMA_OPT__ONLY
 )
 
 add_fp_unittest(
