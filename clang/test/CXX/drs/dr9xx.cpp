@@ -90,6 +90,19 @@ namespace dr974 { // dr974: yes
 #endif
 }
 
+namespace dr977 { // dr977: yes
+enum E { e = E() };
+#ifndef _WIN32
+// expected-error@-2 {{invalid use of incomplete type 'E'}}
+// expected-note@-3 {{definition of 'dr977::E' is not complete until the closing '}'}}
+#endif
+#if __cplusplus >= 201103L
+enum E2 : int { e2 = E2() };
+enum struct E3 { e = static_cast<int>(E3()) };
+enum struct E4 : int { e = static_cast<int>(E4()) };
+#endif
+} // namespace dr977
+
 namespace dr990 { // dr990: 3.5
 #if __cplusplus >= 201103L
   struct A { // expected-note 2{{candidate}}
