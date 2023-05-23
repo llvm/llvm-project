@@ -1728,6 +1728,13 @@ public:
     return &*It;
   }
 
+  /// Return module entry for module with the given \p ModPath.
+  const ModuleInfo *getModule(StringRef ModPath) const {
+    auto It = ModulePathStringTable.find(ModPath);
+    assert(It != ModulePathStringTable.end() && "Module not registered");
+    return &*It;
+  }
+
   /// Check if the given Module has any functions available for exporting
   /// in the index. We consider any module present in the ModulePathStringTable
   /// to have exported functions.

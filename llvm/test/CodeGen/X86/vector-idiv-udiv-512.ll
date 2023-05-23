@@ -162,7 +162,7 @@ define <64 x i8> @test_div7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpsrlw $2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
-; AVX512F-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_div7_64i8:
@@ -178,10 +178,10 @@ define <64 x i8> @test_div7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpackuswb %zmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpsrlw $1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpsrlw $2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %res = udiv <64 x i8> %a, <i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7,i8 7, i8 7, i8 7, i8 7>
   ret <64 x i8> %res
@@ -524,12 +524,12 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpackuswb %zmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsubb %zmm1, %zmm0, %zmm2
 ; AVX512BW-NEXT:    vpsrlw $1, %zmm2, %zmm2
-; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm2
+; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpaddb %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    vpsrlw $2, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
+; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpsllw $3, %zmm1, %zmm2
-; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm2
+; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpsubb %zmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq

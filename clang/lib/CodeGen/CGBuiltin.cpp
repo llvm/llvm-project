@@ -99,13 +99,29 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
 
   // TODO: This list should be expanded or refactored after all GCC-compatible
   // std libcall builtins are implemented.
-  static SmallDenseMap<unsigned, StringRef, 8> F128Builtins{
+  static SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
+      {Builtin::BI__builtin___fprintf_chk, "__fprintf_chkieee128"},
+      {Builtin::BI__builtin___printf_chk, "__printf_chkieee128"},
+      {Builtin::BI__builtin___snprintf_chk, "__snprintf_chkieee128"},
+      {Builtin::BI__builtin___sprintf_chk, "__sprintf_chkieee128"},
+      {Builtin::BI__builtin___vfprintf_chk, "__vfprintf_chkieee128"},
+      {Builtin::BI__builtin___vprintf_chk, "__vprintf_chkieee128"},
+      {Builtin::BI__builtin___vsnprintf_chk, "__vsnprintf_chkieee128"},
+      {Builtin::BI__builtin___vsprintf_chk, "__vsprintf_chkieee128"},
+      {Builtin::BI__builtin_fprintf, "__fprintfieee128"},
       {Builtin::BI__builtin_printf, "__printfieee128"},
+      {Builtin::BI__builtin_snprintf, "__snprintfieee128"},
+      {Builtin::BI__builtin_sprintf, "__sprintfieee128"},
+      {Builtin::BI__builtin_vfprintf, "__vfprintfieee128"},
+      {Builtin::BI__builtin_vprintf, "__vprintfieee128"},
       {Builtin::BI__builtin_vsnprintf, "__vsnprintfieee128"},
       {Builtin::BI__builtin_vsprintf, "__vsprintfieee128"},
-      {Builtin::BI__builtin_sprintf, "__sprintfieee128"},
-      {Builtin::BI__builtin_snprintf, "__snprintfieee128"},
-      {Builtin::BI__builtin_fprintf, "__fprintfieee128"},
+      {Builtin::BI__builtin_fscanf, "__fscanfieee128"},
+      {Builtin::BI__builtin_scanf, "__scanfieee128"},
+      {Builtin::BI__builtin_sscanf, "__sscanfieee128"},
+      {Builtin::BI__builtin_vfscanf, "__vfscanfieee128"},
+      {Builtin::BI__builtin_vscanf, "__vscanfieee128"},
+      {Builtin::BI__builtin_vsscanf, "__vsscanfieee128"},
       {Builtin::BI__builtin_nexttowardf128, "__nexttowardieee128"},
   };
 

@@ -825,7 +825,7 @@ define void @qpConv2shw_02(ptr nocapture %res) {
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    lxv v2, 32(r4)
-; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    xscvqpsdz v2, v2
 ; CHECK-NEXT:    stxsihx v2, 0, r3
 ; CHECK-NEXT:    blr
 ;
@@ -915,7 +915,7 @@ define void @qpConv2shw_04(ptr nocapture readonly %a,
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    lxv v3, 0(r4)
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
-; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    xscvqpsdz v2, v2
 ; CHECK-NEXT:    stxsihx v2, 0, r5
 ; CHECK-NEXT:    blr
 ;
@@ -990,7 +990,7 @@ define void @qpConv2uhw_02(ptr nocapture %res) {
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    lxv v2, 32(r4)
-; CHECK-NEXT:    xscvqpuwz v2, v2
+; CHECK-NEXT:    xscvqpudz v2, v2
 ; CHECK-NEXT:    stxsihx v2, 0, r3
 ; CHECK-NEXT:    blr
 ;
@@ -1078,7 +1078,7 @@ define void @qpConv2uhw_04(ptr nocapture readonly %a,
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    lxv v3, 0(r4)
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
-; CHECK-NEXT:    xscvqpuwz v2, v2
+; CHECK-NEXT:    xscvqpudz v2, v2
 ; CHECK-NEXT:    stxsihx v2, 0, r5
 ; CHECK-NEXT:    blr
 ;
@@ -1155,7 +1155,7 @@ define void @qpConv2sb_02(ptr nocapture %res) {
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    lxv v2, 32(r4)
-; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    xscvqpsdz v2, v2
 ; CHECK-NEXT:    stxsibx v2, 0, r3
 ; CHECK-NEXT:    blr
 ;
@@ -1245,7 +1245,7 @@ define void @qpConv2sb_04(ptr nocapture readonly %a,
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    lxv v3, 0(r4)
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
-; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    xscvqpsdz v2, v2
 ; CHECK-NEXT:    stxsibx v2, 0, r5
 ; CHECK-NEXT:    blr
 ;
@@ -1320,7 +1320,7 @@ define void @qpConv2ub_02(ptr nocapture %res) {
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    lxv v2, 32(r4)
-; CHECK-NEXT:    xscvqpuwz v2, v2
+; CHECK-NEXT:    xscvqpudz v2, v2
 ; CHECK-NEXT:    stxsibx v2, 0, r3
 ; CHECK-NEXT:    blr
 ;
@@ -1408,7 +1408,7 @@ define void @qpConv2ub_04(ptr nocapture readonly %a,
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    lxv v3, 0(r4)
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
-; CHECK-NEXT:    xscvqpuwz v2, v2
+; CHECK-NEXT:    xscvqpudz v2, v2
 ; CHECK-NEXT:    stxsibx v2, 0, r5
 ; CHECK-NEXT:    blr
 ;

@@ -20,6 +20,8 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/Todo.h"
 
+#include <algorithm>
+
 /// Convert string, \p s, to an APFloat value. Recognize and handle Inf and
 /// NaN strings as well. \p s is assumed to not contain any spaces.
 static llvm::APFloat consAPFloat(const llvm::fltSemantics &fsem,
@@ -48,7 +50,14 @@ static mlir::Attribute convertToAttribute(
     const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>> &value,
     mlir::Type type) {
   if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-    return builder.getIntegerAttr(type, value.ToInt64());
+    if constexpr (KIND <= 8)
+      return builder.getIntegerAttr(type, value.ToInt64());
+    else {
+      static_assert(KIND <= 16, "integers with KIND > 16 are not supported");
+      return builder.getIntegerAttr(
+          type, llvm::APInt(KIND * 8,
+                            {value.ToUInt64(), value.SHIFTR(64).ToUInt64()}));
+    }
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
     return builder.getIntegerAttr(type, value.IsTrue());
   } else {
@@ -66,17 +75,12 @@ namespace {
 /// Helper class to lower an array constant to a global with an MLIR dense
 /// attribute.
 ///
-/// If we have a rank-1 array of integer, real, or logical, then we can
+/// If we have an array of integer, real, or logical, then we can
 /// create a global array with the dense attribute.
 ///
 /// The mlir tensor type can only handle integer, real, or logical. It
 /// does not currently support nested structures which is required for
 /// complex.
-///
-/// Also, we currently handle just rank-1 since tensor type assumes
-/// row major array ordering. We will need to reorder the dimensions
-/// in the tensor type to support Fortran's column major array ordering.
-/// How to create this tensor type is to be determined.
 class DenseGlobalBuilder {
 public:
   static fir::GlobalOp tryCreating(fir::FirOpBuilder &builder,
@@ -124,8 +128,6 @@ private:
           &constant) {
     static_assert(TC != Fortran::common::TypeCategory::Character,
                   "must be numerical or logical");
-    if (constant.Rank() != 1)
-      return;
     auto attrTc = TC == Fortran::common::TypeCategory::Logical
                       ? Fortran::common::TypeCategory::Integer
                       : TC;
@@ -158,12 +160,16 @@ private:
                                   llvm::StringRef globalName,
                                   mlir::StringAttr linkage,
                                   bool isConst) const {
-    // Not a rank 1 "trivial" intrinsic constant array, or empty array.
+    // Not a "trivial" intrinsic constant array, or empty array.
     if (!attributeElementType || attributes.empty())
       return {};
 
+    assert(symTy.isa<fir::SequenceType>() && "expecting an array global");
+    auto arrTy = symTy.cast<fir::SequenceType>();
+    llvm::SmallVector<int64_t> tensorShape(arrTy.getShape());
+    std::reverse(tensorShape.begin(), tensorShape.end());
     auto tensorTy =
-        mlir::RankedTensorType::get(attributes.size(), attributeElementType);
+        mlir::RankedTensorType::get(tensorShape, attributeElementType);
     auto init = mlir::DenseElementsAttr::get(tensorTy, attributes);
     return builder.createGlobal(loc, symTy, globalName, linkage, init, isConst);
   }
@@ -544,6 +550,13 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
           true, constant);
     }
     if (!global)
+      // If the number of elements of the array is huge, the compilation may
+      // use a lot of memory and take a very long time to complete.
+      // Empirical evidence shows that an array with 150000 elements of
+      // complex type takes roughly 30 seconds to compile and uses 4GB of RAM,
+      // on a modern machine.
+      // It would be nice to add a driver switch to control the array size
+      // after which flang should not continue to compile.
       global = builder.createGlobalConstant(
           loc, arrayTy, globalName,
           [&](fir::FirOpBuilder &builder) {

@@ -3765,12 +3765,6 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   }
 
   if (HaveModules) {
-    // -fprebuilt-module-path specifies where to load the prebuilt module files.
-    for (const Arg *A : Args.filtered(options::OPT_fprebuilt_module_path)) {
-      CmdArgs.push_back(Args.MakeArgString(
-          std::string("-fprebuilt-module-path=") + A->getValue()));
-      A->claim();
-    }
     if (Args.hasFlag(options::OPT_fprebuilt_implicit_modules,
                      options::OPT_fno_prebuilt_implicit_modules, false))
       CmdArgs.push_back("-fprebuilt-implicit-modules");
@@ -3803,9 +3797,16 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   // names to precompiled module files (the module is loaded only if used).
   // The -fmodule-file=<file> form can be used to unconditionally load
   // precompiled module files (whether used or not).
-  if (HaveModules)
+  if (HaveModules || Input.getType() == clang::driver::types::TY_ModuleFile) {
     Args.AddAllArgs(CmdArgs, options::OPT_fmodule_file);
-  else
+
+    // -fprebuilt-module-path specifies where to load the prebuilt module files.
+    for (const Arg *A : Args.filtered(options::OPT_fprebuilt_module_path)) {
+      CmdArgs.push_back(Args.MakeArgString(
+          std::string("-fprebuilt-module-path=") + A->getValue()));
+      A->claim();
+    }
+  } else
     Args.ClaimAllArgs(options::OPT_fmodule_file);
 
   // When building modules and generating crashdumps, we need to dump a module

@@ -523,6 +523,17 @@ namespace llvm {
     /// string is well-formed in the given radix.
     bool getAsInteger(unsigned Radix, APInt &Result) const;
 
+    /// Parse the current string as an integer of the specified \p Radix.  If
+    /// \p Radix is specified as zero, this does radix autosensing using
+    /// extended C rules: 0 is octal, 0x is hex, 0b is binary.
+    ///
+    /// If the string does not begin with a number of the specified radix,
+    /// this returns true to signify the error. The string is considered
+    /// erroneous if empty.
+    /// The portion of the string representing the discovered numeric value
+    /// is removed from the beginning of the string.
+    bool consumeInteger(unsigned Radix, APInt &Result);
+
     /// Parse the current string as an IEEE double-precision floating
     /// point value.  The string must be a well-formed double.
     ///

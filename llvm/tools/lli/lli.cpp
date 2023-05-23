@@ -1178,3 +1178,41 @@ Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
       llvm::orc::SimpleRemoteEPC::Setup(), PipeFD[1][0], PipeFD[0][1]);
 #endif
 }
+
+// For MinGW environments, manually export the __chkstk function from the lli
+// executable.
+//
+// Normally, this function is provided by compiler-rt builtins or libgcc.
+// It is named "_alloca" on i386, "___chkstk_ms" on x86_64, and "__chkstk" on
+// arm/aarch64. In MSVC configurations, it's named "__chkstk" in all
+// configurations.
+//
+// When Orc tries to resolve symbols at runtime, this succeeds in MSVC
+// configurations, somewhat by accident/luck; kernelbase.dll does export a
+// symbol named "__chkstk" which gets found by Orc, even if regular applications
+// never link against that function from that DLL (it's linked in statically
+// from a compiler support library).
+//
+// The MinGW specific symbol names aren't available in that DLL though.
+// Therefore, manually export the relevant symbol from lli, to let it be
+// found at runtime during tests.
+//
+// For real JIT uses, the real compiler support libraries should be linked
+// in, somehow; this is a workaround to let tests pass.
+//
+// TODO: Move this into libORC at some point, see
+// https://github.com/llvm/llvm-project/issues/56603.
+#ifdef __MINGW32__
+// This is a MinGW version of #pragma comment(linker, "...") that doesn't
+// require compiling with -fms-extensions.
+#if defined(__i386__)
+static __attribute__((section(".drectve"), used)) const char export_chkstk[] =
+    "-export:_alloca";
+#elif defined(__x86_64__)
+static __attribute__((section(".drectve"), used)) const char export_chkstk[] =
+    "-export:___chkstk_ms";
+#else
+static __attribute__((section(".drectve"), used)) const char export_chkstk[] =
+    "-export:__chkstk";
+#endif
+#endif

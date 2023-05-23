@@ -340,8 +340,8 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
   int Reg =0;
   int SpReg = 0;
 
-  rs.enterBasicBlock(MBB);
-  rs.forward(II);
+  rs.enterBasicBlockEnd(MBB);
+  rs.backward(II);
   //
   // We need to know which registers can be used, in the case where there
   // are not enough free registers. We exclude all registers that

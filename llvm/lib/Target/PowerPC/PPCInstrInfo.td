@@ -32,7 +32,7 @@ def SDT_PPCcv_fp_to_int  : SDTypeProfile<1, 1, [
   SDTCisFP<0>, SDTCisFP<1>
   ]>;
 def SDT_PPCstore_scal_int_from_vsr : SDTypeProfile<0, 3, [
-  SDTCisVT<0, f64>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
+  SDTCisFP<0>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
 ]>;
 def SDT_PPCVexts  : SDTypeProfile<1, 2, [
   SDTCisVT<0, f64>, SDTCisVT<1, f64>, SDTCisPtrTy<2>
@@ -164,10 +164,6 @@ def PPCany_fcfidus : PatFrags<(ops node:$op),
                               [(PPCfcfidus node:$op),
                                (PPCstrict_fcfidus node:$op)]>;
 
-def PPCcv_fp_to_uint_in_vsr:
-    SDNode<"PPCISD::FP_TO_UINT_IN_VSR", SDT_PPCcv_fp_to_int, []>;
-def PPCcv_fp_to_sint_in_vsr:
-    SDNode<"PPCISD::FP_TO_SINT_IN_VSR", SDT_PPCcv_fp_to_int, []>;
 def PPCstore_scal_int_from_vsr:
    SDNode<"PPCISD::ST_VSR_SCAL_INT", SDT_PPCstore_scal_int_from_vsr,
            [SDNPHasChain, SDNPMayStore]>;
