@@ -11125,8 +11125,8 @@ struct BadSpecifierDiagnoser {
 /// Check the validity of a declarator that we parsed for a deduction-guide.
 /// These aren't actually declarators in the grammar, so we need to check that
 /// the user didn't specify any pieces that are not part of the deduction-guide
-/// grammar. Return true on invalid deduction-guide.
-bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
+/// grammar.
+void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
                                          StorageClass &SC) {
   TemplateName GuidedTemplate = D.getName().TemplateName.get().get();
   TemplateDecl *GuidedTemplateDecl = GuidedTemplate.getAsTemplateDecl();
@@ -11176,7 +11176,7 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
   }
 
   if (D.isInvalidType())
-    return true;
+    return;
 
   // Check the declarator is simple enough.
   bool FoundFunction = false;
@@ -11189,9 +11189,11 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
           << D.getSourceRange();
       break;
     }
-    if (!Chunk.Fun.hasTrailingReturnType())
-      return Diag(D.getName().getBeginLoc(),
+    if (!Chunk.Fun.hasTrailingReturnType()) {
+      Diag(D.getName().getBeginLoc(),
            diag::err_deduction_guide_no_trailing_return_type);
+      break;
+    }
 
     // Check that the return type is written as a specialization of
     // the template specified as the deduction-guide's name.
@@ -11226,12 +11228,13 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
       MightInstantiateToSpecialization = true;
     }
 
-    if (!AcceptableReturnType)
-      return Diag(TSI->getTypeLoc().getBeginLoc(),
+    if (!AcceptableReturnType) {
+      Diag(TSI->getTypeLoc().getBeginLoc(),
            diag::err_deduction_guide_bad_trailing_return_type)
           << GuidedTemplate << TSI->getType()
           << MightInstantiateToSpecialization
           << TSI->getTypeLoc().getSourceRange();
+    }
 
     // Keep going to check that we don't have any inner declarator pieces (we
     // could still have a function returning a pointer to a function).
@@ -11239,9 +11242,7 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
   }
 
   if (D.isFunctionDefinition())
-    // we can still create a valid deduction guide here.
     Diag(D.getIdentifierLoc(), diag::err_deduction_guide_defines_function);
-  return false;
 }
 
 //===----------------------------------------------------------------------===//
