@@ -105,6 +105,7 @@ group("RISCV") {
     ":LLVMRISCVCodeGen",
     "AsmParser",
     "Disassembler",
+    "MCA",
     "MCTargetDesc",
     "TargetInfo",
   ]
