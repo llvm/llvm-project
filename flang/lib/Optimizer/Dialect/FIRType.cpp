@@ -489,7 +489,9 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
   ty = fir::unwrapRefType(ty);
   while (ty) {
     if (fir::isa_trivial(ty)) {
-      if (ty.isIntOrIndex()) {
+      if (mlir::isa<mlir::IndexType>(ty)) {
+        name << "idx";
+      } else if (ty.isIntOrIndex()) {
         name << 'i' << ty.getIntOrFloatBitWidth();
       } else if (ty.isa<mlir::FloatType>()) {
         name << 'f' << ty.getIntOrFloatBitWidth();
