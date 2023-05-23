@@ -108,7 +108,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<(const error_condition& __x, const er
   return __x.category() < __y.category() || (__x.category() == __y.category() && __x.value() < __y.value());
 }
 
-#else  // _LIBCPP_STD_VER <= 17
+#else // _LIBCPP_STD_VER <= 17
 
 inline _LIBCPP_HIDE_FROM_ABI strong_ordering
 operator<=>(const error_condition& __x, const error_condition& __y) noexcept {

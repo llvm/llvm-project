@@ -31,7 +31,7 @@ _LIBCPP_HIDE_FROM_ABI auto __terminate_on_exception(_Func __func) {
   }
 }
 
-#  else  // _LIBCPP_HAS_NO_EXCEPTIONS
+#  else // _LIBCPP_HAS_NO_EXCEPTIONS
 
 template <class _Func>
 _LIBCPP_HIDE_FROM_ABI auto __terminate_on_exception(_Func __func) {
