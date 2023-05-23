@@ -1268,6 +1268,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+ log_test
+ NEED_MPFR
+ SUITE
+   libc_math_unittests
+ SRCS
+   log_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.include.math
+   libc.src.math.log
+   libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   logf_test
   NEED_MPFR
   SUITE

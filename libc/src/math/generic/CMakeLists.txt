@@ -768,6 +768,15 @@ add_object_library(
     libc.src.__support.number_pair
 )
 
+add_header_library(
+  log_range_reduction
+  HDRS
+    log_range_reduction.h
+  DEPENDS
+    .common_constants
+    libc.src.__support.FPUtil.dyadic_float
+)
+
 add_entrypoint_object(
   log10
   SRCS
@@ -776,6 +785,7 @@ add_entrypoint_object(
     ../log10.h
   DEPENDS
     .common_constants
+    .log_range_reduction
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
@@ -837,6 +847,26 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
     COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  log
+  SRCS
+    log.cpp
+  HDRS
+    ../log.h
+  DEPENDS
+    .common_constants
+    .log_range_reduction
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
     -O3
 )
 
