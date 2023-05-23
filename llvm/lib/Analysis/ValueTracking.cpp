@@ -580,6 +580,11 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   return false;
 }
 
+// TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
+// we still have enough information about `RHS` to conclude non-zero. For
+// example Pred=EQ, RHS=isKnownNonZero. cmpExcludesZero is called in loops
+// so the extra compile time may not be worth it, but possibly a second API
+// should be created for use outside of loops.
 static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
   // v u> y implies v != 0.
   if (Pred == ICmpInst::ICMP_UGT)
@@ -2882,12 +2887,38 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     return (XKnown.countMaxTrailingZeros() + YKnown.countMaxTrailingZeros()) <
            BitWidth;
   }
-  case Instruction::Select:
+  case Instruction::Select: {
     // (C ? X : Y) != 0 if X != 0 and Y != 0.
-    if (isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q) &&
-        isKnownNonZero(I->getOperand(2), DemandedElts, Depth, Q))
+
+    // First check if the arm is non-zero using `isKnownNonZero`. If that fails,
+    // then see if the select condition implies the arm is non-zero. For example
+    // (X != 0 ? X : Y), we know the true arm is non-zero as the `X` "return" is
+    // dominated by `X != 0`.
+    auto SelectArmIsNonZero = [&](bool IsTrueArm) {
+      Value *Op;
+      Op = IsTrueArm ? I->getOperand(1) : I->getOperand(2);
+      // Op is trivially non-zero.
+      if (isKnownNonZero(Op, DemandedElts, Depth, Q))
+        return true;
+
+      // The condition of the select dominates the true/false arm. Check if the
+      // condition implies that a given arm is non-zero.
+      Value *X;
+      CmpInst::Predicate Pred;
+      if (!match(I->getOperand(0), m_c_ICmp(Pred, m_Specific(Op), m_Value(X))))
+        return false;
+
+      if (!IsTrueArm)
+        Pred = ICmpInst::getInversePredicate(Pred);
+
+      return cmpExcludesZero(Pred, X);
+    };
+
+    if (SelectArmIsNonZero(/* IsTrueArm */ true) &&
+        SelectArmIsNonZero(/* IsTrueArm */ false))
       return true;
     break;
+  }
   case Instruction::PHI: {
     auto *PN = cast<PHINode>(I);
     if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))
