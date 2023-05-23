@@ -311,7 +311,7 @@ public:
     llvm_unreachable("NYI");
   }
 
-  void HandleVTable(CXXRecordDecl *RD) override { llvm_unreachable("NYI"); }
+  void HandleVTable(CXXRecordDecl *RD) override { gen->HandleVTable(RD); }
 };
 } // namespace cir
 

@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -clangir-disable-emit-cxx-default -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
+typedef enum {
+  RequestFailed = -2004,
+} enumy;
+
 class C1 {
  public:
   virtual ~C1();
@@ -21,6 +25,8 @@ class C1 {
     Layer(int d);
     virtual ~Layer() {}
   };
+
+  virtual enumy Initialize() = 0;
 };
 
 class C2 : public C1 {
@@ -40,6 +46,8 @@ class C2 : public C1 {
    protected:
     const C2* m_C1;
   };
+
+  virtual enumy Initialize() override;
 };
 
 class C3 : public C2 {
@@ -48,6 +56,8 @@ class C3 : public C2 {
     Layer(int d, const C2* C1);
     void Initialize();
   };
+
+  virtual enumy Initialize() override;
 };
 
 void C3::Layer::Initialize() {
@@ -69,3 +79,15 @@ void C3::Layer::Initialize() {
 // CHECK:    %4 = cir.load %3 : cir.ptr <!cir.ptr<!ty_22class2EC222>>, !cir.ptr<!ty_22class2EC222>
 // CHECK:    %5 = cir.const(#cir.null : !cir.ptr<!ty_22class2EC222>) : !cir.ptr<!ty_22class2EC222>
 // CHECK:    %6 = cir.cmp(eq, %4, %5) : !cir.ptr<!ty_22class2EC222>, !cir.bool
+
+enumy C3::Initialize() {
+  return C2::Initialize();
+}
+
+// CHECK: cir.func @_ZN2C310InitializeEv(%arg0: !cir.ptr<!ty_22class2EC322>
+// CHECK:     %0 = cir.alloca !cir.ptr<!ty_22class2EC322>, cir.ptr <!cir.ptr<!ty_22class2EC322>>, ["this", init] {alignment = 8 : i64}
+
+// CHECK:     cir.store %arg0, %0 : !cir.ptr<!ty_22class2EC322>, cir.ptr <!cir.ptr<!ty_22class2EC322>>
+// CHECK:     %2 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22class2EC322>>, !cir.ptr<!ty_22class2EC322>
+// CHECK:     %3 = cir.base_class_addr(%2 : cir.ptr <!ty_22class2EC322>) -> cir.ptr <!ty_22class2EC222>
+// CHECK:     %4 = cir.call @_ZN2C210InitializeEv(%3) : (!cir.ptr<!ty_22class2EC222>) -> !s32i
