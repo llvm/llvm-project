@@ -29,14 +29,9 @@ const char *getEdgeKindName(Edge::Kind K);
 /// TOOD: Add fixups as we add edges.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         const Symbol *GOTSymbol) {
-  switch (E.getKind()) {
-  default:
-    return make_error<JITLinkError>(
-        "In graph " + G.getName() + ", section " + B.getSection().getName() +
-        " unsupported edge kind " + getEdgeKindName(E.getKind()));
-  }
-
-  return Error::success();
+  return make_error<JITLinkError>(
+      "In graph " + G.getName() + ", section " + B.getSection().getName() +
+      " unsupported edge kind " + getEdgeKindName(E.getKind()));
 }
 
 } // end namespace llvm::jitlink::ppc64
