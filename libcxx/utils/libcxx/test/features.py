@@ -383,4 +383,12 @@ DEFAULT_FEATURES += [
   # not other forms of aligned allocation.
   Feature(name='availability-aligned_allocation-missing',
     when=lambda cfg: BooleanExpression.evaluate('stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12)(.0)?}}', cfg.available_features)),
+
+  # Tests that require 64-bit architecture
+  Feature(name='32-bit-pointer',
+          when=lambda cfg: sourceBuilds(cfg, """
+            int main(int, char**) {
+              static_assert(sizeof(void *) == 4);
+            }
+          """)),
 ]
