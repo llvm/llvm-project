@@ -9679,6 +9679,40 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
       ColonLoc, result, VK, OK);
 }
 
+// Check that the SME attributes for PSTATE.ZA and PSTATE.SM are compatible.
+bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType,
+                                      AArch64SMECallConversionKind C) {
+  unsigned FromAttributes = 0, ToAttributes = 0;
+  if (const auto *FromFn =
+          dyn_cast<FunctionProtoType>(Context.getCanonicalType(FromType)))
+    FromAttributes =
+        FromFn->getAArch64SMEAttributes() & FunctionType::SME_AttributeMask;
+  if (const auto *ToFn =
+          dyn_cast<FunctionProtoType>(Context.getCanonicalType(ToType)))
+    ToAttributes =
+        ToFn->getAArch64SMEAttributes() & FunctionType::SME_AttributeMask;
+
+  if (FromAttributes == ToAttributes)
+    return false;
+
+  // If the '__arm_preserves_za' is the only difference between the types,
+  // check whether we're allowed to add or remove it.
+  if ((FromAttributes ^ ToAttributes) ==
+      FunctionType::SME_PStateZAPreservedMask) {
+    switch (C) {
+    case AArch64SMECallConversionKind::MatchExactly:
+      return true;
+    case AArch64SMECallConversionKind::MayAddPreservesZA:
+      return !(ToAttributes & FunctionType::SME_PStateZAPreservedMask);
+    case AArch64SMECallConversionKind::MayDropPreservesZA:
+      return !(FromAttributes & FunctionType::SME_PStateZAPreservedMask);
+    }
+  }
+
+  // There has been a mismatch of attributes
+  return true;
+}
+
 // Check if we have a conversion between incompatible cmse function pointer
 // types, that is, a conversion between a function pointer with the
 // cmse_nonsecure_call attribute and one without.
@@ -9844,6 +9878,10 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
       S.IsFunctionConversion(ltrans, rtrans, ltrans))
     return Sema::IncompatibleFunctionPointer;
   if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
+    return Sema::IncompatibleFunctionPointer;
+  if (S.IsInvalidSMECallConversion(
+          rtrans, ltrans,
+          Sema::AArch64SMECallConversionKind::MayDropPreservesZA))
     return Sema::IncompatibleFunctionPointer;
   return ConvTy;
 }

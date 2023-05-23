@@ -2293,6 +2293,14 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     return;
   }
 
+  // Handle SME attributes that apply to function definitions,
+  // rather than to function prototypes.
+  if (D->hasAttr<ArmLocallyStreamingAttr>())
+    B.addAttribute("aarch64_pstate_sm_body");
+
+  if (D->hasAttr<ArmNewZAAttr>())
+    B.addAttribute("aarch64_pstate_za_new");
+
   // Track whether we need to add the optnone LLVM attribute,
   // starting with the default for this optimization level.
   bool ShouldAddOptNone =
