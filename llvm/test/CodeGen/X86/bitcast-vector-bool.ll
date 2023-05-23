@@ -1086,7 +1086,7 @@ define i1 @trunc_v64i8_cmp(<64 x i8> %a0) nounwind {
 ;
 ; AVX512-LABEL: trunc_v64i8_cmp:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
+; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper

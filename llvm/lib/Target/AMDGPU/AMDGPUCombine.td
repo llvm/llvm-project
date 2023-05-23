@@ -84,7 +84,7 @@ def fp_minmax_to_clamp : GICombineRule<
 
 def fmed3_intrinsic_to_clamp : GICombineRule<
   (defs root:$fmed3, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_INTRINSIC):$fmed3,
+  (match (wip_match_opcode G_AMDGPU_FMED3):$fmed3,
          [{ return RegBankHelper.matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
   (apply [{ RegBankHelper.applyClamp(*${fmed3}, ${matchinfo}); }])>;
 
@@ -112,8 +112,32 @@ def sign_extension_in_reg : GICombineRule<
          [{ return PostLegalizerHelper.matchCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }]),
   (apply [{ PostLegalizerHelper.applyCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }])>;
 
-// Combines which should only apply on SI/VI
+
+let Predicates = [Has16BitInsts, NotHasMed3_16] in {
+// For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
+// saves one instruction compared to the promotion.
+//
+// FIXME: Should have ComplexPattern like in/out matchers
+//
+// FIXME: We should be able to match either G_AMDGPU_FMED3 or
+// G_INTRINSIC @llvm.amdgcn.fmed3. Currently the legalizer will
+// replace the intrinsic with G_AMDGPU_FMED3 since we can't write a
+// pattern to match it.
+def expand_promoted_fmed3 : GICombineRule<
+  (defs root:$fptrunc_dst),
+  (match (G_FPTRUNC $fptrunc_dst, $fmed3_dst):$fptrunc,
+         (G_AMDGPU_FMED3 $fmed3_dst, $src0, $src1, $src2),
+    [{ return Helper.matchExpandPromotedF16FMed3(*${fptrunc}, ${src0}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }]),
+  (apply [{ Helper.applyExpandPromotedF16FMed3(*${fptrunc}, ${src0}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }])
+>;
+
+} // End Predicates = [NotHasMed3_16]
+
+// Combines which should only apply on SI/CI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
+
+// Combines which should only apply on VI
+def gfx8_combines : GICombineGroup<[expand_promoted_fmed3]>;
 
 def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPreLegalizerCombinerHelper",
@@ -125,7 +149,7 @@ def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
 
 def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
   "AMDGPUGenPostLegalizerCombinerHelper",
-  [all_combines, gfx6gfx7_combines,
+  [all_combines, gfx6gfx7_combines, gfx8_combines,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    rcp_sqrt_to_rsq, sign_extension_in_reg]> {
   let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";

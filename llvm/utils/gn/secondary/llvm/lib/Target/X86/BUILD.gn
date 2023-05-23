@@ -91,6 +91,7 @@ static_library("LLVMX86CodeGen") {
     "X86FixupInstTuning.cpp",
     "X86FixupLEAs.cpp",
     "X86FixupSetCC.cpp",
+    "X86FixupVectorConstants.cpp",
     "X86FlagsCopyLowering.cpp",
     "X86FloatingPoint.cpp",
     "X86FrameLowering.cpp",

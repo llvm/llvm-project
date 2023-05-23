@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncrementalParser.h"
-
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
@@ -19,9 +18,9 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Interpreter/Interpreter.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
-
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
@@ -30,6 +29,79 @@
 #include <sstream>
 
 namespace clang {
+
+class IncrementalASTConsumer final : public ASTConsumer {
+  Interpreter &Interp;
+  std::unique_ptr<ASTConsumer> Consumer;
+
+public:
+  IncrementalASTConsumer(Interpreter &InterpRef, std::unique_ptr<ASTConsumer> C)
+      : Interp(InterpRef), Consumer(std::move(C)) {}
+
+  bool HandleTopLevelDecl(DeclGroupRef DGR) override final {
+    if (DGR.isNull())
+      return true;
+    if (!Consumer)
+      return true;
+
+    for (Decl *D : DGR)
+      if (auto *TSD = llvm::dyn_cast<TopLevelStmtDecl>(D);
+          TSD && TSD->isSemiMissing())
+        TSD->setStmt(Interp.SynthesizeExpr(cast<Expr>(TSD->getStmt())));
+
+    return Consumer->HandleTopLevelDecl(DGR);
+  }
+  void HandleTranslationUnit(ASTContext &Ctx) override final {
+    Consumer->HandleTranslationUnit(Ctx);
+  }
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override final {
+    Consumer->HandleInlineFunctionDefinition(D);
+  }
+  void HandleInterestingDecl(DeclGroupRef D) override final {
+    Consumer->HandleInterestingDecl(D);
+  }
+  void HandleTagDeclDefinition(TagDecl *D) override final {
+    Consumer->HandleTagDeclDefinition(D);
+  }
+  void HandleTagDeclRequiredDefinition(const TagDecl *D) override final {
+    Consumer->HandleTagDeclRequiredDefinition(D);
+  }
+  void HandleCXXImplicitFunctionInstantiation(FunctionDecl *D) override final {
+    Consumer->HandleCXXImplicitFunctionInstantiation(D);
+  }
+  void HandleTopLevelDeclInObjCContainer(DeclGroupRef D) override final {
+    Consumer->HandleTopLevelDeclInObjCContainer(D);
+  }
+  void HandleImplicitImportDecl(ImportDecl *D) override final {
+    Consumer->HandleImplicitImportDecl(D);
+  }
+  void CompleteTentativeDefinition(VarDecl *D) override final {
+    Consumer->CompleteTentativeDefinition(D);
+  }
+  void CompleteExternalDeclaration(VarDecl *D) override final {
+    Consumer->CompleteExternalDeclaration(D);
+  }
+  void AssignInheritanceModel(CXXRecordDecl *RD) override final {
+    Consumer->AssignInheritanceModel(RD);
+  }
+  void HandleCXXStaticMemberVarInstantiation(VarDecl *D) override final {
+    Consumer->HandleCXXStaticMemberVarInstantiation(D);
+  }
+  void HandleVTable(CXXRecordDecl *RD) override final {
+    Consumer->HandleVTable(RD);
+  }
+  ASTMutationListener *GetASTMutationListener() override final {
+    return Consumer->GetASTMutationListener();
+  }
+  ASTDeserializationListener *GetASTDeserializationListener() override final {
+    return Consumer->GetASTDeserializationListener();
+  }
+  void PrintStats() override final { Consumer->PrintStats(); }
+  bool shouldSkipFunctionBody(Decl *D) override final {
+    return Consumer->shouldSkipFunctionBody(D);
+  }
+  static bool classof(const clang::ASTConsumer *) { return true; }
+};
 
 /// A custom action enabling the incremental processing functionality.
 ///
@@ -122,7 +194,8 @@ public:
   }
 };
 
-IncrementalParser::IncrementalParser(std::unique_ptr<CompilerInstance> Instance,
+IncrementalParser::IncrementalParser(Interpreter &Interp,
+                                     std::unique_ptr<CompilerInstance> Instance,
                                      llvm::LLVMContext &LLVMCtx,
                                      llvm::Error &Err)
     : CI(std::move(Instance)) {
@@ -131,6 +204,9 @@ IncrementalParser::IncrementalParser(std::unique_ptr<CompilerInstance> Instance,
   if (Err)
     return;
   CI->ExecuteAction(*Act);
+  std::unique_ptr<ASTConsumer> IncrConsumer =
+      std::make_unique<IncrementalASTConsumer>(Interp, CI->takeASTConsumer());
+  CI->setASTConsumer(std::move(IncrConsumer));
   Consumer = &CI->getASTConsumer();
   P.reset(
       new Parser(CI->getPreprocessor(), CI->getSema(), /*SkipBodies=*/false));
@@ -267,15 +343,20 @@ IncrementalParser::Parse(llvm::StringRef input) {
            "Lexer must be EOF when starting incremental parse!");
   }
 
-  if (CodeGenerator *CG = getCodeGen(Act.get())) {
-    std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
-    CG->StartModule("incr_module_" + std::to_string(PTUs.size()),
-                    M->getContext());
-
+  if (std::unique_ptr<llvm::Module> M = GenModule())
     PTU->TheModule = std::move(M);
-  }
 
   return PTU;
+}
+
+std::unique_ptr<llvm::Module> IncrementalParser::GenModule() {
+  static unsigned ID = 0;
+  if (CodeGenerator *CG = getCodeGen(Act.get())) {
+    std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
+    CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
+    return M;
+  }
+  return nullptr;
 }
 
 void IncrementalParser::CleanUpPTU(PartialTranslationUnit &PTU) {

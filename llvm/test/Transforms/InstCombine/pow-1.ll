@@ -20,10 +20,12 @@
 
 declare float @powf(float, float) nounwind readonly
 declare float @llvm.pow.f32(float, float)
+declare float @llvm.fabs.f32(float)
 declare double @pow(double, double) nounwind readonly
 declare double @llvm.pow.f64(double, double)
 declare <2 x float> @llvm.pow.v2f32(<2 x float>, <2 x float>) nounwind readonly
 declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>) nounwind readonly
+declare void @llvm.assume(i1 noundef)
 
 ; Check pow(1.0, x) -> 1.0.
 
@@ -267,6 +269,66 @@ define float @powf_libcall_half_ninf(float %x) {
 ; NOLIB-NEXT:    ret float [[POW]]
 ;
   %retval = call ninf float @powf(float %x, float 0.5)
+  ret float %retval
+}
+
+; Make sure assume works when inferring no infinities
+define float @powf_libcall_half_assume_ninf(float %x) {
+; ANY-LABEL: define float @powf_libcall_half_assume_ninf
+; ANY-SAME: (float [[X:%.*]]) {
+; ANY-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; ANY-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; ANY-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
+; ANY-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X]])
+; ANY-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
+; ANY-NEXT:    ret float [[ABS]]
+;
+; VC32-LABEL: define float @powf_libcall_half_assume_ninf
+; VC32-SAME: (float [[X:%.*]]) {
+; VC32-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; VC32-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; VC32-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
+; VC32-NEXT:    [[RETVAL:%.*]] = call float @powf(float [[X]], float 5.000000e-01)
+; VC32-NEXT:    ret float [[RETVAL]]
+;
+; VC51-LABEL: define float @powf_libcall_half_assume_ninf
+; VC51-SAME: (float [[X:%.*]]) {
+; VC51-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; VC51-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; VC51-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
+; VC51-NEXT:    [[RETVAL:%.*]] = call float @powf(float [[X]], float 5.000000e-01)
+; VC51-NEXT:    ret float [[RETVAL]]
+;
+; VC64-LABEL: define float @powf_libcall_half_assume_ninf
+; VC64-SAME: (float [[X:%.*]]) {
+; VC64-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; VC64-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; VC64-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
+; VC64-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X]])
+; VC64-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
+; VC64-NEXT:    ret float [[ABS]]
+;
+; VC83-LABEL: define float @powf_libcall_half_assume_ninf
+; VC83-SAME: (float [[X:%.*]]) {
+; VC83-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; VC83-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; VC83-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
+; VC83-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X]])
+; VC83-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
+; VC83-NEXT:    ret float [[ABS]]
+;
+; NOLIB-LABEL: define float @powf_libcall_half_assume_ninf
+; NOLIB-SAME: (float [[X:%.*]]) {
+; NOLIB-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; NOLIB-NEXT:    [[NOT_INF:%.*]] = fcmp one float [[FABS]], 0x7FF0000000000000
+; NOLIB-NEXT:    call void @llvm.assume(i1 [[NOT_INF]])
+; NOLIB-NEXT:    [[RETVAL:%.*]] = call float @powf(float [[X]], float 5.000000e-01)
+; NOLIB-NEXT:    ret float [[RETVAL]]
+;
+  %fabs = call float @llvm.fabs.f32(float %x)
+  %not.inf = fcmp one float %fabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %not.inf)
+  %retval = call float @powf(float %x, float 0.5)
   ret float %retval
 }
 

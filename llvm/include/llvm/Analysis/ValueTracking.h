@@ -472,13 +472,18 @@ bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
 /// Return true if the floating-point scalar value is not an infinity or if
 /// the floating-point vector value has no infinities. Return false if a value
 /// could ever be infinity.
-bool isKnownNeverInfinity(const Value *V, const DataLayout &DL,
-                          const TargetLibraryInfo *TLI = nullptr,
-                          unsigned Depth = 0, AssumptionCache *AC = nullptr,
-                          const Instruction *CtxI = nullptr,
-                          const DominatorTree *DT = nullptr,
-                          OptimizationRemarkEmitter *ORE = nullptr,
-                          bool UseInstrInfo = true);
+inline bool isKnownNeverInfinity(const Value *V, const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI = nullptr,
+                                 unsigned Depth = 0,
+                                 AssumptionCache *AC = nullptr,
+                                 const Instruction *CtxI = nullptr,
+                                 const DominatorTree *DT = nullptr,
+                                 OptimizationRemarkEmitter *ORE = nullptr,
+                                 bool UseInstrInfo = true) {
+  KnownFPClass Known = computeKnownFPClass(V, DL, fcInf, Depth, TLI, AC, CtxI,
+                                           DT, ORE, UseInstrInfo);
+  return Known.isKnownNeverInfinity();
+}
 
 /// Return true if the floating-point value can never contain a NaN or infinity.
 inline bool isKnownNeverInfOrNaN(

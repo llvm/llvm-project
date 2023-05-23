@@ -1,5 +1,8 @@
 // RUN: %libomp-compile && env LIBOMP_NUM_HIDDEN_HELPER_THREADS=1 %libomp-run
 
+// gcc/icc target offloading is incompatible with libomp
+// UNSUPPORTED: icc, gcc
+
 // The test checks that "devide-by-0" bug fixed in runtime.
 // The fix is to increment number of threads by 1 if positive,
 // so that operation

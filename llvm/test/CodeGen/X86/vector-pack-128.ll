@@ -95,12 +95,26 @@ define <16 x i8> @trunc_concat_packsswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
 ; SSE-NEXT:    packsswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: trunc_concat_packsswb_128:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: trunc_concat_packsswb_128:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: trunc_concat_packsswb_128:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: trunc_concat_packsswb_128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %1 = ashr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %2 = and  <8 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
   %3 = shufflevector <8 x i16> %1, <8 x i16> %2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -116,12 +130,26 @@ define <16 x i8> @trunc_concat_packuswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: trunc_concat_packuswb_128:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: trunc_concat_packuswb_128:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: trunc_concat_packuswb_128:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: trunc_concat_packuswb_128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %1 = lshr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %2 = and  <8 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
   %3 = shufflevector <8 x i16> %1, <8 x i16> %2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -231,12 +259,26 @@ define <16 x i8> @concat_trunc_packsswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
 ; SSE-NEXT:    packsswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: concat_trunc_packsswb_128:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: concat_trunc_packsswb_128:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: concat_trunc_packsswb_128:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: concat_trunc_packsswb_128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %1 = ashr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %2 = and  <8 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
   %3 = trunc <8 x i16> %1 to <8 x i8>
@@ -253,12 +295,26 @@ define <16 x i8> @concat_trunc_packuswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: concat_trunc_packuswb_128:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: concat_trunc_packuswb_128:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: concat_trunc_packuswb_128:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: concat_trunc_packuswb_128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %1 = lshr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %2 = and  <8 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
   %3 = trunc <8 x i16> %1 to <8 x i8>
@@ -266,3 +322,5 @@ define <16 x i8> @concat_trunc_packuswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
   %5 = shufflevector <8 x i8> %3, <8 x i8> %4, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i8> %5
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AVX: {{.*}}

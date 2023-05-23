@@ -146,13 +146,10 @@ ExpressionFormat::valueFromStringRepr(StringRef StrVal,
   bool Hex = Value == Kind::HexUpper || Value == Kind::HexLower;
   uint64_t UnsignedValue;
   bool MissingFormPrefix = AlternateForm && !StrVal.consume_front("0x");
+  (void)MissingFormPrefix;
+  assert(!MissingFormPrefix && "missing alternate form prefix");
   if (StrVal.getAsInteger(Hex ? 16 : 10, UnsignedValue))
     return ErrorDiagnostic::get(SM, StrVal, IntegerParseErrorStr);
-
-  // Error out for a missing prefix only now that we know we have an otherwise
-  // valid integer.  For example, "-0x18" is reported above instead.
-  if (MissingFormPrefix)
-    return ErrorDiagnostic::get(SM, StrVal, "missing alternate form prefix");
 
   return ExpressionValue(UnsignedValue);
 }
