@@ -11,7 +11,7 @@ def which(command: str, paths: Optional[str] = None) -> Optional[str]:
     (or the PATH environment variable, if unspecified)."""
 
     if paths is None:
-        paths = os.environ.get('PATH', '')
+        paths = os.environ.get("PATH", "")
 
     # Check for absolute match first.
     if os.path.exists(command):
@@ -23,10 +23,10 @@ def which(command: str, paths: Optional[str] = None) -> Optional[str]:
 
     # Get suffixes to search.
     # On Cygwin, 'PATHEXT' may exist but it should not be used.
-    if os.pathsep == ';':
-        pathext = os.environ.get('PATHEXT', '').split(';')
+    if os.pathsep == ";":
+        pathext = os.environ.get("PATHEXT", "").split(";")
     else:
-        pathext = ['']
+        pathext = [""]
 
     # Search the paths...
     for path in paths.split(os.pathsep):
@@ -62,6 +62,7 @@ def memory_to_str(memory: int) -> str:
     if memory:
         try:
             import humanize
+
             return humanize.naturalsize(memory, gnu=True)
         except ImportError:
             # no formatter installed, let's keep it in bytes
@@ -106,11 +107,10 @@ def check_and_measure_call(*popenargs, **kwargs) -> Tuple[float, int]:
 
         with ps.Popen(*popenargs, **kwargs) as process:
             # while the process is running calculate resource utilization.
-            while (process.is_running() and
-                   process.status() != ps.STATUS_ZOMBIE):
+            while process.is_running() and process.status() != ps.STATUS_ZOMBIE:
                 # track the peak utilization of the process
                 peak_mem = max(peak_mem, get_memory(process))
-                time.sleep(.5)
+                time.sleep(0.5)
 
             if process.is_running():
                 process.kill()
@@ -129,8 +129,14 @@ def check_and_measure_call(*popenargs, **kwargs) -> Tuple[float, int]:
     return time.time() - start_time, peak_mem
 
 
-def run_script(script_path: str, build_log_file: IO, cwd: str,
-               out=sys.stdout, err=sys.stderr, verbose: int = 0):
+def run_script(
+    script_path: str,
+    build_log_file: IO,
+    cwd: str,
+    out=sys.stdout,
+    err=sys.stderr,
+    verbose: int = 0,
+):
     """
     Run the provided script if it exists.
     """
@@ -139,19 +145,27 @@ def run_script(script_path: str, build_log_file: IO, cwd: str,
             if verbose == 1:
                 out.write(f"  Executing: {script_path}\n")
 
-            check_call(f"chmod +x '{script_path}'", cwd=cwd,
-                       stderr=build_log_file,
-                       stdout=build_log_file,
-                       shell=True)
+            check_call(
+                f"chmod +x '{script_path}'",
+                cwd=cwd,
+                stderr=build_log_file,
+                stdout=build_log_file,
+                shell=True,
+            )
 
-            check_call(f"'{script_path}'", cwd=cwd,
-                       stderr=build_log_file,
-                       stdout=build_log_file,
-                       shell=True)
+            check_call(
+                f"'{script_path}'",
+                cwd=cwd,
+                stderr=build_log_file,
+                stdout=build_log_file,
+                shell=True,
+            )
 
         except CalledProcessError:
-            err.write(f"Error: Running {script_path} failed. "
-                      f"See {build_log_file.name} for details.\n")
+            err.write(
+                f"Error: Running {script_path} failed. "
+                f"See {build_log_file.name} for details.\n"
+            )
             sys.exit(-1)
 
 
