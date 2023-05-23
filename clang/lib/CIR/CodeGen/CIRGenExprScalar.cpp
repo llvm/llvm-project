@@ -444,9 +444,7 @@ public:
     return buildUnaryOp(E, mlir::cir::UnaryOpKind::Not, op);
   }
 
-  mlir::Value VisitUnaryLNot(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
-  }
+  mlir::Value VisitUnaryLNot(const UnaryOperator *E);
   mlir::Value VisitUnaryReal(const UnaryOperator *E) {
     llvm_unreachable("NYI");
   }
@@ -1238,6 +1236,26 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   }
 
   return Visit(E->getInit(0));
+}
+
+mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {
+  // Perform vector logical not on comparison with zero vector.
+  if (E->getType()->isVectorType() &&
+      E->getType()->castAs<VectorType>()->getVectorKind() ==
+          VectorKind::Generic) {
+    llvm_unreachable("NYI");
+  }
+
+  // Compare operand to zero.
+  mlir::Value boolVal = CGF.evaluateExprAsBool(E->getSubExpr());
+
+  // Invert value.
+  boolVal = Builder.createNot(boolVal);
+
+  // ZExt result to the expr type.
+  auto dstTy = ConvertType(E->getType());
+  assert(boolVal.getType() == dstTy && "NYI");
+  return boolVal;
 }
 
 mlir::Value ScalarExprEmitter::buildScalarCast(

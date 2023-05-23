@@ -701,14 +701,14 @@ Address CIRGenFunction::buildPointerWithAlignment(const Expr *E,
 /// Perform the usual unary conversions on the specified
 /// expression and compare the result against zero, returning an Int1Ty value.
 mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *E) {
-  // TODO: PGO
+  // TODO(cir): PGO
   if (const MemberPointerType *MPT = E->getType()->getAs<MemberPointerType>()) {
     assert(0 && "not implemented");
   }
 
   QualType BoolTy = getContext().BoolTy;
   SourceLocation Loc = E->getExprLoc();
-  // TODO: CGFPOptionsRAII for FP stuff.
+  // TODO(cir): CGFPOptionsRAII for FP stuff.
   if (!E->getType()->isAnyComplexType())
     return buildScalarConversion(buildScalarExpr(E), E->getType(), BoolTy, Loc);
 
@@ -1845,7 +1845,14 @@ mlir::Value CIRGenFunction::buildOpOnBoolExpr(const Expr *cond,
   // }
 
   if (const UnaryOperator *CondUOp = dyn_cast<UnaryOperator>(cond)) {
-    llvm_unreachable("NYI");
+    // In LLVM the condition is reversed here for efficient codegen.
+    // This should be done in CIR prior to LLVM lowering, if we do now
+    // we can make CIR based diagnostics misleading.
+    //  cir.ternary(!x, t, f) -> cir.ternary(x, f, t)
+    // if (CondUOp->getOpcode() == UO_LNot) {
+    //   buildOpOnBoolExpr(CondUOp->getSubExpr(), loc, elseS, thenS);
+    // }
+    assert(!UnimplementedFeature::shouldReverseUnaryCondOnBoolExpr());
   }
 
   if (const ConditionalOperator *CondOp = dyn_cast<ConditionalOperator>(cond)) {
