@@ -9199,8 +9199,8 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
       SemaRef.Diag(TrailingRequiresClause->getBeginLoc(),
                    diag::err_trailing_requires_clause_on_deduction_guide)
           << TrailingRequiresClause->getSourceRange();
-    SemaRef.CheckDeductionGuideDeclarator(D, R, SC);
-
+    if (SemaRef.CheckDeductionGuideDeclarator(D, R, SC))
+      return nullptr;
     return CXXDeductionGuideDecl::Create(SemaRef.Context, DC, D.getBeginLoc(),
                                          ExplicitSpecifier, NameInfo, R, TInfo,
                                          D.getEndLoc());
