@@ -940,9 +940,9 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
                                  lldb::offset_t file_offset,
                                  lldb::offset_t length)
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
-      m_mach_segments(), m_mach_sections(), m_entry_point_address(),
-      m_thread_context_offsets(), m_thread_context_offsets_valid(false),
-      m_reexported_dylibs(), m_allow_assembly_emulation_unwind_plans(true) {
+      m_mach_sections(), m_entry_point_address(), m_thread_context_offsets(),
+      m_thread_context_offsets_valid(false), m_reexported_dylibs(),
+      m_allow_assembly_emulation_unwind_plans(true) {
   ::memset(&m_header, 0, sizeof(m_header));
   ::memset(&m_dysymtab, 0, sizeof(m_dysymtab));
 }
@@ -952,9 +952,9 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
                                  const lldb::ProcessSP &process_sp,
                                  lldb::addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
-      m_mach_segments(), m_mach_sections(), m_entry_point_address(),
-      m_thread_context_offsets(), m_thread_context_offsets_valid(false),
-      m_reexported_dylibs(), m_allow_assembly_emulation_unwind_plans(true) {
+      m_mach_sections(), m_entry_point_address(), m_thread_context_offsets(),
+      m_thread_context_offsets_valid(false), m_reexported_dylibs(),
+      m_allow_assembly_emulation_unwind_plans(true) {
   ::memset(&m_header, 0, sizeof(m_header));
   ::memset(&m_dysymtab, 0, sizeof(m_dysymtab));
 }
@@ -1621,10 +1621,6 @@ void ObjectFileMachO::ProcessSegmentCommand(
   const uint32_t segment_permissions = GetSegmentPermissions(load_cmd);
   const bool segment_is_encrypted =
       (load_cmd.flags & SG_PROTECTED_VERSION_1) != 0;
-
-  // Keep a list of mach segments around in case we need to get at data that
-  // isn't stored in the abstracted Sections.
-  m_mach_segments.push_back(load_cmd);
 
   // Use a segment ID of the segment index shifted left by 8 so they never
   // conflict with any of the sections.
