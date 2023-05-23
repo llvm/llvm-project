@@ -1519,7 +1519,7 @@ mlir::Value ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   // If the lvalue is non-volatile, return the computed value of the assignment.
   if (!LHS.isVolatileQualified())
-    llvm_unreachable("NYI");
+    return RHS;
 
   // Otherwise, reload the value.
   return buildLoadOfLValue(LHS, E->getExprLoc());
