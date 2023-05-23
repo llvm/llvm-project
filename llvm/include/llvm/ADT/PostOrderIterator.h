@@ -296,23 +296,24 @@ template<class GraphT, class GT = GraphTraits<GraphT>>
 class ReversePostOrderTraversal {
   using NodeRef = typename GT::NodeRef;
 
-  std::vector<NodeRef> Blocks; // Block list in normal PO order
+  using VecTy = SmallVector<NodeRef, 8>;
+  VecTy Blocks; // Block list in normal PO order
 
   void Initialize(const GraphT &G) {
     std::copy(po_begin(G), po_end(G), std::back_inserter(Blocks));
   }
 
 public:
-  using rpo_iterator = typename std::vector<NodeRef>::reverse_iterator;
-  using const_rpo_iterator = typename std::vector<NodeRef>::const_reverse_iterator;
+  using rpo_iterator = typename VecTy::reverse_iterator;
+  using const_rpo_iterator = typename VecTy::const_reverse_iterator;
 
   ReversePostOrderTraversal(const GraphT &G) { Initialize(G); }
 
   // Because we want a reverse post order, use reverse iterators from the vector
   rpo_iterator begin() { return Blocks.rbegin(); }
-  const_rpo_iterator begin() const { return Blocks.crbegin(); }
+  const_rpo_iterator begin() const { return Blocks.rbegin(); }
   rpo_iterator end() { return Blocks.rend(); }
-  const_rpo_iterator end() const { return Blocks.crend(); }
+  const_rpo_iterator end() const { return Blocks.rend(); }
 };
 
 } // end namespace llvm
