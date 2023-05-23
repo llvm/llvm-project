@@ -14,7 +14,7 @@ body:     |
     ; MIR-NEXT: {{  $}}
     ; MIR-NEXT: dead $x0 = PseudoVSETVLI renamable $x10, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; MIR-NEXT: WriteVXRMImm 0, implicit-def $vxrm
-    ; MIR-NEXT: renamable $v8 = PseudoVAADD_VV_MF8 renamable $v8, renamable $v9, $noreg, 3 /* e8 */, implicit $vxrm, implicit $vl, implicit $vtype, implicit $vl, implicit $vtype
+    ; MIR-NEXT: renamable $v8 = PseudoVAADD_VV_MF8 renamable $v8, renamable $v9, 0, $noreg, 3 /* e8 */, implicit $vl, implicit $vtype, implicit $vxrm
     ; MIR-NEXT: PseudoRET implicit $v8
     ; ASM-LABEL: verify_vxrm:
     ; ASM:        # %bb.0:
@@ -25,7 +25,6 @@ body:     |
     %0:vr = COPY $v8
     %1:vr = COPY $v9
     dead $x0 = PseudoVSETVLI killed renamable $x10, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype
-    WriteVXRMImm 0, implicit-def $vxrm
-    renamable $v8 = PseudoVAADD_VV_MF8 killed renamable $v8, killed renamable $v9, $noreg, 3 /* e8 */, implicit $vxrm, implicit $vl, implicit $vtype
+    renamable $v8 = PseudoVAADD_VV_MF8 killed renamable $v8, killed renamable $v9, 0, $noreg, 3 /* e8 */
     PseudoRET implicit $v8
 ...
