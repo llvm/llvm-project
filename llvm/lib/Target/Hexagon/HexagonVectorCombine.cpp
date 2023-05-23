@@ -918,7 +918,10 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
     Instruction *Base = Move.Main.front();
     if (Base->getParent() != Info.Inst->getParent())
       return false;
-
+    // Check if it's safe to move the load.
+    if (!HVC.isSafeToMoveBeforeInBB(*Info.Inst, Base->getIterator()))
+      return false;
+    // And if it's safe to clone the dependencies.
     auto isSafeToCopyAtBase = [&](const Instruction *I) {
       return HVC.isSafeToMoveBeforeInBB(*I, Base->getIterator()) &&
              HVC.isSafeToClone(*I);
