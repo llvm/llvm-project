@@ -301,7 +301,8 @@ Language Selection and Mode Options
 
 .. option:: -fmsc-version=
 
- Set _MSC_VER. Defaults to 1300 on Windows. Not set otherwise.
+ Set ``_MSC_VER``. When on Windows, this defaults to either the same value as
+ the currently installed version of cl.exe, or ``1920``. Not set otherwise.
 
 .. option:: -fborland-extensions
 
