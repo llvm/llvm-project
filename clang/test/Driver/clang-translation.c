@@ -81,6 +81,8 @@
 
 // RUN: %clang -target arm64-apple-ios10 -funwind-tables -### -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-APPLE-UNWIND %s
+// RUN: %clang -target arm64_32-apple-watchos8 -funwind-tables -### -S %s -arch arm64 2>&1 | \
+// RUN: FileCheck -check-prefix=ARM64-APPLE-UNWIND %s
 // ARM64-APPLE-UNWIND: -funwind-tables=1
 
 // RUN: %clang -target arm64-apple-ios10 -### -ffreestanding -S %s -arch arm64 2>&1 | \
