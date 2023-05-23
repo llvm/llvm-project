@@ -183,9 +183,11 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned MinTrailingZeros = LHS.countMinTrailingZeros();
 
   APInt MinShiftAmount = RHS.getMinValue();
-  if (MinShiftAmount.uge(BitWidth))
-    // Always poison. Return unknown because we don't like returning conflict.
+  if (MinShiftAmount.uge(BitWidth)) {
+    // Always poison. Return zero because we don't like returning conflict.
+    Known.setAllZero();
     return Known;
+  }
 
   // Minimum shift amount low bits are known zero.
   MinTrailingZeros += MinShiftAmount.getZExtValue();
@@ -240,9 +242,11 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
 
   // Minimum shift amount high bits are known zero.
   APInt MinShiftAmount = RHS.getMinValue();
-  if (MinShiftAmount.uge(BitWidth))
-    // Always poison. Return unknown because we don't like returning conflict.
+  if (MinShiftAmount.uge(BitWidth)) {
+    // Always poison. Return zero because we don't like returning conflict.
+    Known.setAllZero();
     return Known;
+  }
 
   MinLeadingZeros += MinShiftAmount.getZExtValue();
   MinLeadingZeros = std::min(MinLeadingZeros, BitWidth);
@@ -295,9 +299,11 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
 
   // Minimum shift amount high bits are known sign bits.
   APInt MinShiftAmount = RHS.getMinValue();
-  if (MinShiftAmount.uge(BitWidth))
-    // Always poison. Return unknown because we don't like returning conflict.
+  if (MinShiftAmount.uge(BitWidth)) {
+    // Always poison. Return zero because we don't like returning conflict.
+    Known.setAllZero();
     return Known;
+  }
 
   if (MinLeadingZeros) {
     MinLeadingZeros += MinShiftAmount.getZExtValue();

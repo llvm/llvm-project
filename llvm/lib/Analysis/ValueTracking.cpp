@@ -994,13 +994,6 @@ static void computeKnownBitsFromShiftOperator(
 
   if (ShiftAmtIsConstant) {
     Known = KF(Known2, Known);
-
-    // If the known bits conflict, this must be an overflowing left shift, so
-    // the shift result is poison. We can return anything we want. Choose 0 for
-    // the best folding opportunity.
-    if (Known.hasConflict())
-      Known.setAllZero();
-
     return;
   }
 
