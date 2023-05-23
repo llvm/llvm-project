@@ -51,6 +51,15 @@ getTwoUses(hlfir::ElementalOp elemental) {
 
   if (!apply || !destroy)
     return std::nullopt;
+
+  // we can't inline if the return type of the yield doesn't match the return
+  // type of the apply
+  auto yield = mlir::dyn_cast_or_null<hlfir::YieldElementOp>(
+      elemental.getRegion().back().back());
+  assert(yield && "hlfir.elemental should always end with a yield");
+  if (apply.getResult().getType() != yield.getElementValue().getType())
+    return std::nullopt;
+
   return std::pair{apply, destroy};
 }
 
