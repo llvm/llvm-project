@@ -39,4 +39,17 @@ raw_ostream &operator<<(raw_ostream &os, const IRUnit &unit);
 
 } // end namespace mlir
 
+namespace llvm {
+
+// Allow llvm::cast style functions.
+template <typename To>
+struct CastInfo<To, mlir::IRUnit>
+    : public CastInfo<To, mlir::IRUnit::PointerUnion> {};
+
+template <typename To>
+struct CastInfo<To, const mlir::IRUnit>
+    : public CastInfo<To, const mlir::IRUnit::PointerUnion> {};
+
+} // namespace llvm
+
 #endif // MLIR_IR_UNIT_H
