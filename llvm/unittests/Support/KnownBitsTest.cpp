@@ -356,20 +356,15 @@ TEST(KnownBitsTest, BinaryExhaustive) {
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
-  // TODO: Make optimal for cases that are not known non-negative.
-  testUnaryOpExhaustive(
-      [](const KnownBits &Known) { return Known.abs(); },
-      [](const APInt &N) { return N.abs(); },
-      [](const KnownBits &Known) { return Known.isNonNegative(); });
+  testUnaryOpExhaustive([](const KnownBits &Known) { return Known.abs(); },
+                        [](const APInt &N) { return N.abs(); });
 
-  testUnaryOpExhaustive(
-      [](const KnownBits &Known) { return Known.abs(true); },
-      [](const APInt &N) -> std::optional<APInt> {
-        if (N.isMinSignedValue())
-          return std::nullopt;
-        return N.abs();
-      },
-      [](const KnownBits &Known) { return Known.isNonNegative(); });
+  testUnaryOpExhaustive([](const KnownBits &Known) { return Known.abs(true); },
+                        [](const APInt &N) -> std::optional<APInt> {
+                          if (N.isMinSignedValue())
+                            return std::nullopt;
+                          return N.abs();
+                        });
 
   testUnaryOpExhaustive([](const KnownBits &Known) { return Known.blsi(); },
                         [](const APInt &N) { return N & -N; });
