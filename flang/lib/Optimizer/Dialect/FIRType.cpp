@@ -486,7 +486,6 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
   name << prefix.str();
   if (!prefix.empty())
     name << "_";
-  ty = fir::unwrapRefType(ty);
   while (ty) {
     if (fir::isa_trivial(ty)) {
       if (mlir::isa<mlir::IndexType>(ty)) {
@@ -518,6 +517,9 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
       for (auto extent : seqTy.getShape())
         name << extent << 'x';
       ty = seqTy.getEleTy();
+    } else if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
+      name << "ref_";
+      ty = refTy.getEleTy();
     } else {
       // TODO: add support for RecordType/BaseBoxType
       llvm::report_fatal_error("unsupported type");
