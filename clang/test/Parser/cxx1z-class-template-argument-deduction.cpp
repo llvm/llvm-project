@@ -241,8 +241,9 @@ struct A1 {
 };
 
 struct A2 {
-  template <typename Ty>
+  template <typename Ty> // expected-note {{non-deducible template parameter 'Ty'}}
   B() noexcept(false); // expected-error {{deduction guide must be declared in the same scope as template 'PR49735::B'}} \
+                       // expected-error {{deduction guide template contains a template parameter that cannot be deduced}} \
                        // expected-error {{deduction guide declaration without trailing return type}}
 };
 

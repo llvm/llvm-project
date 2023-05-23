@@ -173,10 +173,10 @@ template <class a, class e>
 concept g = f<a, e>::h;
 template <class a, class e>
 concept i = g<e, a>;
-template <typename> class j {
+template <typename> class j { // expected-note {{candidate template ignored}}
   template <typename k>
   requires requires { requires i<j, k>; }
-  j();
+  j(); // expected-note {{candidate template ignored}}
 };
-template <> j(); // expected-error {{deduction guide declaration without trailing return type}}
+template <> j(); // expected-error {{deduction guide declaration without trailing return type}} // expected-error {{no function template}}
 }
