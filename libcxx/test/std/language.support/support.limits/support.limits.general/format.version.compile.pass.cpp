@@ -19,7 +19,7 @@
 
 /*  Constant                   Value
     __cpp_lib_format           202106L [C++20]
-    __cpp_lib_format_ranges    202207L [C++2b]
+    __cpp_lib_format_ranges    202207L [C++23]
 */
 
 #include <format>
@@ -32,7 +32,7 @@
 # endif
 
 # ifdef __cpp_lib_format_ranges
-#   error "__cpp_lib_format_ranges should not be defined before c++2b"
+#   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 14
@@ -42,7 +42,7 @@
 # endif
 
 # ifdef __cpp_lib_format_ranges
-#   error "__cpp_lib_format_ranges should not be defined before c++2b"
+#   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -52,7 +52,7 @@
 # endif
 
 # ifdef __cpp_lib_format_ranges
-#   error "__cpp_lib_format_ranges should not be defined before c++2b"
+#   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -71,17 +71,17 @@
 # endif
 
 # ifdef __cpp_lib_format_ranges
-#   error "__cpp_lib_format_ranges should not be defined before c++2b"
+#   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER > 20
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++2b"
+#     error "__cpp_lib_format should be defined in c++23"
 #   endif
 #   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++2b"
+#     error "__cpp_lib_format should have the value 202106L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_format
@@ -91,10 +91,10 @@
 
 # if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 #   ifndef __cpp_lib_format_ranges
-#     error "__cpp_lib_format_ranges should be defined in c++2b"
+#     error "__cpp_lib_format_ranges should be defined in c++23"
 #   endif
 #   if __cpp_lib_format_ranges != 202207L
-#     error "__cpp_lib_format_ranges should have the value 202207L in c++2b"
+#     error "__cpp_lib_format_ranges should have the value 202207L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_format_ranges

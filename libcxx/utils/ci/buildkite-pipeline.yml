@@ -107,8 +107,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "C++2b"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+  - label: "C++23"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -258,7 +258,7 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Clang 15"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -277,7 +277,7 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Clang 16"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -1029,7 +1029,7 @@ steps:
   - group: "FreeBSD"
     steps:
     - label: "FreeBSD 13 amd64"
-      command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx23"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"

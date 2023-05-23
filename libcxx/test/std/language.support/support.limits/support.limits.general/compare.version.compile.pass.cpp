@@ -59,10 +59,10 @@
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should be defined in c++2b"
+#     error "__cpp_lib_three_way_comparison should be defined in c++23"
 #   endif
 #   if __cpp_lib_three_way_comparison != 201907L
-#     error "__cpp_lib_three_way_comparison should have the value 201907L in c++2b"
+#     error "__cpp_lib_three_way_comparison should have the value 201907L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_three_way_comparison
