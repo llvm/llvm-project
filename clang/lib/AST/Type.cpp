@@ -3391,12 +3391,19 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     argSlot[i] = params[i];
   }
 
+  // Propagate the SME ACLE attributes.
+  if (epi.AArch64SMEAttributes != SME_NormalFunction) {
+    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    assert(epi.AArch64SMEAttributes <= SME_AttributeMask &&
+           "Not enough bits to encode SME attributes");
+    ExtraBits.AArch64SMEAttributes = epi.AArch64SMEAttributes;
+  }
+
   // Fill in the exception type array if present.
   if (getExceptionSpecType() == EST_Dynamic) {
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
     size_t NumExceptions = epi.ExceptionSpec.Exceptions.size();
-    assert(NumExceptions <= UINT16_MAX &&
-           "Not enough bits to encode exceptions");
+    assert(NumExceptions <= 1023 && "Not enough bits to encode exceptions");
     ExtraBits.NumExceptionType = NumExceptions;
 
     assert(hasExtraBitfields() && "missing trailing extra bitfields!");
@@ -3553,8 +3560,11 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // This is followed by an optional "consumed argument" section of the
   // same length as the first type sequence:
   //      bool*
-  // Finally, we have the ext info and trailing return type flag:
-  //      int bool
+  // This is followed by the ext info:
+  //      int
+  // Finally we have a trailing return type flag (bool)
+  // combined with AArch64 SME Attributes, to save space:
+  //      int
   //
   // There is no ambiguity between the consumed arguments and an empty EH
   // spec because of the leading 'bool' which unambiguously indicates
@@ -3587,8 +3597,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     for (unsigned i = 0; i != NumParams; ++i)
       ID.AddInteger(epi.ExtParameterInfos[i].getOpaqueValue());
   }
+
   epi.ExtInfo.Profile(ID);
-  ID.AddBoolean(epi.HasTrailingReturn);
+  ID.AddInteger((epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
 }
 
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
