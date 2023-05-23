@@ -102,33 +102,25 @@ subroutine range()
   integer, dimension(10) :: a0
   real, dimension(2,3) ::  a1
   integer, dimension(3,4) :: a2
+  integer, dimension(2,3,4) :: a3
  
   a0 = (/1, 2, 3, 3, 3, 3, 3, 3, 3, 3/)
   a1 = reshape((/3.5, 3.5, 3.5, 3.5, 3.5, 3.5/), shape(a1))
   a2 = reshape((/1, 3, 3, 5, 3, 3, 3, 3, 9, 9, 9, 8/), shape(a2))
+  a3 = reshape((/1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12/), shape(a3))
 end subroutine range
 
 ! a0 array constructor
 ! CHECK: fir.global internal @_QQro.10xi4.{{.*}}(dense<[1, 2, 3, 3, 3, 3, 3, 3, 3, 3]> : tensor<10xi32>) constant : !fir.array<10xi32>
 
 ! a1 array constructor
-! CHECK: fir.global internal @_QQro.2x3xr4.{{.*}} constant : !fir.array<2x3xf32> {
-  ! CHECK-DAG: %cst = arith.constant {{.*}} : f32
-  ! CHECK: %{{.*}} = fir.insert_on_range %{{[0-9]+}}, %cst from (0, 0) to (1, 2) :
+! CHECK: fir.global internal @_QQro.2x3xr4.{{.*}}(dense<3.500000e+00> : tensor<3x2xf32>) constant : !fir.array<2x3xf32>
 
 ! a2 array constructor
-! CHECK: fir.global internal @_QQro.3x4xi4.{{.*}} constant : !fir.array<3x4xi32> {
-  ! CHECK-DAG: %[[c1_i32:.*]] = arith.constant 1 : i32
-  ! CHECK-DAG: %[[c3_i32:.*]] = arith.constant 3 : i32
-  ! CHECK-DAG: %[[c5_i32:.*]] = arith.constant 5 : i32
-  ! CHECK-DAG: %[[c8_i32:.*]] = arith.constant 8 : i32
-  ! CHECK-DAG: %[[c9_i32:.*]] = arith.constant 9 : i32
-  ! CHECK: %[[r1:.*]] = fir.insert_value %{{.*}}, %{{.*}}, [0 : index, 0 : index] :
-  ! CHECK: %[[r2:.*]] = fir.insert_on_range %[[r1]], %[[c3_i32]] from (1, 0) to (2, 0) :
-  ! CHECK: %[[r3:.*]] = fir.insert_value %[[r2]], %{{.*}}, [0 : index, 1 : index] :
-  ! CHECK: %[[r4:.*]] = fir.insert_on_range %[[r3]], %[[c3_i32]] from (1, 1) to (1, 2) :
-  ! CHECK: %[[r5:.*]] = fir.insert_on_range %[[r4]], %[[c9_i32]] from (2, 2) to (1, 3) :
-  ! CHECK: %[[r6:.*]] = fir.insert_value %[[r5]], %{{.*}}, [2 : index, 3 : index] :
+! CHECK: fir.global internal @_QQro.3x4xi4.{{.*}}(dense<{{\[\[1, 3, 3], \[5, 3, 3], \[3, 3, 9], \[9, 9, 8]]}}> : tensor<4x3xi32>) constant : !fir.array<3x4xi32>
+
+! a3 array constructor
+! CHECK: fir.global internal @_QQro.2x3x4xi4.{{.*}}(dense<{{\[\[\[1, 1], \[2, 2], \[3, 3]], \[\[4, 4], \[5, 5], \[6, 6]], \[\[7, 7], \[8, 8], \[9, 9]], \[\[10, 10], \[11, 11], \[12, 12]]]}}> : tensor<4x3x2xi32>) constant : !fir.array<2x3x4xi32>
 
 ! CHECK-LABEL rangeGlobal
 subroutine rangeGlobal()
@@ -136,6 +128,15 @@ subroutine rangeGlobal()
   integer, dimension(6) :: a0 = (/ 1, 1, 2, 2, 3, 3 /)
 
 end subroutine rangeGlobal
+
+! CHECK-LABEL hugeGlobal
+subroutine hugeGlobal()
+  integer, parameter :: D = 500
+  integer, dimension(D, D) :: a
+
+! CHECK: fir.global internal @_QQro.500x500xi4.{{.*}}(dense<{{.*}}> : tensor<500x500xi32>) constant : !fir.array<500x500xi32>
+  a = reshape((/(i, i = 1, D * D)/), shape(a))
+end subroutine hugeGlobal
 
 block data
   real(selected_real_kind(6)) :: x(5,5)

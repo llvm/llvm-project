@@ -1,6 +1,10 @@
 // This test is adapted from test_parallel_for_allocate.c in SOLLVE V&V.
 // https://github.com/SOLLVE/sollve_vv/blob/master/tests/5.0/parallel_for/test_parallel_for_allocate.c
 // RUN: %libomp-compile-and-run
+
+// Support for allocate was added in GCC 11
+// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8, gcc-9, gcc-10
+
 #include <omp.h>
 
 #include <assert.h>

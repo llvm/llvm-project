@@ -818,6 +818,7 @@ TEST(StringRefTest, consumeIntegerUnsigned) {
   uint16_t U16;
   uint32_t U32;
   uint64_t U64;
+  APInt U;
 
   for (size_t i = 0; i < std::size(ConsumeUnsigned); ++i) {
     StringRef Str = ConsumeUnsigned[i].Str;
@@ -857,6 +858,12 @@ TEST(StringRefTest, consumeIntegerUnsigned) {
     bool U64Success = Str.consumeInteger(0, U64);
     ASSERT_FALSE(U64Success);
     EXPECT_EQ(U64, ConsumeUnsigned[i].Expected);
+    EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
+
+    Str = ConsumeUnsigned[i].Str;
+    U64Success = Str.consumeInteger(0, U);
+    ASSERT_FALSE(U64Success);
+    EXPECT_EQ(U.getZExtValue(), ConsumeUnsigned[i].Expected);
     EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
   }
 }

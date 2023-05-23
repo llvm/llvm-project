@@ -174,22 +174,38 @@ void llvm::computeLTOCacheKey(
   // imported symbols for each module may affect code generation and is
   // sensitive to link order, so include that as well.
   using ImportMapIteratorTy = FunctionImporter::ImportMapTy::const_iterator;
-  std::vector<ImportMapIteratorTy> ImportModulesVector;
+  struct ImportModule {
+    ImportMapIteratorTy ModIt;
+    const ModuleSummaryIndex::ModuleInfo *ModInfo;
+
+    StringRef getIdentifier() const { return ModIt->getKey(); }
+    const FunctionImporter::FunctionsToImportTy &getFunctions() const {
+      return ModIt->second;
+    }
+
+    const ModuleHash &getHash() const { return ModInfo->second.second; }
+    uint64_t getId() const { return ModInfo->second.first; }
+  };
+
+  std::vector<ImportModule> ImportModulesVector;
   ImportModulesVector.reserve(ImportList.size());
 
   for (ImportMapIteratorTy It = ImportList.begin(); It != ImportList.end();
        ++It) {
-    ImportModulesVector.push_back(It);
+    ImportModulesVector.push_back({It, Index.getModule(It->getKey())});
   }
+  // Order using moduleId integer which is based on the order the module was
+  // added.
   llvm::sort(ImportModulesVector,
-             [](const ImportMapIteratorTy &Lhs, const ImportMapIteratorTy &Rhs)
-                 -> bool { return Lhs->getKey() < Rhs->getKey(); });
-  for (const ImportMapIteratorTy &EntryIt : ImportModulesVector) {
-    auto ModHash = Index.getModuleHash(EntryIt->first());
+             [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
+               return Lhs.getId() < Rhs.getId();
+             });
+  for (const ImportModule &Entry : ImportModulesVector) {
+    auto ModHash = Entry.getHash();
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
-    AddUint64(EntryIt->second.size());
-    for (auto &Fn : EntryIt->second)
+    AddUint64(Entry.getFunctions().size());
+    for (auto &Fn : Entry.getFunctions())
       AddUint64(Fn);
   }
 
@@ -259,9 +275,10 @@ void llvm::computeLTOCacheKey(
 
   // Imported functions may introduce new uses of type identifier resolutions,
   // so we need to collect their used resolutions as well.
-  for (auto &ImpM : ImportList)
-    for (auto &ImpF : ImpM.second) {
-      GlobalValueSummary *S = Index.findSummaryInModule(ImpF, ImpM.first());
+  for (const ImportModule &ImpM : ImportModulesVector)
+    for (auto &ImpF : ImpM.getFunctions()) {
+      GlobalValueSummary *S =
+          Index.findSummaryInModule(ImpF, ImpM.getIdentifier());
       AddUsedThings(S);
       // If this is an alias, we also care about any types/etc. that the aliasee
       // may reference.

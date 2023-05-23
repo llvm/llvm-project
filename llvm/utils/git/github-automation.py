@@ -155,6 +155,19 @@ def phab_get_commit_approvers(phab_token: str, commit: github.Commit.Commit) -> 
     return accepted
 
 
+def extract_commit_hash(arg: str):
+    """
+    Extract the commit hash from the argument passed to /action github
+    comment actions. We currently only support passing the commit hash
+    directly or use the github URL, such as
+    https://github.com/llvm/llvm-project/commit/2832d7941f4207f1fcf813b27cf08cecc3086959
+    """
+    github_prefix = "https://github.com/llvm/llvm-project/commit/"
+    if arg.startswith(github_prefix):
+        return arg[len(github_prefix) :]
+    return arg
+
+
 class ReleaseWorkflow:
 
     CHERRY_PICK_FAILED_LABEL = "release:cherry-pick-failed"
@@ -460,7 +473,9 @@ class ReleaseWorkflow:
             args = m.group(2)
 
             if command == "cherry-pick":
-                return self.create_branch(args.split())
+                arg_list = args.split()
+                commits = list(map(lambda a: extract_commit_hash(a), arg_list))
+                return self.create_branch(commits)
 
             if command == "branch":
                 m = re.match("([^/]+)/([^/]+)/(.+)", args)

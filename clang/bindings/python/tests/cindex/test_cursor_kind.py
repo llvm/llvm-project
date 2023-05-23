@@ -1,7 +1,8 @@
 import os
 from clang.cindex import Config
-if 'CLANG_LIBRARY_PATH' in os.environ:
-    Config.set_library_path(os.environ['CLANG_LIBRARY_PATH'])
+
+if "CLANG_LIBRARY_PATH" in os.environ:
+    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 from clang.cindex import CursorKind
 
@@ -10,7 +11,7 @@ import unittest
 
 class TestCursorKind(unittest.TestCase):
     def test_name(self):
-        self.assertEqual(CursorKind.UNEXPOSED_DECL.name, 'UNEXPOSED_DECL')
+        self.assertEqual(CursorKind.UNEXPOSED_DECL.name, "UNEXPOSED_DECL")
 
     def test_get_all_kinds(self):
         kinds = CursorKind.get_all_kinds()
@@ -43,16 +44,27 @@ class TestCursorKind(unittest.TestCase):
         self.assertFalse(CursorKind.TYPE_REF.is_unexposed())
 
         for k in CursorKind.get_all_kinds():
-            group = [n for n in ('is_declaration', 'is_reference', 'is_expression',
-                                 'is_statement', 'is_invalid', 'is_attribute')
-                     if getattr(k, n)()]
+            group = [
+                n
+                for n in (
+                    "is_declaration",
+                    "is_reference",
+                    "is_expression",
+                    "is_statement",
+                    "is_invalid",
+                    "is_attribute",
+                )
+                if getattr(k, n)()
+            ]
 
-            if k in (   CursorKind.TRANSLATION_UNIT,
-                        CursorKind.MACRO_DEFINITION,
-                        CursorKind.MACRO_INSTANTIATION,
-                        CursorKind.INCLUSION_DIRECTIVE,
-                        CursorKind.PREPROCESSING_DIRECTIVE,
-                        CursorKind.OVERLOAD_CANDIDATE):
+            if k in (
+                CursorKind.TRANSLATION_UNIT,
+                CursorKind.MACRO_DEFINITION,
+                CursorKind.MACRO_INSTANTIATION,
+                CursorKind.INCLUSION_DIRECTIVE,
+                CursorKind.PREPROCESSING_DIRECTIVE,
+                CursorKind.OVERLOAD_CANDIDATE,
+            ):
                 self.assertEqual(len(group), 0)
             else:
                 self.assertEqual(len(group), 1)

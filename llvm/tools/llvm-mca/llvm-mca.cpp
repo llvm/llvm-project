@@ -571,11 +571,14 @@ int main(int argc, char **argv) {
 
     IPP->resetState();
 
+    DenseMap<const MCInst *, SmallVector<mca::Instrument *>>
+        InstToInstruments;
     SmallVector<std::unique_ptr<mca::Instruction>> LoweredSequence;
     for (const MCInst &MCI : Insts) {
       SMLoc Loc = MCI.getLoc();
       const SmallVector<mca::Instrument *> Instruments =
           InstrumentRegions.getActiveInstruments(Loc);
+      InstToInstruments.insert({&MCI, Instruments});
 
       Expected<std::unique_ptr<mca::Instruction>> Inst =
           IB.createInstruction(MCI, Instruments);
@@ -621,7 +624,7 @@ int main(int argc, char **argv) {
       if (PrintInstructionInfoView) {
         Printer.addView(std::make_unique<mca::InstructionInfoView>(
             *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-            ShowBarriers));
+            ShowBarriers, *IM, InstToInstruments));
       }
       Printer.addView(
           std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
@@ -698,7 +701,7 @@ int main(int argc, char **argv) {
     if (PrintInstructionInfoView)
       Printer.addView(std::make_unique<mca::InstructionInfoView>(
           *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-          ShowBarriers));
+          ShowBarriers, *IM, InstToInstruments));
 
     // Fetch custom Views that are to be placed after the InstructionInfoView.
     // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line

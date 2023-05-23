@@ -527,7 +527,7 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 ;
 ; AVX512BW-LABEL: v16i1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpternlogq $96, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512BW-NEXT:    vpternlogd $96, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
 ; AVX512BW-NEXT:    retq
   %z = call <16 x i1> @llvm.usub.sat.v16i1(<16 x i1> %x, <16 x i1> %y)
   ret <16 x i1> %z

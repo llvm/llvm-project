@@ -30,6 +30,18 @@ static const X86MemoryFoldTableEntry BroadcastFoldTable2[] = {
   { X86::VADDPSZ128rr,   X86::VADDPSZ128rmb,   TB_BCAST_SS },
   { X86::VADDPSZ256rr,   X86::VADDPSZ256rmb,   TB_BCAST_SS },
   { X86::VADDPSZrr,      X86::VADDPSZrmb,      TB_BCAST_SS },
+  { X86::VANDNPDZ128rr,  X86::VANDNPDZ128rmb,  TB_BCAST_SD },
+  { X86::VANDNPDZ256rr,  X86::VANDNPDZ256rmb,  TB_BCAST_SD },
+  { X86::VANDNPDZrr,     X86::VANDNPDZrmb,     TB_BCAST_SD },
+  { X86::VANDNPSZ128rr,  X86::VANDNPSZ128rmb,  TB_BCAST_SS },
+  { X86::VANDNPSZ256rr,  X86::VANDNPSZ256rmb,  TB_BCAST_SS },
+  { X86::VANDNPSZrr,     X86::VANDNPSZrmb,     TB_BCAST_SS },
+  { X86::VANDPDZ128rr,   X86::VANDPDZ128rmb,   TB_BCAST_SD },
+  { X86::VANDPDZ256rr,   X86::VANDPDZ256rmb,   TB_BCAST_SD },
+  { X86::VANDPDZrr,      X86::VANDPDZrmb,      TB_BCAST_SD },
+  { X86::VANDPSZ128rr,   X86::VANDPSZ128rmb,   TB_BCAST_SS },
+  { X86::VANDPSZ256rr,   X86::VANDPSZ256rmb,   TB_BCAST_SS },
+  { X86::VANDPSZrr,      X86::VANDPSZrmb,      TB_BCAST_SS },
   { X86::VCMPPDZ128rri,  X86::VCMPPDZ128rmbi,  TB_BCAST_SD },
   { X86::VCMPPDZ256rri,  X86::VCMPPDZ256rmbi,  TB_BCAST_SD },
   { X86::VCMPPDZrri,     X86::VCMPPDZrmbi,     TB_BCAST_SD },
@@ -72,6 +84,12 @@ static const X86MemoryFoldTableEntry BroadcastFoldTable2[] = {
   { X86::VMULPSZ128rr,   X86::VMULPSZ128rmb,   TB_BCAST_SS },
   { X86::VMULPSZ256rr,   X86::VMULPSZ256rmb,   TB_BCAST_SS },
   { X86::VMULPSZrr,      X86::VMULPSZrmb,      TB_BCAST_SS },
+  { X86::VORPDZ128rr,    X86::VORPDZ128rmb,    TB_BCAST_SD },
+  { X86::VORPDZ256rr,    X86::VORPDZ256rmb,    TB_BCAST_SD },
+  { X86::VORPDZrr,       X86::VORPDZrmb,       TB_BCAST_SD },
+  { X86::VORPSZ128rr,    X86::VORPSZ128rmb,    TB_BCAST_SS },
+  { X86::VORPSZ256rr,    X86::VORPSZ256rmb,    TB_BCAST_SS },
+  { X86::VORPSZrr,       X86::VORPSZrmb,       TB_BCAST_SS },
   { X86::VPADDDZ128rr,   X86::VPADDDZ128rmb,   TB_BCAST_D },
   { X86::VPADDDZ256rr,   X86::VPADDDZ256rmb,   TB_BCAST_D },
   { X86::VPADDDZrr,      X86::VPADDDZrmb,      TB_BCAST_D },
@@ -174,6 +192,12 @@ static const X86MemoryFoldTableEntry BroadcastFoldTable2[] = {
   { X86::VSUBPSZ128rr,   X86::VSUBPSZ128rmb,   TB_BCAST_SS },
   { X86::VSUBPSZ256rr,   X86::VSUBPSZ256rmb,   TB_BCAST_SS },
   { X86::VSUBPSZrr,      X86::VSUBPSZrmb,      TB_BCAST_SS },
+  { X86::VXORPDZ128rr,   X86::VXORPDZ128rmb,   TB_BCAST_SD },
+  { X86::VXORPDZ256rr,   X86::VXORPDZ256rmb,   TB_BCAST_SD },
+  { X86::VXORPDZrr,      X86::VXORPDZrmb,      TB_BCAST_SD },
+  { X86::VXORPSZ128rr,   X86::VXORPSZ128rmb,   TB_BCAST_SS },
+  { X86::VXORPSZ256rr,   X86::VXORPSZ256rmb,   TB_BCAST_SS },
+  { X86::VXORPSZrr,      X86::VXORPSZrmb,      TB_BCAST_SS },
 };
 
 static const X86MemoryFoldTableEntry BroadcastFoldTable3[] = {
@@ -293,6 +317,68 @@ static const X86MemoryFoldTableEntry BroadcastFoldTable3[] = {
   { X86::VPTERNLOGQZrri,       X86::VPTERNLOGQZrmbi,      TB_BCAST_Q },
 };
 
+// Table to map instructions safe to broadcast using a different width from the
+// element width.
+static const X86MemoryFoldTableEntry BroadcastSizeFoldTable2[] = {
+  { X86::VANDNPDZ128rr,        X86::VANDNPSZ128rmb,       TB_BCAST_SS },
+  { X86::VANDNPDZ256rr,        X86::VANDNPSZ256rmb,       TB_BCAST_SS },
+  { X86::VANDNPDZrr,           X86::VANDNPSZrmb,          TB_BCAST_SS },
+  { X86::VANDNPSZ128rr,        X86::VANDNPDZ128rmb,       TB_BCAST_SD },
+  { X86::VANDNPSZ256rr,        X86::VANDNPDZ256rmb,       TB_BCAST_SD },
+  { X86::VANDNPSZrr,           X86::VANDNPDZrmb,          TB_BCAST_SD },
+  { X86::VANDPDZ128rr,         X86::VANDPSZ128rmb,        TB_BCAST_SS },
+  { X86::VANDPDZ256rr,         X86::VANDPSZ256rmb,        TB_BCAST_SS },
+  { X86::VANDPDZrr,            X86::VANDPSZrmb,           TB_BCAST_SS },
+  { X86::VANDPSZ128rr,         X86::VANDPDZ128rmb,        TB_BCAST_SD },
+  { X86::VANDPSZ256rr,         X86::VANDPDZ256rmb,        TB_BCAST_SD },
+  { X86::VANDPSZrr,            X86::VANDPDZrmb,           TB_BCAST_SD },
+  { X86::VORPDZ128rr,          X86::VORPSZ128rmb,         TB_BCAST_SS },
+  { X86::VORPDZ256rr,          X86::VORPSZ256rmb,         TB_BCAST_SS },
+  { X86::VORPDZrr,             X86::VORPSZrmb,            TB_BCAST_SS },
+  { X86::VORPSZ128rr,          X86::VORPDZ128rmb,         TB_BCAST_SD },
+  { X86::VORPSZ256rr,          X86::VORPDZ256rmb,         TB_BCAST_SD },
+  { X86::VORPSZrr,             X86::VORPDZrmb,            TB_BCAST_SD },
+  { X86::VPANDDZ128rr,         X86::VPANDQZ128rmb,        TB_BCAST_Q },
+  { X86::VPANDDZ256rr,         X86::VPANDQZ256rmb,        TB_BCAST_Q },
+  { X86::VPANDDZrr,            X86::VPANDQZrmb,           TB_BCAST_Q },
+  { X86::VPANDNDZ128rr,        X86::VPANDNQZ128rmb,       TB_BCAST_Q },
+  { X86::VPANDNDZ256rr,        X86::VPANDNQZ256rmb,       TB_BCAST_Q },
+  { X86::VPANDNDZrr,           X86::VPANDNQZrmb,          TB_BCAST_Q },
+  { X86::VPANDNQZ128rr,        X86::VPANDNDZ128rmb,       TB_BCAST_D },
+  { X86::VPANDNQZ256rr,        X86::VPANDNDZ256rmb,       TB_BCAST_D },
+  { X86::VPANDNQZrr,           X86::VPANDNDZrmb,          TB_BCAST_D },
+  { X86::VPANDQZ128rr,         X86::VPANDDZ128rmb,        TB_BCAST_D },
+  { X86::VPANDQZ256rr,         X86::VPANDDZ256rmb,        TB_BCAST_D },
+  { X86::VPANDQZrr,            X86::VPANDDZrmb,           TB_BCAST_D },
+  { X86::VPORDZ128rr,          X86::VPORQZ128rmb,         TB_BCAST_Q },
+  { X86::VPORDZ256rr,          X86::VPORQZ256rmb,         TB_BCAST_Q },
+  { X86::VPORDZrr,             X86::VPORQZrmb,            TB_BCAST_Q },
+  { X86::VPORQZ128rr,          X86::VPORDZ128rmb,         TB_BCAST_D },
+  { X86::VPORQZ256rr,          X86::VPORDZ256rmb,         TB_BCAST_D },
+  { X86::VPORQZrr,             X86::VPORDZrmb,            TB_BCAST_D },
+  { X86::VPXORDZ128rr,         X86::VPXORQZ128rmb,        TB_BCAST_Q },
+  { X86::VPXORDZ256rr,         X86::VPXORQZ256rmb,        TB_BCAST_Q },
+  { X86::VPXORDZrr,            X86::VPXORQZrmb,           TB_BCAST_Q },
+  { X86::VPXORQZ128rr,         X86::VPXORDZ128rmb,        TB_BCAST_D },
+  { X86::VPXORQZ256rr,         X86::VPXORDZ256rmb,        TB_BCAST_D },
+  { X86::VPXORQZrr,            X86::VPXORDZrmb,           TB_BCAST_D },
+  { X86::VXORPDZ128rr,         X86::VXORPSZ128rmb,        TB_BCAST_SS },
+  { X86::VXORPDZ256rr,         X86::VXORPSZ256rmb,        TB_BCAST_SS },
+  { X86::VXORPDZrr,            X86::VXORPSZrmb,           TB_BCAST_SS },
+  { X86::VXORPSZ128rr,         X86::VXORPDZ128rmb,        TB_BCAST_SD },
+  { X86::VXORPSZ256rr,         X86::VXORPDZ256rmb,        TB_BCAST_SD },
+  { X86::VXORPSZrr,            X86::VXORPDZrmb,           TB_BCAST_SD },
+};
+
+static const X86MemoryFoldTableEntry BroadcastSizeFoldTable3[] = {
+  { X86::VPTERNLOGDZ128rri,    X86::VPTERNLOGQZ128rmbi,   TB_BCAST_Q },
+  { X86::VPTERNLOGDZ256rri,    X86::VPTERNLOGQZ256rmbi,   TB_BCAST_Q },
+  { X86::VPTERNLOGDZrri,       X86::VPTERNLOGQZrmbi,      TB_BCAST_Q },
+  { X86::VPTERNLOGQZ128rri,    X86::VPTERNLOGDZ128rmbi,   TB_BCAST_D },
+  { X86::VPTERNLOGQZ256rri,    X86::VPTERNLOGDZ256rmbi,   TB_BCAST_D },
+  { X86::VPTERNLOGQZrri,       X86::VPTERNLOGDZrmbi,      TB_BCAST_D },
+};
+
 static const X86MemoryFoldTableEntry *
 lookupFoldTableImpl(ArrayRef<X86MemoryFoldTableEntry> Table, unsigned RegOp) {
 #ifndef NDEBUG
@@ -339,6 +425,16 @@ lookupFoldTableImpl(ArrayRef<X86MemoryFoldTableEntry> Table, unsigned RegOp) {
                               std::end(BroadcastFoldTable3)) ==
                std::end(BroadcastFoldTable3) &&
            "BroadcastFoldTable3 is not sorted and unique!");
+    assert(llvm::is_sorted(BroadcastSizeFoldTable2) &&
+           std::adjacent_find(std::begin(BroadcastSizeFoldTable2),
+                              std::end(BroadcastSizeFoldTable2)) ==
+               std::end(BroadcastSizeFoldTable2) &&
+           "BroadcastSizeFoldTable2 is not sorted and unique!");
+    assert(llvm::is_sorted(BroadcastSizeFoldTable3) &&
+           std::adjacent_find(std::begin(BroadcastSizeFoldTable3),
+                              std::end(BroadcastSizeFoldTable3)) ==
+               std::end(BroadcastSizeFoldTable3) &&
+           "BroadcastSizeFoldTable3 is not sorted and unique!");
     FoldTablesChecked.store(true, std::memory_order_relaxed);
   }
 #endif
@@ -444,3 +540,85 @@ llvm::lookupUnfoldTable(unsigned MemOp) {
   return nullptr;
 }
 
+namespace {
+
+// This class stores the memory -> broadcast folding tables. It is instantiated
+// as a function scope static variable to lazily init the folding table.
+struct X86MemBroadcastFoldTable {
+  // Stores memory broadcast folding tables entries sorted by opcode.
+  std::vector<X86MemoryFoldTableEntry> Table;
+
+  X86MemBroadcastFoldTable() {
+    // Broadcast tables.
+    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastFoldTable2) {
+      unsigned RegOp = Reg2Bcst.KeyOp;
+      unsigned BcstOp = Reg2Bcst.DstOp;
+      if (const X86MemoryFoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 2)) {
+        unsigned MemOp = Reg2Mem->DstOp;
+        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_2 |
+                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        Table.push_back({MemOp, BcstOp, Flags});
+      }
+    }
+    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastSizeFoldTable2) {
+      unsigned RegOp = Reg2Bcst.KeyOp;
+      unsigned BcstOp = Reg2Bcst.DstOp;
+      if (const X86MemoryFoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 2)) {
+        unsigned MemOp = Reg2Mem->DstOp;
+        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_2 |
+                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        Table.push_back({MemOp, BcstOp, Flags});
+      }
+    }
+
+    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastFoldTable3) {
+      unsigned RegOp = Reg2Bcst.KeyOp;
+      unsigned BcstOp = Reg2Bcst.DstOp;
+      if (const X86MemoryFoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 3)) {
+        unsigned MemOp = Reg2Mem->DstOp;
+        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_3 |
+                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        Table.push_back({MemOp, BcstOp, Flags});
+      }
+    }
+    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastSizeFoldTable3) {
+      unsigned RegOp = Reg2Bcst.KeyOp;
+      unsigned BcstOp = Reg2Bcst.DstOp;
+      if (const X86MemoryFoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 3)) {
+        unsigned MemOp = Reg2Mem->DstOp;
+        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_3 |
+                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        Table.push_back({MemOp, BcstOp, Flags});
+      }
+    }
+
+    // Sort the memory->broadcast fold table.
+    array_pod_sort(Table.begin(), Table.end());
+  }
+};
+} // namespace
+
+static bool matchBroadcastSize(const X86MemoryFoldTableEntry &Entry,
+                               unsigned BroadcastBits) {
+  switch (Entry.Flags & TB_BCAST_MASK) {
+  case TB_BCAST_SD:
+  case TB_BCAST_Q:
+    return BroadcastBits == 64;
+  case TB_BCAST_SS:
+  case TB_BCAST_D:
+    return BroadcastBits == 32;
+  }
+  return false;
+}
+
+const X86MemoryFoldTableEntry *
+llvm::lookupBroadcastFoldTable(unsigned MemOp, unsigned BroadcastBits) {
+  static X86MemBroadcastFoldTable MemBroadcastFoldTable;
+  auto &Table = MemBroadcastFoldTable.Table;
+  for (auto I = llvm::lower_bound(Table, MemOp);
+       I != Table.end() && I->KeyOp == MemOp; ++I) {
+    if (matchBroadcastSize(*I, BroadcastBits))
+      return &*I;
+  }
+  return nullptr;
+}

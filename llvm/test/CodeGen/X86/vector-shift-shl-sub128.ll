@@ -1825,7 +1825,7 @@ define <8 x i8> @splatconstant_shift_v8i8(<8 x i8> %a) nounwind {
 ; AVX512VL-LABEL: splatconstant_shift_v8i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; X86-SSE-LABEL: splatconstant_shift_v8i8:
@@ -1864,7 +1864,7 @@ define <4 x i8> @splatconstant_shift_v4i8(<4 x i8> %a) nounwind {
 ; AVX512VL-LABEL: splatconstant_shift_v4i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; X86-SSE-LABEL: splatconstant_shift_v4i8:
@@ -1903,7 +1903,7 @@ define <2 x i8> @splatconstant_shift_v2i8(<2 x i8> %a) nounwind {
 ; AVX512VL-LABEL: splatconstant_shift_v2i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; X86-SSE-LABEL: splatconstant_shift_v2i8:

@@ -141,7 +141,13 @@ private:
   /// code, except the final yield, at the current execution point.
   /// If the value was saved in a previous run, this fetches the saved value
   /// from the temporary storage and returns the value.
-  mlir::Value generateYieldedScalarValue(mlir::Region &region);
+  /// Inside Forall, the value will be hoisted outside of the forall loops if
+  /// it does not depend on the forall indices.
+  /// An optional type can be provided to get a value from a specific type
+  /// (the cast will be hoisted if the computation is hoisted).
+  mlir::Value generateYieldedScalarValue(
+      mlir::Region &region,
+      std::optional<mlir::Type> castToType = std::nullopt);
 
   /// Generate an entity yielded by an ordered assignment tree region, and
   /// optionally return the (uncloned) yield if there is any clean-up that
@@ -149,7 +155,8 @@ private:
   /// this will return the saved value if the region was saved in a previous
   /// run.
   std::pair<mlir::Value, std::optional<hlfir::YieldOp>>
-  generateYieldedEntity(mlir::Region &region);
+  generateYieldedEntity(mlir::Region &region,
+                        std::optional<mlir::Type> castToType = std::nullopt);
 
   /// If \p maybeYield is present and has a clean-up, generate the clean-up
   /// at the current insertion point (by cloning).
@@ -215,20 +222,20 @@ void OrderedAssignmentRewriter::walk(
 
 void OrderedAssignmentRewriter::pre(hlfir::ForallOp forallOp) {
   /// Create a fir.do_loop given the hlfir.forall control values.
-  mlir::Value rawLowerBound =
-      generateYieldedScalarValue(forallOp.getLbRegion());
-  mlir::Location loc = forallOp.getLoc();
   mlir::Type idxTy = builder.getIndexType();
-  mlir::Value lb = builder.createConvert(loc, idxTy, rawLowerBound);
-  mlir::Value rawUpperBound =
-      generateYieldedScalarValue(forallOp.getUbRegion());
-  mlir::Value ub = builder.createConvert(loc, idxTy, rawUpperBound);
+  mlir::Location loc = forallOp.getLoc();
+  mlir::Value lb = generateYieldedScalarValue(forallOp.getLbRegion(), idxTy);
+  mlir::Value ub = generateYieldedScalarValue(forallOp.getUbRegion(), idxTy);
   mlir::Value step;
   if (forallOp.getStepRegion().empty()) {
+    auto insertionPoint = builder.saveInsertionPoint();
+    if (!constructStack.empty())
+      builder.setInsertionPoint(constructStack[0]);
     step = builder.createIntegerConstant(loc, idxTy, 1);
+    if (!constructStack.empty())
+      builder.restoreInsertionPoint(insertionPoint);
   } else {
-    step = generateYieldedScalarValue(forallOp.getStepRegion());
-    step = builder.createConvert(loc, idxTy, step);
+    step = generateYieldedScalarValue(forallOp.getStepRegion(), idxTy);
   }
   auto doLoop = builder.create<fir::DoLoopOp>(loc, lb, ub, step);
   builder.setInsertionPointToStart(doLoop.getBody());
@@ -256,8 +263,8 @@ void OrderedAssignmentRewriter::pre(hlfir::ForallIndexOp forallIndexOp) {
 
 void OrderedAssignmentRewriter::pre(hlfir::ForallMaskOp forallMaskOp) {
   mlir::Location loc = forallMaskOp.getLoc();
-  mlir::Value mask = generateYieldedScalarValue(forallMaskOp.getMaskRegion());
-  mask = builder.createConvert(loc, builder.getI1Type(), mask);
+  mlir::Value mask = generateYieldedScalarValue(forallMaskOp.getMaskRegion(),
+                                                builder.getI1Type());
   auto ifOp = builder.create<fir::IfOp>(loc, std::nullopt, mask, false);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   constructStack.push_back(ifOp);
@@ -350,35 +357,84 @@ void OrderedAssignmentRewriter::post(hlfir::ElseWhereOp elseWhereOp) {
   builder.setInsertionPointAfter(constructStack.pop_back_val());
 }
 
+/// Is this value a Forall index?
+/// Forall index are block arguments of hlfir.forall body, or the result
+/// of hlfir.forall_index.
+static bool isForallIndex(mlir::Value value) {
+  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value)) {
+    if (mlir::Block *block = blockArg.getOwner())
+      return block->isEntryBlock() &&
+             mlir::isa_and_nonnull<hlfir::ForallOp>(block->getParentOp());
+    return false;
+  }
+  return value.getDefiningOp<hlfir::ForallIndexOp>();
+}
+
 std::pair<mlir::Value, std::optional<hlfir::YieldOp>>
-OrderedAssignmentRewriter::generateYieldedEntity(mlir::Region &region) {
+OrderedAssignmentRewriter::generateYieldedEntity(
+    mlir::Region &region, std::optional<mlir::Type> castToType) {
   // TODO: if the region was saved, use that instead of generating code again.
   if (whereLoopNest.has_value()) {
     mlir::Location loc = region.getParentOp()->getLoc();
     return {generateMaskedEntity(loc, region), std::nullopt};
   }
   assert(region.hasOneBlock() && "region must contain one block");
-  // Clone all operations except the final hlfir.yield.
+  auto oldYield = mlir::dyn_cast_or_null<hlfir::YieldOp>(
+      region.back().getOperations().back());
+  assert(oldYield && "region computing entities must end with a YieldOp");
   mlir::Block::OpListType &ops = region.back().getOperations();
+
+  // Inside Forall, scalars that do not depend on forall indices can be hoisted
+  // here because their evaluation is required to only call pure procedures, and
+  // if they depend on a variable previously assigned to in a forall assignment,
+  // this assignment must have been scheduled in a previous run. Hoisting of
+  // scalars is done here to help creating simple temporary storage if needed.
+  // Inner forall bounds can often be hoisted, and this allows computing the
+  // total number of iterations to create temporary storages.
+  bool hoistComputation = false;
+  if (fir::isa_trivial(oldYield.getEntity().getType()) &&
+      !constructStack.empty()) {
+    hoistComputation = true;
+    for (mlir::Operation &op : ops)
+      if (llvm::any_of(op.getOperands(), [](mlir::Value value) {
+            return isForallIndex(value);
+          })) {
+        hoistComputation = false;
+        break;
+      }
+  }
+  auto insertionPoint = builder.saveInsertionPoint();
+  if (hoistComputation)
+    builder.setInsertionPoint(constructStack[0]);
+
+  // Clone all operations except the final hlfir.yield.
   assert(!ops.empty() && "yield block cannot be empty");
   auto end = ops.end();
   for (auto opIt = ops.begin(); std::next(opIt) != end; ++opIt)
     (void)builder.clone(*opIt, mapper);
-  auto oldYield = mlir::dyn_cast_or_null<hlfir::YieldOp>(
-      region.back().getOperations().back());
-  assert(oldYield && "region computing scalar must end with a YieldOp");
   // Get the value for the yielded entity, it may be the result of an operation
   // that was cloned, or it may be the same as the previous value if the yield
   // operand was created before the ordered assignment tree.
   mlir::Value newEntity = mapper.lookupOrDefault(oldYield.getEntity());
+  if (castToType.has_value())
+    newEntity =
+        builder.createConvert(newEntity.getLoc(), *castToType, newEntity);
+
+  if (hoistComputation) {
+    // Hoisted trivial scalars clean-up can be done right away, the value is
+    // in registers.
+    generateCleanupIfAny(oldYield);
+    builder.restoreInsertionPoint(insertionPoint);
+    return {newEntity, std::nullopt};
+  }
   if (oldYield.getCleanup().empty())
     return {newEntity, std::nullopt};
   return {newEntity, oldYield};
 }
 
-mlir::Value
-OrderedAssignmentRewriter::generateYieldedScalarValue(mlir::Region &region) {
-  auto [value, maybeYield] = generateYieldedEntity(region);
+mlir::Value OrderedAssignmentRewriter::generateYieldedScalarValue(
+    mlir::Region &region, std::optional<mlir::Type> castToType) {
+  auto [value, maybeYield] = generateYieldedEntity(region, castToType);
   assert(fir::isa_trivial(value.getType()) && "not a trivial scalar value");
   generateCleanupIfAny(maybeYield);
   return value;

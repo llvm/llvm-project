@@ -436,7 +436,7 @@ define i1 @trunc_v32i16_v32i1(<32 x i16>) {
 ;
 ; AVX512-LABEL: trunc_v32i16_v32i1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
+; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
@@ -485,7 +485,7 @@ define i1 @trunc_v64i8_v64i1(<64 x i8>) {
 ;
 ; AVX512-LABEL: trunc_v64i8_v64i1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
+; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
