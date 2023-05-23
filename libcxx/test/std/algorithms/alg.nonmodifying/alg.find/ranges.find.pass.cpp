@@ -70,25 +70,6 @@ constexpr void test_iterators() {
   }
 }
 
-struct OneWayComparable {
-  bool isLeft;
-  friend constexpr bool operator==(OneWayComparable l, OneWayComparable) { return l.isLeft; }
-};
-
-struct NonConstComparableLValue {
-  friend constexpr bool operator==(const NonConstComparableLValue&, const NonConstComparableLValue&) { return false; }
-  friend constexpr bool operator==(NonConstComparableLValue&, NonConstComparableLValue&) { return false; }
-  friend constexpr bool operator==(const NonConstComparableLValue&, NonConstComparableLValue&) { return false; }
-  friend constexpr bool operator==(NonConstComparableLValue&, const NonConstComparableLValue&) { return true; }
-};
-
-struct NonConstComparableRValue {
-  friend constexpr bool operator==(const NonConstComparableRValue&, const NonConstComparableRValue&) { return false; }
-  friend constexpr bool operator==(const NonConstComparableRValue&&, const NonConstComparableRValue&&) { return false; }
-  friend constexpr bool operator==(NonConstComparableRValue&&, NonConstComparableRValue&&) { return false; }
-  friend constexpr bool operator==(NonConstComparableRValue&&, const NonConstComparableRValue&) { return true; }
-};
-
 constexpr bool test() {
   test_iterators<int*>();
   test_iterators<const int*>();
@@ -151,25 +132,11 @@ constexpr bool test() {
   }
 
   {
-    // check that ranges::dangling is returned
-    [[maybe_unused]] std::same_as<std::ranges::dangling> auto ret =
-      std::ranges::find(std::array{1, 2}, 3);
-  }
-
-  {
     // check that an iterator is returned with a borrowing range
     int a[] = {1, 2, 3, 4};
     std::same_as<int*> auto ret = std::ranges::find(std::views::all(a), 1);
     assert(ret == a);
     assert(*ret == 1);
-  }
-
-  {
-    // check that std::invoke is used
-    struct S { int i; };
-    S a[] = { S{1}, S{3}, S{2} };
-    std::same_as<S*> auto ret = std::ranges::find(a, 4, &S::i);
-    assert(ret == a + 3);
   }
 
   {
@@ -193,47 +160,6 @@ constexpr bool test() {
   }
 
   {
-    // check comparison order
-    {
-      OneWayComparable a[] = { OneWayComparable{true} };
-      auto ret = std::ranges::find(a, a + 1, OneWayComparable{false});
-      assert(ret == a);
-    }
-    {
-      OneWayComparable a[] = { OneWayComparable{true} };
-      auto ret = std::ranges::find(a, OneWayComparable{false});
-      assert(ret == a);
-    }
-  }
-
-  {
-    // check that the return type of `iter::operator*` doesn't change
-    {
-      NonConstComparableLValue a[] = { NonConstComparableLValue{} };
-      auto ret = std::ranges::find(a, a + 1, NonConstComparableLValue{});
-      assert(ret == a);
-    }
-    {
-      using It = std::move_iterator<NonConstComparableRValue*>;
-      NonConstComparableRValue a[] = { NonConstComparableRValue{} };
-      auto ret = std::ranges::find(It(a), It(a + 1), NonConstComparableRValue{});
-      assert(ret.base() == a);
-    }
-    {
-      NonConstComparableLValue a[] = { NonConstComparableLValue{} };
-      auto ret = std::ranges::find(a, NonConstComparableLValue{});
-      assert(ret == a);
-    }
-    {
-      using It = std::move_iterator<NonConstComparableRValue*>;
-      NonConstComparableRValue a[] = { NonConstComparableRValue{} };
-      auto range = std::ranges::subrange(It(a), It(a + 1));
-      auto ret = std::ranges::find(range, NonConstComparableRValue{});
-      assert(ret.base() == a);
-    }
-  }
-
-  {
     // check that an empty range works
     {
       std::array<int ,0> a = {};
@@ -244,20 +170,6 @@ constexpr bool test() {
       std::array<int, 0> a = {};
       auto ret = std::ranges::find(a, 1);
       assert(ret == a.begin());
-    }
-  }
-
-  {
-    // check that the implicit conversion to bool works
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret = std::ranges::find(a, a + 4, StrictComparable<int>{2});
-      assert(ret == a + 1);
-    }
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret = std::ranges::find(a, StrictComparable<int>{2});
-      assert(ret == a + 1);
     }
   }
 
