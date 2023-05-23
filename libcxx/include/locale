@@ -598,81 +598,81 @@ public:
     typedef _CharT char_type;
     typedef _InputIterator iter_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit num_get(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, bool& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, long& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, long long& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, unsigned short& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, unsigned int& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, unsigned long& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, unsigned long long& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, float& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, double& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, long double& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, void*& __v) const
     {
@@ -682,7 +682,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~num_get() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~num_get() override {}
 
     template <class _Fp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
@@ -1289,60 +1289,60 @@ public:
     typedef _CharT char_type;
     typedef _OutputIterator iter_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit num_put(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   bool __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   long __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   long long __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   unsigned long __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   unsigned long long __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   double __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   long double __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   const void* __v) const
     {
@@ -1352,7 +1352,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~num_put() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~num_put() override {}
 
     virtual iter_type do_put(iter_type __s, ios_base& __iob, char_type __fl,
                              bool __v) const;
@@ -1703,7 +1703,7 @@ protected:
     virtual const string_type& __x() const;
     virtual const string_type& __X() const;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     ~__time_get_c_storage() {}
 };
 
@@ -1737,52 +1737,52 @@ public:
     typedef time_base::dateorder    dateorder;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit time_get(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     dateorder date_order() const
     {
         return this->do_date_order();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get_time(iter_type __b, iter_type __e, ios_base& __iob,
                        ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_time(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get_date(iter_type __b, iter_type __e, ios_base& __iob,
                        ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_date(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get_weekday(iter_type __b, iter_type __e, ios_base& __iob,
                           ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_weekday(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get_monthname(iter_type __b, iter_type __e, ios_base& __iob,
                             ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_monthname(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get_year(iter_type __b, iter_type __e, ios_base& __iob,
                        ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_year(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, tm *__tm,
                   char __fmt, char __mod = 0) const
@@ -1797,7 +1797,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_get() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~time_get() override {}
 
     virtual dateorder do_date_order() const;
     virtual iter_type do_get_time(iter_type __b, iter_type __e, ios_base& __iob,
@@ -2406,27 +2406,53 @@ public:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit time_get_byname(const char* __nm, size_t __refs = 0)
         : time_get<_CharT, _InputIterator>(__refs),
           __time_get_storage<_CharT>(__nm) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit time_get_byname(const string& __nm, size_t __refs = 0)
         : time_get<_CharT, _InputIterator>(__refs),
           __time_get_storage<_CharT>(__nm) {}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_get_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~time_get_byname() override {}
 
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL dateorder do_date_order() const override {return this->__do_date_order();}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION dateorder do_date_order() const override {
+        return this->__do_date_order();
+    }
+
 private:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type* __weeks() const override  {return this->__weeks_;}
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type* __months() const override {return this->__months_;}
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type* __am_pm() const override  {return this->__am_pm_;}
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __c() const override      {return this->__c_;}
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __r() const override      {return this->__r_;}
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __x() const override      {return this->__x_;}
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __X() const override      {return this->__X_;}
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION const string_type*
+  __weeks() const override {
+        return this->__weeks_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION const string_type*
+  __months() const override {
+        return this->__months_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION const string_type*
+  __am_pm() const override {
+        return this->__am_pm_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION const string_type& __c() const override {
+        return this->__c_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION const string_type& __r() const override {
+        return this->__r_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION const string_type& __x() const override {
+        return this->__x_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION const string_type& __X() const override {
+        return this->__X_;
+  }
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<char>;
@@ -2459,14 +2485,14 @@ public:
     typedef _CharT char_type;
     typedef _OutputIterator iter_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit time_put(size_t __refs = 0)
         : locale::facet(__refs) {}
 
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl, const tm* __tm,
                   const char_type* __pb, const char_type* __pe) const;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   const tm* __tm, char __fmt, char __mod = 0) const
     {
@@ -2476,15 +2502,15 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_put() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~time_put() override {}
     virtual iter_type do_put(iter_type __s, ios_base&, char_type, const tm* __tm,
                              char __fmt, char __mod) const;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit time_put(const char* __nm, size_t __refs)
         : locale::facet(__refs),
           __time_put(__nm) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit time_put(const string& __nm, size_t __refs)
         : locale::facet(__refs),
           __time_put(__nm) {}
@@ -2555,16 +2581,16 @@ class _LIBCPP_TEMPLATE_VIS time_put_byname
     : public time_put<_CharT, _OutputIterator>
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit time_put_byname(const char* __nm, size_t __refs = 0)
         : time_put<_CharT, _OutputIterator>(__nm, __refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit time_put_byname(const string& __nm, size_t __refs = 0)
         : time_put<_CharT, _OutputIterator>(__nm, __refs) {}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_put_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~time_put_byname() override {}
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<char>;
@@ -2594,25 +2620,49 @@ public:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit moneypunct(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY char_type   decimal_point() const {return do_decimal_point();}
-    _LIBCPP_INLINE_VISIBILITY char_type   thousands_sep() const {return do_thousands_sep();}
-    _LIBCPP_INLINE_VISIBILITY string      grouping()      const {return do_grouping();}
-    _LIBCPP_INLINE_VISIBILITY string_type curr_symbol()   const {return do_curr_symbol();}
-    _LIBCPP_INLINE_VISIBILITY string_type positive_sign() const {return do_positive_sign();}
-    _LIBCPP_INLINE_VISIBILITY string_type negative_sign() const {return do_negative_sign();}
-    _LIBCPP_INLINE_VISIBILITY int         frac_digits()   const {return do_frac_digits();}
-    _LIBCPP_INLINE_VISIBILITY pattern     pos_format()    const {return do_pos_format();}
-    _LIBCPP_INLINE_VISIBILITY pattern     neg_format()    const {return do_neg_format();}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION char_type decimal_point() const {
+        return do_decimal_point();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION char_type thousands_sep() const {
+        return do_thousands_sep();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION string grouping() const { return do_grouping(); }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION string_type curr_symbol() const {
+        return do_curr_symbol();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION string_type positive_sign() const {
+        return do_positive_sign();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION string_type negative_sign() const {
+        return do_negative_sign();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION int frac_digits() const {
+        return do_frac_digits();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION pattern pos_format() const {
+        return do_pos_format();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION pattern neg_format() const {
+        return do_neg_format();
+    }
 
     static locale::id id;
     static const bool intl = _International;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~moneypunct() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~moneypunct() override {}
 
     virtual char_type   do_decimal_point() const {return numeric_limits<char_type>::max();}
     virtual char_type   do_thousands_sep() const {return numeric_limits<char_type>::max();}
@@ -2653,16 +2703,16 @@ public:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit moneypunct_byname(const char* __nm, size_t __refs = 0)
         : moneypunct<_CharT, _International>(__refs) {init(__nm);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit moneypunct_byname(const string& __nm, size_t __refs = 0)
         : moneypunct<_CharT, _International>(__refs) {init(__nm.c_str());}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~moneypunct_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~moneypunct_byname() override {}
 
      char_type   do_decimal_point() const override {return __decimal_point_;}
      char_type   do_thousands_sep() const override {return __thousands_sep_;}
@@ -2709,7 +2759,7 @@ protected:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY __money_get() {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION __money_get() {}
 
     static void __gather_info(bool __intl, const locale& __loc,
                               money_base::pattern& __pat, char_type& __dp,
@@ -2769,18 +2819,18 @@ public:
     typedef _InputIterator          iter_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit money_get(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, bool __intl, ios_base& __iob,
                   ios_base::iostate& __err, long double& __v) const
     {
         return do_get(__b, __e, __intl, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type get(iter_type __b, iter_type __e, bool __intl, ios_base& __iob,
                   ios_base::iostate& __err, string_type& __v) const
     {
@@ -2790,7 +2840,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~money_get() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~money_get() override {}
 
     virtual iter_type do_get(iter_type __b, iter_type __e, bool __intl,
                              ios_base& __iob, ios_base::iostate& __err,
@@ -3135,7 +3185,7 @@ protected:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY __money_put() {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION __money_put() {}
 
     static void __gather_info(bool __intl, bool __neg, const locale& __loc,
                               money_base::pattern& __pat, char_type& __dp,
@@ -3313,18 +3363,18 @@ public:
     typedef _OutputIterator         iter_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit money_put(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, bool __intl, ios_base& __iob, char_type __fl,
                   long double __units) const
     {
         return do_put(__s, __intl, __iob, __fl, __units);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     iter_type put(iter_type __s, bool __intl, ios_base& __iob, char_type __fl,
                   const string_type& __digits) const
     {
@@ -3334,7 +3384,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~money_put() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~money_put() override {}
 
     virtual iter_type do_put(iter_type __s, bool __intl, ios_base& __iob,
                              char_type __fl, long double __units) const;
@@ -3476,24 +3526,24 @@ public:
     typedef _CharT               char_type;
     typedef basic_string<_CharT> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit messages(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     catalog open(const basic_string<char>& __nm, const locale& __loc) const
     {
         return do_open(__nm, __loc);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     string_type get(catalog __c, int __set, int __msgid,
                     const string_type& __dflt) const
     {
         return do_get(__c, __set, __msgid, __dflt);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     void close(catalog __c) const
     {
         do_close(__c);
@@ -3502,7 +3552,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~messages() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~messages() override {}
 
     virtual catalog do_open(const basic_string<char>&, const locale&) const;
     virtual string_type do_get(catalog, int __set, int __msgid,
@@ -3582,16 +3632,16 @@ public:
     typedef messages_base::catalog catalog;
     typedef basic_string<_CharT> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit messages_byname(const char*, size_t __refs = 0)
         : messages<_CharT>(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
     explicit messages_byname(const string&, size_t __refs = 0)
         : messages<_CharT>(__refs) {}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~messages_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION ~messages_byname() override {}
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;
