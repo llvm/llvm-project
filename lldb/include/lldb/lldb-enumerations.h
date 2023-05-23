@@ -834,7 +834,9 @@ enum StructuredDataType {
   eStructuredDataTypeFloat,
   eStructuredDataTypeBoolean,
   eStructuredDataTypeString,
-  eStructuredDataTypeDictionary
+  eStructuredDataTypeDictionary,
+  eStructuredDataTypeSignedInteger,
+  eStructuredDataTypeUnsignedInteger = eStructuredDataTypeInteger,
 };
 
 FLAGS_ENUM(TypeClass){
