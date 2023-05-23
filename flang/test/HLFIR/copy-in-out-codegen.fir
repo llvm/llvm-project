@@ -21,7 +21,7 @@ func.func @test_copy_in(%box: !fir.box<!fir.array<?xf64>>) {
 // CHECK:      fir.store %[[VAL_8]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
 // CHECK:      %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:      %[[VAL_13:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
-// CHECK:      %[[VAL_15:.*]] = fir.call @_FortranAAssign(%[[VAL_12]], %[[VAL_13]],
+// CHECK:      %[[VAL_15:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_12]], %[[VAL_13]],
 // CHECK:      %[[VAL_16:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
 // CHECK:      %[[VAL_17:.*]] = fir.rebox %[[VAL_16]] : (!fir.box<!fir.heap<!fir.array<?xf64>>>) -> !fir.box<!fir.array<?xf64>>
 // CHECK:      fir.result %[[VAL_17]] : !fir.box<!fir.array<?xf64>>
@@ -52,7 +52,7 @@ func.func @test_copy_in_optional(%box: !fir.box<!fir.array<?xf64>>, %is_present:
 // CHECK:        fir.store %[[VAL_10]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
 // CHECK:        %[[VAL_14:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:        %[[VAL_15:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
-// CHECK:        %[[VAL_17:.*]] = fir.call @_FortranAAssign(%[[VAL_14]], %[[VAL_15]],
+// CHECK:        %[[VAL_17:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_14]], %[[VAL_15]],
 // CHECK:        %[[VAL_18:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
 // CHECK:        %[[VAL_19:.*]] = fir.rebox %[[VAL_18]] : (!fir.box<!fir.heap<!fir.array<?xf64>>>) -> !fir.box<!fir.array<?xf64>>
 // CHECK:        fir.result %[[VAL_19]] : !fir.box<!fir.array<?xf64>>
@@ -73,8 +73,10 @@ func.func @test_copy_out_no_copy_back(%temp: !fir.box<!fir.array<?xf64>>, %was_c
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf64>>,
 // CHECK-SAME:    %[[VAL_1:.*]]: i1) {
 // CHECK-NEXT:    fir.if %[[VAL_1]] {
-// CHECK-NEXT:      %[[VAL_2:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
-// CHECK-NEXT:      fir.freemem %[[VAL_2]] : !fir.heap<!fir.array<?xf64>>
+// CHECK-NEXT:      %[[VAL_2:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
+// CHECK-NEXT:      %[[VAL_3:.*]] = fir.call @_FortranADestroyWithoutFinalization(%[[VAL_2]]) : (!fir.box<none>) -> none
+// CHECK-NEXT:      %[[VAL_4:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
+// CHECK-NEXT:      fir.freemem %[[VAL_4]] : !fir.heap<!fir.array<?xf64>>
 // CHECK-NEXT:    }
 
 func.func @test_copy_out_copy_back(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.box<!fir.array<?xf64>>, %was_copied: i1) {
@@ -88,11 +90,14 @@ func.func @test_copy_out_copy_back(%box: !fir.box<!fir.array<?xf64>>, %temp: !fi
 // CHECK:    %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
 // CHECK:    fir.if %[[VAL_2]] {
 // CHECK:      fir.store %[[VAL_0]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
-// CHECK:      %[[VAL_7:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<none>>
-// CHECK:      %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
-// CHECK:      %[[VAL_10:.*]] = fir.call @_FortranAAssign(%[[VAL_7]], %[[VAL_8]],
-// CHECK:      %[[VAL_11:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
-// CHECK:      fir.freemem %[[VAL_11]] : !fir.heap<!fir.array<?xf64>>
+// CHECK:      %[[VAL_7:.*]] = arith.constant true
+// CHECK:      %[[VAL_8:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:      %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
+// CHECK:      %[[VAL_11:.*]] = fir.call @_FortranACopyOutAssign(%[[VAL_8]], %[[VAL_9]], %[[VAL_7]],
+// CHECK:      %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
+// CHECK:      %[[VAL_13:.*]] = fir.call @_FortranADestroyWithoutFinalization(%[[VAL_12]]) : (!fir.box<none>) -> none
+// CHECK:      %[[VAL_14:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
+// CHECK:      fir.freemem %[[VAL_14]] : !fir.heap<!fir.array<?xf64>>
 // CHECK:    }
 
 func.func @test_copy_in_poly(%poly : !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>) {
@@ -118,7 +123,7 @@ func.func @test_copy_in_poly(%poly : !fir.class<!fir.array<?x!fir.type<test_copy
 // CHECK:             %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:             %[[VAL_13:.*]] = fir.convert %[[VAL_0]] : (!fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>) -> !fir.box<none>
 // CHECK:             %[[VAL_14:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-// CHECK:             %[[VAL_15:.*]] = fir.call @_FortranAAssign(%[[VAL_12]], %[[VAL_13]], %[[VAL_14]], %[[VAL_11]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+// CHECK:             %[[VAL_15:.*]] = fir.call @_FortranAAssignTemporary(%[[VAL_12]], %[[VAL_13]], %[[VAL_14]], %[[VAL_11]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 // CHECK:             %[[VAL_16:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>>
 // CHECK:             %[[VAL_17:.*]] = fir.rebox %[[VAL_16]] : (!fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>) -> !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>
 // CHECK:             fir.result %[[VAL_17]] : !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>

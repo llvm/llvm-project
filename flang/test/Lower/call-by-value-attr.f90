@@ -78,7 +78,7 @@ program call_by_value_attr
   !CHECK: fir.store %[[TEMP_BOX]] to %[[TEMP_BOX_LOC:.*]] : !fir.ref<!fir.box<!fir.array<11xi32>>>
   !CHECK: %[[TEMP_BOX_ADDR:.*]] = fir.convert %[[TEMP_BOX_LOC]] : (!fir.ref<!fir.box<!fir.array<11xi32>>>) -> !fir.ref<!fir.box<none>>
   !CHECK: %[[BOX_ADDR:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<11xi32>>) -> !fir.box<none>
-  !CHECK: fir.call @_FortranAAssign(%[[TEMP_BOX_ADDR]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}){{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  !CHECK: fir.call @_FortranAAssignTemporary(%[[TEMP_BOX_ADDR]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}){{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
   !CHECK: fir.result %[[ARRAY_COPY_2]] : !fir.heap<!fir.array<11xi32>>
   !CHECK: %[[CONVERT_B:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.array<11xi32>>) -> !fir.ref<!fir.array<10xi32>>
   !CHECK: fir.call @_QPsubra(%[[CONVERT_B]])
