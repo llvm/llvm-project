@@ -1154,8 +1154,8 @@ def SymbolicateCrashLog(crash_log, options):
 
     futures = []
     loaded_images = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        with tempfile.TemporaryDirectory() as obj_dir:
+    with tempfile.TemporaryDirectory() as obj_dir:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
 
             def add_module(image, target, obj_dir):
                 return image, image.add_module(target, obj_dir)
@@ -1166,12 +1166,12 @@ def SymbolicateCrashLog(crash_log, options):
                         add_module, image=image, target=target, obj_dir=obj_dir
                     )
                 )
-        for future in concurrent.futures.as_completed(futures):
-            image, err = future.result()
-            if err:
-                print(err)
-            else:
-                loaded_images.append(image)
+            for future in concurrent.futures.as_completed(futures):
+                image, err = future.result()
+                if err:
+                    print(err)
+                else:
+                    loaded_images.append(image)
 
     if crash_log.backtraces:
         for thread in crash_log.backtraces:
