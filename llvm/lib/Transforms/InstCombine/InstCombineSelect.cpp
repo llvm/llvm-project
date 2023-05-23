@@ -1238,8 +1238,8 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
   return nullptr;
 }
 
-static bool replaceInInstruction(Value *V, Value *Old, Value *New,
-                                 InstCombiner &IC, unsigned Depth = 0) {
+bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
+                                            unsigned Depth) {
   // Conservatively limit replacement to two instructions upwards.
   if (Depth == 2)
     return false;
@@ -1251,10 +1251,11 @@ static bool replaceInInstruction(Value *V, Value *Old, Value *New,
   bool Changed = false;
   for (Use &U : I->operands()) {
     if (U == Old) {
-      IC.replaceUse(U, New);
+      replaceUse(U, New);
+      Worklist.add(I);
       Changed = true;
     } else {
-      Changed |= replaceInInstruction(U, Old, New, IC, Depth + 1);
+      Changed |= replaceInInstruction(U, Old, New, Depth + 1);
     }
   }
   return Changed;
@@ -1310,7 +1311,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // FIXME: Support vectors.
     if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()) &&
         !Cmp.getType()->isVectorTy())
-      if (replaceInInstruction(TrueVal, CmpLHS, CmpRHS, *this))
+      if (replaceInInstruction(TrueVal, CmpLHS, CmpRHS))
         return &Sel;
   }
   if (TrueVal != CmpRHS &&
