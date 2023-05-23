@@ -694,6 +694,7 @@ public:
                   const PCHContainerReader &PCHContainerRdr, WhatToLoad ToLoad,
                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                   const FileSystemOptions &FileSystemOpts,
+                  std::shared_ptr<HeaderSearchOptions> HSOpts,
                   bool UseDebugInfo = false, bool OnlyLocalDecls = false,
                   CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
                   bool AllowASTWithCompilerErrors = false,
