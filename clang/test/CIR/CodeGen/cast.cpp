@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
 
 unsigned char cxxstaticcast_0(unsigned int x) {
   return static_cast<unsigned char>(x);
@@ -37,3 +38,14 @@ int cStyleCasts_0(unsigned x1, int x2) {
 
   return 0;
 }
+
+bool cptr(void *d) {
+  bool x = d;
+  return x;
+}
+
+// CHECK: cir.func @_Z4cptrPv(%arg0: !cir.ptr<i8>
+// CHECK:   %0 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["d", init] {alignment = 8 : i64}
+
+// CHECK:   %3 = cir.load %0 : cir.ptr <!cir.ptr<i8>>, !cir.ptr<i8>
+// CHECK:   %4 = cir.cast(ptr_to_bool, %3 : !cir.ptr<i8>), !cir.bool

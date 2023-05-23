@@ -274,6 +274,11 @@ public:
                                      mlir::cir::CastKind::floating, v);
   }
 
+  mlir::Value createPtrToBoolCast(mlir::Value v) {
+    return create<mlir::cir::CastOp>(v.getLoc(), getBoolTy(),
+                                     mlir::cir::CastKind::ptr_to_bool, v);
+  }
+
   cir::Address createBaseClassAddr(mlir::Location loc, cir::Address addr,
                                    mlir::Type destType) {
     if (destType == addr.getElementType())
