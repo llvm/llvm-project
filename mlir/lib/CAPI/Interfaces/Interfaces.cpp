@@ -152,7 +152,7 @@ MlirLogicalResult mlirInferShapedTypeOpInterfaceInferReturnTypes(
   bool hasRank;
   intptr_t rank;
   const int64_t *shapeData;
-  for (ShapedTypeComponents t : inferredTypeComponents) {
+  for (const ShapedTypeComponents &t : inferredTypeComponents) {
     if (t.hasRank()) {
       hasRank = true;
       rank = t.getDims().size();
