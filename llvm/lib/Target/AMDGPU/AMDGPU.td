@@ -1549,6 +1549,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureWavefrontSize32,
    FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,
+   FeatureArchitectedSGPRs,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeaturePackedTID,
