@@ -541,8 +541,7 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
         // equivalent.
         if (config.alwaysIncludeLeaves)
           result.insert(value);
-      } else {
-        workingSet.insert(a.opOperand->get());
+        continue;
       }
 
       if (config.followInPlaceOnly && !isInPlace(*a.opOperand)) {
