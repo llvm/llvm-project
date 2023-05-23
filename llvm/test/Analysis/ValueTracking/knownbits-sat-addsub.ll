@@ -8,11 +8,7 @@ declare i8 @llvm.usub.sat.i8(i8, i8)
 
 define i1 @uadd_sat_overflow(i8 %x, i8 %y) {
 ; CHECK-LABEL: @uadd_sat_overflow(
-; CHECK-NEXT:    [[LHS:%.*]] = or i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[RHS:%.*]] = or i8 [[Y:%.*]], -128
-; CHECK-NEXT:    [[EXP:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[LHS]], i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[EXP]], -2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %lhs = or i8 %x, 128
   %rhs = or i8 %y, 128
@@ -38,11 +34,7 @@ define i1 @uadd_sat_overflow_fail(i8 %x, i8 %y) {
 
 define i1 @usub_sat_overflow(i8 %x, i8 %y) {
 ; CHECK-LABEL: @usub_sat_overflow(
-; CHECK-NEXT:    [[LHS:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[RHS:%.*]] = or i8 [[Y:%.*]], -128
-; CHECK-NEXT:    [[EXP:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[LHS]], i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[EXP]], 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %lhs = and i8 %x, 127
   %rhs = or i8 %y, 128
@@ -68,13 +60,7 @@ define i1 @usub_sat_overflow_fail(i8 %x, i8 %y) {
 
 define i1 @sadd_sat_overflow_pos(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_sat_overflow_pos(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 127
-; CHECK-NEXT:    [[LHS:%.*]] = or i8 [[XX]], 64
-; CHECK-NEXT:    [[RHS:%.*]] = or i8 [[YY]], 65
-; CHECK-NEXT:    [[EXP:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[LHS]], i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[EXP]], -128
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 127
   %yy = and i8 %y, 127
@@ -87,14 +73,7 @@ define i1 @sadd_sat_overflow_pos(i8 %x, i8 %y) {
 
 define i1 @sadd_sat_low_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_sat_low_bits(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 15
-; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 15
-; CHECK-NEXT:    [[LHS:%.*]] = or i8 [[XX]], 1
-; CHECK-NEXT:    [[RHS:%.*]] = and i8 [[YY]], -2
-; CHECK-NEXT:    [[EXP:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[LHS]], i8 [[RHS]])
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[EXP]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 15
   %yy = and i8 %y, 15
@@ -125,11 +104,7 @@ define i1 @sadd_sat_fail_may_overflow(i8 %x, i8 %y) {
 
 define i1 @sadd_sat_overflow_neg(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_sat_overflow_neg(
-; CHECK-NEXT:    [[LHS:%.*]] = or i8 [[X:%.*]], -64
-; CHECK-NEXT:    [[RHS:%.*]] = or i8 [[Y:%.*]], -65
-; CHECK-NEXT:    [[EXP:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[LHS]], i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[EXP]], 127
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %lhs = or i8 %x, 192
   %rhs = or i8 %y, 191
@@ -140,13 +115,7 @@ define i1 @sadd_sat_overflow_neg(i8 %x, i8 %y) {
 
 define i1 @ssub_sat_overflow_neg(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ssub_sat_overflow_neg(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 112
-; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 127
-; CHECK-NEXT:    [[LHS:%.*]] = or i8 [[XX]], -128
-; CHECK-NEXT:    [[RHS:%.*]] = or i8 [[YY]], 126
-; CHECK-NEXT:    [[EXP:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[LHS]], i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[EXP]], 32
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 112
   %yy = and i8 %y, 127
@@ -159,14 +128,7 @@ define i1 @ssub_sat_overflow_neg(i8 %x, i8 %y) {
 
 define i1 @ssub_sat_low_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ssub_sat_low_bits(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 15
-; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 15
-; CHECK-NEXT:    [[LHS:%.*]] = or i8 [[XX]], 17
-; CHECK-NEXT:    [[RHS:%.*]] = and i8 [[YY]], -2
-; CHECK-NEXT:    [[EXP:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[LHS]], i8 [[RHS]])
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[EXP]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 15
   %yy = and i8 %y, 15
@@ -201,13 +163,7 @@ define i1 @ssub_sat_fail_may_overflow(i8 %x, i8 %y) {
 
 define i1 @ssub_sat_overflow_pos(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ssub_sat_overflow_pos(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 24
-; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 3
-; CHECK-NEXT:    [[LHS:%.*]] = or i8 [[XX]], 8
-; CHECK-NEXT:    [[RHS:%.*]] = or i8 [[YY]], -128
-; CHECK-NEXT:    [[EXP:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[LHS]], i8 [[RHS]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[EXP]], -128
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 24
   %yy = and i8 %y, 3
