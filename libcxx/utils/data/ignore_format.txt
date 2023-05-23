@@ -250,7 +250,6 @@ libcxx/include/__chrono/literals.h
 libcxx/include/__chrono/monthday.h
 libcxx/include/__chrono/month.h
 libcxx/include/__chrono/month_weekday.h
-libcxx/include/__chrono/statically_widen.h
 libcxx/include/__chrono/steady_clock.h
 libcxx/include/__chrono/system_clock.h
 libcxx/include/__chrono/time_point.h
@@ -308,10 +307,8 @@ libcxx/include/__debug
 libcxx/include/__debug_utils/randomize_range.h
 libcxx/include/deque
 libcxx/include/errno.h
-libcxx/include/__exception/exception_ptr.h
 libcxx/include/expected
 libcxx/include/__expected/expected.h
-libcxx/include/__expected/unexpected.h
 libcxx/include/experimental/__config
 libcxx/include/experimental/iterator
 libcxx/include/experimental/map
@@ -506,7 +503,6 @@ libcxx/include/__numeric/transform_inclusive_scan.h
 libcxx/include/__numeric/transform_reduce.h
 libcxx/include/optional
 libcxx/include/ostream
-libcxx/include/__pstl/internal/algorithm_impl.h
 libcxx/include/__pstl/internal/numeric_impl.h
 libcxx/include/__pstl/internal/omp/parallel_for_each.h
 libcxx/include/__pstl/internal/omp/parallel_for.h
@@ -628,9 +624,6 @@ libcxx/include/__support/newlib/xlocale.h
 libcxx/include/__support/win32/locale_win32.h
 libcxx/include/__support/xlocale/__nop_locale_mgmt.h
 libcxx/include/__system_error/errc.h
-libcxx/include/__system_error/error_category.h
-libcxx/include/__system_error/error_code.h
-libcxx/include/__system_error/error_condition.h
 libcxx/include/thread
 libcxx/include/__threading_support
 libcxx/include/__thread/poll_with_backoff.h
@@ -777,7 +770,6 @@ libcxx/include/__utility/pair.h
 libcxx/include/__utility/piecewise_construct.h
 libcxx/include/__utility/priority_tag.h
 libcxx/include/__utility/rel_ops.h
-libcxx/include/__utility/terminate_on_exception.h
 libcxx/include/__utility/to_underlying.h
 libcxx/include/__utility/unreachable.h
 libcxx/include/valarray
