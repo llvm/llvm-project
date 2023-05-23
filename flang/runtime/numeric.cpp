@@ -239,8 +239,9 @@ template <int PREC, typename T> inline T Spacing(T x) {
     // subnormal.
     return std::numeric_limits<T>::min(); // 0 -> TINY(x)
   } else {
-    return std::ldexp(
-        static_cast<T>(1.0), std::ilogb(x) + 1 - PREC); // 2**(e-p)
+    T result{
+        std::ldexp(static_cast<T>(1.0), std::ilogb(x) + 1 - PREC)}; // 2**(e-p)
+    return result == 0 ? /*TINY(x)*/ std::numeric_limits<T>::min() : result;
   }
 }
 
