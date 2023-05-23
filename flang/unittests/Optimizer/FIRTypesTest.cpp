@@ -277,4 +277,6 @@ TEST_F(FIRTypesTest, getTypeAsString) {
   mlir::Type ty = mlir::IntegerType::get(&context, 64);
   mlir::Type arrTy = fir::SequenceType::get({10, 20}, ty);
   EXPECT_EQ("10x20xi64", fir::getTypeAsString(arrTy, *kindMap));
+  EXPECT_EQ(
+      "idx", fir::getTypeAsString(mlir::IndexType::get(&context), *kindMap));
 }
