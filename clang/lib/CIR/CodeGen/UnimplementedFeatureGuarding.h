@@ -67,6 +67,7 @@ struct UnimplementedFeature {
   static bool shouldUseMemSetToInitialize() { return false; }
   static bool shouldSplitConstantStore() { return false; }
   static bool shouldCreateMemCpyFromGlobal() { return false; }
+  static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }

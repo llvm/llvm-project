@@ -327,6 +327,11 @@ public:
     return create<mlir::cir::StoreOp>(loc, flag, dst);
   }
 
+  mlir::Value createNot(mlir::Value value) {
+    return create<mlir::cir::UnaryOp>(value.getLoc(), value.getType(),
+                                      mlir::cir::UnaryOpKind::Not, value);
+  }
+
   mlir::Value createZExtOrBitCast(mlir::Location loc, mlir::Value src,
                                   mlir::Type newTy) {
     if (src.getType() == newTy)
