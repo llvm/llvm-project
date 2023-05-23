@@ -142,14 +142,14 @@ define <8 x float> @uitofp_v8i1_v8f32(<8 x i1> %x) #0 {
 ;
 ; AVX512VL-32-LABEL: uitofp_v8i1_v8f32:
 ; AVX512VL-32:       # %bb.0:
-; AVX512VL-32-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; AVX512VL-32-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; AVX512VL-32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512VL-32-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX512VL-32-NEXT:    retl
 ;
 ; AVX512VL-64-LABEL: uitofp_v8i1_v8f32:
 ; AVX512VL-64:       # %bb.0:
-; AVX512VL-64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-64-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VL-64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512VL-64-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX512VL-64-NEXT:    retq
@@ -170,14 +170,14 @@ define <8 x float> @uitofp_v8i1_v8f32(<8 x i1> %x) #0 {
 ;
 ; AVX512DQVL-32-LABEL: uitofp_v8i1_v8f32:
 ; AVX512DQVL-32:       # %bb.0:
-; AVX512DQVL-32-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; AVX512DQVL-32-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; AVX512DQVL-32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512DQVL-32-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX512DQVL-32-NEXT:    retl
 ;
 ; AVX512DQVL-64-LABEL: uitofp_v8i1_v8f32:
 ; AVX512DQVL-64:       # %bb.0:
-; AVX512DQVL-64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512DQVL-64-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512DQVL-64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX512DQVL-64-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX512DQVL-64-NEXT:    retq
