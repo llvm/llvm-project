@@ -393,6 +393,8 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
       if (auto *Item = Completion->getObject("completionItem")) {
         if (auto SnippetSupport = Item->getBoolean("snippetSupport"))
           R.CompletionSnippets = *SnippetSupport;
+        if (auto LabelDetailsSupport = Item->getBoolean("labelDetailsSupport"))
+          R.CompletionLabelDetail = *LabelDetailsSupport;
         if (const auto *DocumentationFormat =
                 Item->getArray("documentationFormat")) {
           for (const auto &Format : *DocumentationFormat) {
@@ -1069,6 +1071,25 @@ bool fromJSON(const llvm::json::Value &E, CompletionItemKindBitset &Out,
   return false;
 }
 
+llvm::json::Value toJSON(const CompletionItemLabelDetails &CD) {
+  llvm::json::Object Result;
+  if (!CD.detail.empty())
+    Result["detail"] = CD.detail;
+  if (!CD.description.empty())
+    Result["description"] = CD.description;
+  return Result;
+}
+
+void removeCompletionLabelDetails(CompletionItem &C) {
+  if (!C.labelDetails)
+    return;
+  if (!C.labelDetails->detail.empty())
+    C.label += C.labelDetails->detail;
+  if (!C.labelDetails->description.empty())
+    C.label = C.labelDetails->description + C.label;
+  C.labelDetails.reset();
+}
+
 llvm::json::Value toJSON(const CompletionItem &CI) {
   assert(!CI.label.empty() && "completion item label is required");
   llvm::json::Object Result{{"label", CI.label}};
@@ -1076,6 +1097,8 @@ llvm::json::Value toJSON(const CompletionItem &CI) {
     Result["kind"] = static_cast<int>(CI.kind);
   if (!CI.detail.empty())
     Result["detail"] = CI.detail;
+  if (CI.labelDetails)
+    Result["labelDetails"] = *CI.labelDetails;
   if (CI.documentation)
     Result["documentation"] = CI.documentation;
   if (!CI.sortText.empty())
