@@ -18,10 +18,7 @@ namespace llvm::jitlink::ppc64 {
 
 const char *getEdgeKindName(Edge::Kind K) {
   // TODO: Add edge names.
-  switch (K) {
-  default:
-    return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
-  }
+  return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
 }
 
 } // end namespace llvm::jitlink::ppc64
