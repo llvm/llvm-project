@@ -66,20 +66,20 @@ static bool findOHOSMultilibs(const Driver &D,
   bool IsA7 = false;
   if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
     IsA7 = A->getValue() == StringRef("cortex-a7");
-  addMultilibFlag(IsA7, "mcpu=cortex-a7", Flags);
+  addMultilibFlag(IsA7, "-mcpu=cortex-a7", Flags);
 
   bool IsMFPU = false;
   if (const Arg *A = Args.getLastArg(options::OPT_mfpu_EQ))
     IsMFPU = A->getValue() == StringRef("neon-vfpv4");
-  addMultilibFlag(IsMFPU, "mfpu=neon-vfpv4", Flags);
+  addMultilibFlag(IsMFPU, "-mfpu=neon-vfpv4", Flags);
 
   tools::arm::FloatABI ARMFloatABI = getARMFloatABI(D, TargetTriple, Args);
   addMultilibFlag((ARMFloatABI == tools::arm::FloatABI::Soft),
-      "mfloat-abi=soft", Flags);
+                  "-mfloat-abi=soft", Flags);
   addMultilibFlag((ARMFloatABI == tools::arm::FloatABI::SoftFP),
-      "mfloat-abi=softfp", Flags);
+                  "-mfloat-abi=softfp", Flags);
   addMultilibFlag((ARMFloatABI == tools::arm::FloatABI::Hard),
-      "mfloat-abi=hard", Flags);
+                  "-mfloat-abi=hard", Flags);
 
   return findOHOSMuslMultilibs(Flags, Result);
 }

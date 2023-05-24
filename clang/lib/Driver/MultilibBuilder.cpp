@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/MultilibBuilder.h"
+#include "ToolChains/CommonArgs.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
@@ -83,6 +84,11 @@ bool MultilibBuilder::isValid() const {
       return false;
   }
   return true;
+}
+
+MultilibBuilder &MultilibBuilder::flag(bool Required, StringRef Flag) {
+  tools::addMultilibFlag(Required, Flag, Flags);
+  return *this;
 }
 
 Multilib MultilibBuilder::makeMultilib() const {

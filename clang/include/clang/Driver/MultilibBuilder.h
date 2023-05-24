@@ -75,18 +75,9 @@ public:
   flags_list &flags() { return Flags; }
 
   /// Add a flag to the flags list
-  /// \p Flag must be a flag accepted by the driver with its leading '-'
-  /// removed,
-  ///     and replaced with either:
-  ///       '-' which contraindicates using this multilib with that flag
-  ///     or:
-  ///       '+' which promotes using this multilib in the presence of that flag
-  ///     otherwise '-print-multi-lib' will not emit them correctly.
-  MultilibBuilder &flag(StringRef F) {
-    assert(F.front() == '+' || F.front() == '-');
-    Flags.push_back(std::string(F));
-    return *this;
-  }
+  /// \p Required defines whether the flag is required or disallowed.
+  /// \p Flag must be a flag accepted by the driver.
+  MultilibBuilder &flag(bool Required, StringRef Flag);
 
   Multilib makeMultilib() const;
 
