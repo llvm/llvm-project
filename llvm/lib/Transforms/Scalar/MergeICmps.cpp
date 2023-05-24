@@ -616,14 +616,14 @@ private:
 } // namespace
 
 // Check whether the current comparisons is the last comparisons.
-// Only the last comparisons chain include the last link (unconditionla jmp).
-// Due to reordering of contiguous comparison blocks, the unconditionla
+// Only the last comparisons chain include the last link (unconditional jmp).
+// Due to reordering of contiguous comparison blocks, the unconditional
 // comparison of a chain maybe not placed at the end of the array comparisons.
 static bool isLastLinkComparison(ArrayRef<BCECmpBlock> Comparisons) {
-  for (int i = 0; i < Comparisons.size(); i++) {
+  for (unsigned i = 0; i < Comparisons.size(); i++) {
     BasicBlock *const BB = Comparisons[i].BB;
     auto *const BranchI = cast<BranchInst>(BB->getTerminator());
-    // Only the last comparisons chain include the unconditionla jmp
+    // Only the last comparisons chain include the unconditional jmp
     if (BranchI->isUnconditional())
       return true;
   }
