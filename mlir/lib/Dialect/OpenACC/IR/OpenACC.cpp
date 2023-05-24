@@ -749,6 +749,11 @@ LogicalResult acc::LoopOp::verify() {
           "privatizations")))
     return failure();
 
+  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
+          *this, getReductionRecipes(), getReductionOperands(), "reduction",
+          "reductions")))
+    return failure();
+
   // Check non-empty body().
   if (getRegion().empty())
     return emitError("expected non-empty body.");
