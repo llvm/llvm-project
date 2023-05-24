@@ -10686,7 +10686,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       RetOps.push_back(Extract);
       return DAG.getMergeValues(RetOps, dl);
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case Intrinsic::ppc_vsx_disassemble_pair: {
     int NumVecs = 2;
