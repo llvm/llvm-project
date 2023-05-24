@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 declare void @llvm.assume(i1)
+
 define i1 @select_v_ne_fail(i8 %v, i8 %C, i8 %y) {
 ; CHECK-LABEL: @select_v_ne_fail(
 ; CHECK-NEXT:    [[YNZ:%.*]] = icmp ne i8 [[Y:%.*]], 0
