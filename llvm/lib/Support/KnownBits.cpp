@@ -491,29 +491,25 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
     }
   } else if (Add) {
     // uadd.sat
-    Overflow = KnownBits::ult(Res, RHS);
-    if (!Overflow)
-      Overflow = KnownBits::ult(Res, LHS);
-    if (!Overflow) {
-      bool Of;
+    bool Of;
+    (void)LHS.getMaxValue().uadd_ov(RHS.getMaxValue(), Of);
+    if (!Of) {
+      Overflow = false;
+    } else {
       (void)LHS.getMinValue().uadd_ov(RHS.getMinValue(), Of);
       if (Of)
         Overflow = true;
-      (void)LHS.getMaxValue().uadd_ov(RHS.getMaxValue(), Of);
-      if (!Of)
-        Overflow = false;
     }
   } else {
     // usub.sat
-    Overflow = KnownBits::ugt(Res, LHS);
-    if (!Overflow) {
-      bool Of;
+    bool Of;
+    (void)LHS.getMinValue().usub_ov(RHS.getMaxValue(), Of);
+    if (!Of) {
+      Overflow = false;
+    } else {
       (void)LHS.getMaxValue().usub_ov(RHS.getMinValue(), Of);
       if (Of)
-        Overflow = Of;
-      (void)LHS.getMinValue().usub_ov(RHS.getMaxValue(), Of);
-      if (!Of)
-        Overflow = Of;
+        Overflow = true;
     }
   }
 
