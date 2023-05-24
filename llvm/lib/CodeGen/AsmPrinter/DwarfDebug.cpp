@@ -707,8 +707,8 @@ static void interpretValues(const MachineInstr *CurMI,
     if (MI.isDebugInstr())
       return;
 
-    for (const MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical()) {
+    for (const MachineOperand &MO : MI.all_defs()) {
+      if (MO.getReg().isPhysical()) {
         for (auto &FwdReg : ForwardedRegWorklist)
           if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
