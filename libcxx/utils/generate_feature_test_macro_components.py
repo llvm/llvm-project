@@ -324,21 +324,15 @@ feature_test_macros = [ add_version_header(x) for x in [
         # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
         },
     "headers": ["format"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_format_ranges",
     "values": { "c++23": 202207 },
     "headers": ["format"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
   }, {
     "name": "__cpp_lib_formatters",
     "values": { "c++23": 202302 },
     "headers": ["stacktrace", "thread"],
-    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
-    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_forward_like",
@@ -802,7 +796,6 @@ assert all(all(key in ["name", "values", "headers", "libcxx_guard", "test_suite_
 lit_markup = {
   "barrier": ["UNSUPPORTED: no-threads"],
   "filesystem": ["UNSUPPORTED: no-filesystem"],
-  "format": ["UNSUPPORTED: libcpp-has-no-incomplete-format"],
   "iomanip": ["UNSUPPORTED: no-localization"],
   "ios": ["UNSUPPORTED: no-localization"],
   "iostream": ["UNSUPPORTED: no-localization"],
