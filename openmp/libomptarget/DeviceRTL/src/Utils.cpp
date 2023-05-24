@@ -59,7 +59,8 @@ uint64_t Pack(uint32_t LowBits, uint32_t HighBits) {
 ///
 ///{
 #pragma omp begin declare variant match(                                       \
-    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+        device = {arch(nvptx, nvptx64)},                                       \
+            implementation = {extension(match_any)})
 
 void Unpack(uint64_t Val, uint32_t *LowBits, uint32_t *HighBits) {
   uint32_t LowBitsLocal, HighBitsLocal;
@@ -103,8 +104,9 @@ int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t LaneDelta,
   return __builtin_amdgcn_ds_bpermute(Index << 2, Var);
 }
 
-bool isSharedMemPtr(const void * Ptr) {
-  return __builtin_amdgcn_is_shared((const __attribute__((address_space(0))) void *)Ptr);
+bool isSharedMemPtr(const void *Ptr) {
+  return __builtin_amdgcn_is_shared(
+      (const __attribute__((address_space(0))) void *)Ptr);
 }
 #pragma omp end declare variant
 ///}
@@ -113,7 +115,8 @@ bool isSharedMemPtr(const void * Ptr) {
 ///
 ///{
 #pragma omp begin declare variant match(                                       \
-    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+        device = {arch(nvptx, nvptx64)},                                       \
+            implementation = {extension(match_any)})
 
 int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane) {
   return __nvvm_shfl_sync_idx_i32(Mask, Var, SrcLane, 0x1f);

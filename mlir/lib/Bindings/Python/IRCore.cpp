@@ -278,8 +278,7 @@ public:
   PyRegion dunderGetItem(intptr_t index) {
     // dunderLen checks validity.
     if (index < 0 || index >= dunderLen()) {
-      throw SetPyError(PyExc_IndexError,
-                       "attempt to access out of bounds region");
+      throw py::index_error("attempt to access out of bounds region");
     }
     MlirRegion region = mlirOperationGetRegion(operation->get(), index);
     return PyRegion(operation, region);
@@ -351,8 +350,7 @@ public:
   PyBlock dunderGetItem(intptr_t index) {
     operation->checkValid();
     if (index < 0) {
-      throw SetPyError(PyExc_IndexError,
-                       "attempt to access out of bounds block");
+      throw py::index_error("attempt to access out of bounds block");
     }
     MlirBlock block = mlirRegionGetFirstBlock(region);
     while (!mlirBlockIsNull(block)) {
@@ -362,7 +360,7 @@ public:
       block = mlirBlockGetNextInRegion(block);
       index -= 1;
     }
-    throw SetPyError(PyExc_IndexError, "attempt to access out of bounds block");
+    throw py::index_error("attempt to access out of bounds block");
   }
 
   PyBlock appendBlock(const py::args &pyArgTypes) {
@@ -456,8 +454,7 @@ public:
   py::object dunderGetItem(intptr_t index) {
     parentOperation->checkValid();
     if (index < 0) {
-      throw SetPyError(PyExc_IndexError,
-                       "attempt to access out of bounds operation");
+      throw py::index_error("attempt to access out of bounds operation");
     }
     MlirOperation childOp = mlirBlockGetFirstOperation(block);
     while (!mlirOperationIsNull(childOp)) {
@@ -468,8 +465,7 @@ public:
       childOp = mlirOperationGetNextInBlock(childOp);
       index -= 1;
     }
-    throw SetPyError(PyExc_IndexError,
-                     "attempt to access out of bounds operation");
+    throw py::index_error("attempt to access out of bounds operation");
   }
 
   static void bind(py::module &m) {
@@ -684,8 +680,7 @@ MlirLogicalResult PyMlirContext::ErrorCapture::handler(MlirDiagnostic diag,
 PyMlirContext &DefaultingPyMlirContext::resolve() {
   PyMlirContext *context = PyThreadContextEntry::getDefaultContext();
   if (!context) {
-    throw SetPyError(
-        PyExc_RuntimeError,
+    throw std::runtime_error(
         "An MLIR function requires a Context but none was provided in the call "
         "or from the surrounding environment. Either pass to the function with "
         "a 'context=' argument or establish a default using 'with Context():'");
@@ -775,10 +770,10 @@ py::object PyThreadContextEntry::pushContext(PyMlirContext &context) {
 void PyThreadContextEntry::popContext(PyMlirContext &context) {
   auto &stack = getStack();
   if (stack.empty())
-    throw SetPyError(PyExc_RuntimeError, "Unbalanced Context enter/exit");
+    throw std::runtime_error("Unbalanced Context enter/exit");
   auto &tos = stack.back();
   if (tos.frameKind != FrameKind::Context && tos.getContext() != &context)
-    throw SetPyError(PyExc_RuntimeError, "Unbalanced Context enter/exit");
+    throw std::runtime_error("Unbalanced Context enter/exit");
   stack.pop_back();
 }
 
@@ -797,13 +792,11 @@ PyThreadContextEntry::pushInsertionPoint(PyInsertionPoint &insertionPoint) {
 void PyThreadContextEntry::popInsertionPoint(PyInsertionPoint &insertionPoint) {
   auto &stack = getStack();
   if (stack.empty())
-    throw SetPyError(PyExc_RuntimeError,
-                     "Unbalanced InsertionPoint enter/exit");
+    throw std::runtime_error("Unbalanced InsertionPoint enter/exit");
   auto &tos = stack.back();
   if (tos.frameKind != FrameKind::InsertionPoint &&
       tos.getInsertionPoint() != &insertionPoint)
-    throw SetPyError(PyExc_RuntimeError,
-                     "Unbalanced InsertionPoint enter/exit");
+    throw std::runtime_error("Unbalanced InsertionPoint enter/exit");
   stack.pop_back();
 }
 
@@ -819,10 +812,10 @@ py::object PyThreadContextEntry::pushLocation(PyLocation &location) {
 void PyThreadContextEntry::popLocation(PyLocation &location) {
   auto &stack = getStack();
   if (stack.empty())
-    throw SetPyError(PyExc_RuntimeError, "Unbalanced Location enter/exit");
+    throw std::runtime_error("Unbalanced Location enter/exit");
   auto &tos = stack.back();
   if (tos.frameKind != FrameKind::Location && tos.getLocation() != &location)
-    throw SetPyError(PyExc_RuntimeError, "Unbalanced Location enter/exit");
+    throw std::runtime_error("Unbalanced Location enter/exit");
   stack.pop_back();
 }
 
@@ -913,8 +906,11 @@ MlirDialect PyDialects::getDialectForKey(const std::string &key,
   MlirDialect dialect = mlirContextGetOrLoadDialect(getContext()->get(),
                                                     {key.data(), key.size()});
   if (mlirDialectIsNull(dialect)) {
-    throw SetPyError(attrError ? PyExc_AttributeError : PyExc_IndexError,
-                     Twine("Dialect '") + key + "' not found");
+    std::string msg = (Twine("Dialect '") + key + "' not found").str();
+    if (attrError)
+      throw py::attribute_error(msg);
+    else
+      throw py::index_error(msg);
   }
   return dialect;
 }
@@ -961,8 +957,7 @@ void PyLocation::contextExit(const pybind11::object &excType,
 PyLocation &DefaultingPyLocation::resolve() {
   auto *location = PyThreadContextEntry::getDefaultLocation();
   if (!location) {
-    throw SetPyError(
-        PyExc_RuntimeError,
+    throw std::runtime_error(
         "An MLIR function requires a Location but none was provided in the "
         "call or from the surrounding environment. Either pass to the function "
         "with a 'loc=' argument or establish a default using 'with loc:'");
@@ -1107,7 +1102,7 @@ PyOperationRef PyOperation::parse(PyMlirContextRef contextRef,
 
 void PyOperation::checkValid() const {
   if (!valid) {
-    throw SetPyError(PyExc_RuntimeError, "the operation has been invalidated");
+    throw std::runtime_error("the operation has been invalidated");
   }
 }
 
@@ -1211,7 +1206,7 @@ bool PyOperationBase::verify() {
 std::optional<PyOperationRef> PyOperation::getParentOperation() {
   checkValid();
   if (!isAttached())
-    throw SetPyError(PyExc_ValueError, "Detached operations have no parent");
+    throw py::value_error("Detached operations have no parent");
   MlirOperation operation = mlirOperationGetParentOperation(get());
   if (mlirOperationIsNull(operation))
     return {};
@@ -1270,14 +1265,14 @@ py::object PyOperation::create(const std::string &name,
 
   // General parameter validation.
   if (regions < 0)
-    throw SetPyError(PyExc_ValueError, "number of regions must be >= 0");
+    throw py::value_error("number of regions must be >= 0");
 
   // Unpack/validate operands.
   if (operands) {
     mlirOperands.reserve(operands->size());
     for (PyValue *operand : *operands) {
       if (!operand)
-        throw SetPyError(PyExc_ValueError, "operand value cannot be None");
+        throw py::value_error("operand value cannot be None");
       mlirOperands.push_back(operand->get());
     }
   }
@@ -1288,7 +1283,7 @@ py::object PyOperation::create(const std::string &name,
     for (PyType *result : *results) {
       // TODO: Verify result type originate from the same context.
       if (!result)
-        throw SetPyError(PyExc_ValueError, "result type cannot be None");
+        throw py::value_error("result type cannot be None");
       mlirResults.push_back(*result);
     }
   }
@@ -1329,7 +1324,7 @@ py::object PyOperation::create(const std::string &name,
     for (auto *successor : *successors) {
       // TODO: Verify successor originate from the same context.
       if (!successor)
-        throw SetPyError(PyExc_ValueError, "successor block cannot be None");
+        throw py::value_error("successor block cannot be None");
       mlirSuccessors.push_back(successor->get());
     }
   }
@@ -1701,8 +1696,8 @@ PyInsertionPoint::PyInsertionPoint(PyOperationBase &beforeOperationBase)
 void PyInsertionPoint::insert(PyOperationBase &operationBase) {
   PyOperation &operation = operationBase.getOperation();
   if (operation.isAttached())
-    throw SetPyError(PyExc_ValueError,
-                     "Attempt to insert operation that is already attached");
+    throw py::value_error(
+        "Attempt to insert operation that is already attached");
   block.getParentOperation()->checkValid();
   MlirOperation beforeOp = {nullptr};
   if (refOperation) {
@@ -1740,7 +1735,7 @@ PyInsertionPoint PyInsertionPoint::atBlockBegin(PyBlock &block) {
 PyInsertionPoint PyInsertionPoint::atBlockTerminator(PyBlock &block) {
   MlirOperation terminator = mlirBlockGetTerminator(block.get());
   if (mlirOperationIsNull(terminator))
-    throw SetPyError(PyExc_ValueError, "Block has no terminator");
+    throw py::value_error("Block has no terminator");
   PyOperationRef terminatorOpRef = PyOperation::forOperation(
       block.getParentOperation()->getContext(), terminator);
   return PyInsertionPoint{block, std::move(terminatorOpRef)};
@@ -2033,9 +2028,10 @@ public:
   static MlirValue castFrom(PyValue &orig) {
     if (!DerivedTy::isaFunction(orig.get())) {
       auto origRepr = py::repr(py::cast(orig)).cast<std::string>();
-      throw SetPyError(PyExc_ValueError, Twine("Cannot cast value to ") +
-                                             DerivedTy::pyClassName +
-                                             " (from " + origRepr + ")");
+      throw py::value_error((Twine("Cannot cast value to ") +
+                             DerivedTy::pyClassName + " (from " + origRepr +
+                             ")")
+                                .str());
     }
     return orig.get();
   }
@@ -2273,16 +2269,14 @@ public:
     MlirAttribute attr = mlirOperationGetAttributeByName(operation->get(),
                                                          toMlirStringRef(name));
     if (mlirAttributeIsNull(attr)) {
-      throw SetPyError(PyExc_KeyError,
-                       "attempt to access a non-existent attribute");
+      throw py::key_error("attempt to access a non-existent attribute");
     }
     return PyAttribute(operation->getContext(), attr);
   }
 
   PyNamedAttribute dunderGetItemIndexed(intptr_t index) {
     if (index < 0 || index >= dunderLen()) {
-      throw SetPyError(PyExc_IndexError,
-                       "attempt to access out of bounds attribute");
+      throw py::index_error("attempt to access out of bounds attribute");
     }
     MlirNamedAttribute namedAttr =
         mlirOperationGetAttribute(operation->get(), index);
@@ -2301,8 +2295,7 @@ public:
     int removed = mlirOperationRemoveAttributeByName(operation->get(),
                                                      toMlirStringRef(name));
     if (!removed)
-      throw SetPyError(PyExc_KeyError,
-                       "attempt to delete a non-existent attribute");
+      throw py::key_error("attempt to delete a non-existent attribute");
   }
 
   intptr_t dunderLen() {
@@ -2402,7 +2395,7 @@ void mlir::python::populateIRCore(py::module &m) {
           [](py::object & /*class*/) {
             auto *context = PyThreadContextEntry::getDefaultContext();
             if (!context)
-              throw SetPyError(PyExc_ValueError, "No current Context");
+              throw py::value_error("No current Context");
             return context;
           },
           "Gets the Context bound to the current thread or raises ValueError")
@@ -2419,8 +2412,8 @@ void mlir::python::populateIRCore(py::module &m) {
             MlirDialect dialect = mlirContextGetOrLoadDialect(
                 self.get(), {name.data(), name.size()});
             if (mlirDialectIsNull(dialect)) {
-              throw SetPyError(PyExc_ValueError,
-                               Twine("Dialect '") + name + "' not found");
+              throw py::value_error(
+                  (Twine("Dialect '") + name + "' not found").str());
             }
             return PyDialectDescriptor(self.getRef(), dialect);
           },
@@ -2545,7 +2538,7 @@ void mlir::python::populateIRCore(py::module &m) {
           [](py::object & /*class*/) {
             auto *loc = PyThreadContextEntry::getDefaultLocation();
             if (!loc)
-              throw SetPyError(PyExc_ValueError, "No current Location");
+              throw py::value_error("No current Location");
             return loc;
           },
           "Gets the Location bound to the current thread or raises ValueError")
@@ -2752,13 +2745,13 @@ void mlir::python::populateIRCore(py::module &m) {
             auto numResults = mlirOperationGetNumResults(operation);
             if (numResults != 1) {
               auto name = mlirIdentifierStr(mlirOperationGetName(operation));
-              throw SetPyError(
-                  PyExc_ValueError,
-                  Twine("Cannot call .result on operation ") +
-                      StringRef(name.data, name.length) + " which has " +
-                      Twine(numResults) +
-                      " results (it is only valid for operations with a "
-                      "single result)");
+              throw py::value_error(
+                  (Twine("Cannot call .result on operation ") +
+                   StringRef(name.data, name.length) + " which has " +
+                   Twine(numResults) +
+                   " results (it is only valid for operations with a "
+                   "single result)")
+                      .str());
             }
             return PyOpResult(operation.getRef(),
                               mlirOperationGetResult(operation, 0));
@@ -3119,7 +3112,7 @@ void mlir::python::populateIRCore(py::module &m) {
           [](py::object & /*class*/) {
             auto *ip = PyThreadContextEntry::getDefaultInsertionPoint();
             if (!ip)
-              throw SetPyError(PyExc_ValueError, "No current InsertionPoint");
+              throw py::value_error("No current InsertionPoint");
             return ip;
           },
           "Gets the InsertionPoint bound to the current thread or raises "

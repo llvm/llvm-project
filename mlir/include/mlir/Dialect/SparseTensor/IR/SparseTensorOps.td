@@ -73,7 +73,7 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
     This operation can be used to materialize a sparse tensor from external
     sources; e.g., when passing two numpy arrays from Python.
 
-    Disclaimer: This is users' responsibility to provide input that can be
+    Disclaimer: This is the user's responsibility to provide input that can be
     correctly interpreted by the sparse compiler, which does not perform
     any sanity test during runtime to verify data integrity.
 
@@ -102,29 +102,25 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_UnpackOp : SparseTensor_Op<"unpack">,
+def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure]>,
     Arguments<(ins AnySparseTensor:$tensor,
-                   OptionalAttr<IndexAttr>:$batched_lvls)>,
-    Results<(outs TensorOf<[AnyType]>:$values,
-                  TensorOf<[AnySignlessIntegerOrIndex]>:$coordinates,
-                  AnySignlessIntegerOrIndex:$nse)> {
+                   TensorOf<[AnyType]>:$out_values,
+                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels)>,
+    Results<(outs TensorOf<[AnyType]>:$ret_values,
+                  Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels)> {
   let summary = "Returns the (values, coordinates) pair unpacked from the input tensor";
 
   let description = [{
     The unpack operation is the inverse of `sparse_tensor::pack`.  It returns
-    the values, level-coordinates, and number-of-stored-entries extracted
-    from the sparse tensor.  The source tensor is allowed (in principle)
-    to have non-identity dimOrdering/higherOrdering mappings.  Regardless
-    of the mappings, the returned `coordinates` are always level-coordinates,
-    because this is what we mean by "unpacking" as opposed to other forms
-    of exposing sparse tensors to external clients.  This operation can be
-    used for returning an unpacked MLIR sparse tensor to frontend; e.g.,
-    returning two numpy arrays to Python.
+    the values and per-level position and coordinate array to the user
+    from the sparse tensor. This operation can be used for returning an
+    unpacked MLIR sparse tensor to frontend; e.g., returning two numpy arrays to Python.
+
+    Disclaimer: This is the user's responsibility to allocate large enough buffers
+    to hold the sparse tensor. The sparse compiler simply copies each fields
+    of the sparse tensor into the user-supplied buffer without bound checking.
 
     TODO: the current implementation does not yet support non-identity mappings.
-
-    This operation ends the lifetime of the sparse tensor, and using
-    the tensor after the unpack is undefined behavior.
 
     Example:
 
@@ -132,51 +128,18 @@ def SparseTensor_UnpackOp : SparseTensor_Op<"unpack">,
     // input COO format |1.1, 0.0, 0.0, 0.0|
     //    of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
     //                  |0.0, 0.0, 0.0, 0.0|
-    %values, %coordinates, %nse
-      = sparse_tensor.unpack %st
-      : tensor<3x4xf64, #COO> to tensor<2xf64>, tensor<2x2xindex>, index
+    %values, %pos, %coords = sparse_tensor.unpack %sp : tensor<3x4xf64, #SparseVector>
+                             outs(%od, %op, %oi : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>)
+                             -> tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>
     // %values      = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
+    // %pos         = arith.constant dense<[ 0,              3 ]> : tensor<2xindex>
     // %coordinates = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
-    // %nse = 3
-    ```
-
-    If `batched_lvls` is provided, the operation unpacks each batch of the tensors
-    separately. The returned `nse` is the maximum nse of all batches. For a batch with
-    a smaller nse, trailing zeros are appended in the result.
-    Example:
-
-    ```mlir
-    // input BCOO format |1.1, 2.2, 3.3, 0.0|
-    //      of 2x4 matrix |0.0, 1.2, 2.3, 0.0|
-    %values, %coordinates, %nse = sparse_tensor.unpack %st batched_lvls=1
-        : tensor<2x3xf64>, tensor<2x3x1xindex> to tensor<2x4xf64, #BCOO>
-    // %values      = arith.constant dense<[[ 1.1,   2.2,   3.3 ],
-    //                                      [ 1.2,   2.3,   0.0 ]]> : tensor<2x3xf64>
-    // %coordinates = arith.constant dense<[[ [0],   [1],   [2] ],
-    //                                      [ [1],   [2],   [0] ]> : tensor<2x3x1xindex>
     ```
   }];
-
-  let extraClassDeclaration = [{
-    /// Returns the number of leading levels that are batched.
-    unsigned getNumBatchedLvls();
-  }];
-
-  let builders = [
-    OpBuilder<(ins "Type":$values, "Type":$coordinates, "Type":$nse, "Value": $tensor),
-    [{
-      build($_builder, $_state, values, coordinates, nse, tensor, nullptr);
-    }]>,
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value": $tensor),
-    [{
-      build($_builder, $_state, resultTypes, tensor, nullptr);
-    }]>
-  ];
-
 
   let assemblyFormat =
-    "$tensor (`batched_lvls` `=` $batched_lvls^)? attr-dict `:`"
-    "type($tensor) `to` type($values) `,` type($coordinates) `,` type($nse)";
+    "$tensor `:` type($tensor) `outs` `(` $out_values `,` $out_levels `:` type($out_values) `,` type($out_levels) `)`"
+    "attr-dict `->` type($ret_values) `,` type($ret_levels)";
 
   let hasVerifier = 1;
 }

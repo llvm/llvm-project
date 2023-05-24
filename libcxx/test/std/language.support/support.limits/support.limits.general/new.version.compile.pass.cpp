@@ -113,14 +113,14 @@
 #   error "__cpp_lib_launder should have the value 201606L in c++20"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   ifndef __cpp_lib_destroying_delete
-#     error "__cpp_lib_destroying_delete should be defined in c++2b"
+#     error "__cpp_lib_destroying_delete should be defined in c++23"
 #   endif
 #   if __cpp_lib_destroying_delete != 201806L
-#     error "__cpp_lib_destroying_delete should have the value 201806L in c++2b"
+#     error "__cpp_lib_destroying_delete should have the value 201806L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_destroying_delete
@@ -130,10 +130,10 @@
 
 # if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
 #   ifndef __cpp_lib_hardware_interference_size
-#     error "__cpp_lib_hardware_interference_size should be defined in c++2b"
+#     error "__cpp_lib_hardware_interference_size should be defined in c++23"
 #   endif
 #   if __cpp_lib_hardware_interference_size != 201703L
-#     error "__cpp_lib_hardware_interference_size should have the value 201703L in c++2b"
+#     error "__cpp_lib_hardware_interference_size should have the value 201703L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_hardware_interference_size
@@ -142,11 +142,46 @@
 # endif
 
 # ifndef __cpp_lib_launder
-#   error "__cpp_lib_launder should be defined in c++2b"
+#   error "__cpp_lib_launder should be defined in c++23"
 # endif
 # if __cpp_lib_launder != 201606L
-#   error "__cpp_lib_launder should have the value 201606L in c++2b"
+#   error "__cpp_lib_launder should have the value 201606L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
+#   ifndef __cpp_lib_destroying_delete
+#     error "__cpp_lib_destroying_delete should be defined in c++26"
+#   endif
+#   if __cpp_lib_destroying_delete != 201806L
+#     error "__cpp_lib_destroying_delete should have the value 201806L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_destroying_delete
+#     error "__cpp_lib_destroying_delete should not be defined when the requirement 'TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L' is not met!"
+#   endif
+# endif
+
+# if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
+#   ifndef __cpp_lib_hardware_interference_size
+#     error "__cpp_lib_hardware_interference_size should be defined in c++26"
+#   endif
+#   if __cpp_lib_hardware_interference_size != 201703L
+#     error "__cpp_lib_hardware_interference_size should have the value 201703L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_hardware_interference_size
+#     error "__cpp_lib_hardware_interference_size should not be defined when the requirement 'defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)' is not met!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_launder
+#   error "__cpp_lib_launder should be defined in c++26"
+# endif
+# if __cpp_lib_launder != 201606L
+#   error "__cpp_lib_launder should have the value 201606L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

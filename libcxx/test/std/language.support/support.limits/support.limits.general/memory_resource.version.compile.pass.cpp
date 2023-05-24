@@ -72,21 +72,37 @@
 #   error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++20"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_memory_resource
-#   error "__cpp_lib_memory_resource should be defined in c++2b"
+#   error "__cpp_lib_memory_resource should be defined in c++23"
 # endif
 # if __cpp_lib_memory_resource != 201603L
-#   error "__cpp_lib_memory_resource should have the value 201603L in c++2b"
+#   error "__cpp_lib_memory_resource should have the value 201603L in c++23"
 # endif
 
 # ifndef __cpp_lib_polymorphic_allocator
-#   error "__cpp_lib_polymorphic_allocator should be defined in c++2b"
+#   error "__cpp_lib_polymorphic_allocator should be defined in c++23"
 # endif
 # if __cpp_lib_polymorphic_allocator != 201902L
-#   error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++2b"
+#   error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_memory_resource
+#   error "__cpp_lib_memory_resource should be defined in c++26"
+# endif
+# if __cpp_lib_memory_resource != 201603L
+#   error "__cpp_lib_memory_resource should have the value 201603L in c++26"
+# endif
+
+# ifndef __cpp_lib_polymorphic_allocator
+#   error "__cpp_lib_polymorphic_allocator should be defined in c++26"
+# endif
+# if __cpp_lib_polymorphic_allocator != 201902L
+#   error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

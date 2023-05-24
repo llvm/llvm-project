@@ -26,9 +26,6 @@ public:
                             dw_offset_t debug_ranges_offset) const;
 
 protected:
-  bool Extract(lldb_private::DWARFContext &context, lldb::offset_t *offset_ptr,
-               DWARFRangeList &range_list);
-
   std::map<dw_offset_t, DWARFRangeList> m_range_map;
 };
 

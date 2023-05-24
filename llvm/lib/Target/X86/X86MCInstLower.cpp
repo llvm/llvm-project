@@ -18,6 +18,7 @@
 #include "MCTargetDesc/X86ShuffleDecode.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "X86AsmPrinter.h"
+#include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86ShuffleDecodeConstantPool.h"
 #include "X86Subtarget.h"
@@ -2118,6 +2119,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     if (HasActiveDwarfFrame && !hasFP) {
       OutStreamer->emitCFIAdjustCfaOffset(-stackGrowth);
+      MF->getInfo<X86MachineFunctionInfo>()->setHasCFIAdjustCfa(true);
     }
 
     // Emit the label.

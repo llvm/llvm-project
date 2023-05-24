@@ -1375,15 +1375,23 @@ Defvar in a record body
 
 In addition to defining global variables, the ``defvar`` statement can
 be used inside the :token:`Body` of a class or record definition to define
-local variables. The scope of the variable extends from the ``defvar``
-statement to the end of the body. It cannot be set to a different value
-within its scope. The ``defvar`` statement can also be used in the statement
+local variables. Template arguments of ``class`` or ``multiclass`` can be
+used in the value expression. The scope of the variable extends from the
+``defvar`` statement to the end of the body. It cannot be set to a different
+value within its scope. The ``defvar`` statement can also be used in the statement
 list of a ``foreach``, which establishes a scope.
 
 A variable named ``V`` in an inner scope shadows (hides) any variables ``V``
-in outer scopes. In particular, ``V`` in a record body shadows a global
-``V``, and ``V`` in a ``foreach`` statement list shadows any ``V`` in
-surrounding record or global scopes.
+in outer scopes. In particular, there are several cases:
+
+* ``V`` in a record body shadows a global ``V``.
+
+* ``V`` in a record body shadows template argument ``V``.
+
+* ``V`` in template arguments shadows a global ``V``.
+
+* ``V`` in a ``foreach`` statement list shadows any ``V`` in surrounding record or
+  global scopes.
 
 Variables defined in a ``foreach`` go out of scope at the end of
 each loop iteration, so their value in one iteration is not available in

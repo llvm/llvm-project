@@ -62,7 +62,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #  endif
 }
 
-#else  // _LIBCPP_ABI_MICROSOFT
+#else // _LIBCPP_ABI_MICROSOFT
 
 class _LIBCPP_TYPE_VIS exception_ptr {
   _LIBCPP_DIAGNOSTIC_PUSH

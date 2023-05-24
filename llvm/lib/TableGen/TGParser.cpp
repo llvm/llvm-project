@@ -139,6 +139,79 @@ static Init *QualifiedNameOfImplicitName(MultiClass *MC) {
   return QualifiedNameOfImplicitName(MC->Rec, MC);
 }
 
+Init *TGVarScope::getVar(RecordKeeper &Records, MultiClass* ParsingMultiClass,
+                         StringInit *Name, SMRange NameLoc,
+                         bool TrackReferenceLocs) const {
+  // First, we search in local variables.
+  auto It = Vars.find(Name->getValue());
+  if (It != Vars.end())
+    return It->second;
+
+  std::function<Init *(Record *, StringInit *, StringRef)> FindValueInArgs =
+      [&](Record *Rec, StringInit *Name, StringRef Scoper) -> Init * {
+    if (!Rec)
+      return nullptr;
+    Init *ArgName = QualifyName(*Rec, ParsingMultiClass, Name, Scoper);
+    if (Rec->isTemplateArg(ArgName)) {
+      RecordVal *RV = Rec->getValue(ArgName);
+      assert(RV && "Template arg doesn't exist??");
+      RV->setUsed(true);
+      if (TrackReferenceLocs)
+        RV->addReferenceLoc(NameLoc);
+      return VarInit::get(ArgName, RV->getType());
+    }
+    return Name->getValue() == "NAME"
+               ? VarInit::get(ArgName, StringRecTy::get(Records))
+               : nullptr;
+  };
+
+  // If not found, we try to find the variable in additional variables like
+  // arguments, loop iterator, etc.
+  switch (Kind) {
+  case SK_Local:
+    break; /* do nothing. */
+  case SK_Record: {
+    if (CurRec) {
+      // The variable is a record field?
+      if (RecordVal *RV = CurRec->getValue(Name)) {
+        if (TrackReferenceLocs)
+          RV->addReferenceLoc(NameLoc);
+        return VarInit::get(Name, RV->getType());
+      }
+
+      // The variable is a class template argument?
+      if (CurRec->isClass())
+        if (auto *V = FindValueInArgs(CurRec, Name, ":"))
+          return V;
+    }
+    break;
+  }
+  case SK_ForeachLoop: {
+    // The variable is a loop iterator?
+    if (CurLoop->IterVar) {
+      VarInit *IterVar = dyn_cast<VarInit>(CurLoop->IterVar);
+      if (IterVar && IterVar->getNameInit() == Name)
+        return IterVar;
+    }
+    break;
+  }
+  case SK_MultiClass: {
+    // The variable is a multiclass template argument?
+    if (CurMultiClass)
+      if (auto *V = FindValueInArgs(&CurMultiClass->Rec, Name, "::"))
+        return V;
+    break;
+  }
+  }
+
+  // Then, we try to find the name in parent scope.
+  if (Parent)
+    return Parent->getVar(Records, ParsingMultiClass, Name, NameLoc,
+                          TrackReferenceLocs);
+
+  return nullptr;
+}
+
 bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV) {
   if (!CurRec)
     CurRec = &CurMultiClass->Rec;
@@ -1037,47 +1110,9 @@ RecTy *TGParser::ParseType() {
 /// ParseIDValue
 Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMRange NameLoc,
                              IDParseMode Mode) {
-  if (CurRec) {
-    if (RecordVal *RV = CurRec->getValue(Name)) {
-      if (TrackReferenceLocs)
-        RV->addReferenceLoc(NameLoc);
-      return VarInit::get(Name, RV->getType());
-    }
-  }
-
-  if ((CurRec && CurRec->isClass()) || CurMultiClass) {
-    Init *TemplateArgName;
-    if (CurMultiClass) {
-      TemplateArgName =
-          QualifyName(CurMultiClass->Rec, CurMultiClass, Name, "::");
-    } else
-      TemplateArgName = QualifyName(*CurRec, CurMultiClass, Name, ":");
-
-    Record *TemplateRec = CurMultiClass ? &CurMultiClass->Rec : CurRec;
-    if (TemplateRec->isTemplateArg(TemplateArgName)) {
-      RecordVal *RV = TemplateRec->getValue(TemplateArgName);
-      assert(RV && "Template arg doesn't exist??");
-      RV->setUsed(true);
-      if (TrackReferenceLocs)
-        RV->addReferenceLoc(NameLoc);
-      return VarInit::get(TemplateArgName, RV->getType());
-    } else if (Name->getValue() == "NAME") {
-      return VarInit::get(TemplateArgName, StringRecTy::get(Records));
-    }
-  }
-
-  if (CurLocalScope)
-    if (Init *I = CurLocalScope->getVar(Name->getValue()))
-      return I;
-
-  // If this is in a foreach loop, make sure it's not a loop iterator
-  for (const auto &L : Loops) {
-    if (L->IterVar) {
-      VarInit *IterVar = dyn_cast<VarInit>(L->IterVar);
-      if (IterVar && IterVar->getNameInit() == Name)
-        return IterVar;
-    }
-  }
+  if (Init *I = CurScope->getVar(Records, CurMultiClass, Name, NameLoc,
+                                 TrackReferenceLocs))
+    return I;
 
   if (Mode == ParseNameMode)
     return Name;
@@ -1942,12 +1977,14 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       ParseRec = ParseRecTmp.get();
     }
 
+    TGVarScope *FoldScope = PushScope(ParseRec);
     ParseRec->addValue(RecordVal(A, Start->getType(), RecordVal::FK_Normal));
-    ParseRec->addValue(RecordVal(B, ListType->getElementType(),
-                                 RecordVal::FK_Normal));
+    ParseRec->addValue(
+        RecordVal(B, ListType->getElementType(), RecordVal::FK_Normal));
     Init *ExprUntyped = ParseValue(ParseRec);
     ParseRec->removeValue(A);
     ParseRec->removeValue(B);
+    PopScope(FoldScope);
     if (!ExprUntyped)
       return nullptr;
 
@@ -2279,10 +2316,11 @@ Init *TGParser::ParseOperationForEachFilter(Record *CurRec, RecTy *ItemType) {
         std::make_unique<Record>(".parse", ArrayRef<SMLoc>{}, Records);
     ParseRec = ParseRecTmp.get();
   }
-
+  TGVarScope *TempScope = PushScope(ParseRec);
   ParseRec->addValue(RecordVal(LHS, InEltType, RecordVal::FK_Normal));
   Init *RHS = ParseValue(ParseRec, ExprEltType);
   ParseRec->removeValue(LHS);
+  PopScope(TempScope);
   if (!RHS)
     return nullptr;
 
@@ -3070,6 +3108,11 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
     return nullptr;
   }
 
+  if (!ParsingTemplateArgs && CurScope->varAlreadyDefined(Str)) {
+    TokError("local variable of this name already exists");
+    return nullptr;
+  }
+
   SMLoc IdLoc = Lex.getLoc();
   Init *DeclName = StringInit::get(Records, Str);
   Lex.Lex();
@@ -3306,14 +3349,9 @@ bool TGParser::ParseBody(Record *CurRec) {
   if (!consume(tgtok::l_brace))
     return TokError("Expected '{' to start body or ';' for declaration only");
 
-  // An object body introduces a new scope for local variables.
-  TGLocalVarScope *BodyScope = PushLocalScope();
-
   while (Lex.getCode() != tgtok::r_brace)
     if (ParseBodyItem(CurRec))
       return true;
-
-  PopLocalScope(BodyScope);
 
   // Eat the '}'.
   Lex.Lex();
@@ -3365,6 +3403,8 @@ bool TGParser::ApplyLetStack(RecordsEntry &Entry) {
 ///   BaseClassListNE ::= SubClassRef (',' SubClassRef)*
 ///
 bool TGParser::ParseObjectBody(Record *CurRec) {
+  // An object body introduces a new scope for local variables.
+  TGVarScope *ObjectScope = PushScope(CurRec);
   // If there is a baseclass list, read it.
   if (consume(tgtok::colon)) {
 
@@ -3387,7 +3427,9 @@ bool TGParser::ParseObjectBody(Record *CurRec) {
   if (ApplyLetStack(CurRec))
     return true;
 
-  return ParseBody(CurRec);
+  bool Result = ParseBody(CurRec);
+  PopScope(ObjectScope);
+  return Result;
 }
 
 /// ParseDef - Parse and return a top level or multiclass record definition.
@@ -3482,13 +3524,20 @@ bool TGParser::ParseDefvar(Record *CurRec) {
   if (Lex.getCode() != tgtok::Id)
     return TokError("expected identifier");
   StringInit *DeclName = StringInit::get(Records, Lex.getCurStrVal());
-  if (CurLocalScope) {
-    if (CurLocalScope->varAlreadyDefined(DeclName->getValue()))
-      return TokError("local variable of this name already exists");
-  } else {
-    if (Records.getGlobal(DeclName->getValue()))
-      return TokError("def or global variable of this name already exists");
+  if (CurScope->varAlreadyDefined(DeclName->getValue()))
+    return TokError("local variable of this name already exists");
+
+  // The name should not be conflicted with existed field names.
+  if (CurRec) {
+    auto *V = CurRec->getValue(DeclName->getValue());
+    if (V && !V->isTemplateArg())
+      return TokError("field of this name already exists");
   }
+
+  // If this defvar is in the top level, the name should not be conflicted
+  // with existed global names.
+  if (CurScope->isOutermost() && Records.getGlobal(DeclName->getValue()))
+    return TokError("def or global variable of this name already exists");
 
   Lex.Lex();
   if (!consume(tgtok::equal))
@@ -3501,8 +3550,8 @@ bool TGParser::ParseDefvar(Record *CurRec) {
   if (!consume(tgtok::semi))
     return TokError("expected ';'");
 
-  if (CurLocalScope)
-    CurLocalScope->addVar(DeclName->getValue(), Value);
+  if (!CurScope->isOutermost())
+    CurScope->addVar(DeclName->getValue(), Value);
   else
     Records.addExtraGlobal(DeclName->getValue(), Value);
 
@@ -3531,10 +3580,10 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     return TokError("Unknown tok");
 
   // Create a loop object and remember it.
-  Loops.push_back(std::make_unique<ForeachLoop>(Loc, IterName, ListValue));
-
+  auto TheLoop = std::make_unique<ForeachLoop>(Loc, IterName, ListValue);
   // A foreach loop introduces a new scope for local variables.
-  TGLocalVarScope *ForeachScope = PushLocalScope();
+  TGVarScope *ForeachScope = PushScope(TheLoop.get());
+  Loops.push_back(std::move(TheLoop));
 
   if (Lex.getCode() != tgtok::l_brace) {
     // FOREACH Declaration IN Object
@@ -3555,7 +3604,7 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     }
   }
 
-  PopLocalScope(ForeachScope);
+  PopScope(ForeachScope);
 
   // Resolve the loop or store it for later resolution.
   std::unique_ptr<ForeachLoop> Loop = std::move(Loops.back());
@@ -3644,7 +3693,8 @@ bool TGParser::ParseIf(MultiClass *CurMultiClass) {
 ///   IfBody ::= '{' ObjectList '}'
 ///
 bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
-  TGLocalVarScope *BodyScope = PushLocalScope();
+  // An if-statement introduces a new scope for local variables.
+  TGVarScope *BodyScope = PushScope();
 
   if (Lex.getCode() != tgtok::l_brace) {
     // A single object.
@@ -3665,7 +3715,7 @@ bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
     }
   }
 
-  PopLocalScope(BodyScope);
+  PopScope(BodyScope);
   return false;
 }
 
@@ -3732,6 +3782,8 @@ bool TGParser::ParseClass() {
   }
   Lex.Lex(); // eat the name.
 
+  // A class definition introduces a new scope.
+  TGVarScope *ClassScope = PushScope(CurRec);
   // If there are template args, parse them.
   if (Lex.getCode() == tgtok::less)
     if (ParseTemplateArgList(CurRec))
@@ -3742,6 +3794,8 @@ bool TGParser::ParseClass() {
 
   if (!NoWarnOnUnusedTemplateArgs)
     CurRec->checkUnusedTemplateArgs();
+
+  PopScope(ClassScope);
   return false;
 }
 
@@ -3807,8 +3861,6 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
   if (!consume(tgtok::In))
     return TokError("expected 'in' at end of top-level 'let'");
 
-  TGLocalVarScope *LetScope = PushLocalScope();
-
   // If this is a scalar let, just handle it now
   if (Lex.getCode() != tgtok::l_brace) {
     // LET LetList IN Object
@@ -3819,6 +3871,9 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
     // Otherwise, this is a group let.
     Lex.Lex();  // eat the '{'.
 
+    // A group let introduces a new scope for local variables.
+    TGVarScope *LetScope = PushScope();
+
     // Parse the object list.
     if (ParseObjectList(CurMultiClass))
       return true;
@@ -3827,9 +3882,9 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
       TokError("expected '}' at end of top level let command");
       return Error(BraceLoc, "to match this '{'");
     }
-  }
 
-  PopLocalScope(LetScope);
+    PopScope(LetScope);
+  }
 
   // Outside this let scope, this let block is not active.
   LetStack.pop_back();
@@ -3866,6 +3921,9 @@ bool TGParser::ParseMultiClass() {
 
   CurMultiClass = Result.first->second.get();
   Lex.Lex();  // Eat the identifier.
+
+  // A multiclass body introduces a new scope for local variables.
+  TGVarScope *MulticlassScope = PushScope(CurMultiClass);
 
   // If there are template args, parse them.
   if (Lex.getCode() == tgtok::less)
@@ -3904,9 +3962,6 @@ bool TGParser::ParseMultiClass() {
     if (Lex.Lex() == tgtok::r_brace)  // eat the '{'.
       return TokError("multiclass must contain at least one def");
 
-    // A multiclass body introduces a new scope for local variables.
-    TGLocalVarScope *MulticlassScope = PushLocalScope();
-
     while (Lex.getCode() != tgtok::r_brace) {
       switch (Lex.getCode()) {
       default:
@@ -3933,13 +3988,12 @@ bool TGParser::ParseMultiClass() {
       PrintError(SemiLoc, "A multiclass body should not end with a semicolon");
       PrintNote("Semicolon ignored; remove to eliminate this error");    
     }
-
-    PopLocalScope(MulticlassScope);
   }
 
   if (!NoWarnOnUnusedTemplateArgs)
     CurMultiClass->Rec.checkUnusedTemplateArgs();
 
+  PopScope(MulticlassScope);
   CurMultiClass = nullptr;
   return false;
 }
@@ -4118,7 +4172,10 @@ bool TGParser::ParseObjectList(MultiClass *MC) {
 
 bool TGParser::ParseFile() {
   Lex.Lex(); // Prime the lexer.
-  if (ParseObjectList()) return true;
+  TGVarScope *GlobalScope = PushScope();
+  if (ParseObjectList())
+    return true;
+  PopScope(GlobalScope);
 
   // If we have unread input at the end of the file, report it.
   if (Lex.getCode() == tgtok::Eof)

@@ -294,13 +294,13 @@ namespace std::ranges {
   // [range.zip], zip view
   template<input_range... Views>
     requires (view<Views> && ...) && (sizeof...(Views) > 0)
-  class zip_view;        // C++2b
+  class zip_view;        // C++23
 
   template<class... Views>
-    inline constexpr bool enable_borrowed_range<zip_view<Views...>> =    // C++2b
+    inline constexpr bool enable_borrowed_range<zip_view<Views...>> =    // C++23
       (enable_borrowed_range<Views> && ...);
 
-  namespace views { inline constexpr unspecified zip = unspecified; }    // C++2b
+  namespace views { inline constexpr unspecified zip = unspecified; }    // C++23
 
   // [range.as.rvalue]
   template <view V>

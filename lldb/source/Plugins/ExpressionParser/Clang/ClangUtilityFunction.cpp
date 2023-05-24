@@ -176,6 +176,8 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
   }
 }
 
+char ClangUtilityFunction::ClangUtilityFunctionHelper::ID;
+
 void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx, bool keep_result_in_memory) {
   std::shared_ptr<ClangASTImporter> ast_importer;

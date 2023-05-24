@@ -416,11 +416,10 @@ inline bool isBoxAddressOrValue(mlir::Type t) {
   return fir::unwrapRefType(t).isa<fir::BaseBoxType>();
 }
 
-/// Return a string representation of `ty`. The fir.ref is omitted in the
-/// representation.
+/// Return a string representation of `ty`.
 ///
 /// fir.array<10x10xf32> -> prefix_10x10xf32
-/// fir.ref<i32> -> i32
+/// fir.ref<i32> -> prefix_ref_i32
 std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
                             llvm::StringRef prefix = "");
 

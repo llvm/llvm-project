@@ -945,6 +945,11 @@ public:
   /// Set that PLT should be avoid for RTLib calls.
   void setRtLibUseGOT();
 
+  /// Get/set whether referencing global variables can use direct access
+  /// relocations on ELF targets.
+  bool getDirectAccessExternalData() const;
+  void setDirectAccessExternalData(bool Value);
+
   /// Get/set whether synthesized functions should get the uwtable attribute.
   UWTableKind getUwtable() const;
   void setUwtable(UWTableKind Kind);

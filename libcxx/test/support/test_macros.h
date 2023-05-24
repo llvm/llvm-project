@@ -99,6 +99,8 @@
 # define TEST_STD_VER 17
 #elif __cplusplus <= 202002L
 # define TEST_STD_VER 20
+#elif __cplusplus <= 202302L
+# define TEST_STD_VER 23
 #else
 # define TEST_STD_VER 99    // greater than current standard
 // This is deliberately different than _LIBCPP_STD_VER to discourage matching them up.
@@ -436,6 +438,15 @@ inline void DoNotOptimize(Tp const& value) {
 
 #ifdef _LIBCPP_SHORT_WCHAR
 #  define TEST_SHORT_WCHAR
+#endif
+
+// This is a temporary workaround for user-defined `operator new` definitions
+// not being picked up on Apple platforms in some circumstances. This is under
+// investigation and should be short-lived.
+#ifdef __APPLE__
+#  define TEST_WORKAROUND_BUG_109234844_WEAK __attribute__((weak))
+#else
+#  define TEST_WORKAROUND_BUG_109234844_WEAK /* nothing */
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

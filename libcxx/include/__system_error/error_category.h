@@ -51,7 +51,7 @@ public:
     return compare_three_way()(this, std::addressof(__rhs));
   }
 
-#else  // _LIBCPP_STD_VER >= 20
+#else // _LIBCPP_STD_VER >= 20
 
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const error_category& __rhs) const _NOEXCEPT { return !(*this == __rhs); }
 

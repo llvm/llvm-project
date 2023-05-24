@@ -114,10 +114,13 @@ add_math_entrypoint_object(ldexpl)
 add_math_entrypoint_object(log10)
 add_math_entrypoint_object(log10f)
 
+add_math_entrypoint_object(log1p)
 add_math_entrypoint_object(log1pf)
 
+add_math_entrypoint_object(log2)
 add_math_entrypoint_object(log2f)
 
+add_math_entrypoint_object(log)
 add_math_entrypoint_object(logf)
 
 add_math_entrypoint_object(logb)

@@ -743,13 +743,17 @@ static void replaceExtractElements(InsertElementInst *InsElt,
 
   // Replace extracts from the original narrow vector with extracts from the new
   // wide vector.
-  for (User *U : ExtVecOp->users()) {
+  SmallVector<User *> Users(ExtVecOp->users());
+  for (User *U : Users) {
     ExtractElementInst *OldExt = dyn_cast<ExtractElementInst>(U);
     if (!OldExt || OldExt->getParent() != WideVec->getParent())
       continue;
     auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
     NewExt->insertAfter(OldExt);
     IC.replaceInstUsesWith(*OldExt, NewExt);
+    // Add the old extracts to the worklist for DCE. We can't remove the
+    // extracts directly, because they may still be used by the calling code.
+    IC.addToWorklist(OldExt);
   }
 }
 

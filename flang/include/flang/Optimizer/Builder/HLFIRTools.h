@@ -135,6 +135,11 @@ public:
     return getFortranElementType().isa<fir::CharacterType>();
   }
 
+  bool hasIntrinsicType() const {
+    mlir::Type eleTy = getFortranElementType();
+    return fir::isa_trivial(eleTy) || eleTy.isa<fir::CharacterType>();
+  }
+
   bool isDerivedWithLengthParameters() const {
     return fir::isRecordWithTypeParameters(getFortranElementType());
   }

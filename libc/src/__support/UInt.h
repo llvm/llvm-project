@@ -77,18 +77,24 @@ template <size_t Bits> struct UInt {
       val[i] = words[i];
   }
 
-  constexpr explicit operator uint64_t() const { return val[0]; }
-
-  constexpr explicit operator uint32_t() const {
-    return uint32_t(uint64_t(*this));
+  constexpr explicit operator unsigned long long() const {
+    return static_cast<unsigned long long>(val[0]);
   }
 
-  constexpr explicit operator uint16_t() const {
-    return uint16_t(uint64_t(*this));
+  constexpr explicit operator unsigned long() const {
+    return static_cast<unsigned long>(val[0]);
   }
 
-  constexpr explicit operator uint8_t() const {
-    return uint8_t(uint64_t(*this));
+  constexpr explicit operator unsigned int() const {
+    return static_cast<unsigned int>(val[0]);
+  }
+
+  constexpr explicit operator unsigned short() const {
+    return static_cast<unsigned short>(val[0]);
+  }
+
+  constexpr explicit operator unsigned char() const {
+    return static_cast<unsigned char>(val[0]);
   }
 
   constexpr explicit operator bool() const { return !is_zero(); }

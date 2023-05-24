@@ -2252,6 +2252,68 @@ cc_binary(
 )
 
 cc_binary(
+    name = "clang-offload-packager",
+    srcs = glob(["tools/clang-offload-packager/*.cpp"]),
+    stamp = 0,
+    deps = [
+        ":basic",
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+gentbl(
+    name = "linker_wrapper_opts_gen",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/clang-linker-wrapper/LinkerWrapperOpts.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/clang-linker-wrapper/LinkerWrapperOpts.td",
+    td_srcs = [
+        "tools/clang-linker-wrapper/LinkerWrapperOpts.td",
+        "//llvm:include/llvm/Option/OptParser.td",
+    ],
+)
+
+cc_binary(
+    name = "clang-linker-wrapper",
+    srcs = [
+        "tools/clang-linker-wrapper/ClangLinkerWrapper.cpp",
+        "tools/clang-linker-wrapper/OffloadWrapper.cpp",
+        "tools/clang-linker-wrapper/OffloadWrapper.h",
+    ],
+    copts = [
+        "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/tools/clang-linker-wrapper",
+    ],
+    toolchains = [
+        ":workspace_root",
+    ],
+    stamp = 0,
+    deps = [
+        ":basic",
+        ":linker_wrapper_opts_gen",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:BinaryFormat",
+        "//llvm:MC",
+        "//llvm:Target",
+        "//llvm:TransformUtils",
+        "//llvm:Analysis",
+        "//llvm:Passes",
+        "//llvm:IRReader",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:CodeGen",
+        "//llvm:LTO",
+    ],
+)
+
+cc_binary(
     name = "clang-refactor",
     srcs = glob([
         "tools/clang-refactor/*.cpp",

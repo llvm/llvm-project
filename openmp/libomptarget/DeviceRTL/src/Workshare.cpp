@@ -114,9 +114,9 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
   ////////////////////////////////////////////////////////////////////////////////
   // Support for Static Init
 
-  static void for_static_init(int32_t, int32_t schedtype,
-                              int32_t *plastiter, T *plower, T *pupper,
-                              ST *pstride, ST chunk, bool IsSPMDExecutionMode) {
+  static void for_static_init(int32_t, int32_t schedtype, int32_t *plastiter,
+                              T *plower, T *pupper, ST *pstride, ST chunk,
+                              bool IsSPMDExecutionMode) {
     int32_t gtid = omp_get_thread_num();
     int numberOfActiveOMPThreads = omp_get_num_threads();
 
