@@ -32,6 +32,32 @@ void handle_server(Alloc allocator, Dealloc deallocator) {
       return;
 
     switch (port->get_opcode()) {
+    case rpc::Opcode::WRITE_TO_STREAM:
+    case rpc::Opcode::WRITE_TO_STDERR:
+    case rpc::Opcode::WRITE_TO_STDOUT: {
+      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
+      void *strs[rpc::MAX_LANE_SIZE] = {nullptr};
+      FILE *files[rpc::MAX_LANE_SIZE] = {nullptr};
+      if (port->get_opcode() == rpc::Opcode::WRITE_TO_STREAM)
+        port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+          files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
+        });
+      port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
+      port->send([&](rpc::Buffer *buffer, uint32_t id) {
+        FILE *file = port->get_opcode() == rpc::Opcode::WRITE_TO_STDOUT
+                         ? stdout
+                         : (port->get_opcode() == rpc::Opcode::WRITE_TO_STDERR
+                                ? stderr
+                                : files[id]);
+        int ret = fwrite(strs[id], sizes[id], 1, file);
+        reinterpret_cast<int *>(buffer->data)[0] = ret >= 0 ? sizes[id] : ret;
+      });
+      for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
+        if (strs[i])
+          delete[] reinterpret_cast<uint8_t *>(strs[i]);
+      }
+      break;
+    }
     case rpc::Opcode::PRINT_TO_STDERR: {
       uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
       void *strs[rpc::MAX_LANE_SIZE] = {nullptr};

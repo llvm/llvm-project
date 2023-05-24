@@ -33,13 +33,16 @@ namespace rpc {
 /// A list of opcodes that we use to invoke certain actions on the server.
 enum Opcode : uint16_t {
   NOOP = 0,
-  PRINT_TO_STDERR = 1,
-  EXIT = 2,
-  MALLOC = 3,
-  FREE = 4,
-  TEST_INCREMENT = 5,
-  TEST_INTERFACE = 6,
-  TEST_STREAM = 7,
+  EXIT = 1,
+  WRITE_TO_STDOUT = 2,
+  WRITE_TO_STDERR = 3,
+  WRITE_TO_STREAM = 4,
+  MALLOC = 5,
+  FREE = 6,
+  PRINT_TO_STDERR = 7,
+  TEST_INCREMENT = 8,
+  TEST_INTERFACE = 9,
+  TEST_STREAM = 10,
 };
 
 /// A fixed size channel used to communicate between the RPC client and server.
