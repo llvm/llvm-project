@@ -1225,7 +1225,7 @@ void TextDiagnostic::emitSnippetAndCaret(
     // to produce easily machine parsable output.  Add a space before the
     // source line and the caret to make it trivial to tell the main diagnostic
     // line from what the user is intended to see.
-    if (DiagOpts->ShowSourceRanges) {
+    if (DiagOpts->ShowSourceRanges && !SourceLine.empty()) {
       SourceLine = ' ' + SourceLine;
       CaretLine = ' ' + CaretLine;
     }
@@ -1262,9 +1262,6 @@ void TextDiagnostic::emitSnippetAndCaret(
 void TextDiagnostic::emitSnippet(StringRef SourceLine,
                                  unsigned MaxLineNoDisplayWidth,
                                  unsigned LineNo) {
-  if (SourceLine.empty())
-    return;
-
   // Emit line number.
   if (MaxLineNoDisplayWidth > 0) {
     unsigned LineNoDisplayWidth = getNumDisplayWidth(LineNo);
