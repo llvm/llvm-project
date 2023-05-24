@@ -733,3 +733,37 @@ math_test(
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
     ],
 )
+
+math_test(
+    name = "fmod",
+    hdrs = ["FModTest.h"]
+)
+
+math_test(
+    name = "fmodf",
+    hdrs = ["FModTest.h"]
+)
+
+math_test(
+    name = "scalbn",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h"
+    ],
+)
+
+math_test(
+    name = "scalbnf",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h"
+    ],
+)
+
+math_test(
+    name = "scalbnl",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h"
+    ],
+)
