@@ -28,8 +28,7 @@ namespace PR6717 {
 
     WebVector(const WebVector<T>& other) { } // expected-error{{undeclared identifier 'T'}} \
                                                 precxx17-error{{a type specifier is required}} \
-                                                cxx17-error{{deduction guide declaration without trailing return type}} \
-                                                cxx17-error{{deduction guide cannot have a function definition}}
+                                                cxx17-error{{deduction guide declaration without trailing return type}}
 
   template <typename C>
   WebVector<T>& operator=(const C& other) { } // expected-error{{undeclared identifier 'T'}}
