@@ -812,12 +812,14 @@ lldb::offset_t DWARFDebugInfoEntry::GetFirstAttributeOffset() const {
 
 const DWARFAbbreviationDeclaration *
 DWARFDebugInfoEntry::GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const {
-  if (cu) {
-    const DWARFAbbreviationDeclarationSet *abbrev_set = cu->GetAbbreviations();
-    if (abbrev_set)
-      return abbrev_set->GetAbbreviationDeclaration(m_abbr_idx);
-  }
-  return nullptr;
+  if (!cu)
+    return nullptr;
+
+  const DWARFAbbreviationDeclarationSet *abbrev_set = cu->GetAbbreviations();
+  if (!abbrev_set)
+    return nullptr;
+
+  return abbrev_set->getAbbreviationDeclaration(m_abbr_idx);
 }
 
 bool DWARFDebugInfoEntry::IsGlobalOrStaticScopeVariable() const {
