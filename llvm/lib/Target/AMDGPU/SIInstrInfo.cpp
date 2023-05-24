@@ -637,8 +637,9 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
   // Only loop through if there are any free registers left. We don't want to
   // spill.
   while (RegNo--) {
-    Register Tmp2 = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0,
-                                        /* AllowSpill */ false);
+    Register Tmp2 = RS.scavengeRegisterBackwards(AMDGPU::VGPR_32RegClass, MI,
+                                                 /* RestoreAfter */ false, 0,
+                                                 /* AllowSpill */ false);
     if (!Tmp2 || RI.getHWRegIndex(Tmp2) >= MaxVGPRs)
       break;
     Tmp = Tmp2;
@@ -7919,10 +7920,11 @@ MachineInstrBuilder SIInstrInfo::getAddNoCarry(MachineBasicBlock &MBB,
     return BuildMI(MBB, I, DL, get(AMDGPU::V_ADD_U32_e32), DestReg);
 
   // If available, prefer to use vcc.
-  Register UnusedCarry =
-      !RS.isRegUsed(AMDGPU::VCC)
-          ? Register(RI.getVCC())
-          : RS.scavengeRegister(RI.getBoolRC(), I, 0, /* AllowSpill */ false);
+  Register UnusedCarry = !RS.isRegUsed(AMDGPU::VCC)
+                             ? Register(RI.getVCC())
+                             : RS.scavengeRegisterBackwards(
+                                   *RI.getBoolRC(), I, /* RestoreAfter */ false,
+                                   0, /* AllowSpill */ false);
 
   // TODO: Users need to deal with this.
   if (!UnusedCarry.isValid())
