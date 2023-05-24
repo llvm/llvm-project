@@ -68,6 +68,9 @@ protected:
   /// Return the single op that defines all given values (if any).
   static Operation *getCommonDefiningOp(ValueRange values);
 
+  /// Return the transform op in which this TrackingListener is used.
+  TransformOpInterface getTransformOp() const { return transformOp; }
+
 private:
   void notifyOperationRemoved(Operation *op) override;
 
