@@ -3,6 +3,7 @@ algorithm cstddef
 algorithm cstdint
 algorithm cstring
 algorithm ctime
+algorithm cwchar
 algorithm execution
 algorithm initializer_list
 algorithm iosfwd
@@ -127,12 +128,14 @@ coroutine version
 cstddef version
 ctgmath ccomplex
 ctgmath cmath
+cwchar cstddef
 cwchar cwctype
 cwctype cctype
 deque compare
 deque cstddef
 deque cstdint
 deque cstring
+deque cwchar
 deque initializer_list
 deque limits
 deque new
@@ -442,6 +445,7 @@ random vector
 random version
 ranges compare
 ranges cstddef
+ranges cwchar
 ranges initializer_list
 ranges iosfwd
 ranges iterator
@@ -640,6 +644,7 @@ vector cstddef
 vector cstdint
 vector cstdlib
 vector cstring
+vector cwchar
 vector initializer_list
 vector iosfwd
 vector limits
