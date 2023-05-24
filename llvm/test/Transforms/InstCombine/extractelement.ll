@@ -902,3 +902,27 @@ define i32 @extelt_select_const_operands_vector_extra_use_2(i1 %c) {
   %r = extractelement <3 x i32> %s, i64 0
   ret i32 %r
 }
+
+define float @crash_4b8320(<2 x float> %i1, float %i12) {
+; ANY-LABEL: @crash_4b8320(
+; ANY-NEXT:    [[I6:%.*]] = fmul reassoc <2 x float> [[I1:%.*]], <float 0.000000e+00, float poison>
+; ANY-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[I6]], i64 0
+; ANY-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[I6]], i64 0
+; ANY-NEXT:    [[TMP3:%.*]] = fadd float [[TMP1]], [[TMP2]]
+; ANY-NEXT:    [[I29:%.*]] = fadd float [[TMP3]], 0.000000e+00
+; ANY-NEXT:    ret float [[I29]]
+;
+  %i5 = fmul <2 x float> zeroinitializer, %i1
+  %i6 = fmul reassoc <2 x float> zeroinitializer, %i5
+  %i147 = extractelement <2 x float> %i6, i64 0
+  %i15 = extractelement <2 x float> %i6, i64 0
+  %i16 = insertelement <4 x float> zeroinitializer, float %i147, i64 0
+  %i17 = insertelement <4 x float> %i16, float %i15, i64 1
+  %i18 = insertelement <4 x float> %i17, float %i12, i64 2
+  %i19 = shufflevector <4 x float> %i18, <4 x float> zeroinitializer, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %i23 = fadd <4 x float> %i19, %i18
+  %i24 = shufflevector <4 x float> %i18, <4 x float> zeroinitializer, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %i26 = fadd <4 x float> %i23, %i24
+  %i29 = extractelement <4 x float> %i26, i64 0
+  ret float %i29
+}
