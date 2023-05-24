@@ -1188,13 +1188,17 @@ void Module::ReportWarningCantLoadSwiftModule(
                           &m_swift_import_warning);
 }
 
+static llvm::VersionTuple GetAdjustedVersion(llvm::VersionTuple version) {
+  return version;
+}
+
 void Module::ReportWarningToolchainMismatch(
     CompileUnit &comp_unit, llvm::Optional<lldb::user_id_t> debugger_id) {
   if (SymbolFile *sym_file = GetSymbolFile()) {
     llvm::VersionTuple sym_file_version =
-        sym_file->GetProducerVersion(comp_unit);
+        GetAdjustedVersion(sym_file->GetProducerVersion(comp_unit));
     llvm::VersionTuple swift_version =
-        swift::version::getCurrentCompilerVersion();
+        GetAdjustedVersion(swift::version::getCurrentCompilerVersion());
     if (sym_file_version != swift_version) {
       std::string str = llvm::formatv(
           "{0} was compiled with a different Swift compiler "
