@@ -106,6 +106,7 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
       libc.src.__support.FPUtil.fenv_impl
     LINK_LIBRARIES
       LibcFPExceptionHelpers
+    UNIT_TEST_ONLY
   )
 
   add_fp_unittest(
@@ -120,5 +121,6 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
       libc.src.__support.FPUtil.fenv_impl
     LINK_LIBRARIES
       LibcFPExceptionHelpers
+    UNIT_TEST_ONLY
   )
 endif()
