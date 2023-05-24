@@ -526,29 +526,6 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
   }
 }
 
-template <typename Clause>
-static void genObjectListWithModifier(
-    const Clause *x, Fortran::lower::AbstractConverter &converter,
-    Fortran::semantics::SemanticsContext &semanticsContext,
-    Fortran::lower::StatementContext &stmtCtx,
-    Fortran::parser::AccDataModifier::Modifier mod,
-    llvm::SmallVectorImpl<mlir::Value> &operandsWithModifier,
-    llvm::SmallVectorImpl<mlir::Value> &operands) {
-  const Fortran::parser::AccObjectListWithModifier &listWithModifier = x->v;
-  const auto &accObjectList =
-      std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
-  const auto &modifier =
-      std::get<std::optional<Fortran::parser::AccDataModifier>>(
-          listWithModifier.t);
-  if (modifier && (*modifier).v == mod) {
-    genObjectList(accObjectList, converter, semanticsContext, stmtCtx,
-                  operandsWithModifier);
-  } else {
-    genObjectList(accObjectList, converter, semanticsContext, stmtCtx,
-                  operands);
-  }
-}
-
 static void
 addOperands(llvm::SmallVectorImpl<mlir::Value> &operands,
             llvm::SmallVectorImpl<int32_t> &operandSegments,
