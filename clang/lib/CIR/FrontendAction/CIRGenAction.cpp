@@ -418,7 +418,7 @@ void CIRGenAction::ExecuteAction() {
 
   llvm::LLVMContext llvmCtx;
   auto llvmModule = lowerFromCIRToLLVMIR(
-      ci.getFrontendOpts(), *mlirModule,
+      ci.getFrontendOpts(), mlirModule.release(),
       std::unique_ptr<mlir::MLIRContext>(mlirContext), llvmCtx);
 
   if (outstream)
