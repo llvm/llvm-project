@@ -822,7 +822,6 @@ add_entrypoint_object(
     ../log1p.h
   DEPENDS
     .common_constants
-    .log_range_reduction
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add

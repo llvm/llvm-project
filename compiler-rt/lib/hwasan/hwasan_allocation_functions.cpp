@@ -159,13 +159,13 @@ void *__sanitizer_malloc(uptr size) {
 // Fuchsia does not use WRAP/wrappers used for the interceptor infrastructure.
 #  define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                 \
     extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE RET FN( \
-        ARGS) ALIAS("__sanitizer_" #FN)
+        ARGS) ALIAS(__sanitizer_##FN)
 #else
 #  define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                 \
     extern "C" SANITIZER_INTERFACE_ATTRIBUTE RET WRAP(FN)(ARGS)               \
-        ALIAS("__sanitizer_" #FN);                                            \
+        ALIAS(__sanitizer_##FN);                                              \
     extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE RET FN( \
-        ARGS) ALIAS("__sanitizer_" #FN)
+        ARGS) ALIAS(__sanitizer_##FN)
 #endif
 
 INTERCEPTOR_ALIAS(int, posix_memalign, void **memptr, SIZE_T alignment,

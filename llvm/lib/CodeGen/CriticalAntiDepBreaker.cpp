@@ -49,7 +49,7 @@ CriticalAntiDepBreaker::~CriticalAntiDepBreaker() = default;
 
 void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   const unsigned BBSize = BB->size();
-  for (unsigned i = 0, e = TRI->getNumRegs(); i != e; ++i) {
+  for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i) {
     // Clear out the register class data.
     Classes[i] = nullptr;
 
@@ -111,7 +111,7 @@ void CriticalAntiDepBreaker::Observe(MachineInstr &MI, unsigned Count,
     return;
   assert(Count < InsertPosIndex && "Instruction index out of expected range!");
 
-  for (unsigned Reg = 0; Reg != TRI->getNumRegs(); ++Reg) {
+  for (unsigned Reg = 1; Reg != TRI->getNumRegs(); ++Reg) {
     if (KillIndices[Reg] != ~0u) {
       // If Reg is currently live, then mark that it can't be renamed as
       // we don't know the extent of its live-range anymore (now that it
@@ -265,7 +265,7 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
                         [&](MCPhysReg SR) { return MO.clobbersPhysReg(SR); });
         };
 
-        for (unsigned i = 0, e = TRI->getNumRegs(); i != e; ++i) {
+        for (unsigned i = 1, e = TRI->getNumRegs(); i != e; ++i) {
           if (ClobbersPhysRegAndSubRegs(i)) {
             DefIndices[i] = Count;
             KillIndices[i] = ~0u;
@@ -463,7 +463,7 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
     LLVM_DEBUG(dbgs() << "Critical path has total latency "
                       << (Max->getDepth() + Max->Latency) << "\n");
     LLVM_DEBUG(dbgs() << "Available regs:");
-    for (unsigned Reg = 0; Reg < TRI->getNumRegs(); ++Reg) {
+    for (unsigned Reg = 1; Reg < TRI->getNumRegs(); ++Reg) {
       if (KillIndices[Reg] == ~0u)
         LLVM_DEBUG(dbgs() << " " << printReg(Reg, TRI));
     }

@@ -9,6 +9,7 @@ unittest("SerializationTests") {
     "//clang/lib/Lex",
     "//clang/lib/Sema",
     "//clang/lib/Serialization",
+    "//clang/lib/Tooling",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Support",
   ]
@@ -16,5 +17,6 @@ unittest("SerializationTests") {
     "InMemoryModuleCacheTest.cpp",
     "ModuleCacheTest.cpp",
     "SourceLocationEncodingTest.cpp",
+    "VarDeclConstantInitTest.cpp",
   ]
 }

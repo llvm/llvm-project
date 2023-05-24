@@ -443,7 +443,7 @@ INTERCEPTOR(_Unwind_Reason_Code, _Unwind_SjLj_RaiseException,
 #if ASAN_INTERCEPT_INDEX
 # if ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX
 INTERCEPTOR(char*, index, const char *string, int c)
-  ALIAS(WRAPPER_NAME(strchr));
+  ALIAS(WRAP(strchr));
 # else
 #  if SANITIZER_APPLE
 DECLARE_REAL(char*, index, const char *string, int c)
