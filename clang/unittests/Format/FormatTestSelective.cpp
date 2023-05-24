@@ -528,6 +528,26 @@ TEST_F(FormatTestSelective, ReformatRegionAdjustsIndent) {
             format("  int a;\n"
                    "void ffffff() {}",
                    11, 0));
+
+  // https://github.com/llvm/llvm-project/issues/59178
+  Style = getMozillaStyle();
+  EXPECT_EQ("int a()\n"
+            "{\n"
+            "return 0;\n"
+            "}\n"
+            "int b()\n"
+            "{\n"
+            "  return 42;\n"
+            "}",
+            format("int a()\n"
+                   "{\n"
+                   "return 0;\n"
+                   "}\n"
+                   "int b()\n"
+                   "{\n"
+                   "return 42;\n" // Format this line only
+                   "}",
+                   32, 0));
 }
 
 TEST_F(FormatTestSelective, UnderstandsTabs) {
