@@ -2152,7 +2152,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Name = Name.substr(4);
 
     if (IsX86 && Name.startswith("sse4a.movnt.")) {
-      Module *M = F->getParent();
       SmallVector<Metadata *, 1> Elts;
       Elts.push_back(
           ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
@@ -2170,7 +2169,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
           Builder.CreateExtractElement(Arg1, (uint64_t)0, "extractelement");
 
       StoreInst *SI = Builder.CreateAlignedStore(Extract, Addr, Align(1));
-      SI->setMetadata(M->getMDKindID("nontemporal"), Node);
+      SI->setMetadata(LLVMContext::MD_nontemporal, Node);
 
       // Remove intrinsic.
       CI->eraseFromParent();
@@ -2179,7 +2178,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     if (IsX86 && (Name.startswith("avx.movnt.") ||
                   Name.startswith("avx512.storent."))) {
-      Module *M = F->getParent();
       SmallVector<Metadata *, 1> Elts;
       Elts.push_back(
           ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
@@ -2195,7 +2193,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       StoreInst *SI = Builder.CreateAlignedStore(
           Arg1, BC,
           Align(Arg1->getType()->getPrimitiveSizeInBits().getFixedValue() / 8));
-      SI->setMetadata(M->getMDKindID("nontemporal"), Node);
+      SI->setMetadata(LLVMContext::MD_nontemporal, Node);
 
       // Remove intrinsic.
       CI->eraseFromParent();
@@ -3523,7 +3521,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (IsX86 && Name.startswith("avx512.cvtmask2")) {
       Rep = UpgradeMaskToInt(Builder, *CI);
     } else if (IsX86 && Name.endswith(".movntdqa")) {
-      Module *M = F->getParent();
       MDNode *Node = MDNode::get(
           C, ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
 
@@ -3535,7 +3532,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       LoadInst *LI = Builder.CreateAlignedLoad(
           CI->getType(), BC,
           Align(CI->getType()->getPrimitiveSizeInBits().getFixedValue() / 8));
-      LI->setMetadata(M->getMDKindID("nontemporal"), Node);
+      LI->setMetadata(LLVMContext::MD_nontemporal, Node);
       Rep = LI;
     } else if (IsX86 && (Name.startswith("fma.vfmadd.") ||
                          Name.startswith("fma.vfmsub.") ||
