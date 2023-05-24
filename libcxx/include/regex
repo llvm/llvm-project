@@ -2218,7 +2218,7 @@ class __match_any_but_newline
 public:
     typedef _VSTD::__state<_CharT> __state;
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+    _LIBCPP_INLINE_VISIBILITY
     __match_any_but_newline(__node<_CharT>* __s)
         : base(__s) {}
 
