@@ -2658,8 +2658,15 @@ TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
   auto impl = [&]() -> llvm::Optional<uint64_t> {
     if (auto *runtime =
             SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
-      return runtime->GetByteStride(GetCanonicalType(type));
+      if (auto stride = runtime->GetByteStride(GetCanonicalType(type)))
+        return stride;
     }
+    // Runtime failed, fallback to SwiftASTContext.
+    LLDB_LOGF(GetLog(LLDBLog::Types),
+              "Couldn't compute stride of type %s using SwiftLanguageRuntime.",
+              AsMangledName(type));
+    if (auto *swift_ast_context = GetSwiftASTContext())
+      return swift_ast_context->GetByteStride(ReconstructType(type), exe_scope);
     return {};
   };
   VALIDATE_AND_RETURN(impl, GetByteStride, type, exe_scope,
