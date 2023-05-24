@@ -165,7 +165,7 @@ void HwasanAllocatorLock() { allocator.ForceLock(); }
 
 void HwasanAllocatorUnlock() { allocator.ForceUnlock(); }
 
-void AllocatorSwallowThreadLocalCache(AllocatorCache *cache) {
+void AllocatorThreadFinish(AllocatorCache *cache) {
   allocator.SwallowCache(cache);
 }
 
