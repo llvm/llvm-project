@@ -1530,6 +1530,20 @@ static void printConstant(const Constant *COp, raw_ostream &CS) {
     printConstant(CI->getValue(), CS);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
     printConstant(CF->getValueAPF(), CS);
+  } else if (auto *CDS = dyn_cast<ConstantDataSequential>(COp)) {
+    Type *EltTy = CDS->getElementType();
+    bool IsInteger = EltTy->isIntegerTy();
+    bool IsFP = EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
+    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+      if (I != 0)
+        CS << ",";
+      if (IsInteger)
+        printConstant(CDS->getElementAsAPInt(I), CS);
+      else if (IsFP)
+        printConstant(CDS->getElementAsAPFloat(I), CS);
+      else
+        CS << "?";
+    }
   } else {
     CS << "?";
   }

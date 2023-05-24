@@ -7450,6 +7450,14 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       Mask = CFP->getValueAPF().bitcastToAPInt();
       return true;
     }
+    if (auto *CDS = dyn_cast<ConstantDataSequential>(Cst)) {
+      Type *Ty = CDS->getType();
+      Mask = APInt::getZero(Ty->getPrimitiveSizeInBits());
+      unsigned EltBits = CDS->getElementType()->getPrimitiveSizeInBits();
+      for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I)
+        Mask.insertBits(CDS->getElementAsAPInt(I), I * EltBits);
+      return true;
+    }
     return false;
   };
 
@@ -7511,12 +7519,12 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   if (Op.getOpcode() == X86ISD::VBROADCAST_LOAD &&
       EltSizeInBits <= VT.getScalarSizeInBits()) {
     auto *MemIntr = cast<MemIntrinsicSDNode>(Op);
-    if (MemIntr->getMemoryVT().getScalarSizeInBits() != VT.getScalarSizeInBits())
+    if (MemIntr->getMemoryVT().getStoreSizeInBits() != VT.getScalarSizeInBits())
       return false;
 
     SDValue Ptr = MemIntr->getBasePtr();
     if (const Constant *C = getTargetConstantFromBasePtr(Ptr)) {
-      unsigned SrcEltSizeInBits = C->getType()->getScalarSizeInBits();
+      unsigned SrcEltSizeInBits = VT.getScalarSizeInBits();
       unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
 
       APInt UndefSrcElts(NumSrcElts, 0);
@@ -9695,24 +9703,27 @@ static SDValue combineToConsecutiveLoads(EVT VT, SDValue Op, const SDLoc &DL,
 static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
                                    unsigned SplatBitSize, LLVMContext &C) {
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  unsigned NumElm = SplatBitSize / ScalarSize;
 
-  SmallVector<Constant *, 32> ConstantVec;
-  for (unsigned i = 0; i < NumElm; i++) {
-    APInt Val = SplatValue.extractBits(ScalarSize, ScalarSize * i);
-    Constant *Const;
+  auto getConstantScalar = [&](const APInt &Val) -> Constant * {
     if (VT.isFloatingPoint()) {
-      if (ScalarSize == 16) {
-        Const = ConstantFP::get(C, APFloat(APFloat::IEEEhalf(), Val));
-      } else if (ScalarSize == 32) {
-        Const = ConstantFP::get(C, APFloat(APFloat::IEEEsingle(), Val));
-      } else {
-        assert(ScalarSize == 64 && "Unsupported floating point scalar size");
-        Const = ConstantFP::get(C, APFloat(APFloat::IEEEdouble(), Val));
-      }
-    } else
-      Const = Constant::getIntegerValue(Type::getIntNTy(C, ScalarSize), Val);
-    ConstantVec.push_back(Const);
+      if (ScalarSize == 16)
+        return ConstantFP::get(C, APFloat(APFloat::IEEEhalf(), Val));
+      if (ScalarSize == 32)
+        return ConstantFP::get(C, APFloat(APFloat::IEEEsingle(), Val));
+      assert(ScalarSize == 64 && "Unsupported floating point scalar size");
+      return ConstantFP::get(C, APFloat(APFloat::IEEEdouble(), Val));
+    }
+    return Constant::getIntegerValue(Type::getIntNTy(C, ScalarSize), Val);
+  };
+
+  if (ScalarSize == SplatBitSize)
+    return getConstantScalar(SplatValue);
+
+  unsigned NumElm = SplatBitSize / ScalarSize;
+  SmallVector<Constant *, 32> ConstantVec;
+  for (unsigned I = 0; I != NumElm; ++I) {
+    APInt Val = SplatValue.extractBits(ScalarSize, ScalarSize * I);
+    ConstantVec.push_back(getConstantScalar(Val));
   }
   return ConstantVector::get(ArrayRef<Constant *>(ConstantVec));
 }
@@ -9831,11 +9842,9 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
       if (Subtarget.hasAVX()) {
         if (SplatBitSize == 32 || SplatBitSize == 64 ||
             (SplatBitSize < 32 && Subtarget.hasAVX2())) {
-          // Splatted value can fit in one INTEGER constant in constant pool.
-          // Load the constant and broadcast it.
+          // Load the constant scalar/subvector and broadcast it.
           MVT CVT = MVT::getIntegerVT(SplatBitSize);
-          Type *ScalarTy = Type::getIntNTy(*Ctx, SplatBitSize);
-          Constant *C = Constant::getIntegerValue(ScalarTy, SplatValue);
+          Constant *C = getConstantVector(VT, SplatValue, SplatBitSize, *Ctx);
           SDValue CP = DAG.getConstantPool(C, PVT);
           unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
 
