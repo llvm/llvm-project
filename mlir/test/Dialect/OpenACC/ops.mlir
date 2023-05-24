@@ -510,6 +510,31 @@ acc.private.recipe @privatization_memref_10_10_f32 : memref<10x10xf32> init {
   acc.terminator
 }
 
+acc.firstprivate.recipe @privatization_memref_10xf32 : memref<10xf32> init {
+^bb0(%arg0: memref<10xf32>):
+  %0 = memref.alloc() : memref<10xf32>
+  acc.yield %0 : memref<10xf32>
+} copy {
+^bb0(%arg0: memref<10xf32>, %arg1: memref<10xf32>):
+  acc.terminator
+} destroy {
+^bb0(%arg0: memref<10xf32>):
+  memref.dealloc %arg0 : memref<10xf32> 
+  acc.terminator
+}
+
+// Test optional destroy region
+acc.firstprivate.recipe @privatization_memref_20xf32 : memref<20xf32> init {
+^bb0(%arg0: memref<20xf32>):
+  %0 = memref.alloc() : memref<20xf32>
+  acc.yield %0 : memref<20xf32>
+} copy {
+^bb0(%arg0: memref<20xf32>, %arg1: memref<20xf32>):
+  acc.terminator
+}
+
+// CHECK-LABEL: acc.firstprivate.recipe @privatization_memref_20xf32 : memref<20xf32> init
+
 func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %i64value = arith.constant 1 : i64
   %i32value = arith.constant 1 : i32

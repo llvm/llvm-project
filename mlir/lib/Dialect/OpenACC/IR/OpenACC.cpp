@@ -398,6 +398,9 @@ LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
     return emitOpError() << "expects copy region with two arguments of the "
                             "privatization type";
 
+  if (getDestroyRegion().empty())
+    return success();
+
   if (failed(verifyInitLikeSingleArgRegion(*this, getDestroyRegion(),
                                            "privatization", "destroy",
                                            getType(), /*verifyYield=*/false)))
