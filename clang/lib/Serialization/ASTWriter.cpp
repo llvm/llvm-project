@@ -5987,13 +5987,20 @@ void ASTRecordWriter::AddVarDeclInit(const VarDecl *VD) {
     return;
   }
 
-  unsigned Val = 1;
+  uint64_t Val = 1;
   if (EvaluatedStmt *ES = VD->getEvaluatedStmt()) {
     Val |= (ES->HasConstantInitialization ? 2 : 0);
     Val |= (ES->HasConstantDestruction ? 4 : 0);
-    // FIXME: Also emit the constant initializer value.
+    APValue *Evaluated = VD->getEvaluatedValue();
+    // If the evaluted result is constant, emit it.
+    if (Evaluated && (Evaluated->isInt() || Evaluated->isFloat()))
+      Val |= 8;
   }
   push_back(Val);
+  if (Val & 8) {
+    AddAPValue(*VD->getEvaluatedValue());
+  }
+
   writeStmtRef(Init);
 }
 
