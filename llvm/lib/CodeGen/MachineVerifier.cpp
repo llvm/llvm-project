@@ -297,6 +297,7 @@ namespace {
       AU.addUsedIfAvailable<LiveStacks>();
       AU.addUsedIfAvailable<LiveVariables>();
       AU.addUsedIfAvailable<SlotIndexes>();
+      AU.addUsedIfAvailable<LiveIntervals>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
