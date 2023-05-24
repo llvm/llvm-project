@@ -416,36 +416,7 @@ ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 /// UnreachableInst, otherwise it branches to Tail.
 /// Returns the NewBasicBlock's terminator.
 ///
-/// Updates DT and LI if given.
-///
-/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
-Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
-                                       bool Unreachable, MDNode *BranchWeights,
-                                       DominatorTree *DT,
-                                       LoopInfo *LI = nullptr,
-                                       BasicBlock *ThenBlock = nullptr);
-
-/// Split the containing block at the specified instruction - everything before
-/// SplitBefore stays in the old basic block, and the rest of the instructions
-/// in the BB are moved to a new block. The two blocks are connected by a
-/// conditional branch (with value of Cmp being the condition).
-/// Before:
-///   Head
-///   SplitBefore
-///   Tail
-/// After:
-///   Head
-///   if (Cond)
-///     ThenBlock
-///   SplitBefore
-///   Tail
-///
-/// If \p ThenBlock is not specified, a new block will be created for it.
-/// If \p Unreachable is true, the newly created block will end with
-/// UnreachableInst, otherwise it branches to Tail.
-/// Returns the NewBasicBlock's terminator.
-///
-/// Updates DT and LI if given.
+/// Updates DTU and LI if given.
 Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
                                        bool Unreachable,
                                        MDNode *BranchWeights = nullptr,
