@@ -15515,8 +15515,10 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
 
     EVT Op1VT = N->getOperand(1).getValueType();
     unsigned Opcode = N->getOperand(1).getOpcode();
+    bool NeedsFPCVT = Opcode == ISD::FP_TO_UINT && Op1VT == MVT::i64;
 
-    if (Opcode == ISD::FP_TO_SINT || Opcode == ISD::FP_TO_UINT) {
+    if ((Opcode == ISD::FP_TO_SINT || Opcode == ISD::FP_TO_UINT) &&
+        (!NeedsFPCVT || Subtarget.hasFPCVT())) {
       SDValue Val= combineStoreFPToInt(N, DCI);
       if (Val)
         return Val;
