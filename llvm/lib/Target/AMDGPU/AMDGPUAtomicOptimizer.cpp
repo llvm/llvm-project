@@ -15,6 +15,7 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
@@ -59,7 +60,7 @@ private:
   SmallVector<ReplacementInfo, 8> ToReplace;
   const UniformityInfo *UA;
   const DataLayout *DL;
-  DominatorTree *DT;
+  DomTreeUpdater &DTU;
   const GCNSubtarget *ST;
   bool IsPixelShader;
 
@@ -76,9 +77,9 @@ public:
   AMDGPUAtomicOptimizerImpl() = delete;
 
   AMDGPUAtomicOptimizerImpl(const UniformityInfo *UA, const DataLayout *DL,
-                            DominatorTree *DT, const GCNSubtarget *ST,
+                            DomTreeUpdater &DTU, const GCNSubtarget *ST,
                             bool IsPixelShader)
-      : UA(UA), DL(DL), DT(DT), ST(ST), IsPixelShader(IsPixelShader) {}
+      : UA(UA), DL(DL), DTU(DTU), ST(ST), IsPixelShader(IsPixelShader) {}
 
   bool run(Function &F);
 
@@ -103,7 +104,8 @@ bool AMDGPUAtomicOptimizer::runOnFunction(Function &F) {
 
   DominatorTreeWrapperPass *const DTW =
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DominatorTree *DT = DTW ? &DTW->getDomTree() : nullptr;
+  DomTreeUpdater DTU(DTW ? &DTW->getDomTree() : nullptr,
+                     DomTreeUpdater::UpdateStrategy::Lazy);
 
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
@@ -111,7 +113,7 @@ bool AMDGPUAtomicOptimizer::runOnFunction(Function &F) {
 
   bool IsPixelShader = F.getCallingConv() == CallingConv::AMDGPU_PS;
 
-  return AMDGPUAtomicOptimizerImpl(UA, DL, DT, ST, IsPixelShader).run(F);
+  return AMDGPUAtomicOptimizerImpl(UA, DL, DTU, ST, IsPixelShader).run(F);
 }
 
 PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
@@ -120,12 +122,13 @@ PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
   const auto *UA = &AM.getResult<UniformityInfoAnalysis>(F);
   const DataLayout *DL = &F.getParent()->getDataLayout();
 
-  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  DomTreeUpdater DTU(&AM.getResult<DominatorTreeAnalysis>(F),
+                     DomTreeUpdater::UpdateStrategy::Lazy);
   const GCNSubtarget *ST = &TM.getSubtarget<GCNSubtarget>(F);
 
   bool IsPixelShader = F.getCallingConv() == CallingConv::AMDGPU_PS;
 
-  return AMDGPUAtomicOptimizerImpl(UA, DL, DT, ST, IsPixelShader).run(F)
+  return AMDGPUAtomicOptimizerImpl(UA, DL, DTU, ST, IsPixelShader).run(F)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }
@@ -519,7 +522,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
     Value *const Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {}, {});
     Instruction *const NonHelperTerminator =
-        SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, DT, nullptr);
+        SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
 
     // Record I's new position as the exit block.
     PixelExitBB = I.getParent();
@@ -648,7 +651,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // entry --> single_lane -\
   //       \------------------> exit
   Instruction *const SingleLaneTerminator =
-      SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, DT, nullptr);
+      SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
 
   // Move the IR builder into single_lane next.
   B.SetInsertPoint(SingleLaneTerminator);

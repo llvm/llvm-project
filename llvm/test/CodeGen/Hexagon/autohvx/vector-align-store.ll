@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hvc-align-full-hvx-stores < %s | FileCheck %s
+; RUN: llc -march=hexagon -hvc-va-full-stores < %s | FileCheck %s
 
 ; Make sure we generate 3 aligned stores.
 ; CHECK: vmem({{.*}}) =

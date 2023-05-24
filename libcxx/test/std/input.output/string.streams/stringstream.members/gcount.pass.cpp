@@ -6,12 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// All 32 bit arches that CI has:
-//
-// UNSUPPORTED: target=powerpc-ibm-aix
-// UNSUPPORTED: target={{.*}}armv7l{{.*}}
-// UNSUPPORTED: target={{.*}}armv8l{{.*}}
-// UNSUPPORTED: target=i686-w64-windows-gnu
+// UNSUPPORTED: 32-bit-pointer
 
 // Test that tellp() does not break the stringstream after INT_MAX, due to use
 // of pbump() that accept int.

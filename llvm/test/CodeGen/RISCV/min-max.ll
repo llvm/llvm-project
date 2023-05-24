@@ -682,13 +682,11 @@ define signext i32 @smin_i32_negone(i32 signext %a) {
 define i64 @smin_i64_negone(i64 %a) {
 ; RV32I-LABEL: smin_i64_negone:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slti a2, a1, -1
-; RV32I-NEXT:    li a3, -1
+; RV32I-NEXT:    slti a2, a1, 0
 ; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    beq a1, a3, .LBB27_2
-; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    or a0, a2, a0
-; RV32I-NEXT:  .LBB27_2:
+; RV32I-NEXT:    slti a2, a1, -1
+; RV32I-NEXT:    addi a2, a2, -1
 ; RV32I-NEXT:    or a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
@@ -702,13 +700,11 @@ define i64 @smin_i64_negone(i64 %a) {
 ; RV32ZBB-LABEL: smin_i64_negone:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    li a2, -1
-; RV32ZBB-NEXT:    beq a1, a2, .LBB27_2
-; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    slti a3, a1, -1
-; RV32ZBB-NEXT:    addi a3, a3, -1
-; RV32ZBB-NEXT:    or a0, a3, a0
-; RV32ZBB-NEXT:  .LBB27_2:
-; RV32ZBB-NEXT:    min a1, a1, a2
+; RV32ZBB-NEXT:    min a2, a1, a2
+; RV32ZBB-NEXT:    slti a1, a1, 0
+; RV32ZBB-NEXT:    addi a1, a1, -1
+; RV32ZBB-NEXT:    or a0, a1, a0
+; RV32ZBB-NEXT:    mv a1, a2
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: smin_i64_negone:

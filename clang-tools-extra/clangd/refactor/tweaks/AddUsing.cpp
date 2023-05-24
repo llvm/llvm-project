@@ -288,11 +288,18 @@ bool AddUsing::prepare(const Selection &Inputs) {
   if (Node == nullptr)
     return false;
 
+  // Closed range for the fully qualified name as spelled in source code.
   SourceRange SpelledNameRange;
   if (auto *D = Node->ASTNode.get<DeclRefExpr>()) {
     if (D->getDecl()->getIdentifier()) {
       QualifierToRemove = D->getQualifierLoc();
+      // Use the name range rather than expr, as the latter can contain template
+      // arguments in the range.
       SpelledNameRange = D->getSourceRange();
+      // Remove the template arguments from the name, as they shouldn't be
+      // spelled in the using declaration.
+      if (auto AngleLoc = D->getLAngleLoc(); AngleLoc.isValid())
+        SpelledNameRange.setEnd(AngleLoc.getLocWithOffset(-1));
       MustInsertAfterLoc = D->getDecl()->getBeginLoc();
     }
   } else if (auto *T = Node->ASTNode.get<TypeLoc>()) {

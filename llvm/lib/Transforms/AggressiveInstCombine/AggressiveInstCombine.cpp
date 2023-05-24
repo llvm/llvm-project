@@ -766,7 +766,8 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
 // pattern which suggests that the loads can be combined. The one and only use
 // of the loads is to form a wider load.
 static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
-                                 TargetTransformInfo &TTI, AliasAnalysis &AA) {
+                                 TargetTransformInfo &TTI, AliasAnalysis &AA,
+                                 const DominatorTree &DT) {
   // Only consider load chains of scalar values.
   if (isa<VectorType>(I.getType()))
     return false;
@@ -791,15 +792,17 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   if (!Allowed || !Fast)
     return false;
 
-  // Make sure the Load pointer of type GEP/non-GEP is above insert point
-  Instruction *Inst = dyn_cast<Instruction>(LI1->getPointerOperand());
-  if (Inst && Inst->getParent() == LI1->getParent() &&
-      !Inst->comesBefore(LOps.RootInsert))
-    Inst->moveBefore(LOps.RootInsert);
-
-  // New load can be generated
+  // Get the Index and Ptr for the new GEP.
   Value *Load1Ptr = LI1->getPointerOperand();
   Builder.SetInsertPoint(LOps.RootInsert);
+  if (!DT.dominates(Load1Ptr, LOps.RootInsert)) {
+    APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
+    Load1Ptr = Load1Ptr->stripAndAccumulateConstantOffsets(
+        DL, Offset1, /* AllowNonInbounds */ true);
+    Load1Ptr = Builder.CreateGEP(Builder.getInt8Ty(), Load1Ptr,
+                                 Builder.getInt32(Offset1.getZExtValue()));
+  }
+  // Generate wider load.
   Value *NewPtr = Builder.CreateBitCast(Load1Ptr, WiderType->getPointerTo(AS));
   NewLoad = Builder.CreateAlignedLoad(WiderType, NewPtr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
@@ -936,7 +939,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToFPToSat(I, TTI);
       MadeChange |= tryToRecognizeTableBasedCttz(I);
-      MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA);
+      MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make

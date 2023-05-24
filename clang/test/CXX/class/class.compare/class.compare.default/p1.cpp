@@ -27,6 +27,16 @@ struct A {
     bool operator==(const A&) const = default; // expected-error {{comparison operator template cannot be defaulted}}
 };
 
+template<class C> struct D {
+  C i;
+  friend bool operator==(const D&, D) = default; // expected-error {{must have the same type}}
+  friend bool operator>(D, const D&) = default; // expected-error {{must have the same type}}
+  friend bool operator<(const D&, const D&) = default;
+  friend bool operator<=(D, D) = default;
+
+  bool operator!=(D) const = default; // expected-error {{invalid parameter type for defaulted equality comparison operator}}
+};
+
 template<typename T> struct Dependent {
   using U = typename T::type;
   bool operator==(U) const = default; // expected-error {{found 'U'}}

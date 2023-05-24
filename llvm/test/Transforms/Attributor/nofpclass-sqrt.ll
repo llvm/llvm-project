@@ -221,9 +221,9 @@ define float @ret_sqrt_ftz_dynamic_noinf_nonegzero(float nofpclass(inf nzero) %a
 }
 
 define float @constrained_sqrt(float %arg) strictfp {
-; CHECK-LABEL: define float @constrained_sqrt
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @constrained_sqrt
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
+; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(ninf nsub nnorm) float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.sqrt.f32(float %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -231,9 +231,9 @@ define float @constrained_sqrt(float %arg) strictfp {
 }
 
 define float @constrained_sqrt_nonan(float nofpclass(nan) %arg) strictfp {
-; CHECK-LABEL: define float @constrained_sqrt_nonan
+; CHECK-LABEL: define nofpclass(snan ninf nsub nnorm) float @constrained_sqrt_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR9]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
+; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(snan ninf nsub nnorm) float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.sqrt.f32(float %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -241,9 +241,9 @@ define float @constrained_sqrt_nonan(float nofpclass(nan) %arg) strictfp {
 }
 
 define float @constrained_sqrt_nopinf(float nofpclass(pinf) %arg) strictfp {
-; CHECK-LABEL: define float @constrained_sqrt_nopinf
+; CHECK-LABEL: define nofpclass(inf nsub nnorm) float @constrained_sqrt_nopinf
 ; CHECK-SAME: (float nofpclass(pinf) [[ARG:%.*]]) #[[ATTR9]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
+; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(inf nsub nnorm) float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.sqrt.f32(float %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -251,9 +251,9 @@ define float @constrained_sqrt_nopinf(float nofpclass(pinf) %arg) strictfp {
 }
 
 define float @constrained_sqrt_nonegzero(float nofpclass(nzero) %arg) strictfp {
-; CHECK-LABEL: define float @constrained_sqrt_nonegzero
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @constrained_sqrt_nonegzero
 ; CHECK-SAME: (float nofpclass(nzero) [[ARG:%.*]]) #[[ATTR9]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
+; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.sqrt.f32(float %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -261,9 +261,9 @@ define float @constrained_sqrt_nonegzero(float nofpclass(nzero) %arg) strictfp {
 }
 
 define float @constrained_sqrt_nozero(float nofpclass(zero) %arg) strictfp {
-; CHECK-LABEL: define float @constrained_sqrt_nozero
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @constrained_sqrt_nozero
 ; CHECK-SAME: (float nofpclass(zero) [[ARG:%.*]]) #[[ATTR9]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
+; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.experimental.constrained.sqrt.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.sqrt.f32(float %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")

@@ -197,7 +197,7 @@ INTERCEPTOR(void*, pvalloc, uptr size) {
 #endif // SANITIZER_INTERCEPT_PVALLOC
 
 #if SANITIZER_INTERCEPT_CFREE
-INTERCEPTOR(void, cfree, void *p) ALIAS(WRAPPER_NAME(free));
+INTERCEPTOR(void, cfree, void *p) ALIAS(WRAP(free));
 #define LSAN_MAYBE_INTERCEPT_CFREE INTERCEPT_FUNCTION(cfree)
 #else
 #define LSAN_MAYBE_INTERCEPT_CFREE

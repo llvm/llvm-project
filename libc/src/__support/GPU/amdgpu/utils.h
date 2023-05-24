@@ -122,6 +122,7 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
   return __builtin_amdgcn_readfirstlane(x);
 }
 
+/// Returns a bitmask of threads in the current lane for which \p x is true.
 [[clang::convergent]] LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
   // the lane_mask & gives the nvptx semantics when lane_mask is a subset of
   // the active threads

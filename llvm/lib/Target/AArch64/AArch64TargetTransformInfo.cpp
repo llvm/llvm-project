@@ -211,7 +211,8 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
-  return K == TargetTransformInfo::RGK_FixedWidthVector;
+  return (K == TargetTransformInfo::RGK_FixedWidthVector &&
+          !ST->forceStreamingCompatibleSVE());
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper

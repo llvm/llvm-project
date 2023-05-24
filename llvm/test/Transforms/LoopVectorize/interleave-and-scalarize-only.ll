@@ -21,7 +21,7 @@
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%start> + vp<[[CAN_IV]]> * ir<1>
 ; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
 ; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
-; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr ir<%dst>, vp<[[IV_STEPS]]>
+; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%dst>, vp<[[IV_STEPS]]>
 ; DBG-NEXT:     CLONE store ir<%min>, ir<%arrayidx>
 ; DBG-NEXT:     EMIT vp<[[INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
 ; DBG-NEXT:     EMIT branch-on-count  vp<[[INC]]> vp<[[VEC_TC]]>
@@ -87,9 +87,9 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.if:
 ; DBG-NEXT:       vp<[[STEPS2:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; DBG-NEXT:       CLONE ir<%gep.src> = getelementptr ir<%src>, vp<[[STEPS2]]>
+; DBG-NEXT:       CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS2]]>
 ; DBG-NEXT:       CLONE ir<%l> = load ir<%gep.src>
-; DBG-NEXT:       CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[STEPS2]]>
+; DBG-NEXT:       CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS2]]>
 ; DBG-NEXT:       CLONE store ir<%l>, ir<%gep.dst>
 ; DBG-NEXT:     Successor(s): pred.store.continue
 ; DBG-EMPTY:
