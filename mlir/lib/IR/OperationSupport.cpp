@@ -877,6 +877,9 @@ OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
   topOp->walk([&](Operation *op) {
     //   - Operation pointer
     addDataToHash(hasher, op);
+    //   - Parent operation pointer (to take into account the nesting structure)
+    if (op != topOp)
+      addDataToHash(hasher, op->getParentOp());
     //   - Attributes
     addDataToHash(hasher, op->getDiscardableAttrDictionary());
     //   - Properties
