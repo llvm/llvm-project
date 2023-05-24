@@ -369,11 +369,11 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
 }
 
 static void DiagnoseUninitializedSubobject(InterpState &S, const SourceInfo &SI,
-                                           QualType SubObjType,
-                                           SourceLocation SubObjLoc) {
-  S.FFDiag(SI, diag::note_constexpr_uninitialized) << true << SubObjType;
-  if (SubObjLoc.isValid())
-    S.Note(SubObjLoc, diag::note_constexpr_subobject_declared_here);
+                                           const FieldDecl *SubObjDecl) {
+  assert(SubObjDecl && "Subobject declaration does not exist");
+  S.FFDiag(SI, diag::note_constexpr_uninitialized) << SubObjDecl;
+  S.Note(SubObjDecl->getLocation(),
+         diag::note_constexpr_subobject_declared_here);
 }
 
 static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
@@ -400,8 +400,8 @@ static bool CheckArrayInitialized(InterpState &S, CodePtr OpPC,
   } else {
     for (size_t I = 0; I != NumElems; ++I) {
       if (!BasePtr.atIndex(I).isInitialized()) {
-        DiagnoseUninitializedSubobject(S, S.Current->getSource(OpPC), ElemType,
-                                       BasePtr.getFieldDesc()->getLocation());
+        DiagnoseUninitializedSubobject(S, S.Current->getSource(OpPC),
+                                       BasePtr.getField());
         Result = false;
       }
     }
@@ -426,8 +426,7 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
           cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());
       Result &= CheckArrayInitialized(S, OpPC, FieldPtr, CAT);
     } else if (!FieldPtr.isInitialized()) {
-      DiagnoseUninitializedSubobject(S, S.Current->getSource(OpPC),
-                                     F.Decl->getType(), F.Decl->getLocation());
+      DiagnoseUninitializedSubobject(S, S.Current->getSource(OpPC), F.Decl);
       Result = false;
     }
   }
