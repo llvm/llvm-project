@@ -58,17 +58,13 @@ class AllocatorStats {
 // Global stats, used for aggregation and querying.
 class AllocatorGlobalStats : public AllocatorStats {
  public:
-  void InitLinkerInitialized() {
-    next_ = this;
-    prev_ = this;
-  }
   void Init() {
     internal_memset(this, 0, sizeof(*this));
-    InitLinkerInitialized();
   }
 
   void Register(AllocatorStats *s) {
     SpinMutexLock l(&mu_);
+    LazyInit();
     s->next_ = next_;
     s->prev_ = this;
     next_->prev_ = s;
@@ -87,7 +83,7 @@ class AllocatorGlobalStats : public AllocatorStats {
     internal_memset(s, 0, AllocatorStatCount * sizeof(uptr));
     SpinMutexLock l(&mu_);
     const AllocatorStats *stats = this;
-    for (;;) {
+    for (; stats;) {
       for (int i = 0; i < AllocatorStatCount; i++)
         s[i] += stats->Get(AllocatorStat(i));
       stats = stats->next_;
@@ -100,6 +96,13 @@ class AllocatorGlobalStats : public AllocatorStats {
   }
 
  private:
+  void LazyInit() {
+    if (!next_) {
+      next_ = this;
+      prev_ = this;
+    }
+  }
+
   mutable StaticSpinMutex mu_;
 };
 
