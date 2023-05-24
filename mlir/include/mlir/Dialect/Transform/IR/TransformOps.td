@@ -441,7 +441,7 @@ def MergeHandlesOp : TransformDialectOp<"merge_handles",
   let arguments = (ins Variadic<TransformHandleTypeInterface>:$handles,
                        UnitAttr:$deduplicate);
   let results = (outs TransformHandleTypeInterface:$result);
-  let assemblyFormat = "($deduplicate^)? $handles attr-dict `:` type($result)";
+  let assemblyFormat = "(`deduplicate` $deduplicate^)? $handles attr-dict `:` type($result)";
   let hasFolder = 1;
 }
 

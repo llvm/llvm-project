@@ -555,6 +555,32 @@ transform.with_pdl_patterns {
 
 // -----
 
+func.func @foo(%arg0: index) {
+  %0 = arith.addi %arg0, %arg0 : index
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !transform.any_op):
+  pdl.pattern @addi : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "arith.addi"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 : !transform.any_op failures(propagate) {
+  ^bb0(%arg1: !transform.any_op):
+    %0 = pdl_match @addi in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = pdl_match @addi in %arg1 : (!transform.any_op) -> !transform.any_op
+    %2 = merge_handles deduplicate %0, %1 : !transform.any_op
+    // expected-remark @below {{1}}
+    test_print_number_of_associated_payload_ir_ops %2 : !transform.any_op
+  }
+}
+
+// -----
+
 func.func @foo() {
   "op" () { target_me } : () -> ()
   // expected-note @below {{when applied to this op}}
