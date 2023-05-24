@@ -1082,8 +1082,8 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
   if (State.first.isVirtual()) {
     // Virtual register def -- we can just look up where this happens.
     MachineInstr *Inst = MRI.def_begin(State.first)->getParent();
-    for (auto &MO : Inst->operands()) {
-      if (!MO.isReg() || !MO.isDef() || MO.getReg() != State.first)
+    for (auto &MO : Inst->all_defs()) {
+      if (MO.getReg() != State.first)
         continue;
       return ApplySubregisters({Inst->getDebugInstrNum(), MO.getOperandNo()});
     }
@@ -1100,10 +1100,9 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
   auto RMII = CurInst->getReverseIterator();
   auto PrevInstrs = make_range(RMII, CurInst->getParent()->instr_rend());
   for (auto &ToExamine : PrevInstrs) {
-    for (auto &MO : ToExamine.operands()) {
+    for (auto &MO : ToExamine.all_defs()) {
       // Test for operand that defines something aliasing RegToSeek.
-      if (!MO.isReg() || !MO.isDef() ||
-          !TRI.regsOverlap(RegToSeek, MO.getReg()))
+      if (!TRI.regsOverlap(RegToSeek, MO.getReg()))
         continue;
 
       return ApplySubregisters(

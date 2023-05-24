@@ -933,12 +933,12 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       continue;
 
     MI.clearKillInfo();
-    for (auto &Op : MI.operands()) {
+    for (auto &Op : MI.all_defs()) {
       // An implicit def of a super-register may not necessarily start a
       // live range of it, since an implicit use could be used to keep parts
       // of it live. Instead of analyzing the implicit operands, ignore
       // implicit defs.
-      if (!Op.isReg() || !Op.isDef() || Op.isImplicit())
+      if (Op.isImplicit())
         continue;
       Register R = Op.getReg();
       if (!R.isPhysical())
@@ -946,8 +946,8 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       for (MCPhysReg SR : TRI.subregs_inclusive(R))
         Live.reset(SR);
     }
-    for (auto &Op : MI.operands()) {
-      if (!Op.isReg() || !Op.isUse() || Op.isUndef())
+    for (auto &Op : MI.all_uses()) {
+      if (Op.isUndef())
         continue;
       Register R = Op.getReg();
       if (!R.isPhysical())
