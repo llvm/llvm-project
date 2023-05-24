@@ -384,7 +384,7 @@ Changes in existing checks
   with attributes and to support nested inline namespace introduced in c++20.
 
 - Fixed a false positive in :doc:`performance-no-automatic-move
-  <clang-tidy/checks/performance/no-automatic-move>` when warning would be
+  <clang-tidy/checks/performance/performance-no-automatic-move>` when warning would be
   emitted for a const local variable to which NRVO is applied.
 
 - Improved :doc:`performance-no-automatic-move
