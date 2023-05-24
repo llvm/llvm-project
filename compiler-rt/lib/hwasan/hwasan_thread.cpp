@@ -100,7 +100,7 @@ void Thread::ClearShadowForThreadStackAndTLS() {
 void Thread::Destroy() {
   if (flags()->verbose_threads)
     Print("Destroying: ");
-  AllocatorSwallowThreadLocalCache(allocator_cache());
+  AllocatorThreadFinish(allocator_cache());
   ClearShadowForThreadStackAndTLS();
   if (heap_allocations_)
     heap_allocations_->Delete();
