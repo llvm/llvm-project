@@ -88,8 +88,9 @@ static cl::opt<bool> DisableIDivExpand(
   cl::ReallyHidden,
   cl::init(false));
 
-class AMDGPUCodeGenPrepare : public FunctionPass,
-                             public InstVisitor<AMDGPUCodeGenPrepare, bool> {
+class AMDGPUCodeGenPrepareImpl
+    : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
+public:
   const GCNSubtarget *ST = nullptr;
   const TargetLibraryInfo *TLInfo = nullptr;
   AssumptionCache *AC = nullptr;
@@ -99,6 +100,7 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   const DataLayout *DL = nullptr;
   bool HasUnsafeFPMath = false;
   bool HasFP32Denormals = false;
+  bool FlowChanged = false;
 
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
 
@@ -232,10 +234,6 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   Value *applyFractPat(IRBuilder<> &Builder, Value *FractArg);
 
 public:
-  static char ID;
-
-  AMDGPUCodeGenPrepare() : FunctionPass(ID) {}
-
   bool visitFDiv(BinaryOperator &I);
   bool visitXor(BinaryOperator &I);
 
@@ -249,12 +247,18 @@ public:
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
   bool visitMinNum(IntrinsicInst &I);
+  bool run(Function &F);
+};
 
-  bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &F) override;
+class AMDGPUCodeGenPrepare : public FunctionPass {
+private:
+  AMDGPUCodeGenPrepareImpl Impl;
 
-  StringRef getPassName() const override { return "AMDGPU IR optimizations"; }
-
+public:
+  static char ID;
+  AMDGPUCodeGenPrepare() : FunctionPass(ID) {
+    initializeAMDGPUCodeGenPreparePass(*PassRegistry::getPassRegistry());
+  }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
@@ -263,12 +267,43 @@ public:
     // FIXME: Division expansion needs to preserve the dominator tree.
     if (!ExpandDiv64InIR)
       AU.setPreservesAll();
- }
+  }
+  bool runOnFunction(Function &F) override;
+  bool doInitialization(Module &M) override;
+  StringRef getPassName() const override { return "AMDGPU IR optimizations"; }
 };
 
 } // end anonymous namespace
 
-unsigned AMDGPUCodeGenPrepare::getBaseElementBitWidth(const Type *T) const {
+bool AMDGPUCodeGenPrepareImpl::run(Function &F) {
+  bool MadeChange = false;
+
+  Function::iterator NextBB;
+  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; FI = NextBB) {
+    BasicBlock *BB = &*FI;
+    NextBB = std::next(FI);
+
+    BasicBlock::iterator Next;
+    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;
+         I = Next) {
+      Next = std::next(I);
+
+      MadeChange |= visit(*I);
+
+      if (Next != E) { // Control flow changed
+        BasicBlock *NextInstBB = Next->getParent();
+        if (NextInstBB != BB) {
+          BB = NextInstBB;
+          E = BB->end();
+          FE = F.end();
+        }
+      }
+    }
+  }
+  return MadeChange;
+}
+
+unsigned AMDGPUCodeGenPrepareImpl::getBaseElementBitWidth(const Type *T) const {
   assert(needsPromotionToI32(T) && "T does not need promotion to i32");
 
   if (T->isIntegerTy())
@@ -276,7 +311,7 @@ unsigned AMDGPUCodeGenPrepare::getBaseElementBitWidth(const Type *T) const {
   return cast<VectorType>(T)->getElementType()->getIntegerBitWidth();
 }
 
-Type *AMDGPUCodeGenPrepare::getI32Ty(IRBuilder<> &B, const Type *T) const {
+Type *AMDGPUCodeGenPrepareImpl::getI32Ty(IRBuilder<> &B, const Type *T) const {
   assert(needsPromotionToI32(T) && "T does not need promotion to i32");
 
   if (T->isIntegerTy())
@@ -284,17 +319,17 @@ Type *AMDGPUCodeGenPrepare::getI32Ty(IRBuilder<> &B, const Type *T) const {
   return FixedVectorType::get(B.getInt32Ty(), cast<FixedVectorType>(T));
 }
 
-bool AMDGPUCodeGenPrepare::isSigned(const BinaryOperator &I) const {
+bool AMDGPUCodeGenPrepareImpl::isSigned(const BinaryOperator &I) const {
   return I.getOpcode() == Instruction::AShr ||
       I.getOpcode() == Instruction::SDiv || I.getOpcode() == Instruction::SRem;
 }
 
-bool AMDGPUCodeGenPrepare::isSigned(const SelectInst &I) const {
+bool AMDGPUCodeGenPrepareImpl::isSigned(const SelectInst &I) const {
   return isa<ICmpInst>(I.getOperand(0)) ?
       cast<ICmpInst>(I.getOperand(0))->isSigned() : false;
 }
 
-bool AMDGPUCodeGenPrepare::needsPromotionToI32(const Type *T) const {
+bool AMDGPUCodeGenPrepareImpl::needsPromotionToI32(const Type *T) const {
   if (!Widen16BitOps)
     return false;
 
@@ -314,7 +349,7 @@ bool AMDGPUCodeGenPrepare::needsPromotionToI32(const Type *T) const {
   return false;
 }
 
-bool AMDGPUCodeGenPrepare::isLegalFloatingTy(const Type *Ty) const {
+bool AMDGPUCodeGenPrepareImpl::isLegalFloatingTy(const Type *Ty) const {
   return Ty->isFloatTy() || Ty->isDoubleTy() ||
          (Ty->isHalfTy() && ST->has16BitInsts());
 }
@@ -347,7 +382,7 @@ static bool promotedOpIsNUW(const Instruction &I) {
   }
 }
 
-bool AMDGPUCodeGenPrepare::canWidenScalarExtLoad(LoadInst &I) const {
+bool AMDGPUCodeGenPrepareImpl::canWidenScalarExtLoad(LoadInst &I) const {
   Type *Ty = I.getType();
   const DataLayout &DL = Mod->getDataLayout();
   int TySize = DL.getTypeSizeInBits(Ty);
@@ -356,7 +391,7 @@ bool AMDGPUCodeGenPrepare::canWidenScalarExtLoad(LoadInst &I) const {
   return I.isSimple() && TySize < 32 && Alignment >= 4 && UA->isUniform(&I);
 }
 
-bool AMDGPUCodeGenPrepare::promoteUniformOpToI32(BinaryOperator &I) const {
+bool AMDGPUCodeGenPrepareImpl::promoteUniformOpToI32(BinaryOperator &I) const {
   assert(needsPromotionToI32(I.getType()) &&
          "I does not need promotion to i32");
 
@@ -403,7 +438,7 @@ bool AMDGPUCodeGenPrepare::promoteUniformOpToI32(BinaryOperator &I) const {
   return true;
 }
 
-bool AMDGPUCodeGenPrepare::promoteUniformOpToI32(ICmpInst &I) const {
+bool AMDGPUCodeGenPrepareImpl::promoteUniformOpToI32(ICmpInst &I) const {
   assert(needsPromotionToI32(I.getOperand(0)->getType()) &&
          "I does not need promotion to i32");
 
@@ -430,7 +465,7 @@ bool AMDGPUCodeGenPrepare::promoteUniformOpToI32(ICmpInst &I) const {
   return true;
 }
 
-bool AMDGPUCodeGenPrepare::promoteUniformOpToI32(SelectInst &I) const {
+bool AMDGPUCodeGenPrepareImpl::promoteUniformOpToI32(SelectInst &I) const {
   assert(needsPromotionToI32(I.getType()) &&
          "I does not need promotion to i32");
 
@@ -459,7 +494,7 @@ bool AMDGPUCodeGenPrepare::promoteUniformOpToI32(SelectInst &I) const {
   return true;
 }
 
-bool AMDGPUCodeGenPrepare::promoteUniformBitreverseToI32(
+bool AMDGPUCodeGenPrepareImpl::promoteUniformBitreverseToI32(
     IntrinsicInst &I) const {
   assert(I.getIntrinsicID() == Intrinsic::bitreverse &&
          "I must be bitreverse intrinsic");
@@ -485,11 +520,11 @@ bool AMDGPUCodeGenPrepare::promoteUniformBitreverseToI32(
   return true;
 }
 
-unsigned AMDGPUCodeGenPrepare::numBitsUnsigned(Value *Op) const {
+unsigned AMDGPUCodeGenPrepareImpl::numBitsUnsigned(Value *Op) const {
   return computeKnownBits(Op, *DL, 0, AC).countMaxActiveBits();
 }
 
-unsigned AMDGPUCodeGenPrepare::numBitsSigned(Value *Op) const {
+unsigned AMDGPUCodeGenPrepareImpl::numBitsSigned(Value *Op) const {
   return ComputeMaxSignificantBits(Op, *DL, 0, AC);
 }
 
@@ -548,7 +583,7 @@ static Value *getMul24(IRBuilder<> &Builder, Value *LHS, Value *RHS,
   return Builder.CreateOr(Lo, Builder.CreateShl(Hi, 32));
 }
 
-bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
+bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
   if (I.getOpcode() != Instruction::Mul)
     return false;
 
@@ -632,7 +667,7 @@ static SelectInst *findSelectThroughCast(Value *V, CastInst *&Cast) {
   return nullptr;
 }
 
-bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
+bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
   // Don't do this unless the old select is going away. We want to eliminate the
   // binary operator, not replace a binop with a select.
   int SelOpNo = 0;
@@ -799,7 +834,7 @@ static Value *optimizeWithFDivFast(Value *Num, Value *Den, float ReqdAccuracy,
 //   1/x -> fdiv.fast(1,x)  when !fpmath >= 2.5ulp.
 //
 // NOTE: rcp is the preference in cases that both are legal.
-bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
+bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
 
   Type *Ty = FDiv.getType()->getScalarType();
 
@@ -871,7 +906,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
   return !!NewFDiv;
 }
 
-bool AMDGPUCodeGenPrepare::visitXor(BinaryOperator &I) {
+bool AMDGPUCodeGenPrepareImpl::visitXor(BinaryOperator &I) {
   // Match the Xor instruction, its type and its operands
   IntrinsicInst *IntrinsicCall = dyn_cast<IntrinsicInst>(I.getOperand(0));
   ConstantInt *RHS = dyn_cast<ConstantInt>(I.getOperand(1));
@@ -922,9 +957,9 @@ static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
 /// Figure out how many bits are really needed for this division. \p AtLeast is
 /// an optimization hint to bypass the second ComputeNumSignBits call if we the
 /// first one is insufficient. Returns -1 on failure.
-int AMDGPUCodeGenPrepare::getDivNumBits(BinaryOperator &I,
-                                        Value *Num, Value *Den,
-                                        unsigned AtLeast, bool IsSigned) const {
+int AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
+                                            Value *Den, unsigned AtLeast,
+                                            bool IsSigned) const {
   const DataLayout &DL = Mod->getDataLayout();
   unsigned LHSSignBits = ComputeNumSignBits(Num, DL, 0, AC, &I);
   if (LHSSignBits < AtLeast)
@@ -943,21 +978,19 @@ int AMDGPUCodeGenPrepare::getDivNumBits(BinaryOperator &I,
 
 // The fractional part of a float is enough to accurately represent up to
 // a 24-bit signed integer.
-Value *AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
-                                            BinaryOperator &I,
-                                            Value *Num, Value *Den,
-                                            bool IsDiv, bool IsSigned) const {
+Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
+                                                BinaryOperator &I, Value *Num,
+                                                Value *Den, bool IsDiv,
+                                                bool IsSigned) const {
   int DivBits = getDivNumBits(I, Num, Den, 9, IsSigned);
   if (DivBits == -1)
     return nullptr;
   return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
 }
 
-Value *AMDGPUCodeGenPrepare::expandDivRem24Impl(IRBuilder<> &Builder,
-                                                BinaryOperator &I,
-                                                Value *Num, Value *Den,
-                                                unsigned DivBits,
-                                                bool IsDiv, bool IsSigned) const {
+Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
+    IRBuilder<> &Builder, BinaryOperator &I, Value *Num, Value *Den,
+    unsigned DivBits, bool IsDiv, bool IsSigned) const {
   Type *I32Ty = Builder.getInt32Ty();
   Num = Builder.CreateTrunc(Num, I32Ty);
   Den = Builder.CreateTrunc(Den, I32Ty);
@@ -1057,8 +1090,9 @@ Value *AMDGPUCodeGenPrepare::expandDivRem24Impl(IRBuilder<> &Builder,
 // than the general expansion we do here.
 
 // TODO: It would be better to just directly handle those optimizations here.
-bool AMDGPUCodeGenPrepare::divHasSpecialOptimization(
-  BinaryOperator &I, Value *Num, Value *Den) const {
+bool AMDGPUCodeGenPrepareImpl::divHasSpecialOptimization(BinaryOperator &I,
+                                                         Value *Num,
+                                                         Value *Den) const {
   if (Constant *C = dyn_cast<Constant>(Den)) {
     // Arbitrary constants get a better expansion as long as a wider mulhi is
     // legal.
@@ -1099,9 +1133,9 @@ static Value *getSign32(Value *V, IRBuilder<> &Builder, const DataLayout *DL) {
   return Builder.CreateAShr(V, Builder.getInt32(31));
 }
 
-Value *AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
-                                            BinaryOperator &I, Value *X,
-                                            Value *Y) const {
+Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
+                                                BinaryOperator &I, Value *X,
+                                                Value *Y) const {
   Instruction::BinaryOps Opc = I.getOpcode();
   assert(Opc == Instruction::URem || Opc == Instruction::UDiv ||
          Opc == Instruction::SRem || Opc == Instruction::SDiv);
@@ -1224,9 +1258,9 @@ Value *AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   return Res;
 }
 
-Value *AMDGPUCodeGenPrepare::shrinkDivRem64(IRBuilder<> &Builder,
-                                            BinaryOperator &I,
-                                            Value *Num, Value *Den) const {
+Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
+                                                BinaryOperator &I, Value *Num,
+                                                Value *Den) const {
   if (!ExpandDiv64InIR && divHasSpecialOptimization(I, Num, Den))
     return nullptr;  // Keep it for later optimization.
 
@@ -1255,7 +1289,7 @@ Value *AMDGPUCodeGenPrepare::shrinkDivRem64(IRBuilder<> &Builder,
   return nullptr;
 }
 
-void AMDGPUCodeGenPrepare::expandDivRem64(BinaryOperator &I) const {
+void AMDGPUCodeGenPrepareImpl::expandDivRem64(BinaryOperator &I) const {
   Instruction::BinaryOps Opc = I.getOpcode();
   // Do the general expansion.
   if (Opc == Instruction::UDiv || Opc == Instruction::SDiv) {
@@ -1271,7 +1305,7 @@ void AMDGPUCodeGenPrepare::expandDivRem64(BinaryOperator &I) const {
   llvm_unreachable("not a division");
 }
 
-bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
+bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
   if (foldBinOpIntoSelect(I))
     return true;
 
@@ -1347,6 +1381,7 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
     // TODO: We get much worse code in specially handled constant cases.
     for (BinaryOperator *Div : Div64ToExpand) {
       expandDivRem64(*Div);
+      FlowChanged = true;
       Changed = true;
     }
   }
@@ -1354,7 +1389,7 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
   return Changed;
 }
 
-bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
+bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
   if (!WidenLoads)
     return false;
 
@@ -1400,7 +1435,7 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
   return false;
 }
 
-bool AMDGPUCodeGenPrepare::visitICmpInst(ICmpInst &I) {
+bool AMDGPUCodeGenPrepareImpl::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
 
   if (ST->has16BitInsts() && needsPromotionToI32(I.getOperand(0)->getType()) &&
@@ -1410,18 +1445,18 @@ bool AMDGPUCodeGenPrepare::visitICmpInst(ICmpInst &I) {
   return Changed;
 }
 
-bool AMDGPUCodeGenPrepare::visitSelectInst(SelectInst &I) {
-  if (ST->has16BitInsts() && needsPromotionToI32(I.getType())) {
-    if (UA->isUniform(&I))
-      return promoteUniformOpToI32(I);
-    return false;
-  }
-
+bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
   Value *Cond = I.getCondition();
   Value *TrueVal = I.getTrueValue();
   Value *FalseVal = I.getFalseValue();
   Value *CmpVal;
   FCmpInst::Predicate Pred;
+
+  if (ST->has16BitInsts() && needsPromotionToI32(I.getType())) {
+    if (UA->isUniform(&I))
+      return promoteUniformOpToI32(I);
+    return false;
+  }
 
   // Match fract pattern with nan check.
   if (!match(Cond, m_FCmp(Pred, m_Value(CmpVal), m_NonNaN())))
@@ -1518,7 +1553,7 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
   return false;
 }
 
-bool AMDGPUCodeGenPrepare::canBreakPHINode(const PHINode &I) {
+bool AMDGPUCodeGenPrepareImpl::canBreakPHINode(const PHINode &I) {
   // Check in the cache, or add an entry for this node.
   //
   // We init with false because we consider all PHI nodes unbreakable until we
@@ -1623,7 +1658,7 @@ private:
   SmallDenseMap<std::pair<BasicBlock *, Value *>, Value *> SlicedVals;
 };
 
-bool AMDGPUCodeGenPrepare::visitPHINode(PHINode &I) {
+bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   // Break-up fixed-vector PHIs into smaller pieces.
   // Default threshold is 32, so it breaks up any vector that's >32 bits into
   // its elements, or into 32-bit pieces (for 8/16 bit elts).
@@ -1707,7 +1742,7 @@ bool AMDGPUCodeGenPrepare::visitPHINode(PHINode &I) {
   return true;
 }
 
-bool AMDGPUCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
+bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   switch (I.getIntrinsicID()) {
   case Intrinsic::bitreverse:
     return visitBitreverseIntrinsicInst(I);
@@ -1718,7 +1753,7 @@ bool AMDGPUCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   }
 }
 
-bool AMDGPUCodeGenPrepare::visitBitreverseIntrinsicInst(IntrinsicInst &I) {
+bool AMDGPUCodeGenPrepareImpl::visitBitreverseIntrinsicInst(IntrinsicInst &I) {
   bool Changed = false;
 
   if (ST->has16BitInsts() && needsPromotionToI32(I.getType()) &&
@@ -1733,7 +1768,7 @@ bool AMDGPUCodeGenPrepare::visitBitreverseIntrinsicInst(IntrinsicInst &I) {
 ///
 /// If fract is a useful instruction for the subtarget. Does not account for the
 /// nan handling; the instruction has a nan check on the input value.
-Value *AMDGPUCodeGenPrepare::matchFractPat(IntrinsicInst &I) {
+Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
   if (ST->hasFractBug())
     return nullptr;
 
@@ -1767,8 +1802,8 @@ Value *AMDGPUCodeGenPrepare::matchFractPat(IntrinsicInst &I) {
   return nullptr;
 }
 
-Value *AMDGPUCodeGenPrepare::applyFractPat(IRBuilder<> &Builder,
-                                           Value *FractArg) {
+Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
+                                               Value *FractArg) {
   SmallVector<Value *, 4> FractVals;
   extractValues(Builder, FractVals, FractArg);
 
@@ -1783,7 +1818,7 @@ Value *AMDGPUCodeGenPrepare::applyFractPat(IRBuilder<> &Builder,
   return insertValues(Builder, FractArg->getType(), ResultVals);
 }
 
-bool AMDGPUCodeGenPrepare::visitMinNum(IntrinsicInst &I) {
+bool AMDGPUCodeGenPrepareImpl::visitMinNum(IntrinsicInst &I) {
   Value *FractArg = matchFractPat(I);
   if (!FractArg)
     return false;
@@ -1807,8 +1842,8 @@ bool AMDGPUCodeGenPrepare::visitMinNum(IntrinsicInst &I) {
 }
 
 bool AMDGPUCodeGenPrepare::doInitialization(Module &M) {
-  Mod = &M;
-  DL = &Mod->getDataLayout();
+  Impl.Mod = &M;
+  Impl.DL = &Impl.Mod->getDataLayout();
   return false;
 }
 
@@ -1821,44 +1856,35 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
     return false;
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
-  ST = &TM.getSubtarget<GCNSubtarget>(F);
-  TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-
+  Impl.TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  Impl.ST = &TM.getSubtarget<GCNSubtarget>(F);
+  Impl.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  Impl.UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DT = DTWP ? &DTWP->getDomTree() : nullptr;
-
-  HasUnsafeFPMath = hasUnsafeFPMath(F);
-
+  Impl.DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  Impl.HasUnsafeFPMath = hasUnsafeFPMath(F);
   SIModeRegisterDefaults Mode(F);
-  HasFP32Denormals = Mode.allFP32Denormals();
+  Impl.HasFP32Denormals = Mode.allFP32Denormals();
+  return Impl.run(F);
+}
 
-  bool MadeChange = false;
-
-  Function::iterator NextBB;
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; FI = NextBB) {
-    BasicBlock *BB = &*FI;
-    NextBB = std::next(FI);
-
-    BasicBlock::iterator Next;
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; I = Next) {
-      Next = std::next(I);
-
-      MadeChange |= visit(*I);
-
-      if (Next != E) { // Control flow changed
-        BasicBlock *NextInstBB = Next->getParent();
-        if (NextInstBB != BB) {
-          BB = NextInstBB;
-          E = BB->end();
-          FE = F.end();
-        }
-      }
-    }
-  }
-
-  return MadeChange;
+PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
+                                                FunctionAnalysisManager &FAM) {
+  AMDGPUCodeGenPrepareImpl Impl;
+  Impl.Mod = F.getParent();
+  Impl.DL = &Impl.Mod->getDataLayout();
+  Impl.TLInfo = &FAM.getResult<TargetLibraryAnalysis>(F);
+  Impl.ST = &TM.getSubtarget<GCNSubtarget>(F);
+  Impl.AC = &FAM.getResult<AssumptionAnalysis>(F);
+  Impl.UA = &FAM.getResult<UniformityInfoAnalysis>(F);
+  Impl.DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+  Impl.HasUnsafeFPMath = hasUnsafeFPMath(F);
+  SIModeRegisterDefaults Mode(F);
+  Impl.HasFP32Denormals = Mode.allFP32Denormals();
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  if (!Impl.FlowChanged)
+    PA.preserveSet<CFGAnalyses>();
+  return Impl.run(F) ? PA : PreservedAnalyses::all();
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
