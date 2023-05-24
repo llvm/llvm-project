@@ -132,6 +132,18 @@ def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
+class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
+                          list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
+        NVPTXInst<(outs), (ins), "barrier.cluster."# variant #";", [(Intr)]>,
+        Requires<Preds>;
+
+def barrier_cluster_arrive:
+        INT_BARRIER_CLUSTER<"arrive", int_nvvm_barrier_cluster_arrive>;
+def barrier_cluster_arrive_relaxed:
+        INT_BARRIER_CLUSTER<"arrive.relaxed",
+        int_nvvm_barrier_cluster_arrive_relaxed, [hasPTX<80>, hasSM<90>]>;
+def barrier_cluster_wait:
+        INT_BARRIER_CLUSTER<"wait", int_nvvm_barrier_cluster_wait>;
 
 class SHFL_INSTR<bit sync, string mode, string reg, bit return_pred,
                  bit offset_imm, bit mask_imm, bit threadmask_imm>
@@ -303,6 +315,9 @@ def INT_MEMBAR_CTA : MEMBAR<"membar.cta;", int_nvvm_membar_cta>;
 def INT_MEMBAR_GL  : MEMBAR<"membar.gl;",  int_nvvm_membar_gl>;
 def INT_MEMBAR_SYS : MEMBAR<"membar.sys;", int_nvvm_membar_sys>;
 
+def INT_FENCE_SC_CLUSTER:
+       MEMBAR<"fence.sc.cluster;", int_nvvm_fence_sc_cluster>,
+       Requires<[hasPTX<78>, hasSM<90>]>;
 
 //-----------------------------------
 // Async Copy Functions

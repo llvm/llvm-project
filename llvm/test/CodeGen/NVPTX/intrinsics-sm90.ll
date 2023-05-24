@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx78| FileCheck --check-prefixes=CHECK %s
-; RUN: %if ptxas-11.8 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx78| %ptxas-verify -arch=sm_90 %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx80| FileCheck --check-prefixes=CHECK %s
+; RUN: %if ptxas-11.8 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx80| %ptxas-verify -arch=sm_90 %}
 
 ; CHECK-LABEL: test_isspacep
 define i1 @test_isspacep_shared_cluster(ptr %p) {
@@ -120,6 +120,19 @@ define i1 @test_is_explicit_cluster() {
         ret i1 %x
 }
 
+; CHECK-LABEL: test_barrier_cluster(
+define void @test_barrier_cluster() {
+; CHECK: barrier.cluster.arrive;
+       call void @llvm.nvvm.barrier.cluster.arrive()
+; CHECK: barrier.cluster.arrive.relaxed;
+       call void @llvm.nvvm.barrier.cluster.arrive.relaxed()
+; CHECK: barrier.cluster.wait;
+       call void @llvm.nvvm.barrier.cluster.wait()
+; CHECK: fence.sc.cluster
+       call void @llvm.nvvm.fence.sc.cluster()
+       ret void
+}
+
 
 declare i1 @llvm.nvvm.isspacep.shared.cluster(ptr %p);
 declare ptr @llvm.nvvm.mapa(ptr %p, i32 %r);
@@ -137,3 +150,7 @@ declare i32 @llvm.nvvm.read.ptx.sreg.nclusterid.w()
 declare i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
 declare i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
 declare i1 @llvm.nvvm.is_explicit_cluster()
+declare void @llvm.nvvm.barrier.cluster.arrive()
+declare void @llvm.nvvm.barrier.cluster.arrive.relaxed()
+declare void @llvm.nvvm.barrier.cluster.wait()
+declare void @llvm.nvvm.fence.sc.cluster()

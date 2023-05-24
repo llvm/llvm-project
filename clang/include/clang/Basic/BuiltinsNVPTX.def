@@ -582,6 +582,11 @@ TARGET_BUILTIN(__nvvm_bar_warp_sync, "vUi", "n", PTX60)
 TARGET_BUILTIN(__nvvm_barrier_sync, "vUi", "n", PTX60)
 TARGET_BUILTIN(__nvvm_barrier_sync_cnt, "vUiUi", "n", PTX60)
 
+TARGET_BUILTIN(__nvvm_barrier_cluster_arrive, "v", "n", AND(SM_90,PTX78))
+TARGET_BUILTIN(__nvvm_barrier_cluster_arrive_relaxed, "v", "n", AND(SM_90,PTX80))
+TARGET_BUILTIN(__nvvm_barrier_cluster_wait, "v", "n", AND(SM_90,PTX78))
+TARGET_BUILTIN(__nvvm_fence_sc_cluster, "v", "n", AND(SM_90,PTX78))
+
 // Shuffle
 
 BUILTIN(__nvvm_shfl_down_i32, "iiii", "")
