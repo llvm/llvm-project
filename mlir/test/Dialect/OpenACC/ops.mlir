@@ -1430,3 +1430,13 @@ acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
 // CHECK:         %[[RES:.*]] = arith.addi %[[ARG0]], %[[ARG1]] : i64
 // CHECK:         acc.yield %[[RES]] : i64
 // CHECK:       }
+
+func.func @acc_reduc_test(%a : i64) -> () {
+  acc.parallel reduction(@reduction_add_i64 -> %a : i64) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_reduc_test(
+// CHECK-SAME:    %[[ARG0:.*]]: i64)
+// CHECK:         acc.parallel reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
