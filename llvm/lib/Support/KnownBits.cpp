@@ -839,6 +839,8 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
       Known.Zero.setBit(0);
     // Odd / Even -> impossible
     // Even / Even -> unknown
+    if (Known.hasConflict())
+      Known.setAllZero();
   }
 
   return Known;
