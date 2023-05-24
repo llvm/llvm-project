@@ -1559,6 +1559,7 @@ module std [system] {
     module has_unique_object_representation          { private header "__type_traits/has_unique_object_representation.h" }
     module has_virtual_destructor                    { private header "__type_traits/has_virtual_destructor.h" }
     module integral_constant                         { private header "__type_traits/integral_constant.h" }
+    module invoke                                    { private header "__type_traits/invoke.h" }
     module is_abstract                               { private header "__type_traits/is_abstract.h" }
     module is_aggregate                              { private header "__type_traits/is_aggregate.h" }
     module is_allocator                              { private header "__type_traits/is_allocator.h" }

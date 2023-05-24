@@ -2153,7 +2153,27 @@ public:
 
     auto doCopyIn = [&]() -> ExtValue {
       ExtValue temp = genArrayTempFromMold(actualArg, tempName);
-      if (!arg.mayBeReadByCall()) {
+      if (!arg.mayBeReadByCall() &&
+          // INTENT(OUT) dummy argument finalization, automatically
+          // done when the procedure is invoked, may imply reading
+          // the argument value in the finalization routine.
+          // So we need to make a copy, if finalization may occur.
+          // TODO: do we have to avoid the copying for an actual
+          // argument of type that does not require finalization?
+          !arg.mayRequireIntentoutFinalization() &&
+          // ALLOCATABLE dummy argument may require finalization.
+          // If it has to be automatically deallocated at the end
+          // of the procedure invocation (9.7.3.2 p. 2),
+          // then the finalization may happen if the actual argument
+          // is allocated (7.5.6.3 p. 2).
+          !arg.hasAllocatableAttribute()) {
+        // We have to initialize the temp if it may have components
+        // that need initialization. If there are no components
+        // requiring initialization, then the call is a no-op.
+        if (getElementTypeOf(temp).isa<fir::RecordType>()) {
+          mlir::Value tempBox = fir::getBase(builder.createBox(loc, temp));
+          fir::runtime::genDerivedTypeInitialize(builder, loc, tempBox);
+        }
         return temp;
       }
       if (!isActualArgBox || inlineCopyInOutForBoxes) {
@@ -2161,12 +2181,16 @@ public:
         return temp;
       }
 
-      // Generate Assign() call to copy data from the actualArg
-      // to a temporary.
+      // Generate AssignTemporary() call to copy data from the actualArg
+      // to a temporary. AssignTemporary() will initialize the temporary,
+      // if needed, before doing the assignment, which is required
+      // since the temporary's components (if any) are uninitialized
+      // at this point.
       mlir::Value destBox = fir::getBase(builder.createBox(loc, temp));
       mlir::Value boxRef = builder.createTemporary(loc, destBox.getType());
       builder.create<fir::StoreOp>(loc, destBox, boxRef);
-      fir::runtime::genAssign(builder, loc, boxRef, fir::getBase(actualArg));
+      fir::runtime::genAssignTemporary(builder, loc, boxRef,
+                                       fir::getBase(actualArg));
       return temp;
     };
 
@@ -2272,21 +2296,37 @@ public:
         genArrayCopy(copyOutPair.var, copyOutPair.temp);
         return;
       }
-      // Generate Assign() call to copy data from the temporary
+      // Generate CopyOutAssign() call to copy data from the temporary
       // to the actualArg. Note that in case the actual argument
-      // is ALLOCATABLE/POINTER the Assign() implementation
+      // is ALLOCATABLE/POINTER the CopyOutAssign() implementation
       // should not engage its reallocation, because the temporary
       // is rank, shape and type compatible with it.
+      // Moreover, CopyOutAssign() guarantees that there will be no
+      // finalization for the LHS even if it is of a derived type
+      // with finalization.
       mlir::Value srcBox =
           fir::getBase(builder.createBox(loc, copyOutPair.temp));
       mlir::Value destBox =
           fir::getBase(builder.createBox(loc, copyOutPair.var));
       mlir::Value destBoxRef = builder.createTemporary(loc, destBox.getType());
       builder.create<fir::StoreOp>(loc, destBox, destBoxRef);
-      fir::runtime::genAssign(builder, loc, destBoxRef, srcBox);
+      fir::runtime::genCopyOutAssign(builder, loc, destBoxRef, srcBox,
+                                     /*skipToInit=*/true);
     };
     if (!copyOutPair.restrictCopyAndFreeAtRuntime) {
       doCopyOut();
+
+      if (fir::getElementTypeOf(copyOutPair.temp).isa<fir::RecordType>()) {
+        // Destroy components of the temporary (if any).
+        // If there are no components requiring destruction, then the call
+        // is a no-op.
+        mlir::Value tempBox =
+            fir::getBase(builder.createBox(loc, copyOutPair.temp));
+        fir::runtime::genDerivedTypeDestroyWithoutFinalization(builder, loc,
+                                                               tempBox);
+      }
+
+      // Deallocate the top-level entity of the temporary.
       builder.create<fir::FreeMemOp>(loc, fir::getBase(copyOutPair.temp));
       return;
     }
@@ -2294,6 +2334,17 @@ public:
     builder.genIfThen(loc, *copyOutPair.restrictCopyAndFreeAtRuntime)
         .genThen([&]() {
           doCopyOut();
+          if (fir::getElementTypeOf(copyOutPair.temp).isa<fir::RecordType>()) {
+            // Destroy components of the temporary (if any).
+            // If there are no components requiring destruction, then the call
+            // is a no-op.
+            mlir::Value tempBox =
+                fir::getBase(builder.createBox(loc, copyOutPair.temp));
+            fir::runtime::genDerivedTypeDestroyWithoutFinalization(builder, loc,
+                                                                   tempBox);
+          }
+
+          // Deallocate the top-level entity of the temporary.
           builder.create<fir::FreeMemOp>(loc, fir::getBase(copyOutPair.temp));
         })
         .end();

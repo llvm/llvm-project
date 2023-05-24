@@ -49,3 +49,6 @@ entry:
   store i8 %e, ptr %c, align 8
   ret i32 0
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 7, !"direct-access-external-data", i32 1}

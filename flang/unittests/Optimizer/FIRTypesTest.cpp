@@ -263,6 +263,10 @@ TEST_F(FIRTypesTest, updateTypeForUnlimitedPolymorphic) {
 TEST_F(FIRTypesTest, getTypeAsString) {
   EXPECT_EQ("i32",
       fir::getTypeAsString(mlir::IntegerType::get(&context, 32), *kindMap));
+  EXPECT_EQ("ref_i32",
+      fir::getTypeAsString(
+          fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)),
+          *kindMap));
   EXPECT_EQ(
       "f64", fir::getTypeAsString(mlir::FloatType::getF64(&context), *kindMap));
   EXPECT_EQ(
@@ -277,4 +281,6 @@ TEST_F(FIRTypesTest, getTypeAsString) {
   mlir::Type ty = mlir::IntegerType::get(&context, 64);
   mlir::Type arrTy = fir::SequenceType::get({10, 20}, ty);
   EXPECT_EQ("10x20xi64", fir::getTypeAsString(arrTy, *kindMap));
+  EXPECT_EQ(
+      "idx", fir::getTypeAsString(mlir::IndexType::get(&context), *kindMap));
 }

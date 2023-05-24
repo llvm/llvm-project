@@ -69,14 +69,10 @@ def _memoizeExpensiveOperation(extractCacheKey):
     return f
   return decorator
 
-def _executeScriptInternal(test, commands):
+def _executeWithFakeConfig(test, commands):
   """
-  Returns (stdout, stderr, exitCode, timeoutInfo)
-
-  TODO: This really should be easier to access from Lit itself
+  Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
   """
-  parsedCommands = libcxx.test.format.parseScript(test, preamble=commands)
-
   litConfig = lit.LitConfig.LitConfig(
     progname='lit',
     path=[],
@@ -89,23 +85,7 @@ def _executeScriptInternal(test, commands):
     isWindows=platform.system() == 'Windows',
     order='smart',
     params={})
-  _, tmpBase = libcxx.test.format._getTempPaths(test)
-  execDir = os.path.dirname(test.getExecPath())
-  res = lit.TestRunner.executeScriptInternal(test, litConfig, tmpBase, parsedCommands, execDir)
-  if isinstance(res, lit.Test.Result): # Handle failure to parse the Lit test
-    res = ('', res.output, 127, None)
-  (out, err, exitCode, timeoutInfo) = res
-
-  # TODO: As a temporary workaround until https://reviews.llvm.org/D81892 lands, manually
-  #       split any stderr output that is included in stdout. It shouldn't be there, but
-  #       the Lit internal shell conflates stderr and stdout.
-  conflatedErrorOutput = re.search("(# command stderr:.+$)", out, flags=re.DOTALL)
-  if conflatedErrorOutput:
-    conflatedErrorOutput = conflatedErrorOutput.group(0)
-    out = out[:-len(conflatedErrorOutput)]
-    err += conflatedErrorOutput
-
-  return (out, err, exitCode, timeoutInfo, parsedCommands)
+  return libcxx.test.format._executeScriptInternal(test, litConfig, commands)
 
 def _makeConfigTest(config):
   # Make sure the support directories exist, which is needed to create
@@ -146,7 +126,7 @@ def sourceBuilds(config, source, additionalFlags=[]):
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as sourceFile:
       sourceFile.write(source)
-    _, _, exitCode, _, _ = _executeScriptInternal(test, ['%{{build}} {}'.format(' '.join(additionalFlags))])
+    _, _, exitCode, _, _ = _executeWithFakeConfig(test, ['%{{build}} {}'.format(' '.join(additionalFlags))])
     return exitCode == 0
 
 @_memoizeExpensiveOperation(lambda c, p, args=None: (c.substitutions, c.environment, p, args))
@@ -164,11 +144,11 @@ def programOutput(config, program, args=None):
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as source:
       source.write(program)
-    _, err, exitCode, _, buildcmd = _executeScriptInternal(test, ['%{build}'])
+    _, err, exitCode, _, buildcmd = _executeWithFakeConfig(test, ['%{build}'])
     if exitCode != 0:
       raise ConfigurationCompilationError("Failed to build program, cmd:\n{}\nstderr is:\n{}".format(buildcmd, err))
 
-    out, err, exitCode, _, runcmd = _executeScriptInternal(test, ["%{{run}} {}".format(' '.join(args))])
+    out, err, exitCode, _, runcmd = _executeWithFakeConfig(test, ["%{{run}} {}".format(' '.join(args))])
     if exitCode != 0:
       raise ConfigurationRuntimeError("Failed to run program, cmd:\n{}\nstderr is:\n{}".format(runcmd, err))
 
@@ -201,7 +181,7 @@ def hasCompileFlag(config, flag):
   checking whether that succeeds.
   """
   with _makeConfigTest(config) as test:
-    out, err, exitCode, timeoutInfo, _ = _executeScriptInternal(test, [
+    out, err, exitCode, timeoutInfo, _ = _executeWithFakeConfig(test, [
       "%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)
     ])
     return exitCode == 0
@@ -215,7 +195,7 @@ def runScriptExitCode(config, script):
   could appear on the right-hand-side of a `RUN:` keyword.
   """
   with _makeConfigTest(config) as test:
-    _, _, exitCode, _, _ = _executeScriptInternal(test, script)
+    _, _, exitCode, _, _ = _executeWithFakeConfig(test, script)
     return exitCode
 
 @_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
@@ -228,7 +208,7 @@ def commandOutput(config, command):
   could appear on the right-hand-side of a `RUN:` keyword.
   """
   with _makeConfigTest(config) as test:
-    out, err, exitCode, _, cmd = _executeScriptInternal(test, command)
+    out, err, exitCode, _, cmd = _executeWithFakeConfig(test, command)
     if exitCode != 0:
      raise ConfigurationRuntimeError("Failed to run command: {}\nstderr is:\n{}".format(cmd, err))
     return out
@@ -281,7 +261,7 @@ def compilerMacros(config, flags=''):
       #  include <__config_site>
       #endif
       """)
-    unparsedOutput, err, exitCode, _, cmd = _executeScriptInternal(test, [
+    unparsedOutput, err, exitCode, _, cmd = _executeWithFakeConfig(test, [
       "%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)
     ])
     if exitCode != 0:

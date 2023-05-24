@@ -1013,17 +1013,15 @@ static bool canReplaceGEPIdxWithZero(InstCombinerImpl &IC,
 // If we're indexing into an object with a variable index for the memory
 // access, but the object has only one element, we can assume that the index
 // will always be zero. If we replace the GEP, return it.
-template <typename T>
 static Instruction *replaceGEPIdxWithZero(InstCombinerImpl &IC, Value *Ptr,
-                                          T &MemI) {
+                                          Instruction &MemI) {
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Ptr)) {
     unsigned Idx;
     if (canReplaceGEPIdxWithZero(IC, GEPI, &MemI, Idx)) {
       Instruction *NewGEPI = GEPI->clone();
       NewGEPI->setOperand(Idx,
         ConstantInt::get(GEPI->getOperand(Idx)->getType(), 0));
-      NewGEPI->insertBefore(GEPI);
-      MemI.setOperand(MemI.getPointerOperandIndex(), NewGEPI);
+      IC.InsertNewInstBefore(NewGEPI, *GEPI);
       return NewGEPI;
     }
   }
@@ -1072,10 +1070,8 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     LI.setAlignment(KnownAlign);
 
   // Replace GEP indices if possible.
-  if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI)) {
-      Worklist.push(NewGEPI);
-      return &LI;
-  }
+  if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI))
+    return replaceOperand(LI, 0, NewGEPI);
 
   if (Instruction *Res = unpackLoadToAggregate(*this, LI))
     return Res;
@@ -1483,10 +1479,8 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
     return eraseInstFromFunction(SI);
 
   // Replace GEP indices if possible.
-  if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Ptr, SI)) {
-      Worklist.push(NewGEPI);
-      return &SI;
-  }
+  if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Ptr, SI))
+    return replaceOperand(SI, 1, NewGEPI);
 
   // Don't hack volatile/ordered stores.
   // FIXME: Some bits are legal for ordered atomic stores; needs refactoring.

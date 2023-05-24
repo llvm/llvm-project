@@ -1791,7 +1791,7 @@
 // CHECK-LD-GENTOO-X32: "-lc"
 // CHECK-LD-GENTOO-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -no-pie -fuse-ld=ld 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     --gcc-toolchain="%S/Inputs/rhel_7_tree/opt/rh/devtoolset-7/root/usr" \
 // RUN:     --sysroot="%S/Inputs/rhel_7_tree/opt/rh/devtoolset-7/root" \

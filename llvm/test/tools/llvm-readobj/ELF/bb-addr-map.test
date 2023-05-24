@@ -39,6 +39,7 @@
 # CHECK-NEXT:         HasTailCall: Yes
 # CHECK-NEXT:         IsEHPad: No
 # CHECK-NEXT:         CanFallThrough: No
+# CHECK-NEXT:         HasIndirectBranch: No
 # CHECK-NEXT:       }
 # CHECK-NEXT:       {
 # CHECK-NEXT:         ID: 2
@@ -48,6 +49,7 @@
 # CHECK-NEXT:         HasTailCall: No
 # CHECK-NEXT:         IsEHPad: Yes
 # CHECK-NEXT:         CanFallThrough: No
+# CHECK-NEXT:         HasIndirectBranch: Yes
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
@@ -63,6 +65,7 @@
 # CHECK-NEXT:         HasTailCall: No
 # CHECK-NEXT:         IsEHPad: No
 # CHECK-NEXT:         CanFallThrough: Yes
+# CHECK-NEXT:         HasIndirectBranch: No
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
@@ -87,6 +90,7 @@
 # TRUNCATED-NEXT:         HasTailCall: Yes
 # TRUNCATED-NEXT:         IsEHPad: No
 # TRUNCATED-NEXT:         CanFallThrough: Yes
+# TRUNCATED-NEXT:         HasIndirectBranch: Yes
 # TRUNCATED-NEXT:       }
 # TRUNCATED-NEXT:       {
 # TRUNCATED-NEXT:         ID: 7
@@ -96,6 +100,7 @@
 # TRUNCATED-NEXT:         HasTailCall: Yes
 # TRUNCATED-NEXT:         IsEHPad: Yes
 # TRUNCATED-NEXT:         CanFallThrough: Yes
+# TRUNCATED-NEXT:         HasIndirectBranch: No
 # TRUNCATED-NEXT:       }
 # TRUNCATED-NEXT:     ]
 # TRUNCATED-NEXT:   }
@@ -131,7 +136,7 @@ Sections:
           - ID:            2
             AddressOffset: 0x3
             Size:          0x4
-            Metadata:      0x5
+            Metadata:      0x15
       - Version: 2
         Address: 0x22222
         BBEntries:
@@ -152,7 +157,7 @@ Sections:
           - ID:            6
             AddressOffset: 0x9
             Size:          0xa
-            Metadata:      0xb
+            Metadata:      0x1b
           - ID:            7
             AddressOffset: 0xc
             Size:          0xd
@@ -192,6 +197,7 @@ Symbols:
 # V0-NEXT:         HasTailCall:
 # V0-NEXT:         IsEHPad:
 # V0-NEXT:         CanFallThrough:
+# V0-NEXT:         HasIndirectBranch:
 # V0-NEXT:       }
 # V0-NEXT:       {
 # V0-NEXT:         ID: 1
@@ -201,6 +207,7 @@ Symbols:
 # V0-NEXT:         HasTailCall:
 # V0-NEXT:         IsEHPad:
 # V0-NEXT:         CanFallThrough:
+# V0-NEXT:         HasIndirectBranch:
 # V0-NEXT:       }
 # V0-NEXT:     ]
 # V0-NEXT:   }
@@ -222,6 +229,7 @@ Symbols:
 # V1-NEXT:         HasTailCall:
 # V1-NEXT:         IsEHPad:
 # V1-NEXT:         CanFallThrough:
+# V1-NEXT:         HasIndirectBranch:
 # V1-NEXT:       }
 # V1-NEXT:       {
 # V1-NEXT:         ID: 1
@@ -231,6 +239,7 @@ Symbols:
 # V1-NEXT:         HasTailCall:
 # V1-NEXT:         IsEHPad:
 # V1-NEXT:         CanFallThrough:
+# V1-NEXT:         HasIndirectBranch:
 # V1-NEXT:       }
 # V1-NEXT:     ]
 # V1-NEXT:   }

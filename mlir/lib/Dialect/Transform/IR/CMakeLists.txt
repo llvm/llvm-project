@@ -14,8 +14,6 @@ add_mlir_dialect_library(MLIRTransformDialect
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRParser
-  MLIRPDLDialect
-  MLIRPDLInterpDialect
   MLIRRewrite
   MLIRSideEffectInterfaces
   MLIRTransforms

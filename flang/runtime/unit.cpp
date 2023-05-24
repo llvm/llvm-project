@@ -893,6 +893,12 @@ void ExternalFileUnit::BackspaceVariableFormattedRecord(
 }
 
 void ExternalFileUnit::DoImpliedEndfile(IoErrorHandler &handler) {
+  if (!impliedEndfile_ && direction_ == Direction::Output && IsRecordFile() &&
+      access != Access::Direct && leftTabLimit) {
+    // Complete partial record after non-advancing write before
+    // positioning or closing the unit.  Usually sets impliedEndfile_.
+    AdvanceRecord(handler);
+  }
   if (impliedEndfile_) {
     impliedEndfile_ = false;
     if (access != Access::Direct && IsRecordFile() && mayPosition()) {
@@ -905,7 +911,7 @@ void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   if (IsRecordFile() && access != Access::Direct) {
     furthestPositionInRecord =
         std::max(positionInRecord, furthestPositionInRecord);
-    if (furthestPositionInRecord > 0) {
+    if (leftTabLimit) {
       // Last read/write was non-advancing, so AdvanceRecord() was not called.
       leftTabLimit.reset();
       ++currentRecordNumber;

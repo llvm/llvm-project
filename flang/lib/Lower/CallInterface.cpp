@@ -1230,6 +1230,57 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::hasValueAttribute() const {
 }
 
 template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::hasAllocatableAttribute()
+    const {
+  if (!characteristics)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+  return dummy && dummy->attrs.test(Attrs::Allocatable);
+}
+
+template <typename T>
+bool Fortran::lower::CallInterface<
+    T>::PassedEntity::mayRequireIntentoutFinalization() const {
+  // Conservatively assume that the finalization is needed.
+  if (!characteristics)
+    return true;
+
+  // No INTENT(OUT) dummy arguments do not require finalization on entry.
+  if (!isIntentOut())
+    return false;
+
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  if (!dummy)
+    return true;
+
+  // POINTER/ALLOCATABLE dummy arguments do not require finalization.
+  using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+  if (dummy->attrs.test(Attrs::Allocatable) ||
+      dummy->attrs.test(Attrs::Pointer))
+    return false;
+
+  // Polymorphic and unlimited polymorphic INTENT(OUT) dummy arguments
+  // may need finalization.
+  const Fortran::evaluate::DynamicType &type = dummy->type.type();
+  if (type.IsPolymorphic() || type.IsUnlimitedPolymorphic())
+    return true;
+
+  // INTENT(OUT) dummy arguments of derived types require finalization,
+  // if their type has finalization.
+  const Fortran::semantics::DerivedTypeSpec *derived =
+      Fortran::evaluate::GetDerivedTypeSpec(type);
+  if (!derived)
+    return false;
+
+  return Fortran::semantics::IsFinalizable(*derived);
+}
+
+template <typename T>
 void Fortran::lower::CallInterface<T>::determineInterface(
     bool isImplicit,
     const Fortran::evaluate::characteristics::Procedure &procedure) {

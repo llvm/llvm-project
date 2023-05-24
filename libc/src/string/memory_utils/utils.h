@@ -39,20 +39,20 @@ static constexpr bool is_power2(size_t value) {
 }
 
 // Compile time version of log2 that handles 0.
-static constexpr size_t log2(size_t value) {
-  return (value == 0 || value == 1) ? 0 : 1 + log2(value / 2);
+static constexpr size_t log2s(size_t value) {
+  return (value == 0 || value == 1) ? 0 : 1 + log2s(value / 2);
 }
 
 // Returns the first power of two preceding value or value if it is already a
 // power of two (or 0 when value is 0).
 static constexpr size_t le_power2(size_t value) {
-  return value == 0 ? value : 1ULL << log2(value);
+  return value == 0 ? value : 1ULL << log2s(value);
 }
 
 // Returns the first power of two following value or value if it is already a
 // power of two (or 0 when value is 0).
 static constexpr size_t ge_power2(size_t value) {
-  return is_power2_or_zero(value) ? value : 1ULL << (log2(value) + 1);
+  return is_power2_or_zero(value) ? value : 1ULL << (log2s(value) + 1);
 }
 
 // Returns the number of bytes to substract from ptr to get to the previous

@@ -436,6 +436,51 @@ func.func private @_QPwork()
 
 // -----
 
+
+func.func @_QQmain() {
+  %c0 = arith.constant 0 : index
+  %c5 = arith.constant 5 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.alloca i32
+  omp.taskgroup   {
+    %1 = fir.convert %c1 : (index) -> i32
+    cf.br ^bb1(%1, %c5 : i32, index)
+  ^bb1(%2: i32, %3: index):  // 2 preds: ^bb0, ^bb2
+    %4 = arith.cmpi sgt, %3, %c0 : index
+    cf.cond_br %4, ^bb2, ^bb3
+  ^bb2:  // pred: ^bb1
+    fir.store %2 to %0 : !fir.ref<i32>
+    omp.task   {
+      fir.call @_QFPdo_work(%0) : (!fir.ref<i32>) -> ()
+      omp.terminator
+    }
+    %5 = fir.load %0 : !fir.ref<i32>
+    %6 = arith.addi %5, %1 : i32
+    %7 = arith.subi %3, %c1 : index
+    cf.br ^bb1(%6, %7 : i32, index)
+  ^bb3:  // pred: ^bb1
+    fir.store %2 to %0 : !fir.ref<i32>
+    omp.terminator
+  }
+  return
+}
+func.func private @_QFPdo_work(!fir.ref<i32>)
+
+// CHECK-LABEL: llvm.func @_QQmain
+// CHECK:          omp.taskgroup   {
+// CHECK:            omp.task   {
+// CHECK:              llvm.call @_QFPdo_work({{.*}}) : (!llvm.ptr<i32>) -> ()
+// CHECK:              omp.terminator
+// CHECK:            }
+// CHECK:            omp.terminator
+// CHECK:          }
+// CHECK:          llvm.return
+// CHECK:        }
+// CHECK:        llvm.func @_QFPdo_work(!llvm.ptr<i32>)
+// CHECK:      }
+
+// -----
+
 func.func @_QPs() {
   %0 = fir.address_of(@_QFsEc) : !fir.ref<i32>
   omp.atomic.update   %0 : !fir.ref<i32> {

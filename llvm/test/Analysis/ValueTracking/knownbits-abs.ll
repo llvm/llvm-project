@@ -4,12 +4,7 @@ declare i8 @llvm.abs.i8(i8, i1)
 
 define i1 @abs_low_bit_set(i8 %x) {
 ; CHECK-LABEL: @abs_low_bit_set(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], -16
-; CHECK-NEXT:    [[V:%.*]] = or i8 [[XX]], 4
-; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[V]], i1 true)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ABS]], 4
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 240
   %v = or i8 %xx, 4
@@ -36,12 +31,7 @@ define i1 @abs_unknown_low_bit_set_fail(i8 %x) {
 
 define i1 @abs_negative(i8 %x) {
 ; CHECK-LABEL: @abs_negative(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], -16
-; CHECK-NEXT:    [[V:%.*]] = or i8 [[XX]], -124
-; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[V]], i1 true)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ABS]], 8
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 240
   %v = or i8 %xx, 132
@@ -53,11 +43,7 @@ define i1 @abs_negative(i8 %x) {
 
 define i1 @abs_negative2(i8 %x) {
 ; CHECK-LABEL: @abs_negative2(
-; CHECK-NEXT:    [[V:%.*]] = or i8 [[X:%.*]], -125
-; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[V]], i1 true)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ABS]], 2
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %v = or i8 %x, 131
   %abs = call i8 @llvm.abs.i8(i8 %v, i1 true)

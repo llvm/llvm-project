@@ -192,7 +192,7 @@ INTERCEPTOR(int, pthread_join, void *t, void **arg) {
 DEFINE_REAL_PTHREAD_FUNCTIONS
 
 INTERCEPTOR(char *, index, const char *string, int c)
-ALIAS(WRAPPER_NAME(strchr));
+ALIAS(WRAP(strchr));
 
 // For both strcat() and strncat() we need to check the validity of |to|
 // argument irrespective of the |from| length.

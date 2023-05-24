@@ -61,9 +61,11 @@
 #      define _LIBCPP_STD_VER 17
 #    elif __cplusplus <= 202002L
 #      define _LIBCPP_STD_VER 20
+#    elif __cplusplus <= 202302L
+#      define _LIBCPP_STD_VER 23
 #    else
 // Expected release year of the next C++ standard
-#      define _LIBCPP_STD_VER 23
+#      define _LIBCPP_STD_VER 26
 #    endif
 #  endif // _LIBCPP_STD_VER
 // NOLINTEND(libcpp-cpp-version-check)
@@ -592,7 +594,10 @@ typedef __char32_t char32_t;
 
 #  endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
-#  if __has_attribute(exclude_from_explicit_instantiation)
+// _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION is used on member functions of explicitly instantiated
+// classes that we don't want to make part of the ABI to opt those methods out of the explicit instantiation
+// and avoid exporting them from the dylib or relying on their definition being in the dylib.
+#  if __has_attribute(__exclude_from_explicit_instantiation__)
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((__exclude_from_explicit_instantiation__))
 #  else
 // Try to approximate the effect of exclude_from_explicit_instantiation
@@ -618,9 +623,6 @@ typedef __char32_t char32_t;
 //    all functions or giving internal linkage to all functions. Both these (previous) solutions
 //    suffer from drawbacks that lead notably to code bloat.
 //
-// Note that we use _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION to ensure that we don't depend
-// on _LIBCPP_HIDE_FROM_ABI methods of classes explicitly instantiated in the dynamic library.
-//
 // Also note that the _LIBCPP_HIDE_FROM_ABI_VIRTUAL macro should be used on virtual functions
 // instead of _LIBCPP_HIDE_FROM_ABI. That macro does not use an ABI tag. Indeed, the mangled
 // name of a virtual function is part of its ABI, since some architectures like arm64e can sign
@@ -635,25 +637,26 @@ typedef __char32_t char32_t;
 //       use compression mangling instead, see https://github.com/itanium-cxx-abi/cxx-abi/issues/70.
 #  ifndef _LIBCPP_NO_ABI_TAG
 #    define _LIBCPP_HIDE_FROM_ABI                                                                                      \
-      _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION                                                       \
-          __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_VERSIONED_IDENTIFIER))))
+      _LIBCPP_HIDDEN __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_VERSIONED_IDENTIFIER))))
 #  else
-#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN
 #  endif
-#  define _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+#  define _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_HIDDEN
 
 // This macro provides a HIDE_FROM_ABI equivalent that can be applied to extern
 // "C" function, as those lack mangling.
-#  define _LIBCPP_HIDE_FROM_ABI_C _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+#  define _LIBCPP_HIDE_FROM_ABI_C _LIBCPP_HIDDEN
 
+// _LIBCPP_HIDE_FROM_ABI_AFTER_V1 also avoids relying on the symbols in ABIv1. Functions marked with this macro are
+// only preserved in the dylib to avoid ABI breaks.
 #  ifdef _LIBCPP_BUILDING_LIBRARY
 #    if _LIBCPP_ABI_VERSION > 1
-#      define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
+#      define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 #    else
 #      define _LIBCPP_HIDE_FROM_ABI_AFTER_V1
 #    endif
 #  else
-#    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
+#    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 #  endif
 
 // Just so we can migrate to the new macros gradually.

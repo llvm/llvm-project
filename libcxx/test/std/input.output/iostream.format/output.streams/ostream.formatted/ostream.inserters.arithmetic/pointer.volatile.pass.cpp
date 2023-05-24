@@ -13,9 +13,9 @@
 // This test fails in Windows DLL configurations, due to
 // __exclude_from_explicit_instantiation__ not behaving as it should in
 // combination with dllimport (https://llvm.org/PR41018), in combination
-// with running tests in c++2b mode while building the library in c++20 mode.
+// with running tests in c++23 mode while building the library in c++20 mode.
 //
-// If the library was built in c++2b mode, this test would succeed.
+// If the library was built in c++23 mode, this test would succeed.
 //
 // Older CMake passed -std:c++latest to set C++ 20 mode on clang-cl, which
 // hid this issue. With newer CMake versions, it passes -std:c++20 which
@@ -23,7 +23,7 @@
 //
 // Marking as UNSUPPORTED instead of XFAIL to avoid spurious failures/successes
 // depending on the version of CMake used.
-// TODO: Remove this when the library is built in c++2b mode.
+// TODO: Remove this when the library is built in c++23 mode.
 //
 // UNSUPPORTED: windows-dll
 

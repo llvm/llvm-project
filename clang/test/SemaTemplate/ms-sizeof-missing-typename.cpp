@@ -50,7 +50,7 @@ template struct Foo<Bar>; // expected-note-re {{in instantiation {{.*}} requeste
 }
 
 namespace ambiguous_missing_parens {
-// expected-error@+1 {{'Q::U' instantiated to a class template, not a function template}}
+// expected-error@+1 {{'Q::U' is expected to be a non-type template, but instantiated to a class template}}
 template <typename T> void f() { int a = sizeof T::template U<0> + 4; }
 struct Q {
   // expected-note@+1 {{class template declared here}}
