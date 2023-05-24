@@ -302,7 +302,7 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
 }
 
 bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
-  return true;
+  return !F || !ST->isSingleLaneExecution(*F);
 }
 
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
