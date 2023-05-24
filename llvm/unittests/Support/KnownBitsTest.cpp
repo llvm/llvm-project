@@ -79,6 +79,7 @@ static void testUnaryOpExhaustive(
       }
     });
 
+    EXPECT_TRUE(!Computed.hasConflict());
     EXPECT_TRUE(isCorrect(Exact, Computed, Known));
     // We generally don't want to return conflicting known bits, even if it is
     // legal for always poison results.
@@ -110,6 +111,7 @@ static void testBinaryOpExhaustive(
         });
       });
 
+      EXPECT_TRUE(!Computed.hasConflict());
       EXPECT_TRUE(isCorrect(Exact, Computed, {Known1, Known2}));
       // We generally don't want to return conflicting known bits, even if it is
       // legal for always poison results.
