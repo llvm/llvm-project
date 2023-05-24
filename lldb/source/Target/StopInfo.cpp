@@ -831,6 +831,11 @@ protected:
           = std::static_pointer_cast<StopInfoWatchpoint>(shared_from_this());
       ThreadPlanSP step_over_wp_sp(new ThreadPlanStepOverWatchpoint(
           *(thread_sp.get()), me_as_siwp_sp, wp_sp));
+      // When this plan is done we want to stop, so set this as a Controlling
+      // plan.    
+      step_over_wp_sp->SetIsControllingPlan(true);
+      step_over_wp_sp->SetOkayToDiscard(false);
+
       Status error;
       error = thread_sp->QueueThreadPlan(step_over_wp_sp, false);
       // If we couldn't push the thread plan, just stop here:
