@@ -743,8 +743,7 @@ static void replaceExtractElements(InsertElementInst *InsElt,
 
   // Replace extracts from the original narrow vector with extracts from the new
   // wide vector.
-  SmallVector<User *> Users(ExtVecOp->users());
-  for (User *U : Users) {
+  for (User *U : ExtVecOp->users()) {
     ExtractElementInst *OldExt = dyn_cast<ExtractElementInst>(U);
     if (!OldExt || OldExt->getParent() != WideVec->getParent())
       continue;
