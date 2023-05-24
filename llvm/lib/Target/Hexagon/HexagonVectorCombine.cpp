@@ -192,7 +192,7 @@ public:
 
 private:
   using InstList = std::vector<Instruction *>;
-  using InstMap = DenseMap<Instruction*, Instruction*>;
+  using InstMap = DenseMap<Instruction *, Instruction *>;
 
   struct AddrInfo {
     AddrInfo(const AddrInfo &) = default;
@@ -299,9 +299,11 @@ private:
   Value *getPassThrough(Value *Val) const;
 
   Value *createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr, Type *ValTy,
-                               int Adjust) const;
+                               int Adjust,
+                               const InstMap &CloneMap = InstMap()) const;
   Value *createAlignedPointer(IRBuilderBase &Builder, Value *Ptr, Type *ValTy,
-                              int Alignment) const;
+                              int Alignment,
+                              const InstMap &CloneMap = InstMap()) const;
 
   Value *createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                     Value *Predicate, int Alignment, Value *Mask,
@@ -662,8 +664,17 @@ auto AlignVectors::getPassThrough(Value *Val) const -> Value * {
 }
 
 auto AlignVectors::createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr,
-                                         Type *ValTy, int Adjust) const
+                                         Type *ValTy, int Adjust,
+                                         const InstMap &CloneMap) const
     -> Value * {
+  auto remap = [&](Value *V) -> Value * {
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      for (auto [Old, New] : CloneMap)
+        I->replaceUsesOfWith(Old, New);
+      return I;
+    }
+    return V;
+  };
   // The adjustment is in bytes, but if it's a multiple of the type size,
   // we don't need to do pointer casts.
   auto *PtrTy = cast<PointerType>(Ptr->getType());
@@ -673,23 +684,33 @@ auto AlignVectors::createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr,
     if (Adjust % ElemSize == 0 && Adjust != 0) {
       Value *Tmp0 = Builder.CreateGEP(
           ElemTy, Ptr, HVC.getConstInt(Adjust / ElemSize), "gep");
-      return Builder.CreatePointerCast(Tmp0, ValTy->getPointerTo(), "cst");
+      return Builder.CreatePointerCast(remap(Tmp0), ValTy->getPointerTo(),
+                                       "cst");
     }
   }
 
   PointerType *CharPtrTy = Type::getInt8PtrTy(HVC.F.getContext());
   Value *Tmp0 = Builder.CreatePointerCast(Ptr, CharPtrTy, "cst");
-  Value *Tmp1 = Builder.CreateGEP(Type::getInt8Ty(HVC.F.getContext()), Tmp0,
-                                  HVC.getConstInt(Adjust), "gep");
-  return Builder.CreatePointerCast(Tmp1, ValTy->getPointerTo(), "cst");
+  Value *Tmp1 = Builder.CreateGEP(Type::getInt8Ty(HVC.F.getContext()),
+                                  remap(Tmp0), HVC.getConstInt(Adjust), "gep");
+  return Builder.CreatePointerCast(remap(Tmp1), ValTy->getPointerTo(), "cst");
 }
 
 auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,
-                                        Type *ValTy, int Alignment) const
+                                        Type *ValTy, int Alignment,
+                                        const InstMap &CloneMap) const
     -> Value * {
+  auto remap = [&](Value *V) -> Value * {
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      for (auto [Old, New] : CloneMap)
+        I->replaceUsesOfWith(Old, New);
+      return I;
+    }
+    return V;
+  };
   Value *AsInt = Builder.CreatePtrToInt(Ptr, HVC.getIntTy(), "pti");
   Value *Mask = HVC.getConstInt(-Alignment);
-  Value *And = Builder.CreateAnd(AsInt, Mask, "add");
+  Value *And = Builder.CreateAnd(remap(AsInt), Mask, "and");
   return Builder.CreateIntToPtr(And, ValTy->getPointerTo(), "itp");
 }
 
@@ -1028,7 +1049,7 @@ auto AlignVectors::moveTogether(MoveGroup &Move) const -> bool {
     for (Instruction *M : Main) {
       if (M != Where)
         M->moveAfter(Where);
-      for (auto [Old, New]: Move.Clones)
+      for (auto [Old, New] : Move.Clones)
         M->replaceUsesOfWith(Old, New);
       Where = M;
     }
@@ -1431,7 +1452,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     // of potential bitcasts to i8*.
     int Adjust = -alignTo(OffAtMax - Start, MinNeeded.value());
     AlignAddr = createAdjustedPointer(Builder, WithMaxAlign.Addr,
-                                      WithMaxAlign.ValTy, Adjust);
+                                      WithMaxAlign.ValTy, Adjust, Move.Clones);
     int Diff = Start - (OffAtMax + Adjust);
     AlignVal = HVC.getConstInt(Diff);
     assert(Diff >= 0);
@@ -1444,26 +1465,21 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     // the alignment amount.
     // Do an explicit down-alignment of the address to avoid creating an
     // aligned instruction with an address that is not really aligned.
-    AlignAddr = createAlignedPointer(Builder, WithMinOffset.Addr,
-                                     WithMinOffset.ValTy, MinNeeded.value());
+    AlignAddr =
+        createAlignedPointer(Builder, WithMinOffset.Addr, WithMinOffset.ValTy,
+                             MinNeeded.value(), Move.Clones);
     AlignVal =
         Builder.CreatePtrToInt(WithMinOffset.Addr, HVC.getIntTy(), "pti");
+    if (auto *I = dyn_cast<Instruction>(AlignVal)) {
+      for (auto [Old, New] : Move.Clones)
+        I->replaceUsesOfWith(Old, New);
+    }
   }
 
   ByteSpan VSpan;
   for (const AddrInfo &AI : MoveInfos) {
     VSpan.Blocks.emplace_back(AI.Inst, HVC.getSizeOf(AI.ValTy),
                               AI.Offset - WithMinOffset.Offset);
-  }
-
-  // Update the AlignAddr/AlignVal to use cloned dependencies.
-  if (auto *I = dyn_cast<Instruction>(AlignAddr)) {
-    for (auto [Old, New] : Move.Clones)
-      I->replaceUsesOfWith(Old, New);
-  }
-  if (auto *I = dyn_cast<Instruction>(AlignVal)) {
-    for (auto [Old, New] : Move.Clones)
-      I->replaceUsesOfWith(Old, New);
   }
 
   // The aligned loads/stores will use blocks that are either scalars,
