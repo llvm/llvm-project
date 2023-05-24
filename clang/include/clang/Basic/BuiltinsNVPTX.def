@@ -54,7 +54,11 @@
 #pragma push_macro("PTX76")
 #pragma push_macro("PTX77")
 #pragma push_macro("PTX78")
-#define PTX78 "ptx78"
+#pragma push_macro("PTX80")
+#pragma push_macro("PTX81")
+#define PTX81 "ptx81"
+#define PTX80 "ptx80|" PTX81
+#define PTX78 "ptx78|" PTX80
 #define PTX77 "ptx77|" PTX78
 #define PTX76 "ptx76|" PTX77
 #define PTX75 "ptx75|" PTX76
@@ -1012,3 +1016,5 @@ TARGET_BUILTIN(__nvvm_neg_bf16x2, "ZUiZUi", "", AND(SM_80,PTX70))
 #pragma pop_macro("PTX76")
 #pragma pop_macro("PTX77")
 #pragma pop_macro("PTX78")
+#pragma pop_macro("PTX80")
+#pragma pop_macro("PTX81")
