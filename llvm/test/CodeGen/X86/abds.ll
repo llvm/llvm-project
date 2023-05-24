@@ -367,23 +367,21 @@ define i64 @abd_minmax_i64(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    cmpl %eax, %esi
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    cmovbl %esi, %edi
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    cmoval %esi, %ebx
-; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    movl %eax, %ebp
-; X86-NEXT:    cmovll %esi, %ebp
-; X86-NEXT:    cmovel %edi, %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    sbbl %edx, %edi
 ; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    cmovll %ecx, %edi
-; X86-NEXT:    cmovgl %esi, %eax
-; X86-NEXT:    cmovel %ebx, %eax
-; X86-NEXT:    cmovgl %ecx, %edx
-; X86-NEXT:    subl %ebp, %eax
+; X86-NEXT:    cmovll %esi, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    cmovll %ecx, %ebx
+; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    movl %edx, %ebp
+; X86-NEXT:    sbbl %esi, %ebp
+; X86-NEXT:    cmovll %esi, %edx
+; X86-NEXT:    cmovll %ecx, %eax
+; X86-NEXT:    subl %ebx, %eax
 ; X86-NEXT:    sbbl %edi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
