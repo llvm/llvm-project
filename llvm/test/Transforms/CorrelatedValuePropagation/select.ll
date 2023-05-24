@@ -222,7 +222,7 @@ define i1 @test5(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, i32* %p, !noundef !0
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -248,7 +248,7 @@ define i1 @test6(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, i32* %p, !noundef !0
   %cmp1 = icmp ult i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -261,3 +261,18 @@ next:
 exit:
   ret i1 true
 }
+
+define i64 @select_cond_may_undef(i32 %a) {
+; CHECK-LABEL: @select_cond_may_undef(
+; CHECK-NEXT:    [[IS_A_NONNEGATIVE:%.*]] = icmp sgt i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[NARROW:%.*]] = select i1 [[IS_A_NONNEGATIVE]], i32 [[A]], i32 0
+; CHECK-NEXT:    [[MAX:%.*]] = sext i32 [[NARROW]] to i64
+; CHECK-NEXT:    ret i64 [[MAX]]
+;
+  %is_a_nonnegative = icmp sgt i32 %a, 1
+  %narrow = select i1 %is_a_nonnegative, i32 %a, i32 0
+  %max = sext i32 %narrow to i64
+  ret i64 %max
+}
+
+!0 = !{}
