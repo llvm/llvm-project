@@ -481,7 +481,8 @@ def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
          created private value. It takes the initial value and the privatized
          value as arguments.
       3. The destroy region specifies how to destruct the value when it reaches
-         its end of life. It takes the privatized value as argument.
+         its end of life. It takes the privatized value as argument. It is
+         optional.
 
     A single privatization recipe can be used for multiple operand if they have
     the same type and do not require a specific default initialization.
