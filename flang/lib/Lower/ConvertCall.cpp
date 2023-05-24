@@ -912,7 +912,13 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
           loc, boxType, entity, /*shape=*/mlir::Value{},
           /*slice=*/mlir::Value{})};
     }
-    if (arg.hasValueAttribute()) {
+    if (arg.hasValueAttribute() ||
+        // Constant expressions might be lowered as variables with
+        // 'parameter' attribute. Even though the constant expressions
+        // are not definable and explicit assignments to them are not
+        // possible, we have to create a temporary copies when we pass
+        // them down the call stack.
+        entity.isParameter()) {
       // Make a copy in a temporary.
       auto copy = builder.create<hlfir::AsExprOp>(loc, entity);
       hlfir::AssociateOp associate = hlfir::genAssociateExpr(
