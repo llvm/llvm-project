@@ -120,7 +120,7 @@ llvm::UniformityInfo UniformityInfoAnalysis::run(Function &F,
   auto &CI = FAM.getResult<CycleAnalysis>(F);
   UniformityInfo UI{F, DT, CI, &TTI};
   // Skip computation if we can assume everything is uniform.
-  if (TTI.hasBranchDivergence())
+  if (TTI.hasBranchDivergence(&F))
     UI.compute();
 
   return UI;
@@ -175,7 +175,7 @@ bool UniformityInfoWrapperPass::runOnFunction(Function &F) {
       UniformityInfo{F, domTree, cycleInfo, &targetTransformInfo};
 
   // Skip computation if we can assume everything is uniform.
-  if (targetTransformInfo.hasBranchDivergence())
+  if (targetTransformInfo.hasBranchDivergence(m_function))
     m_uniformityInfo.compute();
 
   return false;
