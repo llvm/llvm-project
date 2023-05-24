@@ -2299,6 +2299,9 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     AddedAttr = true;
   }
   if (!Features.empty() && SetTargetFeatures) {
+    llvm::erase_if(Features, [&](const std::string& F) {
+       return getTarget().isReadOnlyFeature(F.substr(1));
+    });
     llvm::sort(Features);
     Attrs.addAttribute("target-features", llvm::join(Features, ","));
     AddedAttr = true;
