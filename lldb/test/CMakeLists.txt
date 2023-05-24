@@ -150,7 +150,7 @@ if(TARGET clang)
         set(LIBCXX_LIBRARY_DIR "${LLDB_TEST_LIBCXX_ROOT_DIR}/lib${LIBCXX_LIBDIR_SUFFIX}")
         set(LIBCXX_GENERATED_INCLUDE_DIR "${LLDB_TEST_LIBCXX_ROOT_DIR}/include/c++/v1")
       else()
-        message(FATAL_ERROR
+        message(WARNING
             "Couldn't find libcxx build in '${LLDB_TEST_LIBCXX_ROOT_DIR}'. To run the "
             "test-suite for a standalone LLDB build please build libcxx and point "
             "LLDB_TEST_LIBCXX_ROOT_DIR to it.")
