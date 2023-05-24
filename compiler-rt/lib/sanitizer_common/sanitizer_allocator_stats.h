@@ -25,17 +25,13 @@ typedef uptr AllocatorStatCounters[AllocatorStatCount];
 // Per-thread stats, live in per-thread cache.
 class AllocatorStats {
  public:
-  void Init() {
-    internal_memset(this, 0, sizeof(*this));
-  }
+  void Init() { internal_memset(this, 0, sizeof(*this)); }
   void Add(AllocatorStat i, uptr v) {
-    v += atomic_load(&stats_[i], memory_order_relaxed);
-    atomic_store(&stats_[i], v, memory_order_relaxed);
+    atomic_fetch_add(&stats_[i], v, memory_order_relaxed);
   }
 
   void Sub(AllocatorStat i, uptr v) {
-    v = atomic_load(&stats_[i], memory_order_relaxed) - v;
-    atomic_store(&stats_[i], v, memory_order_relaxed);
+    atomic_fetch_sub(&stats_[i], v, memory_order_relaxed);
   }
 
   void Set(AllocatorStat i, uptr v) {
