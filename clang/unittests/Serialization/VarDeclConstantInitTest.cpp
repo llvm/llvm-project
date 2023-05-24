@@ -95,15 +95,10 @@ export namespace Fibonacci
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
 
-  llvm::Twine CacheBMIPath = TestDir + "/Cached.pcm";
-  const char *Args[] = {"clang++",
-                        "-std=c++20",
-                        "--precompile",
-                        "-working-directory",
-                        TestDir.c_str(),
-                        "Cached.cppm",
-                        "-o",
-                        CacheBMIPath.str().c_str()};
+  std::string CacheBMIPath = llvm::Twine(TestDir + "/Cached.pcm").str();
+  const char *Args[] = {
+      "clang++",       "-std=c++20",  "--precompile", "-working-directory",
+      TestDir.c_str(), "Cached.cppm", "-o",           CacheBMIPath.c_str()};
   std::shared_ptr<CompilerInvocation> Invocation =
       createInvocation(Args, CIOpts);
   ASSERT_TRUE(Invocation);
@@ -115,12 +110,13 @@ export namespace Fibonacci
   ASSERT_TRUE(Instance.ExecuteAction(Action));
   ASSERT_FALSE(Diags->hasErrorOccurred());
 
-  llvm::Twine DepArg = "-fmodule-file=Fibonacci.Cache=" + CacheBMIPath;
+  std::string DepArg =
+      llvm::Twine("-fmodule-file=Fibonacci.Cache=" + CacheBMIPath).str();
   std::unique_ptr<ASTUnit> AST = tooling::buildASTFromCodeWithArgs(
       R"cpp(
 import Fibonacci.Cache;
         )cpp",
-      /*Args=*/{"-std=c++20", DepArg.str().c_str()});
+      /*Args=*/{"-std=c++20", DepArg.c_str()});
 
   using namespace clang::ast_matchers;
   ASTContext &Ctx = AST->getASTContext();
