@@ -14,6 +14,7 @@
 //   OutputIterator
 //   move_backward(InputIterator first, InputIterator last, OutputIterator result);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -54,16 +55,28 @@ void testN(int start, int N)
     C c2 = make<C>(N);
     assert(std::move_backward(c1.cbegin(), c1.cend(), c2.end()) == c2.begin());
     assert(c1 == c2);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     assert(std::move_backward(c2.cbegin(), c2.cend(), c1.end()) == c1.begin());
     assert(c1 == c2);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     assert(std::move_backward(c1.cbegin(), c1.cend(), RAI(c2.end())) == RAI(c2.begin()));
     assert(c1 == c2);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     assert(std::move_backward(c2.cbegin(), c2.cend(), RAI(c1.end())) == RAI(c1.begin()));
     assert(c1 == c2);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     assert(std::move_backward(RACI(c1.cbegin()), RACI(c1.cend()), c2.end()) == c2.begin());
     assert(c1 == c2);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     assert(std::move_backward(RACI(c2.cbegin()), RACI(c2.cend()), c1.end()) == c1.begin());
     assert(c1 == c2);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
 }
 
 int main(int, char**)
