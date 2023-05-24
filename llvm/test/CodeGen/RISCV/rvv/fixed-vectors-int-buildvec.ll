@@ -63,103 +63,108 @@ define void @buildvec_vid_mpy_imm_v16i8(ptr %x) {
   ret void
 }
 
-; Some tests return this struct because the stores end up being scalarized.
-%x4v4i8 = type {<4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>}
-
-define %x4v4i8 @buildvec_vid_step2_add0_v4i8() {
+define void @buildvec_vid_step2_add0_v4i8(ptr %z0, ptr %z1, ptr %z2, ptr %z3) {
 ; CHECK-LABEL: buildvec_vid_step2_add0_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    vse8.v v8, (a2)
+; CHECK-NEXT:    vse8.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %1 = insertvalue %x4v4i8 poison, <4 x i8> <i8 0, i8 2, i8 4, i8 6>, 0
-  %2 = insertvalue %x4v4i8 %1, <4 x i8> <i8 undef, i8 2, i8 4, i8 6>, 1
-  %3 = insertvalue %x4v4i8 %2, <4 x i8> <i8 undef, i8 undef, i8 4, i8 6>, 2
-  %4 = insertvalue %x4v4i8 %3, <4 x i8> <i8 0, i8 undef, i8 undef, i8 6>, 3
-  ret %x4v4i8 %4
+  store <4 x i8> <i8 0, i8 2, i8 4, i8 6>, ptr %z0
+  store <4 x i8> <i8 undef, i8 2, i8 4, i8 6>, ptr %z1
+  store <4 x i8> <i8 undef, i8 undef, i8 4, i8 6>, ptr %z2
+  store <4 x i8> <i8 0, i8 undef, i8 undef, i8 6>, ptr %z3
+  ret void
 }
 
-define %x4v4i8 @buildvec_vid_step2_add1_v4i8() {
+define void @buildvec_vid_step2_add1_v4i8(ptr %z0, ptr %z1, ptr %z2, ptr %z3) {
 ; CHECK-LABEL: buildvec_vid_step2_add1_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vadd.vi v8, v8, 1
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    vse8.v v8, (a2)
+; CHECK-NEXT:    vse8.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %1 = insertvalue %x4v4i8 poison, <4 x i8> <i8 1, i8 3, i8 5, i8 7>, 0
-  %2 = insertvalue %x4v4i8 %1, <4 x i8> <i8 undef, i8 3, i8 5, i8 7>, 1
-  %3 = insertvalue %x4v4i8 %2, <4 x i8> <i8 undef, i8 undef, i8 5, i8 7>, 2
-  %4 = insertvalue %x4v4i8 %3, <4 x i8> <i8 1, i8 undef, i8 undef, i8 7>, 3
-  ret %x4v4i8 %4
+  store <4 x i8> <i8 1, i8 3, i8 5, i8 7>, ptr %z0
+  store <4 x i8> <i8 undef, i8 3, i8 5, i8 7>, ptr %z1
+  store <4 x i8> <i8 undef, i8 undef, i8 5, i8 7>, ptr %z2
+  store <4 x i8> <i8 1, i8 undef, i8 undef, i8 7>, ptr %z3
+  ret void
 }
 
 ; FIXME: This could generate vrsub.vi but the (ISD::MUL X, -1) we generate
 ; while lowering ISD::BUILD_VECTOR is custom-lowered to RISCVISD::MUL_VL before
 ; being combined.
-define %x4v4i8 @buildvec_vid_stepn1_add0_v4i8() {
+define void @buildvec_vid_stepn1_add0_v4i8(ptr %z0, ptr %z1, ptr %z2, ptr %z3) {
 ; CHECK-LABEL: buildvec_vid_stepn1_add0_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    vse8.v v8, (a2)
+; CHECK-NEXT:    vse8.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %1 = insertvalue %x4v4i8 poison, <4 x i8> <i8 0, i8 -1, i8 -2, i8 -3>, 0
-  %2 = insertvalue %x4v4i8 %1, <4 x i8> <i8 undef, i8 -1, i8 -2, i8 -3>, 1
-  %3 = insertvalue %x4v4i8 %2, <4 x i8> <i8 undef, i8 undef, i8 -2, i8 -3>, 2
-  %4 = insertvalue %x4v4i8 %3, <4 x i8> <i8 0, i8 undef, i8 undef, i8 -3>, 3
-  ret %x4v4i8 %4
+  store <4 x i8> <i8 0, i8 -1, i8 -2, i8 -3>, ptr %z0
+  store <4 x i8> <i8 undef, i8 -1, i8 -2, i8 -3>, ptr %z1
+  store <4 x i8> <i8 undef, i8 undef, i8 -2, i8 -3>, ptr %z2
+  store <4 x i8> <i8 0, i8 undef, i8 undef, i8 -3>, ptr %z3
+  ret void
 }
 
-define %x4v4i8 @buildvec_vid_stepn2_add0_v4i8() {
+define void @buildvec_vid_stepn2_add0_v4i8(ptr %z0, ptr %z1, ptr %z2, ptr %z3) {
 ; CHECK-LABEL: buildvec_vid_stepn2_add0_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
-; CHECK-NEXT:    vmv.v.i v11, -6
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    vse8.v v8, (a2)
+; CHECK-NEXT:    vse8.v v8, (a3)
 ; CHECK-NEXT:    ret
-  %1 = insertvalue %x4v4i8 poison, <4 x i8> <i8 0, i8 -2, i8 -4, i8 -6>, 0
-  %2 = insertvalue %x4v4i8 %1, <4 x i8> <i8 undef, i8 -2, i8 -4, i8 -6>, 1
-  %3 = insertvalue %x4v4i8 %2, <4 x i8> <i8 undef, i8 undef, i8 -4, i8 -6>, 2
-  %4 = insertvalue %x4v4i8 %3, <4 x i8> <i8 undef, i8 undef, i8 undef, i8 -6>, 3
-  ret %x4v4i8 %4
+  store <4 x i8> <i8 0, i8 -2, i8 -4, i8 -6>, ptr %z0
+  store <4 x i8> <i8 undef, i8 -2, i8 -4, i8 -6>, ptr %z1
+  store <4 x i8> <i8 undef, i8 undef, i8 -4, i8 -6>, ptr %z2
+  store <4 x i8> <i8 0, i8 undef, i8 undef, i8 -6>, ptr %z3
+  ret void
 }
 
-define <4 x i8> @buildvec_vid_stepn2_add3_v4i8() {
+define void @buildvec_vid_stepn2_add3_v4i8(ptr %z0, ptr %z1, ptr %z2, ptr %z3) {
 ; CHECK-LABEL: buildvec_vid_stepn2_add3_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 3
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 3, i8 1, i8 -1, i8 -3>
+  store <4 x i8> <i8 3, i8 1, i8 -1, i8 -3>, ptr %z0
+  ret void
 }
 
-define <4 x i8> @buildvec_vid_stepn3_add3_v4i8() {
+define void @buildvec_vid_stepn3_add3_v4i8(ptr %z0, ptr %z1, ptr %z2, ptr %z3) {
 ; CHECK-LABEL: buildvec_vid_stepn3_add3_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 3
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    li a0, -3
-; CHECK-NEXT:    vmadd.vx v8, a0, v9
+; CHECK-NEXT:    vmv.v.i v8, 3
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    li a1, -3
+; CHECK-NEXT:    vmadd.vx v9, a1, v8
+; CHECK-NEXT:    vse8.v v9, (a0)
 ; CHECK-NEXT:    ret
-  ret <4 x i8> <i8 3, i8 0, i8 -3, i8 -6>
+  store <4 x i8> <i8 3, i8 0, i8 -3, i8 -6>, ptr %z0
+  ret void
 }
 
 define void @buildvec_vid_stepn3_addn3_v4i32(ptr %z0, ptr %z1, ptr %z2, ptr %z3) {
@@ -230,37 +235,43 @@ define <4 x i64> @buildvec_vid_step2_add0_v4i64() {
   ret <4 x i64> <i64 0, i64 2, i64 4, i64 6>
 }
 
-%x6v4i8 = type {<4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>}
-
-define %x6v4i8 @buildvec_no_vid_v4i8() {
+define void @buildvec_no_vid_v4i8(ptr %z0, ptr %z1, ptr %z2, ptr %z3, ptr %z4, ptr %z5) {
 ; CHECK-LABEL: buildvec_no_vid_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI14_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI14_0)
+; CHECK-NEXT:    lui a6, %hi(.LCPI14_0)
+; CHECK-NEXT:    addi a6, a6, %lo(.LCPI14_0)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    lui a0, %hi(.LCPI14_1)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI14_1)
-; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v8, (a6)
+; CHECK-NEXT:    lui a6, %hi(.LCPI14_1)
+; CHECK-NEXT:    addi a6, a6, %lo(.LCPI14_1)
+; CHECK-NEXT:    vle8.v v9, (a6)
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vse8.v v9, (a1)
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    slli a0, a0, 11
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a0
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a2)
 ; CHECK-NEXT:    li a0, 2047
-; CHECK-NEXT:    vmv.v.x v11, a0
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    lui a0, %hi(.LCPI14_2)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI14_2)
-; CHECK-NEXT:    vle8.v v13, (a0)
-; CHECK-NEXT:    vmv.v.i v12, -2
+; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vse8.v v8, (a3)
+; CHECK-NEXT:    vmv.v.i v8, -2
+; CHECK-NEXT:    vse8.v v8, (a4)
+; CHECK-NEXT:    vse8.v v9, (a5)
 ; CHECK-NEXT:    ret
-  %1 = insertvalue %x6v4i8 poison, <4 x i8> <i8 1, i8 3, i8 6, i8 7>, 0
-  %2 = insertvalue %x6v4i8 %1, <4 x i8> <i8 undef, i8 2, i8 5, i8 7>, 1
-  %3 = insertvalue %x6v4i8 %2, <4 x i8> <i8 0, i8 undef, i8 undef, i8 8>, 2
-  %4 = insertvalue %x6v4i8 %3, <4 x i8> <i8 -1, i8 undef, i8 undef, i8 7>, 3
-  %5 = insertvalue %x6v4i8 %4, <4 x i8> <i8 -2, i8 undef, i8 undef, i8 undef>, 4
-  %6 = insertvalue %x6v4i8 %5, <4 x i8> <i8 -1, i8 -2, i8 -4, i8 -5>, 5
-  ret %x6v4i8 %6
+  store <4 x i8> <i8 1, i8 3, i8 6, i8 7>, ptr %z0
+  store <4 x i8> <i8 undef, i8 2, i8 5, i8 7>, ptr %z1
+  store <4 x i8> <i8 0, i8 undef, i8 undef, i8 8>, ptr %z2
+  store <4 x i8> <i8 -1, i8 undef, i8 undef, i8 7>, ptr %z3
+  store <4 x i8> <i8 -2, i8 undef, i8 undef, i8 undef>, ptr %z4
+  store <4 x i8> <i8 -1, i8 -2, i8 -4, i8 -5>, ptr %z5
+  ret void
 }
 
 define void @buildvec_dominant0_v8i16(ptr %x) {
@@ -289,30 +300,35 @@ define void @buildvec_dominant1_v8i16(ptr %x) {
   ret void
 }
 
-define <2 x i8> @buildvec_dominant0_v2i8() {
+define void @buildvec_dominant0_v2i8(ptr %x) {
 ; CHECK-LABEL: buildvec_dominant0_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  ret <2 x i8> <i8 undef, i8 undef>
+  store <2 x i8> <i8 undef, i8 undef>, ptr %x
+  ret void
 }
 
-define <2 x i8> @buildvec_dominant1_v2i8() {
+define void @buildvec_dominant1_v2i8(ptr %x) {
 ; CHECK-LABEL: buildvec_dominant1_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, -1
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  ret <2 x i8> <i8 undef, i8 -1>
+  store <2 x i8> <i8 undef, i8 -1>, ptr %x
+  ret void
 }
 
-define <2 x i8> @buildvec_dominant2_v2i8() {
+define void @buildvec_dominant2_v2i8(ptr %x) {
 ; CHECK-LABEL: buildvec_dominant2_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vrsub.vi v8, v8, 0
+; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  ret <2 x i8> <i8 0, i8 -1>
+  store <2 x i8> <i8 0, i8 -1>, ptr %x
+  ret void
 }
 
 define void @buildvec_dominant0_v2i32(ptr %x) {
