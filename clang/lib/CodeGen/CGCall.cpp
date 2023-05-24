@@ -3461,8 +3461,9 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
   // single-predecessors chain from the current insertion point.
   llvm::BasicBlock *StoreBB = store->getParent();
   llvm::BasicBlock *IP = CGF.Builder.GetInsertBlock();
+  llvm::SmallPtrSet<llvm::BasicBlock *, 4> SeenBBs;
   while (IP != StoreBB) {
-    if (!(IP = IP->getSinglePredecessor()))
+    if (!SeenBBs.insert(IP).second || !(IP = IP->getSinglePredecessor()))
       return nullptr;
   }
 
