@@ -1,4 +1,5 @@
-; RUN: opt -S --passes="ipsccp<func-spec>" -funcspec-max-clones=1 < %s | FileCheck %s
+; RUN: opt -S --passes="ipsccp<func-spec>" -funcspec-max-clones=1 -force-specialization < %s | FileCheck %s
+
 define internal i32 @f(i32 noundef %x, ptr nocapture noundef readonly %p, ptr nocapture noundef readonly %q) noinline {
 entry:
   %call = tail call i32 %p(i32 noundef %x)
