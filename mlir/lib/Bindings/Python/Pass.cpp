@@ -93,7 +93,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
                 mlirStringRefCreate(pipeline.data(), pipeline.size()),
                 errorMsg.getCallback(), errorMsg.getUserData());
             if (mlirLogicalResultIsFailure(status))
-              throw SetPyError(PyExc_ValueError, std::string(errorMsg.join()));
+              throw py::value_error(std::string(errorMsg.join()));
             return new PyPassManager(passManager);
           },
           py::arg("pipeline"), py::arg("context") = py::none(),
@@ -109,7 +109,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
                 mlirStringRefCreate(pipeline.data(), pipeline.size()),
                 errorMsg.getCallback(), errorMsg.getUserData());
             if (mlirLogicalResultIsFailure(status))
-              throw SetPyError(PyExc_ValueError, std::string(errorMsg.join()));
+              throw py::value_error(std::string(errorMsg.join()));
           },
           py::arg("pipeline"),
           "Add textual pipeline elements to the pass manager. Throws a "

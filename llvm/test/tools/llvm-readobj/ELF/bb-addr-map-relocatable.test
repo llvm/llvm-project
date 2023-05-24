@@ -20,6 +20,7 @@
 # CHECK-NEXT:         HasTailCall: No
 # CHECK-NEXT:         IsEHPad: No
 # CHECK-NEXT:         CanFallThrough: No
+# CHECK-NEXT:         HasIndirectBranch: No
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
@@ -35,6 +36,7 @@
 # CHECK-NEXT:         HasTailCall: No
 # CHECK-NEXT:         IsEHPad: No
 # CHECK-NEXT:         CanFallThrough: Yes
+# CHECK-NEXT:         HasIndirectBranch: No
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
@@ -205,6 +207,7 @@ Sections:
 # ET-DYN-NO-WARNING:         HasTailCall: No
 # ET-DYN-NO-WARNING:         IsEHPad: No
 # ET-DYN-NO-WARNING:         CanFallThrough: No
+# ET-DYN-NO-WARNING:         HasIndirectBranch: No
 # ET-DYN-NO-WARNING:       }
 # ET-DYN-NO-WARNING:     ]
 # ET-DYN-NO-WARNING:   }

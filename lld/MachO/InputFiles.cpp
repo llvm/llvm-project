@@ -1551,7 +1551,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
           return loadDylib(*dylibPath, umbrella);
       }
     } else if (std::optional<StringRef> dylibPath = findPathCombination(
-                   stem, config->librarySearchPaths, {".tbd", ".dylib"}))
+                   stem, config->librarySearchPaths, {".tbd", ".dylib", ".so"}))
       return loadDylib(*dylibPath, umbrella);
   }
 

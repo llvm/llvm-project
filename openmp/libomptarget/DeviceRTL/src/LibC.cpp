@@ -15,7 +15,8 @@ int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t);
 }
 
 #pragma omp begin declare variant match(                                       \
-    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+        device = {arch(nvptx, nvptx64)},                                       \
+            implementation = {extension(match_any)})
 extern "C" int32_t vprintf(const char *, void *);
 namespace impl {
 int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {

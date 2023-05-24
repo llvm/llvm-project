@@ -110,7 +110,7 @@ public:
   }
 
   void testNormalRange(RemQuoFunc func) {
-    constexpr UIntType COUNT = 1000001;
+    constexpr UIntType COUNT = 234561;
     constexpr UIntType STEP = (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
     for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
          v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;

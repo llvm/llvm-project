@@ -40,15 +40,15 @@ TEST(LoopRotate, MultiDeoptExit) {
     R"(
 declare i32 @llvm.experimental.deoptimize.i32(...)
 
-define i32 @test(i32 * nonnull %a, i64 %x) {
+define i32 @test(ptr nonnull %a, i64 %x) {
 entry:
   br label %for.cond1
 
 for.cond1:
   %idx = phi i64 [ 0, %entry ], [ %idx.next, %for.tail ]
   %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.tail ]
-  %a.idx = getelementptr inbounds i32, i32 *%a, i64 %idx
-  %val.a.idx = load i32, i32* %a.idx, align 4
+  %a.idx = getelementptr inbounds i32, ptr %a, i64 %idx
+  %val.a.idx = load i32, ptr %a.idx, align 4
   %zero.check = icmp eq i32 %val.a.idx, 0
   br i1 %zero.check, label %deopt.exit, label %for.cond2
 
@@ -110,15 +110,15 @@ declare i32 @llvm.experimental.deoptimize.i32(...)
 
 declare void @nondup()
 
-define i32 @test_nondup(i32 * nonnull %a, i64 %x) {
+define i32 @test_nondup(ptr nonnull %a, i64 %x) {
 entry:
   br label %for.cond1
 
 for.cond1:
   %idx = phi i64 [ 0, %entry ], [ %idx.next, %for.tail ]
   %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.tail ]
-  %a.idx = getelementptr inbounds i32, i32 *%a, i64 %idx
-  %val.a.idx = load i32, i32* %a.idx, align 4
+  %a.idx = getelementptr inbounds i32, ptr %a, i64 %idx
+  %val.a.idx = load i32, ptr %a.idx, align 4
   %zero.check = icmp eq i32 %val.a.idx, 0
   br i1 %zero.check, label %deopt.exit, label %for.cond2
 

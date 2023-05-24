@@ -45,7 +45,7 @@ TEST(LlvmLibcUtilsTest, Log2) {
       6                                               // 64
   };
   for (size_t i = 0; i < kExpectedValues.size(); ++i)
-    EXPECT_EQ(log2(i), kExpectedValues[i]);
+    EXPECT_EQ(log2s(i), kExpectedValues[i]);
 }
 
 TEST(LlvmLibcUtilsTest, LEPowerOf2) {

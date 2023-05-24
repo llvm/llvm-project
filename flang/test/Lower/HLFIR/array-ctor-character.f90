@@ -17,12 +17,13 @@ contains
 ! CHECK:  %[[VAL_13:.*]] = arith.constant 3 : i64
 ! CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i64) -> index
 ! CHECK:  %[[VAL_15:.*]] = arith.constant 1 : index
+! CHECK:  %[[VAL_15B:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_16:.*]] = fir.allocmem !fir.array<2x!fir.char<1,3>> {bindc_name = ".tmp.arrayctor", uniq_name = ""}
 ! CHECK:  %[[VAL_17:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_16]](%[[VAL_17]]) typeparams %[[VAL_14]] {uniq_name = ".tmp.arrayctor"} : (!fir.heap<!fir.array<2x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<2x!fir.char<1,3>>>, !fir.heap<!fir.array<2x!fir.char<1,3>>>)
 ! CHECK:  %[[VAL_19:.*]] = arith.constant 3 : i64
 ! CHECK:  %[[VAL_20:.*]] = hlfir.set_length %[[VAL_9]]#0 len %[[VAL_19]] : (!fir.boxchar<1>, i64) -> !hlfir.expr<!fir.char<1,3>>
-! CHECK:  %[[VAL_21:.*]] = arith.addi %[[VAL_15]], %[[VAL_15]] : index
+! CHECK:  %[[VAL_21:.*]] = arith.addi %[[VAL_15]], %[[VAL_15B]] : index
 ! CHECK:  %[[VAL_22:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_15]])  typeparams %[[VAL_14]] : (!fir.heap<!fir.array<2x!fir.char<1,3>>>, index, index) -> !fir.ref<!fir.char<1,3>>
 ! CHECK:  hlfir.assign %[[VAL_20]] to %[[VAL_22]] : !hlfir.expr<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>
 ! CHECK:  %[[VAL_23:.*]] = arith.constant 3 : i64

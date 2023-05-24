@@ -20,6 +20,7 @@
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/ScopHelper.h"
 #include "polly/Support/VirtualInstruction.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -626,8 +627,9 @@ void BlockGenerator::generateConditionalExecution(
   StringRef BlockName = HeadBlock->getName();
 
   // Generate the conditional block.
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   SplitBlockAndInsertIfThen(Cond, &*Builder.GetInsertPoint(), false, nullptr,
-                            &DT, &LI);
+                            &DTU, &LI);
   BranchInst *Branch = cast<BranchInst>(HeadBlock->getTerminator());
   BasicBlock *ThenBlock = Branch->getSuccessor(0);
   BasicBlock *TailBlock = Branch->getSuccessor(1);

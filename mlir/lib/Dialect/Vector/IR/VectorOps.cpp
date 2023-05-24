@@ -4615,6 +4615,13 @@ static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
   unsigned rankB = b.size();
   assert(rankA < rankB);
 
+  auto isOne = [](int64_t v) { return v == 1; };
+
+  // Special-case for n-D to 0-d shape cast. 'b' must be all ones to be shape
+  // casted to a 0-d vector.
+  if (rankA == 0 && llvm::all_of(b, isOne))
+    return true;
+
   unsigned i = 0;
   unsigned j = 0;
   while (i < rankA && j < rankB) {
@@ -4628,7 +4635,6 @@ static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
 
     // Handle the case when trailing dimensions are of size 1.
     // Include them into the contiguous sequence.
-    auto isOne = [](int64_t v) { return v == 1; };
     if (i < rankA && llvm::all_of(a.slice(i), isOne))
       i = rankA;
     if (j < rankB && llvm::all_of(b.slice(j), isOne))

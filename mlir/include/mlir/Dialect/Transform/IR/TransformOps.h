@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMOPS_H
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMOPS_H
 
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
@@ -68,6 +67,9 @@ protected:
 
   /// Return the single op that defines all given values (if any).
   static Operation *getCommonDefiningOp(ValueRange values);
+
+  /// Return the transform op in which this TrackingListener is used.
+  TransformOpInterface getTransformOp() const { return transformOp; }
 
 private:
   void notifyOperationRemoved(Operation *op) override;

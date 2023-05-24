@@ -1659,6 +1659,13 @@ void ASTDeclReader::ReadVarDeclInit(VarDecl *VD) {
     EvaluatedStmt *Eval = VD->ensureEvaluatedStmt();
     Eval->HasConstantInitialization = (Val & 2) != 0;
     Eval->HasConstantDestruction = (Val & 4) != 0;
+    Eval->WasEvaluated = (Val & 8) != 0;
+    if (Eval->WasEvaluated) {
+      Eval->Evaluated = Record.readAPValue();
+      if (Eval->Evaluated.needsCleanup())
+        Reader.getContext().addDestruction(&Eval->Evaluated);
+    }
+
     // Store the offset of the initializer. Don't deserialize it yet: it might
     // not be needed, and might refer back to the variable, for example if it
     // contains a lambda.

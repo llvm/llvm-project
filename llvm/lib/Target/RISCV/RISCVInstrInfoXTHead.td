@@ -598,12 +598,6 @@ def : PatGprImm<rotr, TH_SRRI, uimmlog2xlen>;
 // it can be implemented with th.srri by negating the immediate.
 def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
           (TH_SRRI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
-def : Pat<(rotr GPR:$rs1, GPR:$rs2),
-           (OR (SRL GPR:$rs1, GPR:$rs2),
-               (SLL GPR:$rs1, (SUB X0, GPR:$rs2)))>;
-def : Pat<(rotl GPR:$rs1, GPR:$rs2),
-           (OR (SLL GPR:$rs1, GPR:$rs2),
-               (SRL GPR:$rs1, (SUB X0, GPR:$rs2)))>;
 def : Pat<(sext_inreg GPR:$rs1, i32), (TH_EXT GPR:$rs1, 31, 0)>;
 def : Pat<(sext_inreg GPR:$rs1, i16), (TH_EXT GPR:$rs1, 15, 0)>;
 def : Pat<(sext_inreg GPR:$rs1, i8), (TH_EXT GPR:$rs1, 7, 0)>;
@@ -617,12 +611,6 @@ let Predicates = [HasVendorXTHeadBb, IsRV64] in {
 def : PatGprImm<riscv_rorw, TH_SRRIW, uimm5>;
 def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
           (TH_SRRIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
-def : Pat<(riscv_rorw i64:$rs1, i64:$rs2),
-          (OR (SRLW i64:$rs1, i64:$rs2),
-              (SLLW i64:$rs1, (SUB X0, i64:$rs2)))>;
-def : Pat<(riscv_rolw i64:$rs1, i64:$rs2),
-          (OR (SLLW i64:$rs1, i64:$rs2),
-              (SRLW i64:$rs1, (SUB X0, i64:$rs2)))>;
 def : Pat<(sra (bswap i64:$rs1), (i64 32)),
           (TH_REVW i64:$rs1)>;
 def : Pat<(binop_allwusers<srl> (bswap i64:$rs1), (i64 32)),

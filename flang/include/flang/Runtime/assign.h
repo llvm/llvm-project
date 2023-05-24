@@ -36,6 +36,8 @@ void RTNAME(Assign)(Descriptor &to, const Descriptor &from,
 // reallocation.
 void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
+void RTNAME(CopyOutAssign)(Descriptor &to, const Descriptor &from,
+    bool skipToInit, const char *sourceFile = nullptr, int sourceLine = 0);
 // This variant is for assignments to explicit-length CHARACTER left-hand
 // sides that might need to handle truncation or blank-fill, and
 // must maintain the character length even if an allocatable array

@@ -759,3 +759,6 @@ define void @test_bzero(i64 %in)  {
 }
 
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 7, !"PIC Level", i32 2}

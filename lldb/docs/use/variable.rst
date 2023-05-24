@@ -969,7 +969,7 @@ functions. It is possible to declare this synthetic child without
 including it in the range of children displayed by LLDB. For example,
 this subset of a synthetic children provider class would allow the
 synthetic value to be dereferenced without actually showing any
-synthtic children in the UI:
+synthetic children in the UI:
 
 .. code-block:: python
 
