@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 "-triple" "nvptx64-nvidia-cuda" "-target-feature" "+ptx78" "-target-cpu" "sm_90" -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
+// RUN: %clang_cc1 "-triple" "nvptx64-nvidia-cuda" "-target-feature" "+ptx80" "-target-cpu" "sm_90" -emit-llvm -fcuda-is-device -o - %s | FileCheck %s
 
 // CHECK: define{{.*}} void @_Z6kernelPlPvj(
 __attribute__((global)) void kernel(long *out, void *ptr, unsigned u) {
@@ -56,6 +56,15 @@ __attribute__((global)) void kernel(long *out, void *ptr, unsigned u) {
   out[i++] = __nvvm_getctarank(ptr);
   // CHECK: call i32 @llvm.nvvm.getctarank.shared.cluster(ptr addrspace(3) {{.*}})
   out[i++] = __nvvm_getctarank_shared_cluster(sptr);
+
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive()
+  __nvvm_barrier_cluster_arrive();
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed()
+  __nvvm_barrier_cluster_arrive_relaxed();
+  // CHECK: call void @llvm.nvvm.barrier.cluster.wait()
+  __nvvm_barrier_cluster_wait();
+  // CHECK: call void @llvm.nvvm.fence.sc.cluster()
+  __nvvm_fence_sc_cluster();
 
   // CHECK: ret void
 }
