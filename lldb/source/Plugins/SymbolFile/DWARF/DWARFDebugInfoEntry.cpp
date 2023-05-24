@@ -173,6 +173,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
             break;
 
           case DW_FORM_strp:
+          case DW_FORM_line_strp:
           case DW_FORM_sec_offset:
             data.GetU32(&offset);
             break;
