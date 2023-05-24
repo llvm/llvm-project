@@ -299,20 +299,27 @@ unsigned DWARFVerifier::verifyDebugInfoCallSite(const DWARFDie &Die) {
 }
 
 unsigned DWARFVerifier::verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev) {
+  if (!Abbrev)
+    return 0;
+
+  const DWARFAbbreviationDeclarationSet *AbbrDecls =
+      Abbrev->getAbbreviationDeclarationSet(0);
+  // FIXME: If we failed to get a DWARFAbbreviationDeclarationSet, it's possible
+  // that there are errors. We need to propagate the error from
+  // getAbbreviationDeclarationSet.
+  if (!AbbrDecls)
+    return 0;
+
   unsigned NumErrors = 0;
-  if (Abbrev) {
-    const DWARFAbbreviationDeclarationSet *AbbrDecls =
-        Abbrev->getAbbreviationDeclarationSet(0);
-    for (auto AbbrDecl : *AbbrDecls) {
-      SmallDenseSet<uint16_t> AttributeSet;
-      for (auto Attribute : AbbrDecl.attributes()) {
-        auto Result = AttributeSet.insert(Attribute.Attr);
-        if (!Result.second) {
-          error() << "Abbreviation declaration contains multiple "
-                  << AttributeString(Attribute.Attr) << " attributes.\n";
-          AbbrDecl.dump(OS);
-          ++NumErrors;
-        }
+  for (auto AbbrDecl : *AbbrDecls) {
+    SmallDenseSet<uint16_t> AttributeSet;
+    for (auto Attribute : AbbrDecl.attributes()) {
+      auto Result = AttributeSet.insert(Attribute.Attr);
+      if (!Result.second) {
+        error() << "Abbreviation declaration contains multiple "
+                << AttributeString(Attribute.Attr) << " attributes.\n";
+        AbbrDecl.dump(OS);
+        ++NumErrors;
       }
     }
   }
