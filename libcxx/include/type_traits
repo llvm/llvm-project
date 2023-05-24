@@ -418,7 +418,6 @@ namespace std
 */
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <__functional/invoke.h>
 #include <__fwd/hash.h> // This is https://llvm.org/PR56938
 #include <__type_traits/add_const.h>
 #include <__type_traits/add_cv.h>
@@ -443,6 +442,7 @@ namespace std
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/has_virtual_destructor.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_abstract.h>
 #include <__type_traits/is_aggregate.h>
 #include <__type_traits/is_arithmetic.h>
