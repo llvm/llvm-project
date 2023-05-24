@@ -273,7 +273,6 @@
 // Incomplete features get their own specific disabling flags. This makes it
 // easier to grep for target specific flags once the feature is complete.
 #  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
-#    define _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
 #    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
 #  endif
 
@@ -594,10 +593,7 @@ typedef __char32_t char32_t;
 
 #  endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
-// _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION is used on member functions of explicitly instantiated
-// classes that we don't want to make part of the ABI to opt those methods out of the explicit instantiation
-// and avoid exporting them from the dylib or relying on their definition being in the dylib.
-#  if __has_attribute(__exclude_from_explicit_instantiation__)
+#  if __has_attribute(exclude_from_explicit_instantiation)
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((__exclude_from_explicit_instantiation__))
 #  else
 // Try to approximate the effect of exclude_from_explicit_instantiation
@@ -623,6 +619,9 @@ typedef __char32_t char32_t;
 //    all functions or giving internal linkage to all functions. Both these (previous) solutions
 //    suffer from drawbacks that lead notably to code bloat.
 //
+// Note that we use _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION to ensure that we don't depend
+// on _LIBCPP_HIDE_FROM_ABI methods of classes explicitly instantiated in the dynamic library.
+//
 // Also note that the _LIBCPP_HIDE_FROM_ABI_VIRTUAL macro should be used on virtual functions
 // instead of _LIBCPP_HIDE_FROM_ABI. That macro does not use an ABI tag. Indeed, the mangled
 // name of a virtual function is part of its ABI, since some architectures like arm64e can sign
@@ -637,26 +636,25 @@ typedef __char32_t char32_t;
 //       use compression mangling instead, see https://github.com/itanium-cxx-abi/cxx-abi/issues/70.
 #  ifndef _LIBCPP_NO_ABI_TAG
 #    define _LIBCPP_HIDE_FROM_ABI                                                                                      \
-      _LIBCPP_HIDDEN __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_VERSIONED_IDENTIFIER))))
+      _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION                                                       \
+          __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_VERSIONED_IDENTIFIER))))
 #  else
-#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN
+#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 #  endif
-#  define _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_HIDDEN
+#  define _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 
 // This macro provides a HIDE_FROM_ABI equivalent that can be applied to extern
 // "C" function, as those lack mangling.
-#  define _LIBCPP_HIDE_FROM_ABI_C _LIBCPP_HIDDEN
+#  define _LIBCPP_HIDE_FROM_ABI_C _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 
-// _LIBCPP_HIDE_FROM_ABI_AFTER_V1 also avoids relying on the symbols in ABIv1. Functions marked with this macro are
-// only preserved in the dylib to avoid ABI breaks.
 #  ifdef _LIBCPP_BUILDING_LIBRARY
 #    if _LIBCPP_ABI_VERSION > 1
-#      define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+#      define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #    else
 #      define _LIBCPP_HIDE_FROM_ABI_AFTER_V1
 #    endif
 #  else
-#    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+#    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
 // Just so we can migrate to the new macros gradually.
@@ -904,6 +902,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  ifndef _LIBCPP_HAS_NO_ASAN
     extern "C" _LIBCPP_FUNC_VIS void
     __sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
+#    if _LIBCPP_CLANG_VER >= 1600
+extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_double_ended_contiguous_container(
+    const void*, const void*, const void*, const void*, const void*, const void*);
+extern "C" _LIBCPP_FUNC_VIS int
+__sanitizer_verify_double_ended_contiguous_container(const void*, const void*, const void*, const void*);
+#    endif
 #  endif
 
 // Try to find out if RTTI is disabled.
@@ -1276,7 +1280,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 // TODO: Make this a proper configuration option
 #define _PSTL_PAR_BACKEND_SERIAL
-#define _PSTL_CPU_BACKEND_SERIAL
 
 #define _PSTL_PRAGMA(x) _Pragma(#    x)
 

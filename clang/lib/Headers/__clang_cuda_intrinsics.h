@@ -512,70 +512,63 @@ __device__ inline void *__nv_cvta_local_to_generic_impl(size_t __ptr) {
 __device__ inline cuuint32_t __nvvm_get_smem_pointer(void *__ptr) {
   return __nv_cvta_generic_to_shared_impl(__ptr);
 }
+} // extern "C"
 
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 800
-__device__ inline unsigned __reduce_add_sync_unsigned_impl(unsigned __mask,
-                                                           unsigned __value) {
+__device__ inline unsigned __reduce_add_sync(unsigned __mask,
+                                             unsigned __value) {
   return __nvvm_redux_sync_add(__mask, __value);
 }
-__device__ inline int __reduce_add_sync_signed_impl(unsigned __mask,
-                                                    int __value) {
-  return __nvvm_redux_sync_add(__mask, __value);
-}
-__device__ inline unsigned __reduce_min_sync_unsigned_impl(unsigned __mask,
-                                                           unsigned __value) {
+__device__ inline unsigned __reduce_min_sync(unsigned __mask,
+                                             unsigned __value) {
   return __nvvm_redux_sync_umin(__mask, __value);
 }
-__device__ inline unsigned __reduce_max_sync_unsigned_impl(unsigned __mask,
-                                                           unsigned __value) {
+__device__ inline unsigned __reduce_max_sync(unsigned __mask,
+                                             unsigned __value) {
   return __nvvm_redux_sync_umax(__mask, __value);
 }
-__device__ inline int __reduce_min_sync_signed_impl(unsigned __mask,
-                                                    int __value) {
+__device__ inline int __reduce_min_sync(unsigned __mask, int __value) {
   return __nvvm_redux_sync_min(__mask, __value);
 }
-__device__ inline int __reduce_max_sync_signed_impl(unsigned __mask,
-                                                    int __value) {
+__device__ inline int __reduce_max_sync(unsigned __mask, int __value) {
   return __nvvm_redux_sync_max(__mask, __value);
 }
-__device__ inline unsigned __reduce_or_sync_unsigned_impl(unsigned __mask,
-                                                          unsigned __value) {
+__device__ inline unsigned __reduce_or_sync(unsigned __mask, unsigned __value) {
   return __nvvm_redux_sync_or(__mask, __value);
 }
-__device__ inline unsigned __reduce_and_sync_unsigned_impl(unsigned __mask,
-                                                           unsigned __value) {
+__device__ inline unsigned __reduce_and_sync(unsigned __mask,
+                                             unsigned __value) {
   return __nvvm_redux_sync_and(__mask, __value);
 }
-__device__ inline unsigned __reduce_xor_sync_unsigned_impl(unsigned __mask,
-                                                           unsigned __value) {
+__device__ inline unsigned __reduce_xor_sync(unsigned __mask,
+                                             unsigned __value) {
   return __nvvm_redux_sync_xor(__mask, __value);
 }
 
-__device__ inline void
-__nv_memcpy_async_shared_global_4_impl(void *__dst, const void *__src,
-                                       unsigned __src_size) {
+__device__ inline void __nv_memcpy_async_shared_global_4(void *__dst,
+                                                         const void *__src,
+                                                         unsigned __src_size) {
   __nvvm_cp_async_ca_shared_global_4(
       (void __attribute__((address_space(3))) *)__dst,
       (const void __attribute__((address_space(1))) *)__src, __src_size);
 }
-__device__ inline void
-__nv_memcpy_async_shared_global_8_impl(void *__dst, const void *__src,
-                                       unsigned __src_size) {
+__device__ inline void __nv_memcpy_async_shared_global_8(void *__dst,
+                                                         const void *__src,
+                                                         unsigned __src_size) {
   __nvvm_cp_async_ca_shared_global_8(
       (void __attribute__((address_space(3))) *)__dst,
       (const void __attribute__((address_space(1))) *)__src, __src_size);
 }
-__device__ inline void
-__nv_memcpy_async_shared_global_16_impl(void *__dst, const void *__src,
-                                        unsigned __src_size) {
+__device__ inline void __nv_memcpy_async_shared_global_16(void *__dst,
+                                                          const void *__src,
+                                                          unsigned __src_size) {
   __nvvm_cp_async_ca_shared_global_16(
       (void __attribute__((address_space(3))) *)__dst,
       (const void __attribute__((address_space(1))) *)__src, __src_size);
 }
 
 __device__ inline void *
-__nv_associate_access_property_impl(const void *__ptr,
-                                    unsigned long long __prop) {
+__nv_associate_access_property(const void *__ptr, unsigned long long __prop) {
   // TODO: it appears to provide compiler with some sort of a hint. We do not
   // know what exactly it is supposed to do. However, CUDA headers suggest that
   // just passing through __ptr should not affect correctness. They do so on
@@ -584,7 +577,6 @@ __nv_associate_access_property_impl(const void *__ptr,
 }
 #endif // !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 800
 
-} // extern "C"
 #endif // CUDA_VERSION >= 11000
 
 #endif // defined(__CLANG_CUDA_INTRINSICS_H__)

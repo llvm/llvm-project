@@ -214,11 +214,11 @@ void dereference_reinterpret_cast() {
   (void)*reinterpret_cast<float*>(v_ptr);
 
   // Casting to void pointer
-  (void)*reinterpret_cast<void*>(&a); // expected-error {{ISO C++ does not allow}}
-  (void)*reinterpret_cast<void*>(&b); // expected-error {{ISO C++ does not allow}}
-  (void)*reinterpret_cast<void*>(&l); // expected-error {{ISO C++ does not allow}}
-  (void)*reinterpret_cast<void*>(&d); // expected-error {{ISO C++ does not allow}}
-  (void)*reinterpret_cast<void*>(&f); // expected-error {{ISO C++ does not allow}}
+  (void)*reinterpret_cast<void*>(&a); // expected-error {{indirection not permitted on operand of type 'void *'}}
+  (void)*reinterpret_cast<void*>(&b); // expected-error {{indirection not permitted on operand of type 'void *'}}
+  (void)*reinterpret_cast<void*>(&l); // expected-error {{indirection not permitted on operand of type 'void *'}}
+  (void)*reinterpret_cast<void*>(&d); // expected-error {{indirection not permitted on operand of type 'void *'}}
+  (void)*reinterpret_cast<void*>(&f); // expected-error {{indirection not permitted on operand of type 'void *'}}
 }
 
 void reinterpret_cast_allowlist () {

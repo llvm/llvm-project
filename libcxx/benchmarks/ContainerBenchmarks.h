@@ -27,6 +27,28 @@ void BM_ConstructSize(benchmark::State& st, Container) {
 }
 
 template <class Container>
+void BM_CopyConstruct(benchmark::State& st, Container) {
+  auto size = st.range(0);
+  Container c(size);
+  for (auto _ : st) {
+    auto v = c;
+    DoNotOptimizeData(v);
+  }
+}
+
+template <class Container>
+void BM_Assignment(benchmark::State& st, Container) {
+  auto size = st.range(0);
+  Container c1;
+  Container c2(size);
+  for (auto _ : st) {
+    c1 = c2;
+    DoNotOptimizeData(c1);
+    DoNotOptimizeData(c2);
+  }
+}
+
+template <class Container>
 void BM_ConstructSizeValue(benchmark::State& st, Container, typename Container::value_type const& val) {
   const auto size = st.range(0);
   for (auto _ : st) {

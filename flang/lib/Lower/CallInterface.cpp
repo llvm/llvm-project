@@ -788,10 +788,12 @@ private:
       }
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Derived) {
-      // Derived result need to be allocated by the caller and the result value
-      // must be saved. Derived type in implicit interface cannot have length
-      // parameters.
-      setSaveResult();
+      if (!dynamicType.GetDerivedTypeSpec().IsVectorType()) {
+        // Derived result need to be allocated by the caller and the result
+        // value must be saved. Derived type in implicit interface cannot have
+        // length parameters.
+        setSaveResult();
+      }
       mlir::Type mlirType = translateDynamicType(dynamicType);
       addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
                    Property::Value);

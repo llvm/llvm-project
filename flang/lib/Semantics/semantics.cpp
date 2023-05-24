@@ -470,6 +470,12 @@ void SemanticsContext::UseFortranBuiltinsModule() {
   }
 }
 
+void SemanticsContext::UsePPCFortranBuiltinTypesModule() {
+  if (ppcBuiltinTypesScope_ == nullptr) {
+    ppcBuiltinTypesScope_ = GetBuiltinModule("__fortran_ppc_types");
+  }
+}
+
 void SemanticsContext::UsePPCFortranBuiltinsModule() {
   if (ppcBuiltinsScope_ == nullptr) {
     ppcBuiltinsScope_ = GetBuiltinModule("__fortran_ppc_intrinsics");
@@ -492,7 +498,10 @@ bool Semantics::Perform() {
                     .statement.v.source == "__fortran_builtins" ||
             std::get<parser::Statement<parser::ModuleStmt>>(
                 frontModule->value().t)
-                    .statement.v.source == "__fortran_ppc_intrinsics")) {
+                    .statement.v.source == "__fortran_ppc_intrinsics" ||
+            std::get<parser::Statement<parser::ModuleStmt>>(
+                frontModule->value().t)
+                    .statement.v.source == "__fortran_ppc_types")) {
       // Don't try to read the builtins module when we're actually building it.
     } else {
       context_.UseFortranBuiltinsModule();
@@ -500,6 +509,7 @@ bool Semantics::Perform() {
           llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple()))};
       // Only use __Fortran_PPC_intrinsics module when targetting PowerPC arch
       if (targetTriple.isPPC()) {
+        context_.UsePPCFortranBuiltinTypesModule();
         context_.UsePPCFortranBuiltinsModule();
       }
     }

@@ -95,7 +95,6 @@ assert all(v == sorted(v) for k, v in mandatory_inclusions.items())
 lit_markup = {
   "barrier": ["UNSUPPORTED: no-threads"],
   "filesystem": ["UNSUPPORTED: no-filesystem"],
-  "format": ["UNSUPPORTED: libcpp-has-no-incomplete-format"],
   "iomanip": ["UNSUPPORTED: no-localization"],
   "ios": ["UNSUPPORTED: no-localization"],
   "iostream": ["UNSUPPORTED: no-localization"],

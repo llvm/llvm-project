@@ -3792,7 +3792,7 @@ bool Sema::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
       return Diag(TheCall->getBeginLoc(),
                   diag::err_loongarch_builtin_requires_la64)
              << TheCall->getSourceRange();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LoongArch::BI__builtin_loongarch_cacop_w: {
     if (BuiltinID == LoongArch::BI__builtin_loongarch_cacop_w &&
         !TI.hasFeature("32bit"))

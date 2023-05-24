@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   BitReader
   BitstreamReader
+  FrontendOpenMP
   Support
   )
 
@@ -20,4 +21,5 @@ clang_target_link_libraries(SerializationTests
   clangSema
   clangSerialization
   clangTooling
+  clangASTMatchers
   )

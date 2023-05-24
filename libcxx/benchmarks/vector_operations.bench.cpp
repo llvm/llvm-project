@@ -17,6 +17,14 @@ BENCHMARK_CAPTURE(BM_ConstructSize,
     vector_byte,
     std::vector<unsigned char>{})->Arg(5140480);
 
+BENCHMARK_CAPTURE(BM_CopyConstruct,
+    vector_int,
+    std::vector<int>{})->Arg(5140480);
+
+BENCHMARK_CAPTURE(BM_Assignment,
+    vector_int,
+    std::vector<int>{})->Arg(5140480);
+
 BENCHMARK_CAPTURE(BM_ConstructSizeValue,
     vector_byte,
     std::vector<unsigned char>{}, 0)->Arg(5140480);

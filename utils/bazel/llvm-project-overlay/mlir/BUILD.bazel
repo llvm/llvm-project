@@ -5,6 +5,7 @@
 # Description:
 #   The MLIR "Multi-Level Intermediate Representation" Compiler Infrastructure
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load(":tblgen.bzl", "gentbl_cc_library", "td_library")
 load(":linalggen.bzl", "genlinalg")
@@ -27,6 +28,22 @@ exports_files([
     "run_lit.sh",
     "utils/textmate/mlir.json",
 ])
+
+expand_template(
+    name = "mlir_config_h_gen",
+    out = "include/mlir/Config/mlir-config.h",
+    substitutions = {
+        "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0"
+        },
+    template = "include/mlir/Config/mlir-config.h.cmake",
+)
+
+cc_library(
+    name = "config",
+    hdrs = [
+        "include/mlir/Config/mlir-config.h",
+    ],
+)
 
 filegroup(
     name = "c_headers",
@@ -5992,6 +6009,7 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":config",
         ":ControlFlowInterfaces",
         ":IR",
         ":LoopLikeInterface",
