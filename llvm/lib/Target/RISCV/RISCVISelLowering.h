@@ -164,6 +164,12 @@ enum NodeType : unsigned {
   // value. The fourth and fifth operands are the mask and VL operands.
   VSLIDE1UP_VL,
   VSLIDE1DOWN_VL,
+  // Matches the semantics of vfslide1up/vfslide1down. The first operand is
+  // passthru operand, the second is source vector, third is a scalar value
+  // whose type matches the element type of the vectors.  The fourth and fifth
+  // operands are the mask and VL operands.
+  VFSLIDE1UP_VL,
+  VFSLIDE1DOWN_VL,
   // Matches the semantics of the vid.v instruction, with a mask and VL
   // operand.
   VID_VL,
