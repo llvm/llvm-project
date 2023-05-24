@@ -36,7 +36,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 namespace {
-#ifdef MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 /// A helper struct that stores finger prints of ops in order to detect broken
 /// RewritePatterns. A rewrite pattern is broken if it modifies IR without
 /// using the rewriter API or if it returns an inconsistent return value.
@@ -223,7 +223,7 @@ private:
   /// The low-level pattern applicator.
   PatternApplicator matcher;
 
-#ifdef MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   DebugFingerPrints debugFingerPrints;
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 };
@@ -233,7 +233,7 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
     const GreedyRewriteConfig &config)
     : PatternRewriter(ctx), folder(ctx, this), config(config), matcher(patterns)
-#ifdef MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // clang-format off
       , debugFingerPrints(this)
 // clang-format on
@@ -245,7 +245,7 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
   matcher.applyDefaultCostModel();
 
   // Set up listener.
-#ifdef MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   // Send IR notifications to the debug handler. This handler will then forward
   // all notifications to this GreedyPatternRewriteDriver.
   setListener(&debugFingerPrints);
@@ -346,7 +346,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     function_ref<LogicalResult(const Pattern &)> onSuccess = {};
 #endif
 
-#ifdef MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     debugFingerPrints.computeFingerPrints(
         /*topLevel=*/config.scope ? config.scope->getParentOp() : op);
     auto clearFingerprints =
@@ -358,14 +358,14 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 
     if (succeeded(matchResult)) {
       LLVM_DEBUG(logResultWithLine("success", "pattern matched"));
-#ifdef MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       debugFingerPrints.notifyRewriteSuccess();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       changed = true;
       ++numRewrites;
     } else {
       LLVM_DEBUG(logResultWithLine("failure", "pattern failed to match"));
-#ifdef MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       debugFingerPrints.notifyRewriteFailure();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     }
