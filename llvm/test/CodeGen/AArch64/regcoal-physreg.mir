@@ -1,8 +1,4 @@
-# RUN: llc -mtriple=aarch64-apple-ios -run-pass=simple-register-coalescing,simple-register-coalescing -verify-machineinstrs %s -o - | FileCheck %s
-
-# FIXME: Second run of the pass is a workaround for a bug in
-# -run-pass. The verifier doesn't detect broken LiveIntervals, see bug
-# 46873
+# RUN: llc -mtriple=aarch64-apple-ios -run-pass=simple-register-coalescing -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   declare void @f2()
 
