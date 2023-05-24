@@ -24,8 +24,10 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectCast.h"
 #include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -1110,6 +1112,13 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
   }
 }
 
+static bool IsVariable(ValueObject &object) {
+  if (object.IsSynthetic())
+    return IsVariable(*object.GetNonSyntheticValue());
+
+  return bool(object.GetVariable());
+}
+
 static bool IsSwiftResultVariable(ConstString name) {
   if (name) {
     llvm::StringRef name_sr(name.GetStringRef());
@@ -1140,10 +1149,9 @@ bool SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
   }
 
   std::string expr_string;
-  
-  if (::IsSwiftResultVariable(object.GetName())) {
-    // if this thing is a Swift expression result variable, it has two
-    // properties:
+
+  if (::IsVariable(object) || ::IsSwiftResultVariable(object.GetName())) {
+    // if the object is a Swift variable, it has two properties:
     // a) its name is something we can refer to in expressions for free
     // b) its type may be something we can't actually talk about in expressions
     // so, just use the result variable's name in the expression and be done
