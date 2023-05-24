@@ -372,6 +372,7 @@ struct VOPDInfo {
   uint16_t OpX;
   uint16_t OpY;
   uint16_t Subtarget;
+  bool VOPD3;
 };
 
 struct VOPTrue16Info {
@@ -596,9 +597,10 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 
-int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
+                bool VOPD3) {
   const VOPDInfo *Info =
-      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily);
+      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
   return Info ? Info->Opcode : -1;
 }
 
@@ -651,7 +653,8 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     std::function<unsigned(unsigned, unsigned)> GetRegIdx,
-    const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR) const {
+    const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
+    bool CheckDst) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
@@ -667,6 +670,9 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
       return CompOprIdx;
 
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
+      continue;
+
+    if (!CheckDst && CompOprIdx < Component::DST_NUM)
       continue;
 
     if (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum &&

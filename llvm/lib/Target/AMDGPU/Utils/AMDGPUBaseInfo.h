@@ -535,7 +535,8 @@ LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc);
 
 LLVM_READONLY
-int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily);
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
+                bool VOPD3 = false);
 
 LLVM_READONLY
 bool isVOPD(unsigned Opc);
@@ -776,11 +777,14 @@ public:
   // checked except for being from the same halves of VGPR file on gfx1210.
   // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
   // even though it violates requirement to be from different banks.
+  // If \p CheckDst is set to false both dst registers allowed to be either odd
+  // or even.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI,
       bool SkipSrc = false,
-      bool AllowSameVGPR = false) const;
+      bool AllowSameVGPR = false,
+      bool CheckDst = true) const;
 
 private:
   RegIndices

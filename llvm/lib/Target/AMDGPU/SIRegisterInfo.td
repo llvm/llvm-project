@@ -1271,7 +1271,9 @@ def ARegSrc_32 : RegisterOperand<AGPR_32> {
 def VCSrc_b16 : RegOrB16 <"VS_32", "OPERAND_REG_INLINE_C">;
 def VCSrc_f16 : RegOrF16 <"VS_32", "OPERAND_REG_INLINE_C">;
 def VCSrc_b32 : RegOrB32 <"VS_32", "OPERAND_REG_INLINE_C">;
+def VCSrc_b64 : RegOrB64 <"VS_64", "OPERAND_REG_INLINE_C">;
 def VCSrc_f32 : RegOrF32 <"VS_32", "OPERAND_REG_INLINE_C">;
+def VCSrc_f64 : RegOrF64 <"VS_64", "OPERAND_REG_INLINE_C">;
 def VCSrc_v2b16 : RegOrV2B16 <"VS_32", "OPERAND_REG_INLINE_C">;
 def VCSrc_v2f16 : RegOrV2F16 <"VS_32", "OPERAND_REG_INLINE_C">;
 

@@ -1751,6 +1751,36 @@ class getVOPSrc0ForVT<ValueType VT, bit IsTrue16> {
     );
 }
 
+// Returns the register class to use for source VGPR, SGPR or inline constant
+// for the given VT.
+class getVCSrcForVT<ValueType VT> {
+  bit isFP = isFloatType<VT>.ret;
+
+  RegisterOperand ret =
+    !if(isFP,
+      !if(!eq(VT.Size, 64),
+         VCSrc_f64,
+         !if(!eq(VT.Value, f16.Value),
+            VCSrc_f16,
+            !if(!eq(VT.Value, v2f16.Value),
+               VCSrc_v2f16,
+               VCSrc_f32
+            )
+         )
+       ),
+       !if(!eq(VT.Size, 64),
+          VCSrc_b64,
+          !if(!eq(VT.Value, i16.Value),
+             VCSrc_b16,
+             !if(!eq(VT.Value, v2i16.Value),
+                VCSrc_v2b16,
+                VCSrc_b32
+             )
+          )
+       )
+    );
+}
+
 class getSOPSrcForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 64), SSrc_b64, SSrc_b32);
 }
@@ -2522,6 +2552,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field Operand Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT>.ret;
   field Operand Src0ModSDWA = getSrcModSDWA<Src0VT>.ret;
   field Operand Src1ModSDWA = getSrcModSDWA<Src1VT>.ret;
+  field RegisterOperand Src0RCVOPD3 = getVCSrcForVT<Src0VT>.ret;
 
 
   field bit IsMAI = 0;
@@ -2632,6 +2663,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPR_32:$vsrc1X);
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
   field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPR_32:$vsrc1Y);
+  field dag InsVOPD3X = !con((ins Src0RCVOPD3:$src0X), !if(HasSrc1, (ins Src1RC32:$vsrc1X), (ins)));
+  field dag InsVOPD3Y = !con((ins Src0RCVOPD3:$src0Y), !if(HasSrc1, (ins Src1RC32:$vsrc1Y), (ins)));
 
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
@@ -3101,14 +3134,14 @@ def getVOPDBaseFromComponent : SearchIndex {
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
-  let Fields = ["Opcode", "OpX", "OpY", "SubTgt"];
+  let Fields = ["Opcode", "OpX", "OpY", "SubTgt", "VOPD3"];
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPDOpcodeHelper";
 }
 
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
-  let Key = ["OpX", "OpY", "SubTgt"];
+  let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
 }
 
 include "SIInstructions.td"

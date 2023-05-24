@@ -1722,8 +1722,12 @@ private:
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst) const;
   bool validateConstantBusLimitations(const MCInst &Inst, const OperandVector &Operands);
+  std::optional<unsigned>
+  checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3);
   bool validateVOPDRegBankConstraints(const MCInst &Inst,
                                       const OperandVector &Operands);
+  bool tryVOPD3(const MCInst &Inst);
+
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
@@ -3421,6 +3425,13 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     }
   }
 
+  // Asm first tries to match VOPD. By failing early here with
+  // Match_InvalidOperand, the parser will retry parsing as VOPD3. Checking
+  // later during validateInstruction does not give a chance to retry parsing
+  // as VOPD3.
+  if (tryVOPD3(Inst))
+    return Match_InvalidOperand;
+
   return Match_Success;
 }
 
@@ -3704,12 +3715,12 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
   return false;
 }
 
-bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
-    const MCInst &Inst, const OperandVector &Operands) {
+std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
+    const MCInst &Inst, bool AsVOPD3) {
 
   const unsigned Opcode = Inst.getOpcode();
   if (!isVOPD(Opcode))
-    return true;
+    return {};
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
 
@@ -3725,14 +3736,37 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1210;
   bool AllowSameVGPR = isGFX12_10();
 
+  if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
+    for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
+      const MCOperand &Op = Inst.getOperand(I);
+      if (!Op.isImm())
+        continue;
+      int64_t Imm = Op.getImm();
+      if (!AMDGPU::isInlinableLiteral32(Imm, hasInv2PiInlineImm()) &&
+          !AMDGPU::isInlinableLiteral64(Imm, hasInv2PiInlineImm()))
+        return I;
+    }
+  }
+
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
   auto InvalidCompOprIdx =
       InstInfo.getInvalidCompOperandIndex(getVRegIdx, *TRI, SkipSrc,
-                                          AllowSameVGPR);
-  if (!InvalidCompOprIdx)
+                                          AllowSameVGPR, !AsVOPD3);
+
+  return InvalidCompOprIdx;
+}
+
+bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
+    const MCInst &Inst, const OperandVector &Operands) {
+
+  unsigned Opcode = Inst.getOpcode();
+  bool AsVOPD3 = MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3;
+  auto InvalidCompOprIdx = checkVOPDRegBankConstraints(Inst, AsVOPD3);
+  if (!InvalidCompOprIdx.has_value())
     return true;
 
   auto CompOprIdx = *InvalidCompOprIdx;
+  const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
   auto ParsedIdx =
       std::max(InstInfo[VOPD::X].getIndexInParsedOperands(CompOprIdx),
                InstInfo[VOPD::Y].getIndexInParsedOperands(CompOprIdx));
@@ -3748,6 +3782,24 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
   }
 
   return false;
+}
+
+// VOPD3 has more relaxed register constraints than VOPD. We prefer shorter VOPD
+// form but switch to VOPD3 otherwise.
+bool AMDGPUAsmParser::tryVOPD3(const MCInst &Inst) {
+  const unsigned Opcode = Inst.getOpcode();
+  if (!isGFX12_10() || !isVOPD(Opcode) ||
+      (MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3))
+    return false;
+
+  // First check if it fits VOPD
+  auto InvalidCompOprIdx = checkVOPDRegBankConstraints(Inst, false);
+  if (!InvalidCompOprIdx.has_value())
+    return false;
+
+  // Then if it fits VOPD3
+  InvalidCompOprIdx = checkVOPDRegBankConstraints(Inst, true);
+  return !InvalidCompOprIdx.has_value();
 }
 
 bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {

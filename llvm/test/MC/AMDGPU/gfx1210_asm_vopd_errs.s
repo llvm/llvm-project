@@ -148,7 +148,18 @@ v_dual_add_f32 v255, v4, v2 :: v_dual_and_b32 v6, v1, v3
 // GFX12-NEXT:{{^}}v_dual_add_f32 v255, v4, v2 :: v_dual_and_b32 v6, v1, v3
 // GFX12-NEXT:{{^}}^
 
-v_dual_add_f32 v2, v2, v5 :: v_dual_mul_f32 v2, v3, v6
+v_dual_cndmask_b32 v255, v4, v2 :: v_dual_fmaak_f32 v7, v101, v3, 0xaf123456
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: one dst register must be even and the other odd
-// GFX12-NEXT:{{^}}v_dual_add_f32 v2, v2, v5 :: v_dual_mul_f32 v2, v3, v6
+// GFX12-NEXT:{{^}}v_dual_cndmask_b32 v255, v4, v2 :: v_dual_fmaak_f32 v7, v101, v3, 0xaf123456
+// GFX12-NEXT:{{^}}                                                    ^
+
+v_dual_add_f32 v2, v2, v5 :: v_dual_mul_f32 v4, 130, v6
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: one dst register must be even and the other odd
+// GFX12-NEXT:{{^}}v_dual_add_f32 v2, v2, v5 :: v_dual_mul_f32 v4, 130, v6
 // GFX12-NEXT:{{^}}                                            ^
+
+// Even though it could be represented as VOPD3, fmac reads its dst and bank constraints still apply to src2.
+v_dual_fmac_f32 v255, s105, v2 :: v_dual_fmac_f32 v7, s1, v3
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: one dst register must be even and the other odd
+// GFX12-NEXT:{{^}}v_dual_fmac_f32 v255, s105, v2 :: v_dual_fmac_f32 v7, s1, v3
+// GFX12-NEXT:{{^}}                                                  ^
