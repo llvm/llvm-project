@@ -2,7 +2,7 @@
 
 from mlir.ir import *
 from mlir.dialects import transform
-from mlir.dialects import pdl
+from mlir.dialects.transform import pdl as transform_pdl
 
 
 def run(f):
@@ -103,13 +103,13 @@ def testNestedSequenceOpWithExtras():
 
 @run
 def testTransformPDLOps():
-  withPdl = transform.WithPDLPatternsOp(transform.AnyOpType.get())
+  withPdl = transform_pdl.WithPDLPatternsOp(transform.AnyOpType.get())
   with InsertionPoint(withPdl.body):
     sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
                                     [transform.AnyOpType.get()],
                                     withPdl.bodyTarget)
     with InsertionPoint(sequence.body):
-      match = transform.PDLMatchOp(transform.AnyOpType.get(), sequence.bodyTarget, "pdl_matcher")
+      match = transform_pdl.PDLMatchOp(transform.AnyOpType.get(), sequence.bodyTarget, "pdl_matcher")
       transform.YieldOp(match)
   # CHECK-LABEL: TEST: testTransformPDLOps
   # CHECK: transform.with_pdl_patterns {
@@ -148,13 +148,13 @@ def testMergeHandlesOp():
 
 @run
 def testReplicateOp():
-  with_pdl = transform.WithPDLPatternsOp(transform.AnyOpType.get())
+  with_pdl = transform_pdl.WithPDLPatternsOp(transform.AnyOpType.get())
   with InsertionPoint(with_pdl.body):
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], with_pdl.bodyTarget)
     with InsertionPoint(sequence.body):
-      m1 = transform.PDLMatchOp(transform.AnyOpType.get(), sequence.bodyTarget, "first")
-      m2 = transform.PDLMatchOp(transform.AnyOpType.get(), sequence.bodyTarget, "second")
+      m1 = transform_pdl.PDLMatchOp(transform.AnyOpType.get(), sequence.bodyTarget, "first")
+      m2 = transform_pdl.PDLMatchOp(transform.AnyOpType.get(), sequence.bodyTarget, "second")
       transform.ReplicateOp(m1, [m2])
       transform.YieldOp()
   # CHECK-LABEL: TEST: testReplicateOp
