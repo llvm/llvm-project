@@ -2196,6 +2196,7 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     //   ...
     //   use %physreg_x
     CopyMI = MRI->getVRegDef(SrcReg);
+    deleteInstr(CopyMI);
   } else {
     // VReg is copied into physreg:
     //   %y = def
@@ -2240,14 +2241,14 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
                       << printReg(DstReg, TRI) << " at " << CopyRegIdx << "\n");
 
     LIS->removePhysRegDefAt(DstReg.asMCReg(), CopyRegIdx);
+    deleteInstr(CopyMI);
+
     // Create a new dead def at the new def location.
     for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI) {
       LiveRange &LR = LIS->getRegUnit(*UI);
       LR.createDeadDef(DestRegIdx, LIS->getVNInfoAllocator());
     }
   }
-
-  deleteInstr(CopyMI);
 
   // We don't track kills for reserved registers.
   MRI->clearKillFlags(CP.getSrcReg());
