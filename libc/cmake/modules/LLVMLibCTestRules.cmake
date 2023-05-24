@@ -740,5 +740,12 @@ function(add_libc_test test_name)
   endif()
   if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
     add_libc_hermetic_test(${test_name}.__hermetic__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
+    get_fq_target_name(${test_name} fq_test_name)
+    if(TARGET ${fq_test_name}.__unit__)
+      # Tests like the file tests perform file operations on disk file. If we
+      # don't chain up the unit test and hermetic test, then those tests will
+      # step on each other's files.
+      add_dependencies(${fq_test_name}.__hermetic__ ${fq_test_name}.__unit__)
+    endif()
   endif()
 endfunction(add_libc_test)
