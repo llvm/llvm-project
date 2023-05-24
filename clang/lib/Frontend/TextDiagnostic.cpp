@@ -1187,14 +1187,12 @@ void TextDiagnostic::emitSnippetAndCaret(
     if (size_t(LineEnd - LineStart) > MaxLineLengthToPrint)
       return;
 
-    // Trim trailing null-bytes.
-    StringRef Line(LineStart, LineEnd - LineStart);
-    while (!Line.empty() && Line.back() == '\0' &&
-           (LineNo != CaretLineNo || Line.size() > CaretColNo))
-      Line = Line.drop_back();
-
     // Copy the line of code into an std::string for ease of manipulation.
-    std::string SourceLine(Line.begin(), Line.end());
+    std::string SourceLine(LineStart, LineEnd);
+    // Remove trailing null bytes.
+    while (!SourceLine.empty() && SourceLine.back() == '\0' &&
+           (LineNo != CaretLineNo || SourceLine.size() > CaretColNo))
+      SourceLine.pop_back();
 
     // Build the byte to column map.
     const SourceColumnMap sourceColMap(SourceLine, DiagOpts->TabStop);
