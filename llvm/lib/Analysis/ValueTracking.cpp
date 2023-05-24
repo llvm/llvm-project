@@ -580,6 +580,11 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   return false;
 }
 
+// TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
+// we still have enough information about `RHS` to conclude non-zero. For
+// example Pred=EQ, RHS=isKnownNonZero. cmpExcludesZero is called in loops
+// so the extra compile time may not be worth it, but possibly a second API
+// should be created for use outside of loops.
 static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
   // v u> y implies v != 0.
   if (Pred == ICmpInst::ICMP_UGT)
@@ -1774,36 +1779,25 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
       case Intrinsic::uadd_sat:
-      case Intrinsic::usub_sat: {
-        bool IsAdd = II->getIntrinsicID() == Intrinsic::uadd_sat;
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
-
-        // Add: Leading ones of either operand are preserved.
-        // Sub: Leading zeros of LHS and leading ones of RHS are preserved
-        // as leading zeros in the result.
-        unsigned LeadingKnown;
-        if (IsAdd)
-          LeadingKnown = std::max(Known.countMinLeadingOnes(),
-                                  Known2.countMinLeadingOnes());
-        else
-          LeadingKnown = std::max(Known.countMinLeadingZeros(),
-                                  Known2.countMinLeadingOnes());
-
-        Known = KnownBits::computeForAddSub(
-            IsAdd, /* NSW */ false, Known, Known2);
-
-        // We select between the operation result and all-ones/zero
-        // respectively, so we can preserve known ones/zeros.
-        if (IsAdd) {
-          Known.One.setHighBits(LeadingKnown);
-          Known.Zero.clearAllBits();
-        } else {
-          Known.Zero.setHighBits(LeadingKnown);
-          Known.One.clearAllBits();
-        }
+        Known = KnownBits::uadd_sat(Known, Known2);
         break;
-      }
+      case Intrinsic::usub_sat:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::usub_sat(Known, Known2);
+        break;
+      case Intrinsic::sadd_sat:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::sadd_sat(Known, Known2);
+        break;
+      case Intrinsic::ssub_sat:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::ssub_sat(Known, Known2);
+        break;
       case Intrinsic::umin:
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
@@ -2893,12 +2887,38 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     return (XKnown.countMaxTrailingZeros() + YKnown.countMaxTrailingZeros()) <
            BitWidth;
   }
-  case Instruction::Select:
+  case Instruction::Select: {
     // (C ? X : Y) != 0 if X != 0 and Y != 0.
-    if (isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q) &&
-        isKnownNonZero(I->getOperand(2), DemandedElts, Depth, Q))
+
+    // First check if the arm is non-zero using `isKnownNonZero`. If that fails,
+    // then see if the select condition implies the arm is non-zero. For example
+    // (X != 0 ? X : Y), we know the true arm is non-zero as the `X` "return" is
+    // dominated by `X != 0`.
+    auto SelectArmIsNonZero = [&](bool IsTrueArm) {
+      Value *Op;
+      Op = IsTrueArm ? I->getOperand(1) : I->getOperand(2);
+      // Op is trivially non-zero.
+      if (isKnownNonZero(Op, DemandedElts, Depth, Q))
+        return true;
+
+      // The condition of the select dominates the true/false arm. Check if the
+      // condition implies that a given arm is non-zero.
+      Value *X;
+      CmpInst::Predicate Pred;
+      if (!match(I->getOperand(0), m_c_ICmp(Pred, m_Specific(Op), m_Value(X))))
+        return false;
+
+      if (!IsTrueArm)
+        Pred = ICmpInst::getInversePredicate(Pred);
+
+      return cmpExcludesZero(Pred, X);
+    };
+
+    if (SelectArmIsNonZero(/* IsTrueArm */ true) &&
+        SelectArmIsNonZero(/* IsTrueArm */ false))
       return true;
     break;
+  }
   case Instruction::PHI: {
     auto *PN = cast<PHINode>(I);
     if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))

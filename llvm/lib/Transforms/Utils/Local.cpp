@@ -1980,6 +1980,18 @@ uint64_t getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
   }
 }
 
+static void handleSSAValueOperands(uint64_t CurrentLocOps,
+                                   SmallVectorImpl<uint64_t> &Opcodes,
+                                   SmallVectorImpl<Value *> &AdditionalValues,
+                                   Instruction *I) {
+  if (!CurrentLocOps) {
+    Opcodes.append({dwarf::DW_OP_LLVM_arg, 0});
+    CurrentLocOps = 1;
+  }
+  Opcodes.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps});
+  AdditionalValues.push_back(I->getOperand(1));
+}
+
 Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
                              SmallVectorImpl<uint64_t> &Opcodes,
                              SmallVectorImpl<Value *> &AdditionalValues) {
@@ -2002,12 +2014,7 @@ Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
     }
     Opcodes.append({dwarf::DW_OP_constu, Val});
   } else {
-    if (!CurrentLocOps) {
-      Opcodes.append({dwarf::DW_OP_LLVM_arg, 0});
-      CurrentLocOps = 1;
-    }
-    Opcodes.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps});
-    AdditionalValues.push_back(BI->getOperand(1));
+    handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, BI);
   }
 
   // Add salvaged binary operator to expression stack, if it has a valid
@@ -2017,6 +2024,60 @@ Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
     return nullptr;
   Opcodes.push_back(DwarfBinOp);
   return BI->getOperand(0);
+}
+
+uint64_t getDwarfOpForIcmpPred(CmpInst::Predicate Pred) {
+  // The signedness of the operation is implicit in the typed stack, signed and
+  // unsigned instructions map to the same DWARF opcode.
+  switch (Pred) {
+  case CmpInst::ICMP_EQ:
+    return dwarf::DW_OP_eq;
+  case CmpInst::ICMP_NE:
+    return dwarf::DW_OP_ne;
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_SGT:
+    return dwarf::DW_OP_gt;
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_SGE:
+    return dwarf::DW_OP_ge;
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_SLT:
+    return dwarf::DW_OP_lt;
+  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_SLE:
+    return dwarf::DW_OP_le;
+  default:
+    return 0;
+  }
+}
+
+Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
+                              SmallVectorImpl<uint64_t> &Opcodes,
+                              SmallVectorImpl<Value *> &AdditionalValues) {
+  // Handle icmp operations with constant integer operands as a special case.
+  auto *ConstInt = dyn_cast<ConstantInt>(Icmp->getOperand(1));
+  // Values wider than 64 bits cannot be represented within a DIExpression.
+  if (ConstInt && ConstInt->getBitWidth() > 64)
+    return nullptr;
+  // Push any Constant Int operand onto the expression stack.
+  if (ConstInt) {
+    if (Icmp->isSigned())
+      Opcodes.push_back(dwarf::DW_OP_consts);
+    else
+      Opcodes.push_back(dwarf::DW_OP_constu);
+    uint64_t Val = ConstInt->getSExtValue();
+    Opcodes.push_back(Val);
+  } else {
+    handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, Icmp);
+  }
+
+  // Add salvaged binary operator to expression stack, if it has a valid
+  // representation in a DIExpression.
+  uint64_t DwarfIcmpOp = getDwarfOpForIcmpPred(Icmp->getPredicate());
+  if (!DwarfIcmpOp)
+    return nullptr;
+  Opcodes.push_back(DwarfIcmpOp);
+  return Icmp->getOperand(0);
 }
 
 Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
@@ -2058,6 +2119,8 @@ Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
     return getSalvageOpsForGEP(GEP, DL, CurrentLocOps, Ops, AdditionalValues);
   if (auto *BI = dyn_cast<BinaryOperator>(&I))
     return getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues);
+  if (auto *IC = dyn_cast<ICmpInst>(&I))
+    return getSalvageOpsForIcmpOp(IC, CurrentLocOps, Ops, AdditionalValues);
 
   // *Not* to do: we should not attempt to salvage load instructions,
   // because the validity and lifetime of a dbg.value containing

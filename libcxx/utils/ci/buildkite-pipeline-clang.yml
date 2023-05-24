@@ -64,14 +64,14 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "C++23"
+  - label: "C++26"
     commands:
       - "buildkite-agent artifact download install.tar.xz ."
       - "tar -xvf install.tar.xz"
       - "export CC=$(pwd)/install/bin/clang"
       - "export CXX=$(pwd)/install/bin/clang++"
       - "chmod +x install/bin/clang install/bin/clang++"
-      - "libcxx/utils/ci/run-buildbot generic-cxx23"
+      - "libcxx/utils/ci/run-buildbot generic-cxx26"
     artifact_paths:
       - "**/test-results.xml"
       - "**/crash_diagnostics/*"

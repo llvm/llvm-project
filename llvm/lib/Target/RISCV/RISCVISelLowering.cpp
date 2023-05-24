@@ -285,10 +285,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL_PARTS, ISD::SRL_PARTS, ISD::SRA_PARTS}, XLenVT,
                      Custom);
 
-  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb() ||
-      Subtarget.hasVendorXTHeadBb()) {
+  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) {
     if (Subtarget.is64Bit())
       setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
+  } else if (Subtarget.hasVendorXTHeadBb()) {
+    if (Subtarget.is64Bit())
+      setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
+    setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Custom);
   } else {
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
@@ -4418,6 +4421,15 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerShiftRightParts(Op, DAG, true);
   case ISD::SRL_PARTS:
     return lowerShiftRightParts(Op, DAG, false);
+  case ISD::ROTL:
+  case ISD::ROTR:
+    assert(Subtarget.hasVendorXTHeadBb() &&
+           !(Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) &&
+           "Unexpected custom legalization");
+    // XTHeadBb only supports rotate by constant.
+    if (!isa<ConstantSDNode>(Op.getOperand(1)))
+      return SDValue();
+    return Op;
   case ISD::BITCAST: {
     SDLoc DL(Op);
     EVT VT = Op.getValueType();
@@ -9032,6 +9044,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::ROTR:
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
+    assert((Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb() ||
+            Subtarget.hasVendorXTHeadBb()) &&
+           "Unexpected custom legalization");
+    if (!isa<ConstantSDNode>(N->getOperand(1)) &&
+        !(Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()))
+      return;
     Results.push_back(customLegalizeToWOp(N, DAG));
     break;
   case ISD::CTTZ:

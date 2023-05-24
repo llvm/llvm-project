@@ -46,7 +46,7 @@
 #   error "__cpp_lib_constexpr_bitset should not be defined before c++23"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should be defined in c++23"
@@ -55,5 +55,14 @@
 #   error "__cpp_lib_constexpr_bitset should have the value 202207L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_constexpr_bitset
+#   error "__cpp_lib_constexpr_bitset should be defined in c++26"
+# endif
+# if __cpp_lib_constexpr_bitset != 202207L
+#   error "__cpp_lib_constexpr_bitset should have the value 202207L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

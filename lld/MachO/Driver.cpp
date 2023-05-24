@@ -91,14 +91,15 @@ static std::optional<StringRef> findLibrary(StringRef name) {
 
   auto doFind = [&] {
     if (config->searchDylibsFirst) {
-      if (std::optional<StringRef> path = findPathCombination(
-              "lib" + name, config->librarySearchPaths, {".tbd", ".dylib"}))
+      if (std::optional<StringRef> path =
+              findPathCombination("lib" + name, config->librarySearchPaths,
+                                  {".tbd", ".dylib", ".so"}))
         return path;
       return findPathCombination("lib" + name, config->librarySearchPaths,
                                  {".a"});
     }
     return findPathCombination("lib" + name, config->librarySearchPaths,
-                               {".tbd", ".dylib", ".a"});
+                               {".tbd", ".dylib", ".so", ".a"});
   };
 
   std::optional<StringRef> path = doFind();

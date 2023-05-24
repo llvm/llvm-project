@@ -300,7 +300,38 @@ TEST(KnownBitsTest, BinaryExhaustive) {
         return N1.srem(N2);
       },
       checkCorrectnessOnlyBinary);
-
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::sadd_sat(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        return N1.sadd_sat(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::uadd_sat(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        return N1.uadd_sat(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::ssub_sat(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        return N1.ssub_sat(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::usub_sat(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        return N1.usub_sat(N2);
+      },
+      checkCorrectnessOnlyBinary);
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::shl(Known1, Known2);
@@ -356,20 +387,15 @@ TEST(KnownBitsTest, BinaryExhaustive) {
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
-  // TODO: Make optimal for cases that are not known non-negative.
-  testUnaryOpExhaustive(
-      [](const KnownBits &Known) { return Known.abs(); },
-      [](const APInt &N) { return N.abs(); },
-      [](const KnownBits &Known) { return Known.isNonNegative(); });
+  testUnaryOpExhaustive([](const KnownBits &Known) { return Known.abs(); },
+                        [](const APInt &N) { return N.abs(); });
 
-  testUnaryOpExhaustive(
-      [](const KnownBits &Known) { return Known.abs(true); },
-      [](const APInt &N) -> std::optional<APInt> {
-        if (N.isMinSignedValue())
-          return std::nullopt;
-        return N.abs();
-      },
-      [](const KnownBits &Known) { return Known.isNonNegative(); });
+  testUnaryOpExhaustive([](const KnownBits &Known) { return Known.abs(true); },
+                        [](const APInt &N) -> std::optional<APInt> {
+                          if (N.isMinSignedValue())
+                            return std::nullopt;
+                          return N.abs();
+                        });
 
   testUnaryOpExhaustive([](const KnownBits &Known) { return Known.blsi(); },
                         [](const APInt &N) { return N & -N; });

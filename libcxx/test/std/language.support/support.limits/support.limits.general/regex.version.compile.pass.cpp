@@ -54,7 +54,7 @@
 #   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++20"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_nonmember_container_access
 #   error "__cpp_lib_nonmember_container_access should be defined in c++23"
@@ -63,5 +63,14 @@
 #   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_nonmember_container_access
+#   error "__cpp_lib_nonmember_container_access should be defined in c++26"
+# endif
+# if __cpp_lib_nonmember_container_access != 201411L
+#   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

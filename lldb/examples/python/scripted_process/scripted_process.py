@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
 import lldb
-import json, struct, signal
 
 class ScriptedProcess(metaclass=ABCMeta):
 
@@ -226,6 +225,7 @@ class ScriptedProcess(metaclass=ABCMeta):
                              % self.__class__.__name__)
         return False
 
+
 class ScriptedThread(metaclass=ABCMeta):
 
     """
@@ -375,162 +375,6 @@ class ScriptedThread(metaclass=ABCMeta):
                   None if the thread as no extended information.
         """
         return self.extended_info
-
-
-class PassthroughScriptedProcess(ScriptedProcess):
-    driving_target = None
-    driving_process = None
-
-    def __init__(self, exe_ctx, args, launched_driving_process=True):
-        super().__init__(exe_ctx, args)
-
-        self.driving_target = None
-        self.driving_process = None
-
-        self.driving_target_idx = args.GetValueForKey("driving_target_idx")
-        if self.driving_target_idx and self.driving_target_idx.IsValid():
-            idx = self.driving_target_idx.GetUnsignedIntegerValue(42)
-            self.driving_target = self.target.GetDebugger().GetTargetAtIndex(idx)
-
-            if launched_driving_process:
-                self.driving_process = self.driving_target.GetProcess()
-                for driving_thread in self.driving_process:
-                    structured_data = lldb.SBStructuredData()
-                    structured_data.SetFromJSON(
-                        json.dumps(
-                            {
-                                "driving_target_idx": idx,
-                                "thread_idx": driving_thread.GetIndexID(),
-                            }
-                        )
-                    )
-
-                    self.threads[
-                        driving_thread.GetThreadID()
-                    ] = PassthroughScriptedThread(self, structured_data)
-
-                for module in self.driving_target.modules:
-                    path = module.file.fullpath
-                    load_addr = module.GetObjectFileHeaderAddress().GetLoadAddress(
-                        self.driving_target
-                    )
-                    self.loaded_images.append({"path": path, "load_addr": load_addr})
-
-    def get_memory_region_containing_address(self, addr):
-        mem_region = lldb.SBMemoryRegionInfo()
-        error = self.driving_process.GetMemoryRegionInfo(addr, mem_region)
-        if error.Fail():
-            return None
-        return mem_region
-
-    def read_memory_at_address(self, addr, size, error):
-        data = lldb.SBData()
-        bytes_read = self.driving_process.ReadMemory(addr, size, error)
-
-        if error.Fail():
-            return data
-
-        data.SetDataWithOwnership(
-            error,
-            bytes_read,
-            self.driving_target.GetByteOrder(),
-            self.driving_target.GetAddressByteSize(),
-        )
-
-        return data
-
-    def write_memory_at_address(self, addr, data, error):
-        return self.driving_process.WriteMemory(
-            addr, bytearray(data.uint8.all()), error
-        )
-
-    def get_process_id(self):
-        return self.driving_process.GetProcessID()
-
-    def is_alive(self):
-        return True
-
-    def get_scripted_thread_plugin(self):
-        return f"{PassthroughScriptedThread.__module__}.{PassthroughScriptedThread.__name__}"
-
-
-class PassthroughScriptedThread(ScriptedThread):
-    def __init__(self, process, args):
-        super().__init__(process, args)
-        driving_target_idx = args.GetValueForKey("driving_target_idx")
-        thread_idx = args.GetValueForKey("thread_idx")
-
-        # TODO: Change to Walrus operator (:=) with oneline if assignment
-        # Requires python 3.8
-        val = thread_idx.GetUnsignedIntegerValue()
-        if val is not None:
-            self.idx = val
-
-        self.driving_target = None
-        self.driving_process = None
-        self.driving_thread = None
-
-        # TODO: Change to Walrus operator (:=) with oneline if assignment
-        # Requires python 3.8
-        val = driving_target_idx.GetUnsignedIntegerValue()
-        if val is not None:
-            self.driving_target = self.target.GetDebugger().GetTargetAtIndex(val)
-            self.driving_process = self.driving_target.GetProcess()
-            self.driving_thread = self.driving_process.GetThreadByIndexID(self.idx)
-
-        if self.driving_thread:
-            self.id = self.driving_thread.GetThreadID()
-
-    def get_thread_id(self):
-        return self.id
-
-    def get_name(self):
-        return f"{PassthroughScriptedThread.__name__}.thread-{self.idx}"
-
-    def get_stop_reason(self):
-        stop_reason = {"type": lldb.eStopReasonInvalid, "data": {}}
-
-        if (
-            self.driving_thread
-            and self.driving_thread.IsValid()
-            and self.get_thread_id() == self.driving_thread.GetThreadID()
-        ):
-            stop_reason["type"] = lldb.eStopReasonNone
-
-            # TODO: Passthrough stop reason from driving process
-            if self.driving_thread.GetStopReason() != lldb.eStopReasonNone:
-                if "arm64" in self.scripted_process.arch:
-                    stop_reason["type"] = lldb.eStopReasonException
-                    stop_reason["data"][
-                        "desc"
-                    ] = self.driving_thread.GetStopDescription(100)
-                elif self.scripted_process.arch == "x86_64":
-                    stop_reason["type"] = lldb.eStopReasonSignal
-                    stop_reason["data"]["signal"] = signal.SIGTRAP
-                else:
-                    stop_reason["type"] = self.driving_thread.GetStopReason()
-
-        return stop_reason
-
-    def get_register_context(self):
-        if not self.driving_thread or self.driving_thread.GetNumFrames() == 0:
-            return None
-        frame = self.driving_thread.GetFrameAtIndex(0)
-
-        GPRs = None
-        registerSet = frame.registers  # Returns an SBValueList.
-        for regs in registerSet:
-            if "general purpose" in regs.name.lower():
-                GPRs = regs
-                break
-
-        if not GPRs:
-            return None
-
-        for reg in GPRs:
-            self.register_ctx[reg.name] = int(reg.value, base=16)
-
-        return struct.pack(f"{len(self.register_ctx)}Q", *self.register_ctx.values())
 
 ARM64_GPR = [ {'name': 'x0',   'bitsize': 64, 'offset': 0,   'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 0,  'dwarf': 0,  'generic': 'arg0', 'alt-name': 'arg0'},
               {'name': 'x1',   'bitsize': 64, 'offset': 8,   'encoding': 'uint', 'format': 'hex', 'set': 0, 'gcc': 1,  'dwarf': 1,  'generic': 'arg1', 'alt-name': 'arg1'},

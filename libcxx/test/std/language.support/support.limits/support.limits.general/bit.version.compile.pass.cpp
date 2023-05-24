@@ -132,7 +132,7 @@
 #   error "__cpp_lib_int_pow2 should have the value 202002L in c++20"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_bit_cast
 #   error "__cpp_lib_bit_cast should be defined in c++23"
@@ -175,5 +175,48 @@
 #   error "__cpp_lib_int_pow2 should have the value 202002L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_bit_cast
+#   error "__cpp_lib_bit_cast should be defined in c++26"
+# endif
+# if __cpp_lib_bit_cast != 201806L
+#   error "__cpp_lib_bit_cast should have the value 201806L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_bitops
+#     error "__cpp_lib_bitops should be defined in c++26"
+#   endif
+#   if __cpp_lib_bitops != 201907L
+#     error "__cpp_lib_bitops should have the value 201907L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_bitops
+#     error "__cpp_lib_bitops should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_byteswap
+#   error "__cpp_lib_byteswap should be defined in c++26"
+# endif
+# if __cpp_lib_byteswap != 202110L
+#   error "__cpp_lib_byteswap should have the value 202110L in c++26"
+# endif
+
+# ifndef __cpp_lib_endian
+#   error "__cpp_lib_endian should be defined in c++26"
+# endif
+# if __cpp_lib_endian != 201907L
+#   error "__cpp_lib_endian should have the value 201907L in c++26"
+# endif
+
+# ifndef __cpp_lib_int_pow2
+#   error "__cpp_lib_int_pow2 should be defined in c++26"
+# endif
+# if __cpp_lib_int_pow2 != 202002L
+#   error "__cpp_lib_int_pow2 should have the value 202002L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

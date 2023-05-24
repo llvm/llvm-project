@@ -81,7 +81,7 @@
 #   endif
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_constexpr_charconv
 #   error "__cpp_lib_constexpr_charconv should be defined in c++23"
@@ -103,5 +103,27 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should be defined in c++26"
+# endif
+# if __cpp_lib_constexpr_charconv != 202207L
+#   error "__cpp_lib_constexpr_charconv should have the value 202207L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_to_chars
+#     error "__cpp_lib_to_chars should be defined in c++26"
+#   endif
+#   if __cpp_lib_to_chars != 201611L
+#     error "__cpp_lib_to_chars should have the value 201611L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_to_chars
+#     error "__cpp_lib_to_chars should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+#endif // TEST_STD_VER > 23
 
