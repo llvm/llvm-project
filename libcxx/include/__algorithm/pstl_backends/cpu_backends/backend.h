@@ -11,8 +11,10 @@
 
 #include <__config>
 
-#if defined(_LIBCPP_HAS_NO_THREADS) || defined(_PSTL_CPU_BACKEND_SERIAL)
+#if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL)
 #  include <__algorithm/pstl_backends/cpu_backends/serial.h>
+#elif defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD)
+#  include <__algorithm/pstl_backends/cpu_backends/thread.h>
 #else
 #  error "Invalid CPU backend choice"
 #endif
