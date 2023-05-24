@@ -5487,9 +5487,7 @@ INTERCEPTOR(void *, __tls_get_addr, void *arg) {
 // On PowerPC, we also need to intercept __tls_get_addr_opt, which has
 // mostly the same semantics as __tls_get_addr, but its presence enables
 // some optimizations in linker (which are safe to ignore here).
-extern "C" __attribute__((alias("__interceptor___tls_get_addr"),
-                          visibility("default")))
-void *__tls_get_addr_opt(void *arg);
+INTERCEPTOR(void *, __tls_get_addr_opt, void *arg) ALIAS(WRAP(__tls_get_addr));
 #endif
 #else // SANITIZER_S390
 // On s390, we have to intercept two functions here:
