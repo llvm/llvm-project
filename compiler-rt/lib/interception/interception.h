@@ -118,13 +118,11 @@ const interpose_substitution substitution_##func_name[] \
 }
 
 # define WRAP(x) wrap_##x
-# define WRAPPER_NAME(x) "wrap_"#x
 # define INTERCEPTOR_ATTRIBUTE
 # define DECLARE_WRAPPER(ret_type, func, ...)
 
 #elif SANITIZER_WINDOWS
 # define WRAP(x) __asan_wrap_##x
-# define WRAPPER_NAME(x) "__asan_wrap_"#x
 # define INTERCEPTOR_ATTRIBUTE __declspec(dllexport)
 # define DECLARE_WRAPPER(ret_type, func, ...) \
     extern "C" ret_type func(__VA_ARGS__);
@@ -132,7 +130,6 @@ const interpose_substitution substitution_##func_name[] \
     extern "C" __declspec(dllimport) ret_type __stdcall func(__VA_ARGS__);
 #elif SANITIZER_FREEBSD || SANITIZER_NETBSD
 # define WRAP(x) __interceptor_ ## x
-# define WRAPPER_NAME(x) "__interceptor_" #x
 # define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
 // FreeBSD's dynamic linker (incompliantly) gives non-weak symbols higher
 // priority than weak ones so weak aliases won't work for indirect calls
@@ -142,7 +139,6 @@ const interpose_substitution substitution_##func_name[] \
      __attribute__((alias("__interceptor_" #func), visibility("default")));
 #elif !SANITIZER_FUCHSIA
 # define WRAP(x) __interceptor_ ## x
-# define WRAPPER_NAME(x) "__interceptor_" #x
 # define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
 # define DECLARE_WRAPPER(ret_type, func, ...) \
     extern "C" ret_type func(__VA_ARGS__) \
