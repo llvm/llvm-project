@@ -437,7 +437,8 @@ Bug Fixes in This Version
   ``__builtin_dynamic_object_size`` on structs containing flexible array
   members.
   (`#62789 <https://github.com/llvm/llvm-project/issues/62789>`_).
-
+- Fix a crash when instantiating a non-type template argument in a dependent scope.
+  (`#62533 <https://github.com/llvm/llvm-project/issues/62533>`_).
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
