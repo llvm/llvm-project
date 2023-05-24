@@ -1299,6 +1299,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__GLIBCXX_BITSIZE_INT_N_0", "128");
   }
 
+  // ELF targets define __ELF__
+  if (TI.getTriple().isOSBinFormatELF())
+    Builder.defineMacro("__ELF__");
+
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);
 }
