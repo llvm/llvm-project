@@ -1412,13 +1412,13 @@ acc.private.recipe @privatization_struct_i32_i64 : !llvm.struct<(i32, i32)> init
 // -----
 
 acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
-^bb0(%0: i64):
-  %1 = arith.constant 0 : i64
-  acc.yield %1 : i64
+^bb0(%arg0: i64):
+  %0 = arith.constant 0 : i64
+  acc.yield %0 : i64
 } combiner {
-^bb0(%0: i64, %1: i64):
-  %2 = arith.addi %0, %1 : i64
-  acc.yield %2 : i64
+^bb0(%arg0: i64, %arg1: i64):
+  %0 = arith.addi %arg0, %arg1 : i64
+  acc.yield %0 : i64
 }
 
 // CHECK-LABEL: acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator <add> init {
@@ -1433,6 +1433,10 @@ acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
 
 func.func @acc_reduc_test(%a : i64) -> () {
   acc.parallel reduction(@reduction_add_i64 -> %a : i64) {
+    acc.loop reduction(@reduction_add_i64 -> %a : i64) {
+      acc.yield
+    }
+    acc.yield
   }
   return
 }
@@ -1440,6 +1444,7 @@ func.func @acc_reduc_test(%a : i64) -> () {
 // CHECK-LABEL: func.func @acc_reduc_test(
 // CHECK-SAME:    %[[ARG0:.*]]: i64)
 // CHECK:         acc.parallel reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
+// CHECK:           acc.loop reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
 
 // -----
 
