@@ -74,12 +74,6 @@ public:
                    : Line.Level * PPIndentWidth;
       Indent += AdditionalIndent;
     } else {
-      // When going to lower levels, forget previous higher levels so that we
-      // recompute future higher levels. But don't forget them if we enter a PP
-      // directive, since these do not terminate a code block.
-      if (!Line.InPPDirective)
-        IndentForLevel.resize(Line.Level + 1);
-
       Indent = getIndent(Line.Level);
     }
     if (static_cast<int>(Indent) + Offset >= 0)
@@ -916,7 +910,6 @@ private:
       Tok->TotalLength += LengthA;
       A.Last = Tok;
     }
-    A.Level = B.Level;
   }
 
   const FormatStyle &Style;
