@@ -50,7 +50,10 @@ ThreadArgRetval &GetThreadArgRetval() { return *thread_arg_retval; }
 ThreadContextLsanBase::ThreadContextLsanBase(int tid)
     : ThreadContextBase(tid) {}
 
-void ThreadContextLsanBase::OnStarted(void *arg) { SetCurrentThread(this); }
+void ThreadContextLsanBase::OnStarted(void *arg) {
+  SetCurrentThread(this);
+  AllocatorThreadStart();
+}
 
 void ThreadContextLsanBase::OnFinished() {
   AllocatorThreadFinish();
