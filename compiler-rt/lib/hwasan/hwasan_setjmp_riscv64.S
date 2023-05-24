@@ -41,7 +41,7 @@ ASM_WRAPPER_NAME(setjmp):
 ASM_SIZE(ASM_WRAPPER_NAME(setjmp))
 
 .global ASM_WRAPPER_NAME(sigsetjmp)
-ASM_TYPE_FUNCTION(ASN_WRAPPER_NAME(sigsetjmp))
+ASM_TYPE_FUNCTION(ASM_WRAPPER_NAME(sigsetjmp))
 ASM_WRAPPER_NAME(sigsetjmp):
   CFI_STARTPROC
   sd    ra,   0<<3(x10)
