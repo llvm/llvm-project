@@ -819,7 +819,7 @@ lit_markup = {
 }
 
 def get_std_dialects():
-  std_dialects = ['c++14', 'c++17', 'c++20', 'c++23']
+  std_dialects = ['c++14', 'c++17', 'c++20', 'c++23', 'c++26']
   return list(std_dialects)
 
 def get_first_std(d):
@@ -1167,15 +1167,18 @@ def create_table(grid, indent):
     row = grid[row_i]
     line = indent_str + ' '.join([pad_cell(row[i], col_widths[i]) for i in range(0, len(row))])
     result.append(line.rstrip())
-    is_cxx_header = row[0].startswith('**')
     if row_i == len(grid) - 1:
       header_flag = 2
-    separator = indent_str + add_divider(col_widths, 1 if is_cxx_header else header_flag)
+    if row[0].startswith('**'):
+      header_flag += 1
+    separator = indent_str + add_divider(col_widths, header_flag)
     result.append(separator.rstrip())
     header_flag = 0
   return '\n'.join(result)
 
 def add_divider(widths, header_flag):
+  if header_flag == 3:
+    return '='.join(['='*w for w in widths])
   if header_flag == 2:
     return ' '.join(['='*w for w in widths])
   if header_flag == 1:

@@ -46,7 +46,7 @@
 #   error "__cpp_lib_constexpr_typeinfo should not be defined before c++23"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_constexpr_typeinfo
 #   error "__cpp_lib_constexpr_typeinfo should be defined in c++23"
@@ -55,5 +55,14 @@
 #   error "__cpp_lib_constexpr_typeinfo should have the value 202106L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_constexpr_typeinfo
+#   error "__cpp_lib_constexpr_typeinfo should be defined in c++26"
+# endif
+# if __cpp_lib_constexpr_typeinfo != 202106L
+#   error "__cpp_lib_constexpr_typeinfo should have the value 202106L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

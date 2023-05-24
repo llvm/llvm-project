@@ -74,7 +74,7 @@
 #   error "__cpp_lib_format_ranges should not be defined before c++23"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_format
@@ -102,5 +102,33 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_format
+#     error "__cpp_lib_format should be defined in c++26"
+#   endif
+#   if __cpp_lib_format != 202106L
+#     error "__cpp_lib_format should have the value 202106L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_format
+#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#   ifndef __cpp_lib_format_ranges
+#     error "__cpp_lib_format_ranges should be defined in c++26"
+#   endif
+#   if __cpp_lib_format_ranges != 202207L
+#     error "__cpp_lib_format_ranges should have the value 202207L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_format_ranges
+#     error "__cpp_lib_format_ranges should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
+#   endif
+# endif
+
+#endif // TEST_STD_VER > 23
 

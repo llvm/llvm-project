@@ -46,7 +46,7 @@
 #   error "__cpp_lib_expected should not be defined before c++23"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_expected
 #   error "__cpp_lib_expected should be defined in c++23"
@@ -55,5 +55,14 @@
 #   error "__cpp_lib_expected should have the value 202211L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_expected
+#   error "__cpp_lib_expected should be defined in c++26"
+# endif
+# if __cpp_lib_expected != 202211L
+#   error "__cpp_lib_expected should have the value 202211L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 
