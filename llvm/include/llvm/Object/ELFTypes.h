@@ -800,15 +800,19 @@ struct BBAddrMap {
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {
     struct Metadata {
-      bool HasReturn : 1;   // If this block ends with a return (or tail call).
-      bool HasTailCall : 1; // If this block ends with a tail call.
-      bool IsEHPad : 1;     // If this is an exception handling block.
-      bool CanFallThrough : 1; // If this block can fall through to its next.
+      bool HasReturn : 1;         // If this block ends with a return (or tail
+                                  // call).
+      bool HasTailCall : 1;       // If this block ends with a tail call.
+      bool IsEHPad : 1;           // If this is an exception handling block.
+      bool CanFallThrough : 1;    // If this block can fall through to its next.
+      bool HasIndirectBranch : 1; // If this block ends with an indirect branch
+                                  // (branch via a register).
 
       bool operator==(const Metadata &Other) const {
         return HasReturn == Other.HasReturn &&
                HasTailCall == Other.HasTailCall && IsEHPad == Other.IsEHPad &&
-               CanFallThrough == Other.CanFallThrough;
+               CanFallThrough == Other.CanFallThrough &&
+               HasIndirectBranch == Other.HasIndirectBranch;
       }
 
       // Encodes this struct as a uint32_t value.
@@ -816,7 +820,8 @@ struct BBAddrMap {
         return static_cast<uint32_t>(HasReturn) |
                (static_cast<uint32_t>(HasTailCall) << 1) |
                (static_cast<uint32_t>(IsEHPad) << 2) |
-               (static_cast<uint32_t>(CanFallThrough) << 3);
+               (static_cast<uint32_t>(CanFallThrough) << 3) |
+               (static_cast<uint32_t>(HasIndirectBranch) << 4);
       }
 
       // Decodes and returns a Metadata struct from a uint32_t value.
@@ -824,7 +829,8 @@ struct BBAddrMap {
         Metadata MD{/*HasReturn=*/static_cast<bool>(V & 1),
                     /*HasTailCall=*/static_cast<bool>(V & (1 << 1)),
                     /*IsEHPad=*/static_cast<bool>(V & (1 << 2)),
-                    /*CanFallThrough=*/static_cast<bool>(V & (1 << 3))};
+                    /*CanFallThrough=*/static_cast<bool>(V & (1 << 3)),
+                    /*HasIndirectBranch=*/static_cast<bool>(V & (1 << 4))};
         if (MD.encode() != V)
           return createStringError(
               std::error_code(), "invalid encoding for BBEntry::Metadata: 0x%x",
