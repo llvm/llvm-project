@@ -237,7 +237,7 @@ define <16 x i8> @select_cast_cond_multiuse_v16i8(<16 x i8> %x, <16 x i8> %y, i1
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm2
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [9241421688590303745,9241421688590303745]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0

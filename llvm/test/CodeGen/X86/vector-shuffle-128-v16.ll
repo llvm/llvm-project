@@ -806,7 +806,7 @@ define <16 x i8> @shuffle_v16i8_02_20_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu(
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v16i8_02_20_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu_uu:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [5122,5122,5122,5122,5122,5122,5122,5122]
+; AVX512VLVBMI-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [2,20,2,20,2,20,2,20,2,20,2,20,2,20,2,20]
 ; AVX512VLVBMI-NEXT:    vpermt2b %xmm1, %xmm2, %xmm0
 ; AVX512VLVBMI-NEXT:    retq
 ;

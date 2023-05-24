@@ -612,7 +612,7 @@ define i32 @test_v16i32_v16i8(<16 x i32> %a0) {
 ;
 ; AVX2-LABEL: test_v16i32_v16i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
 ; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
@@ -745,7 +745,7 @@ define i32 @test_v32i32_v32i8(<32 x i32> %a0) {
 ;
 ; AVX2-LABEL: test_v32i32_v32i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
 ; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm0

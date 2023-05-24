@@ -336,7 +336,7 @@ define <64 x i8> @test_mm512_mask_blend_epi8(<64 x i8> %A, <64 x i8> %W){
 ;
 ; AVX512F-LABEL: test_mm512_mask_blend_epi8:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpternlogq $216, %zmm2, %zmm1, %zmm0
 ; AVX512F-NEXT:    ret{{[l|q]}}

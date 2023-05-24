@@ -89,7 +89,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; X86-AVX1-LABEL: var_shift_v4i64:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [0,2147483648,0,2147483648]
 ; X86-AVX1-NEXT:    # xmm3 = mem[0,0]
 ; X86-AVX1-NEXT:    vpsrlq %xmm2, %xmm3, %xmm4
 ; X86-AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
@@ -2169,7 +2169,7 @@ define <4 x i64> @PR52719(<4 x i64> %a0, i32 %a1) {
 ; X86-AVX1-LABEL: PR52719:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; X86-AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [0,2147483648,0,2147483648]
 ; X86-AVX1-NEXT:    # xmm2 = mem[0,0]
 ; X86-AVX1-NEXT:    vpsrlq %xmm1, %xmm2, %xmm2
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
