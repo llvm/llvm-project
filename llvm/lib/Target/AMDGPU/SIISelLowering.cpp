@@ -11139,8 +11139,7 @@ SDValue SITargetLowering::performFPRoundCombine(SDNode *N,
     return SDValue();
 
   if (TruncSrc.getOpcode() != AMDGPUISD::FMED3 ||
-      TruncSrc.getValueType() != MVT::f32 || !TruncSrc.hasOneUse() ||
-      !isNullConstant(N->getOperand(1)))
+      TruncSrc.getValueType() != MVT::f32 || !TruncSrc.hasOneUse())
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
