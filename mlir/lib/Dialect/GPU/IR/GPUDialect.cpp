@@ -172,7 +172,7 @@ static std::string getSparseHandleKeyword(SparseHandleKind kind) {
   case SparseHandleKind::SpMat:
     return "sparse.spmat_handle";
   }
-};
+}
 
 Type GPUDialect::parseType(DialectAsmParser &parser) const {
   // Parse the main keyword for the type.
