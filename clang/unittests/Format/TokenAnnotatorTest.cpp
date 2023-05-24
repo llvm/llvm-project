@@ -40,6 +40,8 @@ protected:
   EXPECT_EQ((FormatTok)->getType(), Type) << *(FormatTok)
 #define EXPECT_TOKEN_PRECEDENCE(FormatTok, Prec)                               \
   EXPECT_EQ((FormatTok)->getPrecedence(), Prec) << *(FormatTok)
+#define EXPECT_BRACE_KIND(FormatTok, Kind)                                     \
+  EXPECT_EQ(FormatTok->getBlockKind(), Kind) << *(FormatTok)
 #define EXPECT_TOKEN(FormatTok, Kind, Type)                                    \
   do {                                                                         \
     EXPECT_TOKEN_KIND(FormatTok, Kind);                                        \
@@ -1798,6 +1800,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsLabels) {
   Tokens = annotate("{ case x: { break; } }");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_CaseLabelColon);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsNestedBlocks) {
+  // The closing braces are not annotated. It doesn't seem to cause a problem.
+  // So we only test for the opening braces.
+  auto Tokens = annotate("{\n"
+                         "  {\n"
+                         "    { int a = 0; }\n"
+                         "  }\n"
+                         "  {}\n"
+                         "}");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[0], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[1], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[2], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[10], BK_Block);
 }
 
 } // namespace

@@ -13732,6 +13732,26 @@ TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
                "  struct Dummy {};\n"
                "  f(v);\n"
                "}");
+  verifyFormat("void foo() {\n"
+               "  { // asdf\n"
+               "    { int a; }\n"
+               "  }\n"
+               "  {\n"
+               "    { int b; }\n"
+               "  }\n"
+               "}");
+  verifyFormat("namespace n {\n"
+               "void foo() {\n"
+               "  {\n"
+               "    {\n"
+               "      statement();\n"
+               "      if (false) {\n"
+               "      }\n"
+               "    }\n"
+               "  }\n"
+               "  {}\n"
+               "}\n"
+               "} // namespace n");
 
   // Long lists should be formatted in columns even if they are nested.
   verifyFormat(
