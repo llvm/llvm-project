@@ -829,6 +829,37 @@ x>)");
     auto AST = createPatchedAST(Code.code(), NewCode.code());
     EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
   }
+  {
+    Annotations Code(R"(
+#ifndef FOO
+#define FOO
+void foo();
+#endif)");
+    // This code will emit a diagnostic for unterminated #ifndef (as stale
+    // preamble has the conditional but main file doesn't terminate it).
+    // We shouldn't emit any diagnotiscs (and shouldn't crash).
+    Annotations NewCode("");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    EXPECT_THAT(*AST->getDiagnostics(), IsEmpty());
+  }
+  {
+    Annotations Code(R"(
+#ifndef FOO
+#define FOO
+void foo();
+#endif)");
+    // This code will emit a diagnostic for unterminated #ifndef (as stale
+    // preamble has the conditional but main file doesn't terminate it).
+    // We shouldn't emit any diagnotiscs (and shouldn't crash).
+    // FIXME: Patch/ignore diagnostics in such cases.
+    Annotations NewCode(R"(
+i[[nt]] xyz;
+    )");
+    auto AST = createPatchedAST(Code.code(), NewCode.code());
+    EXPECT_THAT(
+        *AST->getDiagnostics(),
+        ElementsAre(Diag(NewCode.range(), "pp_unterminated_conditional")));
+  }
 }
 
 MATCHER_P2(Mark, Range, Text, "") {
