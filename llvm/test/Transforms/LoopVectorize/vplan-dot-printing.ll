@@ -28,10 +28,10 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    "vector.body:\l" +
 ; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV:%.+]]\> = CANONICAL-INDUCTION\l" +
 ; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV]]\>, ir\<1\>\l" +
-; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr ir\<%y\>, vp\<[[STEPS]]\>\l" +
+; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr inbounds ir\<%y\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  WIDEN ir\<%lv\> = load ir\<%arrayidx\>\l" +
 ; CHECK-NEXT:    "  WIDEN-CALL ir\<%call\> = call @llvm.sqrt.f32(ir\<%lv\>) (using vector intrinsic)\l" +
-; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr ir\<%x\>, vp\<[[STEPS]]\>\l" +
+; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr inbounds ir\<%x\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  WIDEN store ir\<%arrayidx2\>, ir\<%call\>\l" +
 ; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV_NEXT:%.+]]\> = VF * UF +(nuw) vp\<[[CAN_IV]]\>\l" +
 ; CHECK-NEXT:    "  EMIT branch-on-count vp\<[[CAN_IV_NEXT]]\> vp\<{{.+}}\>\l" +
