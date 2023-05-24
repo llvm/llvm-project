@@ -4456,7 +4456,7 @@ INTERCEPTOR(void, _exit, int status) {
 
 #if SANITIZER_INTERCEPT___LIBC_MUTEX
 INTERCEPTOR(int, __libc_thr_setcancelstate, int state, int *oldstate)
-ALIAS(WRAPPER_NAME(pthread_setcancelstate));
+ALIAS(WRAP(pthread_setcancelstate));
 
 #define INIT___LIBC_THR_SETCANCELSTATE \
   COMMON_INTERCEPT_FUNCTION(__libc_thr_setcancelstate)
