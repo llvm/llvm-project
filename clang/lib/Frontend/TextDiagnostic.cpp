@@ -1134,6 +1134,8 @@ void TextDiagnostic::emitSnippetAndCaret(
   StringRef BufData = Loc.getBufferData(&Invalid);
   if (Invalid)
     return;
+  const char *BufStart = BufData.data();
+  const char *BufEnd = BufStart + BufData.size();
 
   unsigned CaretLineNo = Loc.getLineNumber();
   unsigned CaretColNo = Loc.getColumnNumber();
@@ -1167,9 +1169,6 @@ void TextDiagnostic::emitSnippetAndCaret(
 
   for (unsigned LineNo = Lines.first; LineNo != Lines.second + 1;
        ++LineNo, ++DisplayLineNo) {
-    const char *BufStart = BufData.data();
-    const char *BufEnd = BufStart + BufData.size();
-
     // Rewind from the current position to the start of the line.
     const char *LineStart =
         BufStart +
