@@ -33,6 +33,13 @@ class StdSmartPtrDataFormatterTestCase(TestBase):
         self.expect("frame variable iwp", substrs=['iwp = 123'])
         self.expect("frame variable swp", substrs=['swp = "foobar"'])
 
+        self.expect("frame variable *nsp", substrs=['*nsp = <parent is NULL>'])
+        self.expect("frame variable *isp", substrs=['*isp = 123'])
+        self.expect("frame variable *ssp", substrs=['*ssp = "foobar"'])
+        self.expect("frame variable *fsp", substrs=['*fsp = (mem = 5)'])
+
+        self.expect("frame variable fsp->mem", substrs=['(int) fsp->mem = 5'])
+
         self.runCmd("continue")
 
         self.expect("frame variable nsp", substrs=['nsp = nullptr'])

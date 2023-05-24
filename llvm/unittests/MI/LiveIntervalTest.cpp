@@ -83,14 +83,16 @@ struct TestPass : public MachineFunctionPass {
     // We should never call this but always use PM.add(new TestPass(...))
     abort();
   }
-  TestPass(LiveIntervalTest T) : MachineFunctionPass(ID), T(T) {
+  TestPass(LiveIntervalTest T, bool ShouldPass)
+      : MachineFunctionPass(ID), T(T), ShouldPass(ShouldPass) {
     initializeTestPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     LiveIntervals &LIS = getAnalysis<LiveIntervals>();
     T(MF, LIS);
-    EXPECT_TRUE(MF.verify(this));
+    EXPECT_EQ(MF.verify(this, /* Banner */ nullptr, /* AbortOnError */ false),
+              ShouldPass);
     return true;
   }
 
@@ -102,6 +104,7 @@ struct TestPass : public MachineFunctionPass {
   }
 private:
   LiveIntervalTest T;
+  bool ShouldPass;
 };
 
 static MachineInstr &getMI(MachineFunction &MF, unsigned At,
@@ -185,7 +188,8 @@ static bool checkRegUnitInterference(LiveIntervals &LIS,
   return false;
 }
 
-static void liveIntervalTest(StringRef MIRFunc, LiveIntervalTest T) {
+static void liveIntervalTest(StringRef MIRFunc, LiveIntervalTest T,
+                             bool ShouldPass = true) {
   LLVMContext Context;
   std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   // This test is designed for the X86 backend; stop if it is not available.
@@ -209,7 +213,7 @@ body: |
                                        "func");
   ASSERT_TRUE(M);
 
-  PM.add(new TestPass(T));
+  PM.add(new TestPass(T, ShouldPass));
 
   PM.run(*M);
 }
@@ -740,6 +744,38 @@ TEST(LiveIntervalTest, AdjacentIntervals) {
         ASSERT_FALSE(checkRegUnitInterference(
             LIS, *MF.getSubtarget().getRegisterInfo(), R2, V1));
       });
+}
+
+TEST(LiveIntervalTest, LiveThroughSegments) {
+  liveIntervalTest(
+      R"MIR(
+    %0 = IMPLICIT_DEF
+    S_BRANCH %bb.2
+  bb.1:
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+  bb.2:
+    S_BRANCH %bb.1
+)MIR",
+      [](MachineFunction &MF, LiveIntervals &LIS) {
+        MachineInstr &ImpDef = getMI(MF, 0, 0);
+        MachineInstr &Nop = getMI(MF, 0, 1);
+        LiveInterval &LI = LIS.getInterval(ImpDef.getOperand(0).getReg());
+        SlotIndex OrigIdx = LIS.getInstructionIndex(ImpDef).getRegSlot();
+        LiveInterval::iterator FirstSeg = LI.FindSegmentContaining(OrigIdx);
+
+        // %0 is live through bb.2. Move its def into bb.1 and update LIS but do
+        // not remove the segment for bb.2. This should cause machine
+        // verification to fail.
+        LIS.RemoveMachineInstrFromMaps(ImpDef);
+        ImpDef.moveBefore(&Nop);
+        LIS.InsertMachineInstrInMaps(ImpDef);
+
+        SlotIndex NewIdx = LIS.getInstructionIndex(ImpDef).getRegSlot();
+        FirstSeg->start = NewIdx;
+        FirstSeg->valno->def = NewIdx;
+      },
+      false);
 }
 
 int main(int argc, char **argv) {

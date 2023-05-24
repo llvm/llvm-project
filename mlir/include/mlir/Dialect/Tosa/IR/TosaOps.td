@@ -1500,6 +1500,7 @@ def Tosa_ConcatOp : Tosa_Op<"concat", [
   );
 
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 
   let extraClassDeclaration = [{
     /// Returns true when two result types are compatible for this op;

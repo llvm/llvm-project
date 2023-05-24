@@ -317,6 +317,7 @@ gentbl_cc_library(
         ":TransformDialectTdFiles",
         "//mlir:PDLDialectTdFiles",
         "//mlir:TransformDialectTdFiles",
+        "//mlir:TransformPDLExtension",
     ],
 )
 
@@ -333,6 +334,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:TransformDialect",
         "//mlir:TransformDialectTransforms",
+        "//mlir:TransformPDLExtension",
     ],
 )
 

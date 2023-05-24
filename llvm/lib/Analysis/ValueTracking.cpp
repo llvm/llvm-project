@@ -1363,6 +1363,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Result.Zero.setSignBit();
         if (KnownVal.One.isSignBitSet())
           Result.One.setSignBit();
+        if (Result.hasConflict())
+          Result.setAllZero();
       }
       return Result;
     };
@@ -4523,7 +4525,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.knownNot(fcNegative);
         break;
       }
-      case Intrinsic::sqrt: {
+      case Intrinsic::sqrt:
+      case Intrinsic::experimental_constrained_sqrt: {
         KnownFPClass KnownSrc;
         FPClassTest InterestedSrcs = InterestedClasses;
         if (InterestedClasses & fcNan)

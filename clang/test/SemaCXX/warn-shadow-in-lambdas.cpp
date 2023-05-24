@@ -14,11 +14,15 @@ void foo(int param) { // expected-note 1+ {{previous declaration is here}}
     auto f2 = [&] { int var = 2; };  // no warning
     auto f3 = [=] (int param) { ; }; // no warning
     auto f4 = [&] (int param) { ; }; // no warning
+    auto f5 = [=] { static int var = 1; };  // no warning
+    auto f6 = [&] { static int var = 2; };  // no warning
 #else
     auto f1 = [=] { int var = 1; };  // expected-warning {{declaration shadows a local variable}}
     auto f2 = [&] { int var = 2; };  // expected-warning {{declaration shadows a local variable}}
     auto f3 = [=] (int param) { ; }; // expected-warning {{declaration shadows a local variable}}
     auto f4 = [&] (int param) { ; }; // expected-warning {{declaration shadows a local variable}}
+    auto f5 = [=] { static int var = 1; };  // expected-warning {{declaration shadows a local variable}}
+    auto f6 = [&] { static int var = 2; };  // expected-warning {{declaration shadows a local variable}}
 #endif
   }
 
@@ -67,11 +71,15 @@ void foo(int param) { // expected-note 1+ {{previous declaration is here}}
     auto f2 = [] (int param) { ; }; // no warning
     auto f3 = [param] () { int var = 1; }; // no warning
     auto f4 = [var] (int param) { ; }; // no warning
+    auto f5 = [param] () { static int var = 1; }; // no warning
+    auto f6 = [] { static int var = 1; }; // no warning
 #else
     auto f1 = [] { int var = 1; }; // expected-warning {{declaration shadows a local variable}}
     auto f2 = [] (int param) { ; }; // expected-warning {{declaration shadows a local variable}}
     auto f3 = [param] () { int var = 1; }; // expected-warning {{declaration shadows a local variable}}
     auto f4 = [var] (int param) { ; }; // expected-warning {{declaration shadows a local variable}}
+    auto f5 = [param] () { static int var = 1; }; // expected-warning {{declaration shadows a local variable}}
+    auto f6 = [] { static int var = 1; }; // expected-warning {{declaration shadows a local variable}}
 #endif
   };
 
@@ -125,6 +133,11 @@ void foo(int param) { // expected-note 1+ {{previous declaration is here}}
   auto l6 = [&] {
     auto f1 = [param] { // expected-note {{variable 'param' is explicitly captured here}}
       int param = 0; // expected-warning {{declaration shadows a local variable}}
+    };
+  };
+  auto l7 = [&] {
+    auto f1 = [param] { // expected-note {{variable 'param' is explicitly captured here}}
+      static int param = 0; // expected-warning {{declaration shadows a local variable}}
     };
   };
 

@@ -17,7 +17,6 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "common_constants.h"
-#include "log_range_reduction.h"
 
 namespace __llvm_libc {
 

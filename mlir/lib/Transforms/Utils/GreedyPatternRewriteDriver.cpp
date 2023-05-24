@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+#include "mlir/Config/mlir-config.h"
 #include "mlir/IR/Action.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -30,10 +32,108 @@ using namespace mlir;
 #define DEBUG_TYPE "greedy-rewriter"
 
 //===----------------------------------------------------------------------===//
-// GreedyPatternRewriteDriver
+// Debugging Infrastructure
 //===----------------------------------------------------------------------===//
 
 namespace {
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+/// A helper struct that stores finger prints of ops in order to detect broken
+/// RewritePatterns. A rewrite pattern is broken if it modifies IR without
+/// using the rewriter API or if it returns an inconsistent return value.
+struct DebugFingerPrints : public RewriterBase::ForwardingListener {
+  DebugFingerPrints(RewriterBase::Listener *driver)
+      : RewriterBase::ForwardingListener(driver) {}
+
+  /// Compute finger prints of the given op and its nested ops.
+  void computeFingerPrints(Operation *topLevel) {
+    this->topLevel = topLevel;
+    this->topLevelFingerPrint.emplace(topLevel);
+    topLevel->walk([&](Operation *op) { fingerprints.try_emplace(op, op); });
+  }
+
+  /// Clear all finger prints.
+  void clear() {
+    topLevel = nullptr;
+    topLevelFingerPrint.reset();
+    fingerprints.clear();
+  }
+
+  void notifyRewriteSuccess() {
+    // Pattern application success => IR must have changed.
+    OperationFingerPrint afterFingerPrint(topLevel);
+    if (*topLevelFingerPrint == afterFingerPrint) {
+      // Note: Run "mlir-opt -debug" to see which pattern is broken.
+      llvm::report_fatal_error(
+          "pattern returned success but IR did not change");
+    }
+    for (const auto &it : fingerprints) {
+      // Skip top-level op, its finger print is never invalidated.
+      if (it.first == topLevel)
+        continue;
+      // Note: Finger print computation may crash when an op was erased
+      // without notifying the rewriter. (Run with ASAN to see where the op was
+      // erased; the op was probably erased directly, bypassing the rewriter
+      // API.) Finger print computation does may not crash if a new op was
+      // created at the same memory location. (But then the finger print should
+      // have changed.)
+      if (it.second != OperationFingerPrint(it.first)) {
+        // Note: Run "mlir-opt -debug" to see which pattern is broken.
+        llvm::report_fatal_error("operation finger print changed");
+      }
+    }
+  }
+
+  void notifyRewriteFailure() {
+    // Pattern application failure => IR must not have changed.
+    OperationFingerPrint afterFingerPrint(topLevel);
+    if (*topLevelFingerPrint != afterFingerPrint) {
+      // Note: Run "mlir-opt -debug" to see which pattern is broken.
+      llvm::report_fatal_error("pattern returned failure but IR did change");
+    }
+  }
+
+protected:
+  /// Invalidate the finger print of the given op, i.e., remove it from the map.
+  void invalidateFingerPrint(Operation *op) {
+    // Invalidate all finger prints until the top level.
+    while (op && op != topLevel) {
+      fingerprints.erase(op);
+      op = op->getParentOp();
+    }
+  }
+
+  void notifyOperationInserted(Operation *op) override {
+    RewriterBase::ForwardingListener::notifyOperationInserted(op);
+    invalidateFingerPrint(op->getParentOp());
+  }
+
+  void notifyOperationModified(Operation *op) override {
+    RewriterBase::ForwardingListener::notifyOperationModified(op);
+    invalidateFingerPrint(op);
+  }
+
+  void notifyOperationRemoved(Operation *op) override {
+    RewriterBase::ForwardingListener::notifyOperationRemoved(op);
+    op->walk([this](Operation *op) { invalidateFingerPrint(op); });
+  }
+
+  /// Operation finger prints to detect invalid pattern API usage. IR is checked
+  /// against these finger prints after pattern application to detect cases
+  /// where IR was modified directly, bypassing the rewriter API.
+  DenseMap<Operation *, OperationFingerPrint> fingerprints;
+
+  /// Top-level operation of the current greedy rewrite.
+  Operation *topLevel = nullptr;
+
+  /// Finger print of the top-level operation.
+  std::optional<OperationFingerPrint> topLevelFingerPrint;
+};
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
+//===----------------------------------------------------------------------===//
+// GreedyPatternRewriteDriver
+//===----------------------------------------------------------------------===//
+
 /// This is a worklist-driven driver for the PatternMatcher, which repeatedly
 /// applies the locally optimal patterns.
 ///
@@ -122,21 +222,36 @@ private:
 
   /// The low-level pattern applicator.
   PatternApplicator matcher;
+
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  DebugFingerPrints debugFingerPrints;
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 };
 } // namespace
 
 GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
     const GreedyRewriteConfig &config)
-    : PatternRewriter(ctx), folder(ctx, this), config(config),
-      matcher(patterns) {
+    : PatternRewriter(ctx), folder(ctx, this), config(config), matcher(patterns)
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      // clang-format off
+      , debugFingerPrints(this)
+// clang-format on
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+{
   worklist.reserve(64);
 
   // Apply a simple cost model based solely on pattern benefit.
   matcher.applyDefaultCostModel();
 
   // Set up listener.
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  // Send IR notifications to the debug handler. This handler will then forward
+  // all notifications to this GreedyPatternRewriteDriver.
+  setListener(&debugFingerPrints);
+#else
   setListener(this);
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 }
 
 bool GreedyPatternRewriteDriver::processWorklist() {
@@ -207,45 +322,60 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     // notified of any necessary changes, so there is nothing else to do
     // here.
 #ifndef NDEBUG
-      auto canApply = [&](const Pattern &pattern) {
-        LLVM_DEBUG({
-          logger.getOStream() << "\n";
-          logger.startLine() << "* Pattern " << pattern.getDebugName() << " : '"
-                             << op->getName() << " -> (";
-          llvm::interleaveComma(pattern.getGeneratedOps(), logger.getOStream());
-          logger.getOStream() << ")' {\n";
-          logger.indent();
-        });
-        return true;
-      };
-      auto onFailure = [&](const Pattern &pattern) {
-        LLVM_DEBUG(logResult("failure", "pattern failed to match"));
-      };
-      auto onSuccess = [&](const Pattern &pattern) {
-        LLVM_DEBUG(logResult("success", "pattern applied successfully"));
-        return success();
-      };
-
-      LogicalResult matchResult =
-          matcher.matchAndRewrite(op, *this, canApply, onFailure, onSuccess);
-      if (succeeded(matchResult))
-        LLVM_DEBUG(logResultWithLine("success", "pattern matched"));
-      else
-        LLVM_DEBUG(logResultWithLine("failure", "pattern failed to match"));
+    auto canApply = [&](const Pattern &pattern) {
+      LLVM_DEBUG({
+        logger.getOStream() << "\n";
+        logger.startLine() << "* Pattern " << pattern.getDebugName() << " : '"
+                           << op->getName() << " -> (";
+        llvm::interleaveComma(pattern.getGeneratedOps(), logger.getOStream());
+        logger.getOStream() << ")' {\n";
+        logger.indent();
+      });
+      return true;
+    };
+    auto onFailure = [&](const Pattern &pattern) {
+      LLVM_DEBUG(logResult("failure", "pattern failed to match"));
+    };
+    auto onSuccess = [&](const Pattern &pattern) {
+      LLVM_DEBUG(logResult("success", "pattern applied successfully"));
+      return success();
+    };
 #else
-      LogicalResult matchResult = matcher.matchAndRewrite(op, *this);
+    function_ref<bool(const Pattern &)> canApply = {};
+    function_ref<void(const Pattern &)> onFailure = {};
+    function_ref<LogicalResult(const Pattern &)> onSuccess = {};
 #endif
 
-      if (succeeded(matchResult)) {
-        changed = true;
-        ++numRewrites;
-      }
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+    debugFingerPrints.computeFingerPrints(
+        /*topLevel=*/config.scope ? config.scope->getParentOp() : op);
+    auto clearFingerprints =
+        llvm::make_scope_exit([&]() { debugFingerPrints.clear(); });
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
+    LogicalResult matchResult =
+        matcher.matchAndRewrite(op, *this, canApply, onFailure, onSuccess);
+
+    if (succeeded(matchResult)) {
+      LLVM_DEBUG(logResultWithLine("success", "pattern matched"));
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      debugFingerPrints.notifyRewriteSuccess();
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      changed = true;
+      ++numRewrites;
+    } else {
+      LLVM_DEBUG(logResultWithLine("failure", "pattern failed to match"));
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      debugFingerPrints.notifyRewriteFailure();
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+    }
   }
 
   return changed;
 }
 
 void GreedyPatternRewriteDriver::addToWorklist(Operation *op) {
+  assert(op && "expected valid op");
   // Gather potential ancestors while looking for a "scope" parent region.
   SmallVector<Operation *, 8> ancestors;
   Region *region = nullptr;

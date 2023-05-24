@@ -387,6 +387,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/no-automatic-move>` when warning would be
   emitted for a const local variable to which NRVO is applied.
 
+- Improved :doc:`performance-no-automatic-move
+  <clang-tidy/checks/performance/no-automatic-move>`: warn on ``const &&``
+  constructors.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
