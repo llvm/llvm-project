@@ -204,9 +204,8 @@ SampleProfileSummaryBuilder::computeSummaryForProfiles(
   // profiles before computing profile summary.
   if (UseContextLessSummary || (sampleprof::FunctionSamples::ProfileIsCS &&
                                 !UseContextLessSummary.getNumOccurrences())) {
-    for (const auto &I : Profiles) {
-      ContextLessProfiles[I.second.getName()].merge(I.second);
-    }
+    ProfileConverter::flattenProfile(Profiles, ContextLessProfiles,
+                                     /*ProfileIsCS=*/true);
     ProfilesToUse = &ContextLessProfiles;
   }
 
