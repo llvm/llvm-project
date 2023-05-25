@@ -105,14 +105,14 @@ define <4 x i32> @vrolw_extract_mul_with_mask(<4 x i32> %i) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-NEXT:    vprold $7, %xmm0, %xmm0
-; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vrolw_extract_mul_with_mask:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; X64-NEXT:    vprold $7, %xmm0, %xmm0
-; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %lhs_mul = mul <4 x i32> %i, <i32 1152, i32 1152, i32 1152, i32 1152>
   %rhs_mul = mul <4 x i32> %i, <i32 9, i32 9, i32 9, i32 9>
@@ -151,7 +151,7 @@ define <4 x i64> @no_extract_shl(<4 x i64> %i) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpsllq $24, %ymm0, %ymm1
 ; X86-NEXT:    vpsrlq $39, %ymm0, %ymm0
-; X86-NEXT:    vpternlogq $236, {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
+; X86-NEXT:    vpternlogq $236, {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: no_extract_shl:

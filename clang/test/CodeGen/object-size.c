@@ -551,6 +551,25 @@ unsigned long test34(void) {
   // CHECK: ret i64 16
   return OBJECT_SIZE_BUILTIN(&D34, 1);
 }
+// CHECK-LABEL: @test35
+unsigned long test35(void) {
+  // CHECK: ret i64 16
+  return OBJECT_SIZE_BUILTIN(&(struct DynStructVar){}, 1);
+}
+extern void *memset (void *s, int c, unsigned long n);
+void test36(void) {
+  struct DynStructVar D;
+  // FORTIFY will check the object size of D. Test this doesn't assert when
+  // given a struct with a flexible array member that lacks an initializer.
+  memset(&D, 0, sizeof(D));
+}
+// CHECK-LABEL: @test37
+struct Z { struct A { int x, y[]; } z; int a; int b[]; };
+static struct Z my_z = { .b = {1,2,3} };
+unsigned long test37 (void) {
+  // CHECK: ret i64 4
+  return OBJECT_SIZE_BUILTIN(&my_z.z, 1);
+}
 
 // CHECK-LABEL: @PR30346
 void PR30346(void) {

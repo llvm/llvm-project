@@ -70,4 +70,8 @@ TEST(BreadthFristIteratorTest, Cycle) {
   EXPECT_EQ(It, End);
 }
 
+static_assert(
+    std::is_convertible_v<decltype(*std::declval<bf_iterator<Graph<3>>>()),
+                          typename bf_iterator<Graph<3>>::reference>);
+
 } // end namespace llvm

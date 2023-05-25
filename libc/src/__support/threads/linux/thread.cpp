@@ -23,6 +23,7 @@
 
 #include <fcntl.h>
 #include <linux/futex.h>
+#include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
 #include <linux/sched.h> // For CLONE_* flags.
 #include <stdint.h>
@@ -40,7 +41,6 @@ static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
 #endif
 
 static constexpr size_t NAME_SIZE_MAX = 16; // Includes the null terminator
-static constexpr size_t DEFAULT_STACK_SIZE = (1 << 16); // 64KB
 static constexpr uint32_t CLEAR_TID_VALUE = 0xABCD1234;
 static constexpr unsigned CLONE_SYSCALL_FLAGS =
     CLONE_VM        // Share the memory space with the parent.
@@ -65,23 +65,67 @@ static constexpr unsigned CLONE_SYSCALL_FLAGS =
 #error "CLONE_RESULT_REGISTER not defined for your target architecture"
 #endif
 
-LIBC_INLINE ErrorOr<void *> alloc_stack(size_t size) {
+static constexpr ErrorOr<size_t> add_no_overflow(size_t lhs, size_t rhs) {
+  if (lhs > SIZE_MAX - rhs)
+    return Error{EINVAL};
+  if (rhs > SIZE_MAX - lhs)
+    return Error{EINVAL};
+  return lhs + rhs;
+}
+
+static constexpr ErrorOr<size_t> round_to_page(size_t v) {
+  auto vp_or_err = add_no_overflow(v, EXEC_PAGESIZE - 1);
+  if (!vp_or_err)
+    return vp_or_err;
+
+  return vp_or_err.value() & -EXEC_PAGESIZE;
+}
+
+LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
+
+  // Guard needs to be mapped with PROT_NONE
+  int prot = guardsize ? PROT_NONE : PROT_READ | PROT_WRITE;
+  auto size_or_err = add_no_overflow(stacksize, guardsize);
+  if (!size_or_err)
+    return Error{int(size_or_err.error())};
+  size_t size = size_or_err.value();
+
+  // TODO: Maybe add MAP_STACK? Currently unimplemented on linux but helps
+  // future-proof.
   long mmap_result =
       __llvm_libc::syscall_impl(MMAP_SYSCALL_NUMBER,
                                 0, // No special address
-                                size,
-                                PROT_READ | PROT_WRITE, // Read and write stack
-                                MAP_ANONYMOUS | MAP_PRIVATE, // Process private
+                                size, prot,
+                                MAP_ANONYMOUS | MAP_PRIVATE, // Process private.
                                 -1, // Not backed by any file
                                 0   // No offset
       );
   if (mmap_result < 0 && (uintptr_t(mmap_result) >= UINTPTR_MAX - size))
     return Error{int(-mmap_result)};
+
+  if (guardsize) {
+    // Give read/write permissions to actual stack.
+    // TODO: We are assuming stack growsdown here.
+    long result =
+        __llvm_libc::syscall_impl(SYS_mprotect, mmap_result + guardsize,
+                                  stacksize, PROT_READ | PROT_WRITE);
+
+    if (result != 0)
+      return Error{int(-result)};
+  }
+  mmap_result += guardsize;
   return reinterpret_cast<void *>(mmap_result);
 }
 
-LIBC_INLINE void free_stack(void *stack, size_t size) {
-  __llvm_libc::syscall_impl(SYS_munmap, stack, size);
+// This must always be inlined as we may be freeing the calling threads stack in
+// which case a normal return from the top the stack would cause an invalid
+// memory read.
+static __attribute__((always_inline)) inline void
+free_stack(void *stack, size_t stacksize, size_t guardsize) {
+  uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
+  stackaddr -= guardsize;
+  stack = reinterpret_cast<void *>(stackaddr);
+  __llvm_libc::syscall_impl(SYS_munmap, stack, stacksize + guardsize);
 }
 
 struct Thread;
@@ -97,12 +141,16 @@ struct alignas(STACK_ALIGNMENT) StartArgs {
   void *arg;
 };
 
-static void cleanup_thread_resources(ThreadAttributes *attrib) {
+// This must always be inlined as we may be freeing the calling threads stack in
+// which case a normal return from the top the stack would cause an invalid
+// memory read.
+static __attribute__((always_inline)) inline void
+cleanup_thread_resources(ThreadAttributes *attrib) {
   // Cleanup the TLS before the stack as the TLS information is stored on
   // the stack.
   cleanup_tls(attrib->tls, attrib->tls_size);
   if (attrib->owned_stack)
-    free_stack(attrib->stack, attrib->stack_size);
+    free_stack(attrib->stack, attrib->stacksize, attrib->guardsize);
 }
 
 __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
@@ -148,17 +196,41 @@ __attribute__((noinline)) static void start_thread() {
 }
 
 int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
-                size_t size, bool detached) {
+                size_t stacksize, size_t guardsize, bool detached) {
   bool owned_stack = false;
   if (stack == nullptr) {
-    if (size == 0)
-      size = DEFAULT_STACK_SIZE;
-    auto alloc = alloc_stack(size);
+    // TODO: Should we return EINVAL here? Should we have a generic concept of a
+    //       minimum stacksize (like 16384 for pthread).
+    if (stacksize == 0)
+      stacksize = DEFAULT_STACKSIZE;
+    // Roundup stacksize/guardsize to page size.
+    // TODO: Should be also add sizeof(ThreadAttribute) and other internal
+    //       meta data?
+    auto round_or_err = round_to_page(guardsize);
+    if (!round_or_err)
+      return round_or_err.error();
+    guardsize = round_or_err.value();
+
+    round_or_err = round_to_page(stacksize);
+    if (!round_or_err)
+      return round_or_err.error();
+
+    stacksize = round_or_err.value();
+    auto alloc = alloc_stack(stacksize, guardsize);
     if (!alloc)
       return alloc.error();
     else
       stack = alloc.value();
     owned_stack = true;
+  }
+
+  // Validate that stack/stacksize are validly aligned.
+  uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
+  if ((stackaddr % STACK_ALIGNMENT != 0) ||
+      ((stackaddr + stacksize) % STACK_ALIGNMENT != 0)) {
+    if (owned_stack)
+      free_stack(stack, stacksize, guardsize);
+    return EINVAL;
   }
 
   TLSDescriptor tls;
@@ -173,9 +245,29 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   //
   // Likewise, the actual thread state information is also stored on the
   // stack memory.
-  uintptr_t adjusted_stack = reinterpret_cast<uintptr_t>(stack) + size -
-                             sizeof(StartArgs) - sizeof(ThreadAttributes) -
-                             sizeof(cpp::Atomic<FutexWordType>);
+
+  static constexpr size_t INTERNAL_STACK_DATA_SIZE =
+      sizeof(StartArgs) + sizeof(ThreadAttributes) +
+      sizeof(cpp::Atomic<FutexWordType>);
+
+  // This is pretty arbitrary, but at the moment we don't adjust user provided
+  // stacksize (or default) to account for this data as its assumed minimal. If
+  // this assert starts failing we probably should. Likewise if we can't bound
+  // this we may overflow when we subtract it from the top of the stack.
+  static_assert(INTERNAL_STACK_DATA_SIZE < EXEC_PAGESIZE);
+
+  // TODO: We are assuming stack growsdown here.
+  auto adjusted_stack_or_err =
+      add_no_overflow(reinterpret_cast<uintptr_t>(stack), stacksize);
+  if (!adjusted_stack_or_err) {
+    cleanup_tls(tls.addr, tls.size);
+    if (owned_stack)
+      free_stack(stack, stacksize, guardsize);
+    return adjusted_stack_or_err.error();
+  }
+
+  uintptr_t adjusted_stack =
+      adjusted_stack_or_err.value() - INTERNAL_STACK_DATA_SIZE;
   adjusted_stack &= ~(uintptr_t(STACK_ALIGNMENT) - 1);
 
   auto *start_args = reinterpret_cast<StartArgs *>(adjusted_stack);
@@ -186,7 +278,8 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   attrib->detach_state =
       uint32_t(detached ? DetachState::DETACHED : DetachState::JOINABLE);
   attrib->stack = stack;
-  attrib->stack_size = size;
+  attrib->stacksize = stacksize;
+  attrib->guardsize = guardsize;
   attrib->owned_stack = owned_stack;
   attrib->tls = tls.addr;
   attrib->tls_size = tls.size;
@@ -411,12 +504,18 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
     // Set the CLEAR_TID address to nullptr to prevent the kernel
     // from signalling at a non-existent futex location.
     __llvm_libc::syscall_impl(SYS_set_tid_address, 0);
+    // Return value for detached thread should be unused. We need to avoid
+    // referencing `style` or `retval.*` because they may be stored on the stack
+    // and we have deallocated our stack!
+    __llvm_libc::syscall_impl(SYS_exit, 0);
+    __builtin_unreachable();
   }
 
   if (style == ThreadStyle::POSIX)
     __llvm_libc::syscall_impl(SYS_exit, retval.posix_retval);
   else
     __llvm_libc::syscall_impl(SYS_exit, retval.stdc_retval);
+  __builtin_unreachable();
 }
 
 } // namespace __llvm_libc

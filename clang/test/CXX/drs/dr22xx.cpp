@@ -14,6 +14,14 @@ void f() {
 }
 #endif
 
+namespace dr2213 { // dr2213: yes
+template <typename T, typename U>
+struct A;
+
+template <typename U>
+struct A<int, U>;
+} // namespace dr2213
+
 namespace dr2229 { // dr2229: 7
 struct AnonBitfieldQualifiers {
   const unsigned : 1; // expected-error {{anonymous bit-field cannot have qualifiers}}

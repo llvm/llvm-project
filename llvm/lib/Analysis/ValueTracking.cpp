@@ -580,6 +580,11 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   return false;
 }
 
+// TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
+// we still have enough information about `RHS` to conclude non-zero. For
+// example Pred=EQ, RHS=isKnownNonZero. cmpExcludesZero is called in loops
+// so the extra compile time may not be worth it, but possibly a second API
+// should be created for use outside of loops.
 static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
   // v u> y implies v != 0.
   if (Pred == ICmpInst::ICMP_UGT)
@@ -994,13 +999,6 @@ static void computeKnownBitsFromShiftOperator(
 
   if (ShiftAmtIsConstant) {
     Known = KF(Known2, Known);
-
-    // If the known bits conflict, this must be an overflowing left shift, so
-    // the shift result is poison. We can return anything we want. Choose 0 for
-    // the best folding opportunity.
-    if (Known.hasConflict())
-      Known.setAllZero();
-
     return;
   }
 
@@ -1365,6 +1363,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Result.Zero.setSignBit();
         if (KnownVal.One.isSignBitSet())
           Result.One.setSignBit();
+        if (Result.hasConflict())
+          Result.setAllZero();
       }
       return Result;
     };
@@ -1781,36 +1781,25 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
       case Intrinsic::uadd_sat:
-      case Intrinsic::usub_sat: {
-        bool IsAdd = II->getIntrinsicID() == Intrinsic::uadd_sat;
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
-
-        // Add: Leading ones of either operand are preserved.
-        // Sub: Leading zeros of LHS and leading ones of RHS are preserved
-        // as leading zeros in the result.
-        unsigned LeadingKnown;
-        if (IsAdd)
-          LeadingKnown = std::max(Known.countMinLeadingOnes(),
-                                  Known2.countMinLeadingOnes());
-        else
-          LeadingKnown = std::max(Known.countMinLeadingZeros(),
-                                  Known2.countMinLeadingOnes());
-
-        Known = KnownBits::computeForAddSub(
-            IsAdd, /* NSW */ false, Known, Known2);
-
-        // We select between the operation result and all-ones/zero
-        // respectively, so we can preserve known ones/zeros.
-        if (IsAdd) {
-          Known.One.setHighBits(LeadingKnown);
-          Known.Zero.clearAllBits();
-        } else {
-          Known.Zero.setHighBits(LeadingKnown);
-          Known.One.clearAllBits();
-        }
+        Known = KnownBits::uadd_sat(Known, Known2);
         break;
-      }
+      case Intrinsic::usub_sat:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::usub_sat(Known, Known2);
+        break;
+      case Intrinsic::sadd_sat:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::sadd_sat(Known, Known2);
+        break;
+      case Intrinsic::ssub_sat:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+        Known = KnownBits::ssub_sat(Known, Known2);
+        break;
       case Intrinsic::umin:
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
@@ -2900,12 +2889,38 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     return (XKnown.countMaxTrailingZeros() + YKnown.countMaxTrailingZeros()) <
            BitWidth;
   }
-  case Instruction::Select:
+  case Instruction::Select: {
     // (C ? X : Y) != 0 if X != 0 and Y != 0.
-    if (isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q) &&
-        isKnownNonZero(I->getOperand(2), DemandedElts, Depth, Q))
+
+    // First check if the arm is non-zero using `isKnownNonZero`. If that fails,
+    // then see if the select condition implies the arm is non-zero. For example
+    // (X != 0 ? X : Y), we know the true arm is non-zero as the `X` "return" is
+    // dominated by `X != 0`.
+    auto SelectArmIsNonZero = [&](bool IsTrueArm) {
+      Value *Op;
+      Op = IsTrueArm ? I->getOperand(1) : I->getOperand(2);
+      // Op is trivially non-zero.
+      if (isKnownNonZero(Op, DemandedElts, Depth, Q))
+        return true;
+
+      // The condition of the select dominates the true/false arm. Check if the
+      // condition implies that a given arm is non-zero.
+      Value *X;
+      CmpInst::Predicate Pred;
+      if (!match(I->getOperand(0), m_c_ICmp(Pred, m_Specific(Op), m_Value(X))))
+        return false;
+
+      if (!IsTrueArm)
+        Pred = ICmpInst::getInversePredicate(Pred);
+
+      return cmpExcludesZero(Pred, X);
+    };
+
+    if (SelectArmIsNonZero(/* IsTrueArm */ true) &&
+        SelectArmIsNonZero(/* IsTrueArm */ false))
       return true;
     break;
+  }
   case Instruction::PHI: {
     auto *PN = cast<PHINode>(I);
     if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))
@@ -4031,150 +4046,6 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
   return cannotBeOrderedLessThanZeroImpl(V, DL, TLI, false, 0);
 }
 
-bool llvm::isKnownNeverInfinity(const Value *V, const DataLayout &DL,
-                                const TargetLibraryInfo *TLI, unsigned Depth,
-                                AssumptionCache *AC, const Instruction *CtxI,
-                                const DominatorTree *DT,
-                                OptimizationRemarkEmitter *ORE,
-                                bool UseInstrInfo) {
-  assert(V->getType()->isFPOrFPVectorTy() && "Querying for Inf on non-FP type");
-
-  // If we're told that infinities won't happen, assume they won't.
-  if (auto *FPMathOp = dyn_cast<FPMathOperator>(V))
-    if (FPMathOp->hasNoInfs())
-      return true;
-
-  if (const auto *Arg = dyn_cast<Argument>(V)) {
-    if ((Arg->getNoFPClass() & fcInf) == fcInf)
-      return true;
-  }
-
-  // TODO: Use fpclass like API for isKnown queries and distinguish +inf from
-  // -inf.
-  if (const auto *CB = dyn_cast<CallBase>(V)) {
-    if ((CB->getRetNoFPClass() & fcInf) == fcInf)
-      return true;
-  }
-
-  // Handle scalar constants.
-  if (auto *CFP = dyn_cast<ConstantFP>(V))
-    return !CFP->isInfinity();
-
-  if (Depth == MaxAnalysisRecursionDepth)
-    return false;
-
-  if (auto *Inst = dyn_cast<Instruction>(V)) {
-    switch (Inst->getOpcode()) {
-    case Instruction::Select: {
-      return isKnownNeverInfinity(Inst->getOperand(1), DL, TLI, Depth + 1) &&
-             isKnownNeverInfinity(Inst->getOperand(2), DL, TLI, Depth + 1);
-    }
-    case Instruction::SIToFP:
-    case Instruction::UIToFP: {
-      // Get width of largest magnitude integer (remove a bit if signed).
-      // This still works for a signed minimum value because the largest FP
-      // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
-      int IntSize = Inst->getOperand(0)->getType()->getScalarSizeInBits();
-      if (Inst->getOpcode() == Instruction::SIToFP)
-        --IntSize;
-
-      // If the exponent of the largest finite FP value can hold the largest
-      // integer, the result of the cast must be finite.
-      Type *FPTy = Inst->getType()->getScalarType();
-      return ilogb(APFloat::getLargest(FPTy->getFltSemantics())) >= IntSize;
-    }
-    case Instruction::FNeg:
-    case Instruction::FPExt: {
-      // Peek through to source op. If it is not infinity, this is not infinity.
-      return isKnownNeverInfinity(Inst->getOperand(0), DL, TLI, Depth + 1);
-    }
-    case Instruction::FPTrunc: {
-      // Need a range check.
-      return false;
-    }
-    default:
-      break;
-    }
-
-    if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::sin:
-      case Intrinsic::cos:
-        // Return NaN on infinite inputs.
-        return true;
-      case Intrinsic::fabs:
-      case Intrinsic::sqrt:
-      case Intrinsic::canonicalize:
-      case Intrinsic::copysign:
-      case Intrinsic::arithmetic_fence:
-      case Intrinsic::trunc:
-        return isKnownNeverInfinity(Inst->getOperand(0), DL, TLI, Depth + 1);
-      case Intrinsic::floor:
-      case Intrinsic::ceil:
-      case Intrinsic::rint:
-      case Intrinsic::nearbyint:
-      case Intrinsic::round:
-      case Intrinsic::roundeven:
-        // PPC_FP128 is a special case.
-        if (V->getType()->isMultiUnitFPType())
-          return false;
-        return isKnownNeverInfinity(Inst->getOperand(0), DL, TLI, Depth + 1);
-      case Intrinsic::fptrunc_round:
-        // Requires knowing the value range.
-        return false;
-      case Intrinsic::minnum:
-      case Intrinsic::maxnum:
-      case Intrinsic::minimum:
-      case Intrinsic::maximum:
-        return isKnownNeverInfinity(Inst->getOperand(0), DL, TLI, Depth + 1) &&
-               isKnownNeverInfinity(Inst->getOperand(1), DL, TLI, Depth + 1);
-      case Intrinsic::log:
-      case Intrinsic::log10:
-      case Intrinsic::log2:
-        // log(+inf) -> +inf
-        // log([+-]0.0) -> -inf
-        // log(-inf) -> nan
-        // log(-x) -> nan
-        // TODO: We lack API to check the == 0 case.
-        return false;
-      case Intrinsic::exp:
-      case Intrinsic::exp2:
-      case Intrinsic::pow:
-      case Intrinsic::powi:
-      case Intrinsic::fma:
-      case Intrinsic::fmuladd:
-        // These can return infinities on overflow cases, so it's hard to prove
-        // anything about it.
-        return false;
-      default:
-        break;
-      }
-    }
-  }
-
-  // try to handle fixed width vector constants
-  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
-  if (VFVTy && isa<Constant>(V)) {
-    // For vectors, verify that each element is not infinity.
-    unsigned NumElts = VFVTy->getNumElements();
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = cast<Constant>(V)->getAggregateElement(i);
-      if (!Elt)
-        return false;
-      if (isa<UndefValue>(Elt))
-        continue;
-      auto *CElt = dyn_cast<ConstantFP>(Elt);
-      if (!CElt || CElt->isInfinity())
-        return false;
-    }
-    // All elements were confirmed non-infinity or undefined.
-    return true;
-  }
-
-  // was not able to prove that V never contains infinity
-  return false;
-}
-
 bool llvm::SignBitMustBeZero(const Value *V, const DataLayout &DL,
                              const TargetLibraryInfo *TLI) {
   return cannotBeOrderedLessThanZeroImpl(V, DL, TLI, true, 0);
@@ -4654,7 +4525,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.knownNot(fcNegative);
         break;
       }
-      case Intrinsic::sqrt: {
+      case Intrinsic::sqrt:
+      case Intrinsic::experimental_constrained_sqrt: {
         KnownFPClass KnownSrc;
         FPClassTest InterestedSrcs = InterestedClasses;
         if (InterestedClasses & fcNan)

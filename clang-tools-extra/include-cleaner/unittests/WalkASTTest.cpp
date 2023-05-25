@@ -341,6 +341,34 @@ TEST(WalkAST, TemplateNames) {
   testWalk("template<typename T> struct $explicit^S { S(T); };", "^S s(42);");
 }
 
+TEST(WalkAST, NestedTypes) {
+  testWalk(R"cpp(
+      struct Base { typedef int $implicit^a; };
+      struct Derived : public Base {};)cpp",
+           "void fun() { Derived::^a x; }");
+  testWalk(R"cpp(
+      struct Base { using $implicit^a = int; };
+      struct Derived : public Base {};)cpp",
+           "void fun() { Derived::^a x; }");
+  testWalk(R"cpp(
+      struct ns { struct a {}; };
+      struct Base : public ns { using ns::$implicit^a; };
+      struct Derived : public Base {};)cpp",
+           "void fun() { Derived::^a x; }");
+  testWalk(R"cpp(
+      struct Base { struct $implicit^a {}; };
+      struct Derived : public Base {};)cpp",
+           "void fun() { Derived::^a x; }");
+  testWalk("struct Base { struct $implicit^a {}; };",
+           "struct Derived : public Base { ^a x; };");
+  testWalk(R"cpp(
+      struct Base { struct $implicit^a {}; };
+      struct Derived : public Base {};
+      struct SoDerived : public Derived {};
+      )cpp",
+           "void fun() { SoDerived::Derived::^a x; }");
+}
+
 TEST(WalkAST, MemberExprs) {
   testWalk("struct $implicit^S { static int f; };", "void foo() { S::^f; }");
   testWalk("struct B { static int f; }; struct $implicit^S : B {};",

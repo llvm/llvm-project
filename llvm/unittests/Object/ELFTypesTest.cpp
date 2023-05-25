@@ -64,14 +64,15 @@ TEST(ELFTypesTest, NoteTest) {
 }
 
 TEST(ELFTypesTest, BBEntryMetadataEncodingTest) {
-  const std::array<BBAddrMap::BBEntry::Metadata, 6> Decoded = {
-      {{false, false, false, false},
-       {true, false, false, false},
-       {false, true, false, false},
-       {false, false, true, false},
-       {false, false, false, true},
-       {true, true, true, true}}};
-  const std::array<uint32_t, 6> Encoded = {{0, 1, 2, 4, 8, 15}};
+  const std::array<BBAddrMap::BBEntry::Metadata, 7> Decoded = {
+      {{false, false, false, false, false},
+       {true, false, false, false, false},
+       {false, true, false, false, false},
+       {false, false, true, false, false},
+       {false, false, false, true, false},
+       {false, false, false, false, true},
+       {true, true, true, true, true}}};
+  const std::array<uint32_t, 7> Encoded = {{0, 1, 2, 4, 8, 16, 31}};
   for (size_t i = 0; i < Decoded.size(); ++i)
     EXPECT_EQ(Decoded[i].encode(), Encoded[i]);
   for (size_t i = 0; i < Encoded.size(); ++i) {

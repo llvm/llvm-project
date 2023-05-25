@@ -291,7 +291,7 @@ void setCriticalLock(omp_lock_t *Lock) {
   if (mapping::getThreadIdInWarp() == LowestActiveThread) {
     fenceKernel(atomic::release);
     while (!atomicCAS((uint32_t *)Lock, UNSET, SET, atomic::relaxed,
-                       atomic::relaxed)) {
+                      atomic::relaxed)) {
       __builtin_amdgcn_s_sleep(32);
     }
     fenceKernel(atomic::aquire);
@@ -305,7 +305,8 @@ void setCriticalLock(omp_lock_t *Lock) {
 ///
 ///{
 #pragma omp begin declare variant match(                                       \
-    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+        device = {arch(nvptx, nvptx64)},                                       \
+            implementation = {extension(match_any)})
 
 uint32_t atomicInc(uint32_t *Address, uint32_t Val,
                    atomic::OrderingTy Ordering) {
@@ -483,13 +484,9 @@ uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering) {
   return impl::atomicInc(Addr, V, Ordering);
 }
 
-void unsetCriticalLock(omp_lock_t *Lock) {
-  impl::unsetLock(Lock);
-}
+void unsetCriticalLock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
 
-void setCriticalLock(omp_lock_t *Lock) {
-  impl::setLock(Lock);
-}
+void setCriticalLock(omp_lock_t *Lock) { impl::setLock(Lock); }
 
 extern "C" {
 void __kmpc_ordered(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }

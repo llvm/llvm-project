@@ -108,7 +108,7 @@ void run_foo_tml() {
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs
+// CHECK-NEXT:    ret ptr @_ZN7MyClassIssE7foo_tmlEv._MssbsMsme-f64f64
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777216
@@ -128,7 +128,7 @@ void run_foo_tml() {
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs
+// CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv._MssbsMsme-f64f64
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777216
@@ -157,7 +157,7 @@ void run_foo_tml() {
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 1
-// CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs(
+// CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv._MssbsMsme-f64f64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
@@ -175,7 +175,7 @@ void run_foo_tml() {
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    ret i32 2
-// CHECK-LABEL: @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs(
+// CHECK-LABEL: @_ZN7MyClassIisE7foo_tmlEv._MssbsMsme-f64f64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8

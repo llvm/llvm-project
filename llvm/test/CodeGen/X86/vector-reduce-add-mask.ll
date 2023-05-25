@@ -28,13 +28,37 @@ define i64 @test_v2i64_v2i32(<2 x i64> %a0) {
 ; SSE41-NEXT:    movq %xmm1, %rax
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: test_v2i64_v2i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_v2i64_v2i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_v2i64_v2i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    retq
+;
+; AVX512BW-LABEL: test_v2i64_v2i32:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512BW-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovq %xmm0, %rax
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: test_v2i64_v2i32:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512BWVL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vmovq %xmm0, %rax
+; AVX512BWVL-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 255, i64 255>
   %2 = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %1)
   ret i64 %2
@@ -271,19 +295,33 @@ define i64 @test_v16i64_v16i8(<16 x i64> %a0) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_v16i64_v16i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovqb %zmm1, %xmm1
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v16i64_v16i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpmovqb %zmm1, %xmm1
+; AVX512BW-NEXT:    vpmovqb %zmm0, %xmm0
+; AVX512BW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512BW-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovq %xmm0, %rax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: test_v16i64_v16i8:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpmovqb %zmm1, %xmm1
+; AVX512BWVL-NEXT:    vpmovqb %zmm0, %xmm0
+; AVX512BWVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512BWVL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512BWVL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vmovq %xmm0, %rax
+; AVX512BWVL-NEXT:    vzeroupper
+; AVX512BWVL-NEXT:    retq
   %1 = and <16 x i64> %a0, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
   %2 = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %1)
   ret i64 %2
@@ -1015,7 +1053,7 @@ define i16 @test_v16i16_v16i8(<16 x i16> %a0) {
 ; AVX512BWVL-LABEL: test_v16i16_v16i8:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpmovwb %ymm0, %xmm0
-; AVX512BWVL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BWVL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -1241,7 +1279,7 @@ define i16 @test_v64i16_v64i8(<64 x i16> %a0) {
 ; AVX512-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512-NEXT:    vpmovwb %zmm1, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1

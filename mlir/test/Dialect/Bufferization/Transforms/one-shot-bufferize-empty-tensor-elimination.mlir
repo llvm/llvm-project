@@ -231,3 +231,31 @@ func.func @regression_insert_of_bbarg(%t0: tensor<5xf32>, %t1: tensor<10xf32>) -
   %0 = tensor.insert_slice %t0 into %t1 [2] [5] [1] : tensor<5xf32> into tensor<10xf32>
   return %0 : tensor<10xf32>
 }
+
+// -----
+
+// This is a regression test. Make sure that there is no crash.
+
+// CHECK-LABEL: func.func @regression_eliminate_equivalent_only(
+func.func @regression_eliminate_equivalent_only(%sz: index, %p: index, %t0: tensor<?x16xi8>) -> tensor<?x16xi8> {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %27 = tensor.empty(%sz) : tensor<?x8xi32>
+  %extracted_slice = tensor.extract_slice %27[0, 0] [%p, 8] [1, 1] : tensor<?x8xi32> to tensor<?x8xi32>
+  %28 = scf.for %arg4 = %c0 to %c16 step %c8 iter_args(%arg5 = %t0) -> (tensor<?x16xi8>) {
+    %inserted_slice = tensor.insert_slice %extracted_slice into %27[0, 0] [%sz, 8] [1, 1] : tensor<?x8xi32> into tensor<?x8xi32>
+    %extracted_slice_2 = tensor.extract_slice %arg5[%p, %p] [%sz, 8] [1, 1] : tensor<?x16xi8> to tensor<?x8xi8>
+    %32 = linalg.generic
+        {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+        iterator_types = ["parallel", "parallel"]}
+        ins(%inserted_slice : tensor<?x8xi32>) outs(%extracted_slice_2 : tensor<?x8xi8>) {
+    ^bb0(%in: i32, %out: i8):
+      %tr = arith.trunci %in : i32 to i8
+      linalg.yield %tr : i8
+    } -> tensor<?x8xi8>
+    %inserted_slice_3 = tensor.insert_slice %32 into %arg5[%p, %arg4] [%sz, 8] [1, 1] : tensor<?x8xi8> into tensor<?x16xi8>
+    scf.yield %inserted_slice_3 : tensor<?x16xi8>
+  }
+  func.return %28 : tensor<?x16xi8>
+}

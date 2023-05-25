@@ -1807,3 +1807,127 @@ bb6:                                              ; preds = %start, %bb3, %bb4, 
   %.sroa.0.0 = phi i32 [ 2222, %bb5 ], [ 1111, %bb4 ], [ 4444, %bb3 ], [ 3333, %start ]
   ret i32 %.sroa.0.0
 }
+
+; can attach nsw because of default's unreachability and case value type size
+; is big enough to hold max signed value.
+define i32 @nsw_on_index_sub(i8 %n) {
+; CHECK-LABEL: @nsw_on_index_sub(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i3
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i3 [[TRUNC]], -2
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i32 [[SWITCH_IDX_CAST]], 1111
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[SWITCH_IDX_MULT]], 1111
+; CHECK-NEXT:    ret i32 [[SWITCH_OFFSET]]
+;
+start:
+  %trunc = trunc i8 %n to i3
+  ; we can hold max(cases) - min(cases) = 0b001 - 0b110 = 0b011
+  switch i3 %trunc, label %bb1 [
+  i3 0, label %bb6 ; 0b000
+  i3 1, label %bb3 ; 0b001
+  i3 -2, label %bb4; 0b110
+  i3 -1, label %bb5; 0b111
+  ]
+
+bb1:                                              ; preds = %start
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb6
+
+bb4:                                              ; preds = %start
+  br label %bb6
+
+bb5:                                              ; preds = %start
+  br label %bb6
+
+bb6:                                              ; preds = %start, %bb3, %bb4, %bb5
+  %.sroa.0.0 = phi i32 [ 2222, %bb5 ], [ 1111, %bb4 ], [ 4444, %bb3 ], [ 3333, %start ]
+  ret i32 %.sroa.0.0
+}
+
+; cannot attach nsw on tableidx subtraction
+; because maximum index is greater than INT3_MAX = 3
+define i32 @wrapped_on_index_sub(i8 %n) {
+; CHECK-LABEL: @wrapped_on_index_sub(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i3
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[TRUNC]], -2
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i3 [[SWITCH_TABLEIDX]], -3
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i32 [[SWITCH_IDX_CAST]], 1111
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[SWITCH_IDX_MULT]], 1111
+; CHECK-NEXT:    [[DOTSROA_0_0:%.*]] = select i1 [[TMP0]], i32 [[SWITCH_OFFSET]], i32 0
+; CHECK-NEXT:    ret i32 [[DOTSROA_0_0]]
+;
+start:
+  %trunc = trunc i8 %n to i3
+  switch i3 %trunc, label %bb1 [
+  i3 0, label %bb6
+  i3 1, label %bb3
+  i3 2, label %bb7
+  i3 -2, label %bb4
+  i3 -1, label %bb5
+  ]
+
+bb1:                                              ; preds = %start
+  br label %bb6
+
+bb3:                                              ; preds = %start
+  br label %bb6
+
+bb4:                                              ; preds = %start
+  br label %bb6
+
+bb5:                                              ; preds = %start
+  br label %bb6
+
+bb7:                                              ; preds = %start
+  br label %bb6
+
+bb6:                                              ; preds = %start, %bb3, %bb4, %bb5
+  %.sroa.0.0 = phi i32 [ 0, %bb1 ], [ 2222, %bb5 ], [ 1111, %bb4 ], [ 5555, %bb7 ], [ 4444, %bb3 ], [ 3333, %start ]
+  ret i32 %.sroa.0.0
+}
+
+
+; cannot attach nsw on tableidx subtraction
+; because default reachability shows overflow could happen.
+define i32 @wrapped_on_index_sub_default(i8 %n) {
+; CHECK-LABEL: @wrapped_on_index_sub_default(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i3
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[TRUNC]], -2
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i3 [[SWITCH_TABLEIDX]], -4
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i32 [[SWITCH_IDX_CAST]], 1111
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[SWITCH_IDX_MULT]], 1111
+; CHECK-NEXT:    [[DOTSROA_0_0:%.*]] = select i1 [[TMP0]], i32 [[SWITCH_OFFSET]], i32 0
+; CHECK-NEXT:    ret i32 [[DOTSROA_0_0]]
+;
+start:
+  %trunc = trunc i8 %n to i3
+  switch i3 %trunc, label %bb1 [
+  i3 0, label %bb6
+  i3 1, label %bb3
+  i3 -2, label %bb4
+  i3 -1, label %bb5
+  ]
+
+bb1:                                              ; preds = %start
+  br label %bb6
+
+bb3:                                              ; preds = %start
+  br label %bb6
+
+bb4:                                              ; preds = %start
+  br label %bb6
+
+bb5:                                              ; preds = %start
+  br label %bb6
+
+bb6:                                              ; preds = %start, %bb3, %bb4, %bb5
+  %.sroa.0.0 = phi i32 [ 0, %bb1 ], [ 2222, %bb5 ], [ 1111, %bb4 ], [ 4444, %bb3 ], [ 3333, %start ]
+  ret i32 %.sroa.0.0
+}

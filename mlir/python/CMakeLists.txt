@@ -114,6 +114,16 @@ declare_mlir_dialect_python_bindings(
   DIALECT_NAME linalg
   DEPENDS LinalgOdsGen)
 
+declare_mlir_dialect_extension_python_bindings(
+ADD_TO_PARENT MLIRPythonSources.Dialects
+ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/TransformPDLExtensionOps.td
+  SOURCES
+    dialects/_transform_pdl_extension_ops_ext.py
+    dialects/transform/pdl.py
+  DIALECT_NAME transform
+  EXTENSION_NAME transform_pdl_extension)
+
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
@@ -263,7 +273,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     IRInterfaces.cpp
     IRModule.cpp
     IRTypes.cpp
-    PybindUtils.cpp
     Pass.cpp
 
     # Headers must be included explicitly so they are installed.

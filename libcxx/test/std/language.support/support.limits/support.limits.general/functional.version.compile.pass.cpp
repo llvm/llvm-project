@@ -16,13 +16,13 @@
 // Test the feature test macros defined by <functional>
 
 /*  Constant                           Value
-    __cpp_lib_bind_back                202202L [C++2b]
+    __cpp_lib_bind_back                202202L [C++23]
     __cpp_lib_bind_front               201907L [C++20]
     __cpp_lib_boyer_moore_searcher     201603L [C++17]
     __cpp_lib_constexpr_functional     201907L [C++20]
     __cpp_lib_invoke                   201411L [C++17]
-    __cpp_lib_invoke_r                 202106L [C++2b]
-    __cpp_lib_move_only_function       202110L [C++2b]
+    __cpp_lib_invoke_r                 202106L [C++23]
+    __cpp_lib_move_only_function       202110L [C++23]
     __cpp_lib_not_fn                   201603L [C++17]
     __cpp_lib_ranges                   202106L [C++20]
     __cpp_lib_result_of_sfinae         201210L [C++14]
@@ -37,7 +37,7 @@
 #if TEST_STD_VER < 14
 
 # ifdef __cpp_lib_bind_back
-#   error "__cpp_lib_bind_back should not be defined before c++2b"
+#   error "__cpp_lib_bind_back should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_bind_front
@@ -57,11 +57,11 @@
 # endif
 
 # ifdef __cpp_lib_invoke_r
-#   error "__cpp_lib_invoke_r should not be defined before c++2b"
+#   error "__cpp_lib_invoke_r should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_move_only_function
-#   error "__cpp_lib_move_only_function should not be defined before c++2b"
+#   error "__cpp_lib_move_only_function should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_not_fn
@@ -87,7 +87,7 @@
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_bind_back
-#   error "__cpp_lib_bind_back should not be defined before c++2b"
+#   error "__cpp_lib_bind_back should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_bind_front
@@ -107,11 +107,11 @@
 # endif
 
 # ifdef __cpp_lib_invoke_r
-#   error "__cpp_lib_invoke_r should not be defined before c++2b"
+#   error "__cpp_lib_invoke_r should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_move_only_function
-#   error "__cpp_lib_move_only_function should not be defined before c++2b"
+#   error "__cpp_lib_move_only_function should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_not_fn
@@ -143,7 +143,7 @@
 #elif TEST_STD_VER == 17
 
 # ifdef __cpp_lib_bind_back
-#   error "__cpp_lib_bind_back should not be defined before c++2b"
+#   error "__cpp_lib_bind_back should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_bind_front
@@ -169,11 +169,11 @@
 # endif
 
 # ifdef __cpp_lib_invoke_r
-#   error "__cpp_lib_invoke_r should not be defined before c++2b"
+#   error "__cpp_lib_invoke_r should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_move_only_function
-#   error "__cpp_lib_move_only_function should not be defined before c++2b"
+#   error "__cpp_lib_move_only_function should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_not_fn
@@ -208,7 +208,7 @@
 #elif TEST_STD_VER == 20
 
 # ifdef __cpp_lib_bind_back
-#   error "__cpp_lib_bind_back should not be defined before c++2b"
+#   error "__cpp_lib_bind_back should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_bind_front
@@ -240,11 +240,11 @@
 # endif
 
 # ifdef __cpp_lib_invoke_r
-#   error "__cpp_lib_invoke_r should not be defined before c++2b"
+#   error "__cpp_lib_invoke_r should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_move_only_function
-#   error "__cpp_lib_move_only_function should not be defined before c++2b"
+#   error "__cpp_lib_move_only_function should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_not_fn
@@ -282,14 +282,14 @@
 #   error "__cpp_lib_unwrap_ref should have the value 201811L in c++20"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_bind_back
-#     error "__cpp_lib_bind_back should be defined in c++2b"
+#     error "__cpp_lib_bind_back should be defined in c++23"
 #   endif
 #   if __cpp_lib_bind_back != 202202L
-#     error "__cpp_lib_bind_back should have the value 202202L in c++2b"
+#     error "__cpp_lib_bind_back should have the value 202202L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_bind_back
@@ -298,46 +298,46 @@
 # endif
 
 # ifndef __cpp_lib_bind_front
-#   error "__cpp_lib_bind_front should be defined in c++2b"
+#   error "__cpp_lib_bind_front should be defined in c++23"
 # endif
 # if __cpp_lib_bind_front != 201907L
-#   error "__cpp_lib_bind_front should have the value 201907L in c++2b"
+#   error "__cpp_lib_bind_front should have the value 201907L in c++23"
 # endif
 
 # ifndef __cpp_lib_boyer_moore_searcher
-#   error "__cpp_lib_boyer_moore_searcher should be defined in c++2b"
+#   error "__cpp_lib_boyer_moore_searcher should be defined in c++23"
 # endif
 # if __cpp_lib_boyer_moore_searcher != 201603L
-#   error "__cpp_lib_boyer_moore_searcher should have the value 201603L in c++2b"
+#   error "__cpp_lib_boyer_moore_searcher should have the value 201603L in c++23"
 # endif
 
 # ifndef __cpp_lib_constexpr_functional
-#   error "__cpp_lib_constexpr_functional should be defined in c++2b"
+#   error "__cpp_lib_constexpr_functional should be defined in c++23"
 # endif
 # if __cpp_lib_constexpr_functional != 201907L
-#   error "__cpp_lib_constexpr_functional should have the value 201907L in c++2b"
+#   error "__cpp_lib_constexpr_functional should have the value 201907L in c++23"
 # endif
 
 # ifndef __cpp_lib_invoke
-#   error "__cpp_lib_invoke should be defined in c++2b"
+#   error "__cpp_lib_invoke should be defined in c++23"
 # endif
 # if __cpp_lib_invoke != 201411L
-#   error "__cpp_lib_invoke should have the value 201411L in c++2b"
+#   error "__cpp_lib_invoke should have the value 201411L in c++23"
 # endif
 
 # ifndef __cpp_lib_invoke_r
-#   error "__cpp_lib_invoke_r should be defined in c++2b"
+#   error "__cpp_lib_invoke_r should be defined in c++23"
 # endif
 # if __cpp_lib_invoke_r != 202106L
-#   error "__cpp_lib_invoke_r should have the value 202106L in c++2b"
+#   error "__cpp_lib_invoke_r should have the value 202106L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_move_only_function
-#     error "__cpp_lib_move_only_function should be defined in c++2b"
+#     error "__cpp_lib_move_only_function should be defined in c++23"
 #   endif
 #   if __cpp_lib_move_only_function != 202110L
-#     error "__cpp_lib_move_only_function should have the value 202110L in c++2b"
+#     error "__cpp_lib_move_only_function should have the value 202110L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_move_only_function
@@ -346,39 +346,137 @@
 # endif
 
 # ifndef __cpp_lib_not_fn
-#   error "__cpp_lib_not_fn should be defined in c++2b"
+#   error "__cpp_lib_not_fn should be defined in c++23"
 # endif
 # if __cpp_lib_not_fn != 201603L
-#   error "__cpp_lib_not_fn should have the value 201603L in c++2b"
+#   error "__cpp_lib_not_fn should have the value 201603L in c++23"
 # endif
 
 # ifndef __cpp_lib_ranges
-#   error "__cpp_lib_ranges should be defined in c++2b"
+#   error "__cpp_lib_ranges should be defined in c++23"
 # endif
 # if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++2b"
+#   error "__cpp_lib_ranges should have the value 202106L in c++23"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae
-#   error "__cpp_lib_result_of_sfinae should be defined in c++2b"
+#   error "__cpp_lib_result_of_sfinae should be defined in c++23"
 # endif
 # if __cpp_lib_result_of_sfinae != 201210L
-#   error "__cpp_lib_result_of_sfinae should have the value 201210L in c++2b"
+#   error "__cpp_lib_result_of_sfinae should have the value 201210L in c++23"
 # endif
 
 # ifndef __cpp_lib_transparent_operators
-#   error "__cpp_lib_transparent_operators should be defined in c++2b"
+#   error "__cpp_lib_transparent_operators should be defined in c++23"
 # endif
 # if __cpp_lib_transparent_operators != 201510L
-#   error "__cpp_lib_transparent_operators should have the value 201510L in c++2b"
+#   error "__cpp_lib_transparent_operators should have the value 201510L in c++23"
 # endif
 
 # ifndef __cpp_lib_unwrap_ref
-#   error "__cpp_lib_unwrap_ref should be defined in c++2b"
+#   error "__cpp_lib_unwrap_ref should be defined in c++23"
 # endif
 # if __cpp_lib_unwrap_ref != 201811L
-#   error "__cpp_lib_unwrap_ref should have the value 201811L in c++2b"
+#   error "__cpp_lib_unwrap_ref should have the value 201811L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_bind_back
+#     error "__cpp_lib_bind_back should be defined in c++26"
+#   endif
+#   if __cpp_lib_bind_back != 202202L
+#     error "__cpp_lib_bind_back should have the value 202202L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_bind_back
+#     error "__cpp_lib_bind_back should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_bind_front
+#   error "__cpp_lib_bind_front should be defined in c++26"
+# endif
+# if __cpp_lib_bind_front != 201907L
+#   error "__cpp_lib_bind_front should have the value 201907L in c++26"
+# endif
+
+# ifndef __cpp_lib_boyer_moore_searcher
+#   error "__cpp_lib_boyer_moore_searcher should be defined in c++26"
+# endif
+# if __cpp_lib_boyer_moore_searcher != 201603L
+#   error "__cpp_lib_boyer_moore_searcher should have the value 201603L in c++26"
+# endif
+
+# ifndef __cpp_lib_constexpr_functional
+#   error "__cpp_lib_constexpr_functional should be defined in c++26"
+# endif
+# if __cpp_lib_constexpr_functional != 201907L
+#   error "__cpp_lib_constexpr_functional should have the value 201907L in c++26"
+# endif
+
+# ifndef __cpp_lib_invoke
+#   error "__cpp_lib_invoke should be defined in c++26"
+# endif
+# if __cpp_lib_invoke != 201411L
+#   error "__cpp_lib_invoke should have the value 201411L in c++26"
+# endif
+
+# ifndef __cpp_lib_invoke_r
+#   error "__cpp_lib_invoke_r should be defined in c++26"
+# endif
+# if __cpp_lib_invoke_r != 202106L
+#   error "__cpp_lib_invoke_r should have the value 202106L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_move_only_function
+#     error "__cpp_lib_move_only_function should be defined in c++26"
+#   endif
+#   if __cpp_lib_move_only_function != 202110L
+#     error "__cpp_lib_move_only_function should have the value 202110L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_move_only_function
+#     error "__cpp_lib_move_only_function should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_not_fn
+#   error "__cpp_lib_not_fn should be defined in c++26"
+# endif
+# if __cpp_lib_not_fn != 201603L
+#   error "__cpp_lib_not_fn should have the value 201603L in c++26"
+# endif
+
+# ifndef __cpp_lib_ranges
+#   error "__cpp_lib_ranges should be defined in c++26"
+# endif
+# if __cpp_lib_ranges != 202106L
+#   error "__cpp_lib_ranges should have the value 202106L in c++26"
+# endif
+
+# ifndef __cpp_lib_result_of_sfinae
+#   error "__cpp_lib_result_of_sfinae should be defined in c++26"
+# endif
+# if __cpp_lib_result_of_sfinae != 201210L
+#   error "__cpp_lib_result_of_sfinae should have the value 201210L in c++26"
+# endif
+
+# ifndef __cpp_lib_transparent_operators
+#   error "__cpp_lib_transparent_operators should be defined in c++26"
+# endif
+# if __cpp_lib_transparent_operators != 201510L
+#   error "__cpp_lib_transparent_operators should have the value 201510L in c++26"
+# endif
+
+# ifndef __cpp_lib_unwrap_ref
+#   error "__cpp_lib_unwrap_ref should be defined in c++26"
+# endif
+# if __cpp_lib_unwrap_ref != 201811L
+#   error "__cpp_lib_unwrap_ref should have the value 201811L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

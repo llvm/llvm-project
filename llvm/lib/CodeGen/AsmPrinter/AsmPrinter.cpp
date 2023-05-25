@@ -1330,7 +1330,8 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
   const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
   return object::BBAddrMap::BBEntry::Metadata{
       MBB.isReturnBlock(), !MBB.empty() && TII->isTailCall(MBB.back()),
-      MBB.isEHPad(), const_cast<MachineBasicBlock &>(MBB).canFallThrough()}
+      MBB.isEHPad(), const_cast<MachineBasicBlock &>(MBB).canFallThrough(),
+      !MBB.empty() && MBB.rbegin()->isIndirectBranch()}
       .encode();
 }
 

@@ -50,5 +50,6 @@ add_integration_test(
   SRCS
    rpc_stream_test.cpp
   LOADER_ARGS
-   --threads-x 32
+   --threads 32
+   --blocks 8
 )

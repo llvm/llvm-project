@@ -571,6 +571,16 @@ void DAGTypeLegalizer::SplitRes_UNDEF(SDNode *N, SDValue &Lo, SDValue &Hi) {
   Hi = DAG.getUNDEF(HiVT);
 }
 
+void DAGTypeLegalizer::SplitVecRes_AssertZext(SDNode *N, SDValue &Lo,
+                                              SDValue &Hi) {
+  SDValue L, H;
+  SDLoc dl(N);
+  GetSplitOp(N->getOperand(0), L, H);
+
+  Lo = DAG.getNode(ISD::AssertZext, dl, L.getValueType(), L, N->getOperand(1));
+  Hi = DAG.getNode(ISD::AssertZext, dl, H.getValueType(), H, N->getOperand(1));
+}
+
 void DAGTypeLegalizer::SplitRes_FREEZE(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue L, H;
   SDLoc dl(N);

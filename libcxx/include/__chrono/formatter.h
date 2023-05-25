@@ -556,9 +556,7 @@ __format_chrono(const _Tp& __value,
     }
   }
 
-  // TODO FMT Use the stringstream's view after P0408R7 has been implemented.
-  basic_string<_CharT> __str = __sstr.str();
-  return __formatter::__write_string(basic_string_view<_CharT>{__str}, __ctx.out(), __specs);
+  return __formatter::__write_string(__sstr.view(), __ctx.out(), __specs);
 }
 
 } // namespace __formatter

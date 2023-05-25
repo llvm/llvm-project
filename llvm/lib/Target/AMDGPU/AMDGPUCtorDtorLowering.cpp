@@ -38,6 +38,7 @@ static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
       GlobalValue::WeakODRLinkage, 0, InitOrFiniKernelName, &M);
   InitOrFiniKernel->setCallingConv(CallingConv::AMDGPU_KERNEL);
+  InitOrFiniKernel->addFnAttr("amdgpu-flat-work-group-size", "1,1");
   if (IsCtor)
     InitOrFiniKernel->addFnAttr("device-init");
   else
@@ -58,6 +59,7 @@ static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
 // void call_init_array_callbacks() {
 //   for (auto start = __init_array_start; start != __init_array_end; ++start)
 //     reinterpret_cast<InitCallback *>(*start)();
+// }
 static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   Module &M = *F.getParent();
   LLVMContext &C = M.getContext();

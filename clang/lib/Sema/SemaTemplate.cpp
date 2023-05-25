@@ -2851,8 +2851,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         NewDefaultLoc = NewTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
 
-        if (!OldTypeParm->getOwningModule() ||
-            isModuleUnitOfCurrentTU(OldTypeParm->getOwningModule()))
+        if (!OldTypeParm->getOwningModule())
           RedundantDefaultArg = true;
         else if (!getASTContext().isSameDefaultTemplateArgument(OldTypeParm,
                                                                 NewTypeParm)) {
@@ -2904,8 +2903,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldNonTypeParm->getDefaultArgumentLoc();
         NewDefaultLoc = NewNonTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
-        if (!OldNonTypeParm->getOwningModule() ||
-            isModuleUnitOfCurrentTU(OldNonTypeParm->getOwningModule()))
+        if (!OldNonTypeParm->getOwningModule())
           RedundantDefaultArg = true;
         else if (!getASTContext().isSameDefaultTemplateArgument(
                      OldNonTypeParm, NewNonTypeParm)) {
@@ -2956,8 +2954,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldTemplateParm->getDefaultArgument().getLocation();
         NewDefaultLoc = NewTemplateParm->getDefaultArgument().getLocation();
         SawDefaultArgument = true;
-        if (!OldTemplateParm->getOwningModule() ||
-            isModuleUnitOfCurrentTU(OldTemplateParm->getOwningModule()))
+        if (!OldTemplateParm->getOwningModule())
           RedundantDefaultArg = true;
         else if (!getASTContext().isSameDefaultTemplateArgument(
                      OldTemplateParm, NewTemplateParm)) {
@@ -5004,13 +5001,20 @@ Sema::BuildQualifiedTemplateIdExpr(CXXScopeSpec &SS,
     return ExprError();
   }
 
-  if (ClassTemplateDecl *Temp = R.getAsSingle<ClassTemplateDecl>()) {
-    Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_class_template)
-      << SS.getScopeRep()
-      << NameInfo.getName().getAsString() << SS.getRange();
-    Diag(Temp->getLocation(), diag::note_referenced_class_template);
+  auto DiagnoseTypeTemplateDecl = [&](TemplateDecl *Temp,
+                                      bool isTypeAliasTemplateDecl) {
+    Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_type_template)
+        << SS.getScopeRep() << NameInfo.getName().getAsString() << SS.getRange()
+        << isTypeAliasTemplateDecl;
+    Diag(Temp->getLocation(), diag::note_referenced_type_template) << 0;
     return ExprError();
-  }
+  };
+
+  if (ClassTemplateDecl *Temp = R.getAsSingle<ClassTemplateDecl>())
+    return DiagnoseTypeTemplateDecl(Temp, false);
+
+  if (TypeAliasTemplateDecl *Temp = R.getAsSingle<TypeAliasTemplateDecl>())
+    return DiagnoseTypeTemplateDecl(Temp, true);
 
   return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*ADL*/ false, TemplateArgs);
 }

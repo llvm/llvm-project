@@ -417,6 +417,10 @@ void X86FrameLowering::BuildCFI(MachineBasicBlock &MBB,
                                 MachineInstr::MIFlag Flag) const {
   MachineFunction &MF = *MBB.getParent();
   unsigned CFIIndex = MF.addFrameInst(CFIInst);
+
+  if (CFIInst.getOperation() == MCCFIInstruction::OpAdjustCfaOffset)
+    MF.getInfo<X86MachineFunctionInfo>()->setHasCFIAdjustCfa(true);
+
   BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex)
       .setMIFlag(Flag);
@@ -3803,7 +3807,23 @@ int X86FrameLowering::getInitialCFAOffset(const MachineFunction &MF) const {
 
 Register
 X86FrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
-  return TRI->getDwarfRegNum(StackPtr, true);
+  return StackPtr;
+}
+
+TargetFrameLowering::DwarfFrameBase
+X86FrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
+  const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
+  Register FrameRegister = RI->getFrameRegister(MF);
+  if (getInitialCFARegister(MF) == FrameRegister &&
+      MF.getInfo<X86MachineFunctionInfo>()->hasCFIAdjustCfa()) {
+    DwarfFrameBase FrameBase;
+    FrameBase.Kind = DwarfFrameBase::CFA;
+    FrameBase.Location.Offset =
+        -MF.getFrameInfo().getStackSize() - getInitialCFAOffset(MF);
+    return FrameBase;
+  }
+
+  return DwarfFrameBase{DwarfFrameBase::Register, {FrameRegister}};
 }
 
 namespace {

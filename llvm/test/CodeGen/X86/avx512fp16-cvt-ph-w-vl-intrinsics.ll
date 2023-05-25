@@ -740,7 +740,7 @@ define <2 x half> @test_u1tofp2(<2 x i1> %arg0) {
 ; CHECK-LABEL: test_u1tofp2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovqw %xmm0, %xmm0
-; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtuw2ph %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res = uitofp <2 x i1> %arg0 to <2 x half>

@@ -17,7 +17,9 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/PDLExtension/PDLExtensionOps.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Compiler.h"
@@ -754,6 +756,23 @@ public:
 #define GET_TYPEDEF_LIST
 #include "TestTransformDialectExtensionTypes.cpp.inc"
         >();
+
+    auto verboseConstraint = [](PatternRewriter &rewriter,
+                                ArrayRef<PDLValue> pdlValues) {
+      for (const PDLValue &pdlValue : pdlValues) {
+        if (Operation *op = pdlValue.dyn_cast<Operation *>()) {
+          op->emitWarning() << "from PDL constraint";
+        }
+      }
+      return success();
+    };
+
+    addDialectDataInitializer<transform::PDLMatchHooks>(
+        [&](transform::PDLMatchHooks &hooks) {
+          llvm::StringMap<PDLConstraintFunction> constraints;
+          constraints.try_emplace("verbose_constraint", verboseConstraint);
+          hooks.mergeInPDLMatchHooks(std::move(constraints));
+        });
   }
 };
 } // namespace

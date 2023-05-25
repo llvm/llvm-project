@@ -948,6 +948,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
                        "operator!\n");
 
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
+  case ISD::AssertZext:   SplitVecRes_AssertZext(N, Lo, Hi); break;
   case ISD::VSELECT:
   case ISD::SELECT:
   case ISD::VP_MERGE:
@@ -3925,6 +3926,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     llvm_unreachable("Do not know how to widen the result of this operator!");
 
   case ISD::MERGE_VALUES:      Res = WidenVecRes_MERGE_VALUES(N, ResNo); break;
+  case ISD::AssertZext:        Res = WidenVecRes_AssertZext(N); break;
   case ISD::BITCAST:           Res = WidenVecRes_BITCAST(N); break;
   case ISD::BUILD_VECTOR:      Res = WidenVecRes_BUILD_VECTOR(N); break;
   case ISD::CONCAT_VECTORS:    Res = WidenVecRes_CONCAT_VECTORS(N); break;
@@ -5124,6 +5126,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
   for (; i < WidenNumElts; ++i)
     Ops[i] = UndefVal;
   return DAG.getBuildVector(WidenVT, dl, Ops);
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_AssertZext(SDNode *N) {
+  SDValue InOp = ModifyToType(
+      N->getOperand(0),
+      TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0)), true);
+  return DAG.getNode(ISD::AssertZext, SDLoc(N), InOp.getValueType(), InOp,
+                     N->getOperand(1));
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_INSERT_VECTOR_ELT(SDNode *N) {

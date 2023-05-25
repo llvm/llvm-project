@@ -1,22 +1,8 @@
-// RUN: %clangxx -DDETERMINE_UNIQUE %s -o %t-unique
 // RUN: %clangxx -std=c++17 -fsanitize=function %s -O3 -g -DSHARED_LIB -fPIC -shared -o %t-so.so
 // RUN: %clangxx -std=c++17 -fsanitize=function %s -O3 -g -o %t %t-so.so
-// RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK $(%run %t-unique UNIQUE)
+// RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK
 // Verify that we can disable symbolization if needed:
-// RUN: %env_ubsan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM $(%run %t-unique NOSYM-UNIQUE)
-
-#ifdef DETERMINE_UNIQUE
-
-#include <iostream>
-
-#include "../../../../../lib/sanitizer_common/sanitizer_platform.h"
-
-int main(int, char **argv) {
-  if (!SANITIZER_NON_UNIQUE_TYPEINFO)
-    std::cout << "--check-prefix=" << argv[1];
-}
-
-#else
+// RUN: %env_ubsan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
 struct Shared {};
 using FnShared = void (*)(Shared *);
@@ -127,7 +113,5 @@ int main(void) {
   // NOSYM-NOT: runtime error: call to function
   make_invalid_call();
 }
-
-#endif
 
 #endif

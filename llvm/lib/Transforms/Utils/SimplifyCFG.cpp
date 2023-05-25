@@ -6473,24 +6473,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   std::vector<DominatorTree::UpdateType> Updates;
 
-  // Create the BB that does the lookups.
-  Module &Mod = *CommonDest->getParent()->getParent();
-  BasicBlock *LookupBB = BasicBlock::Create(
-      Mod.getContext(), "switch.lookup", CommonDest->getParent(), CommonDest);
-
-  // Compute the table index value.
-  Builder.SetInsertPoint(SI);
-  Value *TableIndex;
-  ConstantInt *TableIndexOffset;
-  if (UseSwitchConditionAsTableIndex) {
-    TableIndexOffset = ConstantInt::get(MaxCaseVal->getType(), 0);
-    TableIndex = SI->getCondition();
-  } else {
-    TableIndexOffset = MinCaseVal;
-    TableIndex =
-        Builder.CreateSub(SI->getCondition(), TableIndexOffset, "switch.tableidx");
-  }
-
   // Compute the maximum table size representable by the integer type we are
   // switching upon.
   unsigned CaseSize = MinCaseVal->getType()->getPrimitiveSizeInBits();
@@ -6505,6 +6487,34 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   const bool DefaultIsReachable =
       !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
   const bool GeneratingCoveredLookupTable = (MaxTableSize == TableSize);
+
+  // Create the BB that does the lookups.
+  Module &Mod = *CommonDest->getParent()->getParent();
+  BasicBlock *LookupBB = BasicBlock::Create(
+      Mod.getContext(), "switch.lookup", CommonDest->getParent(), CommonDest);
+
+  // Compute the table index value.
+  Builder.SetInsertPoint(SI);
+  Value *TableIndex;
+  ConstantInt *TableIndexOffset;
+  if (UseSwitchConditionAsTableIndex) {
+    TableIndexOffset = ConstantInt::get(MaxCaseVal->getType(), 0);
+    TableIndex = SI->getCondition();
+  } else {
+    TableIndexOffset = MinCaseVal;
+    // If the default is unreachable, all case values are s>= MinCaseVal. Then
+    // we can try to attach nsw.
+    bool MayWrap = true;
+    if (!DefaultIsReachable) {
+      APInt Res = MaxCaseVal->getValue().ssub_ov(MinCaseVal->getValue(), MayWrap);
+      (void)Res;
+    }
+
+    TableIndex = Builder.CreateSub(SI->getCondition(), TableIndexOffset,
+                                   "switch.tableidx", /*HasNUW =*/false,
+                                   /*HasNSW =*/!MayWrap);
+  }
+
   BranchInst *RangeCheckBranch = nullptr;
 
   if (!DefaultIsReachable || GeneratingCoveredLookupTable) {

@@ -925,6 +925,13 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // Copy-in non contiguous variables.
       assert(entity.getType().isa<fir::BaseBoxType>() &&
              "expect non simply contiguous variables to be boxes");
+      // TODO: for non-finalizable monomorphic derived type actual
+      // arguments associated with INTENT(OUT) dummy arguments
+      // we may avoid doing the copy and only allocate the temporary.
+      // The codegen would do a "mold" allocation instead of "sourced"
+      // allocation for the temp in this case. We can communicate
+      // this to the codegen via some CopyInOp flag.
+      // This is a performance concern.
       auto copyIn = builder.create<hlfir::CopyInOp>(
           loc, entity, /*var_is_present=*/mlir::Value{});
       entity = hlfir::Entity{copyIn.getCopiedIn()};

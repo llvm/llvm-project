@@ -16,6 +16,7 @@ unittest("DebugInfoDWARFTests") {
   sources = [
     "DWARFAcceleratorTableTest.cpp",
     "DWARFDataExtractorTest.cpp",
+    "DWARFDebugAbbrevTest.cpp",
     "DWARFDebugArangeSetTest.cpp",
     "DWARFDebugFrameTest.cpp",
     "DWARFDebugInfoTest.cpp",

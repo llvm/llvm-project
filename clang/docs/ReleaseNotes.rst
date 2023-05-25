@@ -296,7 +296,11 @@ Improvements to Clang's diagnostics
   Clang ABI >= 15.
   (`#62353: <https://github.com/llvm/llvm-project/issues/62353>`_,
   fallout from the non-POD packing ABI fix in LLVM 15).
-
+- Clang constexpr evaluator now prints subobject's name instead of its type in notes
+  when a constexpr variable has uninitialized subobjects after its constructor call.
+  (`#58601 <https://github.com/llvm/llvm-project/issues/58601>`_)
+- Clang's `-Wshadow` warning now warns about shadowings by static local variables
+  (`#62850: <https://github.com/llvm/llvm-project/issues/62850>`_).
 
 Bug Fixes in This Version
 -------------------------
@@ -397,6 +401,8 @@ Bug Fixes in This Version
 - Fix crash when attempting to perform parenthesized initialization of an
   aggregate with a base class with only non-public constructors.
   (`#62296 <https://github.com/llvm/llvm-project/issues/62296>`_)
+- Fix crash when handling initialization candidates for invalid deduction guide.
+  (`#62408 <https://github.com/llvm/llvm-project/issues/62408>`_)
 - Fix crash when redefining a variable with an invalid type again with an
   invalid type. (`#62447 <https://github.com/llvm/llvm-project/issues/62447>`_)
 - Fix a stack overflow issue when evaluating ``consteval`` default arguments.
@@ -431,7 +437,8 @@ Bug Fixes in This Version
   ``__builtin_dynamic_object_size`` on structs containing flexible array
   members.
   (`#62789 <https://github.com/llvm/llvm-project/issues/62789>`_).
-
+- Fix a crash when instantiating a non-type template argument in a dependent scope.
+  (`#62533 <https://github.com/llvm/llvm-project/issues/62533>`_).
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

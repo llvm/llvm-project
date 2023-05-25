@@ -82,13 +82,15 @@ void FunctionPropertiesInfo::updateAggregateStats(const Function &F,
 }
 
 FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
-    const Function &F, FunctionAnalysisManager &FAM) {
+    Function &F, FunctionAnalysisManager &FAM) {
+  return getFunctionPropertiesInfo(F, FAM.getResult<DominatorTreeAnalysis>(F),
+                                   FAM.getResult<LoopAnalysis>(F));
+}
+
+FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
+    const Function &F, const DominatorTree &DT, const LoopInfo &LI) {
 
   FunctionPropertiesInfo FPI;
-  // The const casts are due to the getResult API - there's no mutation of F.
-  const auto &LI = FAM.getResult<LoopAnalysis>(const_cast<Function &>(F));
-  const auto &DT =
-      FAM.getResult<DominatorTreeAnalysis>(const_cast<Function &>(F));
   for (const auto &BB : F)
     if (DT.isReachableFromEntry(&BB))
       FPI.reIncludeBB(BB);
@@ -127,7 +129,7 @@ FunctionPropertiesPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 FunctionPropertiesUpdater::FunctionPropertiesUpdater(
-    FunctionPropertiesInfo &FPI, const CallBase &CB)
+    FunctionPropertiesInfo &FPI, CallBase &CB)
     : FPI(FPI), CallSiteBB(*CB.getParent()), Caller(*CallSiteBB.getParent()) {
   assert(isa<CallInst>(CB) || isa<InvokeInst>(CB));
   // For BBs that are likely to change, we subtract from feature totals their
@@ -247,5 +249,13 @@ void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
 
   const auto &LI = FAM.getResult<LoopAnalysis>(const_cast<Function &>(Caller));
   FPI.updateAggregateStats(Caller, LI);
-  assert(FPI == FunctionPropertiesInfo::getFunctionPropertiesInfo(Caller, FAM));
+}
+
+bool FunctionPropertiesUpdater::isUpdateValid(Function &F,
+                                              const FunctionPropertiesInfo &FPI,
+                                              FunctionAnalysisManager &FAM) {
+  DominatorTree DT(F);
+  LoopInfo LI(DT);
+  auto Fresh = FunctionPropertiesInfo::getFunctionPropertiesInfo(F, DT, LI);
+  return FPI == Fresh;
 }

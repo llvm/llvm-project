@@ -2,7 +2,7 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
-! CHECK-LABEL: acc.private.recipe @privatization_10xf32 : !fir.ref<!fir.array<10xf32>> init {
+! CHECK-LABEL: acc.private.recipe @privatization_ref_10xf32 : !fir.ref<!fir.array<10xf32>> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10xf32>>):
 ! CHECK:   acc.yield %{{.*}} : !fir.ref<!fir.array<10xf32>>
 ! CHECK: }
@@ -454,8 +454,8 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.parallel firstprivate(%[[B]] : !fir.ref<!fir.array<10xf32>>) private(@privatization_10xf32 -> %[[A]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK:        acc.loop private(@privatization_10xf32 -> %[[A]] : !fir.ref<!fir.array<10xf32>>) {
+! CHECK:      acc.parallel firstprivate(%[[B]] : !fir.ref<!fir.array<10xf32>>) private(@privatization_ref_10xf32 -> %[[A]] : !fir.ref<!fir.array<10xf32>>) {
+! CHECK:        acc.loop private(@privatization_ref_10xf32 -> %[[A]] : !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}

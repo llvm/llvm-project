@@ -64,5 +64,5 @@ define void @bar() addrspace(1) {
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { "device-init" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { "device-fini" }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { "amdgpu-flat-work-group-size"="1,1" "device-init" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { "amdgpu-flat-work-group-size"="1,1" "device-fini" }

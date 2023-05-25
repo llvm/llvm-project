@@ -567,7 +567,7 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; AVX512BW-NEXT:    vpaddsb %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
-; AVX512BW-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512BW-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
 ; AVX512BW-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    retq
   %z = call <16 x i4> @llvm.sadd.sat.v16i4(<16 x i4> %x, <16 x i4> %y)

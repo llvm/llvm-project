@@ -3048,6 +3048,7 @@ static kmp_task_t *__kmp_get_priority_task(kmp_int32 gtid,
     if (__kmp_atomic_compare_store(&task_team->tt.tt_num_task_pri, ntasks,
                                    ntasks - 1))
       break;
+    ntasks = task_team->tt.tt_num_task_pri;
   } while (ntasks > 0);
   if (ntasks == 0) {
     KA_TRACE(20, ("__kmp_get_priority_task(exit #2): T#%d No tasks to get\n",
