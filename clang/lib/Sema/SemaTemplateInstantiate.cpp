@@ -961,11 +961,13 @@ void Sema::PrintInstantiationStack() {
             << MD->isExplicitlyDefaulted() << DFK.asSpecialMember()
             << Context.getTagDeclType(MD->getParent());
       } else if (DFK.isComparison()) {
+        QualType RecordType = FD->getParamDecl(0)
+                                  ->getType()
+                                  .getNonReferenceType()
+                                  .getUnqualifiedType();
         Diags.Report(Active->PointOfInstantiation,
                      diag::note_comparison_synthesized_at)
-            << (int)DFK.asComparison()
-            << Context.getTagDeclType(
-                   cast<CXXRecordDecl>(FD->getLexicalDeclContext()));
+            << (int)DFK.asComparison() << RecordType;
       }
       break;
     }
