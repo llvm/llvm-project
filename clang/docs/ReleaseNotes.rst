@@ -587,6 +587,7 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+- Clang now supports CUDA SDK up to 12.1
 
 AIX Support
 ^^^^^^^^^^^
