@@ -391,6 +391,64 @@ IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// FuncType Definitions
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult
+FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                 llvm::ArrayRef<mlir::Type> inputs,
+                 llvm::ArrayRef<mlir::Type> results, bool varArg) {
+  if (results.size() > 1)
+    return emitError() << "functions only supports 0 or 1 results";
+  if (varArg && inputs.empty())
+    return emitError() << "functions must have at least one non-variadic input";
+  return mlir::success();
+}
+
+FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
+  return get(getContext(), results, inputs, isVarArg());
+}
+
+mlir::ParseResult
+parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
+                  bool &isVarArg) {
+  isVarArg = false;
+  // `(` `)`
+  if (succeeded(p.parseOptionalRParen()))
+    return mlir::success();
+
+  // type (`,` type)* (`,` `...`)?
+  mlir::Type type;
+  if (p.parseType(type))
+    return mlir::failure();
+  params.push_back(type);
+  while (succeeded(p.parseOptionalComma())) {
+    if (succeeded(p.parseOptionalEllipsis())) {
+      isVarArg = true;
+      return p.parseRParen();
+    }
+    if (p.parseType(type))
+      return mlir::failure();
+    params.push_back(type);
+  }
+
+  return p.parseRParen();
+}
+
+void printFuncTypeArgs(mlir::AsmPrinter &p,
+                              mlir::ArrayRef<mlir::Type> params,
+                              bool isVarArg) {
+  llvm::interleaveComma(params, p,
+                        [&p](mlir::Type type) { p.printType(type); });
+  if (isVarArg) {
+    if (!params.empty())
+      p << ", ";
+    p << "...";
+  }
+  p << ')';
+}
+
+//===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 
