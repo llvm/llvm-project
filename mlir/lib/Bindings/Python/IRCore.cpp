@@ -295,6 +295,11 @@ class PyRegionList {
 public:
   PyRegionList(PyOperationRef operation) : operation(std::move(operation)) {}
 
+  PyRegionIterator dunderIter() {
+    operation->checkValid();
+    return PyRegionIterator(operation);
+  }
+
   intptr_t dunderLen() {
     operation->checkValid();
     return mlirOperationGetNumRegions(operation->get());
@@ -312,6 +317,7 @@ public:
   static void bind(py::module &m) {
     py::class_<PyRegionList>(m, "RegionSequence", py::module_local())
         .def("__len__", &PyRegionList::dunderLen)
+        .def("__iter__", &PyRegionList::dunderIter)
         .def("__getitem__", &PyRegionList::dunderGetItem);
   }
 
