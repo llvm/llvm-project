@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IFD %s
+; RUN: llc -mtriple=riscv32 -target-abi=ilp32 -mattr=+zdinx -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV32IZFINXZDINX %s
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64 -mattr=+d -verify-machineinstrs < %s \
@@ -31,6 +33,12 @@ define double @fneg(double %a) nounwind {
 ; RV32IFD-NEXT:    lui a2, 524288
 ; RV32IFD-NEXT:    xor a1, a1, a2
 ; RV32IFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fneg:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    lui a2, 524288
+; RV32IZFINXZDINX-NEXT:    xor a1, a1, a2
+; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fneg:
 ; RV64I:       # %bb.0:
@@ -70,6 +78,12 @@ define double @fabs(double %a) nounwind {
 ; RV32IFD-NEXT:    slli a1, a1, 1
 ; RV32IFD-NEXT:    srli a1, a1, 1
 ; RV32IFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fabs:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    slli a1, a1, 1
+; RV32IZFINXZDINX-NEXT:    srli a1, a1, 1
+; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fabs:
 ; RV64I:       # %bb.0:
@@ -124,6 +138,25 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: fcopysign_fneg:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a2, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a3, 12(sp)
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    fsgnjn.d a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64I-LABEL: fcopysign_fneg:
 ; RV64I:       # %bb.0:
