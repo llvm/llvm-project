@@ -2694,9 +2694,11 @@ bool TargetLowering::SimplifyDemandedBits(
     if (Op.getOpcode() == ISD::MUL) {
       Known = KnownBits::mul(KnownOp0, KnownOp1);
     } else { // Op.getOpcode() is either ISD::ADD or ISD::SUB.
-      Known = KnownBits::computeForAddSub(Op.getOpcode() == ISD::ADD,
-                                          Flags.hasNoSignedWrap(), KnownOp0,
-                                          KnownOp1);
+      // TODO: Update `computeForAddCarry` to handle the NSW flag as well so
+      //       that `Flags.hasNoSignedWrap()` can be passed through here
+      //       instead of false.
+      Known = KnownBits::computeForAddSub(Op.getOpcode() == ISD::ADD, false,
+                                          KnownOp0, KnownOp1);
     }
     break;
   }
