@@ -1847,8 +1847,12 @@ private:
     Fortran::lower::pft::Evaluation &eval = getEval();
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(eval, stmtCtx);
-    for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
-      genFIR(e);
+    for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
+      if (e.getIf<Fortran::parser::EndSelectStmt>())
+        maybeStartBlock(e.block);
+      else
+        genFIR(e);
+    }
     popActiveConstruct();
   }
 
@@ -2708,7 +2712,7 @@ private:
         builder->restoreInsertionPoint(crtInsPt);
         ++typeGuardIdx;
       } else if (eval.getIf<Fortran::parser::EndSelectStmt>()) {
-        genFIR(eval);
+        maybeStartBlock(eval.block);
         if (hasLocalScope)
           localSymbols.popScope();
       } else {

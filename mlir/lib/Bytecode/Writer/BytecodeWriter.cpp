@@ -585,6 +585,9 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
                                  std::move(versionEmitter));
   }
 
+  if (config.bytecodeVersion > 3)
+    dialectEmitter.emitVarInt(size(numberingState.getOpNames()));
+
   // Emit the referenced operation names grouped by dialect.
   auto emitOpName = [&](OpNameNumbering &name) {
     dialectEmitter.emitVarInt(stringSection.insert(name.name.stripDialect()));
@@ -670,8 +673,16 @@ void BytecodeWriter::writeBlock(EncodingEmitter &emitter, Block *block) {
   if (hasArgs) {
     emitter.emitVarInt(args.size());
     for (BlockArgument arg : args) {
-      emitter.emitVarInt(numberingState.getNumber(arg.getType()));
-      emitter.emitVarInt(numberingState.getNumber(arg.getLoc()));
+      Location argLoc = arg.getLoc();
+      if (config.bytecodeVersion > 3) {
+        emitter.emitVarIntWithFlag(numberingState.getNumber(arg.getType()),
+                                   !isa<UnknownLoc>(argLoc));
+        if (!isa<UnknownLoc>(argLoc))
+          emitter.emitVarInt(numberingState.getNumber(argLoc));
+      } else {
+        emitter.emitVarInt(numberingState.getNumber(arg.getType()));
+        emitter.emitVarInt(numberingState.getNumber(argLoc));
+      }
     }
     if (config.bytecodeVersion > 2) {
       uint64_t maskOffset = emitter.size();
@@ -755,7 +766,7 @@ void BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
 
     for (Region &region : op->getRegions()) {
       // If the region is not isolated from above, or we are emitting bytecode
-      // targetting version <2, we don't use a section.
+      // targeting version <2, we don't use a section.
       if (!isIsolatedFromAbove || config.bytecodeVersion < 2) {
         writeRegion(emitter, &region);
         continue;

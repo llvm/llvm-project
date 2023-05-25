@@ -6,8 +6,8 @@ import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
-class ExprEntryBPTestCase(TestBase):
 
+class ExprEntryBPTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_expr_entry_bp(self):
@@ -15,13 +15,22 @@ class ExprEntryBPTestCase(TestBase):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
 
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, "Set a breakpoint here", self.main_source_file)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
 
         self.assertEqual(1, bkpt.GetNumLocations())
-        entry = bkpt.GetLocationAtIndex(0).GetAddress().GetModule().GetObjectFileEntryPointAddress()
+        entry = (
+            bkpt.GetLocationAtIndex(0)
+            .GetAddress()
+            .GetModule()
+            .GetObjectFileEntryPointAddress()
+        )
         self.assertTrue(entry.IsValid(), "Can't get a module entry point")
 
         entry_bp = target.BreakpointCreateBySBAddress(entry)
-        self.assertTrue(entry_bp.IsValid(), "Can't set a breakpoint on the module entry point")
+        self.assertTrue(
+            entry_bp.IsValid(), "Can't set a breakpoint on the module entry point"
+        )
 
         self.expect_expr("sum(7, 1)", result_type="int", result_value="8")

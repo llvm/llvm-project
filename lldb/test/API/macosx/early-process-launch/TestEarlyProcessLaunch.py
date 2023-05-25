@@ -9,30 +9,28 @@ from lldbsuite.test import lldbutil
 
 
 class TestEarlyProcessLaunch(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
-    @skipIfAsan # rdar://103359354
-    @skipIfOutOfTreeDebugserver  # 2022-12-13 FIXME: skipping system debugserver 
-                                 # until this feature is included in the system
-                                 # debugserver.
-    @add_test_categories(['pyapi'])
+    @skipIfAsan  # rdar://103359354
+    @skipIfOutOfTreeDebugserver  # 2022-12-13 FIXME: skipping system debugserver
+    # until this feature is included in the system
+    # debugserver.
+    @add_test_categories(["pyapi"])
     def test_early_process_launch(self):
         """Test that we don't read objc class tables early in proc startup"""
         self.build()
 
         ###
-        ### Hit a breakpoint on the first malloc() call, which 
+        ### Hit a breakpoint on the first malloc() call, which
         ### is before libSystem has finished initializing.  At
         ### this point, we should not read the objc class tables.
-        ### Then continue to main(), which is past libSystem 
+        ### Then continue to main(), which is past libSystem
         ### initializing.  Try again, and they should be read.
-        ### 
+        ###
         ### Use the types logging to detect the difference.
 
-        target, process, _, bkpt = lldbutil.run_to_name_breakpoint(
-            self, 'malloc')
+        target, process, _, bkpt = lldbutil.run_to_name_breakpoint(self, "malloc")
 
         target.DisableAllBreakpoints()
         target.BreakpointCreateByName("main")

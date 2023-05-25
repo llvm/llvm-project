@@ -7,8 +7,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestCase(TestBase):
 
+class TestCase(TestBase):
     @no_debug_info_test
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
@@ -21,5 +21,4 @@ class TestCase(TestBase):
         # Test for the abort signal code.
         self.assertEqual(process.GetExitStatus(), 6)
         # Test for the exit code description.
-        self.assertEqual(process.GetExitDescription(),
-                         "Terminated due to signal 6")
+        self.assertEqual(process.GetExitDescription(), "Terminated due to signal 6")

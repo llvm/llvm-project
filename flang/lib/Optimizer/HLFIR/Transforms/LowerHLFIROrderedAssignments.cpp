@@ -146,7 +146,8 @@ private:
 
   /// Is this an assignment to a vector subscripted entity?
   static bool hasVectorSubscriptedLhs(hlfir::RegionAssignOp regionAssignOp);
-  /// Are they any leaf region in node that must be saved in the current run?
+  /// Are there any leaf region in the node that must be saved in the current
+  /// run?
   bool mustSaveRegionIn(
       hlfir::OrderedAssignmentTreeOpInterface node,
       llvm::SmallVectorImpl<hlfir::SaveEntity> &saveEntities) const;
@@ -216,7 +217,7 @@ private:
   }
 
   /// Can the current loop nest iteration number be computed? For simplicity,
-  /// this is true if an only if all the bounds and steps of the fir.do_loop
+  /// this is true if and only if all the bounds and steps of the fir.do_loop
   /// nest dominates the outer loop. The argument is filled with the current
   /// loop nest on success.
   bool currentLoopNestIterationNumberCanBeComputed(
@@ -250,10 +251,10 @@ private:
   /// Map of temporary storage to keep track of saved entity once the run
   /// that saves them has been lowered. It is kept in-between runs.
   llvm::DenseMap<mlir::Region *, fir::factory::TemporaryStorage> savedEntities;
-  /// Map holding the value that were saved in the current run and that also
+  /// Map holding the values that were saved in the current run and that also
   /// need to be used (because their construct will be visited). It is reset
   /// after each run. It avoids having to store and fetch in the temporary
-  /// during the same run, which would required the temporary to have different
+  /// during the same run, which would require the temporary to have different
   /// fetching and storing counters.
   llvm::DenseMap<mlir::Region *, ValueAndCleanUp> savedInCurrentRunBeforeUse;
 

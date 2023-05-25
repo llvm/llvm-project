@@ -1,4 +1,3 @@
-
 class LookupDictionary(dict):
     """
     a dictionary which can lookup value by key, or keys by value
@@ -30,7 +29,6 @@ class LookupDictionary(dict):
 
 
 class Enum(LookupDictionary):
-
     def __init__(self, initial_value=0, items=[]):
         """items can be a list of pair_lists or a dictionary"""
         LookupDictionary.__init__(self, items)
@@ -38,7 +36,7 @@ class Enum(LookupDictionary):
 
     def set_value(self, v):
         v_typename = typeof(v).__name__
-        if v_typename == 'str':
+        if v_typename == "str":
             if str in self:
                 v = self[v]
             else:

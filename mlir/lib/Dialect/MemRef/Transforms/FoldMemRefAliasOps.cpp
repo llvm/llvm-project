@@ -169,6 +169,12 @@ static Value getMemRefOperand(vector::TransferReadOp op) {
   return op.getSource();
 }
 
+static Value getMemRefOperand(nvgpu::LdMatrixOp op) {
+  return op.getSrcMemref();
+}
+
+static Value getMemRefOperand(vector::LoadOp op) { return op.getBase(); }
+
 static Value getMemRefOperand(vector::TransferWriteOp op) {
   return op.getSource();
 }
@@ -393,6 +399,10 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
         rewriter.replaceOpWithNewOp<memref::LoadOp>(
             loadOp, subViewOp.getSource(), sourceIndices, op.getNontemporal());
       })
+      .Case([&](vector::LoadOp op) {
+        rewriter.replaceOpWithNewOp<vector::LoadOp>(
+            op, op.getType(), subViewOp.getSource(), sourceIndices);
+      })
       .Case([&](vector::TransferReadOp op) {
         rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
             op, op.getVectorType(), subViewOp.getSource(), sourceIndices,
@@ -405,6 +415,11 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
         rewriter.replaceOpWithNewOp<gpu::SubgroupMmaLoadMatrixOp>(
             op, op.getType(), subViewOp.getSource(), sourceIndices,
             op.getLeadDimension(), op.getTransposeAttr());
+      })
+      .Case([&](nvgpu::LdMatrixOp op) {
+        rewriter.replaceOpWithNewOp<nvgpu::LdMatrixOp>(
+            op, op.getType(), subViewOp.getSource(), sourceIndices,
+            op.getTranspose(), op.getNumTiles());
       })
       .Default([](Operation *) { llvm_unreachable("unexpected operation."); });
   return success();
@@ -658,6 +673,8 @@ LogicalResult NvgpuAsyncCopyOpSubViewOpFolder::matchAndRewrite(
 void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
   patterns.add<LoadOpOfSubViewOpFolder<affine::AffineLoadOp>,
                LoadOpOfSubViewOpFolder<memref::LoadOp>,
+               LoadOpOfSubViewOpFolder<nvgpu::LdMatrixOp>,
+               LoadOpOfSubViewOpFolder<vector::LoadOp>,
                LoadOpOfSubViewOpFolder<vector::TransferReadOp>,
                LoadOpOfSubViewOpFolder<gpu::SubgroupMmaLoadMatrixOp>,
                StoreOpOfSubViewOpFolder<affine::AffineStoreOp>,
