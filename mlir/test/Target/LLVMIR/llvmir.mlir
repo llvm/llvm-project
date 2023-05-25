@@ -2209,3 +2209,31 @@ llvm.func @readwrite_func() attributes {
   memory = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
 
 // CHECK: attributes #[[ATTR]] = { memory(readwrite) }
+
+// -----
+
+//
+// arm_streaming attribute.
+//
+
+// CHECK-LABEL: @streaming_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @streaming_func() attributes {arm_streaming} {
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_enabled" }
+
+// -----
+
+//
+// arm_locally_streaming attribute.
+//
+
+// CHECK-LABEL: @locally_streaming_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_body" }
