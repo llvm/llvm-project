@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <sstream>
 #include <stdio.h>
+#include <sys/auxv.h>
 #include <sys/types.h>
 #include <thread>
 
@@ -232,6 +233,11 @@ uint64_t SimpleFastHash(const void *Data, size_t Size, uint64_t Initial) {
   for (size_t i = 0; i < Size; i++)
     Res = Res * 11 + Bytes[i];
   return Res;
+}
+
+size_t PageSize() {
+  static size_t PageSizeCached = getauxval(AT_PAGESZ);
+  return PageSizeCached;
 }
 
 }  // namespace fuzzer
