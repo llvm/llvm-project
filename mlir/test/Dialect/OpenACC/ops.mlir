@@ -1440,3 +1440,25 @@ func.func @acc_reduc_test(%a : i64) -> () {
 // CHECK-LABEL: func.func @acc_reduc_test(
 // CHECK-SAME:    %[[ARG0:.*]]: i64)
 // CHECK:         acc.parallel reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
+
+// -----
+
+acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
+^bb0(%0: i64):
+  %1 = arith.constant 0 : i64
+  acc.yield %1 : i64
+} combiner {
+^bb0(%0: i64, %1: i64):
+  %2 = arith.addi %0, %1 : i64
+  acc.yield %2 : i64
+}
+
+func.func @acc_reduc_test(%a : i64) -> () {
+  acc.serial reduction(@reduction_add_i64 -> %a : i64) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_reduc_test(
+// CHECK-SAME:    %[[ARG0:.*]]: i64)
+// CHECK:         acc.serial reduction(@reduction_add_i64 -> %[[ARG0]] : i64)

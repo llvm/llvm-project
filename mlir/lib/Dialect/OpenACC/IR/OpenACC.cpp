@@ -584,6 +584,10 @@ LogicalResult acc::SerialOp::verify() {
           *this, getPrivatizations(), getGangPrivateOperands(), "private",
           "privatizations")))
     return failure();
+  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
+          *this, getReductionRecipes(), getReductionOperands(), "reduction",
+          "reductions")))
+    return failure();
   return checkDataOperands<acc::SerialOp>(*this, getDataClauseOperands());
 }
 
