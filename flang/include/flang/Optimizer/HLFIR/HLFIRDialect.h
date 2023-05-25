@@ -69,6 +69,12 @@ inline bool isBoxAddressOrValueType(mlir::Type type) {
   return fir::unwrapRefType(type).isa<fir::BaseBoxType>();
 }
 
+inline bool isPolymorphicType(mlir::Type type) {
+  if (auto exprType = type.dyn_cast<hlfir::ExprType>())
+    return exprType.isPolymorphic();
+  return fir::isPolymorphicType(type);
+}
+
 bool isFortranScalarNumericalType(mlir::Type);
 bool isFortranNumericalArrayObject(mlir::Type);
 bool isFortranNumericalOrLogicalArrayObject(mlir::Type);

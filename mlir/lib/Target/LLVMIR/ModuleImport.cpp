@@ -1542,6 +1542,12 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
       attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
     auto keyAttr = StringAttr::get(context, attrName);
 
+    // Skip the aarch64_pstate_sm_<body|enabled> since the LLVMFuncOp has an
+    // explicit attribute.
+    if (attrName == "aarch64_pstate_sm_enabled" ||
+        attrName == "aarch64_pstate_sm_body")
+      continue;
+
     if (attr.isStringAttribute()) {
       StringRef val = attr.getValueAsString();
       if (val.empty()) {
@@ -1574,6 +1580,11 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
   processMemoryEffects(func, funcOp);
   processPassthroughAttrs(func, funcOp);
+
+  if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
+    funcOp.setArmStreaming(true);
+  else if (func->hasFnAttribute("aarch64_pstate_sm_body"))
+    funcOp.setArmLocallyStreaming(true);
 }
 
 DictionaryAttr

@@ -9,18 +9,21 @@
 
 from dex.command.CommandBase import CommandBase
 
+
 class DexCommandLine(CommandBase):
     def __init__(self, the_cmdline):
         if type(the_cmdline) is not list:
-            raise TypeError('Expected list, got {}'.format(type(the_cmdline)))
+            raise TypeError("Expected list, got {}".format(type(the_cmdline)))
         for x in the_cmdline:
-          if type(x) is not str:
-              raise TypeError('Command line element "{}" has type {}'.format(x, type(x)))
+            if type(x) is not str:
+                raise TypeError(
+                    'Command line element "{}" has type {}'.format(x, type(x))
+                )
         self.the_cmdline = the_cmdline
         super(DexCommandLine, self).__init__()
 
     def eval(self):
-        raise NotImplementedError('DexCommandLine commands cannot be evaled.')
+        raise NotImplementedError("DexCommandLine commands cannot be evaled.")
 
     @staticmethod
     def get_name():

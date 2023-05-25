@@ -9,7 +9,7 @@
 // NOTE: To run this test, your CPU must support SME.
 
 // VLA memcopy in streaming mode.
-func.func @streaming_kernel_copy(%src : memref<?xi64>, %dst : memref<?xi64>, %size : index) attributes {passthrough = ["aarch64_pstate_sm_enabled"]} {
+func.func @streaming_kernel_copy(%src : memref<?xi64>, %dst : memref<?xi64>, %size : index) attributes {arm_streaming} {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %vscale = vector.vscale
