@@ -1322,13 +1322,13 @@ lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
     // Extract the top-level op so that aliases get printed.
     // FIXME: We should be able to enable aliases without having to do this!
     OwningOpRef<Operation *> topOp = &parsedBlock.front();
-    (*topOp)->remove();
+    topOp->remove();
 
     AsmState state(*topOp, OpPrintingFlags().enableDebugInfo().assumeVerified(),
                    /*locationMap=*/nullptr, &fallbackResourceMap);
 
     llvm::raw_string_ostream os(result.output);
-    (*topOp)->print(os, state);
+    topOp->print(os, state);
   }
   return std::move(result);
 }
