@@ -82,3 +82,26 @@ func.func @non_cast_like_insert_slice(%t: tensor<7xf32>) {
       : tensor<5xf32> into tensor<7xf32>
   return
 }
+
+// -----
+
+func.func @cast_like_insert_slice_dynamic(
+    %t: tensor<1x?x1xf32>, %f: f32, %pos: index) {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.insert %f into %t[%c0, %pos, %c0] {replaced} : tensor<1x?x1xf32>
+
+  // Rank reduction
+  %c1 = arith.constant 1 : index
+  %dim1 = tensor.dim %t, %c1 : tensor<1x?x1xf32>
+  %1 = tensor.extract_slice %t[0, 0, 0][1, %dim1, 1][1, 1, 1]
+      : tensor<1x?x1xf32> to tensor<?xf32>
+  // expected-remark @below {{replacement found}}
+  %2 = tensor.insert %f into %1[%c0] : tensor<?xf32>
+  // Rank expansion
+  // Throw in a wrench: Do not use %dim1 directly, but another SSA value that
+  // has the same runtime value.
+  %dim1b = tensor.dim %1, %c0 : tensor<?xf32>
+  %3 = tensor.insert_slice %2 into %t[0, 0, 0][1, %dim1b, 1][1, 1, 1]
+      {replacement_0 = 0} : tensor<?xf32> into tensor<1x?x1xf32>
+  return
+}
