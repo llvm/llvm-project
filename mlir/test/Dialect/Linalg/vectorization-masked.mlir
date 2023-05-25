@@ -405,14 +405,17 @@ transform.sequence failures(propagate) {
 
 // -----
 
-// CHECK-LABEL: func @test_masked_vectorize_dynamic_pad
+//       CHECK: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s1 + s0)>
+//       CHECK: func @test_masked_vectorize_dynamic_pad
 func.func @test_masked_vectorize_dynamic_pad(
   %0 : tensor<?x?xf32>, %h0 : index, %h1 : index)
     -> tensor<?x?xf32>
 {
   //  CHECK-DAG: %[[c42:.*]] = arith.constant 4.243000e+01 : f32
   //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
-  //      CHECK: %[[empty:.*]] = tensor.empty({{.+}}) : tensor<?x?xf32>
+  //  CHECK-DAG: %[[res_d0:.+]] = affine.apply #[[MAP]]()
+  //  CHECK-DAG: %[[res_d1:.+]] = affine.apply #[[MAP]]()
+  //  CHECK-DAG: %[[empty:.*]] = tensor.empty(%[[res_d0]], %[[res_d1]]) : tensor<?x?xf32>
   //      CHECK: %[[d0:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[d1:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[mask:.*]] = vector.create_mask %[[d0]], %[[d1]] : vector<2x4xi1>
@@ -421,7 +424,8 @@ func.func @test_masked_vectorize_dynamic_pad(
   // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_2]], %[[c0_2]]], %[[c42]]
   // CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<2x4xf32>
   // CHECK-SAME: } : vector<2x4xi1> -> vector<2x4xf32>
-  //      CHECK: %[[masked_write:.*]] = vector.mask %[[mask]] {
+  //      CHECK: %[[mask_2:.*]] = vector.create_mask %[[res_d0]], %[[res_d1]] : vector<2x4xi1>
+  //      CHECK: %[[masked_write:.*]] = vector.mask %[[mask_2]] {
   // CHECK-SAME: vector.transfer_write %[[masked_read]], %[[empty]][%[[c0_2]], %[[c0_2]]]
   // CHECK-SAME:   {in_bounds = [true, true]} : vector<2x4xf32>, tensor<?x?xf32>
   //      CHECK: return %[[masked_write]] : tensor<?x?xf32>

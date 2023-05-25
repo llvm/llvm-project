@@ -462,3 +462,12 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
   %2 = arith.constant 0 : i32
   acc.yield %2 : i32
 }
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr<i32>) -> () {
+  // expected-error@+1 {{expected symbol reference @privatization_i32 to point to a private declaration}}
+  acc.serial private(@privatization_i32 -> %0 : !llvm.ptr<i32>) {
+  }
+  return
+}

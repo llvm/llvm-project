@@ -1,4 +1,4 @@
-//===-- Map from error numbers to strings in the c std ----------*- C++ -*-===//
+//===-- Map of C standard error numbers to strings --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERROR_TABLE_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERROR_TABLE_H
-
-#include "src/errno/libc_errno.h" // For error macros
+#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
+#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
 
-namespace __llvm_libc::internal {
+#include <errno.h> // For error macros
+
+namespace __llvm_libc {
 
 inline constexpr const MsgTable<4> STDC_ERRORS = {
     MsgMapping(0, "Success"),
@@ -22,6 +22,6 @@ inline constexpr const MsgTable<4> STDC_ERRORS = {
     MsgMapping(EILSEQ, "Invalid or incomplete multibyte or wide character"),
 };
 
-} // namespace __llvm_libc::internal
+} // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_ERROR_TABLE_H
+#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_ERRORS_H

@@ -141,6 +141,10 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
 
 set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
+configure_file(
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Config/mlir-config.h.cmake
+  ${MLIR_INCLUDE_DIR}/mlir/Config/mlir-config.h)
+
 #-------------------------------------------------------------------------------
 # Python Bindings Configuration
 # Requires:

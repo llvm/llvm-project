@@ -40,7 +40,7 @@ bool MCInstrDesc::hasImplicitDefOfPhysReg(unsigned Reg,
 bool MCInstrDesc::hasDefOfPhysReg(const MCInst &MI, unsigned Reg,
                                   const MCRegisterInfo &RI) const {
   for (int i = 0, e = NumDefs; i != e; ++i)
-    if (MI.getOperand(i).isReg() &&
+    if (MI.getOperand(i).isReg() && MI.getOperand(i).getReg() &&
         RI.isSubRegisterEq(Reg, MI.getOperand(i).getReg()))
       return true;
   if (variadicOpsAreDefs())

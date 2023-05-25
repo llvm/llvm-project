@@ -72,6 +72,13 @@ checkHasDynamicBatchDims(PatternRewriter &rewriter, Op op,
   return dynamicDims;
 }
 
+/// Common code to create the reshape op where necessary to make the rank of two
+/// values equal. input1 and input2 will be updated when the rank has
+/// changed. The caller is expected to use these to rewrite the original
+/// operator with the RESHAPE now in the graph.
+LogicalResult EqualizeRanks(PatternRewriter &rewriter, Location loc,
+                            Value &input1, Value &input2);
+
 } // namespace tosa
 } // namespace mlir
 

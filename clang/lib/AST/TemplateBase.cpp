@@ -327,7 +327,7 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
 
   case TemplateExpansion:
     ID.AddInteger(TemplateArg.NumExpansions);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Template:
     ID.AddPointer(TemplateArg.Name);
     break;

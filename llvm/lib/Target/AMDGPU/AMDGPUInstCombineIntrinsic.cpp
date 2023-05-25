@@ -450,86 +450,25 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Src0 = II.getArgOperand(0);
     Value *Src1 = II.getArgOperand(1);
     const ConstantInt *CMask = dyn_cast<ConstantInt>(Src1);
-    if (!CMask) {
-      if (isa<UndefValue>(Src0)) {
-        return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
-      }
+    if (CMask) {
+      II.setCalledOperand(Intrinsic::getDeclaration(
+          II.getModule(), Intrinsic::is_fpclass, Src0->getType()));
 
-      if (isa<UndefValue>(Src1)) {
-        return IC.replaceInstUsesWith(II,
-                                      ConstantInt::get(II.getType(), false));
-      }
-      break;
+      // Clamp any excess bits, as they're illegal for the generic intrinsic.
+      II.setArgOperand(1, ConstantInt::get(Src1->getType(),
+                                           CMask->getZExtValue() & fcAllFlags));
+      return &II;
     }
 
-    uint32_t Mask = CMask->getZExtValue();
+    // FIXME: Should propagate poison.
+    if (isa<UndefValue>(Src0))
+      return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
 
-    // If all tests are made, it doesn't matter what the value is.
-    if ((Mask & fcAllFlags) == fcAllFlags) {
-      return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
-    }
-
-    if ((Mask & fcAllFlags) == 0) {
+    if (isa<UndefValue>(Src1)) {
       return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), false));
     }
 
-    if (Mask == fcNan && !II.isStrictFP()) {
-      // Equivalent of isnan. Replace with standard fcmp.
-      Value *FCmp = IC.Builder.CreateFCmpUNO(Src0, Src0);
-      FCmp->takeName(&II);
-      return IC.replaceInstUsesWith(II, FCmp);
-    }
-
-    if (Mask == fcZero && !II.isStrictFP()) {
-      // Equivalent of == 0.
-      Value *FCmp =
-          IC.Builder.CreateFCmpOEQ(Src0, ConstantFP::get(Src0->getType(), 0.0));
-
-      FCmp->takeName(&II);
-      return IC.replaceInstUsesWith(II, FCmp);
-    }
-
-    // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
-    if ((Mask & fcNan) &&
-        isKnownNeverNaN(Src0, IC.getDataLayout(), &IC.getTargetLibraryInfo())) {
-      return IC.replaceOperand(
-          II, 1, ConstantInt::get(Src1->getType(), Mask & ~fcNan));
-    }
-
-    const ConstantFP *CVal = dyn_cast<ConstantFP>(Src0);
-    if (!CVal) {
-      if (isa<UndefValue>(Src0)) {
-        return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
-      }
-
-      // Clamp mask to used bits
-      if ((Mask & fcAllFlags) != Mask) {
-        CallInst *NewCall = IC.Builder.CreateCall(
-            II.getCalledFunction(),
-            {Src0, ConstantInt::get(Src1->getType(), Mask & fcAllFlags)});
-
-        NewCall->takeName(&II);
-        return IC.replaceInstUsesWith(II, NewCall);
-      }
-
-      break;
-    }
-
-    const APFloat &Val = CVal->getValueAPF();
-
-    bool Result =
-        ((Mask & fcSNan) && Val.isNaN() && Val.isSignaling()) ||
-        ((Mask & fcQNan) && Val.isNaN() && !Val.isSignaling()) ||
-        ((Mask & fcNegInf) && Val.isInfinity() && Val.isNegative()) ||
-        ((Mask & fcNegNormal) && Val.isNormal() && Val.isNegative()) ||
-        ((Mask & fcNegSubnormal) && Val.isDenormal() && Val.isNegative()) ||
-        ((Mask & fcNegZero) && Val.isZero() && Val.isNegative()) ||
-        ((Mask & fcPosZero) && Val.isZero() && !Val.isNegative()) ||
-        ((Mask & fcPosSubnormal) && Val.isDenormal() && !Val.isNegative()) ||
-        ((Mask & fcPosNormal) && Val.isNormal() && !Val.isNegative()) ||
-        ((Mask & fcPosInf) && Val.isInfinity() && !Val.isNegative());
-
-    return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Result));
+    break;
   }
   case Intrinsic::amdgcn_cvt_pkrtz: {
     Value *Src0 = II.getArgOperand(0);

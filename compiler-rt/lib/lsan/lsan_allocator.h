@@ -32,6 +32,7 @@ template<typename Callable>
 void ForEachChunk(const Callable &callback);
 
 void GetAllocatorCacheRange(uptr *begin, uptr *end);
+void AllocatorThreadStart();
 void AllocatorThreadFinish();
 void InitializeAllocator();
 

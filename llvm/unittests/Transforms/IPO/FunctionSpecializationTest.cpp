@@ -85,7 +85,10 @@ protected:
     auto &TTI = FAM.getResult<TargetIRAnalysis>(*I.getFunction());
     auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*I.getFunction());
 
-    return BFI.getBlockFreq(I.getParent()).getFrequency() / BFI.getEntryFreq() *
+    uint64_t Weight = FunctionSpecializer::getBlockFreqMultiplier() *
+                      BFI.getBlockFreq(I.getParent()).getFrequency() /
+                      BFI.getEntryFreq();
+    return Weight *
          TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
   }
 };

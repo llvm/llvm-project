@@ -343,7 +343,6 @@ libcxx/include/__filesystem/perms.h
 libcxx/include/__filesystem/recursive_directory_iterator.h
 libcxx/include/__filesystem/u8path.h
 libcxx/include/float.h
-libcxx/include/format
 libcxx/include/__format/buffer.h
 libcxx/include/__format/concepts.h
 libcxx/include/__format/escaped_output_table.h

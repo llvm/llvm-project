@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck -check-prefix=RV32IFD %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IFD %s
+; RUN: llc -mtriple=riscv32 -mattr=+zdinx -target-abi=ilp32 -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV32IZFINXZDINX %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zdinx -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IZFINXZDINX %s
 
@@ -57,6 +59,44 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV64IFD-NEXT:  .LBB0_2: # %return
 ; RV64IFD-NEXT:    fmv.x.d a0, fa5
 ; RV64IFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: func:
+; RV32IZFINXZDINX:       # %bb.0: # %entry
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -32
+; RV32IZFINXZDINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw s0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw s1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    beqz a2, .LBB0_2
+; RV32IZFINXZDINX-NEXT:  # %bb.1: # %if.else
+; RV32IZFINXZDINX-NEXT:    addi a2, a2, -1
+; RV32IZFINXZDINX-NEXT:    sw s0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw s1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    call func@plt
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, s0
+; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    j .LBB0_3
+; RV32IZFINXZDINX-NEXT:  .LBB0_2: # %return
+; RV32IZFINXZDINX-NEXT:    sw s0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw s1, 12(sp)
+; RV32IZFINXZDINX-NEXT:  .LBB0_3: # %return
+; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
+; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 32
+; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: func:
 ; RV64IZFINXZDINX:       # %bb.0: # %entry

@@ -16,9 +16,9 @@ module {
 // CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.number_of_entries %[[VAL_0]] : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-DAG:       %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-DAG:       %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_4]] : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex, strided<[?], offset: ?>>
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex, strided<[?], offset: ?>>
+// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
 // CHECK:           %[[VAL_11:.*]] = gpu.wait async
 // CHECK:           %[[VAL_12:.*]] = memref.dim %[[VAL_8]], %[[VAL_3]] : memref<?xindex, strided<[?], offset: ?>>
 // CHECK:           %[[VAL_13:.*]], %[[VAL_14:.*]] = gpu.alloc async {{\[}}%[[VAL_11]]] (%[[VAL_12]]) : memref<?xindex>
@@ -54,17 +54,16 @@ module {
 // CHECK:           %[[VAL_53:.*]] = gpu.destroy_dn_vec async {{\[}}%[[VAL_52]]] %[[VAL_43]]
 // CHECK:           %[[VAL_54:.*]] = gpu.destroy_dn_vec async {{\[}}%[[VAL_53]]] %[[VAL_45]]
 // CHECK:           %[[VAL_55:.*]] = gpu.destroy_sparse_env async {{\[}}%[[VAL_54]]] %[[VAL_39]]
-// CHECK:           gpu.wait {{\[}}%[[VAL_55]]]
-// CHECK:           %[[VAL_56:.*]] = gpu.wait async
-// CHECK:           %[[VAL_57:.*]] = gpu.memcpy async {{\[}}%[[VAL_56]]] %[[VAL_32]], %[[VAL_35]] : memref<?xf64>, memref<?xf64>
-// CHECK:           %[[VAL_58:.*]] = gpu.dealloc async {{\[}}%[[VAL_57]]] %[[VAL_13]] : memref<?xindex>
-// CHECK:           %[[VAL_59:.*]] = gpu.dealloc async {{\[}}%[[VAL_58]]] %[[VAL_18]] : memref<?xindex>
-// CHECK:           %[[VAL_60:.*]] = gpu.dealloc async {{\[}}%[[VAL_59]]] %[[VAL_23]] : memref<?xf64>
-// CHECK:           %[[VAL_61:.*]] = gpu.dealloc async {{\[}}%[[VAL_60]]] %[[VAL_49]] : memref<?xi8>
-// CHECK:           %[[VAL_62:.*]] = gpu.dealloc async {{\[}}%[[VAL_61]]] %[[VAL_29]] : memref<?xf64>
-// CHECK:           %[[VAL_63:.*]] = gpu.dealloc async {{\[}}%[[VAL_62]]] %[[VAL_35]] : memref<?xf64>
-// CHECK:           gpu.wait {{\[}}%[[VAL_63]]]
-// CHECK:           return %[[VAL_2]] : tensor<?xf64>
+// CHECK:           %[[VAL_56:.*]] = gpu.dealloc async {{\[}}%[[VAL_55]]] %[[VAL_13]] : memref<?xindex>
+// CHECK:           %[[VAL_57:.*]] = gpu.dealloc async {{\[}}%[[VAL_56]]] %[[VAL_18]] : memref<?xindex>
+// CHECK:           %[[VAL_58:.*]] = gpu.dealloc async {{\[}}%[[VAL_57]]] %[[VAL_23]] : memref<?xf64>
+// CHECK:           %[[VAL_59:.*]] = gpu.dealloc async {{\[}}%[[VAL_58]]] %[[VAL_49]] : memref<?xi8>
+// CHECK:           %[[VAL_60:.*]] = gpu.dealloc async {{\[}}%[[VAL_59]]] %[[VAL_29]] : memref<?xf64>
+// CHECK:           %[[VAL_61:.*]] = gpu.memcpy async {{\[}}%[[VAL_60]]] %[[VAL_32]], %[[VAL_35]] : memref<?xf64>, memref<?xf64>
+// CHECK:           %[[VAL_62:.*]] = gpu.dealloc async {{\[}}%[[VAL_61]]] %[[VAL_35]] : memref<?xf64>
+// CHECK:           gpu.wait {{\[}}%[[VAL_62]]]
+// CHECK:           %[[VAL_63:.*]] = bufferization.to_tensor %[[VAL_32]] : memref<?xf64>
+// CHECK:           return %[[VAL_63]] : tensor<?xf64>
 // CHECK:         }
 func.func @matvec(%A: tensor<?x?xf64, #SortedCOO>,
                   %x: tensor<?xf64>,

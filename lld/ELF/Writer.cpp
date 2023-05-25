@@ -559,6 +559,10 @@ template <class ELFT> void Writer<ELFT>::run() {
   // fails, for example, due to an erroneous file size.
   writeMapAndCref();
 
+  // Handle --print-memory-usage option.
+  if (config->printMemoryUsage)
+    script->printMemoryUsage(lld::outs());
+
   if (config->checkSections)
     checkSections();
 

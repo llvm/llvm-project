@@ -297,6 +297,7 @@ namespace {
       AU.addUsedIfAvailable<LiveStacks>();
       AU.addUsedIfAvailable<LiveVariables>();
       AU.addUsedIfAvailable<SlotIndexes>();
+      AU.addUsedIfAvailable<LiveIntervals>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -3107,107 +3108,108 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     return;
   }
 
-  // No more checks for live-out segments.
-  if (S.end == LiveInts->getMBBEndIdx(EndMBB))
-    return;
+  // Checks for non-live-out segments.
+  if (S.end != LiveInts->getMBBEndIdx(EndMBB)) {
+    // RegUnit intervals are allowed dead phis.
+    if (!Reg.isVirtual() && VNI->isPHIDef() && S.start == VNI->def &&
+        S.end == VNI->def.getDeadSlot())
+      return;
 
-  // RegUnit intervals are allowed dead phis.
-  if (!Reg.isVirtual() && VNI->isPHIDef() && S.start == VNI->def &&
-      S.end == VNI->def.getDeadSlot())
-    return;
+    // The live segment is ending inside EndMBB
+    const MachineInstr *MI =
+        LiveInts->getInstructionFromIndex(S.end.getPrevSlot());
+    if (!MI) {
+      report("Live segment doesn't end at a valid instruction", EndMBB);
+      report_context(LR, Reg, LaneMask);
+      report_context(S);
+      return;
+    }
 
-  // The live segment is ending inside EndMBB
-  const MachineInstr *MI =
-    LiveInts->getInstructionFromIndex(S.end.getPrevSlot());
-  if (!MI) {
-    report("Live segment doesn't end at a valid instruction", EndMBB);
-    report_context(LR, Reg, LaneMask);
-    report_context(S);
-    return;
-  }
-
-  // The block slot must refer to a basic block boundary.
-  if (S.end.isBlock()) {
-    report("Live segment ends at B slot of an instruction", EndMBB);
-    report_context(LR, Reg, LaneMask);
-    report_context(S);
-  }
-
-  if (S.end.isDead()) {
-    // Segment ends on the dead slot.
-    // That means there must be a dead def.
-    if (!SlotIndex::isSameInstr(S.start, S.end)) {
-      report("Live segment ending at dead slot spans instructions", EndMBB);
+    // The block slot must refer to a basic block boundary.
+    if (S.end.isBlock()) {
+      report("Live segment ends at B slot of an instruction", EndMBB);
       report_context(LR, Reg, LaneMask);
       report_context(S);
     }
-  }
 
-  // After tied operands are rewritten, a live segment can only end at an
-  // early-clobber slot if it is being redefined by an early-clobber def.
-  // TODO: Before tied operands are rewritten, a live segment can only end at an
-  // early-clobber slot if the last use is tied to an early-clobber def.
-  if (MF->getProperties().hasProperty(
-          MachineFunctionProperties::Property::TiedOpsRewritten) &&
-      S.end.isEarlyClobber()) {
-    if (I+1 == LR.end() || (I+1)->start != S.end) {
-      report("Live segment ending at early clobber slot must be "
-             "redefined by an EC def in the same instruction", EndMBB);
-      report_context(LR, Reg, LaneMask);
-      report_context(S);
-    }
-  }
-
-  // The following checks only apply to virtual registers. Physreg liveness
-  // is too weird to check.
-  if (Reg.isVirtual()) {
-    // A live segment can end with either a redefinition, a kill flag on a
-    // use, or a dead flag on a def.
-    bool hasRead = false;
-    bool hasSubRegDef = false;
-    bool hasDeadDef = false;
-    for (ConstMIBundleOperands MOI(*MI); MOI.isValid(); ++MOI) {
-      if (!MOI->isReg() || MOI->getReg() != Reg)
-        continue;
-      unsigned Sub = MOI->getSubReg();
-      LaneBitmask SLM = Sub != 0 ? TRI->getSubRegIndexLaneMask(Sub)
-                                 : LaneBitmask::getAll();
-      if (MOI->isDef()) {
-        if (Sub != 0) {
-          hasSubRegDef = true;
-          // An operand %0:sub0 reads %0:sub1..n. Invert the lane
-          // mask for subregister defs. Read-undef defs will be handled by
-          // readsReg below.
-          SLM = ~SLM;
-        }
-        if (MOI->isDead())
-          hasDeadDef = true;
-      }
-      if (LaneMask.any() && (LaneMask & SLM).none())
-        continue;
-      if (MOI->readsReg())
-        hasRead = true;
-    }
     if (S.end.isDead()) {
-      // Make sure that the corresponding machine operand for a "dead" live
-      // range has the dead flag. We cannot perform this check for subregister
-      // liveranges as partially dead values are allowed.
-      if (LaneMask.none() && !hasDeadDef) {
-        report("Instruction ending live segment on dead slot has no dead flag",
-               MI);
+      // Segment ends on the dead slot.
+      // That means there must be a dead def.
+      if (!SlotIndex::isSameInstr(S.start, S.end)) {
+        report("Live segment ending at dead slot spans instructions", EndMBB);
         report_context(LR, Reg, LaneMask);
         report_context(S);
       }
-    } else {
-      if (!hasRead) {
-        // When tracking subregister liveness, the main range must start new
-        // values on partial register writes, even if there is no read.
-        if (!MRI->shouldTrackSubRegLiveness(Reg) || LaneMask.any() ||
-            !hasSubRegDef) {
-          report("Instruction ending live segment doesn't read the register",
-                 MI);
+    }
+
+    // After tied operands are rewritten, a live segment can only end at an
+    // early-clobber slot if it is being redefined by an early-clobber def.
+    // TODO: Before tied operands are rewritten, a live segment can only end at
+    // an early-clobber slot if the last use is tied to an early-clobber def.
+    if (MF->getProperties().hasProperty(
+            MachineFunctionProperties::Property::TiedOpsRewritten) &&
+        S.end.isEarlyClobber()) {
+      if (I + 1 == LR.end() || (I + 1)->start != S.end) {
+        report("Live segment ending at early clobber slot must be "
+               "redefined by an EC def in the same instruction",
+               EndMBB);
+        report_context(LR, Reg, LaneMask);
+        report_context(S);
+      }
+    }
+
+    // The following checks only apply to virtual registers. Physreg liveness
+    // is too weird to check.
+    if (Reg.isVirtual()) {
+      // A live segment can end with either a redefinition, a kill flag on a
+      // use, or a dead flag on a def.
+      bool hasRead = false;
+      bool hasSubRegDef = false;
+      bool hasDeadDef = false;
+      for (ConstMIBundleOperands MOI(*MI); MOI.isValid(); ++MOI) {
+        if (!MOI->isReg() || MOI->getReg() != Reg)
+          continue;
+        unsigned Sub = MOI->getSubReg();
+        LaneBitmask SLM =
+            Sub != 0 ? TRI->getSubRegIndexLaneMask(Sub) : LaneBitmask::getAll();
+        if (MOI->isDef()) {
+          if (Sub != 0) {
+            hasSubRegDef = true;
+            // An operand %0:sub0 reads %0:sub1..n. Invert the lane
+            // mask for subregister defs. Read-undef defs will be handled by
+            // readsReg below.
+            SLM = ~SLM;
+          }
+          if (MOI->isDead())
+            hasDeadDef = true;
+        }
+        if (LaneMask.any() && (LaneMask & SLM).none())
+          continue;
+        if (MOI->readsReg())
+          hasRead = true;
+      }
+      if (S.end.isDead()) {
+        // Make sure that the corresponding machine operand for a "dead" live
+        // range has the dead flag. We cannot perform this check for subregister
+        // liveranges as partially dead values are allowed.
+        if (LaneMask.none() && !hasDeadDef) {
+          report(
+              "Instruction ending live segment on dead slot has no dead flag",
+              MI);
           report_context(LR, Reg, LaneMask);
           report_context(S);
+        }
+      } else {
+        if (!hasRead) {
+          // When tracking subregister liveness, the main range must start new
+          // values on partial register writes, even if there is no read.
+          if (!MRI->shouldTrackSubRegLiveness(Reg) || LaneMask.any() ||
+              !hasSubRegDef) {
+            report("Instruction ending live segment doesn't read the register",
+                   MI);
+            report_context(LR, Reg, LaneMask);
+            report_context(S);
+          }
         }
       }
     }

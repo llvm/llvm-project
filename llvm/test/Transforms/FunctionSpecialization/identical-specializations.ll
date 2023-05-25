@@ -6,10 +6,10 @@ define i64 @main(i64 %x, i64 %y, i1 %flag) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[PLUS:%.*]], label [[MINUS:%.*]]
 ; CHECK:       plus:
-; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @compute.2(i64 [[X:%.*]], i64 [[Y:%.*]], ptr @plus, ptr @minus)
+; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @compute.2(i64 [[X:%.*]], i64 42, ptr @plus, ptr @minus)
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       minus:
-; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @compute.3(i64 [[X]], i64 [[Y]], ptr @minus, ptr @plus)
+; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @compute.3(i64 [[X]], i64 [[Y:%.*]], ptr @minus, ptr @plus)
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[PH:%.*]] = phi i64 [ [[CMP0]], [[PLUS]] ], [ [[CMP1]], [[MINUS]] ]
@@ -20,7 +20,7 @@ entry:
   br i1 %flag, label %plus, label %minus
 
 plus:
-  %cmp0 = call i64 @compute(i64 %x, i64 %y, ptr @plus, ptr @minus)
+  %cmp0 = call i64 @compute(i64 %x, i64 42, ptr @plus, ptr @minus)
   br label %merge
 
 minus:
@@ -68,9 +68,9 @@ entry:
 
 ; CHECK-LABEL: @compute.2
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @plus(i64 [[X:%.*]], i64 [[Y:%.*]])
-; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @minus(i64 [[X]], i64 [[Y]])
-; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute.1(i64 [[X]], i64 [[Y]], ptr @plus, ptr @plus)
+; CHECK-NEXT:    [[CMP0:%.*]] = call i64 @plus(i64 [[X:%.*]], i64 42)
+; CHECK-NEXT:    [[CMP1:%.*]] = call i64 @minus(i64 [[X]], i64 42)
+; CHECK-NEXT:    [[CMP2:%.*]] = call i64 @compute.1(i64 [[X]], i64 42, ptr @plus, ptr @plus)
 
 ; CHECK-LABEL: @compute.3
 ; CHECK-NEXT:  entry:

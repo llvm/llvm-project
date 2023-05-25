@@ -1408,7 +1408,7 @@ public:
 private:
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::BOZLiteralConstant &expr) {
-    fir::emitFatalError(loc, "BOZ literal must be replaced by semantics");
+    TODO(getLoc(), "BOZ");
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::NullPointer &expr) {
