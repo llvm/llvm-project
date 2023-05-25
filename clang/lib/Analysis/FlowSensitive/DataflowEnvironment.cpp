@@ -267,9 +267,10 @@ Environment::Environment(DataflowAnalysisContext &DACtx)
 
 Environment::Environment(const Environment &Other)
     : DACtx(Other.DACtx), CallStack(Other.CallStack),
-      ReturnLoc(Other.ReturnLoc), ThisPointeeLoc(Other.ThisPointeeLoc),
-      DeclToLoc(Other.DeclToLoc), ExprToLoc(Other.ExprToLoc),
-      LocToVal(Other.LocToVal), MemberLocToStruct(Other.MemberLocToStruct),
+      ReturnVal(Other.ReturnVal), ReturnLoc(Other.ReturnLoc),
+      ThisPointeeLoc(Other.ThisPointeeLoc), DeclToLoc(Other.DeclToLoc),
+      ExprToLoc(Other.ExprToLoc), LocToVal(Other.LocToVal),
+      MemberLocToStruct(Other.MemberLocToStruct),
       FlowConditionToken(&DACtx->forkFlowCondition(*Other.FlowConditionToken)) {
 }
 
@@ -302,9 +303,6 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
               createValue(ParamDecl->getType().getNonReferenceType()))
           setValue(ParamLoc, *ParamVal);
     }
-
-    QualType ReturnType = FuncDecl->getReturnType();
-    ReturnLoc = &createStorageLocation(ReturnType);
   }
 
   if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
@@ -331,9 +329,6 @@ bool Environment::canDescend(unsigned MaxDepth,
 Environment Environment::pushCall(const CallExpr *Call) const {
   Environment Env(*this);
 
-  // FIXME: Support references here.
-  Env.ReturnLoc = getStorageLocation(*Call, SkipPast::Reference);
-
   if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
@@ -352,10 +347,9 @@ Environment Environment::pushCall(const CallExpr *Call) const {
 Environment Environment::pushCall(const CXXConstructExpr *Call) const {
   Environment Env(*this);
 
-  // FIXME: Support references here.
-  Env.ReturnLoc = getStorageLocation(*Call, SkipPast::Reference);
-
-  Env.ThisPointeeLoc = Env.ReturnLoc;
+  Env.ThisPointeeLoc = &Env.createStorageLocation(Call->getType());
+  if (Value *Val = Env.createValue(Call->getType()))
+    Env.setValue(*Env.ThisPointeeLoc, *Val);
 
   Env.pushCallInternal(Call->getConstructor(),
                        llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
@@ -365,6 +359,12 @@ Environment Environment::pushCall(const CXXConstructExpr *Call) const {
 
 void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
                                    ArrayRef<const Expr *> Args) {
+  // Canonicalize to the definition of the function. This ensures that we're
+  // putting arguments into the same `ParamVarDecl`s` that the callee will later
+  // be retrieving them from.
+  assert(FuncDecl->getDefinition() != nullptr);
+  FuncDecl = FuncDecl->getDefinition();
+
   CallStack.push_back(FuncDecl);
 
   initFieldsGlobalsAndFuncs(FuncDecl);
@@ -399,22 +399,45 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
   }
 }
 
-void Environment::popCall(const Environment &CalleeEnv) {
+void Environment::popCall(const CallExpr *Call, const Environment &CalleeEnv) {
   // We ignore `DACtx` because it's already the same in both. We don't want the
-  // callee's `DeclCtx`, `ReturnLoc` or `ThisPointeeLoc`. We don't bring back
-  // `DeclToLoc` and `ExprToLoc` because we want to be able to later analyze the
-  // same callee in a different context, and `setStorageLocation` requires there
-  // to not already be a storage location assigned. Conceptually, these maps
-  // capture information from the local scope, so when popping that scope, we do
-  // not propagate the maps.
+  // callee's `DeclCtx`, `ReturnVal`, `ReturnLoc` or `ThisPointeeLoc`. We don't
+  // bring back `DeclToLoc` and `ExprToLoc` because we want to be able to later
+  // analyze the same callee in a different context, and `setStorageLocation`
+  // requires there to not already be a storage location assigned. Conceptually,
+  // these maps capture information from the local scope, so when popping that
+  // scope, we do not propagate the maps.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
   this->MemberLocToStruct = std::move(CalleeEnv.MemberLocToStruct);
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
+
+  if (Call->isGLValue()) {
+    if (CalleeEnv.ReturnLoc != nullptr)
+      setStorageLocationStrict(*Call, *CalleeEnv.ReturnLoc);
+  } else if (!Call->getType()->isVoidType()) {
+    if (CalleeEnv.ReturnVal != nullptr)
+      setValueStrict(*Call, *CalleeEnv.ReturnVal);
+  }
+}
+
+void Environment::popCall(const CXXConstructExpr *Call,
+                          const Environment &CalleeEnv) {
+  // See also comment in `popCall(const CallExpr *, const Environment &)` above.
+  this->LocToVal = std::move(CalleeEnv.LocToVal);
+  this->MemberLocToStruct = std::move(CalleeEnv.MemberLocToStruct);
+  this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
+
+  if (Value *Val = CalleeEnv.getValue(*CalleeEnv.ThisPointeeLoc)) {
+    setValueStrict(*Call, *Val);
+  }
 }
 
 bool Environment::equivalentTo(const Environment &Other,
                                Environment::ValueModel &Model) const {
   assert(DACtx == Other.DACtx);
+
+  if (ReturnVal != Other.ReturnVal)
+    return false;
 
   if (ReturnLoc != Other.ReturnLoc)
     return false;
@@ -453,6 +476,7 @@ bool Environment::equivalentTo(const Environment &Other,
 LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
                                      Environment::ValueModel &Model) {
   assert(DACtx == PrevEnv.DACtx);
+  assert(ReturnVal == PrevEnv.ReturnVal);
   assert(ReturnLoc == PrevEnv.ReturnLoc);
   assert(ThisPointeeLoc == PrevEnv.ThisPointeeLoc);
   assert(CallStack == PrevEnv.CallStack);
@@ -514,7 +538,6 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
 LatticeJoinEffect Environment::join(const Environment &Other,
                                     Environment::ValueModel &Model) {
   assert(DACtx == Other.DACtx);
-  assert(ReturnLoc == Other.ReturnLoc);
   assert(ThisPointeeLoc == Other.ThisPointeeLoc);
   assert(CallStack == Other.CallStack);
 
@@ -523,8 +546,37 @@ LatticeJoinEffect Environment::join(const Environment &Other,
   Environment JoinedEnv(*DACtx);
 
   JoinedEnv.CallStack = CallStack;
-  JoinedEnv.ReturnLoc = ReturnLoc;
   JoinedEnv.ThisPointeeLoc = ThisPointeeLoc;
+
+  if (ReturnVal == nullptr || Other.ReturnVal == nullptr) {
+    // `ReturnVal` might not always get set -- for example if we have a return
+    // statement of the form `return some_other_func()` and we decide not to
+    // analyze `some_other_func()`.
+    // In this case, we can't say anything about the joined return value -- we
+    // don't simply want to propagate the return value that we do have, because
+    // it might not be the correct one.
+    // This occurs for example in the test `ContextSensitiveMutualRecursion`.
+    JoinedEnv.ReturnVal = nullptr;
+  } else if (areEquivalentValues(*ReturnVal, *Other.ReturnVal)) {
+    JoinedEnv.ReturnVal = ReturnVal;
+  } else {
+    assert(!CallStack.empty());
+    // FIXME: Make `CallStack` a vector of `FunctionDecl` so we don't need this
+    // cast.
+    auto *Func = dyn_cast<FunctionDecl>(CallStack.back());
+    assert(Func != nullptr);
+    if (Value *MergedVal =
+            mergeDistinctValues(Func->getReturnType(), *ReturnVal, *this,
+                                *Other.ReturnVal, Other, JoinedEnv, Model)) {
+      JoinedEnv.ReturnVal = MergedVal;
+      Effect = LatticeJoinEffect::Changed;
+    }
+  }
+
+  if (ReturnLoc == Other.ReturnLoc)
+    JoinedEnv.ReturnLoc = ReturnLoc;
+  else
+    JoinedEnv.ReturnLoc = nullptr;
 
   // FIXME: Once we're able to remove declarations from `DeclToLoc` when their
   // lifetime ends, add an assertion that there aren't any entries in
@@ -657,10 +709,6 @@ StorageLocation *Environment::getStorageLocationStrict(const Expr &E) const {
 
 StorageLocation *Environment::getThisPointeeStorageLocation() const {
   return ThisPointeeLoc;
-}
-
-StorageLocation *Environment::getReturnStorageLocation() const {
-  return ReturnLoc;
 }
 
 PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {
