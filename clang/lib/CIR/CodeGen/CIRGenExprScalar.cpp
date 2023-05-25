@@ -888,7 +888,7 @@ public:
 
     if (SrcTy.isa<::mlir::cir::PointerType>()) {
       // Must be a ptr to int cast.
-      assert(DstTy.isa<mlir::IntegerType>() && "not ptr->int?");
+      assert(CGF.getBuilder().isInt(DstTy) && "not ptr->int?");
       llvm_unreachable("not implemented");
     }
 
@@ -1284,13 +1284,13 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
     DstElementType = DstType;
   }
 
-  if (SrcElementTy.isa<mlir::IntegerType>()) {
+  if (CGF.getBuilder().isInt(SrcElementTy)) {
     bool InputSigned = SrcElementType->isSignedIntegerOrEnumerationType();
     if (SrcElementType->isBooleanType() && Opts.TreatBooleanAsSigned) {
       llvm_unreachable("NYI");
     }
 
-    if (DstElementTy.isa<mlir::IntegerType>())
+    if (CGF.getBuilder().isInt(DstElementTy))
       return Builder.create<mlir::cir::CastOp>(
           Src.getLoc(), DstTy, mlir::cir::CastKind::integral, Src);
     if (InputSigned)

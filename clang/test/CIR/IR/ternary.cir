@@ -1,29 +1,30 @@
 // RUN: cir-tool %s | cir-tool | FileCheck %s
+!u32i = !cir.int<u, 32>
 
 module  {
-  cir.func @blue(%arg0: !cir.bool) -> i32 {
+  cir.func @blue(%arg0: !cir.bool) -> !u32i {
     %0 = cir.ternary(%arg0, true {
-      %a = cir.const(0 : i32) : i32
-      cir.yield %a : i32
+      %a = cir.const(#cir.int<0> : !u32i) : !u32i
+      cir.yield %a : !u32i
     }, false {
-      %b = cir.const(1 : i32) : i32
-      cir.yield %b : i32
-    }) : i32
-    cir.return %0 : i32
+      %b = cir.const(#cir.int<1> : !u32i) : !u32i
+      cir.yield %b : !u32i
+    }) : !u32i
+    cir.return %0 : !u32i
   }
 }
 
 // CHECK: module  {
 
-// CHECK: cir.func @blue(%arg0: !cir.bool) -> i32 {
+// CHECK: cir.func @blue(%arg0: !cir.bool) -> !u32i {
 // CHECK:   %0 = cir.ternary(%arg0, true {
-// CHECK:     %1 = cir.const(0 : i32) : i32
-// CHECK:     cir.yield %1 : i32
+// CHECK:     %1 = cir.const(#cir.int<0> : !u32i) : !u32i
+// CHECK:     cir.yield %1 : !u32i
 // CHECK:   }, false {
-// CHECK:     %1 = cir.const(1 : i32) : i32
-// CHECK:     cir.yield %1 : i32
-// CHECK:   }) : i32
-// CHECK:   cir.return %0 : i32
+// CHECK:     %1 = cir.const(#cir.int<1> : !u32i) : !u32i
+// CHECK:     cir.yield %1 : !u32i
+// CHECK:   }) : !u32i
+// CHECK:   cir.return %0 : !u32i
 // CHECK: }
 
 // CHECK: }

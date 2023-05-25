@@ -28,9 +28,11 @@ void yoyo(incomplete *i) {}
 
 //      CHECK: !ty_22struct2Eincomplete22 = !cir.struct<"struct.incomplete", incomplete
 //      CHECK: !ty_22struct2EBar22 = !cir.struct<"struct.Bar", !s32i, !s8i>
-//      CHECK: !ty_22struct2EMandalore22 = !cir.struct<"struct.Mandalore", !u32i, !cir.ptr<i8>, !s32i, #cir.recdecl.ast>
-//      CHECK: !ty_22class2EAdv22 = !cir.struct<"class.Adv", !ty_22struct2EMandalore22>
+
 //      CHECK: !ty_22struct2EFoo22 = !cir.struct<"struct.Foo", !s32i, !s8i, !ty_22struct2EBar22>
+//      CHECK: !ty_22struct2EMandalore22 = !cir.struct<"struct.Mandalore", !u32i, !cir.ptr<!u8i>, !s32i, #cir.recdecl.ast>
+//      CHECK: !ty_22class2EAdv22 = !cir.struct<"class.Adv", !ty_22struct2EMandalore22>
+//      CHECK: !ty_22struct2EEntry22 = !cir.struct<"struct.Entry", !cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<!u8i>)>>>
 
 //      CHECK: cir.func linkonce_odr @_ZN3Bar6methodEv(%arg0: !cir.ptr<!ty_22struct2EBar22>
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!ty_22struct2EBar22>, cir.ptr <!cir.ptr<!ty_22struct2EBar22>>, ["this", init] {alignment = 8 : i64}
@@ -100,9 +102,9 @@ void m() { Adv C; }
 // CHECK:     %3 = "cir.struct_element_addr"(%2) <{member_name = "w"}> : (!cir.ptr<!ty_22struct2EMandalore22>) -> !cir.ptr<!u32i>
 // CHECK:     %4 = cir.const(#cir.int<1000024001> : !u32i) : !u32i
 // CHECK:     cir.store %4, %3 : !u32i, cir.ptr <!u32i>
-// CHECK:     %5 = "cir.struct_element_addr"(%2) <{member_name = "n"}> : (!cir.ptr<!ty_22struct2EMandalore22>) -> !cir.ptr<!cir.ptr<i8>>
-// CHECK:     %6 = cir.const(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
-// CHECK:     cir.store %6, %5 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
+// CHECK:     %5 = "cir.struct_element_addr"(%2) <{member_name = "n"}> : (!cir.ptr<!ty_22struct2EMandalore22>) -> !cir.ptr<!cir.ptr<!u8i>>
+// CHECK:     %6 = cir.const(#cir.null : !cir.ptr<!u8i>) : !cir.ptr<!u8i>
+// CHECK:     cir.store %6, %5 : !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>
 // CHECK:     %7 = "cir.struct_element_addr"(%2) <{member_name = "d"}> : (!cir.ptr<!ty_22struct2EMandalore22>) -> !cir.ptr<!s32i>
 // CHECK:     %8 = cir.const(#cir.int<0> : !s32i) : !s32i
 // CHECK:     cir.store %8, %7 : !s32i, cir.ptr <!s32i>
@@ -144,4 +146,5 @@ struct Entry {
 void ppp() { Entry x; }
 
 // CHECK: cir.func linkonce_odr @_ZN5EntryC2Ev(%arg0: !cir.ptr<!ty_22struct2EEntry22>
-// CHECK: = "cir.struct_element_addr"(%1) <{member_name = "procAddr"}> : (!cir.ptr<!ty_22struct2EEntry22>) -> !cir.ptr<!cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<i8>)>>>
+
+// CHECK: = "cir.struct_element_addr"(%1) <{member_name = "procAddr"}> : (!cir.ptr<!ty_22struct2EEntry22>) -> !cir.ptr<!cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<!u8i>)>>>

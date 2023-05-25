@@ -260,7 +260,7 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
 
     // If we have a sign or zero extended integer, make sure to return Extend so
     // that the parameter gets the right LLVM IR attributes.
-    if (Hi == NoClass && ResType.isa<mlir::IntegerType>()) {
+    if (Hi == NoClass && ResType.isa<mlir::cir::IntType>()) {
       assert(!Ty->getAs<EnumType>() && "NYI");
       if (Ty->isSignedIntegerOrEnumerationType() &&
           isPromotableIntegerTypeForABI(Ty))
@@ -389,7 +389,7 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
     // If we have a sign or zero extended integer, make sure to return Extend so
     // that the parameter gets the right LLVM IR attributes.
     // TODO: extend the above consideration to MLIR
-    if (Hi == NoClass && ResType.isa<mlir::IntegerType>()) {
+    if (Hi == NoClass && ResType.isa<mlir::cir::IntType>()) {
       // Treat an enum type as its underlying type.
       if (const auto *EnumTy = RetTy->getAs<EnumType>())
         RetTy = EnumTy->getDecl()->getIntegerType();

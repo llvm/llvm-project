@@ -129,14 +129,16 @@ struct CIRRecordLowering final {
   }
 
   mlir::Type getCharType() {
-    return mlir::IntegerType::get(&cirGenTypes.getMLIRContext(),
-                                  astContext.getCharWidth());
+    return mlir::cir::IntType::get(&cirGenTypes.getMLIRContext(),
+                                   astContext.getCharWidth(),
+                                   /*isSigned=*/false);
   }
 
-  /// Wraps mlir::IntegerType with some implicit arguments.
-  mlir::Type getIntNType(uint64_t NumBits) {
+  /// Wraps mlir::cir::IntType with some implicit arguments.
+  mlir::Type getUIntNType(uint64_t NumBits) {
     unsigned AlignedBits = llvm::alignTo(NumBits, astContext.getCharWidth());
-    return mlir::IntegerType::get(&cirGenTypes.getMLIRContext(), AlignedBits);
+    return mlir::cir::IntType::get(&cirGenTypes.getMLIRContext(), AlignedBits,
+                                   /*isSigned=*/false);
   }
 
   mlir::Type getByteArrayType(CharUnits numberOfChars) {
@@ -162,7 +164,7 @@ struct CIRRecordLowering final {
     // if (isDiscreteBitFieldABI())
     //   return type;
 
-    // return getIntNType(std::min(fielddecl->getBitWidthValue(astContext),
+    // return getUIntNType(std::min(fielddecl->getBitWidthValue(astContext),
     //     static_cast<unsigned int>(astContext.toBits(getSize(type)))));
     llvm_unreachable("getStorageType only supports nonBitFields at this point");
   }
@@ -481,7 +483,7 @@ void CIRRecordLowering::accumulateBitFields(
     // Make sure StartBitOffset is naturally aligned if it is treated as an
     // IType integer.
     // if (StartBitOffset %
-    //         astContext.toBits(getAlignment(getIntNType(OffsetInRecord))) !=
+    //         astContext.toBits(getAlignment(getUIntNType(OffsetInRecord))) !=
     //     0)
     //   return false;
     return true;
@@ -526,7 +528,7 @@ void CIRRecordLowering::accumulateBitFields(
     }
 
     // We've hit a break-point in the run and need to emit a storage field.
-    auto Type = getIntNType(Tail - StartBitOffset);
+    auto Type = getUIntNType(Tail - StartBitOffset);
     // Add the storage member to the record and set the bitfield info for all of
     // the bitfields in the run. Bitfields get the offset of their storage but
     // come afterward and remain there after a stable sort.

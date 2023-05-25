@@ -48,22 +48,22 @@ bool cptr(void *d) {
   return x;
 }
 
-// CHECK: cir.func @_Z4cptrPv(%arg0: !cir.ptr<i8>
-// CHECK:   %0 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["d", init] {alignment = 8 : i64}
+// CHECK: cir.func @_Z4cptrPv(%arg0: !cir.ptr<!u8i>
+// CHECK:   %0 = cir.alloca !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>, ["d", init] {alignment = 8 : i64}
 
-// CHECK:   %3 = cir.load %0 : cir.ptr <!cir.ptr<i8>>, !cir.ptr<i8>
-// CHECK:   %4 = cir.cast(ptr_to_bool, %3 : !cir.ptr<i8>), !cir.bool
+// CHECK:   %3 = cir.load %0 : cir.ptr <!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+// CHECK:   %4 = cir.cast(ptr_to_bool, %3 : !cir.ptr<!u8i>), !cir.bool
 
 void call_cptr(void *d) {
   if (!cptr(d)) {
   }
 }
 
-// CHECK: cir.func @_Z9call_cptrPv(%arg0: !cir.ptr<i8>
-// CHECK:   %0 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["d", init] {alignment = 8 : i64}
+// CHECK: cir.func @_Z9call_cptrPv(%arg0: !cir.ptr<!u8i>
+// CHECK:   %0 = cir.alloca !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>, ["d", init] {alignment = 8 : i64}
 
 // CHECK:   cir.scope {
-// CHECK:     %1 = cir.load %0 : cir.ptr <!cir.ptr<i8>>, !cir.ptr<i8>
-// CHECK:     %2 = cir.call @_Z4cptrPv(%1) : (!cir.ptr<i8>) -> !cir.bool
+// CHECK:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+// CHECK:     %2 = cir.call @_Z4cptrPv(%1) : (!cir.ptr<!u8i>) -> !cir.bool
 // CHECK:     %3 = cir.unary(not, %2) : !cir.bool, !cir.bool
 // CHECK:     cir.if %3 {

@@ -129,14 +129,14 @@ void ConstantAggregateBuilderBase::addSize(CharUnits size) {
 }
 
 mlir::Attribute
-ConstantAggregateBuilderBase::getRelativeOffset(mlir::IntegerType offsetType,
+ConstantAggregateBuilderBase::getRelativeOffset(mlir::cir::IntType offsetType,
                                                 mlir::Attribute target) {
   return getRelativeOffsetToPosition(offsetType, target,
                                      Builder.Buffer.size() - Begin);
 }
 
 mlir::Attribute ConstantAggregateBuilderBase::getRelativeOffsetToPosition(
-    mlir::IntegerType offsetType, mlir::Attribute target, size_t position) {
+    mlir::cir::IntType offsetType, mlir::Attribute target, size_t position) {
   llvm_unreachable("NYI");
   // // Compute the address of the relative-address slot.
   // auto base = getAddrOfPosition(offsetType, position);

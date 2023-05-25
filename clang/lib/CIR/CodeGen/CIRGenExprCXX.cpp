@@ -624,7 +624,7 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
           allocationAlign, getContext().toCharUnitsFromBits(AllocatorAlign));
     }
 
-    allocation = Address(RV.getScalarVal(), Int8Ty, allocationAlign);
+    allocation = Address(RV.getScalarVal(), UInt8Ty, allocationAlign);
   }
 
   // Emit a null check on the allocation result if the allocation

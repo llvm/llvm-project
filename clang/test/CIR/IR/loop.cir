@@ -1,35 +1,36 @@
 // RUN: cir-tool %s | FileCheck %s
 #false = #cir.bool<false> : !cir.bool
 #true = #cir.bool<true> : !cir.bool
+!u32i = !cir.int<u, 32>
 
 cir.func @l0() {
-  %0 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
-  %1 = cir.const(0 : i32) : i32
-  cir.store %1, %0 : i32, cir.ptr <i32>
+  %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["x", init] {alignment = 4 : i64}
+  %1 = cir.const(#cir.int<0> : !u32i) : !u32i
+  cir.store %1, %0 : !u32i, cir.ptr <!u32i>
   cir.scope {
-    %2 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-    %3 = cir.const(0 : i32) : i32
-    cir.store %3, %2 : i32, cir.ptr <i32>
+    %2 = cir.alloca !u32i, cir.ptr <!u32i>, ["i", init] {alignment = 4 : i64}
+    %3 = cir.const(#cir.int<0> : !u32i) : !u32i
+    cir.store %3, %2 : !u32i, cir.ptr <!u32i>
     cir.loop for(cond :  {
-      %4 = cir.load %2 : cir.ptr <i32>, i32
-      %5 = cir.const(10 : i32) : i32
-      %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+      %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
+      %5 = cir.const(#cir.int<10> : !u32i) : !u32i
+      %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
       cir.brcond %6 ^bb1, ^bb2
       ^bb1:
         cir.yield continue
       ^bb2:
         cir.yield
     }, step :  {
-      %4 = cir.load %2 : cir.ptr <i32>, i32
-      %5 = cir.const(1 : i32) : i32
-      %6 = cir.binop(add, %4, %5) : i32
-      cir.store %6, %2 : i32, cir.ptr <i32>
+      %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
+      %5 = cir.const(#cir.int<1> : !u32i) : !u32i
+      %6 = cir.binop(add, %4, %5) : !u32i
+      cir.store %6, %2 : !u32i, cir.ptr <!u32i>
       cir.yield
     })  {
-      %4 = cir.load %0 : cir.ptr <i32>, i32
-      %5 = cir.const(1 : i32) : i32
-      %6 = cir.binop(add, %4, %5) : i32
-      cir.store %6, %0 : i32, cir.ptr <i32>
+      %4 = cir.load %0 : cir.ptr <!u32i>, !u32i
+      %5 = cir.const(#cir.int<1> : !u32i) : !u32i
+      %6 = cir.binop(add, %4, %5) : !u32i
+      cir.store %6, %0 : !u32i, cir.ptr <!u32i>
       %7 = cir.const(#true) : !cir.bool
       cir.if %7 {
         cir.yield break
@@ -38,13 +39,13 @@ cir.func @l0() {
     }
   }
   cir.scope {
-    %2 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-    %3 = cir.const(0 : i32) : i32
-    cir.store %3, %2 : i32, cir.ptr <i32>
+    %2 = cir.alloca !u32i, cir.ptr <!u32i>, ["i", init] {alignment = 4 : i64}
+    %3 = cir.const(#cir.int<0> : !u32i) : !u32i
+    cir.store %3, %2 : !u32i, cir.ptr <!u32i>
     cir.loop while(cond :  {
-      %4 = cir.load %2 : cir.ptr <i32>, i32
-      %5 = cir.const(10 : i32) : i32
-      %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+      %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
+      %5 = cir.const(#cir.int<10> : !u32i) : !u32i
+      %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
       cir.brcond %6 ^bb1, ^bb2
       ^bb1:
         cir.yield continue
@@ -53,10 +54,10 @@ cir.func @l0() {
     }, step :  {
       cir.yield
     })  {
-      %4 = cir.load %0 : cir.ptr <i32>, i32
-      %5 = cir.const(1 : i32) : i32
-      %6 = cir.binop(add, %4, %5) : i32
-      cir.store %6, %0 : i32, cir.ptr <i32>
+      %4 = cir.load %0 : cir.ptr <!u32i>, !u32i
+      %5 = cir.const(#cir.int<1> : !u32i) : !u32i
+      %6 = cir.binop(add, %4, %5) : !u32i
+      cir.store %6, %0 : !u32i, cir.ptr <!u32i>
       %7 = cir.const(#true) : !cir.bool
       cir.if %7 {
         cir.yield continue
@@ -66,13 +67,13 @@ cir.func @l0() {
   }
 
   cir.scope {
-    %2 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-    %3 = cir.const(0 : i32) : i32
-    cir.store %3, %2 : i32, cir.ptr <i32>
+    %2 = cir.alloca !u32i, cir.ptr <!u32i>, ["i", init] {alignment = 4 : i64}
+    %3 = cir.const(#cir.int<0> : !u32i) : !u32i
+    cir.store %3, %2 : !u32i, cir.ptr <!u32i>
     cir.loop dowhile(cond :  {
-      %4 = cir.load %2 : cir.ptr <i32>, i32
-      %5 = cir.const(10 : i32) : i32
-      %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+      %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
+      %5 = cir.const(#cir.int<10> : !u32i) : !u32i
+      %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
       cir.brcond %6 ^bb1, ^bb2
       ^bb1:
         cir.yield continue
@@ -81,10 +82,10 @@ cir.func @l0() {
     }, step :  {
       cir.yield
     })  {
-      %4 = cir.load %0 : cir.ptr <i32>, i32
-      %5 = cir.const(1 : i32) : i32
-      %6 = cir.binop(add, %4, %5) : i32
-      cir.store %6, %0 : i32, cir.ptr <i32>
+      %4 = cir.load %0 : cir.ptr <!u32i>, !u32i
+      %5 = cir.const(#cir.int<1> : !u32i) : !u32i
+      %6 = cir.binop(add, %4, %5) : !u32i
+      cir.store %6, %0 : !u32i, cir.ptr <!u32i>
       cir.yield
     }
   }
@@ -93,25 +94,25 @@ cir.func @l0() {
 
 // CHECK: cir.func @l0
 // CHECK: cir.loop for(cond :  {
-// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
-// CHECK-NEXT:     %5 = cir.const(10 : i32) : i32
-// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
+// CHECK-NEXT:     %5 = cir.const(#cir.int<10> : !u32i) : !u32i
+// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
 // CHECK-NEXT:     cir.brcond %6 ^bb1, ^bb2
 // CHECK-NEXT:     ^bb1:
 // CHECK-NEXT:       cir.yield continue
 // CHECK-NEXT:     ^bb2:
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:   }, step :  {
-// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
-// CHECK-NEXT:     %5 = cir.const(1 : i32) : i32
-// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
-// CHECK-NEXT:     cir.store %6, %2 : i32, cir.ptr <i32>
+// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
+// CHECK-NEXT:     %5 = cir.const(#cir.int<1> : !u32i) : !u32i
+// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : !u32i
+// CHECK-NEXT:     cir.store %6, %2 : !u32i, cir.ptr <!u32i>
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   })  {
-// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK-NEXT:     %5 = cir.const(1 : i32) : i32
-// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
-// CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <!u32i>, !u32i
+// CHECK-NEXT:     %5 = cir.const(#cir.int<1> : !u32i) : !u32i
+// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : !u32i
+// CHECK-NEXT:     cir.store %6, %0 : !u32i, cir.ptr <!u32i>
 // CHECK-NEXT:     %7 = cir.const(#true) : !cir.bool
 // CHECK-NEXT:     cir.if %7 {
 // CHECK-NEXT:       cir.yield break
@@ -120,9 +121,9 @@ cir.func @l0() {
 // CHECK-NEXT: }
 
 // CHECK:        cir.loop while(cond :  {
-// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
-// CHECK-NEXT:     %5 = cir.const(10 : i32) : i32
-// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
+// CHECK-NEXT:     %5 = cir.const(#cir.int<10> : !u32i) : !u32i
+// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
 // CHECK-NEXT:     cir.brcond %6 ^bb1, ^bb2
 // CHECK-NEXT:     ^bb1:
 // CHECK-NEXT:       cir.yield continue
@@ -131,10 +132,10 @@ cir.func @l0() {
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   })  {
-// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK-NEXT:     %5 = cir.const(1 : i32) : i32
-// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
-// CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <!u32i>, !u32i
+// CHECK-NEXT:     %5 = cir.const(#cir.int<1> : !u32i) : !u32i
+// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : !u32i
+// CHECK-NEXT:     cir.store %6, %0 : !u32i, cir.ptr <!u32i>
 // CHECK-NEXT:     %7 = cir.const(#true) : !cir.bool
 // CHECK-NEXT:     cir.if %7 {
 // CHECK-NEXT:       cir.yield continue
@@ -143,9 +144,9 @@ cir.func @l0() {
 // CHECK-NEXT:   }
 
 // CHECK:        cir.loop dowhile(cond :  {
-// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <i32>, i32
-// CHECK-NEXT:     %5 = cir.const(10 : i32) : i32
-// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : i32, !cir.bool
+// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
+// CHECK-NEXT:     %5 = cir.const(#cir.int<10> : !u32i) : !u32i
+// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
 // CHECK-NEXT:     cir.brcond %6 ^bb1, ^bb2
 // CHECK-NEXT:     ^bb1:
 // CHECK-NEXT:       cir.yield continue
@@ -154,10 +155,10 @@ cir.func @l0() {
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   })  {
-// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK-NEXT:     %5 = cir.const(1 : i32) : i32
-// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : i32
-// CHECK-NEXT:     cir.store %6, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <!u32i>, !u32i
+// CHECK-NEXT:     %5 = cir.const(#cir.int<1> : !u32i) : !u32i
+// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : !u32i
+// CHECK-NEXT:     cir.store %6, %0 : !u32i, cir.ptr <!u32i>
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }
 

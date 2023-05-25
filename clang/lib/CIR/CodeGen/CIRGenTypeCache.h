@@ -28,9 +28,6 @@ struct CIRGenTypeCache {
 
   /// void
   mlir::Type VoidTy;
-
-  /// i8, i16, i32, and i64
-  mlir::Type Int8Ty, Int16Ty, Int32Ty, Int64Ty;
   // char, int, short, long
   mlir::Type SInt8Ty, SInt16Ty, SInt32Ty, SInt64Ty;
   // usigned char, unsigned, unsigned short, unsigned long
@@ -40,14 +37,14 @@ struct CIRGenTypeCache {
   mlir::Type FloatTy, DoubleTy;
 
   /// int
-  mlir::Type IntTy;
+  mlir::Type UIntTy;
 
   /// char
-  mlir::Type CharTy;
+  mlir::Type UCharTy;
 
   /// intptr_t, size_t, and ptrdiff_t, which we assume are the same size.
   union {
-    mlir::Type IntPtrTy;
+    mlir::Type UIntPtrTy;
     mlir::Type SizeTy;
     mlir::Type PtrDiffTy;
   };
@@ -55,13 +52,13 @@ struct CIRGenTypeCache {
   /// void* in address space 0
   union {
     mlir::cir::PointerType VoidPtrTy;
-    mlir::cir::PointerType Int8PtrTy;
+    mlir::cir::PointerType UInt8PtrTy;
   };
 
   /// void** in address space 0
   union {
     mlir::cir::PointerType VoidPtrPtrTy;
-    mlir::cir::PointerType Int8PtrPtrTy;
+    mlir::cir::PointerType UInt8PtrPtrTy;
   };
 
   /// void* in alloca address space
