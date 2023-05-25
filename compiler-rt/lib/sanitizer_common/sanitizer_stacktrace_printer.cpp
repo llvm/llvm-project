@@ -19,12 +19,23 @@ namespace __sanitizer {
 // sanitizer_symbolizer_markup.cpp implements these differently.
 #if !SANITIZER_SYMBOLIZER_MARKUP
 
-static const char *StripFunctionName(const char *function, const char *prefix) {
-  if (!function) return nullptr;
-  if (!prefix) return function;
-  uptr prefix_len = internal_strlen(prefix);
-  if (0 == internal_strncmp(function, prefix, prefix_len))
-    return function + prefix_len;
+// Strip interceptor prefixes from function name.
+static const char *StripFunctionName(const char *function) {
+  if (!function)
+    return nullptr;
+  auto try_strip = [function](const char *prefix) -> const char * {
+    const uptr prefix_len = internal_strlen(prefix);
+    if (!internal_strncmp(function, prefix, prefix_len))
+      return function + prefix_len;
+    return nullptr;
+  };
+  if (SANITIZER_APPLE) {
+    if (const char *s = try_strip("wrap_"))
+      return s;
+  } else {
+    if (const char *s = try_strip("__interceptor_"))
+      return s;
+  }
   return function;
 }
 
@@ -121,7 +132,7 @@ static const char kDefaultFormat[] = "    #%n %p %F %L";
 
 void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
                  uptr address, const AddressInfo *info, bool vs_style,
-                 const char *strip_path_prefix, const char *strip_func_prefix) {
+                 const char *strip_path_prefix) {
   // info will be null in the case where symbolization is not needed for the
   // given format. This ensures that the code below will get a hard failure
   // rather than print incorrect information in case RenderNeedsSymbolization
@@ -157,8 +168,8 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
       MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/false, buffer);
       break;
     case 'f':
-      buffer->append("%s", DemangleFunctionName(StripFunctionName(
-                               info->function, strip_func_prefix)));
+      buffer->append("%s",
+                     DemangleFunctionName(StripFunctionName(info->function)));
       break;
     case 'q':
       buffer->append("0x%zx", info->function_offset != AddressInfo::kUnknown
@@ -178,8 +189,8 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
     case 'F':
       // Function name and offset, if file is unknown.
       if (info->function) {
-        buffer->append("in %s", DemangleFunctionName(StripFunctionName(
-                                    info->function, strip_func_prefix)));
+        buffer->append("in %s",
+                       DemangleFunctionName(StripFunctionName(info->function)));
         if (!info->file && info->function_offset != AddressInfo::kUnknown)
           buffer->append("+0x%zx", info->function_offset);
       }
