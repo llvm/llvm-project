@@ -1381,8 +1381,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
 
   if (expr_diagnostics.HasErrors())
     return make_error<ModuleImportError>(
-        expr_diagnostics.GetAllErrors().AsCString(
-            "Explicit module import error"));
+        llvm::toString(expr_diagnostics.GetAllErrors()));
 
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
   if (repl || !playground) {
