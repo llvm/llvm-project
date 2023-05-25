@@ -1518,7 +1518,7 @@ namespace clang {
 
     /// The directory that file names in this module map file should
     /// be resolved relative to.
-    const DirectoryEntry *Directory;
+    DirectoryEntryRef Directory;
 
     /// Whether this module map is in a system header directory.
     bool IsSystem;
@@ -1584,7 +1584,7 @@ namespace clang {
     explicit ModuleMapParser(Lexer &L, SourceManager &SourceMgr,
                              const TargetInfo *Target, DiagnosticsEngine &Diags,
                              ModuleMap &Map, const FileEntry *ModuleMapFile,
-                             const DirectoryEntry *Directory, bool IsSystem)
+                             DirectoryEntryRef Directory, bool IsSystem)
         : L(L), SourceMgr(SourceMgr), Target(Target), Diags(Diags), Map(Map),
           ModuleMapFile(ModuleMapFile), Directory(Directory),
           IsSystem(IsSystem) {
@@ -2254,16 +2254,16 @@ void ModuleMapParser::parseExternModuleDecl() {
   StringRef FileNameRef = FileName;
   SmallString<128> ModuleMapFileName;
   if (llvm::sys::path::is_relative(FileNameRef)) {
-    ModuleMapFileName += Directory->getName();
+    ModuleMapFileName += Directory.getName();
     llvm::sys::path::append(ModuleMapFileName, FileName);
     FileNameRef = ModuleMapFileName;
   }
-  if (auto File = SourceMgr.getFileManager().getFile(FileNameRef))
+  if (auto File = SourceMgr.getFileManager().getOptionalFileRef(FileNameRef))
     Map.parseModuleMapFile(
         *File, IsSystem,
         Map.HeaderInfo.getHeaderSearchOpts().ModuleMapFileHomeIsCwd
             ? Directory
-            : (*File)->getDir(),
+            : File->getDir(),
         FileID(), nullptr, ExternLoc);
 }
 
@@ -2518,7 +2518,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     Dir = SourceMgr.getFileManager().getOptionalDirectoryRef(DirName);
   } else {
     SmallString<128> PathName;
-    PathName = Directory->getName();
+    PathName = Directory.getName();
     llvm::sys::path::append(PathName, DirName);
     Dir = SourceMgr.getFileManager().getOptionalDirectoryRef(PathName);
   }
@@ -3080,7 +3080,7 @@ bool ModuleMapParser::parseModuleMapFile() {
 }
 
 bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
-                                   const DirectoryEntry *Dir, FileID ID,
+                                   DirectoryEntryRef Dir, FileID ID,
                                    unsigned *Offset,
                                    SourceLocation ExternModuleLoc) {
   assert(Target && "Missing target information");
