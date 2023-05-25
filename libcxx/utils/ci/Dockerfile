@@ -93,7 +93,8 @@ RUN apt-get update && apt-get install -y clang-tidy-$(($LLVM_HEAD_VERSION - 2)) 
 # TODO(LLVM-17) revert D148831 to only install $(($LLVM_HEAD_VERSION - 1)) and $LLVM_HEAD_VERSION
 # The usage of the ToT version is needed due to module issues with Clang 16
 RUN apt-get update && apt-get install -y llvm-$(($LLVM_HEAD_VERSION - 2))-dev llvm-$(($LLVM_HEAD_VERSION - 1))-dev     llvm-$LLVM_HEAD_VERSION-dev \
-                                     libclang-$(($LLVM_HEAD_VERSION - 2))-dev libclang-$(($LLVM_HEAD_VERSION - 1))-dev libclang-$LLVM_HEAD_VERSION-dev
+                                     libclang-$(($LLVM_HEAD_VERSION - 2))-dev libclang-$(($LLVM_HEAD_VERSION - 1))-dev libclang-$LLVM_HEAD_VERSION-dev \
+                                                                                                                       libomp5-$LLVM_HEAD_VERSION
 
 # Install the most recent GCC, like clang install the previous version as a transition.
 ENV GCC_LATEST_VERSION=13
