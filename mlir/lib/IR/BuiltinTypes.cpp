@@ -291,6 +291,15 @@ TensorType TensorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                rankedTy.getEncoding());
 }
 
+RankedTensorType TensorType::clone(::llvm::ArrayRef<int64_t> shape,
+                                   Type elementType) const {
+  return ::llvm::cast<RankedTensorType>(cloneWith(shape, elementType));
+}
+
+RankedTensorType TensorType::clone(::llvm::ArrayRef<int64_t> shape) const {
+  return ::llvm::cast<RankedTensorType>(cloneWith(shape, getElementType()));
+}
+
 // Check if "elementType" can be an element type of a tensor.
 static LogicalResult
 checkTensorElementType(function_ref<InFlightDiagnostic()> emitError,
@@ -368,6 +377,15 @@ BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
     builder.setShape(*shape);
   builder.setElementType(elementType);
   return builder;
+}
+
+MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape,
+                                 Type elementType) const {
+  return ::llvm::cast<MemRefType>(cloneWith(shape, elementType));
+}
+
+MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape) const {
+  return ::llvm::cast<MemRefType>(cloneWith(shape, getElementType()));
 }
 
 Attribute BaseMemRefType::getMemorySpace() const {
