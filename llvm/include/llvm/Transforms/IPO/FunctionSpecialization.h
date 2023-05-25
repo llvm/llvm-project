@@ -188,6 +188,8 @@ public:
 
   bool run();
 
+  static unsigned getBlockFreqMultiplier();
+
   InstCostVisitor getInstCostVisitorFor(Function *F) {
     auto &BFI = (GetBFI)(*F);
     auto &TTI = (GetTTI)(*F);
