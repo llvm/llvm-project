@@ -200,7 +200,7 @@ void AggressiveAntiDepBreaker::Observe(MachineInstr &MI, unsigned Count,
   LLVM_DEBUG(dbgs() << "\tRegs:");
 
   std::vector<unsigned> &DefIndices = State->GetDefIndices();
-  for (unsigned Reg = 1; Reg != TRI->getNumRegs(); ++Reg) {
+  for (unsigned Reg = 0; Reg != TRI->getNumRegs(); ++Reg) {
     // If Reg is current live, then mark that it can't be renamed as
     // we don't know the extent of its live-range anymore (now that it
     // has been scheduled). If it is not live but was defined in the
@@ -776,7 +776,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "\n===== Aggressive anti-dependency breaking\n");
   LLVM_DEBUG(dbgs() << "Available regs:");
-  for (unsigned Reg = 1; Reg < TRI->getNumRegs(); ++Reg) {
+  for (unsigned Reg = 0; Reg < TRI->getNumRegs(); ++Reg) {
     if (!State->IsLive(Reg))
       LLVM_DEBUG(dbgs() << " " << printReg(Reg, TRI));
   }
