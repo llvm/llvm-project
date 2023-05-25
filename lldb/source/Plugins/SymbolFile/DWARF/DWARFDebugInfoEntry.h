@@ -94,8 +94,8 @@ public:
       uint64_t fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
-  size_t GetAttributeAddressRanges(
-      DWARFUnit *cu, DWARFRangeList &ranges, bool check_hi_lo_pc,
+  DWARFRangeList GetAttributeAddressRanges(
+      DWARFUnit *cu, bool check_hi_lo_pc,
       bool check_specification_or_abstract_origin = false) const;
 
   const char *GetName(const DWARFUnit *cu) const;
