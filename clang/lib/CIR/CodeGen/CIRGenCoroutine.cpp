@@ -158,8 +158,8 @@ static mlir::LogicalResult buildBodyAndFallthrough(
 
 mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc,
                                                          mlir::Value nullPtr) {
-  auto int8PtrTy = builder.getInt8PtrTy();
-  auto int32Ty = mlir::IntegerType::get(builder.getContext(), 32);
+  auto int8PtrTy = builder.getUInt8PtrTy();
+  auto int32Ty = builder.getUInt32Ty();
 
   auto &TI = CGM.getASTContext().getTargetInfo();
   unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
@@ -181,14 +181,14 @@ mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc,
 
   return builder.create<mlir::cir::CallOp>(
       loc, fnOp,
-      mlir::ValueRange{builder.getInt32(NewAlign, loc), nullPtr, nullPtr,
+      mlir::ValueRange{builder.getUInt32(NewAlign, loc), nullPtr, nullPtr,
                        nullPtr});
 }
 
 mlir::cir::CallOp
 CIRGenFunction::buildCoroAllocBuiltinCall(mlir::Location loc) {
   auto boolTy = builder.getBoolTy();
-  auto int32Ty = mlir::IntegerType::get(builder.getContext(), 32);
+  auto int32Ty = builder.getUInt32Ty();
 
   mlir::Operation *builtin = CGM.getGlobalValue(CGM.builtinCoroAlloc);
 
@@ -211,8 +211,8 @@ CIRGenFunction::buildCoroAllocBuiltinCall(mlir::Location loc) {
 mlir::cir::CallOp
 CIRGenFunction::buildCoroBeginBuiltinCall(mlir::Location loc,
                                           mlir::Value coroframeAddr) {
-  auto int8PtrTy = builder.getInt8PtrTy();
-  auto int32Ty = mlir::IntegerType::get(builder.getContext(), 32);
+  auto int8PtrTy = builder.getUInt8PtrTy();
+  auto int32Ty = builder.getUInt32Ty();
   mlir::Operation *builtin = CGM.getGlobalValue(CGM.builtinCoroBegin);
 
   mlir::cir::FuncOp fnOp;
@@ -234,7 +234,7 @@ CIRGenFunction::buildCoroBeginBuiltinCall(mlir::Location loc,
 
 mlir::cir::CallOp CIRGenFunction::buildCoroEndBuiltinCall(mlir::Location loc,
                                                           mlir::Value nullPtr) {
-  auto int8PtrTy = builder.getInt8PtrTy();
+  auto int8PtrTy = builder.getUInt8PtrTy();
   auto boolTy = builder.getBoolTy();
   mlir::Operation *builtin = CGM.getGlobalValue(CGM.builtinCoroEnd);
 
@@ -257,7 +257,7 @@ mlir::cir::CallOp CIRGenFunction::buildCoroEndBuiltinCall(mlir::Location loc,
 mlir::LogicalResult
 CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
   auto openCurlyLoc = getLoc(S.getBeginLoc());
-  auto nullPtrCst = builder.getNullPtr(builder.getInt8PtrTy(), openCurlyLoc);
+  auto nullPtrCst = builder.getNullPtr(builder.getUInt8PtrTy(), openCurlyLoc);
 
   CurFn.setCoroutineAttr(mlir::UnitAttr::get(builder.getContext()));
   auto coroId = buildCoroIDBuiltinCall(openCurlyLoc, nullPtrCst);

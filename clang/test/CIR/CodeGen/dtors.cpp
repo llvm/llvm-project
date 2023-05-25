@@ -38,7 +38,7 @@ public:
 };
 
 // Class A
-// CHECK: ![[ClassA:ty_.*]] = !cir.struct<"class.A", !cir.ptr<!cir.ptr<!cir.func<i32 ()>>>, #cir.recdecl.ast>
+// CHECK: ![[ClassA:ty_.*]] = !cir.struct<"class.A", !cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>, #cir.recdecl.ast>
 
 // Class B
 // CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B", ![[ClassA]]>
@@ -56,7 +56,7 @@ public:
 // CHECK:   cir.func private @_ZN1BD2Ev(!cir.ptr<![[ClassB]]>)
 
 // operator delete(void*) declaration
-// CHECK:   cir.func private @_ZdlPv(!cir.ptr<i8>)
+// CHECK:   cir.func private @_ZdlPv(!cir.ptr<!u8i>)
 
 // B dtor => @B::~B() #2
 // Calls dtor #1
@@ -67,8 +67,8 @@ public:
 // CHECK:     cir.store %arg0, %0 : !cir.ptr<![[ClassB]]>, cir.ptr <!cir.ptr<![[ClassB]]>>
 // CHECK:     %1 = cir.load %0 : cir.ptr <!cir.ptr<![[ClassB]]>>, !cir.ptr<![[ClassB]]>
 // CHECK:     cir.call @_ZN1BD2Ev(%1) : (!cir.ptr<![[ClassB]]>) -> ()
-// CHECK:     %2 = cir.cast(bitcast, %1 : !cir.ptr<![[ClassB]]>), !cir.ptr<i8>
-// CHECK:     cir.call @_ZdlPv(%2) : (!cir.ptr<i8>) -> ()
+// CHECK:     %2 = cir.cast(bitcast, %1 : !cir.ptr<![[ClassB]]>), !cir.ptr<!u8i>
+// CHECK:     cir.call @_ZdlPv(%2) : (!cir.ptr<!u8i>) -> ()
 // CHECK:     cir.return
 // CHECK:   }
 

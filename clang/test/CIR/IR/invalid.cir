@@ -1,9 +1,11 @@
 // Test attempts to build bogus CIR
 // RUN: cir-tool %s -verify-diagnostics -split-input-file
 
+!u32i = !cir.int<u, 32>
+
 // expected-error@+2 {{'cir.const' op nullptr expects pointer type}}
 cir.func @p0() {
-  %1 = cir.const(#cir.null : !cir.ptr<i32>) : i32
+  %1 = cir.const(#cir.null : !cir.ptr<!u32i>) : !u32i
   cir.return
 }
 
@@ -11,9 +13,10 @@ cir.func @p0() {
 
 #false = #cir.bool<false> : !cir.bool
 #true = #cir.bool<true> : !cir.bool
-// expected-error@+2 {{op result type ('i32') must be '!cir.bool' for '#cir.bool<true> : !cir.bool'}}
+!u32i = !cir.int<u, 32>
+// expected-error@+2 {{op result type ('!cir.int<u, 32>') must be '!cir.bool' for '#cir.bool<true> : !cir.bool'}}
 cir.func @b0() {
-  %1 = cir.const(#true) : i32
+  %1 = cir.const(#true) : !u32i
   cir.return
 }
 
@@ -21,12 +24,13 @@ cir.func @b0() {
 
 #false = #cir.bool<false> : !cir.bool
 #true = #cir.bool<true> : !cir.bool
+!u32i = !cir.int<u, 32>
 cir.func @if0() {
   %0 = cir.const(#true) : !cir.bool
   // expected-error@+1 {{'cir.if' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
   cir.if %0 {
-    %6 = cir.const(3 : i32) : i32
-    cir.yield %6 : i32
+    %6 = cir.const(#cir.int<3> : !u32i) : !u32i
+    cir.yield %6 : !u32i
   }
   cir.return
 }
@@ -115,8 +119,9 @@ cir.func @badstride(%x: !cir.ptr<!cir.int<s, 32>>) {
 
 // -----
 
-cir.func @cast0(%arg0: i32) {
-  %1 = cir.cast(int_to_bool, %arg0 : i32), i32 // expected-error {{requires !cir.bool type for result}}
+!u32i = !cir.int<u, 32>
+cir.func @cast0(%arg0: !u32i) {
+  %1 = cir.cast(int_to_bool, %arg0 : !u32i), !u32i // expected-error {{requires !cir.bool type for result}}
   cir.return
 }
 
@@ -129,23 +134,26 @@ cir.func @cast1(%arg1: f32) {
 
 // -----
 
-cir.func @cast2(%p: !cir.ptr<i32>) {
-  %2 = cir.cast(array_to_ptrdecay, %p : !cir.ptr<i32>), !cir.ptr<i32> // expected-error {{requires !cir.array pointee}}
+!u32i = !cir.int<u, 32>
+cir.func @cast2(%p: !cir.ptr<!u32i>) {
+  %2 = cir.cast(array_to_ptrdecay, %p : !cir.ptr<!u32i>), !cir.ptr<!u32i> // expected-error {{requires !cir.array pointee}}
   cir.return
 }
 
 // -----
 
-cir.func @cast3(%p: !cir.ptr<i32>) {
-  %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", init]
-  %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<f32> // expected-error {{requires same type for array element and pointee result}}
+!u32i = !cir.int<u, 32>
+cir.func @cast3(%p: !cir.ptr<!u32i>) {
+  %0 = cir.alloca !cir.array<!u32i x 10>, cir.ptr <!cir.array<!u32i x 10>>, ["x", init]
+  %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!u32i x 10>>), !cir.ptr<f32> // expected-error {{requires same type for array element and pointee result}}
   cir.return
 }
 
 // -----
 
-cir.func @cast4(%p: !cir.ptr<i32>) {
-  %2 = cir.cast(bitcast, %p : !cir.ptr<i32>), i32 // expected-error {{requires !cir.ptr type for source and result}}
+!u32i = !cir.int<u, 32>
+cir.func @cast4(%p: !cir.ptr<!u32i>) {
+  %2 = cir.cast(bitcast, %p : !cir.ptr<!u32i>), !u32i // expected-error {{requires !cir.ptr type for source and result}}
   cir.return
 }
 
@@ -175,20 +183,24 @@ cir.func @b0() {
 
 // -----
 
+!u32i = !cir.int<u, 32>
+!u8i = !cir.int<u, 8>
 module {
-  cir.global external @a = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{constant array element should match array element type}}
+  cir.global external @a = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<23> : !u8i, #cir.int<33> : !u8i] : !cir.array<!u32i x 3>> // expected-error {{constant array element should match array element type}}
 } // expected-error {{expected constant attribute to match type}}
 
 // -----
 
+!u8i = !cir.int<u, 8>
 module {
-  cir.global external @a = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 4>> // expected-error {{constant array size should match type size}}
+  cir.global external @a = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<23> : !u8i, #cir.int<33> : !u8i] : !cir.array<!u8i x 4>> // expected-error {{constant array size should match type size}}
 } // expected-error {{expected constant attribute to match type}}
 
 // -----
 
+!u32i = !cir.int<u, 32>
 module {
-  cir.global external @b = #cir.const_array<"example\00" : !cir.array<i32 x 8>> // expected-error {{constant array element for string literals expects i8 array element type}}
+  cir.global external @b = #cir.const_array<"example\00" : !cir.array<!u32i x 8>> // expected-error {{constant array element for string literals expects !cir.int<u, 8> element type}}
 } // expected-error {{expected constant attribute to match type}}
 
 // -----
@@ -199,49 +211,55 @@ module {
 
 // -----
 
+!u32i = !cir.int<u, 32>
 module {
-  cir.global @a = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, internal, cir_private, extern_weak, common]}}
+  cir.global @a = #cir.const_array<[0 : !u8i, -23 : !u8i, 33 : !u8i] : !cir.array<!u32i x 3>> // expected-error {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, internal, cir_private, extern_weak, common]}}
 }
 
 // -----
 
+!u32i = !cir.int<u, 32>
 module {
-  cir.global "private" external @v = 3 : i32 // expected-error {{private visibility not allowed with 'external' linkage}}
+  cir.global "private" external @v = #cir.int<3> : !u32i // expected-error {{private visibility not allowed with 'external' linkage}}
 }
 
 // -----
 
+!u32i = !cir.int<u, 32>
 module {
-  cir.global "public" internal @v = 3 : i32 // expected-error {{public visibility not allowed with 'internal' linkage}}
+  cir.global "public" internal @v = #cir.int<3> : !u32i // expected-error {{public visibility not allowed with 'internal' linkage}}
 }
 
 // -----
 
+!u32i = !cir.int<u, 32>
 cir.func @unary0() {
-  %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
-  %1 = cir.const(2 : i32) : i32
+  %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init] {alignment = 4 : i64}
+  %1 = cir.const(#cir.int<2> : !u32i) : !u32i
 
-  %3 = cir.unary(inc, %1) : i32, i32 // expected-error {{'cir.unary' op requires input to be defined by a memory load}}
-  cir.store %3, %0 : i32, cir.ptr <i32>
+  %3 = cir.unary(inc, %1) : !u32i, !u32i // expected-error {{'cir.unary' op requires input to be defined by a memory load}}
+  cir.store %3, %0 : !u32i, cir.ptr <!u32i>
   cir.return
 }
 
 // -----
 
+!u32i = !cir.int<u, 32>
 cir.func @unary1() {
-  %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
-  %1 = cir.const(2 : i32) : i32
-  cir.store %1, %0 : i32, cir.ptr <i32>
+  %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init] {alignment = 4 : i64}
+  %1 = cir.const(#cir.int<2> : !u32i) : !u32i
+  cir.store %1, %0 : !u32i, cir.ptr <!u32i>
 
-  %2 = cir.load %0 : cir.ptr <i32>, i32
-  %3 = cir.unary(dec, %2) : i32, i32 //  // expected-error {{'cir.unary' op requires result to be used by a memory store to the same address as the input memory load}}
+  %2 = cir.load %0 : cir.ptr <!u32i>, !u32i
+  %3 = cir.unary(dec, %2) : !u32i, !u32i //  // expected-error {{'cir.unary' op requires result to be used by a memory store to the same address as the input memory load}}
   cir.return
 }
 
 // -----
 
+!u32i = !cir.int<u, 32>
 module {
-  cir.global external @v = #cir.zero : i32 // expected-error {{zero expects struct type}}
+  cir.global external @v = #cir.zero : !u32i // expected-error {{zero expects struct type}}
 }
 
 // -----
@@ -282,14 +300,16 @@ cir.func coroutine @good_yield() {
 
 // -----
 
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
 module {
   // Note MLIR requires "private" for global declarations, should get
   // rid of this somehow in favor of clarity?
-  cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<i32>
+  cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<!u32i>
 
-  cir.global external @type_info_B = #cir.typeinfo<<{ // expected-error {{element at index 0 has type '!cir.ptr<i8>' but return type for this element is '!cir.ptr<i32>'}}
-    #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i8>}>>
-    : !cir.struct<"", !cir.ptr<i32>>
+  cir.global external @type_info_B = #cir.typeinfo<<{ // expected-error {{element at index 0 has type '!cir.ptr<!cir.int<u, 8>>' but return type for this element is '!cir.ptr<!cir.int<u, 32>>'}}
+    #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<!u8i>}>>
+    : !cir.struct<"", !cir.ptr<!u32i>>
 } // expected-error {{'cir.global' expected constant attribute to match type}}
 
 // -----

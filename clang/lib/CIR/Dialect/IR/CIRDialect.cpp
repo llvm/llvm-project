@@ -1273,7 +1273,9 @@ VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 LogicalResult cir::VTableAddrPointOp::verify() {
   auto resultType = getAddr().getType();
   auto fnTy = mlir::cir::FuncType::get(
-      getContext(), {}, {mlir::IntegerType::get(getContext(), 32)});
+      getContext(), {},
+      {mlir::cir::IntType::get(getContext(), 32, /*isSigned=*/false)});
+
   auto resTy = mlir::cir::PointerType::get(
       getContext(), mlir::cir::PointerType::get(getContext(), fnTy));
 
@@ -1800,8 +1802,8 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
 
     // TODO: add CIR type for char.
     if (!intTy || intTy.getWidth() != 8) {
-      emitError() << "constant array element for string literals expects i8 "
-                     "array element type";
+      emitError() << "constant array element for string literals expects "
+                     "!cir.int<u, 8> element type";
       return failure();
     }
     return success();

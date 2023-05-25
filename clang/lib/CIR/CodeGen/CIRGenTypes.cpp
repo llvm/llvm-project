@@ -465,7 +465,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
 
     case BuiltinType::NullPtr:
       // Model std::nullptr_t as i8*
-      // ResultType = llvm::Type::getInt8PtrTy(getLLVMContext());
+      // ResultType = llvm::Type::getUInt8PtrTy(getLLVMContext());
       assert(0 && "not implemented");
       break;
 
@@ -658,7 +658,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     // Return a placeholder 'i32' type.  This can be changed later when the
     // type is defined (see UpdateCompletedType), but is likely to be the
     // "right" answer.
-    ResultType = CGM.Int32Ty;
+    ResultType = CGM.UInt32Ty;
     break;
   }
 

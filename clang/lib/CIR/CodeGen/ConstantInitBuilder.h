@@ -189,7 +189,7 @@ public:
   void addSize(CharUnits size);
 
   /// Add an integer value of a specific type.
-  void addInt(mlir::IntegerType intTy, uint64_t value, bool isSigned = false) {
+  void addInt(mlir::cir::IntType intTy, uint64_t value, bool isSigned = false) {
     add(mlir::IntegerAttr::get(intTy,
                                llvm::APInt{intTy.getWidth(), value, isSigned}));
   }
@@ -218,14 +218,14 @@ public:
   /// in the current linkage unit.  The offset will have the given
   /// integer type, which must be no wider than intptr_t.  Some
   /// targets may not fully support this operation.
-  void addRelativeOffset(mlir::IntegerType type, mlir::Attribute target) {
+  void addRelativeOffset(mlir::cir::IntType type, mlir::Attribute target) {
     llvm_unreachable("NYI");
     // add(getRelativeOffset(type, target));
   }
 
   /// Same as addRelativeOffset(), but instead relative to an element in this
   /// aggregate, identified by its index.
-  void addRelativeOffsetToPosition(mlir::IntegerType type,
+  void addRelativeOffsetToPosition(mlir::cir::IntType type,
                                    mlir::Attribute target, size_t position) {
     llvm_unreachable("NYI");
     // add(getRelativeOffsetToPosition(type, target, position));
@@ -235,7 +235,7 @@ public:
   /// constant offset.  This is primarily useful when the relative
   /// offset is known to be a multiple of (say) four and therefore
   /// the tag can be used to express an extra two bits of information.
-  void addTaggedRelativeOffset(mlir::IntegerType type, mlir::Attribute address,
+  void addTaggedRelativeOffset(mlir::cir::IntType type, mlir::Attribute address,
                                unsigned tag) {
     llvm_unreachable("NYI");
     // mlir::Attribute offset =
@@ -287,7 +287,7 @@ public:
 
   /// Fill a previously-added placeholder.
   void fillPlaceholderWithInt(PlaceholderPosition position,
-                              mlir::IntegerType type, uint64_t value,
+                              mlir::cir::IntType type, uint64_t value,
                               bool isSigned = false) {
     llvm_unreachable("NYI");
     // fillPlaceholder(position, llvm::ConstantInt::get(type, value, isSigned));
@@ -333,10 +333,10 @@ private:
   void getGEPIndicesTo(llvm::SmallVectorImpl<mlir::Attribute> &indices,
                        size_t position) const;
 
-  mlir::Attribute getRelativeOffset(mlir::IntegerType offsetType,
+  mlir::Attribute getRelativeOffset(mlir::cir::IntType offsetType,
                                     mlir::Attribute target);
 
-  mlir::Attribute getRelativeOffsetToPosition(mlir::IntegerType offsetType,
+  mlir::Attribute getRelativeOffsetToPosition(mlir::cir::IntType offsetType,
                                               mlir::Attribute target,
                                               size_t position);
 

@@ -45,14 +45,14 @@ void m(APIType api) {
 // CHECK:    %5 = cir.cmp(eq, %2, %4) : !s32i, !cir.bool
 // CHECK:    %6 = cir.ternary(%5, true {
 // CHECK:      %7 = cir.const(#cir.int<0> : !s32i) : !s32i
-// CHECK:      %8 = cir.const(0 : i8) : i8
-// CHECK:      cir.yield %8 : i8
+// CHECK:      %8 = cir.const(#cir.int<0> : !u8i) : !u8i
+// CHECK:      cir.yield %8 : !u8i
 // CHECK:    }, false {
 // CHECK:      %7 = cir.get_global @".str" : cir.ptr <!cir.array<!s8i x 7>>
 // CHECK:      %8 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s8i x 7>>), !cir.ptr<!s8i>
 // CHECK:      cir.call @_Z3obaPKc(%8) : (!cir.ptr<!s8i>) -> ()
-// CHECK:      %9 = cir.const(0 : i8) : i8
-// CHECK:      cir.yield %9 : i8
-// CHECK:    }) : i8
+// CHECK:      %9 = cir.const(#cir.int<0> : !u8i) : !u8i
+// CHECK:      cir.yield %9 : !u8i
+// CHECK:    }) : !u8i
 // CHECK:    cir.return
 // CHECK:  }

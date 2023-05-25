@@ -96,24 +96,27 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
       target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)), genTypes{*this},
       VTables{*this} {
 
-  // Initialize signless integers types cache.
-  VoidTy = ::mlir::IntegerType::get(builder.getContext(), 8);
-  Int8Ty = ::mlir::IntegerType::get(builder.getContext(), 8);
-  Int16Ty = ::mlir::IntegerType::get(builder.getContext(), 16);
-  Int32Ty = ::mlir::IntegerType::get(builder.getContext(), 32);
-  Int64Ty = ::mlir::IntegerType::get(builder.getContext(), 64);
-
   // Initialize CIR signed integer types cache.
-  SInt8Ty = ::mlir::cir::IntType::get(builder.getContext(), 8, true);
-  SInt16Ty = ::mlir::cir::IntType::get(builder.getContext(), 16, true);
-  SInt32Ty = ::mlir::cir::IntType::get(builder.getContext(), 32, true);
-  SInt64Ty = ::mlir::cir::IntType::get(builder.getContext(), 64, true);
+  SInt8Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 8, /*isSigned=*/true);
+  SInt16Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 16, /*isSigned=*/true);
+  SInt32Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 32, /*isSigned=*/true);
+  SInt64Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 64, /*isSigned=*/true);
 
   // Initialize CIR unsigned integer types cache.
-  UInt8Ty = ::mlir::cir::IntType::get(builder.getContext(), 8, false);
-  UInt16Ty = ::mlir::cir::IntType::get(builder.getContext(), 16, false);
-  UInt32Ty = ::mlir::cir::IntType::get(builder.getContext(), 32, false);
-  UInt64Ty = ::mlir::cir::IntType::get(builder.getContext(), 64, false);
+  UInt8Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 8, /*isSigned=*/false);
+  UInt16Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 16, /*isSigned=*/false);
+  UInt32Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 32, /*isSigned=*/false);
+  UInt64Ty =
+      ::mlir::cir::IntType::get(builder.getContext(), 64, /*isSigned=*/false);
+
+  VoidTy = UInt8Ty;
 
   // TODO: HalfTy
   // TODO: BFloatTy
@@ -123,14 +126,17 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   // TODO: PointerAlignInBytes
   // TODO: SizeSizeInBytes
   // TODO: IntAlignInBytes
-  CharTy = ::mlir::IntegerType::get(builder.getContext(),
-                                    astCtx.getTargetInfo().getCharWidth());
-  IntTy = ::mlir::IntegerType::get(builder.getContext(),
-                                   astCtx.getTargetInfo().getIntWidth());
-  IntPtrTy = ::mlir::IntegerType::get(
-      builder.getContext(), astCtx.getTargetInfo().getMaxPointerWidth());
-  Int8PtrTy = builder.getPointerTo(Int8Ty);
-  Int8PtrPtrTy = builder.getPointerTo(Int8PtrTy);
+  UCharTy = ::mlir::cir::IntType::get(builder.getContext(),
+                                      astCtx.getTargetInfo().getCharWidth(),
+                                      /*isSigned=*/false);
+  UIntTy = ::mlir::cir::IntType::get(builder.getContext(),
+                                     astCtx.getTargetInfo().getIntWidth(),
+                                     /*isSigned=*/false);
+  UIntPtrTy = ::mlir::cir::IntType::get(
+      builder.getContext(), astCtx.getTargetInfo().getMaxPointerWidth(),
+      /*isSigned=*/false);
+  UInt8PtrTy = builder.getPointerTo(UInt8Ty);
+  UInt8PtrPtrTy = builder.getPointerTo(UInt8PtrTy);
   // TODO: AllocaInt8PtrTy
   // TODO: GlobalsInt8PtrTy
   // TODO: ConstGlobalsPtrTy
@@ -1942,6 +1948,9 @@ void CIRGenModule::buildDefaultMethods() {
 }
 
 mlir::IntegerAttr CIRGenModule::getSize(CharUnits size) {
+  // Note that mlir::IntegerType is used instead of mlir::cir::IntType here
+  // because we don't need sign information for this to be useful, so keep
+  // it simple.
   return mlir::IntegerAttr::get(
       mlir::IntegerType::get(builder.getContext(), 64), size.getQuantity());
 }

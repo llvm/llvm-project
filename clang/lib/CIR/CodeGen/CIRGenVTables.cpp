@@ -38,9 +38,9 @@ static bool UseRelativeLayout(const CIRGenModule &CGM) {
 bool CIRGenVTables::useRelativeLayout() const { return UseRelativeLayout(CGM); }
 
 mlir::Type CIRGenModule::getVTableComponentType() {
-  mlir::Type ptrTy = builder.getInt8PtrTy();
+  mlir::Type ptrTy = builder.getUInt8PtrTy();
   if (UseRelativeLayout(*this))
-    ptrTy = builder.getInt32PtrTy();
+    ptrTy = builder.getUInt32PtrTy();
   return ptrTy;
 }
 
@@ -160,7 +160,7 @@ static void AddPointerLayoutOffset(CIRGenModule &CGM,
                                    CharUnits offset) {
   assert(offset.getQuantity() == 0 && "NYI");
   builder.add(mlir::cir::NullAttr::get(CGM.getBuilder().getContext(),
-                                       CGM.getBuilder().getInt8PtrTy()));
+                                       CGM.getBuilder().getUInt8PtrTy()));
 }
 
 static void AddRelativeLayoutOffset(CIRGenModule &CGM,
@@ -278,7 +278,7 @@ void CIRGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       llvm_unreachable("NYI");
     } else {
       return builder.add(mlir::cir::GlobalViewAttr::get(
-          CGM.getBuilder().getInt8PtrTy(),
+          CGM.getBuilder().getUInt8PtrTy(),
           mlir::FlatSymbolRefAttr::get(fnPtr.getSymNameAttr())));
     }
   }

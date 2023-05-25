@@ -1,11 +1,13 @@
 // RUN: cir-tool %s | cir-tool | FileCheck %s
 
+!u32i = !cir.int<u, 32>
+
 module  {
   cir.func @arrays() {
-    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr<!cir.array<i32 x 10>>, ["x", init]
+    %0 = cir.alloca !cir.array<!u32i x 10>, cir.ptr<!cir.array<!u32i x 10>>, ["x", init]
     cir.return
   }
 }
 
 // CHECK: cir.func @arrays() {
-// CHECK-NEXT:     %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", init]
+// CHECK-NEXT:     %0 = cir.alloca !cir.array<!u32i x 10>, cir.ptr <!cir.array<!u32i x 10>>, ["x", init]

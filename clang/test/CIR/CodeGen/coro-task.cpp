@@ -126,21 +126,21 @@ co_invoke_fn co_invoke;
 
 }} // namespace folly::coro
 
-// CHECK: ![[VoidTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", i8>
-// CHECK: ![[IntTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", i8>
-// CHECK: ![[VoidPromisse:ty_.*]] = !cir.struct<"struct.folly::coro::Task<void>::promise_type", i8>
-// CHECK: ![[CoroHandleVoid:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", i8>
-// CHECK: ![[CoroHandlePromise:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", i8>
-// CHECK: ![[StdString:ty_.*]] = !cir.struct<"struct.std::string", i8
-// CHECK: ![[SuspendAlways:ty_.*]] = !cir.struct<"struct.std::suspend_always", i8>
+// CHECK: ![[VoidTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", !u8i>
+// CHECK: ![[IntTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", !u8i>
+// CHECK: ![[VoidPromisse:ty_.*]] = !cir.struct<"struct.folly::coro::Task<void>::promise_type", !u8i>
+// CHECK: ![[CoroHandleVoid:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", !u8i>
+// CHECK: ![[CoroHandlePromise:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", !u8i>
+// CHECK: ![[StdString:ty_.*]] = !cir.struct<"struct.std::string", !u8i
+// CHECK: ![[SuspendAlways:ty_.*]] = !cir.struct<"struct.std::suspend_always", !u8i>
 
 // CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !ty_22struct2Efolly3A3Acoro3A3Aco_invoke_fn22
 
-// CHECK: cir.func builtin private @__builtin_coro_id(i32, !cir.ptr<i8>, !cir.ptr<i8>, !cir.ptr<i8>) -> i32
-// CHECK: cir.func builtin private @__builtin_coro_alloc(i32) -> !cir.bool
+// CHECK: cir.func builtin private @__builtin_coro_id(!u32i, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !u32i
+// CHECK: cir.func builtin private @__builtin_coro_alloc(!u32i) -> !cir.bool
 // CHECK: cir.func builtin private @__builtin_coro_size() -> !u64i
-// CHECK: cir.func builtin private @__builtin_coro_begin(i32, !cir.ptr<i8>) -> !cir.ptr<i8>
+// CHECK: cir.func builtin private @__builtin_coro_begin(!u32i, !cir.ptr<!u8i>) -> !cir.ptr<!u8i>
 
 using VoidTask = folly::coro::Task<void>;
 
@@ -153,26 +153,26 @@ VoidTask silly_task() {
 // Allocate promise.
 
 // CHECK: %[[#VoidTaskAddr:]] = cir.alloca ![[VoidTask]], {{.*}}, ["__retval"]
-// CHECK: %[[#SavedFrameAddr:]] = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["__coro_frame_addr"] {alignment = 8 : i64}
+// CHECK: %[[#SavedFrameAddr:]] = cir.alloca !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>, ["__coro_frame_addr"] {alignment = 8 : i64}
 // CHECK: %[[#VoidPromisseAddr:]] = cir.alloca ![[VoidPromisse]], {{.*}}, ["__promise"]
 
 // Get coroutine id with __builtin_coro_id.
 
-// CHECK: %[[#NullPtr:]] = cir.const(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
-// CHECK: %[[#Align:]] = cir.const(16 : i32) : i32
+// CHECK: %[[#NullPtr:]] = cir.const(#cir.null : !cir.ptr<!u8i>) : !cir.ptr<!u8i>
+// CHECK: %[[#Align:]] = cir.const(#cir.int<16> : !u32i) : !u32i
 // CHECK: %[[#CoroId:]] = cir.call @__builtin_coro_id(%[[#Align]], %[[#NullPtr]], %[[#NullPtr]], %[[#NullPtr]])
 
 // Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
 // call __builtin_coro_begin for the final coroutine frame address.
 
-// CHECK: %[[#ShouldAlloc:]] = cir.call @__builtin_coro_alloc(%[[#CoroId]]) : (i32) -> !cir.bool
-// CHECK: cir.store %[[#NullPtr]], %[[#SavedFrameAddr]] : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
+// CHECK: %[[#ShouldAlloc:]] = cir.call @__builtin_coro_alloc(%[[#CoroId]]) : (!u32i) -> !cir.bool
+// CHECK: cir.store %[[#NullPtr]], %[[#SavedFrameAddr]] : !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>
 // CHECK: cir.if %[[#ShouldAlloc]] {
 // CHECK:   %[[#CoroSize:]] = cir.call @__builtin_coro_size() : () -> !u64i
-// CHECK:   %[[#AllocAddr:]] = cir.call @_Znwm(%[[#CoroSize]]) : (!u64i) -> !cir.ptr<i8>
-// CHECK:   cir.store %[[#AllocAddr]], %[[#SavedFrameAddr]] : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
+// CHECK:   %[[#AllocAddr:]] = cir.call @_Znwm(%[[#CoroSize]]) : (!u64i) -> !cir.ptr<!u8i>
+// CHECK:   cir.store %[[#AllocAddr]], %[[#SavedFrameAddr]] : !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>
 // CHECK: }
-// CHECK: %[[#Load0:]] = cir.load %[[#SavedFrameAddr]] : cir.ptr <!cir.ptr<i8>>, !cir.ptr<i8>
+// CHECK: %[[#Load0:]] = cir.load %[[#SavedFrameAddr]] : cir.ptr <!cir.ptr<!u8i>>, !cir.ptr<!u8i>
 // CHECK: %[[#CoroFrameAddr:]] = cir.call @__builtin_coro_begin(%[[#CoroId]], %[[#Load0]])
 
 // Call promise.get_return_object() to retrieve the task object.
@@ -264,7 +264,7 @@ VoidTask silly_task() {
 
 // Call builtin coro end and return
 
-// CHECK-NEXT: %[[#CoroEndArg0:]] = cir.const(#cir.null : !cir.ptr<i8>)
+// CHECK-NEXT: %[[#CoroEndArg0:]] = cir.const(#cir.null : !cir.ptr<!u8i>)
 // CHECK-NEXT: %[[#CoroEndArg1:]] = cir.const(#false) : !cir.bool
 // CHECK-NEXT: = cir.call @__builtin_coro_end(%[[#CoroEndArg0]], %[[#CoroEndArg1]])
 
