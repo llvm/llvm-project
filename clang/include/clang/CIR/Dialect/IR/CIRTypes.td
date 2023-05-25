@@ -166,10 +166,68 @@ def CIR_ArrayType : CIR_Type<"Array", "array",
 }
 
 //===----------------------------------------------------------------------===//
+// FuncType
+//===----------------------------------------------------------------------===//
+
+def CIR_FuncType : CIR_Type<"Func", "func"> {
+  let summary = "CIR function type";
+  let description = [{
+    The `!cir.func` is a function type. It consists of a single return type, a
+    list of parameter types and can optionally be variadic.
+
+    Example:
+
+    ```mlir
+    !cir.func<!bool ()>
+    !cir.func<!s32i (!s8i, !s8i)>
+    !cir.func<!s32i (!s32i, ...)>
+    ```
+  }];
+
+  let parameters = (ins ArrayRefParameter<"Type">:$inputs,
+                        ArrayRefParameter<"Type">:$results, "bool":$varArg);
+  let assemblyFormat = [{
+    `<` $results ` ` `(` custom<FuncTypeArgs>($inputs, $varArg) `>`
+  }];
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    TypeBuilder<(ins CArg<"TypeRange">:$inputs, CArg<"TypeRange">:$results,
+                 CArg<"bool", "false">:$isVarArg), [{
+      return $_get($_ctxt, llvm::to_vector(inputs), llvm::to_vector(results), isVarArg);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    /// Returns whether the function is variadic.
+    bool isVarArg() const { return getVarArg(); }
+
+    /// Returns the `i`th input operand type. Asserts if out of bounds.
+    Type getInput(unsigned i) const { return getInputs()[i]; }
+
+    /// Returns the number of arguments to the function.
+    unsigned getNumInputs() const { return getInputs().size(); }
+
+    /// Returns the `i`th result operand type. Asserts if out of bounds.
+    Type getResult(unsigned i) const { return getResults()[i]; }
+
+    /// Returns the number of results to the function.
+    unsigned getNumResults() const { return getResults().size(); }
+
+    /// Returns a clone of this function type with the given argument
+    /// and result types.
+    FuncType clone(TypeRange inputs, TypeRange results) const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // One type to bind them all
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyCIRType : AnyTypeOf<[CIR_PointerType, CIR_BoolType, CIR_StructType,
-                                CIR_ArrayType]>;
+                                CIR_ArrayType, CIR_FuncType]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES
