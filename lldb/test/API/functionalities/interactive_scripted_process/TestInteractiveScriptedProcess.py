@@ -10,7 +10,6 @@ import json, os
 
 
 class TestInteractiveScriptedProcess(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

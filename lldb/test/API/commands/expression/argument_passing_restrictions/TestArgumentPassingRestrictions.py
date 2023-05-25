@@ -16,16 +16,18 @@ from lldbsuite.test import lldbutil
 
 
 class TestArgumentPassingRestrictions(TestBase):
+    @skipIf(compiler="clang", compiler_version=["<", "7.0"])
+    def test_argument_passing_restrictions(self):
+        self.build()
 
-  @skipIf(compiler="clang", compiler_version=['<', '7.0'])
-  def test_argument_passing_restrictions(self):
-    self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
 
-    lldbutil.run_to_source_breakpoint(self, '// break here',
-            lldb.SBFileSpec("main.cpp"))
+        self.expect_expr(
+            "returnPassByRef()",
+            result_type="PassByRef",
+            result_children=[ValueCheck(name="x", value="11223344")],
+        )
 
-    self.expect_expr("returnPassByRef()", result_type="PassByRef", result_children=[
-        ValueCheck(name="x", value="11223344")
-    ])
-
-    self.expect_expr("takePassByRef(p)", result_type="int", result_value="42")
+        self.expect_expr("takePassByRef(p)", result_type="int", result_value="42")

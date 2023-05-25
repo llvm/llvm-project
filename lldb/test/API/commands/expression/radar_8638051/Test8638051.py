@@ -3,13 +3,11 @@ Test the robustness of lldb expression parser.
 """
 
 
-
 import lldb
 from lldbsuite.test.lldbtest import *
 
 
 class Radar8638051TestCase(TestBase):
-
     def test_expr_commands(self):
         """The following expression commands should not crash."""
         self.build()
@@ -25,6 +23,5 @@ class Radar8638051TestCase(TestBase):
 
         # rdar://problem/8638051
         # lldb expression command: Could this crash be avoided
-        self.expect("expression &val",
-                    startstr="(int *) $2 = ")
+        self.expect("expression &val", startstr="(int *) $2 = ")
         # (int *) $2 = 0x....

@@ -7,13 +7,15 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestCase(TestBase):
 
+class TestCase(TestBase):
     @skipUnlessDarwin
     @no_debug_info_test
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.m"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.m")
+        )
 
         # Don't warn about not using the result of getters. This is perfectly
         # fine in the expression parser and LLDB shouldn't warn the user about that.
