@@ -307,6 +307,8 @@ Improvements to Clang's diagnostics
   (`#62850: <https://github.com/llvm/llvm-project/issues/62850>`_).
 - Clang now warns when any predefined macro is undefined or redefined, instead
   of only some of them.
+- ``-Wpacked-non-pod`` is now included in ``-Wall``.
+  (`#60832: <https://github.com/llvm/llvm-project/issues/60832>`_)
 
 Bug Fixes in This Version
 -------------------------
