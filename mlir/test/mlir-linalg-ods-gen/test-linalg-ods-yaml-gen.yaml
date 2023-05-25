@@ -91,7 +91,7 @@ structured_op: !LinalgStructuredOpConfig
 #  IMPL-NEXT:  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
 #  IMPL-NEXT:                                return attr.getName() == "cast"; });
 #  IMPL-NEXT:  if (castIter != attrs.end()) {
-#  IMPL-NEXT:    if (auto attr = castIter->getValue().dyn_cast<TypeFnAttr>())
+#  IMPL-NEXT:    if (auto attr = llvm::dyn_cast<TypeFnAttr>(castIter->getValue()))
 #  IMPL-NEXT:      castVal = attr.getValue();
 #  IMPL-NEXT:  }
 
