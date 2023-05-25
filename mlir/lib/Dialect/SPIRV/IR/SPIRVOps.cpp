@@ -1558,6 +1558,48 @@ LogicalResult spirv::BitcastOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.ConvertPtrToUOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::ConvertPtrToUOp::verify() {
+  auto operandType = getPointer().getType().cast<spirv::PointerType>();
+  auto resultType = getResult().getType().cast<spirv::ScalarType>();
+  if (!resultType || !resultType.isSignlessInteger())
+    return emitError("result must be a scalar type of unsigned integer");
+  auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();
+  if (!spirvModule)
+    return success();
+  auto addressingModel = spirvModule.getAddressingModel();
+  if ((addressingModel == spirv::AddressingModel::Logical) ||
+      (addressingModel == spirv::AddressingModel::PhysicalStorageBuffer64 &&
+       operandType.getStorageClass() !=
+           spirv::StorageClass::PhysicalStorageBuffer))
+    return emitError("operand must be a physical pointer");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ConvertUToPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::ConvertUToPtrOp::verify() {
+  auto operandType = getOperand().getType().cast<spirv::ScalarType>();
+  auto resultType = getResult().getType().cast<spirv::PointerType>();
+  if (!operandType || !operandType.isSignlessInteger())
+    return emitError("result must be a scalar type of unsigned integer");
+  auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();
+  if (!spirvModule)
+    return success();
+  auto addressingModel = spirvModule.getAddressingModel();
+  if ((addressingModel == spirv::AddressingModel::Logical) ||
+      (addressingModel == spirv::AddressingModel::PhysicalStorageBuffer64 &&
+       resultType.getStorageClass() !=
+           spirv::StorageClass::PhysicalStorageBuffer))
+    return emitError("result must be a physical pointer");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.PtrCastToGenericOp
 //===----------------------------------------------------------------------===//
 
