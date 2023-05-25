@@ -473,7 +473,8 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
     SmallString<128> InferredFrameworkPath = ModuleMap->getDir().getName();
     llvm::sys::path::append(InferredFrameworkPath,
                             CI.getLangOpts().ModuleName + ".framework");
-    if (auto Dir = CI.getFileManager().getDirectory(InferredFrameworkPath))
+    if (auto Dir =
+            CI.getFileManager().getOptionalDirectoryRef(InferredFrameworkPath))
       (void)HS.getModuleMap().inferFrameworkModule(*Dir, IsSystem, nullptr);
   }
 
