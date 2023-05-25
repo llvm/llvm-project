@@ -10055,12 +10055,12 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
       // header maps are not (currently) enumerable.
       break;
     case DirectoryLookup::LT_NormalDir:
-      AddFilesFromIncludeDir(IncludeDir.getDir()->getName(), IsSystem,
+      AddFilesFromIncludeDir(IncludeDir.getDirRef()->getName(), IsSystem,
                              DirectoryLookup::LT_NormalDir);
       break;
     case DirectoryLookup::LT_Framework:
-      AddFilesFromIncludeDir(IncludeDir.getFrameworkDir()->getName(), IsSystem,
-                             DirectoryLookup::LT_Framework);
+      AddFilesFromIncludeDir(IncludeDir.getFrameworkDirRef()->getName(),
+                             IsSystem, DirectoryLookup::LT_Framework);
       break;
     }
   };
@@ -10072,9 +10072,8 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
   using llvm::make_range;
   if (!Angled) {
     // The current directory is on the include path for "quoted" includes.
-    const FileEntry *CurFile = PP.getCurrentFileLexer()->getFileEntry();
-    if (CurFile && CurFile->getDir())
-      AddFilesFromIncludeDir(CurFile->getDir()->getName(), false,
+    if (auto CurFile = PP.getCurrentFileLexer()->getFileEntry())
+      AddFilesFromIncludeDir(CurFile->getDir().getName(), false,
                              DirectoryLookup::LT_NormalDir);
     for (const auto &D : make_range(S.quoted_dir_begin(), S.quoted_dir_end()))
       AddFilesFromDirLookup(D, false);
