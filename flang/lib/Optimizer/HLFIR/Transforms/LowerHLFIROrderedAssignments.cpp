@@ -895,7 +895,8 @@ void OrderedAssignmentRewriter::generateSaveEntity(
         // iterations are values that may have different shape, type parameters
         // or dynamic type, use the runtime to create and manage a stack-like
         // temporary.
-        TODO(loc, "use runtime to create temporary storage in FORALL or WHERE");
+        temp = insertSavedEntity(
+            region, fir::factory::AnyValueStack{loc, builder, entityType});
       }
     });
     // Inside the loop nest (and any fir.if if there are active masks), copy
