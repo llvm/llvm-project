@@ -144,4 +144,4 @@ struct Entry {
 void ppp() { Entry x; }
 
 // CHECK: cir.func linkonce_odr @_ZN5EntryC2Ev(%arg0: !cir.ptr<!ty_22struct2EEntry22>
-// CHECK: = "cir.struct_element_addr"(%1) <{member_name = "procAddr"}> : (!cir.ptr<!ty_22struct2EEntry22>) -> !cir.ptr<!cir.ptr<(!s32i, !cir.ptr<!s8i>, !cir.ptr<i8>) -> !u32i>>
+// CHECK: = "cir.struct_element_addr"(%1) <{member_name = "procAddr"}> : (!cir.ptr<!ty_22struct2EEntry22>) -> !cir.ptr<!cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<i8>)>>>

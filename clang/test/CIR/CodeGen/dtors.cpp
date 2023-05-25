@@ -38,7 +38,7 @@ public:
 };
 
 // Class A
-// CHECK: ![[ClassA:ty_.*]] = !cir.struct<"class.A", !cir.ptr<!cir.ptr<() -> i32>>, #cir.recdecl.ast>
+// CHECK: ![[ClassA:ty_.*]] = !cir.struct<"class.A", !cir.ptr<!cir.ptr<!cir.func<i32 ()>>>, #cir.recdecl.ast>
 
 // Class B
 // CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B", ![[ClassA]]>

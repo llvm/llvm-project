@@ -1,11 +1,32 @@
 // RUN: cir-tool %s | FileCheck %s
-
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
 module {
   cir.func @l0() {
     cir.return
   }
 
   cir.func @l1() alias(@l0)
+
+  cir.func private @variadic(!s32i, ...) -> !s32i
+
+  // Should accept call with only the required parameters.
+  cir.func @variadic_call_1(%0: !s32i) -> !s32i {
+    %9 = cir.call @variadic(%0) : (!s32i) -> !s32i
+    cir.return %9 : !s32i
+  }
+
+  // Should accept calls with variadic parameters.
+  cir.func @variadic_call_2(%0: !s32i, %1: !s32i,  %2: !u8i) -> !s32i {
+    %9 = cir.call @variadic(%0, %1, %2) : (!s32i, !s32i, !u8i) -> !s32i
+    cir.return %9 : !s32i
+  }
+
+  // Should parse custom assembly format.
+  cir.func @parse_func_type() -> () {
+    %1 = cir.alloca !cir.ptr<!cir.func<!s32i (!s32i, ...)>>, cir.ptr <!cir.ptr<!cir.func<!s32i (!s32i, ...)>>>, ["fn", init] {alignment = 8 : i64}
+    cir.return
+  }
 }
 
 // CHECK: cir.func @l0()

@@ -376,7 +376,7 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
 
   // Compute the function info and CIR type.
   const CIRGenFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
-  mlir::FunctionType Ty = getTypes().GetFunctionType(FI);
+  auto Ty = getTypes().GetFunctionType(FI);
 
   // Get or create the prototype for the function.
   // if (!V || (V.getValueType() != Ty))
@@ -1439,10 +1439,10 @@ bool CIRGenModule::verifyModule() {
   return mlir::verify(theModule).succeeded();
 }
 
-std::pair<mlir::FunctionType, mlir::cir::FuncOp>
+std::pair<mlir::cir::FuncType, mlir::cir::FuncOp>
 CIRGenModule::getAddrAndTypeOfCXXStructor(GlobalDecl GD,
                                           const CIRGenFunctionInfo *FnInfo,
-                                          mlir::FunctionType FnType,
+                                          mlir::cir::FuncType FnType,
                                           bool Dontdefer,
                                           ForDefinition_t IsForDefinition) {
   auto *MD = cast<CXXMethodDecl>(GD.getDecl());
@@ -1612,7 +1612,7 @@ bool CIRGenModule::lookupRepresentativeDecl(StringRef MangledName,
 
 mlir::cir::FuncOp
 CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
-                                mlir::FunctionType Ty,
+                                mlir::cir::FuncType Ty,
                                 const clang::FunctionDecl *FD) {
   // At the point we need to create the function, the insertion point
   // could be anywhere (e.g. callsite). Do not rely on whatever it might
@@ -1737,9 +1737,9 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   // set attributes.
   bool IsIncompleteFunction = false;
 
-  mlir::FunctionType FTy;
-  if (Ty.isa<mlir::FunctionType>()) {
-    FTy = Ty.cast<mlir::FunctionType>();
+  mlir::cir::FuncType FTy;
+  if (Ty.isa<mlir::cir::FuncType>()) {
+    FTy = Ty.cast<mlir::cir::FuncType>();
   } else {
     assert(false && "NYI");
     // FTy = mlir::FunctionType::get(VoidTy, false);

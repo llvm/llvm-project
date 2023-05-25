@@ -182,14 +182,14 @@ public:
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 
   /// Get the CIR function type for \arg Info.
-  mlir::FunctionType GetFunctionType(const CIRGenFunctionInfo &Info);
+  mlir::cir::FuncType GetFunctionType(const CIRGenFunctionInfo &Info);
 
-  mlir::FunctionType GetFunctionType(clang::GlobalDecl GD);
+  mlir::cir::FuncType GetFunctionType(clang::GlobalDecl GD);
 
   /// Get the LLVM function type for use in a vtable, given a CXXMethodDecl. If
   /// the method to has an incomplete return type, and/or incomplete argument
   /// types, this will return the opaque type.
-  mlir::FunctionType GetFunctionTypeForVTable(clang::GlobalDecl GD);
+  mlir::cir::FuncType GetFunctionTypeForVTable(clang::GlobalDecl GD);
 
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue
