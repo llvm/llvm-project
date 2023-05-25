@@ -275,8 +275,7 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
       .add(MBBI->getOperand(2));
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
     // FIXME: Zdinx RV32 can not work on unaligned scalar memory.
-    const auto &STI = MF->getSubtarget<RISCVSubtarget>();
-    assert(!STI.enableUnalignedScalarMem());
+    assert(!MF->getSubtarget<RISCVSubtarget>().enableUnalignedScalarMem());
 
     assert(MBBI->getOperand(2).getOffset() % 8 == 0);
     MBBI->getOperand(2).setOffset(MBBI->getOperand(2).getOffset() + 4);
