@@ -193,3 +193,19 @@ define hidden void @hidden() {
 define protected void @protected() {
   ret void
 }
+
+// -----
+
+; CHECK-LABEL: @streaming_func
+; CHECK-SAME: attributes {arm_streaming}
+define void @streaming_func() "aarch64_pstate_sm_enabled" {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: @locally_streaming_func
+; CHECK-SAME: attributes {arm_locally_streaming}
+define void @locally_streaming_func() "aarch64_pstate_sm_body" {
+  ret void
+}

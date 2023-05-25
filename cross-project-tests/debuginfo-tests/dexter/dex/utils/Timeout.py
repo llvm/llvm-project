@@ -11,8 +11,8 @@ means a timeout will never be triggered, i.e. timed_out() will always return Fal
 
 import time
 
-class Timeout(object):
 
+class Timeout(object):
     def __init__(self, duration: float):
         self.start = self.now
         self.duration = duration

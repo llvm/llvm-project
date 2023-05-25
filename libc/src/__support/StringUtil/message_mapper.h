@@ -15,7 +15,6 @@
 #include <stddef.h>
 
 namespace __llvm_libc {
-namespace internal {
 
 struct MsgMapping {
   int num;
@@ -99,7 +98,6 @@ constexpr MsgTable<N1 + N2> operator+(const MsgTable<N1> &t1,
   return res;
 }
 
-} // namespace internal
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H

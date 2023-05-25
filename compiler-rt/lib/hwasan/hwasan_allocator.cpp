@@ -149,8 +149,9 @@ void HwasanAllocatorInit() {
   atomic_store_relaxed(&hwasan_allocator_tagging_enabled,
                        !flags()->disable_allocator_tagging);
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
-  allocator.Init(common_flags()->allocator_release_to_os_interval_ms,
-                 GetAliasRegionStart());
+  allocator.InitLinkerInitialized(
+      common_flags()->allocator_release_to_os_interval_ms,
+      GetAliasRegionStart());
   for (uptr i = 0; i < sizeof(tail_magic); i++)
     tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
   if (common_flags()->max_allocation_size_mb) {
@@ -165,8 +166,11 @@ void HwasanAllocatorLock() { allocator.ForceLock(); }
 
 void HwasanAllocatorUnlock() { allocator.ForceUnlock(); }
 
+void AllocatorThreadStart(AllocatorCache *cache) { allocator.InitCache(cache); }
+
 void AllocatorThreadFinish(AllocatorCache *cache) {
   allocator.SwallowCache(cache);
+  allocator.DestroyCache(cache);
 }
 
 static uptr TaggedSize(uptr size) {

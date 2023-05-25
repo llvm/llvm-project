@@ -75,7 +75,7 @@ int main() {
 
 #if defined(SEND)
   sent = send(sockfd[0], buf, kBufSize, 0);
-  // SEND: Uninitialized bytes in __interceptor_send at offset 7 inside [{{.*}}, 10)
+  // SEND: Uninitialized bytes in send at offset 7 inside [{{.*}}, 10)
   assert(sent > 0);
 
   ret = recv(sockfd[1], rbuf, kRecvBufSize, 0);
@@ -83,7 +83,7 @@ int main() {
   assert(__msan_test_shadow(rbuf, kRecvBufSize) == sent);
 #elif defined(SENDTO)
   sent = sendto(sockfd[0], buf, kBufSize, 0, nullptr, 0);
-  // SENDTO: Uninitialized bytes in __interceptor_sendto at offset 7 inside [{{.*}}, 10)
+  // SENDTO: Uninitialized bytes in sendto at offset 7 inside [{{.*}}, 10)
   assert(sent > 0);
 
   struct sockaddr_storage ss;

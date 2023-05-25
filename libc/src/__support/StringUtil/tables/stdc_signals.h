@@ -1,4 +1,4 @@
-//===-- Map from signal numbers to strings in the c std ---------*- C++ -*-===//
+//===-- Map of C standard signal numbers to strings -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_SIGNAL_TABLE_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_SIGNAL_TABLE_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_SIGNALS_H
+#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_SIGNALS_H
 
-#include <signal.h>
+#include <signal.h> // For signal numbers
 
 #include "src/__support/StringUtil/message_mapper.h"
 
-namespace __llvm_libc::internal {
+namespace __llvm_libc {
 
 inline constexpr const MsgTable<6> STDC_SIGNALS = {
     MsgMapping(SIGINT, "Interrupt"),
@@ -24,6 +24,6 @@ inline constexpr const MsgTable<6> STDC_SIGNALS = {
     MsgMapping(SIGTERM, "Terminated"),
 };
 
-} // namespace __llvm_libc::internal
+} // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_SIGNAL_TABLE_H
+#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_SIGNALS_H

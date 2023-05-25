@@ -34,9 +34,9 @@ class CombinedAllocator {
 #endif
 
   void InitLinkerInitialized(s32 release_to_os_interval_ms,
+                             uptr heap_start = 0,
                              bool enable_device_allocator = false) {
-    stats_.InitLinkerInitialized();
-    primary_.Init(release_to_os_interval_ms);
+    primary_.Init(release_to_os_interval_ms, heap_start);
     secondary_.InitLinkerInitialized();
 #if SANITIZER_AMDGPU
     device_.Init(enable_device_allocator, primary_.kMetadataSize);

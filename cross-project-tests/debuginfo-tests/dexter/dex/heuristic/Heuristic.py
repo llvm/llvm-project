@@ -18,84 +18,92 @@ from dex.command.StepValueInfo import StepValueInfo
 from dex.command.commands.DexExpectWatchBase import format_address
 
 
-PenaltyCommand = namedtuple('PenaltyCommand', ['pen_dict', 'max_penalty'])
+PenaltyCommand = namedtuple("PenaltyCommand", ["pen_dict", "max_penalty"])
 # 'meta' field used in different ways by different things
-PenaltyInstance = namedtuple('PenaltyInstance', ['meta', 'the_penalty'])
+PenaltyInstance = namedtuple("PenaltyInstance", ["meta", "the_penalty"])
 
 
 def add_heuristic_tool_arguments(parser):
     parser.add_argument(
-        '--penalty-variable-optimized',
+        "--penalty-variable-optimized",
         type=int,
         default=3,
-        help='set the penalty multiplier for each'
-        ' occurrence of a variable that was optimized'
-        ' away',
-        metavar='<int>')
+        help="set the penalty multiplier for each"
+        " occurrence of a variable that was optimized"
+        " away",
+        metavar="<int>",
+    )
     parser.add_argument(
-        '--penalty-misordered-values',
+        "--penalty-misordered-values",
         type=int,
         default=3,
-        help='set the penalty multiplier for each'
-        ' occurrence of a misordered value.',
-        metavar='<int>')
+        help="set the penalty multiplier for each" " occurrence of a misordered value.",
+        metavar="<int>",
+    )
     parser.add_argument(
-        '--penalty-irretrievable',
+        "--penalty-irretrievable",
         type=int,
         default=4,
-        help='set the penalty multiplier for each'
+        help="set the penalty multiplier for each"
         " occurrence of a variable that couldn't"
-        ' be retrieved',
-        metavar='<int>')
+        " be retrieved",
+        metavar="<int>",
+    )
     parser.add_argument(
-        '--penalty-not-evaluatable',
+        "--penalty-not-evaluatable",
         type=int,
         default=5,
-        help='set the penalty multiplier for each'
+        help="set the penalty multiplier for each"
         " occurrence of a variable that couldn't"
-        ' be evaluated',
-        metavar='<int>')
+        " be evaluated",
+        metavar="<int>",
+    )
     parser.add_argument(
-        '--penalty-missing-values',
+        "--penalty-missing-values",
         type=int,
         default=6,
-        help='set the penalty multiplier for each missing'
-        ' value',
-        metavar='<int>')
+        help="set the penalty multiplier for each missing" " value",
+        metavar="<int>",
+    )
     parser.add_argument(
-        '--penalty-incorrect-values',
+        "--penalty-incorrect-values",
         type=int,
         default=7,
-        help='set the penalty multiplier for each'
-        ' occurrence of an unexpected value.',
-        metavar='<int>')
+        help="set the penalty multiplier for each"
+        " occurrence of an unexpected value.",
+        metavar="<int>",
+    )
     parser.add_argument(
-        '--penalty-unreachable',
+        "--penalty-unreachable",
         type=int,
         default=4,  # XXX XXX XXX selected by random
-        help='set the penalty for each line stepped onto that should'
-        ' have been unreachable.',
-        metavar='<int>')
+        help="set the penalty for each line stepped onto that should"
+        " have been unreachable.",
+        metavar="<int>",
+    )
     parser.add_argument(
-        '--penalty-misordered-steps',
+        "--penalty-misordered-steps",
         type=int,
         default=2,  # XXX XXX XXX selected by random
-        help='set the penalty for differences in the order of steps'
-        ' the program was expected to observe.',
-        metavar='<int>')
+        help="set the penalty for differences in the order of steps"
+        " the program was expected to observe.",
+        metavar="<int>",
+    )
     parser.add_argument(
-        '--penalty-missing-step',
+        "--penalty-missing-step",
         type=int,
         default=4,  # XXX XXX XXX selected by random
-        help='set the penalty for the program skipping over a step.',
-        metavar='<int>')
+        help="set the penalty for the program skipping over a step.",
+        metavar="<int>",
+    )
     parser.add_argument(
-        '--penalty-incorrect-program-state',
+        "--penalty-incorrect-program-state",
         type=int,
         default=4,  # XXX XXX XXX selected by random
-        help='set the penalty for the program never entering an expected state'
-        ' or entering an unexpected state.',
-        metavar='<int>')
+        help="set the penalty for the program never entering an expected state"
+        " or entering an unexpected state.",
+        metavar="<int>",
+    )
 
 
 class PenaltyLineRanges:
@@ -106,21 +114,21 @@ class PenaltyLineRanges:
     def add_step(self, next_step, penalty):
         last_range = self.ranges[-1]
         last_step = last_range[1]
-        if (next_step == last_step + 1):
+        if next_step == last_step + 1:
             self.ranges[-1] = (last_range[0], next_step)
         else:
             self.ranges.append((next_step, next_step))
         self.penalty += penalty
 
     def __str__(self):
-        range_to_str = lambda r: str(r[0]) if r[0] == r[1] else f'{r[0]}-{r[1]}'
+        range_to_str = lambda r: str(r[0]) if r[0] == r[1] else f"{r[0]}-{r[1]}"
         if self.ranges[0][0] == self.ranges[-1][1]:
-            text = f'step {self.ranges[0][0]}'
+            text = f"step {self.ranges[0][0]}"
         else:
-            step_list = ', '.join([range_to_str(r) for r in self.ranges])
-            text = f'steps [{step_list}]'
+            step_list = ", ".join([range_to_str(r) for r in self.ranges])
+            text = f"steps [{step_list}]"
         if self.penalty:
-            text += ' <r>[-{}]</>'.format(self.penalty)
+            text += " <r>[-{}]</>".format(self.penalty)
         return text
 
 
@@ -130,16 +138,22 @@ class Heuristic(object):
         self.penalties = {}
         self.address_resolutions = {}
 
-        worst_penalty = max([
-            self.penalty_variable_optimized, self.penalty_irretrievable,
-            self.penalty_not_evaluatable, self.penalty_incorrect_values,
-            self.penalty_missing_values, self.penalty_unreachable,
-            self.penalty_missing_step, self.penalty_misordered_steps
-        ])
+        worst_penalty = max(
+            [
+                self.penalty_variable_optimized,
+                self.penalty_irretrievable,
+                self.penalty_not_evaluatable,
+                self.penalty_incorrect_values,
+                self.penalty_missing_values,
+                self.penalty_unreachable,
+                self.penalty_missing_step,
+                self.penalty_misordered_steps,
+            ]
+        )
 
         # Before evaluating scoring commands, evaluate address values.
         try:
-            for command in steps.commands['DexDeclareAddress']:
+            for command in steps.commands["DexDeclareAddress"]:
                 command.address_resolutions = self.address_resolutions
                 command.eval(steps)
         except KeyError:
@@ -147,90 +161,94 @@ class Heuristic(object):
 
         # Get DexExpectWatchType results.
         try:
-            for command in steps.commands['DexExpectWatchType']:
+            for command in steps.commands["DexExpectWatchType"]:
                 command.eval(steps)
-                maximum_possible_penalty = min(3, len(
-                    command.values)) * worst_penalty
+                maximum_possible_penalty = min(3, len(command.values)) * worst_penalty
                 name, p = self._calculate_expect_watch_penalties(
-                    command, maximum_possible_penalty)
-                name = name + ' ExpectType'
-                self.penalties[name] = PenaltyCommand(p,
-                                                      maximum_possible_penalty)
+                    command, maximum_possible_penalty
+                )
+                name = name + " ExpectType"
+                self.penalties[name] = PenaltyCommand(p, maximum_possible_penalty)
         except KeyError:
             pass
 
         # Get DexExpectWatchValue results.
         try:
-            for command in steps.commands['DexExpectWatchValue']:
+            for command in steps.commands["DexExpectWatchValue"]:
                 command.address_resolutions = self.address_resolutions
                 command.eval(steps)
-                maximum_possible_penalty = min(3, len(
-                    command.values)) * worst_penalty
+                maximum_possible_penalty = min(3, len(command.values)) * worst_penalty
                 name, p = self._calculate_expect_watch_penalties(
-                    command, maximum_possible_penalty)
-                name = name + ' ExpectValue'
-                self.penalties[name] = PenaltyCommand(p,
-                                                      maximum_possible_penalty)
+                    command, maximum_possible_penalty
+                )
+                name = name + " ExpectValue"
+                self.penalties[name] = PenaltyCommand(p, maximum_possible_penalty)
         except KeyError:
             pass
 
         try:
             penalties = defaultdict(list)
             maximum_possible_penalty_all = 0
-            for expect_state in steps.commands['DexExpectProgramState']:
+            for expect_state in steps.commands["DexExpectProgramState"]:
                 success = expect_state.eval(steps)
                 p = 0 if success else self.penalty_incorrect_program_state
 
-                meta = 'expected {}: {}'.format(
-                    '{} times'.format(expect_state.times)
-                        if expect_state.times >= 0 else 'at least once',
-                    expect_state.program_state_text)
+                meta = "expected {}: {}".format(
+                    "{} times".format(expect_state.times)
+                    if expect_state.times >= 0
+                    else "at least once",
+                    expect_state.program_state_text,
+                )
 
                 if success:
-                    meta = '<g>{}</>'.format(meta)
+                    meta = "<g>{}</>".format(meta)
 
                 maximum_possible_penalty = self.penalty_incorrect_program_state
                 maximum_possible_penalty_all += maximum_possible_penalty
                 name = expect_state.program_state_text
-                penalties[meta] = [PenaltyInstance('{} times'.format(
-                    len(expect_state.encounters)), p)]
-            self.penalties['expected program states'] = PenaltyCommand(
-                penalties, maximum_possible_penalty_all)
+                penalties[meta] = [
+                    PenaltyInstance("{} times".format(len(expect_state.encounters)), p)
+                ]
+            self.penalties["expected program states"] = PenaltyCommand(
+                penalties, maximum_possible_penalty_all
+            )
         except KeyError:
             pass
 
         # Get the total number of each step kind.
         step_kind_counts = defaultdict(int)
-        for step in getattr(steps, 'steps'):
+        for step in getattr(steps, "steps"):
             step_kind_counts[step.step_kind] += 1
 
         # Get DexExpectStepKind results.
         penalties = defaultdict(list)
         maximum_possible_penalty_all = 0
         try:
-            for command in steps.commands['DexExpectStepKind']:
+            for command in steps.commands["DexExpectStepKind"]:
                 command.eval()
                 # Cap the penalty at 2 * expected count or else 1
                 maximum_possible_penalty = max(command.count * 2, 1)
                 p = abs(command.count - step_kind_counts[command.name])
                 actual_penalty = min(p, maximum_possible_penalty)
-                key = ('{}'.format(command.name)
-                       if actual_penalty else '<g>{}</>'.format(command.name))
+                key = (
+                    "{}".format(command.name)
+                    if actual_penalty
+                    else "<g>{}</>".format(command.name)
+                )
                 penalties[key] = [PenaltyInstance(p, actual_penalty)]
                 maximum_possible_penalty_all += maximum_possible_penalty
-            self.penalties['step kind differences'] = PenaltyCommand(
-                penalties, maximum_possible_penalty_all)
+            self.penalties["step kind differences"] = PenaltyCommand(
+                penalties, maximum_possible_penalty_all
+            )
         except KeyError:
             pass
 
-        if 'DexUnreachable' in steps.commands:
-            cmds = steps.commands['DexUnreachable']
+        if "DexUnreachable" in steps.commands:
+            cmds = steps.commands["DexUnreachable"]
             unreach_count = 0
 
             # Find steps with unreachable in them
-            ureachs = [
-                s for s in steps.steps if 'DexUnreachable' in s.watches.keys()
-            ]
+            ureachs = [s for s in steps.steps if "DexUnreachable" in s.watches.keys()]
 
             # There's no need to match up cmds with the actual watches
             upen = self.penalty_unreachable
@@ -239,22 +257,19 @@ class Heuristic(object):
             if count != 0:
                 d = dict()
                 for x in ureachs:
-                    msg = 'line {} reached'.format(x.current_location.lineno)
+                    msg = "line {} reached".format(x.current_location.lineno)
                     d[msg] = [PenaltyInstance(upen, upen)]
             else:
-                d = {
-                    '<g>No unreachable lines seen</>': [PenaltyInstance(0, 0)]
-                }
+                d = {"<g>No unreachable lines seen</>": [PenaltyInstance(0, 0)]}
             total = PenaltyCommand(d, len(cmds) * upen)
 
-            self.penalties['unreachable lines'] = total
+            self.penalties["unreachable lines"] = total
 
-        if 'DexExpectStepOrder' in steps.commands:
-            cmds = steps.commands['DexExpectStepOrder']
+        if "DexExpectStepOrder" in steps.commands:
+            cmds = steps.commands["DexExpectStepOrder"]
 
             # Form a list of which line/cmd we _should_ have seen
-            cmd_num_lst = [(x, c.get_line()) for c in cmds
-                                         for x in c.sequence]
+            cmd_num_lst = [(x, c.get_line()) for c in cmds for x in c.sequence]
             # Order them by the sequence number
             cmd_num_lst.sort(key=lambda t: t[0])
             # Strip out sequence key
@@ -262,8 +277,8 @@ class Heuristic(object):
 
             # Now do the same, but for the actually observed lines/cmds
             ss = steps.steps
-            deso = [s for s in ss if 'DexExpectStepOrder' in s.watches.keys()]
-            deso = [s.watches['DexExpectStepOrder'] for s in deso]
+            deso = [s for s in ss if "DexExpectStepOrder" in s.watches.keys()]
+            deso = [s.watches["DexExpectStepOrder"] for s in deso]
             # We rely on the steps remaining in order here
             order_list = [int(x.expression) for x in deso]
 
@@ -279,11 +294,11 @@ class Heuristic(object):
             num_repeats = 0
             for k, v in expected.items():
                 if k not in seen:
-                    msg = 'Line {} not seen'.format(k)
+                    msg = "Line {} not seen".format(k)
                     unseen_line_dict[msg] = [PenaltyInstance(mispen, mispen)]
                     num_missing += v
                 elif v > seen[k]:
-                    msg = 'Line {} skipped at least once'.format(k)
+                    msg = "Line {} skipped at least once".format(k)
                     skipped_line_dict[msg] = [PenaltyInstance(mispen, mispen)]
                     num_missing += v - seen[k]
                 elif v < seen[k]:
@@ -294,16 +309,16 @@ class Heuristic(object):
 
             if len(unseen_line_dict) == 0:
                 pi = PenaltyInstance(0, 0)
-                unseen_line_dict['<g>All lines were seen</>'] = [pi]
+                unseen_line_dict["<g>All lines were seen</>"] = [pi]
 
             if len(skipped_line_dict) == 0:
                 pi = PenaltyInstance(0, 0)
-                skipped_line_dict['<g>No lines were skipped</>'] = [pi]
+                skipped_line_dict["<g>No lines were skipped</>"] = [pi]
 
             total = PenaltyCommand(unseen_line_dict, len(expected) * mispen)
-            self.penalties['Unseen lines'] = total
+            self.penalties["Unseen lines"] = total
             total = PenaltyCommand(skipped_line_dict, len(expected) * mispen)
-            self.penalties['Skipped lines'] = total
+            self.penalties["Skipped lines"] = total
 
             ordpen = self.penalty_misordered_steps
             cmd_num_lst = [str(x) for x in cmd_num_lst]
@@ -311,7 +326,7 @@ class Heuristic(object):
             lst = list(difflib.Differ().compare(cmd_num_lst, order_list))
             diff_detail = Counter(l[0] for l in lst)
 
-            assert '?' not in diff_detail
+            assert "?" not in diff_detail
 
             # Diffs are hard to interpret; there are many algorithms for
             # condensing them. Ignore all that, and just print out the changed
@@ -328,9 +343,9 @@ class Heuristic(object):
             diff_msgs = dict()
 
             def reportdiff(start_idx, segment, end_idx):
-                msg = 'Order mismatch, expected linenos {}, saw {}'
-                expected_linenos = filt_lines(start_idx, segment, end_idx, '-')
-                seen_linenos = filt_lines(start_idx, segment, end_idx, '+')
+                msg = "Order mismatch, expected linenos {}, saw {}"
+                expected_linenos = filt_lines(start_idx, segment, end_idx, "-")
+                seen_linenos = filt_lines(start_idx, segment, end_idx, "+")
                 msg = msg.format(expected_linenos, seen_linenos)
                 diff_msgs[msg] = [PenaltyInstance(ordpen, ordpen)]
 
@@ -338,13 +353,12 @@ class Heuristic(object):
             start_expt_step = 0
             end_expt_step = 0
             to_print_lst = []
-            for k, subit in groupby(lst, lambda x: x[0] == ' '):
+            for k, subit in groupby(lst, lambda x: x[0] == " "):
                 if k:  # Whitespace group
                     nochanged = [x for x in subit]
                     end_expt_step = int(nochanged[0][2:])
                     if len(to_print_lst) > 0:
-                        reportdiff(start_expt_step, to_print_lst,
-                                   end_expt_step)
+                        reportdiff(start_expt_step, to_print_lst, end_expt_step)
                     start_expt_step = int(nochanged[-1][2:])
                     to_print_lst = []
                 else:  # Diff group, save for printing
@@ -352,14 +366,12 @@ class Heuristic(object):
 
             # If there was a dangling different step, print that too.
             if len(to_print_lst) > 0:
-                reportdiff(start_expt_step, to_print_lst, '[End]')
+                reportdiff(start_expt_step, to_print_lst, "[End]")
 
             if len(diff_msgs) == 0:
-                diff_msgs['<g>No lines misordered</>'] = [
-                    PenaltyInstance(0, 0)
-                ]
+                diff_msgs["<g>No lines misordered</>"] = [PenaltyInstance(0, 0)]
             total = PenaltyCommand(diff_msgs, len(cmd_num_lst) * ordpen)
-            self.penalties['Misordered lines'] = total
+            self.penalties["Misordered lines"] = total
 
         return
 
@@ -369,13 +381,11 @@ class Heuristic(object):
         if c.line_range[0] == c.line_range[-1]:
             line_range = str(c.line_range[0])
         else:
-            line_range = '{}-{}'.format(c.line_range[0], c.line_range[-1])
+            line_range = "{}-{}".format(c.line_range[0], c.line_range[-1])
 
-        name = '{}:{} [{}]'.format(
-            os.path.basename(c.path), line_range, c.expression)
+        name = "{}:{} [{}]".format(os.path.basename(c.path), line_range, c.expression)
 
-        num_actual_watches = len(c.expected_watches) + len(
-            c.unexpected_watches)
+        num_actual_watches = len(c.expected_watches) + len(c.unexpected_watches)
 
         penalty_available = maximum_possible_penalty
 
@@ -384,27 +394,29 @@ class Heuristic(object):
         # encountered the value at all.
         if num_actual_watches or c.times_encountered == 0:
             for v in c.missing_values:
-                current_penalty = min(penalty_available,
-                                      self.penalty_missing_values)
+                current_penalty = min(penalty_available, self.penalty_missing_values)
                 penalty_available -= current_penalty
-                penalties['missing values'].append(
-                    PenaltyInstance(v, current_penalty))
+                penalties["missing values"].append(PenaltyInstance(v, current_penalty))
 
         for v in c.encountered_values:
-            penalties['<g>expected encountered watches</>'].append(
-                PenaltyInstance(v, 0))
+            penalties["<g>expected encountered watches</>"].append(
+                PenaltyInstance(v, 0)
+            )
 
         penalty_descriptions = [
-            (self.penalty_not_evaluatable, c.invalid_watches,
-             'could not evaluate'),
-            (self.penalty_variable_optimized, c.optimized_out_watches,
-             'result optimized away'),
-            (self.penalty_misordered_values, c.misordered_watches,
-             'misordered result'),
-            (self.penalty_irretrievable, c.irretrievable_watches,
-             'result could not be retrieved'),
-            (self.penalty_incorrect_values, c.unexpected_watches,
-             'unexpected result'),
+            (self.penalty_not_evaluatable, c.invalid_watches, "could not evaluate"),
+            (
+                self.penalty_variable_optimized,
+                c.optimized_out_watches,
+                "result optimized away",
+            ),
+            (self.penalty_misordered_values, c.misordered_watches, "misordered result"),
+            (
+                self.penalty_irretrievable,
+                c.irretrievable_watches,
+                "result could not be retrieved",
+            ),
+            (self.penalty_incorrect_values, c.unexpected_watches, "unexpected result"),
         ]
 
         for penalty_score, watches, description in penalty_descriptions:
@@ -417,8 +429,7 @@ class Heuristic(object):
                 times_to_penalize -= 1
                 penalty_score = min(penalty_available, penalty_score)
                 penalty_available -= penalty_score
-                penalties[description].append(
-                    PenaltyInstance(w, penalty_score))
+                penalties[description].append(PenaltyInstance(w, penalty_score))
                 if not times_to_penalize:
                     penalty_score = 0
 
@@ -445,56 +456,60 @@ class Heuristic(object):
         try:
             return 1.0 - (self.penalty / float(self.max_penalty))
         except ZeroDivisionError:
-            return float('nan')
+            return float("nan")
 
     @property
     def summary_string(self):
         score = self.score
         isnan = score != score  # pylint: disable=comparison-with-itself
-        color = 'g'
+        color = "g"
         if score < 0.25 or isnan:
-            color = 'r'
+            color = "r"
         elif score < 0.75:
-            color = 'y'
+            color = "y"
 
-        return '<{}>({:.4f})</>'.format(color, score)
+        return "<{}>({:.4f})</>".format(color, score)
 
     @property
     def verbose_output(self):  # noqa
-        string = ''
+        string = ""
 
         # Add address resolutions if present.
         if self.address_resolutions:
             if self.resolved_addresses:
-                string += '\nResolved Addresses:\n'
+                string += "\nResolved Addresses:\n"
                 for addr, res in self.resolved_addresses.items():
                     string += f"  '{addr}': {res}\n"
             if self.unresolved_addresses:
-                string += '\n'
-                string += f'Unresolved Addresses:\n  {self.unresolved_addresses}\n'
+                string += "\n"
+                string += f"Unresolved Addresses:\n  {self.unresolved_addresses}\n"
 
-        string += ('\n')
+        string += "\n"
         for command in sorted(self.penalties):
             pen_cmd = self.penalties[command]
             maximum_possible_penalty = pen_cmd.max_penalty
             total_penalty = 0
             lines = []
             for category in sorted(pen_cmd.pen_dict):
-                lines.append('    <r>{}</>:\n'.format(category))
+                lines.append("    <r>{}</>:\n".format(category))
 
                 step_value_results = {}
                 for result, penalty in pen_cmd.pen_dict[category]:
                     if not isinstance(result, StepValueInfo):
                         continue
                     if result.expected_value not in step_value_results:
-                        step_value_results[result.expected_value] = PenaltyLineRanges(result.step_index, penalty)
+                        step_value_results[result.expected_value] = PenaltyLineRanges(
+                            result.step_index, penalty
+                        )
                     else:
-                        step_value_results[result.expected_value].add_step(result.step_index, penalty)
+                        step_value_results[result.expected_value].add_step(
+                            result.step_index, penalty
+                        )
 
                 for value, penalty_line_range in step_value_results.items():
-                    text = f'({value}): {penalty_line_range}'
+                    text = f"({value}): {penalty_line_range}"
                     total_penalty += penalty_line_range.penalty
-                    lines.append('      {}\n'.format(text))
+                    lines.append("      {}\n".format(text))
 
                 for result, penalty in pen_cmd.pen_dict[category]:
                     if isinstance(result, StepValueInfo):
@@ -504,21 +519,26 @@ class Heuristic(object):
                     if penalty:
                         assert penalty > 0, penalty
                         total_penalty += penalty
-                        text += ' <r>[-{}]</>'.format(penalty)
-                    lines.append('      {}\n'.format(text))
+                        text += " <r>[-{}]</>".format(penalty)
+                    lines.append("      {}\n".format(text))
 
-                lines.append('\n')
+                lines.append("\n")
 
-            string += ('  <b>{}</> <y>[{}/{}]</>\n'.format(
-                command, total_penalty, maximum_possible_penalty))
+            string += "  <b>{}</> <y>[{}/{}]</>\n".format(
+                command, total_penalty, maximum_possible_penalty
+            )
             for line in lines:
-                string += (line)
-        string += ('\n')
+                string += line
+        string += "\n"
         return string
 
     @property
     def resolved_addresses(self):
-        return {addr: format_address(res) for addr, res in self.address_resolutions.items() if res is not None}
+        return {
+            addr: format_address(res)
+            for addr, res in self.address_resolutions.items()
+            if res is not None
+        }
 
     @property
     def unresolved_addresses(self):

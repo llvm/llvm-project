@@ -58,6 +58,7 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
 #endif
   InitStackAndTls(state);
   dtls_ = DTLS_Get();
+  AllocatorThreadStart(allocator_cache());
 }
 
 void Thread::InitStackRingBuffer(uptr stack_buffer_start,
@@ -173,12 +174,12 @@ static __hwasan::Thread *GetThreadByOsIDLocked(tid_t os_id) {
       [os_id](__hwasan::Thread *t) { return t->os_id() == os_id; });
 }
 
-void LockThreadRegistry() {
+void LockThreads() {
   __hwasan::hwasanThreadList().Lock();
   __hwasan::hwasanThreadArgRetval().Lock();
 }
 
-void UnlockThreadRegistry() {
+void UnlockThreads() {
   __hwasan::hwasanThreadArgRetval().Unlock();
   __hwasan::hwasanThreadList().Unlock();
 }

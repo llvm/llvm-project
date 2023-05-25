@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/StringUtil/signal_to_string.h"
+#include "signal_to_string.h"
+#include "platform_signals.h"
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/StringUtil/message_mapper.h"
-#include "src/__support/StringUtil/tables/signal_table.h"
 #include "src/__support/integer_to_string.h"
 
 #include <signal.h>

@@ -10,6 +10,7 @@ breakpoint has been hit a number of times.
 
 from dex.command.CommandBase import CommandBase
 
+
 class DexFinishTest(CommandBase):
     def __init__(self, *args, **kwargs):
         if len(args) == 0:
@@ -20,15 +21,14 @@ class DexFinishTest(CommandBase):
         else:
             self.expression = args[0]
             self.values = [str(arg) for arg in args[1:]]
-        self.on_line = kwargs.pop('on_line')
-        self.hit_count = kwargs.pop('hit_count', 0)
+        self.on_line = kwargs.pop("on_line")
+        self.hit_count = kwargs.pop("hit_count", 0)
         if kwargs:
-            raise TypeError('unexpected named args: {}'.format(
-                ', '.join(kwargs)))
+            raise TypeError("unexpected named args: {}".format(", ".join(kwargs)))
         super(DexFinishTest, self).__init__()
 
     def eval(self):
-        raise NotImplementedError('DexFinishTest commands cannot be evaled.')
+        raise NotImplementedError("DexFinishTest commands cannot be evaled.")
 
     @staticmethod
     def get_name():

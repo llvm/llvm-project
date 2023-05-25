@@ -1444,15 +1444,6 @@ multiclass VPatMultiplyAccVL_VV_VX<PatFrag op, string instruction_name> {
   foreach vti = AllIntegerVectors in {
   defvar suffix = vti.LMul.MX;
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(riscv_vp_merge_vl (vti.Mask true_mask),
-                (vti.Vector (op vti.RegClass:$rd,
-                                (riscv_mul_vl_oneuse vti.RegClass:$rs1, vti.RegClass:$rs2,
-                                    srcvalue, (vti.Mask true_mask), VLOpFrag),
-                                srcvalue, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_VV_"# suffix)
-                   vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                   GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
     def : Pat<(riscv_vp_merge_vl (vti.Mask V0),
                 (vti.Vector (op vti.RegClass:$rd,
                                 (riscv_mul_vl_oneuse vti.RegClass:$rs1, vti.RegClass:$rs2,
@@ -1462,15 +1453,6 @@ multiclass VPatMultiplyAccVL_VV_VX<PatFrag op, string instruction_name> {
               (!cast<Instruction>(instruction_name#"_VV_"# suffix #"_MASK")
                    vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                    (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
-    def : Pat<(riscv_vp_merge_vl (vti.Mask true_mask),
-                (vti.Vector (op vti.RegClass:$rd,
-                                (riscv_mul_vl_oneuse (SplatPat XLenVT:$rs1), vti.RegClass:$rs2,
-                                    srcvalue, (vti.Mask true_mask), VLOpFrag),
-                                srcvalue, (vti.Mask true_mask), VLOpFrag)),
-                            vti.RegClass:$rd, VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_VX_"# suffix)
-                   vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                   GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
     def : Pat<(riscv_vp_merge_vl (vti.Mask V0),
                 (vti.Vector (op vti.RegClass:$rd,
                                 (riscv_mul_vl_oneuse (SplatPat XLenVT:$rs1), vti.RegClass:$rs2,
