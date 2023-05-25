@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 
 // TODO FMT Investigate Windows issues.
 // UNSUPPORTED: msvc, target={{.+}}-windows-gnu

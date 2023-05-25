@@ -12,6 +12,7 @@
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
 
 #include "gtest/gtest.h"
+#include "interception/interception.h"
 
 namespace __sanitizer {
 
@@ -71,7 +72,7 @@ TEST(SanitizerStacktracePrinter, RenderFrame) {
   info.address = 0x400000;
   info.module = internal_strdup("/path/to/my/module");
   info.module_offset = 0x200;
-  info.function = internal_strdup("function_foo");
+  info.function = internal_strdup("foo");
   info.function_offset = 0x100;
   info.file = internal_strdup("/path/to/my/source");
   info.line = 10;
@@ -83,9 +84,22 @@ TEST(SanitizerStacktracePrinter, RenderFrame) {
               "%% Frame:%n PC:%p Module:%m ModuleOffset:%o "
               "Function:%f FunctionOffset:%q Source:%s Line:%l "
               "Column:%c",
-              frame_no, info.address, &info, false, "/path/to/", "function_");
+              frame_no, info.address, &info, false, "/path/to/");
   EXPECT_STREQ("% Frame:42 PC:0x400000 Module:my/module ModuleOffset:0x200 "
                "Function:foo FunctionOffset:0x100 Source:my/source Line:10 "
+               "Column:5",
+               str.data());
+
+  str.clear();
+  // Check that RenderFrame() strips interceptor prefixes.
+  info.function = internal_strdup(SANITIZER_STRINGIFY(WRAP(bar)));
+  RenderFrame(&str,
+              "%% Frame:%n PC:%p Module:%m ModuleOffset:%o "
+              "Function:%f FunctionOffset:%q Source:%s Line:%l "
+              "Column:%c",
+              frame_no, info.address, &info, false, "/path/to/");
+  EXPECT_STREQ("% Frame:42 PC:0x400000 Module:my/module ModuleOffset:0x200 "
+               "Function:bar FunctionOffset:0x100 Source:my/source Line:10 "
                "Column:5",
                str.data());
   info.Clear();

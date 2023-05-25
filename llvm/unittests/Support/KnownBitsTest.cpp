@@ -345,6 +345,41 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       });
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::shl(Known1, Known2, /* NUW */ true);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool Overflow;
+        APInt Res = N1.ushl_ov(N2, Overflow);
+        if (Overflow)
+          return std::nullopt;
+        return Res;
+      });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::shl(Known1, Known2, /* NUW */ false, /* NSW */ true);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool Overflow;
+        APInt Res = N1.sshl_ov(N2, Overflow);
+        if (Overflow)
+          return std::nullopt;
+        return Res;
+      });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::shl(Known1, Known2, /* NUW */ true, /* NSW */ true);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        bool OverflowUnsigned, OverflowSigned;
+        APInt Res = N1.ushl_ov(N2, OverflowUnsigned);
+        (void)N1.sshl_ov(N2, OverflowSigned);
+        if (OverflowUnsigned || OverflowSigned)
+          return std::nullopt;
+        return Res;
+      });
+
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::lshr(Known1, Known2);
       },
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {

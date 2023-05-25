@@ -74,6 +74,22 @@ static cl::opt<bool> ForceSpecialization(
     "Force function specialization for every call site with a constant "
     "argument"));
 
+// Set to 2^3 to model three levels of if-else nest.
+static cl::opt<unsigned> BlockFreqMultiplier(
+    "funcspec-block-freq-multiplier", cl::init(8), cl::Hidden, cl::desc(
+    "Multiplier to scale block frequency of user instructions during "
+    "specialization bonus estimation"));
+
+static cl::opt<unsigned> MinEntryFreq(
+    "funcspec-min-entry-freq", cl::init(450), cl::Hidden, cl::desc(
+    "Do not specialize functions with entry block frequency lower than "
+    "this value"));
+
+static cl::opt<unsigned> MinScore(
+    "funcspec-min-score", cl::init(2), cl::Hidden, cl::desc(
+    "Do not specialize functions with score lower than this value "
+    "(the ratio of specialization bonus over specialization cost)"));
+
 static cl::opt<unsigned> MaxClones(
     "funcspec-max-clones", cl::init(3), cl::Hidden, cl::desc(
     "The maximum number of clones allowed for a single function "
@@ -88,14 +104,14 @@ static cl::opt<bool> SpecializeOnAddress(
     "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
     "Enable function specialization on the address of global values"));
 
-// Disabled by default as it can significantly increase compilation times.
-//
-// https://llvm-compile-time-tracker.com
-// https://github.com/nikic/llvm-compile-time-tracker
 static cl::opt<bool> SpecializeLiteralConstant(
-    "funcspec-for-literal-constant", cl::init(false), cl::Hidden, cl::desc(
+    "funcspec-for-literal-constant", cl::init(true), cl::Hidden, cl::desc(
     "Enable specialization of functions that take a literal constant as an "
     "argument"));
+
+unsigned FunctionSpecializer::getBlockFreqMultiplier() {
+  return BlockFreqMultiplier;
+}
 
 // Estimates the instruction cost of all the basic blocks in \p WorkList.
 // The successors of such blocks are added to the list as long as they are
@@ -114,7 +130,8 @@ static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
   while (!WorkList.empty()) {
     BasicBlock *BB = WorkList.pop_back_val();
 
-    uint64_t Weight = BFI.getBlockFreq(BB).getFrequency() /
+    uint64_t Weight = BlockFreqMultiplier *
+                      BFI.getBlockFreq(BB).getFrequency() /
                       BFI.getEntryFreq();
     if (!Weight)
       continue;
@@ -167,7 +184,8 @@ Cost InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) {
 
   KnownConstants.insert({User, C});
 
-  uint64_t Weight = BFI.getBlockFreq(User->getParent()).getFrequency() /
+  uint64_t Weight = BlockFreqMultiplier *
+                    BFI.getBlockFreq(User->getParent()).getFrequency() /
                     BFI.getEntryFreq();
   if (!Weight)
     return 0;
@@ -649,6 +667,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
   if (Args.empty())
     return false;
 
+  bool HasCheckedEntryFreq = false;
   for (User *U : F->users()) {
     if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
       continue;
@@ -684,6 +703,21 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
     if (S.Args.empty())
       continue;
 
+    // Check the function entry frequency only once. We sink this code here to
+    // postpone running the Block Frequency Analysis until we know for sure
+    // there are Specialization candidates, otherwise we are adding unnecessary
+    // overhead.
+    if (!HasCheckedEntryFreq) {
+      // Reject cold functions (for some definition of 'cold').
+      uint64_t EntryFreq = (GetBFI)(*F).getEntryFreq();
+      if (!ForceSpecialization && EntryFreq < MinEntryFreq)
+        return false;
+
+      HasCheckedEntryFreq = true;
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Entry block frequency for "
+                        << F->getName() << " = " << EntryFreq << "\n");
+    }
+
     // Check if we have encountered the same specialisation already.
     if (auto It = UniqueSpecs.find(S); It != UniqueSpecs.end()) {
       // Existing specialisation. Add the call to the list to rewrite, unless
@@ -698,13 +732,14 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
       AllSpecs[Index].CallSites.push_back(&CS);
     } else {
       // Calculate the specialisation gain.
-      Cost Score = 0 - SpecCost;
+      Cost Score = 0;
       InstCostVisitor Visitor = getInstCostVisitorFor(F);
       for (ArgInfo &A : S.Args)
         Score += getSpecializationBonus(A.Formal, A.Actual, Visitor);
+      Score /= SpecCost;
 
       // Discard unprofitable specialisations.
-      if (!ForceSpecialization && Score <= 0)
+      if (!ForceSpecialization && Score < MinScore)
         continue;
 
       // Create a new specialisation entry.

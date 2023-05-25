@@ -766,6 +766,9 @@ public:
     llvm::append_range(pad, op.getPad());
     pad.resize(pad.size() + 2, 0);
     TypedAttr padAttr = rewriter.getZeroAttr(inElementTy);
+    // Unsupported element type
+    if (!padAttr)
+      return failure();
     Value paddedInput = applyPad(loc, input, pad, padAttr, rewriter);
 
     auto initialAttr = rewriter.getZeroAttr(accETy);

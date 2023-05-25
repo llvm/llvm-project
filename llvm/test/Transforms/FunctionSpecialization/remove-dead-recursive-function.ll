@@ -1,4 +1,4 @@
-; RUN: opt -passes="ipsccp<func-spec>" -funcspec-min-function-size=3 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization -S < %s | FileCheck %s
 
 define i64 @main(i64 %x, i1 %flag) {
 entry:

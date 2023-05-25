@@ -6,7 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 
 // TODO FMT Investigate why this fails.
 // UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}

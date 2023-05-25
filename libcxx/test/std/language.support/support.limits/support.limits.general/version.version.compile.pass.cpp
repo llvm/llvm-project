@@ -4191,17 +4191,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
-#   ifndef __cpp_lib_format_ranges
-#     error "__cpp_lib_format_ranges should be defined in c++23"
-#   endif
-#   if __cpp_lib_format_ranges != 202207L
-#     error "__cpp_lib_format_ranges should have the value 202207L in c++23"
-#   endif
-# else
-#   ifdef __cpp_lib_format_ranges
-#     error "__cpp_lib_format_ranges should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
-#   endif
+# ifndef __cpp_lib_format_ranges
+#   error "__cpp_lib_format_ranges should be defined in c++23"
+# endif
+# if __cpp_lib_format_ranges != 202207L
+#   error "__cpp_lib_format_ranges should have the value 202207L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -5611,17 +5605,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
-#   ifndef __cpp_lib_format_ranges
-#     error "__cpp_lib_format_ranges should be defined in c++26"
-#   endif
-#   if __cpp_lib_format_ranges != 202207L
-#     error "__cpp_lib_format_ranges should have the value 202207L in c++26"
-#   endif
-# else
-#   ifdef __cpp_lib_format_ranges
-#     error "__cpp_lib_format_ranges should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
-#   endif
+# ifndef __cpp_lib_format_ranges
+#   error "__cpp_lib_format_ranges should be defined in c++26"
+# endif
+# if __cpp_lib_format_ranges != 202207L
+#   error "__cpp_lib_format_ranges should have the value 202207L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

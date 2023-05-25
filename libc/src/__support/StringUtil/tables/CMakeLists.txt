@@ -1,35 +1,89 @@
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${LIBC_TARGET_OS})
-endif()
-
-set(error_to_string_platform_dep "")
-if(TARGET libc.src.__support.StringUtil.tables.${LIBC_TARGET_OS}.error_table)
-  set(error_to_string_platform_dep 
-  libc.src.__support.StringUtil.tables.${LIBC_TARGET_OS}.error_table)
-endif()
-
 add_header_library(
-  error_table
+  stdc_errors
   HDRS
-    error_table.h  
-    stdc_error_table.h  
-    posix_error_table.h  
+    stdc_errors.h
   DEPENDS
-    ${error_to_string_platform_dep}
+    libc.include.errno
+    libc.src.__support.StringUtil.message_mapper
 )
 
-set(signal_to_string_platform_dep "")
-if(TARGET libc.src.__support.StringUtil.tables.${LIBC_TARGET_OS}.signal_table)
-  set(signal_to_string_platform_dep 
-  libc.src.__support.StringUtil.tables.${LIBC_TARGET_OS}.signal_table)
-endif()
+add_header_library(
+  posix_errors
+  HDRS
+    posix_errors.h
+  DEPENDS
+    libc.include.errno
+    libc.src.__support.StringUtil.message_mapper
+)
 
 add_header_library(
-  signal_table
+  linux_extension_errors
   HDRS
-    signal_table.h  
-    stdc_signal_table.h  
-    posix_signal_table.h  
+    linux_extension_errors.h
   DEPENDS
-    ${signal_to_string_platform_dep}
+    libc.include.errno
+    libc.src.__support.StringUtil.message_mapper
+)
+
+add_header_library(
+  linux_platform_errors
+  HDRS
+    linux_platform_errors
+  DEPENDS
+    .linux_extension_errors
+    .posix_errors
+    .stdc_errors
+)
+
+add_header_library(
+  minimal_platform_errors
+  HDRS
+    minimal_platform_errors
+  DEPENDS
+    .stdc_errors
+)
+
+add_header_library(
+  stdc_signals
+  HDRS
+    stdc_signals.h
+  DEPENDS
+    libc.include.signal
+    libc.src.__support.StringUtil.message_mapper
+)
+
+add_header_library(
+  posix_signals
+  HDRS
+    posix_signals.h
+  DEPENDS
+    libc.include.signal
+    libc.src.__support.StringUtil.message_mapper
+)
+
+add_header_library(
+  linux_extension_signals
+  HDRS
+    linux_extension_signals.h
+  DEPENDS
+    libc.include.signal
+    libc.src.__support.StringUtil.message_mapper
+)
+
+add_header_library(
+  linux_platform_signals
+  HDRS
+    linux_platform_signals
+  DEPENDS
+    .linux_extension_signals
+    .posix_signals
+    .stdc_signals
+)
+
+add_header_library(
+  minimal_platform_signals
+  HDRS
+    minimal_platform_signals
+  DEPENDS
+    .stdc_signals
 )

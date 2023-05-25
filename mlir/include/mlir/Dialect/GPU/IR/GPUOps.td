@@ -1557,14 +1557,16 @@ def GPU_CreateSparseEnvOp : GPU_Op<"create_sparse_env", [GPU_AsyncOpInterface]> 
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies);
-  let results = (outs Res<GPU_SparseHandle>:$env, Optional<GPU_AsyncToken>:$asyncToken);
-
+  let results = (outs Res<GPU_SparseEnvHandle>:$env, 
+                      Optional<GPU_AsyncToken>:$asyncToken);
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) attr-dict
   }];
 }
 
-def GPU_DestroySparseEnvOp : GPU_Op<"destroy_sparse_env", [GPU_AsyncOpInterface]> {
+def GPU_DestroySparseEnvOp : GPU_Op<
+    "destroy_sparse_env", 
+    [GPU_AsyncOpInterface]> {
   let summary = "Destroy sparse environment operation";
   let description = [{
     The `gpu.destroy_sparse_env` operation releases all resources of a sparse
@@ -1583,11 +1585,12 @@ def GPU_DestroySparseEnvOp : GPU_Op<"destroy_sparse_env", [GPU_AsyncOpInterface]
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Arg<GPU_SparseHandle>:$env);
+                       Arg<GPU_SparseEnvHandle>:$env);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
-    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) $env attr-dict
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) 
+    $env attr-dict
   }];
 }
 
@@ -1612,7 +1615,8 @@ def GPU_CreateDnVecOp : GPU_Op<"create_dn_vec", [GPU_AsyncOpInterface]> {
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                    AnyMemRef:$memref, Index:$size);
-  let results = (outs Res<GPU_SparseHandle>:$dvec, Optional<GPU_AsyncToken>:$asyncToken);
+  let results = (outs Res<GPU_SparseDnVecHandle>:$dvec, 
+                      Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
@@ -1639,11 +1643,12 @@ def GPU_DestroyDnVecOp : GPU_Op<"destroy_dn_vec", [GPU_AsyncOpInterface]> {
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Arg<GPU_SparseHandle>:$dvec);
+                       Arg<GPU_SparseDnVecHandle>:$dvec);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
-    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) $dvec attr-dict
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) 
+    $dvec attr-dict
   }];
 }
 
@@ -1667,10 +1672,10 @@ def GPU_CreateDnMatOp : GPU_Op<"create_dn_mat", [GPU_AsyncOpInterface]> {
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Index:$rows,
-                   Index:$cols,
-                   AnyMemRef:$memref);
-  let results = (outs Res<GPU_SparseHandle>:$dmat, Optional<GPU_AsyncToken>:$asyncToken);
+                       Index:$rows,
+                       Index:$cols,
+                       AnyMemRef:$memref);
+  let results = (outs Res<GPU_SparseDnMatHandle>:$dmat, Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
@@ -1697,11 +1702,12 @@ def GPU_DestroyDnMatOp : GPU_Op<"destroy_dn_mat", [GPU_AsyncOpInterface]> {
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Arg<GPU_SparseHandle>:$dmat);
+                       Arg<GPU_SparseDnMatHandle>:$dmat);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
-    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) $dmat attr-dict
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) 
+    $dmat attr-dict
   }];
 }
 
@@ -1726,13 +1732,14 @@ def GPU_CreateCooOp : GPU_Op<"create_coo", [GPU_AsyncOpInterface]> {
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Index:$rows,
-                   Index:$cols,
-                   Index:$nnz,
-                   AnyMemRef:$rowIdxs,
-                   AnyMemRef:$colIdxs,
-                   AnyMemRef:$values);
-  let results = (outs Res<GPU_SparseHandle>:$spmat, Optional<GPU_AsyncToken>:$asyncToken);
+                       Index:$rows,
+                       Index:$cols,
+                       Index:$nnz,
+                       AnyMemRef:$rowIdxs,
+                       AnyMemRef:$colIdxs,
+                       AnyMemRef:$values);
+  let results = (outs Res<GPU_SparseSpMatHandle>:$spmat, 
+                      Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
@@ -1769,7 +1776,8 @@ def GPU_CreateCsrOp : GPU_Op<"create_csr", [GPU_AsyncOpInterface]> {
                    AnyMemRef:$rowPos,
                    AnyMemRef:$colIdxs,
                    AnyMemRef:$values);
-  let results = (outs Res<GPU_SparseHandle>:$spmat, Optional<GPU_AsyncToken>:$asyncToken);
+  let results = (outs Res<GPU_SparseSpMatHandle>:$spmat, 
+                      Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
@@ -1797,7 +1805,7 @@ def GPU_DestroySpMatOp : GPU_Op<"destroy_sp_mat", [GPU_AsyncOpInterface]> {
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Arg<GPU_SparseHandle>:$spmat);
+                       Arg<GPU_SparseSpMatHandle>:$spmat);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
@@ -1823,13 +1831,13 @@ def GPU_SpMVBufferSizeOp : GPU_Op<"spmv_buffer_size", [GPU_AsyncOpInterface]> {
     %buffersz, %token = gpu.spmv_buffersize async [%dep] %env, %spmatA, %dnX, %dnY
     ```
   }];
-
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   GPU_SparseHandle:$env,
-                   GPU_SparseHandle:$spmatA,
-                   GPU_SparseHandle:$dnX,
-                   GPU_SparseHandle:$dnY);
-  let results = (outs Res<Index>:$bufferSz, Optional<GPU_AsyncToken>:$asyncToken);
+                       GPU_SparseEnvHandle:$env,
+                       GPU_SparseSpMatHandle:$spmatA,
+                       GPU_SparseDnVecHandle:$dnX,
+                       GPU_SparseDnVecHandle:$dnY);
+  let results = (outs Res<Index>:$bufferSz, 
+                      Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
@@ -1855,13 +1863,12 @@ def GPU_SpMVOp : GPU_Op<"spmv", [GPU_AsyncOpInterface]> {
     %token = gpu.spmv async [%dep] %env, %spmatA, %dnX, %dnY : memref<?xf64>
     ```
   }];
-
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   GPU_SparseHandle:$env,
-                   GPU_SparseHandle:$spmatA,
-                   GPU_SparseHandle:$dnX,
-                   GPU_SparseHandle:$dnY,
-                   AnyMemRef:$buffer);
+                       GPU_SparseEnvHandle:$env,
+                       GPU_SparseSpMatHandle:$spmatA,
+                       GPU_SparseDnVecHandle:$dnX,
+                       GPU_SparseDnVecHandle:$dnY,
+                       AnyMemRef:$buffer);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
@@ -1890,11 +1897,12 @@ def GPU_SpMMBufferSizeOp : GPU_Op<"spmm_buffer_size", [GPU_AsyncOpInterface]> {
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   GPU_SparseHandle:$env,
-                   GPU_SparseHandle:$spmatA,
-                   GPU_SparseHandle:$dnmatB,
-                   GPU_SparseHandle:$dnmatC);
-  let results = (outs Res<Index>:$bufferSz, Optional<GPU_AsyncToken>:$asyncToken);
+                       GPU_SparseEnvHandle:$env,
+                       GPU_SparseSpMatHandle:$spmatA,
+                       GPU_SparseDnMatHandle:$dnmatB,
+                       GPU_SparseDnMatHandle:$dnmatC);
+  let results = (outs Res<Index>:$bufferSz, 
+                      Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
@@ -1922,11 +1930,11 @@ def GPU_SpMMOp : GPU_Op<"spmm", [GPU_AsyncOpInterface]> {
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   GPU_SparseHandle:$env,
-                   GPU_SparseHandle:$spmatA,
-                   GPU_SparseHandle:$dnmatB,
-                   GPU_SparseHandle:$dnmatC,
-                   AnyMemRef:$buffer);
+                       GPU_SparseEnvHandle:$env,
+                       GPU_SparseSpMatHandle:$spmatA,
+                       GPU_SparseDnMatHandle:$dnmatB,
+                       GPU_SparseDnMatHandle:$dnmatC,
+                       AnyMemRef:$buffer);
   let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{

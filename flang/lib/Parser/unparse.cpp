@@ -161,6 +161,15 @@ public:
   void Post(const IntrinsicTypeSpec::DoubleComplex &) {
     Word("DOUBLE COMPLEX");
   }
+  void Before(const UnsignedTypeSpec &) { Word("UNSIGNED"); }
+  void Before(const IntrinsicVectorTypeSpec &) { Word("VECTOR("); }
+  void Post(const IntrinsicVectorTypeSpec &) { Put(')'); }
+  void Post(const VectorTypeSpec::PairVectorTypeSpec &) {
+    Word("__VECTOR_PAIR");
+  }
+  void Post(const VectorTypeSpec::QuadVectorTypeSpec &) {
+    Word("__VECTOR_QUAD");
+  }
   void Before(const IntegerTypeSpec &) { // R705
     Word("INTEGER");
   }

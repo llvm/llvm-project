@@ -378,23 +378,26 @@ static Value genSecondCrds(OpBuilder &builder, Location loc, Value a,
                            bool isCOO, bool enableRT) {
   if (isCOO && !enableRT)
     return Value(); // nothing needed
-  return genToCoordinates(builder, loc, a, 1, /*cooStart=*/0);
+  return genToCoordinates(builder, loc, a, 1, /*cooStart=*/isCOO ? 0 : 2);
 }
 
 /// Generates the sparse matrix multiplication.
 static Operation *genSpMat(OpBuilder &builder, Location loc, Type handleTp,
-                           Type tokenTp, Value token, Value szY, Value szX,
+                           Type tokenTp, Value token, Value sz1, Value sz2,
                            Value nseA, Value rowA, Value colA, Value valA,
                            bool isCOO, bool enableRT) {
   if (isCOO) {
     // Library uses SoA COO, direct IR uses AoS COO.
-    if (enableRT)
+    if (enableRT) {
+      assert(colA);
       return builder.create<gpu::CreateCooOp>(loc, handleTp, tokenTp, token,
-                                              szY, szX, nseA, rowA, colA, valA);
+                                              sz1, sz2, nseA, rowA, colA, valA);
+    }
     llvm_unreachable("gpu::CreateCooAoSOp is deprecated");
   }
-  return builder.create<gpu::CreateCsrOp>(loc, handleTp, tokenTp, token, szY,
-                                          szX, nseA, rowA, colA, valA);
+  assert(colA);
+  return builder.create<gpu::CreateCsrOp>(loc, handleTp, tokenTp, token, sz1,
+                                          sz2, nseA, rowA, colA, valA);
 }
 
 /// Match and rewrite SpMV kernel.
@@ -436,22 +439,25 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 
   // Create sparse environment and sparse matrix/dense vector handles.
   Type indexTp = rewriter.getIndexType();
-  Type handleTp = rewriter.getType<gpu::SparseHandleType>();
+  Type envHandleTp = rewriter.getType<gpu::SparseEnvHandleType>();
+  Type dnVecHandleTp = rewriter.getType<gpu::SparseDnVecHandleType>();
+  Type spmatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   auto env =
-      rewriter.create<gpu::CreateSparseEnvOp>(loc, handleTp, tokenTp, token);
+      rewriter.create<gpu::CreateSparseEnvOp>(loc, envHandleTp, tokenTp, token);
   Value handle = env.getResult(0);
   token = env.getAsyncToken();
-  Operation *spGenA = genSpMat(rewriter, loc, handleTp, tokenTp, token, szY,
-                               szX, nseA, rowA, colA, valA, isCOO, enableRT);
+  Operation *spGenA =
+      genSpMat(rewriter, loc, spmatHandleTp, tokenTp, token, szY, szX, nseA,
+               rowA, colA, valA, isCOO, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
-  auto dvecX = rewriter.create<gpu::CreateDnVecOp>(loc, handleTp, tokenTp,
+  auto dvecX = rewriter.create<gpu::CreateDnVecOp>(loc, dnVecHandleTp, tokenTp,
                                                    token, vecX, szX);
   Value dnX = dvecX.getResult(0);
   token = dvecX.getAsyncToken();
-  auto dvecY = rewriter.create<gpu::CreateDnVecOp>(loc, handleTp, tokenTp,
+  auto dvecY = rewriter.create<gpu::CreateDnVecOp>(loc, dnVecHandleTp, tokenTp,
                                                    token, vecY, szY);
   Value dnY = dvecY.getResult(0);
   token = dvecY.getAsyncToken();
@@ -479,24 +485,20 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
               .getAsyncToken();
   token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
               .getAsyncToken();
-  tokens.push_back(token);
-  genBlockingWait(rewriter, loc, tokens);
-  tokens.clear();
-  token = genFirstWait(rewriter, loc);
-  token = genCopyMemRef(rewriter, loc, memY, vecY, token);
   token = genDeallocMemRef(rewriter, loc, rowA, token);
   if (colA)
     token = genDeallocMemRef(rewriter, loc, colA, token);
   token = genDeallocMemRef(rewriter, loc, valA, token);
   token = genDeallocMemRef(rewriter, loc, buffer, token);
   token = genDeallocMemRef(rewriter, loc, vecX, token);
+  token = genCopyMemRef(rewriter, loc, memY, vecY, token);
   token = genDeallocMemRef(rewriter, loc, vecY, token);
   tokens.push_back(token);
   genBlockingWait(rewriter, loc, tokens);
   tokens.clear();
 
   // Done.
-  rewriter.replaceOp(op, op.getDpsInitOperand(0)->get());
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, memY);
   return success();
 }
 
@@ -540,22 +542,25 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
 
   // Create sparse environment and sparse matrix/dense matrix handles.
   Type indexTp = rewriter.getIndexType();
-  Type handleTp = rewriter.getType<gpu::SparseHandleType>();
+  Type envHandleTp = rewriter.getType<gpu::SparseEnvHandleType>();
+  Type dnMatHandleTp = rewriter.getType<gpu::SparseDnMatHandleType>();
+  Type spMatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   auto env =
-      rewriter.create<gpu::CreateSparseEnvOp>(loc, handleTp, tokenTp, token);
+      rewriter.create<gpu::CreateSparseEnvOp>(loc, envHandleTp, tokenTp, token);
   Value handle = env.getResult(0);
   token = env.getAsyncToken();
-  Operation *spGenA = genSpMat(rewriter, loc, handleTp, tokenTp, token, szm,
-                               szk, nseA, rowA, colA, valA, isCOO, enableRT);
+  Operation *spGenA =
+      genSpMat(rewriter, loc, spMatHandleTp, tokenTp, token, szm, szk, nseA,
+               rowA, colA, valA, isCOO, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
-  auto dmatB = rewriter.create<gpu::CreateDnMatOp>(loc, handleTp, tokenTp,
+  auto dmatB = rewriter.create<gpu::CreateDnMatOp>(loc, dnMatHandleTp, tokenTp,
                                                    token, szk, szn, matB);
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
-  auto dmatC = rewriter.create<gpu::CreateDnMatOp>(loc, handleTp, tokenTp,
+  auto dmatC = rewriter.create<gpu::CreateDnMatOp>(loc, dnMatHandleTp, tokenTp,
                                                    token, szm, szn, matC);
   Value dnC = dmatC.getResult(0);
   token = dmatC.getAsyncToken();
@@ -583,24 +588,20 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
               .getAsyncToken();
   token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
               .getAsyncToken();
-  tokens.push_back(token);
-  genBlockingWait(rewriter, loc, tokens);
-  tokens.clear();
-  token = genFirstWait(rewriter, loc);
-  token = genCopyMemRef(rewriter, loc, bufC, matC, token);
   token = genDeallocMemRef(rewriter, loc, rowA, token);
   if (colA)
     token = genDeallocMemRef(rewriter, loc, colA, token);
   token = genDeallocMemRef(rewriter, loc, valA, token);
   token = genDeallocMemRef(rewriter, loc, buffer, token);
   token = genDeallocMemRef(rewriter, loc, matB, token);
+  token = genCopyMemRef(rewriter, loc, bufC, matC, token);
   token = genDeallocMemRef(rewriter, loc, matC, token);
   tokens.push_back(token);
   genBlockingWait(rewriter, loc, tokens);
   tokens.clear();
 
   // Done.
-  rewriter.replaceOp(op, op.getDpsInitOperand(0)->get());
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, matC);
   return success();
 }
 

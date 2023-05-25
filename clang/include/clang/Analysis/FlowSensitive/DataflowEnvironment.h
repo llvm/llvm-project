@@ -192,7 +192,8 @@ public:
 
   /// Moves gathered information back into `this` from a `CalleeEnv` created via
   /// `pushCall`.
-  void popCall(const Environment &CalleeEnv);
+  void popCall(const CallExpr *Call, const Environment &CalleeEnv);
+  void popCall(const CXXConstructExpr *Call, const Environment &CalleeEnv);
 
   /// Returns true if and only if the environment is equivalent to `Other`, i.e
   /// the two environments:
@@ -323,8 +324,51 @@ public:
   /// in the environment.
   StorageLocation *getThisPointeeStorageLocation() const;
 
-  /// Returns the storage location of the return value or null, if unset.
-  StorageLocation *getReturnStorageLocation() const;
+  /// Returns the return value of the current function. This can be null if:
+  /// - The function has a void return type
+  /// - No return value could be determined for the function, for example
+  ///   because it calls a function without a body.
+  ///
+  /// Requirements:
+  ///  The current function must have a non-reference return type.
+  Value *getReturnValue() const {
+    assert(getCurrentFunc() != nullptr &&
+           !getCurrentFunc()->getReturnType()->isReferenceType());
+    return ReturnVal;
+  }
+
+  /// Returns the storage location for the reference returned by the current
+  /// function. This can be null if function doesn't return a single consistent
+  /// reference.
+  ///
+  /// Requirements:
+  ///  The current function must have a reference return type.
+  StorageLocation *getReturnStorageLocation() const {
+    assert(getCurrentFunc() != nullptr &&
+           getCurrentFunc()->getReturnType()->isReferenceType());
+    return ReturnLoc;
+  }
+
+  /// Sets the return value of the current function.
+  ///
+  /// Requirements:
+  ///  The current function must have a non-reference return type.
+  void setReturnValue(Value *Val) {
+    assert(getCurrentFunc() != nullptr &&
+           !getCurrentFunc()->getReturnType()->isReferenceType());
+    ReturnVal = Val;
+  }
+
+  /// Sets the storage location for the reference returned by the current
+  /// function.
+  ///
+  /// Requirements:
+  ///  The current function must have a reference return type.
+  void setReturnStorageLocation(StorageLocation *Loc) {
+    assert(getCurrentFunc() != nullptr &&
+           getCurrentFunc()->getReturnType()->isReferenceType());
+    ReturnLoc = Loc;
+  }
 
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
@@ -472,6 +516,12 @@ public:
   /// returns null.
   const DeclContext *getDeclCtx() const { return CallStack.back(); }
 
+  /// Returns the function currently being analyzed, or null if the code being
+  /// analyzed isn't part of a function.
+  const FunctionDecl *getCurrentFunc() const {
+    return dyn_cast<FunctionDecl>(getDeclCtx());
+  }
+
   /// Returns whether this `Environment` can be extended to analyze the given
   /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
   /// given `MaxDepth`.
@@ -515,16 +565,18 @@ private:
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 
-
-  // FIXME: move the fields `CallStack`, `ReturnLoc` and `ThisPointeeLoc` into a
-  // separate call-context object, shared between environments in the same call.
+  // FIXME: move the fields `CallStack`, `ReturnVal`, `ReturnLoc` and
+  // `ThisPointeeLoc` into a separate call-context object, shared between
+  // environments in the same call.
   // https://github.com/llvm/llvm-project/issues/59005
 
   // `DeclContext` of the block being analysed if provided.
   std::vector<const DeclContext *> CallStack;
 
-  // In a properly initialized `Environment`, `ReturnLoc` should only be null if
-  // its `DeclContext` could not be cast to a `FunctionDecl`.
+  // Value returned by the function (if it has non-reference return type).
+  Value *ReturnVal = nullptr;
+  // Storage location of the reference returned by the function (if it has
+  // reference return type).
   StorageLocation *ReturnLoc = nullptr;
   // The storage location of the `this` pointee. Should only be null if the
   // function being analyzed is only a function and not a method.

@@ -8,6 +8,7 @@ set(MODULES
   "__fortran_builtins"
   "__fortran_ieee_exceptions"
   "__fortran_type_info"
+  "__fortran_ppc_types"
   "__fortran_ppc_intrinsics"
   "ieee_arithmetic"
   "ieee_exceptions"
@@ -28,8 +29,10 @@ if (NOT CMAKE_CROSSCOMPILING)
     set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
     if(${filename} STREQUAL "__fortran_builtins")
       set(depends "")
-    elseif(${filename} STREQUAL "__fortran_ppc_intrinsics")
+    elseif(${filename} STREQUAL "__fortran_ppc_types")
       set(depends "")
+    elseif(${filename} STREQUAL "__fortran_ppc_intrinsics")
+      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_ppc_types.mod)
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
       if(NOT ${filename} STREQUAL "__fortran_type_info")

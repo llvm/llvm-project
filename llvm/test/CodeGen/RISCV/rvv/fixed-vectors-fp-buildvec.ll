@@ -287,3 +287,67 @@ define dso_local void @splat_load_licm(float* %0) {
 8:                                                ; preds = %2
   ret void
 }
+
+define <2 x half> @buildvec_v2f16(half %a, half %b) {
+; CHECK-LABEL: buildvec_v2f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    ret
+  %v1 = insertelement <2 x half> poison, half %a, i64 0
+  %v2 = insertelement <2 x half> %v1, half %b, i64 1
+  ret <2 x half> %v2
+}
+
+define <2 x float> @buildvec_v2f32(float %a, float %b) {
+; CHECK-LABEL: buildvec_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    ret
+  %v1 = insertelement <2 x float> poison, float %a, i64 0
+  %v2 = insertelement <2 x float> %v1, float %b, i64 1
+  ret <2 x float> %v2
+}
+
+define <2 x double> @buildvec_v2f64(double %a, double %b) {
+; CHECK-LABEL: buildvec_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    ret
+  %v1 = insertelement <2 x double> poison, double %a, i64 0
+  %v2 = insertelement <2 x double> %v1, double %b, i64 1
+  ret <2 x double> %v2
+}
+
+define <2 x double> @buildvec_v2f64_b(double %a, double %b) {
+; CHECK-LABEL: buildvec_v2f64_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    ret
+  %v1 = insertelement <2 x double> poison, double %b, i64 1
+  %v2 = insertelement <2 x double> %v1, double %a, i64 0
+  ret <2 x double> %v2
+}
+
+define <4 x float> @buildvec_v4f32(float %a, float %b, float %c, float %d) {
+; CHECK-LABEL: buildvec_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
+; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
+; CHECK-NEXT:    ret
+  %v1 = insertelement <4 x float> poison, float %a, i64 0
+  %v2 = insertelement <4 x float> %v1, float %b, i64 1
+  %v3 = insertelement <4 x float> %v2, float %c, i64 2
+  %v4 = insertelement <4 x float> %v3, float %d, i64 3
+  ret <4 x float> %v4
+}

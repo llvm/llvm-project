@@ -351,6 +351,9 @@ def push_state: F<"push-state">,
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
+def print_memory_usage: F<"print-memory-usage">,
+  HelpText<"Report target memory usage">;
+
 defm relax: BB<"relax",
   "Enable target-specific relaxations if supported (default)",
   "Disable target-specific relaxations">;

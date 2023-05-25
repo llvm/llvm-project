@@ -13,6 +13,7 @@ import sys
 # pylint: disable=import-error
 import win32com.client as com
 import win32api
+
 # pylint: enable=import-error
 
 from dex.utils.Exceptions import LoadDebuggerException
@@ -22,25 +23,27 @@ _com_error = com.pywintypes.com_error  # pylint: disable=no-member
 
 def get_file_version(file_):
     try:
-        info = win32api.GetFileVersionInfo(file_, '\\')
-        ms = info['FileVersionMS']
-        ls = info['FileVersionLS']
-        return '.'.join(
-            str(s) for s in [
+        info = win32api.GetFileVersionInfo(file_, "\\")
+        ms = info["FileVersionMS"]
+        ls = info["FileVersionLS"]
+        return ".".join(
+            str(s)
+            for s in [
                 win32api.HIWORD(ms),
                 win32api.LOWORD(ms),
                 win32api.HIWORD(ls),
-                win32api.LOWORD(ls)
-            ])
+                win32api.LOWORD(ls),
+            ]
+        )
     except com.pywintypes.error:  # pylint: disable=no-member
-        return 'no versioninfo present'
+        return "no versioninfo present"
 
 
 def _handle_com_error(e):
     exc = sys.exc_info()
     msg = win32api.FormatMessage(e.hresult)
     try:
-        msg = msg.decode('CP1251')
+        msg = msg.decode("CP1251")
     except AttributeError:
         pass
     msg = msg.strip()
@@ -54,7 +57,7 @@ class ComObject(object):
 
     def __init__(self, raw):
         assert not isinstance(raw, ComObject), raw
-        self.__dict__['raw'] = raw
+        self.__dict__["raw"] = raw
 
     def __str__(self):
         return self._call(self.raw.__str__)
@@ -88,15 +91,15 @@ class ComObject(object):
         """
         ex = AssertionError("this should never be raised!")
 
-        assert (inspect.isfunction(fn) or inspect.ismethod(fn)
-                or inspect.isbuiltin(fn)), (fn, type(fn))
+        assert (
+            inspect.isfunction(fn) or inspect.ismethod(fn) or inspect.isbuiltin(fn)
+        ), (fn, type(fn))
         retries = ([0] * 50) + ([1] * 5)
         for r in retries:
             try:
                 try:
                     result = fn(*args)
-                    if inspect.ismethod(result) or 'win32com' in str(
-                            result.__class__):
+                    if inspect.ismethod(result) or "win32com" in str(result.__class__):
                         result = ComObject(result)
                     return result
                 except _com_error as e:
@@ -116,4 +119,5 @@ class DTE(ComObject):
         except _com_error as e:
             msg, exc = _handle_com_error(e)
             raise LoadDebuggerException(
-                '{} [{}]'.format(msg, class_string), orig_exception=exc)
+                "{} [{}]".format(msg, class_string), orig_exception=exc
+            )

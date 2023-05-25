@@ -443,7 +443,7 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
       break;
     case MCDisassembler::SoftFail:
       LLVM_DEBUG({ dbgs() << "Potentially undefined instruction:"; });
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case MCDisassembler::Success: {
       std::string Buffer;
       raw_string_ostream Stream(Buffer);
