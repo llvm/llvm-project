@@ -1,7 +1,6 @@
 """Test that backtraces can follow cross-DSO tail calls"""
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -9,11 +8,10 @@ from lldbsuite.test import lldbutil
 
 
 class TestCrossDSOTailCalls(TestBase):
-
-    @skipIf(compiler="clang", compiler_version=['<', '10.0'])
-    @skipIf(dwarf_version=['<', '4'])
+    @skipIf(compiler="clang", compiler_version=["<", "10.0"])
+    @skipIf(dwarf_version=["<", "4"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
-    @expectedFailureAll(archs=['arm', 'aarch64'], bugnumber="llvm.org/PR44561")
+    @expectedFailureAll(archs=["arm", "aarch64"], bugnumber="llvm.org/PR44561")
     def test_cross_dso_tail_calls(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -22,14 +20,15 @@ class TestCrossDSOTailCalls(TestBase):
 
         # Register our shared libraries for remote targets so they get
         # automatically uploaded
-        environment = self.registerSharedLibrariesWithTarget(
-            target, ['One', 'Two'])
+        environment = self.registerSharedLibrariesWithTarget(target, ["One", "Two"])
 
-        lldbutil.run_break_set_by_source_regexp(self, '// break here',
-                extra_options='-f Two.c')
+        lldbutil.run_break_set_by_source_regexp(
+            self, "// break here", extra_options="-f Two.c"
+        )
 
         process = target.LaunchSimple(
-            None, environment, self.get_process_working_directory())
+            None, environment, self.get_process_working_directory()
+        )
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # We should be stopped in the second dylib.
@@ -47,12 +46,12 @@ class TestCrossDSOTailCalls(TestBase):
         #  frame #4: 0x000000010d5d3f80 a.out`helper [opt] [artificial]
         #  frame #5: 0x000000010d5d3f79 a.out`main at main.c:10:3 [opt]
         expected_frames = [
-                ("tail_called_in_b_from_b", False),
-                ("tail_called_in_b_from_a", True),
-                ("helper_in_a", True),
-                ("tail_called_in_a_from_main", False),
-                ("helper", True),
-                ("main", False)
+            ("tail_called_in_b_from_b", False),
+            ("tail_called_in_b_from_a", True),
+            ("helper_in_a", True),
+            ("tail_called_in_a_from_main", False),
+            ("helper", True),
+            ("main", False),
         ]
         for idx, (name, is_artificial) in enumerate(expected_frames):
             frame = thread.GetFrameAtIndex(idx)

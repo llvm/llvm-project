@@ -10,12 +10,10 @@ from lldbsuite.test import lldbutil
 
 
 class RepeatedExprsCase(BenchBase):
-
     def setUp(self):
         BenchBase.setUp(self)
-        self.source = 'main.cpp'
-        self.line_to_break = line_number(
-            self.source, '// Set breakpoint here.')
+        self.source = "main.cpp"
+        self.line_to_break = line_number(self.source, "// Set breakpoint here.")
         self.lldb_avg = None
         self.gdb_avg = None
         self.count = 100
@@ -23,11 +21,12 @@ class RepeatedExprsCase(BenchBase):
     @benchmarks_test
     @expectedFailureAll(
         oslist=["windows"],
-        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows",
+    )
     def test_compare_lldb_to_gdb(self):
         """Test repeated expressions with lldb vs. gdb."""
         self.build()
-        self.exe_name = 'a.out'
+        self.exe_name = "a.out"
 
         print()
         self.run_lldb_repeated_exprs(self.exe_name, self.count)
@@ -38,16 +37,17 @@ class RepeatedExprsCase(BenchBase):
 
     def run_lldb_repeated_exprs(self, exe_name, count):
         import pexpect
+
         exe = self.getBuildArtifact(exe_name)
 
         # Set self.child_prompt, which is "(lldb) ".
-        self.child_prompt = '(lldb) '
+        self.child_prompt = "(lldb) "
         prompt = self.child_prompt
 
         # So that the child gets torn down after the test.
         self.child = pexpect.spawn(
-            '%s %s %s' %
-            (lldbtest_config.lldbExec, self.lldbOption, exe))
+            "%s %s %s" % (lldbtest_config.lldbExec, self.lldbOption, exe)
+        )
         child = self.child
 
         # Turn on logging for what the child sends back.
@@ -55,14 +55,12 @@ class RepeatedExprsCase(BenchBase):
             child.logfile_read = sys.stdout
 
         child.expect_exact(prompt)
-        child.sendline(
-            'breakpoint set -f %s -l %d' %
-            (self.source, self.line_to_break))
+        child.sendline("breakpoint set -f %s -l %d" % (self.source, self.line_to_break))
         child.expect_exact(prompt)
-        child.sendline('run')
+        child.sendline("run")
         child.expect_exact(prompt)
-        expr_cmd1 = 'expr ptr[j]->point.x'
-        expr_cmd2 = 'expr ptr[j]->point.y'
+        expr_cmd1 = "expr ptr[j]->point.x"
+        expr_cmd2 = "expr ptr[j]->point.y"
 
         # Reset the stopwatch now.
         self.stopwatch.reset()
@@ -72,10 +70,10 @@ class RepeatedExprsCase(BenchBase):
                 child.expect_exact(prompt)
                 child.sendline(expr_cmd2)
                 child.expect_exact(prompt)
-            child.sendline('process continue')
+            child.sendline("process continue")
             child.expect_exact(prompt)
 
-        child.sendline('quit')
+        child.sendline("quit")
         try:
             self.child.expect(pexpect.EOF)
         except:
@@ -88,14 +86,15 @@ class RepeatedExprsCase(BenchBase):
 
     def run_gdb_repeated_exprs(self, exe_name, count):
         import pexpect
+
         exe = self.getBuildArtifact(exe_name)
 
         # Set self.child_prompt, which is "(gdb) ".
-        self.child_prompt = '(gdb) '
+        self.child_prompt = "(gdb) "
         prompt = self.child_prompt
 
         # So that the child gets torn down after the test.
-        self.child = pexpect.spawn('gdb --nx %s' % exe)
+        self.child = pexpect.spawn("gdb --nx %s" % exe)
         child = self.child
 
         # Turn on logging for what the child sends back.
@@ -103,12 +102,12 @@ class RepeatedExprsCase(BenchBase):
             child.logfile_read = sys.stdout
 
         child.expect_exact(prompt)
-        child.sendline('break %s:%d' % (self.source, self.line_to_break))
+        child.sendline("break %s:%d" % (self.source, self.line_to_break))
         child.expect_exact(prompt)
-        child.sendline('run')
+        child.sendline("run")
         child.expect_exact(prompt)
-        expr_cmd1 = 'print ptr[j]->point.x'
-        expr_cmd2 = 'print ptr[j]->point.y'
+        expr_cmd1 = "print ptr[j]->point.x"
+        expr_cmd2 = "print ptr[j]->point.y"
 
         # Reset the stopwatch now.
         self.stopwatch.reset()
@@ -118,12 +117,12 @@ class RepeatedExprsCase(BenchBase):
                 child.expect_exact(prompt)
                 child.sendline(expr_cmd2)
                 child.expect_exact(prompt)
-            child.sendline('continue')
+            child.sendline("continue")
             child.expect_exact(prompt)
 
-        child.sendline('quit')
-        child.expect_exact('The program is running.  Exit anyway?')
-        child.sendline('y')
+        child.sendline("quit")
+        child.expect_exact("The program is running.  Exit anyway?")
+        child.sendline("y")
         try:
             self.child.expect(pexpect.EOF)
         except:

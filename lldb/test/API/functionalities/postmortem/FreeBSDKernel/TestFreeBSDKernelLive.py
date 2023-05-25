@@ -29,14 +29,13 @@ class FreeBSDKernelVMCoreTestCase(TestBase):
         self.assertEqual(process.GetProcessID(), 0)
 
         # test memory reading
-        self.expect("expr -- *(int *) &hz",
-                    substrs=["(int) $0 = %d" % hz_value])
+        self.expect("expr -- *(int *) &hz", substrs=["(int) $0 = %d" % hz_value])
 
         main_mod = target.GetModuleAtIndex(0)
-        hz_addr = (main_mod.FindSymbols("hz")[0].symbol.addr
-                   .GetLoadAddress(target))
+        hz_addr = main_mod.FindSymbols("hz")[0].symbol.addr.GetLoadAddress(target)
         error = lldb.SBError()
-        self.assertEqual(process.ReadMemory(hz_addr, 4, error),
-                         struct.pack("<I", hz_value))
+        self.assertEqual(
+            process.ReadMemory(hz_addr, 4, error), struct.pack("<I", hz_value)
+        )
 
         self.dbg.DeleteTarget(target)

@@ -3,7 +3,6 @@ Test that a variable watchpoint should only hit when in scope.
 """
 
 
-
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
@@ -23,12 +22,12 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Our simple source filename.
-        self.source = 'main.c'
+        self.source = "main.c"
         self.exe_name = self.testMethodName
-        self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
+        self.d = {"C_SOURCES": self.source, "EXE": self.exe_name}
 
     # Test hangs due to a kernel bug, see fdfeff0f in the linux kernel for details
-    @skipIfTargetAndroid(api_levels=list(range(25+1)), archs=["aarch64", "arm"])
+    @skipIfTargetAndroid(api_levels=list(range(25 + 1)), archs=["aarch64", "arm"])
     @skipIf
     def test_watched_var_should_only_hit_when_in_scope(self):
         """Test that a variable watchpoint should only hit when in scope."""
@@ -39,43 +38,46 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped in main.
-        lldbutil.run_break_set_by_symbol(
-            self, "main", num_expected_locations=-1)
+        lldbutil.run_break_set_by_symbol(self, "main", num_expected_locations=-1)
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
         # We should be stopped again due to the breakpoint.
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # Now let's set a watchpoint for 'c.a'.
         # There should be only one watchpoint hit (see main.c).
-        self.expect("watchpoint set variable c.a", WATCHPOINT_CREATED,
-                    substrs=['Watchpoint created', 'size = 4', 'type = w'])
+        self.expect(
+            "watchpoint set variable c.a",
+            WATCHPOINT_CREATED,
+            substrs=["Watchpoint created", "size = 4", "type = w"],
+        )
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should be 0 initially.
-        self.expect("watchpoint list -v",
-                    substrs=['hit_count = 0'])
+        self.expect("watchpoint list -v", substrs=["hit_count = 0"])
 
         self.runCmd("process continue")
 
         # We should be stopped again due to the watchpoint (write type), but
         # only once.  The stop reason of the thread should be watchpoint.
-        self.expect("thread list", STOPPED_DUE_TO_WATCHPOINT,
-                    substrs=['stopped',
-                             'stop reason = watchpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_WATCHPOINT,
+            substrs=["stopped", "stop reason = watchpoint"],
+        )
 
         self.runCmd("process continue")
         # Don't expect the read of 'global' to trigger a stop exception.
         # The process status should be 'exited'.
-        self.expect("process status",
-                    substrs=['exited'])
+        self.expect("process status", substrs=["exited"])
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should now be 1.
-        self.expect("watchpoint list -v",
-                    substrs=['hit_count = 1'])
+        self.expect("watchpoint list -v", substrs=["hit_count = 1"])

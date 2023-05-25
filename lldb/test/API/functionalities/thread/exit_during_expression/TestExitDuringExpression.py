@@ -8,8 +8,8 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
-class TestExitDuringExpression(TestBase):
 
+class TestExitDuringExpression(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows
@@ -43,19 +43,22 @@ class TestExitDuringExpression(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.build()
 
-    def exiting_expression_test(self, before_one_thread_timeout , unwind):
+    def exiting_expression_test(self, before_one_thread_timeout, unwind):
         """function_to_call sleeps for g_timeout microseconds, then calls pthread_exit.
-           This test calls function_to_call with an overall timeout of 500
-           microseconds, and a one_thread_timeout as passed in.
-           It also sets unwind_on_exit for the call to the unwind passed in.
-           This allows you to have the thread exit either before the one thread
-           timeout is passed. """
+        This test calls function_to_call with an overall timeout of 500
+        microseconds, and a one_thread_timeout as passed in.
+        It also sets unwind_on_exit for the call to the unwind passed in.
+        This allows you to have the thread exit either before the one thread
+        timeout is passed."""
 
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                   "Break here and cause the thread to exit", self.main_source_file)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Break here and cause the thread to exit", self.main_source_file
+        )
 
         # We'll continue to this breakpoint after running our expression:
-        return_bkpt = target.BreakpointCreateBySourceRegex("Break here to make sure the thread exited", self.main_source_file)
+        return_bkpt = target.BreakpointCreateBySourceRegex(
+            "Break here to make sure the thread exited", self.main_source_file
+        )
         frame = thread.frames[0]
         tid = thread.GetThreadID()
         # Find the timeout:
@@ -73,7 +76,7 @@ class TestExitDuringExpression(TestBase):
         self.assertSuccess(error, "Couldn't get timeout value")
 
         one_thread_timeout = 0
-        if (before_one_thread_timeout):
+        if before_one_thread_timeout:
             one_thread_timeout = timeout_value * 2
         else:
             one_thread_timeout = int(timeout_value / 2)

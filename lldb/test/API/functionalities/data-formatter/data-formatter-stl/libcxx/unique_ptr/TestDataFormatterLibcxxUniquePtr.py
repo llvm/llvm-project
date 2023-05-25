@@ -10,22 +10,27 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     def make_expected_type(self, pointee_type: str, qualifiers: str = "") -> str:
         if qualifiers:
-            qualifiers = ' ' + qualifiers
+            qualifiers = " " + qualifiers
 
-        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
-            return f'std::unique_ptr<{pointee_type}>{qualifiers}'
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">", "16.0"]
+        ):
+            return f"std::unique_ptr<{pointee_type}>{qualifiers}"
         else:
-            return f'std::unique_ptr<{pointee_type}, std::default_delete<{pointee_type}> >{qualifiers}'
+            return f"std::unique_ptr<{pointee_type}, std::default_delete<{pointee_type}> >{qualifiers}"
 
     def make_expected_basic_string_ptr(self) -> str:
-        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
-            return f'std::unique_ptr<std::string>'
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">", "16.0"]
+        ):
+            return f"std::unique_ptr<std::string>"
         else:
-            return 'std::unique_ptr<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, ' \
-                   'std::default_delete<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > >'
+            return (
+                "std::unique_ptr<std::basic_string<char, std::char_traits<char>, std::allocator<char> >, "
+                "std::default_delete<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > >"
+            )
 
     @add_test_categories(["libc++"])
     def test_unique_ptr_variables(self):
@@ -81,9 +86,7 @@ class TestCase(TestBase):
             children=[ValueCheck(name="pointer", summary='"hello"')],
         )
 
-        valobj = self.expect_var_path(
-            "up_user", type=self.make_expected_type("User")
-        )
+        valobj = self.expect_var_path("up_user", type=self.make_expected_type("User"))
         self.assertRegex(valobj.summary, "^User @ 0x0*[1-9a-f][0-9a-f]+$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
@@ -103,9 +106,9 @@ class TestCase(TestBase):
             summary="1234",
             children=[
                 ValueCheck(name="pointer"),
-                ValueCheck(name="deleter", children=[
-                    ValueCheck(name="dummy_", value="9999")
-                ]),
+                ValueCheck(
+                    name="deleter", children=[ValueCheck(name="dummy_", value="9999")]
+                ),
             ],
         )
         self.assertNotEqual(valobj.child[0].unsigned, 0)

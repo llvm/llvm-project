@@ -9,13 +9,12 @@ import lldbvscode_testcase
 
 
 class TestVSCode_exception(lldbvscode_testcase.VSCodeTestCaseBase):
-
     @skipIfWindows
     def test_stopped_description(self):
-        '''
-            Test that exception description is shown correctly in stopped
-            event.
-        '''
+        """
+        Test that exception description is shown correctly in stopped
+        event.
+        """
         program = self.getBuildArtifact("a.out")
         print("test_stopped_description called", flush=True)
         self.build_and_launch(program)
