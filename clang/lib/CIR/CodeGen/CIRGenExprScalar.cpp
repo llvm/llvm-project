@@ -836,6 +836,13 @@ public:
   buildScalarConversion(mlir::Value Src, QualType SrcType, QualType DstType,
                         SourceLocation Loc,
                         ScalarConversionOpts Opts = ScalarConversionOpts()) {
+    // All conversions involving fixed point types should be handled by the
+    // buildFixedPoint family functions. This is done to prevent bloating up
+    // this function more, and although fixed point numbers are represented by
+    // integers, we do not want to follow any logic that assumes they should be
+    // treated as integers.
+    // TODO(leonardchan): When necessary, add another if statement checking for
+    // conversions to fixed point types from other types.
     if (SrcType->isFixedPointType()) {
       llvm_unreachable("not implemented");
     } else if (DstType->isFixedPointType()) {
@@ -1131,8 +1138,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FloatingCast:
   case CK_FixedPointToFloating:
   case CK_FloatingToFixedPoint: {
-    if (Kind != CK_FloatingCast)
-      llvm_unreachable("Only FloatingCast supported so far.");
+    if (!(Kind == CK_FloatingCast || Kind == CK_FloatingToIntegral))
+      llvm_unreachable("Only FloatingCast and Integral supported so far.");
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, CE);
     return buildScalarConversion(Visit(E), E->getType(), DestTy,
                                  CE->getExprLoc());
@@ -1266,7 +1273,7 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
   mlir::Type DstElementTy;
   QualType SrcElementType;
   QualType DstElementType;
-  if (SrcType->isMatrixType() || DstType->isMatrixType()) {
+  if (SrcType->isMatrixType() && DstType->isMatrixType()) {
     llvm_unreachable("NYI");
   } else {
     assert(!SrcType->isMatrixType() && !DstType->isMatrixType() &&
@@ -1296,11 +1303,28 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
     if (DstElementTy.isa<mlir::cir::IntType>())
       return Builder.create<mlir::cir::CastOp>(
           Src.getLoc(), DstTy, mlir::cir::CastKind::integral, Src);
+    return Builder.create<mlir::cir::CastOp>(
+        Src.getLoc(), DstTy, mlir::cir::CastKind::floating, Src);
+  }
+
+  // Leaving mlir::IntegerType around incase any old user lingers
+  if (DstElementTy.isa<mlir::IntegerType>()) {
     llvm_unreachable("NYI");
   }
 
-  if (DstElementTy.isa<mlir::IntegerType>()) {
-    llvm_unreachable("NYI");
+  if (DstElementTy.isa<mlir::cir::IntType>()) {
+    assert(SrcElementTy.isa<mlir::FloatType>() && "Unknown real conversion");
+
+    // If we can't recognize overflow as undefined behavior, assume that
+    // overflow saturates. This protects against normal optimizations if we are
+    // compiling with non-standard FP semantics.
+    if (!CGF.CGM.getCodeGenOpts().StrictFloatCastOverflow)
+      llvm_unreachable("NYI");
+
+    if (Builder.getIsFPConstrained())
+      llvm_unreachable("NYI");
+    return Builder.create<mlir::cir::CastOp>(
+        Src.getLoc(), DstTy, mlir::cir::CastKind::float_to_int, Src);
   }
 
   auto FloatDstTy = DstElementTy.cast<mlir::FloatType>();
