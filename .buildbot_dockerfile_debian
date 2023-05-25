@@ -2,9 +2,15 @@ FROM debian:bullseye
 ARG CI_UID
 RUN useradd -m -u ${CI_UID} ci
 RUN apt-get update && \
-    apt-get -y install build-essential curl cmake python3-distutils git \
+    apt-get -y install clang-13 make curl cmake python3-distutils git \
     ninja-build
 WORKDIR /ci
+RUN update-alternatives --install /usr/bin/cc cc /usr/bin/clang-13 999
+RUN update-alternatives --set cc /usr/bin/clang-13
+RUN update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-13 999
+RUN update-alternatives --set c++ /usr/bin/clang++-13
+RUN ln -sf /usr/bin/clang-13 /usr/bin/clang
+RUN ln -sf /usr/bin/clang++-13 /usr/bin/clang++
 RUN chown ${CI_UID}:${CI_UID} .
 COPY --chown=${CI_UID}:${CI_UID} . .
 CMD sh -x .buildbot.sh
