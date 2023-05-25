@@ -881,6 +881,11 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto gc = func.getGarbageCollector())
     llvmFunc->setGC(gc->str());
 
+  if (auto armStreaming = func.getArmStreaming())
+    llvmFunc->addFnAttr("aarch64_pstate_sm_enabled");
+  else if (auto armLocallyStreaming = func.getArmLocallyStreaming())
+    llvmFunc->addFnAttr("aarch64_pstate_sm_body");
+
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
   for (auto &bb : func) {

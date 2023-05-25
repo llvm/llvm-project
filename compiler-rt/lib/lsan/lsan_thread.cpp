@@ -34,7 +34,7 @@ static ThreadContextBase *CreateThreadContext(u32 tid) {
   return new (allocator_for_thread_context) ThreadContext(tid);
 }
 
-void InitializeThreadRegistry() {
+void InitializeThreads() {
   static ALIGNED(alignof(
       ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
   thread_registry =
@@ -50,7 +50,10 @@ ThreadArgRetval &GetThreadArgRetval() { return *thread_arg_retval; }
 ThreadContextLsanBase::ThreadContextLsanBase(int tid)
     : ThreadContextBase(tid) {}
 
-void ThreadContextLsanBase::OnStarted(void *arg) { SetCurrentThread(this); }
+void ThreadContextLsanBase::OnStarted(void *arg) {
+  SetCurrentThread(this);
+  AllocatorThreadStart();
+}
 
 void ThreadContextLsanBase::OnFinished() {
   AllocatorThreadFinish();
@@ -80,12 +83,12 @@ void GetThreadExtraStackRangesLocked(tid_t os_id,
                                      InternalMmapVector<Range> *ranges) {}
 void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
-void LockThreadRegistry() {
+void LockThreads() {
   thread_registry->Lock();
   thread_arg_retval->Lock();
 }
 
-void UnlockThreadRegistry() {
+void UnlockThreads() {
   thread_arg_retval->Unlock();
   thread_registry->Unlock();
 }

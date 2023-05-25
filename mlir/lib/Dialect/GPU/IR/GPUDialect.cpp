@@ -146,7 +146,10 @@ struct GPUInlinerInterface : public DialectInlinerInterface {
 void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
   addTypes<MMAMatrixType>();
-  addTypes<SparseHandleType>();
+  addTypes<SparseEnvHandleType>();
+  addTypes<SparseDnVecHandleType>();
+  addTypes<SparseDnMatHandleType>();
+  addTypes<SparseSpMatHandleType>();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/IR/GPUOps.cpp.inc"
@@ -156,6 +159,19 @@ void GPUDialect::initialize() {
 #include "mlir/Dialect/GPU/IR/GPUOpsAttributes.cpp.inc"
       >();
   addInterfaces<GPUInlinerInterface>();
+}
+
+static std::string getSparseHandleKeyword(SparseHandleKind kind) {
+  switch (kind) {
+  case SparseHandleKind::Env:
+    return "sparse.env_handle";
+  case SparseHandleKind::DnVec:
+    return "sparse.dnvec_handle";
+  case SparseHandleKind::DnMat:
+    return "sparse.dnmat_handle";
+  case SparseHandleKind::SpMat:
+    return "sparse.spmat_handle";
+  }
 }
 
 Type GPUDialect::parseType(DialectAsmParser &parser) const {
@@ -201,17 +217,31 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
                                      shape, elementType, operand);
   }
 
-  if (keyword == "sparse.handle")
-    return SparseHandleType::get(context);
+  if (keyword == getSparseHandleKeyword(SparseHandleKind::Env))
+    return SparseEnvHandleType::get(context);
+  if (keyword == getSparseHandleKeyword(SparseHandleKind::DnVec))
+    return SparseDnVecHandleType::get(context);
+  if (keyword == getSparseHandleKeyword(SparseHandleKind::DnMat))
+    return SparseDnMatHandleType::get(context);
+  if (keyword == getSparseHandleKeyword(SparseHandleKind::SpMat))
+    return SparseSpMatHandleType::get(context);
 
   parser.emitError(parser.getNameLoc(), "unknown gpu type: " + keyword);
   return Type();
 }
-
+// TODO: print refined type here. Notice that should be corresponding to the
+// parser
 void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
-      .Case<SparseHandleType>([&](Type) { os << "sparse.handle"; })
+      .Case<SparseEnvHandleType>(
+          [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::Env); })
+      .Case<SparseDnVecHandleType>(
+          [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::DnVec); })
+      .Case<SparseDnMatHandleType>(
+          [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::DnMat); })
+      .Case<SparseSpMatHandleType>(
+          [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::SpMat); })
       .Case<MMAMatrixType>([&](MMAMatrixType fragTy) {
         os << "mma_matrix<";
         auto shape = fragTy.getShape();

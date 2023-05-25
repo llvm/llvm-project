@@ -1,11 +1,15 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
+// RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,ARM,32
 
 // CHECK: define{{.*}} void @_Z3funv() #0 !func_sanitize ![[FUNCSAN:.*]] {
 void fun() {}
 
 // CHECK-LABEL: define{{.*}} void @_Z6callerPFvvE(ptr noundef %f)
+// ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !5
+// ARM:   and i32 {{.*}}, -2, !nosanitize !5
+// ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !5
 // CHECK: getelementptr <{ i32, i32 }>, ptr {{.*}}, i32 -1, i32 0, !nosanitize
 // CHECK: load i32, ptr {{.*}}, align {{.*}}, !nosanitize
 // CHECK: icmp eq i32 {{.*}}, -1056584962, !nosanitize
@@ -16,7 +20,8 @@ void fun() {}
 // CHECK: icmp eq i32 {{.*}}, -1522505972, !nosanitize
 // CHECK: br i1 {{.*}}, label %[[LABEL3:.*]], label %[[LABEL2:[^,]*]], {{.*}}!nosanitize
 // CHECK: [[LABEL2]]:
-// CHECK: call void @__ubsan_handle_function_type_mismatch_abort(ptr @[[#]], i64 %[[#]]) #[[#]], !nosanitize
+// 64:    call void @__ubsan_handle_function_type_mismatch_abort(ptr @[[#]], i64 %[[#]]) #[[#]], !nosanitize
+// 32:    call void @__ubsan_handle_function_type_mismatch_abort(ptr @[[#]], i32 %[[#]]) #[[#]], !nosanitize
 // CHECK-NEXT: unreachable, !nosanitize
 // CHECK-EMPTY:
 // CHECK-NEXT: [[LABEL3]]:

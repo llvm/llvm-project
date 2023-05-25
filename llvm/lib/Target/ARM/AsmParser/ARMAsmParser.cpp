@@ -1260,34 +1260,6 @@ public:
     return isImmediate<1, 33>();
   }
 
-  template<int shift>
-  bool isExpImmValue(uint64_t Value) const {
-    uint64_t mask = (1 << shift) - 1;
-    if ((Value & mask) != 0 || (Value >> shift) > 0xff)
-      return false;
-    return true;
-  }
-
-  template<int shift>
-  bool isExpImm() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-
-    return isExpImmValue<shift>(CE->getValue());
-  }
-
-  template<int shift, int size>
-  bool isInvertedExpImm() const {
-    if (!isImm()) return false;
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
-
-    uint64_t OriginalValue = CE->getValue();
-    uint64_t InvertedValue = OriginalValue ^ (((uint64_t)1 << size) - 1);
-    return isExpImmValue<shift>(InvertedValue);
-  }
-
   bool isPKHLSLImm() const {
     return isImmediate<0, 32>();
   }

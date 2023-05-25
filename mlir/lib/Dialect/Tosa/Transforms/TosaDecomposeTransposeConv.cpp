@@ -17,6 +17,7 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Pass/Pass.h"
 
@@ -365,9 +366,13 @@ public:
     Value resultPaddingVal = createOpAndInfer<tosa::ConstOp>(
         rewriter, loc, resultPaddingAttr.getType(), resultPaddingAttr);
 
-    auto resultPad = createOpAndInfer<tosa::PadOp>(
+    Value resultPad = createOpAndInfer<tosa::PadOp>(
         rewriter, loc, UnrankedTensorType::get(resultETy), slice,
         resultPaddingVal);
+
+    if (EqualizeRanks(rewriter, op.getLoc(), resultPad, bias).failed()) {
+      return failure();
+    }
 
     rewriter.replaceOpWithNewOp<tosa::AddOp>(op, op.getType(), resultPad, bias);
     return success();

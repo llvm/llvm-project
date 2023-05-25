@@ -248,9 +248,12 @@ static inline cusparseIndexType_t idxTp(int32_t width) {
 
 // Some macro magic to get float/double alpha and beta on host.
 #define ALPHABETA(w, alpha, beta)                                              \
-  float(alpha##f) = 1.0, (beta##f) = 1.0;                                      \
-  double(alpha##d) = 1.0, (beta##d) = 1.0;                                     \
-  void *(alpha##p), *(beta##p);                                                \
+  float(alpha##f) = 1.0f;                                                      \
+  float(beta##f) = 1.0f;                                                       \
+  double(alpha##d) = 1.0;                                                      \
+  double(beta##d) = 1.0;                                                       \
+  const void *(alpha##p) = nullptr;                                            \
+  const void *(beta##p) = nullptr;                                             \
   if ((w) == 32) {                                                             \
     (alpha##p) = reinterpret_cast<void *>(&(alpha##f));                        \
     (beta##p) = reinterpret_cast<void *>(&(beta##f));                          \

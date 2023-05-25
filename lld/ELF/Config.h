@@ -252,6 +252,7 @@ struct Config {
   bool pie;
   bool printGcSections;
   bool printIcfSections;
+  bool printMemoryUsage;
   bool relax;
   bool relaxGP;
   bool relocatable;

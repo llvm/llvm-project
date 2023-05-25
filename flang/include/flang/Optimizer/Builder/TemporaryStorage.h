@@ -93,5 +93,81 @@ private:
   /// Temporary storage.
   mlir::Value temp;
 };
+
+/// Structure to hold the value of a single entity.
+class SimpleCopy {
+public:
+  SimpleCopy(mlir::Location loc, fir::FirOpBuilder &builder,
+             hlfir::Entity source, llvm::StringRef tempName);
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value) {
+    assert(false && "must not be called: value already set");
+  }
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder){};
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder) {
+    return copy.getBase();
+  }
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+
+public:
+  /// Temporary storage for the copy.
+  hlfir::AssociateOp copy;
+};
+
+/// Data structure to stack any kind of values with the same static type and
+/// rank. Each value may have different type parameters, bounds, and dynamic
+/// type. Fetching value N will return a value with the same dynamic type,
+/// bounds, and type parameters as the Nth value that was pushed. It is
+/// implemented using runtime.
+class AnyValueStack {
+public:
+  AnyValueStack(mlir::Location loc, fir::FirOpBuilder &builder,
+                mlir::Type valueStaticType);
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value);
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+
+private:
+  /// Keep the original value type. Values may be stored by the runtime
+  /// with a different type (i1 cannot be passed by descriptor).
+  mlir::Type valueStaticType;
+  /// Runtime cookie created by the runtime. It is a pointer to an opaque
+  /// runtime data structure that manages the stack.
+  mlir::Value opaquePtr;
+  /// Counter to keep track of the fetching position.
+  Counter counter;
+  /// Allocatable box passed to the runtime when fetching the values.
+  mlir::Value retValueBox;
+};
+
+/// Generic wrapper over the different sorts of temporary storages.
+class TemporaryStorage {
+public:
+  template <typename T>
+  TemporaryStorage(T &&impl) : impl{std::forward<T>(impl)} {}
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value) {
+    std::visit([&](auto &temp) { temp.pushValue(loc, builder, value); }, impl);
+  }
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder) {
+    std::visit([&](auto &temp) { temp.resetFetchPosition(loc, builder); },
+               impl);
+  }
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder) {
+    return std::visit([&](auto &temp) { return temp.fetch(loc, builder); },
+                      impl);
+  }
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder) {
+    std::visit([&](auto &temp) { temp.destroy(loc, builder); }, impl);
+  }
+
+private:
+  std::variant<HomogeneousScalarStack, SimpleCopy, AnyValueStack> impl;
+};
 } // namespace fir::factory
 #endif // FORTRAN_OPTIMIZER_BUILDER_TEMPORARYSTORAGE_H

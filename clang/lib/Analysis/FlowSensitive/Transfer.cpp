@@ -503,22 +503,21 @@ public:
     if (Ret == nullptr)
       return;
 
-    auto *Val = Env.getValue(*Ret, SkipPast::None);
-    if (Val == nullptr)
-      return;
+    if (Ret->isPRValue()) {
+      auto *Val = Env.getValueStrict(*Ret);
+      if (Val == nullptr)
+        return;
 
-    // FIXME: Support reference-type returns.
-    if (Val->getKind() == Value::Kind::Reference)
-      return;
+      // FIXME: Model NRVO.
+      Env.setReturnValue(Val);
+    } else {
+      auto *Loc = Env.getStorageLocationStrict(*Ret);
+      if (Loc == nullptr)
+        return;
 
-    auto *Loc = Env.getReturnStorageLocation();
-    assert(Loc != nullptr);
-    // FIXME: Support reference-type returns.
-    if (Loc->getType()->isReferenceType())
-      return;
-
-    // FIXME: Model NRVO.
-    Env.setValue(*Loc, *Val);
+      // FIXME: Model NRVO.
+      Env.setReturnStorageLocation(Loc);
+    }
   }
 
   void VisitMemberExpr(const MemberExpr *S) {
@@ -857,13 +856,6 @@ private:
 
     auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
 
-    if (const auto *NonConstructExpr = dyn_cast<CallExpr>(S)) {
-      // Note that it is important for the storage location of `S` to be set
-      // before `pushCall`, because the latter uses it to set the storage
-      // location for `return`.
-      auto &ReturnLoc = Env.createStorageLocation(*S);
-      Env.setStorageLocation(*S, ReturnLoc);
-    }
     auto CalleeEnv = Env.pushCall(S);
 
     // FIXME: Use the same analysis as the caller for the callee. Note,
@@ -882,7 +874,7 @@ private:
     auto ExitState = (*BlockToOutputState)[ExitBlock];
     assert(ExitState);
 
-    Env.popCall(ExitState->Env);
+    Env.popCall(S, ExitState->Env);
   }
 
   const StmtToEnvMap &StmtToEnv;

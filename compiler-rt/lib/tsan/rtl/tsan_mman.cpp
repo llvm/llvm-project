@@ -452,6 +452,10 @@ uptr __sanitizer_get_allocated_size(const void *p) {
   return user_alloc_usable_size(p);
 }
 
+void __sanitizer_purge_allocator() {
+  allocator()->ForceReleaseToOS();
+}
+
 void __tsan_on_thread_idle() {
   ThreadState *thr = cur_thread();
   allocator()->SwallowCache(&thr->proc()->alloc_cache);

@@ -145,8 +145,13 @@ AllocatorCache *GetAllocatorCache(MsanThreadLocalMallocStorage *ms) {
   return reinterpret_cast<AllocatorCache *>(ms->allocator_cache);
 }
 
+void MsanThreadLocalMallocStorage::Init() {
+  allocator.InitCache(GetAllocatorCache(this));
+}
+
 void MsanThreadLocalMallocStorage::CommitBack() {
   allocator.SwallowCache(GetAllocatorCache(this));
+  allocator.DestroyCache(GetAllocatorCache(this));
 }
 
 static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
@@ -393,3 +398,5 @@ const void *__sanitizer_get_allocated_begin(const void *p) {
 }
 
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }
+
+void __sanitizer_purge_allocator() { allocator.ForceReleaseToOS(); }

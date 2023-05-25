@@ -367,7 +367,9 @@ public:
     if (tensor::isSameTypeWithoutEncoding(srcType, dstType)) {
       if (Operation *def = op.getSource().getDefiningOp()) {
         if (def->hasOneUse() && isa<tensor::ExtractSliceOp>(def)) {
-          def->getResult(0).setType(op->getResultTypes()[0]);
+          rewriter.updateRootInPlace(def, [&]() {
+            def->getResult(0).setType(op->getResultTypes()[0]);
+          });
           rewriter.replaceOp(op, def->getResult(0));
           return success();
         }
