@@ -90,10 +90,20 @@ multiclass RVVSignedBinBuiltinSet
                           [["vv", "v", "vvv"],
                            ["vx", "v", "vve"]]>;
 
+multiclass RVVSignedBinBuiltinSetRoundingMode
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vv", "v", "vvvu"],
+                           ["vx", "v", "vveu"]]>;
+
 multiclass RVVUnsignedBinBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "csil",
                           [["vv", "Uv", "UvUvUv"],
                            ["vx", "Uv", "UvUvUe"]]>;
+
+multiclass RVVUnsignedBinBuiltinSetRoundingMode
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vv", "Uv", "UvUvUvu"],
+                           ["vx", "Uv", "UvUvUeu"]]>;
 
 multiclass RVVIntBinBuiltinSet
     : RVVSignedBinBuiltinSet,
@@ -1715,6 +1725,17 @@ let HasMasked = false,
 }
 
 // 13. Vector Fixed-Point Arithmetic Instructions
+let HeaderCode =
+[{
+enum __RISCV_VXRM {
+  __RISCV_VXRM_RNU = 0,
+  __RISCV_VXRM_RNE = 1,
+  __RISCV_VXRM_RDN = 2,
+  __RISCV_VXRM_ROD = 3,
+};
+}] in
+def vxrm_enum : RVVHeader;
+
 // 13.1. Vector Single-Width Saturating Add and Subtract
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vsaddu : RVVUnsignedBinBuiltinSet;
@@ -1723,10 +1744,46 @@ defm vssubu : RVVUnsignedBinBuiltinSet;
 defm vssub : RVVSignedBinBuiltinSet;
 
 // 13.2. Vector Single-Width Averaging Add and Subtract
-defm vaaddu : RVVUnsignedBinBuiltinSet;
-defm vaadd : RVVSignedBinBuiltinSet;
-defm vasubu : RVVUnsignedBinBuiltinSet;
-defm vasub : RVVSignedBinBuiltinSet;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    Operands.push_back(Ops[Offset + 2]); // vxrm
+    Operands.push_back(Ops[Offset + 3]); // vl
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset + 1]->getType(), Ops.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  defm vaaddu : RVVUnsignedBinBuiltinSetRoundingMode;
+  defm vaadd : RVVSignedBinBuiltinSetRoundingMode;
+  defm vasubu : RVVUnsignedBinBuiltinSetRoundingMode;
+  defm vasub : RVVSignedBinBuiltinSetRoundingMode;
+}
 
 // 13.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
 let RequiredFeatures = ["FullMultiply"] in {

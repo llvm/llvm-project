@@ -504,7 +504,7 @@ entry:
   ret <vscale x 1 x i8> %a
 }
 
-declare <vscale x 1 x i8> @llvm.riscv.vaadd.rm.mask.nxv1i8.nxv1i8(
+declare <vscale x 1 x i8> @llvm.riscv.vaadd.mask.nxv1i8.nxv1i8(
   <vscale x 1 x i8>,
   <vscale x 1 x i8>,
   <vscale x 1 x i8>,
@@ -521,7 +521,7 @@ define <vscale x 1 x i8> @intrinsic_vaadd_mask_vv_nxv1i8_nxv1i8_nxv1i8(<vscale x
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.rm.mask.nxv1i8.nxv1i8(
+  %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.mask.nxv1i8.nxv1i8(
     <vscale x 1 x i8> undef,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
