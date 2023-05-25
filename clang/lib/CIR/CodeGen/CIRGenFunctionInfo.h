@@ -251,8 +251,17 @@ public:
   static RequiredArgs
   forPrototypePlus(const clang::FunctionProtoType *prototype,
                    unsigned additional) {
-    assert(!prototype->isVariadic() && "NYI");
-    return All;
+    if (!prototype->isVariadic())
+      return All;
+
+    if (prototype->hasExtParameterInfos())
+      additional += llvm::count_if(
+          prototype->getExtParameterInfos(),
+          [](const clang::FunctionProtoType::ExtParameterInfo &ExtInfo) {
+            return ExtInfo.hasPassObjectSize();
+          });
+
+    return RequiredArgs(prototype->getNumParams() + additional);
   }
 
   static RequiredArgs
@@ -453,7 +462,6 @@ public:
   bool isVariadic() const { return Required.allowsOptionalArgs(); }
   RequiredArgs getRequiredArgs() const { return Required; }
   unsigned getNumRequiredArgs() const {
-    assert(!isVariadic() && "Variadic NYI");
     return isVariadic() ? getRequiredArgs().getNumRequiredArgs() : arg_size();
   }
 

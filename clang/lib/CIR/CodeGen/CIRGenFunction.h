@@ -1675,6 +1675,9 @@ public:
         AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
         AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
   }
+
+private:
+  QualType getVarArgType(const Expr *Arg);
 };
 
 /// A specialization of DominatingValue for RValue.
