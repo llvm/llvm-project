@@ -52,10 +52,8 @@ define void @br_undef(i1 %x) {
 ; CHECK-SAME: (i1 [[X:%.*]]) {
 ; CHECK-NEXT:    br i1 undef, label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   %c = xor i1 %x, undef
@@ -129,10 +127,8 @@ define void @switch_undef(i32 %x) {
 ; CHECK-NEXT:    i32 0, label [[CASE0:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       case0:
-; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ; CHECK:       default:
-; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
   %v = xor i32 %x, undef
