@@ -42,9 +42,9 @@ template <typename B, typename S> struct Range {
     size = 0;
   }
 
-  // Set the start value for the range, and keep the same size
   BaseType GetRangeBase() const { return base; }
 
+  /// Set the start value for the range, and keep the same size
   void SetRangeBase(BaseType b) { base = b; }
 
   void Slide(BaseType slide) { base += slide; }
