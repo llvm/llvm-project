@@ -28,6 +28,7 @@
 
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Utility/ARM64_DWARF_Registers.h"
+#include "llvm/ADT/SmallSet.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -234,7 +235,7 @@ public:
       return false;
     auto fn_start = sc.symbol->GetFileAddress();
     auto fn_end = sc.symbol->GetFileAddress() + sc.symbol->GetByteSize();
-    int line_entry_count = 0;
+    llvm::SmallSet<uint32_t, 2> unique_debug_lines;
     if (auto *line_table = sc.comp_unit->GetLineTable()) {
       for (uint32_t i = 0; i < line_table->GetSize(); ++i) {
         LineEntry line_entry;
@@ -243,11 +244,23 @@ public:
             continue;
 
           auto line_start = line_entry.range.GetBaseAddress().GetFileAddress();
-          if (line_start >= fn_start && line_start < fn_end)
-            if (++line_entry_count > 1)
-              // This is an async function with a proper body of code, no step
-              // into `swift_task_switch` required.
+          if (fn_start <= line_start && line_start < fn_end) {
+            unique_debug_lines.insert(line_entry.line);
+            // This logic is to distinguish between async functions that only
+            // call `swift_task_switch` (which, from the perspective of the
+            // user, has no meaningful function body), vs async functions that
+            // do have a function body. In the first case, lldb should step
+            // further to find the function body, in the second case lldb has
+            // found a body and should stop.
+            //
+            // Currently, async functions that go through `swift_task_switch`
+            // are generated with a reference to a single line. If this function
+            // has more than one unique debug line, then it is a function that
+            // has a body, and execution can stop here.
+            if (unique_debug_lines.size() >= 2)
+              // No step into `swift_task_switch` required.
               return false;
+          }
         }
       }
     }
