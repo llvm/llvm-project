@@ -191,7 +191,8 @@ TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
                 // the structure includes the surrounding slashes to avoid
                 // name clashes.
                 construct<DeclarationTypeSpec::Record>(
-                    "RECORD" >> sourced("/" >> name / "/")))))
+                    "RECORD" >> sourced("/" >> name / "/")))) ||
+        construct<DeclarationTypeSpec>(vectorTypeSpec))
 
 // R704 intrinsic-type-spec ->
 //        integer-type-spec | REAL [kind-selector] | DOUBLE PRECISION |
@@ -217,6 +218,28 @@ TYPE_CONTEXT_PARSER("intrinsic type spec"_en_US,
         extension<LanguageFeature::Byte>("nonstandard usage: BYTE"_port_en_US,
             construct<IntrinsicTypeSpec>(construct<IntegerTypeSpec>(
                 "BYTE" >> construct<std::optional<KindSelector>>(pure(1)))))))
+
+// Extension: Vector type
+// VECTOR(intrinsic-type-spec) | __VECTOR_PAIR | __VECTOR_QUAD
+TYPE_CONTEXT_PARSER("vector type spec"_en_US,
+    extension<LanguageFeature::PPCVector>(
+        "nonstandard usage: Vector type"_port_en_US,
+        first(construct<VectorTypeSpec>(intrinsicVectorTypeSpec),
+            construct<VectorTypeSpec>("__VECTOR_PAIR" >>
+                construct<VectorTypeSpec::PairVectorTypeSpec>()),
+            construct<VectorTypeSpec>("__VECTOR_QUAD" >>
+                construct<VectorTypeSpec::QuadVectorTypeSpec>()))))
+
+// VECTOR(integer-type-spec) | VECTOR(real-type-spec) |
+// VECTOR(unsigend-type-spec) |
+TYPE_PARSER(construct<IntrinsicVectorTypeSpec>("VECTOR" >>
+    parenthesized(construct<VectorElementType>(integerTypeSpec) ||
+        construct<VectorElementType>(unsignedTypeSpec) ||
+        construct<VectorElementType>(construct<IntrinsicTypeSpec::Real>(
+            "REAL" >> maybe(kindSelector))))))
+
+// UNSIGNED type
+TYPE_PARSER(construct<UnsignedTypeSpec>("UNSIGNED" >> maybe(kindSelector)))
 
 // R705 integer-type-spec -> INTEGER [kind-selector]
 TYPE_PARSER(construct<IntegerTypeSpec>("INTEGER" >> maybe(kindSelector)))
