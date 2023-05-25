@@ -3522,8 +3522,17 @@ LogicalResult spirv::ModuleOp::verifyRegions() {
       }
       entryPoints[key] = entryPointOp;
     } else if (auto funcOp = dyn_cast<spirv::FuncOp>(op)) {
-      if (funcOp.isExternal())
-        return op.emitError("'spirv.module' cannot contain external functions");
+      // If the function is external and does not have 'Import'
+      // linkage_attributes(LinkageAttributes), throw an error. 'Import'
+      // LinkageAttributes is used to import external functions.
+      auto linkageAttr = funcOp.getLinkageAttributes();
+      auto hasImportLinkage =
+          linkageAttr && (linkageAttr.value().getLinkageType().getValue() ==
+                          spirv::LinkageType::Import);
+      if (funcOp.isExternal() && !hasImportLinkage)
+        return op.emitError(
+            "'spirv.module' cannot contain external functions "
+            "without 'Import' linkage_attributes (LinkageAttributes)");
 
       // TODO: move this check to spirv.func.
       for (auto &block : funcOp)
