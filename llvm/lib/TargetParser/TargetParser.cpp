@@ -125,6 +125,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
   {{"gfx1150"},   {"gfx1150"}, GK_GFX1150, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
   {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
   {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+  {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
   {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
 };
 
@@ -250,6 +251,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1150: return {11, 5, 0};
   case GK_GFX1151: return {11, 5, 1};
   case GK_GFX1200: return {12, 0, 0};
+  case GK_GFX1201: return {12, 0, 1};
   case GK_GFX1210: return {12, 1, 0};
   default:         return {0, 0, 0};
   }
@@ -260,7 +262,6 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);
   if (ProcKind == GK_NONE)
     return StringRef();
-
   return T.isAMDGCN() ? getArchNameAMDGCN(ProcKind) : getArchNameR600(ProcKind);
 }
 
@@ -285,6 +286,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx12-10-insts"] = true;
       Features["bitop3-insts"] = true;
       break;
+    case GK_GFX1201:
     case GK_GFX1200:
       Features["ci-insts"] = true;
       Features["dot5-insts"] = true;
@@ -472,6 +474,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
     case GK_GFX1210:
+    case GK_GFX1201:
     case GK_GFX1200:
     case GK_GFX1151:
     case GK_GFX1150:
