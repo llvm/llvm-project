@@ -2029,12 +2029,21 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     std::lock_guard<std::recursive_mutex> global_context_locker(
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
-    LLVMVerifyModule((LLVMOpaqueModule *)m_module.get(), LLVMReturnStatusAction,
-                     nullptr);
+    bool has_errors = LLVMVerifyModule((LLVMOpaqueModule *)m_module.get(),
+                                       LLVMReturnStatusAction, nullptr);
+    if (has_errors) {
+      diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                   "LLVM verification error");
+      return ParseResult::unrecoverable_error;
+    }
   }
 
-  if (expr_diagnostics->HasErrors())
+  if (expr_diagnostics->HasErrors()) {
+    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                 "post-IRGen error");
+    DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
+  }
 
   // The Parse succeeded!  Now put this module into the context's list
   // of loaded modules, and copy the Decls that were globalized as
