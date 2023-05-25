@@ -10,8 +10,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/TemporaryStorage.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
@@ -132,4 +132,25 @@ hlfir::Entity fir::factory::HomogeneousScalarStack::moveStackAsArrayExpr(
   mlir::Value mustFree = builder.createBool(loc, allocateOnHeap);
   auto hlfirExpr = builder.create<hlfir::AsExprOp>(loc, temp, mustFree);
   return hlfir::Entity{hlfirExpr};
+}
+
+//===----------------------------------------------------------------------===//
+// fir::factory::SimpleCopy implementation.
+//===----------------------------------------------------------------------===//
+
+fir::factory::SimpleCopy::SimpleCopy(mlir::Location loc,
+                                     fir::FirOpBuilder &builder,
+                                     hlfir::Entity source,
+                                     llvm::StringRef tempName) {
+  // Use hlfir.as_expr and hlfir.associate to create a copy and leave
+  // bufferization deals with how best to make the copy.
+  if (source.isVariable())
+    source = hlfir::Entity{builder.create<hlfir::AsExprOp>(loc, source)};
+  copy = hlfir::genAssociateExpr(loc, builder, source,
+                                 source.getFortranElementType(), tempName);
+}
+
+void fir::factory::SimpleCopy::destroy(mlir::Location loc,
+                                       fir::FirOpBuilder &builder) {
+  builder.create<hlfir::EndAssociateOp>(loc, copy);
 }
