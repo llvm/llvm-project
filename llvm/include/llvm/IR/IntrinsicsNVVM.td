@@ -1358,12 +1358,22 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>,
       ClangBuiltin<"__nvvm_barrier_sync_cnt">;
 
+  // barrier.cluster.[wait, arrive, arrive.relaxed]
+  def int_nvvm_barrier_cluster_arrive :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_arrive_relaxed :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_wait :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+
   // Membar
   def int_nvvm_membar_cta : ClangBuiltin<"__nvvm_membar_cta">,
       Intrinsic<[], [], [IntrNoCallback]>;
   def int_nvvm_membar_gl : ClangBuiltin<"__nvvm_membar_gl">,
       Intrinsic<[], [], [IntrNoCallback]>;
   def int_nvvm_membar_sys : ClangBuiltin<"__nvvm_membar_sys">,
+      Intrinsic<[], [], [IntrNoCallback]>;
+  def int_nvvm_fence_sc_cluster:
       Intrinsic<[], [], [IntrNoCallback]>;
 
 // Async Copy
