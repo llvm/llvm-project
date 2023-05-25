@@ -93,5 +93,52 @@ private:
   /// Temporary storage.
   mlir::Value temp;
 };
+
+/// Structure to hold the value of a single entity.
+class SimpleCopy {
+public:
+  SimpleCopy(mlir::Location loc, fir::FirOpBuilder &builder,
+             hlfir::Entity source, llvm::StringRef tempName);
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value) {
+    assert(false && "must not be called: value already set");
+  }
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder){};
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder) {
+    return copy.getBase();
+  }
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+
+public:
+  /// Temporary storage for the copy.
+  hlfir::AssociateOp copy;
+};
+
+/// Generic wrapper over the different sorts of temporary storages.
+class TemporaryStorage {
+public:
+  template <typename T>
+  TemporaryStorage(T &&impl) : impl{std::forward<T>(impl)} {}
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value) {
+    std::visit([&](auto &temp) { temp.pushValue(loc, builder, value); }, impl);
+  }
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder) {
+    std::visit([&](auto &temp) { temp.resetFetchPosition(loc, builder); },
+               impl);
+  }
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder) {
+    return std::visit([&](auto &temp) { return temp.fetch(loc, builder); },
+                      impl);
+  }
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder) {
+    std::visit([&](auto &temp) { temp.destroy(loc, builder); }, impl);
+  }
+
+private:
+  std::variant<HomogeneousScalarStack, SimpleCopy> impl;
+};
 } // namespace fir::factory
 #endif // FORTRAN_OPTIMIZER_BUILDER_TEMPORARYSTORAGE_H

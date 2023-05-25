@@ -20,9 +20,11 @@
 #include "ScheduleOrderedAssignments.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Builder/TemporaryStorage.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
@@ -106,7 +108,19 @@ public:
     currentRun = nullptr;
     assert(constructStack.empty() && "must exit constructs after a run");
     mapper.clear();
+    savedInCurrentRunBeforeUse.clear();
   }
+
+  /// After all run have been lowered, clean-up all the temporary
+  /// storage that were created (do not call final routines).
+  void cleanupSavedEntities() {
+    for (auto &temp : savedEntities)
+      temp.second.destroy(root.getLoc(), builder);
+  }
+
+  /// Lowered value for an expression, and the original hlfir.yield if any
+  /// clean-up needs to be cloned after usage.
+  using ValueAndCleanUp = std::pair<mlir::Value, std::optional<hlfir::YieldOp>>;
 
 private:
   /// Walk the part of an order assignment tree node that needs
@@ -126,11 +140,16 @@ private:
   void post(hlfir::ForallMaskOp);
   void post(hlfir::WhereOp);
   void post(hlfir::ElseWhereOp);
+  /// Enter (and maybe create) the fir.if else block of an ElseWhereOp,
+  /// but do not generate the elswhere mask or the new fir.if.
+  void enterElsewhere(hlfir::ElseWhereOp);
 
   /// Is this an assignment to a vector subscripted entity?
   static bool hasVectorSubscriptedLhs(hlfir::RegionAssignOp regionAssignOp);
   /// Are they any leaf region in node that must be saved in the current run?
-  bool mustSavedRegionIn(hlfir::OrderedAssignmentTreeOpInterface node) const;
+  bool mustSaveRegionIn(
+      hlfir::OrderedAssignmentTreeOpInterface node,
+      llvm::SmallVectorImpl<hlfir::SaveEntity> &saveEntities) const;
   /// Should this node be evaluated in the current run? Saving a region in a
   /// node does not imply the node needs to be evaluated.
   bool
@@ -154,7 +173,7 @@ private:
   /// should be done after using the entity. Like, generateYieldedScalarValue,
   /// this will return the saved value if the region was saved in a previous
   /// run.
-  std::pair<mlir::Value, std::optional<hlfir::YieldOp>>
+  ValueAndCleanUp
   generateYieldedEntity(mlir::Region &region,
                         std::optional<mlir::Type> castToType = std::nullopt);
 
@@ -173,8 +192,43 @@ private:
   mlir::Value generateMaskedEntity(MaskedArrayExpr &maskedExpr);
 
   /// Create a fir.if at the current position inside the where loop nest
-  /// given a mask expression.
-  void generateMaskIfOp(MaskedArrayExpr &mask);
+  /// given the element value of a mask.
+  void generateMaskIfOp(mlir::Value cdt);
+
+  /// Save a value for subsequent runs.
+  void generateSaveEntity(hlfir::SaveEntity savedEntity,
+                          bool willUseSavedEntityInSameRun);
+
+  /// Get a value if it was saved in this run or a previous run. Returns
+  /// nullopt if it has not been saved.
+  std::optional<ValueAndCleanUp> getIfSaved(mlir::Region &region);
+
+  /// Generate code before the loop nest for the current run, if any.
+  void doBeforeLoopNest(const std::function<void()> &callback) {
+    if (constructStack.empty()) {
+      callback();
+      return;
+    }
+    auto insertionPoint = builder.saveInsertionPoint();
+    builder.setInsertionPoint(constructStack[0]);
+    callback();
+    builder.restoreInsertionPoint(insertionPoint);
+  }
+
+  /// Can the current loop nest iteration number be computed? For simplicity,
+  /// this is true if an only if all the bounds and steps of the fir.do_loop
+  /// nest dominates the outer loop. The argument is filled with the current
+  /// loop nest on success.
+  bool currentLoopNestIterationNumberCanBeComputed(
+      llvm::SmallVectorImpl<fir::DoLoopOp> &loopNest);
+
+  template <typename T>
+  fir::factory::TemporaryStorage *insertSavedEntity(mlir::Region &region,
+                                                    T &&temp) {
+    auto inserted = savedEntities.try_emplace(&region, std::forward<T>(temp));
+    assert(inserted.second && "temp must have been emplaced");
+    return &inserted.first->second;
+  }
 
   fir::FirOpBuilder &builder;
 
@@ -182,6 +236,10 @@ private:
   /// operations and the operations that have been cloned in the current run.
   /// It is reset between two runs.
   mlir::IRMapping mapper;
+  /// Dominance info is used to determine if inner loop bounds are all computed
+  /// before outer loop for the current loop. It does not need to be reset
+  /// between runs.
+  mlir::DominanceInfo dominanceInfo;
   /// Construct stack in the current run. This allows setting back the insertion
   /// point correctly when leaving a node that requires a fir.do_loop or fir.if
   /// operation.
@@ -189,20 +247,50 @@ private:
   /// Current where loop nest, if any.
   std::optional<hlfir::LoopNest> whereLoopNest;
 
+  /// Map of temporary storage to keep track of saved entity once the run
+  /// that saves them has been lowered. It is kept in-between runs.
+  llvm::DenseMap<mlir::Region *, fir::factory::TemporaryStorage> savedEntities;
+  /// Map holding the value that were saved in the current run and that also
+  /// need to be used (because their construct will be visited). It is reset
+  /// after each run. It avoids having to store and fetch in the temporary
+  /// during the same run, which would required the temporary to have different
+  /// fetching and storing counters.
+  llvm::DenseMap<mlir::Region *, ValueAndCleanUp> savedInCurrentRunBeforeUse;
+
   /// Root of the order assignment tree being lowered.
   hlfir::OrderedAssignmentTreeOpInterface root;
   /// Pointer to the current run of the schedule being lowered.
   hlfir::Run *currentRun = nullptr;
+
+  /// When allocating temporary storage inlined, indicate if the storage should
+  /// be heap or stack allocated. Temporary allocated with the runtime are heap
+  /// allocated by the runtime.
+  bool allocateOnHeap = true;
 };
 } // namespace
 
 void OrderedAssignmentRewriter::walk(
     hlfir::OrderedAssignmentTreeOpInterface node) {
-  if (mustSavedRegionIn(node))
-    TODO(node.getLoc(),
-         "creating temporary storage in FORALL or WHERE constructs");
-  if (isRequiredInCurrentRun(node) || mlir::isa<hlfir::ForallIndexOp>(node)) {
-    llvm::TypeSwitch<mlir::Operation *, void>(node.getOperation())
+  bool mustVisit =
+      isRequiredInCurrentRun(node) || mlir::isa<hlfir::ForallIndexOp>(node);
+  llvm::SmallVector<hlfir::SaveEntity> saveEntities;
+  mlir::Operation *nodeOp = node.getOperation();
+  if (mustSaveRegionIn(node, saveEntities)) {
+    mlir::IRRewriter::InsertPoint insertionPoint;
+    if (auto elseWhereOp = mlir::dyn_cast<hlfir::ElseWhereOp>(nodeOp)) {
+      // ElseWhere mask to save must be evaluated inside the fir.if else
+      // for the previous where/elsewehere (its evaluation must be
+      // masked by the "pending control mask").
+      insertionPoint = builder.saveInsertionPoint();
+      enterElsewhere(elseWhereOp);
+    }
+    for (hlfir::SaveEntity saveEntity : saveEntities)
+      generateSaveEntity(saveEntity, mustVisit);
+    if (insertionPoint.isSet())
+      builder.restoreInsertionPoint(insertionPoint);
+  }
+  if (mustVisit) {
+    llvm::TypeSwitch<mlir::Operation *, void>(nodeOp)
         .Case<hlfir::ForallOp, hlfir::ForallIndexOp, hlfir::ForallMaskOp,
               hlfir::RegionAssignOp, hlfir::WhereOp, hlfir::ElseWhereOp>(
             [&](auto concreteOp) { pre(concreteOp); })
@@ -212,7 +300,7 @@ void OrderedAssignmentRewriter::walk(
         if (auto subNode =
                 mlir::dyn_cast<hlfir::OrderedAssignmentTreeOpInterface>(op))
           walk(subNode);
-      llvm::TypeSwitch<mlir::Operation *, void>(node.getOperation())
+      llvm::TypeSwitch<mlir::Operation *, void>(nodeOp)
           .Case<hlfir::ForallOp, hlfir::ForallMaskOp, hlfir::WhereOp,
                 hlfir::ElseWhereOp>([&](auto concreteOp) { post(concreteOp); })
           .Default([](auto) {});
@@ -292,14 +380,11 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   generateCleanupIfAny(oldLhsYield);
 }
 
-void OrderedAssignmentRewriter::generateMaskIfOp(MaskedArrayExpr &mask) {
-  assert(whereLoopNest.has_value() && "must be inside a WHERE");
-  mlir::Location loc = mask.loc;
-  hlfir::Entity maskVal{generateMaskedEntity(mask)};
-  maskVal = hlfir::loadTrivialScalar(loc, builder, maskVal);
-  mlir::Value cdt = builder.createConvert(loc, builder.getI1Type(), maskVal);
-  // Else region is added when visiting nested hlfir.elseWhereOp, if any.
-  auto ifOp = builder.create<fir::IfOp>(loc, std::nullopt, cdt,
+void OrderedAssignmentRewriter::generateMaskIfOp(mlir::Value cdt) {
+  mlir::Location loc = cdt.getLoc();
+  cdt = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{cdt});
+  cdt = builder.createConvert(loc, builder.getI1Type(), cdt);
+  auto ifOp = builder.create<fir::IfOp>(cdt.getLoc(), std::nullopt, cdt,
                                         /*withElseRegion=*/false);
   constructStack.push_back(ifOp.getOperation());
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -307,18 +392,46 @@ void OrderedAssignmentRewriter::generateMaskIfOp(MaskedArrayExpr &mask) {
 
 void OrderedAssignmentRewriter::pre(hlfir::WhereOp whereOp) {
   mlir::Location loc = whereOp.getLoc();
-  MaskedArrayExpr mask(loc, whereOp.getMaskRegion());
   if (!whereLoopNest) {
-    // Start a loop nest iterating on the shape of the where mask.
+    // This is the top-level WHERE. Start a loop nest iterating on the shape of
+    // the where mask.
+    if (auto maybeSaved = getIfSaved(whereOp.getMaskRegion())) {
+      // Use the saved value to get the shape and condition element.
+      hlfir::Entity savedMask{maybeSaved->first};
+      mlir::Value shape = hlfir::genShape(loc, builder, savedMask);
+      whereLoopNest = hlfir::genLoopNest(loc, builder, shape);
+      constructStack.push_back(whereLoopNest->outerLoop.getOperation());
+      builder.setInsertionPointToStart(whereLoopNest->innerLoop.getBody());
+      mlir::Value cdt = hlfir::getElementAt(loc, builder, savedMask,
+                                            whereLoopNest->oneBasedIndices);
+      generateMaskIfOp(cdt);
+      if (maybeSaved->second) {
+        // If this is the same run as the one that saved the value, the clean-up
+        // was left-over to be done now.
+        auto insertionPoint = builder.saveInsertionPoint();
+        builder.setInsertionPointAfter(whereLoopNest->outerLoop);
+        generateCleanupIfAny(maybeSaved->second);
+        builder.restoreInsertionPoint(insertionPoint);
+      }
+      return;
+    }
+    // The mask was not evaluated yet or can be safely re-evaluated.
+    MaskedArrayExpr mask(loc, whereOp.getMaskRegion());
     mask.generateNoneElementalPart(builder, mapper);
     mlir::Value shape = mask.generateShape(builder, mapper);
     whereLoopNest = hlfir::genLoopNest(loc, builder, shape);
     constructStack.push_back(whereLoopNest->outerLoop.getOperation());
     builder.setInsertionPointToStart(whereLoopNest->innerLoop.getBody());
+    mlir::Value cdt = generateMaskedEntity(mask);
+    generateMaskIfOp(cdt);
+    return;
   }
+  // Where Loops have been already created by a parent WHERE.
   // Generate a fir.if with the value of the current element of the mask
-  // inside the loops.
-  generateMaskIfOp(mask);
+  // inside the loops. The case where the mask was saved is handled in the
+  // generateYieldedScalarValue call.
+  mlir::Value cdt = generateYieldedScalarValue(whereOp.getMaskRegion());
+  generateMaskIfOp(cdt);
 }
 
 void OrderedAssignmentRewriter::post(hlfir::WhereOp whereOp) {
@@ -333,20 +446,27 @@ void OrderedAssignmentRewriter::post(hlfir::WhereOp whereOp) {
   }
 }
 
-void OrderedAssignmentRewriter::pre(hlfir::ElseWhereOp elseWhereOp) {
-  assert(!constructStack.empty() && "cannot be empty inside a where");
-  mlir::Location loc = elseWhereOp.getLoc();
+void OrderedAssignmentRewriter::enterElsewhere(hlfir::ElseWhereOp elseWhereOp) {
   // Create an "else" region for the current where/elsewhere fir.if.
   auto ifOp = mlir::dyn_cast<fir::IfOp>(constructStack.back());
-  assert(ifOp && ifOp.getElseRegion().empty() && "must be an if without else");
-  builder.createBlock(&ifOp.getElseRegion());
-  auto end = builder.create<fir::ResultOp>(loc);
-  builder.setInsertionPoint(end);
+  assert(ifOp && "must be an if");
+  if (ifOp.getElseRegion().empty()) {
+    mlir::Location loc = elseWhereOp.getLoc();
+    builder.createBlock(&ifOp.getElseRegion());
+    auto end = builder.create<fir::ResultOp>(loc);
+    builder.setInsertionPoint(end);
+  } else {
+    builder.setInsertionPoint(&ifOp.getElseRegion().back().back());
+  }
+}
+
+void OrderedAssignmentRewriter::pre(hlfir::ElseWhereOp elseWhereOp) {
+  enterElsewhere(elseWhereOp);
   if (elseWhereOp.getMaskRegion().empty())
     return;
   // Create new nested fir.if with elsewhere mask if any.
-  MaskedArrayExpr mask(loc, elseWhereOp.getMaskRegion());
-  generateMaskIfOp(mask);
+  mlir::Value cdt = generateYieldedScalarValue(elseWhereOp.getMaskRegion());
+  generateMaskIfOp(cdt);
 }
 
 void OrderedAssignmentRewriter::post(hlfir::ElseWhereOp elseWhereOp) {
@@ -370,14 +490,51 @@ static bool isForallIndex(mlir::Value value) {
   return value.getDefiningOp<hlfir::ForallIndexOp>();
 }
 
-std::pair<mlir::Value, std::optional<hlfir::YieldOp>>
+static OrderedAssignmentRewriter::ValueAndCleanUp
+castIfNeeded(mlir::Location loc, fir::FirOpBuilder &builder,
+             OrderedAssignmentRewriter::ValueAndCleanUp valueAndCleanUp,
+             std::optional<mlir::Type> castToType) {
+  if (!castToType.has_value())
+    return valueAndCleanUp;
+  mlir::Value cast =
+      builder.createConvert(loc, *castToType, valueAndCleanUp.first);
+  return {cast, valueAndCleanUp.second};
+}
+
+std::optional<OrderedAssignmentRewriter::ValueAndCleanUp>
+OrderedAssignmentRewriter::getIfSaved(mlir::Region &region) {
+  mlir::Location loc = region.getParentOp()->getLoc();
+  // If the region was saved in the same run, use the value that was evaluated
+  // instead of fetching the temp, and do clean-up, if any, that were delayed.
+  // This is done to avoid requiring the temporary stack to have different
+  // fetching and storing counters, and also because it produces slightly better
+  // code.
+  if (auto savedInSameRun = savedInCurrentRunBeforeUse.find(&region);
+      savedInSameRun != savedInCurrentRunBeforeUse.end())
+    return savedInSameRun->second;
+  // If the region was saved in a previous run, fetch the saved value.
+  if (auto temp = savedEntities.find(&region); temp != savedEntities.end()) {
+    doBeforeLoopNest([&]() { temp->second.resetFetchPosition(loc, builder); });
+    return ValueAndCleanUp{temp->second.fetch(loc, builder), std::nullopt};
+  }
+  return std::nullopt;
+}
+
+OrderedAssignmentRewriter::ValueAndCleanUp
 OrderedAssignmentRewriter::generateYieldedEntity(
     mlir::Region &region, std::optional<mlir::Type> castToType) {
-  // TODO: if the region was saved, use that instead of generating code again.
+  mlir::Location loc = region.getParentOp()->getLoc();
+  if (auto maybeValueAndCleanUp = getIfSaved(region))
+    return castIfNeeded(loc, builder, *maybeValueAndCleanUp, castToType);
+  // Otherwise, evaluate the region now.
+
+  // Masked expression must not evaluate the elemental parts that are masked,
+  // they have custom code generation.
   if (whereLoopNest.has_value()) {
-    mlir::Location loc = region.getParentOp()->getLoc();
-    return {generateMaskedEntity(loc, region), std::nullopt};
+    mlir::Value maskedValue = generateMaskedEntity(loc, region);
+    return castIfNeeded(loc, builder, {maskedValue, std::nullopt}, castToType);
   }
+
   assert(region.hasOneBlock() && "region must contain one block");
   auto oldYield = mlir::dyn_cast_or_null<hlfir::YieldOp>(
       region.back().getOperations().back());
@@ -434,7 +591,9 @@ OrderedAssignmentRewriter::generateYieldedEntity(
 
 mlir::Value OrderedAssignmentRewriter::generateYieldedScalarValue(
     mlir::Region &region, std::optional<mlir::Type> castToType) {
+  mlir::Location loc = region.getParentOp()->getLoc();
   auto [value, maybeYield] = generateYieldedEntity(region, castToType);
+  value = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{value});
   assert(fir::isa_trivial(value.getType()) && "not a trivial scalar value");
   generateCleanupIfAny(maybeYield);
   return value;
@@ -468,7 +627,8 @@ void OrderedAssignmentRewriter::generateCleanupIfAny(
       assert(maybeYield->getCleanup().hasOneBlock() &&
              "region must contain one block");
       for (auto &op : maybeYield->getCleanup().back().getOperations())
-        builder.clone(op, mapper);
+        if (!mlir::isa<fir::FirEndOp>(op))
+          builder.clone(op, mapper);
     }
 }
 
@@ -478,14 +638,15 @@ bool OrderedAssignmentRewriter::hasVectorSubscriptedLhs(
       regionAssignOp.getLhsRegion().back().back());
 }
 
-bool OrderedAssignmentRewriter::mustSavedRegionIn(
-    hlfir::OrderedAssignmentTreeOpInterface node) const {
+bool OrderedAssignmentRewriter::mustSaveRegionIn(
+    hlfir::OrderedAssignmentTreeOpInterface node,
+    llvm::SmallVectorImpl<hlfir::SaveEntity> &saveEntities) const {
   for (auto &action : currentRun->actions)
     if (hlfir::SaveEntity *savedEntity =
             std::get_if<hlfir::SaveEntity>(&action))
       if (node.getOperation() == savedEntity->yieldRegion->getParentOp())
-        return true;
-  return false;
+        saveEntities.push_back(*savedEntity);
+  return !saveEntities.empty();
 }
 
 bool OrderedAssignmentRewriter::isRequiredInCurrentRun(
@@ -634,6 +795,125 @@ void MaskedArrayExpr::generateNoneElementalCleanupIfAny(
   }
 }
 
+static bool isLeftHandSide(mlir::Region &region) {
+  auto assign = mlir::dyn_cast<hlfir::RegionAssignOp>(region.getParentOp());
+  return assign && (&assign.getLhsRegion() == &region);
+}
+
+bool OrderedAssignmentRewriter::currentLoopNestIterationNumberCanBeComputed(
+    llvm::SmallVectorImpl<fir::DoLoopOp> &loopNest) {
+  if (constructStack.empty())
+    return true;
+  mlir::Operation *outerLoop = constructStack[0];
+  mlir::Operation *currentConstruct = constructStack.back();
+  // Loop through the loops until the outer construct is met, and test if the
+  // loop operands dominate the outer construct.
+  while (currentConstruct) {
+    if (auto doLoop = mlir::dyn_cast<fir::DoLoopOp>(currentConstruct)) {
+      if (llvm::any_of(doLoop->getOperands(), [&](mlir::Value value) {
+            return !dominanceInfo.properlyDominates(value, outerLoop);
+          })) {
+        return false;
+      }
+      loopNest.push_back(doLoop);
+    }
+    if (currentConstruct == outerLoop)
+      currentConstruct = nullptr;
+    else
+      currentConstruct = currentConstruct->getParentOp();
+  }
+  return true;
+}
+
+static mlir::Value
+computeLoopNestIterationNumber(mlir::Location loc, fir::FirOpBuilder &builder,
+                               llvm::ArrayRef<fir::DoLoopOp> loopNest) {
+  mlir::Value loopExtent;
+  for (fir::DoLoopOp doLoop : loopNest) {
+    mlir::Value extent = builder.genExtentFromTriplet(
+        loc, doLoop.getLowerBound(), doLoop.getUpperBound(), doLoop.getStep(),
+        builder.getIndexType());
+    if (!loopExtent)
+      loopExtent = extent;
+    else
+      loopExtent = builder.create<mlir::arith::MulIOp>(loc, loopExtent, extent);
+  }
+  assert(loopExtent && "loopNest must not be empty");
+  return loopExtent;
+}
+
+void OrderedAssignmentRewriter::generateSaveEntity(
+    hlfir::SaveEntity savedEntity, bool willUseSavedEntityInSameRun) {
+  mlir::Region &region = *savedEntity.yieldRegion;
+  mlir::Location loc = region.getParentOp()->getLoc();
+
+  if (!mlir::isa<hlfir::YieldOp>(region.back().back()))
+    TODO(loc, "creating temporary storage for vector subscripted LHS");
+
+  // Evaluate the region inside the loop nest (if any).
+  auto [clonedValue, oldYield] = generateYieldedEntity(region);
+  hlfir::Entity entity{clonedValue};
+  if (isLeftHandSide(region)) // Need to save the address, not the values.
+    TODO(loc, "creating temporary storage for LHS");
+  else
+    entity = hlfir::loadTrivialScalar(loc, builder, entity);
+  mlir::Type entityType = entity.getType();
+
+  static constexpr char tempName[] = ".tmp.forall";
+  if (constructStack.empty()) {
+    // Value evaluated outside of any loops (this may be the first MASK of a
+    // WHERE construct, or an LHS/RHS temp of hlfir.region_assign outside of
+    // WHERE/FORALL).
+    insertSavedEntity(region,
+                      fir::factory::SimpleCopy(loc, builder, entity, tempName));
+  } else {
+    // Need to create a temporary for values computed inside loops.
+    // Create temporary storage outside of the loop nest given the entity
+    // type (and the loop context).
+    fir::factory::TemporaryStorage *temp;
+    llvm::SmallVector<fir::DoLoopOp> loopNest;
+    bool loopShapeCanBePreComputed =
+        currentLoopNestIterationNumberCanBeComputed(loopNest);
+    doBeforeLoopNest([&] {
+      /// For simple scalars inside loops whose total iteration number can be
+      /// pre-computed, create a rank-1 array outside of the loops. It will be
+      /// assigned/fetched inside the loops like a normal Fortran array given
+      /// the iteration count.
+      if (loopShapeCanBePreComputed && fir::isa_trivial(entityType)) {
+        mlir::Value loopExtent =
+            computeLoopNestIterationNumber(loc, builder, loopNest);
+        auto sequenceType =
+            builder.getVarLenSeqTy(entityType).cast<fir::SequenceType>();
+        temp = insertSavedEntity(region,
+                                 fir::factory::HomogeneousScalarStack{
+                                     loc, builder, sequenceType, loopExtent,
+                                     /*lenParams=*/{}, allocateOnHeap,
+                                     /*stackThroughLoops=*/true, tempName});
+
+      } else {
+        // If the number of iteration is not known, or if the values at each
+        // iterations are values that may have different shape, type parameters
+        // or dynamic type, use the runtime to create and manage a stack-like
+        // temporary.
+        TODO(loc, "use runtime to create temporary storage in FORALL or WHERE");
+      }
+    });
+    // Inside the loop nest (and any fir.if if there are active masks), copy
+    // the value to the temp and do clean-ups for the value if any.
+    temp->pushValue(loc, builder, entity);
+  }
+
+  // Delay the clean-up if the entity will be used in the same run (i.e., the
+  // parent construct will be visited and needs to be lowered).
+  if (willUseSavedEntityInSameRun) {
+    auto inserted =
+        savedInCurrentRunBeforeUse.try_emplace(&region, entity, oldYield);
+    assert(inserted.second && "entity must have been emplaced");
+  } else {
+    generateCleanupIfAny(oldYield);
+  }
+}
+
 /// Lower an ordered assignment tree to fir.do_loop and hlfir.assign given
 /// a schedule.
 static void lower(hlfir::OrderedAssignmentTreeOpInterface root,
@@ -643,6 +923,7 @@ static void lower(hlfir::OrderedAssignmentTreeOpInterface root,
   OrderedAssignmentRewriter assignmentRewriter(builder, root);
   for (auto &run : schedule)
     assignmentRewriter.lowerRun(run);
+  assignmentRewriter.cleanupSavedEntities();
 }
 
 /// Shared rewrite entry point for all the ordered assignment tree root
