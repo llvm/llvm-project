@@ -267,6 +267,9 @@ set(cuda_wrapper_files
   cuda_wrappers/cmath
   cuda_wrappers/complex
   cuda_wrappers/new
+)
+
+set(cuda_wrapper_bits_files
   cuda_wrappers/bits/shared_ptr_base.h
 )
 
@@ -328,7 +331,8 @@ endfunction(clang_generate_header)
 
 
 # Copy header files from the source directory to the build directory
-foreach( f ${files} ${cuda_wrapper_files} ${ppc_wrapper_files} ${openmp_wrapper_files} ${hlsl_files})
+foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
+           ${ppc_wrapper_files} ${openmp_wrapper_files} ${hlsl_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 
@@ -432,7 +436,7 @@ add_header_target("arm-common-resource-headers" "${arm_common_files};${arm_commo
 # Architecture/platform specific targets
 add_header_target("arm-resource-headers" "${arm_only_files};${arm_only_generated_files}")
 add_header_target("aarch64-resource-headers" "${aarch64_only_files};${aarch64_only_generated_files}")
-add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files}")
+add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files};${cuda_wrapper_bits_files}")
 add_header_target("hexagon-resource-headers" "${hexagon_files}")
 add_header_target("hip-resource-headers" "${hip_files}")
 add_header_target("loongarch-resource-headers" "${loongarch_files}")
@@ -464,6 +468,11 @@ install(
 install(
   FILES ${cuda_wrapper_files}
   DESTINATION ${header_install_dir}/cuda_wrappers
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${cuda_wrapper_bits_files}
+  DESTINATION ${header_install_dir}/cuda_wrappers/bits
   COMPONENT clang-resource-headers)
 
 install(
@@ -505,6 +514,12 @@ install(
 install(
   FILES ${cuda_wrapper_files}
   DESTINATION ${header_install_dir}/cuda_wrappers
+  EXCLUDE_FROM_ALL
+  COMPONENT cuda-resource-headers)
+
+install(
+  FILES ${cuda_wrapper_bits_files}
+  DESTINATION ${header_install_dir}/cuda_wrappers/bits
   EXCLUDE_FROM_ALL
   COMPONENT cuda-resource-headers)
 
