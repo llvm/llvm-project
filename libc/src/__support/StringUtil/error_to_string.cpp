@@ -6,18 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/StringUtil/error_to_string.h"
+#include "error_to_string.h"
+#include "platform_errors.h"
 
-#include "src/errno/libc_errno.h" // For error macros
-
-#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/integer_to_string.h"
-
-#include "src/__support/StringUtil/tables/error_table.h"
 
 #include <stddef.h>
 
