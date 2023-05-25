@@ -6003,6 +6003,7 @@ cc_library(
         ":TensorTransformOpsIncGen",
         ":TensorTransforms",
         ":TransformDialect",
+        ":ValueBoundsOpInterface",
         "//llvm:Support",
     ],
 )
