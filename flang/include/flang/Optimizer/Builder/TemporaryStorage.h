@@ -115,6 +115,35 @@ public:
   hlfir::AssociateOp copy;
 };
 
+/// Data structure to stack any kind of values with the same static type and
+/// rank. Each value may have different type parameters, bounds, and dynamic
+/// type. Fetching value N will return a value with the same dynamic type,
+/// bounds, and type parameters as the Nth value that was pushed. It is
+/// implemented using runtime.
+class AnyValueStack {
+public:
+  AnyValueStack(mlir::Location loc, fir::FirOpBuilder &builder,
+                mlir::Type valueStaticType);
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value);
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+
+private:
+  /// Keep the original value type. Values may be stored by the runtime
+  /// with a different type (i1 cannot be passed by descriptor).
+  mlir::Type valueStaticType;
+  /// Runtime cookie created by the runtime. It is a pointer to an opaque
+  /// runtime data structure that manages the stack.
+  mlir::Value opaquePtr;
+  /// Counter to keep track of the fetching position.
+  Counter counter;
+  /// Allocatable box passed to the runtime when fetching the values.
+  mlir::Value retValueBox;
+};
+
 /// Generic wrapper over the different sorts of temporary storages.
 class TemporaryStorage {
 public:
@@ -138,7 +167,7 @@ public:
   }
 
 private:
-  std::variant<HomogeneousScalarStack, SimpleCopy> impl;
+  std::variant<HomogeneousScalarStack, SimpleCopy, AnyValueStack> impl;
 };
 } // namespace fir::factory
 #endif // FORTRAN_OPTIMIZER_BUILDER_TEMPORARYSTORAGE_H
