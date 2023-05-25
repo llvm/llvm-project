@@ -13,7 +13,7 @@ class SBDirCheckerCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.source = 'main.cpp'
+        self.source = "main.cpp"
         self.generateSource(self.source)
 
     @skipIfNoSBHeaders
@@ -24,8 +24,7 @@ class SBDirCheckerCase(TestBase):
         if not (self.platformIsDarwin() and self.getArchitecture() == "x86_64"):
             self.skipTest("This test is only for LLDB.framework built 64-bit")
         if self.getArchitecture() == "i386":
-            self.skipTest(
-                "LLDB is 64-bit and cannot be linked to 32-bit test program.")
+            self.skipTest("LLDB is 64-bit and cannot be linked to 32-bit test program.")
 
         exe_name = self.getBuildArtifact("a.out")
         self.buildDriver(self.source, exe_name)
@@ -39,26 +38,33 @@ class SBDirCheckerCase(TestBase):
 
         # This test uses a generated source file, so it's in the build directory.
         self.line_to_break = line_number(
-            self.getBuildArtifact(self.source), '// Set breakpoint here.')
+            self.getBuildArtifact(self.source), "// Set breakpoint here."
+        )
 
         env_cmd = "settings set target.env-vars %s=%s" % (
-            self.dylibPath, self.getLLDBLibraryEnvVal())
+            self.dylibPath,
+            self.getLLDBLibraryEnvVal(),
+        )
         if self.TraceOn():
             print("Set environment to: ", env_cmd)
         self.runCmd(env_cmd)
         self.addTearDownHook(
             lambda: self.dbg.HandleCommand(
-                "settings remove target.env-vars %s" %
-                self.dylibPath))
+                "settings remove target.env-vars %s" % self.dylibPath
+            )
+        )
 
         lldbutil.run_break_set_by_file_and_line(
-            self, self.source, self.line_to_break, num_expected_locations=-1)
+            self, self.source, self.line_to_break, num_expected_locations=-1
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
-        self.runCmd('frame variable')
+        self.runCmd("frame variable")

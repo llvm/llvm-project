@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 import threading
 import os
 
+
 class TestDebuggerInterruption(TestBase):
     """This test runs a command that starts up, rendevous with the test thread
        using threading barriers, then checks whether it has been interrupted.
@@ -23,8 +24,9 @@ class TestDebuggerInterruption(TestBase):
 
     class CommandRunner(threading.Thread):
         """This class is for running a command, and for making a thread to run the command on.
-           It gets passed the test it is working on behalf of, and most of the important
-           objects come from the test. """
+        It gets passed the test it is working on behalf of, and most of the important
+        objects come from the test."""
+
         def __init__(self, test):
             super().__init__()
             self.test = test
@@ -32,24 +34,31 @@ class TestDebuggerInterruption(TestBase):
         def rendevous(self):
             # We smuggle out barriers and event to the runner thread using thread local data:
             import interruptible
-            interruptible.local_data = interruptible.BarrierContainer(self.test.before_interrupt_barrier,
-                                                                   self.test.after_interrupt_barrier,
-                                                                   self.test.event)
-            
+
+            interruptible.local_data = interruptible.BarrierContainer(
+                self.test.before_interrupt_barrier,
+                self.test.after_interrupt_barrier,
+                self.test.event,
+            )
+
     class DirectCommandRunner(CommandRunner):
-        """"This version runs a single command using HandleCommand."""
+        """ "This version runs a single command using HandleCommand."""
+
         def __init__(self, test, command):
             super().__init__(test)
             self.command = command
-        
+
         def run(self):
             self.rendevous()
-            result = self.test.dbg.GetCommandInterpreter().HandleCommand(self.command, self.test.result)
+            result = self.test.dbg.GetCommandInterpreter().HandleCommand(
+                self.command, self.test.result
+            )
             if self.test.result_barrier:
                 self.test.result_barrier.wait()
 
     class CommandInterpreterRunner(CommandRunner):
         """This version runs the CommandInterpreter and feeds the command to it."""
+
         def __init__(self, test):
             super().__init__(test)
 
@@ -57,16 +66,18 @@ class TestDebuggerInterruption(TestBase):
             self.rendevous()
 
             test = self.test
-            
+
             # We will use files for debugger input and output:
-            
+
             # First write down the command:
             with open(test.getBuildArtifact(test.in_filename), "w") as f:
                 f.write(f"{test.command}\n")
 
             # Now set the debugger's stdout & stdin to our files, and run
             # the CommandInterpreter:
-            with open(test.out_filename, "w") as outf, open(test.in_filename, "r") as inf:
+            with open(test.out_filename, "w") as outf, open(
+                test.in_filename, "r"
+            ) as inf:
                 outsbf = lldb.SBFile(outf.fileno(), "w", False)
                 orig_outf = test.dbg.GetOutputFile()
                 error = test.dbg.SetOutputFile(outsbf)
@@ -76,11 +87,11 @@ class TestDebuggerInterruption(TestBase):
                 orig_inf = test.dbg.GetOutputFile()
                 error = test.dbg.SetInputFile(insbf)
                 test.assertSuccess(error, "Could not set infile")
-                      
+
                 options = lldb.SBCommandInterpreterRunOptions()
                 options.SetPrintResults(True)
                 options.SetEchoCommands(False)
-                
+
                 test.dbg.RunCommandInterpreter(True, False, options, 0, False, False)
                 test.dbg.GetOutputFile().Flush()
 
@@ -88,10 +99,10 @@ class TestDebuggerInterruption(TestBase):
                 test.assertSuccess(error, "Restored outfile")
                 test.dbg.SetInputFile(orig_inf)
                 test.assertSuccess(error, "Restored infile")
-            
+
     def command_setup(self, args):
         """Insert our command, if needed.  Then set up event and barriers if needed.
-           Then return the command to run."""
+        Then return the command to run."""
 
         self.interp = self.dbg.GetCommandInterpreter()
         self.command_name = "interruptible_command"
@@ -121,7 +132,7 @@ class TestDebuggerInterruption(TestBase):
         else:
             command = self.command_name + " " + args
         return command
-    
+
     def run_single_command(self, command):
         # Now start up a thread to run the command:
         self.result.Clear()
@@ -131,15 +142,19 @@ class TestDebuggerInterruption(TestBase):
     def start_command_interp(self):
         self.runner = TestDebuggerInterruption.CommandInterpreterRunner(self)
         self.runner.start()
-        
+
     def check_text(self, result_text, interrupted):
-        if interrupted: 
-            self.assertIn("Command was interrupted", result_text,
-                          "Got the interrupted message")
+        if interrupted:
+            self.assertIn(
+                "Command was interrupted", result_text, "Got the interrupted message"
+            )
         else:
-            self.assertIn("Command was not interrupted", result_text,
-                          "Got the not interrupted message")
-        
+            self.assertIn(
+                "Command was not interrupted",
+                result_text,
+                "Got the not interrupted message",
+            )
+
     def gather_output(self):
         # Now wait for the interrupt to interrupt the command:
         self.runner.join(10.0)
@@ -150,12 +165,12 @@ class TestDebuggerInterruption(TestBase):
             self.runner.join(10.0)
 
         self.assertTrue(finished, "We did finish the command")
-        
-    def check_result(self, interrupted = True):
+
+    def check_result(self, interrupted=True):
         self.gather_output()
         self.check_text(self.result.GetOutput(), interrupted)
 
-    def check_result_output(self, interrupted = True):
+    def check_result_output(self, interrupted=True):
         self.gather_output()
         buffer = ""
         # Okay, now open the file for reading, and read.
@@ -164,13 +179,13 @@ class TestDebuggerInterruption(TestBase):
 
         self.assertNotEqual(len(buffer), 0, "No command data")
         self.check_text(buffer, interrupted)
-        
+
     def debugger_interrupt_test(self, use_interrupt_requested):
         """Test that debugger interruption interrupts a command
-           running directly through HandleCommand.
-           If use_interrupt_requested is true, we'll check that API,
-           otherwise we'll check WasInterrupted.  They should both do
-           the same thing."""
+        running directly through HandleCommand.
+        If use_interrupt_requested is true, we'll check that API,
+        otherwise we'll check WasInterrupted.  They should both do
+        the same thing."""
 
         if use_interrupt_requested:
             command = self.command_setup("debugger")
@@ -185,13 +200,14 @@ class TestDebuggerInterruption(TestBase):
         # I'm going to do it twice here to test that it works as a counter:
         self.dbg.RequestInterrupt()
         self.dbg.RequestInterrupt()
-        
+
         def cleanup():
             self.dbg.CancelInterruptRequest()
+
         self.addTearDownHook(cleanup)
         # Okay, now set both sides going:
         self.after_interrupt_barrier.wait()
-        
+
         # Check that the command was indeed interrupted.  First rendevous
         # after the runner thread had a chance to execute the command:
         self.result_barrier.wait()
@@ -208,12 +224,14 @@ class TestDebuggerInterruption(TestBase):
         # checks for the interrupt state on entry, so we don't wait on the command
         # barriers.
         self.result_barrier.wait()
-        
+
         # Again check that we were
         self.assertFalse(self.result.Succeeded(), "Our command was not allowed to run")
         error_output = self.result.GetError()
-        self.assertIn("... Interrupted", error_output, "Command was cut short by interrupt")
-        
+        self.assertIn(
+            "... Interrupted", error_output, "Command was cut short by interrupt"
+        )
+
         # Now take down the flag, and make sure that we aren't interrupted:
         self.dbg.CancelInterruptRequest()
 
@@ -225,16 +243,16 @@ class TestDebuggerInterruption(TestBase):
 
     def test_debugger_interrupt_use_dbg(self):
         self.debugger_interrupt_test(True)
-        
+
     def test_debugger_interrupt_use_interp(self):
         self.debugger_interrupt_test(False)
-        
+
     def test_interp_doesnt_interrupt_debugger(self):
         """Test that interpreter interruption does not interrupt a command
-           running directly through HandleCommand.
-           If use_interrupt_requested is true, we'll check that API,
-           otherwise we'll check WasInterrupted.  They should both do
-           the same thing."""
+        running directly through HandleCommand.
+        If use_interrupt_requested is true, we'll check that API,
+        otherwise we'll check WasInterrupted.  They should both do
+        the same thing."""
 
         command = self.command_setup("debugger poll")
 
@@ -245,21 +263,20 @@ class TestDebuggerInterruption(TestBase):
         self.before_interrupt_barrier.wait()
         self.dbg.GetCommandInterpreter().InterruptCommand()
         self.after_interrupt_barrier.wait()
-        
+
         # Check that the command was indeed interrupted:
         self.result_barrier.wait()
         self.assertTrue(self.result.Succeeded(), "Our command succeeded")
         result_output = self.result.GetOutput()
         self.check_result(False)
 
-
     def interruptible_command_test(self, use_interrupt_requested):
         """Test that interpreter interruption interrupts a command
-           running in the RunCommandInterpreter loop.
-           If use_interrupt_requested is true, we'll check that API,
-           otherwise we'll check WasInterrupted.  They should both do
-           the same thing."""
-        
+        running in the RunCommandInterpreter loop.
+        If use_interrupt_requested is true, we'll check that API,
+        otherwise we'll check WasInterrupted.  They should both do
+        the same thing."""
+
         self.out_filename = self.getBuildArtifact("output")
         self.in_filename = self.getBuildArtifact("input")
         # We're going to overwrite the input file, but we
@@ -284,7 +301,7 @@ class TestDebuggerInterruption(TestBase):
         self.assertTrue(sent_interrupt, "Did send command interrupt.")
         # Now give the command a chance to finish:
         self.after_interrupt_barrier.wait()
-        
+
         self.check_result_output(True)
 
         os.unlink(self.out_filename)
@@ -292,19 +309,19 @@ class TestDebuggerInterruption(TestBase):
         # Now send the check command, and make sure the flag is now down.
         self.command = self.command_setup("interp check") + "\n"
         self.start_command_interp()
-        
+
         self.check_result_output(False)
 
     def test_interruptible_command_check_dbg(self):
         self.interruptible_command_test(True)
-        
+
     def test_interruptible_command_check_interp(self):
         self.interruptible_command_test(False)
 
     def test_debugger_doesnt_interrupt_command(self):
         """Test that debugger interruption doesn't interrupt a command
-           running in the RunCommandInterpreter loop."""
-        
+        running in the RunCommandInterpreter loop."""
+
         self.out_filename = self.getBuildArtifact("output")
         self.in_filename = self.getBuildArtifact("input")
         # We're going to overwrite the input file, but we
@@ -319,12 +336,13 @@ class TestDebuggerInterruption(TestBase):
 
         self.before_interrupt_barrier.wait()
         self.dbg.RequestInterrupt()
+
         def cleanup():
             self.dbg.CancelInterruptRequest()
+
         self.addTearDownHook(cleanup)
         self.after_interrupt_barrier.wait()
 
         self.check_result_output(False)
 
         os.unlink(self.out_filename)
-

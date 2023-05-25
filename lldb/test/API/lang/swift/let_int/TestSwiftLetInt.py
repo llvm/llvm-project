@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftLetIntSupport(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -32,7 +31,8 @@ class TestSwiftLetIntSupport(TestBase):
         """Test that a 'let' Int is formatted properly"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         let = self.frame().FindVariable("x")
         var = self.frame().FindVariable("y")
@@ -43,9 +43,9 @@ class TestSwiftLetIntSupport(TestBase):
         get_locals = True
         get_statics = False
         get_in_scope_only = True
-        local_vars = self.frame().GetVariables(get_arguments, get_locals,
-                                             get_statics, get_in_scope_only)
+        local_vars = self.frame().GetVariables(
+            get_arguments, get_locals, get_statics, get_in_scope_only
+        )
         self.assertTrue(local_vars.GetFirstValueByName("x").IsValid())
         self.assertTrue(local_vars.GetFirstValueByName("y").IsValid())
         self.assertTrue(not local_vars.GetFirstValueByName("z").IsValid())
-

@@ -28,7 +28,9 @@ class TestCase(lldbtest.TestBase):
         self.assertEqual(lines, {3})
 
         # Required for builds that have debug info.
-        self.runCmd("settings set target.process.thread.step-avoid-libraries libswift_Concurrency.dylib")
+        self.runCmd(
+            "settings set target.process.thread.step-avoid-libraries libswift_Concurrency.dylib"
+        )
         thread.StepInto()
         frame = thread.frame[0]
         # Step in from `main` should progress through to `f`.

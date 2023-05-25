@@ -27,7 +27,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestTemplateWithSameArg(TestBase):
-
     def setUp(self):
         TestBase.setUp(self)
         self.build()
@@ -37,17 +36,25 @@ class TestTemplateWithSameArg(TestBase):
     def test_same_template_arg(self):
         lldbutil.run_to_source_breakpoint(self, "Break here", self.main_source_file)
 
-        self.expect_expr("FromMod1", result_type="ClassInMod1", result_children=[
-                ValueCheck(name="VecInMod1", children=[
-                            ValueCheck(name="Member", value="137")
-                    ])
-            ])
+        self.expect_expr(
+            "FromMod1",
+            result_type="ClassInMod1",
+            result_children=[
+                ValueCheck(
+                    name="VecInMod1", children=[ValueCheck(name="Member", value="137")]
+                )
+            ],
+        )
 
-        self.expect_expr("FromMod2", result_type="ClassInMod2", result_children=[
-                ValueCheck(name="VecInMod2", children=[
-                            ValueCheck(name="Member", value="42")
-                    ])
-            ])
+        self.expect_expr(
+            "FromMod2",
+            result_type="ClassInMod2",
+            result_children=[
+                ValueCheck(
+                    name="VecInMod2", children=[ValueCheck(name="Member", value="42")]
+                )
+            ],
+        )
 
     @add_test_categories(["gmodules"])
     def test_duplicate_decls(self):
@@ -57,6 +64,8 @@ class TestTemplateWithSameArg(TestBase):
 
         # Make sure we only have a single 'Member' decl on the AST
         self.filecheck("target module dump ast", __file__)
+
+
 # CHECK:      ClassTemplateSpecializationDecl {{.*}} imported in Module2 struct ClassInMod3 definition
 # CHECK-NEXT: |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial
 # CHECK-NEXT: | |-DefaultConstructor exists trivial needs_implicit

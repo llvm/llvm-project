@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestFunctionVariables(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -46,7 +45,8 @@ class TestFunctionVariables(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            '// Set breakpoint here', self.main_source_spec)
+            "// Set breakpoint here", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -55,15 +55,14 @@ class TestFunctionVariables(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         thread = threads[0]
         frame = thread.frames[0]
         self.assertTrue(frame, "Frame 0 is valid.")
         # Get the function pointer variable from our frame
-        func_ptr_value = frame.FindVariable('func_ptr')
+        func_ptr_value = frame.FindVariable("func_ptr")
 
         # Grab the function pointer value as an unsigned load address
         func_ptr_addr = func_ptr_value.GetValueAsUnsigned()
@@ -77,5 +76,4 @@ class TestFunctionVariables(TestBase):
 
         # Make sure the function pointer correctly resolved to our a.bar
         # function
-        self.assertEqual('a.bar() -> ()', func_ptr_function.name)
-
+        self.assertEqual("a.bar() -> ()", func_ptr_function.name)

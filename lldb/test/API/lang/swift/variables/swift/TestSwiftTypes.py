@@ -21,7 +21,6 @@ import platform
 
 
 class TestSwiftTypes(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -46,7 +45,8 @@ class TestSwiftTypes(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
+            "Set breakpoint here", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -55,8 +55,7 @@ class TestSwiftTypes(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -64,142 +63,93 @@ class TestSwiftTypes(TestBase):
         value_str = "value = -2"
         self.expect(
             "frame variable --raw int16_minus_two",
-            substrs=[
-                'Int16',
-                'int16_minus_two',
-                value_str])
+            substrs=["Int16", "int16_minus_two", value_str],
+        )
         self.expect(
             "frame variable --raw int32_minus_two",
-            substrs=[
-                'Int32',
-                'int32_minus_two',
-                value_str])
+            substrs=["Int32", "int32_minus_two", value_str],
+        )
         # TODO: change 'Int' back to 'Int64' name back when
         # <rdar://problem/15078795> is fixed
         self.expect(
             "frame variable --raw int64_minus_two",
-            substrs=[
-                'Int',
-                'int64_minus_two',
-                value_str])
+            substrs=["Int", "int64_minus_two", value_str],
+        )
         self.expect(
             "frame variable --raw int_minus_two",
-            substrs=[
-                'Int',
-                'int_minus_two',
-                value_str])
+            substrs=["Int", "int_minus_two", value_str],
+        )
         value_str = "value = 2"
         self.expect(
             "frame variable --raw int8_plus_two",
-            substrs=[
-                'Int8',
-                'int8_plus_two',
-                value_str])
+            substrs=["Int8", "int8_plus_two", value_str],
+        )
         self.expect(
             "frame variable --raw int16_plus_two",
-            substrs=[
-                'Int16',
-                'int16_plus_two',
-                value_str])
+            substrs=["Int16", "int16_plus_two", value_str],
+        )
         self.expect(
             "frame variable --raw int32_plus_two",
-            substrs=[
-                'Int32',
-                'int32_plus_two',
-                value_str])
+            substrs=["Int32", "int32_plus_two", value_str],
+        )
         # TODO: change 'Int' back to 'Int64' name back when
         # <rdar://problem/15078795> is fixed
         self.expect(
             "frame variable --raw int64_plus_two",
-            substrs=[
-                'Int',
-                'int64_plus_two',
-                value_str])
+            substrs=["Int", "int64_plus_two", value_str],
+        )
         self.expect(
             "frame variable --raw int_plus_two",
-            substrs=[
-                'Int',
-                'int_plus_two',
-                value_str])
+            substrs=["Int", "int_plus_two", value_str],
+        )
         value_str = "value = 2"
         self.expect(
             "frame variable --raw int8_plus_two",
-            substrs=[
-                'Int8',
-                'int8_plus_two',
-                value_str])
+            substrs=["Int8", "int8_plus_two", value_str],
+        )
         self.expect(
             "frame variable --raw int16_plus_two",
-            substrs=[
-                'Int16',
-                'int16_plus_two',
-                value_str])
+            substrs=["Int16", "int16_plus_two", value_str],
+        )
         self.expect(
             "frame variable --raw int32_plus_two",
-            substrs=[
-                'Int32',
-                'int32_plus_two',
-                value_str])
+            substrs=["Int32", "int32_plus_two", value_str],
+        )
         # TODO: change 'Int' back to 'Int64' name back when
         # <rdar://problem/15078795> is fixed
         self.expect(
             "frame variable --raw int64_plus_two",
-            substrs=[
-                'Int',
-                'int64_plus_two',
-                value_str])
+            substrs=["Int", "int64_plus_two", value_str],
+        )
 
         self.expect(
-            "frame variable --raw float32",
-            substrs=[
-                'Float',
-                'float32',
-                'value = 1.25'])
+            "frame variable --raw float32", substrs=["Float", "float32", "value = 1.25"]
+        )
         self.expect(
-            "frame variable --raw float64",
-            substrs=[
-                'Double',
-                'float64',
-                'value = 2.5'])
+            "frame variable --raw float64", substrs=["Double", "float64", "value = 2.5"]
+        )
         if self.getArchitecture() == "x86_64":
             self.expect(
                 "frame variable --raw float80",
-                substrs=[
-                    'Float80',
-                    'float80',
-                    'value = 1.0625'])
+                substrs=["Float80", "float80", "value = 1.0625"],
+            )
         self.expect(
-            "frame variable --raw float",
-            substrs=[
-                'Float',
-                'float',
-                'value = 3.75'])
+            "frame variable --raw float", substrs=["Float", "float", "value = 3.75"]
+        )
 
-        self.expect("frame variable --raw hello", substrs=['String'])
+        self.expect("frame variable --raw hello", substrs=["String"])
 
-        self.expect("expression/x int64_minus_two", substrs=['0xfffffffffffffffe'])
-        self.expect("expression/u ~1", substrs=['18446744073709551614'])
-        self.expect("expression/d ~1", substrs=['-2'])
+        self.expect("expression/x int64_minus_two", substrs=["0xfffffffffffffffe"])
+        self.expect("expression/u ~1", substrs=["18446744073709551614"])
+        self.expect("expression/d ~1", substrs=["-2"])
 
-        self.expect('frame variable uint8_max', substrs=['-1'], matching=False)
-        self.expect(
-            'frame variable uint16_max',
-            substrs=['-1'],
-            matching=False)
-        self.expect(
-            'frame variable uint32_max',
-            substrs=['-1'],
-            matching=False)
-        self.expect(
-            'frame variable uint64_max',
-            substrs=['-1'],
-            matching=False)
-        self.expect('frame variable uint_max', substrs=['-1'], matching=False)
+        self.expect("frame variable uint8_max", substrs=["-1"], matching=False)
+        self.expect("frame variable uint16_max", substrs=["-1"], matching=False)
+        self.expect("frame variable uint32_max", substrs=["-1"], matching=False)
+        self.expect("frame variable uint64_max", substrs=["-1"], matching=False)
+        self.expect("frame variable uint_max", substrs=["-1"], matching=False)
 
-        self.expect('frame variable uint8_max', substrs=['255'])
-        self.expect('frame variable uint16_max', substrs=['65535'])
-        self.expect('frame variable uint32_max', substrs=['4294967295'])
-        self.expect(
-            'frame variable uint64_max',
-            substrs=['18446744073709551615'])
-
+        self.expect("frame variable uint8_max", substrs=["255"])
+        self.expect("frame variable uint16_max", substrs=["65535"])
+        self.expect("frame variable uint32_max", substrs=["4294967295"])
+        self.expect("frame variable uint64_max", substrs=["18446744073709551615"])

@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftMixAnyObjectType(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -33,31 +32,26 @@ class TestSwiftMixAnyObjectType(TestBase):
         """Test the AnyObject type in different combinations"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, '// break here', lldb.SBFileSpec('main.swift'))
+            self, "// break here", lldb.SBFileSpec("main.swift")
+        )
 
         self.expect(
-            'frame variable -d run -- cls',
-            substrs=['text = "Instance of MyClass"'])
-        self.expect(
-            'expr -d run -- cls',
-            substrs=['text = "Instance of MyClass"'])
+            "frame variable -d run -- cls", substrs=['text = "Instance of MyClass"']
+        )
+        self.expect("expr -d run -- cls", substrs=['text = "Instance of MyClass"'])
 
         self.expect(
-            'frame variable -d run -- any',
-            substrs=['text = "Instance of MyClass"'])
-        self.expect(
-            'expr -d run -- any',
-            substrs=['text = "Instance of MyClass"'])
+            "frame variable -d run -- any", substrs=['text = "Instance of MyClass"']
+        )
+        self.expect("expr -d run -- any", substrs=['text = "Instance of MyClass"'])
 
         self.expect(
-            'frame variable -d run -- opt',
-            substrs=['text = "Instance of MyClass"'])
-        self.expect(
-            'expr -d run -- opt',
-            substrs=['text = "Instance of MyClass"'])
+            "frame variable -d run -- opt", substrs=['text = "Instance of MyClass"']
+        )
+        self.expect("expr -d run -- opt", substrs=['text = "Instance of MyClass"'])
 
         self.expect(
-            'frame variable -d run -- dict',
+            "frame variable -d run -- dict",
             ordered=False,
             substrs=[
                 'key = "One"',
@@ -65,9 +59,11 @@ class TestSwiftMixAnyObjectType(TestBase):
                 'key = "Three"',
                 'text = "Instance of MyClass"',
                 'key = "Two"',
-                'text = "Instance Two"'])
+                'text = "Instance Two"',
+            ],
+        )
         self.expect(
-            'expr -d run -- dict',
+            "expr -d run -- dict",
             ordered=False,
             substrs=[
                 'key = "One"',
@@ -75,4 +71,6 @@ class TestSwiftMixAnyObjectType(TestBase):
                 'key = "Three"',
                 'text = "Instance of MyClass"',
                 'key = "Two"',
-                'text = "Instance Two"'])
+                'text = "Instance Two"',
+            ],
+        )

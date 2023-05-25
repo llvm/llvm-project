@@ -12,11 +12,12 @@
 import lldbsuite.test.lldbinline as lldbinline
 from lldbsuite.test.decorators import *
 
-lldbinline.MakeInlineTest(__file__,
-                          globals(),
-                          decorators=[
-                              swiftTest,
-                              skipIf(oslist=['windows']),
-                              expectedFailureAll(oslist=["linux"],
-                                                 bugnumber="rdar://83444822")
-                          ])
+lldbinline.MakeInlineTest(
+    __file__,
+    globals(),
+    decorators=[
+        swiftTest,
+        skipIf(oslist=["windows"]),
+        expectedFailureAll(oslist=["linux"], bugnumber="rdar://83444822"),
+    ],
+)

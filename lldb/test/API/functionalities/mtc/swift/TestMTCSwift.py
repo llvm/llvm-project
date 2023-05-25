@@ -13,11 +13,12 @@ import json
 
 
 class MTCSwiftTestCase(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(bugnumber="rdar://60396797",
-                        setting=('symbols.use-swift-clangimporter', 'false'))
+    @expectedFailureAll(
+        bugnumber="rdar://60396797",
+        setting=("symbols.use-swift-clangimporter", "false"),
+    )
     @skipUnlessDarwin
     @swiftTest
     def test(self):
@@ -40,20 +41,35 @@ class MTCSwiftTestCase(TestBase):
 
         view = "NSView" if lldbplatformutil.getPlatform() == "macosx" else "UIView"
 
-        self.expect("thread info",
-                    substrs=['stop reason = ' + view +
-                             '.removeFromSuperview() must be used from main thread only'])
+        self.expect(
+            "thread info",
+            substrs=[
+                "stop reason = "
+                + view
+                + ".removeFromSuperview() must be used from main thread only"
+            ],
+        )
 
         self.expect(
             "thread info -s",
             ordered=False,
-            substrs=["instrumentation_class", "api_name", "class_name", "selector", "description"])
+            substrs=[
+                "instrumentation_class",
+                "api_name",
+                "class_name",
+                "selector",
+                "description",
+            ],
+        )
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonInstrumentation)
-        output_lines = self.res.GetOutput().split('\n')
-        json_line = '\n'.join(output_lines[2:])
+        output_lines = self.res.GetOutput().split("\n")
+        json_line = "\n".join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "MainThreadChecker")
         self.assertEqual(data["api_name"], view + ".removeFromSuperview()")
         self.assertEqual(data["class_name"], view)
         self.assertEqual(data["selector"], "removeFromSuperview")
-        self.assertEqual(data["description"], view + ".removeFromSuperview() must be used from main thread only")
+        self.assertEqual(
+            data["description"],
+            view + ".removeFromSuperview() must be used from main thread only",
+        )

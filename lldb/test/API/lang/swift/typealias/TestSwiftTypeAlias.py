@@ -2,8 +2,8 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
-class TestSwiftTypeAlias(TestBase):
 
+class TestSwiftTypeAlias(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -14,20 +14,27 @@ class TestSwiftTypeAlias(TestBase):
         self.expect("log enable dwarf lookups -f " + log)
 
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.swift"), extra_images=['Dylib'])
+            self, "break here", lldb.SBFileSpec("main.swift"), extra_images=["Dylib"]
+        )
         self.expect("target variable foo", substrs=["(Dylib.MyAlias)", "23"])
-        self.expect("target variable bar",
-                    substrs=["(Dylib.MyGenericAlias<Dylib.MyAlias>)", "42"])
+        self.expect(
+            "target variable bar",
+            substrs=["(Dylib.MyGenericAlias<Dylib.MyAlias>)", "42"],
+        )
 
         import io
-        logfile = io.open(log, "r", encoding='utf-8')
+
+        logfile = io.open(log, "r", encoding="utf-8")
         foo_lookups = 0
         bar_lookups = 0
         for line in logfile:
             if ' SymbolFileDWARF::FindTypes (sc, name="$s5Dylib7MyAliasaD"' in line:
                 foo_lookups += 1
 
-            if ' SymbolFileDWARF::FindTypes (sc, name="$s5Dylib14MyGenericAliasaD' in line:
+            if (
+                ' SymbolFileDWARF::FindTypes (sc, name="$s5Dylib14MyGenericAliasaD'
+                in line
+            ):
                 bar_lookups += 1
         self.assertEquals(foo_lookups, 0)
         # FIXME: This does not actually work yet, it should also be 0.

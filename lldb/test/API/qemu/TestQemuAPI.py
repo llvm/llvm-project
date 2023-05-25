@@ -17,9 +17,9 @@ class TestQemuAPI(TestBase):
 
         self.assertSuccess(qemu.Put(main_c, lldb.SBFileSpec(target)))
         self.assertTrue(os.path.exists(target))
-        self.assertEqual(qemu.GetFilePermissions(target),
-                host.GetFilePermissions(target))
+        self.assertEqual(
+            qemu.GetFilePermissions(target), host.GetFilePermissions(target)
+        )
 
-        self.assertSuccess(qemu.MakeDirectory(
-            self.getBuildArtifact("target_dir")))
+        self.assertSuccess(qemu.MakeDirectory(self.getBuildArtifact("target_dir")))
         self.assertTrue(os.path.isdir(self.getBuildArtifact("target_dir")))

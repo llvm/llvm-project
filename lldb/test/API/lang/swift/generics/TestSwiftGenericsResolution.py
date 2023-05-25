@@ -20,7 +20,6 @@ import unittest2
 
 
 class SwiftDynamicTypeGenericsTest(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -34,7 +33,9 @@ class SwiftDynamicTypeGenericsTest(TestBase):
 
     def genericresolution_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
-        lldbutil.run_to_source_breakpoint(self, "//Break here", lldb.SBFileSpec("main.swift"))
+        lldbutil.run_to_source_breakpoint(
+            self, "//Break here", lldb.SBFileSpec("main.swift")
+        )
 
         self.expect(
             "frame variable -d run",
@@ -42,33 +43,38 @@ class SwiftDynamicTypeGenericsTest(TestBase):
                 "(Int) x = 123",
                 "(a.OtherClass<Int>) self = 0x",
                 "a.AClass<Swift.Int> = {}",
-                "v = 1234567"])
+                "v = 1234567",
+            ],
+        )
+        self.runCmd("continue")
+        self.expect(
+            "frame variable -d run",
+            substrs=['(String) x = "hello world again"', "(Int) v = 1"],
+        )
         self.runCmd("continue")
         self.expect(
             "frame variable -d run",
             substrs=[
-                '(String) x = "hello world again"',
-                '(Int) v = 1'])
-        self.runCmd("continue")
-        self.expect(
-            "frame variable -d run",
-            substrs=[
-                '(a.Pair<a.Generic<Int>, a.Pair<String, a.Generic<String>>>) self = 0x',
-                'one = ',
-                'v = 193627',
-                'two = 0x',
+                "(a.Pair<a.Generic<Int>, a.Pair<String, a.Generic<String>>>) self = 0x",
+                "one = ",
+                "v = 193627",
+                "two = 0x",
                 'one = "hello"',
-                'two = (v = "world")'])
+                'two = (v = "world")',
+            ],
+        )
         self.runCmd("continue")
         self.expect(
             "frame variable -d run",
             substrs=[
-                '(a.Pair<a.Generic<Double>, a.Generic<a.Pair<String, String>>>) self = 0',
-                'one = ',
-                'v = 3.1',
-                'two = {',
-                'v = 0x',
-                '(one = "this is", two = "a good thing")'])
+                "(a.Pair<a.Generic<Double>, a.Generic<a.Pair<String, String>>>) self = 0",
+                "one = ",
+                "v = 3.1",
+                "two = {",
+                "v = 0x",
+                '(one = "this is", two = "a good thing")',
+            ],
+        )
         self.runCmd("continue")
         self.expect(
             "frame variable -d run",
@@ -77,10 +83,8 @@ class SwiftDynamicTypeGenericsTest(TestBase):
                 '(String) y = "hello world"',
                 "(a.OtherClass<Int>) self = 0x",
                 "a.AClass<Swift.Int> = {}",
-                "v = 1234567"])
+                "v = 1234567",
+            ],
+        )
         self.runCmd("continue")
-        self.expect(
-            "frame variable -d run",
-            substrs=[
-                "(a.Outer<Int>.Inner) self ="
-            ])
+        self.expect("frame variable -d run", substrs=["(a.Outer<Int>.Inner) self ="])

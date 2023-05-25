@@ -24,6 +24,7 @@ import unittest2
 from lldbsuite.test.builders.darwin import get_triple
 
 import sys
+
 if sys.version_info.major == 2:
     import commands as subprocess
 else:
@@ -36,39 +37,38 @@ def execute_command(command):
 
 
 class TestSwiftPlaygrounds(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def get_build_triple(self):
         """We want to build the file with a deployment target earlier than the
-           availability set in the source file."""
+        availability set in the source file."""
         if lldb.remote_platform:
             arch = self.getArchitecture()
             vendor, os, version, _ = get_triple()
             # This is made slightly more complex by watchOS having misaligned
             # version numbers.
-            if os == 'watchos':
-                version = '5.0'
+            if os == "watchos":
+                version = "5.0"
             else:
-                version = '7.0'
-            triple = '{}-{}-{}{}'.format(arch, vendor, os, version)
+                version = "7.0"
+            triple = "{}-{}-{}{}".format(arch, vendor, os, version)
         else:
-            triple = '{}-apple-macosx11.0'.format(platform.machine())
+            triple = "{}-apple-macosx11.0".format(platform.machine())
         return triple
 
     def get_run_triple(self):
         if lldb.remote_platform:
             arch = self.getArchitecture()
             vendor, os, version, _ = get_triple()
-            triple = '{}-{}-{}{}'.format(arch, vendor, os, version)
+            triple = "{}-{}-{}{}".format(arch, vendor, os, version)
         else:
             version, _, machine = platform.mac_ver()
-            triple = '{}-apple-macosx{}'.format(machine, version)
+            triple = "{}-apple-macosx{}".format(machine, version)
         return triple
 
     @skipUnlessDarwin
     @swiftTest
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     @skipIf(debug_info=decorators.no_match("dsym"))
     def test_force_target(self):
         """Test that playgrounds work"""
@@ -77,7 +77,7 @@ class TestSwiftPlaygrounds(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     @skipIf(debug_info=decorators.no_match("dsym"))
     def test_no_force_target(self):
         """Test that playgrounds work"""
@@ -86,7 +86,7 @@ class TestSwiftPlaygrounds(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     @skipIf(debug_info=decorators.no_match("dsym"))
     @skipIf(macos_version=["<", "12"])
     def test_concurrency(self):
@@ -96,46 +96,46 @@ class TestSwiftPlaygrounds(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     @skipIf(debug_info=decorators.no_match("dsym"))
     def test_import(self):
         """Test that a dylib can be imported in playgrounds"""
         self.launch(True)
         self.do_import_test()
-        
+
     def launch(self, force_target):
         """Test that playgrounds work"""
-        self.build(dictionary={
-            'TARGET_SWIFTFLAGS':
-            '-target {}'.format(self.get_build_triple()),
-        })
+        self.build(
+            dictionary={
+                "TARGET_SWIFTFLAGS": "-target {}".format(self.get_build_triple()),
+            }
+        )
 
         # Create the target
         exe = self.getBuildArtifact("PlaygroundStub")
         if force_target:
-            target = self.dbg.CreateTargetWithFileAndArch(
-                exe, self.get_run_triple())
+            target = self.dbg.CreateTargetWithFileAndArch(exe, self.get_run_triple())
         else:
             target = self.dbg.CreateTarget(exe)
 
         self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target,
-                                               ['libPlaygroundsRuntime.dylib'])
+        self.registerSharedLibrariesWithTarget(target, ["libPlaygroundsRuntime.dylib"])
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', lldb.SBFileSpec("PlaygroundStub.swift"))
+            "Set breakpoint here", lldb.SBFileSpec("PlaygroundStub.swift")
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         process = target.LaunchSimple(None, None, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertEqual(len(threads), 1)
-        self.expect('settings set target.swift-framework-search-paths "%s"' %
-                    self.getBuildDir())
+        self.expect(
+            'settings set target.swift-framework-search-paths "%s"' % self.getBuildDir()
+        )
 
         self.options = lldb.SBExpressionOptions()
         self.options.SetLanguage(lldb.eLanguageTypeSwift)
@@ -144,16 +144,15 @@ class TestSwiftPlaygrounds(TestBase):
         self.options.SetOneThreadTimeoutInMicroSeconds(1)
         self.options.SetTryAllThreads(True)
 
-
     def execute_code(self, input_file, expect_error=False):
         contents = "syntax error"
-        with open(input_file, 'r') as contents_file:
+        with open(input_file, "r") as contents_file:
             contents = contents_file.read()
         res = self.frame().EvaluateExpression(contents, self.options)
         ret = self.frame().EvaluateExpression("get_output()")
         is_error = res.GetError().Fail() and not (
-                     res.GetError().GetType() == 1 and
-                     res.GetError().GetError() == 0x1001)
+            res.GetError().GetType() == 1 and res.GetError().GetError() == 0x1001
+        )
         playground_output = ret.GetSummary()
         with recording(self, self.TraceOn()) as sbuf:
             print("playground result: ", file=sbuf)
@@ -171,9 +170,9 @@ class TestSwiftPlaygrounds(TestBase):
         self.assertFalse(is_error)
         self.assertIsNotNone(playground_output)
         return playground_output
-        
+
     def do_basic_test(self, force_target):
-        playground_output = self.execute_code('Contents.swift', not force_target)
+        playground_output = self.execute_code("Contents.swift", not force_target)
         if not force_target:
             # This is expected to fail because the deployment target
             # is less than the availability of the function being
@@ -187,23 +186,26 @@ class TestSwiftPlaygrounds(TestBase):
         self.assertIn("=\\'11\\'", playground_output)
 
     def do_concurrency_test(self):
-        playground_output = self.execute_code('Concurrency.swift')
+        playground_output = self.execute_code("Concurrency.swift")
         self.assertIn("=\\'23\\'", playground_output)
 
     def do_import_test(self):
         # Test importing a library that adds new Clang options.
-        log = self.getBuildArtifact('types.log')
-        self.expect('log enable lldb types -f ' + log)
-        playground_output = self.execute_code('Import.swift')
+        log = self.getBuildArtifact("types.log")
+        self.expect("log enable lldb types -f " + log)
+        playground_output = self.execute_code("Import.swift")
         self.assertIn("Hello from the Dylib", playground_output)
 
         # Scan through the types log to make sure the SwiftASTContext was poisoned.
         import io
-        logfile = io.open(log, "r", encoding='utf-8')
+
+        logfile = io.open(log, "r", encoding="utf-8")
         found = 0
         for line in logfile:
-            if 'New Swift image added' in line \
-               and 'Versions/A/Dylib' in line \
-               and 'ClangImporter needs to be reinitialized' in line:
-                    found += 1
+            if (
+                "New Swift image added" in line
+                and "Versions/A/Dylib" in line
+                and "ClangImporter needs to be reinitialized" in line
+            ):
+                found += 1
         self.assertEqual(found, 2)

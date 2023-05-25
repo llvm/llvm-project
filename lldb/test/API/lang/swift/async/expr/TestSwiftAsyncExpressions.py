@@ -6,7 +6,6 @@ import unittest2
 
 
 class TestSwiftAsyncExpressions(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -17,5 +16,6 @@ class TestSwiftAsyncExpressions(lldbtest.TestBase):
         """Test async unwind"""
         self.build()
         target, process, thread, main_bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec("main.swift"))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
         self.expect("expr n", substrs=["42"])

@@ -6,7 +6,6 @@ import unittest2
 
 
 class TestArchetypeInConditionalBreakpoint(TestBase):
-
     @swiftTest
     def test_stops(self):
         """Tests that using archetypes in a conditional breakpoint's expression works correctly"""
@@ -14,13 +13,13 @@ class TestArchetypeInConditionalBreakpoint(TestBase):
         target = lldbutil.run_to_breakpoint_make_target(self)
 
         breakpoint = target.BreakpointCreateBySourceRegex(
-                "break here", lldb.SBFileSpec("main.swift"))
+            "break here", lldb.SBFileSpec("main.swift")
+        )
 
         breakpoint.SetCondition("T.self == Int.self")
         _, process, _, _ = lldbutil.run_to_breakpoint_do_run(self, target, breakpoint)
-    
-        self.assertEqual(process.state, lldb.eStateStopped)
 
+        self.assertEqual(process.state, lldb.eStateStopped)
 
     @swiftTest
     def test_doesnt_stop(self):
@@ -29,7 +28,8 @@ class TestArchetypeInConditionalBreakpoint(TestBase):
         target = lldbutil.run_to_breakpoint_make_target(self)
 
         breakpoint = target.BreakpointCreateBySourceRegex(
-                "break here", lldb.SBFileSpec("main.swift"))
+            "break here", lldb.SBFileSpec("main.swift")
+        )
 
         breakpoint.SetCondition("T.self == Double.self")
 
@@ -41,4 +41,3 @@ class TestArchetypeInConditionalBreakpoint(TestBase):
 
         # Make sure that we didn't stop since the condition doesn't match
         self.assertEqual(process.state, lldb.eStateExited)
-

@@ -20,7 +20,6 @@ import os
 
 
 class TestSwiftTypeAliasFormatters(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -30,35 +29,33 @@ class TestSwiftTypeAliasFormatters(TestBase):
     def test_swift_type_alias_formatters(self):
         """Test that Swift typealiases get formatted properly"""
         self.build()
-        target, process, thread, a_breakpoint = \
-            lldbutil.run_to_source_breakpoint(
-                self, 'break here', lldb.SBFileSpec('main.swift'))
+        target, process, thread, a_breakpoint = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
         def cleanup():
-            self.runCmd('type format clear', check=False)
-            self.runCmd('type summary clear', check=False)
-            self.runCmd(
-                "settings set target.max-children-count 256",
-                check=False)
+            self.runCmd("type format clear", check=False)
+            self.runCmd("type summary clear", check=False)
+            self.runCmd("settings set target.max-children-count 256", check=False)
 
         self.addTearDownHook(cleanup)
 
-        self.expect("frame variable f", substrs=['Foo) f = (value = 12)'])
-        self.expect("frame variable b", substrs=['Bar) b = (value = 24)'])
+        self.expect("frame variable f", substrs=["Foo) f = (value = 12)"])
+        self.expect("frame variable b", substrs=["Bar) b = (value = 24)"])
 
         self.runCmd('type summary add a.Foo -v -s "hello"')
-        self.expect("frame variable f", substrs=['Foo) f = hello'])
-        self.expect("frame variable b", substrs=['Bar) b = hello'])
+        self.expect("frame variable f", substrs=["Foo) f = hello"])
+        self.expect("frame variable b", substrs=["Bar) b = hello"])
 
         self.runCmd('type summary add a.Bar -v -s "hi"')
-        self.expect("frame variable f", substrs=['Foo) f = hello'])
-        self.expect("frame variable b", substrs=['Bar) b = hi'])
+        self.expect("frame variable f", substrs=["Foo) f = hello"])
+        self.expect("frame variable b", substrs=["Bar) b = hi"])
 
         self.runCmd("type summary delete a.Foo")
-        self.expect("frame variable f", substrs=['Foo) f = (value = 12)'])
-        self.expect("frame variable b", substrs=['Bar) b = hi'])
+        self.expect("frame variable f", substrs=["Foo) f = (value = 12)"])
+        self.expect("frame variable b", substrs=["Bar) b = hi"])
 
         self.runCmd("type summary delete a.Bar")
         self.runCmd("type summary add -C no -v a.Foo -s hello")
-        self.expect("frame variable f", substrs=['Foo) f = hello'])
-        self.expect("frame variable b", substrs=['Bar) b = (value = 24)'])
+        self.expect("frame variable f", substrs=["Foo) f = hello"])
+        self.expect("frame variable b", substrs=["Bar) b = (value = 24)"])

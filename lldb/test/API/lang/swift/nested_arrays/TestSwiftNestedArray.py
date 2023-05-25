@@ -33,7 +33,6 @@ def check_for_C(child, idx):
 
 
 class TestSwiftNestedArray(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -46,7 +45,8 @@ class TestSwiftNestedArray(TestBase):
         """Test Arrays of Arrays in Swift"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
         var_aInt = self.frame().FindVariable("aInt")
         var_aC = self.frame().FindVariable("aC")
@@ -60,4 +60,3 @@ class TestSwiftNestedArray(TestBase):
         for i in range(0, 5):
             var_aCChild = var_aC.GetChildAtIndex(i)
             lldbutil.check_children(self, var_aCChild, check_for_C)
-

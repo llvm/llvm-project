@@ -20,7 +20,6 @@ import os
 
 
 class TestSwiftSubmoduleImport(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     # Have to find some submodule that is present on both Darwin & Linux for this
@@ -35,7 +34,8 @@ class TestSwiftSubmoduleImport(TestBase):
         """Tests that swift expressions can import sub-modules correctly"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set a breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         options = lldb.SBExpressionOptions()
         options.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
@@ -44,19 +44,13 @@ class TestSwiftSubmoduleImport(TestBase):
         # so even though it doesn't seem like it this does test auto-import:
         value = self.frame().EvaluateExpression("b", options)
         self.assertTrue(value.IsValid(), "Got a valid variable back from b")
-        self.assertSuccess(value.GetError(),
-                        "And the variable was successfully evaluated")
+        self.assertSuccess(
+            value.GetError(), "And the variable was successfully evaluated"
+        )
         result = value.GetSummary()
-        self.assertTrue(
-            result == '"aa"',
-            "And the variable's value was correct.")
+        self.assertTrue(result == '"aa"', "And the variable's value was correct.")
 
         # Now make sure we can explicitly do the import:
-        value = self.frame().EvaluateExpression('import Darwin.C\n b', options)
-        self.assertTrue(
-            value.IsValid(),
-            "Got a valid value back from import Darwin.C")
-        self.assertSuccess(
-            value.GetError(),
-            "The import was not successful")
-
+        value = self.frame().EvaluateExpression("import Darwin.C\n b", options)
+        self.assertTrue(value.IsValid(), "Got a valid value back from import Darwin.C")
+        self.assertSuccess(value.GetError(), "The import was not successful")

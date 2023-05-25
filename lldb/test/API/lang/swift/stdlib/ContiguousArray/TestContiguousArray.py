@@ -10,7 +10,6 @@ import unittest2
 
 
 class TestContiguousArray(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -18,8 +17,11 @@ class TestContiguousArray(lldbtest.TestBase):
         """Test that contiguous array prints correctly"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
-        self.expect("frame variable",
-                    startstr="""(ContiguousArray<a.Class>) array = 1 value {
-  [0] = 0x""")
+        self.expect(
+            "frame variable",
+            startstr="""(ContiguousArray<a.Class>) array = 1 value {
+  [0] = 0x""",
+        )

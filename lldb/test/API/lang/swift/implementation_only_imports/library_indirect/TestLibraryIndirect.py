@@ -21,8 +21,8 @@ import os.path
 import time
 import unittest2
 
-class TestLibraryIndirect(TestBase):
 
+class TestLibraryIndirect(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def launch_info(self):
@@ -48,30 +48,49 @@ class TestLibraryIndirect(TestBase):
         """
         self.build()
         if lldb.remote_platform:
-            ext = 'so'
+            ext = "so"
             if self.platformIsDarwin():
-                ext = 'dylib'
+                ext = "dylib"
             wd = lldb.remote_platform.GetWorkingDirectory()
-            filename = 'libSomeLibraryCore.' + ext
+            filename = "libSomeLibraryCore." + ext
             err = lldb.remote_platform.Put(
                 lldb.SBFileSpec(self.getBuildArtifact(filename)),
-                lldb.SBFileSpec(os.path.join(wd, filename)))
-            self.assertFalse(err.Fail(), 'Failed to copy ' + filename)
+                lldb.SBFileSpec(os.path.join(wd, filename)),
+            )
+            self.assertFalse(err.Fail(), "Failed to copy " + filename)
 
         lldbutil.run_to_source_breakpoint(
-            self, "break here",
+            self,
+            "break here",
             lldb.SBFileSpec("main.swift"),
-            extra_images=['SomeLibrary'])
+            extra_images=["SomeLibrary"],
+        )
 
         # This test is deliberately checking what the user will see, rather than
         # the structure provided by the Python API, in order to test the recovery.
-        self.expect("fr var", substrs=[
-            "(SomeLibrary.ContainsTwoInts) container = {\n  wrapped = 0x",
-            "\n    value = (first = 2, second = 3)\n  }\n  other = 10\n}",
-            "(Int) simple = 1"])
-        self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"])
-        self.expect("e container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "0x", "value = (first = 2, second = 3)"])
-        self.expect("e container.wrapped.value", substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"])
+        self.expect(
+            "fr var",
+            substrs=[
+                "(SomeLibrary.ContainsTwoInts) container = {\n  wrapped = 0x",
+                "\n    value = (first = 2, second = 3)\n  }\n  other = 10\n}",
+                "(Int) simple = 1",
+            ],
+        )
+        self.expect(
+            "e container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"]
+        )
+        self.expect(
+            "e container.wrapped",
+            substrs=[
+                "(SomeLibrary.BoxedTwoInts)",
+                "0x",
+                "value = (first = 2, second = 3)",
+            ],
+        )
+        self.expect(
+            "e container.wrapped.value",
+            substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"],
+        )
 
     @swiftTest
     def test_implementation_only_import_library_no_library_module(self):
@@ -85,27 +104,45 @@ class TestLibraryIndirect(TestBase):
         os.remove(self.getBuildArtifact("SomeLibraryCore.swiftinterface"))
 
         if lldb.remote_platform:
-            ext = 'so'
+            ext = "so"
             if self.platformIsDarwin():
-                ext = 'dylib'
+                ext = "dylib"
             wd = lldb.remote_platform.GetWorkingDirectory()
-            filename = 'libSomeLibraryCore.' + ext
+            filename = "libSomeLibraryCore." + ext
             err = lldb.remote_platform.Put(
                 lldb.SBFileSpec(self.getBuildArtifact(filename)),
-                lldb.SBFileSpec(os.path.join(wd, filename)))
-            self.assertFalse(err.Fail(), 'Failed to copy ' + filename)
+                lldb.SBFileSpec(os.path.join(wd, filename)),
+            )
+            self.assertFalse(err.Fail(), "Failed to copy " + filename)
 
-        lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec("main.swift"),
-                                          extra_images=['SomeLibrary'])
+        lldbutil.run_to_source_breakpoint(
+            self,
+            "break here",
+            lldb.SBFileSpec("main.swift"),
+            extra_images=["SomeLibrary"],
+        )
 
         # This test is deliberately checking what the user will see, rather than
         # the structure provided by the Python API, in order to test the recovery.
-        self.expect("fr var", substrs=[
-            "(SomeLibrary.ContainsTwoInts) container = {",
-            "wrapped = 0x",
-            "other = 10",
-            "(Int) simple = 1"])
-        self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "wrapped = 0x", "other = 10"])
-        self.expect("e container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "value = (first = 2, second = 3)"])
-        self.expect("e container.wrapped.value", error=True, substrs=["value of type 'BoxedTwoInts' has no member 'value'"])
+        self.expect(
+            "fr var",
+            substrs=[
+                "(SomeLibrary.ContainsTwoInts) container = {",
+                "wrapped = 0x",
+                "other = 10",
+                "(Int) simple = 1",
+            ],
+        )
+        self.expect(
+            "e container",
+            substrs=["(SomeLibrary.ContainsTwoInts)", "wrapped = 0x", "other = 10"],
+        )
+        self.expect(
+            "e container.wrapped",
+            substrs=["(SomeLibrary.BoxedTwoInts)", "value = (first = 2, second = 3)"],
+        )
+        self.expect(
+            "e container.wrapped.value",
+            error=True,
+            substrs=["value of type 'BoxedTwoInts' has no member 'value'"],
+        )

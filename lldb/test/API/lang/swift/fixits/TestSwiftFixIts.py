@@ -20,7 +20,6 @@ import unittest2
 
 
 class TestSwiftFixIts(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -45,7 +44,8 @@ class TestSwiftFixIts(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here to test fixits', self.main_source_spec)
+            "break here to test fixits", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -54,8 +54,7 @@ class TestSwiftFixIts(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            self.process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(self.process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -67,36 +66,37 @@ class TestSwiftFixIts(TestBase):
 
         # First make sure the expressions fail with no fixits:
         value = frame.EvaluateExpression(
-            "var $tmp : Int = does_have.could_be!!", options)
+            "var $tmp : Int = does_have.could_be!!", options
+        )
         self.assertTrue(value.GetError().Fail())
         self.assertTrue(
-            value.GetError().GetError() != 0x1001,
-            'Failure was not "no return type"')
+            value.GetError().GetError() != 0x1001, 'Failure was not "no return type"'
+        )
 
-        value = frame.EvaluateExpression(
-                "var $tmp2 = wrapper.wrapped", options)
+        value = frame.EvaluateExpression("var $tmp2 = wrapper.wrapped", options)
         self.assertTrue(value.GetError().Fail())
         self.assertTrue(
-            value.GetError().GetError() != 0x1001,
-            'Failure was not "no return type"')
+            value.GetError().GetError() != 0x1001, 'Failure was not "no return type"'
+        )
 
         # Now turn on auto apply:
         options.SetAutoApplyFixIts(True)
         value = frame.EvaluateExpression(
-            "var $tmp : Int = does_have.could_be!!", options)
-        self.assertTrue(value.GetError().Fail(),
-                        "There's no result so this is counted a fail.")
+            "var $tmp : Int = does_have.could_be!!", options
+        )
         self.assertTrue(
-            value.GetError().GetError() == 0x1001,
-            'This error is "no return type"')
+            value.GetError().Fail(), "There's no result so this is counted a fail."
+        )
+        self.assertTrue(
+            value.GetError().GetError() == 0x1001, 'This error is "no return type"'
+        )
 
         # Check that the expressions were correct:
         tmp_value = frame.EvaluateExpression("$tmp == 100")
         self.assertSuccess(tmp_value.GetError())
-        self.assertTrue(tmp_value.GetSummary() == 'true')
-        
-        value = frame.EvaluateExpression(
-                "var $tmp2 = wrapper.wrapped", options)
+        self.assertTrue(tmp_value.GetSummary() == "true")
+
+        value = frame.EvaluateExpression("var $tmp2 = wrapper.wrapped", options)
         tmp_value = frame.EvaluateExpression("$tmp2 == 7")
         self.assertSuccess(tmp_value.GetError())
-        self.assertTrue(tmp_value.GetSummary() == 'true')
+        self.assertTrue(tmp_value.GetSummary() == "true")

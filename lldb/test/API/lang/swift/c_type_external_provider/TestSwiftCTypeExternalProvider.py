@@ -8,7 +8,6 @@ import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
 
-
 class TestSwiftCTypeExternalProvider(TestBase):
     def setUp(self):
         TestBase.setUp(self)
@@ -23,17 +22,20 @@ class TestSwiftCTypeExternalProvider(TestBase):
         log = self.getBuildArtifact("types.log")
         self.runCmd('log enable lldb types -f "%s"' % log)
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', self.main_source_spec)
+            self, "Set breakpoint here", self.main_source_spec
+        )
 
         # Consult the second field to ensure we call GetIndexOfChildMemberWithName.
-        self.expect('v dummy.second', substrs=['2'])
+        self.expect("v dummy.second", substrs=["2"])
 
         # Make sure we look up the type with the external type info provider.
         provider_log_found = False
-        with open(log, "r", encoding='utf-8') as logfile:
+        with open(log, "r", encoding="utf-8") as logfile:
             for line in logfile:
-                if '[LLDBTypeInfoProvider] Looking up debug type info for So5DummyV' in line:
+                if (
+                    "[LLDBTypeInfoProvider] Looking up debug type info for So5DummyV"
+                    in line
+                ):
                     provider_log_found = True
                     break
         self.assertTrue(provider_log_found)
-

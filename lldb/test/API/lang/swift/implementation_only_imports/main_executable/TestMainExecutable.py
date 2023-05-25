@@ -21,9 +21,9 @@ import os.path
 import time
 import unittest2
 
-@skipIfDarwin # rdar://problem/54322424 Sometimes failing, sometimes truncated output.
-class TestMainExecutable(TestBase):
 
+@skipIfDarwin  # rdar://problem/54322424 Sometimes failing, sometimes truncated output.
+class TestMainExecutable(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def launch_info(self):
@@ -41,8 +41,10 @@ class TestMainExecutable(TestBase):
 
         return info
 
-    @skipIf(bugnumber="rdar://problem/54322424", # This test is unreliable.
-            setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(
+        bugnumber="rdar://problem/54322424",  # This test is unreliable.
+        setting=("symbols.use-swift-clangimporter", "false"),
+    )
     @swiftTest
     def test_implementation_only_import_main_executable(self):
         """Test `@_implementationOnly import` in the main executable
@@ -51,22 +53,42 @@ class TestMainExecutable(TestBase):
         """
 
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info()
+        )
 
         # This test is deliberately checking what the user will see, rather than
         # the structure provided by the Python API, in order to test the recovery.
-        self.expect("fr var", substrs=[
-            "(SomeLibrary.TwoInts) value = (first = 2, second = 3)",
-            "(main.ContainsTwoInts) container = {\n  wrapped = (first = 2, second = 3)\n  other = 10\n}",
-            "(Int) simple = 1"])
-        self.expect("e value", substrs=["(SomeLibrary.TwoInts)", "= (first = 2, second = 3)"])
-        self.expect("e container", substrs=["(main.ContainsTwoInts)", "wrapped = (first = 2, second = 3)", "other = 10"])
-        self.expect("e TwoInts(4, 5)", substrs=["(SomeLibrary.TwoInts)", "= (first = 4, second = 5)"])
+        self.expect(
+            "fr var",
+            substrs=[
+                "(SomeLibrary.TwoInts) value = (first = 2, second = 3)",
+                "(main.ContainsTwoInts) container = {\n  wrapped = (first = 2, second = 3)\n  other = 10\n}",
+                "(Int) simple = 1",
+            ],
+        )
+        self.expect(
+            "e value", substrs=["(SomeLibrary.TwoInts)", "= (first = 2, second = 3)"]
+        )
+        self.expect(
+            "e container",
+            substrs=[
+                "(main.ContainsTwoInts)",
+                "wrapped = (first = 2, second = 3)",
+                "other = 10",
+            ],
+        )
+        self.expect(
+            "e TwoInts(4, 5)",
+            substrs=["(SomeLibrary.TwoInts)", "= (first = 4, second = 5)"],
+        )
 
-    @skipIf(bugnumber="rdar://problem/54322424", # This test is unreliable.
-            setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(
+        bugnumber="rdar://problem/54322424",  # This test is unreliable.
+        setting=("symbols.use-swift-clangimporter", "false"),
+    )
     @swiftTest
-    @skipIfLinux # rdar://problem/67348391
+    @skipIfLinux  # rdar://problem/67348391
     def test_implementation_only_import_main_executable_no_library_module(self):
         """Test `@_implementationOnly import` in the main executable, after removing the library's swiftmodule
 
@@ -77,7 +99,9 @@ class TestMainExecutable(TestBase):
         self.runCmd("settings set symbols.use-swift-dwarfimporter false")
         os.remove(self.getBuildArtifact("SomeLibrary.swiftmodule"))
         os.remove(self.getBuildArtifact("SomeLibrary.swiftinterface"))
-        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info()
+        )
 
         # FIXME: This particular test config is producing different results on
         # different machines, but it's also the least important configuration
@@ -85,10 +109,14 @@ class TestMainExecutable(TestBase):
         # library present, implementation-only or not, and that library doesn't
         # even have library evolution support enabled. Just make sure we don't
         # crash.
-        self.expect("fr var", substrs=[
-            "value = <could not resolve type>",
-#            "container = {}",
-            "simple = 1"])
+        self.expect(
+            "fr var",
+            substrs=[
+                "value = <could not resolve type>",
+                #            "container = {}",
+                "simple = 1",
+            ],
+        )
 
         self.expect("e value", error=True)
         self.expect("e container", error=True)
@@ -104,40 +132,82 @@ class TestMainExecutable(TestBase):
         See the ReadMe.md in the parent directory for more information.
         """
 
-        self.build(dictionary={"LIBRARY_SWIFTFLAGS_EXTRAS": "-enable-library-evolution"})
-        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
+        self.build(
+            dictionary={"LIBRARY_SWIFTFLAGS_EXTRAS": "-enable-library-evolution"}
+        )
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info()
+        )
 
         # This test is deliberately checking what the user will see, rather than
         # the structure provided by the Python API, in order to test the recovery.
-        self.expect("fr var", substrs=[
-            "(SomeLibrary.TwoInts) value = (first = 2, second = 3)",
-            "(main.ContainsTwoInts) container = {\n  wrapped = (first = 2, second = 3)\n  other = 10\n}",
-            "(Int) simple = 1"])
-        self.expect("e value", substrs=["(SomeLibrary.TwoInts)", "= (first = 2, second = 3)"])
-        self.expect("e container", substrs=["(main.ContainsTwoInts)", "wrapped = (first = 2, second = 3)", "other = 10"])
-        self.expect("e TwoInts(4, 5)", substrs=["(SomeLibrary.TwoInts)", "= (first = 4, second = 5)"])
+        self.expect(
+            "fr var",
+            substrs=[
+                "(SomeLibrary.TwoInts) value = (first = 2, second = 3)",
+                "(main.ContainsTwoInts) container = {\n  wrapped = (first = 2, second = 3)\n  other = 10\n}",
+                "(Int) simple = 1",
+            ],
+        )
+        self.expect(
+            "e value", substrs=["(SomeLibrary.TwoInts)", "= (first = 2, second = 3)"]
+        )
+        self.expect(
+            "e container",
+            substrs=[
+                "(main.ContainsTwoInts)",
+                "wrapped = (first = 2, second = 3)",
+                "other = 10",
+            ],
+        )
+        self.expect(
+            "e TwoInts(4, 5)",
+            substrs=["(SomeLibrary.TwoInts)", "= (first = 4, second = 5)"],
+        )
 
     @swiftTest
-    @expectedFailureOS(no_match(["macosx"])) # Requires Remote Mirrors support
-    def test_implementation_only_import_main_executable_resilient_no_library_module(self):
+    @expectedFailureOS(no_match(["macosx"]))  # Requires Remote Mirrors support
+    def test_implementation_only_import_main_executable_resilient_no_library_module(
+        self,
+    ):
         """Test `@_implementationOnly import` in the main executable with a resilient library, after removing the library's swiftmodule
 
         See the ReadMe.md in the parent directory for more information.
         """
 
-        self.build(dictionary={"LIBRARY_SWIFTFLAGS_EXTRAS": "-enable-library-evolution"})
+        self.build(
+            dictionary={"LIBRARY_SWIFTFLAGS_EXTRAS": "-enable-library-evolution"}
+        )
         os.remove(self.getBuildArtifact("SomeLibrary.swiftmodule"))
         os.remove(self.getBuildArtifact("SomeLibrary.swiftinterface"))
-        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info()
+        )
 
         # This test is deliberately checking what the user will see, rather than
         # the structure provided by the Python API, in order to test the recovery.
-        self.expect("fr var", substrs=[
-            "value = <could not resolve type>",
-            "(main.ContainsTwoInts) container = (other = 10)",
-            "(Int) simple = 1"])
+        self.expect(
+            "fr var",
+            substrs=[
+                "value = <could not resolve type>",
+                "(main.ContainsTwoInts) container = (other = 10)",
+                "(Int) simple = 1",
+            ],
+        )
         # FIXME: If we could figure out how to ignore this failure but still not
         # crash if we touch something that can't be loaded, that would be nice.
-        self.expect("e value", error=True, substrs=["failed to get module \"SomeLibrary\" from AST context"])
-        self.expect("e container", error=True, substrs=["failed to get module \"SomeLibrary\" from AST context"])
-        self.expect("e TwoInts(4, 5)", error=True, substrs=["failed to get module \"SomeLibrary\" from AST context"])
+        self.expect(
+            "e value",
+            error=True,
+            substrs=['failed to get module "SomeLibrary" from AST context'],
+        )
+        self.expect(
+            "e container",
+            error=True,
+            substrs=['failed to get module "SomeLibrary" from AST context'],
+        )
+        self.expect(
+            "e TwoInts(4, 5)",
+            error=True,
+            substrs=['failed to get module "SomeLibrary" from AST context'],
+        )

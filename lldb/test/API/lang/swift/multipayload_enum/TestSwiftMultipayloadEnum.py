@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftMultipayloadEnum(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -32,10 +31,11 @@ class TestSwiftMultipayloadEnum(TestBase):
         """Test that LLDB understands generic enums with more than one payload type"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
-        self.expect("frame variable one", substrs=['One', '1234'])
-        self.expect("frame variable two", substrs=['TheOther', '"some value"'])
+        self.expect("frame variable one", substrs=["One", "1234"])
+        self.expect("frame variable two", substrs=["TheOther", '"some value"'])
 
-        self.expect("expression one", substrs=['One', '1234'])
-        self.expect("expression two", substrs=['TheOther', '"some value"'])
+        self.expect("expression one", substrs=["One", "1234"])
+        self.expect("expression two", substrs=["TheOther", '"some value"'])

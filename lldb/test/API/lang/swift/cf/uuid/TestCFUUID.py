@@ -14,7 +14,9 @@ class TestCase(TestBase):
     def test(self):
         """Test CFUUID object description prints the UUID string."""
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"))
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
         # Swift type validation fails in IsPossibleDynamicType rdar://109611675
         self.runCmd("settings set symbols.swift-validate-typesystem false")
         uuid = "68753A44-4D6F-1226-9C60-0050E4C00067"

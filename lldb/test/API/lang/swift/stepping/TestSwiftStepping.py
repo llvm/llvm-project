@@ -20,8 +20,8 @@ import os
 import platform
 import unittest2
 
-class TestSwiftStepping(lldbtest.TestBase):
 
+class TestSwiftStepping(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -39,14 +39,15 @@ class TestSwiftStepping(lldbtest.TestBase):
         # end up stepping into the stdlib and that will make stepping
         # tests impossible to write.  So avoid that.
 
-        if platform.system() == 'Darwin':
+        if platform.system() == "Darwin":
             lib_name = "libswiftCore.dylib"
         else:
             lib_name = "libswiftCore.so"
 
         self.dbg.HandleCommand(
             "settings set "
-            "target.process.thread.step-avoid-libraries {}".format(lib_name))
+            "target.process.thread.step-avoid-libraries {}".format(lib_name)
+        )
 
     def correct_stop_reason(self, thread):
         # We are always just stepping, so that should be the thread stop reason:
@@ -57,16 +58,15 @@ class TestSwiftStepping(lldbtest.TestBase):
         # print "Check if we got to: ", pattern
         self.correct_stop_reason(thread)
         target_line = lldbtest.line_number(self.main_source, pattern)
-        self.assertTrue(
-            target_line != 0,
-            "Could not find source pattern " + pattern)
+        self.assertTrue(target_line != 0, "Could not find source pattern " + pattern)
         cur_line = thread.frames[0].GetLineEntry().GetLine()
         hit_line = cur_line == target_line
         if fail_if_wrong:
             self.assertTrue(
                 hit_line,
                 "Stepped to line %d instead of expected %d "
-                "with pattern '%s'." % (cur_line, target_line, pattern))
+                "with pattern '%s'." % (cur_line, target_line, pattern),
+            )
         return hit_line
 
     def hit_correct_function(self, thread, pattern):
@@ -81,7 +81,8 @@ class TestSwiftStepping(lldbtest.TestBase):
             desc.Print(name)
         self.assertTrue(
             pattern in name,
-            "Got to '%s' not the expected function '%s'." % (desc.GetData(), pattern))
+            "Got to '%s' not the expected function '%s'." % (desc.GetData(), pattern),
+        )
 
     def do_test(self):
         """Tests that we can step reliably in swift code."""
@@ -94,9 +95,9 @@ class TestSwiftStepping(lldbtest.TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'Stop here first in main', self.main_source_spec)
-        self.assertTrue(
-            breakpoint.GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT)
+            "Stop here first in main", self.main_source_spec
+        )
+        self.assertTrue(breakpoint.GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -104,8 +105,7 @@ class TestSwiftStepping(lldbtest.TestBase):
         self.assertTrue(process, lldbtest.PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         thread = threads[0]
@@ -144,18 +144,19 @@ class TestSwiftStepping(lldbtest.TestBase):
 
         thread.StepInto()
         prologue_at_first_line = self.hit_correct_line(
-            thread, "At the first line of B constructor.", False)
+            thread, "At the first line of B constructor.", False
+        )
         if prologue_at_first_line:
             thread.StepOver()
 
-        self.hit_correct_line(
-            thread, "In the B constructor about to call super.")
+        self.hit_correct_line(thread, "In the B constructor about to call super.")
 
         # Make sure we can follow super into the parent constructor.
         thread.StepInto()
 
         prologue_at_first_line = self.hit_correct_line(
-            thread, "Here is the A constructor.", False)
+            thread, "Here is the A constructor.", False
+        )
         if prologue_at_first_line:
             thread.StepOver()
 
@@ -176,14 +177,14 @@ class TestSwiftStepping(lldbtest.TestBase):
         self.hit_correct_line(thread, "Stop here to step into B constructor.")
 
         thread.StepOver()
-        self.hit_correct_line(
-            thread, "Stop here to step into call_overridden.")
+        self.hit_correct_line(thread, "Stop here to step into call_overridden.")
 
         # Make sure we get into the overridden call as expected:
         thread.StepInto()
         self.hit_correct_function(thread, "call_overridden")
         stopped_at_func_defn = self.hit_correct_line(
-            thread, "call_overridden func def", False)
+            thread, "call_overridden func def", False
+        )
         if stopped_at_func_defn:
             thread.StepOver()
         thread.StepInto()
@@ -193,19 +194,21 @@ class TestSwiftStepping(lldbtest.TestBase):
         thread.StepOut()
         self.hit_correct_function(thread, "call_overridden")
         thread.StepOut()
-        self.hit_correct_line(
-            thread, "Stop here to step into call_overridden.")
+        self.hit_correct_line(thread, "Stop here to step into call_overridden.")
 
         # Two steps should get us to the switch:
         thread.StepOver()
         self.hit_correct_line(thread, "At point initializer.")
         thread.StepOver()
-        stopped_at_switch = self.hit_correct_line (thread, "At the beginning of the switch.", False)
+        stopped_at_switch = self.hit_correct_line(
+            thread, "At the beginning of the switch.", False
+        )
         if stopped_at_switch:
             thread.StepOver()
 
         stopped_at_case = self.hit_correct_line(
-            thread, "case (let x, let y) where", False)
+            thread, "case (let x, let y) where", False
+        )
         if stopped_at_case:
             thread.StepOver()
 
@@ -215,15 +218,15 @@ class TestSwiftStepping(lldbtest.TestBase):
 
         thread.StepInto()
         self.hit_correct_line(
-            thread, "return_same gets called in both where statements")
+            thread, "return_same gets called in both where statements"
+        )
 
         thread.StepOut()
         self.hit_correct_line(thread, "Second case with a where statement")
 
         thread.StepOver()
         thread.StepOver()
-        self.hit_correct_line(
-            thread, "print in second case with where statement.")
+        self.hit_correct_line(thread, "print in second case with where statement.")
 
         #
         # For some reason, we don't step from the body of the case to
@@ -233,25 +236,27 @@ class TestSwiftStepping(lldbtest.TestBase):
         thread.StepOver()
         steps_back_to_case = self.hit_correct_line(
             thread,
-            "Sometimes the line table steps to here "
-            "after the body of the case.", False)
+            "Sometimes the line table steps to here " "after the body of the case.",
+            False,
+        )
         if steps_back_to_case:
             self.fail(
                 "Stepping past a taken body of a case statement should not "
-                "step back to the case statement.")
+                "step back to the case statement."
+            )
 
         if self.hit_correct_line(
-                thread,
-                "This is the end of the switch statement", False):
+            thread, "This is the end of the switch statement", False
+        ):
             thread.StepOver()
         elif not self.hit_correct_line(
-                thread, "Make a version of P that conforms directly", False):
+            thread, "Make a version of P that conforms directly", False
+        ):
             self.fail(
-                "Stepping past the body of the case didn't stop "
-                "where expected.")
+                "Stepping past the body of the case didn't stop " "where expected."
+            )
 
-        self.hit_correct_line(
-            thread, "Make a version of P that conforms directly")
+        self.hit_correct_line(thread, "Make a version of P that conforms directly")
 
         # FIXME: Stepping into constructors is kind of a mess,
         # I'm going to just step over for these tests.
@@ -261,13 +266,13 @@ class TestSwiftStepping(lldbtest.TestBase):
         thread.StepInto()
 
         stop_at_prologue = self.hit_correct_line(
-            thread,
-            "We stopped at the protocol_func declaration instead.",
-            False)
+            thread, "We stopped at the protocol_func declaration instead.", False
+        )
         if stop_at_prologue:
             thread.StepOver()
         self.hit_correct_line(
-            thread, "This is where we will stop in the protocol dispatch")
+            thread, "This is where we will stop in the protocol dispatch"
+        )
 
         # Step out of the protocol functions, one step should get us
         # past any dispatch thunk.
@@ -277,28 +282,32 @@ class TestSwiftStepping(lldbtest.TestBase):
         # stops immediately on returning
         # to the caller frame.  If so we will need to step again:
         stop_in_caller_line = self.hit_correct_line(
-            thread, "direct.protocol_func(10)", False)
+            thread, "direct.protocol_func(10)", False
+        )
         if stop_in_caller_line:
             thread.StepOver()
         self.hit_correct_line(
-            thread, "Make a version of P that conforms through a subclass")
+            thread, "Make a version of P that conforms through a subclass"
+        )
 
         # This steps into another protocol dispatch.
         thread.StepOver()
         thread.StepInto()
         stop_at_prologue = self.hit_correct_line(
-            thread,
-            "We stopped at the protocol_func declaration instead.",
-            False)
+            thread, "We stopped at the protocol_func declaration instead.", False
+        )
         if stop_at_prologue:
             thread.StepOver()
         self.hit_correct_line(
-            thread, "This is where we will stop in the protocol dispatch")
+            thread, "This is where we will stop in the protocol dispatch"
+        )
 
         # Step out of the protocol function, one step out should also
         # get us past any dispatch thunk.
         thread.StepOut()
-        stop_on_caller = self.hit_correct_line(thread, "indirect.protocol_func(20)", False)
+        stop_on_caller = self.hit_correct_line(
+            thread, "indirect.protocol_func(20)", False
+        )
         stop_at_cd_maker = self.hit_correct_line(thread, "var cd_maker", False)
 
         # In swift-4.0 U before, one step over is necessary because step out doesn't
@@ -322,11 +331,11 @@ class TestSwiftStepping(lldbtest.TestBase):
 
         thread.StepInto()
         stop_in_prologue = self.hit_correct_line(
-            thread, "Stopped in doSomethingWithFunctionResult decl.", False)
+            thread, "Stopped in doSomethingWithFunctionResult decl.", False
+        )
         if stop_in_prologue:
             thread.StepOver()
-        self.hit_correct_line(
-            thread, "Calling doSomethingWithFunction with value")
+        self.hit_correct_line(thread, "Calling doSomethingWithFunction with value")
         thread.StepOver()
         self.hit_correct_line(thread, "let result = f(other_value)")
 
@@ -334,7 +343,8 @@ class TestSwiftStepping(lldbtest.TestBase):
         # layers of goo to get through:
         thread.StepInto()
         stop_in_prologue = self.hit_correct_line(
-            thread, "Step into cd_maker stops at closure decl instead.", False)
+            thread, "Step into cd_maker stops at closure decl instead.", False
+        )
         if stop_in_prologue:
             thread.StepOver()
 
@@ -345,14 +355,15 @@ class TestSwiftStepping(lldbtest.TestBase):
         # Again, step out may not have completed the source line we
         # stepped in FROM...
         stop_in_caller_line = self.hit_correct_line(
-            thread, "let result = f(other_value)", False)
+            thread, "let result = f(other_value)", False
+        )
         if stop_in_caller_line:
             thread.StepOver()
 
-        self.hit_correct_line(
-            thread, "result.protocol_func(other_value)")
+        self.hit_correct_line(thread, "result.protocol_func(other_value)")
 
     def tearDown(self):
         self.dbg.HandleCommand(
-            "settings clear target.process.thread.step-avoid-libraries")
+            "settings clear target.process.thread.step-avoid-libraries"
+        )
         super(TestSwiftStepping, self).tearDown()

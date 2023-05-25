@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class CompileUnitAPITestCase(TestBase):
-
     def setUp(self):
         TestBase.setUp(self)
 
@@ -17,15 +16,17 @@ class CompileUnitAPITestCase(TestBase):
         """Exercise some SBCompileUnit APIs."""
         self.build()
 
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 'break here', lldb.SBFileSpec('main.c'))
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.c")
+        )
         self.assertTrue(target, VALID_TARGET)
         self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertTrue(bkpt and bkpt.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+        self.assertTrue(bkpt and bkpt.GetNumLocations() == 1, VALID_BREAKPOINT)
 
         self.assertTrue(
             thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition")
+            "There should be a thread stopped due to breakpoint condition",
+        )
         frame0 = thread.GetFrameAtIndex(0)
         line_entry = frame0.GetLineEntry()
 
@@ -35,8 +36,9 @@ class CompileUnitAPITestCase(TestBase):
         main_cu = sc_list.compile_units[0]
         self.assertTrue(main_cu.IsValid(), "Main executable CU is not valid")
 
-        self.assertEqual(main_cu.FindLineEntryIndex(line_entry, True),
-                         main_cu.FindLineEntryIndex(0, line_entry.GetLine(),
-                                   line_entry.GetFileSpec(), True))
-
-
+        self.assertEqual(
+            main_cu.FindLineEntryIndex(line_entry, True),
+            main_cu.FindLineEntryIndex(
+                0, line_entry.GetLine(), line_entry.GetFileSpec(), True
+            ),
+        )

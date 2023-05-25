@@ -9,7 +9,6 @@ import unittest2
 
 
 class TestSBValueUpdates(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
@@ -36,9 +35,9 @@ class TestSBValueUpdates(lldbtest.TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
-        self.assertTrue(
-            breakpoint.GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT)
+            "break here", self.main_source_spec
+        )
+        self.assertTrue(breakpoint.GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         self.runCmd("run")
@@ -63,8 +62,9 @@ class TestSBValueUpdates(lldbtest.TestBase):
         self.assertTrue(var_x.GetValue() == "5")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import atexit
+
     lldb.SBDebugger.Initialize()
     atexit.register(lldb.SBDebugger.Terminate)
     unittest2.main()

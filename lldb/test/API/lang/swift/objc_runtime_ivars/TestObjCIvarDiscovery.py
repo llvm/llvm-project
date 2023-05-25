@@ -22,8 +22,8 @@ import re
 import unittest2
 import shutil
 
-class TestObjCIVarDiscovery(TestBase):
 
+class TestObjCIVarDiscovery(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
@@ -31,7 +31,11 @@ class TestObjCIVarDiscovery(TestBase):
     @swiftTest
     def test_nodbg(self):
         self.build()
-        shutil.rmtree(self.getBuildArtifact("aTestFramework.framework/Versions/A/aTestFramework.dSYM"))
+        shutil.rmtree(
+            self.getBuildArtifact(
+                "aTestFramework.framework/Versions/A/aTestFramework.dSYM"
+            )
+        )
         self.do_test(False)
 
     @skipUnlessDarwin
@@ -50,33 +54,37 @@ class TestObjCIVarDiscovery(TestBase):
         """Test that we can correctly see ivars from the Objective-C runtime"""
         if lldb.remote_platform:
             wd = lldb.remote_platform.GetWorkingDirectory()
-            directory = 'aTestFramework.framework/Versions/A/'
-            filename = directory + '/aTestFramework'
+            directory = "aTestFramework.framework/Versions/A/"
+            filename = directory + "/aTestFramework"
             cur_dir = wd
-            for d in directory.split('/'):
-                err = lldb.remote_platform.MakeDirectory(
-                    os.path.join(cur_dir, d))
-                self.assertFalse(err.Fail(), 'Failed to mkdir ' + d + ':' + str(err))
+            for d in directory.split("/"):
+                err = lldb.remote_platform.MakeDirectory(os.path.join(cur_dir, d))
+                self.assertFalse(err.Fail(), "Failed to mkdir " + d + ":" + str(err))
                 cur_dir = os.path.join(cur_dir, d)
             err = lldb.remote_platform.Put(
                 lldb.SBFileSpec(self.getBuildArtifact(filename)),
-                lldb.SBFileSpec(os.path.join(wd, filename)))
-            self.assertFalse(err.Fail(), 'Failed to copy ' + filename + ':' + str(err))
+                lldb.SBFileSpec(os.path.join(wd, filename)),
+            )
+            self.assertFalse(err.Fail(), "Failed to copy " + filename + ":" + str(err))
 
         # Launch the process, and do not stop at the entry point.
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'),
-        #    extra_images=['aTestFramework.framework/aTestFramework']
+            self,
+            "Set breakpoint here",
+            lldb.SBFileSpec("main.swift"),
+            #    extra_images=['aTestFramework.framework/aTestFramework']
         )
 
         if dbg:
             self.expect(
-                "image list", substrs=["Contents/Resources/DWARF/aTestFramework"])
+                "image list", substrs=["Contents/Resources/DWARF/aTestFramework"]
+            )
         else:
             self.expect(
                 "image list",
                 substrs=["Contents/Resources/DWARF/aTestFramework"],
-                matching=False)
+                matching=False,
+            )
 
         self.runCmd("frame variable -d run --show-types --ptr-depth=1")
 
@@ -92,33 +100,35 @@ class TestObjCIVarDiscovery(TestBase):
         self.assertEqual(m_pair_A.GetValueAsUnsigned(), 1)
         self.assertEqual(m_pair_B.GetValueAsUnsigned(), 2)
 
-        m_derived = self.prepare_value(
-            myclass.GetChildMemberWithName("m_base"))
+        m_derived = self.prepare_value(myclass.GetChildMemberWithName("m_base"))
 
         m_derivedX = m_derived.GetChildMemberWithName("m_DerivedX")
 
         self.assertEqual(m_derivedX.GetValueAsUnsigned(), 1)
 
         m_numbers = self.prepare_value(
-            myclass.GetChildMemberWithName("m_myclass_numbers"))
+            myclass.GetChildMemberWithName("m_myclass_numbers")
+        )
 
         self.assertTrue(
-            m_numbers.GetSummary() == '3 elements',
-            "m_myclass_numbers != 3 elements")
+            m_numbers.GetSummary() == "3 elements", "m_myclass_numbers != 3 elements"
+        )
 
         m_subclass_ivar = mysubclass.GetChildMemberWithName("m_subclass_ivar")
         self.assertTrue(
-            m_subclass_ivar.GetValueAsUnsigned() == 42,
-            "m_subclass_ivar != 42")
+            m_subclass_ivar.GetValueAsUnsigned() == 42, "m_subclass_ivar != 42"
+        )
 
         m_mysubclass_s = mysubclass.GetChildMemberWithName("m_mysubclass_s")
         self.assertTrue(
             m_mysubclass_s.GetSummary() == '"an NSString here"',
-            'm_subclass_s != "an NSString here"')
+            'm_subclass_s != "an NSString here"',
+        )
 
         swiftivar = obj.GetChildMemberWithName("swiftivar")
         self.assertTrue(
-            swiftivar.GetSummary() == '"Hey Swift!"', "swiftivar != Hey Swift")
+            swiftivar.GetSummary() == '"Hey Swift!"', "swiftivar != Hey Swift"
+        )
 
         silly = self.prepare_value(obj.GetChildMemberWithName("silly"))
 
@@ -127,5 +137,5 @@ class TestObjCIVarDiscovery(TestBase):
 
         self.assertTrue(silly_x.GetValueAsUnsigned() == 12, "x != 12")
         self.assertTrue(
-            silly_url.GetSummary() == '"http://www.apple.com"',
-            "url != apple.com")
+            silly_url.GetSummary() == '"http://www.apple.com"', "url != apple.com"
+        )

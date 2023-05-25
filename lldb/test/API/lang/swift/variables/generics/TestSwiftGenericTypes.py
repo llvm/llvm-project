@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftGenericTypes(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -46,7 +45,8 @@ class TestSwiftGenericTypes(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
+            "Set breakpoint here", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -55,32 +55,37 @@ class TestSwiftGenericTypes(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
-        self.expect("frame variable -d no-dynamic-values object",
-                    substrs=['(JustSomeType) object = 0x'])
         self.expect(
-            "frame variable -d run-target -- object",
-            substrs=['(Int) object = 255'])
+            "frame variable -d no-dynamic-values object",
+            substrs=["(JustSomeType) object = 0x"],
+        )
+        self.expect(
+            "frame variable -d run-target -- object", substrs=["(Int) object = 255"]
+        )
 
         self.runCmd("continue")
         self.runCmd("frame select 0")
 
-        self.expect("frame variable --show-types c",
-                    substrs=['(Int) c = 255'])
+        self.expect("frame variable --show-types c", substrs=["(Int) c = 255"])
 
-        self.expect("frame variable --raw-output --show-types o_some",
-                    substrs=['(Swift.Optional<Swift.String>) o_some = some {',
-                             '(Swift.String) some ='])
-        self.expect("frame variable --raw-output --show-types o_none",
-                    substrs=['(Swift.Optional<Swift.String>) o_none = none'])
+        self.expect(
+            "frame variable --raw-output --show-types o_some",
+            substrs=[
+                "(Swift.Optional<Swift.String>) o_some = some {",
+                "(Swift.String) some =",
+            ],
+        )
+        self.expect(
+            "frame variable --raw-output --show-types o_none",
+            substrs=["(Swift.Optional<Swift.String>) o_none = none"],
+        )
 
         self.expect(
             "frame variable o_some o_none",
-            substrs=[
-                '(String?) o_some = "Hello"',
-                '(String?) o_none = nil'])
+            substrs=['(String?) o_some = "Hello"', "(String?) o_none = nil"],
+        )

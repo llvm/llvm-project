@@ -13,8 +13,8 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
-class TestClassConstrainedProtocol(TestBase):
 
+class TestClassConstrainedProtocol(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -24,7 +24,7 @@ class TestClassConstrainedProtocol(TestBase):
         self.do_self_test("Break here for weak self", needs_dynamic=False)
 
     @swiftTest
-    def test_extension_self (self):
+    def test_extension_self(self):
         """Test that we can reconstruct self in method of a class constrained protocol."""
         self.build()
         self.do_self_test("Break here in class protocol", needs_dynamic=False)
@@ -56,15 +56,18 @@ class TestClassConstrainedProtocol(TestBase):
         opts.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
         result = self.frame().EvaluateExpression("self", opts)
         error = result.GetError()
-        self.assertSuccess(error,
-                           "'self' expression failed at '%s'" % bkpt_pattern)
+        self.assertSuccess(error, "'self' expression failed at '%s'" % bkpt_pattern)
         f_ivar = result.GetChildMemberWithName("f")
-        self.assertTrue(f_ivar.IsValid(),
-                        "Could not find 'f' in self at '%s'"%(bkpt_pattern))
-        self.assertTrue(f_ivar.GetValueAsSigned() == 12345,
-                        "Wrong value for f: %d"%(f_ivar.GetValueAsSigned()))
+        self.assertTrue(
+            f_ivar.IsValid(), "Could not find 'f' in self at '%s'" % (bkpt_pattern)
+        )
+        self.assertTrue(
+            f_ivar.GetValueAsSigned() == 12345,
+            "Wrong value for f: %d" % (f_ivar.GetValueAsSigned()),
+        )
 
     def do_self_test(self, bkpt_pattern, needs_dynamic):
         lldbutil.run_to_source_breakpoint(
-            self, bkpt_pattern, lldb.SBFileSpec('main.swift'))
+            self, bkpt_pattern, lldb.SBFileSpec("main.swift")
+        )
         self.check_self(bkpt_pattern, needs_dynamic)

@@ -24,7 +24,6 @@ import unittest2
 
 
 class TestSwiftBridgedStringVariables(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -36,7 +35,8 @@ class TestSwiftBridgedStringVariables(TestBase):
         """Test that Swift.String formats properly"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         s1 = self.frame().FindVariable("s1")
         s2 = self.frame().FindVariable("s2")
@@ -51,4 +51,3 @@ class TestSwiftBridgedStringVariables(TestBase):
         lldbutil.check_variable(self, s4, summary='"ΞΕΛΛΘ"')
         lldbutil.check_variable(self, s5, use_dynamic=True, summary='"abc"')
         lldbutil.check_variable(self, s6, summary='"abc"')
-

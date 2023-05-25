@@ -13,22 +13,20 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
-class TestSwiftUnitTests(TestBase):
 
+class TestSwiftUnitTests(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
     @swiftTest
     # The creation of the .xctest framework messes with the AST search path.
     @skipIf(debug_info=no_match("dsym"))
-    @skipIfDarwinEmbedded # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456> 
+    @skipIfDarwinEmbedded  # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456>
     def test_cross_module_extension(self):
         """Test that XCTest-based unit tests work"""
         self.build()
-        lldbutil.run_to_source_breakpoint(self,
-                                          "Set breakpoint here",
-                                          lldb.SBFileSpec('xctest.c'),
-                                          exe_name = "xctest")
+        lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint here", lldb.SBFileSpec("xctest.c"), exe_name="xctest"
+        )
         self.expect("expr -l Swift -- import test")
-        self.expect("expr -l Swift -- doTest()",
-                    substrs=['Int','$R0','=','3'])
+        self.expect("expr -l Swift -- doTest()", substrs=["Int", "$R0", "=", "3"])

@@ -20,7 +20,6 @@ import os
 
 
 class TestSwiftMetadataSymbols(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -42,10 +41,10 @@ class TestSwiftMetadataSymbols(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        self.expect("target modules dump symtab -m a.out",
-                    patterns=['Metadata.*_TMC1a3Foo'])
+        self.expect(
+            "target modules dump symtab -m a.out", patterns=["Metadata.*_TMC1a3Foo"]
+        )
 
-        self.expect("target modules dump symtab a.out",
-                    patterns=['Metadata.*type metadata for'])
-
-
+        self.expect(
+            "target modules dump symtab a.out", patterns=["Metadata.*type metadata for"]
+        )

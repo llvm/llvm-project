@@ -14,8 +14,8 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 # This test creates a ficticious target xml with non-sequential regnums to test
 # that correct registers are accessed in all of above mentioned cases.
 
-class TestRemoteRegNums(GDBRemoteTestBase):
 
+class TestRemoteRegNums(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     def test(self):
         class MyResponder(MockGDBServerResponder):
@@ -61,7 +61,8 @@ class TestRemoteRegNums(GDBRemoteTestBase):
 
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <target version="1.0">
                           <architecture>i386:x86-64</architecture>
                           <feature name="org.gnu.gdb.i386.core">
@@ -72,16 +73,17 @@ class TestRemoteRegNums(GDBRemoteTestBase):
                             <reg name="ebx" bitsize="32" regnum="7" value_regnums="4" invalidate_regnums="4" type="code_ptr" group="general"/>
                             <reg name="rsi" bitsize="64" regnum="9" type="code_ptr" group="general"/>
                           </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
         self.server.responder = MyResponder()
-        target = self.dbg.CreateTarget('')
+        target = self.dbg.CreateTarget("")
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
         process = self.connect(target)
 
         thread = process.GetThreadAtIndex(0)
@@ -95,16 +97,18 @@ class TestRemoteRegNums(GDBRemoteTestBase):
         rip = frame.FindRegister("rip").GetValueAsUnsigned()
 
         if self.TraceOn():
-            print("Register values: rax == 0x%x, rbx == 0x%x, rsi == 0x%x, pc == 0x%x, rip == 0x%x" % (
-                rax, rbx, rsi, pc, rip))
+            print(
+                "Register values: rax == 0x%x, rbx == 0x%x, rsi == 0x%x, pc == 0x%x, rip == 0x%x"
+                % (rax, rbx, rsi, pc, rip)
+            )
 
-        self.assertEqual(rax, 0xffffffe03c778278)
+        self.assertEqual(rax, 0xFFFFFFE03C778278)
         self.assertEqual(rbx, 0x8877665544332211)
-        self.assertEqual(eax, 0x3c778278)
+        self.assertEqual(eax, 0x3C778278)
         self.assertEqual(ebx, 0x44332211)
-        self.assertEqual(rsi, 0x00007ffeeb2548c0)
-        self.assertEqual(pc, 0x10001bc00)
-        self.assertEqual(rip, 0x10001bc00)
+        self.assertEqual(rsi, 0x00007FFEEB2548C0)
+        self.assertEqual(pc, 0x10001BC00)
+        self.assertEqual(rip, 0x10001BC00)
 
         frame.FindRegister("eax").SetValueFromCString("1")
         frame.FindRegister("ebx").SetValueFromCString("0")
@@ -114,13 +118,15 @@ class TestRemoteRegNums(GDBRemoteTestBase):
         rbx = frame.FindRegister("rbx").GetValueAsUnsigned()
 
         if self.TraceOn():
-            print("Register values: rax == 0x%x, rbx == 0x%x, rsi == 0x%x, pc == 0x%x, rip == 0x%x" % (
-                rax, rbx, rsi, pc, rip))
+            print(
+                "Register values: rax == 0x%x, rbx == 0x%x, rsi == 0x%x, pc == 0x%x, rip == 0x%x"
+                % (rax, rbx, rsi, pc, rip)
+            )
 
-        self.assertEqual(rax, 0xffffffe000000001)
+        self.assertEqual(rax, 0xFFFFFFE000000001)
         self.assertEqual(rbx, 0x8877665500000000)
         self.assertEqual(eax, 0x00000001)
         self.assertEqual(ebx, 0x00000000)
-        self.assertEqual(rsi, 0x00007ffeeb2548c0)
-        self.assertEqual(pc, 0x10001bc00)
-        self.assertEqual(rip, 0x10001bc00)
+        self.assertEqual(rsi, 0x00007FFEEB2548C0)
+        self.assertEqual(pc, 0x10001BC00)
+        self.assertEqual(rip, 0x10001BC00)

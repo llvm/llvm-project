@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftErrorBreakpoint(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.skipIfLinux  # <rdar://problem/30909618>
@@ -62,11 +61,13 @@ class TestSwiftErrorBreakpoint(TestBase):
             types.AppendString("exception-typename")
             types.AppendString(typename)
         return target.BreakpointCreateForException(
-            lldb.eLanguageTypeSwift, False, True, types).GetID()
+            lldb.eLanguageTypeSwift, False, True, types
+        ).GetID()
 
     def create_breakpoint_with_command(self, target, typename):
         return lldbutil.run_break_set_by_exception(
-            self, "swift", exception_typename=typename)
+            self, "swift", exception_typename=typename
+        )
 
     def do_test(self, typename, should_stop, make_breakpoint):
         exe_name = "a.out"
@@ -87,12 +88,17 @@ class TestSwiftErrorBreakpoint(TestBase):
         if should_stop:
             self.assertTrue(process, PROCESS_IS_VALID)
             breakpoint_threads = lldbutil.get_threads_stopped_at_breakpoint_id(
-                process, swift_error_bkpt_id)
-            self.assertEqual(len(breakpoint_threads), 1,
-                "We didn't stop at the error breakpoint")
+                process, swift_error_bkpt_id
+            )
+            self.assertEqual(
+                len(breakpoint_threads), 1, "We didn't stop at the error breakpoint"
+            )
         else:
             exit_state = process.GetState()
-            self.assertEqual(exit_state, lldb.eStateExited,
-                "We stopped at the error breakpoint when we shouldn't have.")
+            self.assertEqual(
+                exit_state,
+                lldb.eStateExited,
+                "We stopped at the error breakpoint when we shouldn't have.",
+            )
 
         target.BreakpointDelete(swift_error_bkpt_id)

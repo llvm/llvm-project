@@ -40,9 +40,9 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
         """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
         self.build()
         # install invalid modules in the build directory first to check we still fall back to the .swiftinterface
-        modules = ['AA.swiftmodule', 'BB.swiftmodule', 'CC.swiftmodule']
+        modules = ["AA.swiftmodule", "BB.swiftmodule", "CC.swiftmodule"]
         for module in modules:
-            open(self.getBuildArtifact(module), 'w').close()
+            open(self.getBuildArtifact(module), "w").close()
         self.do_test()
 
     def setUp(self):
@@ -54,24 +54,30 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
 
         # Clear the swift module cache (populated by the Makefile build)
         shutil.rmtree(swift_mod_cache)
-        self.assertFalse(os.path.isdir(swift_mod_cache),
-                         "module cache should not exist")
+        self.assertFalse(
+            os.path.isdir(swift_mod_cache), "module cache should not exist"
+        )
 
         # Update the settings to use the custom module cache location.
         # Note: the clang module cache path setting is used for this currently.
-        self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % swift_mod_cache)
+        self.runCmd(
+            'settings set symbols.clang-modules-cache-path "%s"' % swift_mod_cache
+        )
 
         # Set a breakpoint in and launch the main executable
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'),
-            exe_name=self.getBuildArtifact("main"))
+            self,
+            "break here",
+            lldb.SBFileSpec("main.swift"),
+            exe_name=self.getBuildArtifact("main"),
+        )
 
         # Check we are able to access the public fields of variables whose
         # types are from the .swiftinterface-only modules
         var = self.frame().FindVariable("x")
         lldbutil.check_variable(self, var, False, typename="AA.MyPoint")
 
-        child_y = var.GetChildMemberWithName("y") # MyPoint.y is public
+        child_y = var.GetChildMemberWithName("y")  # MyPoint.y is public
         lldbutil.check_variable(self, child_y, False, value="0")
 
         # MyPoint.x isn't public, but LLDB can find it through type metadata.
@@ -80,19 +86,23 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
 
         # Expression evaluation using types from the .swiftinterface only
         # modules should work too
-        lldbutil.check_expression(self, self.frame(),
-                                  "y.magnitudeSquared", "404",
-                                  use_summary=False)
-        lldbutil.check_expression(self, self.frame(),
-                                  "MyPoint(x: 1, y: 2).magnitudeSquared", "5",
-                                  use_summary=False)
+        lldbutil.check_expression(
+            self, self.frame(), "y.magnitudeSquared", "404", use_summary=False
+        )
+        lldbutil.check_expression(
+            self,
+            self.frame(),
+            "MyPoint(x: 1, y: 2).magnitudeSquared",
+            "5",
+            use_summary=False,
+        )
 
         # Check the swift module cache was populated with the .swiftmodule
         # files of the loaded modules
         self.assertTrue(os.path.isdir(swift_mod_cache), "module cache exists")
-        a_modules = glob.glob(os.path.join(swift_mod_cache, 'AA-*.swiftmodule'))
-        b_modules = glob.glob(os.path.join(swift_mod_cache, 'BB-*.swiftmodule'))
-        c_modules = glob.glob(os.path.join(swift_mod_cache, 'CC-*.swiftmodule'))
+        a_modules = glob.glob(os.path.join(swift_mod_cache, "AA-*.swiftmodule"))
+        b_modules = glob.glob(os.path.join(swift_mod_cache, "BB-*.swiftmodule"))
+        c_modules = glob.glob(os.path.join(swift_mod_cache, "CC-*.swiftmodule"))
         self.assertEqual(len(a_modules), 1)
         self.assertEqual(len(b_modules), 1)
         self.assertEqual(len(c_modules), 0)
@@ -110,26 +120,35 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
 
         # Check we still have a single .swiftmodule in the cache for A and B
         # and that there is now one for C too
-        a_modules = glob.glob(os.path.join(swift_mod_cache, 'AA-*.swiftmodule'))
-        b_modules = glob.glob(os.path.join(swift_mod_cache, 'BB-*.swiftmodule'))
-        c_modules = glob.glob(os.path.join(swift_mod_cache, 'CC-*.swiftmodule'))
-        self.assertEqual(len(a_modules), 1, "unexpected number of swiftmodules for A.swift")
-        self.assertEqual(len(b_modules), 1, "unexpected number of swiftmodules for B.swift")
-        self.assertEqual(len(c_modules), 1, "unexpected number of swiftmodules for C.swift")
+        a_modules = glob.glob(os.path.join(swift_mod_cache, "AA-*.swiftmodule"))
+        b_modules = glob.glob(os.path.join(swift_mod_cache, "BB-*.swiftmodule"))
+        c_modules = glob.glob(os.path.join(swift_mod_cache, "CC-*.swiftmodule"))
+        self.assertEqual(
+            len(a_modules), 1, "unexpected number of swiftmodules for A.swift"
+        )
+        self.assertEqual(
+            len(b_modules), 1, "unexpected number of swiftmodules for B.swift"
+        )
+        self.assertEqual(
+            len(c_modules), 1, "unexpected number of swiftmodules for C.swift"
+        )
 
         # Make sure the .swiftmodule files of A and B were re-used rather than
         # re-generated when they were re-imported
         for file in a_modules + b_modules:
-            self.assertTrue(is_old(file), "Swiftmodule file was regenerated rather than reused")
+            self.assertTrue(
+                is_old(file), "Swiftmodule file was regenerated rather than reused"
+            )
 
 
-OLD_TIMESTAMP = 1390550700 # 2014-01-24T08:05:00+00:00
+OLD_TIMESTAMP = 1390550700  # 2014-01-24T08:05:00+00:00
+
 
 def make_old(file):
     """Sets the access and modified time of the given file to a time long past"""
     os.utime(file, (OLD_TIMESTAMP, OLD_TIMESTAMP))
 
+
 def is_old(file):
     """Checks the modified time of the given file matches the timestamp set my make_old"""
     return os.stat(file).st_mtime == OLD_TIMESTAMP
-

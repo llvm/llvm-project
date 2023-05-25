@@ -22,7 +22,6 @@ import unittest2
 
 
 class TestSimpleSwiftExpressions(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -38,8 +37,7 @@ class TestSimpleSwiftExpressions(TestBase):
             answer = value.GetSummary()
         else:
             answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
+        report_str = "%s expected: %s got: %s" % (expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
     @swiftTest
@@ -47,11 +45,13 @@ class TestSimpleSwiftExpressions(TestBase):
         """Tests that we can run simple Swift expressions correctly"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         # Test that parse errors give a correct result:
         value_obj = self.frame().EvaluateExpression(
-            "iff is_five === 5 { return is_five")
+            "iff is_five === 5 { return is_five"
+        )
         error = value_obj.GetError()
 
         # Test simple math with constants
@@ -59,9 +59,8 @@ class TestSimpleSwiftExpressions(TestBase):
         self.check_expression("5 + 6", "11", use_summary=False)
         self.check_expression("is_five + is_six", "11", use_summary=False)
         self.check_expression(
-            "if (1 == 1) { return is_five + is_six }",
-            "11",
-            use_summary=False)
+            "if (1 == 1) { return is_five + is_six }", "11", use_summary=False
+        )
 
         # Test boolean operations with simple variables:
         # Bool's are currently enums, so their value is actually in the value.
@@ -71,20 +70,24 @@ class TestSimpleSwiftExpressions(TestBase):
         self.check_expression(
             "if is_five == 5 { return is_five + is_six } else { return is_five }",
             "11",
-            use_summary=False)
+            use_summary=False,
+        )
 
         # Make sure we get an error if we don't give homogenous return types:
         bool_or_int = self.frame().EvaluateExpression(
-            "if is_five == 5 { return is_five + is_six } else { return false }")
+            "if is_five == 5 { return is_five + is_six } else { return false }"
+        )
         self.assertTrue(
             bool_or_int.IsValid(),
-            "if is_five == 5 { return is_five + is_six } else { return false } is invalid")
+            "if is_five == 5 { return is_five + is_six } else { return false } is invalid",
+        )
 
         # Make sure we get the correct branch of a complex result expression:
         self.check_expression(
             "if is_five == 6 {return is_five} else if is_six == 5 {return is_six} ; is_eleven",
             "11",
-            use_summary=False)
+            use_summary=False,
+        )
 
         # Make sure we can access globals:
         # Commented out till we resolve <rdar://problem/15695494> Accessing global variables causes LLVM ERROR and exit...
@@ -95,14 +98,10 @@ class TestSimpleSwiftExpressions(TestBase):
         # This can be removed once python 2 is gone entirely.
         if sys.version_info.major == 2:
             self.check_expression(
-                u"\u20ac_varname".encode("utf-8"),
-                "5",
-                use_summary=False)
+                "\u20ac_varname".encode("utf-8"), "5", use_summary=False
+            )
         else:
-            self.check_expression(
-                u"\u20ac_varname",
-                "5",
-                use_summary=False)
+            self.check_expression("\u20ac_varname", "5", use_summary=False)
 
         # See if we can do the same manipulations with tuples:
         # Commented out due to: <rdar://problem/15476525> Expressions with
@@ -111,35 +110,34 @@ class TestSimpleSwiftExpressions(TestBase):
 
         # See if we can do some manipulations with dicts:
         self.check_expression(
-            'str_int_dict["five"]! + str_int_dict["six"]!',
-            "11",
-            use_summary=False)
-        self.check_expression(
-            'int_str_dict[Int(is_five + is_six)]!',
-            '"eleven"')
+            'str_int_dict["five"]! + str_int_dict["six"]!', "11", use_summary=False
+        )
+        self.check_expression("int_str_dict[Int(is_five + is_six)]!", '"eleven"')
         # Commented out, touching the dict twice causes it to die, probably the same problem
         # as <rdar://problem/15306399>
         self.check_expression(
             'str_int_dict["five"] = 6; str_int_dict["five"]! + str_int_dict["six"]!',
             "12",
-            use_summary=False)
+            use_summary=False,
+        )
 
         # See if we can use a switch statement in an expression:
         self.check_expression(
             "switch is_five { case 0..<6: return 1; case 7..<11: return 2; case _: return 4; }; 3;",
             "1",
-            use_summary=False)
+            use_summary=False,
+        )
 
         # These ones are int-convertible and Equatable so we can do some things
         # with them anyway:
         self.check_expression("enum_eleven", "Eleven", False)
         self.check_expression("enum_eleven == SomeValues.Eleven", "true")
         self.check_expression(
-            "SomeValues.Five.toInt() + SomeValues.Six.toInt()",
-            "11",
-            use_summary=False)
+            "SomeValues.Five.toInt() + SomeValues.Six.toInt()", "11", use_summary=False
+        )
         self.check_expression(
-            "enum_eleven = .Five; return enum_eleven == .Five", "true")
+            "enum_eleven = .Five; return enum_eleven == .Five", "true"
+        )
 
         # Test expressions with a simple object:
         self.check_expression("a_obj.x", "6", use_summary=False)
@@ -153,24 +151,25 @@ class TestSimpleSwiftExpressions(TestBase):
         # Test expression with Chars and strings:
 
         # Commented out due to <rdar://problem/16856379>
-        #self.check_expression ("a_char", "U+0061 U+0000 u'a'")
+        # self.check_expression ("a_char", "U+0061 U+0000 u'a'")
 
         # Interpolated strings and string addition:
         self.check_expression(
-            '"Five: \(is_five) " + "Six: \(is_six)"',
-            '"Five: 5 Six: 6"')
+            '"Five: \(is_five) " + "Six: \(is_six)"', '"Five: 5 Six: 6"'
+        )
 
         # Next let's try some simple array accesses:
         self.check_expression("an_int_array[0]", "5", use_summary=False)
 
         # Test expression with read-only variables:
         self.check_expression("b_struct.b_read_only == 5", "true")
-        failed_value = self.frame().EvaluateExpression(
-            "b_struct.b_read_only = 34")
-        self.assertTrue(failed_value.IsValid(),
-                        "Get something back from the evaluation.")
-        self.assertTrue(failed_value.GetError().Success()
-                        == False, "But it is an error.")
+        failed_value = self.frame().EvaluateExpression("b_struct.b_read_only = 34")
+        self.assertTrue(
+            failed_value.IsValid(), "Get something back from the evaluation."
+        )
+        self.assertTrue(
+            failed_value.GetError().Success() == False, "But it is an error."
+        )
 
         # Check a simple value in a struct:
         self.check_expression("b_struct_2.b_int", "20", use_summary=False)
@@ -180,5 +179,6 @@ class TestSimpleSwiftExpressions(TestBase):
 
         # Here are a few tests of making variables in expressions:
         self.check_expression(
-            "var enum_six : SomeValues = SomeValues.Six; return enum_six == .Six", "true")
-
+            "var enum_six : SomeValues = SomeValues.Six; return enum_six == .Six",
+            "true",
+        )

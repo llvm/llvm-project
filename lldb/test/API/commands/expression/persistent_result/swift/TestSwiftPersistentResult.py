@@ -12,7 +12,9 @@ class TestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"))
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
     def test_enable_persistent_result(self):
         """Test explicitly enabling result variables persistence."""

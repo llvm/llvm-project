@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftAtObjCIvars(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -30,7 +29,7 @@ class TestSwiftAtObjCIvars(TestBase):
     def check_foo(self, theFoo):
         x = theFoo.GetChildMemberWithName("x")
         y = theFoo.GetChildMemberWithName("y")
-        lldbutil.check_variable(self, x, False, value='12')
+        lldbutil.check_variable(self, x, False, value="12")
         lldbutil.check_variable(self, y, False, '"12"')
 
     @skipUnlessDarwin
@@ -39,7 +38,8 @@ class TestSwiftAtObjCIvars(TestBase):
         """Test ObjC instance variables"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set a breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         foo_objc = self.frame().FindVariable("foo_objc")
         foo_swift = self.frame().FindVariable("foo_swift")

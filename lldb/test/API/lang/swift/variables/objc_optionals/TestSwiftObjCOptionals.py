@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftObjCOptionalType(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -39,19 +38,20 @@ class TestSwiftObjCOptionalType(TestBase):
     def do_check_consistency(self):
         """Check formatting for T? and T! when T is an ObjC type"""
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
     def do_check_visuals(self):
         """Check formatting for T? and T! when T is an ObjC type"""
         self.expect(
-            "frame variable optColor_Some",
-            substrs=['Color?) optColor_Some = 0x'])
+            "frame variable optColor_Some", substrs=["Color?) optColor_Some = 0x"]
+        )
         self.expect(
-            "frame variable uoptColor_Some",
-            substrs=['Color?) uoptColor_Some = 0x'])
+            "frame variable uoptColor_Some", substrs=["Color?) uoptColor_Some = 0x"]
+        )
 
-        self.expect("frame variable optColor_None", substrs=['nil'])
-        self.expect("frame variable uoptColor_None", substrs=['nil'])
+        self.expect("frame variable optColor_None", substrs=["nil"])
+        self.expect("frame variable uoptColor_None", substrs=["nil"])
 
     def do_check_api(self):
         """Check formatting for T? and T! when T is an ObjC type"""
@@ -59,15 +59,6 @@ class TestSwiftObjCOptionalType(TestBase):
 
         # SwiftOptionalSyntheticFrontEnd passes GetNumChildren
         # through to the .some object.  NSColor has no children.
-        lldbutil.check_variable(
-            self,
-            optColor_Some,
-            use_dynamic=False,
-            num_children=0)
+        lldbutil.check_variable(self, optColor_Some, use_dynamic=False, num_children=0)
         uoptColor_Some = self.frame().FindVariable("uoptColor_Some")
-        lldbutil.check_variable(
-            self,
-            uoptColor_Some,
-            use_dynamic=False,
-            num_children=0)
-
+        lldbutil.check_variable(self, uoptColor_Some, use_dynamic=False, num_children=0)

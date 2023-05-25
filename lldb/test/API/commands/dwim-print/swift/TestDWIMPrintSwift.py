@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
+
 class TestCase(TestBase):
     @swiftTest
     def test_swift_po_address(self):
@@ -17,7 +18,9 @@ class TestCase(TestBase):
         frame = thread.frame[0]
         addr = frame.FindVariable("object").GetLoadAddress()
         hex_addr = f"{addr:x}"
-        self.expect(f"dwim-print -O -- 0x{hex_addr}", patterns=[f"Object@0x0*{hex_addr}"])
+        self.expect(
+            f"dwim-print -O -- 0x{hex_addr}", patterns=[f"Object@0x0*{hex_addr}"]
+        )
         self.expect(f"dwim-print -O -- {addr}", patterns=[f"Object@0x0*{hex_addr}"])
 
     @swiftTest

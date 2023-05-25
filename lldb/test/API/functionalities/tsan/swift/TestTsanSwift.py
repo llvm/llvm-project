@@ -22,13 +22,12 @@ import json
 
 
 class TsanSwiftTestCase(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
     @skipIfLinux
     @skipUnlessSwiftThreadSanitizer
-    @skipIfAsan # This test does not behave reliable with an ASANified LLDB.
+    @skipIfAsan  # This test does not behave reliable with an ASANified LLDB.
     def test_tsan_swift(self):
         self.build()
         self.do_test()
@@ -50,36 +49,42 @@ class TsanSwiftTestCase(lldbtest.TestBase):
         for m in target.module_iter():
             libspec = m.GetFileSpec()
             if "clang_rt" in libspec.GetFilename():
-                runtimes.append(os.path.join(libspec.GetDirectory(), libspec.GetFilename()))
+                runtimes.append(
+                    os.path.join(libspec.GetDirectory(), libspec.GetFilename())
+                )
         self.registerSharedLibrariesWithTarget(target, runtimes)
 
         self.runCmd("run")
         self.runCmd("bt")
 
-        stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        stop_reason = (
+            self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        )
         if stop_reason == lldb.eStopReasonExec:
             # On OS X 10.10 and older, we need to re-exec to enable
             # interceptors.
             self.runCmd("continue")
 
         # the stop reason of the thread should be a TSan report.
-        self.expect("thread list", "A data race should be detected",
-                    substrs=['stopped', 'stop reason = Data race detected'])
+        self.expect(
+            "thread list",
+            "A data race should be detected",
+            substrs=["stopped", "stop reason = Data race detected"],
+        )
 
         self.assertEqual(
             self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
-            lldb.eStopReasonInstrumentation)
+            lldb.eStopReasonInstrumentation,
+        )
 
         self.expect(
             "thread info -s",
             "The extended stop info should contain the TSan provided fields",
-            substrs=[
-                "instrumentation_class",
-                "description",
-                "mops"])
+            substrs=["instrumentation_class", "description", "mops"],
+        )
 
-        output_lines = self.res.GetOutput().split('\n')
-        json_line = '\n'.join(output_lines[2:])
+        output_lines = self.res.GetOutput().split("\n")
+        json_line = "\n".join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "ThreadSanitizer")
         self.assertEqual(data["issue_type"], "data-race")
@@ -87,6 +92,5 @@ class TsanSwiftTestCase(lldbtest.TestBase):
         self.assertTrue(data["location_filename"].endswith("/main.swift"))
         self.assertEqual(
             data["location_line"],
-            lldbtest.line_number(
-                'main.swift',
-                '// global variable'))
+            lldbtest.line_number("main.swift", "// global variable"),
+        )
