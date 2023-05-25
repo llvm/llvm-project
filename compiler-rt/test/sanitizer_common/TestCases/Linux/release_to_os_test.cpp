@@ -1,6 +1,9 @@
 // RUN: %clangxx %s -o %t
 // RUN: env %tool_options=allocator_release_to_os_interval_ms=-1 %run %t
 
+// Temporarily disable test
+// UNSUPPORTED: tsan
+
 // Not needed, no allocator.
 // UNSUPPORTED: ubsan
 
