@@ -130,23 +130,21 @@ const interpose_substitution substitution_##func_name[] \
     extern "C" ret_type func(__VA_ARGS__);
 # define DECLARE_WRAPPER_WINAPI(ret_type, func, ...) \
     extern "C" __declspec(dllimport) ret_type __stdcall func(__VA_ARGS__);
-#elif SANITIZER_FREEBSD || SANITIZER_NETBSD
+#elif !SANITIZER_FUCHSIA  // LINUX, FREEBSD, NETBSD, SOLARIS
 # define WRAP(x) __interceptor_ ## x
 # define TRAMPOLINE(x) WRAP(x)
 # define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
+# if SANITIZER_FREEBSD || SANITIZER_NETBSD
 // FreeBSD's dynamic linker (incompliantly) gives non-weak symbols higher
 // priority than weak ones so weak aliases won't work for indirect calls
 // in position-independent (-fPIC / -fPIE) mode.
-# define DECLARE_WRAPPER(ret_type, func, ...) \
-     extern "C" ret_type func(__VA_ARGS__) \
-     __attribute__((alias("__interceptor_" #func), visibility("default")));
-#elif !SANITIZER_FUCHSIA
-# define WRAP(x) __interceptor_ ## x
-# define TRAMPOLINE(x) WRAP(x)
-# define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
-# define DECLARE_WRAPPER(ret_type, func, ...) \
-    extern "C" ret_type func(__VA_ARGS__) \
-    __attribute__((weak, alias("__interceptor_" #func), visibility("default")));
+# define OVERRIDE_ATTRIBUTE
+# else  // SANITIZER_FREEBSD || SANITIZER_NETBSD
+# define OVERRIDE_ATTRIBUTE __attribute__((weak))
+# endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
+# define DECLARE_WRAPPER(ret_type, func, ...)                                  \
+    extern "C" ret_type func(__VA_ARGS__) INTERCEPTOR_ATTRIBUTE                \
+      OVERRIDE_ATTRIBUTE ALIAS(WRAP(func));
 #endif
 
 #if SANITIZER_FUCHSIA
