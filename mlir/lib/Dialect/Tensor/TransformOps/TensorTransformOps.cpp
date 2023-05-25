@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -23,18 +24,27 @@ using namespace tensor;
 // TrackingListener
 //===----------------------------------------------------------------------===//
 
-/// A tensor.insert_slice is a cast-like operation if it the source tensor and
-/// the destination tensor have the same number of elements. I.e., the result
-/// tensor data equals the source tensor data, maybe rank-extended to a
-/// different shape.
+/// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
+/// source tensor or inserts the source tensor into a destination tensor with
+/// the same shape.
 static bool isCastLikeInsertSliceOp(InsertSliceOp op) {
-  // TODO: Support dynamically shaped tensors. Utilize ValueBoundsOpInterface
-  // to check if source and destination have the same shape.
-  if (!op.getSourceType().hasStaticShape() ||
-      !op.getDestType().hasStaticShape())
-    return false;
-  return op.getSourceType().getNumElements() ==
-         op.getDestType().getNumElements();
+  llvm::SmallBitVector droppedDims = op.getDroppedDims();
+  int64_t srcDim = 0;
+  // Source dims and destination dims (apart from dropped dims) must have the
+  // same size.
+  for (int64_t resultDim = 0; resultDim < op.getDestType().getRank();
+       ++resultDim) {
+    if (droppedDims.test(resultDim)) {
+      continue;
+    }
+    FailureOr<bool> equalDimSize = ValueBoundsConstraintSet::areEqual(
+        op.getSource(), op.getResult(), srcDim, resultDim);
+    if (failed(equalDimSize) || !*equalDimSize)
+      return false;
+    ++srcDim;
+  }
+
+  return true;
 }
 
 Operation *
