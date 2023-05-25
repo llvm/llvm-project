@@ -15,17 +15,44 @@
 //===----------------------------------------------------------------------===//
 
 #include "hwasan.h"
+#include "hwasan_allocator.h"
 #include "hwasan_checks.h"
 #include "hwasan_platform_interceptors.h"
 #include "hwasan_thread.h"
 #include "hwasan_thread_list.h"
 #include "interception/interception.h"
+#include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
 #if !SANITIZER_FUCHSIA
 
 using namespace __hwasan;
+
+#  if !SANITIZER_APPLE
+#    define HWASAN_INTERCEPT_FUNC(name)                                        \
+      do {                                                                     \
+        if (!INTERCEPT_FUNCTION(name))                                         \
+          VReport(1, "HWAddressSanitizer: failed to intercept '%s'\n", #name); \
+      } while (0)
+#    define HWASAN_INTERCEPT_FUNC_VER(name, ver)                           \
+      do {                                                                 \
+        if (!INTERCEPT_FUNCTION_VER(name, ver))                            \
+          VReport(1, "HWAddressSanitizer: failed to intercept '%s@@%s'\n", \
+                  #name, ver);                                             \
+      } while (0)
+#    define HWASAN_INTERCEPT_FUNC_VER_UNVERSIONED_FALLBACK(name, ver)          \
+      do {                                                                     \
+        if (!INTERCEPT_FUNCTION_VER(name, ver) && !INTERCEPT_FUNCTION(name))   \
+          VReport(                                                             \
+              1, "HWAddressSanitizer: failed to intercept '%s@@%s' or '%s'\n", \
+              #name, ver, #name);                                              \
+      } while (0)
+
+#  else
+// OS X interceptors don't need to be initialized with INTERCEPT_FUNCTION.
+#    define HWASAN_INTERCEPT_FUNC(name)
+#  endif  // SANITIZER_APPLE
 
 #  if HWASAN_WITH_INTERCEPTORS
 
@@ -45,100 +72,151 @@ using namespace __hwasan;
 #    include "sanitizer_common/sanitizer_common_syscalls.inc"
 #    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
-#define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
-  do {                                                \
-  } while (false)
+#    define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
+      do {                                                 \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
-  do {                                                \
-    (void)(ctx);                                      \
-    (void)(ptr);                                      \
-    (void)(size);                                     \
-  } while (false)
+#    define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
+      do {                                                \
+        (void)(ctx);                                      \
+        (void)(ptr);                                      \
+        (void)(size);                                     \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
-  do {                                           \
-    (void)(ctx);                                 \
-    (void)(func);                                \
-  } while (false)
+#    define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
+      do {                                           \
+        (void)(ctx);                                 \
+        (void)(func);                                \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
-  do {                                            \
-    (void)(ctx);                                  \
-    (void)(path);                                 \
-  } while (false)
+#    define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
+      do {                                            \
+        (void)(ctx);                                  \
+        (void)(path);                                 \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd) \
-  do {                                         \
-    (void)(ctx);                               \
-    (void)(fd);                                \
-  } while (false)
+#    define COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd) \
+      do {                                         \
+        (void)(ctx);                               \
+        (void)(fd);                                \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd) \
-  do {                                         \
-    (void)(ctx);                               \
-    (void)(fd);                                \
-  } while (false)
+#    define COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd) \
+      do {                                         \
+        (void)(ctx);                               \
+        (void)(fd);                                \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, newfd) \
-  do {                                                      \
-    (void)(ctx);                                            \
-    (void)(fd);                                             \
-    (void)(newfd);                                          \
-  } while (false)
+#    define COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, newfd) \
+      do {                                                      \
+        (void)(ctx);                                            \
+        (void)(fd);                                             \
+        (void)(newfd);                                          \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) \
-  do {                                                \
-    (void)(ctx);                                      \
-    (void)(name);                                     \
-  } while (false)
+#    define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) \
+      do {                                                \
+        (void)(ctx);                                      \
+        (void)(name);                                     \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
-  do {                                                         \
-    (void)(ctx);                                               \
-    (void)(thread);                                            \
-    (void)(name);                                              \
-  } while (false)
+#    define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
+      do {                                                         \
+        (void)(ctx);                                               \
+        (void)(thread);                                            \
+        (void)(name);                                              \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_BLOCK_REAL(name) \
-  do {                                      \
-    (void)(name);                           \
-  } while (false)
+#    define COMMON_INTERCEPTOR_BLOCK_REAL(name) \
+      do {                                      \
+        (void)(name);                           \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
-  do {                                                       \
-    (void)(ctx);                                             \
-    (void)(to);                                              \
-    (void)(from);                                            \
-    (void)(size);                                            \
-  } while (false)
+#    define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
+      do {                                                       \
+        (void)(ctx);                                             \
+        (void)(to);                                              \
+        (void)(from);                                            \
+        (void)(size);                                            \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
-  do {                                                      \
-    (void)(ctx);                                            \
-    (void)(to);                                             \
-    (void)(from);                                           \
-    (void)(size);                                           \
-  } while (false)
+#    define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
+      do {                                                      \
+        (void)(ctx);                                            \
+        (void)(to);                                             \
+        (void)(from);                                           \
+        (void)(size);                                           \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
-  do {                                                      \
-    (void)(ctx);                                            \
-    (void)(block);                                          \
-    (void)(c);                                              \
-    (void)(size);                                           \
-  } while (false)
+#    define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
+      do {                                                      \
+        (void)(ctx);                                            \
+        (void)(block);                                          \
+        (void)(c);                                              \
+        (void)(size);                                           \
+      } while (false)
 
-#define COMMON_INTERCEPTOR_STRERROR() \
-  do {                                \
-  } while (false)
+#    define COMMON_INTERCEPTOR_STRERROR() \
+      do {                                \
+      } while (false)
 
-#define COMMON_INTERCEPT_FUNCTION(name) \
-  do {                                  \
-    (void)(name);                       \
-  } while (false)
+#    define COMMON_INTERCEPT_FUNCTION(name) HWASAN_INTERCEPT_FUNC(name)
 
-#include "sanitizer_common/sanitizer_common_interceptors.inc"
+#    define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!hwasan_inited)
+
+// The main purpose of the mmap interceptor is to prevent the user from
+// allocating on top of shadow pages.
+//
+// For compatibility, it does not tag pointers, nor does it allow
+// MAP_FIXED in combination with a tagged pointer. (Since mmap itself
+// will not return a tagged pointer, the tagged pointer must have come
+// from elsewhere, such as the secondary allocator, which makes it a
+// very odd usecase.)
+template <class Mmap>
+static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
+                              int prot, int flags, int fd, OFF64_T offset) {
+  if (addr) {
+    if (flags & map_fixed) CHECK_EQ(addr, UntagPtr(addr));
+
+    addr = UntagPtr(addr);
+  }
+  SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
+  void *end_addr = (char *)addr + (rounded_length - 1);
+  if (addr && (!MemIsApp(reinterpret_cast<uptr>(addr)) ||
+               !MemIsApp(reinterpret_cast<uptr>(end_addr)))) {
+    // User requested an address that is incompatible with HWASan's
+    // memory layout. Use a different address if allowed, else fail.
+    if (flags & map_fixed) {
+      errno = errno_EINVAL;
+      return (void *)-1;
+    } else {
+      addr = nullptr;
+    }
+  }
+  void *res = real_mmap(addr, length, prot, flags, fd, offset);
+  if (res != (void *)-1) {
+    void *end_res = (char *)res + (rounded_length - 1);
+    if (!MemIsApp(reinterpret_cast<uptr>(res)) ||
+        !MemIsApp(reinterpret_cast<uptr>(end_res))) {
+      // Application has attempted to map more memory than is supported by
+      // HWASan. Act as if we ran out of memory.
+      internal_munmap(res, length);
+      errno = errno_ENOMEM;
+      return (void *)-1;
+    }
+  }
+
+  return res;
+}
+
+#    define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags, \
+                                         fd, offset)                           \
+      do {                                                                     \
+        (void)(ctx);                                                           \
+        return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);   \
+      } while (false)
+
+#    include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 struct ThreadStartArg {
   __sanitizer_sigset_t starting_sigset_;
@@ -414,7 +492,8 @@ void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
 
-  (void)(InitializeCommonInterceptors);
+  InitializeCommonInterceptors();
+
   (void)(read_iovec);
   (void)(write_iovec);
 
