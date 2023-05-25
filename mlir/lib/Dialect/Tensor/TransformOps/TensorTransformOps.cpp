@@ -23,6 +23,20 @@ using namespace tensor;
 // TrackingListener
 //===----------------------------------------------------------------------===//
 
+/// A tensor.insert_slice is a cast-like operation if it the source tensor and
+/// the destination tensor have the same number of elements. I.e., the result
+/// tensor data equals the source tensor data, maybe rank-extended to a
+/// different shape.
+static bool isCastLikeInsertSliceOp(InsertSliceOp op) {
+  // TODO: Support dynamically shaped tensors. Utilize ValueBoundsOpInterface
+  // to check if source and destination have the same shape.
+  if (!op.getSourceType().hasStaticShape() ||
+      !op.getDestType().hasStaticShape())
+    return false;
+  return op.getSourceType().getNumElements() ==
+         op.getDestType().getNumElements();
+}
+
 Operation *
 tensor::TrackingListener::findReplacementOp(Operation *op,
                                             ValueRange newValues) const {
@@ -48,6 +62,10 @@ tensor::TrackingListener::findReplacementOp(Operation *op,
             [&](ExpandShapeOp op) { values.push_back(op.getSrc()); })
         .Case<ReshapeOp>(
             [&](ReshapeOp op) { values.push_back(op.getSource()); })
+        .Case<InsertSliceOp>([&](InsertSliceOp op) {
+          if (isCastLikeInsertSliceOp(op))
+            values.push_back(op.getSource());
+        })
         .Default([](Operation *op) {});
   } while (!values.empty());
 
