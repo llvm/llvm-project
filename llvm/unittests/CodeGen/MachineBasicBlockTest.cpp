@@ -56,9 +56,8 @@ TEST(FindDebugLocTest, DifferentIterators) {
   EXPECT_EQ(DL0, MBB.findDebugLoc(MBB.instr_begin()));
   EXPECT_EQ(DL0, MBB.findDebugLoc(MBB.instr_end()));
 
-  // FIXME: This would crash (see https://reviews.llvm.org/D150577).
-  //EXPECT_EQ(DL0, MBB.rfindDebugLoc(MBB.instr_rbegin()));
-  //EXPECT_EQ(DL0, MBB.rfindDebugLoc(MBB.instr_rend()));
+  EXPECT_EQ(DL0, MBB.rfindDebugLoc(MBB.instr_rbegin()));
+  EXPECT_EQ(DL0, MBB.rfindDebugLoc(MBB.instr_rend()));
 
   EXPECT_EQ(DL0, MBB.findPrevDebugLoc(MBB.instr_begin()));
   EXPECT_EQ(DL0, MBB.findPrevDebugLoc(MBB.instr_end()));
@@ -84,8 +83,7 @@ TEST(FindDebugLocTest, DifferentIterators) {
   EXPECT_EQ(DL3, MBB.findDebugLoc(MI3));
   EXPECT_EQ(DL0, MBB.findDebugLoc(MBB.instr_end()));
 
-  // FIXME: This would crash (see https://reviews.llvm.org/D150577).
-  //EXPECT_EQ(DL1, MBB.rfindDebugLoc(MBB.instr_rend()));
+  EXPECT_EQ(DL1, MBB.rfindDebugLoc(MBB.instr_rend()));
   EXPECT_EQ(DL1, MBB.rfindDebugLoc(MI1));
   EXPECT_EQ(DL3, MBB.rfindDebugLoc(MI2));
   EXPECT_EQ(DL3, MBB.rfindDebugLoc(MI3));
