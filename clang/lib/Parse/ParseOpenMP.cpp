@@ -3103,8 +3103,13 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
     return nullptr;
   SmallVector<Sema::UsesAllocatorsData, 4> Data;
   do {
+    CXXScopeSpec SS;
+    Token Replacement;
     ExprResult Allocator =
-        getLangOpts().CPlusPlus ? ParseCXXIdExpression() : ParseExpression();
+        getLangOpts().CPlusPlus
+            ? ParseCXXIdExpression()
+            : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
+                                      Replacement);
     if (Allocator.isInvalid()) {
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
