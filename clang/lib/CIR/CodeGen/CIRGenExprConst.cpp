@@ -942,11 +942,18 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
   auto &builder = CGM.getBuilder();
   auto isNullValue = [&](mlir::Attribute f) {
     // TODO(cir): introduce char type in CIR and check for that instead.
-    auto intVal = f.dyn_cast_or_null<mlir::cir::IntAttr>();
-    assert(intVal && "not implemented");
-    if (intVal.getValue() == 0)
-      return true;
-    return false;
+    if (const auto intVal = f.dyn_cast_or_null<mlir::cir::IntAttr>())
+      return intVal.getValue() == 0;
+
+    if (const auto fpVal = f.dyn_cast_or_null<mlir::FloatAttr>()) {
+      bool ignored;
+      llvm::APFloat FV(+0.0);
+      FV.convert(fpVal.getValue().getSemantics(),
+                 llvm::APFloat::rmNearestTiesToEven, &ignored);
+      return FV.bitwiseIsEqual(fpVal.getValue());
+    }
+
+    llvm_unreachable("NYI");
   };
 
   // Figure out how long the initial prefix of non-zero elements is.
