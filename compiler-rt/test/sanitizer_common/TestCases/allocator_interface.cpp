@@ -5,7 +5,7 @@
 // UNSUPPORTED: ubsan
 
 // FIXME: implementation is incomplete.
-// XFAIL: lsan, hwasan
+// XFAIL: hwasan
 
 #include <assert.h>
 #include <sanitizer/allocator_interface.h>
