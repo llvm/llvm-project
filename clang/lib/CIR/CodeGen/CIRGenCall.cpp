@@ -190,12 +190,12 @@ static bool hasInAllocaArgs(CIRGenModule &CGM, CallingConv ExplicitCC,
   return false;
 }
 
-mlir::FunctionType CIRGenTypes::GetFunctionType(GlobalDecl GD) {
+mlir::cir::FuncType CIRGenTypes::GetFunctionType(GlobalDecl GD) {
   const CIRGenFunctionInfo &FI = arrangeGlobalDeclaration(GD);
   return GetFunctionType(FI);
 }
 
-mlir::FunctionType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
+mlir::cir::FuncType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
   bool Inserted = FunctionsBeingProcessed.insert(&FI).second;
   (void)Inserted;
   assert(Inserted && "Recursively being processed?");
@@ -255,11 +255,12 @@ mlir::FunctionType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
   (void)Erased;
   assert(Erased && "Not in set?");
 
-  return Builder.getFunctionType(ArgTypes,
-                                 resultType ? resultType : mlir::TypeRange());
+  return mlir::cir::FuncType::get(
+      &getMLIRContext(), ArgTypes,
+      (resultType ? resultType : mlir::TypeRange{}));
 }
 
-mlir::FunctionType CIRGenTypes::GetFunctionTypeForVTable(GlobalDecl GD) {
+mlir::cir::FuncType CIRGenTypes::GetFunctionTypeForVTable(GlobalDecl GD) {
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
 
@@ -314,7 +315,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   QualType RetTy = CallInfo.getReturnType();
   const auto &RetAI = CallInfo.getReturnInfo();
 
-  mlir::FunctionType CIRFuncTy = getTypes().GetFunctionType(CallInfo);
+  mlir::cir::FuncType CIRFuncTy = getTypes().GetFunctionType(CallInfo);
 
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
 

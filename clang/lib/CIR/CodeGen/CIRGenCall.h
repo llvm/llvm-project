@@ -71,7 +71,7 @@ class CIRGenCallee {
     const clang::CallExpr *CE;
     clang::GlobalDecl MD;
     Address Addr;
-    mlir::FunctionType FTy;
+    mlir::cir::FuncType FTy;
   };
 
   SpecialKind KindOrFunctionPointer;

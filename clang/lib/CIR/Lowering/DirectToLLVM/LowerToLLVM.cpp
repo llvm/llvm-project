@@ -23,6 +23,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/IR/Attributes.h"
@@ -515,11 +516,13 @@ public:
         return mlir::failure();
     }
 
-    auto fn = rewriter.create<mlir::func::FuncOp>(
-        op.getLoc(), op.getName(),
-        rewriter.getFunctionType(signatureConversion.getConvertedTypes(),
-                                 resultType ? mlir::TypeRange(resultType)
-                                            : mlir::TypeRange()));
+    // Create the LLVM function operation.
+    auto llvmFnTy = mlir::LLVM::LLVMFunctionType::get(
+        resultType ? resultType : mlir::LLVM::LLVMVoidType::get(getContext()),
+        signatureConversion.getConvertedTypes(),
+        /*isVarArg=*/fnType.isVarArg());
+    auto fn = rewriter.create<mlir::LLVM::LLVMFuncOp>(op.getLoc(), op.getName(),
+                                                      llvmFnTy);
 
     rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
     if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,

@@ -323,7 +323,7 @@ public:
 
   mlir::cir::FuncOp getAddrOfCXXStructor(
       clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
-      mlir::FunctionType FnType = nullptr, bool DontDefer = false,
+      mlir::cir::FuncType FnType = nullptr, bool DontDefer = false,
       ForDefinition_t IsForDefinition = NotForDefinition) {
 
     return getAddrAndTypeOfCXXStructor(GD, FnInfo, FnType, DontDefer,
@@ -365,9 +365,9 @@ public:
     DefaultMethodsToEmit.emplace_back(GD);
   }
 
-  std::pair<mlir::FunctionType, mlir::cir::FuncOp> getAddrAndTypeOfCXXStructor(
+  std::pair<mlir::cir::FuncType, mlir::cir::FuncOp> getAddrAndTypeOfCXXStructor(
       clang::GlobalDecl GD, const CIRGenFunctionInfo *FnInfo = nullptr,
-      mlir::FunctionType FnType = nullptr, bool Dontdefer = false,
+      mlir::cir::FuncType FnType = nullptr, bool Dontdefer = false,
       ForDefinition_t IsForDefinition = NotForDefinition);
 
   void buildTopLevelDecl(clang::Decl *decl);
@@ -512,7 +512,7 @@ public:
   // Effectively create the CIR instruction, properly handling insertion
   // points.
   mlir::cir::FuncOp createCIRFunction(mlir::Location loc, StringRef name,
-                                      mlir::FunctionType Ty,
+                                      mlir::cir::FuncType Ty,
                                       const clang::FunctionDecl *FD);
 
   /// Emit type info if type of an expression is a variably modified

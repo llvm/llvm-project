@@ -185,7 +185,7 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   else
     FInfo = &CGM.getTypes().arrangeCXXMethodDeclaration(CalleeDecl);
 
-  mlir::FunctionType Ty = CGM.getTypes().GetFunctionType(*FInfo);
+  auto Ty = CGM.getTypes().GetFunctionType(*FInfo);
 
   // C++11 [class.mfct.non-static]p2:
   //   If a non-static member function of a class X is called for an object that

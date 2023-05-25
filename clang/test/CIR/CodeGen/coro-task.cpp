@@ -362,19 +362,19 @@ folly::coro::Task<int> go4() {
 // CHECK:   %17 = cir.alloca !ty_22class2Eanon221, cir.ptr <!ty_22class2Eanon221>, ["ref.tmp1"] {alignment = 1 : i64}
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
-// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
-// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
-// CHECK:   cir.yield %19 : !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<!cir.func<!ty_22struct2Efolly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
+// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<!ty_22struct2Efolly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<!ty_22struct2Efolly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>> 
+// CHECK:   cir.yield %19 : !cir.ptr<!cir.func<!ty_22struct2Efolly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
 // CHECK: }
-// CHECK: cir.store %12, %3 : !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, cir.ptr <!cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>>
+// CHECK: cir.store %12, %3 : !cir.ptr<!cir.func<!ty_22struct2Efolly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>, cir.ptr <!cir.ptr<!cir.func<!ty_22struct2Efolly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>>
 // CHECK: cir.scope {
 // CHECK:   %17 = cir.alloca !s32i, cir.ptr <!s32i>, ["ref.tmp2", init] {alignment = 4 : i64}
-// CHECK:   %18 = cir.load %3 : cir.ptr <!cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>>, !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK:   %18 = cir.load %3 : cir.ptr <!cir.ptr<!cir.func<!ty_22struct2Efolly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>>, !cir.ptr<!cir.func<!ty_22struct2Efolly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
 // CHECK:   %19 = cir.const(#cir.int<3> : !s32i) : !s32i
 // CHECK:   cir.store %19, %17 : !s32i, cir.ptr <!s32i>
 
 // Call invoker, which calls operator() indirectly.
-// CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, !cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221
+// CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<!cir.func<!ty_22struct2Efolly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>, !cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221
 // CHECK:   cir.store %20, %4 : !ty_22struct2Efolly3A3Acoro3A3ATask221, cir.ptr <!ty_22struct2Efolly3A3Acoro3A3ATask221>
 // CHECK: }
 

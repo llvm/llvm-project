@@ -339,3 +339,35 @@ module {
   // expected-error@below {{integer value too large for the given type}}
   cir.global external @b = #cir.int<-129> : !cir.int<s, 8>
 }
+
+// -----
+
+module {
+  // expected-error@+1 {{functions must have at least one non-variadic input}}
+  cir.func @variadic(...) -> !cir.int<s, 32>
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{custom op 'cir.func' variadic arguments must be in the end of the argument list}}
+  cir.func @variadic(..., !cir.int<s, 32>) -> !cir.int<s, 32>
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{functions only supports 0 or 1 results}}
+  cir.func @variadic() -> (!cir.int<s, 32>, !cir.int<s, 32>)
+}
+
+// -----
+
+module {
+  cir.func private @variadic(!cir.int<s, 32>, !cir.int<s, 32>, ...) -> !cir.int<s, 32>
+  cir.func @call_variadic(%0: !cir.int<s, 32>) -> !cir.int<s, 32> {
+    // expected-error@+1 {{'cir.call' op too few operands for callee}}
+    %1 = cir.call @variadic(%0) : (!cir.int<s, 32>) -> !cir.int<s, 32>
+    cir.return %1 : !cir.int<s, 32>
+  }
+}
