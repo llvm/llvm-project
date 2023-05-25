@@ -17,7 +17,7 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 // CHECK:  }
 
 
-int cStyleCasts_0(unsigned x1, int x2) {
+int cStyleCasts_0(unsigned x1, int x2, float x3) {
 // CHECK: cir.func @_{{.*}}cStyleCasts_0{{.*}}
 
   char a = (char)x1; // truncate
@@ -35,6 +35,10 @@ int cStyleCasts_0(unsigned x1, int x2) {
   int arr[3];
   int* e = (int*)arr; // explicit pointer decay
   // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %{{[0-9]+}} : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
+
+  int f = (int)x3;
+  // CHECK: %{{[0-9]+}} = cir.cast(float_to_int, %{{[0-9]+}} : f32), !s32i
+
 
   return 0;
 }
