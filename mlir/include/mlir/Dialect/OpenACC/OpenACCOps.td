@@ -1046,8 +1046,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
                        Variadic<IntOrIndex>:$tileOperands,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
                        OptionalAttr<SymbolRefArrayAttr>:$privatizations,
-                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
-                       Variadic<AnyType>:$reductionOperands);
+                       Variadic<AnyType>:$reductionOperands,
+                       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes);
 
   let results = (outs Variadic<AnyType>:$results);
 
@@ -1069,7 +1069,9 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
             $privateOperands, type($privateOperands), $privatizations)
         `)`
       | `tile` `(` $tileOperands `:` type($tileOperands) `)`
-      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
+      | `reduction` `(` custom<SymOperandList>(
+            $reductionOperands, type($reductionOperands), $reductionRecipes)
+        `)`
     )
     $region
     ( `(` type($results)^ `)` )?
