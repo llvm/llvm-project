@@ -1020,7 +1020,6 @@ public:
     std::string formatted_text;
     if (!line_col.first) {
       formatted_text = text.str();
-      use_fixits = false;
     } else {
       ANSIColorStringStream os(m_colorize);
 
