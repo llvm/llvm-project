@@ -64,9 +64,6 @@ runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
                     AST->getASTContext()));
   assert(Func != nullptr);
 
-  Stmt *Body = Func->getBody();
-  assert(Body != nullptr);
-
   auto CFCtx =
       llvm::cantFail(ControlFlowContext::build(*Func, AST->getASTContext()));
 
