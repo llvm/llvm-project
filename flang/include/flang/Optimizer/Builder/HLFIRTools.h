@@ -112,11 +112,7 @@ public:
   }
   bool isScalar() const { return !isArray(); }
 
-  bool isPolymorphic() const {
-    if (auto exprType = getType().dyn_cast<hlfir::ExprType>())
-      return exprType.isPolymorphic();
-    return fir::isPolymorphicType(getType());
-  }
+  bool isPolymorphic() const { return hlfir::isPolymorphicType(getType()); }
 
   mlir::Type getFortranElementType() const {
     return hlfir::getFortranElementType(getType());
