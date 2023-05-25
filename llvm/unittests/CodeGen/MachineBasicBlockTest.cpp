@@ -100,6 +100,9 @@ TEST(FindDebugLocTest, DifferentIterators) {
   EXPECT_EQ(DL1, MBB.rfindPrevDebugLoc(MI2));
   EXPECT_EQ(DL1, MBB.rfindPrevDebugLoc(MI3));
   EXPECT_EQ(DL1, MBB.rfindPrevDebugLoc(MBB.instr_rbegin()));
+
+  // Finalize DIBuilder to avoid memory leaks.
+  DIB.finalize();
 }
 
 } // end namespace
