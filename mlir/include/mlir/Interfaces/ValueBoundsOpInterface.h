@@ -183,7 +183,7 @@ protected:
   /// An index-typed value or the dimension of a shaped-type value.
   using ValueDim = std::pair<Value, int64_t>;
 
-  ValueBoundsConstraintSet(Value value, std::optional<int64_t> dim);
+  ValueBoundsConstraintSet(MLIRContext *ctx);
 
   /// Iteratively process all elements on the worklist until an index-typed
   /// value or shaped value meets `stopCondition`. Such values are not processed

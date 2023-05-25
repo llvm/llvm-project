@@ -39,11 +39,8 @@ static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   return std::nullopt;
 }
 
-ValueBoundsConstraintSet::ValueBoundsConstraintSet(Value value,
-                                                   std::optional<int64_t> dim)
-    : builder(value.getContext()) {
-  insert(value, dim, /*isSymbol=*/false);
-}
+ValueBoundsConstraintSet::ValueBoundsConstraintSet(MLIRContext *ctx)
+    : builder(ctx) {}
 
 #ifndef NDEBUG
 static void assertValidValueDim(Value value, std::optional<int64_t> dim) {
@@ -246,7 +243,8 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
   // Process the backward slice of `value` (i.e., reverse use-def chain) until
   // `stopCondition` is met.
   ValueDim valueDim = std::make_pair(value, dim.value_or(kIndexValue));
-  ValueBoundsConstraintSet cstr(value, dim);
+  ValueBoundsConstraintSet cstr(value.getContext());
+  int64_t pos = cstr.insert(value, dim, /*isSymbol=*/false);
   cstr.processWorklist(stopCondition);
 
   // Project out all variables (apart from `valueDim`) that do not match the
@@ -261,7 +259,6 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
   });
 
   // Compute lower and upper bounds for `valueDim`.
-  int64_t pos = cstr.getPos(value, dim);
   SmallVector<AffineMap> lb(1), ub(1);
   cstr.cstr.getSliceBounds(pos, 1, value.getContext(), &lb, &ub,
                            /*getClosedUB=*/true);
@@ -411,8 +408,8 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
 
   // Process the backward slice of `value` (i.e., reverse use-def chain) until
   // `stopCondition` is met.
-  ValueBoundsConstraintSet cstr(value, dim);
-  int64_t pos = cstr.getPos(value, dim);
+  ValueBoundsConstraintSet cstr(value.getContext());
+  int64_t pos = cstr.insert(value, dim, /*isSymbol=*/false);
   if (stopCondition) {
     cstr.processWorklist(stopCondition);
   } else {
