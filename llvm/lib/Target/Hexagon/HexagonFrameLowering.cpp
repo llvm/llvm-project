@@ -307,6 +307,9 @@ static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
           return true;
         if (MO.isReg()) {
           Register R = MO.getReg();
+          // Debug instructions may refer to $noreg.
+          if (!R)
+            continue;
           // Virtual registers will need scavenging, which then may require
           // a stack slot.
           if (R.isVirtual())
