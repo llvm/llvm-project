@@ -123,7 +123,9 @@ using unsigned_integer_types =
 #endif
               >;
 
-using integral_types = concatenate_t<character_types, signed_integer_types, unsigned_integer_types, type_list<bool> >;
+using integer_types = concatenate_t<character_types, signed_integer_types, unsigned_integer_types>;
+
+using integral_types = concatenate_t<integer_types, type_list<bool> >;
 
 using floating_point_types = type_list<float, double, long double>;
 
