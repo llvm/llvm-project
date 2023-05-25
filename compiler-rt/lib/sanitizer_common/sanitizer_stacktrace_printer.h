@@ -17,6 +17,9 @@
 
 namespace __sanitizer {
 
+// Strip interceptor prefixes from function name.
+const char *StripFunctionName(const char *function);
+
 // Render the contents of "info" structure, which represents the contents of
 // stack frame "frame_no" and appends it to the "buffer". "format" is a
 // string with placeholders, which is copied to the output with
