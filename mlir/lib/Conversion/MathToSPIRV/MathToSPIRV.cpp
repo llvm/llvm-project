@@ -430,6 +430,7 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
   // OpenCL patterns
   patterns.add<Log1pOpPattern<spirv::CLLogOp>, ExpM1OpPattern<spirv::CLExpOp>,
                CheckedElementwiseOpPattern<math::AbsFOp, spirv::CLFAbsOp>,
+               CheckedElementwiseOpPattern<math::AbsIOp, spirv::CLSAbsOp>,
                CheckedElementwiseOpPattern<math::CeilOp, spirv::CLCeilOp>,
                CheckedElementwiseOpPattern<math::CosOp, spirv::CLCosOp>,
                CheckedElementwiseOpPattern<math::ErfOp, spirv::CLErfOp>,

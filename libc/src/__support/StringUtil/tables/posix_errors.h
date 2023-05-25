@@ -1,4 +1,4 @@
-//===-- Map from error numbers to strings in posix --------------*- C++ -*-===//
+//===-- Map of POSIX error numbers to strings -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_ERROR_TABLE_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_ERROR_TABLE_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H
+#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H
 
-#include "src/errno/libc_errno.h" // For error macros
-
-#include "src/__support/CPP/array.h"
 #include "src/__support/StringUtil/message_mapper.h"
 
-namespace __llvm_libc::internal {
+#include <errno.h> // For error macros
+
+namespace __llvm_libc {
 
 inline constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(EPERM, "Operation not permitted"),
@@ -95,6 +94,6 @@ inline constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(ENOTRECOVERABLE, "State not recoverable"),
 };
 
-} // namespace __llvm_libc::internal
+} // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_ERROR_TABLE_H
+#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H

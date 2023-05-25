@@ -48,11 +48,9 @@ def testTraverseOpRegionBlockIterators():
   # CHECK: .verify = True
   print(f".verify = {module.operation.verify()}")
 
-  # Get the regions and blocks from the default collections.
-  default_regions = list(op.regions)
-  default_blocks = list(default_regions[0])
+  # Get the blocks from the default collection.
+  default_blocks = list(regions[0])
   # They should compare equal regardless of how obtained.
-  assert default_regions == regions
   assert default_blocks == blocks
 
   # Should be able to get the operations from either the named collection
@@ -78,6 +76,13 @@ def testTraverseOpRegionBlockIterators():
   # CHECK:           OP 0: %0 = "custom.addi"
   # CHECK:           OP 1: func.return
   walk_operations("", op)
+
+  # CHECK:    Region iter: <mlir.{{.+}}.RegionIterator
+  # CHECK:     Block iter: <mlir.{{.+}}.BlockIterator
+  # CHECK: Operation iter: <mlir.{{.+}}.OperationIterator
+  print("   Region iter:", iter(op.regions))
+  print("    Block iter:", iter(op.regions[0]))
+  print("Operation iter:", iter(op.regions[0].blocks[0]))
 
 
 # Verify index based traversal of the op/region/block hierarchy.

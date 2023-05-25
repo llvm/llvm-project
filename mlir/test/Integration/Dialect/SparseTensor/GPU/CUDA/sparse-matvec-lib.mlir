@@ -87,7 +87,7 @@ module {
     //
     %pb0 = vector.transfer_read %0[%c0], %f0 : tensor<?xf64>, vector<64xf64>
     vector.print %pb0 : vector<64xf64>
-    %pb1 = vector.transfer_read %0[%c0], %f0 : tensor<?xf64>, vector<64xf64>
+    %pb1 = vector.transfer_read %1[%c0], %f0 : tensor<?xf64>, vector<64xf64>
     vector.print %pb1 : vector<64xf64>
 
     // Release the resources.

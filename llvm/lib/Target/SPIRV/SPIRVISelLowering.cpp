@@ -55,7 +55,7 @@ bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   switch (Intrinsic) {
   case Intrinsic::spv_load:
     AlignIdx = 2;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::spv_store: {
     if (I.getNumOperands() >= AlignIdx + 1) {
       auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));

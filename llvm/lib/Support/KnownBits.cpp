@@ -164,21 +164,51 @@ KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
   return Flip(umax(Flip(LHS), Flip(RHS)));
 }
 
-KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
+KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
+                         bool NSW) {
   unsigned BitWidth = LHS.getBitWidth();
-  KnownBits Known(BitWidth);
+  auto ShiftByConst = [&](const KnownBits &LHS,
+                          uint64_t ShiftAmt) -> std::optional<KnownBits> {
+    KnownBits Known;
+    Known.Zero = LHS.Zero << ShiftAmt;
+    Known.Zero.setLowBits(ShiftAmt);
+    Known.One = LHS.One << ShiftAmt;
+    if ((!NUW && !NSW) || ShiftAmt == 0)
+      return Known;
+
+    KnownBits ShiftedOutBits = LHS.extractBits(ShiftAmt, BitWidth - ShiftAmt);
+    if (NUW && !ShiftedOutBits.One.isZero())
+      // One bit has been shifted out.
+      return std::nullopt;
+    if (NSW) {
+      if (!ShiftedOutBits.Zero.isZero() && !ShiftedOutBits.One.isZero())
+        // Both zeros and ones have been shifted out.
+        return std::nullopt;
+      if (NUW || !ShiftedOutBits.Zero.isZero()) {
+        if (Known.isNegative())
+          // Zero bit has been shifted out, but result sign is negative.
+          return std::nullopt;
+        Known.makeNonNegative();
+      } else if (!ShiftedOutBits.One.isZero()) {
+        if (Known.isNonNegative())
+          // One bit has been shifted out, but result sign is negative.
+          return std::nullopt;
+        Known.makeNegative();
+      }
+    }
+    return Known;
+  };
 
   // If the shift amount is a valid constant then transform LHS directly.
   if (RHS.isConstant() && RHS.getConstant().ult(BitWidth)) {
-    unsigned Shift = RHS.getConstant().getZExtValue();
-    Known = LHS;
-    Known.Zero <<= Shift;
-    Known.One <<= Shift;
-    // Low bits are known zero.
-    Known.Zero.setLowBits(Shift);
+    if (auto Res = ShiftByConst(LHS, RHS.getConstant().getZExtValue()))
+      return *Res;
+    KnownBits Known(BitWidth);
+    Known.setAllZero();
     return Known;
   }
 
+  KnownBits Known(BitWidth);
   APInt MinShiftAmount = RHS.getMinValue();
   if (MinShiftAmount.uge(BitWidth)) {
     // Always poison. Return zero because we don't like returning conflict.
@@ -193,6 +223,8 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
     MinTrailingZeros += MinShiftAmount.getZExtValue();
     MinTrailingZeros = std::min(MinTrailingZeros, BitWidth);
     Known.Zero.setLowBits(MinTrailingZeros);
+    if (NUW && NSW && !MinShiftAmount.isZero())
+      Known.makeNonNegative();
     return Known;
   }
 
@@ -210,15 +242,20 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
     if ((ShiftAmtZeroMask & ShiftAmt) != ShiftAmt ||
         (ShiftAmtOneMask | ShiftAmt) != ShiftAmt)
       continue;
-    KnownBits SpecificShift;
-    SpecificShift.Zero = LHS.Zero << ShiftAmt;
-    SpecificShift.Zero.setLowBits(ShiftAmt);
-    SpecificShift.One = LHS.One << ShiftAmt;
-    Known = Known.intersectWith(SpecificShift);
+    auto Res = ShiftByConst(LHS, ShiftAmt);
+    if (!Res)
+      // All larger shift amounts will overflow as well.
+      break;
+    Known = Known.intersectWith(*Res);
     if (Known.isUnknown())
       break;
   }
 
+  // All shift amounts may result in poison.
+  if (Known.hasConflict()) {
+    assert((NUW || NSW) && "Can only happen with nowrap flags");
+    Known.setAllZero();
+  }
   return Known;
 }
 

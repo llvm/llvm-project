@@ -96,7 +96,8 @@ bool locationInRange(SourceLocation L, CharSourceRange R,
 
 // Clang diags have a location (shown as ^) and 0 or more ranges (~~~~).
 // LSP needs a single range.
-Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
+std::optional<Range> diagnosticRange(const clang::Diagnostic &D,
+                                     const LangOptions &L) {
   auto &M = D.getSourceManager();
   auto PatchedRange = [&M](CharSourceRange &R) {
     R.setBegin(translatePreamblePatchLocation(R.getBegin(), M));
@@ -115,13 +116,18 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
     if (locationInRange(Loc, R, M))
       return halfOpenToRange(M, PatchedRange(R));
   }
+  // Source locations from stale preambles might become OOB.
+  // FIXME: These diagnostics might point to wrong locations even when they're
+  // not OOB.
+  auto [FID, Offset] = M.getDecomposedLoc(Loc);
+  if (Offset > M.getBufferData(FID).size())
+    return std::nullopt;
   // If the token at the location is not a comment, we use the token.
   // If we can't get the token at the location, fall back to using the location
   auto R = CharSourceRange::getCharRange(Loc);
   Token Tok;
-  if (!Lexer::getRawToken(Loc, Tok, M, L, true) && Tok.isNot(tok::comment)) {
+  if (!Lexer::getRawToken(Loc, Tok, M, L, true) && Tok.isNot(tok::comment))
     R = CharSourceRange::getTokenRange(Tok.getLocation(), Tok.getEndLoc());
-  }
   return halfOpenToRange(M, PatchedRange(R));
 }
 
@@ -697,7 +703,10 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     SourceLocation PatchLoc =
         translatePreamblePatchLocation(Info.getLocation(), SM);
     D.InsideMainFile = isInsideMainFile(PatchLoc, SM);
-    D.Range = diagnosticRange(Info, *LangOpts);
+    if (auto DRange = diagnosticRange(Info, *LangOpts))
+      D.Range = *DRange;
+    else
+      D.Severity = DiagnosticsEngine::Ignored;
     auto FID = SM.getFileID(Info.getLocation());
     if (const auto FE = SM.getFileEntryRefForID(FID)) {
       D.File = FE->getName().str();

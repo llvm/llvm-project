@@ -36,7 +36,6 @@ expand_template(
         "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0"
         },
     template = "include/mlir/Config/mlir-config.h.cmake",
-    visibility = ["//visibility:private"],
 )
 
 cc_library(

@@ -183,7 +183,7 @@ public:
       case 'f':
         if (RegName[1] == 'p')
           return RegName + 2;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case 'r':
       case 'v':
         if (RegName[1] == 's') {

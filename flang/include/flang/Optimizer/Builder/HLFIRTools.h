@@ -196,6 +196,11 @@ public:
     return varIface ? varIface.isOptional() : false;
   }
 
+  bool isParameter() const {
+    auto varIface = getIfVariableInterface();
+    return varIface ? varIface.isParameter() : false;
+  }
+
   // Get the entity as an mlir SSA value containing all the shape, type
   // parameters and dynamic shape information.
   mlir::Value getBase() const { return *this; }

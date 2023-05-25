@@ -21,6 +21,7 @@
 // const_reference back() const;
 // libc++ marks these as 'noexcept'
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -66,6 +67,7 @@ int main(int, char**)
             assert(c.at(i) == i);
         assert(c.front() == 0);
         assert(c.back() == 9);
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
     {
         typedef std::deque<int> C;
@@ -82,6 +84,7 @@ int main(int, char**)
             assert(c.at(i) == i);
         assert(c.front() == 0);
         assert(c.back() == 9);
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
 #if TEST_STD_VER >= 11
     {
@@ -99,6 +102,7 @@ int main(int, char**)
             assert(c.at(i) == i);
         assert(c.front() == 0);
         assert(c.back() == 9);
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
     {
         typedef std::deque<int, min_allocator<int>> C;
@@ -115,6 +119,7 @@ int main(int, char**)
             assert(c.at(i) == i);
         assert(c.front() == 0);
         assert(c.back() == 9);
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
 #endif
 

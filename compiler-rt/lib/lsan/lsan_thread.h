@@ -44,7 +44,7 @@ class ThreadContextLsanBase : public ThreadContextBase {
 // This subclass of ThreadContextLsanBase is declared in an OS-specific header.
 class ThreadContext;
 
-void InitializeThreadRegistry();
+void InitializeThreads();
 void InitializeMainThread();
 
 ThreadRegistry *GetLsanThreadRegistryLocked();

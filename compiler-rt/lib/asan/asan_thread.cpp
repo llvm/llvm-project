@@ -494,12 +494,12 @@ __asan::AsanThread *GetAsanThreadByOsIDLocked(tid_t os_id) {
 
 // --- Implementation of LSan-specific functions --- {{{1
 namespace __lsan {
-void LockThreadRegistry() {
+void LockThreads() {
   __asan::asanThreadRegistry().Lock();
   __asan::asanThreadArgRetval().Lock();
 }
 
-void UnlockThreadRegistry() {
+void UnlockThreads() {
   __asan::asanThreadArgRetval().Unlock();
   __asan::asanThreadRegistry().Unlock();
 }
