@@ -447,7 +447,8 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
 
   // Map the current input to a file.
   FileID ModuleMapID = SrcMgr.getMainFileID();
-  const FileEntry *ModuleMap = SrcMgr.getFileEntryForID(ModuleMapID);
+  OptionalFileEntryRef ModuleMap = SrcMgr.getFileEntryRefForID(ModuleMapID);
+  assert(ModuleMap && "MainFileID without FileEntry");
 
   // If the module map is preprocessed, handle the initial line marker;
   // line directives are not part of the module map syntax in general.
@@ -460,7 +461,7 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
   }
 
   // Load the module map file.
-  if (HS.loadModuleMapFile(ModuleMap, IsSystem, ModuleMapID, &Offset,
+  if (HS.loadModuleMapFile(*ModuleMap, IsSystem, ModuleMapID, &Offset,
                            PresumedModuleMapFile))
     return true;
 
@@ -469,7 +470,7 @@ static bool loadModuleMapForModuleBuild(CompilerInstance &CI, bool IsSystem,
 
   // Infer framework module if possible.
   if (HS.getModuleMap().canInferFrameworkModule(ModuleMap->getDir())) {
-    SmallString<128> InferredFrameworkPath = ModuleMap->getDir()->getName();
+    SmallString<128> InferredFrameworkPath = ModuleMap->getDir().getName();
     llvm::sys::path::append(InferredFrameworkPath,
                             CI.getLangOpts().ModuleName + ".framework");
     if (auto Dir = CI.getFileManager().getDirectory(InferredFrameworkPath))
@@ -910,7 +911,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // If we were asked to load any module map files, do so now.
   for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
-    if (auto File = CI.getFileManager().getFile(Filename))
+    if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
       CI.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
           *File, /*IsSystem*/false);
     else
