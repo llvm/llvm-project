@@ -607,27 +607,27 @@ __device__ inline unsigned __clusterDimIsSpecified() {
 }
 
 __device__ inline dim3 __clusterDim() {
-  return {__nvvm_read_ptx_sreg_cluster_nctaid_x(),
-          __nvvm_read_ptx_sreg_cluster_nctaid_y(),
-          __nvvm_read_ptx_sreg_cluster_nctaid_z()};
+  return dim3(__nvvm_read_ptx_sreg_cluster_nctaid_x(),
+              __nvvm_read_ptx_sreg_cluster_nctaid_y(),
+              __nvvm_read_ptx_sreg_cluster_nctaid_z());
 }
 
 __device__ inline dim3 __clusterRelativeBlockIdx() {
-  return {__nvvm_read_ptx_sreg_cluster_ctaid_x(),
-          __nvvm_read_ptx_sreg_cluster_ctaid_y(),
-          __nvvm_read_ptx_sreg_cluster_ctaid_z()};
+  return dim3(__nvvm_read_ptx_sreg_cluster_ctaid_x(),
+              __nvvm_read_ptx_sreg_cluster_ctaid_y(),
+              __nvvm_read_ptx_sreg_cluster_ctaid_z());
 }
 
 __device__ inline dim3 __clusterGridDimInClusters() {
-  return {__nvvm_read_ptx_sreg_nclusterid_x(),
-          __nvvm_read_ptx_sreg_nclusterid_y(),
-          __nvvm_read_ptx_sreg_nclusterid_z()};
+  return dim3(__nvvm_read_ptx_sreg_nclusterid_x(),
+              __nvvm_read_ptx_sreg_nclusterid_y(),
+              __nvvm_read_ptx_sreg_nclusterid_z());
 }
 
 __device__ inline dim3 __clusterIdx() {
-  return {__nvvm_read_ptx_sreg_clusterid_x(),
-          __nvvm_read_ptx_sreg_clusterid_y(),
-          __nvvm_read_ptx_sreg_clusterid_z()};
+  return dim3(__nvvm_read_ptx_sreg_clusterid_x(),
+              __nvvm_read_ptx_sreg_clusterid_y(),
+              __nvvm_read_ptx_sreg_clusterid_z());
 }
 
 __device__ inline unsigned __clusterRelativeBlockRank() {
