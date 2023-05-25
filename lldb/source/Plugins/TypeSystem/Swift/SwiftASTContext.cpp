@@ -936,14 +936,12 @@ bool SwiftASTContext::ScopedDiagnostics::HasErrors() const {
   return false;
 }
 
-Status SwiftASTContext::ScopedDiagnostics::GetAllErrors() const {
+llvm::Error SwiftASTContext::ScopedDiagnostics::GetAllErrors() const {
   // Retrieve the error message from the DiagnosticConsumer.
   DiagnosticManager diagnostic_manager;
   PrintDiagnostics(diagnostic_manager);
-
-  Status error;
-  error.SetErrorString(diagnostic_manager.GetString());
-  return error;
+  return llvm::make_error<llvm::StringError>(diagnostic_manager.GetString(),
+                                             llvm::inconvertibleErrorCode());
 }
 
 SwiftASTContext::ScopedDiagnostics::~ScopedDiagnostics() {

@@ -484,7 +484,7 @@ public:
     bool HasErrors() const;
     /// Return all errors and warnings that happened during the lifetime of this
     /// object.
-    Status GetAllErrors() const;
+    llvm::Error GetAllErrors() const;
   };
   std::unique_ptr<ScopedDiagnostics> getScopedDiagnosticConsumer();
   /// \}
