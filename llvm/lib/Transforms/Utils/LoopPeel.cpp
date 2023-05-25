@@ -351,11 +351,19 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     MaxPeelCount =
         std::min((unsigned)SC->getAPInt().getLimitedValue() - 1, MaxPeelCount);
 
-  auto ComputePeelCount = [&](Value *Condition) -> void {
+  std::function<void(Value *)> ComputePeelCount =
+      [&](Value *Condition) -> void {
     if (!Condition->getType()->isIntegerTy())
       return;
 
     Value *LeftVal, *RightVal;
+    if (match(Condition, m_And(m_Value(LeftVal), m_Value(RightVal))) ||
+        match(Condition, m_Or(m_Value(LeftVal), m_Value(RightVal)))) {
+      ComputePeelCount(LeftVal);
+      ComputePeelCount(RightVal);
+      return;
+    }
+
     CmpInst::Predicate Pred;
     if (!match(Condition, m_ICmp(Pred, m_Value(LeftVal), m_Value(RightVal))))
       return;
