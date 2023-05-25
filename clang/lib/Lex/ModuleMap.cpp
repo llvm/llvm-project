@@ -972,14 +972,14 @@ static void inferFrameworkLink(Module *Mod) {
                                                    /*IsFramework=*/true));
 }
 
-Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
+Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
                                         bool IsSystem, Module *Parent) {
   Attributes Attrs;
   Attrs.IsSystem = IsSystem;
   return inferFrameworkModule(FrameworkDir, Attrs, Parent);
 }
 
-Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
+Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
                                         Attributes Attrs, Module *Parent) {
   // Note: as an egregious but useful hack we use the real path here, because
   // we might be looking at an embedded framework that symlinks out to a
@@ -1010,7 +1010,7 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
     if (llvm::sys::path::has_parent_path(FrameworkDirName)) {
       // Figure out the parent path.
       StringRef Parent = llvm::sys::path::parent_path(FrameworkDirName);
-      if (auto ParentDir = FileMgr.getDirectory(Parent)) {
+      if (auto ParentDir = FileMgr.getOptionalDirectoryRef(Parent)) {
         // Check whether we have already looked into the parent directory
         // for a module map.
         llvm::DenseMap<const DirectoryEntry *, InferredDirectory>::const_iterator
@@ -1057,7 +1057,7 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
   }
 
   // Look for an umbrella header.
-  SmallString<128> UmbrellaName = StringRef(FrameworkDir->getName());
+  SmallString<128> UmbrellaName = FrameworkDir.getName();
   llvm::sys::path::append(UmbrellaName, "Headers", ModuleName + ".h");
   auto UmbrellaHeader = FileMgr.getOptionalFileRef(UmbrellaName);
 
@@ -1103,8 +1103,7 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
 
   // Look for subframeworks.
   std::error_code EC;
-  SmallString<128> SubframeworksDirName
-    = StringRef(FrameworkDir->getName());
+  SmallString<128> SubframeworksDirName = FrameworkDir.getName();
   llvm::sys::path::append(SubframeworksDirName, "Frameworks");
   llvm::sys::path::native(SubframeworksDirName);
   llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
@@ -1115,8 +1114,7 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
     if (!StringRef(Dir->path()).endswith(".framework"))
       continue;
 
-    if (auto SubframeworkDir =
-            FileMgr.getDirectory(Dir->path())) {
+    if (auto SubframeworkDir = FileMgr.getOptionalDirectoryRef(Dir->path())) {
       // Note: as an egregious but useful hack, we use the real path here and
       // check whether it is actually a subdirectory of the parent directory.
       // This will not be the case if the 'subframework' is actually a symlink
