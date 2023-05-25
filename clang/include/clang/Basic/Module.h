@@ -149,7 +149,7 @@ public:
   /// The build directory of this module. This is the directory in
   /// which the module is notionally built, and relative to which its headers
   /// are found.
-  const DirectoryEntry *Directory = nullptr;
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Directory;
 
   /// The presumed file name for the module map defining this module.
   /// Only non-empty when building from preprocessed source.
