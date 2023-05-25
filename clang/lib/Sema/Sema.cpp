@@ -2044,9 +2044,10 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         !TI.hasFeature("zve64x"))
       Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve64x";
     if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ true) &&
-        !TI.hasFeature("experimental-zvfh"))
+        !TI.hasFeature("experimental-zvfh") &&
+        !TI.hasFeature("experimental-zvfhmin"))
       Diag(Loc, diag::err_riscv_type_requires_extension, FD)
-          << Ty << "zvfh";
+          << Ty << "zvfh or zvfhmin";
     if (Ty->isRVVType(/* Bitwidth */ 32, /* IsFloat */ true) &&
         !TI.hasFeature("zve32f"))
       Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve32f";
