@@ -82,15 +82,10 @@ ASM_WRAPPER_NAME(sigsetjmp):
   CFI_ENDPROC
 ASM_SIZE(ASM_WRAPPER_NAME(sigsetjmp))
 
-
-.macro WEAK_ALIAS first second
-  .weak \second
-  .equ \second\(), \first
-.endm
-
-WEAK_ALIAS ASM_WRAPPER_NAME(sigsetjmp), __sigsetjmp
-
-WEAK_ALIAS ASM_WRAPPER_NAME(setjmp), _setjmp
+ASM_INTERCEPTOR_TRAMPOLINE(sigsetjmp)
+ASM_TRAMPOLINE_ALIAS(__sigsetjmp, sigsetjmp)
+ASM_INTERCEPTOR_TRAMPOLINE(setjmp)
+ASM_TRAMPOLINE_ALIAS(_setjmp, setjmp)
 #endif
 
 // We do not need executable stack.

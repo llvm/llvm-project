@@ -49,6 +49,10 @@
 # define ASM_SYMBOL(symbol) symbol
 # define ASM_SYMBOL_INTERCEPTOR(symbol) symbol
 # define ASM_WRAPPER_NAME(symbol) __interceptor_##symbol
+# define ASM_TRAMPOLINE_ALIAS(symbol, name)                     \
+        .weak symbol;                                           \
+        .set symbol, ASM_WRAPPER_NAME(name)
+# define ASM_INTERCEPTOR_TRAMPOLINE(name)
 #else
 # define ASM_HIDDEN(symbol)
 # define ASM_TYPE_FUNCTION(symbol)
