@@ -805,9 +805,19 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
   if (call.Rank() == 0) {
     return ScalarShape();
   } else if (call.IsElemental()) {
-    for (const auto &arg : call.arguments()) {
-      if (arg && arg->Rank() > 0) {
-        return (*this)(*arg);
+    // Use the shape of an actual array argument associated with a
+    // non-OPTIONAL dummy object argument.
+    if (context_) {
+      if (auto chars{characteristics::Procedure::FromActuals(
+              call.proc(), call.arguments(), *context_)}) {
+        std::size_t j{0};
+        for (const auto &arg : call.arguments()) {
+          if (arg && arg->Rank() > 0 && j < chars->dummyArguments.size() &&
+              !chars->dummyArguments[j].IsOptional()) {
+            return (*this)(*arg);
+          }
+          ++j;
+        }
       }
     }
     return ScalarShape();
