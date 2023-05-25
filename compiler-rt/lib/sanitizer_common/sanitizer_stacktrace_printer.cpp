@@ -11,12 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_stacktrace_printer.h"
+
 #include "sanitizer_file.h"
+#include "sanitizer_flags.h"
 #include "sanitizer_fuchsia.h"
 
 namespace __sanitizer {
 
 const char *StripFunctionName(const char *function) {
+  if (!common_flags()->demangle)
+    return function;
   if (!function)
     return nullptr;
   auto try_strip = [function](const char *prefix) -> const char * {
@@ -39,7 +43,10 @@ const char *StripFunctionName(const char *function) {
 #if !SANITIZER_SYMBOLIZER_MARKUP
 
 static const char *DemangleFunctionName(const char *function) {
-  if (!function) return nullptr;
+  if (!common_flags()->demangle)
+    return function;
+  if (!function)
+    return nullptr;
 
   // NetBSD uses indirection for old threading functions for historical reasons
   // The mangled names are internal implementation detail and should not be
