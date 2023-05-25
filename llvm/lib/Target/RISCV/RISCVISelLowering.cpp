@@ -3945,16 +3945,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
     SDValue Res = DAG.getUNDEF(ContainerVT);
     if (HiV) {
-      // If we are doing a SLIDEDOWN+SLIDEUP, reduce the VL for the SLIDEDOWN.
-      // FIXME: If we are only doing a SLIDEDOWN, don't reduce the VL as it
-      // causes multiple vsetvlis in some test cases such as lowering
-      // reduce.mul
-      SDValue DownVL = VL;
-      if (LoV)
-        DownVL = DAG.getConstant(InvRotate, DL, XLenVT);
+      // Even though we could use a smaller VL, don't to avoid a vsetivli
+      // toggle.
       Res = getVSlidedown(DAG, Subtarget, DL, ContainerVT, Res, HiV,
-                          DAG.getConstant(Rotation, DL, XLenVT), TrueMask,
-                          DownVL);
+                          DAG.getConstant(Rotation, DL, XLenVT), TrueMask, VL);
     }
     if (LoV)
       Res = getVSlideup(DAG, Subtarget, DL, ContainerVT, Res, LoV,
