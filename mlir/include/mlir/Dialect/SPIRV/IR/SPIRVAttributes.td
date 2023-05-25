@@ -46,6 +46,14 @@ def SPIRV_ExtensionArrayAttr : TypedArrayAttrBase<
 def SPIRV_CapabilityArrayAttr : TypedArrayAttrBase<
     SPIRV_CapabilityAttr, "SPIR-V capability array attribute">;
 
+def SPIRV_LinkageAttributesAttr : SPIRV_Attr<"LinkageAttributes", "linkage_attributes"> {
+  let parameters = (ins
+    "std::string":$linkage_name,
+    "mlir::spirv::LinkageTypeAttr":$linkage_type
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 // Description of cooperative matrix operations supported on the
 // target. Represents `VkCooperativeMatrixPropertiesNV`. See
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkCooperativeMatrixPropertiesNV.html

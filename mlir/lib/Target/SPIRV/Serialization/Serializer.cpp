@@ -208,7 +208,8 @@ void Serializer::processMemoryModel() {
 LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
                                             NamedAttribute attr) {
   auto attrName = attr.getName().strref();
-  auto decorationName = llvm::convertToCamelFromSnakeCase(attrName, true);
+  auto decorationName =
+      llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
   auto decoration = spirv::symbolizeDecoration(decorationName);
   if (!decoration) {
     return emitError(
@@ -218,6 +219,18 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   }
   SmallVector<uint32_t, 1> args;
   switch (*decoration) {
+  case spirv::Decoration::LinkageAttributes: {
+    // Get the value of the Linkage Attributes
+    // e.g., LinkageAttributes=["linkageName", linkageType].
+    auto linkageAttr = attr.getValue().dyn_cast<spirv::LinkageAttributesAttr>();
+    auto linkageName = linkageAttr.getLinkageName();
+    auto linkageType = linkageAttr.getLinkageType().getValue();
+    // Encode the Linkage Name (string literal to uint32_t).
+    spirv::encodeStringLiteralInto(args, linkageName);
+    // Encode LinkageType & Add the Linkagetype to the args.
+    args.push_back(static_cast<uint32_t>(linkageType));
+    break;
+  }
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
