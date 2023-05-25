@@ -19,8 +19,6 @@
 
 namespace clang {
 
-using DefMapTy = llvm::DenseMap<const VarDecl *, std::vector<const VarDecl *>>;
-
 /// The interface that lets the caller handle unsafe buffer usage analysis
 /// results by overriding this class's handle... methods.
 class UnsafeBufferUsageHandler {
@@ -36,12 +34,9 @@ public:
   virtual void handleUnsafeOperation(const Stmt *Operation,
                                      bool IsRelatedToDecl) = 0;
 
-  /// Invoked when a fix is suggested against a variable. This function groups
-  /// all variables that must be fixed together (i.e their types must be changed to the
-  /// same target type to prevent type mismatches) into a single fixit.
-  virtual void handleUnsafeVariableGroup(const VarDecl *Variable,
-                                         const DefMapTy &VarGrpMap,
-                                         FixItList &&Fixes) = 0;
+  /// Invoked when a fix is suggested against a variable.
+  virtual void handleFixableVariable(const VarDecl *Variable,
+                                     FixItList &&List) = 0;
 
   /// Returns a reference to the `Preprocessor`:
   virtual bool isSafeBufferOptOut(const SourceLocation &Loc) const = 0;

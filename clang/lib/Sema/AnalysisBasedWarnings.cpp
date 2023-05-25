@@ -2218,8 +2218,8 @@ public:
     }
   }
 
-  void handleUnsafeVariableGroup(const VarDecl *Variable,
-                                 const DefMapTy &VarGrpMap,
+  // FIXME: rename to handleUnsafeVariable
+  void handleFixableVariable(const VarDecl *Variable,
                              FixItList &&Fixes) override {
     assert(!SuggestSuggestions &&
            "Unsafe buffer usage fixits displayed without suggestions!");
@@ -2227,52 +2227,11 @@ public:
         << Variable << (Variable->getType()->isPointerType() ? 0 : 1)
         << Variable->getSourceRange();
     if (!Fixes.empty()) {
-      const auto VarGroupForVD = VarGrpMap.find(Variable)->second;
-      unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
+      unsigned FixItStrategy = 0; // For now we only has 'std::span' strategy
       const auto &FD = S.Diag(Variable->getLocation(),
-                              diag::note_unsafe_buffer_variable_fixit_group);
-      
-      FD << Variable << FixItStrategy;
-      std::string AllVars = "";
-      if (VarGroupForVD.size() > 1) {
-        if (VarGroupForVD.size() == 2) {
-          if (VarGroupForVD[0] == Variable) {
-            AllVars.append("'" + VarGroupForVD[1]->getName().str() + "'");
-          } else {
-            AllVars.append("'" + VarGroupForVD[0]->getName().str() + "'");
-          }
-        } else {
-          bool first = false;
-          if (VarGroupForVD.size() == 3) {
-            for (const VarDecl * V : VarGroupForVD) {
-              if (V == Variable) {
-                continue;
-              }
-              if (!first) {
-                first = true;
-                AllVars.append("'" + V->getName().str() + "'" + " and ");
-              } else {
-                AllVars.append("'" + V->getName().str() + "'");
-              }
-            }
-          } else {
-            for (const VarDecl * V : VarGroupForVD) {
-              if (V == Variable) {
-                continue;
-              }
-              if (VarGroupForVD.back() != V) {
-                AllVars.append("'" + V->getName().str() + "'" + ", ");
-              } else {
-                AllVars.append("and '" + V->getName().str() + "'");
-              }
-            }
-          }
-        }
-        FD << AllVars << 1;
-      } else {
-        FD << "" << 0;
-      }
+                              diag::note_unsafe_buffer_variable_fixit);
 
+      FD << Variable->getName() << FixItStrategy;
       for (const auto &F : Fixes)
         FD << F;
     }
