@@ -443,13 +443,13 @@ LogicalResult acc::ReductionRecipeOp::verifyRegions() {
 // Custom parser and printer verifier for private clause
 //===----------------------------------------------------------------------===//
 
-static ParseResult parsePrivatizationList(
+static ParseResult parseSymOperandList(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
-    llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &privatizationSymbols) {
-  llvm::SmallVector<SymbolRefAttr> privatizationVec;
+    llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &symbols) {
+  llvm::SmallVector<SymbolRefAttr> attributes;
   if (failed(parser.parseCommaSeparatedList([&]() {
-        if (parser.parseAttribute(privatizationVec.emplace_back()) ||
+        if (parser.parseAttribute(attributes.emplace_back()) ||
             parser.parseArrow() ||
             parser.parseOperand(operands.emplace_back()) ||
             parser.parseColonType(types.emplace_back()))
@@ -457,22 +457,21 @@ static ParseResult parsePrivatizationList(
         return success();
       })))
     return failure();
-  llvm::SmallVector<mlir::Attribute> privatizations(privatizationVec.begin(),
-                                                    privatizationVec.end());
-  privatizationSymbols = ArrayAttr::get(parser.getContext(), privatizations);
+  llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
+                                               attributes.end());
+  symbols = ArrayAttr::get(parser.getContext(), arrayAttr);
   return success();
 }
 
-static void
-printPrivatizationList(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                       mlir::OperandRange privateOperands,
-                       mlir::TypeRange privateTypes,
-                       std::optional<mlir::ArrayAttr> privatizations) {
-  for (unsigned i = 0, e = privatizations->size(); i < e; ++i) {
+static void printSymOperandList(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                                mlir::OperandRange operands,
+                                mlir::TypeRange types,
+                                std::optional<mlir::ArrayAttr> attributes) {
+  for (unsigned i = 0, e = attributes->size(); i < e; ++i) {
     if (i != 0)
       p << ", ";
-    p << (*privatizations)[i] << " -> " << privateOperands[i] << " : "
-      << privateOperands[i].getType();
+    p << (*attributes)[i] << " -> " << operands[i] << " : "
+      << operands[i].getType();
   }
 }
 
@@ -495,40 +494,43 @@ static LogicalResult checkDataOperands(Op op,
   return success();
 }
 
+template <typename Op>
 static LogicalResult
-checkPrivatizationList(Operation *op,
-                       std::optional<mlir::ArrayAttr> privatizations,
-                       mlir::OperandRange privateOperands) {
-  if (!privateOperands.empty()) {
-    if (!privatizations || privatizations->size() != privateOperands.size())
-      return op->emitOpError() << "expected as many privatizations symbol "
-                                  "reference as private operands";
+checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
+                    mlir::OperandRange operands, llvm::StringRef operandName,
+                    llvm::StringRef symbolName) {
+  if (!operands.empty()) {
+    if (!attributes || attributes->size() != operands.size())
+      return op->emitOpError()
+             << "expected as many " << symbolName << " symbol reference as "
+             << operandName << " operands";
   } else {
-    if (privatizations)
-      return op->emitOpError() << "unexpected privatizations symbol reference";
+    if (attributes)
+      return op->emitOpError()
+             << "unexpected " << symbolName << " symbol reference";
     return success();
   }
 
-  llvm::DenseSet<Value> privates;
-  for (auto args : llvm::zip(privateOperands, *privatizations)) {
-    mlir::Value privateOperand = std::get<0>(args);
+  llvm::DenseSet<Value> set;
+  for (auto args : llvm::zip(operands, *attributes)) {
+    mlir::Value operand = std::get<0>(args);
 
-    if (!privates.insert(privateOperand).second)
-      return op->emitOpError() << "private operand appears more than once";
+    if (!set.insert(operand).second)
+      return op->emitOpError()
+             << operandName << " operand appears more than once";
 
-    mlir::Type varType = privateOperand.getType();
+    mlir::Type varType = operand.getType();
     auto symbolRef = std::get<1>(args).cast<SymbolRefAttr>();
-    auto decl =
-        SymbolTable::lookupNearestSymbolFrom<PrivateRecipeOp>(op, symbolRef);
+    auto decl = SymbolTable::lookupNearestSymbolFrom<Op>(op, symbolRef);
     if (!decl)
-      return op->emitOpError() << "expected symbol reference " << symbolRef
-                               << " to point to a private declaration";
+      return op->emitOpError()
+             << "expected symbol reference " << symbolRef << " to point to a "
+             << operandName << " declaration";
 
     if (decl.getType() && decl.getType() != varType)
       return op->emitOpError()
-             << "expected private (" << varType
-             << ") to be the same type as private declaration ("
-             << decl.getType() << ")";
+             << "expected private (" << varType << ") to be the same type as "
+             << operandName << " declaration (" << decl.getType() << ")";
   }
 
   return success();
@@ -550,8 +552,13 @@ Value ParallelOp::getDataOperand(unsigned i) {
 }
 
 LogicalResult acc::ParallelOp::verify() {
-  if (failed(checkPrivatizationList(*this, getPrivatizations(),
-                                    getGangPrivateOperands())))
+  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
+          *this, getPrivatizations(), getGangPrivateOperands(), "private",
+          "privatizations")))
+    return failure();
+  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
+          *this, getReductionRecipes(), getReductionOperands(), "reduction",
+          "reductions")))
     return failure();
   return checkDataOperands<acc::ParallelOp>(*this, getDataClauseOperands());
 }
@@ -573,6 +580,7 @@ Value SerialOp::getDataOperand(unsigned i) {
 }
 
 LogicalResult acc::SerialOp::verify() {
+
   return checkDataOperands<acc::SerialOp>(*this, getDataClauseOperands());
 }
 
@@ -729,8 +737,9 @@ LogicalResult acc::LoopOp::verify() {
   if (getSeq() && (getHasGang() || getHasWorker() || getHasVector()))
     return emitError("gang, worker or vector cannot appear with the seq attr");
 
-  if (failed(checkPrivatizationList(*this, getPrivatizations(),
-                                    getPrivateOperands())))
+  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
+          *this, getPrivatizations(), getPrivateOperands(), "private",
+          "privatizations")))
     return failure();
 
   // Check non-empty body().

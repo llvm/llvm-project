@@ -635,8 +635,8 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
                        Optional<I1>:$ifCond,
                        Optional<I1>:$selfCond,
                        UnitAttr:$selfAttr,
-                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
+                       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$gangPrivateOperands,
                        OptionalAttr<SymbolRefArrayAttr>:$privatizations,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
@@ -661,14 +661,16 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
             type($gangFirstPrivateOperands) `)`
       | `num_gangs` `(` $numGangs `:` type($numGangs) `)`
       | `num_workers` `(` $numWorkers `:` type($numWorkers) `)`
-      | `private` `(` custom<PrivatizationList>(
+      | `private` `(` custom<SymOperandList>(
             $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
         `)`
       | `vector_length` `(` $vectorLength `:` type($vectorLength) `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
-      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
+      | `reduction` `(` custom<SymOperandList>(
+            $reductionOperands, type($reductionOperands), $reductionRecipes)
+        `)`
     )
     $region attr-dict-with-keyword
   }];
@@ -727,7 +729,7 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       | `async` `(` $async `:` type($async) `)`
       | `firstprivate` `(` $gangFirstPrivateOperands `:`
             type($gangFirstPrivateOperands) `)`
-      | `private` `(` custom<PrivatizationList>(
+      | `private` `(` custom<SymOperandList>(
             $gangPrivateOperands, type($gangPrivateOperands), $privatizations)
         `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
@@ -1061,7 +1063,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
         `gang` `` custom<GangClause>($gangNum, type($gangNum), $gangStatic, type($gangStatic), $hasGang)
       | `worker` `` custom<WorkerClause>($workerNum, type($workerNum), $hasWorker)
       | `vector` `` custom<VectorClause>($vectorLength, type($vectorLength), $hasVector)
-      | `private` `(` custom<PrivatizationList>(
+      | `private` `(` custom<SymOperandList>(
             $privateOperands, type($privateOperands), $privatizations)
         `)`
       | `tile` `(` $tileOperands `:` type($tileOperands) `)`
