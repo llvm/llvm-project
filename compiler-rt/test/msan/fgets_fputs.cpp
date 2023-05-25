@@ -43,5 +43,5 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK-FPUTS: Uninitialized bytes in __interceptor_fputs at offset 0 inside
-// CHECK-PUTS: Uninitialized bytes in __interceptor_puts at offset 0 inside
+// CHECK-FPUTS: Uninitialized bytes in fputs at offset 0 inside
+// CHECK-PUTS: Uninitialized bytes in puts at offset 0 inside

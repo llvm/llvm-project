@@ -31,4 +31,4 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// CHECK: Uninitialized bytes in __interceptor_fwrite at offset 0 inside
+// CHECK: Uninitialized bytes in fwrite at offset 0 inside
