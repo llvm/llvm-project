@@ -424,8 +424,8 @@ define i16 @red_mla_dup_ext_u8_s8_s16(i8* noalias nocapture noundef readonly %A,
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    b .LBB5_7
 ; CHECK-NEXT:  .LBB5_3:
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    b .LBB5_9
 ; CHECK-NEXT:  .LBB5_4: // %vector.ph
 ; CHECK-NEXT:    and x11, x10, #0xfffffff0
 ; CHECK-NEXT:    add x8, x0, #8

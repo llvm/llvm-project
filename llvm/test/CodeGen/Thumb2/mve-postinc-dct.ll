@@ -6,13 +6,14 @@
 define void @DCT_mve1(ptr nocapture readonly %S, ptr nocapture readonly %pIn, ptr nocapture %pOut) {
 ; CHECK-LABEL: DCT_mve1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-NEXT:    ldr r3, [r0, #4]
 ; CHECK-NEXT:    sub.w r12, r3, #1
 ; CHECK-NEXT:    cmp.w r12, #2
-; CHECK-NEXT:    blo .LBB0_5
-; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
+; CHECK-NEXT:    it lo
+; CHECK-NEXT:    bxlo lr
+; CHECK-NEXT:  .LBB0_1: @ %for.body.preheader
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-NEXT:    ldr r5, [r0, #8]
 ; CHECK-NEXT:    ldr r3, [r0]
 ; CHECK-NEXT:    add.w r3, r3, r5, lsl #2
@@ -43,8 +44,9 @@ define void @DCT_mve1(ptr nocapture readonly %S, ptr nocapture readonly %pIn, pt
 ; CHECK-NEXT:    vadd.f32 s0, s0, s2
 ; CHECK-NEXT:    vstr s0, [r7]
 ; CHECK-NEXT:    bne .LBB0_2
-; CHECK-NEXT:  .LBB0_5: @ %for.cond.cleanup
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
+; CHECK-NEXT:  @ %bb.5:
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    bx lr
 entry:
   %NumInputs = getelementptr inbounds %struct.DCT_InstanceTypeDef, ptr %S, i32 0, i32 2
   %i = load i32, ptr %NumInputs, align 4
