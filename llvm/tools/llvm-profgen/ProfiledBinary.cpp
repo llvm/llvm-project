@@ -163,12 +163,13 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
 }
 
 ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
-                             const StringRef DebugBinPath)
-    : Path(ExeBinPath), DebugBinaryPath(DebugBinPath), ProEpilogTracker(this),
+                               const StringRef DebugBinPath)
+    : Path(ExeBinPath), DebugBinaryPath(DebugBinPath),
+      SymbolizerOpts(getSymbolizerOpts()), ProEpilogTracker(this),
+      Symbolizer(std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts)),
       TrackFuncContextSize(EnableCSPreInliner && UseContextCostForPreInliner) {
   // Point to executable binary if debug info binary is not specified.
   SymbolizerPath = DebugBinPath.empty() ? ExeBinPath : DebugBinPath;
-  setupSymbolizer();
   if (InferMissingFrames)
     MissingContextInferrer = std::make_unique<MissingFrameInferrer>(this);
   load();
@@ -840,7 +841,7 @@ void ProfiledBinary::populateSymbolListFromDWARF(
     SymbolList.add(I.second.getFuncName());
 }
 
-void ProfiledBinary::setupSymbolizer() {
+symbolize::LLVMSymbolizer::Options ProfiledBinary::getSymbolizerOpts() const {
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
   SymbolizerOpts.PrintFunctions =
       DILineInfoSpecifier::FunctionNameKind::LinkageName;
@@ -849,7 +850,7 @@ void ProfiledBinary::setupSymbolizer() {
   SymbolizerOpts.UseSymbolTable = false;
   SymbolizerOpts.RelativeAddresses = false;
   SymbolizerOpts.DWPName = DWPPath;
-  Symbolizer = std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts);
+  return SymbolizerOpts;
 }
 
 SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
