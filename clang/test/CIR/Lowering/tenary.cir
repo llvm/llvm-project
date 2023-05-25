@@ -1,0 +1,52 @@
+// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+
+!s32i = !cir.int<s, 32>
+
+module {
+cir.func @_Z1xi(%arg0: !s32i) -> !s32i {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["y", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %4 = cir.cmp(gt, %2, %3) : !s32i, !cir.bool
+    %5 = cir.ternary(%4, true {
+      %7 = cir.const(#cir.int<3> : !s32i) : !s32i
+      cir.yield %7 : !s32i
+    }, false {
+      %7 = cir.const(#cir.int<5> : !s32i) : !s32i
+      cir.yield %7 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.store %5, %1 : !s32i, cir.ptr <!s32i>
+    %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    cir.return %6 : !s32i
+  }
+}
+
+//      MLIR: module {
+//      MLIR: llvm.func @_Z1xi(%arg0: i32) -> i32 {
+// MLIR-NEXT:    %0 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:    %2 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:    %3 = llvm.alloca %2 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:    llvm.store %arg0, %1 : i32, !llvm.ptr
+// MLIR-NEXT:    %4 = llvm.load %1 : !llvm.ptr
+// MLIR-NEXT:    %5 = llvm.mlir.constant(0 : i32) : i32
+// MLIR-NEXT:    %6 = llvm.icmp "sgt" %4, %5 : i32
+// MLIR-NEXT:    %7 = llvm.zext %6 : i1 to i8
+// MLIR-NEXT:    %8 = llvm.trunc %7 : i8 to i1
+// MLIR-NEXT:    llvm.cond_br %8, ^bb1, ^bb2
+// MLIR-NEXT:  ^bb1:  // pred: ^bb0
+// MLIR-NEXT:    %9 = llvm.mlir.constant(3 : i32) : i32
+// MLIR-NEXT:    llvm.br ^bb3(%9 : i32)
+// MLIR-NEXT:  ^bb2:  // pred: ^bb0
+// MLIR-NEXT:    %10 = llvm.mlir.constant(5 : i32) : i32
+// MLIR-NEXT:    llvm.br ^bb3(%10 : i32)
+// MLIR-NEXT:  ^bb3(%11: i32):  // 2 preds: ^bb1, ^bb2
+// MLIR-NEXT:    llvm.br ^bb4
+// MLIR-NEXT:  ^bb4:  // pred: ^bb3
+// MLIR-NEXT:    llvm.store %11, %3 : i32, !llvm.ptr
+// MLIR-NEXT:    %12 = llvm.load %3 : !llvm.ptr
+// MLIR-NEXT:    llvm.return %12 : i32
+// MLIR-NEXT:   }
+// MLIR-NEXT: }
