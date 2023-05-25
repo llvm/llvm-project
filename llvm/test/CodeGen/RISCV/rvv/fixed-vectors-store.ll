@@ -187,3 +187,141 @@ define void @store_v6i1(ptr %p, <6 x i1> %v) {
   store <6 x i1> %v, ptr %p
   ret void
 }
+
+define void @store_constant_v2i8(ptr %p) {
+; CHECK-LABEL: store_constant_v2i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 1539
+; CHECK-NEXT:    sh a1, 0(a0)
+; CHECK-NEXT:    ret
+  store <2 x i8> <i8 3, i8 6>, ptr %p
+  ret void
+}
+
+define void @store_constant_v2i16(ptr %p) {
+; RV32-LABEL: store_constant_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, 96
+; RV32-NEXT:    addi a1, a1, 3
+; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: store_constant_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 96
+; RV64-NEXT:    addiw a1, a1, 3
+; RV64-NEXT:    sw a1, 0(a0)
+; RV64-NEXT:    ret
+  store <2 x i16> <i16 3, i16 6>, ptr %p
+  ret void
+}
+
+define void @store_constant_v2i32(ptr %p) {
+; CHECK-LABEL: store_constant_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 3
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    li a1, 3
+; CHECK-NEXT:    vmadd.vx v9, a1, v8
+; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    ret
+  store <2 x i32> <i32 3, i32 6>, ptr %p
+  ret void
+}
+
+define void @store_constant_v4i8(ptr %p) {
+; RV32-LABEL: store_constant_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, 4176
+; RV32-NEXT:    addi a1, a1, 1539
+; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: store_constant_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 4176
+; RV64-NEXT:    addiw a1, a1, 1539
+; RV64-NEXT:    sw a1, 0(a0)
+; RV64-NEXT:    ret
+  store <4 x i8> <i8 3, i8 6, i8 5, i8 1>, ptr %p
+  ret void
+}
+
+define void @store_constant_v4i16(ptr %p) {
+; CHECK-LABEL: store_constant_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI13_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI13_0)
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    ret
+  store <4 x i16> <i16 3, i16 6, i16 5, i16 1>, ptr %p
+  ret void
+}
+
+define void @store_constant_v4i32(ptr %p) {
+; CHECK-LABEL: store_constant_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI14_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI14_0)
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
+  store <4 x i32> <i32 3, i32 6, i32 5, i32 1>, ptr %p
+  ret void
+}
+
+define void @store_id_v4i8(ptr %p) {
+; RV32-LABEL: store_id_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, 12320
+; RV32-NEXT:    addi a1, a1, 256
+; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: store_id_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 12320
+; RV64-NEXT:    addiw a1, a1, 256
+; RV64-NEXT:    sw a1, 0(a0)
+; RV64-NEXT:    ret
+  store <4 x i8> <i8 0, i8 1, i8 2, i8 3>, ptr %p
+  ret void
+}
+
+define void @store_constant_v2i8_align1(ptr %p) {
+; CHECK-LABEL: store_constant_v2i8_align1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 3
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    li a1, 3
+; CHECK-NEXT:    vmadd.vx v9, a1, v8
+; CHECK-NEXT:    vse8.v v9, (a0)
+; CHECK-NEXT:    ret
+  store <2 x i8> <i8 3, i8 6>, ptr %p, align 1
+  ret void
+}
+
+define void @store_constant_splat_v2i8(ptr %p) {
+; CHECK-LABEL: store_constant_splat_v2i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 771
+; CHECK-NEXT:    sh a1, 0(a0)
+; CHECK-NEXT:    ret
+  store <2 x i8> <i8 3, i8 3>, ptr %p
+  ret void
+}
+
+define void @store_constant_undef_v2i8(ptr %p) {
+; CHECK-LABEL: store_constant_undef_v2i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 768
+; CHECK-NEXT:    sh a1, 0(a0)
+; CHECK-NEXT:    ret
+  store <2 x i8> <i8 undef, i8 3>, ptr %p
+  ret void
+}

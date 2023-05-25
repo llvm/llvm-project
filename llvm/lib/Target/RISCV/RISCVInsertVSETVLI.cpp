@@ -360,18 +360,28 @@ public:
   unsigned getSEW() const { return SEW; }
   RISCVII::VLMUL getVLMUL() const { return VLMul; }
 
-  bool hasNonZeroAVL() const {
+  bool hasNonZeroAVL(const MachineRegisterInfo &MRI) const {
     if (hasAVLImm())
       return getAVLImm() > 0;
-    if (hasAVLReg())
-      return getAVLReg() == RISCV::X0;
+    if (hasAVLReg()) {
+      if (getAVLReg() == RISCV::X0)
+        return true;
+      if (MachineInstr *MI = MRI.getVRegDef(getAVLReg());
+          MI && MI->getOpcode() == RISCV::ADDI &&
+          MI->getOperand(1).isReg() && MI->getOperand(2).isImm() &&
+          MI->getOperand(1).getReg() == RISCV::X0 &&
+          MI->getOperand(2).getImm() != 0)
+        return true;
+      return false;
+    }
     return false;
   }
 
-  bool hasEquallyZeroAVL(const VSETVLIInfo &Other) const {
+  bool hasEquallyZeroAVL(const VSETVLIInfo &Other,
+                         const MachineRegisterInfo &MRI) const {
     if (hasSameAVL(Other))
       return true;
-    return (hasNonZeroAVL() && Other.hasNonZeroAVL());
+    return (hasNonZeroAVL(MRI) && Other.hasNonZeroAVL(MRI));
   }
 
   bool hasSameAVL(const VSETVLIInfo &Other) const {
@@ -447,7 +457,8 @@ public:
   // Determine whether the vector instructions requirements represented by
   // Require are compatible with the previous vsetvli instruction represented
   // by this.  MI is the instruction whose requirements we're considering.
-  bool isCompatible(const DemandedFields &Used, const VSETVLIInfo &Require) const {
+  bool isCompatible(const DemandedFields &Used, const VSETVLIInfo &Require,
+                    const MachineRegisterInfo &MRI) const {
     assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
     assert(!Require.SEWLMULRatioOnly &&
@@ -469,7 +480,7 @@ public:
     if (Used.VLAny && !hasSameAVL(Require))
       return false;
 
-    if (Used.VLZeroness && !hasEquallyZeroAVL(Require))
+    if (Used.VLZeroness && !hasEquallyZeroAVL(Require, MRI))
       return false;
 
     return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
@@ -881,7 +892,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     }
   }
 
-  if (CurInfo.isCompatible(Used, Require))
+  if (CurInfo.isCompatible(Used, Require, *MRI))
     return false;
 
   // We didn't find a compatible value. If our AVL is a virtual register,
@@ -929,7 +940,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info, const MachineInstr &M
   // prevent extending live range of an avl register operand.
   // TODO: We can probably relax this for immediates.
   if (isScalarMoveInstr(MI) && PrevInfo.isValid() &&
-      PrevInfo.hasEquallyZeroAVL(Info) &&
+      PrevInfo.hasEquallyZeroAVL(Info, *MRI) &&
       Info.hasSameVLMAX(PrevInfo)) {
     if (PrevInfo.hasAVLImm())
       Info.setAVLImm(PrevInfo.getAVLImm());

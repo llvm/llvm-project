@@ -10,10 +10,6 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_FUNCTIONS
 #define _LIBCPP___FORMAT_FORMAT_FUNCTIONS
 
-// TODO FMT This is added to fix Apple back-deployment.
-#include <version>
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
-
 #include <__algorithm/clamp.h>
 #include <__availability>
 #include <__concepts/convertible_to.h>
@@ -677,7 +673,5 @@ formatted_size(locale __loc, wformat_string<_Args...> __fmt, _Args&&... __args) 
 #endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 #endif // _LIBCPP___FORMAT_FORMAT_FUNCTIONS

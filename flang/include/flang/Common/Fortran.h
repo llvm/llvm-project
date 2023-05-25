@@ -21,6 +21,7 @@ namespace Fortran::common {
 
 // Fortran has five kinds of intrinsic data types, plus the derived types.
 ENUM_CLASS(TypeCategory, Integer, Real, Complex, Character, Logical, Derived)
+ENUM_CLASS(VectorElementCategory, Integer, Unsigned, Real)
 
 constexpr bool IsNumericTypeCategory(TypeCategory category) {
   return category == TypeCategory::Integer || category == TypeCategory::Real ||
