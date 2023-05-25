@@ -1,10 +1,10 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 """Commands used to automate testing gdb pretty printers.
 
 This script is part of a larger framework to test gdb pretty printers. It
@@ -31,10 +31,8 @@ has_run_tests = False
 
 
 class CheckResult(gdb.Command):
-
     def __init__(self):
-        super(CheckResult, self).__init__(
-            "print_and_compare", gdb.COMMAND_DATA)
+        super(CheckResult, self).__init__("print_and_compare", gdb.COMMAND_DATA)
 
     def invoke(self, arg, from_tty):
         global has_run_tests
@@ -55,7 +53,7 @@ class CheckResult(gdb.Command):
             value_str = self._get_value_string(compare_frame, testcase_frame)
 
             # Ignore the convenience variable name and newline
-            value = value_str[value_str.find("= ") + 2:-1]
+            value = value_str[value_str.find("= ") + 2 : -1]
             gdb.newest_frame().select()
             expectation_val = compare_frame.read_var("expectation")
             check_literal = expectation_val.string(encoding="utf-8")
@@ -66,16 +64,14 @@ class CheckResult(gdb.Command):
 
             if test_fails:
                 global test_failures
-                print("FAIL: " + test_loc.symtab.filename +
-                      ":" + str(test_loc.line))
+                print("FAIL: " + test_loc.symtab.filename + ":" + str(test_loc.line))
                 print("GDB printed:")
                 print("   " + repr(value))
                 print("Value should match:")
                 print("   " + repr(check_literal))
                 test_failures += 1
             else:
-                print("PASS: " + test_loc.symtab.filename +
-                      ":" + str(test_loc.line))
+                print("PASS: " + test_loc.symtab.filename + ":" + str(test_loc.line))
 
         except RuntimeError as e:
             # At this point, lots of different things could be wrong, so don't try to
