@@ -208,12 +208,22 @@ mlir::Value fir::factory::AnyValueStack::fetch(mlir::Location loc,
                                                fir::FirOpBuilder &builder) {
   mlir::Value indexValue = counter.getAndIncrementIndex(loc, builder);
   fir::runtime::genValueAt(loc, builder, opaquePtr, indexValue, retValueBox);
-  /// Dereference the allocatable "retValueBox", and load if trivial scalar
-  /// value.
+  // Dereference the allocatable "retValueBox", and load if trivial scalar
+  // value.
   mlir::Value result =
       hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{retValueBox});
-  if (valueStaticType == builder.getI1Type())
-    return builder.createConvert(loc, valueStaticType, result);
+  if (valueStaticType != result.getType()) {
+    // Cast back saved simple scalars stored with another type to their original
+    // type (like i1).
+    if (fir::isa_trivial(valueStaticType))
+      return builder.createConvert(loc, valueStaticType, result);
+    // Memory type mismatches (e.g. fir.ref vs fir.heap) or hlfir.expr vs
+    // variable type mismatches are OK, but the base Fortran type must be the
+    // same.
+    assert(hlfir::getFortranElementOrSequenceType(valueStaticType) ==
+               hlfir::getFortranElementOrSequenceType(result.getType()) &&
+           "non trivial values must be saved with their original type");
+  }
   return result;
 }
 
