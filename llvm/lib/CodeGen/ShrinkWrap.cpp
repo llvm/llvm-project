@@ -99,7 +99,7 @@ static cl::opt<cl::boolOrDefault>
 EnableShrinkWrapOpt("enable-shrink-wrap", cl::Hidden,
                     cl::desc("enable the shrink-wrapping pass"));
 static cl::opt<bool> EnablePostShrinkWrapOpt(
-    "enable-shrink-wrap-region-split", cl::init(false), cl::Hidden,
+    "enable-shrink-wrap-region-split", cl::init(true), cl::Hidden,
     cl::desc("enable splitting of the restore block if possible"));
 
 namespace {
@@ -635,7 +635,10 @@ bool ShrinkWrap::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
       FindIDom<>(**DirtyPreds.begin(), DirtyPreds, *MDT, false);
 
   while (NewSave && (hasDirtyPred(ReachableByDirty, *NewSave) ||
-                     EntryFreq < MBFI->getBlockFreq(NewSave).getFrequency()))
+                     EntryFreq < MBFI->getBlockFreq(NewSave).getFrequency() ||
+                     /*Entry freq has been observed more than a loop block in
+                        some cases*/
+                     MLI->getLoopFor(NewSave)))
     NewSave = FindIDom<>(**NewSave->pred_begin(), NewSave->predecessors(), *MDT,
                          false);
 
