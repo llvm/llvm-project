@@ -528,9 +528,9 @@ checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
              << operandName << " declaration";
 
     if (decl.getType() && decl.getType() != varType)
-      return op->emitOpError()
-             << "expected private (" << varType << ") to be the same type as "
-             << operandName << " declaration (" << decl.getType() << ")";
+      return op->emitOpError() << "expected " << operandName << " (" << varType
+                               << ") to be the same type as " << operandName
+                               << " declaration (" << decl.getType() << ")";
   }
 
   return success();

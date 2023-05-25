@@ -921,8 +921,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         entity.isParameter()) {
       // Make a copy in a temporary.
       auto copy = builder.create<hlfir::AsExprOp>(loc, entity);
+      mlir::Type storageType = entity.getType();
       hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-          loc, builder, hlfir::Entity{copy}, dummyType, "adapt.valuebyref");
+          loc, builder, hlfir::Entity{copy}, storageType, "adapt.valuebyref");
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.setExprAssociateCleanUp(

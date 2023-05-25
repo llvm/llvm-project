@@ -15,6 +15,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
@@ -261,57 +262,56 @@ ArrayAttr Builder::getArrayAttr(ArrayRef<Attribute> value) {
 }
 
 ArrayAttr Builder::getBoolArrayAttr(ArrayRef<bool> values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [this](bool v) -> Attribute { return getBoolAttr(v); }));
+  auto attrs = llvm::map_to_vector<8>(
+      values, [this](bool v) -> Attribute { return getBoolAttr(v); });
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getI32ArrayAttr(ArrayRef<int32_t> values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [this](int32_t v) -> Attribute { return getI32IntegerAttr(v); }));
+  auto attrs = llvm::map_to_vector<8>(
+      values, [this](int32_t v) -> Attribute { return getI32IntegerAttr(v); });
   return getArrayAttr(attrs);
 }
 ArrayAttr Builder::getI64ArrayAttr(ArrayRef<int64_t> values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [this](int64_t v) -> Attribute { return getI64IntegerAttr(v); }));
+  auto attrs = llvm::map_to_vector<8>(
+      values, [this](int64_t v) -> Attribute { return getI64IntegerAttr(v); });
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getIndexArrayAttr(ArrayRef<int64_t> values) {
-  auto attrs = llvm::to_vector<8>(
-      llvm::map_range(values, [this](int64_t v) -> Attribute {
-        return getIntegerAttr(IndexType::get(getContext()), v);
-      }));
+  auto attrs = llvm::map_to_vector<8>(values, [this](int64_t v) -> Attribute {
+    return getIntegerAttr(IndexType::get(getContext()), v);
+  });
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getF32ArrayAttr(ArrayRef<float> values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [this](float v) -> Attribute { return getF32FloatAttr(v); }));
+  auto attrs = llvm::map_to_vector<8>(
+      values, [this](float v) -> Attribute { return getF32FloatAttr(v); });
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getF64ArrayAttr(ArrayRef<double> values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [this](double v) -> Attribute { return getF64FloatAttr(v); }));
+  auto attrs = llvm::map_to_vector<8>(
+      values, [this](double v) -> Attribute { return getF64FloatAttr(v); });
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getStrArrayAttr(ArrayRef<StringRef> values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [this](StringRef v) -> Attribute { return getStringAttr(v); }));
+  auto attrs = llvm::map_to_vector<8>(
+      values, [this](StringRef v) -> Attribute { return getStringAttr(v); });
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getTypeArrayAttr(TypeRange values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [](Type v) -> Attribute { return TypeAttr::get(v); }));
+  auto attrs = llvm::map_to_vector<8>(
+      values, [](Type v) -> Attribute { return TypeAttr::get(v); });
   return getArrayAttr(attrs);
 }
 
 ArrayAttr Builder::getAffineMapArrayAttr(ArrayRef<AffineMap> values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [](AffineMap v) -> Attribute { return AffineMapAttr::get(v); }));
+  auto attrs = llvm::map_to_vector<8>(
+      values, [](AffineMap v) -> Attribute { return AffineMapAttr::get(v); });
   return getArrayAttr(attrs);
 }
 

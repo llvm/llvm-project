@@ -175,9 +175,37 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
   return failure(result.wasInterrupted());
 }
 
+/// Look for "test.are_equal" ops and emit errors/remarks.
+static LogicalResult testEquality(func::FuncOp funcOp) {
+  IRRewriter rewriter(funcOp.getContext());
+  WalkResult result = funcOp.walk([&](Operation *op) {
+    // Look for test.are_equal ops.
+    if (op->getName().getStringRef() == "test.are_equal") {
+      if (op->getNumOperands() != 2 || !op->getOperand(0).getType().isIndex() ||
+          !op->getOperand(1).getType().isIndex()) {
+        op->emitOpError("invalid op");
+        return WalkResult::skip();
+      }
+      FailureOr<bool> equal = ValueBoundsConstraintSet::areEqual(
+          op->getOperand(0), op->getOperand(1));
+      if (failed(equal)) {
+        op->emitError("could not determine equality");
+      } else if (*equal) {
+        op->emitRemark("equal");
+      } else {
+        op->emitRemark("different");
+      }
+    }
+    return WalkResult::advance();
+  });
+  return failure(result.wasInterrupted());
+}
+
 void TestReifyValueBounds::runOnOperation() {
   if (failed(
           testReifyValueBounds(getOperation(), reifyToFuncArgs, useArithOps)))
+    signalPassFailure();
+  if (failed(testEquality(getOperation())))
     signalPassFailure();
 }
 

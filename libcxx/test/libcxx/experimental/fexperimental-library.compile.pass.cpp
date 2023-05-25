@@ -22,3 +22,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -fexperimental-library
 
 #include <version>
+
+#ifdef _LIBCPP_HAS_NO_INCOMPLETE_PSTL
+#  error "-fexperimental-library should enable the PSTL"
+#endif
