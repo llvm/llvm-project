@@ -108,18 +108,18 @@ class SiFive7GetCyclesOnePerElement<string mx, int sew> {
   // to use a different VLEN, this model will not make scheduling decisions
   // based on the user specified VLEN.
   // c = ceil(VLEN / SEW) * LMUL
-  // Note: c >= 1 since the smallest VLUpperBound is 512 / 8 = 8, and the
-  // largest division performed on VLUpperBound is in MF8 case with division
+  // Note: c >= 1 since the smallest VLEN is 512 / 8 = 8, and the
+  // largest division performed on VLEN is in MF8 case with division
   // by 8. Therefore, there is no need to ceil the result.
-  int VLUpperBound = !div(512, sew);
+  int VLEN = !div(512, sew);
   int c = !cond(
-    !eq(mx, "M1") :        VLUpperBound,
-    !eq(mx, "M2") :        !mul(VLUpperBound, 2),
-    !eq(mx, "M4") :        !mul(VLUpperBound, 4),
-    !eq(mx, "M8") :        !mul(VLUpperBound, 8),
-    !eq(mx, "MF2") :       !div(VLUpperBound, 2),
-    !eq(mx, "MF4") :       !div(VLUpperBound, 4),
-    !eq(mx, "MF8") :       !div(VLUpperBound, 8)
+    !eq(mx, "M1")  : VLEN,
+    !eq(mx, "M2")  : !mul(VLEN, 2),
+    !eq(mx, "M4")  : !mul(VLEN, 4),
+    !eq(mx, "M8")  : !mul(VLEN, 8),
+    !eq(mx, "MF2") : !div(VLEN, 2),
+    !eq(mx, "MF4") : !div(VLEN, 4),
+    !eq(mx, "MF8") : !div(VLEN, 8)
   );
 }
 
