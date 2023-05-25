@@ -13,6 +13,8 @@
 #  error This file must be included inside sanitizer_allocator.h
 #endif
 
+struct DeviceAllocationInfo;
+#if SANITIZER_AMDGPU
 // Device memory allocation usually requires additional information, we can put
 // all the additional information into a data structure DeviceAllocationInfo.
 // This is only a parent structure since different vendors may require
@@ -25,15 +27,10 @@ typedef enum {
 struct DeviceAllocationInfo {
   DeviceAllocationInfo(DeviceAllocationType type = DAT_UNKNOWN) {
     type_ = type;
-    remap_first_device_page = false;
-    remapped_device_page = nullptr;
   }
   DeviceAllocationType type_;
-  bool remap_first_device_page;
-  void *remapped_device_page;
 };
 
-#if SANITIZER_AMDGPU
 struct DevivePointerInfo {
   uptr map_beg;
   uptr map_size;
@@ -110,8 +107,7 @@ class DeviceAllocatorT {
     return reinterpret_cast<void *>(res);
   }
 
-  void Deallocate(AllocatorStats *stat, void *p,
-                  DeviceAllocationInfo *da_info) {
+  void Deallocate(AllocatorStats *stat, void *p) {
     Header header, *h;
     {
       SpinMutexLock l(&mutex_);
@@ -134,7 +130,7 @@ class DeviceAllocatorT {
       stat->Sub(AllocatorStatMapped, h->map_size);
     }
     MapUnmapCallback().OnUnmap(h->map_beg, h->map_size);
-    DeviceMemFuncs::Deallocate(p, da_info);
+    DeviceMemFuncs::Deallocate(p);
   }
 
   uptr TotalMemoryUsed() {

@@ -175,22 +175,9 @@ class LargeChunkHeader {
                : nullptr;
   }
 
-  void Set(AsanChunk *p, DeviceAllocationInfo *da_info = nullptr) {
+  void Set(AsanChunk *p) {
     if (p) {
       chunk_header = p;
-
-      // remapped_device_page is stored right after chunk_header. We don't
-      // declare it formally in the data structure otherwise some sanity check
-      // will fail for host allocations, where remapped_device_page is really
-      // meaningless.
-      // For device memory, we always have enough space in LargeChunkHeader to
-      // store remapped_device_page because the alignment is always kPageSize_
-      if (da_info) {
-        void **remapped_device_page = reinterpret_cast<void **>(
-            reinterpret_cast<uptr>(&chunk_header) + sizeof(AsanChunk *));
-        *remapped_device_page = da_info->remapped_device_page;
-      }
-
       atomic_store(&magic, kAllocBegMagic, memory_order_release);
       return;
     }
@@ -200,14 +187,6 @@ class LargeChunkHeader {
                                         memory_order_release)) {
       CHECK_EQ(old, kAllocBegMagic);
     }
-  }
-
-  void *GetRemappedDevicePage() const {
-    void **remapped_device_page = reinterpret_cast<void **>(
-      reinterpret_cast<uptr>(&chunk_header) + sizeof(AsanChunk *));
-    return atomic_load(&magic, memory_order_acquire) == kAllocBegMagic
-               ? *remapped_device_page
-               : nullptr;
   }
 };
 
@@ -219,13 +198,7 @@ struct QuarantineCallback {
 
   void Recycle(AsanChunk *m) {
     void *p = get_allocator().GetBlockBegin(m);
-    DeviceAllocationInfo da_info;
     if (p != m) {
-      // For host allocations, GetRemappedDevicePage() doesn't return valid
-      // values for remapped_device_page, but it shouldn't matter because host
-      // memory Deallocate() calls won't use da_info
-      da_info.remapped_device_page =
-        reinterpret_cast<LargeChunkHeader *>(p)->GetRemappedDevicePage();
       // Clear the magic value, as allocator internals may overwrite the
       // contents of deallocated chunk, confusing GetAsanChunk lookup.
       reinterpret_cast<LargeChunkHeader *>(p)->Set(nullptr);
@@ -245,7 +218,7 @@ struct QuarantineCallback {
     thread_stats.real_frees++;
     thread_stats.really_freed += m->UsedSize();
 
-    get_allocator().Deallocate(cache_, p, &da_info);
+    get_allocator().Deallocate(cache_, p);
   }
 
   void *Allocate(uptr size) {
@@ -363,7 +336,7 @@ struct Allocator {
   void InitLinkerInitialized(const AllocatorOptions &options) {
     SetAllocatorMayReturnNull(options.may_return_null);
 #if SANITIZER_AMDGPU
-    allocator.InitLinkerInitialized(options.release_to_os_interval_ms, true);
+    allocator.InitLinkerInitialized(options.release_to_os_interval_ms, 0, true);
 #else
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
 #endif
@@ -627,7 +600,7 @@ struct Allocator {
     atomic_store(&m->chunk_state, CHUNK_ALLOCATED, memory_order_release);
     if (alloc_beg != chunk_beg) {
       CHECK_LE(alloc_beg + sizeof(LargeChunkHeader), chunk_beg);
-      reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m, da_info);
+      reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Set(m);
     }
     RunMallocHooks(res, size);
     return res;
@@ -1269,7 +1242,6 @@ hsa_status_t asan_hsa_amd_memory_pool_allocate(
   AmdgpuAllocationInfo aa_info;
   aa_info.alloc_func =
     reinterpret_cast<void *>(asan_hsa_amd_memory_pool_allocate);
-  aa_info.remap_first_device_page = true;
   aa_info.memory_pool = memory_pool;
   aa_info.size = size;
   aa_info.flags = flags;
