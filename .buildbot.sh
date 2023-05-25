@@ -15,6 +15,8 @@ cmake -DCMAKE_INSTALL_PREFIX=${INST_DIR} \
     -DLLVM_ENABLE_PROJECTS="lld;clang" \
     -DCLANG_DEFAULT_PIE_ON_LINUX=OFF \
     -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_C_COMPILER=/usr/bin/clang \
+    -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
     -GNinja \
     ../llvm
 cmake --build .
