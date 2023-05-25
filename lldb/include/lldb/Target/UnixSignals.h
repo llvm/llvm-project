@@ -94,7 +94,7 @@ public:
   // Instead of calling this directly, use a ADD_SIGCODE macro to get compile
   // time checks when on the native platform.
   void AddSignalCode(
-      int signo, int code, const char *description,
+      int signo, int code, const llvm::StringLiteral description,
       SignalCodePrintOption print_option = SignalCodePrintOption::None);
 
   void RemoveSignal(int signo);
@@ -127,8 +127,8 @@ protected:
   // Classes that inherit from UnixSignals can see and modify these
 
   struct SignalCode {
-    ConstString m_description;
-    SignalCodePrintOption m_print_option;
+    const llvm::StringLiteral m_description;
+    const SignalCodePrintOption m_print_option;
   };
 
   struct Signal {
