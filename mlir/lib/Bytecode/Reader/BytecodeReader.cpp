@@ -24,6 +24,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
@@ -516,6 +517,7 @@ public:
 private:
   /// The table of dialect resources within the bytecode file.
   SmallVector<AsmDialectResourceHandle> dialectResources;
+  llvm::StringMap<std::string> dialectResourceHandleRenamingMap;
 };
 
 class ParsedResourceEntry : public AsmParsedResourceEntry {
@@ -604,6 +606,7 @@ parseResourceGroup(Location fileLoc, bool allowEmpty,
                    EncodingReader &offsetReader, EncodingReader &resourceReader,
                    StringSectionReader &stringReader, T *handler,
                    const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef,
+                   function_ref<StringRef(StringRef)> remapKey = {},
                    function_ref<LogicalResult(StringRef)> processKeyFn = {}) {
   uint64_t numResources;
   if (failed(offsetReader.parseVarInt(numResources)))
@@ -635,6 +638,7 @@ parseResourceGroup(Location fileLoc, bool allowEmpty,
 
     // Otherwise, parse the resource value.
     EncodingReader entryReader(data, fileLoc);
+    key = remapKey(key);
     ParsedResourceEntry entry(key, kind, entryReader, stringReader,
                               bufferOwnerRef);
     if (failed(handler->parseResource(entry)))
@@ -665,8 +669,16 @@ LogicalResult ResourceSectionReader::initialize(
   // provides most of the arguments.
   auto parseGroup = [&](auto *handler, bool allowEmpty = false,
                         function_ref<LogicalResult(StringRef)> keyFn = {}) {
+    auto resolveKey = [&](StringRef key) -> StringRef {
+      auto it = dialectResourceHandleRenamingMap.find(key);
+      if (it == dialectResourceHandleRenamingMap.end())
+        return "";
+      return it->second;
+    };
+
     return parseResourceGroup(fileLoc, allowEmpty, offsetReader, resourceReader,
-                              stringReader, handler, bufferOwnerRef, keyFn);
+                              stringReader, handler, bufferOwnerRef, resolveKey,
+                              keyFn);
   };
 
   // Read the external resources from the bytecode.
@@ -714,6 +726,7 @@ LogicalResult ResourceSectionReader::initialize(
                << "unknown 'resource' key '" << key << "' for dialect '"
                << dialect->name << "'";
       }
+      dialectResourceHandleRenamingMap[key] = handler->getResourceKey(*handle);
       dialectResources.push_back(*handle);
       return success();
     };
