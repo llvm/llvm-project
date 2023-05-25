@@ -16,11 +16,7 @@
 
 namespace __sanitizer {
 
-// sanitizer_symbolizer_markup.cpp implements these differently.
-#if !SANITIZER_SYMBOLIZER_MARKUP
-
-// Strip interceptor prefixes from function name.
-static const char *StripFunctionName(const char *function) {
+const char *StripFunctionName(const char *function) {
   if (!function)
     return nullptr;
   auto try_strip = [function](const char *prefix) -> const char * {
@@ -38,6 +34,9 @@ static const char *StripFunctionName(const char *function) {
   }
   return function;
 }
+
+// sanitizer_symbolizer_markup.cpp implements these differently.
+#if !SANITIZER_SYMBOLIZER_MARKUP
 
 static const char *DemangleFunctionName(const char *function) {
   if (!function) return nullptr;
