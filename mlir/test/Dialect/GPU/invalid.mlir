@@ -318,7 +318,7 @@ func.func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
 // -----
 
 func.func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{operand #0 must be i32 or f32}}
+  // expected-error@+1 {{operand #0 must be i32, i64, f32 or f64}}
   %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : index
   return
 }
