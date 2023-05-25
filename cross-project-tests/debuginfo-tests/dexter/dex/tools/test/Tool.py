@@ -39,43 +39,44 @@ class TestCase(object):
         try:
             return self.heuristic.penalty
         except AttributeError:
-            return float('nan')
+            return float("nan")
 
     @property
     def max_penalty(self):
         try:
             return self.heuristic.max_penalty
         except AttributeError:
-            return float('nan')
+            return float("nan")
 
     @property
     def score(self):
         try:
             return self.heuristic.score
         except AttributeError:
-            return float('nan')
+            return float("nan")
 
     def __str__(self):
         if self.error and self.context.options.verbose:
             verbose_error = str(self.error)
         else:
-            verbose_error = ''
+            verbose_error = ""
 
         if self.error:
-            script_error = (' : {}'.format(
-                self.error.script_error.splitlines()[0]) if getattr(
-                    self.error, 'script_error', None) else '')
+            script_error = (
+                " : {}".format(self.error.script_error.splitlines()[0])
+                if getattr(self.error, "script_error", None)
+                else ""
+            )
 
-            error = ' [{}{}]'.format(
-                str(self.error).splitlines()[0], script_error)
+            error = " [{}{}]".format(str(self.error).splitlines()[0], script_error)
         else:
-            error = ''
+            error = ""
 
         try:
             summary = self.heuristic.summary_string
         except AttributeError:
-            summary = '<r>nan/nan (nan)</>'
-        return '{}: {}{}\n{}'.format(self.name, summary, error, verbose_error)
+            summary = "<r>nan/nan (nan)</>"
+        return "{}: {}{}\n{}".format(self.name, summary, error, verbose_error)
 
 
 class Tool(TestToolBase):
@@ -90,18 +91,22 @@ class Tool(TestToolBase):
 
     @property
     def name(self):
-        return 'DExTer test'
+        return "DExTer test"
 
     def add_tool_arguments(self, parser, defaults):
-        parser.add_argument('--fail-lt',
-                            type=float,
-                            default=0.0, # By default TEST always succeeds.
-                            help='exit with status FAIL(2) if the test result'
-                                ' is less than this value.',
-                            metavar='<float>')
-        parser.add_argument('--calculate-average',
-                            action="store_true",
-                            help='calculate the average score of every test run')
+        parser.add_argument(
+            "--fail-lt",
+            type=float,
+            default=0.0,  # By default TEST always succeeds.
+            help="exit with status FAIL(2) if the test result"
+            " is less than this value.",
+            metavar="<float>",
+        )
+        parser.add_argument(
+            "--calculate-average",
+            action="store_true",
+            help="calculate the average score of every test run",
+        )
         super(Tool, self).add_tool_arguments(parser, defaults)
 
     def _build_test_case(self):
@@ -119,10 +124,7 @@ class Tool(TestToolBase):
         if options.binary:
             # Copy user's binary into the tmp working directory
             shutil.copy(options.binary, options.executable)
-            builderIR = BuilderIR(
-                name='binary',
-                cflags=[options.binary],
-                ldflags='')
+            builderIR = BuilderIR(name="binary", cflags=[options.binary], ldflags="")
         else:
             options = self.context.options
             compiler_options = [options.cflags for _ in options.source_files]
@@ -133,21 +135,24 @@ class Tool(TestToolBase):
                 source_files=options.source_files,
                 compiler_options=compiler_options,
                 linker_options=linker_options,
-                executable_file=options.executable)
+                executable_file=options.executable,
+            )
         return builderIR
 
     def _init_debugger_controller(self):
         step_collection = DextIR(
             executable_path=self.context.options.executable,
             source_paths=self.context.options.source_files,
-            dexter_version=self.context.version)
+            dexter_version=self.context.version,
+        )
 
         step_collection.commands, new_source_files = get_command_infos(
-            self.context.options.test_files, self.context.options.source_root_dir)
+            self.context.options.test_files, self.context.options.source_root_dir
+        )
 
         self.context.options.source_files.extend(list(new_source_files))
 
-        if 'DexLimitSteps' in step_collection.commands:
+        if "DexLimitSteps" in step_collection.commands:
             debugger_controller = ConditionalController(self.context, step_collection)
         else:
             debugger_controller = DefaultController(self.context, step_collection)
@@ -155,11 +160,11 @@ class Tool(TestToolBase):
         return debugger_controller
 
     def _get_steps(self, builderIR):
-        """Generate a list of debugger steps from a test case.
-        """
+        """Generate a list of debugger steps from a test case."""
         debugger_controller = self._init_debugger_controller()
         debugger_controller = run_debugger_subprocess(
-            debugger_controller, self.context.working_directory.path)
+            debugger_controller, self.context.working_directory.path
+        )
         steps = debugger_controller.step_collection
         steps.builder = builderIR
         return steps
@@ -167,30 +172,31 @@ class Tool(TestToolBase):
     def _get_results_basename(self, test_name):
         def splitall(x):
             while len(x) > 0:
-              x, y = os.path.split(x)
-              yield y
+                x, y = os.path.split(x)
+                yield y
+
         all_components = reversed([x for x in splitall(test_name)])
-        return '_'.join(all_components)
+        return "_".join(all_components)
 
     def _get_results_path(self, test_name):
         """Returns the path to the test results directory for the test denoted
         by test_name.
         """
         assert self.context.options.results_directory != None
-        return os.path.join(self.context.options.results_directory,
-                            self._get_results_basename(test_name))
+        return os.path.join(
+            self.context.options.results_directory,
+            self._get_results_basename(test_name),
+        )
 
     def _get_results_text_path(self, test_name):
-        """Returns path results .txt file for test denoted by test_name.
-        """
+        """Returns path results .txt file for test denoted by test_name."""
         test_results_path = self._get_results_path(test_name)
-        return '{}.txt'.format(test_results_path)
+        return "{}.txt".format(test_results_path)
 
     def _get_results_pickle_path(self, test_name):
-        """Returns path results .dextIR file for test denoted by test_name.
-        """
+        """Returns path results .dextIR file for test denoted by test_name."""
         test_results_path = self._get_results_path(test_name)
-        return '{}.dextIR'.format(test_results_path)
+        return "{}.dextIR".format(test_results_path)
 
     def _record_steps(self, test_name, steps):
         """Write out the set of steps out to the test's .txt and .json
@@ -198,11 +204,11 @@ class Tool(TestToolBase):
         """
         if self.context.options.results_directory:
             output_text_path = self._get_results_text_path(test_name)
-            with open(output_text_path, 'w') as fp:
+            with open(output_text_path, "w") as fp:
                 self.context.o.auto(str(steps), stream=Stream(fp))
 
             output_dextIR_path = self._get_results_pickle_path(test_name)
-            with open(output_dextIR_path, 'wb') as fp:
+            with open(output_dextIR_path, "wb") as fp:
                 pickle.dump(steps, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
     def _record_score(self, test_name, heuristic):
@@ -211,7 +217,7 @@ class Tool(TestToolBase):
         """
         if self.context.options.results_directory:
             output_text_path = self._get_results_text_path(test_name)
-            with open(output_text_path, 'a') as fp:
+            with open(output_text_path, "a") as fp:
                 self.context.o.auto(heuristic.verbose_output, stream=Stream(fp))
 
     def _record_test_and_display(self, test_case):
@@ -235,7 +241,7 @@ class Tool(TestToolBase):
         test_case = TestCase(self.context, test_name, heuristic, None)
         self._record_test_and_display(test_case)
         if self.context.options.verbose:
-            self.context.o.auto('\n{}\n'.format(steps))
+            self.context.o.auto("\n{}\n".format(steps))
             self.context.o.auto(heuristic.verbose_output)
 
     def _run_test(self, test_name):
@@ -248,8 +254,7 @@ class Tool(TestToolBase):
             self._record_steps(test_name, steps)
             heuristic_score = Heuristic(self.context, steps)
             self._record_score(test_name, heuristic_score)
-        except (BuildScriptException, DebuggerException,
-                HeuristicException) as e:
+        except (BuildScriptException, DebuggerException, HeuristicException) as e:
             self._record_failed_test(test_name, e)
             return
 
@@ -261,7 +266,7 @@ class Tool(TestToolBase):
         options = self.context.options
 
         if not options.verbose:
-            self.context.o.auto('\n')
+            self.context.o.auto("\n")
 
         if options.calculate_average:
             # Calculate and print the average score
@@ -274,22 +279,25 @@ class Tool(TestToolBase):
                     num_tests += 1
 
             if num_tests != 0:
-                print("@avg: ({:.4f})".format(score_sum/num_tests))
+                print("@avg: ({:.4f})".format(score_sum / num_tests))
 
         has_failed = lambda test: test.score < options.fail_lt or test.error
         if any(map(has_failed, self._test_cases)):
             return_code = ReturnCode.FAIL
 
         if options.results_directory:
-            summary_path = os.path.join(options.results_directory, 'summary.csv')
-            with open(summary_path, mode='w', newline='') as fp:
-                writer = csv.writer(fp, delimiter=',')
-                writer.writerow(['Test Case', 'Score', 'Error'])
+            summary_path = os.path.join(options.results_directory, "summary.csv")
+            with open(summary_path, mode="w", newline="") as fp:
+                writer = csv.writer(fp, delimiter=",")
+                writer.writerow(["Test Case", "Score", "Error"])
 
                 for test_case in self._test_cases:
-                    writer.writerow([
-                        test_case.name, '{:.4f}'.format(test_case.score),
-                        test_case.error
-                    ])
+                    writer.writerow(
+                        [
+                            test_case.name,
+                            "{:.4f}".format(test_case.score),
+                            test_case.error,
+                        ]
+                    )
 
         return return_code

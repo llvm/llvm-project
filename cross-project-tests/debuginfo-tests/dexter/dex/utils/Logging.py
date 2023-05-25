@@ -8,6 +8,7 @@
 
 from dex.utils import PrettyOutput
 
+
 class Logger(object):
     def __init__(self, pretty_output: PrettyOutput):
         self.o = pretty_output
@@ -20,25 +21,25 @@ class Logger(object):
         if self.verbosity < 0:
             return
         if enable_prefix:
-            msg = f'error: {msg}'
+            msg = f"error: {msg}"
         if flag:
-           msg = f'{msg} <y>[{flag}]</>'
-        self.error_color('{}\n'.format(msg), stream=PrettyOutput.stderr)
+            msg = f"{msg} <y>[{flag}]</>"
+        self.error_color("{}\n".format(msg), stream=PrettyOutput.stderr)
 
     def warning(self, msg, enable_prefix=True, flag=None):
         if self.verbosity < 1:
             return
         if enable_prefix:
-            msg = f'warning: {msg}'
+            msg = f"warning: {msg}"
         if flag:
-           msg = f'{msg} <y>[{flag}]</>'
-        self.warning_color('{}\n'.format(msg), stream=PrettyOutput.stderr)
+            msg = f"{msg} <y>[{flag}]</>"
+        self.warning_color("{}\n".format(msg), stream=PrettyOutput.stderr)
 
     def note(self, msg, enable_prefix=True, flag=None):
         if self.verbosity < 2:
             return
         if enable_prefix:
-            msg = f'note: {msg}'
+            msg = f"note: {msg}"
         if flag:
-           msg = f'{msg} <y>[{flag}]</>'
-        self.note_color('{}\n'.format(msg), stream=PrettyOutput.stderr)
+            msg = f"{msg} <y>[{flag}]</>"
+        self.note_color("{}\n".format(msg), stream=PrettyOutput.stderr)
