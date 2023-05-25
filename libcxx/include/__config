@@ -1280,7 +1280,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 
 // TODO: Make this a proper configuration option
 #define _PSTL_PAR_BACKEND_SERIAL
-#define _PSTL_CPU_BACKEND_SERIAL
 
 #define _PSTL_PRAGMA(x) _Pragma(#    x)
 
