@@ -15,6 +15,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
@@ -170,22 +171,9 @@ static void updateStringLiteralType(Expr *E, QualType Ty) {
   while (true) {
     E->setType(Ty);
     E->setValueKind(VK_PRValue);
-    if (isa<StringLiteral>(E) || isa<ObjCEncodeExpr>(E)) {
+    if (isa<StringLiteral>(E) || isa<ObjCEncodeExpr>(E))
       break;
-    } else if (ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
-      E = PE->getSubExpr();
-    } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
-      assert(UO->getOpcode() == UO_Extension);
-      E = UO->getSubExpr();
-    } else if (GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(E)) {
-      E = GSE->getResultExpr();
-    } else if (ChooseExpr *CE = dyn_cast<ChooseExpr>(E)) {
-      E = CE->getChosenSubExpr();
-    } else if (PredefinedExpr *PE = dyn_cast<PredefinedExpr>(E)) {
-      E = PE->getFunctionName();
-    } else {
-      llvm_unreachable("unexpected expr in string literal init");
-    }
+    E = IgnoreParensSingleStep(E);
   }
 }
 
@@ -194,20 +182,9 @@ static void updateStringLiteralType(Expr *E, QualType Ty) {
 static void updateGNUCompoundLiteralRValue(Expr *E) {
   while (true) {
     E->setValueKind(VK_PRValue);
-    if (isa<CompoundLiteralExpr>(E)) {
+    if (isa<CompoundLiteralExpr>(E))
       break;
-    } else if (ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
-      E = PE->getSubExpr();
-    } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
-      assert(UO->getOpcode() == UO_Extension);
-      E = UO->getSubExpr();
-    } else if (GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(E)) {
-      E = GSE->getResultExpr();
-    } else if (ChooseExpr *CE = dyn_cast<ChooseExpr>(E)) {
-      E = CE->getChosenSubExpr();
-    } else {
-      llvm_unreachable("unexpected expr in array compound literal init");
-    }
+    E = IgnoreParensSingleStep(E);
   }
 }
 
