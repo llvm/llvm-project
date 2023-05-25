@@ -109,52 +109,52 @@ enum PPElifDiag {
   PED_Elifndef
 };
 
+static bool isFeatureTestMacro(StringRef MacroName) {
+  // list from:
+  // * https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
+  // * https://docs.microsoft.com/en-us/cpp/c-runtime-library/security-features-in-the-crt?view=msvc-160
+  // * man 7 feature_test_macros
+  // The list must be sorted for correct binary search.
+  static constexpr StringRef ReservedMacro[] = {
+      "_ATFILE_SOURCE",
+      "_BSD_SOURCE",
+      "_CRT_NONSTDC_NO_WARNINGS",
+      "_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES",
+      "_CRT_SECURE_NO_WARNINGS",
+      "_FILE_OFFSET_BITS",
+      "_FORTIFY_SOURCE",
+      "_GLIBCXX_ASSERTIONS",
+      "_GLIBCXX_CONCEPT_CHECKS",
+      "_GLIBCXX_DEBUG",
+      "_GLIBCXX_DEBUG_PEDANTIC",
+      "_GLIBCXX_PARALLEL",
+      "_GLIBCXX_PARALLEL_ASSERTIONS",
+      "_GLIBCXX_SANITIZE_VECTOR",
+      "_GLIBCXX_USE_CXX11_ABI",
+      "_GLIBCXX_USE_DEPRECATED",
+      "_GNU_SOURCE",
+      "_ISOC11_SOURCE",
+      "_ISOC95_SOURCE",
+      "_ISOC99_SOURCE",
+      "_LARGEFILE64_SOURCE",
+      "_POSIX_C_SOURCE",
+      "_REENTRANT",
+      "_SVID_SOURCE",
+      "_THREAD_SAFE",
+      "_XOPEN_SOURCE",
+      "_XOPEN_SOURCE_EXTENDED",
+      "__STDCPP_WANT_MATH_SPEC_FUNCS__",
+      "__STDC_FORMAT_MACROS",
+  };
+  return std::binary_search(std::begin(ReservedMacro), std::end(ReservedMacro),
+                            MacroName);
+}
+
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  if (isReservedInAllContexts(II->isReserved(Lang))) {
-    // list from:
-    // - https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
-    // - https://docs.microsoft.com/en-us/cpp/c-runtime-library/security-features-in-the-crt?view=msvc-160
-    // - man 7 feature_test_macros
-    // The list must be sorted for correct binary search.
-    static constexpr StringRef ReservedMacro[] = {
-        "_ATFILE_SOURCE",
-        "_BSD_SOURCE",
-        "_CRT_NONSTDC_NO_WARNINGS",
-        "_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES",
-        "_CRT_SECURE_NO_WARNINGS",
-        "_FILE_OFFSET_BITS",
-        "_FORTIFY_SOURCE",
-        "_GLIBCXX_ASSERTIONS",
-        "_GLIBCXX_CONCEPT_CHECKS",
-        "_GLIBCXX_DEBUG",
-        "_GLIBCXX_DEBUG_PEDANTIC",
-        "_GLIBCXX_PARALLEL",
-        "_GLIBCXX_PARALLEL_ASSERTIONS",
-        "_GLIBCXX_SANITIZE_VECTOR",
-        "_GLIBCXX_USE_CXX11_ABI",
-        "_GLIBCXX_USE_DEPRECATED",
-        "_GNU_SOURCE",
-        "_ISOC11_SOURCE",
-        "_ISOC95_SOURCE",
-        "_ISOC99_SOURCE",
-        "_LARGEFILE64_SOURCE",
-        "_POSIX_C_SOURCE",
-        "_REENTRANT",
-        "_SVID_SOURCE",
-        "_THREAD_SAFE",
-        "_XOPEN_SOURCE",
-        "_XOPEN_SOURCE_EXTENDED",
-        "__STDCPP_WANT_MATH_SPEC_FUNCS__",
-        "__STDC_FORMAT_MACROS",
-    };
-    if (std::binary_search(std::begin(ReservedMacro), std::end(ReservedMacro),
-                           II->getName()))
-      return MD_NoWarn;
-
-    return MD_ReservedMacro;
-  }
   StringRef Text = II->getName();
+  if (isReservedInAllContexts(II->isReserved(Lang)))
+    return isFeatureTestMacro(Text) ? MD_NoWarn : MD_ReservedMacro;
   if (II->isKeyword(Lang))
     return MD_KeywordDef;
   if (Lang.CPlusPlus11 && (Text.equals("override") || Text.equals("final")))
@@ -317,15 +317,6 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   if ((isDefineUndef != MU_Other) && II->getPPKeywordID() == tok::pp_defined) {
     // Error if defining "defined": C99 6.10.8/4, C++ [cpp.predefined]p4.
     return Diag(MacroNameTok, diag::err_defined_macro_name);
-  }
-
-  if (isDefineUndef == MU_Undef) {
-    auto *MI = getMacroInfo(II);
-    if (MI && MI->isBuiltinMacro()) {
-      // Warn if undefining "__LINE__" and other builtins, per C99 6.10.8/4
-      // and C++ [cpp.predefined]p4], but allow it as an extension.
-      Diag(MacroNameTok, diag::ext_pp_undef_builtin_macro);
-    }
   }
 
   // If defining/undefining reserved identifier or a keyword, we need to issue
@@ -3012,6 +3003,12 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
   MI->setTokens(Tokens, BP);
   return MI;
 }
+
+static bool isObjCProtectedMacro(const IdentifierInfo *II) {
+  return II->isStr("__strong") || II->isStr("__weak") ||
+         II->isStr("__unsafe_unretained") || II->isStr("__autoreleasing");
+}
+
 /// HandleDefineDirective - Implements \#define.  This consumes the entire macro
 /// line then lets the caller lex the next real token.
 void Preprocessor::HandleDefineDirective(
@@ -3083,15 +3080,9 @@ void Preprocessor::HandleDefineDirective(
     // In Objective-C, ignore attempts to directly redefine the builtin
     // definitions of the ownership qualifiers.  It's still possible to
     // #undef them.
-    auto isObjCProtectedMacro = [](const IdentifierInfo *II) -> bool {
-      return II->isStr("__strong") ||
-             II->isStr("__weak") ||
-             II->isStr("__unsafe_unretained") ||
-             II->isStr("__autoreleasing");
-    };
-   if (getLangOpts().ObjC &&
-        SourceMgr.getFileID(OtherMI->getDefinitionLoc())
-          == getPredefinesFileID() &&
+    if (getLangOpts().ObjC &&
+        SourceMgr.getFileID(OtherMI->getDefinitionLoc()) ==
+            getPredefinesFileID() &&
         isObjCProtectedMacro(MacroNameTok.getIdentifierInfo())) {
       // Warn if it changes the tokens.
       if ((!getDiagnostics().getSuppressSystemWarnings() ||
@@ -3115,7 +3106,9 @@ void Preprocessor::HandleDefineDirective(
 
       // Warn if defining "__LINE__" and other builtins, per C99 6.10.8/4 and
       // C++ [cpp.predefined]p4, but allow it as an extension.
-      if (OtherMI->isBuiltinMacro())
+      if (OtherMI->isBuiltinMacro() ||
+          (SourceMgr.isWrittenInBuiltinFile(OtherMI->getDefinitionLoc()) &&
+           !isFeatureTestMacro(MacroNameTok.getIdentifierInfo()->getName())))
         Diag(MacroNameTok, diag::ext_pp_redef_builtin_macro);
       // Macros must be identical.  This means all tokens and whitespace
       // separation must be the same.  C99 6.10.3p2.
@@ -3194,6 +3187,14 @@ void Preprocessor::HandleUndefDirective() {
   if (const MacroInfo *MI = MD.getMacroInfo()) {
     if (!MI->isUsed() && MI->isWarnIfUnused())
       Diag(MI->getDefinitionLoc(), diag::pp_macro_not_used);
+
+    // Warn if undefining "__LINE__" and other builtins, per C99 6.10.8/4 and
+    // C++ [cpp.predefined]p4, but allow it as an extension. Don't warn if this
+    // is an Objective-C builtin macro though.
+    if ((MI->isBuiltinMacro() ||
+         SourceMgr.isWrittenInBuiltinFile(MI->getDefinitionLoc())) &&
+        !(getLangOpts().ObjC && isObjCProtectedMacro(II)))
+      Diag(MacroNameTok, diag::ext_pp_undef_builtin_macro);
 
     if (MI->isWarnIfUnused())
       WarnUnusedMacroLocs.erase(MI->getDefinitionLoc());

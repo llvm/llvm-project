@@ -291,6 +291,7 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
     case Intrinsic::nvvm_isspacep_local:
       return std::make_pair(II->getArgOperand(0), llvm::ADDRESS_SPACE_LOCAL);
     case Intrinsic::nvvm_isspacep_shared:
+    case Intrinsic::nvvm_isspacep_shared_cluster:
       return std::make_pair(II->getArgOperand(0), llvm::ADDRESS_SPACE_SHARED);
     default:
       break;

@@ -6,6 +6,7 @@
 #define __cplusplus
 #define _HAVE_X 0
 #define X__Y
+#define __STDC__ 1 // expected-warning {{redefining builtin macro}}
 
 #undef for
 #undef final
@@ -13,6 +14,7 @@
 #undef __cplusplus
 #undef _HAVE_X
 #undef X__Y
+#undef __STDC_HOSTED__ // expected-warning {{undefining builtin macro}}
 
 // allowlisted definitions
 #define while while

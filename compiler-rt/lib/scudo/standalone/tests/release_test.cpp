@@ -22,13 +22,16 @@ TEST(ScudoReleaseTest, RegionPageMap) {
   for (scudo::uptr I = 0; I < SCUDO_WORDSIZE; I++) {
     // Various valid counter's max values packed into one word.
     scudo::RegionPageMap PageMap2N(1U, 1U, 1UL << I);
+    ASSERT_TRUE(PageMap2N.isAllocated());
     EXPECT_EQ(sizeof(scudo::uptr), PageMap2N.getBufferSize());
     // Check the "all bit set" values too.
     scudo::RegionPageMap PageMap2N1_1(1U, 1U, ~0UL >> I);
+    ASSERT_TRUE(PageMap2N1_1.isAllocated());
     EXPECT_EQ(sizeof(scudo::uptr), PageMap2N1_1.getBufferSize());
     // Verify the packing ratio, the counter is Expected to be packed into the
     // closest power of 2 bits.
     scudo::RegionPageMap PageMap(1U, SCUDO_WORDSIZE, 1UL << I);
+    ASSERT_TRUE(PageMap.isAllocated());
     EXPECT_EQ(sizeof(scudo::uptr) * scudo::roundUpPowerOfTwo(I + 1),
               PageMap.getBufferSize());
   }
@@ -40,6 +43,7 @@ TEST(ScudoReleaseTest, RegionPageMap) {
         (scudo::getPageSizeCached() / 8) * (SCUDO_WORDSIZE >> I);
     scudo::RegionPageMap PageMap(1U, NumCounters,
                                        1UL << ((1UL << I) - 1));
+    ASSERT_TRUE(PageMap.isAllocated());
     PageMap.inc(0U, 0U);
     for (scudo::uptr C = 1; C < NumCounters - 1; C++) {
       EXPECT_EQ(0UL, PageMap.get(0U, C));

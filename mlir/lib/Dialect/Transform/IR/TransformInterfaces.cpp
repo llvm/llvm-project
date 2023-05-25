@@ -1238,6 +1238,12 @@ void transform::detail::forwardTerminatorOperands(
   }
 }
 
+transform::TransformState
+transform::detail::makeTransformStateForTesting(Region *region,
+                                                Operation *payloadRoot) {
+  return TransformState(region, payloadRoot);
+}
+
 //===----------------------------------------------------------------------===//
 // Utilities for PossibleTopLevelTransformOpTrait.
 //===----------------------------------------------------------------------===//

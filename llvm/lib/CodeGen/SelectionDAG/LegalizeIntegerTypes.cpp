@@ -1184,16 +1184,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SETCC(SDNode *N) {
   // Get the SETCC result using the canonical SETCC type.
   SDValue SetCC;
   if (N->isStrictFPOpcode()) {
-    EVT VTs[] = {SVT, MVT::Other};
+    SDVTList VTs = DAG.getVTList({SVT, MVT::Other});
     SDValue Opers[] = {N->getOperand(0), N->getOperand(1),
                        N->getOperand(2), N->getOperand(3)};
-    SetCC = DAG.getNode(N->getOpcode(), dl, VTs, Opers);
+    SetCC = DAG.getNode(N->getOpcode(), dl, VTs, Opers, N->getFlags());
     // Legalize the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), SetCC.getValue(1));
   } else
     SetCC = DAG.getNode(N->getOpcode(), dl, SVT, N->getOperand(0),
-                        N->getOperand(1), N->getOperand(2));
+                        N->getOperand(1), N->getOperand(2), N->getFlags());
 
   // Convert to the expected type.
   return DAG.getSExtOrTrunc(SetCC, dl, NVT);
