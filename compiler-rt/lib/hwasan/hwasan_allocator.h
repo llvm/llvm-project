@@ -88,6 +88,7 @@ typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator> Allocator;
 typedef Allocator::AllocatorCache AllocatorCache;
 
+void AllocatorThreadStart(AllocatorCache *cache);
 void AllocatorThreadFinish(AllocatorCache *cache);
 
 class HwasanChunkView {
