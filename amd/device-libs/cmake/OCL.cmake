@@ -19,7 +19,7 @@ endif()
 
 # -Wno-error=atomic-alignment was added to workaround build problems due to
 # potential mis-aligned atomic ops detected by clang
-set(CLANG_OCL_FLAGS -fcolor-diagnostics -Werror -Wno-error=atomic-alignment -x cl -Xclang
+set(CLANG_OCL_FLAGS -fcolor-diagnostics -Werror -Wno-builtin-macro-redefined -Wno-error=atomic-alignment -x cl -Xclang
   -cl-std=CL2.0 -target "${AMDGPU_TARGET_TRIPLE}" -fvisibility=protected -fomit-frame-pointer
   -Xclang -finclude-default-header -Xclang -fexperimental-strict-floating-point
   -Xclang -fdenormal-fp-math=dynamic
