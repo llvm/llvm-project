@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
@@ -2482,6 +2483,13 @@ public:
     }
     llvm::support::ulittle32_t align;
     memcpy(&align, blobData->data(), sizeof(uint32_t));
+    if (align && !llvm::isPowerOf2_32(align)) {
+      return p.emitError(value.getLoc(),
+                         "expected hex string blob for key '" + key +
+                             "' to encode alignment in first 4 bytes, but got "
+                             "non-power-of-2 value: " +
+                             Twine(align));
+    }
 
     // Get the data portion of the blob.
     StringRef data = StringRef(*blobData).drop_front(sizeof(uint32_t));
