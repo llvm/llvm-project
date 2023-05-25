@@ -131,6 +131,16 @@ public:
     return CompactPtrGroupBase;
   }
 
+  ALWAYS_INLINE static bool isSmallBlock(uptr BlockSize) {
+    const uptr PageSize = getPageSizeCached();
+    return BlockSize < PageSize / 16U;
+  }
+
+  ALWAYS_INLINE static bool isLargeBlock(uptr BlockSize) {
+    const uptr PageSize = getPageSizeCached();
+    return BlockSize > PageSize;
+  }
+
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
     SizeClassInfo *Sci = getSizeClassInfo(ClassId);
@@ -740,12 +750,8 @@ private:
     if (UNLIKELY(BytesInFreeList == 0))
       return 0;
 
-    bool MaySkip = false;
-
-    if (BytesInFreeList <= Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint) {
+    if (BytesInFreeList <= Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint)
       Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-      MaySkip = true;
-    }
 
     // Always update `BytesInFreeListAtLastCheckpoint` with the smallest value
     // so that we won't underestimate the releasable pages. For example, the
@@ -765,34 +771,38 @@ private:
     // (BytesInFreeListAtLastCheckpoint - BytesInFreeList).
     const uptr PushedBytesDelta =
         BytesInFreeList - Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
-    if (PushedBytesDelta < PageSize)
-      MaySkip = true;
+    if (PushedBytesDelta < PageSize && ReleaseType != ReleaseToOS::ForceAll)
+      return 0;
 
     const bool CheckDensity =
-        BlockSize < PageSize / 16U && ReleaseType != ReleaseToOS::ForceAll;
+        isSmallBlock(BlockSize) && ReleaseType != ReleaseToOS::ForceAll;
     // Releasing smaller blocks is expensive, so we want to make sure that a
     // significant amount of bytes are free, and that there has been a good
     // amount of batches pushed to the freelist before attempting to release.
-    if (CheckDensity) {
-      if (ReleaseType == ReleaseToOS::Normal &&
-          PushedBytesDelta < Sci->AllocatedUser / 16U) {
-        MaySkip = true;
-      }
-    }
-
-    if (MaySkip && ReleaseType != ReleaseToOS::ForceAll)
-      return 0;
+    if (CheckDensity && ReleaseType == ReleaseToOS::Normal)
+      if (PushedBytesDelta < Sci->AllocatedUser / 16U)
+        return 0;
 
     if (ReleaseType == ReleaseToOS::Normal) {
       const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
       if (IntervalMs < 0)
         return 0;
-      if (Sci->ReleaseInfo.LastReleaseAtNs +
-              static_cast<u64>(IntervalMs) * 1000000 >
-          getMonotonicTimeFast()) {
-        return 0; // Memory was returned recently.
+
+      // The constant 8 here is selected from profiling some apps and the number
+      // of unreleased pages in the large size classes is around 16 pages or
+      // more. Choose half of it as a heuristic and which also avoids page
+      // release every time for every pushBlocks() attempt by large blocks.
+      const bool ByPassReleaseInterval =
+          isLargeBlock(BlockSize) && PushedBytesDelta > 8 * PageSize;
+      if (!ByPassReleaseInterval) {
+        if (Sci->ReleaseInfo.LastReleaseAtNs +
+                static_cast<u64>(IntervalMs) * 1000000 >
+            getMonotonicTimeFast()) {
+          // Memory was returned recently.
+          return 0;
+        }
       }
-    }
+    } // if (ReleaseType == ReleaseToOS::Normal)
 
     const uptr First = Sci->MinRegionIndex;
     const uptr Last = Sci->MaxRegionIndex;
@@ -835,7 +845,7 @@ private:
         continue;
       }
       const uptr PushedBytesDelta = BytesInBG - BG.BytesInBGAtLastCheckpoint;
-      if (PushedBytesDelta < PageSize)
+      if (ReleaseType != ReleaseToOS::ForceAll && PushedBytesDelta < PageSize)
         continue;
 
       // Given the randomness property, we try to release the pages only if the
