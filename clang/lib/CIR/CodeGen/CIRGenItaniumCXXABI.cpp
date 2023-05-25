@@ -589,7 +589,7 @@ CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
           .getAddressPoint(Base);
 
   auto &builder = CGM.getBuilder();
-  auto vtablePtrTy = builder.getVirtualFnPtrType(/*isVarArg=*/true);
+  auto vtablePtrTy = builder.getVirtualFnPtrType(/*isVarArg=*/false);
 
   return builder.create<mlir::cir::VTableAddrPointOp>(
       CGM.getLoc(VTableClass->getSourceRange()), vtablePtrTy,

@@ -164,11 +164,11 @@ public:
   mlir::cir::BoolType getBoolTy() {
     return ::mlir::cir::BoolType::get(getContext());
   }
-  mlir::Type getVirtualFnPtrType([[maybe_unused]] bool isVarArg = false) {
+  mlir::Type getVirtualFnPtrType(bool isVarArg = false) {
     // FIXME: replay LLVM codegen for now, perhaps add a vtable ptr special
     // type so it's a bit more clear and C++ idiomatic.
     auto fnTy =
-        mlir::cir::FuncType::get(getContext(), {}, {getInt32Ty()});
+        mlir::cir::FuncType::get(getContext(), {}, {getInt32Ty()}, isVarArg);
     assert(!UnimplementedFeature::isVarArg());
     return getPointerTo(getPointerTo(fnTy));
   }

@@ -255,9 +255,9 @@ mlir::cir::FuncType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
   (void)Erased;
   assert(Erased && "Not in set?");
 
-  return mlir::cir::FuncType::get(
-      &getMLIRContext(), ArgTypes,
-      (resultType ? resultType : mlir::TypeRange{}));
+  return mlir::cir::FuncType::get(&getMLIRContext(), ArgTypes,
+                                  (resultType ? resultType : mlir::TypeRange{}),
+                                  FI.isVariadic());
 }
 
 mlir::cir::FuncType CIRGenTypes::GetFunctionTypeForVTable(GlobalDecl GD) {
@@ -638,6 +638,24 @@ void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
   args.add(buildAnyExprToTemp(E), type);
 }
 
+QualType CIRGenFunction::getVarArgType(const Expr *Arg) {
+  // System headers on Windows define NULL to 0 instead of 0LL on Win64. MSVC
+  // implicitly widens null pointer constants that are arguments to varargs
+  // functions to pointer-sized ints.
+  if (!getTarget().getTriple().isOSWindows())
+    return Arg->getType();
+
+  if (Arg->getType()->isIntegerType() &&
+      getContext().getTypeSize(Arg->getType()) <
+          getContext().getTargetInfo().getPointerWidth(LangAS::Default) &&
+      Arg->isNullPointerConstant(getContext(),
+                                 Expr::NPC_ValueDependentIsNotNull)) {
+    return getContext().getIntPtrType();
+  }
+
+  return Arg->getType();
+}
+
 /// Similar to buildAnyExpr(), however, the result will always be accessible
 /// even if no aggregate location is provided.
 RValue CIRGenFunction::buildAnyExprToTemp(const Expr *E) {
@@ -675,17 +693,14 @@ void CIRGenFunction::buildCallArgs(
 
     const auto *FPT = Prototype.P.get<const FunctionProtoType *>();
     IsVariadic = FPT->isVariadic();
-    assert(!IsVariadic && "Variadic functions NYI");
     ExplicitCC = FPT->getExtInfo().getCC();
     ArgTypes.assign(FPT->param_type_begin() + ParamsToSkip,
                     FPT->param_type_end());
   }
 
   // If we still have any arguments, emit them using the type of the argument.
-  for (auto *A : llvm::drop_begin(ArgRange, ArgTypes.size())) {
-    assert(!IsVariadic && "Variadic functions NYI");
-    ArgTypes.push_back(A->getType());
-  };
+  for (auto *A : llvm::drop_begin(ArgRange, ArgTypes.size()))
+    ArgTypes.push_back(IsVariadic ? getVarArgType(A) : A->getType());
   assert((int)ArgTypes.size() == (ArgRange.end() - ArgRange.begin()));
 
   // We must evaluate arguments from right to left in the MS C++ ABI, because
@@ -961,14 +976,18 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
   // In most cases, there are no optional arguments.
   RequiredArgs required = RequiredArgs::All;
 
-  // if we have a variadic prototype, the required arguments are the extra
-  // prefix plus the arguments in the prototype.
-  auto *proto = dyn_cast<FunctionProtoType>(fnType);
-  assert(proto && "Only FunctionProtoType supported so far");
-  assert(dyn_cast<FunctionProtoType>(fnType) &&
-         "Only FunctionProtoType supported so far");
-  assert(!proto->isVariadic() && "Variadic NYI");
-  assert(!proto->hasExtParameterInfos() && "extparameterinfos NYI");
+  // If we have a variadic prototype, the required arguments are the
+  // extra prefix plus the arguments in the prototype.
+  if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(fnType)) {
+    if (proto->isVariadic())
+      required = RequiredArgs::forPrototypePlus(proto, numExtraRequiredArgs);
+
+    assert(!proto->hasExtParameterInfos() && "extparameterinfos NYI");
+  } else {
+    assert(!llvm::isa<FunctionNoProtoType>(fnType) &&
+           "FunctionNoProtoType NYI");
+    llvm_unreachable("Unknown function prototype");
+  }
 
   // FIXME: Kill copy.
   SmallVector<CanQualType, 16> argTypes;
