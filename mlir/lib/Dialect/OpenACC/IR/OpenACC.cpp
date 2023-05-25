@@ -580,7 +580,10 @@ Value SerialOp::getDataOperand(unsigned i) {
 }
 
 LogicalResult acc::SerialOp::verify() {
-
+  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
+          *this, getPrivatizations(), getGangPrivateOperands(), "private",
+          "privatizations")))
+    return failure();
   return checkDataOperands<acc::SerialOp>(*this, getDataClauseOperands());
 }
 
