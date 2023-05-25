@@ -14,6 +14,7 @@
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
@@ -1609,8 +1610,20 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader) {
                                 reader);
     if (failed(opName->dialect->load(dialectReader, getContext())))
       return failure();
-    opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
-                           getContext());
+    // If the opName is empty, this is because we use to accept names such as
+    // `foo` without any `.` separator. We shouldn't tolerate this in textual
+    // format anymore but for now we'll be backward compatible. This can only
+    // happen with unregistered dialects.
+    if (opName->name.empty()) {
+      if (opName->dialect->getLoadedDialect())
+        return emitError(fileLoc) << "has an empty opname for dialect '"
+                                  << opName->dialect->name << "'\n";
+
+      opName->opName.emplace(opName->dialect->name, getContext());
+    } else {
+      opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
+                             getContext());
+    }
   }
   return *opName->opName;
 }
