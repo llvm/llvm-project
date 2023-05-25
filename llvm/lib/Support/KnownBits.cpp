@@ -758,6 +758,13 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
   assert(!LHS.hasConflict() && !RHS.hasConflict() && "Bad inputs");
   KnownBits Known(BitWidth);
 
+  if (LHS.isZero() || RHS.isZero()) {
+    // Result is either known Zero or UB. Return Zero either way.
+    // Checking this earlier saves us a lot of special cases later on.
+    Known.setAllZero();
+    return Known;
+  }
+
   std::optional<APInt> Res;
   if (LHS.isNegative() && RHS.isNegative()) {
     // Result non-negative.
@@ -818,6 +825,13 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
   unsigned BitWidth = LHS.getBitWidth();
   assert(!LHS.hasConflict() && !RHS.hasConflict());
   KnownBits Known(BitWidth);
+
+  if (LHS.isZero() || RHS.isZero()) {
+    // Result is either known Zero or UB. Return Zero either way.
+    // Checking this earlier saves us a lot of special cases later on.
+    Known.setAllZero();
+    return Known;
+  }
 
   // We can figure out the minimum number of upper zero bits by doing
   // MaxNumerator / MinDenominator. If the Numerator gets smaller or Denominator
