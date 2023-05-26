@@ -17,10 +17,6 @@ typedef unsigned int uint32_t;
 typedef long int64_t;
 typedef unsigned long uint64_t;
 
-#ifdef __LP64__
-#undef __LP64__
-#endif
-#define __LP64__
 #define DEVICE_COMPILER
 #define LITTLEENDIAN_CPU
 #include "hsa.h"
@@ -29,7 +25,6 @@ typedef unsigned long uint64_t;
 #include "amd_hsa_kernel_code.h"
 #include "amd_hsa_queue.h"
 #include "amd_hsa_signal.h"
-#include "device_amd_hsa.h"
 #undef DEVICE_COMPILER
 
 #endif // DEVICE_AMD_HSA_H
