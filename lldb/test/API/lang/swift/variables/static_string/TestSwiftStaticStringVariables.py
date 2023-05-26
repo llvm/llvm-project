@@ -24,7 +24,6 @@ import unittest2
 
 
 class TestSwiftStaticStringVariables(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -40,7 +39,8 @@ class TestSwiftStaticStringVariables(TestBase):
         """Test that Swift.String formats properly"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         s1 = self.frame().FindVariable("s1")
         s2 = self.frame().FindVariable("s2")
@@ -54,25 +54,23 @@ class TestSwiftStaticStringVariables(TestBase):
         uncappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(uncappedSummaryStream, summaryOptions)
         uncappedSummary = uncappedSummaryStream.GetData()
-        self.assertTrue(uncappedSummary.find("someText") > 0,
-                        "uncappedSummary does not include the full string")
+        self.assertTrue(
+            uncappedSummary.find("someText") > 0,
+            "uncappedSummary does not include the full string",
+        )
         summaryOptions.SetCapping(lldb.eTypeSummaryCapped)
         cappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(cappedSummaryStream, summaryOptions)
         cappedSummary = cappedSummaryStream.GetData()
         self.assertTrue(
             cappedSummary.find("someText") <= 0,
-            "cappedSummary includes the full string")
+            "cappedSummary includes the full string",
+        )
 
         IContainZerosASCII = self.frame().FindVariable("IContainZerosASCII")
         IContainZerosUnicode = self.frame().FindVariable("IContainZerosUnicode")
 
+        lldbutil.check_variable(self, IContainZerosASCII, summary='"a\\0b\\0c\\0d"')
         lldbutil.check_variable(
-            self,
-            IContainZerosASCII,
-            summary='"a\\0b\\0c\\0d"')
-        lldbutil.check_variable(
-            self,
-            IContainZerosUnicode,
-            summary='"HFIHЗIHF\\0VЭHVHЗ90HGЭ"')
-
+            self, IContainZerosUnicode, summary='"HFIHЗIHF\\0VЭHVHЗ90HGЭ"'
+        )

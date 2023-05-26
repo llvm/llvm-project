@@ -17,16 +17,16 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
 
-class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
 
+class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipIf(archs=no_match("arm64"), bugnumber="rdar://104429667") # linker crash
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
+    @skipIf(archs=no_match("arm64"), bugnumber="rdar://104429667")  # linker crash
     @skipUnlessDarwin
     @swiftTest
     def test(self):
@@ -40,9 +40,11 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
 
         # Set the breakpoints.
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Foo.swift'))
+            "break here", lldb.SBFileSpec("Foo.swift")
+        )
         bar_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Bar.swift'))
+            "break here", lldb.SBFileSpec("Bar.swift")
+        )
         self.assertTrue(foo_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
         self.assertTrue(bar_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 

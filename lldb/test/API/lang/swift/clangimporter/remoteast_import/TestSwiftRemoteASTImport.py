@@ -17,15 +17,15 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
 
-class TestSwiftRemoteASTImport(TestBase):
 
+class TestSwiftRemoteASTImport(TestBase):
     mydir = TestBase.compute_mydir(__file__)
-    
+
     def setUp(self):
         TestBase.setUp(self)
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     @skipUnlessDarwin
     @swiftTest
     def testSwiftRemoteASTImport(self):
@@ -36,11 +36,15 @@ class TestSwiftRemoteASTImport(TestBase):
         """
         self.build()
 
-        lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec('Library.swift'),
-                                          extra_images=['Library'])
+        lldbutil.run_to_source_breakpoint(
+            self,
+            "break here",
+            lldb.SBFileSpec("Library.swift"),
+            extra_images=["Library"],
+        )
         # FIXME: Reversing the order of these two commands does not work!
-        self.expect("expr -d no-dynamic-values -- input",
-                    substrs=['(Library.LibraryProtocol) $R0'])
-        self.expect("expr -d run-target -- input",
-                    substrs=['(a.FromMainModule) $R1'])
+        self.expect(
+            "expr -d no-dynamic-values -- input",
+            substrs=["(Library.LibraryProtocol) $R0"],
+        )
+        self.expect("expr -d run-target -- input", substrs=["(a.FromMainModule) $R1"])

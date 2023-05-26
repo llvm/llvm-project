@@ -7,7 +7,6 @@ import unittest2
 
 
 class TestSwiftExprAllocator(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -17,6 +16,7 @@ class TestSwiftExprAllocator(lldbtest.TestBase):
         should still be recognized as self."""
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
-        self.expect("expression x", substrs=['23'])
+        self.expect("expression x", substrs=["23"])

@@ -5,6 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 import re
 
+
 class TestSwiftReflectionOnly(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -16,10 +17,13 @@ class TestSwiftReflectionOnly(lldbtest.TestBase):
         self.build()
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'),
-            extra_images=['dynamic_lib'])
-        log = self.getBuildArtifact('types.log')
-        self.expect('log enable lldb types -f ' + log)
+            self,
+            "Set breakpoint here",
+            lldb.SBFileSpec("main.swift"),
+            extra_images=["dynamic_lib"],
+        )
+        log = self.getBuildArtifact("types.log")
+        self.expect("log enable lldb types -f " + log)
 
         check_var = lldbutil.check_variable
         frame = thread.frames[0]
@@ -70,21 +74,27 @@ class TestSwiftReflectionOnly(lldbtest.TestBase):
 
         # Scan through the types log.
         import io
-        logfile = io.open(log, "r", encoding='utf-8')
+
+        logfile = io.open(log, "r", encoding="utf-8")
         found_ref_exe = 0
         found_ref_lib = 0
         found_ast_exe = 0
         found_ast_lib = 0
         for line in logfile:
-            if 'SwiftASTContextForExpressions::RegisterSectionModules("a.out");' in line:
-                if not 'retrieved 0 AST Data blobs' in line:
+            if (
+                'SwiftASTContextForExpressions::RegisterSectionModules("a.out");'
+                in line
+            ):
+                if not "retrieved 0 AST Data blobs" in line:
                     found_ast_exe += 1
-            elif 'SwiftASTContextForExpressions::RegisterSectionModules("dyld")' in line:
-                if not 'retrieved 0 AST Data blobs' in line:
+            elif (
+                'SwiftASTContextForExpressions::RegisterSectionModules("dyld")' in line
+            ):
+                if not "retrieved 0 AST Data blobs" in line:
                     found_ast_lib += 1
-            elif re.search(r'Adding reflection metadata in .*a\.out', line):
+            elif re.search(r"Adding reflection metadata in .*a\.out", line):
                 found_ref_exe += 1
-            elif re.search(r'Adding reflection metadata in .*dynamic_lib', line):
+            elif re.search(r"Adding reflection metadata in .*dynamic_lib", line):
                 found_ref_lib += 1
         self.assertEqual(found_ref_exe, 1)
         self.assertEqual(found_ref_lib, 1)

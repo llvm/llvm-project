@@ -7,13 +7,12 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class DyldTrieSymbolsTestCase(TestBase):
 
+class DyldTrieSymbolsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
     @skipUnlessDarwin
-
     def test_dyld_trie_symbols(self):
         """Test that we make create symbol table entries from the dyld trie data structure."""
         self.build()
@@ -44,8 +43,6 @@ class DyldTrieSymbolsTestCase(TestBase):
 
         unstripped_bar_symbols = unstripped_target.FindSymbols("bar")
         self.assertEqual(unstripped_bar_symbols.GetSize(), 1)
-
-
 
         # Verify that we can retrieve all the symbols with external
         # linkage after the binary has been stripped; they should not
@@ -95,7 +92,10 @@ class DyldTrieSymbolsTestCase(TestBase):
             if sym1.GetType() == lldb.eSymbolTypeObjCClass:
                 self.assertEqual(sym2.GetType(), lldb.eSymbolTypeObjCMetaClass)
             else:
-                self.assertTrue(sym1.GetType() == lldb.eSymbolTypeObjCMetaClass or sym1.GetType() == lldb.eSymbolTypeObjCClass)
+                self.assertTrue(
+                    sym1.GetType() == lldb.eSymbolTypeObjCMetaClass
+                    or sym1.GetType() == lldb.eSymbolTypeObjCClass
+                )
 
         syms_ctx = stripped_target.FindSymbols("SourceDerived._derivedValue")
         self.assertEqual(syms_ctx.GetSize(), 1)

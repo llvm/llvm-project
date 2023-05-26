@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftTypeLookup(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -32,7 +31,8 @@ class TestSwiftTypeLookup(TestBase):
         """Test the ability to look for type definitions at the command line"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
         # for now, type lookup won't load the AST context, so force load it
         # before testing
@@ -42,42 +42,43 @@ class TestSwiftTypeLookup(TestBase):
         self.expect(
             "type lookup String",
             substrs=[
-                '(struct Swift.String)',
-                'struct String {',
-                'extension Swift.String : '])
+                "(struct Swift.String)",
+                "struct String {",
+                "extension Swift.String : ",
+            ],
+        )
         self.expect(
             "type lookup Cla1",
             substrs=[
-                '(class a.Cla1)',
-                'class Cla1 {',
-                'func bat(_ x: Swift.Int, y: a.Str1) -> Swift.Int'])
+                "(class a.Cla1)",
+                "class Cla1 {",
+                "func bat(_ x: Swift.Int, y: a.Str1) -> Swift.Int",
+            ],
+        )
         self.expect(
             "type lookup Str1",
-            substrs=[
-                '(struct a.Str1)',
-                'struct Str1 {',
-                'func bar()',
-                'var b'])
+            substrs=["(struct a.Str1)", "struct Str1 {", "func bar()", "var b"],
+        )
 
         # Regression test. Ensure "<could not resolve type>" is not output.
         self.expect(
-            "type lookup String",
-            matching=False,
-            substrs=["<could not resolve type>"])
+            "type lookup String", matching=False, substrs=["<could not resolve type>"]
+        )
 
         # check that specifiers are honored
         # self.expect('type lookup class Cla1', substrs=['class Cla1 {'])
         # self.expect('type lookup struct Cla1', substrs=['class Cla1 {'], matching=False, error=True)
 
         # check that modules are honored
-        self.expect("type lookup Swift.String",
-                    substrs=['(struct Swift.String)',
-                             'struct String {'])
+        self.expect(
+            "type lookup Swift.String",
+            substrs=["(struct Swift.String)", "struct String {"],
+        )
         self.expect(
             "type lookup a.String",
-            substrs=['(struct Swift.String)',
-                     'struct String {'],
-            matching=False)
+            substrs=["(struct Swift.String)", "struct String {"],
+            matching=False,
+        )
 
         # check that a combination of module and specifier is honored
         # self.expect('type lookup class a.Cla1', substrs=['class Cla1 {'])
@@ -86,50 +87,49 @@ class TestSwiftTypeLookup(TestBase):
         # self.expect('type lookup struct Swift.Cla1', substrs=['class Cla1 {'], matching=False, error=True)
 
         # check that nested types are looked up correctly
-        self.expect('type lookup Toplevel.Nested.Deeper',
-                    substrs=['class a.Toplevel.Nested.Deeper',
-                             'struct a.Toplevel.Nested',
-                             'class a.Toplevel',
-                             'class Deeper', 
-                             'func foo'])
+        self.expect(
+            "type lookup Toplevel.Nested.Deeper",
+            substrs=[
+                "class a.Toplevel.Nested.Deeper",
+                "struct a.Toplevel.Nested",
+                "class a.Toplevel",
+                "class Deeper",
+                "func foo",
+            ],
+        )
 
         # check that mangled name lookup works
-        self.expect(
-            'type lookup _$sSiD',
-            substrs=[
-                'struct Int',
-                'extension Swift.Int'])
+        self.expect("type lookup _$sSiD", substrs=["struct Int", "extension Swift.Int"])
 
         # check that we can look for generic things
-        self.expect('type lookup Generic', substrs=['class Generic', 'foo'])
+        self.expect("type lookup Generic", substrs=["class Generic", "foo"])
         self.expect(
-            'type lookup Generic<String>',
+            "type lookup Generic<String>",
             substrs=[
-                'bound_generic_class a.Generic',
-                'struct Swift.String',
-                'class Generic',
-                'func foo'])
+                "bound_generic_class a.Generic",
+                "struct Swift.String",
+                "class Generic",
+                "func foo",
+            ],
+        )
 
         # check that we print comment text (and let you get rid of it)
         self.expect(
-            'type lookup Int',
-            substrs=['Creates a new instance'],
-            matching=False)
+            "type lookup Int", substrs=["Creates a new instance"], matching=False
+        )
         self.expect(
-            'type lookup --show-help -- Int',
-            substrs=['Creates a new instance'],
-            matching=True)
-        self.expect(
-            'type lookup foo',
-            substrs=[
-                'func foo',
-                'Int',
-                'Double'],
+            "type lookup --show-help -- Int",
+            substrs=["Creates a new instance"],
             matching=True,
-            ordered=False)
+        )
         self.expect(
-            'type lookup --show-help -- print',
-            substrs=[
-                '/// ',
-                'func print'],
-            matching=True)
+            "type lookup foo",
+            substrs=["func foo", "Int", "Double"],
+            matching=True,
+            ordered=False,
+        )
+        self.expect(
+            "type lookup --show-help -- print",
+            substrs=["/// ", "func print"],
+            matching=True,
+        )

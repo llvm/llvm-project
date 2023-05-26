@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -46,10 +45,9 @@ class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
-        self.assertTrue(
-            breakpoint.GetNumLocations() > 0,
-            lldbtest.VALID_BREAKPOINT)
+            "break here", self.main_source_spec
+        )
+        self.assertTrue(breakpoint.GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -57,19 +55,13 @@ class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
         self.assertTrue(process, lldbtest.PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.expect(
             "frame variable -d run -- o",
-            substrs=[
-                '"Hello World"',
-                '{...}'],
-            matching=True)
+            substrs=['"Hello World"', "{...}"],
+            matching=True,
+        )
         self.expect(
-            "expression -d run -- o",
-            substrs=[
-                '"Hello World"',
-                '{...}'],
-            matching=True)
-
+            "expression -d run -- o", substrs=['"Hello World"', "{...}"], matching=True
+        )

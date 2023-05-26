@@ -3,19 +3,17 @@ Test SBSection APIs.
 """
 
 
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
 class SectionAPITestCase(TestBase):
-
     def test_get_target_byte_size(self):
-        d = {'EXE': 'b.out'}
+        d = {"EXE": "b.out"}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = self.getBuildArtifact('b.out')
+        exe = self.getBuildArtifact("b.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 

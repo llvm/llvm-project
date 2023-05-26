@@ -20,7 +20,6 @@ import unittest2
 
 
 class TestSwiftBacktracePrinting(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -45,7 +44,8 @@ class TestSwiftBacktracePrinting(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
+            "break here", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -53,9 +53,15 @@ class TestSwiftBacktracePrinting(TestBase):
 
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        self.expect("bt", substrs=['h<T>',
-                                   # FIXME: rdar://65956239 U and T are not resolved!
-                                   'g<U, T>', 'pair', # '12', "Hello world",
-                                   'arg1=12', 'arg2="Hello world"'])
-        self.expect("breakpoint set -p other", substrs=['g<U, T>'])
-
+        self.expect(
+            "bt",
+            substrs=[
+                "h<T>",
+                # FIXME: rdar://65956239 U and T are not resolved!
+                "g<U, T>",
+                "pair",  # '12', "Hello world",
+                "arg1=12",
+                'arg2="Hello world"',
+            ],
+        )
+        self.expect("breakpoint set -p other", substrs=["g<U, T>"])

@@ -18,8 +18,8 @@ import os
 import unittest2
 import shutil
 
-class TestSwiftBridgingHeaderHeadermap(TestBase):
 
+class TestSwiftBridgingHeaderHeadermap(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -27,23 +27,23 @@ class TestSwiftBridgingHeaderHeadermap(TestBase):
         TestBase.setUp(self)
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     @skipUnlessDarwin
     @swiftTest
     def test(self):
         # To ensure we hit the rebuild problem remove the cache to avoid caching.
         mod_cache = self.getBuildArtifact("my-clang-modules-cache")
         if os.path.isdir(mod_cache):
-          shutil.rmtree(mod_cache)
+            shutil.rmtree(mod_cache)
 
-        self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
-                    % mod_cache)
+        self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % mod_cache)
         self.runCmd('settings set frame-format ""')
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec('dylib.swift'),
-                                          extra_images=['dylib'])
-        self.expect("fr v -d run-target -- a",
-                    substrs=['(dylib.C<a.Wrapper>.Something)', "hello"])
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("dylib.swift"), extra_images=["dylib"]
+        )
+        self.expect(
+            "fr v -d run-target -- a",
+            substrs=["(dylib.C<a.Wrapper>.Something)", "hello"],
+        )
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
-        

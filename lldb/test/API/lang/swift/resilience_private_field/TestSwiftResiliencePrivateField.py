@@ -6,14 +6,14 @@ import unittest2
 
 
 class TestSwiftResiliencePrivateField(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
     def test(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
-        self.expect("frame variable -- self.m", substrs=['42'])
-        self.expect("expression -- m", substrs=['42'])
+        self.expect("frame variable -- self.m", substrs=["42"])
+        self.expect("expression -- m", substrs=["42"])

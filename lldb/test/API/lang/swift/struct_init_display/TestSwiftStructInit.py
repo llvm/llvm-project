@@ -21,19 +21,19 @@ import unittest2
 
 
 class TestSwiftStructInit(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)
 
     @swiftTest
-    @skipIf(oslist=['windows'])
+    @skipIf(oslist=["windows"])
     def test_swift_struct_init(self):
         """Test that we display self correctly for an inline-initialized struct"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         theself = self.frame().FindVariable("self")
         var_a = theself.GetChildMemberWithName("a")

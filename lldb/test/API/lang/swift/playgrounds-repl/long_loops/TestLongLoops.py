@@ -18,10 +18,9 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestLongLoops(repl.PlaygroundREPLTest):
-
     mydir = repl.PlaygroundREPLTest.compute_mydir(__file__)
 
-    @skipIfDarwin # This test is flakey
+    @skipIfDarwin  # This test is flakey
     def do_test(self):
         """
         Test that long iteration loops don't crash

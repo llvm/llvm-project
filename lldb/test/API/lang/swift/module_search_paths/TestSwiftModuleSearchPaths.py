@@ -19,8 +19,8 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
-class TestSwiftModuleSearchPaths(TestBase):
 
+class TestSwiftModuleSearchPaths(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -28,31 +28,30 @@ class TestSwiftModuleSearchPaths(TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-
     @swiftTest
     def test_swift_module_search_paths(self):
         """
         Tests that we can import modules located using
         target.swift-module-search-paths
         """
-        
+
         # Build and run the dummy target
         self.build()
-        
+
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
-        lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec('main.swift'))
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
         # Add the current working dir to the swift-module-search-paths
-        self.runCmd("settings append target.swift-module-search-paths " +
-                    self.getBuildDir())
-        
+        self.runCmd(
+            "settings append target.swift-module-search-paths " + self.getBuildDir()
+        )
+
         # import the module
         self.runCmd("e import Module")
-        
-        # Check that we know about the function declared in the module
-        self.match(
-            "e plusTen(10)", "error: Couldn't lookup symbols:", error=True)
 
+        # Check that we know about the function declared in the module
+        self.match("e plusTen(10)", "error: Couldn't lookup symbols:", error=True)

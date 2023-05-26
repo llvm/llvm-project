@@ -13,11 +13,12 @@ import json
 
 
 class MTCSwiftPropertyTestCase(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(bugnumber="rdar://60396797",
-                        setting=('symbols.use-swift-clangimporter', 'false'))
+    @expectedFailureAll(
+        bugnumber="rdar://60396797",
+        setting=("symbols.use-swift-clangimporter", "false"),
+    )
     @skipUnlessDarwin
     @swiftTest
     def test(self):
@@ -43,17 +44,31 @@ class MTCSwiftPropertyTestCase(TestBase):
         self.expect(
             "thread info -s",
             ordered=False,
-            substrs=["instrumentation_class", "api_name", "class_name", "selector", "description"])
+            substrs=[
+                "instrumentation_class",
+                "api_name",
+                "class_name",
+                "selector",
+                "description",
+            ],
+        )
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonInstrumentation)
-        output_lines = self.res.GetOutput().split('\n')
-        json_line = '\n'.join(output_lines[2:])
+        output_lines = self.res.GetOutput().split("\n")
+        json_line = "\n".join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "MainThreadChecker")
         self.assertEqual(data["api_name"], view + ".superview")
         self.assertEqual(data["class_name"], view)
         self.assertEqual(data["selector"], "superview")
-        self.assertEqual(data["description"], view + ".superview must be used from main thread only")
+        self.assertEqual(
+            data["description"], view + ".superview must be used from main thread only"
+        )
 
-        self.expect("thread info",
-                    substrs=['stop reason = ' + view +
-                             '.superview must be used from main thread only'])
+        self.expect(
+            "thread info",
+            substrs=[
+                "stop reason = "
+                + view
+                + ".superview must be used from main thread only"
+            ],
+        )

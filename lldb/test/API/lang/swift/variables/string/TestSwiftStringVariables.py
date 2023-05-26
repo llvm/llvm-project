@@ -24,7 +24,6 @@ import unittest2
 
 
 class TestSwiftStringVariables(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -35,7 +34,8 @@ class TestSwiftStringVariables(TestBase):
         """Test that Swift.String formats properly"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         s1 = self.frame().FindVariable("s1")
         s2 = self.frame().FindVariable("s2")
@@ -49,37 +49,35 @@ class TestSwiftStringVariables(TestBase):
         uncappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(uncappedSummaryStream, summaryOptions)
         uncappedSummary = uncappedSummaryStream.GetData()
-        self.assertTrue(uncappedSummary.find("someText") > 0,
-                        "uncappedSummary does not include the full string")
+        self.assertTrue(
+            uncappedSummary.find("someText") > 0,
+            "uncappedSummary does not include the full string",
+        )
         summaryOptions.SetCapping(lldb.eTypeSummaryCapped)
         cappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(cappedSummaryStream, summaryOptions)
         cappedSummary = cappedSummaryStream.GetData()
         self.assertTrue(
             cappedSummary.find("someText") <= 0,
-            "cappedSummary includes the full string")
+            "cappedSummary includes the full string",
+        )
         self.assertTrue(
-            cappedSummary.endswith('"...'),
-            "cappedSummary ends with quote dot dot dot")
+            cappedSummary.endswith('"...'), "cappedSummary ends with quote dot dot dot"
+        )
 
         IContainZerosASCII = self.frame().FindVariable("IContainZerosASCII")
         IContainZerosUnicode = self.frame().FindVariable("IContainZerosUnicode")
         IContainEscapes = self.frame().FindVariable("IContainEscapes")
 
+        lldbutil.check_variable(self, IContainZerosASCII, summary='"a\\0b\\0c\\0d"')
         lldbutil.check_variable(
-            self,
-            IContainZerosASCII,
-            summary='"a\\0b\\0c\\0d"')
+            self, IContainZerosUnicode, summary='"HFIHЗIHF\\0VЭHVHЗ90HGЭ"'
+        )
         lldbutil.check_variable(
-            self,
-            IContainZerosUnicode,
-            summary='"HFIHЗIHF\\0VЭHVHЗ90HGЭ"')
-        lldbutil.check_variable(
-            self,
-            IContainEscapes,
-            summary='"Hello\\u{8}\\n\\u{8}\\u{8}\\nGoodbye"')
+            self, IContainEscapes, summary='"Hello\\u{8}\\n\\u{8}\\u{8}\\nGoodbye"'
+        )
 
         self.expect(
             'expression -l objc++ -- (char*)"Hello\b\b\b\b\bGoodbye"',
-            substrs=['"Hello\\b\\b\\b\\b\\bGoodbye"'])
-
+            substrs=['"Hello\\b\\b\\b\\b\\bGoodbye"'],
+        )

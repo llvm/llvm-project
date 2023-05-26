@@ -6,6 +6,7 @@ import os
 import platform
 import unittest2
 
+
 class TestStepIntoOverride(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
@@ -22,21 +23,24 @@ class TestStepIntoOverride(lldbtest.TestBase):
         # end up stepping into the stdlib and that will make stepping
         # tests impossible to write.  So avoid that.
 
-        if platform.system() == 'Darwin':
+        if platform.system() == "Darwin":
             lib_name = "libswiftCore.dylib"
         else:
             lib_name = "libswiftCore.so"
 
         self.dbg.HandleCommand(
             "settings set "
-            "target.process.thread.step-avoid-libraries {}".format(lib_name))
+            "target.process.thread.step-avoid-libraries {}".format(lib_name)
+        )
 
     def do_test(self):
         """Tests that we can step reliably in swift code."""
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
-        target, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(self, 'break here', self.main_source_spec)
+        target, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(
+            self, "break here", self.main_source_spec
+        )
 
         # Step into the function.
         thread.StepInto()
@@ -45,8 +49,8 @@ class TestStepIntoOverride(lldbtest.TestBase):
         # Make sure we step into the right function, the one that takes
         # an Optional<Int> as argument.
         func = frame.GetFunctionName()
-        self.assertEqual(func, 'a.Base.foo(Swift.Optional<Swift.Int>) -> ()')
+        self.assertEqual(func, "a.Base.foo(Swift.Optional<Swift.Int>) -> ()")
 
         # And that we can find the value of `a` after we stepped in.
-        valobj = frame.FindVariable('a')
-        self.assertEqual(valobj.GetSummary(), '3')
+        valobj = frame.FindVariable("a")
+        self.assertEqual(valobj.GetSummary(), "3")

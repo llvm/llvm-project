@@ -21,26 +21,25 @@ import unittest2
 
 
 class TestSwiftStdlibDictionary(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)
 
     def get_variable(self, name):
-        var = self.frame().FindVariable(
-            name).GetDynamicValue(lldb.eDynamicCanRunTarget)
+        var = self.frame().FindVariable(name).GetDynamicValue(lldb.eDynamicCanRunTarget)
         var.SetPreferSyntheticValue(True)
         return var
 
     def find_dictionary_entry(
-            self,
-            vdict,
-            key_summary=None,
-            key_value=None,
-            value_summary=None,
-            value_value=None,
-            fail_on_missing=True):
+        self,
+        vdict,
+        key_summary=None,
+        key_value=None,
+        value_summary=None,
+        value_value=None,
+        fail_on_missing=True,
+    ):
         self.assertTrue(vdict.IsValid(), "invalid Dictionary")
         count = vdict.GetNumChildren()
         found = False
@@ -83,12 +82,17 @@ class TestSwiftStdlibDictionary(TestBase):
 
         if fail_on_missing:
             self.assertTrue(
-                found, ("could not find an expected child for '%s':'%s'" %
-                        (key_str, value_str)))
+                found,
+                (
+                    "could not find an expected child for '%s':'%s'"
+                    % (key_str, value_str)
+                ),
+            )
         else:
             self.assertFalse(
-                found, ("found a not expected child for '%s':'%s'" %
-                        (key_str, value_str)))
+                found,
+                ("found a not expected child for '%s':'%s'" % (key_str, value_str)),
+            )
 
     @swiftTest
     # @skipIfLinux  # bugs.swift.org/SR-844
@@ -96,7 +100,8 @@ class TestSwiftStdlibDictionary(TestBase):
         """Tests that we properly vend synthetic children for Swift.Dictionary"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
@@ -106,18 +111,19 @@ class TestSwiftStdlibDictionary(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        self.runCmd('type summary add a.Wrapper -s ${var.value%S}')
+        self.runCmd("type summary add a.Wrapper -s ${var.value%S}")
 
         for i in range(0, 100):
             self.find_dictionary_entry(
                 self.get_variable("d"),
                 key_value=str(i),
-                value_summary='"%s"' % (i * 2 + 1))
+                value_summary='"%s"' % (i * 2 + 1),
+            )
 
-        self.runCmd('expression d.removeValue(forKey: 34)')
+        self.runCmd("expression d.removeValue(forKey: 34)")
         self.find_dictionary_entry(
             self.get_variable("d"),
             key_value=34,
             value_summary='"43"',
-            fail_on_missing=False)
-
+            fail_on_missing=False,
+        )

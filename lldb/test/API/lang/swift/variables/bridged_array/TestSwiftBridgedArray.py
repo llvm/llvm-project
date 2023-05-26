@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftBridgedArray(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
@@ -48,7 +47,8 @@ class TestSwiftBridgedArray(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
+            "break here", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -57,16 +57,28 @@ class TestSwiftBridgedArray(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
         self.expect(
             "frame variable -d run -- swarr",
-            substrs=['Int(123456)', 'Int32(234567)', 'UInt16(45678)', 'Double(1.250000)', 'Float(2.500000)'])
+            substrs=[
+                "Int(123456)",
+                "Int32(234567)",
+                "UInt16(45678)",
+                "Double(1.250000)",
+                "Float(2.500000)",
+            ],
+        )
         self.expect(
             "expression -d run -- swarr",
-            substrs=['Int(123456)', 'Int32(234567)', 'UInt16(45678)', 'Double(1.250000)', 'Float(2.500000)'])
-
+            substrs=[
+                "Int(123456)",
+                "Int32(234567)",
+                "UInt16(45678)",
+                "Double(1.250000)",
+                "Float(2.500000)",
+            ],
+        )

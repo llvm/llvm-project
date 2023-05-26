@@ -6,18 +6,21 @@ import unittest2
 
 
 class TestSwiftAsyncFnArgs(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @skipIf(oslist=['windows', 'linux'])
+    @skipIf(oslist=["windows", "linux"])
     def test(self):
         """Test function arguments in async functions"""
         self.build()
-        src = lldb.SBFileSpec('main.swift')
+        src = lldb.SBFileSpec("main.swift")
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', src)
+            self, "Set breakpoint here", src
+        )
 
         while process.selected_thread.stop_reason == lldb.eStopReasonBreakpoint:
-            self.expect("frame var -d run-target msg", patterns=['"(basic|generic|static|closure) world"'])
+            self.expect(
+                "frame var -d run-target msg",
+                patterns=['"(basic|generic|static|closure) world"'],
+            )
             process.Continue()

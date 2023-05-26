@@ -3,7 +3,6 @@ Test that we handle breakpoints on consecutive instructions correctly.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,12 +10,17 @@ from lldbsuite.test import lldbutil
 
 
 class ConsecutiveBreakpointsTestCase(TestBase):
-
     def prepare_test(self):
         self.build()
 
-        (self.target, self.process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(
-                self, "Set breakpoint here", lldb.SBFileSpec("main.cpp"))
+        (
+            self.target,
+            self.process,
+            self.thread,
+            bkpt,
+        ) = lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
 
         # Set breakpoint to the next instruction
         frame = self.thread.GetFrameAtIndex(0)
@@ -26,10 +30,12 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         self.assertEquals(len(instructions), 2)
         self.bkpt_address = instructions[1].GetAddress()
         self.breakpoint2 = self.target.BreakpointCreateByAddress(
-            self.bkpt_address.GetLoadAddress(self.target))
+            self.bkpt_address.GetLoadAddress(self.target)
+        )
         self.assertTrue(
             self.breakpoint2 and self.breakpoint2.GetNumLocations() == 1,
-            VALID_BREAKPOINT)
+            VALID_BREAKPOINT,
+        )
 
     def finish_test(self):
         # Run the process until termination
@@ -45,10 +51,11 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         self.assertState(self.process.GetState(), lldb.eStateStopped)
         # We should be stopped at the second breakpoint
         self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(
-            self.process, self.breakpoint2)
+            self.process, self.breakpoint2
+        )
         self.assertIsNotNone(
-            self.thread,
-            "Expected one thread to be stopped at breakpoint 2")
+            self.thread, "Expected one thread to be stopped at breakpoint 2"
+        )
 
         self.finish_test()
 
@@ -62,14 +69,15 @@ class ConsecutiveBreakpointsTestCase(TestBase):
 
         self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(
-            self.thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(
-                self.target), self.bkpt_address.GetLoadAddress(
-                self.target))
+            self.thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(self.target),
+            self.bkpt_address.GetLoadAddress(self.target),
+        )
         self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(
-            self.process, self.breakpoint2)
+            self.process, self.breakpoint2
+        )
         self.assertIsNotNone(
-            self.thread,
-            "Expected one thread to be stopped at breakpoint 2")
+            self.thread, "Expected one thread to be stopped at breakpoint 2"
+        )
 
         self.finish_test()
 
@@ -89,12 +97,13 @@ class ConsecutiveBreakpointsTestCase(TestBase):
 
         self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(
-            self.thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(
-                self.target), self.bkpt_address.GetLoadAddress(
-                self.target))
+            self.thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(self.target),
+            self.bkpt_address.GetLoadAddress(self.target),
+        )
         self.assertEquals(
             self.thread.GetStopReason(),
             lldb.eStopReasonPlanComplete,
-            "Stop reason should be 'plan complete'")
+            "Stop reason should be 'plan complete'",
+        )
 
         self.finish_test()

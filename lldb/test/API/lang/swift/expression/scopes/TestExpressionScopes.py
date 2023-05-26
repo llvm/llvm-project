@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftExpressionScopes(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -42,8 +41,7 @@ class TestSwiftExpressionScopes(TestBase):
             answer = value.GetSummary()
         else:
             answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
+        report_str = "%s expected: %s got: %s" % (expression, expected_result, answer)
         if answer != expected_result:
             print(report_str)
             print(value.GetError())
@@ -55,8 +53,7 @@ class TestSwiftExpressionScopes(TestBase):
         self.assertTrue(len(threads) == 1)
 
     def continue_by_pattern(self, pattern):
-        bkpt = self.target.BreakpointCreateBySourceRegex(
-            pattern, self.main_source_spec)
+        bkpt = self.target.BreakpointCreateBySourceRegex(pattern, self.main_source_spec)
         self.assertTrue(bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
         self.continue_to_bkpt(self.process, bkpt)
         self.target.BreakpointDelete(bkpt.GetID())
@@ -73,11 +70,13 @@ class TestSwiftExpressionScopes(TestBase):
 
         # Set the breakpoints
         shadow_a_bkpt = target.BreakpointCreateBySourceRegex(
-            'Shadowed in A', self.main_source_spec)
+            "Shadowed in A", self.main_source_spec
+        )
         self.assertTrue(shadow_a_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         init_bkpt = target.BreakpointCreateBySourceRegex(
-            'In init.', self.main_source_spec)
+            "In init.", self.main_source_spec
+        )
         self.assertTrue(init_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -87,8 +86,7 @@ class TestSwiftExpressionScopes(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, init_bkpt)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, init_bkpt)
 
         self.assertTrue(len(threads) == 1)
 
@@ -110,7 +108,8 @@ class TestSwiftExpressionScopes(TestBase):
 
         # Now set a breakpoint in the static_method and run to there:
         static_bkpt = target.BreakpointCreateBySourceRegex(
-            'In class function', self.main_source_spec)
+            "In class function", self.main_source_spec
+        )
         self.assertTrue(static_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, static_bkpt)
@@ -123,7 +122,8 @@ class TestSwiftExpressionScopes(TestBase):
 
         # Now run into the setters & getters:
         set_bkpt = target.BreakpointCreateBySourceRegex(
-            'In set.', self.main_source_spec)
+            "In set.", self.main_source_spec
+        )
         self.assertTrue(set_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, set_bkpt)
@@ -131,7 +131,8 @@ class TestSwiftExpressionScopes(TestBase):
         set_bkpt.SetEnabled(False)
 
         get_bkpt = target.BreakpointCreateBySourceRegex(
-            'In get.', self.main_source_spec)
+            "In get.", self.main_source_spec
+        )
         self.assertTrue(get_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, get_bkpt)
@@ -139,7 +140,8 @@ class TestSwiftExpressionScopes(TestBase):
         get_bkpt.SetEnabled(False)
 
         deinit_bkpt = target.BreakpointCreateBySourceRegex(
-            'In deinit.', self.main_source_spec)
+            "In deinit.", self.main_source_spec
+        )
         self.assertTrue(deinit_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, deinit_bkpt)
@@ -149,10 +151,9 @@ class TestSwiftExpressionScopes(TestBase):
         # Now let's try the subscript getter & make sure that that works:
 
         str_sub_get_bkpt = target.BreakpointCreateBySourceRegex(
-            'In string subscript getter', self.main_source_spec)
-        self.assertTrue(
-            str_sub_get_bkpt.GetNumLocations() > 0,
-            VALID_BREAKPOINT)
+            "In string subscript getter", self.main_source_spec
+        )
+        self.assertTrue(str_sub_get_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, str_sub_get_bkpt)
         self.check_expression("self.backing_int", "10", use_summary=False)
@@ -162,7 +163,8 @@ class TestSwiftExpressionScopes(TestBase):
         # Next run into the closure that captures self and make sure that
         # works:
         closure_bkpt = target.BreakpointCreateBySourceRegex(
-            'Break here in closure', self.main_source_spec)
+            "Break here in closure", self.main_source_spec
+        )
         self.assertTrue(closure_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         self.continue_to_bkpt(process, closure_bkpt)
@@ -170,7 +172,6 @@ class TestSwiftExpressionScopes(TestBase):
         self.check_expression("a_string", '"abcde"', use_summary=True)
 
         # Now set a breakpoint in the struct method and run to there:
-        self.continue_by_pattern('Break here in struct')
-        self.check_expression("a", "\"foo\"", use_summary=True)
+        self.continue_by_pattern("Break here in struct")
+        self.check_expression("a", '"foo"', use_summary=True)
         self.check_expression("self.b", "5", use_summary=False)
-

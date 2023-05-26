@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftMetatype(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -32,7 +31,8 @@ class TestSwiftMetatype(TestBase):
         """Test the formatting of Swift metatypes"""
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         frame = thread.frames[0]
         self.assertTrue(frame, "Frame 0 is valid.")
