@@ -28,7 +28,7 @@ see check `modernize-use-default-member-init <../modernize/use-default-member-in
   Enforcement of rule C.48 in this check is deprecated, to be removed in
   :program:`clang-tidy` version 19 (only C.49 will be enforced by this check then).
   Please use `cppcoreguidelines-use-default-member-init <../cppcoreguidelines/use-default-member-init.html>`_
-  to enfoce rule C.48.
+  to enforce rule C.48.
 
 Example 1
 ---------
