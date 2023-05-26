@@ -1801,7 +1801,7 @@ struct FormatStyle {
     BBCDS_Never,
     /// Breaking between template declaration and ``concept`` is allowed. The
     /// actual behavior depends on the content and line breaking rules and
-    /// penalities.
+    /// penalties.
     BBCDS_Allowed,
     /// Always break before ``concept``, putting it in the line after the
     /// template declaration.
