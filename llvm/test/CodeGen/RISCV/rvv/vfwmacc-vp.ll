@@ -754,3 +754,29 @@ define <vscale x 8 x double> @vfmacc_vv_nxv8f64_nxv8f16_unmasked(<vscale x 8 x h
   %v = call <vscale x 8 x double> @llvm.vp.fma.nxv8f64(<vscale x 8 x double> %aext, <vscale x 8 x double> %bext, <vscale x 8 x double> %c, <vscale x 8 x i1> %allones, i32 %evl)
   ret <vscale x 8 x double> %v
 }
+
+define <vscale x 1 x float> @vfmacc_squared_nxv1f32(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vfmacc_squared_nxv1f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwmacc.vv v10, v8, v8, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    ret
+  %aext = call <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half> %a, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x float> @llvm.vp.fma.nxv1f32(<vscale x 1 x float> %aext, <vscale x 1 x float> %aext, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 %evl)
+  ret <vscale x 1 x float> %v
+}
+
+define <vscale x 1 x float> @vfmacc_squared_nxv1f32_unmasked(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x float> %c, i32 zeroext %evl) {
+; CHECK-LABEL: vfmacc_squared_nxv1f32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vfwmacc.vv v10, v8, v8
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
+  %allones = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
+  %aext = call <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half> %a, <vscale x 1 x i1> %allones, i32 %evl)
+  %v = call <vscale x 1 x float> @llvm.vp.fma.nxv1f32(<vscale x 1 x float> %aext, <vscale x 1 x float> %aext, <vscale x 1 x float> %c, <vscale x 1 x i1> %allones, i32 %evl)
+  ret <vscale x 1 x float> %v
+}

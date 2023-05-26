@@ -238,8 +238,6 @@ void AArch64TargetInfo::fillValidCPUList(
 void AArch64TargetInfo::getTargetDefinesARMV81A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
-  Builder.defineMacro("__ARM_FEATURE_ATOMICS", "1");
-  Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 }
 
 void AArch64TargetInfo::getTargetDefinesARMV82A(const LangOptions &Opts,
@@ -335,16 +333,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__aarch64__");
   // Inline assembly supports AArch64 flag outputs.
   Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
-  // For bare-metal.
-  if (getTriple().getOS() == llvm::Triple::UnknownOS &&
-      getTriple().isOSBinFormatELF())
-    Builder.defineMacro("__ELF__");
-
-  // Target properties.
-  if (!getTriple().isOSWindows() && getTriple().isArch64Bit()) {
-    Builder.defineMacro("_LP64");
-    Builder.defineMacro("__LP64__");
-  }
 
   std::string CodeModel = getTargetOpts().CodeModel;
   if (CodeModel == "default")
@@ -1523,7 +1511,6 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__ARM64_ARCH_8__");
   Builder.defineMacro("__ARM_NEON__");
-  Builder.defineMacro("__LITTLE_ENDIAN__");
   Builder.defineMacro("__REGISTER_PREFIX__", "");
   Builder.defineMacro("__arm64", "1");
   Builder.defineMacro("__arm64__", "1");

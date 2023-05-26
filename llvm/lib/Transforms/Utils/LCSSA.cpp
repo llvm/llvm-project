@@ -40,7 +40,6 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PredIteratorCache.h"
@@ -77,14 +76,12 @@ static bool isExitBlock(BasicBlock *BB,
 /// rewrite the uses.
 bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                     const DominatorTree &DT, const LoopInfo &LI,
-                                    IRBuilderBase &Builder,
-                                    SmallVectorImpl<PHINode *> *PHIsToRemove) {
+                                    SmallVectorImpl<PHINode *> *PHIsToRemove,
+                                    SmallVectorImpl<PHINode *> *InsertedPHIs) {
   SmallVector<Use *, 16> UsesToRewrite;
   SmallSetVector<PHINode *, 16> LocalPHIsToRemove;
   PredIteratorCache PredCache;
   bool Changed = false;
-
-  IRBuilderBase::InsertPointGuard InsertPtGuard(Builder);
 
   // Cache the Loop ExitBlocks across this loop.  We expect to get a lot of
   // instructions within the same loops, computing the exit blocks is
@@ -146,8 +143,8 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     SmallVector<PHINode *, 16> AddedPHIs;
     SmallVector<PHINode *, 8> PostProcessPHIs;
 
-    SmallVector<PHINode *, 4> InsertedPHIs;
-    SSAUpdater SSAUpdate(&InsertedPHIs);
+    SmallVector<PHINode *, 4> LocalInsertedPHIs;
+    SSAUpdater SSAUpdate(&LocalInsertedPHIs);
     SSAUpdate.Initialize(I->getType(), I->getName());
 
     // Insert the LCSSA phi's into all of the exit blocks dominated by the
@@ -159,9 +156,10 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
       // If we already inserted something for this BB, don't reprocess it.
       if (SSAUpdate.HasValueForBlock(ExitBB))
         continue;
-      Builder.SetInsertPoint(&ExitBB->front());
-      PHINode *PN = Builder.CreatePHI(I->getType(), PredCache.size(ExitBB),
-                                      I->getName() + ".lcssa");
+      PHINode *PN = PHINode::Create(I->getType(), PredCache.size(ExitBB),
+                                    I->getName() + ".lcssa", &ExitBB->front());
+      if (InsertedPHIs)
+        InsertedPHIs->push_back(PN);
       // Get the debug location from the original instruction.
       PN->setDebugLoc(I->getDebugLoc());
 
@@ -251,10 +249,12 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
     // SSAUpdater might have inserted phi-nodes inside other loops. We'll need
     // to post-process them to keep LCSSA form.
-    for (PHINode *InsertedPN : InsertedPHIs) {
+    for (PHINode *InsertedPN : LocalInsertedPHIs) {
       if (auto *OtherLoop = LI.getLoopFor(InsertedPN->getParent()))
         if (!L->contains(OtherLoop))
           PostProcessPHIs.push_back(InsertedPN);
+      if (InsertedPHIs)
+        InsertedPHIs->push_back(InsertedPN);
     }
 
     // Post process PHI instructions that were inserted into another disjoint
@@ -386,8 +386,7 @@ bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI) {
     }
   }
 
-  IRBuilder<> Builder(L.getHeader()->getContext());
-  Changed = formLCSSAForInstructions(Worklist, DT, *LI, Builder);
+  Changed = formLCSSAForInstructions(Worklist, DT, *LI);
 
   assert(L.isLCSSAForm(DT));
 

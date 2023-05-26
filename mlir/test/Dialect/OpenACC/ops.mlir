@@ -510,6 +510,31 @@ acc.private.recipe @privatization_memref_10_10_f32 : memref<10x10xf32> init {
   acc.terminator
 }
 
+acc.firstprivate.recipe @privatization_memref_10xf32 : memref<10xf32> init {
+^bb0(%arg0: memref<10xf32>):
+  %0 = memref.alloc() : memref<10xf32>
+  acc.yield %0 : memref<10xf32>
+} copy {
+^bb0(%arg0: memref<10xf32>, %arg1: memref<10xf32>):
+  acc.terminator
+} destroy {
+^bb0(%arg0: memref<10xf32>):
+  memref.dealloc %arg0 : memref<10xf32> 
+  acc.terminator
+}
+
+// Test optional destroy region
+acc.firstprivate.recipe @privatization_memref_20xf32 : memref<20xf32> init {
+^bb0(%arg0: memref<20xf32>):
+  %0 = memref.alloc() : memref<20xf32>
+  acc.yield %0 : memref<20xf32>
+} copy {
+^bb0(%arg0: memref<20xf32>, %arg1: memref<20xf32>):
+  acc.terminator
+}
+
+// CHECK-LABEL: acc.firstprivate.recipe @privatization_memref_20xf32 : memref<20xf32> init
+
 func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %i64value = arith.constant 1 : i64
   %i32value = arith.constant 1 : i32
@@ -1387,13 +1412,13 @@ acc.private.recipe @privatization_struct_i32_i64 : !llvm.struct<(i32, i32)> init
 // -----
 
 acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
-^bb0(%0: i64):
-  %1 = arith.constant 0 : i64
-  acc.yield %1 : i64
+^bb0(%arg0: i64):
+  %0 = arith.constant 0 : i64
+  acc.yield %0 : i64
 } combiner {
-^bb0(%0: i64, %1: i64):
-  %2 = arith.addi %0, %1 : i64
-  acc.yield %2 : i64
+^bb0(%arg0: i64, %arg1: i64):
+  %0 = arith.addi %arg0, %arg1 : i64
+  acc.yield %0 : i64
 }
 
 // CHECK-LABEL: acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator <add> init {
@@ -1405,3 +1430,40 @@ acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
 // CHECK:         %[[RES:.*]] = arith.addi %[[ARG0]], %[[ARG1]] : i64
 // CHECK:         acc.yield %[[RES]] : i64
 // CHECK:       }
+
+func.func @acc_reduc_test(%a : i64) -> () {
+  acc.parallel reduction(@reduction_add_i64 -> %a : i64) {
+    acc.loop reduction(@reduction_add_i64 -> %a : i64) {
+      acc.yield
+    }
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_reduc_test(
+// CHECK-SAME:    %[[ARG0:.*]]: i64)
+// CHECK:         acc.parallel reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
+// CHECK:           acc.loop reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
+
+// -----
+
+acc.reduction.recipe @reduction_add_i64 : i64 reduction_operator<add> init {
+^bb0(%0: i64):
+  %1 = arith.constant 0 : i64
+  acc.yield %1 : i64
+} combiner {
+^bb0(%0: i64, %1: i64):
+  %2 = arith.addi %0, %1 : i64
+  acc.yield %2 : i64
+}
+
+func.func @acc_reduc_test(%a : i64) -> () {
+  acc.serial reduction(@reduction_add_i64 -> %a : i64) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_reduc_test(
+// CHECK-SAME:    %[[ARG0:.*]]: i64)
+// CHECK:         acc.serial reduction(@reduction_add_i64 -> %[[ARG0]] : i64)

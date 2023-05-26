@@ -32,7 +32,7 @@ if.then:                                          ; preds = %entry
   store i32 0, ptr @f, align 4, !tbaa !2
   br label %if.end
 
-; DARWIN-NOT:           Merging into block
+; DARWIN:             Merging into block
 ; LINUX:    	      Merging into block
 
 if.end:                                           ; preds = %entry.if.end_crit_edge, %if.then

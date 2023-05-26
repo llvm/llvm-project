@@ -206,11 +206,11 @@ public:
     { this->init(__sb); }
     ~basic_ostream() override;
 protected:
-    inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+    inline _LIBCPP_INLINE_VISIBILITY
     basic_ostream(basic_ostream&& __rhs);
 
     // 27.7.2.3 Assign/swap
-    inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+    inline _LIBCPP_INLINE_VISIBILITY
     basic_ostream& operator=(basic_ostream&& __rhs);
 
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
@@ -253,7 +253,7 @@ public:
     basic_ostream& operator<<(const void* __p);
 
 #if _LIBCPP_STD_VER >= 23
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+    _LIBCPP_HIDE_FROM_ABI
     basic_ostream& operator<<(const volatile void* __p) {
         return operator<<(const_cast<const void*>(__p));
     }
@@ -264,7 +264,7 @@ public:
 #if _LIBCPP_STD_VER >= 17
 // LWG 2221 - nullptr. This is not backported to older standards modes.
 // See https://reviews.llvm.org/D127033 for more info on the rationale.
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+    _LIBCPP_INLINE_VISIBILITY
     basic_ostream& operator<<(nullptr_t)
     { return *this << "nullptr"; }
 #endif
@@ -283,7 +283,7 @@ public:
     basic_ostream& seekp(off_type __off, ios_base::seekdir __dir);
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+    _LIBCPP_INLINE_VISIBILITY
     basic_ostream() {}  // extension, intentially does not initialize
 };
 
@@ -299,7 +299,7 @@ public:
     sentry(const sentry&) = delete;
     sentry& operator=(const sentry&) = delete;
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
+    _LIBCPP_INLINE_VISIBILITY
     explicit operator bool() const {return __ok_;}
 };
 

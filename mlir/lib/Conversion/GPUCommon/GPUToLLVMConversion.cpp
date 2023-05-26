@@ -1470,18 +1470,23 @@ LogicalResult ConvertSpMMOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
+template <typename T>
+static void addOpaquePointerConversion(LLVMTypeConverter &converter) {
+  converter.addConversion([&converter](T) -> Type {
+    return converter.getPointerType(
+        IntegerType::get(&converter.getContext(), 8));
+  });
+}
+
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns,
                                                StringRef gpuBinaryAnnotation,
                                                bool kernelBarePtrCallConv) {
-  converter.addConversion([&converter](gpu::AsyncTokenType type) -> Type {
-    return converter.getPointerType(
-        IntegerType::get(&converter.getContext(), 8));
-  });
-  converter.addConversion([&converter](gpu::SparseHandleType type) -> Type {
-    return converter.getPointerType(
-        IntegerType::get(&converter.getContext(), 8));
-  });
+  addOpaquePointerConversion<gpu::AsyncTokenType>(converter);
+  addOpaquePointerConversion<gpu::SparseDnVecHandleType>(converter);
+  addOpaquePointerConversion<gpu::SparseDnMatHandleType>(converter);
+  addOpaquePointerConversion<gpu::SparseSpMatHandleType>(converter);
+  addOpaquePointerConversion<gpu::SparseEnvHandleType>(converter);
 
   patterns.add<ConvertAllocOpToGpuRuntimeCallPattern,
                ConvertDeallocOpToGpuRuntimeCallPattern,

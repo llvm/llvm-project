@@ -21,13 +21,16 @@ class DexExpectStepKind(CommandBase):
 
     def __init__(self, *args):
         if len(args) != 2:
-            raise TypeError('expected two args')
+            raise TypeError("expected two args")
 
         try:
             step_kind = StepKind[args[0]]
         except KeyError:
-            raise TypeError('expected arg 0 to be one of {}'.format(
-                [kind for kind, _ in StepKind.__members__.items()]))
+            raise TypeError(
+                "expected arg 0 to be one of {}".format(
+                    [kind for kind, _ in StepKind.__members__.items()]
+                )
+            )
 
         self.name = step_kind
         self.count = args[1]

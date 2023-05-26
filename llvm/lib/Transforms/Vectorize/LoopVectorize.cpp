@@ -8487,7 +8487,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWiden(Instruction *I,
       Ops[1] = SafeRHS;
       return new VPWidenRecipe(*I, make_range(Ops.begin(), Ops.end()));
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case Instruction::Add:
   case Instruction::And:

@@ -708,6 +708,21 @@ struct IntrinsicTypeSpec {
       u;
 };
 
+// Extension: Vector type
+WRAPPER_CLASS(UnsignedTypeSpec, std::optional<KindSelector>);
+struct VectorElementType {
+  UNION_CLASS_BOILERPLATE(VectorElementType);
+  std::variant<IntegerTypeSpec, IntrinsicTypeSpec::Real, UnsignedTypeSpec> u;
+};
+WRAPPER_CLASS(IntrinsicVectorTypeSpec, VectorElementType);
+struct VectorTypeSpec {
+  UNION_CLASS_BOILERPLATE(VectorTypeSpec);
+  EMPTY_CLASS(PairVectorTypeSpec);
+  EMPTY_CLASS(QuadVectorTypeSpec);
+  std::variant<IntrinsicVectorTypeSpec, PairVectorTypeSpec, QuadVectorTypeSpec>
+      u;
+};
+
 // R755 type-param-spec -> [keyword =] type-param-value
 struct TypeParamSpec {
   TUPLE_CLASS_BOILERPLATE(TypeParamSpec);
@@ -748,7 +763,9 @@ struct DeclarationTypeSpec {
   EMPTY_CLASS(ClassStar);
   EMPTY_CLASS(TypeStar);
   WRAPPER_CLASS(Record, Name);
-  std::variant<IntrinsicTypeSpec, Type, Class, ClassStar, TypeStar, Record> u;
+  std::variant<IntrinsicTypeSpec, Type, Class, ClassStar, TypeStar, Record,
+      VectorTypeSpec>
+      u;
 };
 
 // R709 kind-param -> digit-string | scalar-int-constant-name

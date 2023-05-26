@@ -347,10 +347,82 @@ void transform::FuseIntoContainingOp::build(OpBuilder &builder,
   result.addTypes(transform::AnyOpType::get(builder.getContext()));
 }
 
+/// Add new operands to the forall op for users of the producerOp
+/// that are dominated by the containing scf.forall op.
+static Operation *replaceForAllWithNewSignature(
+    RewriterBase &rewriter, Diagnostic &diag, Operation *producerOp,
+    Operation *containingOp, TilingResult &tileAndFuseResult,
+    int64_t resultNumber, SmallVector<OpFoldResult> &offsets,
+    SmallVector<OpFoldResult> &sizes) {
+
+  // Count number of users not including the containing op
+  SetVector<Operation *> dominatedUsers;
+  DominanceInfo domInfo(containingOp);
+  for (Operation *user : producerOp->getResult(resultNumber).getUsers()) {
+    if ((user != containingOp) && (domInfo.dominates(containingOp, user))) {
+      dominatedUsers.insert(user);
+    }
+  }
+  if (dominatedUsers.size() == 0)
+    return nullptr;
+
+  // Create new scf.forall op
+  auto forallOp = cast<scf::ForallOp>(containingOp);
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(forallOp);
+
+  // Get new output
+  Location loc = forallOp.getLoc();
+  auto genericOp = dyn_cast<linalg::GenericOp>(producerOp);
+  if (!genericOp)
+    return nullptr;
+  SmallVector<Value> outputs = genericOp.getOutputs();
+  SmallVector<Value> newOuts(forallOp.getOutputs());
+  newOuts.push_back(outputs[resultNumber]);
+
+  // Create new scf.forall op
+  auto newforallOp = rewriter.create<scf::ForallOp>(
+      loc, forallOp.getMixedLowerBound(), forallOp.getMixedUpperBound(),
+      forallOp.getMixedStep(), newOuts, forallOp.getMapping());
+  rewriter.eraseBlock(newforallOp.getBody());
+  newforallOp.getRegion().takeBody(forallOp.getRegion());
+
+  // Add additional block argument for new value being returned
+  newforallOp.getBody()->addArgument(newOuts.back().getType(),
+                                     newOuts.back().getLoc());
+
+  // Fix terminator
+  scf::InParallelOp terminatorOp = newforallOp.getTerminator();
+  SmallVector<Operation *> yieldingOps = llvm::to_vector<4>(llvm::map_range(
+      terminatorOp.getYieldingOps(), [](Operation &op) { return &op; }));
+  Operation *firstYieldOp = yieldingOps.front();
+  rewriter.setInsertionPoint(firstYieldOp);
+  Value src = tileAndFuseResult.tiledValues[0];
+  Value dst = newforallOp.getOutputBlockArguments().back();
+  SmallVector<OpFoldResult> strides(offsets.size(), rewriter.getIndexAttr(1));
+  rewriter.create<tensor::ParallelInsertSliceOp>(firstYieldOp->getLoc(), src,
+                                                 dst, offsets, sizes, strides);
+
+  for (auto result : llvm::enumerate(forallOp.getResults())) {
+    rewriter.replaceAllUsesWith(result.value(),
+                                newforallOp->getResult(result.index()));
+  }
+  rewriter.replaceUsesWithIf(producerOp->getResult(resultNumber),
+                             newforallOp->getResults().back(),
+                             [&](OpOperand &use) {
+                               Operation *user = use.getOwner();
+                               return dominatedUsers.contains(user);
+                             });
+  return newforallOp;
+}
+
 /// Find the first "extract" user of `producerOp` and tile it right before its
 /// use. The tiled op is fused under the `containingOp`.
 /// Return this fused op on success or nullptr if anything fails.
-static SmallVector<Operation *>
+/// If tiled op has uses that are dominated by `containingOp`, return
+/// a new `containingOp` with results of the fused op appended to
+/// results of the `containingOp` or nullptr if there are no dominated uses.
+static std::tuple<SmallVector<Operation *>, Operation *>
 tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
                            Operation *producerOp, Operation *containingOp) {
   LLVM_DEBUG(DBGS() << "Try to fuse a direct extract use\n");
@@ -386,10 +458,13 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       cast<OpResult>(sliceOpToTile.getSource()).getResultNumber();
   LLVM_DEBUG(DBGS() << "resultNumber: " << resultNumber << "\n");
 
+  SmallVector<OpFoldResult> offsets = sliceOpToTile.getMixedOffsets();
+  SmallVector<OpFoldResult> sizes = sliceOpToTile.getMixedSizes();
+
   FailureOr<TilingResult> tileAndFuseResult =
-      tileableProducer.generateResultTileValue(rewriter, resultNumber,
-                                               sliceOpToTile.getMixedOffsets(),
-                                               sliceOpToTile.getMixedSizes());
+      tileableProducer.generateResultTileValue(rewriter, resultNumber, offsets,
+                                               sizes);
+
   if (failed(tileAndFuseResult)) {
     diag.attachNote(tileableProducer->getLoc())
         << "failed to tile producer op: " << *tileableProducer;
@@ -408,7 +483,13 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       cast<RankedTensorType>(sliceOpToTile->getResult(0).getType()).getShape());
   assert(succeeded(maybeRankReduced) && "unexpected shape");
   rewriter.replaceOp(sliceOpToTile, *maybeRankReduced);
-  return tileAndFuseResult->tiledOps;
+
+  // Add new outputs to containing op, if required
+  Operation *newContainingOp = replaceForAllWithNewSignature(
+      rewriter, diag, producerOp, containingOp, *tileAndFuseResult,
+      resultNumber, offsets, sizes);
+
+  return std::make_tuple(tileAndFuseResult->tiledOps, newContainingOp);
 }
 
 /// First, find the first "scf::ForallOp" user of `producerOp` and ensure
@@ -635,11 +716,15 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
     // cases, we can tile/clone once and reuse the value for each use.
     // Futhermore, producers should then be traversed according to a
     // topological sorting.
-    SmallVector<Operation *> tiledOps =
+    auto [tiledOps, newContainingOp] =
         tileAndFuseFirstExtractUse(rewriter, diag, producerOp, containingOp);
     if (!tiledOps.empty()) {
       LLVM_DEBUG(DBGS() << "\nFused a direct extract use\n" << *containingOp);
       fusedOps.append(tiledOps);
+      if (newContainingOp) {
+        rewriter.eraseOp(containingOp);
+        containingOp = newContainingOp;
+      }
       continue;
     }
 

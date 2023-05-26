@@ -1,4 +1,4 @@
-//===-- Map from signal numbers to strings in posix -------------*- C++ -*-===//
+//===-- Map of POSIX signal numbers to strings ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNAL_TABLE_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNAL_TABLE_H
-
-#include <signal.h>
+#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNALS_H
+#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNALS_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/StringUtil/message_mapper.h"
 
-namespace __llvm_libc::internal {
+#include <signal.h> // For signal numbers
+
+namespace __llvm_libc {
 
 inline constexpr MsgTable<22> POSIX_SIGNALS = {
     MsgMapping(SIGHUP, "Hangup"),
@@ -41,6 +41,6 @@ inline constexpr MsgTable<22> POSIX_SIGNALS = {
     MsgMapping(SIGSYS, "Bad system call"),
 };
 
-} // namespace __llvm_libc::internal
+} // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNAL_TABLE_H
+#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNALS_H

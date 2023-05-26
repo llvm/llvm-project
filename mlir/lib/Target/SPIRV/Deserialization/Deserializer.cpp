@@ -267,6 +267,27 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     }
     typeDecorations[words[0]] = words[2];
     break;
+  case spirv::Decoration::LinkageAttributes: {
+    if (words.size() < 4) {
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName
+             << " needs at least 1 string and 1 integer literal";
+    }
+    // LinkageAttributes has two parameters ["linkageName", linkageType]
+    // e.g., OpDecorate %imported_func LinkageAttributes "outside.func" Import
+    // "linkageName" is a stringliteral encoded as uint32_t,
+    // hence the size of name is variable length which results in words.size()
+    // being variable length, words.size() = 3 + strlen(name)/4 + 1 or
+    // 3 + ceildiv(strlen(name), 4).
+    unsigned wordIndex = 2;
+    auto linkageName = spirv::decodeStringLiteral(words, wordIndex).str();
+    auto linkageTypeAttr = opBuilder.getAttr<::mlir::spirv::LinkageTypeAttr>(
+        static_cast<::mlir::spirv::LinkageType>(words[wordIndex++]));
+    auto linkageAttr = opBuilder.getAttr<::mlir::spirv::LinkageAttributesAttr>(
+        linkageName, linkageTypeAttr);
+    decorations[words[0]].set(symbol, linkageAttr.dyn_cast<Attribute>());
+    break;
+  }
   case spirv::Decoration::Aliased:
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
@@ -380,6 +401,12 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   std::string fnName = getFunctionSymbol(fnID);
   auto funcOp = opBuilder.create<spirv::FuncOp>(
       unknownLoc, fnName, functionType, fnControl.value());
+  // Processing other function attributes.
+  if (decorations.count(fnID)) {
+    for (auto attr : decorations[fnID].getAttrs()) {
+      funcOp->setAttr(attr.getName(), attr.getValue());
+    }
+  }
   curFunction = funcMap[fnID] = funcOp;
   auto *entryBlock = funcOp.addEntryBlock();
   LLVM_DEBUG({
@@ -429,6 +456,16 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
       valueMap[operands[1]] = argValue;
     }
   }
+
+  // entryBlock is needed to access the arguments, Once that is done, we can
+  // erase the block for functions with 'Import' LinkageAttributes, since these
+  // are essentially function declarations, so they have no body.
+  auto linkageAttr = funcOp.getLinkageAttributes();
+  auto hasImportLinkage =
+      linkageAttr && (linkageAttr.value().getLinkageType().getValue() ==
+                      spirv::LinkageType::Import);
+  if (hasImportLinkage)
+    funcOp.eraseBody();
 
   // RAII guard to reset the insertion point to the module's region after
   // deserializing the body of this function.

@@ -198,9 +198,6 @@ MLIR_CAPI_EXPORTED MlirType mlirComplexTypeGetElementType(MlirType type);
 // Shaped type.
 //===----------------------------------------------------------------------===//
 
-/// Returns the typeID of an Shaped type.
-MLIR_CAPI_EXPORTED MlirTypeID mlirShapedTypeGetTypeID(void);
-
 /// Checks whether the given type is a Shaped type.
 MLIR_CAPI_EXPORTED bool mlirTypeIsAShaped(MlirType type);
 
