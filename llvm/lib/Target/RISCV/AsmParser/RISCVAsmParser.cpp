@@ -211,6 +211,12 @@ class RISCVAsmParser : public MCTargetAsmParser {
   bool parseDirectiveInsn(SMLoc L);
   bool parseDirectiveVariantCC();
 
+  /// Helper to reset target features for a new arch string. It
+  /// also records the new arch string that is expanded by RISCVISAInfo
+  /// and reports error for invalid arch string.
+  bool resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
+                   bool FromOptionDirective);
+
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(getSTI().hasFeature(Feature))) {
       MCSubtargetInfo &STI = copySTI();
@@ -2626,6 +2632,49 @@ bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
   return true;
 }
 
+bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
+                                 bool FromOptionDirective) {
+  for (auto Feature : RISCVFeatureKV)
+    if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+      clearFeatureBits(Feature.Value, Feature.Key);
+
+  auto ParseResult = llvm::RISCVISAInfo::parseArchString(
+      Arch, /*EnableExperimentalExtension=*/true,
+      /*ExperimentalExtensionVersionCheck=*/true);
+  if (!ParseResult) {
+    std::string Buffer;
+    raw_string_ostream OutputErrMsg(Buffer);
+    handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
+      OutputErrMsg << "invalid arch name '" << Arch << "', "
+                   << ErrMsg.getMessage();
+    });
+
+    return Error(Loc, OutputErrMsg.str());
+  }
+  auto &ISAInfo = *ParseResult;
+
+  for (auto Feature : RISCVFeatureKV)
+    if (ISAInfo->hasExtension(Feature.Key))
+      setFeatureBits(Feature.Value, Feature.Key);
+
+  if (FromOptionDirective) {
+    if (ISAInfo->getXLen() == 32 && isRV64())
+      return Error(Loc, "bad arch string switching from rv64 to rv32");
+    else if (ISAInfo->getXLen() == 64 && !isRV64())
+      return Error(Loc, "bad arch string switching from rv32 to rv64");
+  }
+
+  if (ISAInfo->getXLen() == 32)
+    clearFeatureBits(RISCV::Feature64Bit, "64bit");
+  else if (ISAInfo->getXLen() == 64)
+    setFeatureBits(RISCV::Feature64Bit, "64bit");
+  else
+    return Error(Loc, "bad arch string " + Arch);
+
+  Result = ISAInfo->toString();
+  return false;
+}
+
 bool RISCVAsmParser::parseDirectiveOption() {
   MCAsmParser &Parser = getParser();
   // Get the option token.
@@ -2656,6 +2705,109 @@ bool RISCVAsmParser::parseDirectiveOption() {
       return Error(StartLoc, ".option pop with no .option push");
 
     return false;
+  }
+
+  if (Option == "arch") {
+
+    Parser.parseComma();
+
+    bool PrefixEmitted = false;
+    bool IsExtensionList = false;
+    while (true) {
+      bool IsAdd;
+      if (Parser.getTok().is(AsmToken::Plus)) {
+        IsAdd = true;
+        IsExtensionList = true;
+      } else if (Parser.getTok().is(AsmToken::Minus)) {
+        IsAdd = false;
+        IsExtensionList = true;
+      } else {
+        SMLoc ArchLoc = Parser.getTok().getLoc();
+
+        if (IsExtensionList)
+          return Error(ArchLoc, "unexpected token, expected + or -");
+
+        StringRef Arch;
+        if (Parser.getTok().is(AsmToken::Identifier))
+          Arch = Parser.getTok().getString();
+        else
+          return Error(ArchLoc,
+                       "unexpected token, expected identifier");
+
+        std::string Result;
+        if (resetToArch(Arch, ArchLoc, Result, true))
+          return true;
+
+        getTargetStreamer().emitDirectiveOptionArchFullArch(Result,
+                                                            PrefixEmitted);
+
+        Parser.Lex();
+
+        return Parser.parseToken(AsmToken::EndOfStatement,
+                                 "unexpected token, expected end of statement");
+      }
+
+      Parser.Lex();
+
+      if (Parser.getTok().isNot(AsmToken::Identifier))
+        return Error(Parser.getTok().getLoc(),
+                     "unexpected token, expected identifier");
+
+      StringRef ExtStr = Parser.getTok().getString();
+
+      ArrayRef<SubtargetFeatureKV> KVArray(RISCVFeatureKV);
+      auto Ext = llvm::lower_bound(KVArray, ExtStr);
+      if (Ext == KVArray.end() || StringRef(Ext->Key) != ExtStr ||
+          !RISCVISAInfo::isSupportedExtension(ExtStr)) {
+        if (isDigit(ExtStr.back()))
+          return Error(
+              Parser.getTok().getLoc(),
+              "Extension version number parsing not currently implemented");
+        return Error(Parser.getTok().getLoc(), "unknown extension feature");
+      }
+
+      SMLoc Loc = Parser.getTok().getLoc();
+
+      Parser.Lex(); // Eat arch string
+      bool HasComma = getTok().is(AsmToken::Comma);
+      if (IsAdd) {
+        setFeatureBits(Ext->Value, Ext->Key);
+        auto ParseResult = RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits());
+        if (!ParseResult) {
+          std::string Buffer;
+          raw_string_ostream OutputErrMsg(Buffer);
+          handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
+            OutputErrMsg << ErrMsg.getMessage();
+          });
+
+          return Error(Loc, OutputErrMsg.str());
+        }
+        getTargetStreamer().emitDirectiveOptionArchPlus(Ext->Key, PrefixEmitted,
+                                                        HasComma);
+      } else {
+        // It is invalid to disable an extension that there are other enabled
+        // extensions depend on it.
+        // TODO: Make use of RISCVISAInfo to handle this
+        for (auto Feature : KVArray) {
+          if (getSTI().hasFeature(Feature.Value) &&
+              Feature.Implies.test(Ext->Value))
+            return Error(Loc,
+                         Twine("Can't disable ") + Ext->Key + " extension, " +
+                             Feature.Key + " extension requires " + Ext->Key +
+                             " extension be enabled");
+        }
+
+        clearFeatureBits(Ext->Value, Ext->Key);
+        getTargetStreamer().emitDirectiveOptionArchMinus(
+            Ext->Key, PrefixEmitted, HasComma);
+      }
+
+      if (!HasComma)
+        return Parser.parseToken(AsmToken::EndOfStatement,
+                                 "unexpected token, expected end of statement");
+      // Eat comma
+      Parser.Lex();
+    }
   }
 
   if (Option == "rvc") {
@@ -2714,9 +2866,9 @@ bool RISCVAsmParser::parseDirectiveOption() {
   }
 
   // Unknown option.
-  Warning(Parser.getTok().getLoc(),
-          "unknown option, expected 'push', 'pop', 'rvc', 'norvc', 'relax' or "
-          "'norelax'");
+  Warning(Parser.getTok().getLoc(), "unknown option, expected 'push', 'pop', "
+                                    "'rvc', 'norvc', 'arch', 'relax' or "
+                                    "'norelax'");
   Parser.eatToEndOfStatement();
   return false;
 }
@@ -2791,39 +2943,12 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
   else if (Tag != RISCVAttrs::ARCH)
     getTargetStreamer().emitTextAttribute(Tag, StringValue);
   else {
-    StringRef Arch = StringValue;
-    for (auto Feature : RISCVFeatureKV)
-      if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
-        clearFeatureBits(Feature.Value, Feature.Key);
-
-    auto ParseResult = llvm::RISCVISAInfo::parseArchString(
-        StringValue, /*EnableExperimentalExtension=*/true,
-        /*ExperimentalExtensionVersionCheck=*/true);
-    if (!ParseResult) {
-      std::string Buffer;
-      raw_string_ostream OutputErrMsg(Buffer);
-      handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
-        OutputErrMsg << "invalid arch name '" << Arch << "', "
-                     << ErrMsg.getMessage();
-      });
-
-      return Error(ValueExprLoc, OutputErrMsg.str());
-    }
-    auto &ISAInfo = *ParseResult;
-
-    for (auto Feature : RISCVFeatureKV)
-      if (ISAInfo->hasExtension(Feature.Key))
-        setFeatureBits(Feature.Value, Feature.Key);
-
-    if (ISAInfo->getXLen() == 32)
-      clearFeatureBits(RISCV::Feature64Bit, "64bit");
-    else if (ISAInfo->getXLen() == 64)
-      setFeatureBits(RISCV::Feature64Bit, "64bit");
-    else
-      return Error(ValueExprLoc, "bad arch string " + Arch);
+    std::string Result;
+    if (resetToArch(StringValue, ValueExprLoc, Result, false))
+      return true;
 
     // Then emit the arch string.
-    getTargetStreamer().emitTextAttribute(Tag, ISAInfo->toString());
+    getTargetStreamer().emitTextAttribute(Tag, Result);
   }
 
   return false;
