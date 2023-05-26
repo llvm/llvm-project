@@ -76,9 +76,6 @@ class ToolSubst(object):
         extra_args: If specified, represents a list of arguments that will be
         appended to the tool's substitution.
 
-        explicit_path: If specified, the exact path will be used as a substitution.
-        Otherwise, the tool will be searched for as if by calling which(tool)
-
         """
         self.unresolved = unresolved
         self.extra_args = extra_args
