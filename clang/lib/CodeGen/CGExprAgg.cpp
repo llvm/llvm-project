@@ -85,8 +85,6 @@ public:
   void EmitCopy(QualType type, const AggValueSlot &dest,
                 const AggValueSlot &src);
 
-  void EmitMoveFromReturnSlot(const Expr *E, RValue Src);
-
   void EmitArrayInit(Address DestPtr, llvm::ArrayType *AType, QualType ArrayQTy,
                      Expr *ExprToVisit, ArrayRef<Expr *> Args,
                      Expr *ArrayFiller);
