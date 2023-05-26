@@ -6,10 +6,16 @@ mark_as_advanced(BOLT_TOOLS_INSTALL_DIR)
 
 macro(add_bolt_tool name)
   llvm_add_tool(BOLT ${ARGV})
+  install(TARGETS ${name}
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT ${name}
+    )
+  add_llvm_install_targets(install-${name} DEPENDS ${name} COMPONENT ${name})
 endmacro()
 
-macro(add_bolt_tool_symlink name)
-  llvm_add_tool_symlink(BOLT ${ARGV})
+macro(add_bolt_tool_symlink name dest)
+  llvm_add_tool_symlink(BOLT ${name} ${dest})
+  llvm_install_symlink(BOLT ${name} ${dest} ALWAYS_GENERATE)
 endmacro()
 
 add_subdirectory(driver)
