@@ -740,19 +740,20 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
   }
 }
 
-DebuggerSP Debugger::FindDebuggerWithInstanceName(ConstString instance_name) {
-  DebuggerSP debugger_sp;
-  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
-    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
-    DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
-    for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos) {
-      if ((*pos)->m_instance_name == instance_name) {
-        debugger_sp = *pos;
-        break;
-      }
-    }
+DebuggerSP
+Debugger::FindDebuggerWithInstanceName(llvm::StringRef instance_name) {
+  if (!g_debugger_list_ptr || !g_debugger_list_mutex_ptr)
+    return DebuggerSP();
+
+  std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+  for (const DebuggerSP &debugger_sp : *g_debugger_list_ptr) {
+    if (!debugger_sp)
+      continue;
+
+    if (llvm::StringRef(debugger_sp->GetInstanceName()) == instance_name)
+      return debugger_sp;
   }
-  return debugger_sp;
+  return DebuggerSP();
 }
 
 TargetSP Debugger::FindTargetWithProcessID(lldb::pid_t pid) {
@@ -801,13 +802,13 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_source_manager_up(), m_source_file_cache(),
       m_command_interpreter_up(
           std::make_unique<CommandInterpreter>(*this, false)),
-      m_io_handler_stack(), m_instance_name(), m_loaded_plugins(),
-      m_event_handler_thread(), m_io_handler_thread(),
+      m_io_handler_stack(),
+      m_instance_name(llvm::formatv("debugger_{0}", GetID()).str()),
+      m_loaded_plugins(), m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_broadcaster(m_broadcaster_manager_sp,
                     GetStaticBroadcasterClass().AsCString()),
       m_forward_listener_sp(), m_clear_once() {
-  m_instance_name.SetString(llvm::formatv("debugger_{0}", GetID()).str());
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties);

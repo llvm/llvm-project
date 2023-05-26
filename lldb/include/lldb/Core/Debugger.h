@@ -116,7 +116,7 @@ public:
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
   static lldb::DebuggerSP
-  FindDebuggerWithInstanceName(ConstString instance_name);
+  FindDebuggerWithInstanceName(llvm::StringRef instance_name);
 
   static size_t GetNumDebuggers();
 
@@ -359,7 +359,7 @@ public:
 
   bool GetNotifyVoid() const;
 
-  ConstString GetInstanceName() { return m_instance_name; }
+  const std::string &GetInstanceName() { return m_instance_name; }
 
   bool LoadPlugin(const FileSpec &spec, Status &error);
 
@@ -644,7 +644,7 @@ protected:
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;
-  ConstString m_instance_name;
+  const std::string m_instance_name;
   static LoadPluginCallbackType g_load_plugin_callback;
   typedef std::vector<llvm::sys::DynamicLibrary> LoadedPluginsList;
   LoadedPluginsList m_loaded_plugins;
