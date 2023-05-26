@@ -98,6 +98,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
