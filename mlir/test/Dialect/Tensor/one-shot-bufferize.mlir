@@ -398,3 +398,21 @@ func.func @parallel_insert_slice_source_out_of_place(%in: tensor<1xf32>, %out: t
   // CHECK: }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor.reshape(
+func.func @tensor.reshape() -> tensor<2x2x5xf32> {
+  // CHECK-DAG: %[[M1:.*]] = memref.cast %{{.*}} : memref<2x10xf32> to memref<?x10xf32>
+  %t1_static = arith.constant dense<0.> : tensor<2x10xf32>
+  %t1 = tensor.cast %t1_static : tensor<2x10xf32> to tensor<?x10xf32>
+
+  // CHECK: %[[SHAPE:.*]] = memref.get_global @{{.*}} : memref<3xi64>
+  %shape = arith.constant dense<[2, 2, 5]> : tensor<3xi64>
+
+  // CHECK: %[[RESHAPED:.*]] = memref.reshape %[[M1]](%[[SHAPE]]) : (memref<?x10xf32>, memref<3xi64>) -> memref<2x2x5xf32>
+  %reshaped = tensor.reshape %t1(%shape) : (tensor<?x10xf32>, tensor<3xi64>) -> tensor<2x2x5xf32>
+
+  // CHECK: return %[[RESHAPED]]
+  return %reshaped : tensor<2x2x5xf32>
+}

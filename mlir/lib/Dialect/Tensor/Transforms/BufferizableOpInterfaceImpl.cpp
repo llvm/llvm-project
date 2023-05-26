@@ -992,8 +992,8 @@ struct ReshapeOpInterface
         getBuffer(rewriter, reshapeOp.getShape(), options);
     if (failed(srcBuffer) || failed(shapeBuffer))
       return failure();
-    auto resultMemRefType = getMemRefType(
-        reshapeOp.getResult(), options, /*layout=*/{},
+    auto resultMemRefType = getMemRefTypeWithStaticIdentityLayout(
+        reshapeOp.getResult().getType(),
         cast<BaseMemRefType>(srcBuffer->getType()).getMemorySpace());
     replaceOpWithNewBufferizedOp<memref::ReshapeOp>(
         rewriter, op, resultMemRefType, *srcBuffer, *shapeBuffer);
