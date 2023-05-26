@@ -821,6 +821,8 @@ libc_support_library(
     srcs = glob(["src/__support/StringUtil/tables/**/*.h"]) + [
         "src/__support/StringUtil/error_to_string.cpp",
         "src/__support/StringUtil/message_mapper.h",
+        "src/__support/StringUtil/platform_errors.h",
+        "src/__support/StringUtil/platform_signals.h",
         "src/__support/StringUtil/signal_to_string.cpp",
     ],
     hdrs = [
