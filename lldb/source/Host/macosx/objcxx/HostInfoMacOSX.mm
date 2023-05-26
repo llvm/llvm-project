@@ -523,39 +523,67 @@ static llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
   return path;
 }
 
-llvm::Expected<llvm::StringRef> HostInfoMacOSX::GetSDKRoot(SDKOptions options) {
-  struct ErrorOrPath {
-    std::string str;
-    bool is_error;
-  };
-  static llvm::StringMap<ErrorOrPath> g_sdk_path;
-  static std::mutex g_sdk_path_mutex;
+namespace {
+struct ErrorOrPath {
+  std::string str;
+  bool is_error;
+};
+} // namespace
 
-  std::lock_guard<std::mutex> guard(g_sdk_path_mutex);
+static llvm::Expected<llvm::StringRef>
+find_cached_path(llvm::StringMap<ErrorOrPath> &cache, std::mutex &mutex,
+                 llvm::StringRef key,
+                 std::function<llvm::Expected<std::string>(void)> compute) {
+  std::lock_guard<std::mutex> guard(mutex);
   LLDB_SCOPED_TIMER();
 
-  if (!options.XcodeSDKSelection)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "XCodeSDK not specified");
-  XcodeSDK sdk = *options.XcodeSDKSelection;
-
-  auto key = sdk.GetString();
-  auto it = g_sdk_path.find(key);
-  if (it != g_sdk_path.end()) {
+  auto it = cache.find(key);
+  if (it != cache.end()) {
     if (it->second.is_error)
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      it->second.str);
-    else
-      return it->second.str;
+    return it->second.str;
   }
-  auto path_or_err = GetXcodeSDK(sdk);
+  auto path_or_err = compute();
   if (!path_or_err) {
     std::string error = toString(path_or_err.takeError());
-    g_sdk_path.insert({key, {error, true}});
+    cache.insert({key, {error, true}});
     return llvm::createStringError(llvm::inconvertibleErrorCode(), error);
   }
-  auto it_new = g_sdk_path.insert({key, {*path_or_err, false}});
+  auto it_new = cache.insert({key, {*path_or_err, false}});
   return it_new.first->second.str;
+}
+
+llvm::Expected<llvm::StringRef> HostInfoMacOSX::GetSDKRoot(SDKOptions options) {
+  static llvm::StringMap<ErrorOrPath> g_sdk_path;
+  static std::mutex g_sdk_path_mutex;
+  if (!options.XcodeSDKSelection)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "XcodeSDK not specified");
+  XcodeSDK sdk = *options.XcodeSDKSelection;
+  auto key = sdk.GetString();
+  return find_cached_path(g_sdk_path, g_sdk_path_mutex, key, [&](){
+    return GetXcodeSDK(sdk);
+  });
+}
+
+llvm::Expected<llvm::StringRef>
+HostInfoMacOSX::FindSDKTool(XcodeSDK sdk, llvm::StringRef tool) {
+  static llvm::StringMap<ErrorOrPath> g_tool_path;
+  static std::mutex g_tool_path_mutex;
+  std::string key;
+  llvm::raw_string_ostream(key) << sdk.GetString() << ":" << tool;
+  return find_cached_path(
+      g_tool_path, g_tool_path_mutex, key,
+      [&]() -> llvm::Expected<std::string> {
+        std::string sdk_name = XcodeSDK::GetCanonicalName(sdk.Parse());
+        if (sdk_name.empty())
+          return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                         "Unrecognized SDK type: " +
+                                             sdk.GetString());
+        llvm::SmallVector<llvm::StringRef, 2> find = {"-find", tool};
+        return xcrun(sdk_name, find);
+      });
 }
 
 namespace {
