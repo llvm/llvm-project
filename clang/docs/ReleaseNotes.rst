@@ -445,6 +445,9 @@ Bug Fixes in This Version
   (`#62789 <https://github.com/llvm/llvm-project/issues/62789>`_).
 - Fix a crash when instantiating a non-type template argument in a dependent scope.
   (`#62533 <https://github.com/llvm/llvm-project/issues/62533>`_).
+- Fix crash when diagnosing default comparison method.
+  (`#62791 <https://github.com/llvm/llvm-project/issues/62791>`_) and
+  (`#62102 <https://github.com/llvm/llvm-project/issues/62102>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
