@@ -578,7 +578,6 @@ lowerFromCIRToMLIRToLLVMIR(mlir::ModuleOp theModule,
   mlir::registerBuiltinDialectTranslation(*mlirCtx);
   mlir::registerLLVMDialectTranslation(*mlirCtx);
 
-  LLVMContext llvmContext;
   auto llvmModule = mlir::translateModuleToLLVMIR(theModule, llvmCtx);
 
   if (!llvmModule)

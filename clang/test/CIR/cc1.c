@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-mlir %s -o %t.mlir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-direct-lowering -emit-mlir %s -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s -check-prefix=MLIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
@@ -24,4 +24,3 @@ void foo() {}
 //      ASM: retq
 
 // OBJ: 0: c3 retq
-
