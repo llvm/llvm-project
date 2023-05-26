@@ -51,6 +51,44 @@ void CIRGenFunction::buildCXXTemporary(const CXXTemporary *Temporary,
               /*useEHCleanup*/ true);
 }
 
+Address CIRGenFunction::createCleanupActiveFlag() { llvm_unreachable("NYI"); }
+
+DominatingValue<RValue>::saved_type
+DominatingValue<RValue>::saved_type::save(CIRGenFunction &CGF, RValue rv) {
+  llvm_unreachable("NYI");
+}
+
+/// Deactive a cleanup that was created in an active state.
+void CIRGenFunction::DeactivateCleanupBlock(EHScopeStack::stable_iterator C,
+                                            mlir::Operation *dominatingIP) {
+  assert(C != EHStack.stable_end() && "deactivating bottom of stack?");
+  EHCleanupScope &Scope = cast<EHCleanupScope>(*EHStack.find(C));
+  assert(Scope.isActive() && "double deactivation");
+
+  // If it's the top of the stack, just pop it, but do so only if it belongs
+  // to the current RunCleanupsScope.
+  if (C == EHStack.stable_begin() &&
+      CurrentCleanupScopeDepth.strictlyEncloses(C)) {
+    // Per comment below, checking EHAsynch is not really necessary
+    // it's there to assure zero-impact w/o EHAsynch option
+    if (!Scope.isNormalCleanup() && getLangOpts().EHAsynch) {
+      llvm_unreachable("NYI");
+    } else {
+      // From LLVM: If it's a normal cleanup, we need to pretend that the
+      // fallthrough is unreachable.
+      // CIR remarks: LLVM uses an empty insertion point to signal behavior
+      // change to other codegen paths (triggered by PopCleanupBlock).
+      // CIRGen doesn't do that yet, but let's mimic just in case.
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.clearInsertionPoint();
+      PopCleanupBlock();
+    }
+    return;
+  }
+
+  llvm_unreachable("NYI");
+}
+
 void CIRGenFunction::initFullExprCleanupWithFlag(Address ActiveFlag) {
   // Set that as the active flag in the cleanup.
   EHCleanupScope &cleanup = cast<EHCleanupScope>(*EHStack.begin());
@@ -140,7 +178,7 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   // rest of CIR gen doesn't need to worry about this; it only happens
   // during the execution of PopCleanupBlocks().
   bool HasTerminator =
-      !FallthroughSource->empty() &&
+      FallthroughSource && !FallthroughSource->empty() &&
       FallthroughSource->back().mightHaveTrait<mlir::OpTrait::IsTerminator>();
   bool HasPrebranchedFallthrough = (FallthroughSource && HasTerminator &&
                                     FallthroughSource->getTerminator());
@@ -167,7 +205,10 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 
   // If we don't need the cleanup at all, we're done.
   if (!RequiresNormalCleanup && !RequiresEHCleanup) {
-    llvm_unreachable("NYI");
+    destroyOptimisticNormalEntry(*this, Scope);
+    EHStack.popCleanup(); // safe because there are no fixups
+    assert(EHStack.getNumBranchFixups() == 0 || EHStack.hasNormalCleanups());
+    return;
   }
 
   // Copy the cleanup emission data out.  This uses either a stack

@@ -1258,4 +1258,55 @@ template <typename Ret, typename... Args> class packaged_task<Ret(Args...)> {
   // TODO: Add some actual implementation.
 };
 
+#if __has_feature(cxx_decltype)
+typedef decltype(nullptr) nullptr_t;
+
+template<class _Tp>
+class shared_ptr
+{
+public:
+  constexpr shared_ptr(nullptr_t);
+  explicit shared_ptr(_Tp* __p);
+
+  shared_ptr(shared_ptr&& __r) { }
+
+  ~shared_ptr();
+
+  // shared_ptr& operator=(shared_ptr&& __r);
+  shared_ptr<_Tp>& operator=(const shared_ptr& __r) noexcept
+  {
+      return *this;
+  }
+
+  template<class _Yp>
+  shared_ptr<_Tp>& operator=(const shared_ptr<_Yp>& __r) noexcept
+  {
+      return *this;
+  }
+
+  shared_ptr<_Tp>& operator=(shared_ptr&& __r) noexcept
+  {
+      return *this;
+  }
+
+  template<class _Yp>
+  shared_ptr<_Tp>& operator=(shared_ptr<_Yp>&& __r)
+  {
+      return *this;
+  }
+};
+
+template<class _Tp>
+inline
+constexpr
+shared_ptr<_Tp>::shared_ptr(nullptr_t) {
+}
+
+#endif // __has_feature(cxx_decltype)
+
+template <typename T, typename... Args>
+  shared_ptr<T> make_shared(Args &&...args) {
+    return shared_ptr<T>(new T(static_cast<Args &&>(args)...));
+  }
+
 } // namespace std
