@@ -358,6 +358,11 @@ def XORI_NM  : ArithLogicI32<"xori", uimm12_nm, GPR32NMOpnd, imm32ZExt12, xor>;
 def ANDI_NM  : ArithLogicI32<"andi", uimm16, GPR32NMOpnd, imm32ZExt12ANDI, and>;
 def SLTI_NM  : ArithLogicI32<"slti", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setlt>;
 def SLTIU_NM : ArithLogicI32<"sltiu", uimm12_nm, GPR32NMOpnd, imm32ZExt12, setult>;
+
+// TODO: isCodeGenOnly=1 was added to avoid conflicts with same instructions
+//       for other Mips targets. Handle this when adding integrated asm
+//       for NanoMips.
+let isCodeGenOnly = 1 in
 def SEQI_NM  : ArithLogicI32<"seqi", uimm12_nm, GPR32NMOpnd, imm32ZExt12, seteq>;
 
 // P.SHIFT pool of instructions
@@ -369,12 +374,13 @@ def ROTR_NM : ArithLogicI32<"rotr", uimm5_nm, GPR32NMOpnd, imm32ZExt5, rotr>;
 def EXT_NM : ExtBaseNM;
 def INS_NM : InsBaseNM;
 
+let isCodeGenOnly = 1 in
 def ADDiu_NM : ArithLogicI32<"addiu", uimm16_simm12, GPR32NMOpnd,
                              imm32SExt12OrZExt16, add>;
 let Constraints = "$rt = $rs" in
 def ADDIU48_NM : ArithLogicINM<"addiu[48]", simm32_relaxed, GPR32NMOpnd,
                                imm32_NM, add>, InstSize48;
-
+let isCodeGenOnly = 1 in
 def LSA_NM : LoadScaledAddressNM<"lsa", GPR32NMOpnd>;
 
 def SEB_NM : SignExtInRegNM<"seb", i8, GPR32NMOpnd>;
@@ -391,9 +397,11 @@ def TEQ_NM : Trap<"teq">;
 def TNE_NM : Trap<"tne">;
 
 def NOT_NM   : ArithLogicR16<"not", GPR3Opnd, not>;
-def XOR16_NM : ArithLogicR16<"xor16", GPR3Opnd>;
-def AND16_NM : ArithLogicR16<"and16", GPR3Opnd>;
-def OR16_NM  : ArithLogicR16<"or16", GPR3Opnd>;
+let isCodeGenOnly = 1 in {
+  def XOR16_NM : ArithLogicR16<"xor16", GPR3Opnd>;
+  def AND16_NM : ArithLogicR16<"and16", GPR3Opnd>;
+  def OR16_NM  : ArithLogicR16<"or16", GPR3Opnd>;
+}
 
 def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 
@@ -408,6 +416,7 @@ def BALC_NM : CallNM<"balc", MipsJmpLink, tglobaladdr>, InstSize32;
 def MOVEBALC_NM : MoveBalcBase;
 
 let isReMaterializable = 1 in {
+let isCodeGenOnly = 1 in
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 def LA_NM : RegImmNM<"la", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 
