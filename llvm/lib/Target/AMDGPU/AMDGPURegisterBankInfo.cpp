@@ -1068,7 +1068,7 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(MachineInstr &MI,
   if (DstBank == &AMDGPU::SGPRRegBank) {
     // There are some special cases that we need to look at for 32 bit and 96
     // bit SGPR loads otherwise we have nothing to do.
-    if (LoadSize != 32 && LoadSize != 96)
+    if (LoadSize != 32 && (LoadSize != 96 || Subtarget.hasScalarDwordx3Loads()))
       return false;
 
     MachineMemOperand *MMO = *MI.memoperands_begin();
