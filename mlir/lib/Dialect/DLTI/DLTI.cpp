@@ -94,7 +94,7 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
 
 void DataLayoutEntryAttr::print(AsmPrinter &os) const {
   os << DataLayoutEntryAttr::kAttrKeyword << "<";
-  if (auto type = getKey().dyn_cast<Type>())
+  if (auto type = llvm::dyn_cast_if_present<Type>(getKey()))
     os << type;
   else
     os << "\"" << getKey().get<StringAttr>().strref() << "\"";
@@ -151,7 +151,7 @@ DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   DenseSet<Type> types;
   DenseSet<StringAttr> ids;
   for (DataLayoutEntryInterface entry : entries) {
-    if (auto type = entry.getKey().dyn_cast<Type>()) {
+    if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
       if (!types.insert(type).second)
         return emitError() << "repeated layout entry key: " << type;
     } else {

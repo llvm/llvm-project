@@ -152,7 +152,7 @@ OpFoldResult spirv::CompositeExtractOp::fold(FoldAdaptor adaptor) {
     auto type = llvm::cast<spirv::CompositeType>(constructOp.getType());
     if (getIndices().size() == 1 &&
         constructOp.getConstituents().size() == type.getNumElements()) {
-      auto i = getIndices().begin()->cast<IntegerAttr>();
+      auto i = llvm::cast<IntegerAttr>(*getIndices().begin());
       return constructOp.getConstituents()[i.getValue().getSExtValue()];
     }
   }

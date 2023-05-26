@@ -95,7 +95,7 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*methodName=*/"getDeclareTargetDeviceType",
       (ins), [{}], [{
         if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
-          if (auto dAttr = dTar.dyn_cast_or_null<mlir::omp::DeclareTargetAttr>())
+          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
             return dAttr.getDeviceType().getValue();
         return {};
       }]>,
@@ -108,7 +108,7 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*methodName=*/"getDeclareTargetCaptureClause",
       (ins), [{}], [{
         if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
-          if (auto dAttr = dTar.dyn_cast_or_null<mlir::omp::DeclareTargetAttr>())
+          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
             return dAttr.getCaptureClause().getValue();
         return {};
       }]>

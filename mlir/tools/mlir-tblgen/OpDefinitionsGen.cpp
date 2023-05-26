@@ -1134,7 +1134,7 @@ void OpEmitter::genPropertiesSupport() {
 )decl";
   for (const auto &attrOrProp : attrOrProperties) {
     if (const auto *namedProperty =
-            attrOrProp.dyn_cast<const NamedProperty *>()) {
+            llvm::dyn_cast_if_present<const NamedProperty *>(attrOrProp)) {
       StringRef name = namedProperty->name;
       auto &prop = namedProperty->prop;
       FmtContext fctx;
@@ -1145,7 +1145,7 @@ void OpEmitter::genPropertiesSupport() {
                                           .addSubst("_diag", propertyDiag)),
                                name);
     } else {
-      const auto *namedAttr = attrOrProp.dyn_cast<const AttributeMetadata *>();
+      const auto *namedAttr = llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
       StringRef name = namedAttr->attrName;
       setPropMethod << formatv(R"decl(
   {{
@@ -1187,7 +1187,7 @@ void OpEmitter::genPropertiesSupport() {
 )decl";
   for (const auto &attrOrProp : attrOrProperties) {
     if (const auto *namedProperty =
-            attrOrProp.dyn_cast<const NamedProperty *>()) {
+            llvm::dyn_cast_if_present<const NamedProperty *>(attrOrProp)) {
       StringRef name = namedProperty->name;
       auto &prop = namedProperty->prop;
       FmtContext fctx;
@@ -1198,7 +1198,7 @@ void OpEmitter::genPropertiesSupport() {
                      .addSubst("_storage", propertyStorage)));
       continue;
     }
-    const auto *namedAttr = attrOrProp.dyn_cast<const AttributeMetadata *>();
+    const auto *namedAttr = llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
     StringRef name = namedAttr->attrName;
     getPropMethod << formatv(R"decl(
     {{
@@ -1225,7 +1225,7 @@ void OpEmitter::genPropertiesSupport() {
 )decl";
   for (const auto &attrOrProp : attrOrProperties) {
     if (const auto *namedProperty =
-            attrOrProp.dyn_cast<const NamedProperty *>()) {
+            llvm::dyn_cast_if_present<const NamedProperty *>(attrOrProp)) {
       StringRef name = namedProperty->name;
       auto &prop = namedProperty->prop;
       FmtContext fctx;
@@ -1238,13 +1238,13 @@ void OpEmitter::genPropertiesSupport() {
   llvm::interleaveComma(
       attrOrProperties, hashMethod, [&](const ConstArgument &attrOrProp) {
         if (const auto *namedProperty =
-                attrOrProp.dyn_cast<const NamedProperty *>()) {
+                llvm::dyn_cast_if_present<const NamedProperty *>(attrOrProp)) {
           hashMethod << "\n    hash_" << namedProperty->name << "(prop."
                      << namedProperty->name << ")";
           return;
         }
         const auto *namedAttr =
-            attrOrProp.dyn_cast<const AttributeMetadata *>();
+            llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
         StringRef name = namedAttr->attrName;
         hashMethod << "\n    llvm::hash_value(prop." << name
                    << ".getAsOpaquePointer())";
@@ -1266,7 +1266,7 @@ void OpEmitter::genPropertiesSupport() {
 )decl";
   for (const auto &attrOrProp : attrOrProperties) {
     if (const auto *namedAttr =
-            attrOrProp.dyn_cast<const AttributeMetadata *>()) {
+            llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp)) {
       StringRef name = namedAttr->attrName;
       getInherentAttrMethod << formatv(getInherentAttrMethodFmt, name);
       setInherentAttrMethod << formatv(setInherentAttrMethodFmt, name);
@@ -1281,7 +1281,7 @@ void OpEmitter::genPropertiesSupport() {
   // syntax. This method verifies the constraint on the properties attributes
   // before they are set, since dyn_cast<> will silently omit failures.
   for (const auto &attrOrProp : attrOrProperties) {
-    const auto *namedAttr = attrOrProp.dyn_cast<const AttributeMetadata *>();
+    const auto *namedAttr = llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
     if (!namedAttr || !namedAttr->constraint)
       continue;
     Attribute attr = *namedAttr->constraint;
@@ -2472,7 +2472,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
     // Calculate the start index from which we can attach default values in the
     // builder declaration.
     for (int i = op.getNumArgs() - 1; i >= 0; --i) {
-      auto *namedAttr = op.getArg(i).dyn_cast<tblgen::NamedAttribute *>();
+      auto *namedAttr = llvm::dyn_cast_if_present<tblgen::NamedAttribute *>(op.getArg(i));
       if (!namedAttr || !namedAttr->attr.hasDefaultValue())
         break;
 
@@ -2502,7 +2502,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
 
   for (int i = 0, e = op.getNumArgs(), numOperands = 0; i < e; ++i) {
     Argument arg = op.getArg(i);
-    if (const auto *operand = arg.dyn_cast<NamedTypeConstraint *>()) {
+    if (const auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg)) {
       StringRef type;
       if (operand->isVariadicOfVariadic())
         type = "::llvm::ArrayRef<::mlir::ValueRange>";
@@ -2515,7 +2515,7 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
                              operand->isOptional());
       continue;
     }
-    if (const auto *operand = arg.dyn_cast<NamedProperty *>()) {
+    if (const auto *operand = llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
       // TODO
       continue;
     }
@@ -3442,7 +3442,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     llvm::raw_string_ostream comparatorOs(comparator);
     for (const auto &attrOrProp : attrOrProperties) {
       if (const auto *namedProperty =
-              attrOrProp.dyn_cast<const NamedProperty *>()) {
+              llvm::dyn_cast_if_present<const NamedProperty *>(attrOrProp)) {
         StringRef name = namedProperty->name;
         if (name.empty())
           report_fatal_error("missing name for property");
@@ -3476,7 +3476,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                                  .addSubst("_storage", propertyStorage)));
         continue;
       }
-      const auto *namedAttr = attrOrProp.dyn_cast<const AttributeMetadata *>();
+      const auto *namedAttr = llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
       const Attribute *attr = nullptr;
       if (namedAttr->constraint)
         attr = &*namedAttr->constraint;

@@ -88,10 +88,10 @@ LogicalResult scf::addLoopRangeConstraints(FlatAffineValueConstraints &cstr,
     return failure();
 
   unsigned dimIv = cstr.appendDimVar(iv);
-  auto lbv = lb.dyn_cast<Value>();
+  auto lbv = llvm::dyn_cast_if_present<Value>(lb);
   unsigned symLb =
       lbv ? cstr.appendSymbolVar(lbv) : cstr.appendSymbolVar(/*num=*/1);
-  auto ubv = ub.dyn_cast<Value>();
+  auto ubv = llvm::dyn_cast_if_present<Value>(ub);
   unsigned symUb =
       ubv ? cstr.appendSymbolVar(ubv) : cstr.appendSymbolVar(/*num=*/1);
 
