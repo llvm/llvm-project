@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <thread>
-#include <unistd.h>
 
 namespace fuzzer {
 
@@ -233,11 +232,6 @@ uint64_t SimpleFastHash(const void *Data, size_t Size, uint64_t Initial) {
   for (size_t i = 0; i < Size; i++)
     Res = Res * 11 + Bytes[i];
   return Res;
-}
-
-size_t PageSize() {
-  static size_t PageSizeCached = sysconf(_SC_PAGESIZE);
-  return PageSizeCached;
 }
 
 }  // namespace fuzzer
