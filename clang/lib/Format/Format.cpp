@@ -2687,6 +2687,7 @@ private:
         "CGSizeMake",
         "CGVector",
         "CGVectorMake",
+        "FOUNDATION_EXPORT",
         "NSAffineTransform",
         "NSArray",
         "NSAttributedString",
@@ -2743,6 +2744,7 @@ private:
         "NSURLQueryItem",
         "NSUUID",
         "NSValue",
+        "NS_ASSUME_NONNULL_BEGIN",
         "UIImage",
         "UIView",
     };
