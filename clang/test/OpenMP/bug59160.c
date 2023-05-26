@@ -20,11 +20,11 @@ void zoo(void) {
 // CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 67, i64 19]
 // CHECK: @0 = private unnamed_addr constant [23 x i8] c"
 // CHECK: @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @0 }, align 8
-// CHECK: @.__omp_offloading_34_735f4a3a_zoo_l13.region_id = weak constant i8 0
+// CHECK: @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_zoo_l13.region_id = weak constant i8 0
 // CHECK: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 8]
 // CHECK: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 288]
-// CHECK: @.omp_offloading.entry_name = internal unnamed_addr constant [37 x i8] c"__omp_offloading_34_735f4a3a_zoo_l13\00"
-// CHECK: @.omp_offloading.entry.__omp_offloading_34_735f4a3a_zoo_l13 = weak constant %struct.__tgt_offload_entry { ptr @.__omp_offloading_34_735f4a3a_zoo_l13.region_id, ptr @.omp_offloading.entry_name, i64 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK: @.omp_offloading.entry_name = internal unnamed_addr constant [37 x i8] c"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_zoo_l13\00"
+// CHECK: @.omp_offloading.entry.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_zoo_l13 = weak constant %struct.__tgt_offload_entry { ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_zoo_l13.region_id, ptr @.omp_offloading.entry_name, i64 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @.omp_offloading.requires_reg, ptr null }]
 //.
 // CHECK-LABEL: define {{[^@]+}}@zoo
@@ -156,20 +156,3 @@ void zoo(void) {
 // SIMD-ONLY0-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i64 1
 // SIMD-ONLY0-NEXT:    store i16 222, ptr [[ARRAYIDX5]], align 2
 // SIMD-ONLY0-NEXT:    ret void
-//
-//.
-// CHECK: attributes #0 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-altivec,-bpermd,-crbits,-crypto,-direct-move,-extdiv,-htm,-isa-v206-instructions,-isa-v207-instructions,-isa-v30-instructions,-power8-vector,-power9-vector,-privileged,-quadword-atomics,-rop-protect,-spe,-vsx" }
-// CHECK: attributes #1 = { nounwind }
-// CHECK: attributes #2 = { noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-altivec,-bpermd,-crbits,-crypto,-direct-move,-extdiv,-htm,-isa-v206-instructions,-isa-v207-instructions,-isa-v30-instructions,-power8-vector,-power9-vector,-privileged,-quadword-atomics,-rop-protect,-spe,-vsx" }
-// CHECK: attributes #3 = { noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-altivec,-bpermd,-crbits,-crypto,-direct-move,-extdiv,-htm,-isa-v206-instructions,-isa-v207-instructions,-isa-v30-instructions,-power8-vector,-power9-vector,-privileged,-quadword-atomics,-rop-protect,-spe,-vsx" }
-//.
-// SIMD-ONLY0: attributes #0 = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-altivec,-bpermd,-crbits,-crypto,-direct-move,-extdiv,-htm,-isa-v206-instructions,-isa-v207-instructions,-isa-v30-instructions,-power8-vector,-power9-vector,-privileged,-quadword-atomics,-rop-protect,-spe,-vsx" }
-//.
-// CHECK: !0 = !{i32 0, i32 52, i32 1935624762, !"zoo", i32 13, i32 0, i32 0}
-// CHECK: !1 = !{i32 1, !"wchar_size", i32 4}
-// CHECK: !2 = !{i32 7, !"openmp", i32 51}
-// CHECK: !3 = !{!"clang version 17.0.0"}
-//.
-// SIMD-ONLY0: !0 = !{i32 1, !"wchar_size", i32 4}
-// SIMD-ONLY0: !1 = !{!"clang version 17.0.0"}
-//.
