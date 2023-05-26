@@ -10,7 +10,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_setaffinity.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 
 #include <sched.h>
 #include <sys/syscall.h>

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SemanticHighlighting.h"
+#include "Config.h"
 #include "FindTarget.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
@@ -354,13 +355,57 @@ resolveConflict(ArrayRef<HighlightingToken> Tokens) {
   return Winner;
 }
 
+/// Filter to remove particular kinds of highlighting tokens and modifiers from
+/// the output.
+class HighlightingFilter {
+public:
+  HighlightingFilter() {
+    for (auto &Active : ActiveKindLookup)
+      Active = true;
+
+    ActiveModifiersMask = ~0;
+  }
+
+  void disableKind(HighlightingKind Kind) {
+    ActiveKindLookup[static_cast<size_t>(Kind)] = false;
+  }
+
+  void disableModifier(HighlightingModifier Modifier) {
+    ActiveModifiersMask &= ~(1 << static_cast<uint32_t>(Modifier));
+  }
+
+  bool isHighlightKindActive(HighlightingKind Kind) const {
+    return ActiveKindLookup[static_cast<size_t>(Kind)];
+  }
+
+  uint32_t maskModifiers(uint32_t Modifiers) const {
+    return Modifiers & ActiveModifiersMask;
+  }
+
+  static HighlightingFilter fromCurrentConfig() {
+    const Config &C = Config::current();
+    HighlightingFilter Filter;
+    for (const auto &Kind : C.SemanticTokens.DisabledKinds)
+      if (auto K = highlightingKindFromString(Kind))
+        Filter.disableKind(*K);
+    for (const auto &Modifier : C.SemanticTokens.DisabledModifiers)
+      if (auto M = highlightingModifierFromString(Modifier))
+        Filter.disableModifier(*M);
+
+    return Filter;
+  }
+
+private:
+  bool ActiveKindLookup[static_cast<size_t>(HighlightingKind::LastKind) + 1];
+  uint32_t ActiveModifiersMask;
+};
+
 /// Consumes source locations and maps them to text ranges for highlightings.
 class HighlightingsBuilder {
 public:
-  HighlightingsBuilder(const ParsedAST &AST, bool IncludeInactiveRegionTokens)
+  HighlightingsBuilder(const ParsedAST &AST, const HighlightingFilter &Filter)
       : TB(AST.getTokens()), SourceMgr(AST.getSourceManager()),
-        LangOpts(AST.getLangOpts()),
-        IncludeInactiveRegionTokens(IncludeInactiveRegionTokens) {}
+        LangOpts(AST.getLangOpts()), Filter(Filter) {}
 
   HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
     auto Range = getRangeForSourceLocation(Loc);
@@ -412,6 +457,9 @@ public:
   }
 
   HighlightingToken &addToken(Range R, HighlightingKind Kind) {
+    if (!Filter.isHighlightKindActive(Kind))
+      return InvalidHighlightingToken;
+
     HighlightingToken HT;
     HT.R = std::move(R);
     HT.Kind = Kind;
@@ -452,6 +500,7 @@ public:
           }
         }
 
+        Resolved->Modifiers = Filter.maskModifiers(Resolved->Modifiers);
         NonConflicting.push_back(*Resolved);
       }
       // TokRef[Conflicting.size()] is the next token with a different range (or
@@ -459,7 +508,7 @@ public:
       TokRef = TokRef.drop_front(Conflicting.size());
     }
 
-    if (!IncludeInactiveRegionTokens)
+    if (!Filter.isHighlightKindActive(HighlightingKind::InactiveCode))
       return NonConflicting;
 
     const auto &SM = AST.getSourceManager();
@@ -535,7 +584,7 @@ private:
   const syntax::TokenBuffer &TB;
   const SourceManager &SourceMgr;
   const LangOptions &LangOpts;
-  bool IncludeInactiveRegionTokens;
+  HighlightingFilter Filter;
   std::vector<HighlightingToken> Tokens;
   std::map<Range, llvm::SmallVector<HighlightingModifier, 1>> ExtraModifiers;
   const HeuristicResolver *Resolver = nullptr;
@@ -1104,8 +1153,11 @@ private:
 std::vector<HighlightingToken>
 getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
   auto &C = AST.getASTContext();
+  HighlightingFilter Filter = HighlightingFilter::fromCurrentConfig();
+  if (!IncludeInactiveRegionTokens)
+    Filter.disableKind(HighlightingKind::InactiveCode);
   // Add highlightings for AST nodes.
-  HighlightingsBuilder Builder(AST, IncludeInactiveRegionTokens);
+  HighlightingsBuilder Builder(AST, Filter);
   // Highlight 'decltype' and 'auto' as their underlying types.
   CollectExtraHighlightings(Builder).TraverseAST(C);
   // Highlight all decls and references coming from the AST.
@@ -1224,6 +1276,38 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
   }
   llvm_unreachable("invalid HighlightingKind");
 }
+std::optional<HighlightingKind>
+highlightingKindFromString(llvm::StringRef Name) {
+  static llvm::StringMap<HighlightingKind> Lookup = {
+      {"Variable", HighlightingKind::Variable},
+      {"LocalVariable", HighlightingKind::LocalVariable},
+      {"Parameter", HighlightingKind::Parameter},
+      {"Function", HighlightingKind::Function},
+      {"Method", HighlightingKind::Method},
+      {"StaticMethod", HighlightingKind::StaticMethod},
+      {"Field", HighlightingKind::Field},
+      {"StaticField", HighlightingKind::StaticField},
+      {"Class", HighlightingKind::Class},
+      {"Interface", HighlightingKind::Interface},
+      {"Enum", HighlightingKind::Enum},
+      {"EnumConstant", HighlightingKind::EnumConstant},
+      {"Typedef", HighlightingKind::Typedef},
+      {"Type", HighlightingKind::Type},
+      {"Unknown", HighlightingKind::Unknown},
+      {"Namespace", HighlightingKind::Namespace},
+      {"TemplateParameter", HighlightingKind::TemplateParameter},
+      {"Concept", HighlightingKind::Concept},
+      {"Primitive", HighlightingKind::Primitive},
+      {"Macro", HighlightingKind::Macro},
+      {"Modifier", HighlightingKind::Modifier},
+      {"Operator", HighlightingKind::Operator},
+      {"Bracket", HighlightingKind::Bracket},
+      {"InactiveCode", HighlightingKind::InactiveCode},
+  };
+
+  auto It = Lookup.find(Name);
+  return It != Lookup.end() ? std::make_optional(It->getValue()) : std::nullopt;
+}
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingModifier K) {
   switch (K) {
   case HighlightingModifier::Declaration:
@@ -1235,6 +1319,33 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingModifier K) {
   default:
     return OS << toSemanticTokenModifier(K);
   }
+}
+std::optional<HighlightingModifier>
+highlightingModifierFromString(llvm::StringRef Name) {
+  static llvm::StringMap<HighlightingModifier> Lookup = {
+      {"Declaration", HighlightingModifier::Declaration},
+      {"Definition", HighlightingModifier::Definition},
+      {"Deprecated", HighlightingModifier::Deprecated},
+      {"Deduced", HighlightingModifier::Deduced},
+      {"Readonly", HighlightingModifier::Readonly},
+      {"Static", HighlightingModifier::Static},
+      {"Abstract", HighlightingModifier::Abstract},
+      {"Virtual", HighlightingModifier::Virtual},
+      {"DependentName", HighlightingModifier::DependentName},
+      {"DefaultLibrary", HighlightingModifier::DefaultLibrary},
+      {"UsedAsMutableReference", HighlightingModifier::UsedAsMutableReference},
+      {"UsedAsMutablePointer", HighlightingModifier::UsedAsMutablePointer},
+      {"ConstructorOrDestructor",
+       HighlightingModifier::ConstructorOrDestructor},
+      {"UserDefined", HighlightingModifier::UserDefined},
+      {"FunctionScope", HighlightingModifier::FunctionScope},
+      {"ClassScope", HighlightingModifier::ClassScope},
+      {"FileScope", HighlightingModifier::FileScope},
+      {"GlobalScope", HighlightingModifier::GlobalScope},
+  };
+
+  auto It = Lookup.find(Name);
+  return It != Lookup.end() ? std::make_optional(It->getValue()) : std::nullopt;
 }
 
 bool operator==(const HighlightingToken &L, const HighlightingToken &R) {

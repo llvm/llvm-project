@@ -470,6 +470,16 @@ namespace llvm {
 template <>
 struct DenseMapInfo<mlir::ProgramPoint>
     : public DenseMapInfo<mlir::ProgramPoint::ParentTy> {};
+
+// Allow llvm::cast style functions.
+template <typename To>
+struct CastInfo<To, mlir::ProgramPoint>
+    : public CastInfo<To, mlir::ProgramPoint::PointerUnion> {};
+
+template <typename To>
+struct CastInfo<To, const mlir::ProgramPoint>
+    : public CastInfo<To, const mlir::ProgramPoint::PointerUnion> {};
+
 } // end namespace llvm
 
 #endif // MLIR_ANALYSIS_DATAFLOWFRAMEWORK_H

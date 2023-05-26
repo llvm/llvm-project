@@ -10,7 +10,7 @@
 
 #include "include/sys/syscall.h"          // For syscall numbers.
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <signal.h>

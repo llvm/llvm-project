@@ -11,7 +11,7 @@
 #include "src/signal/raise.h"
 #include "src/signal/signal.h"
 
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;

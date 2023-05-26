@@ -163,6 +163,13 @@ public:
   }
   bool shouldVerifyPasses() const { return verifyPassesFlag; }
 
+  /// Set whether to run the verifier after each transformation pass.
+  MlirOptMainConfig &verifyRoundtrip(bool verify) {
+    verifyRoundtripFlag = verify;
+    return *this;
+  }
+  bool shouldVerifyRoundtrip() const { return verifyRoundtripFlag; }
+
 protected:
   /// Allow operation with no registered dialects.
   /// This option is for convenience during testing only and discouraged in
@@ -212,6 +219,9 @@ protected:
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;
+
+  /// Verify that the input IR round-trips perfectly.
+  bool verifyRoundtripFlag = false;
 };
 
 /// This defines the function type used to setup the pass manager. This can be

@@ -12,102 +12,11 @@ from threading import Thread
 from typing import Any, Dict
 
 import lldb
-from lldb.plugins.scripted_process import ScriptedProcess
-from lldb.plugins.scripted_process import ScriptedThread
+from lldb.plugins.scripted_process import PassthroughScriptedProcess
+from lldb.plugins.scripted_process import PassthroughScriptedThread
 
 
-class PassthruScriptedProcess(ScriptedProcess):
-    driving_target = None
-    driving_process = None
-
-    def __init__(
-        self,
-        exe_ctx: lldb.SBExecutionContext,
-        args: lldb.SBStructuredData,
-        launched_driving_process: bool = True,
-    ):
-        super().__init__(exe_ctx, args)
-
-        self.driving_target = None
-        self.driving_process = None
-
-        self.driving_target_idx = args.GetValueForKey("driving_target_idx")
-        if self.driving_target_idx and self.driving_target_idx.IsValid():
-            if self.driving_target_idx.GetType() == lldb.eStructuredDataTypeInteger:
-                idx = self.driving_target_idx.GetIntegerValue(42)
-            if self.driving_target_idx.GetType() == lldb.eStructuredDataTypeString:
-                idx = int(self.driving_target_idx.GetStringValue(100))
-            self.driving_target = self.target.GetDebugger().GetTargetAtIndex(idx)
-
-            if launched_driving_process:
-                self.driving_process = self.driving_target.GetProcess()
-                for driving_thread in self.driving_process:
-                    structured_data = lldb.SBStructuredData()
-                    structured_data.SetFromJSON(
-                        json.dumps(
-                            {
-                                "driving_target_idx": idx,
-                                "thread_idx": driving_thread.GetIndexID(),
-                            }
-                        )
-                    )
-
-                    self.threads[driving_thread.GetThreadID()] = PassthruScriptedThread(
-                        self, structured_data
-                    )
-
-                for module in self.driving_target.modules:
-                    path = module.file.fullpath
-                    load_addr = module.GetObjectFileHeaderAddress().GetLoadAddress(
-                        self.driving_target
-                    )
-                    self.loaded_images.append({"path": path, "load_addr": load_addr})
-
-    def get_memory_region_containing_address(
-        self, addr: int
-    ) -> lldb.SBMemoryRegionInfo:
-        mem_region = lldb.SBMemoryRegionInfo()
-        error = self.driving_process.GetMemoryRegionInfo(addr, mem_region)
-        if error.Fail():
-            return None
-        return mem_region
-
-    def read_memory_at_address(
-        self, addr: int, size: int, error: lldb.SBError
-    ) -> lldb.SBData:
-        data = lldb.SBData()
-        bytes_read = self.driving_process.ReadMemory(addr, size, error)
-
-        if error.Fail():
-            return data
-
-        data.SetDataWithOwnership(
-            error,
-            bytes_read,
-            self.driving_target.GetByteOrder(),
-            self.driving_target.GetAddressByteSize(),
-        )
-
-        return data
-
-    def write_memory_at_address(
-        self, addr: int, data: lldb.SBData, error: lldb.SBError
-    ) -> int:
-        return self.driving_process.WriteMemory(
-            addr, bytearray(data.uint8.all()), error
-        )
-
-    def get_process_id(self) -> int:
-        return 42
-
-    def is_alive(self) -> bool:
-        return True
-
-    def get_scripted_thread_plugin(self) -> str:
-        return f"{PassthruScriptedThread.__module__}.{PassthruScriptedThread.__name__}"
-
-
-class MultiplexedScriptedProcess(PassthruScriptedProcess):
+class MultiplexedScriptedProcess(PassthroughScriptedProcess):
     def __init__(self, exe_ctx: lldb.SBExecutionContext, args: lldb.SBStructuredData):
         super().__init__(exe_ctx, args)
         self.multiplexer = None
@@ -115,11 +24,11 @@ class MultiplexedScriptedProcess(PassthruScriptedProcess):
             parity = args.GetValueForKey("parity")
             # TODO: Change to Walrus operator (:=) with oneline if assignment
             # Requires python 3.8
-            val = extract_value_from_structured_data(parity, 0)
+            val = parity.GetUnsignedIntegerValue()
             if val is not None:
                 self.parity = val
 
-            # Turn PassThruScriptedThread into MultiplexedScriptedThread
+            # Turn PassthroughScriptedThread into MultiplexedScriptedThread
             for thread in self.threads.values():
                 thread.__class__ = MultiplexedScriptedThread
 
@@ -144,7 +53,7 @@ class MultiplexedScriptedProcess(PassthruScriptedProcess):
         if not self.multiplexer:
             return super().get_threads_info()
         filtered_threads = self.multiplexer.get_threads_info(pid=self.get_process_id())
-        # Update the filtered thread class from PassthruScriptedThread to MultiplexedScriptedThread
+        # Update the filtered thread class from PassthroughScriptedThread to MultiplexedScriptedThread
         return dict(
             map(
                 lambda pair: (pair[0], MultiplexedScriptedThread(pair[1])),
@@ -161,91 +70,13 @@ class MultiplexedScriptedProcess(PassthruScriptedProcess):
         return f"{MultiplexedScriptedThread.__module__}.{MultiplexedScriptedThread.__name__}"
 
 
-class PassthruScriptedThread(ScriptedThread):
-    def __init__(self, process, args):
-        super().__init__(process, args)
-        driving_target_idx = args.GetValueForKey("driving_target_idx")
-        thread_idx = args.GetValueForKey("thread_idx")
-
-        # TODO: Change to Walrus operator (:=) with oneline if assignment
-        # Requires python 3.8
-        val = extract_value_from_structured_data(thread_idx, 0)
-        if val is not None:
-            self.idx = val
-
-        self.driving_target = None
-        self.driving_process = None
-        self.driving_thread = None
-
-        # TODO: Change to Walrus operator (:=) with oneline if assignment
-        # Requires python 3.8
-        val = extract_value_from_structured_data(driving_target_idx, 42)
-        if val is not None:
-            self.driving_target = self.target.GetDebugger().GetTargetAtIndex(val)
-            self.driving_process = self.driving_target.GetProcess()
-            self.driving_thread = self.driving_process.GetThreadByIndexID(self.idx)
-
-        if self.driving_thread:
-            self.id = self.driving_thread.GetThreadID()
-
-    def get_thread_id(self) -> int:
-        return self.id
-
-    def get_name(self) -> str:
-        return f"{PassthruScriptedThread.__name__}.thread-{self.idx}"
-
-    def get_stop_reason(self) -> Dict[str, Any]:
-        stop_reason = {"type": lldb.eStopReasonInvalid, "data": {}}
-
-        if (
-            self.driving_thread
-            and self.driving_thread.IsValid()
-            and self.get_thread_id() == self.driving_thread.GetThreadID()
-        ):
-            stop_reason["type"] = lldb.eStopReasonNone
-
-            if self.driving_thread.GetStopReason() != lldb.eStopReasonNone:
-                if "arm64" in self.scripted_process.arch:
-                    stop_reason["type"] = lldb.eStopReasonException
-                    stop_reason["data"][
-                        "desc"
-                    ] = self.driving_thread.GetStopDescription(100)
-                elif self.scripted_process.arch == "x86_64":
-                    stop_reason["type"] = lldb.eStopReasonSignal
-                    stop_reason["data"]["signal"] = signal.SIGTRAP
-                else:
-                    stop_reason["type"] = self.driving_thread.GetStopReason()
-
-        return stop_reason
-
-    def get_register_context(self) -> str:
-        if not self.driving_thread or self.driving_thread.GetNumFrames() == 0:
-            return None
-        frame = self.driving_thread.GetFrameAtIndex(0)
-
-        GPRs = None
-        registerSet = frame.registers  # Returns an SBValueList.
-        for regs in registerSet:
-            if "general purpose" in regs.name.lower():
-                GPRs = regs
-                break
-
-        if not GPRs:
-            return None
-
-        for reg in GPRs:
-            self.register_ctx[reg.name] = int(reg.value, base=16)
-
-        return struct.pack(f"{len(self.register_ctx)}Q", *self.register_ctx.values())
-
-
-class MultiplexedScriptedThread(PassthruScriptedThread):
+class MultiplexedScriptedThread(PassthroughScriptedThread):
     def get_name(self) -> str:
         parity = "Odd" if self.scripted_process.parity % 2 else "Even"
         return f"{parity}{MultiplexedScriptedThread.__name__}.thread-{self.idx}"
 
 
-class MultiplexerScriptedProcess(PassthruScriptedProcess):
+class MultiplexerScriptedProcess(PassthroughScriptedProcess):
     listener = None
     multiplexed_processes = None
 
@@ -254,9 +85,9 @@ class MultiplexerScriptedProcess(PassthruScriptedProcess):
             # Update multiplexer process
             log("Updating interactive scripted process threads")
             dbg = self.driving_target.GetDebugger()
-            log("Clearing interactive scripted process threads")
-            self.threads.clear()
+            new_driving_thread_ids = []
             for driving_thread in self.driving_process:
+                new_driving_thread_ids.append(driving_thread.id)
                 log(f"{len(self.threads)} New thread {hex(driving_thread.id)}")
                 structured_data = lldb.SBStructuredData()
                 structured_data.SetFromJSON(
@@ -270,9 +101,16 @@ class MultiplexerScriptedProcess(PassthruScriptedProcess):
                     )
                 )
 
-                self.threads[driving_thread.GetThreadID()] = PassthruScriptedThread(
+                self.threads[driving_thread.id] = PassthroughScriptedThread(
                     self, structured_data
                 )
+
+            for thread_id in self.threads:
+                if thread_id not in new_driving_thread_ids:
+                    log(f"Removing old thread {hex(thread_id)}")
+                    del self.threads[thread_id]
+
+            print(f"New thread count: {len(self.threads)}")
 
             mux_process = self.target.GetProcess()
             mux_process.ForceScriptedState(lldb.eStateRunning)
@@ -284,6 +122,8 @@ class MultiplexerScriptedProcess(PassthruScriptedProcess):
 
         event = lldb.SBEvent()
         while True:
+            if not self.driving_process:
+                continue
             if self.listener.WaitForEvent(1, event):
                 event_mask = event.GetType()
                 if event_mask & lldb.SBProcess.eBroadcastBitStateChanged:
@@ -473,15 +313,6 @@ def duplicate_target(driving_target):
     triple = driving_target.triple
     debugger = driving_target.GetDebugger()
     return debugger.CreateTargetWithFileAndTargetTriple(exe, triple)
-
-
-def extract_value_from_structured_data(data, default_val):
-    if data and data.IsValid():
-        if data.GetType() == lldb.eStructuredDataTypeInteger:
-            return data.GetIntegerValue(default_val)
-        if data.GetType() == lldb.eStructuredDataTypeString:
-            return int(data.GetStringValue(100))
-    return default_val
 
 
 def create_mux_process(debugger, command, exe_ctx, result, dict):

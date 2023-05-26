@@ -381,7 +381,7 @@ static FailureOr<BaseMemRefType> computeLoopRegionIterArgBufferType(
   // map.
   auto yieldedRanked = cast<MemRefType>(yieldedValueBufferType);
 #ifndef NDEBUG
-  auto iterRanked = initArgBufferType->cast<MemRefType>();
+  auto iterRanked = llvm::cast<MemRefType>(*initArgBufferType);
   assert(llvm::equal(yieldedRanked.getShape(), iterRanked.getShape()) &&
          "expected same shape");
   assert(yieldedRanked.getMemorySpace() == iterRanked.getMemorySpace() &&
@@ -802,7 +802,7 @@ struct WhileOpInterface
           if (!isa<TensorType>(bbArg.getType()))
             return bbArg.getType();
           // TODO: error handling
-          return bufferization::getBufferType(bbArg, options)->cast<Type>();
+          return llvm::cast<Type>(*bufferization::getBufferType(bbArg, options));
         }));
 
     // Construct a new scf.while op with memref instead of tensor values.

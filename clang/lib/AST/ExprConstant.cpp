@@ -9025,8 +9025,7 @@ static CharUnits GetAlignOfType(EvalInfo &Info, QualType T,
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
   //     alignment of the referenced type.
-  if (const ReferenceType *Ref = T->getAs<ReferenceType>())
-    T = Ref->getPointeeType();
+  T = T.getNonReferenceType();
 
   if (T.getQualifiers().hasUnaligned())
     return CharUnits::One();
