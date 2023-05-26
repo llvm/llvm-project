@@ -6034,8 +6034,7 @@ void CGOpenMPRuntime::emitUsesAllocatorsInit(CodeGenFunction &CGF,
   AllocatorTraitsLVal = CGF.MakeAddrLValue(Addr, CGF.getContext().VoidPtrTy,
                                            AllocatorTraitsLVal.getBaseInfo(),
                                            AllocatorTraitsLVal.getTBAAInfo());
-  llvm::Value *Traits =
-      CGF.EmitLoadOfScalar(AllocatorTraitsLVal, AllocatorTraits->getExprLoc());
+  llvm::Value *Traits = Addr.getPointer();
 
   llvm::Value *AllocatorVal =
       CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
