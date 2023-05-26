@@ -56,6 +56,9 @@ std::unique_ptr<OperationPass<func::FuncOp>> createGpuMapParallelLoopsPass();
 /// Collect a set of patterns to rewrite GlobalIdOp op within the GPU dialect.
 void populateGpuGlobalIdPatterns(RewritePatternSet &patterns);
 
+/// Collect a set of patterns to rewrite shuffle ops within the GPU dialect.
+void populateGpuShufflePatterns(RewritePatternSet &patterns);
+
 /// Collect a set of patterns to rewrite all-reduce ops within the GPU dialect.
 void populateGpuAllReducePatterns(RewritePatternSet &patterns);
 
@@ -63,6 +66,7 @@ void populateGpuAllReducePatterns(RewritePatternSet &patterns);
 inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
   populateGpuAllReducePatterns(patterns);
   populateGpuGlobalIdPatterns(patterns);
+  populateGpuShufflePatterns(patterns);
 }
 
 namespace gpu {
