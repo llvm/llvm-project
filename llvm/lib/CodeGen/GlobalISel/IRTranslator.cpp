@@ -2077,7 +2077,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       MIRBuilder.buildFIDbgValue(getOrCreateFrameIndex(*AI), DI.getVariable(),
                                  ExprDerefRemoved);
       return true;
-    }
     if (translateIfSwiftAsyncArg(*V, DI, MIRBuilder, false /*IsIndirect*/)) {
       return true;
     }

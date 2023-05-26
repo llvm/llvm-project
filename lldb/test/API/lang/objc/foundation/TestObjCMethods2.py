@@ -3,7 +3,6 @@ Test more expression command sequences with objective-c.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class FoundationTestCase2(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_expr_commands(self):
@@ -21,39 +19,25 @@ class FoundationTestCase2(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lines = []
-        lines.append(
-            line_number(
-                'main.m',
-                '// Break here for selector: tests'))
-        lines.append(
-            line_number(
-                'main.m',
-                '// Break here for NSArray tests'))
-        lines.append(
-            line_number(
-                'main.m',
-                '// Break here for NSString tests'))
-        lines.append(
-            line_number(
-                'main.m',
-                '// Break here for description test'))
-        lines.append(
-            line_number(
-                'main.m',
-                '// Set break point at this line'))
+        lines.append(line_number("main.m", "// Break here for selector: tests"))
+        lines.append(line_number("main.m", "// Break here for NSArray tests"))
+        lines.append(line_number("main.m", "// Break here for NSString tests"))
+        lines.append(line_number("main.m", "// Break here for description test"))
+        lines.append(line_number("main.m", "// Set break point at this line"))
 
         # Create a bunch of breakpoints.
         for line in lines:
             lldbutil.run_break_set_by_file_and_line(
-                self, "main.m", line, num_expected_locations=1, loc_exact=True)
+                self, "main.m", line, num_expected_locations=1, loc_exact=True
+            )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # Test_Selector:
         self.runCmd("thread backtrace")
-        self.expect("expression (char *)sel_getName(sel)",
-                    substrs=["(char *)",
-                             "length"])
+        self.expect(
+            "expression (char *)sel_getName(sel)", substrs=["(char *)", "length"]
+        )
 
         self.runCmd("process continue")
 
@@ -67,8 +51,8 @@ class FoundationTestCase2(TestBase):
 
         # Test_MyString:
         self.runCmd("thread backtrace")
-        self.expect("expression (char *)sel_getName(_cmd)",
-                    substrs=["(char *)",
-                             "description"])
+        self.expect(
+            "expression (char *)sel_getName(_cmd)", substrs=["(char *)", "description"]
+        )
 
         self.runCmd("process continue")

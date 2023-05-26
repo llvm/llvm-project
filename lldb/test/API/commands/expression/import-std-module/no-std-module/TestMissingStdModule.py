@@ -14,15 +14,14 @@ from lldbsuite.test import lldbutil
 
 
 class STLTestCase(TestBase):
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
         self.build()
 
-        lldbutil.run_to_source_breakpoint(self,
-                                          "// Set break point at this line.",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", lldb.SBFileSpec("main.cpp")
+        )
 
         # Activate importing of std module.
         self.runCmd("settings set target.import-std-module true")
@@ -31,5 +30,4 @@ class STLTestCase(TestBase):
         self.expect("expr std::abs(-42)", error=True)
         self.expect("expr std::div(2, 1).quot", error=True)
         self.expect("expr (std::size_t)33U", error=True)
-        self.expect("expr char a = 'b'; char b = 'a'; std::swap(a, b); a",
-                    error=True)
+        self.expect("expr char a = 'b'; char b = 'a'; std::swap(a, b); a", error=True)

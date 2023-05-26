@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 
 
 class HitcountResetUponRun(TestBase):
-    BREAKPOINT_TEXT = 'Set a breakpoint here'
+    BREAKPOINT_TEXT = "Set a breakpoint here"
 
     def check_stopped_at_breakpoint_and_hit_once(self, thread, breakpoint):
         frame0 = thread.GetFrameAtIndex(0)
@@ -26,13 +26,13 @@ class HitcountResetUponRun(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         breakpoint = target.BreakpointCreateBySourceRegex(
-            self.BREAKPOINT_TEXT, lldb.SBFileSpec('main.cpp'))
+            self.BREAKPOINT_TEXT, lldb.SBFileSpec("main.cpp")
+        )
         self.assertTrue(
-            breakpoint.IsValid() and breakpoint.GetNumLocations() == 1,
-            VALID_BREAKPOINT)
+            breakpoint.IsValid() and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         from lldbsuite.test.lldbutil import get_stopped_thread
@@ -40,19 +40,18 @@ class HitcountResetUponRun(TestBase):
         # Verify 1st breakpoint location is hit.
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint")
+            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        )
         self.check_stopped_at_breakpoint_and_hit_once(thread, breakpoint)
 
         # Relaunch
         process.Kill()
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Verify the hit counts are still one.
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint")
+            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        )
         self.check_stopped_at_breakpoint_and_hit_once(thread, breakpoint)

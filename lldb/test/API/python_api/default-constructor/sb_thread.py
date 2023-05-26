@@ -22,7 +22,7 @@ def fuzz_obj(obj):
     obj.StepInstruction(True)
     filespec = lldb.SBFileSpec()
     obj.StepOverUntil(frame, filespec, 1234)
-    obj.RunToAddress(0xabcd)
+    obj.RunToAddress(0xABCD)
     obj.Suspend()
     obj.Resume()
     obj.IsSuspended()

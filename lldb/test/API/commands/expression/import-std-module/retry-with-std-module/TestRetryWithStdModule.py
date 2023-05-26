@@ -4,17 +4,18 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
         self.build()
 
-        lldbutil.run_to_source_breakpoint(self,
-                                          "// Set break point at this line.",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", lldb.SBFileSpec("main.cpp")
+        )
 
-        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">", "16.0"]
+        ):
             vec_type = "std::vector<int>"
         else:
             vec_type = "std::vector<int, std::allocator<int> >"
@@ -34,24 +35,30 @@ class TestCase(TestBase):
         # automatically fall back to import the C++ module to get this working.
         self.expect_expr("std::max<std::size_t>(0U, a.size())", result_value="3")
 
-
         # The 'a' and 'local' part can be parsed without loading a C++ module and will
         # load type/runtime information. The 'std::max...' part will fail to
         # parse without a C++ module. Make sure we reset all the relevant parts of
         # the C++ parser so that we don't end up with for example a second
         # definition of 'local' when retrying.
-        self.expect_expr("a; local; std::max<std::size_t>(0U, a.size())", result_value="3")
-
+        self.expect_expr(
+            "a; local; std::max<std::size_t>(0U, a.size())", result_value="3"
+        )
 
         # Try to declare top-level declarations that require a C++ module to parse.
         # Top-level expressions don't support importing the C++ module (yet), so
         # this should still fail as before.
-        self.expect("expr --top-level -- int i = std::max(1, 2);", error=True,
-                    substrs=["no member named 'max' in namespace 'std'"])
+        self.expect(
+            "expr --top-level -- int i = std::max(1, 2);",
+            error=True,
+            substrs=["no member named 'max' in namespace 'std'"],
+        )
 
         # The proper diagnostic however should be shown on the retry.
-        self.expect("expr std::max(1, 2); unknown_identifier", error=True,
-                    substrs=["use of undeclared identifier 'unknown_identifier'"])
+        self.expect(
+            "expr std::max(1, 2); unknown_identifier",
+            error=True,
+            substrs=["use of undeclared identifier 'unknown_identifier'"],
+        )
 
         # Turn on the 'import-std-module' setting and make sure we import the
         # C++ module.
@@ -63,5 +70,8 @@ class TestCase(TestBase):
         # the module (which should prevent parsing the expression involving
         # 'std::max').
         self.runCmd("settings set target.import-std-module false")
-        self.expect("expr std::max(1, 2);", error=True,
-                    substrs=["no member named 'max' in namespace 'std'"])
+        self.expect(
+            "expr std::max(1, 2);",
+            error=True,
+            substrs=["no member named 'max' in namespace 'std'"],
+        )
