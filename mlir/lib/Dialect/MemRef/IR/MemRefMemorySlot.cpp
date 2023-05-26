@@ -114,7 +114,7 @@ memref::AllocaOp::getDestructurableSlots() {
   if (!destructurable)
     return {};
 
-  Optional<DenseMap<Attribute, Type>> destructuredType =
+  std::optional<DenseMap<Attribute, Type>> destructuredType =
       destructurable.getSubelementIndexMap();
   if (!destructuredType)
     return {};

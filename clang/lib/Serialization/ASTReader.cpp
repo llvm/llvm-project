@@ -5713,9 +5713,9 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       std::string Filename = std::string(Blob);
       ResolveImportedPath(F, Filename);
       if (auto Umbrella = PP.getFileManager().getOptionalFileRef(Filename)) {
-        if (!CurrentModule->getUmbrellaHeader()) {
+        if (!CurrentModule->getUmbrellaHeaderAsWritten()) {
           // FIXME: NameAsWritten
-          ModMap.setUmbrellaHeader(CurrentModule, *Umbrella, Blob, "");
+          ModMap.setUmbrellaHeaderAsWritten(CurrentModule, *Umbrella, Blob, "");
         }
         // Note that it's too late at this point to return out of date if the
         // name from the PCM doesn't match up with the one in the module map,
@@ -5750,10 +5750,11 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       // See comments in SUBMODULE_UMBRELLA_HEADER
       std::string Dirname = std::string(Blob);
       ResolveImportedPath(F, Dirname);
-      if (auto Umbrella = PP.getFileManager().getDirectory(Dirname)) {
-        if (!CurrentModule->getUmbrellaDir()) {
+      if (auto Umbrella =
+              PP.getFileManager().getOptionalDirectoryRef(Dirname)) {
+        if (!CurrentModule->getUmbrellaDirAsWritten()) {
           // FIXME: NameAsWritten
-          ModMap.setUmbrellaDir(CurrentModule, *Umbrella, Blob, "");
+          ModMap.setUmbrellaDirAsWritten(CurrentModule, *Umbrella, Blob, "");
         }
       }
       break;

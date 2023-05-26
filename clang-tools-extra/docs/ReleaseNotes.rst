@@ -248,6 +248,10 @@ Changes in existing checks
   constructor initializers. Correctly handle constructor arguments as being
   sequenced when constructor call is written as list-initialization.
 
+- Extend :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>` check to check for all functions
+  with specified return types using the ``CheckedReturnTypes`` option.
+
 - Deprecated :doc:`cert-dcl21-cpp
   <clang-tidy/checks/cert/dcl21-cpp>` check.
 
