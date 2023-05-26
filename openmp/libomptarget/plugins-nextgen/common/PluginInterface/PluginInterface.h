@@ -326,6 +326,14 @@ private:
   virtual uint32_t getDefaultNumThreads(GenericDeviceTy &Device) const = 0;
   virtual uint32_t getDefaultNumBlocks(GenericDeviceTy &Device) const = 0;
 
+  /// Lower number of threads if tripcount is low.
+  virtual std::pair<bool, uint32_t>
+  adjustNumThreadsForLowTripCount(GenericDeviceTy &GenericDevice,
+                                  uint32_t BlockSize, uint64_t LoopTripCount,
+                                  uint32_t ThreadLimitClause[3]) const {
+    return std::make_pair(false, BlockSize);
+  }
+
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
   virtual uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
@@ -773,6 +781,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   int32_t getOMPTeamsThreadLimit() const { return OMP_TeamsThreadLimit; }
 
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
+
+  virtual uint32_t getOMPXLowTripCount() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getOMPXSmallBlockSize() const {
+    llvm_unreachable("Unimplemented");
+  }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }

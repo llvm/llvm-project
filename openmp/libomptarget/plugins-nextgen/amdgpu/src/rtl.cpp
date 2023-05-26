@@ -693,6 +693,35 @@ private:
   /// CodeGen generate WGSize
   uint16_t ConstWGSize;
 
+  /// Lower number of threads if tripcount is low. This should produce
+  /// a larger number of teams if allowed by other constraints.
+  std::pair<bool, uint32_t> adjustNumThreadsForLowTripCount(
+      GenericDeviceTy &GenericDevice, uint32_t BlockSize,
+      uint64_t LoopTripCount, uint32_t ThreadLimitClause[3]) const override {
+    uint32_t NumThreads = BlockSize;
+
+    // If tripcount not set or not low, do nothing.
+    if ((LoopTripCount == 0) || (LoopTripCount > GenericDevice.getOMPXLowTripCount()))
+      return std::make_pair(false, NumThreads);
+
+    // Environment variable present, do nothing.
+    if (GenericDevice.getOMPTeamsThreadLimit() > 0)
+      return std::make_pair(false, NumThreads);
+
+    // num_threads clause present, do nothing.
+    if ((ThreadLimitClause[0] > 0) && (ThreadLimitClause[0] != (uint32_t)-1))
+      return std::make_pair(false, NumThreads);
+
+    // If generic, generic-SPMD, or Xteam reduction kernel, do nothing.
+    if (isGenericMode() || isGenericSPMDMode() || isXTeamReductionsMode())
+      return std::make_pair(false, NumThreads);
+
+    // Reduce the blocksize as long as it is above the tunable limit.
+    while (NumThreads > GenericDevice.getOMPXSmallBlockSize())
+      NumThreads >>= 1;
+    return std::make_pair(true, NumThreads);
+  }
+
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
@@ -1982,6 +2011,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_NumQueues("LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 4),
         OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 512),
         OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 4),
+        OMPX_LowTripCount("LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT", 2000),
+        OMPX_SmallBlockSize("LIBOMPTARGET_AMDGPU_SMALL_BLOCKSIZE", 32),
         OMPX_MaxAsyncCopyBytes("LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES",
                                1 * 1024 * 1024), // 1MB
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
@@ -1996,6 +2027,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   uint64_t KernelBusyWaitTics;
   uint64_t DataBusyWaitTics;
+
+  virtual uint32_t getOMPXLowTripCount() const override {
+    return OMPX_LowTripCount;
+  }
+  virtual uint32_t getOMPXSmallBlockSize() const override {
+    return OMPX_SmallBlockSize;
+  }
 
   /// Initialize the device, its resources and get its properties.
   Error initImpl(GenericPluginTy &Plugin) override {
@@ -2936,6 +2974,13 @@ private:
   /// of compute units (CUs) the device has:
   ///   #default_teams = OMPX_DefaultTeamsPerCU * #CUs.
   UInt32Envar OMPX_DefaultTeamsPerCU;
+
+  /// Envar specifying tripcount below which the blocksize should be adjusted.
+  UInt32Envar OMPX_LowTripCount;
+
+  /// Envar specifying a value till which the blocksize can be adjusted if the
+  /// tripcount is low.
+  UInt32Envar OMPX_SmallBlockSize;
 
   /// Envar specifying the maximum size in bytes where the memory copies are
   /// asynchronous operations. Up to this transfer size, the memory copies are

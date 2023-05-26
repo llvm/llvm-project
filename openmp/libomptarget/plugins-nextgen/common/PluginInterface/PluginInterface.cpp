@@ -304,6 +304,12 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                                     KernelArgs.NumArgs, Args, Ptrs);
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
+
+  std::pair<bool, uint32_t> AdjustInfo = adjustNumThreadsForLowTripCount(
+      GenericDevice, NumThreads, KernelArgs.Tripcount, KernelArgs.ThreadLimit);
+  if (AdjustInfo.first)
+    NumThreads = AdjustInfo.second;
+
   uint64_t NumBlocks = getNumBlocks(GenericDevice, KernelArgs.NumTeams,
                                     KernelArgs.Tripcount, NumThreads);
 
