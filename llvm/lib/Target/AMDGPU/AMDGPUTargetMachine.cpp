@@ -663,6 +663,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUAtomicOptimizerPass(*this));
           return true;
         }
+        if (PassName == "amdgpu-codegenprepare") {
+          PM.addPass(AMDGPUCodeGenPreparePass(*this));
+          return true;
+        }
         return false;
       });
 
