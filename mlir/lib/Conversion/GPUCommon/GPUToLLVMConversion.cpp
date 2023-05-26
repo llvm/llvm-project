@@ -1190,9 +1190,9 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
 // TODO: safer and more flexible to store data type in actual op instead?
 static Type getSpMatElemType(Value spMat) {
   if (auto op = spMat.getDefiningOp<gpu::CreateCooOp>())
-    return op.getValues().getType().cast<MemRefType>().getElementType();
+    return llvm::cast<MemRefType>(op.getValues().getType()).getElementType();
   if (auto op = spMat.getDefiningOp<gpu::CreateCsrOp>())
-    return op.getValues().getType().cast<MemRefType>().getElementType();
+    return llvm::cast<MemRefType>(op.getValues().getType()).getElementType();
   llvm_unreachable("cannot find spmat def");
 }
 
@@ -1235,7 +1235,7 @@ LogicalResult ConvertCreateDnVecOpToGpuRuntimeCallPattern::matchAndRewrite(
       MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
   if (!getTypeConverter()->useOpaquePointers())
     pVec = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pVec);
-  Type dType = op.getMemref().getType().cast<MemRefType>().getElementType();
+  Type dType = llvm::cast<MemRefType>(op.getMemref().getType()).getElementType();
   auto dw = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
                                               dType.getIntOrFloatBitWidth());
   auto handle =
@@ -1271,7 +1271,7 @@ LogicalResult ConvertCreateDnMatOpToGpuRuntimeCallPattern::matchAndRewrite(
       MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
   if (!getTypeConverter()->useOpaquePointers())
     pMat = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pMat);
-  Type dType = op.getMemref().getType().cast<MemRefType>().getElementType();
+  Type dType = llvm::cast<MemRefType>(op.getMemref().getType()).getElementType();
   auto dw = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
                                               dType.getIntOrFloatBitWidth());
   auto handle =
@@ -1315,8 +1315,8 @@ LogicalResult ConvertCreateCooOpToGpuRuntimeCallPattern::matchAndRewrite(
     pColIdxs = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pColIdxs);
     pValues = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pValues);
   }
-  Type iType = op.getColIdxs().getType().cast<MemRefType>().getElementType();
-  Type dType = op.getValues().getType().cast<MemRefType>().getElementType();
+  Type iType = llvm::cast<MemRefType>(op.getColIdxs().getType()).getElementType();
+  Type dType = llvm::cast<MemRefType>(op.getValues().getType()).getElementType();
   auto iw = rewriter.create<LLVM::ConstantOp>(
       loc, llvmInt32Type, iType.isIndex() ? 64 : iType.getIntOrFloatBitWidth());
   auto dw = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
@@ -1350,9 +1350,9 @@ LogicalResult ConvertCreateCsrOpToGpuRuntimeCallPattern::matchAndRewrite(
     pColIdxs = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pColIdxs);
     pValues = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pValues);
   }
-  Type pType = op.getRowPos().getType().cast<MemRefType>().getElementType();
-  Type iType = op.getColIdxs().getType().cast<MemRefType>().getElementType();
-  Type dType = op.getValues().getType().cast<MemRefType>().getElementType();
+  Type pType = llvm::cast<MemRefType>(op.getRowPos().getType()).getElementType();
+  Type iType = llvm::cast<MemRefType>(op.getColIdxs().getType()).getElementType();
+  Type dType = llvm::cast<MemRefType>(op.getValues().getType()).getElementType();
   auto pw = rewriter.create<LLVM::ConstantOp>(
       loc, llvmInt32Type, pType.isIndex() ? 64 : pType.getIntOrFloatBitWidth());
   auto iw = rewriter.create<LLVM::ConstantOp>(

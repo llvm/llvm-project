@@ -81,6 +81,10 @@ module {
     %s5= sparse_tensor.pack %data, %pos32, %index32 : tensor<3xf64>, tensor<2xi32>, tensor<3x2xi32>
                                            to tensor<10x10xf64, #SortedCOOI32>
 
+    %csr_data = arith.constant dense<
+       [  1.0,  2.0,  3.0,  4.0]
+    > : tensor<4xf64>
+
     %csr_pos32 = arith.constant dense<
        [0, 1, 3]
     > : tensor<3xi32>
@@ -88,7 +92,7 @@ module {
     %csr_index32 = arith.constant dense<
        [1, 0, 1]
     > : tensor<3xi32>
-    %csr= sparse_tensor.pack %data, %csr_pos32, %csr_index32 : tensor<3xf64>, tensor<3xi32>, tensor<3xi32>
+    %csr= sparse_tensor.pack %csr_data, %csr_pos32, %csr_index32 : tensor<4xf64>, tensor<3xi32>, tensor<3xi32>
                                            to tensor<2x2xf64, #CSR>
 
     %bdata = arith.constant dense<
@@ -164,6 +168,16 @@ module {
         vector.print %v: f64
      }
 
+    %d_csr = tensor.empty() : tensor<4xf64>
+    %p_csr = tensor.empty() : tensor<3xi32>
+    %i_csr = tensor.empty() : tensor<3xi32>
+    %rd_csr, %rp_csr, %ri_csr = sparse_tensor.unpack %csr : tensor<2x2xf64, #CSR>
+                 outs(%d_csr, %p_csr, %i_csr : tensor<4xf64>, tensor<3xi32>, tensor<3xi32>)
+                 -> tensor<4xf64>, tensor<3xi32>, tensor<3xi32>
+
+    // CHECK-NEXT: ( 1, 2, 3, {{.*}} )
+    %vd_csr = vector.transfer_read %rd_csr[%c0], %f0 : tensor<4xf64>, vector<4xf64>
+    vector.print %vd_csr : vector<4xf64>
 
     // CHECK-NEXT:1
     // CHECK-NEXT:2

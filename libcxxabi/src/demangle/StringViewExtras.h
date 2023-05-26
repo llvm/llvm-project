@@ -21,12 +21,16 @@
 
 DEMANGLE_NAMESPACE_BEGIN
 
-inline bool starts_with(std::string_view self, char C) {
-  return !self.empty() && self.front() == C;
+inline bool starts_with(std::string_view self, char C) noexcept {
+  return !self.empty() && *self.begin() == C;
 }
 
-inline bool starts_with(std::string_view haystack, std::string_view needle) {
-  return haystack.substr(0, needle.size()) == needle;
+inline bool starts_with(std::string_view haystack,
+                        std::string_view needle) noexcept {
+  if (needle.size() > haystack.size())
+    return false;
+  haystack.remove_suffix(haystack.size() - needle.size());
+  return haystack == needle;
 }
 
 DEMANGLE_NAMESPACE_END

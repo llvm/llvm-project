@@ -571,6 +571,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   remarks::RemarkLinker RL;
   if (!Options.RemarksPrependPath.empty())
     RL.setExternalFilePrependPath(Options.RemarksPrependPath);
+  RL.setKeepAllRemarks(Options.RemarksKeepAll);
   GeneralLinker.setObjectPrefixMap(&Options.ObjectPrefixMap);
 
   std::function<StringRef(StringRef)> TranslationLambda = [&](StringRef Input) {

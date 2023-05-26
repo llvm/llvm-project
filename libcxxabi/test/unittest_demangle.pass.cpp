@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03
 
 #include "../src/cxa_demangle.cpp"
+#include "../src/abort_message.cpp"
 
 using namespace __cxxabiv1;
 

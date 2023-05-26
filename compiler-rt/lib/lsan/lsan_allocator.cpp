@@ -172,6 +172,10 @@ uptr GetMallocUsableSize(const void *p) {
   return m->requested_size;
 }
 
+uptr GetMallocUsableSizeFast(const void *p) {
+  return Metadata(p)->requested_size;
+}
+
 int lsan_posix_memalign(void **memptr, uptr alignment, uptr size,
                         const StackTrace &stack) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {
@@ -383,6 +387,14 @@ const void * __sanitizer_get_allocated_begin(const void *p) {
 SANITIZER_INTERFACE_ATTRIBUTE
 uptr __sanitizer_get_allocated_size(const void *p) {
   return GetMallocUsableSize(p);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = GetMallocUsableSizeFast(p);
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

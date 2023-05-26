@@ -129,6 +129,38 @@ extern int x;
 // CHECK-NEXT: AlignedAttr{{.*}} Inherited
 }
 
+namespace TestAligns {
+
+template<typename...T> struct my_union {
+  alignas(T...) char buffer[1024];
+};
+
+template<typename...T> struct my_union2 {
+  _Alignas(T...) char buffer[1024];
+};
+
+struct alignas(8) A { char c; };
+struct alignas(4) B { short s; };
+struct C { char a[16]; };
+
+// CHECK: ClassTemplateSpecializationDecl {{.*}} struct my_union
+// CHECK: CXXRecordDecl {{.*}} implicit struct my_union
+// CHECK: FieldDecl {{.*}} buffer 'char[1024]'
+// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::A':'TestAligns::A'
+// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::B':'TestAligns::B'
+// CHECK-NEXT: AlignedAttr {{.*}} alignas 'TestAligns::C':'TestAligns::C'
+my_union<A, B, C> my_union_val;
+
+// CHECK: ClassTemplateSpecializationDecl {{.*}} struct my_union2
+// CHECK: CXXRecordDecl {{.*}} implicit struct my_union2
+// CHECK: FieldDecl {{.*}} buffer 'char[1024]'
+// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::A':'TestAligns::A'
+// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::B':'TestAligns::B'
+// CHECK-NEXT: AlignedAttr {{.*}} _Alignas 'TestAligns::C':'TestAligns::C'
+my_union2<A, B, C> my_union2_val;
+
+} // namespace TestAligns
+
 int __attribute__((cdecl)) TestOne(void), TestTwo(void);
 // CHECK: FunctionDecl{{.*}}TestOne{{.*}}__attribute__((cdecl))
 // CHECK: FunctionDecl{{.*}}TestTwo{{.*}}__attribute__((cdecl))

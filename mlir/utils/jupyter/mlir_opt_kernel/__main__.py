@@ -4,4 +4,5 @@
 
 from ipykernel.kernelapp import IPKernelApp
 from .kernel import MlirOptKernel
+
 IPKernelApp.launch_instance(kernel_class=MlirOptKernel)

@@ -34,6 +34,7 @@ INTERFACE_FUNCTION(__sanitizer_symbolize_pc)
 // Allocator interface.
 INTERFACE_FUNCTION(__sanitizer_get_allocated_begin)
 INTERFACE_FUNCTION(__sanitizer_get_allocated_size)
+INTERFACE_FUNCTION(__sanitizer_get_allocated_size_fast)
 INTERFACE_FUNCTION(__sanitizer_get_current_allocated_bytes)
 INTERFACE_FUNCTION(__sanitizer_get_estimated_allocated_size)
 INTERFACE_FUNCTION(__sanitizer_get_free_bytes)
