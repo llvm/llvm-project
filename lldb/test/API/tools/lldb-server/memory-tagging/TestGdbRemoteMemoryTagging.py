@@ -14,13 +14,16 @@ within the same mapping. That logic is handled in the kernel
 so it's just a single ptrace call for lldb-server.
 """
 
-class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
 
+class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
     def check_memtags_response(self, packet_name, body, expected):
-        self.test_sequence.add_log_lines(["read packet: ${}:{}#00".format(packet_name, body),
-                                          "send packet: ${}#00".format(expected),
-                                          ],
-                                         True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: ${}:{}#00".format(packet_name, body),
+                "send packet: ${}#00".format(expected),
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
     def check_tag_read(self, body, expected):
@@ -40,15 +43,24 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
             [
                 # Start running after initial stop
                 "read packet: $c#63",
-		# Match the address of the MTE page
-                {"type": "output_match",
-                 "regex": self.maybe_strict_output_regex(r"buffer: (.+) page_size: (.+)\r\n"),
-                 "capture": {1: "buffer", 2: "page_size"}},
+                # Match the address of the MTE page
+                {
+                    "type": "output_match",
+                    "regex": self.maybe_strict_output_regex(
+                        r"buffer: (.+) page_size: (.+)\r\n"
+                    ),
+                    "capture": {1: "buffer", 2: "page_size"},
+                },
                 # Now stop the inferior
                 "read packet: {}".format(chr(3)),
                 # And wait for the stop notification
-                {"direction": "send", "regex": r"^\$T[0-9a-fA-F]{2}thread:[0-9a-fA-F]+;"}],
-            True)
+                {
+                    "direction": "send",
+                    "regex": r"^\$T[0-9a-fA-F]{2}thread:[0-9a-fA-F]+;",
+                },
+            ],
+            True,
+        )
 
         # Run the packet stream
         context = self.expect_gdbremote_sequence()
@@ -73,7 +85,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["linux"])
     @skipUnlessAArch64MTELinuxCompiler
     def test_qMemTags_packets(self):
-        """ Test that qMemTags packets are parsed correctly and/or rejected. """
+        """Test that qMemTags packets are parsed correctly and/or rejected."""
         buf_address, page_size = self.prep_memtags_test()
 
         # Sanity check that address is correct
@@ -126,15 +138,15 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.check_tag_read("{:x},20:1".format(buf_address), "m0001")
         # lldb-server should re-align the range
         # Here we read from 1/2 way through a granule, into the next. Expands to 2 granules
-        self.check_tag_read("{:x},10:1".format(buf_address+64-8), "m0304")
+        self.check_tag_read("{:x},10:1".format(buf_address + 64 - 8), "m0304")
         # Read up to the end of an MTE page.
         # We know that the last tag should be 0xF since page size will always be a
         # multiple of 256 bytes, which is 16 granules and we have 16 tags to use.
-        self.check_tag_read("{:x},10:1".format(buf_address+page_size-16), "m0f")
+        self.check_tag_read("{:x},10:1".format(buf_address + page_size - 16), "m0f")
         # Here we read off of the end of the MTE range so ptrace gives us one tag,
         # then fails on the second call. To lldb-server this means the response
         # should just be an error, not a partial read.
-        self.check_tag_read("{:x},20:1".format(buf_address+page_size-16), "E01")
+        self.check_tag_read("{:x},20:1".format(buf_address + page_size - 16), "E01")
 
     def check_tag_write(self, body, expected):
         self.check_memtags_response("QMemTags", body, expected)
@@ -143,7 +155,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["linux"])
     @skipUnlessAArch64MTELinuxCompiler
     def test_QMemTags_packets(self):
-        """ Test that QMemTags packets are parsed correctly and/or rejected. """
+        """Test that QMemTags packets are parsed correctly and/or rejected."""
         buf_address, page_size = self.prep_memtags_test()
 
         # Sanity check that address is correct
@@ -201,12 +213,12 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
         # Zero length write doesn't need any tag data (but should include the :)
         self.check_tag_write("{:x},0:1:".format(buf_address), "OK")
         # Zero length unaligned is the same
-        self.check_tag_write("{:x},0:1:".format(buf_address+8), "OK")
+        self.check_tag_write("{:x},0:1:".format(buf_address + 8), "OK")
         # Ranges can be aligned already
         self.check_tag_write("{:x},20:1:0405".format(buf_address), "OK")
         self.check_tag_read("{:x},20:1".format(buf_address), "m0405")
         # Unaliged ranges will be aligned by the server
-        self.check_tag_write("{:x},10:1:0607".format(buf_address+8), "OK")
+        self.check_tag_write("{:x},10:1:0607".format(buf_address + 8), "OK")
         self.check_tag_read("{:x},20:1".format(buf_address), "m0607")
         # Tags will be repeated as needed to cover the range
         self.check_tag_write("{:x},30:1:09".format(buf_address), "OK")
@@ -216,7 +228,7 @@ class TestGdbRemoteMemoryTagging(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.check_tag_write("{:x},30:1:0a0b".format(buf_address), "OK")
         self.check_tag_read("{:x},30:1".format(buf_address), "m0a0b0a")
         # We can write up to the end of the MTE page
-        last_granule = buf_address + page_size - 16;
+        last_granule = buf_address + page_size - 16
         self.check_tag_write("{:x},10:1:0c".format(last_granule), "OK")
         self.check_tag_read("{:x},10:1".format(last_granule), "m0c")
         # Writing over the end of the page is an error

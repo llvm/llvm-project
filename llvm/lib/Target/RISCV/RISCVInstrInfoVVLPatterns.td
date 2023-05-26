@@ -129,6 +129,14 @@ def any_riscv_fsqrt_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
                         [(riscv_fsqrt_vl node:$src, node:$mask, node:$vl),
                          (riscv_strict_fsqrt_vl node:$src, node:$mask, node:$vl)]>;
 
+def riscv_fclass_vl : SDNode<"RISCVISD::FCLASS_VL",
+                             SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisVec<0>,
+                                                  SDTCisFP<1>, SDTCisVec<1>,
+                                                  SDTCisSameSizeAs<0, 1>,
+                                                  SDTCVecEltisVT<2, i1>,
+                                                  SDTCisSameNumEltsAs<0, 2>,
+                                                  SDTCisVT<3, XLenVT>]>>;
+
 def SDT_RISCVVecFMA_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                               SDTCisSameAs<0, 2>,
                                               SDTCisSameAs<0, 3>,
@@ -1999,6 +2007,12 @@ foreach vti = AllFloatVectors in {
               (!cast<Instruction>("PseudoVFROUND_NOEXCEPT_V_" # vti.LMul.MX #"_MASK")
                     (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1,
                     (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
+  
+    // 14.14. Vector Floating-Point Classify Instruction
+    def : Pat<(riscv_fclass_vl (vti.Vector vti.RegClass:$rs2), 
+                               (vti.Mask true_mask), VLOpFrag),
+              (!cast<Instruction>("PseudoVFCLASS_V_"# vti.LMul.MX)
+                 vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
   }
 }
 

@@ -288,6 +288,10 @@ static uptr AllocationSize(const void *p) {
   return b->requested_size;
 }
 
+static uptr AllocationSizeFast(const void *p) {
+  return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
+}
+
 void *msan_malloc(uptr size, StackTrace *stack) {
   return SetErrnoOnNull(MsanAllocate(stack, size, sizeof(u64), false));
 }
@@ -398,5 +402,12 @@ const void *__sanitizer_get_allocated_begin(const void *p) {
 }
 
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = AllocationSizeFast(p);
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
+}
 
 void __sanitizer_purge_allocator() { allocator.ForceReleaseToOS(); }

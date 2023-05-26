@@ -161,7 +161,7 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
       }
 
       // Replace the op with the reified bound.
-      if (auto val = reified->dyn_cast<Value>()) {
+      if (auto val = llvm::dyn_cast_if_present<Value>(*reified)) {
         rewriter.replaceOp(op, val);
         return WalkResult::skip();
       }

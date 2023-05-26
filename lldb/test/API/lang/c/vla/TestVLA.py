@@ -5,12 +5,12 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestVLA(TestBase):
-
-    @skipIf(compiler="clang", compiler_version=['<', '8.0'])
+    @skipIf(compiler="clang", compiler_version=["<", "8.0"])
     def test_variable_list(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec('main.c'))
+            self, "break here", lldb.SBFileSpec("main.c")
+        )
 
         # Make sure no helper expressions show up in frame variable.
         var_opts = lldb.SBVariablesOptions()
@@ -24,20 +24,20 @@ class TestVLA(TestBase):
         for value in all_locals:
             self.assertNotIn("vla_expr", value.name)
 
-    @decorators.skipIf(compiler="clang", compiler_version=['<', '8.0'])
+    @decorators.skipIf(compiler="clang", compiler_version=["<", "8.0"])
     def test_vla(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec('main.c'))
+            self, "break here", lldb.SBFileSpec("main.c")
+        )
 
         def test(a):
             children = []
             for i in range(a):
-                name = "[%d]"%i
-                value = str(a-i)
-                self.expect_var_path("vla"+name, type="int", value=value)
-                self.expect_expr("vla"+name, result_type="int",
-                        result_value=value)
+                name = "[%d]" % i
+                value = str(a - i)
+                self.expect_var_path("vla" + name, type="int", value=value)
+                self.expect_expr("vla" + name, result_type="int", result_value=value)
                 children.append(ValueCheck(name=name, value=value))
             self.expect_var_path("vla", type="int[]", children=children)
             self.expect("expr vla", error=True, substrs=["incomplete"])
@@ -45,4 +45,3 @@ class TestVLA(TestBase):
         test(2)
         process.Continue()
         test(4)
-

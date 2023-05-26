@@ -8,19 +8,20 @@ from lldbsuite.test import lldbutil
 
 
 class TestDbgInfoContentForwardList(TestBase):
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
         self.build()
 
-        lldbutil.run_to_source_breakpoint(self,
-                                          "// Set break point at this line.",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", lldb.SBFileSpec("main.cpp")
+        )
 
         self.runCmd("settings set target.import-std-module true")
 
-        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">", "16.0"]
+        ):
             list_type = "std::forward_list<Foo>"
         else:
             list_type = "std::forward_list<Foo, std::allocator<Foo> >"

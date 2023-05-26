@@ -159,7 +159,7 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
     // Handle built-in types that are not handled by the default process.
     if (auto iType = dyn_cast<IntegerType>(type)) {
       for (DataLayoutEntryInterface entry : params)
-        if (entry.getKey().dyn_cast<Type>() == type)
+        if (llvm::dyn_cast_if_present<Type>(entry.getKey()) == type)
           return 8 *
                  cast<IntegerAttr>(entry.getValue()).getValue().getZExtValue();
       return 8 * iType.getIntOrFloatBitWidth();

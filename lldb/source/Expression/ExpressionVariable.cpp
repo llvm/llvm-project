@@ -34,6 +34,8 @@ uint8_t *ExpressionVariable::GetValueBytes() {
 
 char PersistentExpressionState::ID;
 
+PersistentExpressionState::PersistentExpressionState() = default;
+
 PersistentExpressionState::~PersistentExpressionState() = default;
 
 lldb::addr_t PersistentExpressionState::LookupSymbol(ConstString name) {

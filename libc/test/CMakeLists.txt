@@ -13,6 +13,9 @@ add_header_library(
   HDRS
     ErrnoSetterMatcher.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.StringUtil.error_to_string
     libc.src.errno.errno
 )
 

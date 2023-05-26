@@ -55,7 +55,7 @@ private:
   char *offset_ptr = nullptr;
 };
 
-static inline char GetRandomChar() {
+inline char GetRandomChar() {
   static constexpr const uint64_t a = 1103515245;
   static constexpr const uint64_t c = 12345;
   static constexpr const uint64_t m = 1ULL << 31;
@@ -65,19 +65,18 @@ static inline char GetRandomChar() {
 }
 
 // Randomize the content of the buffer.
-static inline void Randomize(cpp::span<char> buffer) {
+inline void Randomize(cpp::span<char> buffer) {
   for (auto &current : buffer)
     current = GetRandomChar();
 }
 
 // Copy one span to another.
-static inline void ReferenceCopy(cpp::span<char> dst,
-                                 const cpp::span<char> src) {
+inline void ReferenceCopy(cpp::span<char> dst, const cpp::span<char> src) {
   for (size_t i = 0; i < dst.size(); ++i)
     dst[i] = src[i];
 }
 
-static inline bool IsEqual(const cpp::span<char> a, const cpp::span<char> b) {
+inline bool IsEqual(const cpp::span<char> a, const cpp::span<char> b) {
   LIBC_ASSERT(a.size() == b.size());
   for (size_t i = 0; i < a.size(); ++i)
     if (a[i] != b[i])
@@ -87,7 +86,7 @@ static inline bool IsEqual(const cpp::span<char> a, const cpp::span<char> b) {
 
 // Checks that FnImpl implements the memcpy semantic.
 template <auto FnImpl>
-bool CheckMemcpy(cpp::span<char> dst, cpp::span<char> src, size_t size) {
+inline bool CheckMemcpy(cpp::span<char> dst, cpp::span<char> src, size_t size) {
   Randomize(dst);
   FnImpl(dst, src, size);
   return IsEqual(dst, src);
@@ -95,7 +94,7 @@ bool CheckMemcpy(cpp::span<char> dst, cpp::span<char> src, size_t size) {
 
 // Checks that FnImpl implements the memset semantic.
 template <auto FnImpl>
-bool CheckMemset(cpp::span<char> dst, uint8_t value, size_t size) {
+inline bool CheckMemset(cpp::span<char> dst, uint8_t value, size_t size) {
   Randomize(dst);
   FnImpl(dst, value, size);
   for (char c : dst)
@@ -106,7 +105,8 @@ bool CheckMemset(cpp::span<char> dst, uint8_t value, size_t size) {
 
 // Checks that FnImpl implements the bcmp semantic.
 template <auto FnImpl>
-bool CheckBcmp(cpp::span<char> span1, cpp::span<char> span2, size_t size) {
+inline bool CheckBcmp(cpp::span<char> span1, cpp::span<char> span2,
+                      size_t size) {
   ReferenceCopy(span2, span1);
   // Compare equal
   if (int cmp = FnImpl(span1, span2, size); cmp != 0)
@@ -125,7 +125,8 @@ bool CheckBcmp(cpp::span<char> span1, cpp::span<char> span2, size_t size) {
 
 // Checks that FnImpl implements the memcmp semantic.
 template <auto FnImpl>
-bool CheckMemcmp(cpp::span<char> span1, cpp::span<char> span2, size_t size) {
+inline bool CheckMemcmp(cpp::span<char> span1, cpp::span<char> span2,
+                        size_t size) {
   ReferenceCopy(span2, span1);
   // Compare equal
   if (int cmp = FnImpl(span1, span2, size); cmp != 0)
@@ -150,7 +151,7 @@ bool CheckMemcmp(cpp::span<char> span1, cpp::span<char> span2, size_t size) {
   return true;
 }
 
-uint16_t Checksum(cpp::span<char> dst) {
+inline uint16_t Checksum(cpp::span<char> dst) {
   // We use Fletcher16 as it is trivial to implement.
   uint16_t sum1 = 0;
   uint16_t sum2 = 0;
@@ -158,11 +159,11 @@ uint16_t Checksum(cpp::span<char> dst) {
     sum1 = (sum1 + c) % 255U;
     sum2 = (sum2 + sum1) % 255U;
   }
-  return (sum2 << 8) | sum1;
+  return static_cast<uint16_t>((sum2 << 8) | sum1);
 }
 
 template <auto FnImpl>
-bool CheckMemmove(cpp::span<char> dst, cpp::span<char> src) {
+inline bool CheckMemmove(cpp::span<char> dst, cpp::span<char> src) {
   LIBC_ASSERT(dst.size() == src.size());
   // Memmove can override the src buffer. Technically we should save it into a
   // temporary buffer so we can check that 'dst' is equal to what 'src' was
@@ -180,7 +181,7 @@ bool CheckMemmove(cpp::span<char> dst, cpp::span<char> src) {
 //    - zero mean they overlap exactly
 //  - Caller is responsible for randomizing the buffer.
 template <auto FnImpl>
-bool CheckMemmove(cpp::span<char> buffer, size_t size, int overlap) {
+inline bool CheckMemmove(cpp::span<char> buffer, size_t size, int overlap) {
   LIBC_ASSERT(buffer.size() > (2 * size + 1));
   const size_t half_size = buffer.size() / 2;
   LIBC_ASSERT((size_t)(overlap >= 0 ? overlap : -overlap) < half_size);

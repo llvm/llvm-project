@@ -815,7 +815,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
   Level cooStartLvl = getCOOStart(stt.getEncoding());
   if (cooStartLvl < stt.getLvlRank()) {
     // We only supports trailing COO for now, must be the last input.
-    auto cooTp = lvlTps.back().cast<ShapedType>();
+    auto cooTp = llvm::cast<ShapedType>(lvlTps.back());
     // The coordinates should be in shape of <? x rank>
     unsigned expCOORank = stt.getLvlRank() - cooStartLvl;
     if (cooTp.getRank() != 2 || expCOORank != cooTp.getShape().back()) {
@@ -844,7 +844,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
       inputTp = lvlTps[idx++];
     }
     // The input element type and expected element type should match.
-    Type inpElemTp = inputTp.cast<TensorType>().getElementType();
+    Type inpElemTp = llvm::cast<TensorType>(inputTp).getElementType();
     Type expElemTp = getFieldElemType(stt, fKind);
     if (inpElemTp != expElemTp) {
       misMatch = true;

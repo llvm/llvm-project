@@ -300,7 +300,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     return rewriter.create<mlir::math::TanhOp>(loc, resultTypes, args);
 
   // tosa::ErfOp
-  if (isa<tosa::ErfOp>(op) && elementTy.isa<FloatType>())
+  if (isa<tosa::ErfOp>(op) && llvm::isa<FloatType>(elementTy))
     return rewriter.create<mlir::math::ErfOp>(loc, resultTypes, args);
 
   // tosa::GreaterOp
@@ -1885,7 +1885,7 @@ public:
 
     auto addDynamicDimension = [&](Value source, int64_t dim) {
       auto dynamicDim = tensor::createDimValue(builder, loc, source, dim);
-      if (auto dimValue = dynamicDim.value().dyn_cast<Value>())
+      if (auto dimValue = llvm::dyn_cast_if_present<Value>(dynamicDim.value()))
         results.push_back(dimValue);
     };
 

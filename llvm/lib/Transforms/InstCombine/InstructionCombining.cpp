@@ -3903,15 +3903,21 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     // Recursively visit successors.  If this is a branch or switch on a
     // constant, only visit the reachable successor.
     Instruction *TI = BB->getTerminator();
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-      if (BI->isConditional() && isa<ConstantInt>(BI->getCondition())) {
-        bool CondVal = cast<ConstantInt>(BI->getCondition())->getZExtValue();
+    if (BranchInst *BI = dyn_cast<BranchInst>(TI); BI && BI->isConditional()) {
+      if (isa<UndefValue>(BI->getCondition()))
+        // Branch on undef is UB.
+        continue;
+      if (auto *Cond = dyn_cast<ConstantInt>(BI->getCondition())) {
+        bool CondVal = Cond->getZExtValue();
         BasicBlock *ReachableBB = BI->getSuccessor(!CondVal);
         Worklist.push_back(ReachableBB);
         continue;
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
-      if (ConstantInt *Cond = dyn_cast<ConstantInt>(SI->getCondition())) {
+      if (isa<UndefValue>(SI->getCondition()))
+        // Switch on undef is UB.
+        continue;
+      if (auto *Cond = dyn_cast<ConstantInt>(SI->getCondition())) {
         Worklist.push_back(SI->findCaseValue(Cond)->getCaseSuccessor());
         continue;
       }
