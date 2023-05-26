@@ -3062,6 +3062,9 @@ class TypePromotionTransaction {
 
     ~InstructionRemover() override { delete Replacer; }
 
+    InstructionRemover &operator=(const InstructionRemover &other) = delete;
+    InstructionRemover(const InstructionRemover &other) = delete;
+
     /// Resurrect the instruction and reassign it to the proper uses if
     /// new value was provided when build this action.
     void undo() override {
