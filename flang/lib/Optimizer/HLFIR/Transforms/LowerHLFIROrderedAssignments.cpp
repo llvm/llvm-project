@@ -911,6 +911,7 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     auto inserted =
         savedInCurrentRunBeforeUse.try_emplace(&region, entity, oldYield);
     assert(inserted.second && "entity must have been emplaced");
+    (void)inserted;
   } else {
     generateCleanupIfAny(oldYield);
   }
