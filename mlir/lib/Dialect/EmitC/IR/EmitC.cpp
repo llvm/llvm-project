@@ -100,7 +100,7 @@ LogicalResult emitc::CallOp::verify() {
 
         // Args with elements of type ArrayAttr must have a type.
       } else if (llvm::isa<ArrayAttr>(
-                     arg) /*&& arg.getType().isa<NoneType>()*/) {
+                     arg) /*&& llvm::isa<NoneType>(arg.getType())*/) {
         // FIXME: Array attributes never have types
         return emitOpError("array argument has no type");
       }

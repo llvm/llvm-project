@@ -826,7 +826,7 @@ OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
 
 #define REDUCE_FOLDER(OP)                                                      \
   OpFoldResult OP::fold(FoldAdaptor adaptor) {                                 \
-    ShapedType inputTy = getInput().getType().cast<ShapedType>();              \
+    ShapedType inputTy = llvm::cast<ShapedType>(getInput().getType());         \
     if (!inputTy.hasRank())                                                    \
       return {};                                                               \
     if (inputTy.getDimSize(getAxis()) == 1)                                    \
