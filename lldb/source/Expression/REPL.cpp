@@ -117,10 +117,11 @@ const char *REPL::IOHandlerGetFixIndentationCharacters() {
   return (m_enable_auto_indent ? GetAutoIndentCharacters() : nullptr);
 }
 
-ConstString REPL::IOHandlerGetControlSequence(char ch) {
+llvm::StringRef REPL::IOHandlerGetControlSequence(char ch) {
+  static constexpr llvm::StringLiteral control_sequence(":quit\n");
   if (ch == 'd')
-    return ConstString(":quit\n");
-  return ConstString();
+    return control_sequence;
+  return {};
 }
 
 const char *REPL::IOHandlerGetCommandPrefix() { return ":"; }
