@@ -1429,7 +1429,9 @@ unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
 LLVM_READNONE
-inline bool isLegal64BitDPPControl(unsigned DC) {
+inline bool isLegal64BitDPPControl(const MCSubtargetInfo &ST, unsigned DC) {
+  if (!isGFX90A(ST))
+    return true;
   return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
 }
 

@@ -4569,7 +4569,7 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
     return true;
   unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
-  if (!AMDGPU::isLegal64BitDPPControl(DppCtrl)) {
+  if (!AMDGPU::isLegal64BitDPPControl(getSTI(), DppCtrl)) {
     // DPP64 is supported for row_newbcast only.
     int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
     if (Src0Idx >= 0 &&

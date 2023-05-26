@@ -2315,7 +2315,7 @@ SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
   assert (MI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
 
   if (ST.hasMovB64() &&
-      AMDGPU::isLegal64BitDPPControl(
+      AMDGPU::isLegal64BitDPPControl(ST,
         getNamedOperand(MI, AMDGPU::OpName::dpp_ctrl)->getImm())) {
     MI.setDesc(get(AMDGPU::V_MOV_B64_dpp));
     return std::pair(&MI, nullptr);
@@ -4755,7 +4755,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
            (Desc.operands()[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID ||
             Desc.operands()[Src0Idx].RegClass ==
                 AMDGPU::VReg_64_Align2RegClassID)))) &&
-        !AMDGPU::isLegal64BitDPPControl(DC)) {
+        !AMDGPU::isLegal64BitDPPControl(ST, DC)) {
       ErrInfo = "Invalid dpp_ctrl value: "
                 "64 bit dpp only support row_newbcast";
       return false;

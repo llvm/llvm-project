@@ -224,11 +224,15 @@ def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
   let InsVOPDYDeferred = (ins VSrc_f32_Deferred:$src0Y);
 }
 
+def VOPProfile_MOV_B64 : VOPProfile <[i64, i64, untyped, untyped]> {
+  let HasExtVOP3DPP = 1;
+}
+
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
-let SubtargetPredicate = isGFX940Plus in
-defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
+let SubtargetPredicate = isGFX940orGFX12_10 in
+defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOPProfile_MOV_B64>;
 } // End isMoveImm = 1
 
 // FIXME: Specify SchedRW for READFIRSTLANE_B32
@@ -1451,3 +1455,6 @@ def : GCNPat <
                         (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
 >;
 } // End OtherPredicates = [isGFX12Only]
+
+let AssemblerPredicate = isGFX12_10Plus in
+defm V_MOV_B64 : VOP1_Real_FULL <GFX12Gen, 0x1d>;

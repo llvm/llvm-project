@@ -222,7 +222,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   unsigned TSFlags = MI.getDesc().TSFlags;
 
   if (TSFlags & (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
-                 SIInstrFlags::VOP3P | SIInstrFlags::VOPC))
+                 SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP))
     return runOnMachineInstr(MI, VOPOps);
 
   if (TSFlags & SIInstrFlags::DS)

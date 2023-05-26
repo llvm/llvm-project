@@ -1115,7 +1115,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
 
   if (Src0Idx >= 0 &&
       Desc.operands()[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID &&
-      !AMDGPU::isLegal64BitDPPControl(Imm)) {
+      !AMDGPU::isLegal64BitDPPControl(STI, Imm)) {
     O << " /* 64 bit dpp only supports row_newbcast */";
     return;
   } else if (Imm <= DppCtrl::QUAD_PERM_LAST) {

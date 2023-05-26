@@ -1852,6 +1852,10 @@ def isGFX12_10Plus :
   Predicate<"Subtarget->hasGFX12_10Insts()">,
   AssemblerPredicate<(all_of FeatureGFX12_10Insts)>;
 
+def isGFX940orGFX12_10 :
+  Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX12_10Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX12_10Insts)>;
+
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
 
