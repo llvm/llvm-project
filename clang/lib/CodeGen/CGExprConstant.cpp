@@ -1340,6 +1340,7 @@ public:
     std::string Str;
     CGM.getContext().getObjCEncodingForType(E->getEncodedType(), Str);
     const ConstantArrayType *CAT = CGM.getContext().getAsConstantArrayType(T);
+    assert(CAT && "String data not of constant array type!");
 
     // Resize the string to the right size, adding zeros at the end, or
     // truncating as needed.
