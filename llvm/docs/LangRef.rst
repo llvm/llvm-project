@@ -18069,6 +18069,54 @@ Arguments:
 None.
 
 
+'``llvm.experimental.get.vector.length``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare i32 @llvm.experimental.get.vector.length.i32(i32 %cnt, i32 immarg %vf, i1 immarg %scalable)
+      declare i32 @llvm.experimental.get.vector.length.i64(i64 %cnt, i32 immarg %vf, i1 immarg %scalable)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.get.vector.length.*``' intrinsics take a number of
+elements to process and returns how many of the elements can be processed
+with the requested vectorization factor.
+
+Arguments:
+""""""""""
+
+The first argument is an unsigned value of any scalar integer type and specifies
+the total number of elements to be processed. The second argument is an i32
+immediate for the vectorization factor. The third argument indicates if the
+vectorization factor should be multiplied by vscale.
+
+Semantics:
+""""""""""
+
+Returns a positive i32 value (explicit vector length) that is unknown at compile
+time and depends on the hardware specification.
+If the result value does not fit in the result type, then the result is
+a :ref:`poison value <poisonvalues>`.
+
+This intrinsic is intended to be used by loop vectorization with VP intrinsics
+in order to get the number of elements to process on each loop iteration. The
+result should be used to decrease the count for the next iteration until the
+count reaches zero.
+
+If the count is larger than the number of lanes in the type described by the
+last 2 arguments, this intrinsic may return a value less than the number of
+lanes implied by the type. The result will be at least as large as the result
+will be on any later loop iteration.
+
+This intrinsic will only return 0 if the input count is also 0. A non-zero input
+count will produce a non-zero result.
+
 Matrix Intrinsics
 -----------------
 
