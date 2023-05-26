@@ -163,10 +163,8 @@ define <4 x i32> @combine_vec_rot_select_zero(<4 x i32>, <4 x i32>) {
 ;
 ; AVX512-LABEL: combine_vec_rot_select_zero:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vptestnmd %xmm1, %xmm1, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm2 {%k1}
-; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
+; AVX512-NEXT:    vptestmd %xmm1, %xmm1, %k1
+; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
   %3 = and <4 x i32> %1, <i32 31, i32 31, i32 31, i32 31>
   %4 = shl <4 x i32> %0, %3
