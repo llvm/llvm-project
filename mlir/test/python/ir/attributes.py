@@ -553,3 +553,42 @@ def testStridedLayoutAttr():
         print(f"rank: {len(attr.strides)}")
         # CHECK: strides are dynamic: [True, True, True]
         print(f"strides are dynamic: {[s == dynamic for s in attr.strides]}")
+
+
+# CHECK-LABEL: TEST: testConcreteTypesRoundTrip
+@run
+def testConcreteTypesRoundTrip():
+    with Context(), Location.unknown():
+
+        def print_item(attr):
+            print(repr(attr.type))
+
+        # CHECK: F32Type(f32)
+        print_item(Attribute.parse("42.0 : f32"))
+        # CHECK: F32Type(f32)
+        print_item(FloatAttr.get_f32(42.0))
+        # CHECK: IntegerType(i64)
+        print_item(IntegerAttr.get(IntegerType.get_signless(64), 42))
+
+        def print_container_item(attr_asm):
+            attr = DenseElementsAttr(Attribute.parse(attr_asm))
+            print(repr(attr.type))
+            print(repr(attr.type.element_type))
+
+        # CHECK: RankedTensorType(tensor<i16>)
+        # CHECK: IntegerType(i16)
+        print_container_item("dense<123> : tensor<i16>")
+
+        # CHECK: RankedTensorType(tensor<f64>)
+        # CHECK: F64Type(f64)
+        print_container_item("dense<1.0> : tensor<f64>")
+
+        raw = Attribute.parse("vector<4xf32>")
+        # CHECK: attr: vector<4xf32>
+        print("attr:", raw)
+        type_attr = TypeAttr(raw)
+
+        # CHECK: VectorType(vector<4xf32>)
+        print(repr(type_attr.value))
+        # CHECK: F32Type(f32)
+        print(repr(type_attr.value.element_type))
