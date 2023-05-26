@@ -1003,7 +1003,7 @@ public:
     if (sectionData.empty())
       return success();
     EncodingReader propReader(sectionData, fileLoc);
-    size_t count;
+    uint64_t count;
     if (failed(propReader.parseVarInt(count)))
       return failure();
     // Parse the raw properties buffer.
@@ -1029,7 +1029,7 @@ public:
 
   LogicalResult read(Location fileLoc, DialectReader &dialectReader,
                      OperationName *opName, OperationState &opState) {
-    size_t propertiesIdx;
+    uint64_t propertiesIdx;
     if (failed(dialectReader.readVarInt(propertiesIdx)))
       return failure();
     if (propertiesIdx >= offsetTable.size())
