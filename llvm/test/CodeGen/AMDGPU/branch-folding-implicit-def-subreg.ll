@@ -46,7 +46,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2:
   ; GFX90A-NEXT:   successors: %bb.3(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr24, $sgpr33, $vgpr31, $agpr0, $vgpr26, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr58, $sgpr59, $sgpr22, $sgpr20_sgpr21, $sgpr24_sgpr25_sgpr26, $sgpr26_sgpr27, $vgpr2, $vgpr3, $vgpr20, $vgpr22
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr24, $sgpr33, $vgpr31, $agpr0, $vgpr26, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr58, $sgpr59, $sgpr20_sgpr21_sgpr22, $sgpr24_sgpr25_sgpr26, $sgpr26_sgpr27, $vgpr2, $vgpr3, $vgpr20, $vgpr22
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr17 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $sgpr23 = IMPLICIT_DEF
