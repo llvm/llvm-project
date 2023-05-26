@@ -2368,7 +2368,7 @@ transform::TileOp::apply(TransformResults &transformResults,
         sizes.reserve(tileSizes.size());
         unsigned dynamicIdx = 0;
         for (OpFoldResult ofr : getMixedSizes()) {
-          if (auto attr = ofr.dyn_cast<Attribute>()) {
+          if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr)) {
             sizes.push_back(b.create<arith::ConstantIndexOp>(
                 getLoc(), cast<IntegerAttr>(attr).getInt()));
             continue;
@@ -2794,7 +2794,7 @@ transform::TileToScfForOp::apply(TransformResults &transformResults,
             sizes.reserve(tileSizes.size());
             unsigned dynamicIdx = 0;
             for (OpFoldResult ofr : getMixedSizes()) {
-              if (auto attr = ofr.dyn_cast<Attribute>()) {
+              if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr)) {
                 sizes.push_back(b.create<arith::ConstantIndexOp>(
                     getLoc(), cast<IntegerAttr>(attr).getInt()));
               } else {

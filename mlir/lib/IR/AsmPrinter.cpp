@@ -3642,7 +3642,7 @@ void Value::print(raw_ostream &os, const OpPrintingFlags &flags) {
   if (auto *op = getDefiningOp())
     return op->print(os, flags);
   // TODO: Improve BlockArgument print'ing.
-  BlockArgument arg = this->cast<BlockArgument>();
+  BlockArgument arg = llvm::cast<BlockArgument>(*this);
   os << "<block argument> of type '" << arg.getType()
      << "' at index: " << arg.getArgNumber();
 }
@@ -3656,7 +3656,7 @@ void Value::print(raw_ostream &os, AsmState &state) {
     return op->print(os, state);
 
   // TODO: Improve BlockArgument print'ing.
-  BlockArgument arg = this->cast<BlockArgument>();
+  BlockArgument arg = llvm::cast<BlockArgument>(*this);
   os << "<block argument> of type '" << arg.getType()
      << "' at index: " << arg.getArgNumber();
 }
@@ -3693,10 +3693,10 @@ static Operation *findParent(Operation *op, bool shouldUseLocalScope) {
 
 void Value::printAsOperand(raw_ostream &os, const OpPrintingFlags &flags) {
   Operation *op;
-  if (auto result = dyn_cast<OpResult>()) {
+  if (auto result = llvm::dyn_cast<OpResult>(*this)) {
     op = result.getOwner();
   } else {
-    op = cast<BlockArgument>().getOwner()->getParentOp();
+    op = llvm::cast<BlockArgument>(*this).getOwner()->getParentOp();
     if (!op) {
       os << "<<UNKNOWN SSA VALUE>>";
       return;

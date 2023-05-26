@@ -265,11 +265,11 @@ struct OperationFormat {
 
     /// Get the variable this type is resolved to, or nullptr.
     const NamedTypeConstraint *getVariable() const {
-      return resolver.dyn_cast<const NamedTypeConstraint *>();
+      return llvm::dyn_cast_if_present<const NamedTypeConstraint *>(resolver);
     }
     /// Get the attribute this type is resolved to, or nullptr.
     const NamedAttribute *getAttribute() const {
-      return resolver.dyn_cast<const NamedAttribute *>();
+      return llvm::dyn_cast_if_present<const NamedAttribute *>(resolver);
     }
     /// Get the transformer for the type of the variable, or std::nullopt.
     std::optional<StringRef> getVarTransformer() const {

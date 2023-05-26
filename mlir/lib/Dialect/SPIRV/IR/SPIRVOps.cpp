@@ -1562,8 +1562,8 @@ LogicalResult spirv::BitcastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::ConvertPtrToUOp::verify() {
-  auto operandType = getPointer().getType().cast<spirv::PointerType>();
-  auto resultType = getResult().getType().cast<spirv::ScalarType>();
+  auto operandType = llvm::cast<spirv::PointerType>(getPointer().getType());
+  auto resultType = llvm::cast<spirv::ScalarType>(getResult().getType());
   if (!resultType || !resultType.isSignlessInteger())
     return emitError("result must be a scalar type of unsigned integer");
   auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();
@@ -1583,8 +1583,8 @@ LogicalResult spirv::ConvertPtrToUOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::ConvertUToPtrOp::verify() {
-  auto operandType = getOperand().getType().cast<spirv::ScalarType>();
-  auto resultType = getResult().getType().cast<spirv::PointerType>();
+  auto operandType = llvm::cast<spirv::ScalarType>(getOperand().getType());
+  auto resultType = llvm::cast<spirv::PointerType>(getResult().getType());
   if (!operandType || !operandType.isSignlessInteger())
     return emitError("result must be a scalar type of unsigned integer");
   auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();

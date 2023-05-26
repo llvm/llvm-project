@@ -18,7 +18,7 @@ using namespace mlir::detail;
 /// If this value is the result of an Operation, return the operation that
 /// defines it.
 Operation *Value::getDefiningOp() const {
-  if (auto result = dyn_cast<OpResult>())
+  if (auto result = llvm::dyn_cast<OpResult>(*this))
     return result.getOwner();
   return nullptr;
 }
@@ -27,28 +27,28 @@ Location Value::getLoc() const {
   if (auto *op = getDefiningOp())
     return op->getLoc();
 
-  return cast<BlockArgument>().getLoc();
+  return llvm::cast<BlockArgument>(*this).getLoc();
 }
 
 void Value::setLoc(Location loc) {
   if (auto *op = getDefiningOp())
     return op->setLoc(loc);
 
-  return cast<BlockArgument>().setLoc(loc);
+  return llvm::cast<BlockArgument>(*this).setLoc(loc);
 }
 
 /// Return the Region in which this Value is defined.
 Region *Value::getParentRegion() {
   if (auto *op = getDefiningOp())
     return op->getParentRegion();
-  return cast<BlockArgument>().getOwner()->getParent();
+  return llvm::cast<BlockArgument>(*this).getOwner()->getParent();
 }
 
 /// Return the Block in which this Value is defined.
 Block *Value::getParentBlock() {
   if (Operation *op = getDefiningOp())
     return op->getBlock();
-  return cast<BlockArgument>().getOwner();
+  return llvm::cast<BlockArgument>(*this).getOwner();
 }
 
 //===----------------------------------------------------------------------===//
