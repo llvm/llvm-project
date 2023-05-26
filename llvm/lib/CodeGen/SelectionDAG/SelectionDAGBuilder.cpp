@@ -5804,6 +5804,26 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   if (!Op)
     return false;
 
+  // If the expression refers to the entry value of an Argument, use the
+  // corresponding livein physical register. As per the Verifier, this is only
+  // allowed for swiftasync Arguments.
+  if (Op->isReg() && Expr->isEntryValue()) {
+    assert(Arg->hasAttribute(Attribute::AttrKind::SwiftAsync));
+    auto OpReg = Op->getReg();
+    for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
+      if (OpReg == VirtReg || OpReg == PhysReg) {
+        SDDbgValue *SDV = DAG.getVRegDbgValue(
+            Variable, Expr, PhysReg,
+            Kind != FuncArgumentDbgValueKind::Value /*is indirect*/, DL,
+            SDNodeOrder);
+        DAG.AddDbgValue(SDV, false /*treat as dbg.declare byval parameter*/);
+        return true;
+      }
+    LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
+                         "couldn't find a physical register\n");
+    return true;
+  }
+
   assert(Variable->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   MachineInstr *NewMI = nullptr;
