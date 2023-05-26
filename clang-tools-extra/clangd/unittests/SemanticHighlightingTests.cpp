@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Config.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
@@ -1259,6 +1260,17 @@ o]] [[bar]])cpp";
   EXPECT_EQ(Toks[3].deltaLine, 0u);
   EXPECT_EQ(Toks[3].deltaStart, 2u);
   EXPECT_EQ(Toks[3].length, 3u);
+}
+
+TEST(SemanticHighlighting, WithHighlightingFilter) {
+  llvm::StringRef AnnotatedCode = R"cpp(
+int *$Variable[[x]] = new int;
+)cpp";
+  Config Cfg;
+  Cfg.SemanticTokens.DisabledKinds = {"Operator"};
+  Cfg.SemanticTokens.DisabledModifiers = {"Declaration", "Definition"};
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  checkHighlightings(AnnotatedCode, {}, ~ScopeModifierMask);
 }
 } // namespace
 } // namespace clangd
