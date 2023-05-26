@@ -6370,10 +6370,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Arg *A = Args.getLastArgNoClaim(options::OPT_K);
-      A && !TC.getTriple().isOSAIX())
-    D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << A->getAsString(Args) << TripleStr;
+  // Reject AIX-specific link options on other targets.
+  if (!TC.getTriple().isOSAIX()) {
+    for (const Arg *A : Args.filtered(options::OPT_b, options::OPT_K,
+                                      options::OPT_mxcoff_build_id_EQ)) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << TripleStr;
+    }
+  }
 
   if (Args.getLastArg(options::OPT_fapple_kext) ||
       (Args.hasArg(options::OPT_mkernel) && types::isCXX(InputType)))
