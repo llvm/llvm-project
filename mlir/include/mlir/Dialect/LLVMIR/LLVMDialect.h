@@ -236,4 +236,17 @@ SmallVector<IntT> convertArrayToIndices(ArrayAttr attrs) {
 } // namespace LLVM
 } // namespace mlir
 
+namespace llvm {
+
+// Allow llvm::cast style functions.
+template <typename To>
+struct CastInfo<To, mlir::LLVM::GEPArg>
+    : public CastInfo<To, mlir::LLVM::GEPArg::PointerUnion> {};
+
+template <typename To>
+struct CastInfo<To, const mlir::LLVM::GEPArg>
+    : public CastInfo<To, const mlir::LLVM::GEPArg::PointerUnion> {};
+
+} // namespace llvm
+
 #endif // MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_

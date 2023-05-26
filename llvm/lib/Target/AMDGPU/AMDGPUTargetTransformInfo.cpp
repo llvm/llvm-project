@@ -113,6 +113,9 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // manipulations in average.
   UP.BEInsns += 3;
 
+  // We want to run unroll even for the loops which have been vectorized.
+  UP.UnrollVectorizedLoop = true;
+
   // TODO: Do we want runtime unrolling?
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.

@@ -94,7 +94,7 @@ struct ShapeInferencePass
   /// operands inferred.
   static bool allOperandsInferred(Operation *op) {
     return llvm::all_of(op->getOperandTypes(), [](Type operandType) {
-      return operandType.isa<RankedTensorType>();
+      return llvm::isa<RankedTensorType>(operandType);
     });
   }
 
@@ -102,7 +102,7 @@ struct ShapeInferencePass
   /// shaped result.
   static bool returnsDynamicShape(Operation *op) {
     return llvm::any_of(op->getResultTypes(), [](Type resultType) {
-      return !resultType.isa<RankedTensorType>();
+      return !llvm::isa<RankedTensorType>(resultType);
     });
   }
 };

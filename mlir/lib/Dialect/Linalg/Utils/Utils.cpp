@@ -970,7 +970,7 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
     auto dim = it.index();
     auto size = it.value();
     curr.push_back(dim);
-    auto attr = size.dyn_cast<Attribute>();
+    auto attr = llvm::dyn_cast_if_present<Attribute>(size);
     if (attr && cast<IntegerAttr>(attr).getInt() == 1)
       continue;
     reassociation.emplace_back(ReassociationIndices{});

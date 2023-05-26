@@ -7,6 +7,4 @@ from lldbsuite.test import decorators
 # failures in clang. This test cannot be XFAIL'ed because the test harness
 # treats assertion failures as unexpected events. For now, the test must be
 # skipped.
-lldbinline.MakeInlineTest(
-    __file__, globals(), [
-        decorators.skipIf])
+lldbinline.MakeInlineTest(__file__, globals(), [decorators.skipIf])

@@ -11,13 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/TypeUtilities.h"
-
-#include <numeric>
-
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/SmallVectorExtras.h"
+#include <numeric>
 
 using namespace mlir;
 
@@ -119,8 +118,8 @@ LogicalResult mlir::verifyCompatibleDims(ArrayRef<int64_t> dims) {
 /// have compatible dimensions. Dimensions are compatible if all non-dynamic
 /// dims are equal. The element type does not matter.
 LogicalResult mlir::verifyCompatibleShapes(TypeRange types) {
-  auto shapedTypes = llvm::to_vector<8>(llvm::map_range(
-      types, [](auto type) { return llvm::dyn_cast<ShapedType>(type); }));
+  auto shapedTypes = llvm::map_to_vector<8>(
+      types, [](auto type) { return llvm::dyn_cast<ShapedType>(type); });
   // Return failure if some, but not all are not shaped. Return early if none
   // are shaped also.
   if (llvm::none_of(shapedTypes, [](auto t) { return t; }))
@@ -155,10 +154,10 @@ LogicalResult mlir::verifyCompatibleShapes(TypeRange types) {
 
   for (unsigned i = 0; i < firstRank; ++i) {
     // Retrieve all ranked dimensions
-    auto dims = llvm::to_vector<8>(llvm::map_range(
+    auto dims = llvm::map_to_vector<8>(
         llvm::make_filter_range(
             shapes, [&](auto shape) { return shape.getRank() >= i; }),
-        [&](auto shape) { return shape.getDimSize(i); }));
+        [&](auto shape) { return shape.getDimSize(i); });
     if (verifyCompatibleDims(dims).failed())
       return failure();
   }

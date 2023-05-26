@@ -17,6 +17,7 @@ void Test(int size) {
   assert(__sanitizer_get_ownership(p));
   assert(!__sanitizer_get_ownership(&p));
   assert(__sanitizer_get_allocated_size(p) == size);
+  assert(__sanitizer_get_allocated_size_fast(p) == size);
   assert(__sanitizer_get_allocated_begin(p) == p);
   assert(__sanitizer_get_allocated_begin(p + 1) == p);
   assert(__sanitizer_get_current_allocated_bytes() >=

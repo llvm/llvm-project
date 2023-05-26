@@ -1,7 +1,6 @@
 """Test variable with function ptr type and that break on the function works."""
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -9,12 +8,11 @@ from lldbsuite.test import lldbutil
 
 
 class FunctionTypesTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
-        self.line = line_number('main.c', '// Set break point at this line.')
+        self.line = line_number("main.c", "// Set break point at this line.")
 
     def test(self):
         """Test 'callback' has function ptr type, then break on the function."""
@@ -25,14 +23,13 @@ class FunctionTypesTestCase(TestBase):
         self.expect(
             "frame variable --show-types callback",
             VARIABLES_DISPLAYED_CORRECTLY,
-            startstr='(int (*)(const char *)) callback =')
+            startstr="(int (*)(const char *)) callback =",
+        )
 
         # And that we can break on the callback function.
         lldbutil.run_break_set_by_symbol(
-            self,
-            "string_not_empty",
-            num_expected_locations=1,
-            sym_exact=True)
+            self, "string_not_empty", num_expected_locations=1, sym_exact=True
+        )
         self.runCmd("continue")
 
         # Check that we do indeed stop on the string_not_empty function.
@@ -40,9 +37,10 @@ class FunctionTypesTestCase(TestBase):
             "process status",
             STOPPED_DUE_TO_BREAKPOINT,
             substrs=[
-                'stop reason = breakpoint',
-                'a.out`string_not_empty',
-            ])
+                "stop reason = breakpoint",
+                "a.out`string_not_empty",
+            ],
+        )
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_pointers(self):
@@ -50,19 +48,22 @@ class FunctionTypesTestCase(TestBase):
         self.build()
         self.runToBreakpoint()
 
-        self.expect("expr string_not_empty",
-                    substrs=['(int (*)(const char *)) $0 = ', '(a.out`'])
+        self.expect(
+            "expr string_not_empty",
+            substrs=["(int (*)(const char *)) $0 = ", "(a.out`"],
+        )
 
         if self.platformIsDarwin():
-            regexps = ['lib.*\.dylib`printf']
+            regexps = ["lib.*\.dylib`printf"]
         else:
-            regexps = ['printf']
-        self.expect("expr (int (*)(const char*, ...))printf",
-                    substrs=['(int (*)(const char *, ...)) $1 = '],
-                    patterns=regexps)
+            regexps = ["printf"]
+        self.expect(
+            "expr (int (*)(const char*, ...))printf",
+            substrs=["(int (*)(const char *, ...)) $1 = "],
+            patterns=regexps,
+        )
 
-        self.expect("expr $1(\"Hello world\\n\")",
-                    startstr='(int) $2 = 12')
+        self.expect('expr $1("Hello world\\n")', startstr="(int) $2 = 12")
 
     def runToBreakpoint(self):
         exe = self.getBuildArtifact("a.out")
@@ -70,14 +71,17 @@ class FunctionTypesTestCase(TestBase):
 
         # Break inside the main.
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=True
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
+        lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)

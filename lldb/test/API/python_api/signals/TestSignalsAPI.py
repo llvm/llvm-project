@@ -3,7 +3,6 @@ Test SBProcess APIs, including ReadMemory(), WriteMemory(), and others.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -25,19 +24,18 @@ class SignalsAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         line = line_number(
-            "main.cpp",
-            "// Set break point at this line and setup signal ignores.")
+            "main.cpp", "// Set break point at this line and setup signal ignores."
+        )
         breakpoint = target.BreakpointCreateByLocation("main.cpp", line)
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint")
+            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        )
 
         unix_signals = process.GetUnixSignals()
         sigint = unix_signals.GetSignalNumberFromName("SIGINT")
@@ -47,8 +45,8 @@ class SignalsAPITestCase(TestBase):
 
         process.Continue()
         self.assertEqual(
-            process.state, lldb.eStateExited,
-            "The process should have exited")
+            process.state, lldb.eStateExited, "The process should have exited"
+        )
         self.assertEqual(
-            process.GetExitStatus(), 0,
-            "The process should have returned 0")
+            process.GetExitStatus(), 0, "The process should have returned 0"
+        )

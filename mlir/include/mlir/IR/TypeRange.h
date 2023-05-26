@@ -217,13 +217,15 @@ private:
   }
 
   static bool isEmptyKey(mlir::TypeRange range) {
-    if (const auto *type = range.getBase().dyn_cast<const mlir::Type *>())
+    if (const auto *type =
+            llvm::dyn_cast_if_present<const mlir::Type *>(range.getBase()))
       return type == getEmptyKeyPointer();
     return false;
   }
 
   static bool isTombstoneKey(mlir::TypeRange range) {
-    if (const auto *type = range.getBase().dyn_cast<const mlir::Type *>())
+    if (const auto *type =
+            llvm::dyn_cast_if_present<const mlir::Type *>(range.getBase()))
       return type == getTombstoneKeyPointer();
     return false;
   }

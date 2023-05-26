@@ -52,7 +52,7 @@ module {
 
     // Fuse all producers.
     transform.structured.fuse_into_containing_op %producers into %forall_op
-      : (!transform.any_op, !transform.any_op) -> !transform.any_op
+      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
   }
 }
 
@@ -112,6 +112,6 @@ module {
 
     // Fuse all producers.
     transform.structured.fuse_into_containing_op %reversed_producers into %forall_op
-      : (!transform.any_op, !transform.any_op) -> !transform.any_op
+      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
   }
 }

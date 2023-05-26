@@ -6,7 +6,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
-
     def test_qProcessInfo_returns_running_process(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
@@ -45,7 +44,7 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(process_info)
 
         # Ensure the process id matches what we expected.
-        pid_text = process_info.get('pid', None)
+        pid_text = process_info.get("pid", None)
         self.assertIsNotNone(pid_text)
         reported_pid = int(pid_text, base=16)
         self.assertEqual(reported_pid, procs["inferior"].pid)
@@ -90,7 +89,8 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(
             missing_key_set,
             set(),
-            "the listed keys are missing in the qProcessInfo result")
+            "the listed keys are missing in the qProcessInfo result",
+        )
 
     def qProcessInfo_does_not_contain_keys(self, absent_key_set):
         procs = self.prep_debug_monitor_and_inferior()
@@ -113,17 +113,18 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(
             unexpected_key_set,
             set(),
-            "the listed keys were present but unexpected in qProcessInfo result")
+            "the listed keys were present but unexpected in qProcessInfo result",
+        )
 
     @add_test_categories(["debugserver"])
     def test_qProcessInfo_contains_cputype_cpusubtype(self):
         self.build()
-        self.qProcessInfo_contains_keys(set(['cputype', 'cpusubtype']))
+        self.qProcessInfo_contains_keys(set(["cputype", "cpusubtype"]))
 
     @add_test_categories(["llgs"])
     def test_qProcessInfo_contains_triple_ppid(self):
         self.build()
-        self.qProcessInfo_contains_keys(set(['triple', 'parent-pid']))
+        self.qProcessInfo_contains_keys(set(["triple", "parent-pid"]))
 
     @add_test_categories(["debugserver"])
     def test_qProcessInfo_does_not_contain_triple(self):
@@ -131,9 +132,9 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         # We don't expect to see triple on darwin.  If we do, we'll prefer triple
         # to cputype/cpusubtype and skip some darwin-based ProcessGDBRemote ArchSpec setup
         # for the remote Host and Process.
-        self.qProcessInfo_does_not_contain_keys(set(['triple']))
+        self.qProcessInfo_does_not_contain_keys(set(["triple"]))
 
     @add_test_categories(["llgs"])
     def test_qProcessInfo_does_not_contain_cputype_cpusubtype(self):
         self.build()
-        self.qProcessInfo_does_not_contain_keys(set(['cputype', 'cpusubtype']))
+        self.qProcessInfo_does_not_contain_keys(set(["cputype", "cpusubtype"]))

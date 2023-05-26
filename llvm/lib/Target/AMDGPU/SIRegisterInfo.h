@@ -418,6 +418,25 @@ public:
                            int64_t InstrOffset, MachineMemOperand *MMO,
                            RegScavenger *RS,
                            LivePhysRegs *LiveRegs = nullptr) const;
+
+  // Return alignment in register file of first register in a register tuple.
+  unsigned getRegClassAlignmentNumBits(const TargetRegisterClass *RC) const {
+    return (RC->TSFlags & SIRCFlags::RegTupleAlignUnitsMask) * 32;
+  }
+
+  // Check if register class RC has required alignment.
+  bool isRegClassAligned(const TargetRegisterClass *RC,
+                         unsigned AlignNumBits) const {
+    assert(AlignNumBits != 0);
+    unsigned RCAlign = getRegClassAlignmentNumBits(RC);
+    return RCAlign == AlignNumBits ||
+           (RCAlign > AlignNumBits && (RCAlign % AlignNumBits) == 0);
+  }
+
+  // Return alignment of a SubReg relative to start of a register in RC class.
+  // No check if the subreg is supported by the current RC is made.
+  unsigned getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
+                                     unsigned SubReg) const;
 };
 
 } // End namespace llvm

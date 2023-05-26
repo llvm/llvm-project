@@ -350,10 +350,10 @@ struct VectorReductionPattern final
 
 #define INT_AND_FLOAT_CASE(kind, iop, fop)                                     \
   case vector::CombiningKind::kind:                                            \
-    if (resultType.isa<IntegerType>()) {                                       \
+    if (llvm::isa<IntegerType>(resultType)) {                                  \
       result = rewriter.create<spirv::iop>(loc, resultType, result, next);     \
     } else {                                                                   \
-      assert(resultType.isa<FloatType>());                                     \
+      assert(llvm::isa<FloatType>(resultType));                                \
       result = rewriter.create<spirv::fop>(loc, resultType, result, next);     \
     }                                                                          \
     break

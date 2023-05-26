@@ -93,7 +93,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_attributes",
     hdrs = ["src/__support/macros/attributes.h"],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_macros_properties_architectures",
+        ":libc_root",
+    ],
 )
 
 libc_support_library(
@@ -220,6 +223,17 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":libc_root",
+    ],
+)
+
+libc_support_library(
+    name = "__support_cpp_stringstream",
+    hdrs = ["src/__support/CPP/stringstream.h"],
+    deps = [
+        ":__support_cpp_span",
+        ":__support_cpp_string_view",
+        ":__support_cpp_type_traits",
+        ":__support_integer_to_string",
     ],
 )
 
@@ -485,8 +499,8 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
-        ":__support_fputil_fp_bits",
         ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
         ":libc_root",
         ":math_utils",
     ],
@@ -742,8 +756,8 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/double_double.h"],
     deps = [
         ":__support_common",
-        ":__support_number_pair",
         ":__support_fputil_multiply_add",
+        ":__support_number_pair",
     ],
 )
 
@@ -752,11 +766,11 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/dyadic_float.h"],
     deps = [
         ":__support_common",
-        ":__support_uint",
-        ":__support_macros_optimization",
         ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_uint",
     ],
 )
 
@@ -803,6 +817,30 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_stringutil",
+    srcs = glob(["src/__support/StringUtil/tables/**/*.h"]) + [
+        "src/__support/StringUtil/error_to_string.cpp",
+        "src/__support/StringUtil/message_mapper.h",
+        "src/__support/StringUtil/platform_errors.h",
+        "src/__support/StringUtil/platform_signals.h",
+        "src/__support/StringUtil/signal_to_string.cpp",
+    ],
+    hdrs = [
+        "src/__support/StringUtil/error_to_string.h",
+        "src/__support/StringUtil/signal_to_string.h",
+    ],
+    deps = [
+        ":__support_cpp_array",
+        ":__support_cpp_span",
+        ":__support_cpp_string_view",
+        ":__support_cpp_stringstream",
+        ":__support_integer_to_string",
+        ":errno",
+        ":libc_root",
+    ],
+)
+
+libc_support_library(
     name = "__support_threads_mutex",
     hdrs = [
         "src/__support/threads/mutex.h",
@@ -827,6 +865,7 @@ libc_function(
     hdrs = ["src/errno/libc_errno.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
     ],
 )
@@ -1065,8 +1104,8 @@ libc_support_library(
     hdrs = ["src/math/generic/log_range_reduction.h"],
     deps = [
         ":__support_common",
-        ":common_constants",
         ":__support_fputil_dyadic_float",
+        ":common_constants",
     ],
 )
 

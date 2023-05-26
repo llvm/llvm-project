@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -22,6 +23,29 @@ using namespace tensor;
 //===----------------------------------------------------------------------===//
 // TrackingListener
 //===----------------------------------------------------------------------===//
+
+/// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
+/// source tensor or inserts the source tensor into a destination tensor with
+/// the same shape.
+static bool isCastLikeInsertSliceOp(InsertSliceOp op) {
+  llvm::SmallBitVector droppedDims = op.getDroppedDims();
+  int64_t srcDim = 0;
+  // Source dims and destination dims (apart from dropped dims) must have the
+  // same size.
+  for (int64_t resultDim = 0; resultDim < op.getDestType().getRank();
+       ++resultDim) {
+    if (droppedDims.test(resultDim)) {
+      continue;
+    }
+    FailureOr<bool> equalDimSize = ValueBoundsConstraintSet::areEqual(
+        op.getSource(), op.getResult(), srcDim, resultDim);
+    if (failed(equalDimSize) || !*equalDimSize)
+      return false;
+    ++srcDim;
+  }
+
+  return true;
+}
 
 Operation *
 tensor::TrackingListener::findReplacementOp(Operation *op,
@@ -48,6 +72,10 @@ tensor::TrackingListener::findReplacementOp(Operation *op,
             [&](ExpandShapeOp op) { values.push_back(op.getSrc()); })
         .Case<ReshapeOp>(
             [&](ReshapeOp op) { values.push_back(op.getSource()); })
+        .Case<InsertSliceOp>([&](InsertSliceOp op) {
+          if (isCastLikeInsertSliceOp(op))
+            values.push_back(op.getSource());
+        })
         .Default([](Operation *op) {});
   } while (!values.empty());
 

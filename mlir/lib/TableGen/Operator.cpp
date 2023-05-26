@@ -384,7 +384,7 @@ void Operator::populateTypeInferenceInfo(
   if (getTrait("::mlir::OpTrait::SameOperandsAndResultType")) {
     // Check for a non-variable length operand to use as the type anchor.
     auto *operandI = llvm::find_if(arguments, [](const Argument &arg) {
-      NamedTypeConstraint *operand = arg.dyn_cast<NamedTypeConstraint *>();
+      NamedTypeConstraint *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(arg);
       return operand && !operand->isVariableLength();
     });
     if (operandI == arguments.end())
@@ -824,7 +824,7 @@ StringRef Operator::getAssemblyFormat() const {
 void Operator::print(llvm::raw_ostream &os) const {
   os << "op '" << getOperationName() << "'\n";
   for (Argument arg : arguments) {
-    if (auto *attr = arg.dyn_cast<NamedAttribute *>())
+    if (auto *attr = llvm::dyn_cast_if_present<NamedAttribute *>(arg))
       os << "[attribute] " << attr->name << '\n';
     else
       os << "[operand] " << arg.get<NamedTypeConstraint *>()->name << '\n';

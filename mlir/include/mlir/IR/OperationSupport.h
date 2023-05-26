@@ -1103,7 +1103,7 @@ public:
   OpPrintingFlags &enableDebugInfo(bool enable = true, bool prettyForm = false);
 
   /// Always print operations in the generic form.
-  OpPrintingFlags &printGenericOpForm();
+  OpPrintingFlags &printGenericOpForm(bool enable = true);
 
   /// Skip printing regions.
   OpPrintingFlags &skipRegions(bool skip = true);

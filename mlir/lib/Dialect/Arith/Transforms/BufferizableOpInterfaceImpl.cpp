@@ -184,7 +184,7 @@ struct SelectOpInterface
 
     // If the buffers have different types, they differ only in their layout
     // map.
-    auto memrefType = trueType->cast<MemRefType>();
+    auto memrefType = llvm::cast<MemRefType>(*trueType);
     return getMemRefTypeWithFullyDynamicLayout(
         RankedTensorType::get(memrefType.getShape(),
                               memrefType.getElementType()),
