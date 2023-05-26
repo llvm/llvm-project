@@ -46,13 +46,10 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
@@ -415,7 +412,7 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
 
       // Check to see if this store is to a constant offset from the start ptr.
       std::optional<int64_t> Offset =
-          isPointerOffset(StartPtr, NextStore->getPointerOperand(), DL);
+          NextStore->getPointerOperand()->getPointerOffsetFrom(StartPtr, DL);
       if (!Offset)
         break;
 
@@ -429,7 +426,7 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
 
       // Check to see if this store is to a constant offset from the start ptr.
       std::optional<int64_t> Offset =
-          isPointerOffset(StartPtr, MSI->getDest(), DL);
+          MSI->getDest()->getPointerOffsetFrom(StartPtr, DL);
       if (!Offset)
         break;
 
@@ -1152,8 +1149,14 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   // still want to eliminate the intermediate value, but we have to generate a
   // memmove instead of memcpy.
   bool UseMemMove = false;
-  if (isModSet(BAA.getModRefInfo(M, MemoryLocation::getForSource(MDep))))
+  if (isModSet(BAA.getModRefInfo(M, MemoryLocation::getForSource(MDep)))) {
+    // Don't convert llvm.memcpy.inline into memmove because memmove can be
+    // lowered as a call, and that is not allowed for llvm.memcpy.inline (and
+    // there is no inline version of llvm.memmove)
+    if (isa<MemCpyInlineInst>(M))
+      return false;
     UseMemMove = true;
+  }
 
   // If all checks passed, then we can transform M.
   LLVM_DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy->memcpy src:\n"
@@ -1198,13 +1201,18 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
 /// In other words, transform:
 /// \code
 ///   memset(dst, c, dst_size);
+///   ...
 ///   memcpy(dst, src, src_size);
 /// \endcode
 /// into:
 /// \code
-///   memcpy(dst, src, src_size);
+///   ...
 ///   memset(dst + src_size, c, dst_size <= src_size ? 0 : dst_size - src_size);
+///   memcpy(dst, src, src_size);
 /// \endcode
+///
+/// The memset is sunk to just before the memcpy to ensure that src_size is
+/// present when emitting the simplified memset.
 bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
                                                   MemSetInst *MemSet,
                                                   BatchAAResults &BAA) {
@@ -1252,6 +1260,15 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
 
   IRBuilder<> Builder(MemCpy);
 
+  // Preserve the debug location of the old memset for the code emitted here
+  // related to the new memset. This is correct according to the rules in
+  // https://llvm.org/docs/HowToUpdateDebugInfo.html about "when to preserve an
+  // instruction location", given that we move the memset within the basic
+  // block.
+  assert(MemSet->getParent() == MemCpy->getParent() &&
+         "Preserving debug location based on moving memset within BB.");
+  Builder.SetCurrentDebugLocation(MemSet->getDebugLoc());
+
   // If the sizes have different types, zext the smaller one.
   if (DestSize->getType() != SrcSize->getType()) {
     if (DestSize->getType()->getIntegerBitWidth() >
@@ -1275,9 +1292,8 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
 
   assert(isa<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(MemCpy)) &&
          "MemCpy must be a MemoryDef");
-  // The new memset is inserted after the memcpy, but it is known that its
-  // defining access is the memset about to be removed which immediately
-  // precedes the memcpy.
+  // The new memset is inserted before the memcpy, and it is known that the
+  // memcpy's defining access is the memset about to be removed.
   auto *LastDef =
       cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(MemCpy));
   auto *NewAccess = MSSAU->createMemoryAccessBefore(
@@ -1436,8 +1452,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       MSSA->getWalker()->getClobberingMemoryAccess(AnyClobber, DestLoc, BAA);
 
   // Try to turn a partially redundant memset + memcpy into
-  // memcpy + smaller memset.  We don't need the memcpy size for this.
-  // The memcpy most post-dom the memset, so limit this to the same basic
+  // smaller memset + memcpy.  We don't need the memcpy size for this.
+  // The memcpy must post-dom the memset, so limit this to the same basic
   // block. A non-local generalization is likely not worthwhile.
   if (auto *MD = dyn_cast<MemoryDef>(DestClobber))
     if (auto *MDep = dyn_cast_or_null<MemSetInst>(MD->getMemoryInst()))

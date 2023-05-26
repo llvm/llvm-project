@@ -205,7 +205,8 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
       }
 
       char buffer[3];
-      sprintf(buffer, "%2.2s", (line == curr_line) ? current_line_cstr : "");
+      snprintf(buffer, sizeof(buffer), "%2.2s",
+               (line == curr_line) ? current_line_cstr : "");
       std::string current_line_highlight(buffer);
 
       auto debugger_sp = m_debugger_wp.lock();
@@ -358,10 +359,7 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
                                       lldb::eFunctionNameTypeBase,
                                       function_options, sc_list);
-        size_t num_matches = sc_list.GetSize();
-        for (size_t idx = 0; idx < num_matches; idx++) {
-          SymbolContext sc;
-          sc_list.GetContextAtIndex(idx, sc);
+        for (const SymbolContext &sc : sc_list) {
           if (sc.function) {
             lldb_private::LineEntry line_entry;
             if (sc.function->GetAddressRange()
@@ -429,11 +427,8 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         bool got_multiple = false;
         if (num_matches != 0) {
           if (num_matches > 1) {
-            SymbolContext sc;
             CompileUnit *test_cu = nullptr;
-
-            for (unsigned i = 0; i < num_matches; i++) {
-              sc_list.GetContextAtIndex(i, sc);
+            for (const SymbolContext &sc : sc_list) {
               if (sc.comp_unit) {
                 if (test_cu) {
                   if (test_cu != sc.comp_unit)

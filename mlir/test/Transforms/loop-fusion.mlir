@@ -1189,8 +1189,8 @@ func.func @should_fuse_at_depth1_with_trip_count_19() {
 
 // -----
 
-// CHECK-LABEL: func @should_fuse_with_private_memrefs_with_diff_shapes() {
-func.func @should_fuse_with_private_memrefs_with_diff_shapes() {
+// CHECK-LABEL: func @should_fuse_with_private_memref() {
+func.func @should_fuse_with_private_memref() {
   %m = memref.alloc() : memref<100xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -1203,16 +1203,11 @@ func.func @should_fuse_with_private_memrefs_with_diff_shapes() {
   affine.for %i2 = 0 to 82 {
     %v1 = affine.load %m[%i2] : memref<100xf32>
   }
-  // Should create two new private memrefs customized to the shapes accessed
-  // by loops %{{.*}} and %{{.*}}.
-  // CHECK-DAG:  memref.alloc() : memref<1xf32>
+  // Should create a new private memref.
   // CHECK-DAG:  memref.alloc() : memref<1xf32>
   // CHECK:      affine.for %{{.*}} = 0 to 17 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
-  // CHECK-NEXT: }
-  // CHECK-NEXT: affine.for %{{.*}} = 0 to 82 {
-  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: return

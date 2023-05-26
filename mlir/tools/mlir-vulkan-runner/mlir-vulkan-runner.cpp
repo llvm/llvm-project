@@ -57,7 +57,8 @@ static LogicalResult runMLIRPasses(Operation *op,
   if (!module)
     return op->emitOpError("expected a 'builtin.module' op");
   PassManager passManager(module.getContext());
-  applyPassManagerCLOptions(passManager);
+  if (failed(applyPassManagerCLOptions(passManager)))
+    return failure();
 
   passManager.addPass(createGpuKernelOutliningPass());
   passManager.addPass(memref::createFoldMemRefAliasOpsPass());

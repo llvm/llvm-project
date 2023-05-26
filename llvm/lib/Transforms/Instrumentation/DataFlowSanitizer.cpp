@@ -68,6 +68,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -95,8 +96,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -1256,7 +1255,7 @@ void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
   size_t Pos = Asm.find(SearchStr);
   if (Pos != std::string::npos) {
     Asm.replace(Pos, SearchStr.size(), ".symver " + GVName + Suffix + ",");
-    Pos = Asm.find("@");
+    Pos = Asm.find('@');
 
     if (Pos == std::string::npos)
       report_fatal_error(Twine("unsupported .symver: ", Asm));
@@ -2526,8 +2525,9 @@ void DFSanFunction::storeOrigin(Instruction *Pos, Value *Addr, uint64_t Size,
                     ConstantInt::get(DFS.IntptrTy, Size), Origin});
   } else {
     Value *Cmp = convertToBool(CollapsedShadow, IRB, "_dfscmp");
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
-        Cmp, &*IRB.GetInsertPoint(), false, DFS.OriginStoreWeights, &DT);
+        Cmp, &*IRB.GetInsertPoint(), false, DFS.OriginStoreWeights, &DTU);
     IRBuilder<> IRBNew(CheckTerm);
     paintOrigin(IRBNew, updateOrigin(Origin, IRBNew), StoreOriginAddr, Size,
                 OriginAlignment);

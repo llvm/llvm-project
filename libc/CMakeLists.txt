@@ -18,7 +18,7 @@ set(LIBC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # The top-level directory in which libc is being built.
 set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-if(LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
   if(NOT LIBC_HDRGEN_EXE)
     # We need to set up hdrgen first since other targets depend on it.
     add_subdirectory(utils/LibcTableGenUtil)
@@ -28,7 +28,9 @@ if(LLVM_LIBC_FULL_BUILD)
   endif()
 endif()
 
-if(LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD)
+option(LIBC_HDRGEN_ONLY "Only build the 'libc-hdrgen' executable" OFF)
+if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR 
+   LIBC_HDRGEN_ONLY)
   # When libc is build as part of the runtimes/bootstrap build's CMake run, we
   # only need to build the host tools to build the libc. So, we just do enough
   # to build libc-hdrgen and return.
@@ -75,11 +77,15 @@ option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ignored." OFF)
 set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
+set(LIBC_ENABLE_UNITTESTS ON)
+set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
+
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
 
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   include(prepare_libc_gpu_build)
+  set(LIBC_ENABLE_UNITTESTS OFF)
 endif()
 
 include(LLVMLibCCheckMPFR)

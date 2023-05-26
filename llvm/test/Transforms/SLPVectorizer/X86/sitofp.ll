@@ -1092,8 +1092,8 @@ define <4 x double> @sitofp_4xi32_4f64(i32 %a0, i32 %a1, i32 %a2, i32 %a3) #0 {
 ; SSE-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i32 0
 ; SSE-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[A3:%.*]], i32 1
 ; SSE-NEXT:    [[TMP6:%.*]] = sitofp <2 x i32> [[TMP5]] to <2 x double>
-; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; SSE-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; SSE-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; SSE-NEXT:    [[RES31:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; SSE-NEXT:    ret <4 x double> [[RES31]]
 ;
@@ -1122,7 +1122,7 @@ define <4 x double> @sitofp_with_const_4xi32_4f64(i32 %a2, i32 %a3) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
 ; CHECK-NEXT:    [[RES0:%.*]] = insertelement <4 x double> undef, double 1.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[RES31:%.*]] = shufflevector <4 x double> [[RES0]], <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x double> [[RES31]]
 ;
@@ -1139,7 +1139,7 @@ define <4 x double> @sitofp_with_undef_4xi32_4f64(i32 %a2, i32 %a3) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x double> [[TMP4]]
 ;
   %cvt2 = sitofp i32 %a2 to double

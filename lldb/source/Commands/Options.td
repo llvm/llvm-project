@@ -371,7 +371,7 @@ let Command = "expression" in {
     Arg<"Language">, Desc<"Specifies the Language to use when parsing the "
     "expression.  If not set the target.language setting is used.">;
   def expression_options_apply_fixits : Option<"apply-fixits", "X">,
-    Groups<[1,2]>, Arg<"Language">, Desc<"If true, simple fix-it hints will be "
+    Groups<[1,2]>, Arg<"Boolean">, Desc<"If true, simple fix-it hints will be "
     "automatically applied to the expression.">;
   def expression_options_description_verbosity :
     Option<"description-verbosity", "v">, Group<1>,

@@ -121,6 +121,14 @@ public:
     return {};
   }
 
+  /// Returns the distribution id of the host
+  ///
+  /// This will be something like "ubuntu", "fedora", etc. on Linux.
+  ///
+  /// \return Returns either std::nullopt or a reference to a const std::string
+  /// containing the distribution id
+  static llvm::StringRef GetDistributionId() { return llvm::StringRef(); }
+
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);

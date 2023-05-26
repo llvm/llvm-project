@@ -197,7 +197,7 @@ define <2 x i1> @xor_logic_and_or_vector_poison(<2 x i1> %c, <2 x i1> %x, <2 x i
   ret <2 x i1> %r
 }
 
-;; even through we save a instruction here, select is heavier than normal 
+;; even through we save a instruction here, select is heavier than normal
 ;; and/or/xor on most backend,  do we really need to do this transform?
 define i1 @xor_and_or(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_and_or(
@@ -211,7 +211,7 @@ define i1 @xor_and_or(i1 %c, i1 %x, i1 %y) {
   ret i1 %r
 }
 
-;; even though we save a instruction here, select is heavier than normal 
+;; even though we save a instruction here, select is heavier than normal
 ;; and/or/xor on most backend,  do we really need to do this transform?
 define <4 x i1> @xor_and_or_vector(<4 x i1> %c, <4 x i1> %x, <4 x i1> %y) {
 ; CHECK-LABEL: @xor_and_or_vector(

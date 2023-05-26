@@ -358,10 +358,9 @@ entry:
 define <4 x float> @mul_addequal(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: mul_addequal:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #0
-; CHECK-NEXT:    fcmla v3.4s, v0.4s, v1.4s, #90
-; CHECK-NEXT:    fadd v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #90
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>

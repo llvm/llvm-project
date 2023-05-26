@@ -147,7 +147,7 @@ APValue Pointer::toAPValue() const {
 
 bool Pointer::isInitialized() const {
   assert(Pointee && "Cannot check if null pointer was initialized");
-  Descriptor *Desc = getFieldDesc();
+  const Descriptor *Desc = getFieldDesc();
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
     if (isStatic() && Base == 0)
@@ -167,7 +167,7 @@ bool Pointer::isInitialized() const {
 
 void Pointer::initialize() const {
   assert(Pointee && "Cannot initialize null pointer");
-  Descriptor *Desc = getFieldDesc();
+  const Descriptor *Desc = getFieldDesc();
 
   assert(Desc);
   if (Desc->isPrimitiveArray()) {

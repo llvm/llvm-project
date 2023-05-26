@@ -1,7 +1,7 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR" # Optional arguments
+    "NEED_MPFR;HERMETIC_TEST_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
@@ -9,18 +9,26 @@ function(add_fp_unittest name)
 
   if(MATH_UNITTEST_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
-      message("WARNING: Math test ${name} will be skipped as MPFR library is not available.")
+      message(VERBOSE "Math test ${name} will be skipped as MPFR library is not available.")
       return()
     endif()
   endif()
 
+  if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
+    set(test_type HERMETIC_TEST_ONLY)
+  endif()
   if(MATH_UNITTEST_NEED_MPFR)
-    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
+    if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
+      message(FATAL "Hermetic math test cannot require MPFR.")
+    endif()
+    set(test_type UNIT_TEST_ONLY)
+    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper libc_math_test_utils -lmpfr -lgmp)
   endif()
   list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
 
   add_libc_unittest(
     ${name}
+    ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
     "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
   )

@@ -15,6 +15,8 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "llvm/ADT/SmallVector.h"
+
 #include <climits>
 #include <cstdlib>
 #include <cstring>
@@ -116,16 +118,13 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   }
 
   DeviceTy &Device = *PM->Devices[DeviceNum];
-  bool IsLast; // not used
-  bool IsHostPtr;
   // omp_target_is_present tests whether a host pointer refers to storage that
   // is mapped to a given device. However, due to the lack of the storage size,
   // only check 1 byte. Cannot set size 0 which checks whether the pointer (zero
   // lengh array) is mapped instead of the referred storage.
-  TargetPointerResultTy TPR =
-      Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1, IsLast,
-                            /*UpdateRefCount=*/false,
-                            /*UseHoldRefCount=*/false, IsHostPtr);
+  TargetPointerResultTy TPR = Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1,
+                                                    /*UpdateRefCount=*/false,
+                                                    /*UseHoldRefCount=*/false);
   int Rc = TPR.isPresent();
   DP("Call to omp_target_is_present returns %d\n", Rc);
   return Rc;
@@ -210,6 +209,105 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
   return Rc;
 }
 
+// The helper function that calls omp_target_memcpy or omp_target_memcpy_rect
+static int libomp_target_memcpy_async_helper(kmp_int32 Gtid, kmp_task_t *Task) {
+  if (Task == nullptr)
+    return OFFLOAD_FAIL;
+
+  TargetMemcpyArgsTy *Args = (TargetMemcpyArgsTy *)Task->shareds;
+
+  if (Args == nullptr)
+    return OFFLOAD_FAIL;
+
+  // Call blocked version
+  int Rc = OFFLOAD_SUCCESS;
+  if (Args->IsRectMemcpy) {
+    Rc = omp_target_memcpy_rect(
+        Args->Dst, Args->Src, Args->ElementSize, Args->NumDims, Args->Volume,
+        Args->DstOffsets, Args->SrcOffsets, Args->DstDimensions,
+        Args->SrcDimensions, Args->DstDevice, Args->SrcDevice);
+
+    DP("omp_target_memcpy_rect returns %d\n", Rc);
+  } else {
+    Rc = omp_target_memcpy(Args->Dst, Args->Src, Args->Length, Args->DstOffset,
+                           Args->SrcOffset, Args->DstDevice, Args->SrcDevice);
+
+    DP("omp_target_memcpy returns %d\n", Rc);
+  }
+
+  // Release the arguments object
+  delete Args;
+
+  return Rc;
+}
+
+// Allocate and launch helper task
+static int libomp_helper_task_creation(TargetMemcpyArgsTy *Args,
+                                       int DepObjCount,
+                                       omp_depend_t *DepObjList) {
+  // Create global thread ID
+  int Gtid = __kmpc_global_thread_num(nullptr);
+  int (*Fn)(kmp_int32, kmp_task_t *) = &libomp_target_memcpy_async_helper;
+
+  // Setup the hidden helper flags;
+  kmp_int32 Flags = 0;
+  kmp_tasking_flags_t *InputFlags = (kmp_tasking_flags_t *)&Flags;
+  InputFlags->hidden_helper = 1;
+
+  // Alloc helper task
+  kmp_task_t *Ptr = __kmpc_omp_target_task_alloc(nullptr, Gtid, Flags,
+                                                 sizeof(kmp_task_t), 0, Fn, -1);
+
+  if (Ptr == nullptr) {
+    // Task allocation failed, delete the argument object
+    delete Args;
+
+    return OFFLOAD_FAIL;
+  }
+
+  // Setup the arguments passed to helper task
+  Ptr->shareds = Args;
+
+  // Convert the type of depend objects
+  llvm::SmallVector<kmp_depend_info_t> DepObjs;
+  for (int i = 0; i < DepObjCount; i++) {
+    omp_depend_t DepObj = DepObjList[i];
+    DepObjs.push_back(*((kmp_depend_info_t *)DepObj));
+  }
+
+  // Launch the helper task
+  int Rc = __kmpc_omp_task_with_deps(nullptr, Gtid, Ptr, DepObjCount,
+                                     DepObjs.data(), 0, nullptr);
+
+  return Rc;
+}
+
+EXTERN int omp_target_memcpy_async(void *Dst, const void *Src, size_t Length,
+                                   size_t DstOffset, size_t SrcOffset,
+                                   int DstDevice, int SrcDevice,
+                                   int DepObjCount, omp_depend_t *DepObjList) {
+  TIMESCOPE();
+  DP("Call to omp_target_memcpy_async, dst device %d, src device %d, "
+     "dst addr " DPxMOD ", src addr " DPxMOD ", dst offset %zu, "
+     "src offset %zu, length %zu\n",
+     DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DstOffset, SrcOffset,
+     Length);
+
+  // Check the source and dest address
+  if (Dst == nullptr || Src == nullptr)
+    return OFFLOAD_FAIL;
+
+  // Create task object
+  TargetMemcpyArgsTy *Args = new TargetMemcpyArgsTy(
+      Dst, Src, Length, DstOffset, SrcOffset, DstDevice, SrcDevice);
+
+  // Create and launch helper task
+  int Rc = libomp_helper_task_creation(Args, DepObjCount, DepObjList);
+
+  DP("omp_target_memcpy_async returns %d\n", Rc);
+  return Rc;
+}
+
 EXTERN int
 omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
                        int NumDims, const size_t *Volume,
@@ -267,6 +365,43 @@ omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
   }
 
   DP("omp_target_memcpy_rect returns %d\n", Rc);
+  return Rc;
+}
+
+EXTERN int omp_target_memcpy_rect_async(
+    void *Dst, const void *Src, size_t ElementSize, int NumDims,
+    const size_t *Volume, const size_t *DstOffsets, const size_t *SrcOffsets,
+    const size_t *DstDimensions, const size_t *SrcDimensions, int DstDevice,
+    int SrcDevice, int DepObjCount, omp_depend_t *DepObjList) {
+  TIMESCOPE();
+  DP("Call to omp_target_memcpy_rect_async, dst device %d, src device %d, "
+     "dst addr " DPxMOD ", src addr " DPxMOD ", dst offsets " DPxMOD ", "
+     "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
+     "volume " DPxMOD ", element size %zu, num_dims %d\n",
+     DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DPxPTR(DstOffsets),
+     DPxPTR(SrcOffsets), DPxPTR(DstDimensions), DPxPTR(SrcDimensions),
+     DPxPTR(Volume), ElementSize, NumDims);
+
+  // Need to check this first to not return OFFLOAD_FAIL instead
+  if (!Dst && !Src) {
+    DP("Call to omp_target_memcpy_rect returns max supported dimensions %d\n",
+       INT_MAX);
+    return INT_MAX;
+  }
+
+  // Check the source and dest address
+  if (Dst == nullptr || Src == nullptr)
+    return OFFLOAD_FAIL;
+
+  // Create task object
+  TargetMemcpyArgsTy *Args = new TargetMemcpyArgsTy(
+      Dst, Src, ElementSize, NumDims, Volume, DstOffsets, SrcOffsets,
+      DstDimensions, SrcDimensions, DstDevice, SrcDevice);
+
+  // Create and launch helper task
+  int Rc = libomp_helper_task_creation(Args, DepObjCount, DepObjList);
+
+  DP("omp_target_memcpy_rect_async returns %d\n", Rc);
   return Rc;
 }
 
@@ -360,13 +495,10 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
     return nullptr;
   }
 
-  bool IsLast = false;
-  bool IsHostPtr = false;
   auto &Device = *PM->Devices[DeviceNum];
-  TargetPointerResultTy TPR =
-      Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1, IsLast,
-                            /*UpdateRefCount=*/false,
-                            /*UseHoldRefCount=*/false, IsHostPtr);
+  TargetPointerResultTy TPR = Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1,
+                                                    /*UpdateRefCount=*/false,
+                                                    /*UseHoldRefCount=*/false);
   if (!TPR.isPresent()) {
     DP("Ptr " DPxMOD "is not present on device %d, returning nullptr.\n",
        DPxPTR(Ptr), DeviceNum);

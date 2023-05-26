@@ -12,41 +12,52 @@ from lldbsuite.test import lldbtest
 
 import dummy_scripted_process
 
-class ScriptedProcesTestCase(TestBase):
 
+class ScriptedProcesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
     def test_python_plugin_package(self):
         """Test that the lldb python module has a `plugins.scripted_process`
         package."""
-        self.expect('script import lldb.plugins',
-                    substrs=["ModuleNotFoundError"], matching=False)
+        self.expect(
+            "script import lldb.plugins",
+            substrs=["ModuleNotFoundError"],
+            matching=False,
+        )
 
-        self.expect('script dir(lldb.plugins)',
-                    substrs=["scripted_process"])
+        self.expect("script dir(lldb.plugins)", substrs=["scripted_process"])
 
-        self.expect('script import lldb.plugins.scripted_process',
-                    substrs=["ModuleNotFoundError"], matching=False)
+        self.expect(
+            "script import lldb.plugins.scripted_process",
+            substrs=["ModuleNotFoundError"],
+            matching=False,
+        )
 
-        self.expect('script dir(lldb.plugins.scripted_process)',
-                    substrs=["ScriptedProcess"])
+        self.expect(
+            "script dir(lldb.plugins.scripted_process)", substrs=["ScriptedProcess"]
+        )
 
-        self.expect('script from lldb.plugins.scripted_process import ScriptedProcess',
-                    substrs=["ImportError"], matching=False)
+        self.expect(
+            "script from lldb.plugins.scripted_process import ScriptedProcess",
+            substrs=["ImportError"],
+            matching=False,
+        )
 
-        self.expect('script dir(ScriptedProcess)',
-                    substrs=["launch"])
+        self.expect("script dir(ScriptedProcess)", substrs=["launch"])
 
     def move_blueprint_to_dsym(self, blueprint_name):
         blueprint_origin_path = os.path.join(self.getSourceDir(), blueprint_name)
         dsym_bundle = self.getBuildArtifact("a.out.dSYM")
-        blueprint_destination_path = os.path.join(dsym_bundle, "Contents",
-                                                  "Resources", "Python")
+        blueprint_destination_path = os.path.join(
+            dsym_bundle, "Contents", "Resources", "Python"
+        )
         if not os.path.exists(blueprint_destination_path):
             os.mkdir(blueprint_destination_path)
 
-        blueprint_destination_path = os.path.join(blueprint_destination_path, "a_out.py")
+        blueprint_destination_path = os.path.join(
+            blueprint_destination_path, "a_out.py"
+        )
         shutil.copy(blueprint_origin_path, blueprint_destination_path)
 
     @skipUnlessDarwin
@@ -55,16 +66,18 @@ class ScriptedProcesTestCase(TestBase):
         Scripted Thread, with invalid register context."""
         self.build()
 
-        os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"] = "1"
+
         def cleanup():
-          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+            del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+
         self.addTearDownHook(cleanup)
 
         self.runCmd("settings set target.load-script-from-symbol-file true")
-        self.move_blueprint_to_dsym('invalid_scripted_process.py')
+        self.move_blueprint_to_dsym("invalid_scripted_process.py")
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
-        log_file = self.getBuildArtifact('thread.log')
+        log_file = self.getBuildArtifact("thread.log")
         self.runCmd("log enable lldb thread -f " + log_file)
         self.assertTrue(os.path.isfile(log_file))
 
@@ -95,7 +108,7 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(error.Fail())
         self.assertEqual(error.GetCString(), "This is an invalid scripted process!")
 
-        with open(log_file, 'r') as f:
+        with open(log_file, "r") as f:
             log = f.read()
 
         self.assertIn("Failed to get scripted thread registers data.", log)
@@ -110,18 +123,24 @@ class ScriptedProcesTestCase(TestBase):
         target_0 = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target_0, VALID_TARGET)
 
-        os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"] = "1"
+
         def cleanup():
-          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+            del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+
         self.addTearDownHook(cleanup)
 
-        scripted_process_example_relpath = 'dummy_scripted_process.py'
-        self.runCmd("command script import " + os.path.join(self.getSourceDir(),
-                                                            scripted_process_example_relpath))
+        scripted_process_example_relpath = "dummy_scripted_process.py"
+        self.runCmd(
+            "command script import "
+            + os.path.join(self.getSourceDir(), scripted_process_example_relpath)
+        )
 
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetProcessPluginName("ScriptedProcess")
-        launch_info.SetScriptedProcessClassName("dummy_scripted_process.DummyScriptedProcess")
+        launch_info.SetScriptedProcessClassName(
+            "dummy_scripted_process.DummyScriptedProcess"
+        )
 
         error = lldb.SBError()
         process_0 = target_0.Launch(launch_info, error)
@@ -131,10 +150,12 @@ class ScriptedProcesTestCase(TestBase):
 
         py_impl = process_0.GetScriptedImplementation()
         self.assertTrue(py_impl)
-        self.assertTrue(isinstance(py_impl, dummy_scripted_process.DummyScriptedProcess))
-        self.assertFalse(hasattr(py_impl, 'my_super_secret_member'))
+        self.assertTrue(
+            isinstance(py_impl, dummy_scripted_process.DummyScriptedProcess)
+        )
+        self.assertFalse(hasattr(py_impl, "my_super_secret_member"))
         py_impl.my_super_secret_member = 42
-        self.assertTrue(hasattr(py_impl, 'my_super_secret_member'))
+        self.assertTrue(hasattr(py_impl, "my_super_secret_member"))
         self.assertEqual(py_impl.my_super_secret_method(), 42)
 
         # Try reading from target #0 process ...
@@ -150,7 +171,9 @@ class ScriptedProcesTestCase(TestBase):
         # We still need to specify a PID when attaching even for scripted processes
         attach_info = lldb.SBAttachInfo(42)
         attach_info.SetProcessPluginName("ScriptedProcess")
-        attach_info.SetScriptedProcessClassName("dummy_scripted_process.DummyScriptedProcess")
+        attach_info.SetScriptedProcessClassName(
+            "dummy_scripted_process.DummyScriptedProcess"
+        )
 
         error = lldb.SBError()
         process_1 = target_1.Attach(attach_info, error)
@@ -186,15 +209,15 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(thread, "Invalid thread.")
         self.assertEqual(thread.GetThreadID(), 0x19)
         self.assertEqual(thread.GetName(), "DummyScriptedThread.thread-1")
-        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonTrace)
 
         self.assertGreater(thread.GetNumFrames(), 0)
 
         frame = thread.GetFrameAtIndex(0)
         GPRs = None
-        register_set = frame.registers # Returns an SBValueList.
+        register_set = frame.registers  # Returns an SBValueList.
         for regs in register_set:
-            if 'general purpose' in regs.name.lower():
+            if "general purpose" in regs.name.lower():
                 GPRs = regs
                 break
 
@@ -207,4 +230,4 @@ class ScriptedProcesTestCase(TestBase):
 
         self.assertTrue(frame.IsArtificial(), "Frame is not artificial")
         pc = frame.GetPCAddress().GetLoadAddress(target_0)
-        self.assertEqual(pc, 0x0100001b00)
+        self.assertEqual(pc, 0x0100001B00)

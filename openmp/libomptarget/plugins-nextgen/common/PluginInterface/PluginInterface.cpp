@@ -200,12 +200,23 @@ public:
 
 } RecordReplay;
 
-AsyncInfoWrapperTy::~AsyncInfoWrapperTy() {
-  // If we used a local async info object we want synchronous behavior.
-  // In that case, and assuming the current status code is OK, we will
-  // synchronize explicitly when the object is deleted.
+AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
+                                       __tgt_async_info *AsyncInfoPtr)
+    : Device(Device),
+      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {}
+
+void AsyncInfoWrapperTy::finalize(Error &Err) {
+  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
+
+  // If we used a local async info object we want synchronous behavior. In that
+  // case, and assuming the current status code is correct, we will synchronize
+  // explicitly when the object is deleted. Update the error with the result of
+  // the synchronize operation.
   if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err)
     Err = Device.synchronize(&LocalAsyncInfo);
+
+  // Invalidate the wrapper object.
+  AsyncInfoPtr = nullptr;
 }
 
 Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
@@ -242,9 +253,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   llvm::SmallVector<void *, 16> Args;
   llvm::SmallVector<void *, 16> Ptrs;
 
-  void *KernelArgsPtr =
-      prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs, Args,
-                  Ptrs, AsyncInfoWrapper);
+  void *KernelArgsPtr = prepareArgs(GenericDevice, ArgPtrs, ArgOffsets,
+                                    KernelArgs.NumArgs, Args, Ptrs);
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
   uint64_t NumBlocks = getNumBlocks(GenericDevice, KernelArgs.NumTeams,
@@ -262,8 +272,7 @@ void *GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice,
                                    void **ArgPtrs, ptrdiff_t *ArgOffsets,
                                    int32_t NumArgs,
                                    llvm::SmallVectorImpl<void *> &Args,
-                                   llvm::SmallVectorImpl<void *> &Ptrs,
-                                   AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+                                   llvm::SmallVectorImpl<void *> &Ptrs) const {
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
 
@@ -914,26 +923,29 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
 
 Error GenericDeviceTy::dataSubmit(void *TgtPtr, const void *HstPtr,
                                   int64_t Size, __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
-  Err = dataSubmitImpl(TgtPtr, HstPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataSubmitImpl(TgtPtr, HstPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
   return Err;
 }
 
 Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
                                     int64_t Size, __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
-  Err = dataRetrieveImpl(HstPtr, TgtPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataRetrieveImpl(HstPtr, TgtPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
   return Err;
 }
 
 Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
                                     void *DstPtr, int64_t Size,
                                     __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
-  Err = dataExchangeImpl(SrcPtr, DstDev, DstPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataExchangeImpl(SrcPtr, DstDev, DstPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
   return Err;
 }
 
@@ -941,8 +953,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     ptrdiff_t *ArgOffsets,
                                     KernelArgsTy &KernelArgs,
                                     __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
@@ -953,14 +964,15 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
         KernelArgs.NumTeams[0], KernelArgs.ThreadLimit[0], KernelArgs.Tripcount,
         AsyncInfoWrapper);
 
-  Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
-                             AsyncInfoWrapper);
+  auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
+                                  AsyncInfoWrapper);
 
   if (RecordReplay.isRecordingOrReplaying() &&
       RecordReplay.isSaveOutputEnabled())
     RecordReplay.saveKernelOutputInfo(GenericKernel.getName(),
                                       AsyncInfoWrapper);
 
+  AsyncInfoWrapper.finalize(Err);
   return Err;
 }
 
@@ -969,9 +981,10 @@ Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
 
   *AsyncInfoPtr = new __tgt_async_info();
 
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, *AsyncInfoPtr);
-  Err = initAsyncInfoImpl(AsyncInfoWrapper);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, *AsyncInfoPtr);
+
+  auto Err = initAsyncInfoImpl(AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
   return Err;
 }
 
@@ -982,8 +995,16 @@ Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
 }
 
 Error GenericDeviceTy::printInfo() {
-  // TODO: Print generic information here
-  return printInfoImpl();
+  InfoQueueTy InfoQueue;
+
+  // Get the vendor-specific info entries describing the device properties.
+  if (auto Err = obtainInfoImpl(InfoQueue))
+    return Err;
+
+  // Print all info entries.
+  InfoQueue.print();
+
+  return Plugin::success();
 }
 
 Error GenericDeviceTy::createEvent(void **EventPtrStorage) {
@@ -996,16 +1017,18 @@ Error GenericDeviceTy::destroyEvent(void *EventPtr) {
 
 Error GenericDeviceTy::recordEvent(void *EventPtr,
                                    __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
-  Err = recordEventImpl(EventPtr, AsyncInfoWrapper);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = recordEventImpl(EventPtr, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
   return Err;
 }
 
 Error GenericDeviceTy::waitEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
-  auto Err = Plugin::success();
-  AsyncInfoWrapperTy AsyncInfoWrapper(Err, *this, AsyncInfo);
-  Err = waitEventImpl(EventPtr, AsyncInfoWrapper);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = waitEventImpl(EventPtr, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
   return Err;
 }
 

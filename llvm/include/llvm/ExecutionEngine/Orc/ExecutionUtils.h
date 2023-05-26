@@ -180,10 +180,6 @@ public:
   void runDestructors();
 
 protected:
-  template <typename PtrTy> JITTargetAddress toTargetAddress(PtrTy *P) {
-    return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(P));
-  }
-
   using DestructorPtr = void (*)(void *);
   using CXXDestructorDataPair = std::pair<DestructorPtr, void *>;
   using CXXDestructorDataPairList = std::vector<CXXDestructorDataPair>;

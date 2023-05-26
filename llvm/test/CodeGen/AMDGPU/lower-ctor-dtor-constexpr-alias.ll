@@ -1,5 +1,4 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-lower-ctor-dtor %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN %s
 
 ; Make sure we emit code for constructor entries that aren't direct
 ; function calls.
@@ -18,8 +17,10 @@
 @foo.alias = hidden alias void (), ptr @foo
 
 ;.
-; CHECK-NOT: @llvm.global_ctors
-; CHECK-NOT: @llvm.global_dtors
+; CHECK: @__init_array_start = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @__init_array_end = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @__fini_array_start = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @__fini_array_end = external addrspace(1) constant [0 x ptr addrspace(1)]
 ; CHECK: @llvm.used = appending global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
 ; CHECK: @foo.alias = hidden alias void (), ptr @foo
 ;.
@@ -37,46 +38,31 @@ define void @bar() addrspace(1) {
   ret void
 }
 
-; CHECK: define amdgpu_kernel void @amdgcn.device.init() #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT: call void @foo.alias()
-; CHECK-NEXT: call void inttoptr (i64 4096 to ptr)()
-; CHECK-NEXT: ret void
-; CHECK-NEXT: }
+; CHECK-LABEL: define weak_odr amdgpu_kernel void @amdgcn.device.init()
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 icmp ne (ptr addrspace(1) @__init_array_start, ptr addrspace(1) @__init_array_end), label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
+; CHECK:       while.entry:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ @__init_array_start, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
+; CHECK-NEXT:    [[CALLBACK:%.*]] = load ptr, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    call void [[CALLBACK]]()
+; CHECK-NEXT:    [[NEXT]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR]], i64 1
+; CHECK-NEXT:    [[END:%.*]] = icmp eq ptr addrspace(1) [[NEXT]], @__init_array_end
+; CHECK-NEXT:    br i1 [[END]], label [[WHILE_END]], label [[WHILE_ENTRY]]
+; CHECK:       while.end:
+; CHECK-NEXT:    ret void
 
-; CHECK: define amdgpu_kernel void @amdgcn.device.fini() #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT: call void addrspacecast (ptr addrspace(1) @bar to ptr)()
-; CHECK-NEXT: ret void
-; CHECK-NEXT: }
+; CHECK-LABEL: define weak_odr amdgpu_kernel void @amdgcn.device.fini()
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 icmp ne (ptr addrspace(1) @__fini_array_start, ptr addrspace(1) @__fini_array_end), label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
+; CHECK:       while.entry:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ @__fini_array_start, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
+; CHECK-NEXT:    [[CALLBACK:%.*]] = load ptr, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    call void [[CALLBACK]]()
+; CHECK-NEXT:    [[NEXT]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR]], i64 1
+; CHECK-NEXT:    [[END:%.*]] = icmp eq ptr addrspace(1) [[NEXT]], @__fini_array_end
+; CHECK-NEXT:    br i1 [[END]], label [[WHILE_END]], label [[WHILE_ENTRY]]
+; CHECK:       while.end:
+; CHECK-NEXT:    ret void
 
-;.
-; CHECK: attributes #[[ATTR0]] = { "device-init" }
-; CHECK: attributes #[[ATTR1]] = { "device-fini" }
-
-
-; GCN-LABEL: foo:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; GCN-LABEL: bar:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; GCN-LABEL: amdgcn.device.init:
-; GCN:         s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; GCN-NEXT:    s_add_u32 s[[PC_LO]], s[[PC_LO]], foo.alias@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s[[PC_HI]], s[[PC_HI]], foo.alias@rel32@hi+12
-; GCN-NEXT:    s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
-
-; GCN:         s_mov_b64 [[LIT_ADDR:s\[[0-9]+:[0-9]+\]]], 0x1000
-; GCN:         s_swappc_b64 s[30:31], [[LIT_ADDR]]
-; GCN-NEXT:    s_endpgm
-;
-; GCN-LABEL: amdgcn.device.fini:
-; GCN:         s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; GCN-NEXT:    s_add_u32 s[[PC_LO]], s[[PC_LO]], bar@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s[[PC_HI]], s[[PC_HI]], bar@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s{{\[}}[[GOT_LO:[0-9]+]]:[[GOT_HI:[0-9]+]]{{\]}}, s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}, 0x0
-; GCN:         s_swappc_b64 s[30:31], s{{\[}}[[GOT_LO]]:[[GOT_HI]]{{\]}}
-; GCN-NEXT:    s_endpgm
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { "amdgpu-flat-work-group-size"="1,1" "device-init" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { "amdgpu-flat-work-group-size"="1,1" "device-fini" }

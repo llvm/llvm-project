@@ -23,12 +23,13 @@
 #include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::tensor;
 
 /// Get the dimension size of a value of RankedTensor type at the
 static OpFoldResult getShapeDimSize(OpBuilder &b, Location loc,
                                     Value rankedTensor, int64_t dimIdx) {
-  RankedTensorType tensorType = rankedTensor.getType().cast<RankedTensorType>();
+  RankedTensorType tensorType = cast<RankedTensorType>(rankedTensor.getType());
   if (!tensorType.isDynamicDim(dimIdx)) {
     return b.getIndexAttr(tensorType.getDimSize(dimIdx));
   }
@@ -40,7 +41,7 @@ static OpFoldResult getShapeDimSize(OpBuilder &b, Location loc,
 static SmallVector<OpFoldResult> getShapeDimSizes(OpBuilder &b, Location loc,
                                                   Value rankedTensor) {
   SmallVector<OpFoldResult> dimSizes;
-  RankedTensorType tensorType = rankedTensor.getType().cast<RankedTensorType>();
+  RankedTensorType tensorType = cast<RankedTensorType>(rankedTensor.getType());
   for (unsigned i = 0; i < tensorType.getRank(); i++)
     dimSizes.push_back(getShapeDimSize(b, loc, rankedTensor, i));
   return dimSizes;
@@ -61,7 +62,7 @@ static DimAndIndex invertSliceIndexing(OpBuilder &b, Location loc,
   assert(dim < sliceParams.size() && "slice should be non rank-reducing");
   return std::make_pair(
       dim,
-      makeComposedAffineApply(
+      affine::makeComposedAffineApply(
           b, loc, s0 + d0 * s1,
           {indexValue,
            getValueOrCreateConstantIndexOp(b, loc, sliceParams[dim].offset),

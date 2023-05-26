@@ -48,6 +48,11 @@ public:
 
 } // end anonymous namespace
 
+// These are internal relocation numbers for GP relaxation. They aren't part
+// of the psABI spec.
+#define INTERNAL_R_RISCV_GPREL_I 256
+#define INTERNAL_R_RISCV_GPREL_S 257
+
 const uint64_t dtpOffset = 0x800;
 
 enum Op {
@@ -62,6 +67,7 @@ enum Op {
 
 enum Reg {
   X_RA = 1,
+  X_GP = 3,
   X_TP = 4,
   X_T0 = 5,
   X_T1 = 6,
@@ -436,6 +442,20 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     return;
   }
 
+  case INTERNAL_R_RISCV_GPREL_I:
+  case INTERNAL_R_RISCV_GPREL_S: {
+    Defined *gp = ElfSym::riscvGlobalPointer;
+    int64_t displace = SignExtend64(val - gp->getVA(), bits);
+    checkInt(loc, displace, 12, rel);
+    uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_GP << 15);
+    if (rel.type == INTERNAL_R_RISCV_GPREL_I)
+      insn = setLO12_I(insn, displace);
+    else
+      insn = setLO12_S(insn, displace);
+    write32le(loc, insn);
+    return;
+  }
+
   case R_RISCV_ADD8:
     *loc += val;
     return;
@@ -614,27 +634,36 @@ static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
   }
 }
 
+static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
+                          Relocation &r, uint32_t &remove) {
+  const Defined *gp = ElfSym::riscvGlobalPointer;
+  if (!gp)
+    return;
+
+  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
+    return;
+
+  switch (r.type) {
+  case R_RISCV_HI20:
+    // Remove lui rd, %hi20(x).
+    sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
+    remove = 4;
+    break;
+  case R_RISCV_LO12_I:
+    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_I;
+    break;
+  case R_RISCV_LO12_S:
+    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_S;
+    break;
+  }
+}
+
 static bool relax(InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   auto &aux = *sec.relaxAux;
   bool changed = false;
-
-  // Get st_value delta for symbols relative to this section from the previous
-  // iteration.
-  DenseMap<const Defined *, uint64_t> valueDelta;
   ArrayRef<SymbolAnchor> sa = ArrayRef(aux.anchors);
-  uint32_t delta = 0;
-  for (auto [i, r] : llvm::enumerate(sec.relocs())) {
-    for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1))
-      if (!sa[0].end)
-        valueDelta[sa[0].d] = delta;
-    delta = aux.relocDeltas[i];
-  }
-  for (const SymbolAnchor &sa : sa)
-    if (!sa.end)
-      valueDelta[sa.d] = delta;
-  sa = ArrayRef(aux.anchors);
-  delta = 0;
+  uint64_t delta = 0;
 
   std::fill_n(aux.relocTypes.get(), sec.relocs().size(), R_RISCV_NONE);
   aux.writes.clear();
@@ -665,6 +694,13 @@ static bool relax(InputSection &sec) {
           sec.relocs()[i + 1].type == R_RISCV_RELAX)
         relaxTlsLe(sec, i, loc, r, remove);
       break;
+    case R_RISCV_HI20:
+    case R_RISCV_LO12_I:
+    case R_RISCV_LO12_S:
+      if (i + 1 != sec.relocs().size() &&
+          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+        relaxHi20Lo12(sec, i, loc, r, remove);
+      break;
     }
 
     // For all anchors whose offsets are <= r.offset, they are preceded by
@@ -674,7 +710,7 @@ static bool relax(InputSection &sec) {
       if (sa[0].end)
         sa[0].d->size = sa[0].offset - delta - sa[0].d->value;
       else
-        sa[0].d->value -= delta - valueDelta.find(sa[0].d)->second;
+        sa[0].d->value = sa[0].offset - delta;
     }
     delta += remove;
     if (delta != cur) {
@@ -687,11 +723,11 @@ static bool relax(InputSection &sec) {
     if (a.end)
       a.d->size = a.offset - delta - a.d->value;
     else
-      a.d->value -= delta - valueDelta.find(a.d)->second;
+      a.d->value = a.offset - delta;
   }
   // Inform assignAddresses that the size has changed.
-  if (!isUInt<16>(delta))
-    fatal("section size decrease is too large");
+  if (!isUInt<32>(delta))
+    fatal("section size decrease is too large: " + Twine(delta));
   sec.bytesDropped = delta;
   return changed;
 }
@@ -778,6 +814,9 @@ void elf::riscvFinalizeRelax(int passes) {
           }
         } else if (RelType newType = aux.relocTypes[i]) {
           switch (newType) {
+          case INTERNAL_R_RISCV_GPREL_I:
+          case INTERNAL_R_RISCV_GPREL_S:
+            break;
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
             break;

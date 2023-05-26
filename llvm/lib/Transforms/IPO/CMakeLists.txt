@@ -27,6 +27,7 @@ add_llvm_component_library(LLVMipo
   Internalize.cpp
   LoopExtractor.cpp
   LowerTypeTests.cpp
+  MemProfContextDisambiguation.cpp
   MergeFunctions.cpp
   ModuleInliner.cpp
   OpenMPOpt.cpp

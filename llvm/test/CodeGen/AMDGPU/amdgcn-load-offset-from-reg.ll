@@ -8,8 +8,8 @@
 ; from a register.
 ; GCN-LABEL: name: test_load_zext
 ; GCN: %[[OFFSET:[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @DescriptorBuffer
-; SDAG: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR killed %{{[0-9]+}}, killed %[[OFFSET]], 0 :: (invariant load (s128) from %ir.12, addrspace 4)
-; GISEL: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR %{{[0-9]+}}, %[[OFFSET]], 0 :: (invariant load (<4 x s32>) from {{.*}}, addrspace 4)
+; SDAG: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR_IMM killed %{{[0-9]+}}, killed %[[OFFSET]], 0, 0 :: (invariant load (s128) from %ir.12, addrspace 4)
+; GISEL: %{{[0-9]+}}:sgpr_128 = S_LOAD_DWORDX4_SGPR_IMM %{{[0-9]+}}, %[[OFFSET]], 0, 0 :: (invariant load (<4 x s32>) from {{.*}}, addrspace 4)
 define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %resNode0, i32 inreg %resNode1, <3 x i32> inreg %2, i32 inreg %3, <3 x i32> %4) local_unnamed_addr #2 {
 .entry:
   %5 = call i64 @llvm.amdgcn.s.getpc() #3
@@ -31,8 +31,8 @@ define amdgpu_cs void @test_load_zext(i32 inreg %0, i32 inreg %1, i32 inreg %res
 ; GCN-LABEL: name: test_complex_reg_offset
 ; GCN-DAG: %[[BASE:.*]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @0 + 4,
 ; GCN-DAG: %[[OFFSET:.*]]:sreg_32 = S_LSHL_B32
-; SDAG: S_LOAD_DWORD_SGPR killed %[[BASE]], killed %[[OFFSET]],
-; GISEL: S_LOAD_DWORD_SGPR %[[BASE]], %[[OFFSET]],
+; SDAG: S_LOAD_DWORD_SGPR_IMM killed %[[BASE]], killed %[[OFFSET]], 0, 0
+; GISEL: S_LOAD_DWORD_SGPR_IMM %[[BASE]], %[[OFFSET]], 0, 0
 define amdgpu_ps void @test_complex_reg_offset(ptr addrspace(1) %out) {
   %i = load i32, ptr addrspace(4) @1
   %i1 = and i32 %i, 3

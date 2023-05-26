@@ -11,6 +11,7 @@
 // template <class InputIterator>
 //   deque(InputIterator f, InputIterator l, const allocator_type& a);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -34,6 +35,7 @@ test(InputIterator f, InputIterator l, const Allocator& a)
     assert(d.get_allocator() == a);
     assert(d.size() == static_cast<std::size_t>(std::distance(f, l)));
     assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i, ++f)
         assert(*i == *f);
 }
@@ -66,12 +68,14 @@ void test_emplacable_concept() {
     {
       std::deque<T> v(It(arr1), It(std::end(arr1)), a);
       assert(v[0].value == 42);
+      LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(v));
     }
     {
       std::deque<T> v(It(arr2), It(std::end(arr2)), a);
       assert(v[0].value == 1);
       assert(v[1].value == 101);
       assert(v[2].value == 42);
+      LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(v));
     }
   }
   {
@@ -82,6 +86,7 @@ void test_emplacable_concept() {
       std::deque<T> v(It(arr1), It(std::end(arr1)), a);
       assert(v[0].copied == 0);
       assert(v[0].value == 42);
+      LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(v));
     }
     {
       std::deque<T> v(It(arr2), It(std::end(arr2)), a);
@@ -91,6 +96,7 @@ void test_emplacable_concept() {
       assert(v[1].value == 101);
       assert(v[2].copied == 0);
       assert(v[2].value == 42);
+      LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(v));
     }
   }
 #endif

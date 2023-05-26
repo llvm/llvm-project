@@ -26,8 +26,8 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::hasDivergentDefs(
 
 template <>
 bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
-    const Instruction &Instr, bool AllDefsDivergent) {
-  return markDivergent(&Instr);
+    const Instruction &Instr) {
+  return markDivergent(cast<Value>(&Instr));
 }
 
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
@@ -49,9 +49,7 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
     const Value *V) {
   for (const auto *User : V->users()) {
     if (const auto *UserInstr = dyn_cast<const Instruction>(User)) {
-      if (markDivergent(*UserInstr)) {
-        Worklist.push_back(UserInstr);
-      }
+      markDivergent(*UserInstr);
     }
   }
 }
@@ -76,6 +74,20 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
     }
   }
   return false;
+}
+
+template <>
+void llvm::GenericUniformityAnalysisImpl<
+    SSAContext>::propagateTemporalDivergence(const Instruction &I,
+                                             const Cycle &DefCycle) {
+  if (isDivergent(I))
+    return;
+  for (auto *User : I.users()) {
+    auto *UserInstr = cast<Instruction>(User);
+    if (DefCycle.contains(UserInstr->getParent()))
+      continue;
+    markDivergent(*UserInstr);
+  }
 }
 
 template <>

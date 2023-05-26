@@ -44,6 +44,45 @@ static cl::opt<bool>
                          cl::desc("Enable unsafe double to float "
                                   "shrinking for math lib calls"));
 
+// Enable conversion of operator new calls with a MemProf hot or cold hint
+// to an operator new call that takes a hot/cold hint. Off by default since
+// not all allocators currently support this extension.
+static cl::opt<bool>
+    OptimizeHotColdNew("optimize-hot-cold-new", cl::Hidden, cl::init(false),
+                       cl::desc("Enable hot/cold operator new library calls"));
+
+namespace {
+
+// Specialized parser to ensure the hint is an 8 bit value (we can't specify
+// uint8_t to opt<> as that is interpreted to mean that we are passing a char
+// option with a specific set of values.
+struct HotColdHintParser : public cl::parser<unsigned> {
+  HotColdHintParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value) {
+    if (Arg.getAsInteger(0, Value))
+      return O.error("'" + Arg + "' value invalid for uint argument!");
+
+    if (Value > 255)
+      return O.error("'" + Arg + "' value must be in the range [0, 255]!");
+
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+// Hot/cold operator new takes an 8 bit hotness hint, where 0 is the coldest
+// and 255 is the hottest. Default to 1 value away from the coldest and hottest
+// hints, so that the compiler hinted allocations are slightly less strong than
+// manually inserted hints at the two extremes.
+static cl::opt<unsigned, false, HotColdHintParser> ColdNewHintValue(
+    "cold-new-hint-value", cl::Hidden, cl::init(1),
+    cl::desc("Value to pass to hot/cold operator new for cold allocation"));
+static cl::opt<unsigned, false, HotColdHintParser> HotNewHintValue(
+    "hot-new-hint-value", cl::Hidden, cl::init(254),
+    cl::desc("Value to pass to hot/cold operator new for hot allocation"));
+
 //===----------------------------------------------------------------------===//
 // Helper Functions
 //===----------------------------------------------------------------------===//
@@ -1358,6 +1397,10 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
   }
 
+  bool OptForSize = CI->getFunction()->hasOptSize() ||
+                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+                                                PGSOQueryType::IRPass);
+
   // If the char is variable but the input str and length are not we can turn
   // this memchr call into a simple bit field test. Of course this only works
   // when the return value is only checked against null.
@@ -1368,7 +1411,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   // memchr("\r\n", C, 2) != nullptr -> (1 << C & ((1 << '\r') | (1 << '\n')))
   // != 0
   //   after bounds check.
-  if (Str.empty() || !isOnlyUsedInZeroEqualityComparison(CI))
+  if (OptForSize || Str.empty() || !isOnlyUsedInZeroEqualityComparison(CI))
     return nullptr;
 
   unsigned char Max =
@@ -1380,8 +1423,34 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   // FIXME: On a 64 bit architecture this prevents us from using the
   // interesting range of alpha ascii chars. We could do better by emitting
   // two bitfields or shifting the range by 64 if no lower chars are used.
-  if (!DL.fitsInLegalInteger(Max + 1))
-    return nullptr;
+  if (!DL.fitsInLegalInteger(Max + 1)) {
+    // Build chain of ORs
+    // Transform:
+    //    memchr("abcd", C, 4) != nullptr
+    // to:
+    //    (C == 'a' || C == 'b' || C == 'c' || C == 'd') != 0
+    std::string SortedStr = Str.str();
+    llvm::sort(SortedStr);
+    // Compute the number of of non-contiguous ranges.
+    unsigned NonContRanges = 1;
+    for (size_t i = 1; i < SortedStr.size(); ++i) {
+      if (SortedStr[i] > SortedStr[i - 1] + 1) {
+        NonContRanges++;
+      }
+    }
+
+    // Restrict this optimization to profitable cases with one or two range
+    // checks.
+    if (NonContRanges > 2)
+      return nullptr;
+
+    SmallVector<Value *> CharCompares;
+    for (unsigned char C : SortedStr)
+      CharCompares.push_back(
+          B.CreateICmpEQ(CharVal, ConstantInt::get(CharVal->getType(), C)));
+
+    return B.CreateIntToPtr(B.CreateOr(CharCompares), CI->getType());
+  }
 
   // For the bit field use a power-of-2 type with at least 8 bits to avoid
   // creating unnecessary illegal types.
@@ -1651,6 +1720,59 @@ Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
     return copyFlags(*CI, emitMalloc(CI->getArgOperand(1), B, DL, TLI));
 
   return nullptr;
+}
+
+// When enabled, replace operator new() calls marked with a hot or cold memprof
+// attribute with an operator new() call that takes a __hot_cold_t parameter.
+// Currently this is supported by the open source version of tcmalloc, see:
+// https://github.com/google/tcmalloc/blob/master/tcmalloc/new_extension.h
+Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
+                                      LibFunc &Func) {
+  if (!OptimizeHotColdNew)
+    return nullptr;
+
+  uint8_t HotCold;
+  if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "cold")
+    HotCold = ColdNewHintValue;
+  else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "hot")
+    HotCold = HotNewHintValue;
+  else
+    return nullptr;
+
+  switch (Func) {
+  case LibFunc_Znwm:
+    return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                          LibFunc_Znwm12__hot_cold_t, HotCold);
+  case LibFunc_Znam:
+    return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                          LibFunc_Znam12__hot_cold_t, HotCold);
+  case LibFunc_ZnwmRKSt9nothrow_t:
+    return emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                 TLI, LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t,
+                                 HotCold);
+  case LibFunc_ZnamRKSt9nothrow_t:
+    return emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                 TLI, LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t,
+                                 HotCold);
+  case LibFunc_ZnwmSt11align_val_t:
+    return emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                 TLI, LibFunc_ZnwmSt11align_val_t12__hot_cold_t,
+                                 HotCold);
+  case LibFunc_ZnamSt11align_val_t:
+    return emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                 TLI, LibFunc_ZnamSt11align_val_t12__hot_cold_t,
+                                 HotCold);
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
+    return emitHotColdNewAlignedNoThrow(
+        CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+        TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+    return emitHotColdNewAlignedNoThrow(
+        CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+        TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+  default:
+    return nullptr;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2057,7 +2179,7 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   // pow(-Inf, 0.5) is optionally required to have a result of +Inf (not setting
   // errno), but sqrt(-Inf) is required by various standards to set errno.
   if (!Pow->doesNotAccessMemory() && !Pow->hasNoInfs() &&
-      !isKnownNeverInfinity(Base, TLI))
+      !isKnownNeverInfinity(Base, DL, TLI, 0, AC, Pow, /*DT=*/nullptr, &ORE))
     return nullptr;
 
   Sqrt = getSqrtCall(Base, AttributeList(), Pow->doesNotAccessMemory(), Mod, B,
@@ -3448,6 +3570,15 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeWcslen(CI, Builder);
     case LibFunc_bcopy:
       return optimizeBCopy(CI, Builder);
+    case LibFunc_Znwm:
+    case LibFunc_ZnwmRKSt9nothrow_t:
+    case LibFunc_ZnwmSt11align_val_t:
+    case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
+    case LibFunc_Znam:
+    case LibFunc_ZnamRKSt9nothrow_t:
+    case LibFunc_ZnamSt11align_val_t:
+    case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+      return optimizeNew(CI, Builder, Func);
     default:
       break;
     }
@@ -3706,13 +3837,13 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
 }
 
 LibCallSimplifier::LibCallSimplifier(
-    const DataLayout &DL, const TargetLibraryInfo *TLI,
-    OptimizationRemarkEmitter &ORE,
-    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+    const DataLayout &DL, const TargetLibraryInfo *TLI, AssumptionCache *AC,
+    OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+    ProfileSummaryInfo *PSI,
     function_ref<void(Instruction *, Value *)> Replacer,
     function_ref<void(Instruction *)> Eraser)
-    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), ORE(ORE), BFI(BFI), PSI(PSI),
-      Replacer(Replacer), Eraser(Eraser) {}
+    : FortifiedSimplifier(TLI), DL(DL), TLI(TLI), AC(AC), ORE(ORE), BFI(BFI),
+      PSI(PSI), Replacer(Replacer), Eraser(Eraser) {}
 
 void LibCallSimplifier::replaceAllUsesWith(Instruction *I, Value *With) {
   // Indirect through the replacer used in this instance.

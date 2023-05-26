@@ -149,15 +149,15 @@ entry:
 define i16 @mul_add_i16(i16 signext %a, i16 signext %b) nounwind {
 ; LA32-LABEL: mul_add_i16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ori $a2, $zero, 10
-; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    slli.w $a2, $a0, 3
+; LA32-NEXT:    alsl.w $a0, $a0, $a2, 1
 ; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_add_i16:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ori $a2, $zero, 10
-; LA64-NEXT:    mul.d $a0, $a0, $a2
+; LA64-NEXT:    slli.d $a2, $a0, 3
+; LA64-NEXT:    alsl.d $a0, $a0, $a2, 1
 ; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
@@ -169,15 +169,15 @@ entry:
 define i32 @mul_add_i32(i32 signext %a, i32 signext %b) nounwind {
 ; LA32-LABEL: mul_add_i32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ori $a2, $zero, 12
-; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    slli.w $a2, $a0, 3
+; LA32-NEXT:    alsl.w $a0, $a0, $a2, 2
 ; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_add_i32:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ori $a2, $zero, 12
-; LA64-NEXT:    mul.d $a0, $a0, $a2
+; LA64-NEXT:    slli.d $a2, $a0, 3
+; LA64-NEXT:    alsl.d $a0, $a0, $a2, 2
 ; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:

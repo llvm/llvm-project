@@ -8,13 +8,13 @@
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[U:%.*]] = alloca %struct..1anon, align 8
+; CHECK-NEXT:    [[U:%.*]] = alloca [[STRUCT__1ANON:%.*]], align 8
 ; CHECK-NEXT:    store double 0x7FF0000000000000, ptr [[U]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds %struct..0anon, ptr [[U]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT__0ANON:%.*]], ptr [[U]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP89:%.*]] = and i32 [[TMP6]], 2146435072
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[TMP89]], 2146435072
-; CHECK-NEXT:    br i1 [[TMP0]], label %cond_false, label %cond_true
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[TMP6]], 2146435072
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP0]], 2146435072
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]]
 ; CHECK:       cond_true:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       cond_false:

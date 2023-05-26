@@ -506,3 +506,85 @@ define i16 @atomicrmw_umax_i16(i16 %val, ptr %ptr) {
   %old = atomicrmw umax ptr %ptr, i16 %val seq_cst
   ret i16 %old
 }
+
+define i16 @atomicrmw_xchg_i16(i16 %val, ptr %ptr) {
+; NO-ATOMIC-LABEL: atomicrmw_xchg_i16:
+; NO-ATOMIC:         .cfi_startproc
+; NO-ATOMIC-NEXT:  ; %bb.0: ; %entry
+; NO-ATOMIC-NEXT:    suba.l #12, %sp
+; NO-ATOMIC-NEXT:    .cfi_def_cfa_offset -16
+; NO-ATOMIC-NEXT:    move.w (18,%sp), %d0
+; NO-ATOMIC-NEXT:    and.l #65535, %d0
+; NO-ATOMIC-NEXT:    move.l %d0, (4,%sp)
+; NO-ATOMIC-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-NEXT:    jsr __sync_lock_test_and_set_2@PLT
+; NO-ATOMIC-NEXT:    adda.l #12, %sp
+; NO-ATOMIC-NEXT:    rts
+;
+; ATOMIC-LABEL: atomicrmw_xchg_i16:
+; ATOMIC:         .cfi_startproc
+; ATOMIC-NEXT:  ; %bb.0: ; %entry
+; ATOMIC-NEXT:    suba.l #8, %sp
+; ATOMIC-NEXT:    .cfi_def_cfa_offset -12
+; ATOMIC-NEXT:    movem.l %d2-%d3, (0,%sp) ; 12-byte Folded Spill
+; ATOMIC-NEXT:    move.w (14,%sp), %d1
+; ATOMIC-NEXT:    move.l (16,%sp), %a0
+; ATOMIC-NEXT:    move.w (%a0), %d2
+; ATOMIC-NEXT:    move.w %d2, %d0
+; ATOMIC-NEXT:  .LBB10_1: ; %atomicrmw.start
+; ATOMIC-NEXT:    ; =>This Inner Loop Header: Depth=1
+; ATOMIC-NEXT:    cas.w %d0, %d1, (%a0)
+; ATOMIC-NEXT:    move.w %d0, %d3
+; ATOMIC-NEXT:    sub.w %d2, %d3
+; ATOMIC-NEXT:    seq %d2
+; ATOMIC-NEXT:    sub.b #1, %d2
+; ATOMIC-NEXT:    move.w %d0, %d2
+; ATOMIC-NEXT:    bne .LBB10_1
+; ATOMIC-NEXT:  ; %bb.2: ; %atomicrmw.end
+; ATOMIC-NEXT:    movem.l (0,%sp), %d2-%d3 ; 12-byte Folded Reload
+; ATOMIC-NEXT:    adda.l #8, %sp
+; ATOMIC-NEXT:    rts
+entry:
+  %old = atomicrmw xchg ptr %ptr, i16 %val monotonic
+  ret i16 %old
+}
+
+define i32 @atomicrmw_xchg_i32(i32 %val, ptr %ptr) {
+; NO-ATOMIC-LABEL: atomicrmw_xchg_i32:
+; NO-ATOMIC:         .cfi_startproc
+; NO-ATOMIC-NEXT:  ; %bb.0: ; %entry
+; NO-ATOMIC-NEXT:    suba.l #12, %sp
+; NO-ATOMIC-NEXT:    .cfi_def_cfa_offset -16
+; NO-ATOMIC-NEXT:    move.l (16,%sp), (4,%sp)
+; NO-ATOMIC-NEXT:    move.l (20,%sp), (%sp)
+; NO-ATOMIC-NEXT:    jsr __sync_lock_test_and_set_4@PLT
+; NO-ATOMIC-NEXT:    adda.l #12, %sp
+; NO-ATOMIC-NEXT:    rts
+;
+; ATOMIC-LABEL: atomicrmw_xchg_i32:
+; ATOMIC:         .cfi_startproc
+; ATOMIC-NEXT:  ; %bb.0: ; %entry
+; ATOMIC-NEXT:    suba.l #8, %sp
+; ATOMIC-NEXT:    .cfi_def_cfa_offset -12
+; ATOMIC-NEXT:    movem.l %d2-%d3, (0,%sp) ; 12-byte Folded Spill
+; ATOMIC-NEXT:    move.l (12,%sp), %d1
+; ATOMIC-NEXT:    move.l (16,%sp), %a0
+; ATOMIC-NEXT:    move.l (%a0), %d2
+; ATOMIC-NEXT:    move.l %d2, %d0
+; ATOMIC-NEXT:  .LBB11_1: ; %atomicrmw.start
+; ATOMIC-NEXT:    ; =>This Inner Loop Header: Depth=1
+; ATOMIC-NEXT:    cas.l %d0, %d1, (%a0)
+; ATOMIC-NEXT:    move.l %d0, %d3
+; ATOMIC-NEXT:    sub.l %d2, %d3
+; ATOMIC-NEXT:    seq %d2
+; ATOMIC-NEXT:    sub.b #1, %d2
+; ATOMIC-NEXT:    move.l %d0, %d2
+; ATOMIC-NEXT:    bne .LBB11_1
+; ATOMIC-NEXT:  ; %bb.2: ; %atomicrmw.end
+; ATOMIC-NEXT:    movem.l (0,%sp), %d2-%d3 ; 12-byte Folded Reload
+; ATOMIC-NEXT:    adda.l #8, %sp
+; ATOMIC-NEXT:    rts
+entry:
+  %old = atomicrmw xchg ptr %ptr, i32 %val monotonic
+  ret i32 %old
+}

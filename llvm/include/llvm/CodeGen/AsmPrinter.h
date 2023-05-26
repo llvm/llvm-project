@@ -87,7 +87,7 @@ public:
   TargetMachine &TM;
 
   /// Target Asm Printer information.
-  const MCAsmInfo *MAI;
+  const MCAsmInfo *MAI = nullptr;
 
   /// This is the context for the output file that we are streaming. This owns
   /// all of the global MC-related objects for the generated translation unit.
@@ -111,7 +111,7 @@ public:
   MachineLoopInfo *MLI = nullptr;
 
   /// Optimization remark emitter.
-  MachineOptimizationRemarkEmitter *ORE;
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
 
   /// The symbol for the entry in __patchable_function_entires.
   MCSymbol *CurrentPatchableFunctionEntrySym = nullptr;

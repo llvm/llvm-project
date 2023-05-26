@@ -58,6 +58,16 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
         char *ptr{instance.ZeroBasedIndexedElement<char>(j) + comp.offset()};
         std::memcpy(ptr, init, bytes);
       }
+    } else if (comp.genre() == typeInfo::Component::Genre::Pointer) {
+      // Data pointers without explicit initialization are established
+      // so that they are valid right-hand side targets of pointer
+      // assignment statements.
+      for (std::size_t j{0}; j < elements; ++j) {
+        Descriptor &ptrDesc{*instance.OffsetElement<Descriptor>(
+            j * byteStride + comp.offset())};
+        comp.EstablishDescriptor(ptrDesc, instance, terminator);
+        ptrDesc.raw().attribute = CFI_attribute_pointer;
+      }
     } else if (comp.genre() == typeInfo::Component::Genre::Data &&
         comp.derivedType() && !comp.derivedType()->noInitializationNeeded()) {
       // Default initialization of non-pointer non-allocatable/automatic

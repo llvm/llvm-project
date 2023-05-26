@@ -92,8 +92,8 @@ struct TestLinalgElementwiseFusion
   TestLinalgElementwiseFusion(const TestLinalgElementwiseFusion &pass)
       : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
-                    tensor::TensorDialect>();
+    registry.insert<affine::AffineDialect, linalg::LinalgDialect,
+                    memref::MemRefDialect, tensor::TensorDialect>();
   }
   StringRef getArgument() const final {
     return "test-linalg-elementwise-fusion-patterns";

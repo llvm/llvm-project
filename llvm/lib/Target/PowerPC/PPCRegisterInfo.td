@@ -20,6 +20,8 @@ def sub_vsx0 : SubRegIndex<128>;
 def sub_vsx1 : SubRegIndex<128, 128>;
 def sub_gp8_x0 : SubRegIndex<64>;
 def sub_gp8_x1 : SubRegIndex<64, 64>;
+def sub_fp0 : SubRegIndex<64>;
+def sub_fp1 : SubRegIndex<64, 64>;
 }
 
 
@@ -56,6 +58,15 @@ class SPR<bits<10> num, string n> : PPCReg<n> {
 // FPR - One of the 32 64-bit floating-point registers
 class FPR<bits<5> num, string n> : PPCReg<n> {
   let HWEncoding{4-0} = num;
+}
+
+// FPPair - A pair of 64-bit floating-point registers.
+class FPPair<string n, bits<5> EvenIndex> : PPCReg<n> {
+  assert !eq(EvenIndex{0}, 0), "Index should be even.";
+  let HWEncoding{4-0} = EvenIndex;
+  let SubRegs = [!cast<FPR>("F"#EvenIndex), !cast<FPR>("F"#!add(EvenIndex, 1))];
+  let DwarfNumbers = [-1, -1];
+  let SubRegIndices = [sub_fp0, sub_fp1];
 }
 
 // VF - One of the 32 64-bit floating-point subregisters of the vector
@@ -134,6 +145,11 @@ foreach Index = 0-31 in {
 foreach Index = 0-31 in {
   def F#Index : FPR<Index, "f"#Index>,
                 DwarfRegNum<[!add(Index, 32), !add(Index, 32)]>;
+}
+
+// Floating-point pair registers
+foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
+  def Fpair#Index : FPPair<"fp"#Index, Index>;
 }
 
 // 64-bit Floating-point subregisters of Altivec registers
@@ -349,6 +365,21 @@ def F8RC : RegisterClass<"PPC", [f64], 64, (add (sequence "F%u", 0, 13),
                                                 (sequence "F%u", 31, 14))>;
 def F4RC : RegisterClass<"PPC", [f32], 32, (add F8RC)>;
 
+// Floating point pair registers.
+// Note that the type used for this register class is ppcf128. This is not
+// completely correct. However, since we are not pattern matching any
+// instructions for these registers and we are not register allocating or
+// scheduling any of these instructions it should be safe to do this.
+// The reason we didn't use the correct type (Decimal Floating Point) is that
+// at the time of this implementation the correct type was not available.
+def FpRC :
+  RegisterClass<"PPC", [ppcf128], 128,
+                (add Fpair0, Fpair2, Fpair4, Fpair6, Fpair8, Fpair10, Fpair12,
+                     Fpair14, Fpair16, Fpair18, Fpair20, Fpair22, Fpair24,
+                     Fpair26, Fpair28, Fpair30)> {
+  let Size = 128;
+}
+
 def VRRC : RegisterClass<"PPC",
                          [v16i8,v8i16,v4i32,v2i64,v1i128,v4f32,v2f64, f128],
                          128,
@@ -503,6 +534,12 @@ def PPCRegF4RCAsmOperand : AsmOperandClass {
 }
 def f4rc : RegisterOperand<F4RC> {
   let ParserMatchClass = PPCRegF4RCAsmOperand;
+}
+def PPCRegFpRCAsmOperand : AsmOperandClass {
+  let Name = "RegFpRC"; let PredicateMethod = "isEvenRegNumber";
+}
+def fpairrc : RegisterOperand<FpRC> {
+  let ParserMatchClass = PPCRegFpRCAsmOperand;
 }
 def PPCRegVRRCAsmOperand : AsmOperandClass {
   let Name = "RegVRRC"; let PredicateMethod = "isRegNumber";

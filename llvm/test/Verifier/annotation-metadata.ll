@@ -5,7 +5,7 @@ entry:
 ; CHECK: annotation must have at least one operand
   %a.addr = alloca ptr, align 8, !annotation !0
 
-; CHECK-NEXT: operands must be strings
+; CHECK-NEXT: operands must be a string or a tuple of strings
   ret void, !annotation !1
 }
 

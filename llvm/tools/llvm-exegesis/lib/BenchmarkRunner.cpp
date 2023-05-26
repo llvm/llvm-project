@@ -30,12 +30,40 @@ namespace llvm {
 namespace exegesis {
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
-                                 InstructionBenchmark::ModeE Mode,
+                                 Benchmark::ModeE Mode,
                                  BenchmarkPhaseSelectorE BenchmarkPhaseSelector)
     : State(State), Mode(Mode), BenchmarkPhaseSelector(BenchmarkPhaseSelector),
       Scratch(std::make_unique<ScratchSpace>()) {}
 
 BenchmarkRunner::~BenchmarkRunner() = default;
+
+void BenchmarkRunner::FunctionExecutor::accumulateCounterValues(
+    const llvm::SmallVectorImpl<int64_t> &NewValues,
+    llvm::SmallVectorImpl<int64_t> *Result) {
+  const size_t NumValues = std::max(NewValues.size(), Result->size());
+  if (NumValues > Result->size())
+    Result->resize(NumValues, 0);
+  for (size_t I = 0, End = NewValues.size(); I < End; ++I)
+    (*Result)[I] += NewValues[I];
+}
+
+Expected<llvm::SmallVector<int64_t, 4>>
+BenchmarkRunner::FunctionExecutor::runAndSample(const char *Counters) const {
+  // We sum counts when there are several counters for a single ProcRes
+  // (e.g. P23 on SandyBridge).
+  llvm::SmallVector<int64_t, 4> CounterValues;
+  SmallVector<StringRef, 2> CounterNames;
+  StringRef(Counters).split(CounterNames, '+');
+  for (auto &CounterName : CounterNames) {
+    CounterName = CounterName.trim();
+    Expected<SmallVector<int64_t, 4>> ValueOrError =
+        runWithCounter(CounterName);
+    if (!ValueOrError)
+      return ValueOrError.takeError();
+    accumulateCounterValues(ValueOrError.get(), &CounterValues);
+  }
+  return CounterValues;
+}
 
 namespace {
 class FunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
@@ -47,13 +75,6 @@ public:
         Scratch(Scratch) {}
 
 private:
-  Expected<int64_t> runAndMeasure(const char *Counters) const override {
-    auto ResultOrError = runAndSample(Counters);
-    if (ResultOrError)
-      return ResultOrError.get()[0];
-    return ResultOrError.takeError();
-  }
-
   static void
   accumulateCounterValues(const llvm::SmallVector<int64_t, 4> &NewValues,
                           llvm::SmallVector<int64_t, 4> *Result) {
@@ -65,67 +86,43 @@ private:
   }
 
   Expected<llvm::SmallVector<int64_t, 4>>
-  runAndSample(const char *Counters) const override {
-    // We sum counts when there are several counters for a single ProcRes
-    // (e.g. P23 on SandyBridge).
-    llvm::SmallVector<int64_t, 4> CounterValues;
-    int Reserved = 0;
-    SmallVector<StringRef, 2> CounterNames;
-    StringRef(Counters).split(CounterNames, '+');
-    char *const ScratchPtr = Scratch->ptr();
+  runWithCounter(StringRef CounterName) const override {
     const ExegesisTarget &ET = State.getExegesisTarget();
-    for (auto &CounterName : CounterNames) {
-      CounterName = CounterName.trim();
-      auto CounterOrError = ET.createCounter(CounterName, State);
+    char *const ScratchPtr = Scratch->ptr();
+    auto CounterOrError = ET.createCounter(CounterName, State);
 
-      if (!CounterOrError)
-        return CounterOrError.takeError();
+    if (!CounterOrError)
+      return CounterOrError.takeError();
 
-      pfm::Counter *Counter = CounterOrError.get().get();
-      if (Reserved == 0) {
-        Reserved = Counter->numValues();
-        CounterValues.reserve(Reserved);
-      } else if (Reserved != Counter->numValues())
-        // It'd be wrong to accumulate vectors of different sizes.
-        return make_error<Failure>(
-            llvm::Twine("Inconsistent number of values for counter ")
-                .concat(CounterName)
-                .concat(std::to_string(Counter->numValues()))
-                .concat(" vs expected of ")
-                .concat(std::to_string(Reserved)));
-      Scratch->clear();
-      {
-        auto PS = ET.withSavedState();
-        CrashRecoveryContext CRC;
-        CrashRecoveryContext::Enable();
-        const bool Crashed = !CRC.RunSafely([this, Counter, ScratchPtr]() {
-          Counter->start();
-          this->Function(ScratchPtr);
-          Counter->stop();
-        });
-        CrashRecoveryContext::Disable();
-        PS.reset();
-        if (Crashed) {
-          std::string Msg = "snippet crashed while running";
+    pfm::Counter *Counter = CounterOrError.get().get();
+    Scratch->clear();
+    {
+      auto PS = ET.withSavedState();
+      CrashRecoveryContext CRC;
+      CrashRecoveryContext::Enable();
+      const bool Crashed = !CRC.RunSafely([this, Counter, ScratchPtr]() {
+        Counter->start();
+        this->Function(ScratchPtr);
+        Counter->stop();
+      });
+      CrashRecoveryContext::Disable();
+      PS.reset();
+      if (Crashed) {
+        std::string Msg = "snippet crashed while running";
 #ifdef LLVM_ON_UNIX
-          // See "Exit Status for Commands":
-          // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
-          constexpr const int kSigOffset = 128;
-          if (const char *const SigName = strsignal(CRC.RetCode - kSigOffset)) {
-            Msg += ": ";
-            Msg += SigName;
-          }
-#endif
-          return make_error<SnippetCrash>(std::move(Msg));
+        // See "Exit Status for Commands":
+        // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
+        constexpr const int kSigOffset = 128;
+        if (const char *const SigName = strsignal(CRC.RetCode - kSigOffset)) {
+          Msg += ": ";
+          Msg += SigName;
         }
+#endif
+        return make_error<SnippetCrash>(std::move(Msg));
       }
-
-      auto ValueOrError = Counter->readOrError(Function.getFunctionBytes());
-      if (!ValueOrError)
-        return ValueOrError.takeError();
-      accumulateCounterValues(ValueOrError.get(), &CounterValues);
     }
-    return CounterValues;
+
+    return Counter->readOrError(Function.getFunctionBytes());
   }
 
   const LLVMState &State;
@@ -155,7 +152,7 @@ BenchmarkRunner::getRunnableConfiguration(
     const SnippetRepetitor &Repetitor) const {
   RunnableConfiguration RC;
 
-  InstructionBenchmark &InstrBenchmark = RC.InstrBenchmark;
+  Benchmark &InstrBenchmark = RC.InstrBenchmark;
   InstrBenchmark.Mode = Mode;
   InstrBenchmark.CpuName = std::string(State.getTargetMachine().getTargetCPU());
   InstrBenchmark.LLVMTriple =
@@ -196,15 +193,16 @@ BenchmarkRunner::getRunnableConfiguration(
   return std::move(RC);
 }
 
-Expected<InstructionBenchmark>
-BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
-                                  bool DumpObjectToDisk) const {
-  InstructionBenchmark &InstrBenchmark = RC.InstrBenchmark;
+Expected<Benchmark> BenchmarkRunner::runConfiguration(
+    RunnableConfiguration &&RC,
+    const std::optional<StringRef> &DumpFile) const {
+  Benchmark &InstrBenchmark = RC.InstrBenchmark;
   object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
 
-  if (DumpObjectToDisk &&
-      BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
-    auto ObjectFilePath = writeObjectFile(ObjectFile.getBinary()->getData());
+  if (DumpFile && BenchmarkPhaseSelector >
+                      BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
+    auto ObjectFilePath =
+        writeObjectFile(ObjectFile.getBinary()->getData(), *DumpFile);
     if (Error E = ObjectFilePath.takeError()) {
       InstrBenchmark.Error = toString(std::move(E));
       return std::move(InstrBenchmark);
@@ -241,11 +239,16 @@ BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
   return std::move(InstrBenchmark);
 }
 
-Expected<std::string> BenchmarkRunner::writeObjectFile(StringRef Buffer) const {
+Expected<std::string>
+BenchmarkRunner::writeObjectFile(StringRef Buffer, StringRef FileName) const {
   int ResultFD = 0;
-  SmallString<256> ResultPath;
+  SmallString<256> ResultPath = FileName;
   if (Error E = errorCodeToError(
-          sys::fs::createTemporaryFile("snippet", "o", ResultFD, ResultPath)))
+          FileName.empty() ? sys::fs::createTemporaryFile("snippet", "o",
+                                                          ResultFD, ResultPath)
+                           : sys::fs::openFileForReadWrite(
+                                 FileName, ResultFD, sys::fs::CD_CreateAlways,
+                                 sys::fs::OF_None)))
     return std::move(E);
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   OFS.write(Buffer.data(), Buffer.size());

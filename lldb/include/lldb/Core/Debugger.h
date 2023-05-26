@@ -269,7 +269,7 @@ public:
 
   const FormatEntity::Entry *GetFrameFormatUnique() const;
 
-  uint32_t GetStopDisassemblyMaxSize() const;
+  uint64_t GetStopDisassemblyMaxSize() const;
 
   const FormatEntity::Entry *GetThreadFormat() const;
 
@@ -283,9 +283,9 @@ public:
 
   bool SetREPLLanguage(lldb::LanguageType repl_lang);
 
-  uint32_t GetTerminalWidth() const;
+  uint64_t GetTerminalWidth() const;
 
-  bool SetTerminalWidth(uint32_t term_width);
+  bool SetTerminalWidth(uint64_t term_width);
 
   llvm::StringRef GetPrompt() const;
 
@@ -293,8 +293,11 @@ public:
   void SetPrompt(const char *) = delete;
 
   bool GetUseExternalEditor() const;
-
   bool SetUseExternalEditor(bool use_external_editor_p);
+
+  llvm::StringRef GetExternalEditor() const;
+
+  bool SetExternalEditor(llvm::StringRef editor);
 
   bool GetUseColor() const;
 
@@ -326,11 +329,11 @@ public:
 
   llvm::StringRef GetStopShowColumnAnsiSuffix() const;
 
-  uint32_t GetStopSourceLineCount(bool before) const;
+  uint64_t GetStopSourceLineCount(bool before) const;
 
   StopDisassemblyType GetStopDisassemblyDisplay() const;
 
-  uint32_t GetDisassemblyLineCount() const;
+  uint64_t GetDisassemblyLineCount() const;
 
   llvm::StringRef GetStopShowLineMarkerAnsiPrefix() const;
 
@@ -346,9 +349,9 @@ public:
 
   bool SetPrintDecls(bool b);
 
-  uint32_t GetTabSize() const;
+  uint64_t GetTabSize() const;
 
-  bool SetTabSize(uint32_t tab_size);
+  bool SetTabSize(uint64_t tab_size);
 
   lldb::DWIMPrintVerbosity GetDWIMPrintVerbosity() const;
 
@@ -497,6 +500,19 @@ public:
   SetDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
                      void *baton);
 
+  /// Manually start the global event handler thread. It is useful to plugins
+  /// that directly use the \a lldb_private namespace and want to use the
+  /// debugger's default event handler thread instead of defining their own.
+  bool StartEventHandlerThread();
+
+  /// Manually stop the debugger's default event handler.
+  void StopEventHandlerThread();
+
+  /// Force flushing the process's pending stdout and stderr to the debugger's
+  /// asynchronous stdout and stderr streams.
+  void FlushProcessOutput(Process &process, bool flush_stdout,
+                          bool flush_stderr);
+
 protected:
   friend class CommandInterpreter;
   friend class REPL;
@@ -545,10 +561,6 @@ protected:
 
   void PrintProgress(const ProgressEventData &data);
 
-  bool StartEventHandlerThread();
-
-  void StopEventHandlerThread();
-
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);
 
@@ -584,8 +596,6 @@ protected:
 
   // Ensures two threads don't attempt to flush process output in parallel.
   std::mutex m_output_flush_mutex;
-  void FlushProcessOutput(Process &process, bool flush_stdout,
-                          bool flush_stderr);
 
   SourceManager::SourceFileCache &GetSourceFileCache() {
     return m_source_file_cache;

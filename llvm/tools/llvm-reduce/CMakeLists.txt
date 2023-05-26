@@ -7,7 +7,9 @@ set(LLVM_LINK_COMPONENTS
   BitReader
   BitWriter
   CodeGen
+  CodeGenTypes
   Core
+  IPO
   IRReader
   MC
   MIRParser
@@ -16,7 +18,6 @@ set(LLVM_LINK_COMPONENTS
   Target
   TargetParser
   TransformUtils
-  IPO
   )
 
 add_llvm_tool(llvm-reduce

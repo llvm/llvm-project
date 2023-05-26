@@ -26,6 +26,7 @@
 #define DEBUG_TYPE "loop-fusion-utils"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 // Gathers all load and store memref accesses in 'opA' into 'values', where
 // 'values[memref] == true' for each store operation.
@@ -245,10 +246,11 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
 // TODO: This pass performs some computation that is the same for all the depths
 // (e.g., getMaxLoopDepth). Implement a version of this utility that processes
 // all the depths at once or only the legal maximal depth for maximal fusion.
-FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
-                                unsigned dstLoopDepth,
-                                ComputationSliceState *srcSlice,
-                                FusionStrategy fusionStrategy) {
+FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
+                                        AffineForOp dstForOp,
+                                        unsigned dstLoopDepth,
+                                        ComputationSliceState *srcSlice,
+                                        FusionStrategy fusionStrategy) {
   // Return 'failure' if 'dstLoopDepth == 0'.
   if (dstLoopDepth == 0) {
     LLVM_DEBUG(llvm::dbgs() << "Cannot fuse loop nests at depth 0\n");
@@ -303,7 +305,7 @@ FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
 
   // Calculate the number of common loops surrounding 'srcForOp' and 'dstForOp'.
   unsigned numCommonLoops =
-      mlir::getNumCommonSurroundingLoops(*srcForOp, *dstForOp);
+      affine::getNumCommonSurroundingLoops(*srcForOp, *dstForOp);
 
   // Filter out ops in 'opsA' to compute the slice union based on the
   // assumptions made by the fusion strategy.
@@ -335,9 +337,9 @@ FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
 
   // Compute union of computation slices computed between all pairs of ops
   // from 'forOpA' and 'forOpB'.
-  SliceComputationResult sliceComputationResult =
-      mlir::computeSliceUnion(strategyOpsA, opsB, dstLoopDepth, numCommonLoops,
-                              isSrcForOpBeforeDstForOp, srcSlice);
+  SliceComputationResult sliceComputationResult = affine::computeSliceUnion(
+      strategyOpsA, opsB, dstLoopDepth, numCommonLoops,
+      isSrcForOpBeforeDstForOp, srcSlice);
   if (sliceComputationResult.value == SliceComputationResult::GenericFailure) {
     LLVM_DEBUG(llvm::dbgs() << "computeSliceUnion failed\n");
     return FusionResult::FailPrecondition;
@@ -353,8 +355,8 @@ FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
 
 /// Patch the loop body of a forOp that is a single iteration reduction loop
 /// into its containing block.
-LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
-                                             bool siblingFusionUser) {
+static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
+                                                    bool siblingFusionUser) {
   // Check if the reduction loop is a single iteration loop.
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount || *tripCount != 1)
@@ -416,9 +418,9 @@ LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
 
 /// Fuses 'srcForOp' into 'dstForOp' with destination loop block insertion point
 /// and source slice loop bounds specified in 'srcSlice'.
-void mlir::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
-                     const ComputationSliceState &srcSlice,
-                     bool isInnermostSiblingInsertion) {
+void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
+                             const ComputationSliceState &srcSlice,
+                             bool isInnermostSiblingInsertion) {
   // Clone 'srcForOp' into 'dstForOp' at 'srcSlice->insertPoint'.
   OpBuilder b(srcSlice.insertPoint->getBlock(), srcSlice.insertPoint);
   IRMapping mapper;
@@ -465,7 +467,8 @@ void mlir::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
 /// Collect loop nest statistics (eg. loop trip count and operation count)
 /// in 'stats' for loop nest rooted at 'forOp'. Returns true on success,
 /// returns false otherwise.
-bool mlir::getLoopNestStats(AffineForOp forOpRoot, LoopNestStats *stats) {
+bool mlir::affine::getLoopNestStats(AffineForOp forOpRoot,
+                                    LoopNestStats *stats) {
   auto walkResult = forOpRoot.walk([&](AffineForOp forOp) {
     auto *childForOp = forOp.getOperation();
     auto *parentForOp = forOp->getParentOp();
@@ -553,7 +556,7 @@ static int64_t getComputeCostHelper(
 /// Currently, the total cost is computed by counting the total operation
 /// instance count (i.e. total number of operations in the loop body * loop
 /// trip count) for the entire loop nest.
-int64_t mlir::getComputeCost(AffineForOp forOp, LoopNestStats &stats) {
+int64_t mlir::affine::getComputeCost(AffineForOp forOp, LoopNestStats &stats) {
   return getComputeCostHelper(forOp, stats,
                               /*tripCountOverrideMap=*/nullptr,
                               /*computeCostMap=*/nullptr);
@@ -564,10 +567,12 @@ int64_t mlir::getComputeCost(AffineForOp forOp, LoopNestStats &stats) {
 /// the total cost is computed by counting the total operation instance count
 /// (i.e. total number of operations in the loop body * loop trip count) for
 /// the entire loop nest.
-bool mlir::getFusionComputeCost(AffineForOp srcForOp, LoopNestStats &srcStats,
-                                AffineForOp dstForOp, LoopNestStats &dstStats,
-                                const ComputationSliceState &slice,
-                                int64_t *computeCost) {
+bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
+                                        LoopNestStats &srcStats,
+                                        AffineForOp dstForOp,
+                                        LoopNestStats &dstStats,
+                                        const ComputationSliceState &slice,
+                                        int64_t *computeCost) {
   llvm::SmallDenseMap<Operation *, uint64_t, 8> sliceTripCountMap;
   DenseMap<Operation *, int64_t> computeCostMap;
 
@@ -634,7 +639,7 @@ bool mlir::getFusionComputeCost(AffineForOp srcForOp, LoopNestStats &srcStats,
 /// Returns in 'producerConsumerMemrefs' the memrefs involved in a
 /// producer-consumer dependence between write ops in 'srcOps' and read ops in
 /// 'dstOps'.
-void mlir::gatherProducerConsumerMemrefs(
+void mlir::affine::gatherProducerConsumerMemrefs(
     ArrayRef<Operation *> srcOps, ArrayRef<Operation *> dstOps,
     DenseSet<Value> &producerConsumerMemrefs) {
   // Gather memrefs from stores in 'srcOps'.

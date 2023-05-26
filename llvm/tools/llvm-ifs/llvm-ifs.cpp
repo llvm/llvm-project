@@ -333,9 +333,13 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
     if (!Config.OutputFormat)
       OptionNotFound("--output-format", A->getValue());
   }
-  if (const opt::Arg *A = Args.getLastArg(OPT_arch_EQ))
-    Config.OverrideArch = ELF::convertArchNameToEMachine(A->getValue());
-
+  if (const opt::Arg *A = Args.getLastArg(OPT_arch_EQ)) {
+    uint16_t eMachine = ELF::convertArchNameToEMachine(A->getValue());
+    if (eMachine == ELF::EM_NONE) {
+      fatalError(Twine("unknown arch '") + A->getValue() + "'");
+    }
+    Config.OverrideArch = eMachine;
+  }
   if (const opt::Arg *A = Args.getLastArg(OPT_bitwidth_EQ)) {
     size_t Width;
     llvm::StringRef S(A->getValue());

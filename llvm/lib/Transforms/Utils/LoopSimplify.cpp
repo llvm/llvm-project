@@ -340,7 +340,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     // We don't need to form LCSSA recursively, because there cannot be uses
     // inside a newly created loop of defs from inner loops as those would
     // already be a use of an LCSSA phi node.
-    formLCSSA(*L, *DT, LI, SE);
+    formLCSSA(*L, *DT, LI);
 
     assert(NewOuter->isRecursivelyLCSSAForm(*DT, *LI) &&
            "LCSSA is broken after separating nested loops!");
@@ -448,16 +448,15 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   // backedge blocks to jump to the BEBlock instead of the header.
   // If one of the backedges has llvm.loop metadata attached, we remove
   // it from the backedge and add it to BEBlock.
-  unsigned LoopMDKind = BEBlock->getContext().getMDKindID("llvm.loop");
   MDNode *LoopMD = nullptr;
   for (BasicBlock *BB : BackedgeBlocks) {
     Instruction *TI = BB->getTerminator();
     if (!LoopMD)
-      LoopMD = TI->getMetadata(LoopMDKind);
-    TI->setMetadata(LoopMDKind, nullptr);
+      LoopMD = TI->getMetadata(LLVMContext::MD_loop);
+    TI->setMetadata(LLVMContext::MD_loop, nullptr);
     TI->replaceSuccessorWith(Header, BEBlock);
   }
-  BEBlock->getTerminator()->setMetadata(LoopMDKind, LoopMD);
+  BEBlock->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopMD);
 
   //===--- Update all analyses which we must preserve now -----------------===//
 
@@ -693,12 +692,6 @@ ReprocessLoop:
     }
   }
 
-  // Changing exit conditions for blocks may affect exit counts of this loop and
-  // any of its paretns, so we must invalidate the entire subtree if we've made
-  // any changes.
-  if (Changed && SE)
-    SE->forgetTopmostLoop(L);
-
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
@@ -736,6 +729,13 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
   while (!Worklist.empty())
     Changed |= simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE,
                                AC, MSSAU, PreserveLCSSA);
+
+  // Changing exit conditions for blocks may affect exit counts of this loop and
+  // any of its parents, so we must invalidate the entire subtree if we've made
+  // any changes. Do this here rather than in simplifyOneLoop() as the top-most
+  // loop is going to be the same for all child loops.
+  if (Changed && SE)
+    SE->forgetTopmostLoop(L);
 
   return Changed;
 }

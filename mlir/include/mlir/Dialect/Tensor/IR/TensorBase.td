@@ -47,8 +47,9 @@ def Tensor_Dialect : Dialect {
 
   let hasCanonicalizer = 1;
   let hasConstantMaterializer = 1;
+  let usePropertiesForAttributes = 1;
   let dependentDialects = [
-    "AffineDialect",
+    "affine::AffineDialect",
     "arith::ArithDialect",
     "complex::ComplexDialect",
   ];

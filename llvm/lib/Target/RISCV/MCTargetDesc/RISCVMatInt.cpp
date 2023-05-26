@@ -375,7 +375,7 @@ int getIntMatCost(const APInt &Val, unsigned Size,
                   const FeatureBitset &ActiveFeatures, bool CompressionCost) {
   bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
   bool HasRVC = CompressionCost && (ActiveFeatures[RISCV::FeatureStdExtC] ||
-                                    ActiveFeatures[RISCV::FeatureExtZca]);
+                                    ActiveFeatures[RISCV::FeatureStdExtZca]);
   int PlatRegSize = IsRV64 ? 64 : 32;
 
   // Split the constant into platform register sized chunks, and calculate cost

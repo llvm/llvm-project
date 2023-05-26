@@ -30,7 +30,7 @@ implementation-in-namespace
 ---------------------------
 
 It is part of our implementation standards that all implementation pieces live
-under the ``__llvm_libc`` namespace. This prevents polution of the global
+under the ``__llvm_libc`` namespace. This prevents pollution of the global
 namespace. Without a formal check to ensure this, an implementation might
 compile and pass unit tests, but not produce a usable libc function.
 

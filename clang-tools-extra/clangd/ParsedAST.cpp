@@ -9,6 +9,7 @@
 #include "ParsedAST.h"
 #include "../clang-tidy/ClangTidyCheck.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
+#include "../clang-tidy/ClangTidyModule.h"
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "AST.h"
 #include "Compiler.h"
@@ -25,7 +26,6 @@
 #include "TidyProvider.h"
 #include "clang-include-cleaner/Record.h"
 #include "index/CanonicalIncludes.h"
-#include "index/Index.h"
 #include "index/Symbol.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
@@ -50,7 +50,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include <algorithm>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -476,16 +475,19 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // diagnostics.
   if (PreserveDiags) {
     trace::Span Tracer("ClangTidyInit");
-    tidy::ClangTidyCheckFactories CTFactories;
-    for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
-      E.instantiate()->addCheckFactories(CTFactories);
+    static const auto *CTFactories = [] {
+      auto *CTFactories = new tidy::ClangTidyCheckFactories;
+      for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
+        E.instantiate()->addCheckFactories(*CTFactories);
+      return CTFactories;
+    }();
     CTContext.emplace(std::make_unique<tidy::DefaultOptionsProvider>(
         tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);
-    CTChecks = CTFactories.createChecksForLanguage(&*CTContext);
+    CTChecks = CTFactories->createChecksForLanguage(&*CTContext);
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
       Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);
@@ -610,11 +612,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Macros = Patch->mainFileMacros();
     Marks = Patch->marks();
   }
-  Clang->getPreprocessor().addPPCallbacks(
-      std::make_unique<CollectMainFileMacros>(Clang->getSourceManager(),
-                                              Macros));
+  auto &PP = Clang->getPreprocessor();
+  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(PP, Macros));
 
-  Clang->getPreprocessor().addPPCallbacks(
+  PP.addPPCallbacks(
       collectPragmaMarksCallback(Clang->getSourceManager(), Marks));
 
   // Copy over the includes from the preamble, then combine with the
@@ -626,10 +627,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CanonIncludes.addSystemHeadersMapping(Clang->getLangOpts());
   std::unique_ptr<CommentHandler> IWYUHandler =
       collectIWYUHeaderMaps(&CanonIncludes);
-  Clang->getPreprocessor().addCommentHandler(IWYUHandler.get());
+  PP.addCommentHandler(IWYUHandler.get());
 
   // Collect tokens of the main file.
-  syntax::TokenCollector CollectTokens(Clang->getPreprocessor());
+  syntax::TokenCollector CollectTokens(PP);
 
   // To remain consistent with preamble builds, these callbacks must be called
   // exactly here, after preprocessor is initialized and BeginSourceFile() was
@@ -660,7 +661,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // XXX: This is messy: clang-tidy checks flush some diagnostics at EOF.
   // However Action->EndSourceFile() would destroy the ASTContext!
   // So just inform the preprocessor of EOF, while keeping everything alive.
-  Clang->getPreprocessor().EndSourceFile();
+  PP.EndSourceFile();
   // UnitDiagsConsumer is local, we can not store it in CompilerInstance that
   // has a longer lifetime.
   Clang->getDiagnostics().setClient(new IgnoreDiagnostics);

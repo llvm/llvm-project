@@ -368,8 +368,8 @@ private:
   llvm::StringMap<std::unique_ptr<FileData>> Files;
   std::unique_ptr<ASTCache> IdleASTs;
   std::unique_ptr<HeaderIncluderCache> HeaderIncluders;
-  // None when running tasks synchronously and non-None when running tasks
-  // asynchronously.
+  // std::nullopt when running tasks synchronously and non-std::nullopt when
+  // running tasks asynchronously.
   std::optional<AsyncTaskRunner> PreambleTasks;
   std::optional<AsyncTaskRunner> WorkerThreads;
   // Used to create contexts for operations that are not bound to a particular

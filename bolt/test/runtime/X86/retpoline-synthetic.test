@@ -20,5 +20,11 @@ CHECK-CALL-NOT: callq  *
 RUN: llvm-objdump -d -j ".text" %t | FileCheck %s -check-prefix=CHECK-JUMP
 CHECK-JUMP-NOT: jmpq   *
 
+# Check generated retpoline stub names
+RUN: llvm-strings %t | FileCheck %s -check-prefix=CHECK-STRINGS
+CHECK-STRINGS-DAG: __retpoline_%rax_
+CHECK-STRINGS-DAG: __retpoline_mem_%rip+DATAat0x[[#]]
+CHECK-STRINGS-DAG: __retpoline_mem_%rax+0
+
 RUN: %t 1000 3 | FileCheck %s
 CHECK: 30000000

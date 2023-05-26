@@ -71,7 +71,7 @@ template <int N1, int N2>
 struct Data {
   std::array<int, N1> input1;
   std::array<int, N2> input2;
-  ptrdiff_t expected;
+  std::ptrdiff_t expected;
 };
 
 template <class Iter1, class Sent1, class Iter2, class Sent2, int N1, int N2>

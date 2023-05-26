@@ -12,8 +12,6 @@
 #include "src/__support/error_or.h"
 #include "src/errno/libc_errno.h" // For error macros
 
-#include <stdlib.h>
-
 namespace __llvm_libc {
 
 ErrorOr<Dir *> Dir::open(const char *path) {

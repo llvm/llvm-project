@@ -424,9 +424,9 @@ define half @vreduce_fmin_nxv1f16(<vscale x 1 x half> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI30_0)
-; CHECK-NEXT:    flh ft0, %lo(.LCPI30_0)(a0)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI30_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -438,9 +438,9 @@ define half @vreduce_fmin_nxv1f16_nonans(<vscale x 1 x half> %v) #0 {
 ; CHECK-LABEL: vreduce_fmin_nxv1f16_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI31_0)
-; CHECK-NEXT:    flh ft0, %lo(.LCPI31_0)(a0)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI31_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -452,9 +452,9 @@ define half @vreduce_fmin_nxv1f16_nonans_noinfs(<vscale x 1 x half> %v) #1 {
 ; CHECK-LABEL: vreduce_fmin_nxv1f16_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI32_0)
-; CHECK-NEXT:    flh ft0, %lo(.LCPI32_0)(a0)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI32_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -468,9 +468,9 @@ define half @vreduce_fmin_nxv2f16(<vscale x 2 x half> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI33_0)
-; CHECK-NEXT:    flh ft0, %lo(.LCPI33_0)(a0)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI33_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -484,9 +484,9 @@ define half @vreduce_fmin_nxv4f16(<vscale x 4 x half> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI34_0)
-; CHECK-NEXT:    flh ft0, %lo(.LCPI34_0)(a0)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI34_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -500,10 +500,10 @@ define half @vreduce_fmin_nxv64f16(<vscale x 64 x half> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv64f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI35_0)
-; CHECK-NEXT:    flh ft0, %lo(.LCPI35_0)(a0)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI35_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v16
-; CHECK-NEXT:    vfmv.s.f v16, ft0
+; CHECK-NEXT:    vfmv.s.f v16, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v16
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -543,9 +543,9 @@ define float @vreduce_fmin_nxv1f32_nonans_noinfs(<vscale x 1 x float> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv1f32_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI38_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI38_0)(a0)
+; CHECK-NEXT:    flw fa5, %lo(.LCPI38_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -605,9 +605,9 @@ define double @vreduce_fmin_nxv1f64(<vscale x 1 x double> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI42_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI42_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI42_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -619,9 +619,9 @@ define double @vreduce_fmin_nxv1f64_nonans(<vscale x 1 x double> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv1f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI43_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI43_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI43_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -633,9 +633,9 @@ define double @vreduce_fmin_nxv1f64_nonans_noinfs(<vscale x 1 x double> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv1f64_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI44_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI44_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI44_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -649,9 +649,9 @@ define double @vreduce_fmin_nxv2f64(<vscale x 2 x double> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI45_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI45_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI45_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, ft0
+; CHECK-NEXT:    vfmv.s.f v10, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v10
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -665,9 +665,9 @@ define double @vreduce_fmin_nxv4f64(<vscale x 4 x double> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI46_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI46_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI46_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vfmv.s.f v12, ft0
+; CHECK-NEXT:    vfmv.s.f v12, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v12
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -681,10 +681,10 @@ define double @vreduce_fmin_nxv16f64(<vscale x 16 x double> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv16f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI47_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI47_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI47_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v16
-; CHECK-NEXT:    vfmv.s.f v16, ft0
+; CHECK-NEXT:    vfmv.s.f v16, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v16
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -811,9 +811,9 @@ define float @vreduce_fmax_nxv1f32_nonans_noinfs(<vscale x 1 x float> %v) {
 ; CHECK-LABEL: vreduce_fmax_nxv1f32_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI56_0)
-; CHECK-NEXT:    flw ft0, %lo(.LCPI56_0)(a0)
+; CHECK-NEXT:    flw fa5, %lo(.LCPI56_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -873,9 +873,9 @@ define double @vreduce_fmax_nxv1f64(<vscale x 1 x double> %v) {
 ; CHECK-LABEL: vreduce_fmax_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI60_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI60_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI60_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -887,9 +887,9 @@ define double @vreduce_fmax_nxv1f64_nonans(<vscale x 1 x double> %v) {
 ; CHECK-LABEL: vreduce_fmax_nxv1f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI61_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI61_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI61_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -901,9 +901,9 @@ define double @vreduce_fmax_nxv1f64_nonans_noinfs(<vscale x 1 x double> %v) {
 ; CHECK-LABEL: vreduce_fmax_nxv1f64_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI62_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI62_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI62_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, ft0
+; CHECK-NEXT:    vfmv.s.f v9, fa5
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -917,9 +917,9 @@ define double @vreduce_fmax_nxv2f64(<vscale x 2 x double> %v) {
 ; CHECK-LABEL: vreduce_fmax_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI63_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI63_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI63_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, ft0
+; CHECK-NEXT:    vfmv.s.f v10, fa5
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v10
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -933,9 +933,9 @@ define double @vreduce_fmax_nxv4f64(<vscale x 4 x double> %v) {
 ; CHECK-LABEL: vreduce_fmax_nxv4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI64_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI64_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI64_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vfmv.s.f v12, ft0
+; CHECK-NEXT:    vfmv.s.f v12, fa5
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v12
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -949,10 +949,10 @@ define double @vreduce_fmax_nxv16f64(<vscale x 16 x double> %v) {
 ; CHECK-LABEL: vreduce_fmax_nxv16f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI65_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI65_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI65_0)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16
-; CHECK-NEXT:    vfmv.s.f v16, ft0
+; CHECK-NEXT:    vfmv.s.f v16, fa5
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v16
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -1112,11 +1112,11 @@ define half @vreduce_fmin_nxv10f16(<vscale x 10 x half> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    lui a1, %hi(.LCPI73_0)
-; CHECK-NEXT:    flh ft0, %lo(.LCPI73_0)(a1)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI73_0)(a1)
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfmv.v.f v12, ft0
+; CHECK-NEXT:    vfmv.v.f v12, fa5
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v10, v12, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
@@ -1124,7 +1124,7 @@ define half @vreduce_fmin_nxv10f16(<vscale x 10 x half> %v) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vx v11, v12, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfmv.s.f v12, ft0
+; CHECK-NEXT:    vfmv.s.f v12, fa5
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v12
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret

@@ -60,6 +60,12 @@
   name = "nested", scope = #toplevel_namespace, exportSymbols = false
 >
 
+// CHECK-DAG: #[[ANONYMOUS_NS:.*]] = #llvm.di_namespace<scope = #[[FILE]], exportSymbols = false>
+#anonymous_namespace = #llvm.di_namespace<
+  scope = #file,
+  exportSymbols = false
+>
+
 // CHECK-DAG: #[[COMP2:.*]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #[[FILE]], scope = #[[NESTED]], flags = "TypePassByReference|NonTrivial">
 #comp2 = #llvm.di_composite_type<
   tag = DW_TAG_class_type, name = "class_name", file = #file, scope = #nested_namespace,
@@ -83,9 +89,9 @@
   callingConvention = DW_CC_normal
 >
 
-// CHECK-DAG: #[[SP0:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "addr", linkageName = "addr", file = #[[FILE]], line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #[[SPTYPE0]]>
+// CHECK-DAG: #[[SP0:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[ANONYMOUS_NS]], name = "addr", linkageName = "addr", file = #[[FILE]], line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #[[SPTYPE0]]>
 #sp0 = #llvm.di_subprogram<
-  compileUnit = #cu, scope = #file, name = "addr", linkageName = "addr",
+  compileUnit = #cu, scope = #anonymous_namespace, name = "addr", linkageName = "addr",
   file = #file, line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #spType0
 >
 
@@ -134,10 +140,10 @@
 llvm.func @addr(%arg: i64) {
   // CHECK: %[[ALLOC:.*]] = llvm.alloca
   %allocCount = llvm.mlir.constant(1 : i32) : i32
-  %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr<i64>
+  %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
   // CHECK: llvm.intr.dbg.declare #[[VAR0]] = %[[ALLOC]]
-  llvm.intr.dbg.declare #var0 = %alloc : !llvm.ptr<i64>
+  llvm.intr.dbg.declare #var0 = %alloc : !llvm.ptr
   llvm.return
 }
 

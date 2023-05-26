@@ -283,7 +283,8 @@ TEST(NativeMemRefJit, MAYBE_JITCallback) {
   jit->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
     symbolMap[interner("_mlir_ciface_callback")] =
-        llvm::JITEvaluatedSymbol::fromPointer(memrefMultiply);
+        { llvm::orc::ExecutorAddr::fromPtr(memrefMultiply),
+          llvm::JITSymbolFlags::Exported };
     return symbolMap;
   });
 

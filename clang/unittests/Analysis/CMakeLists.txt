@@ -14,9 +14,9 @@ add_clang_unittest(ClangAnalysisTests
 
 clang_target_link_libraries(ClangAnalysisTests
   PRIVATE
-  clangAnalysis
   clangAST
   clangASTMatchers
+  clangAnalysis
   clangBasic
   clangFrontend
   clangLex

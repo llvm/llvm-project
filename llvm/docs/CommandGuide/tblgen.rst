@@ -109,7 +109,7 @@ clang-tblgen Options
 
 .. option:: -gen-clang-attr-classes
 
-  Generate Clang attribute clases.
+  Generate Clang attribute classes.
 
 .. option:: -gen-clang-attr-parser-string-switches
 
@@ -347,6 +347,14 @@ clang-tblgen Options
 .. option:: -gen-riscv-vector-builtin-codegen
 
   Generate ``riscv_vector_builtin_cg.inc`` for Clang.
+
+.. option:: -gen-riscv-sifive-vector-builtins
+
+  Generate ``riscv_sifive_vector_builtins.inc`` for Clang.
+
+.. option:: -gen-riscv-sifive-vector-builtin-codegen
+
+  Generate ``riscv_sifive_vector_builtin_cg.inc`` for Clang.
 
 .. option:: -gen-attr-docs
 

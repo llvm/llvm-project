@@ -92,9 +92,9 @@ define void @memset_10_zeroval_volatile(ptr %dst) {
 ; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 16
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
-; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, wzr
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, #10
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w2, w8
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, wzr
 ; GISel-WITHOUT-MOPS-O0-NEXT:    bl memset
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ret
@@ -112,9 +112,9 @@ define void @memset_10_zeroval_volatile(ptr %dst) {
 ;
 ; GISel-MOPS-O0-LABEL: memset_10_zeroval_volatile:
 ; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    mov x9, xzr
 ; GISel-MOPS-O0-NEXT:    mov w8, #10
 ; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    mov x9, xzr
 ; GISel-MOPS-O0-NEXT:    setp [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    setm [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    sete [x0]!, x8!, x9
@@ -150,9 +150,9 @@ define void @memset_10000_zeroval(ptr %dst) {
 ; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 16
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
-; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, wzr
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, #10000
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w2, w8
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, wzr
 ; GISel-WITHOUT-MOPS-O0-NEXT:    bl memset
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ret
@@ -170,9 +170,9 @@ define void @memset_10000_zeroval(ptr %dst) {
 ;
 ; GISel-MOPS-O0-LABEL: memset_10000_zeroval:
 ; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    mov x9, xzr
 ; GISel-MOPS-O0-NEXT:    mov w8, #10000
 ; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    mov x9, xzr
 ; GISel-MOPS-O0-NEXT:    setp [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    setm [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    sete [x0]!, x8!, x9
@@ -215,9 +215,9 @@ define void @memset_10000_zeroval_volatile(ptr %dst) {
 ; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 16
 ; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
-; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, wzr
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, #10000
 ; GISel-WITHOUT-MOPS-O0-NEXT:    mov w2, w8
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, wzr
 ; GISel-WITHOUT-MOPS-O0-NEXT:    bl memset
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; GISel-WITHOUT-MOPS-O0-NEXT:    ret
@@ -235,9 +235,9 @@ define void @memset_10000_zeroval_volatile(ptr %dst) {
 ;
 ; GISel-MOPS-O0-LABEL: memset_10000_zeroval_volatile:
 ; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    mov x9, xzr
 ; GISel-MOPS-O0-NEXT:    mov w8, #10000
 ; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    mov x9, xzr
 ; GISel-MOPS-O0-NEXT:    setp [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    setm [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    sete [x0]!, x8!, x9
@@ -511,10 +511,10 @@ define void @memset_10_volatile(ptr %dst, i32 %value) {
 ;
 ; GISel-MOPS-O0-LABEL: memset_10_volatile:
 ; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    // implicit-def: $x9
-; GISel-MOPS-O0-NEXT:    mov w9, w1
 ; GISel-MOPS-O0-NEXT:    mov w8, #10
 ; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    // implicit-def: $x9
+; GISel-MOPS-O0-NEXT:    mov w9, w1
 ; GISel-MOPS-O0-NEXT:    setp [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    setm [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    sete [x0]!, x8!, x9
@@ -578,10 +578,10 @@ define void @memset_10000(ptr %dst, i32 %value) {
 ;
 ; GISel-MOPS-O0-LABEL: memset_10000:
 ; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    // implicit-def: $x9
-; GISel-MOPS-O0-NEXT:    mov w9, w1
 ; GISel-MOPS-O0-NEXT:    mov w8, #10000
 ; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    // implicit-def: $x9
+; GISel-MOPS-O0-NEXT:    mov w9, w1
 ; GISel-MOPS-O0-NEXT:    setp [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    setm [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    sete [x0]!, x8!, x9
@@ -644,10 +644,10 @@ define void @memset_10000_volatile(ptr %dst, i32 %value) {
 ;
 ; GISel-MOPS-O0-LABEL: memset_10000_volatile:
 ; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    // implicit-def: $x9
-; GISel-MOPS-O0-NEXT:    mov w9, w1
 ; GISel-MOPS-O0-NEXT:    mov w8, #10000
 ; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    // implicit-def: $x9
+; GISel-MOPS-O0-NEXT:    mov w9, w1
 ; GISel-MOPS-O0-NEXT:    setp [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    setm [x0]!, x8!, x9
 ; GISel-MOPS-O0-NEXT:    sete [x0]!, x8!, x9

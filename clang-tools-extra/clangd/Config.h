@@ -147,7 +147,16 @@ struct Config {
     bool Parameters = true;
     bool DeducedTypes = true;
     bool Designators = true;
+    // Limit the length of type names in inlay hints. (0 means no limit)
+    uint32_t TypeNameLimit = 32;
   } InlayHints;
+
+  struct {
+    /// Controls highlighting kinds that are disabled.
+    std::vector<std::string> DisabledKinds;
+    /// Controls highlighting modifiers that are disabled.
+    std::vector<std::string> DisabledModifiers;
+  } SemanticTokens;
 };
 
 } // namespace clangd

@@ -531,14 +531,14 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
 
     if (HasMatchAllTag) {
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::UBFMXri)
-                                       .addReg(AArch64::X16)
+                                       .addReg(AArch64::X17)
                                        .addReg(Reg)
                                        .addImm(56)
                                        .addImm(63),
                                    *STI);
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBSXri)
                                        .addReg(AArch64::XZR)
-                                       .addReg(AArch64::X16)
+                                       .addReg(AArch64::X17)
                                        .addImm(MatchAllTag)
                                        .addImm(0),
                                    *STI);

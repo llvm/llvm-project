@@ -181,6 +181,10 @@ def TransformEachOpTrait : NativeOpTrait<"TransformEachOpTrait"> {
   let cppNamespace = "::mlir::transform";
 }
 
+def TransformWithPatternsOpTrait : NativeOpTrait<"TransformWithPatternsOpTrait"> {
+  let cppNamespace = "::mlir::transform";
+}
+
 def NavigationTransformOpTrait : NativeOpTrait<"NavigationTransformOpTrait"> {
   let cppNamespace = "::mlir::transform";
 }

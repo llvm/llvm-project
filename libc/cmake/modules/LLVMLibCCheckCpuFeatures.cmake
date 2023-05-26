@@ -5,12 +5,8 @@
 # Initialize ALL_CPU_FEATURES as empty list.
 set(ALL_CPU_FEATURES "")
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  return()
-endif()
-
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
-  set(ALL_CPU_FEATURES SSE2 SSE4_2 AVX2 AVX512F AVX512BW FMA)
+  set(ALL_CPU_FEATURES SSE2 SSE4_2 AVX AVX2 AVX512F AVX512BW FMA)
   set(LIBC_COMPILE_OPTIONS_NATIVE -march=native)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
   set(LIBC_COMPILE_OPTIONS_NATIVE -mcpu=native)
@@ -26,6 +22,10 @@ list(SORT ALL_CPU_FEATURES)
 #   <list of cpu features>
 # )
 function(cpu_supports output_var features)
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    unset(${output_var} PARENT_SCOPE)
+    return()
+  endif()
   _intersection(var "${LIBC_CPU_FEATURES}" "${features}")
   if("${var}" STREQUAL "${features}")
     set(${output_var} TRUE PARENT_SCOPE)

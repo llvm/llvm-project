@@ -168,6 +168,18 @@ def Async_FuncOp : Async_Op<"func",
     ArrayRef<Type> getCallableResults() { return getFunctionType()
                                                     .getResults(); }
 
+    /// Returns the argument attributes for all callable region arguments or
+    /// null if there are none.
+    ::mlir::ArrayAttr getCallableArgAttrs() {
+      return getArgAttrs().value_or(nullptr);
+    }
+
+    /// Returns the result attributes for all callable region results or
+    /// null if there are none.
+    ::mlir::ArrayAttr getCallableResAttrs() {
+      return getResAttrs().value_or(nullptr);
+    }
+
     //===------------------------------------------------------------------===//
     // FunctionOpInterface Methods
     //===------------------------------------------------------------------===//
@@ -258,6 +270,11 @@ def Async_CallOp : Async_Op<"call",
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
       return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(CallInterfaceCallable callee) {
+      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
     }
   }];
 
@@ -624,7 +641,7 @@ def Async_RuntimeAwaitAndResumeOp : Async_Op<"runtime.await_and_resume"> {
 def Async_RuntimeStoreOp : Async_Op<"runtime.store",
       [TypesMatchWith<"type of 'value' matches element type of 'storage'",
                      "storage", "value",
-                     "$_self.cast<ValueType>().getValueType()">]> {
+                     "::llvm::cast<ValueType>($_self).getValueType()">]> {
   let summary = "stores the value into the runtime async.value";
   let description = [{
     The `async.runtime.store` operation stores the value into the runtime
@@ -639,7 +656,7 @@ def Async_RuntimeStoreOp : Async_Op<"runtime.store",
 def Async_RuntimeLoadOp : Async_Op<"runtime.load",
       [TypesMatchWith<"type of 'value' matches element type of 'storage'",
                      "storage", "result",
-                     "$_self.cast<ValueType>().getValueType()">]> {
+                     "::llvm::cast<ValueType>($_self).getValueType()">]> {
   let summary = "loads the value from the runtime async.value";
   let description = [{
     The `async.runtime.load` operation loads the value from the runtime

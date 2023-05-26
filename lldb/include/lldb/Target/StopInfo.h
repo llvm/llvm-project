@@ -109,9 +109,9 @@ public:
   static lldb::StopInfoSP CreateStopReasonWithBreakpointSiteID(
       Thread &thread, lldb::break_id_t break_id, bool should_stop);
 
-  static lldb::StopInfoSP CreateStopReasonWithWatchpointID(
-      Thread &thread, lldb::break_id_t watch_id,
-      lldb::addr_t watch_hit_addr = LLDB_INVALID_ADDRESS);
+  static lldb::StopInfoSP
+  CreateStopReasonWithWatchpointID(Thread &thread, lldb::break_id_t watch_id,
+                                   bool silently_continue = false);
 
   static lldb::StopInfoSP
   CreateStopReasonWithSignal(Thread &thread, int signo,

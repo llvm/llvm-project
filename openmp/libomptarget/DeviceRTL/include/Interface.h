@@ -260,6 +260,10 @@ int32_t __kmpc_master(IdentTy *Loc, int32_t TId);
 
 void __kmpc_end_master(IdentTy *Loc, int32_t TId);
 
+int32_t __kmpc_masked(IdentTy *Loc, int32_t TId, int32_t Filter);
+
+void __kmpc_end_masked(IdentTy *Loc, int32_t TId);
+
 int32_t __kmpc_single(IdentTy *Loc, int32_t TId);
 
 void __kmpc_end_single(IdentTy *Loc, int32_t TId);

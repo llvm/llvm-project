@@ -25,14 +25,13 @@ UnrollLoopsCheck::UnrollLoopsCheck(StringRef Name, ClangTidyContext *Context)
 
 void UnrollLoopsCheck::registerMatchers(MatchFinder *Finder) {
   const auto HasLoopBound = hasDescendant(
-      varDecl(allOf(matchesName("__end*"),
-                    hasDescendant(integerLiteral().bind("cxx_loop_bound")))));
+      varDecl(matchesName("__end*"),
+              hasDescendant(integerLiteral().bind("cxx_loop_bound"))));
   const auto CXXForRangeLoop =
       cxxForRangeStmt(anyOf(HasLoopBound, unless(HasLoopBound)));
   const auto AnyLoop = anyOf(forStmt(), whileStmt(), doStmt(), CXXForRangeLoop);
   Finder->addMatcher(
-      stmt(allOf(AnyLoop, unless(hasDescendant(stmt(AnyLoop))))).bind("loop"),
-      this);
+      stmt(AnyLoop, unless(hasDescendant(stmt(AnyLoop)))).bind("loop"), this);
 }
 
 void UnrollLoopsCheck::check(const MatchFinder::MatchResult &Result) {

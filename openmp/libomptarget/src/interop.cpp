@@ -184,7 +184,7 @@ extern "C" {
 void __tgt_interop_init(ident_t *LocRef, kmp_int32 Gtid,
                         omp_interop_val_t *&InteropPtr,
                         kmp_interop_type_t InteropType, kmp_int32 DeviceId,
-                        kmp_int64 Ndeps, kmp_depend_info_t *DepList,
+                        kmp_int32 Ndeps, kmp_depend_info_t *DepList,
                         kmp_int32 HaveNowait) {
   kmp_int32 NdepsNoalias = 0;
   kmp_depend_info_t *NoaliasDepList = NULL;

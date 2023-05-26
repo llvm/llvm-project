@@ -30,5 +30,9 @@ def Math_Dialect : Dialect {
     ```
   }];
   let hasConstantMaterializer = 1;
+  let usePropertiesForAttributes = 1;
+  let dependentDialects = [
+    "::mlir::arith::ArithDialect"
+  ];
 }
 #endif // MATH_BASE

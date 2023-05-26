@@ -2874,9 +2874,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 
   // Do all the fixups of the original live variables to their relocated selves
   SmallVector<Value *, 128> Live;
-  for (size_t i = 0; i < Records.size(); i++) {
-    PartiallyConstructedSafepointRecord &Info = Records[i];
-
+  for (const PartiallyConstructedSafepointRecord &Info : Records) {
     // We can't simply save the live set from the original insertion.  One of
     // the live values might be the result of a call which needs a safepoint.
     // That Value* no longer exists and we need to use the new gc_result.

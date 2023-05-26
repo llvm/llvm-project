@@ -246,7 +246,7 @@ FunctionSP SymbolFileBreakpad::GetOrCreateFunction(CompileUnit &comp_unit) {
 
   if (auto record = FuncRecord::parse(*It)) {
     Mangled func_name;
-    func_name.SetValue(ConstString(record->Name), false);
+    func_name.SetValue(ConstString(record->Name));
     addr_t address = record->Address + base;
     SectionSP section_sp = list->FindSectionContainingFileAddress(address);
     if (section_sp) {

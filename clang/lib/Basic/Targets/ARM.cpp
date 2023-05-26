@@ -711,10 +711,9 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   // For bare-metal none-eabi.
   if (getTriple().getOS() == llvm::Triple::UnknownOS &&
       (getTriple().getEnvironment() == llvm::Triple::EABI ||
-       getTriple().getEnvironment() == llvm::Triple::EABIHF)) {
-    Builder.defineMacro("__ELF__");
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
+       getTriple().getEnvironment() == llvm::Triple::EABIHF) &&
+      Opts.CPlusPlus) {
+    Builder.defineMacro("_GNU_SOURCE");
   }
 
   // Target properties.
@@ -1244,7 +1243,7 @@ bool ARMTargetInfo::validateConstraintModifier(
 
   return true;
 }
-const char *ARMTargetInfo::getClobbers() const {
+std::string_view ARMTargetInfo::getClobbers() const {
   // FIXME: Is this really right?
   return "";
 }
@@ -1406,11 +1405,6 @@ DarwinARMTargetInfo::DarwinARMTargetInfo(const llvm::Triple &Triple,
                                          const TargetOptions &Opts)
     : DarwinTargetInfo<ARMleTargetInfo>(Triple, Opts) {
   HasAlignMac68kSupport = true;
-  // iOS always has 64-bit atomic instructions.
-  // FIXME: This should be based off of the target features in
-  // ARMleTargetInfo.
-  MaxAtomicInlineWidth = 64;
-
   if (Triple.isWatchABI()) {
     // Darwin on iOS uses a variant of the ARM C++ ABI.
     TheCXXABI.set(TargetCXXABI::WatchOS);

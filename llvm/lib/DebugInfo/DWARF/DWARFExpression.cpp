@@ -94,11 +94,12 @@ static DescVector getDescriptions() {
   Descriptions[DW_OP_WASM_location] =
       Desc(Op::Dwarf4, Op::SizeLEB, Op::WasmLocationArg);
   Descriptions[DW_OP_GNU_push_tls_address] = Desc(Op::Dwarf3);
-  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_const_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_entry_value] = Desc(Op::Dwarf4, Op::SizeLEB);
 
+  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf5, Op::SizeLEB);
+  Descriptions[DW_OP_constx] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
   Descriptions[DW_OP_entry_value] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_regval_type] =
@@ -454,6 +455,9 @@ static bool printCompactDWARFExpr(
       Stack.back().Kind = PrintedExpr::Value;
       break;
     }
+    case dwarf::DW_OP_nop: {
+      break;
+    }
     default:
       if (Opcode >= dwarf::DW_OP_reg0 && Opcode <= dwarf::DW_OP_reg31) {
         // DW_OP_reg<N>: A register, with the register num implied by the
@@ -487,7 +491,10 @@ static bool printCompactDWARFExpr(
     ++I;
   }
 
-  assert(Stack.size() == 1 && "expected one value on stack");
+  if (Stack.size() != 1) {
+    OS << "<stack of size " << Stack.size() << ", expected 1>";
+    return false;
+  }
 
   if (Stack.front().Kind == PrintedExpr::Address)
     OS << "[" << Stack.front().String << "]";

@@ -205,7 +205,7 @@ static Value genLvlTypesBuffer(OpBuilder &builder, Location loc,
                                SparseTensorType stt) {
   SmallVector<Value> lvlTypes;
   lvlTypes.reserve(stt.getLvlRank());
-  for (const auto dlt : stt.getEncoding().getDimLevelType())
+  for (const auto dlt : stt.getEncoding().getLvlTypes())
     lvlTypes.push_back(constantDimLevelTypeEncoding(builder, loc, dlt));
   return allocaBuffer(builder, loc, lvlTypes);
 }
@@ -399,7 +399,7 @@ static void genAddEltCall(OpBuilder &builder, Location loc, Type eltType,
 /// (which can be either dim- or lvl-coords, depending on context).
 static Value genGetNextCall(OpBuilder &builder, Location loc, Value iter,
                             Value coords, Value elemPtr) {
-  Type elemTp = elemPtr.getType().cast<ShapedType>().getElementType();
+  Type elemTp = cast<ShapedType>(elemPtr.getType()).getElementType();
   SmallString<10> name{"getNext", primaryTypeFunctionSuffix(elemTp)};
   SmallVector<Value, 3> params{iter, coords, elemPtr};
   Type i1 = builder.getI1Type();
@@ -489,7 +489,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
     // Static "shapes" are in fact "sizes".
     fillDimShape(rewriter, loc, dstTp, dstDimSizes);
   else
-    genReshapeDstShape(loc, rewriter, dstDimSizes, srcDimSizes,
+    genReshapeDstShape(rewriter, loc, dstDimSizes, srcDimSizes,
                        dstTp.getDimShape(), op.getReassociationIndices());
   const Value coo =
       params.genBuffers(dstTp, dstDimSizes).genNewCall(Action::kEmptyCOO);
@@ -565,7 +565,7 @@ static void genSparseCOOIterationLoop(
   rewriter.setInsertionPointToStart(after);
 
   const bool hasDenseDim =
-      llvm::any_of(stt.getEncoding().getDimLevelType(), isDenseDLT);
+      llvm::any_of(stt.getEncoding().getLvlTypes(), isDenseDLT);
   if (hasDenseDim) {
     Value elemV = rewriter.create<memref::LoadOp>(loc, elemPtr);
     Value isZero = genIsNonzero(rewriter, loc, elemV);
@@ -880,11 +880,11 @@ public:
         break;
       case SparseToSparseConversionStrategy::kDirect:
         useDirectConversion = true;
-        assert(canUseDirectConversion(dstEnc.getDimLevelType()) &&
+        assert(canUseDirectConversion(dstEnc.getLvlTypes()) &&
                "Unsupported target for direct sparse-to-sparse conversion");
         break;
       case SparseToSparseConversionStrategy::kAuto:
-        useDirectConversion = canUseDirectConversion(dstEnc.getDimLevelType());
+        useDirectConversion = canUseDirectConversion(dstEnc.getLvlTypes());
         break;
       }
       if (useDirectConversion) {
@@ -896,7 +896,7 @@ public:
         // method calls can share most parameters, while still providing
         // the correct sparsity information to either of them.
         const auto mixedEnc = SparseTensorEncodingAttr::get(
-            op->getContext(), dstEnc.getDimLevelType(), dstEnc.getDimOrdering(),
+            op->getContext(), dstEnc.getLvlTypes(), dstEnc.getDimOrdering(),
             dstEnc.getHigherOrdering(), srcEnc.getPosWidth(),
             srcEnc.getCrdWidth());
         // TODO: This is the only place where `kToCOO` (or `kToIterator`)
@@ -1045,7 +1045,7 @@ public:
   matchAndRewrite(ToPositionsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resTp = op.getType();
-    Type posTp = resTp.cast<ShapedType>().getElementType();
+    Type posTp = cast<ShapedType>(resTp).getElementType();
     SmallString<17> name{"sparsePositions", overheadTypeFunctionSuffix(posTp)};
     Value lvl = constantIndex(rewriter, op->getLoc(), op.getLevel());
     replaceOpWithFuncCall(rewriter, op, name, resTp, {adaptor.getTensor(), lvl},
@@ -1064,7 +1064,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // TODO: use `SparseTensorType::getCrdType` instead.
     Type resType = op.getType();
-    const Type crdTp = resType.cast<ShapedType>().getElementType();
+    const Type crdTp = cast<ShapedType>(resType).getElementType();
     SmallString<19> name{"sparseCoordinates",
                          overheadTypeFunctionSuffix(crdTp)};
     Location loc = op->getLoc();
@@ -1096,7 +1096,7 @@ public:
   LogicalResult
   matchAndRewrite(ToValuesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resType = op.getType().cast<ShapedType>();
+    auto resType = cast<ShapedType>(op.getType());
     rewriter.replaceOp(op, genValuesCall(rewriter, op.getLoc(), resType,
                                          adaptor.getOperands()));
     return success();
@@ -1113,7 +1113,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     // Query values array size for the actually stored values size.
-    Type eltType = op.getTensor().getType().cast<ShapedType>().getElementType();
+    Type eltType = cast<ShapedType>(op.getTensor().getType()).getElementType();
     auto resTp = MemRefType::get({ShapedType::kDynamic}, eltType);
     Value values = genValuesCall(rewriter, loc, resTp, adaptor.getOperands());
     rewriter.replaceOpWithNewOp<memref::DimOp>(op, values,

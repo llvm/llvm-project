@@ -162,7 +162,8 @@ define ptr @gep_plus_addr_sub_self_in_loop() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ADDR:%.*]] = call i64 @get.i64()
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr getelementptr (i8, ptr @g, i64 sub (i64 0, i64 ptrtoint (ptr @g to i64))), i64 [[ADDR]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr @g, i64 [[ADDR]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P1]], i64 sub (i64 0, i64 ptrtoint (ptr @g to i64))
 ; CHECK-NEXT:    call void @use.ptr(ptr [[P2]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;

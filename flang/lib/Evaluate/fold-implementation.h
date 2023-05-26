@@ -1381,6 +1381,28 @@ ArrayConstructor<RESULT> ArrayConstructorFromMold(
   return result;
 }
 
+template <typename LEFT, typename RIGHT>
+bool ShapesMatch(FoldingContext &context,
+    const ArrayConstructor<LEFT> &leftArrConst,
+    const ArrayConstructor<RIGHT> &rightArrConst) {
+  auto rightIter{rightArrConst.begin()};
+  for (auto &leftValue : leftArrConst) {
+    CHECK(rightIter != rightArrConst.end());
+    auto &leftExpr{std::get<Expr<LEFT>>(leftValue.u)};
+    auto &rightExpr{std::get<Expr<RIGHT>>(rightIter->u)};
+    if (leftExpr.Rank() != rightExpr.Rank()) {
+      return false;
+    }
+    std::optional<Shape> leftShape{GetShape(context, leftExpr)};
+    std::optional<Shape> rightShape{GetShape(context, rightExpr)};
+    if (!leftShape || !rightShape || *leftShape != *rightShape) {
+      return false;
+    }
+    ++rightIter;
+  }
+  return true;
+}
+
 // array * array case
 template <typename RESULT, typename LEFT, typename RIGHT>
 auto MapOperation(FoldingContext &context,
@@ -1391,11 +1413,14 @@ auto MapOperation(FoldingContext &context,
   auto result{ArrayConstructorFromMold<RESULT>(leftValues, std::move(length))};
   auto &leftArrConst{std::get<ArrayConstructor<LEFT>>(leftValues.u)};
   if constexpr (common::HasMember<RIGHT, AllIntrinsicCategoryTypes>) {
-    common::visit(
-        [&](auto &&kindExpr) {
+    bool mapped{common::visit(
+        [&](auto &&kindExpr) -> bool {
           using kindType = ResultType<decltype(kindExpr)>;
 
           auto &rightArrConst{std::get<ArrayConstructor<kindType>>(kindExpr.u)};
+          if (!ShapesMatch(context, leftArrConst, rightArrConst)) {
+            return false;
+          }
           auto rightIter{rightArrConst.begin()};
           for (auto &leftValue : leftArrConst) {
             CHECK(rightIter != rightArrConst.end());
@@ -1405,10 +1430,17 @@ auto MapOperation(FoldingContext &context,
                 f(std::move(leftScalar), Expr<RIGHT>{std::move(rightScalar)})));
             ++rightIter;
           }
+          return true;
         },
-        std::move(rightValues.u));
+        std::move(rightValues.u))};
+    if (!mapped) {
+      return std::nullopt;
+    }
   } else {
     auto &rightArrConst{std::get<ArrayConstructor<RIGHT>>(rightValues.u)};
+    if (!ShapesMatch(context, leftArrConst, rightArrConst)) {
+      return std::nullopt;
+    }
     auto rightIter{rightArrConst.begin()};
     for (auto &leftValue : leftArrConst) {
       CHECK(rightIter != rightArrConst.end());

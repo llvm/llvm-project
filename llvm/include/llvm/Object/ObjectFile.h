@@ -392,6 +392,9 @@ public:
                         uint32_t UniversalCputype = 0,
                         uint32_t UniversalIndex = 0);
 
+  static Expected<std::unique_ptr<ObjectFile>>
+  createGOFFObjectFile(MemoryBufferRef Object);
+
   static Expected<std::unique_ptr<WasmObjectFile>>
   createWasmObjectFile(MemoryBufferRef Object);
 };

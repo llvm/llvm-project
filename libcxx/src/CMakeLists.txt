@@ -58,7 +58,6 @@ set(LIBCXX_SOURCES
   system_error.cpp
   thread.cpp
   typeinfo.cpp
-  utility.cpp
   valarray.cpp
   variant.cpp
   vector.cpp
@@ -101,12 +100,6 @@ if(WIN32)
       support/win32/thread_win32.cpp
       )
   endif()
-elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
-  list(APPEND LIBCXX_SOURCES
-    support/solaris/mbsnrtowcs.inc
-    support/solaris/wcsnrtombs.inc
-    support/solaris/xlocale.cpp
-    )
 elseif(ZOS)
   list(APPEND LIBCXX_SOURCES
     support/ibm/mbsnrtowcs.cpp
@@ -182,16 +175,6 @@ if (APPLE AND LLVM_USE_SANITIZER)
   endif()
 endif()
 
-if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS AND NOT TARGET pstl::ParallelSTL)
-  message(FATAL_ERROR "Could not find ParallelSTL")
-endif()
-
-function(cxx_set_common_defines name)
-  if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
-    target_link_libraries(${name} PUBLIC pstl::ParallelSTL)
-  endif()
-endfunction()
-
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
@@ -211,7 +194,6 @@ if (LIBCXX_ENABLE_SHARED)
       DEFINE_SYMBOL ""
   )
   cxx_add_common_build_flags(cxx_shared)
-  cxx_set_common_defines(cxx_shared)
 
   if(ZOS)
     add_custom_command(TARGET cxx_shared POST_BUILD
@@ -303,7 +285,6 @@ if (LIBCXX_ENABLE_STATIC)
       OUTPUT_NAME   "${LIBCXX_STATIC_OUTPUT_NAME}"
   )
   cxx_add_common_build_flags(cxx_static)
-  cxx_set_common_defines(cxx_static)
 
   if (LIBCXX_HERMETIC_STATIC_LIBRARY)
     # If the hermetic library doesn't define the operator new/delete functions
@@ -330,7 +311,6 @@ add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/memory_resource.cpp
-  format.cpp
   )
 
 add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
@@ -412,14 +392,10 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
     if(LIBCXX_INSTALL_HEADERS)
       set(header_install_target install-cxx-headers)
     endif()
-    if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
-      set(pstl_install_target install-pstl)
-    endif()
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
-                              ${pstl_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
@@ -427,7 +403,6 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
-                              ${pstl_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -DCMAKE_INSTALL_DO_STRIP=1

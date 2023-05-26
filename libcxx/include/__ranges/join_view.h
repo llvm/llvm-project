@@ -30,6 +30,7 @@
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/common_type.h>
 #include <__type_traits/maybe_const.h>
 #include <__utility/forward.h>
 #include <optional>
@@ -394,8 +395,8 @@ inline namespace __cpo {
 template <class _JoinViewIterator>
   requires(_JoinViewIterator::__is_join_view_iterator &&
            ranges::common_range<typename _JoinViewIterator::_Parent> &&
-           __is_cpp17_random_access_iterator<typename _JoinViewIterator::_Outer>::value &&
-           __is_cpp17_random_access_iterator<typename _JoinViewIterator::_Inner>::value)
+           __has_random_access_iterator_category<typename _JoinViewIterator::_Outer>::value &&
+           __has_random_access_iterator_category<typename _JoinViewIterator::_Inner>::value)
 struct __segmented_iterator_traits<_JoinViewIterator> {
 
   using __segment_iterator =

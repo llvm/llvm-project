@@ -24,7 +24,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#if _LIBCPP_STD_VER >= 20
 
 namespace __format_spec {
 
@@ -140,11 +140,11 @@ class _LIBCPP_TEMPLATE_VIS __parser_chrono {
   using _ConstIterator = typename basic_format_parse_context<_CharT>::const_iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr auto
-  __parse(basic_format_parse_context<_CharT>& __parse_ctx, __fields __fields, __flags __flags)
-      -> decltype(__parse_ctx.begin()) {
-    _ConstIterator __begin = __parser_.__parse(__parse_ctx, __fields);
-    _ConstIterator __end   = __parse_ctx.end();
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator
+  __parse(_ParseContext& __ctx, __fields __fields, __flags __flags) {
+    _ConstIterator __begin = __parser_.__parse(__ctx, __fields);
+    _ConstIterator __end   = __ctx.end();
     if (__begin == __end)
       return __begin;
 
@@ -409,7 +409,7 @@ private:
 
 } // namespace __format_spec
 
-#endif //_LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

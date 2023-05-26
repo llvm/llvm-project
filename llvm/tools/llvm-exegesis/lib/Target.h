@@ -59,6 +59,7 @@ struct PfmCountersInfo {
   unsigned NumIssueCounters;
 
   static const PfmCountersInfo Default;
+  static const PfmCountersInfo Dummy;
 };
 
 struct CpuAndPfmCounters {
@@ -154,15 +155,15 @@ public:
 
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
-  createSnippetGenerator(InstructionBenchmark::ModeE Mode,
+  createSnippetGenerator(Benchmark::ModeE Mode,
                          const LLVMState &State,
                          const SnippetGenerator::Options &Opts) const;
   // Creates a benchmark runner for the given mode.
   Expected<std::unique_ptr<BenchmarkRunner>> createBenchmarkRunner(
-      InstructionBenchmark::ModeE Mode, const LLVMState &State,
+      Benchmark::ModeE Mode, const LLVMState &State,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      InstructionBenchmark::ResultAggregationModeE ResultAggMode =
-          InstructionBenchmark::Min) const;
+      Benchmark::ResultAggregationModeE ResultAggMode =
+          Benchmark::Min) const;
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
@@ -177,6 +178,10 @@ public:
   // Returns the Pfm counters for the given CPU (or the default if no pfm
   // counters are defined for this CPU).
   const PfmCountersInfo &getPfmCounters(StringRef CpuName) const;
+
+  // Returns dummy Pfm counters which can be used to execute generated snippet
+  // without access to performance counters.
+  const PfmCountersInfo &getDummyPfmCounters() const;
 
   // Saves the CPU state that needs to be preserved when running a benchmark,
   // and returns and RAII object that restores the state on destruction.
@@ -198,12 +203,12 @@ private:
   std::unique_ptr<SnippetGenerator> virtual createParallelSnippetGenerator(
       const LLVMState &State, const SnippetGenerator::Options &Opts) const;
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
-      const LLVMState &State, InstructionBenchmark::ModeE Mode,
+      const LLVMState &State, Benchmark::ModeE Mode,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      InstructionBenchmark::ResultAggregationModeE ResultAggMode) const;
+      Benchmark::ResultAggregationModeE ResultAggMode) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
       const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-      InstructionBenchmark::ResultAggregationModeE ResultAggMode) const;
+      Benchmark::ResultAggregationModeE ResultAggMode) const;
 
   const ExegesisTarget *Next = nullptr;
   const ArrayRef<CpuAndPfmCounters> CpuPfmCounters;

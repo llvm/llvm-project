@@ -393,27 +393,6 @@ define amdgpu_kernel void @use_get_local_size_z(ptr addrspace(1) %ptr) #1 {
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 
-; ALL: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn "uniform-work-group-size"="false" }
-; ALL: attributes #[[ATTR1]] = { nounwind "uniform-work-group-size"="false" }
-; ALL: attributes #[[ATTR2]] = { nounwind "amdgpu-work-group-id-y" "uniform-work-group-size"="false" }
-; ALL: attributes #[[ATTR3]] = { nounwind "amdgpu-work-group-id-z" "uniform-work-group-size"="false" }
-; ALL: attributes #[[ATTR4]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "uniform-work-group-size"="false" }
-; ALL: attributes #[[ATTR5]] = { nounwind "amdgpu-work-item-id-y" "uniform-work-group-size"="false" }
-; ALL: attributes #[[ATTR6]] = { nounwind "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; ALL: attributes #[[ATTR7]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-item-id-y" "uniform-work-group-size"="false" }
-; ALL: attributes #[[ATTR8]] = { nounwind "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; ALL: attributes #[[ATTR9]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR1]] = { nounwind "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR2]] = { nounwind "amdgpu-work-group-id-y" "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR3]] = { nounwind "amdgpu-work-group-id-z" "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR4]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR5]] = { nounwind "amdgpu-work-item-id-y" "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR6]] = { nounwind "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR7]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-item-id-y" "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR8]] = { nounwind "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-; NOHSA: attributes #[[ATTR9]] = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "uniform-work-group-size"="false" }
-;.
 ; AKF_CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; AKF_CHECK: attributes #[[ATTR1]] = { nounwind }
 ;.

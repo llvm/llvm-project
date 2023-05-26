@@ -12,81 +12,81 @@
 
 #include "sanitizer_platform.h"
 #if SANITIZER_APPLE
-#include "sanitizer_mac.h"
-#include "interception/interception.h"
+#  include "interception/interception.h"
+#  include "sanitizer_mac.h"
 
 // Use 64-bit inodes in file operations. ASan does not support OS X 10.5, so
 // the clients will most certainly use 64-bit ones as well.
-#ifndef _DARWIN_USE_64_BIT_INODE
-#define _DARWIN_USE_64_BIT_INODE 1
-#endif
-#include <stdio.h>
+#  ifndef _DARWIN_USE_64_BIT_INODE
+#    define _DARWIN_USE_64_BIT_INODE 1
+#  endif
+#  include <stdio.h>
 
-#include "sanitizer_common.h"
-#include "sanitizer_file.h"
-#include "sanitizer_flags.h"
-#include "sanitizer_interface_internal.h"
-#include "sanitizer_internal_defs.h"
-#include "sanitizer_libc.h"
-#include "sanitizer_platform_limits_posix.h"
-#include "sanitizer_procmaps.h"
-#include "sanitizer_ptrauth.h"
+#  include "sanitizer_common.h"
+#  include "sanitizer_file.h"
+#  include "sanitizer_flags.h"
+#  include "sanitizer_interface_internal.h"
+#  include "sanitizer_internal_defs.h"
+#  include "sanitizer_libc.h"
+#  include "sanitizer_platform_limits_posix.h"
+#  include "sanitizer_procmaps.h"
+#  include "sanitizer_ptrauth.h"
 
-#if !SANITIZER_IOS
-#include <crt_externs.h>  // for _NSGetEnviron
-#else
+#  if !SANITIZER_IOS
+#    include <crt_externs.h>  // for _NSGetEnviron
+#  else
 extern char **environ;
-#endif
+#  endif
 
-#if defined(__has_include) && __has_include(<os/trace.h>)
-#define SANITIZER_OS_TRACE 1
-#include <os/trace.h>
-#else
-#define SANITIZER_OS_TRACE 0
-#endif
+#  if defined(__has_include) && __has_include(<os/trace.h>)
+#    define SANITIZER_OS_TRACE 1
+#    include <os/trace.h>
+#  else
+#    define SANITIZER_OS_TRACE 0
+#  endif
 
 // import new crash reporting api
-#if defined(__has_include) && __has_include(<CrashReporterClient.h>)
-#define HAVE_CRASHREPORTERCLIENT_H 1
-#include <CrashReporterClient.h>
-#else
-#define HAVE_CRASHREPORTERCLIENT_H 0
-#endif
+#  if defined(__has_include) && __has_include(<CrashReporterClient.h>)
+#    define HAVE_CRASHREPORTERCLIENT_H 1
+#    include <CrashReporterClient.h>
+#  else
+#    define HAVE_CRASHREPORTERCLIENT_H 0
+#  endif
 
-#if !SANITIZER_IOS
-#include <crt_externs.h>  // for _NSGetArgv and _NSGetEnviron
-#else
+#  if !SANITIZER_IOS
+#    include <crt_externs.h>  // for _NSGetArgv and _NSGetEnviron
+#  else
 extern "C" {
-  extern char ***_NSGetArgv(void);
+extern char ***_NSGetArgv(void);
 }
-#endif
+#  endif
 
-#include <asl.h>
-#include <dlfcn.h>  // for dladdr()
-#include <errno.h>
-#include <fcntl.h>
-#include <libkern/OSAtomic.h>
-#include <mach-o/dyld.h>
-#include <mach/mach.h>
-#include <mach/mach_time.h>
-#include <mach/vm_statistics.h>
-#include <malloc/malloc.h>
-#include <os/log.h>
-#include <pthread.h>
-#include <pthread/introspection.h>
-#include <sched.h>
-#include <signal.h>
-#include <spawn.h>
-#include <stdlib.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <util.h>
+#  include <asl.h>
+#  include <dlfcn.h>  // for dladdr()
+#  include <errno.h>
+#  include <fcntl.h>
+#  include <libkern/OSAtomic.h>
+#  include <mach-o/dyld.h>
+#  include <mach/mach.h>
+#  include <mach/mach_time.h>
+#  include <mach/vm_statistics.h>
+#  include <malloc/malloc.h>
+#  include <os/log.h>
+#  include <pthread.h>
+#  include <pthread/introspection.h>
+#  include <sched.h>
+#  include <signal.h>
+#  include <spawn.h>
+#  include <stdlib.h>
+#  include <sys/ioctl.h>
+#  include <sys/mman.h>
+#  include <sys/resource.h>
+#  include <sys/stat.h>
+#  include <sys/sysctl.h>
+#  include <sys/types.h>
+#  include <sys/wait.h>
+#  include <unistd.h>
+#  include <util.h>
 
 // From <crt_externs.h>, but we don't have that file on iOS.
 extern "C" {

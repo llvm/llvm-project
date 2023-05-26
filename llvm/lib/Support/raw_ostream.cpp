@@ -84,8 +84,15 @@ raw_ostream::~raw_ostream() {
 }
 
 size_t raw_ostream::preferred_buffer_size() const {
+#ifdef _WIN32
+  // On Windows BUFSIZ is only 512 which results in more calls to write. This
+  // overhead can cause significant performance degradation. Therefore use a
+  // better default.
+  return (16 * 1024);
+#else
   // BUFSIZ is intended to be a reasonable default.
   return BUFSIZ;
+#endif
 }
 
 void raw_ostream::SetBuffered() {

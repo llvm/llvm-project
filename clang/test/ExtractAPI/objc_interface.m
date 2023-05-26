@@ -434,14 +434,6 @@
         },
         {
           "kind": "keyword",
-          "spelling": "atomic"
-        },
-        {
-          "kind": "text",
-          "spelling": ", "
-        },
-        {
-          "kind": "keyword",
           "spelling": "readonly"
         },
         {

@@ -8,13 +8,16 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// constexpr split_view(View base, Pattern pattern);
+// constexpr split_view(View base, Pattern pattern); // explicit since C++23
 
 #include <algorithm>
 #include <cassert>
 #include <ranges>
 #include <string_view>
 #include <utility>
+
+#include "test_convertible.h"
+#include "test_macros.h"
 
 struct ViewWithCounting : std::ranges::view_base {
   int* times_copied = nullptr;
@@ -38,6 +41,23 @@ struct ViewWithCounting : std::ranges::view_base {
   constexpr bool operator==(const ViewWithCounting&) const { return true; }
 };
 
+using View    = ViewWithCounting;
+using Pattern = ViewWithCounting;
+
+// SFINAE tests.
+
+#if TEST_STD_VER >= 23
+
+static_assert(!test_convertible<std::ranges::split_view<View, Pattern>, View, Pattern>(),
+              "This constructor must be explicit");
+
+#else
+
+static_assert( test_convertible<std::ranges::split_view<View, Pattern>, View, Pattern>(),
+              "This constructor must not be explicit");
+
+#endif // TEST_STD_VER >= 23
+
 constexpr bool test() {
   {
     std::string_view input = "abc def";
@@ -48,9 +68,6 @@ constexpr bool test() {
 
   // Make sure the arguments are moved, not copied.
   {
-    using View    = ViewWithCounting;
-    using Pattern = ViewWithCounting;
-
     // Arguments are lvalues.
     {
       int view_copied = 0, view_moved = 0, pattern_copied = 0, pattern_moved = 0;

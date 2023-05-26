@@ -24,7 +24,7 @@ define void @_foo(double %p1, double %p2, double %p3) #0 {
 ; CHECK-NEXT:    [[X13:%.*]] = tail call i32 @_xfn(<2 x double> [[TMP4]])
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [256 x i32], ptr [[TAB1]], i64 0, i64 [[INDVARS_IV266]]
 ; CHECK-NEXT:    store i32 [[X13]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[X14:%.*]] = tail call i32 @_xfn(<2 x double> [[TMP5]])
 ; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [256 x i32], ptr [[TAB2]], i64 0, i64 [[INDVARS_IV266]]
 ; CHECK-NEXT:    store i32 [[X14]], ptr [[ARRAYIDX26]], align 4, !tbaa [[TBAA0]]

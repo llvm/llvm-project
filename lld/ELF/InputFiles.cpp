@@ -195,6 +195,29 @@ std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
   if (!config->chroot.empty() && path.startswith("/"))
     path = saver().save(config->chroot + path);
 
+  bool remapped = false;
+  auto it = config->remapInputs.find(path);
+  if (it != config->remapInputs.end()) {
+    path = it->second;
+    remapped = true;
+  } else {
+    for (const auto &[pat, toFile] : config->remapInputsWildcards) {
+      if (pat.match(path)) {
+        path = toFile;
+        remapped = true;
+        break;
+      }
+    }
+  }
+  if (remapped) {
+    // Use /dev/null to indicate an input file that should be ignored. Change
+    // the path to NUL on Windows.
+#ifdef _WIN32
+    if (path == "/dev/null")
+      path = "NUL";
+#endif
+  }
+
   log(path);
   config->dependencyFiles.insert(llvm::CachedHashString(path));
 
@@ -862,12 +885,13 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
   while (!data.empty()) {
     // Read one NOTE record.
     auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
-    if (data.size() < sizeof(Elf_Nhdr) || data.size() < nhdr->getSize())
+    if (data.size() < sizeof(Elf_Nhdr) ||
+        data.size() < nhdr->getSize(sec.addralign))
       reportFatal(data.data(), "data is too short");
 
     Elf_Note note(*nhdr);
     if (nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU") {
-      data = data.slice(nhdr->getSize());
+      data = data.slice(nhdr->getSize(sec.addralign));
       continue;
     }
 
@@ -876,7 +900,7 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
                                   : GNU_PROPERTY_X86_FEATURE_1_AND;
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
-    ArrayRef<uint8_t> desc = note.getDesc();
+    ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
     while (!desc.empty()) {
       const uint8_t *place = desc.data();
       if (desc.size() < 8)
@@ -901,7 +925,7 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
     }
 
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
-    data = data.slice(nhdr->getSize());
+    data = data.slice(nhdr->getSize(sec.addralign));
   }
 
   return featuresSet;

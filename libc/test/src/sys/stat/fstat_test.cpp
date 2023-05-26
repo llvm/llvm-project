@@ -11,9 +11,8 @@
 #include "src/sys/stat/fstat.h"
 #include "src/unistd/close.h"
 #include "src/unistd/unlink.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>

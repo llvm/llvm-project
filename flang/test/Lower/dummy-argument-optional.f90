@@ -52,8 +52,9 @@ end subroutine
 ! CHECK-SAME: %[[arg0:.*]]: !fir.boxchar<1> {fir.bindc_name = "x", fir.optional}) {
 subroutine character_scalar(x)
   ! CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %[[arg0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  ! CHECK: %[[ref:.*]] = fir.convert %[[unboxed]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
   character(10), optional :: x
-  ! CHECK: fir.is_present %[[unboxed]]#0 : (!fir.ref<!fir.char<1,?>>) -> i1
+  ! CHECK: fir.is_present %[[ref]] : (!fir.ref<!fir.char<1,10>>) -> i1
   print *, present(x)
 end subroutine
 ! CHECK-LABEL: func @_QMoptPcall_character_scalar()
@@ -195,9 +196,10 @@ end subroutine
 
 ! CHECK-LABEL: func @_QMoptPnull_as_optional() {
 subroutine null_as_optional
-  ! CHECK: %[[temp:.*]] = fir.alloca !fir.llvm_ptr<none>
-  ! CHECK: %[[null:.*]] = fir.zero_bits !fir.ref<none>
-  ! CHECK: fir.store %{{.*}} to %[[temp]] : !fir.ref<!fir.llvm_ptr<none>>
+  ! CHECK: %[[null_ptr:.*]] = fir.alloca !fir.box<!fir.ptr<none>>
+  ! CHECK: %[[null:.*]] = fir.zero_bits !fir.ptr<none>
+  ! CHECK: %[[null_box:.*]] = fir.embox %[[null]] : (!fir.ptr<none>) -> !fir.box<!fir.ptr<none>>
+  ! CHECK: fir.store %[[null_box]] to %[[null_ptr]] : !fir.ref<!fir.box<!fir.ptr<none>>>
   ! CHECK: fir.call @_QMoptPassumed_shape(%{{.*}}) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
  call assumed_shape(null())
 end subroutine null_as_optional

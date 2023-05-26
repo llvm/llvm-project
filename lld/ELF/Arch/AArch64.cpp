@@ -912,7 +912,8 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   // escape to shared objects. isInIplt indicates a non-preemptible ifunc. Its
   // address may escape if referenced by a direct relocation. The condition is
   // conservative.
-  bool hasBti = btiHeader && (sym.hasFlag(NEEDS_COPY) || sym.isInIplt);
+  bool hasBti = btiHeader &&
+                (sym.hasFlag(NEEDS_COPY) || sym.isInIplt || sym.thunkAccessed);
   if (hasBti) {
     memcpy(buf, btiData, sizeof(btiData));
     buf += sizeof(btiData);

@@ -37,7 +37,9 @@ scf::SCFTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
   tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
     OpBuilder::InsertionGuard guard(b);
     b.setInsertionPointToStart(
-        &op->getParentOfType<func::FuncOp>().getBody().front());
+        &op->getParentWithTrait<OpTrait::IsIsolatedFromAbove>()
+             ->getRegion(0)
+             .front());
     return llvm::to_vector<4>(map_range(tileSizes, [&](int64_t s) {
       Value v = b.create<arith::ConstantIndexOp>(op->getLoc(), s);
       return v;
@@ -100,7 +102,7 @@ static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
   bindSymbols(b.getContext(), s0, s1);
   AffineMap minMap = AffineMap::get(1, 2, {s0, s1 - d0}, b.getContext());
   Value size = getValueOrCreateConstantIndexOp(b, loc, loopRange.size);
-  return makeComposedFoldedAffineMin(
+  return affine::makeComposedFoldedAffineMin(
       b, loc, minMap, SmallVector<OpFoldResult>{iv, tileSize, size});
 }
 
@@ -494,7 +496,7 @@ getUntiledProducerFromSliceSource(OpOperand *source,
                                   ArrayRef<scf::ForOp> loops) {
   std::optional<OpOperand *> destinationIterArg;
   auto loopIt = loops.rbegin();
-  while (auto iterArg = source->get().dyn_cast<BlockArgument>()) {
+  while (auto iterArg = dyn_cast<BlockArgument>(source->get())) {
     scf::ForOp loop = *loopIt;
     if (iterArg.getOwner()->getParentOp() != loop)
       break;
@@ -503,7 +505,7 @@ getUntiledProducerFromSliceSource(OpOperand *source,
   }
   if (loopIt == loops.rend())
     destinationIterArg = source;
-  return {source->get().dyn_cast<OpResult>(), destinationIterArg};
+  return {dyn_cast<OpResult>(source->get()), destinationIterArg};
 }
 
 /// Implementation of fusing producer of a single slice by computing the

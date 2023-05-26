@@ -15,7 +15,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include <optional>

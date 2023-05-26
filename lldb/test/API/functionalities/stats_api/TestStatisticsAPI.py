@@ -8,7 +8,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestStatsAPI(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_stats_api(self):
@@ -28,22 +27,46 @@ class TestStatsAPI(TestBase):
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
         debug_stats = json.loads(stream.GetData())
-        self.assertEqual('targets' in debug_stats, True,
-                'Make sure the "targets" key in in target.GetStatistics()')
-        self.assertEqual('modules' in debug_stats, True,
-                'Make sure the "modules" key in in target.GetStatistics()')
-        stats_json = debug_stats['targets'][0]
-        self.assertEqual('expressionEvaluation' in stats_json, True,
-                'Make sure the "expressionEvaluation" key in in target.GetStatistics()["targets"][0]')
-        self.assertEqual('frameVariable' in stats_json, True,
-                'Make sure the "frameVariable" key in in target.GetStatistics()["targets"][0]')
-        expressionEvaluation = stats_json['expressionEvaluation']
-        self.assertEqual('successes' in expressionEvaluation, True,
-                'Make sure the "successes" key in in "expressionEvaluation" dictionary"')
-        self.assertEqual('failures' in expressionEvaluation, True,
-                'Make sure the "failures" key in in "expressionEvaluation" dictionary"')
-        frameVariable = stats_json['frameVariable']
-        self.assertEqual('successes' in frameVariable, True,
-                'Make sure the "successes" key in in "frameVariable" dictionary"')
-        self.assertEqual('failures' in frameVariable, True,
-                'Make sure the "failures" key in in "frameVariable" dictionary"')
+        self.assertEqual(
+            "targets" in debug_stats,
+            True,
+            'Make sure the "targets" key in in target.GetStatistics()',
+        )
+        self.assertEqual(
+            "modules" in debug_stats,
+            True,
+            'Make sure the "modules" key in in target.GetStatistics()',
+        )
+        stats_json = debug_stats["targets"][0]
+        self.assertEqual(
+            "expressionEvaluation" in stats_json,
+            True,
+            'Make sure the "expressionEvaluation" key in in target.GetStatistics()["targets"][0]',
+        )
+        self.assertEqual(
+            "frameVariable" in stats_json,
+            True,
+            'Make sure the "frameVariable" key in in target.GetStatistics()["targets"][0]',
+        )
+        expressionEvaluation = stats_json["expressionEvaluation"]
+        self.assertEqual(
+            "successes" in expressionEvaluation,
+            True,
+            'Make sure the "successes" key in in "expressionEvaluation" dictionary"',
+        )
+        self.assertEqual(
+            "failures" in expressionEvaluation,
+            True,
+            'Make sure the "failures" key in in "expressionEvaluation" dictionary"',
+        )
+        frameVariable = stats_json["frameVariable"]
+        self.assertEqual(
+            "successes" in frameVariable,
+            True,
+            'Make sure the "successes" key in in "frameVariable" dictionary"',
+        )
+        self.assertEqual(
+            "failures" in frameVariable,
+            True,
+            'Make sure the "failures" key in in "frameVariable" dictionary"',
+        )

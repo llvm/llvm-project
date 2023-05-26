@@ -67,6 +67,14 @@ private:
                          const JobAction &JA, const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const;
 
+  /// Extract options for code generation from the driver arguments and add them
+  /// to the command arguments.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void addCodegenOptions(const llvm::opt::ArgList &Args,
+                         llvm::opt::ArgStringList &CmdArgs) const;
+
   /// Extract other compilation options from the driver arguments and add them
   /// to the command arguments.
   ///

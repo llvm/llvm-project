@@ -18,14 +18,12 @@ tablegen(LLVM X86GenMnemonicTables.inc -gen-x86-mnemonic-tables -asmwriternum=1)
 tablegen(LLVM X86GenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM X86GenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM X86GenSubtargetInfo.inc -gen-subtarget)
-
-if (X86_GEN_FOLD_TABLES)
-  tablegen(LLVM X86GenFoldTables.inc -gen-x86-fold-tables -asmwriternum=1)
-endif()
+tablegen(LLVM X86GenFoldTables.inc -gen-x86-fold-tables -asmwriternum=1)
 
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
+  X86ArgumentStackSlotRebase.cpp
   X86AsmPrinter.cpp
   X86AvoidTrailingCall.cpp
   X86CallFrameOptimization.cpp
@@ -47,6 +45,7 @@ set(sources
   X86FixupBWInsts.cpp
   X86FixupLEAs.cpp
   X86FixupInstTuning.cpp
+  X86FixupVectorConstants.cpp
   X86AvoidStoreForwardingBlocks.cpp
   X86DynAllocaExpander.cpp
   X86FixupSetCC.cpp
@@ -65,7 +64,6 @@ set(sources
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
   X86EvexToVex.cpp
-  X86KCFI.cpp
   X86LegalizerInfo.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp
@@ -95,10 +93,14 @@ add_llvm_target(X86CodeGen ${sources}
   LINK_COMPONENTS
   Analysis
   AsmPrinter
+  CFGuard
   CodeGen
+  CodeGenTypes
   Core
+  GlobalISel
   Instrumentation
   MC
+  ProfileData
   SelectionDAG
   Support
   Target
@@ -106,13 +108,10 @@ add_llvm_target(X86CodeGen ${sources}
   TransformUtils
   X86Desc
   X86Info
-  GlobalISel
-  ProfileData
-  CFGuard
 
   ADD_TO_COMPONENT
   X86
-)
+  )
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

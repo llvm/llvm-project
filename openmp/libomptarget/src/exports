@@ -41,6 +41,8 @@ VERS1.0 {
     omp_target_is_present;
     omp_target_memcpy;
     omp_target_memcpy_rect;
+    omp_target_memcpy_async;
+    omp_target_memcpy_rect_async;
     omp_target_associate_ptr;
     omp_target_disassociate_ptr;
     llvm_omp_target_alloc_host;
@@ -62,6 +64,7 @@ VERS1.0 {
     __tgt_interop_init;
     __tgt_interop_use;
     __tgt_interop_destroy;
+    ompt_libomptarget_connect;
   local:
     *;
 };

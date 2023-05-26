@@ -6,7 +6,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+
+// This test uses std::filesystem::path, which is not always available
+// XFAIL: availability-filesystem-missing
 
 // <format>
 
@@ -47,7 +49,7 @@ struct recursive_range {
   struct iterator {
     using iterator_concept = std::input_iterator_tag;
     using value_type       = recursive_range;
-    using difference_type  = ptrdiff_t;
+    using difference_type  = std::ptrdiff_t;
     using reference        = recursive_range;
 
     reference operator*() const;

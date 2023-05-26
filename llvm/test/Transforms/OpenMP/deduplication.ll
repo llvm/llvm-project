@@ -102,8 +102,8 @@ m:
 define void @local_and_global_gtid_calls() {
 ; CHECK-LABEL: define {{[^@]+}}@local_and_global_gtid_calls() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3:[0-9]+]])
 ; CHECK-NEXT:    [[DOTKMPC_LOC_ADDR:%.*]] = alloca [[STRUCT_IDENT_T:%.*]], align 8
+; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3:[0-9]+]])
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])
@@ -132,10 +132,10 @@ entry:
 define void @local_gtid_calls_only() {
 ; CHECK-LABEL: define {{[^@]+}}@local_gtid_calls_only() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
 ; CHECK-NEXT:    [[DOTKMPC_LOC_ADDR1:%.*]] = alloca [[STRUCT_IDENT_T:%.*]], align 8
 ; CHECK-NEXT:    [[DOTKMPC_LOC_ADDR2:%.*]] = alloca [[STRUCT_IDENT_T]], align 8
 ; CHECK-NEXT:    [[DOTKMPC_LOC_ADDR3:%.*]] = alloca [[STRUCT_IDENT_T]], align 8
+; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])

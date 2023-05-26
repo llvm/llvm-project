@@ -157,14 +157,15 @@ private:
            bool HasThisPointer, bool HasRVO);
 
   /// Sets the code of a function.
-  void setCode(unsigned NewFrameSize, std::vector<char> &&NewCode, SourceMap &&NewSrcMap,
-               llvm::SmallVector<Scope, 2> &&NewScopes) {
+  void setCode(unsigned NewFrameSize, std::vector<char> &&NewCode,
+               SourceMap &&NewSrcMap, llvm::SmallVector<Scope, 2> &&NewScopes,
+               bool NewHasBody) {
     FrameSize = NewFrameSize;
     Code = std::move(NewCode);
     SrcMap = std::move(NewSrcMap);
     Scopes = std::move(NewScopes);
     IsValid = true;
-    HasBody = true;
+    HasBody = NewHasBody;
   }
 
   void setIsFullyCompiled(bool FC) { IsFullyCompiled = FC; }

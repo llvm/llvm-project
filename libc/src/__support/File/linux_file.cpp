@@ -139,7 +139,7 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
   int fd = __llvm_libc::syscall_impl(SYS_openat, AT_FDCWD, path, open_flags,
                                      OPEN_MODE);
 #else
-#error "SYS_open and SYS_openat syscalls not available to perform a file open."
+#error "open and openat syscalls not available."
 #endif
 
   if (fd < 0)

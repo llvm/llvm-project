@@ -27,7 +27,7 @@ flang_fc1_args = sys.argv[3:]
 flang_fc1_options = "-fdebug-unparse-with-symbols"
 
 # Strips out blank lines and all comments except for "!DEF:", "!REF:", "!$acc" and "!$omp"
-with open(src, 'r') as text_in:
+with open(src, "r") as text_in:
     for line in text_in:
         text = re.sub(r"!(?![DR]EF:|\$omp|\$acc).*", "", line)
         text = re.sub(r"^\s*$", "", text)
@@ -41,7 +41,9 @@ for line in diff1:
 # Compiles, inserting comments for symbols:
 cmd = [flang_fc1, *flang_fc1_args, flang_fc1_options]
 with tempfile.TemporaryDirectory() as tmpdir:
-    diff3 = subprocess.check_output(cmd, input=diff2, universal_newlines=True, cwd=tmpdir)
+    diff3 = subprocess.check_output(
+        cmd, input=diff2, universal_newlines=True, cwd=tmpdir
+    )
 
 # Removes all whitespace to compare differences in files
 diff1 = diff1.replace(" ", "")
@@ -49,8 +51,15 @@ diff3 = diff3.replace(" ", "")
 diff_check = ""
 
 # Compares the input with the output
-diff_check = "\n".join(unified_diff(diff1.split("\n"), diff3.split("\n"), n=999999,
-                       fromfile="Expected_output", tofile="Actual_output"))
+diff_check = "\n".join(
+    unified_diff(
+        diff1.split("\n"),
+        diff3.split("\n"),
+        n=999999,
+        fromfile="Expected_output",
+        tofile="Actual_output",
+    )
+)
 
 if diff_check != "":
     print(diff_check.replace(" ", ""))
@@ -60,4 +69,3 @@ if diff_check != "":
 else:
     print()
     print("PASS")
-

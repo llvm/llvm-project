@@ -55,33 +55,23 @@ static func::ReturnOp getAssumedUniqueReturnOp(FuncOp funcOp) {
 
 /// Return the index-th bufferized function argument type. This assumes that the
 /// specified argument is a tensor. If the tensor is ranked, a layout map may be
-/// specified by the user. If no layout map is specified, the default layout map
-/// (as per `options.functionBoundaryTypeConversion`) is used.
+/// specified by the user (as per `options.functionArgTypeConverterFn`).
 static BaseMemRefType
 getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
                              const BufferizationOptions &options) {
   auto tensorType =
-      funcOp.getFunctionType().getInput(index).dyn_cast<TensorType>();
+      dyn_cast<TensorType>(funcOp.getFunctionType().getInput(index));
   assert(tensorType && "expected TensorType");
 
-  BaseMemRefType memrefType;
-  if (options.functionBoundaryTypeConversion ==
-      LayoutMapOption::IdentityLayoutMap) {
-    memrefType = getMemRefTypeWithStaticIdentityLayout(
-        tensorType, *options.defaultMemorySpace);
-  } else {
-    // Note: Layout maps on function parameters cannot be inferred. The best we
-    // can do at the moment is "fully dynamic".
-    memrefType = getMemRefTypeWithFullyDynamicLayout(
-        tensorType, *options.defaultMemorySpace);
-  }
+  BaseMemRefType memrefType = options.functionArgTypeConverterFn(
+      tensorType, *options.defaultMemorySpace, funcOp, options);
 
   auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
       index, BufferizationDialect::kBufferLayoutAttrName);
   if (!layoutAttr)
     return memrefType;
 
-  auto rankedMemrefType = memrefType.dyn_cast<MemRefType>();
+  auto rankedMemrefType = dyn_cast<MemRefType>(memrefType);
   assert(rankedMemrefType && "buffer layout not supported on unranked tensors");
   return MemRefType::get(
       rankedMemrefType.getShape(), rankedMemrefType.getElementType(),
@@ -90,7 +80,7 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
 
 /// Return the FuncOp called by `callOp`.
 static FuncOp getCalledFunction(CallOpInterface callOp) {
-  SymbolRefAttr sym = callOp.getCallableForCallee().dyn_cast<SymbolRefAttr>();
+  SymbolRefAttr sym = llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<FuncOp>(
@@ -234,7 +224,7 @@ struct CallOpInterface
     for (const auto &it : llvm::enumerate(callOp.getResultTypes())) {
       unsigned returnValIdx = it.index();
       Type returnType = it.value();
-      if (!returnType.isa<TensorType>()) {
+      if (!isa<TensorType>(returnType)) {
         // Non-tensor values are returned.
         retValMapping[returnValIdx] = resultTypes.size();
         resultTypes.push_back(returnType);
@@ -252,7 +242,7 @@ struct CallOpInterface
       Value tensorOperand = opOperand.get();
 
       // Non-tensor operands are just copied.
-      if (!tensorOperand.getType().isa<TensorType>()) {
+      if (!isa<TensorType>(tensorOperand.getType())) {
         newOperands[idx] = tensorOperand;
         continue;
       }
@@ -352,7 +342,7 @@ struct FuncOpInterface
     SmallVector<Type> argTypes;
     for (const auto &it : llvm::enumerate(funcType.getInputs())) {
       Type argType = it.value();
-      if (auto tensorType = argType.dyn_cast<TensorType>()) {
+      if (auto tensorType = dyn_cast<TensorType>(argType)) {
         argTypes.push_back(
             getBufferizedFunctionArgType(funcOp, it.index(), options));
         continue;
@@ -366,7 +356,7 @@ struct FuncOpInterface
     if (funcOp.getBody().empty()) {
       SmallVector<Type> retTypes;
       for (Type resultType : funcType.getResults()) {
-        if (resultType.isa<TensorType>())
+        if (isa<TensorType>(resultType))
           return funcOp->emitError() << "cannot bufferize bodiless function "
                                      << "that returns a tensor";
         retTypes.push_back(resultType);
@@ -383,7 +373,7 @@ struct FuncOpInterface
     // 1. Rewrite the bbArgs. Turn every tensor bbArg into a memref bbArg.
     Block &frontBlock = funcOp.getBody().front();
     for (BlockArgument &bbArg : frontBlock.getArguments()) {
-      auto tensorType = bbArg.getType().dyn_cast<TensorType>();
+      auto tensorType = dyn_cast<TensorType>(bbArg.getType());
       // Non-tensor types stay the same.
       if (!tensorType)
         continue;
@@ -414,7 +404,7 @@ struct FuncOpInterface
     SmallVector<Value> returnValues;
     for (OpOperand &returnOperand : returnOp->getOpOperands()) {
       Value returnVal = returnOperand.get();
-      auto tensorType = returnVal.getType().dyn_cast<TensorType>();
+      auto tensorType = dyn_cast<TensorType>(returnVal.getType());
       rewriter.setInsertionPoint(returnOp);
 
       // If not a tensor type just forward it.
@@ -423,16 +413,10 @@ struct FuncOpInterface
         continue;
       }
 
-      BaseMemRefType resultType;
-      if (options.functionBoundaryTypeConversion ==
-          LayoutMapOption::IdentityLayoutMap) {
-        resultType = getMemRefTypeWithStaticIdentityLayout(
-            tensorType, *options.defaultMemorySpace);
-      } else {
-        // Note: If `InferLayoutMap`, cast are later folded away.
-        resultType = getMemRefTypeWithFullyDynamicLayout(
-            tensorType, *options.defaultMemorySpace);
-      }
+      // Note: If `inferFunctionResultLayout = true`, cast are later folded
+      // away.
+      BaseMemRefType resultType = options.functionArgTypeConverterFn(
+          tensorType, *options.defaultMemorySpace, funcOp, options);
       Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
           loc, resultType, returnVal);
       returnValues.push_back(toMemrefOp);
@@ -452,7 +436,7 @@ struct FuncOpInterface
   bool isWritable(Operation *op, Value value,
                   const AnalysisState &state) const {
     auto funcOp = cast<FuncOp>(op);
-    BlockArgument bbArg = value.dyn_cast<BlockArgument>();
+    BlockArgument bbArg = dyn_cast<BlockArgument>(value);
     assert(bbArg && "expected BlockArgument");
 
     // "bufferization.writable" overrides other writability decisions. This is

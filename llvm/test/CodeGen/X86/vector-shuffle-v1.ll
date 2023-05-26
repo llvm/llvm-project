@@ -361,7 +361,7 @@ define <32 x i8> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
+; AVX512VL-NEXT:    vpternlogq $202, %ymm2, %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i8:
@@ -459,7 +459,7 @@ define <32 x i8> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpblendvb %ymm0, %ymm2, %ymm3, %ymm0
+; AVX512VL-NEXT:    vpternlogq $202, %ymm3, %ymm2, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; VL_BW_DQ-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i8_split:

@@ -122,8 +122,8 @@
 ; AMDGPU: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ; AMDGPU: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TARGET_L65_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; AMDGPU: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TASK_L74_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
-; AMDGPU: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
-; AMDGPU: @[[X_SHARED_1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
+; AMDGPU: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
+; AMDGPU: @[[X_SHARED_1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
 ; AMDGPU: @[[__OMP_OUTLINED__9_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
 ;.
 ; NVPTX: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
@@ -142,8 +142,8 @@
 ; NVPTX: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ; NVPTX: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TARGET_L65_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; NVPTX: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TASK_L74_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
-; NVPTX: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
-; NVPTX: @[[X_SHARED1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
+; NVPTX: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
+; NVPTX: @[[X_SHARED1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
 ; NVPTX: @[[__OMP_OUTLINED__9_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
 ;.
 ; AMDGPU-DISABLED: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
@@ -161,8 +161,8 @@
 ; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_FD02_2044372E_SEQUENTIAL_LOOP_TO_SHARED_VAR_GUARDED_L50_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TARGET_L65_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; AMDGPU-DISABLED: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TASK_L74_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
-; AMDGPU-DISABLED: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
-; AMDGPU-DISABLED: @[[X_SHARED_1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
+; AMDGPU-DISABLED: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
+; AMDGPU-DISABLED: @[[X_SHARED_1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
 ; AMDGPU-DISABLED: @[[__OMP_OUTLINED__1_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
 ; AMDGPU-DISABLED: @[[__OMP_OUTLINED__3_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
 ; AMDGPU-DISABLED: @[[__OMP_OUTLINED__5_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
@@ -184,8 +184,8 @@
 ; NVPTX-DISABLED: @[[__OMP_OFFLOADING_FD02_2044372E_SEQUENTIAL_LOOP_TO_SHARED_VAR_GUARDED_L50_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; NVPTX-DISABLED: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TARGET_L65_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; NVPTX-DISABLED: @[[__OMP_OFFLOADING_FD02_2044372E_DO_NOT_SPMDIZE_TASK_L74_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
-; NVPTX-DISABLED: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
-; NVPTX-DISABLED: @[[X_SHARED1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
+; NVPTX-DISABLED: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
+; NVPTX-DISABLED: @[[X_SHARED1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
 ; NVPTX-DISABLED: @[[__OMP_OUTLINED__1_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
 ; NVPTX-DISABLED: @[[__OMP_OUTLINED__3_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
 ; NVPTX-DISABLED: @[[__OMP_OUTLINED__5_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef

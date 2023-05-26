@@ -1,6 +1,7 @@
 # REQUIRES: x86
 
 # RUN: rm -rf %t; split-file %s %t
+# RUN: echo "" | llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/empty.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/default.s -o %t/default.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/lazydef.s -o %t/lazydef.o
 # RUN: llvm-ar --format=darwin rcs %t/lazydef.a %t/lazydef.o
@@ -190,9 +191,27 @@
 # NOEXPORTS-NOT: literal_also
 # NOEXPORTS-NOT: literal_only
 
+# RUN: %lld -dylib %t/default.o -o %t/libdefault.dylib
+# RUN: %lld -dylib %t/empty.o %t/libdefault.dylib -exported_symbol _keep_globl \
+# RUN:   -exported_symbol _undef -exported_symbol _tlv \
+# RUN:   -undefined dynamic_lookup -o %t/reexport-dylib
+# RUN: llvm-objdump --macho --exports-trie %t/reexport-dylib
+
+# REEXPORT:      Exports trie:
+# REEXPORT-NEXT: [re-export] _tlv [per-thread] (from libdefault)
+# REEXPORT-NEXT: [re-export] _keep_globl (from libdefault)
+# REEXPORT-NEXT: [re-export] _undef (from unknown)
+
+## -unexported_symbol will not make us re-export symbols in dylibs.
+# RUN: %lld -dylib %t/default.o -o %t/libdefault.dylib
+# RUN: %lld -dylib %t/empty.o %t/libdefault.dylib -unexported_symbol _tlv \
+# RUN:   -o %t/unexport-dylib
+# RUN: llvm-objdump --macho --exports-trie %t/unexport-dylib | FileCheck %s \
+# RUN:   --check-prefix=EMPTY-TRIE
+
 #--- default.s
 
-.globl _keep_globl, _hide_globl
+.globl _keep_globl, _hide_globl, _tlv
 _keep_globl:
   retq
 _hide_globl:
@@ -202,6 +221,9 @@ _private_extern:
   retq
 _private:
   retq
+
+.section __DATA,__thread_vars,thread_local_variables
+_tlv:
 
 #--- lazydef.s
 

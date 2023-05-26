@@ -417,7 +417,7 @@ void PerfJITEventListener::NotifyCode(Expected<llvm::StringRef> &Symbol,
   rec.Prefix.Timestamp = perf_get_timestamp();
 
   rec.CodeSize = CodeSize;
-  rec.Vma = 0;
+  rec.Vma = CodeAddr;
   rec.CodeAddr = CodeAddr;
   rec.Pid = Pid;
   rec.Tid = get_threadid();

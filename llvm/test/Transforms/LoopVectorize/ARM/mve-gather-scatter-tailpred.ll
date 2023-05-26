@@ -44,7 +44,7 @@ define void @test_stride1_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    store i32 [[ADD7]], ptr [[ARRAYIDX9]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_023]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;

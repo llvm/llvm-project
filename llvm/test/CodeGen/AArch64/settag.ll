@@ -61,9 +61,9 @@ define void @stg16(ptr %p) {
 ; CHECK-NEXT:    mov x8, #256
 ; CHECK-NEXT:  .LBB5_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub x8, x8, #32
+; CHECK-NEXT:    subs x8, x8, #32
 ; CHECK-NEXT:    st2g x0, [x0], #32
-; CHECK-NEXT:    cbnz x8, .LBB5_1
+; CHECK-NEXT:    b.ne .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -78,9 +78,9 @@ define void @stg17(ptr %p) {
 ; CHECK-NEXT:    stg x0, [x0], #16
 ; CHECK-NEXT:  .LBB6_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub x8, x8, #32
+; CHECK-NEXT:    subs x8, x8, #32
 ; CHECK-NEXT:    st2g x0, [x0], #32
-; CHECK-NEXT:    cbnz x8, .LBB6_1
+; CHECK-NEXT:    b.ne .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -106,9 +106,9 @@ define void @stzg17(ptr %p) {
 ; CHECK-NEXT:    stzg x0, [x0], #16
 ; CHECK-NEXT:  .LBB8_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub x8, x8, #32
+; CHECK-NEXT:    subs x8, x8, #32
 ; CHECK-NEXT:    stz2g x0, [x0], #32
-; CHECK-NEXT:    cbnz x8, .LBB8_1
+; CHECK-NEXT:    b.ne .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    ret
 entry:
@@ -155,8 +155,8 @@ define void @stg_alloca17() nounwind {
 ; CHECK-NEXT:  .LBB11_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st2g sp, [sp], #32
-; CHECK-NEXT:    sub x8, x8, #32
-; CHECK-NEXT:    cbnz x8, .LBB11_1
+; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    b.ne .LBB11_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    stg sp, [sp], #16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -179,9 +179,9 @@ define void @stg_alloca18() uwtable {
 ; CHECK-NEXT:    stg x9, [x9], #16
 ; CHECK-NEXT:  .LBB12_1: // %entry
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub x8, x8, #32
+; CHECK-NEXT:    subs x8, x8, #32
 ; CHECK-NEXT:    st2g x9, [x9], #32
-; CHECK-NEXT:    cbnz x8, .LBB12_1
+; CHECK-NEXT:    b.ne .LBB12_1
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    add sp, sp, #272
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -194,6 +194,21 @@ entry:
   call void @llvm.aarch64.settag(ptr %a, i64 272)
   ret void
 }
+
+; Verify that SLH works together with MTE stack tagging,
+; see issue https://github.com/llvm/llvm-project/issues/61830
+define void @test_slh() speculative_load_hardening {
+; CHECK-LABEL: test_slh
+; Verify that the memtag loop uses a b.cc conditional branch
+; rather than an cb[n]z branch.
+;CHECK-NOT:   cb{{n?}}z
+;CHECK:       b.
+  %d = alloca [48 x i32], align 4
+  call void @b(ptr %d)
+  ret void
+}
+declare void @b(ptr)
+
 
 declare void @llvm.aarch64.settag(ptr %p, i64 %a)
 declare void @llvm.aarch64.settag.zero(ptr %p, i64 %a)

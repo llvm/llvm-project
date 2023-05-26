@@ -123,7 +123,7 @@ define <16 x i8> @vec128_eltty_i8_source_subvec_0_target_subvec_mask_1_binary(<1
 define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_1_unary(<4 x double> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_0_target_subvec_mask_1_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[0,0,2,3]
+; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,0,2,3]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
   ret <4 x double> %r
@@ -199,7 +199,7 @@ define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_1_bi
 define <4 x double> @vec256_eltty_double_source_subvec_1_target_subvec_mask_2_unary(<4 x double> %x) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_1_target_subvec_mask_2_unary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[0,1,2,2]
+; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,1,2,2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   ret <4 x double> %r

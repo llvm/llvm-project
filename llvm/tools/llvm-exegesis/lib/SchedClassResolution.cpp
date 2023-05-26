@@ -83,9 +83,14 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
     const MCWriteProcResEntry *WPR = Entry.second;
     const MCProcResourceDesc *const ProcResDesc =
         SM.getProcResource(WPR->ProcResourceIdx);
+    // TODO: Handle StartAtCycle in llvm-exegesis and llvm-mca. See
+    // https://github.com/llvm/llvm-project/issues/62680 and
+    // https://github.com/llvm/llvm-project/issues/62681
+    assert(WPR->StartAtCycle == 0 &&
+           "`llvm-exegesis` does not handle StartAtCycle > 0");
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
-      Result.push_back({WPR->ProcResourceIdx, WPR->Cycles});
+      Result.push_back({WPR->ProcResourceIdx, WPR->Cycles, WPR->StartAtCycle});
       ProcResUnitUsage[WPR->ProcResourceIdx] += WPR->Cycles;
     } else {
       // This is a ProcResGroup. First see if it contributes any cycles or if
@@ -102,7 +107,8 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
       }
       // The ProcResGroup contributes `RemainingCycles` cycles of its own.
       Result.push_back({WPR->ProcResourceIdx,
-                        static_cast<uint16_t>(std::round(RemainingCycles))});
+                        static_cast<uint16_t>(std::round(RemainingCycles)),
+                        WPR->StartAtCycle});
       // Spread the remaining cycles over all subunits.
       for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
            SubResIdx != ProcResDesc->SubUnitsIdxBegin + ProcResDesc->NumUnits;
@@ -280,13 +286,13 @@ static unsigned findProcResIdx(const MCSubtargetInfo &STI,
 }
 
 std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
-    InstructionBenchmark::ModeE Mode, const MCSubtargetInfo &STI,
+    Benchmark::ModeE Mode, const MCSubtargetInfo &STI,
     ArrayRef<PerInstructionStats> Representative) const {
   const size_t NumMeasurements = Representative.size();
 
   std::vector<BenchmarkMeasure> SchedClassPoint(NumMeasurements);
 
-  if (Mode == InstructionBenchmark::Latency) {
+  if (Mode == Benchmark::Latency) {
     assert(NumMeasurements == 1 && "Latency is a single measure.");
     BenchmarkMeasure &LatencyMeasure = SchedClassPoint[0];
 
@@ -299,7 +305,7 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
       LatencyMeasure.PerInstructionValue =
           std::max<double>(LatencyMeasure.PerInstructionValue, WLE->Cycles);
     }
-  } else if (Mode == InstructionBenchmark::Uops) {
+  } else if (Mode == Benchmark::Uops) {
     for (auto I : zip(SchedClassPoint, Representative)) {
       BenchmarkMeasure &Measure = std::get<0>(I);
       const PerInstructionStats &Stats = std::get<1>(I);
@@ -326,7 +332,7 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
         return {};
       }
     }
-  } else if (Mode == InstructionBenchmark::InverseThroughput) {
+  } else if (Mode == Benchmark::InverseThroughput) {
     assert(NumMeasurements == 1 && "Inverse Throughput is a single measure.");
     BenchmarkMeasure &RThroughputMeasure = SchedClassPoint[0];
 

@@ -1201,6 +1201,8 @@ bool IsLenTypeParameter(const Symbol &);
 bool IsExtensibleType(const DerivedTypeSpec *);
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name);
 bool IsBuiltinCPtr(const Symbol &);
+bool IsEventType(const DerivedTypeSpec *);
+bool IsLockType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE from module ISO_FORTRAN_ENV?
 bool IsTeamType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE, C_PTR, or C_FUNPTR?
@@ -1234,6 +1236,8 @@ const Symbol *FindFunctionResult(const Symbol &);
 // Uses DynamicType::IsTkCompatible(), which handles the case of distinct
 // but identical derived types.
 bool AreTkCompatibleTypes(const DeclTypeSpec *x, const DeclTypeSpec *y);
+
+common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 
 } // namespace Fortran::semantics
 

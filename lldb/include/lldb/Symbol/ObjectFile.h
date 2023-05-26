@@ -9,7 +9,6 @@
 #ifndef LLDB_SYMBOL_OBJECTFILE_H
 #define LLDB_SYMBOL_OBJECTFILE_H
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/Symtab.h"
@@ -17,6 +16,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Threading.h"
@@ -24,25 +24,6 @@
 #include <optional>
 
 namespace lldb_private {
-
-class ObjectFileJITDelegate {
-public:
-  ObjectFileJITDelegate() = default;
-
-  virtual ~ObjectFileJITDelegate() = default;
-
-  virtual lldb::ByteOrder GetByteOrder() const = 0;
-
-  virtual uint32_t GetAddressByteSize() const = 0;
-
-  virtual void PopulateSymtab(lldb_private::ObjectFile *obj_file,
-                              lldb_private::Symtab &symtab) = 0;
-
-  virtual void PopulateSectionList(lldb_private::ObjectFile *obj_file,
-                                   lldb_private::SectionList &section_list) = 0;
-
-  virtual ArchSpec GetArchitecture() = 0;
-};
 
 /// \class ObjectFile ObjectFile.h "lldb/Symbol/ObjectFile.h"
 /// A plug-in interface definition class for object file parsers.
@@ -787,6 +768,11 @@ template <> struct format_provider<lldb_private::ObjectFile::Strata> {
   static void format(const lldb_private::ObjectFile::Strata &strata,
                      raw_ostream &OS, StringRef Style);
 };
+
+namespace json {
+bool fromJSON(const llvm::json::Value &value, lldb_private::ObjectFile::Type &,
+              llvm::json::Path path);
+} // namespace json
 } // namespace llvm
 
 #endif // LLDB_SYMBOL_OBJECTFILE_H

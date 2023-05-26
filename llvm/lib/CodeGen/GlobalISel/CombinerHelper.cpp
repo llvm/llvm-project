@@ -16,7 +16,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -1288,65 +1288,57 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
          LegalizerHelper::LegalizeResult::Legalized;
 }
 
-static std::optional<APFloat>
-constantFoldFpUnary(unsigned Opcode, LLT DstTy, const Register Op,
-                    const MachineRegisterInfo &MRI) {
-  const ConstantFP *MaybeCst = getConstantFPVRegVal(Op, MRI);
-  if (!MaybeCst)
-    return std::nullopt;
-
-  APFloat V = MaybeCst->getValueAPF();
-  switch (Opcode) {
+static APFloat constantFoldFpUnary(const MachineInstr &MI,
+                                   const MachineRegisterInfo &MRI,
+                                   const APFloat &Val) {
+  APFloat Result(Val);
+  switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode!");
   case TargetOpcode::G_FNEG: {
-    V.changeSign();
-    return V;
+    Result.changeSign();
+    return Result;
   }
   case TargetOpcode::G_FABS: {
-    V.clearSign();
-    return V;
+    Result.clearSign();
+    return Result;
   }
-  case TargetOpcode::G_FPTRUNC:
-    break;
+  case TargetOpcode::G_FPTRUNC: {
+    bool Unused;
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    Result.convert(getFltSemanticForLLT(DstTy), APFloat::rmNearestTiesToEven,
+                   &Unused);
+    return Result;
+  }
   case TargetOpcode::G_FSQRT: {
     bool Unused;
-    V.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &Unused);
-    V = APFloat(sqrt(V.convertToDouble()));
+    Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                   &Unused);
+    Result = APFloat(sqrt(Result.convertToDouble()));
     break;
   }
   case TargetOpcode::G_FLOG2: {
     bool Unused;
-    V.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &Unused);
-    V = APFloat(log2(V.convertToDouble()));
+    Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                   &Unused);
+    Result = APFloat(log2(Result.convertToDouble()));
     break;
   }
   }
   // Convert `APFloat` to appropriate IEEE type depending on `DstTy`. Otherwise,
-  // `buildFConstant` will assert on size mismatch. Only `G_FPTRUNC`, `G_FSQRT`,
-  // and `G_FLOG2` reach here.
+  // `buildFConstant` will assert on size mismatch. Only `G_FSQRT`, and
+  // `G_FLOG2` reach here.
   bool Unused;
-  V.convert(getFltSemanticForLLT(DstTy), APFloat::rmNearestTiesToEven, &Unused);
-  return V;
+  Result.convert(Val.getSemantics(), APFloat::rmNearestTiesToEven, &Unused);
+  return Result;
 }
 
-bool CombinerHelper::matchCombineConstantFoldFpUnary(
-    MachineInstr &MI, std::optional<APFloat> &Cst) {
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  Cst = constantFoldFpUnary(MI.getOpcode(), DstTy, SrcReg, MRI);
-  return Cst.has_value();
-}
-
-void CombinerHelper::applyCombineConstantFoldFpUnary(
-    MachineInstr &MI, std::optional<APFloat> &Cst) {
-  assert(Cst && "Optional is unexpectedly empty!");
+void CombinerHelper::applyCombineConstantFoldFpUnary(MachineInstr &MI,
+                                                     const ConstantFP *Cst) {
   Builder.setInstrAndDebugLoc(MI);
-  MachineFunction &MF = Builder.getMF();
-  auto *FPVal = ConstantFP::get(MF.getFunction().getContext(), *Cst);
-  Register DstReg = MI.getOperand(0).getReg();
-  Builder.buildFConstant(DstReg, *FPVal);
+  APFloat Folded = constantFoldFpUnary(MI, MRI, Cst->getValue());
+  const ConstantFP *NewCst = ConstantFP::get(Builder.getContext(), Folded);
+  Builder.buildFConstant(MI.getOperand(0), *NewCst);
   MI.eraseFromParent();
 }
 
@@ -1622,6 +1614,41 @@ void CombinerHelper::applyShiftOfShiftedLogic(MachineInstr &MI,
   MatchInfo.Logic->eraseFromParent();
 
   MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHL && "Expected G_SHL");
+  // Combine (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
+  // Combine (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
+  auto &Shl = cast<GenericMachineInstr>(MI);
+  Register DstReg = Shl.getReg(0);
+  Register SrcReg = Shl.getReg(1);
+  Register ShiftReg = Shl.getReg(2);
+  Register X, C1;
+
+  if (!getTargetLowering().isDesirableToCommuteWithShift(MI, !isPreLegalize()))
+    return false;
+
+  if (!mi_match(SrcReg, MRI,
+                m_OneNonDBGUse(m_any_of(m_GAdd(m_Reg(X), m_Reg(C1)),
+                                        m_GOr(m_Reg(X), m_Reg(C1))))))
+    return false;
+
+  APInt C1Val, C2Val;
+  if (!mi_match(C1, MRI, m_ICstOrSplat(C1Val)) ||
+      !mi_match(ShiftReg, MRI, m_ICstOrSplat(C2Val)))
+    return false;
+
+  auto *SrcDef = MRI.getVRegDef(SrcReg);
+  assert((SrcDef->getOpcode() == TargetOpcode::G_ADD ||
+          SrcDef->getOpcode() == TargetOpcode::G_OR) && "Unexpected op");
+  LLT SrcTy = MRI.getType(SrcReg);
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto S1 = B.buildShl(SrcTy, X, ShiftReg);
+    auto S2 = B.buildShl(SrcTy, C1, ShiftReg);
+    B.buildInstr(SrcDef->getOpcode(), {DstReg}, {S1, S2});
+  };
+  return true;
 }
 
 bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
@@ -3623,275 +3650,6 @@ bool CombinerHelper::matchLoadOrCombine(
       MIB.buildBSwap(Dst, LoadDst);
   };
   return true;
-}
-
-/// Check if the store \p Store is a truncstore that can be merged. That is,
-/// it's a store of a shifted value of \p SrcVal. If \p SrcVal is an empty
-/// Register then it does not need to match and SrcVal is set to the source
-/// value found.
-/// On match, returns the start byte offset of the \p SrcVal that is being
-/// stored.
-static std::optional<int64_t>
-getTruncStoreByteOffset(GStore &Store, Register &SrcVal,
-                        MachineRegisterInfo &MRI) {
-  Register TruncVal;
-  if (!mi_match(Store.getValueReg(), MRI, m_GTrunc(m_Reg(TruncVal))))
-    return std::nullopt;
-
-  // The shift amount must be a constant multiple of the narrow type.
-  // It is translated to the offset address in the wide source value "y".
-  //
-  // x = G_LSHR y, ShiftAmtC
-  // s8 z = G_TRUNC x
-  // store z, ...
-  Register FoundSrcVal;
-  int64_t ShiftAmt;
-  if (!mi_match(TruncVal, MRI,
-                m_any_of(m_GLShr(m_Reg(FoundSrcVal), m_ICst(ShiftAmt)),
-                         m_GAShr(m_Reg(FoundSrcVal), m_ICst(ShiftAmt))))) {
-    if (!SrcVal.isValid() || TruncVal == SrcVal) {
-      if (!SrcVal.isValid())
-        SrcVal = TruncVal;
-      return 0; // If it's the lowest index store.
-    }
-    return std::nullopt;
-  }
-
-  unsigned NarrowBits = Store.getMMO().getMemoryType().getScalarSizeInBits();
-  if (ShiftAmt % NarrowBits!= 0)
-    return std::nullopt;
-  const unsigned Offset = ShiftAmt / NarrowBits;
-
-  if (SrcVal.isValid() && FoundSrcVal != SrcVal)
-    return std::nullopt;
-
-  if (!SrcVal.isValid())
-    SrcVal = FoundSrcVal;
-  else if (MRI.getType(SrcVal) != MRI.getType(FoundSrcVal))
-    return std::nullopt;
-  return Offset;
-}
-
-/// Match a pattern where a wide type scalar value is stored by several narrow
-/// stores. Fold it into a single store or a BSWAP and a store if the targets
-/// supports it.
-///
-/// Assuming little endian target:
-///  i8 *p = ...
-///  i32 val = ...
-///  p[0] = (val >> 0) & 0xFF;
-///  p[1] = (val >> 8) & 0xFF;
-///  p[2] = (val >> 16) & 0xFF;
-///  p[3] = (val >> 24) & 0xFF;
-/// =>
-///  *((i32)p) = val;
-///
-///  i8 *p = ...
-///  i32 val = ...
-///  p[0] = (val >> 24) & 0xFF;
-///  p[1] = (val >> 16) & 0xFF;
-///  p[2] = (val >> 8) & 0xFF;
-///  p[3] = (val >> 0) & 0xFF;
-/// =>
-///  *((i32)p) = BSWAP(val);
-bool CombinerHelper::matchTruncStoreMerge(MachineInstr &MI,
-                                          MergeTruncStoresInfo &MatchInfo) {
-  auto &StoreMI = cast<GStore>(MI);
-  LLT MemTy = StoreMI.getMMO().getMemoryType();
-
-  // We only handle merging simple stores of 1-4 bytes.
-  if (!MemTy.isScalar())
-    return false;
-  switch (MemTy.getSizeInBits()) {
-  case 8:
-  case 16:
-  case 32:
-    break;
-  default:
-    return false;
-  }
-  if (!StoreMI.isSimple())
-    return false;
-
-  // We do a simple search for mergeable stores prior to this one.
-  // Any potential alias hazard along the way terminates the search.
-  SmallVector<GStore *> FoundStores;
-
-  // We're looking for:
-  // 1) a (store(trunc(...)))
-  // 2) of an LSHR/ASHR of a single wide value, by the appropriate shift to get
-  //    the partial value stored.
-  // 3) where the offsets form either a little or big-endian sequence.
-
-  auto &LastStore = StoreMI;
-
-  // The single base pointer that all stores must use.
-  Register BaseReg;
-  int64_t LastOffset;
-  if (!mi_match(LastStore.getPointerReg(), MRI,
-                m_GPtrAdd(m_Reg(BaseReg), m_ICst(LastOffset)))) {
-    BaseReg = LastStore.getPointerReg();
-    LastOffset = 0;
-  }
-
-  GStore *LowestIdxStore = &LastStore;
-  int64_t LowestIdxOffset = LastOffset;
-
-  Register WideSrcVal;
-  auto LowestShiftAmt = getTruncStoreByteOffset(LastStore, WideSrcVal, MRI);
-  if (!LowestShiftAmt)
-    return false; // Didn't match a trunc.
-  assert(WideSrcVal.isValid());
-
-  LLT WideStoreTy = MRI.getType(WideSrcVal);
-  // The wide type might not be a multiple of the memory type, e.g. s48 and s32.
-  if (WideStoreTy.getSizeInBits() % MemTy.getSizeInBits() != 0)
-    return false;
-  const unsigned NumStoresRequired =
-      WideStoreTy.getSizeInBits() / MemTy.getSizeInBits();
-
-  SmallVector<int64_t, 8> OffsetMap(NumStoresRequired, INT64_MAX);
-  OffsetMap[*LowestShiftAmt] = LastOffset;
-  FoundStores.emplace_back(&LastStore);
-
-  // Search the block up for more stores.
-  // We use a search threshold of 10 instructions here because the combiner
-  // works top-down within a block, and we don't want to search an unbounded
-  // number of predecessor instructions trying to find matching stores.
-  // If we moved this optimization into a separate pass then we could probably
-  // use a more efficient search without having a hard-coded threshold.
-  const int MaxInstsToCheck = 10;
-  int NumInstsChecked = 0;
-  for (auto II = ++LastStore.getReverseIterator();
-       II != LastStore.getParent()->rend() && NumInstsChecked < MaxInstsToCheck;
-       ++II) {
-    NumInstsChecked++;
-    GStore *NewStore;
-    if ((NewStore = dyn_cast<GStore>(&*II))) {
-      if (NewStore->getMMO().getMemoryType() != MemTy || !NewStore->isSimple())
-        break;
-    } else if (II->isLoadFoldBarrier() || II->mayLoad()) {
-      break;
-    } else {
-      continue; // This is a safe instruction we can look past.
-    }
-
-    Register NewBaseReg;
-    int64_t MemOffset;
-    // Check we're storing to the same base + some offset.
-    if (!mi_match(NewStore->getPointerReg(), MRI,
-                  m_GPtrAdd(m_Reg(NewBaseReg), m_ICst(MemOffset)))) {
-      NewBaseReg = NewStore->getPointerReg();
-      MemOffset = 0;
-    }
-    if (BaseReg != NewBaseReg)
-      break;
-
-    auto ShiftByteOffset = getTruncStoreByteOffset(*NewStore, WideSrcVal, MRI);
-    if (!ShiftByteOffset)
-      break;
-    if (MemOffset < LowestIdxOffset) {
-      LowestIdxOffset = MemOffset;
-      LowestIdxStore = NewStore;
-    }
-
-    // Map the offset in the store and the offset in the combined value, and
-    // early return if it has been set before.
-    if (*ShiftByteOffset < 0 || *ShiftByteOffset >= NumStoresRequired ||
-        OffsetMap[*ShiftByteOffset] != INT64_MAX)
-      break;
-    OffsetMap[*ShiftByteOffset] = MemOffset;
-
-    FoundStores.emplace_back(NewStore);
-    // Reset counter since we've found a matching inst.
-    NumInstsChecked = 0;
-    if (FoundStores.size() == NumStoresRequired)
-      break;
-  }
-
-  if (FoundStores.size() != NumStoresRequired) {
-    return false;
-  }
-
-  const auto &DL = LastStore.getMF()->getDataLayout();
-  auto &C = LastStore.getMF()->getFunction().getContext();
-  // Check that a store of the wide type is both allowed and fast on the target
-  unsigned Fast = 0;
-  bool Allowed = getTargetLowering().allowsMemoryAccess(
-      C, DL, WideStoreTy, LowestIdxStore->getMMO(), &Fast);
-  if (!Allowed || !Fast)
-    return false;
-
-  // Check if the pieces of the value are going to the expected places in memory
-  // to merge the stores.
-  unsigned NarrowBits = MemTy.getScalarSizeInBits();
-  auto checkOffsets = [&](bool MatchLittleEndian) {
-    if (MatchLittleEndian) {
-      for (unsigned i = 0; i != NumStoresRequired; ++i)
-        if (OffsetMap[i] != i * (NarrowBits / 8) + LowestIdxOffset)
-          return false;
-    } else { // MatchBigEndian by reversing loop counter.
-      for (unsigned i = 0, j = NumStoresRequired - 1; i != NumStoresRequired;
-           ++i, --j)
-        if (OffsetMap[j] != i * (NarrowBits / 8) + LowestIdxOffset)
-          return false;
-    }
-    return true;
-  };
-
-  // Check if the offsets line up for the native data layout of this target.
-  bool NeedBswap = false;
-  bool NeedRotate = false;
-  if (!checkOffsets(DL.isLittleEndian())) {
-    // Special-case: check if byte offsets line up for the opposite endian.
-    if (NarrowBits == 8 && checkOffsets(DL.isBigEndian()))
-      NeedBswap = true;
-    else if (NumStoresRequired == 2 && checkOffsets(DL.isBigEndian()))
-      NeedRotate = true;
-    else
-      return false;
-  }
-
-  if (NeedBswap &&
-      !isLegalOrBeforeLegalizer({TargetOpcode::G_BSWAP, {WideStoreTy}}))
-    return false;
-  if (NeedRotate &&
-      !isLegalOrBeforeLegalizer({TargetOpcode::G_ROTR, {WideStoreTy}}))
-    return false;
-
-  MatchInfo.NeedBSwap = NeedBswap;
-  MatchInfo.NeedRotate = NeedRotate;
-  MatchInfo.LowestIdxStore = LowestIdxStore;
-  MatchInfo.WideSrcVal = WideSrcVal;
-  MatchInfo.FoundStores = std::move(FoundStores);
-  return true;
-}
-
-void CombinerHelper::applyTruncStoreMerge(MachineInstr &MI,
-                                          MergeTruncStoresInfo &MatchInfo) {
-
-  Builder.setInstrAndDebugLoc(MI);
-  Register WideSrcVal = MatchInfo.WideSrcVal;
-  LLT WideStoreTy = MRI.getType(WideSrcVal);
-
-  if (MatchInfo.NeedBSwap) {
-    WideSrcVal = Builder.buildBSwap(WideStoreTy, WideSrcVal).getReg(0);
-  } else if (MatchInfo.NeedRotate) {
-    assert(WideStoreTy.getSizeInBits() % 2 == 0 &&
-           "Unexpected type for rotate");
-    auto RotAmt =
-        Builder.buildConstant(WideStoreTy, WideStoreTy.getSizeInBits() / 2);
-    WideSrcVal =
-        Builder.buildRotateRight(WideStoreTy, WideSrcVal, RotAmt).getReg(0);
-  }
-
-  Builder.buildStore(WideSrcVal, MatchInfo.LowestIdxStore->getPointerReg(),
-                     MatchInfo.LowestIdxStore->getMMO().getPointerInfo(),
-                     MatchInfo.LowestIdxStore->getMMO().getAlign());
-
-  // Erase the old stores.
-  for (auto *ST : MatchInfo.FoundStores)
-    ST->eraseFromParent();
 }
 
 bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,

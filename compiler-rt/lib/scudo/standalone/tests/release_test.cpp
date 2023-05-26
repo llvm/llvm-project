@@ -22,13 +22,16 @@ TEST(ScudoReleaseTest, RegionPageMap) {
   for (scudo::uptr I = 0; I < SCUDO_WORDSIZE; I++) {
     // Various valid counter's max values packed into one word.
     scudo::RegionPageMap PageMap2N(1U, 1U, 1UL << I);
+    ASSERT_TRUE(PageMap2N.isAllocated());
     EXPECT_EQ(sizeof(scudo::uptr), PageMap2N.getBufferSize());
     // Check the "all bit set" values too.
     scudo::RegionPageMap PageMap2N1_1(1U, 1U, ~0UL >> I);
+    ASSERT_TRUE(PageMap2N1_1.isAllocated());
     EXPECT_EQ(sizeof(scudo::uptr), PageMap2N1_1.getBufferSize());
     // Verify the packing ratio, the counter is Expected to be packed into the
     // closest power of 2 bits.
     scudo::RegionPageMap PageMap(1U, SCUDO_WORDSIZE, 1UL << I);
+    ASSERT_TRUE(PageMap.isAllocated());
     EXPECT_EQ(sizeof(scudo::uptr) * scudo::roundUpPowerOfTwo(I + 1),
               PageMap.getBufferSize());
   }
@@ -40,6 +43,7 @@ TEST(ScudoReleaseTest, RegionPageMap) {
         (scudo::getPageSizeCached() / 8) * (SCUDO_WORDSIZE >> I);
     scudo::RegionPageMap PageMap(1U, NumCounters,
                                        1UL << ((1UL << I) - 1));
+    ASSERT_TRUE(PageMap.isAllocated());
     PageMap.inc(0U, 0U);
     for (scudo::uptr C = 1; C < NumCounters - 1; C++) {
       EXPECT_EQ(0UL, PageMap.get(0U, C));
@@ -315,12 +319,13 @@ template <class SizeClassMap> void testPageMapMarkRange() {
     const scudo::uptr RoundedRegionSize = scudo::roundUp(RegionSize, PageSize);
 
     std::vector<scudo::uptr> Pages(RoundedRegionSize / PageSize, 0);
-    for (scudo::uptr Block = 0; Block + BlockSize <= RoundedRegionSize;
-         Block += BlockSize) {
-      for (scudo::uptr page = Block / PageSize;
-           page <= (Block + BlockSize - 1) / PageSize; ++page) {
-        ASSERT_LT(page, Pages.size());
-        ++Pages[page];
+    for (scudo::uptr Block = 0; Block < RoundedRegionSize; Block += BlockSize) {
+      for (scudo::uptr Page = Block / PageSize;
+           Page <= (Block + BlockSize - 1) / PageSize &&
+           Page < RoundedRegionSize / PageSize;
+           ++Page) {
+        ASSERT_LT(Page, Pages.size());
+        ++Pages[Page];
       }
     }
 
@@ -410,8 +415,6 @@ template <class SizeClassMap> void testPageMapMarkRange() {
 template <class SizeClassMap> void testReleasePartialRegion() {
   typedef FreeBatch<SizeClassMap> Batch;
   const scudo::uptr PageSize = scudo::getPageSizeCached();
-  const scudo::uptr ReleaseBase = PageSize;
-  const scudo::uptr BasePageOffset = ReleaseBase / PageSize;
 
   for (scudo::uptr I = 1; I <= SizeClassMap::LargestClassId; I++) {
     // In the following, we want to ensure the region includes at least 2 pages
@@ -419,8 +422,11 @@ template <class SizeClassMap> void testReleasePartialRegion() {
     // the last block is tricky, so we always test the case that includes the
     // last block.
     const scudo::uptr BlockSize = SizeClassMap::getSizeByClassId(I);
+    const scudo::uptr ReleaseBase = scudo::roundUp(BlockSize, PageSize);
+    const scudo::uptr BasePageOffset = ReleaseBase / PageSize;
     const scudo::uptr RegionSize =
-        scudo::roundUpSlow(scudo::roundUp(BlockSize, PageSize) * 2, BlockSize) +
+        scudo::roundUpSlow(scudo::roundUp(BlockSize, PageSize) + ReleaseBase,
+                           BlockSize) +
         BlockSize;
     const scudo::uptr RoundedRegionSize = scudo::roundUp(RegionSize, PageSize);
 
@@ -429,7 +435,7 @@ template <class SizeClassMap> void testReleasePartialRegion() {
 
     // Skip the blocks in the first page and add the remaining.
     std::vector<scudo::uptr> Pages(RoundedRegionSize / PageSize, 0);
-    for (scudo::uptr Block = scudo::roundUpSlow(PageSize, BlockSize);
+    for (scudo::uptr Block = scudo::roundUpSlow(ReleaseBase, BlockSize);
          Block + BlockSize <= RoundedRegionSize; Block += BlockSize) {
       for (scudo::uptr Page = Block / PageSize;
            Page <= (Block + BlockSize - 1) / PageSize; ++Page) {
@@ -444,7 +450,7 @@ template <class SizeClassMap> void testReleasePartialRegion() {
       ++Pages.back();
 
     Batch *CurrentBatch = nullptr;
-    for (scudo::uptr Block = scudo::roundUpSlow(PageSize, BlockSize);
+    for (scudo::uptr Block = scudo::roundUpSlow(ReleaseBase, BlockSize);
          Block < RegionSize; Block += BlockSize) {
       if (CurrentBatch == nullptr ||
           CurrentBatch->getCount() == Batch::MaxCount) {
@@ -459,7 +465,7 @@ template <class SizeClassMap> void testReleasePartialRegion() {
       auto SkipRegion = [](UNUSED scudo::uptr RegionIndex) { return false; };
       ReleasedPagesRecorder Recorder(ReleaseBase);
       releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
-      const scudo::uptr FirstBlock = scudo::roundUpSlow(PageSize, BlockSize);
+      const scudo::uptr FirstBlock = scudo::roundUpSlow(ReleaseBase, BlockSize);
 
       for (scudo::uptr P = 0; P < RoundedRegionSize; P += PageSize) {
         if (P < FirstBlock) {
@@ -561,6 +567,69 @@ TEST(ScudoReleaseTest, ReleasePartialRegion) {
   testReleasePartialRegion<scudo::AndroidSizeClassMap>();
   testReleasePartialRegion<scudo::FuchsiaSizeClassMap>();
   testReleasePartialRegion<scudo::SvelteSizeClassMap>();
+}
+
+template <class SizeClassMap> void testReleaseRangeWithSingleBlock() {
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
+
+  // We want to test if a memory group only contains single block that will be
+  // handled properly. The case is like:
+  //
+  //   From                     To
+  //     +----------------------+
+  //  +------------+------------+
+  //  |            |            |
+  //  +------------+------------+
+  //                            ^
+  //                        RegionSize
+  //
+  // Note that `From` will be page aligned.
+  //
+  // If the second from the last block is aligned at `From`, then we expect all
+  // the pages after `From` will be marked as can-be-released. Otherwise, the
+  // pages only touched by the last blocks will be marked as can-be-released.
+  for (scudo::uptr I = 1; I <= SizeClassMap::LargestClassId; I++) {
+    const scudo::uptr BlockSize = SizeClassMap::getSizeByClassId(I);
+    const scudo::uptr From = scudo::roundUp(BlockSize, PageSize);
+    const scudo::uptr To =
+        From % BlockSize == 0
+            ? From + BlockSize
+            : scudo::roundDownSlow(From + BlockSize, BlockSize) + BlockSize;
+    const scudo::uptr RoundedRegionSize = scudo::roundUp(To, PageSize);
+
+    std::vector<scudo::uptr> Pages(RoundedRegionSize / PageSize, 0);
+    for (scudo::uptr Block = (To - BlockSize); Block < RoundedRegionSize;
+         Block += BlockSize) {
+      for (scudo::uptr Page = Block / PageSize;
+           Page <= (Block + BlockSize - 1) / PageSize &&
+           Page < RoundedRegionSize / PageSize;
+           ++Page) {
+        ASSERT_LT(Page, Pages.size());
+        ++Pages[Page];
+      }
+    }
+
+    scudo::PageReleaseContext Context(BlockSize, /*NumberOfRegions=*/1U,
+                                      /*ReleaseSize=*/To,
+                                      /*ReleaseBase=*/0U);
+    Context.markRangeAsAllCounted(From, To, /*Base=*/0U, /*RegionIndex=*/0,
+                                  /*RegionSize=*/To);
+
+    for (scudo::uptr Page = 0; Page < RoundedRegionSize; Page += PageSize) {
+      if (Context.PageMap.get(/*Region=*/0U, Page / PageSize) !=
+          Pages[Page / PageSize]) {
+        EXPECT_TRUE(
+            Context.PageMap.isAllCounted(/*Region=*/0U, Page / PageSize));
+      }
+    }
+  } // for each size class
+}
+
+TEST(ScudoReleaseTest, RangeReleaseRegionWithSingleBlock) {
+  testReleaseRangeWithSingleBlock<scudo::DefaultSizeClassMap>();
+  testReleaseRangeWithSingleBlock<scudo::AndroidSizeClassMap>();
+  testReleaseRangeWithSingleBlock<scudo::FuchsiaSizeClassMap>();
+  testReleaseRangeWithSingleBlock<scudo::SvelteSizeClassMap>();
 }
 
 TEST(ScudoReleaseTest, BufferPool) {

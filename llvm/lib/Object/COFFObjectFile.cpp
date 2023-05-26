@@ -1016,6 +1016,8 @@ StringRef COFFObjectFile::getFileFormatName() const {
     return "COFF-ARM64";
   case COFF::IMAGE_FILE_MACHINE_ARM64EC:
     return "COFF-ARM64EC";
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return "COFF-ARM64X";
   default:
     return "COFF-<unknown arch>";
   }
@@ -1031,6 +1033,7 @@ Triple::ArchType COFFObjectFile::getArch() const {
     return Triple::thumb;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
   case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
     return Triple::aarch64;
   default:
     return Triple::UnknownArch;
@@ -1318,6 +1321,7 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
     break;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
   case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
     switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
@@ -1901,6 +1905,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
       break;
     case COFF::IMAGE_FILE_MACHINE_ARM64:
     case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    case COFF::IMAGE_FILE_MACHINE_ARM64X:
       RVAReloc = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:

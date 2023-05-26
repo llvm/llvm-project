@@ -501,7 +501,6 @@ public:
                             APInt &Mask) const override;
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 uint64_t GotSectionVA,
                  const Triple &TargetTriple) const override;
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
@@ -570,8 +569,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
 }
 
 static std::vector<std::pair<uint64_t, uint64_t>>
-findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                  uint64_t GotPltSectionVA) {
+findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
   // Do a lightweight parsing of PLT entries.
   std::vector<std::pair<uint64_t, uint64_t>> Result;
   for (uint64_t Byte = 0, End = PltContents.size(); Byte + 6 < End; ) {
@@ -579,9 +577,11 @@ findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
     if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0xa3) {
       // The jmp instruction at the beginning of each PLT entry jumps to the
       // address of the base of the .got.plt section plus the immediate.
+      // Set the 1 << 32 bit to let ELFObjectFileBase::getPltEntries convert the
+      // offset to an address. Imm may be a negative int32_t if the GOT entry is
+      // in .got.
       uint32_t Imm = support::endian::read32le(PltContents.data() + Byte + 2);
-      Result.push_back(
-          std::make_pair(PltSectionVA + Byte, GotPltSectionVA + Imm));
+      Result.emplace_back(PltSectionVA + Byte, Imm | (uint64_t(1) << 32));
       Byte += 6;
     } else if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0x25) {
       // The jmp instruction at the beginning of each PLT entry jumps to the
@@ -614,17 +614,18 @@ findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
   return Result;
 }
 
-std::vector<std::pair<uint64_t, uint64_t>> X86MCInstrAnalysis::findPltEntries(
-    uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-    uint64_t GotPltSectionVA, const Triple &TargetTriple) const {
+std::vector<std::pair<uint64_t, uint64_t>>
+X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
+                                   ArrayRef<uint8_t> PltContents,
+                                   const Triple &TargetTriple) const {
   switch (TargetTriple.getArch()) {
-    case Triple::x86:
-      return findX86PltEntries(PltSectionVA, PltContents, GotPltSectionVA);
-    case Triple::x86_64:
-      return findX86_64PltEntries(PltSectionVA, PltContents);
-    default:
-      return {};
-    }
+  case Triple::x86:
+    return findX86PltEntries(PltSectionVA, PltContents);
+  case Triple::x86_64:
+    return findX86_64PltEntries(PltSectionVA, PltContents);
+  default:
+    return {};
+  }
 }
 
 bool X86MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,

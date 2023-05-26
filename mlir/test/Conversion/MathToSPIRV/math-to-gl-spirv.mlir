@@ -137,9 +137,14 @@ func.func @powf_scalar(%lhs: f32, %rhs: f32) -> f32 {
   // CHECK: %[[F0:.+]] = spirv.Constant 0.000000e+00 : f32
   // CHECK: %[[LT:.+]] = spirv.FOrdLessThan %[[LHS]], %[[F0]] : f32
   // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[LHS]] : f32
+  // CHECK: %[[IRHS:.+]] = spirv.ConvertFToS
+  // CHECK: %[[CST1:.+]] = spirv.Constant 1 : i32
+  // CHECK: %[[REM:.+]] = spirv.BitwiseAnd %[[IRHS]]
+  // CHECK: %[[ODD:.+]] = spirv.IEqual %[[REM]], %[[CST1]] : i32
   // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
   // CHECK: %[[NEG:.+]] = spirv.FNegate %[[POW]] : f32
-  // CHECK: %[[SEL:.+]] = spirv.Select %[[LT]], %[[NEG]], %[[POW]] : i1, f32
+  // CHECK: %[[SNEG:.+]] = spirv.LogicalAnd %[[LT]], %[[ODD]] : i1
+  // CHECK: %[[SEL:.+]] = spirv.Select %[[SNEG]], %[[NEG]], %[[POW]] : i1, f32
   %0 = math.powf %lhs, %rhs : f32
   // CHECK: return %[[SEL]]
   return %0: f32
@@ -149,6 +154,8 @@ func.func @powf_scalar(%lhs: f32, %rhs: f32) -> f32 {
 func.func @powf_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) -> vector<4xf32> {
   // CHECK: spirv.FOrdLessThan
   // CHECK: spirv.GL.FAbs
+  // CHECK: spirv.BitwiseAnd %{{.*}} : vector<4xi32>
+  // CHECK: spirv.IEqual %{{.*}} : vector<4xi32>
   // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
   // CHECK: spirv.FNegate
   // CHECK: spirv.Select

@@ -34,10 +34,9 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
-static cl::opt<bool> ZeroDivCheck(
-    "loongarch-check-zero-division", cl::Hidden,
-    cl::desc("Trap on integer division by zero."),
-    cl::init(false));
+static cl::opt<bool> ZeroDivCheck("loongarch-check-zero-division", cl::Hidden,
+                                  cl::desc("Trap on integer division by zero."),
+                                  cl::init(false));
 
 LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                                                  const LoongArchSubtarget &STI)
@@ -1372,16 +1371,39 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
     if (CN->getZExtValue() <= 0xfff)
       return SDValue();
 
-    // Return if the mask doesn't start at position 0.
-    if (SMIdx)
+    // Return if the MSB exceeds.
+    if (SMIdx + SMLen > ValTy.getSizeInBits())
       return SDValue();
 
-    lsb = 0;
+    if (SMIdx > 0) {
+      // Omit if the constant has more than 2 uses. This a conservative
+      // decision. Whether it is a win depends on the HW microarchitecture.
+      // However it should always be better for 1 and 2 uses.
+      if (CN->use_size() > 2)
+        return SDValue();
+      // Return if the constant can be composed by a single LU12I.W.
+      if ((CN->getZExtValue() & 0xfff) == 0)
+        return SDValue();
+      // Return if the constand can be composed by a single ADDI with
+      // the zero register.
+      if (CN->getSExtValue() >= -2048 && CN->getSExtValue() < 0)
+        return SDValue();
+    }
+
+    lsb = SMIdx;
     NewOperand = FirstOperand;
   }
+
   msb = lsb + SMLen - 1;
-  return DAG.getNode(LoongArchISD::BSTRPICK, DL, ValTy, NewOperand,
-                     DAG.getConstant(msb, DL, GRLenVT),
+  SDValue NR0 = DAG.getNode(LoongArchISD::BSTRPICK, DL, ValTy, NewOperand,
+                            DAG.getConstant(msb, DL, GRLenVT),
+                            DAG.getConstant(lsb, DL, GRLenVT));
+  if (FirstOperandOpc == ISD::SRA || FirstOperandOpc == ISD::SRL || lsb == 0)
+    return NR0;
+  // Try to optimize to
+  //   bstrpick $Rd, $Rs, msb, lsb
+  //   slli     $Rd, $Rd, lsb
+  return DAG.getNode(ISD::SHL, DL, ValTy, NR0,
                      DAG.getConstant(lsb, DL, GRLenVT));
 }
 
@@ -1906,7 +1928,6 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   default:
     llvm_unreachable("Unexpected ABI");
   case LoongArchABI::ABI_ILP32S:
-  case LoongArchABI::ABI_LP64S:
   case LoongArchABI::ABI_ILP32F:
   case LoongArchABI::ABI_LP64F:
     report_fatal_error("Unimplemented ABI");
@@ -1914,6 +1935,8 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   case LoongArchABI::ABI_ILP32D:
   case LoongArchABI::ABI_LP64D:
     UseGPRForFloat = !IsFixed;
+    break;
+  case LoongArchABI::ABI_LP64S:
     break;
   }
 
@@ -2047,8 +2070,8 @@ void LoongArchTargetLowering::analyzeInputArgs(
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Ins[i].Flags,
            CCInfo, /*IsFixed=*/true, IsRet, ArgTy)) {
-      LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
-                        << ArgVT << '\n');
+      LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type " << ArgVT
+                        << '\n');
       llvm_unreachable("");
     }
   }
@@ -2065,8 +2088,8 @@ void LoongArchTargetLowering::analyzeOutputArgs(
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Outs[i].Flags,
            CCInfo, Outs[i].IsFixed, IsRet, OrigTy)) {
-      LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
-                        << ArgVT << "\n");
+      LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type " << ArgVT
+                        << "\n");
       llvm_unreachable("");
     }
   }
@@ -2154,14 +2177,15 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
 }
 
 static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                            CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                             CCValAssign::LocInfo LocInfo,
+                             ISD::ArgFlagsTy ArgFlags, CCState &State) {
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, SpLim
     //                        s0    s1  s2  s3  s4  s5  s6  s7  s8
     static const MCPhysReg GPRList[] = {
-        LoongArch::R23, LoongArch::R24, LoongArch::R25, LoongArch::R26, LoongArch::R27,
-        LoongArch::R28, LoongArch::R29, LoongArch::R30, LoongArch::R31};
+        LoongArch::R23, LoongArch::R24, LoongArch::R25,
+        LoongArch::R26, LoongArch::R27, LoongArch::R28,
+        LoongArch::R29, LoongArch::R30, LoongArch::R31};
     if (unsigned Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
@@ -2212,7 +2236,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     if (!MF.getSubtarget().hasFeature(LoongArch::FeatureBasicF) ||
         !MF.getSubtarget().hasFeature(LoongArch::FeatureBasicD))
       report_fatal_error(
-        "GHC calling convention requires the F and D extensions");
+          "GHC calling convention requires the F and D extensions");
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -2275,7 +2299,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     // If all registers are allocated, then all varargs must be passed on the
     // stack and we don't need to save any argregs.
     if (ArgRegs.size() == Idx) {
-      VaArgOffset = CCInfo.getNextStackOffset();
+      VaArgOffset = CCInfo.getStackSize();
       VarArgsSaveSize = 0;
     } else {
       VarArgsSaveSize = GRLenInBytes * (ArgRegs.size() - Idx);
@@ -2373,7 +2397,7 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
   auto CallerCC = Caller.getCallingConv();
 
   // Do not tail call opt if the stack is used to pass parameters.
-  if (CCInfo.getNextStackOffset() != 0)
+  if (CCInfo.getStackSize() != 0)
     return false;
 
   // Do not tail call opt if any parameters need to be passed indirectly.
@@ -2449,7 +2473,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
                        "site marked musttail");
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = ArgCCInfo.getNextStackOffset();
+  unsigned NumBytes = ArgCCInfo.getStackSize();
 
   // Create local copies for byval args.
   SmallVector<SDValue> ByValArgs;
@@ -2615,7 +2639,9 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(LoongArchISD::TAIL, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(LoongArchISD::TAIL, DL, NodeTys, Ops);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    return Ret;
   }
 
   Chain = DAG.getNode(LoongArchISD::CALL, DL, NodeTys, Ops);
@@ -3131,12 +3157,38 @@ bool LoongArchTargetLowering::decomposeMulByConstant(LLVMContext &Context,
   if (VT.getSizeInBits() > Subtarget.getGRLen())
     return false;
 
-  // Break MUL into (SLLI + ADD/SUB) or ALSL.
   if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
     const APInt &Imm = ConstNode->getAPIntValue();
+    // Break MUL into (SLLI + ADD/SUB) or ALSL.
     if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
         (1 - Imm).isPowerOf2() || (-1 - Imm).isPowerOf2())
       return true;
+    // Break MUL into (ALSL x, (SLLI x, imm0), imm1).
+    if (ConstNode->hasOneUse() &&
+        ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
+         (Imm - 8).isPowerOf2() || (Imm - 16).isPowerOf2()))
+      return true;
+    // Break (MUL x, imm) into (ADD (SLLI x, s0), (SLLI x, s1)),
+    // in which the immediate has two set bits. Or Break (MUL x, imm)
+    // into (SUB (SLLI x, s0), (SLLI x, s1)), in which the immediate
+    // equals to (1 << s0) - (1 << s1).
+    if (ConstNode->hasOneUse() && !(Imm.sge(-2048) && Imm.sle(4095))) {
+      unsigned Shifts = Imm.countr_zero();
+      // Reject immediates which can be composed via a single LUI.
+      if (Shifts >= 12)
+        return false;
+      // Reject multiplications can be optimized to
+      // (SLLI (ALSL x, x, 1/2/3/4), s).
+      APInt ImmPop = Imm.ashr(Shifts);
+      if (ImmPop == 3 || ImmPop == 5 || ImmPop == 9 || ImmPop == 17)
+        return false;
+      // We do not consider the case `(-Imm - ImmSmall).isPowerOf2()`,
+      // since it needs one more instruction than other 3 cases.
+      APInt ImmSmall = APInt(Imm.getBitWidth(), 1ULL << Shifts, true);
+      if ((Imm - ImmSmall).isPowerOf2() || (Imm + ImmSmall).isPowerOf2() ||
+          (ImmSmall - Imm).isPowerOf2())
+        return true;
+    }
   }
 
   return false;

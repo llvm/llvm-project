@@ -83,9 +83,9 @@ define amdgpu_kernel void @shl_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v3, v7, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v2, v6, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v1, v5, v1
+; SI-NEXT:    v_lshl_b32_e32 v3, v3, v7
+; SI-NEXT:    v_lshl_b32_e32 v2, v2, v6
+; SI-NEXT:    v_lshl_b32_e32 v1, v1, v5
 ; SI-NEXT:    v_lshl_b32_e32 v0, v0, v4
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -153,7 +153,7 @@ define amdgpu_kernel void @shl_i16(ptr addrspace(1) %out, ptr addrspace(1) %in) 
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; SI-NEXT:    v_lshl_b32_e32 v0, v0, v1
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;

@@ -8,9 +8,11 @@ add_mlir_library(MLIRTransforms
   Inliner.cpp
   LocationSnapshot.cpp
   LoopInvariantCodeMotion.cpp
+  Mem2Reg.cpp
   OpStats.cpp
   PrintIR.cpp
   SCCP.cpp
+  SROA.cpp
   StripDebugInfo.cpp
   SymbolDCE.cpp
   SymbolPrivatize.cpp
@@ -27,6 +29,7 @@ add_mlir_library(MLIRTransforms
   MLIRAnalysis
   MLIRCopyOpInterface
   MLIRLoopLikeInterface
+  MLIRMemorySlotInterfaces
   MLIRPass
   MLIRRuntimeVerifiableOpInterface
   MLIRSideEffectInterfaces

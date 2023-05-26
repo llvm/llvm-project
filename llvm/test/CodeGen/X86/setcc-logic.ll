@@ -324,7 +324,7 @@ define i32 @vec_extract_branch(<2 x double> %x)  {
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    cmpltpd %xmm0, %xmm1
 ; CHECK-NEXT:    movmskpd %xmm1, %eax
-; CHECK-NEXT:    cmpb $3, %al
+; CHECK-NEXT:    cmpl $3, %eax
 ; CHECK-NEXT:    jne .LBB16_2
 ; CHECK-NEXT:  # %bb.1: # %true
 ; CHECK-NEXT:    movl $42, %eax

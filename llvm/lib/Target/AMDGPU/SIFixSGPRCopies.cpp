@@ -869,7 +869,9 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
     return true;
   }
   if (!SrcReg.isVirtual() || TRI->isAGPR(*MRI, SrcReg)) {
-    TII->moveToVALU(MI, MDT);
+    SIInstrWorklist worklist;
+    worklist.insert(&MI);
+    TII->moveToVALU(worklist, MDT);
     return true;
   }
 
@@ -991,6 +993,10 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       LoweringWorklist.push_back(C.second.ID);
   }
 
+  // Store all the V2S copy instructions that need to be moved to VALU
+  // in the Copies worklist.
+  SIInstrWorklist Copies;
+
   while (!LoweringWorklist.empty()) {
     unsigned CurID = LoweringWorklist.pop_back_val();
     auto CurInfoIt = V2SCopies.find(CurID);
@@ -1013,9 +1019,12 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "V2S copy " << *C.Copy
                         << " is being turned to VALU\n");
       V2SCopies.erase(C.ID);
-      TII->moveToVALU(*C.Copy, MDT);
+      Copies.insert(C.Copy);
     }
   }
+
+  TII->moveToVALU(Copies, MDT);
+  Copies.clear();
 
   // Now do actual lowering
   for (auto C : V2SCopies) {

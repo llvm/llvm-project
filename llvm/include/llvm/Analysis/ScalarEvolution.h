@@ -791,16 +791,19 @@ public:
   bool isLoopBackedgeGuardedByCond(const Loop *L, ICmpInst::Predicate Pred,
                                    const SCEV *LHS, const SCEV *RHS);
 
+  /// A version of getTripCountFromExitCount below which always picks an
+  /// evaluation type which can not result in overflow.
+  const SCEV *getTripCountFromExitCount(const SCEV *ExitCount);
+
   /// Convert from an "exit count" (i.e. "backedge taken count") to a "trip
   /// count".  A "trip count" is the number of times the header of the loop
   /// will execute if an exit is taken after the specified number of backedges
   /// have been taken.  (e.g. TripCount = ExitCount + 1).  Note that the
-  /// expression can overflow if ExitCount = UINT_MAX.  \p Extend controls
-  /// how potential overflow is handled.  If true, a wider result type is
-  /// returned. ex: EC = 255 (i8), TC = 256 (i9).  If false, result unsigned
-  /// wraps with 2s-complement semantics.  ex: EC = 255 (i8), TC = 0 (i8)
-  const SCEV *getTripCountFromExitCount(const SCEV *ExitCount,
-                                        bool Extend = true);
+  /// expression can overflow if ExitCount = UINT_MAX.  If EvalTy is not wide
+  /// enough to hold the result without overflow, result unsigned wraps with
+  /// 2s-complement semantics.  ex: EC = 255 (i8), TC = 0 (i8)
+  const SCEV *getTripCountFromExitCount(const SCEV *ExitCount, Type *EvalTy,
+                                        const Loop *L);
 
   /// Returns the exact trip count of the loop if we can compute it, and
   /// the result is a small constant.  '0' is used to represent an unknown
@@ -962,7 +965,13 @@ public:
   /// (at every loop iteration).  It is, at the same time, the minimum number
   /// of times S is divisible by 2.  For example, given {4,+,8} it returns 2.
   /// If S is guaranteed to be 0, it returns the bitwidth of S.
-  uint32_t GetMinTrailingZeros(const SCEV *S);
+  uint32_t getMinTrailingZeros(const SCEV *S);
+
+  /// Returns the max constant multiple of S.
+  APInt getConstantMultiple(const SCEV *S);
+
+  // Returns the max constant multiple of S. If S is exactly 0, return 1.
+  APInt getNonZeroConstantMultiple(const SCEV *S);
 
   /// Determine the unsigned range for a particular SCEV.
   /// NOTE: This returns a copy of the reference returned by getRangeRef.
@@ -1431,14 +1440,14 @@ private:
   /// predicate by splitting it into a set of independent predicates.
   bool ProvingSplitPredicate = false;
 
-  /// Memoized values for the GetMinTrailingZeros
-  DenseMap<const SCEV *, uint32_t> MinTrailingZerosCache;
+  /// Memoized values for the getConstantMultiple
+  DenseMap<const SCEV *, APInt> ConstantMultipleCache;
 
   /// Return the Value set from which the SCEV expr is generated.
   ArrayRef<Value *> getSCEVValues(const SCEV *S);
 
-  /// Private helper method for the GetMinTrailingZeros method
-  uint32_t GetMinTrailingZerosImpl(const SCEV *S);
+  /// Private helper method for the getConstantMultiple method.
+  APInt getConstantMultipleImpl(const SCEV *S);
 
   /// Information about the number of times a particular loop exit may be
   /// reached before exiting the loop.

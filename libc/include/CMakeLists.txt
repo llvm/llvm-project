@@ -184,6 +184,7 @@ add_gen_header(
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.stdio_macros
     .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
 )
@@ -247,9 +248,13 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sched_macros
+    .llvm-libc-types.cpu_set_t
     .llvm-libc-types.pid_t
     .llvm-libc-types.size_t
-    .llvm-libc-types.cpu_set_t
+    .llvm-libc-types.struct_sched_param
+    # Needed according to posix standard
+    .llvm-libc-types.time_t
+    .llvm-libc-types.struct_timespec
 )
 
 add_gen_header(
@@ -383,6 +388,8 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_socket_macros
+    .llvm-libc-types.struct_sockaddr
+    .llvm-libc-types.sa_family_t
 )
 
 add_gen_header(
@@ -511,6 +518,11 @@ foreach(target IN LISTS all_install_header_targets)
   endif()
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_BINARY_DIR} ${header_file})
   get_filename_component(nested_dir ${relative_path} DIRECTORY)
+  # The GPU headers are installed to 'gpu-none-llvm/' to prevent shadowing the
+  # system headers.
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    set(nested_dir gpu-none-llvm/${nested_dir})
+  endif()
   install(FILES ${header_file}
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${nested_dir}
           COMPONENT libc-headers)

@@ -128,7 +128,9 @@ const int SIGSYS = 12;
 const int SIGBUS = 7;
 const int SIGSYS = 31;
 #endif
+#if SANITIZER_HAS_SIGINFO
 const int SI_TIMER = -2;
+#endif
 void *const MAP_FAILED = (void*)-1;
 #if SANITIZER_NETBSD
 const int PTHREAD_BARRIER_SERIAL_THREAD = 1234567;
@@ -592,58 +594,27 @@ TSAN_INTERCEPTOR(int, sigsetjmp, void *env);
 #define sigsetjmp_symname sigsetjmp
 #endif
 
-#define TSAN_INTERCEPTOR_SETJMP_(x) __interceptor_ ## x
-#define TSAN_INTERCEPTOR_SETJMP__(x) TSAN_INTERCEPTOR_SETJMP_(x)
-#define TSAN_INTERCEPTOR_SETJMP TSAN_INTERCEPTOR_SETJMP__(setjmp_symname)
-#define TSAN_INTERCEPTOR_SIGSETJMP TSAN_INTERCEPTOR_SETJMP__(sigsetjmp_symname)
-
-#define TSAN_STRING_SETJMP SANITIZER_STRINGIFY(setjmp_symname)
-#define TSAN_STRING_SIGSETJMP SANITIZER_STRINGIFY(sigsetjmp_symname)
-
-// Not called.  Merely to satisfy TSAN_INTERCEPT().
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-int TSAN_INTERCEPTOR_SETJMP(void *env);
-extern "C" int TSAN_INTERCEPTOR_SETJMP(void *env) {
-  CHECK(0);
-  return 0;
-}
-
-// FIXME: any reason to have a separate declaration?
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-int __interceptor__setjmp(void *env);
-extern "C" int __interceptor__setjmp(void *env) {
-  CHECK(0);
-  return 0;
-}
-
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-int TSAN_INTERCEPTOR_SIGSETJMP(void *env);
-extern "C" int TSAN_INTERCEPTOR_SIGSETJMP(void *env) {
-  CHECK(0);
-  return 0;
-}
-
-#if !SANITIZER_NETBSD
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-int __interceptor___sigsetjmp(void *env);
-extern "C" int __interceptor___sigsetjmp(void *env) {
-  CHECK(0);
-  return 0;
-}
-#endif
-
-extern "C" int setjmp_symname(void *env);
-extern "C" int _setjmp(void *env);
-extern "C" int sigsetjmp_symname(void *env);
-#if !SANITIZER_NETBSD
-extern "C" int __sigsetjmp(void *env);
-#endif
 DEFINE_REAL(int, setjmp_symname, void *env)
 DEFINE_REAL(int, _setjmp, void *env)
 DEFINE_REAL(int, sigsetjmp_symname, void *env)
 #if !SANITIZER_NETBSD
 DEFINE_REAL(int, __sigsetjmp, void *env)
 #endif
+
+// The real interceptor for setjmp is special, and implemented in pure asm. We
+// just need to initialize the REAL functions so that they can be used in asm.
+static void InitializeSetjmpInterceptors() {
+  // We can not use TSAN_INTERCEPT to get setjmp addr, because it does &setjmp and
+  // setjmp is not present in some versions of libc.
+  using __interception::InterceptFunction;
+  InterceptFunction(SANITIZER_STRINGIFY(setjmp_symname), (uptr*)&REAL(setjmp_symname), 0, 0);
+  InterceptFunction("_setjmp", (uptr*)&REAL(_setjmp), 0, 0);
+  InterceptFunction(SANITIZER_STRINGIFY(sigsetjmp_symname), (uptr*)&REAL(sigsetjmp_symname), 0,
+                    0);
+#if !SANITIZER_NETBSD
+  InterceptFunction("__sigsetjmp", (uptr*)&REAL(__sigsetjmp), 0, 0);
+#endif
+}
 #endif  // SANITIZER_APPLE
 
 #if SANITIZER_NETBSD
@@ -2497,11 +2468,21 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
     res;                                          \
   })
 
+// Ignore interceptors in OnLibraryLoaded()/Unloaded().  These hooks use code
+// (ListOfModules::init, MemoryMappingLayout::DumpListOfModules) that make
+// intercepted calls, which can cause deadlockes with ReportRace() which also
+// uses this code.
 #define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle) \
-  libignore()->OnLibraryLoaded(filename)
+  ({                                                        \
+    ScopedIgnoreInterceptors ignore_interceptors;           \
+    libignore()->OnLibraryLoaded(filename);                 \
+  })
 
-#define COMMON_INTERCEPTOR_LIBRARY_UNLOADED() \
-  libignore()->OnLibraryUnloaded()
+#define COMMON_INTERCEPTOR_LIBRARY_UNLOADED()     \
+  ({                                              \
+    ScopedIgnoreInterceptors ignore_interceptors; \
+    libignore()->OnLibraryUnloaded();             \
+  })
 
 #define COMMON_INTERCEPTOR_ACQUIRE(ctx, u) \
   Acquire(((TsanInterceptorContext *) ctx)->thr, pc, u)
@@ -2883,16 +2864,7 @@ void InitializeInterceptors() {
   InitializeLibdispatchInterceptors();
 
 #if !SANITIZER_APPLE
-  // We can not use TSAN_INTERCEPT to get setjmp addr,
-  // because it does &setjmp and setjmp is not present in some versions of libc.
-  using __interception::InterceptFunction;
-  InterceptFunction(TSAN_STRING_SETJMP, (uptr*)&REAL(setjmp_symname), 0, 0);
-  InterceptFunction("_setjmp", (uptr*)&REAL(_setjmp), 0, 0);
-  InterceptFunction(TSAN_STRING_SIGSETJMP, (uptr*)&REAL(sigsetjmp_symname), 0,
-                    0);
-#if !SANITIZER_NETBSD
-  InterceptFunction("__sigsetjmp", (uptr*)&REAL(__sigsetjmp), 0, 0);
-#endif
+  InitializeSetjmpInterceptors();
 #endif
 
   TSAN_INTERCEPT(longjmp_symname);

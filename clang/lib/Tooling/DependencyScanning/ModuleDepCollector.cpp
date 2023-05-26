@@ -100,6 +100,8 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   if (!CI.getLangOpts()->ModulesCodegen) {
     CI.getCodeGenOpts().DebugCompilationDir.clear();
     CI.getCodeGenOpts().CoverageCompilationDir.clear();
+    CI.getCodeGenOpts().CoverageDataFile.clear();
+    CI.getCodeGenOpts().CoverageNotesFile.clear();
   }
 
   // Map output paths that affect behaviour to "-" so their existence is in the
@@ -498,8 +500,7 @@ static void forEachSubmoduleSorted(const Module *M,
   // Submodule order depends on order of header includes for inferred submodules
   // we don't care about the exact order, so sort so that it's consistent across
   // TUs to improve sharing.
-  SmallVector<const Module *> Submodules(M->submodule_begin(),
-                                         M->submodule_end());
+  SmallVector<const Module *> Submodules(M->submodules());
   llvm::stable_sort(Submodules, [](const Module *A, const Module *B) {
     return A->Name < B->Name;
   });

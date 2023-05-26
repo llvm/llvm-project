@@ -830,6 +830,30 @@
 // CHECK-ARM-HF: "-dynamic-linker" "{{.*}}/lib/ld-linux-armhf.so.3"
 //
 // RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=loongarch64-linux-gnu \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONGARCH-LP64D %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=loongarch64-linux-gnuf64 \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONGARCH-LP64D %s
+// CHECK-LOONGARCH-LP64D: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LOONGARCH-LP64D: "-m" "elf64loongarch"
+// CHECK-LOONGARCH-LP64D: "-dynamic-linker" "{{.*}}/lib64/ld-linux-loongarch-lp64d.so.1"
+//
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=loongarch64-linux-gnuf32 \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONGARCH-LP64F %s
+// CHECK-LOONGARCH-LP64F: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LOONGARCH-LP64F: "-m" "elf64loongarch"
+// CHECK-LOONGARCH-LP64F: "-dynamic-linker" "{{.*}}/lib64/ld-linux-loongarch-lp64f.so.1"
+//
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=loongarch64-linux-gnusf \
+// RUN:   | FileCheck --check-prefix=CHECK-LOONGARCH-LP64S %s
+// CHECK-LOONGARCH-LP64S: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LOONGARCH-LP64S: "-m" "elf64loongarch"
+// CHECK-LOONGARCH-LP64S: "-dynamic-linker" "{{.*}}/lib64/ld-linux-loongarch-lp64s.so.1"
+//
+// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc64-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64 %s
 // CHECK-PPC64: "{{.*}}ld{{(.exe)?}}"
@@ -1046,16 +1070,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mipsel-linux-android -rtlib=platform --unwindlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mips64el-linux-android -rtlib=platform --unwindlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
-// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i686-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
@@ -1101,18 +1115,6 @@
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mipsel-linux-android -rtlib=platform --unwindlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:     -shared \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mips64el-linux-android -rtlib=platform --unwindlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:     -shared \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
-// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i686-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
@@ -1154,18 +1156,6 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm64-linux-android -rtlib=platform --unwindlib=platform \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:     -static \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mipsel-linux-android -rtlib=platform --unwindlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:     -static \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mips64el-linux-android -rtlib=platform --unwindlib=platform \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
@@ -1216,18 +1206,6 @@
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mipsel-linux-android -rtlib=platform --unwindlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:     -pie \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mips64el-linux-android -rtlib=platform --unwindlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:     -pie \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
-// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i686-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
@@ -1259,22 +1237,12 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-32 %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mipsel-linux-android \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-32 %s
-// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64-linux-android \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-64 %s
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm64-linux-android \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-64 %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mips64el-linux-android \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-64 %s
@@ -1313,15 +1281,6 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mipsel-linux-android -pthread \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mips64el-linux-android -pthread \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD %s
-// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i686-linux-android -pthread \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
@@ -1356,18 +1315,6 @@
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mipsel-linux-android -pthread \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:     -shared \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=mips64el-linux-android -pthread \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
-// RUN:     -shared \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD %s
-// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i686-linux-android -pthread \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
@@ -1387,6 +1334,29 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD-LINK %s
 // CHECK-ANDROID-PTHREAD-LINK-NOT: argument unused during compilation: '-pthread'
+//
+// Check linker invocation on a Debian LoongArch sysroot.
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=loongarch64-linux-gnu -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-LOONG64 %s
+//
+// Check that "-gnuf64" is seen as "-gnu" for loong64.
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=loongarch64-linux-gnuf64 -rtlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-ML-LOONG64 %s
+// CHECK-DEBIAN-ML-LOONG64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-DEBIAN-ML-LOONG64: "[[SYSROOT]]/usr/lib/loongarch64-linux-gnu/crt1.o"
+// CHECK-DEBIAN-ML-LOONG64: "[[SYSROOT]]/usr/lib/loongarch64-linux-gnu/crti.o"
+// CHECK-DEBIAN-ML-LOONG64: "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/crtbegin.o"
+// CHECK-DEBIAN-ML-LOONG64: "-L[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13"
+// CHECK-DEBIAN-ML-LOONG64: "-L[[SYSROOT]]/usr/lib/loongarch64-linux-gnu"
+// CHECK-DEBIAN-ML-LOONG64: "-L[[SYSROOT]]/usr/lib"
+// CHECK-DEBIAN-ML-LOONG64: "[[SYSROOT]]/usr/lib/gcc/loongarch64-linux-gnu/13/crtend.o"
+// CHECK-DEBIAN-ML-LOONG64: "[[SYSROOT]]/usr/lib/loongarch64-linux-gnu/crtn.o"
 //
 // Check linker invocation on Debian 6 MIPS 32/64-bit.
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -1821,15 +1791,14 @@
 // CHECK-LD-GENTOO-X32: "-lc"
 // CHECK-LD-GENTOO-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -no-pie -fuse-ld=ld 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     --gcc-toolchain="%S/Inputs/rhel_7_tree/opt/rh/devtoolset-7/root/usr" \
-// RUN:     --sysroot=%S/Inputs/rhel_7_tree \
+// RUN:     --sysroot="%S/Inputs/rhel_7_tree/opt/rh/devtoolset-7/root" \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RHEL7-DTS %s
-// CHECK-LD-RHEL7-DTS: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-LD-RHLE7-DTS: Selected GCC installation: [[GCC_INSTALL:[[SYSROOT]]/lib/gcc/x86_64-redhat-linux/7]]
+// CHECK-LD-RHEL7-DTS: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-LD-RHEL7-DTS-NOT: /usr/bin/ld
-// CHECK-LD-RHLE7-DTS: [[GCC_INSTALL]/../../../bin/ld
+// CHECK-LD-RHEL7-DTS: [[SYSROOT]]/usr/lib/gcc/x86_64-redhat-linux/7/../../../../bin/ld
 
 // Check whether gcc7 install works fine on Amazon Linux AMI
 // RUN: %clang -### %s -no-pie 2>&1 \

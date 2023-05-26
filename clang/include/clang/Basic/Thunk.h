@@ -26,7 +26,7 @@ class CXXMethodDecl;
 struct ReturnAdjustment {
   /// The non-virtual adjustment from the derived object to its
   /// nearest virtual base.
-  int64_t NonVirtual;
+  int64_t NonVirtual = 0;
 
   /// Holds the ABI-specific information about the virtual return
   /// adjustment, if needed.
@@ -64,7 +64,7 @@ struct ReturnAdjustment {
     }
   } Virtual;
 
-  ReturnAdjustment() : NonVirtual(0) {}
+  ReturnAdjustment() = default;
 
   bool isEmpty() const { return !NonVirtual && Virtual.isEmpty(); }
 
@@ -91,7 +91,7 @@ struct ReturnAdjustment {
 struct ThisAdjustment {
   /// The non-virtual adjustment from the derived object to its
   /// nearest virtual base.
-  int64_t NonVirtual;
+  int64_t NonVirtual = 0;
 
   /// Holds the ABI-specific information about the virtual this
   /// adjustment, if needed.
@@ -131,7 +131,7 @@ struct ThisAdjustment {
     }
   } Virtual;
 
-  ThisAdjustment() : NonVirtual(0) {}
+  ThisAdjustment() = default;
 
   bool isEmpty() const { return !NonVirtual && Virtual.isEmpty(); }
 

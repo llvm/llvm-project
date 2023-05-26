@@ -580,8 +580,6 @@ define void @masked_gather_v2f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-NEXT:    mov w8, v1.s[1]
 ; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0

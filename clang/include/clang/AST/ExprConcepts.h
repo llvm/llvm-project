@@ -64,6 +64,7 @@ protected:
                             const ConstraintSatisfaction *Satisfaction);
 
   ConceptSpecializationExpr(const ASTContext &C, ConceptDecl *NamedConcept,
+                            const ASTTemplateArgumentListInfo *ArgsAsWritten,
                             ImplicitConceptSpecializationDecl *SpecDecl,
                             const ConstraintSatisfaction *Satisfaction,
                             bool Dependent,
@@ -81,6 +82,7 @@ public:
 
   static ConceptSpecializationExpr *
   Create(const ASTContext &C, ConceptDecl *NamedConcept,
+         const ASTTemplateArgumentListInfo *ArgsAsWritten,
          ImplicitConceptSpecializationDecl *SpecDecl,
          const ConstraintSatisfaction *Satisfaction, bool Dependent,
          bool ContainsUnexpandedParameterPack);

@@ -158,7 +158,7 @@ void EPCGenericJITLinkMemoryManager::completeAllocation(
     auto &SegInfo = SegInfos[AG];
     SegInfo.ContentSize = Seg.ContentSize;
     SegInfo.ZeroFillSize = Seg.ZeroFillSize;
-    SegInfo.Addr = ExecutorAddr(Seg.Addr);
+    SegInfo.Addr = Seg.Addr;
     SegInfo.WorkingMem = Seg.WorkingMem;
   }
 

@@ -76,18 +76,16 @@ define <2 x i32> @utest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [9223372039002259456,9223372039002259456]
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259455,9223372039002259455]
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    pcmpgtd %xmm2, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    pand %xmm3, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-NEXT:    por %xmm0, %xmm2
-; CHECK-NEXT:    pand %xmm2, %xmm1
-; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; CHECK-NEXT:    por %xmm1, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptoui <2 x double> %x to <2 x i64>
@@ -276,31 +274,27 @@ define <4 x i32> @utest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [9223372039002259456,9223372039002259456]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm4
 ; CHECK-NEXT:    pxor %xmm3, %xmm4
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm3, %xmm5
-; CHECK-NEXT:    movdqa {{.*#+}} xmm6 = [9223372039002259455,9223372039002259455]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm6 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    movdqa %xmm6, %xmm7
-; CHECK-NEXT:    pcmpgtd %xmm4, %xmm7
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm7[0,0,2,2]
-; CHECK-NEXT:    pand %xmm5, %xmm4
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm7[1,1,3,3]
-; CHECK-NEXT:    por %xmm4, %xmm5
-; CHECK-NEXT:    pand %xmm5, %xmm0
-; CHECK-NEXT:    pandn %xmm2, %xmm5
-; CHECK-NEXT:    por %xmm0, %xmm5
+; CHECK-NEXT:    pcmpgtd %xmm5, %xmm7
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm3, %xmm4
+; CHECK-NEXT:    pand %xmm7, %xmm4
+; CHECK-NEXT:    pand %xmm4, %xmm0
+; CHECK-NEXT:    pandn %xmm2, %xmm4
+; CHECK-NEXT:    por %xmm0, %xmm4
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    pxor %xmm3, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm3, %xmm4
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm6
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,2,2]
-; CHECK-NEXT:    pand %xmm4, %xmm3
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[1,1,3,3]
-; CHECK-NEXT:    por %xmm3, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[0,0,2,2]
+; CHECK-NEXT:    pcmpgtd %xmm5, %xmm6
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm3, %xmm0
+; CHECK-NEXT:    pand %xmm6, %xmm0
 ; CHECK-NEXT:    pand %xmm0, %xmm1
 ; CHECK-NEXT:    pandn %xmm2, %xmm0
 ; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm5[0,2]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm4[0,2]
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptoui <4 x float> %x to <4 x i64>
@@ -560,33 +554,28 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm3
 ; CHECK-NEXT:    pxor %xmm2, %xmm3
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm4
-; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [9223372039002259455,9223372039002259455]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
-; CHECK-NEXT:    pcmpgtd %xmm3, %xmm6
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,2,2]
-; CHECK-NEXT:    pand %xmm4, %xmm3
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[1,1,3,3]
-; CHECK-NEXT:    por %xmm3, %xmm4
-; CHECK-NEXT:    pand %xmm4, %xmm0
-; CHECK-NEXT:    pandn %xmm1, %xmm4
-; CHECK-NEXT:    por %xmm0, %xmm4
+; CHECK-NEXT:    pcmpgtd %xmm4, %xmm6
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm3
+; CHECK-NEXT:    pand %xmm6, %xmm3
+; CHECK-NEXT:    pand %xmm3, %xmm0
+; CHECK-NEXT:    pandn %xmm1, %xmm3
+; CHECK-NEXT:    por %xmm0, %xmm3
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
 ; CHECK-NEXT:    movdqa %xmm6, %xmm0
 ; CHECK-NEXT:    pxor %xmm2, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm3
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm5
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm5[0,0,2,2]
-; CHECK-NEXT:    pand %xmm3, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,3,3]
-; CHECK-NEXT:    por %xmm2, %xmm0
-; CHECK-NEXT:    movdqa %xmm6, %xmm2
-; CHECK-NEXT:    pand %xmm0, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[0,0,2,2]
+; CHECK-NEXT:    pcmpgtd %xmm4, %xmm5
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm0
+; CHECK-NEXT:    pand %xmm5, %xmm0
+; CHECK-NEXT:    pand %xmm0, %xmm6
 ; CHECK-NEXT:    pandn %xmm1, %xmm0
-; CHECK-NEXT:    por %xmm2, %xmm0
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm4[0,2]
+; CHECK-NEXT:    por %xmm6, %xmm0
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
 ; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -1661,18 +1650,16 @@ define <2 x i32> @utest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [9223372039002259456,9223372039002259456]
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259455,9223372039002259455]
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [2147483647,2147483647,2147483647,2147483647]
+; CHECK-NEXT:    pcmpgtd %xmm2, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    pand %xmm3, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-NEXT:    por %xmm0, %xmm2
-; CHECK-NEXT:    pand %xmm2, %xmm1
-; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; CHECK-NEXT:    por %xmm1, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptoui <2 x double> %x to <2 x i64>
@@ -1855,32 +1842,28 @@ define <4 x i32> @utest_f32i32_mm(<4 x float> %x) {
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm3
 ; CHECK-NEXT:    pxor %xmm2, %xmm3
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm4
-; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [9223372039002259455,9223372039002259455]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm6
-; CHECK-NEXT:    pcmpgtd %xmm3, %xmm6
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,2,2]
-; CHECK-NEXT:    pand %xmm4, %xmm3
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[1,1,3,3]
-; CHECK-NEXT:    por %xmm3, %xmm4
-; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [4294967295,4294967295]
-; CHECK-NEXT:    pand %xmm4, %xmm0
-; CHECK-NEXT:    pandn %xmm3, %xmm4
-; CHECK-NEXT:    por %xmm0, %xmm4
+; CHECK-NEXT:    pcmpgtd %xmm4, %xmm6
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm3
+; CHECK-NEXT:    pand %xmm6, %xmm3
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [4294967295,4294967295]
+; CHECK-NEXT:    pand %xmm3, %xmm0
+; CHECK-NEXT:    pandn %xmm4, %xmm3
+; CHECK-NEXT:    por %xmm0, %xmm3
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    pxor %xmm2, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm6 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm6
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm5
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm5[0,0,2,2]
-; CHECK-NEXT:    pand %xmm6, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,3,3]
-; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm6 = xmm0[0,0,2,2]
+; CHECK-NEXT:    pcmpgtd %xmm6, %xmm5
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm0
+; CHECK-NEXT:    pand %xmm5, %xmm0
 ; CHECK-NEXT:    pand %xmm0, %xmm1
-; CHECK-NEXT:    pandn %xmm3, %xmm0
+; CHECK-NEXT:    pandn %xmm4, %xmm0
 ; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm4[0,2]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptoui <4 x float> %x to <4 x i64>
@@ -2134,34 +2117,29 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259456,9223372039002259456]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    pxor %xmm1, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm3
-; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [9223372039002259455,9223372039002259455]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    movdqa %xmm4, %xmm5
-; CHECK-NEXT:    pcmpgtd %xmm2, %xmm5
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm5[0,0,2,2]
-; CHECK-NEXT:    pand %xmm3, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[1,1,3,3]
-; CHECK-NEXT:    por %xmm2, %xmm3
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,4294967295]
-; CHECK-NEXT:    pand %xmm3, %xmm0
-; CHECK-NEXT:    pandn %xmm2, %xmm3
-; CHECK-NEXT:    por %xmm0, %xmm3
+; CHECK-NEXT:    pcmpgtd %xmm3, %xmm5
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm2
+; CHECK-NEXT:    pand %xmm5, %xmm2
+; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [4294967295,4294967295]
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    pandn %xmm3, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
 ; CHECK-NEXT:    movdqa %xmm6, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm5
-; CHECK-NEXT:    pcmpgtd %xmm0, %xmm4
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[0,0,2,2]
-; CHECK-NEXT:    pand %xmm5, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,3,3]
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    movdqa %xmm6, %xmm1
-; CHECK-NEXT:    pand %xmm0, %xmm1
-; CHECK-NEXT:    pandn %xmm2, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[0,0,2,2]
+; CHECK-NEXT:    pcmpgtd %xmm5, %xmm4
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm4, %xmm0
+; CHECK-NEXT:    pand %xmm0, %xmm6
+; CHECK-NEXT:    pandn %xmm3, %xmm0
+; CHECK-NEXT:    por %xmm6, %xmm0
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
 ; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

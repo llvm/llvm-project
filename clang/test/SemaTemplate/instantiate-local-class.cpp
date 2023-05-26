@@ -473,7 +473,8 @@ namespace rdar23721638 {
   template <typename T> void bar() {
     auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}} \
                                    // expected-note  {{in instantiation of default function argument expression for 'operator()<rdar23721638::A>' required here}} \
-                                   // expected-note  {{passing argument to parameter 'a' here}}
+                                   // expected-note  {{passing argument to parameter 'a' here}} \
+                                   // expected-note {{while substituting into a lambda}}
     lambda();
   }
   template void bar<A>(); // expected-note {{in instantiation}}
@@ -496,6 +497,7 @@ namespace PR45000 {
   // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'std::nullptr_t'}}
   // expected-note@-2  {{in instantiation of default function argument expression for 'operator()<int>' required here}}
   // expected-note@-3  {{passing argument to parameter 'x' here}}
+  // expected-note@-4  {{while substituting into a lambda}}
 
   void g() { f<int>(); }
   // expected-note@-1 {{in instantiation of default function argument expression for 'f<int>' required here}}

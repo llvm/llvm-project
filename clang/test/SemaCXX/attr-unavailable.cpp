@@ -172,3 +172,13 @@ int phase_one_unavailable(int x = unavailable_int()) {}
 
 template <class T>
 int phase_one_unavailable2(int x = unavailable_int()) __attribute__((unavailable)) {}
+
+namespace GH61815 {
+template <class _ValueType = int>
+class __attribute__((unavailable)) polymorphic_allocator {}; // expected-note 2 {{'polymorphic_allocator<void>' has been explicitly marked unavailable here}}
+
+void f() {
+  polymorphic_allocator<void> a; // expected-error {{'polymorphic_allocator<void>' is unavailable}}
+  polymorphic_allocator<void> b; // expected-error {{'polymorphic_allocator<void>' is unavailable}}
+}
+}

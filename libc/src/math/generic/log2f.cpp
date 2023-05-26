@@ -54,50 +54,50 @@
 namespace __llvm_libc {
 
 // Lookup table for log2(f) = log2(1 + n*2^(-7)) where n = 0..127.
-static constexpr double LOG2_F[128] = {
-    0x0.0000000000000p+0, 0x1.6fe50b6ef0851p-7, 0x1.6e79685c2d22ap-6,
-    0x1.11cd1d5133413p-5, 0x1.6bad3758efd87p-5, 0x1.c4dfab90aab5fp-5,
-    0x1.0eb389fa29f9bp-4, 0x1.3aa2fdd27f1c3p-4, 0x1.663f6fac91316p-4,
-    0x1.918a16e46335bp-4, 0x1.bc84240adabbap-4, 0x1.e72ec117fa5b2p-4,
-    0x1.08c588cda79e4p-3, 0x1.1dcd197552b7bp-3, 0x1.32ae9e278ae1ap-3,
-    0x1.476a9f983f74dp-3, 0x1.5c01a39fbd688p-3, 0x1.70742d4ef027fp-3,
-    0x1.84c2bd02f03b3p-3, 0x1.98edd077e70dfp-3, 0x1.acf5e2db4ec94p-3,
-    0x1.c0db6cdd94deep-3, 0x1.d49ee4c325970p-3, 0x1.e840be74e6a4dp-3,
-    0x1.fbc16b902680ap-3, 0x1.0790adbb03009p-2, 0x1.11307dad30b76p-2,
-    0x1.1ac05b291f070p-2, 0x1.24407ab0e073ap-2, 0x1.2db10fc4d9aafp-2,
-    0x1.37124cea4cdedp-2, 0x1.406463b1b0449p-2, 0x1.49a784bcd1b8bp-2,
-    0x1.52dbdfc4c96b3p-2, 0x1.5c01a39fbd688p-2, 0x1.6518fe4677ba7p-2,
-    0x1.6e221cd9d0cdep-2, 0x1.771d2ba7efb3cp-2, 0x1.800a563161c54p-2,
-    0x1.88e9c72e0b226p-2, 0x1.91bba891f1709p-2, 0x1.9a802391e232fp-2,
-    0x1.a33760a7f6051p-2, 0x1.abe18797f1f49p-2, 0x1.b47ebf73882a1p-2,
-    0x1.bd0f2e9e79031p-2, 0x1.c592fad295b56p-2, 0x1.ce0a4923a587dp-2,
-    0x1.d6753e032ea0fp-2, 0x1.ded3fd442364cp-2, 0x1.e726aa1e754d2p-2,
-    0x1.ef6d67328e220p-2, 0x1.f7a8568cb06cfp-2, 0x1.ffd799a83ff9bp-2,
-    0x1.03fda8b97997fp-1, 0x1.0809cf27f703dp-1, 0x1.0c10500d63aa6p-1,
-    0x1.10113b153c8eap-1, 0x1.140c9faa1e544p-1, 0x1.18028cf72976ap-1,
-    0x1.1bf311e95d00ep-1, 0x1.1fde3d30e8126p-1, 0x1.23c41d42727c8p-1,
-    0x1.27a4c0585cbf8p-1, 0x1.2b803473f7ad1p-1, 0x1.2f56875eb3f26p-1,
-    0x1.3327c6ab49ca7p-1, 0x1.36f3ffb6d9162p-1, 0x1.3abb3faa02167p-1,
-    0x1.3e7d9379f7016p-1, 0x1.423b07e986aa9p-1, 0x1.45f3a98a20739p-1,
-    0x1.49a784bcd1b8bp-1, 0x1.4d56a5b33cec4p-1, 0x1.510118708a8f9p-1,
-    0x1.54a6e8ca5438ep-1, 0x1.5848226989d34p-1, 0x1.5be4d0cb51435p-1,
-    0x1.5f7cff41e09afp-1, 0x1.6310b8f553048p-1, 0x1.66a008e4788ccp-1,
-    0x1.6a2af9e5a0f0ap-1, 0x1.6db196a76194ap-1, 0x1.7133e9b156c7cp-1,
-    0x1.74b1fd64e0754p-1, 0x1.782bdbfdda657p-1, 0x1.7ba18f93502e4p-1,
-    0x1.7f1322182cf16p-1, 0x1.82809d5be7073p-1, 0x1.85ea0b0b27b26p-1,
-    0x1.894f74b06ef8bp-1, 0x1.8cb0e3b4b3bbep-1, 0x1.900e6160002cdp-1,
-    0x1.9367f6da0ab2fp-1, 0x1.96bdad2acb5f6p-1, 0x1.9a0f8d3b0e050p-1,
-    0x1.9d5d9fd5010b3p-1, 0x1.a0a7eda4c112dp-1, 0x1.a3ee7f38e181fp-1,
-    0x1.a7315d02f20c8p-1, 0x1.aa708f58014d3p-1, 0x1.adac1e711c833p-1,
-    0x1.b0e4126bcc86cp-1, 0x1.b418734a9008cp-1, 0x1.b74948f5532dap-1,
-    0x1.ba769b39e4964p-1, 0x1.bda071cc67e6ep-1, 0x1.c0c6d447c5dd3p-1,
-    0x1.c3e9ca2e1a055p-1, 0x1.c7095ae91e1c7p-1, 0x1.ca258dca93316p-1,
-    0x1.cd3e6a0ca8907p-1, 0x1.d053f6d260896p-1, 0x1.d3663b27f31d5p-1,
-    0x1.d6753e032ea0fp-1, 0x1.d9810643d6615p-1, 0x1.dc899ab3ff56cp-1,
-    0x1.df8f02086af2cp-1, 0x1.e29142e0e0140p-1, 0x1.e59063c8822cep-1,
-    0x1.e88c6b3626a73p-1, 0x1.eb855f8ca88fbp-1, 0x1.ee7b471b3a950p-1,
-    0x1.f16e281db7630p-1, 0x1.f45e08bcf0655p-1, 0x1.f74aef0efafaep-1,
-    0x1.fa34e1177c233p-1, 0x1.fd1be4c7f2af9p-1};
+static constexpr double LOG2_R[128] = {
+    0x0.0000000000000p+0, 0x1.72c7ba20f7327p-7, 0x1.743ee861f3556p-6,
+    0x1.184b8e4c56af8p-5, 0x1.77394c9d958d5p-5, 0x1.d6ebd1f1febfep-5,
+    0x1.1bb32a600549dp-4, 0x1.4c560fe68af88p-4, 0x1.7d60496cfbb4cp-4,
+    0x1.960caf9abb7cap-4, 0x1.c7b528b70f1c5p-4, 0x1.f9c95dc1d1165p-4,
+    0x1.097e38ce60649p-3, 0x1.22dadc2ab3497p-3, 0x1.3c6fb650cde51p-3,
+    0x1.494f863b8df35p-3, 0x1.633a8bf437ce1p-3, 0x1.7046031c79f85p-3,
+    0x1.8a8980abfbd32p-3, 0x1.97c1cb13c7ec1p-3, 0x1.b2602497d5346p-3,
+    0x1.bfc67a7fff4ccp-3, 0x1.dac22d3e441d3p-3, 0x1.e857d3d361368p-3,
+    0x1.01d9bbcfa61d4p-2, 0x1.08bce0d95fa38p-2, 0x1.169c05363f158p-2,
+    0x1.1d982c9d52708p-2, 0x1.249cd2b13cd6cp-2, 0x1.32bfee370ee68p-2,
+    0x1.39de8e1559f6fp-2, 0x1.4106017c3eca3p-2, 0x1.4f6fbb2cec598p-2,
+    0x1.56b22e6b578e5p-2, 0x1.5dfdcf1eeae0ep-2, 0x1.6552b49986277p-2,
+    0x1.6cb0f6865c8eap-2, 0x1.7b89f02cf2aadp-2, 0x1.8304d90c11fd3p-2,
+    0x1.8a8980abfbd32p-2, 0x1.921800924dd3bp-2, 0x1.99b072a96c6b2p-2,
+    0x1.a8ff971810a5ep-2, 0x1.b0b67f4f4681p-2,  0x1.b877c57b1b07p-2,
+    0x1.c043859e2fdb3p-2, 0x1.c819dc2d45fe4p-2, 0x1.cffae611ad12bp-2,
+    0x1.d7e6c0abc3579p-2, 0x1.dfdd89d586e2bp-2, 0x1.e7df5fe538ab3p-2,
+    0x1.efec61b011f85p-2, 0x1.f804ae8d0cd02p-2, 0x1.0014332be0033p-1,
+    0x1.042bd4b9a7c99p-1, 0x1.08494c66b8efp-1,  0x1.0c6caaf0c5597p-1,
+    0x1.1096015dee4dap-1, 0x1.14c560fe68af9p-1, 0x1.18fadb6e2d3c2p-1,
+    0x1.1d368296b5255p-1, 0x1.217868b0c37e8p-1, 0x1.25c0a0463bebp-1,
+    0x1.2a0f3c340705cp-1, 0x1.2e644fac04fd8p-1, 0x1.2e644fac04fd8p-1,
+    0x1.32bfee370ee68p-1, 0x1.37222bb70747cp-1, 0x1.3b8b1c68fa6edp-1,
+    0x1.3ffad4e74f1d6p-1, 0x1.44716a2c08262p-1, 0x1.44716a2c08262p-1,
+    0x1.48eef19317991p-1, 0x1.4d7380dcc422dp-1, 0x1.51ff2e30214bcp-1,
+    0x1.5692101d9b4a6p-1, 0x1.5b2c3da19723bp-1, 0x1.5b2c3da19723bp-1,
+    0x1.5fcdce2727ddbp-1, 0x1.6476d98ad990ap-1, 0x1.6927781d932a8p-1,
+    0x1.6927781d932a8p-1, 0x1.6ddfc2a78fc63p-1, 0x1.729fd26b707c8p-1,
+    0x1.7767c12967a45p-1, 0x1.7767c12967a45p-1, 0x1.7c37a9227e7fbp-1,
+    0x1.810fa51bf65fdp-1, 0x1.810fa51bf65fdp-1, 0x1.85efd062c656dp-1,
+    0x1.8ad846cf369a4p-1, 0x1.8ad846cf369a4p-1, 0x1.8fc924c89ac84p-1,
+    0x1.94c287492c4dbp-1, 0x1.94c287492c4dbp-1, 0x1.99c48be2063c8p-1,
+    0x1.9ecf50bf43f13p-1, 0x1.9ecf50bf43f13p-1, 0x1.a3e2f4ac43f6p-1,
+    0x1.a8ff971810a5ep-1, 0x1.a8ff971810a5ep-1, 0x1.ae255819f022dp-1,
+    0x1.b35458761d479p-1, 0x1.b35458761d479p-1, 0x1.b88cb9a2ab521p-1,
+    0x1.b88cb9a2ab521p-1, 0x1.bdce9dcc96187p-1, 0x1.c31a27dd00b4ap-1,
+    0x1.c31a27dd00b4ap-1, 0x1.c86f7b7ea4a89p-1, 0x1.c86f7b7ea4a89p-1,
+    0x1.cdcebd2373995p-1, 0x1.d338120a6dd9dp-1, 0x1.d338120a6dd9dp-1,
+    0x1.d8aba045b01c8p-1, 0x1.d8aba045b01c8p-1, 0x1.de298ec0bac0dp-1,
+    0x1.de298ec0bac0dp-1, 0x1.e3b20546f554ap-1, 0x1.e3b20546f554ap-1,
+    0x1.e9452c8a71028p-1, 0x1.e9452c8a71028p-1, 0x1.eee32e2aeccbfp-1,
+    0x1.eee32e2aeccbfp-1, 0x1.f48c34bd1e96fp-1, 0x1.f48c34bd1e96fp-1,
+    0x1.fa406bd2443dfp-1, 0x1.0000000000000p0};
 
 LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -107,16 +107,11 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   // Hard to round value(s).
   using fputil::round_result_slightly_up;
 
-  switch (x_u) {
-  case 0x3f7d57f5U: // x = 0x1.faafeap-1
-    return round_result_slightly_up(-0x1.ed1c34p-7f);
-  case 0x3f7e3274U: // x = 0x1.fc64e8p-1f
-    return round_result_slightly_up(-0x1.4e1d16p-7f);
-  case 0x3f81d0b5U: // x = 0x1.03a16ap0f
-    return round_result_slightly_up(0x1.4cdc4cp-6f);
-  }
-
   int m = -FPBits::EXPONENT_BIAS;
+
+  // log2(1.0f) = 0.0f.
+  if (LIBC_UNLIKELY(x_u == 0x3f80'0000U))
+    return 0.0f;
 
   // Exceptional inputs.
   if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL || x_u > FPBits::MAX_NORMAL)) {
@@ -139,31 +134,32 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   }
 
   m += xbits.get_unbiased_exponent();
-  int f_index = xbits.get_mantissa() >> 16;
+  int index = xbits.get_mantissa() >> 16;
   // Set bits to 1.m
   xbits.set_unbiased_exponent(0x7F);
-  // Get the 8 highest bits, use 7 bits (excluding the implicit hidden bit) for
-  // lookup tables.
 
-  FPBits f = xbits;
-  // Clear the lowest 16 bits.
-  f.bits &= ~0x0000'FFFF;
+  float u = static_cast<float>(xbits);
+  double v;
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+  v = static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.
+#else
+  v = fputil::multiply_add(static_cast<double>(u), RD[index], -1.0); // Exact
+#endif // LIBC_TARGET_CPU_HAS_FMA
 
-  double d = static_cast<float>(xbits) - static_cast<float>(f);
-  d *= ONE_OVER_F[f_index];
+  double extra_factor = static_cast<double>(m) + LOG2_R[index];
 
-  double extra_factor = static_cast<double>(m) + LOG2_F[f_index];
+  // Degree-5 polynomial approximation of log2 generated by Sollya with:
+  // > P = fpminimax(log2(1 + x)/x, 4, [|1, D...|], [-2^-8, 2^-7]);
+  constexpr double COEFFS[5] = {0x1.71547652b8133p0, -0x1.71547652d1e33p-1,
+                                0x1.ec70a098473dep-2, -0x1.7154c5ccdf121p-2,
+                                0x1.2514fd90a130ap-2};
 
-  const double COEFFS[5] = {0x1.71547652bd4fp+0, -0x1.7154769b978c7p-1,
-                            0x1.ec71a99e349c8p-2, -0x1.720d90e6aac6cp-2,
-                            0x1.5132da3583dap-2};
+  double vsq = v * v; // Exact
+  double c0 = fputil::multiply_add(v, COEFFS[0], extra_factor);
+  double c1 = fputil::multiply_add(v, COEFFS[2], COEFFS[1]);
+  double c2 = fputil::multiply_add(v, COEFFS[4], COEFFS[3]);
 
-  double dsq = d * d;
-  double c0 = fputil::multiply_add(d, COEFFS[0], extra_factor);
-  double c1 = fputil::multiply_add(d, COEFFS[2], COEFFS[1]);
-  double c2 = fputil::multiply_add(d, COEFFS[4], COEFFS[3]);
-
-  double r = fputil::polyeval(dsq, c0, c1, c2);
+  double r = fputil::polyeval(vsq, c0, c1, c2);
 
   return static_cast<float>(r);
 }

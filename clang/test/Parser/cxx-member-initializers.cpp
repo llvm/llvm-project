@@ -108,4 +108,9 @@ class G {
   // expected-error@-2 {{type name requires a specifier or qualifier}}
   // expected-error@-3 {{expected '>'}}
   // expected-note@-4 {{to match this '<'}}
+
+  void n(int x = 1 ? 2) {}
+  // expected-error@-1 {{expected ':'}}
+  // expected-note@-2 {{to match this '?'}}
+  // expected-error@-3 {{expected expression}}
 };

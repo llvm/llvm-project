@@ -119,7 +119,7 @@ namespace llvm {
   /// A ScheduleDAG for scheduling lists of MachineInstr.
   class ScheduleDAGInstrs : public ScheduleDAG {
   protected:
-    const MachineLoopInfo *MLI;
+    const MachineLoopInfo *MLI = nullptr;
     const MachineFrameInfo &MFI;
 
     /// TargetSchedModel provides an interface to the machine model.
@@ -143,7 +143,7 @@ namespace llvm {
     // ------------------------------------------------
 
     /// The block in which to insert instructions
-    MachineBasicBlock *BB;
+    MachineBasicBlock *BB = nullptr;
 
     /// The beginning of the range to be scheduled.
     MachineBasicBlock::iterator RegionBegin;
@@ -152,7 +152,7 @@ namespace llvm {
     MachineBasicBlock::iterator RegionEnd;
 
     /// Instructions in this region (distance(RegionBegin, RegionEnd)).
-    unsigned NumRegionInstrs;
+    unsigned NumRegionInstrs = 0;
 
     /// After calling BuildSchedGraph, each machine instruction in the current
     /// scheduling region is mapped to an SUnit.

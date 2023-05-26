@@ -33,5 +33,6 @@ def libc_test(name, srcs, libc_function_deps, deps = [], **kwargs):
             "//libc/test/UnitTest:LibcUnitTest",
         ] + deps,
         features = ["-link_llvmlibc"],  # Do not link libllvmlibc.a
+        linkstatic = 1,
         **kwargs
     )

@@ -218,6 +218,8 @@ add_object_library(
     rand_util.cpp
   HDRS
     rand_util.h
+  DEPENDS
+    libc.src.__support.common
 )
 
 add_entrypoint_object(
@@ -313,9 +315,13 @@ endif()
 
 add_entrypoint_object(
   _Exit
-  ALIAS
+  SRCS
+    _Exit.cpp
+  HDRS
+    _Exit.h
   DEPENDS
-    .${LIBC_TARGET_OS}._Exit
+    libc.include.stdlib
+    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(
@@ -341,6 +347,7 @@ add_entrypoint_object(
   DEPENDS
     ._Exit
     .atexit
+    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(

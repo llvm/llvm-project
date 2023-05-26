@@ -605,7 +605,7 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
         if (reg_info) {
           RegisterValue reg_value;
           if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-            DumpRegisterValue(reg_value, &s, reg_info, false, false, format);
+            DumpRegisterValue(reg_value, s, *reg_info, false, false, format);
             return true;
           }
         }
@@ -985,7 +985,7 @@ static bool DumpRegister(Stream &s, StackFrame *frame, const char *reg_name,
       if (reg_info) {
         RegisterValue reg_value;
         if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-          DumpRegisterValue(reg_value, &s, reg_info, false, false, format);
+          DumpRegisterValue(reg_value, s, *reg_info, false, false, format);
           return true;
         }
       }
@@ -1008,7 +1008,7 @@ static bool FormatThreadExtendedInfoRecurse(
       const char *token_format = "0x%4.4" PRIx64;
       if (!entry.printf_format.empty())
         token_format = entry.printf_format.c_str();
-      s.Printf(token_format, value->GetAsInteger()->GetValue());
+      s.Printf(token_format, value->GetUnsignedIntegerValue());
       return true;
     } else if (value->GetType() == eStructuredDataTypeFloat) {
       s.Printf("%f", value->GetAsFloat()->GetValue());

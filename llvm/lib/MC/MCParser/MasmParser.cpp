@@ -1618,19 +1618,7 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // Parse symbol variant.
     std::pair<StringRef, StringRef> Split;
     if (!MAI.useParensForSymbolVariant()) {
-      if (FirstTokenKind == AsmToken::String) {
-        if (Lexer.is(AsmToken::At)) {
-          Lex(); // eat @
-          SMLoc AtLoc = getLexer().getLoc();
-          StringRef VName;
-          if (parseIdentifier(VName))
-            return Error(AtLoc, "expected symbol variant after '@'");
-
-          Split = std::make_pair(Identifier, VName);
-        }
-      } else {
-        Split = Identifier.split('@');
-      }
+      Split = Identifier.split('@');
     } else if (Lexer.is(AsmToken::LParen)) {
       Lex(); // eat '('.
       StringRef VName;
@@ -4549,7 +4537,7 @@ bool MasmParser::parseDirectiveStruct(StringRef Directive,
                                      "' directive; expected none or NONUNIQUE");
   }
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in '" + Twine(Directive) + "' directive");
 
   StructInProgress.emplace_back(Name, DirKind == DK_UNION, AlignmentValue);
@@ -4571,7 +4559,7 @@ bool MasmParser::parseDirectiveNestedStruct(StringRef Directive,
     Name = getTok().getIdentifier();
     parseToken(AsmToken::Identifier);
   }
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in '" + Twine(Directive) + "' directive");
 
   // Reserve space to ensure Alignment doesn't get invalidated when
@@ -4597,7 +4585,7 @@ bool MasmParser::parseDirectiveEnds(StringRef Name, SMLoc NameLoc) {
       Structure.Size, std::min(Structure.Alignment, Structure.AlignmentSize));
   Structs[Name.lower()] = Structure;
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in ENDS directive");
 
   return false;
@@ -4609,7 +4597,7 @@ bool MasmParser::parseDirectiveNestedEnds() {
   if (StructInProgress.size() == 1)
     return TokError("missing name in top-level ENDS directive");
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in nested ENDS directive");
 
   StructInfo Structure = StructInProgress.pop_back_val();
@@ -4681,7 +4669,7 @@ bool MasmParser::parseDirectiveOrg() {
   SMLoc OffsetLoc = Lexer.getLoc();
   if (checkForValidSection() || parseExpression(Offset))
     return true;
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in 'org' directive");
 
   if (StructInProgress.empty()) {
@@ -4750,10 +4738,9 @@ bool MasmParser::parseDirectiveAlign() {
   if (getTok().is(AsmToken::EndOfStatement)) {
     return Warning(AlignmentLoc,
                    "align directive with no operand is ignored") &&
-           parseToken(AsmToken::EndOfStatement);
+           parseEOL();
   }
-  if (parseAbsoluteExpression(Alignment) ||
-      parseToken(AsmToken::EndOfStatement))
+  if (parseAbsoluteExpression(Alignment) || parseEOL())
     return addErrorSuffix(" in align directive");
 
   // Always emit an alignment here even if we throw an error.
@@ -4776,7 +4763,7 @@ bool MasmParser::parseDirectiveAlign() {
 /// parseDirectiveEven
 ///  ::= even
 bool MasmParser::parseDirectiveEven() {
-  if (parseToken(AsmToken::EndOfStatement) || emitAlignTo(2))
+  if (parseEOL() || emitAlignTo(2))
     return addErrorSuffix(" in even directive");
 
   return false;
@@ -5494,7 +5481,7 @@ bool MasmParser::parseDirectiveCFIStartProc() {
   if (!parseOptionalToken(AsmToken::EndOfStatement)) {
     if (check(parseIdentifier(Simple) || Simple != "simple",
               "unexpected token") ||
-        parseToken(AsmToken::EndOfStatement))
+        parseEOL())
       return addErrorSuffix(" in '.cfi_startproc' directive");
   }
 
@@ -6115,6 +6102,7 @@ bool MasmParser::parseDirectiveComm(bool IsLocal) {
 bool MasmParser::parseDirectiveComment(SMLoc DirectiveLoc) {
   std::string FirstLine = parseStringTo(AsmToken::EndOfStatement);
   size_t DelimiterEnd = FirstLine.find_first_of("\b\t\v\f\r\x1A ");
+  assert(DelimiterEnd != std::string::npos);
   StringRef Delimiter = StringRef(FirstLine).take_front(DelimiterEnd);
   if (Delimiter.empty())
     return Error(DirectiveLoc, "no delimiter in 'comment' directive");

@@ -128,7 +128,7 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   //     = 2^(hi + mid) * 2^lo
   //     ~ mh * (1 + lo * P(lo))
   //     = mh + (mh*lo) * P(lo)
-  return fputil::multiply_add(p, dx_sq * mh, c1 * mh);
+  return static_cast<float>(fputil::multiply_add(p, dx_sq * mh, c1 * mh));
 }
 
 } // namespace __llvm_libc

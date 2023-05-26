@@ -131,14 +131,14 @@ public:
 
   bool GetEnableOnStartup() const {
     const uint32_t idx = ePropertyEnableOnStartup;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        nullptr, idx, g_darwinlog_properties[idx].default_uint_value != 0);
+    return GetPropertyAtIndexAs<bool>(
+        idx, g_darwinlog_properties[idx].default_uint_value != 0);
   }
 
   llvm::StringRef GetAutoEnableOptions() const {
     const uint32_t idx = ePropertyAutoEnableOptions;
-    return m_collection_sp->GetPropertyAtIndexAsString(
-        nullptr, idx, g_darwinlog_properties[idx].default_cstr_value);
+    return GetPropertyAtIndexAs<llvm::StringRef>(
+        idx, g_darwinlog_properties[idx].default_cstr_value);
   }
 
   const char *GetLoggingModuleName() const { return "libsystem_trace.dylib"; }
@@ -975,9 +975,10 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
 
   // Parse the arguments.
   auto options_property_sp =
-      debugger.GetPropertyValue(nullptr, "plugin.structured-data.darwin-log."
-                                         "auto-enable-options",
-                                false, error);
+      debugger.GetPropertyValue(nullptr,
+                                "plugin.structured-data.darwin-log."
+                                "auto-enable-options",
+                                error);
   if (!error.Success())
     return EnableOptionsSP();
   if (!options_property_sp) {
@@ -1267,7 +1268,7 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
 
     auto &file_spec = module_sp->GetFileSpec();
     found_logging_support_module =
-        (file_spec.GetLastPathComponent() == logging_module_name);
+        (file_spec.GetFilename() == logging_module_name);
     if (found_logging_support_module)
       break;
   }
@@ -1365,9 +1366,7 @@ void StructuredDataDarwinLog::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForStructuredDataPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the darwin-log"
-                    " plug-in."),
-        is_global_setting);
+        "Properties for the darwin-log plug-in.", is_global_setting);
   }
 }
 

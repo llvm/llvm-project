@@ -1059,6 +1059,13 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                    "#endif\n"
                    "  }\n"
                    "}"));
+
+  const StringRef Code("void func() {\n"
+                       "  // clang-format off\n"
+                       "  #define KV(value) #value, value\n"
+                       "  // clang-format on\n"
+                       "}");
+  EXPECT_EQ(Code, format(Code));
 }
 
 TEST_F(FormatTestComments, SplitsLongLinesInComments) {
@@ -2752,7 +2759,7 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
 
   // Checks an edge case in preprocessor handling.
   // These comments should *not* be aligned
-  EXPECT_NE( // change for EQ when fixed
+  EXPECT_EQ(
       "#if FOO\n"
       "#else\n"
       "long a; // Line about a\n"

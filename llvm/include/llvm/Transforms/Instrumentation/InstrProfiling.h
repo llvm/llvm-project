@@ -95,6 +95,10 @@ private:
   /// Replace instrprof.cover with a store instruction to the coverage byte.
   void lowerCover(InstrProfCoverInst *Inc);
 
+  /// Replace instrprof.timestamp with a call to
+  /// INSTR_PROF_PROFILE_SET_TIMESTAMP.
+  void lowerTimestamp(InstrProfTimestampInst *TimestampInstruction);
+
   /// Replace instrprof.increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
 

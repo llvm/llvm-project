@@ -80,6 +80,7 @@ namespace generic_lambda {
     [](auto x) {
       if constexpr (sizeof(T) == 1 && sizeof(x) == 1)
         T::error(); // expected-error 2{{'::'}}
+                    // expected-note@-3 2{{while substituting into a lambda expression here}}
     } (0);
   }
 
@@ -88,6 +89,7 @@ namespace generic_lambda {
       if constexpr (sizeof(T) == 1)
         if constexpr (sizeof(x) == 1)
           T::error(); // expected-error {{'::'}}
+                      // expected-note@-4 {{while substituting into a lambda expression here}}
     } (0);
   }
 

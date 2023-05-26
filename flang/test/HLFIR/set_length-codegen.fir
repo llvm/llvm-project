@@ -15,7 +15,7 @@ func.func @test_cst_len(%str : !fir.boxchar<1>) {
 // CHECK:  %[[VAL_4:.*]] = arith.constant false
 // CHECK:  %[[VAL_5:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1,10>>, i1>
 // CHECK:  %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_4]], [1 : index] : (tuple<!fir.ref<!fir.char<1,10>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1,10>>, i1>
-// CHECK:  %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_1]], [0 : index] : (tuple<!fir.ref<!fir.char<1,10>>, i1>, !fir.ref<!fir.char<1,10>>) -> tuple<!fir.ref<!fir.char<1,10>>, i1>
+// CHECK:  %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_3]]#0, [0 : index] : (tuple<!fir.ref<!fir.char<1,10>>, i1>, !fir.ref<!fir.char<1,10>>) -> tuple<!fir.ref<!fir.char<1,10>>, i1>
 
 func.func @test_dyn_len(%str : !fir.ref<!fir.char<1,10>>, %len : index) {
   %0 = hlfir.set_length %str len %len : (!fir.ref<!fir.char<1,10>>, index) -> !hlfir.expr<!fir.char<1,?>>
@@ -28,6 +28,6 @@ func.func @test_dyn_len(%str : !fir.ref<!fir.char<1,10>>, %len : index) {
 // CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_1]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:  hlfir.assign %[[VAL_0]] to %[[VAL_3]]#0 : !fir.ref<!fir.char<1,10>>, !fir.boxchar<1>
 // CHECK:  %[[VAL_4:.*]] = arith.constant false
-// CHECK:  %[[VAL_5:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1,?>>, i1>
-// CHECK:  %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_4]], [1 : index] : (tuple<!fir.ref<!fir.char<1,?>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1,?>>, i1>
-// CHECK:  %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_2]], [0 : index] : (tuple<!fir.ref<!fir.char<1,?>>, i1>, !fir.ref<!fir.char<1,?>>) -> tuple<!fir.ref<!fir.char<1,?>>, i1>
+// CHECK:  %[[VAL_5:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
+// CHECK:  %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_4]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
+// CHECK:  %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_3]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>

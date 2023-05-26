@@ -57,6 +57,9 @@ struct LinkOptions {
   /// function.
   bool KeepFunctionForStatic = false;
 
+  /// Use a 64-bit header when emitting universal binaries.
+  bool Fat64 = false;
+
   /// Number of threads.
   unsigned Threads = 1;
 
@@ -95,6 +98,9 @@ struct LinkOptions {
   /// The output format of the remarks.
   remarks::Format RemarksFormat = remarks::Format::Bitstream;
 
+  /// Whether all remarks should be kept or only remarks with valid debug
+  /// locations.
+  bool RemarksKeepAll = true;
   /// @}
 
   LinkOptions() = default;

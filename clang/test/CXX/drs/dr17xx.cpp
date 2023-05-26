@@ -27,6 +27,18 @@ namespace dr1715 { // dr1715: 3.9
 #endif
 }
 
+namespace dr1722 { // dr1722: 9
+#if __cplusplus >= 201103L
+void f() {
+  const auto lambda = [](int x) { return x + 1; };
+  // Without the DR applied, this static_assert would fail.
+  static_assert(
+      noexcept((int (*)(int))(lambda)),
+      "Lambda-to-function-pointer conversion is expected to be noexcept");
+}
+#endif
+} // namespace dr1722
+
 namespace dr1734 { // dr1734: no
 #if __cplusplus >= 201103L
 struct A {
@@ -111,17 +123,14 @@ namespace dr1758 { // dr1758: 3.7
 #endif
 }
 
-namespace dr1722 { // dr1722: 9
+namespace dr1762 { // dr1762: 14
 #if __cplusplus >= 201103L
-void f() {
-  const auto lambda = [](int x) { return x + 1; };
-  // Without the DR applied, this static_assert would fail.
-  static_assert(
-      noexcept((int (*)(int))(lambda)),
-      "Lambda-to-function-pointer conversion is expected to be noexcept");
-}
+  float operator ""_E(const char *);
+  // expected-error@+2 {{invalid suffix on literal; C++11 requires a space between literal and identifier}}
+  // expected-warning@+1 {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}
+  float operator ""E(const char *);
 #endif
-} // namespace dr1722
+}
 
 namespace dr1778 { // dr1778: 9
   // Superseded by P1286R2.
@@ -135,14 +144,5 @@ namespace dr1778 { // dr1778: 9
   struct D { B b; D() noexcept(true) = default; };
   static_assert(!noexcept(C()), "");
   static_assert(noexcept(D()), "");
-#endif
-}
-
-namespace dr1762 { // dr1762: 14
-#if __cplusplus >= 201103L
-  float operator ""_E(const char *);
-  // expected-error@+2 {{invalid suffix on literal; C++11 requires a space between literal and identifier}}
-  // expected-warning@+1 {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}
-  float operator ""E(const char *);
 #endif
 }

@@ -218,6 +218,9 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::ROUND_F32] = f32_func_f32;
     Table[RTLIB::ROUND_F64] = f64_func_f64;
     Table[RTLIB::ROUND_F128] = i64_i64_func_i64_i64;
+    Table[RTLIB::ROUNDEVEN_F32] = f32_func_f32;
+    Table[RTLIB::ROUNDEVEN_F64] = f64_func_f64;
+    Table[RTLIB::ROUNDEVEN_F128] = i64_i64_func_i64_i64;
     Table[RTLIB::LROUND_F32] = iPTR_func_f32;
     Table[RTLIB::LROUND_F64] = iPTR_func_f64;
     Table[RTLIB::LROUND_F128] = iPTR_func_i64_i64;
@@ -770,8 +773,6 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     break;
   case i64_i64_func_i64_i64_i32:
     if (Subtarget.hasMultivalue()) {
-      Rets.push_back(wasm::ValType::I64);
-      Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
       Rets.push_back(wasm::ValType::I64);
     } else {

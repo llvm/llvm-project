@@ -29,7 +29,7 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
 #elif defined(SYS_clone)
   pid_t ret = __llvm_libc::syscall_impl(SYS_clone, SIGCHLD, 0);
 #else
-#error "SYS_fork or SYS_clone not available."
+#error "fork and clone syscalls not available."
 #endif
   if (ret == 0) {
     // Return value is 0 in the child process.

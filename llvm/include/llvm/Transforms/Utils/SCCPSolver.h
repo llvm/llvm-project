@@ -44,7 +44,6 @@ struct AnalysisResultsForFn {
   std::unique_ptr<PredicateInfo> PredInfo;
   DominatorTree *DT;
   PostDominatorTree *PDT;
-  LoopInfo *LI;
 };
 
 /// Helper struct shared between Function Specialization and SCCP Solver.
@@ -91,8 +90,6 @@ public:
 
   const PredicateBase *getPredicateInfoFor(Instruction *I);
 
-  const LoopInfo &getLoopInfo(Function &F);
-
   DomTreeUpdater getDTU(Function &F);
 
   /// trackValueOfGlobalVariable - Clients can use this method to
@@ -132,6 +129,8 @@ public:
 
   void solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList);
 
+  void solveWhileResolvedUndefs();
+
   bool isBlockExecutable(BasicBlock *BB) const;
 
   // isEdgeFeasible - Return true if the control flow edge from the 'From' basic
@@ -141,6 +140,10 @@ public:
   std::vector<ValueLatticeElement> getStructLatticeValueFor(Value *V) const;
 
   void removeLatticeValueFor(Value *V);
+
+  /// Invalidate the Lattice Value of \p Call and its users after specializing
+  /// the call. Then recompute it.
+  void resetLatticeValueFor(CallBase *Call);
 
   const ValueLatticeElement &getLatticeValueFor(Value *V) const;
 
@@ -168,17 +171,18 @@ public:
   /// range with a single element.
   Constant *getConstant(const ValueLatticeElement &LV) const;
 
+  /// Return either a Constant or nullptr for a given Value.
+  Constant *getConstantOrNull(Value *V) const;
+
   /// Return a reference to the set of argument tracked functions.
   SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions();
 
-  /// Mark the constant arguments of a new function specialization. \p F points
-  /// to the cloned function and \p Args contains a list of constant arguments
-  /// represented as pairs of {formal,actual} values (the formal argument is
-  /// associated with the original function definition). All other arguments of
-  /// the specialization inherit the lattice state of their corresponding values
-  /// in the original function.
-  void markArgInFuncSpecialization(Function *F,
-                                   const SmallVectorImpl<ArgInfo> &Args);
+  /// Set the Lattice Value for the arguments of a specialization \p F.
+  /// If an argument is Constant then its lattice value is marked with the
+  /// corresponding actual argument in \p Args. Otherwise, its lattice value
+  /// is inherited (copied) from the corresponding formal argument in \p Args.
+  void setLatticeValueForSpecializationArguments(Function *F,
+                                       const SmallVectorImpl<ArgInfo> &Args);
 
   /// Mark all of the blocks in function \p F non-executable. Clients can used
   /// this method to erase a function from the module (e.g., if it has been

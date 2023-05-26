@@ -47,7 +47,7 @@ test()
     static_assert((std::is_same<typename S::traits_type,     Traits>::value), "");
     static_assert((std::is_same<typename S::value_type,      typename Traits::char_type>::value), "");
     static_assert((std::is_same<typename S::size_type,       std::size_t>::value), "");
-    static_assert((std::is_same<typename S::difference_type, ptrdiff_t>::value), "");
+    static_assert((std::is_same<typename S::difference_type, std::ptrdiff_t>::value), "");
     static_assert((std::is_same<typename S::reference,             typename S::value_type&>::value), "");
     static_assert((std::is_same<typename S::const_reference, const typename S::value_type&>::value), "");
     static_assert((std::is_same<typename S::pointer,               typename S::value_type*>::value), "");

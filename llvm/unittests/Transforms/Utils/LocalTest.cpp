@@ -598,8 +598,50 @@ TEST(Local, SimplifyVScaleWithRange) {
 
   // Test that simplifyCall won't try to query it's parent function for
   // vscale_range attributes in order to simplify llvm.vscale -> constant.
-  EXPECT_EQ(simplifyCall(CI, SimplifyQuery(M.getDataLayout())), nullptr);
+  EXPECT_EQ(simplifyCall(CI, VScale, {}, SimplifyQuery(M.getDataLayout())),
+            nullptr);
   delete CI;
+}
+
+TEST(Local, wouldInstructionBeTriviallyDead) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx,
+                                      R"(
+    define dso_local void @fun() local_unnamed_addr #0 !dbg !9 {
+    entry:
+      call void @llvm.dbg.declare(metadata !{}, metadata !13, metadata !DIExpression()), !dbg !16
+      ret void, !dbg !16
+    }
+
+    declare void @llvm.dbg.declare(metadata, metadata, metadata)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2, !3}
+    !llvm.ident = !{!8}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 16.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "test.c", directory: "/")
+    !2 = !{i32 7, !"Dwarf Version", i32 5}
+    !3 = !{i32 2, !"Debug Info Version", i32 3}
+    !8 = !{!"clang version 16.0.0"}
+    !9 = distinct !DISubprogram(name: "fun", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+    !10 = !DISubroutineType(types: !11)
+    !11 = !{null}
+    !12 = !{!13}
+    !13 = !DILocalVariable(name: "a", scope: !9, file: !1, line: 1, type: !14)
+    !14 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !16 = !DILocation(line: 1, column: 21, scope: !9)
+    )");
+  bool BrokenDebugInfo = true;
+  verifyModule(*M, &errs(), &BrokenDebugInfo);
+  ASSERT_FALSE(BrokenDebugInfo);
+
+  // Get the dbg.declare.
+  Function &F = *cast<Function>(M->getNamedValue("fun"));
+  Instruction *DbgDeclare = &F.front().front();
+  ASSERT_TRUE(isa<DbgDeclareInst>(DbgDeclare));
+  // Debug intrinsics with empty metadata arguments are not dead.
+  EXPECT_FALSE(wouldInstructionBeTriviallyDead(DbgDeclare));
 }
 
 TEST(Local, ChangeToUnreachable) {
@@ -648,6 +690,60 @@ TEST(Local, ChangeToUnreachable) {
 
   DebugLoc DLB = B.getDebugLoc();
   EXPECT_EQ(DLA, DLB);
+}
+
+TEST(Local, FindDbgUsers) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx,
+                                      R"(
+  define dso_local void @fun(ptr %a) #0 !dbg !11 {
+  entry:
+    call void @llvm.dbg.assign(metadata ptr %a, metadata !16, metadata !DIExpression(), metadata !15, metadata ptr %a, metadata !DIExpression()), !dbg !19
+    ret void
+  }
+
+  declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !9}
+  !llvm.ident = !{!10}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 17.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "/")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{i32 1, !"wchar_size", i32 4}
+  !9 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
+  !10 = !{!"clang version 17.0.0"}
+  !11 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !14)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{null}
+  !14 = !{}
+  !15 = distinct !DIAssignID()
+  !16 = !DILocalVariable(name: "x", scope: !11, file: !1, line: 2, type: !17)
+  !17 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !18, size: 64)
+  !18 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !19 = !DILocation(line: 0, scope: !11)
+  )");
+
+  bool BrokenDebugInfo = true;
+  verifyModule(*M, &errs(), &BrokenDebugInfo);
+  ASSERT_FALSE(BrokenDebugInfo);
+
+  Function &Fun = *cast<Function>(M->getNamedValue("fun"));
+  Value *Arg = Fun.getArg(0);
+
+  SmallVector<DbgVariableIntrinsic *> Users;
+  // Arg (%a) is used twice by a single dbg.assign. Check findDbgUsers returns
+  // only 1 pointer to it rather than 2.
+  findDbgUsers(Users, Arg);
+  EXPECT_EQ(Users.size(), 1u);
+
+  SmallVector<DbgValueInst *> Vals;
+  // Arg (%a) is used twice by a single dbg.assign. Check findDbgValues returns
+  // only 1 pointer to it rather than 2.
+  findDbgValues(Vals, Arg);
+  EXPECT_EQ(Vals.size(), 1u);
 }
 
 TEST(Local, ReplaceAllDbgUsesWith) {

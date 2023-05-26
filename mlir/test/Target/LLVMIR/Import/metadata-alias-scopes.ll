@@ -62,27 +62,34 @@ define void @two_domains(ptr %arg1) {
 
 ; // -----
 
+; CHECK: llvm.metadata @__llvm_global_metadata {
+; CHECK:   llvm.alias_scope_domain @[[DOMAIN:.*]] {description = "The domain"}
+; CHECK:   llvm.alias_scope @[[$SCOPE:.*]] {domain = @[[DOMAIN]]}
+; CHECK: }
+
 ; CHECK-LABEL: llvm.func @supported_ops
 define void @supported_ops(ptr %arg1, float %arg2, i32 %arg3, i32 %arg4) {
-  ; CHECK: llvm.load {{.*}}alias_scopes =
-  %1 = load i32, ptr %arg1, !alias.scope !3
-  ; CHECK: llvm.store {{.*}}alias_scopes =
-  store i32 %1, ptr %arg1, !alias.scope !3
-  ; CHECK: llvm.atomicrmw {{.*}}alias_scopes =
-  %2 = atomicrmw fmax ptr %arg1, float %arg2 acquire, !alias.scope !3
-  ; CHECK: llvm.cmpxchg {{.*}}alias_scopes =
-  %3 = cmpxchg ptr %arg1, i32 %arg3, i32 %arg4 monotonic seq_cst, !alias.scope !3
-  ; CHECK: "llvm.intr.memcpy"{{.*}}alias_scopes =
-  call void @llvm.memcpy.p0.p0.i32(ptr %arg1, ptr %arg1, i32 4, i1 false), !alias.scope !3
-  ; CHECK: "llvm.intr.memset"{{.*}}alias_scopes =
-  call void @llvm.memset.p0.i32(ptr %arg1, i8 42, i32 4, i1 false), !alias.scope !3
+  ; CHECK: llvm.intr.experimental.noalias.scope.decl @__llvm_global_metadata::@[[$SCOPE]]
+  call void @llvm.experimental.noalias.scope.decl(metadata !2)
+  ; CHECK: llvm.load {{.*}}alias_scopes = [@__llvm_global_metadata::@[[$SCOPE]]]
+  %1 = load i32, ptr %arg1, !alias.scope !2
+  ; CHECK: llvm.store {{.*}}alias_scopes = [@__llvm_global_metadata::@[[$SCOPE]]]
+  store i32 %1, ptr %arg1, !alias.scope !2
+  ; CHECK: llvm.atomicrmw {{.*}}alias_scopes = [@__llvm_global_metadata::@[[$SCOPE]]]
+  %2 = atomicrmw fmax ptr %arg1, float %arg2 acquire, !alias.scope !2
+  ; CHECK: llvm.cmpxchg {{.*}}alias_scopes = [@__llvm_global_metadata::@[[$SCOPE]]]
+  %3 = cmpxchg ptr %arg1, i32 %arg3, i32 %arg4 monotonic seq_cst, !alias.scope !2
+  ; CHECK: "llvm.intr.memcpy"{{.*}}alias_scopes = [@__llvm_global_metadata::@[[$SCOPE]]]
+  call void @llvm.memcpy.p0.p0.i32(ptr %arg1, ptr %arg1, i32 4, i1 false), !alias.scope !2
+  ; CHECK: "llvm.intr.memset"{{.*}}alias_scopes = [@__llvm_global_metadata::@[[$SCOPE]]]
+  call void @llvm.memset.p0.i32(ptr %arg1, i8 42, i32 4, i1 false), !alias.scope !2
   ret void
 }
 
+declare void @llvm.experimental.noalias.scope.decl(metadata)
 declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 
 !0 = distinct !{!0, !"The domain"}
-!1 = distinct !{!1}
-!2 = !{!2, !0}
-!3 = !{!2}
+!1 = !{!1, !0}
+!2 = !{!1}

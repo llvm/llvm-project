@@ -342,10 +342,17 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (TC.getTriple().isRISCV())
     CmdArgs.push_back("-X");
 
+  // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
+  // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
+  // arm*-*-*bsd).
+  if (isARMBareMetal(TC.getTriple()))
+    CmdArgs.push_back("--target2=rel");
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileCurCP(),
                                          Args.MakeArgString(TC.GetLinkerPath()),
                                          CmdArgs, Inputs, Output));
 }

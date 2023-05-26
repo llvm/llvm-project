@@ -51,7 +51,7 @@ define i8 @andv_v32i8(ptr %a) vscale_range(2,0) #0 {
 define i8 @andv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: andv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
@@ -140,7 +140,7 @@ define i16 @andv_v16i16(ptr %a) vscale_range(2,0) #0 {
 define i16 @andv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: andv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
@@ -229,7 +229,7 @@ define i32 @andv_v8i32(ptr %a) vscale_range(2,0) #0 {
 define i32 @andv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: andv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
@@ -316,7 +316,7 @@ define i64 @andv_v4i64(ptr %a) vscale_range(2,0) #0 {
 define i64 @andv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: andv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
@@ -409,7 +409,7 @@ define i8 @eorv_v32i8(ptr %a) vscale_range(2,0) #0 {
 define i8 @eorv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: eorv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
@@ -498,7 +498,7 @@ define i16 @eorv_v16i16(ptr %a) vscale_range(2,0) #0 {
 define i16 @eorv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: eorv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
@@ -587,7 +587,7 @@ define i32 @eorv_v8i32(ptr %a) vscale_range(2,0) #0 {
 define i32 @eorv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: eorv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
@@ -674,7 +674,7 @@ define i64 @eorv_v4i64(ptr %a) vscale_range(2,0) #0 {
 define i64 @eorv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: eorv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
@@ -767,7 +767,7 @@ define i8 @orv_v32i8(ptr %a) vscale_range(2,0) #0 {
 define i8 @orv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: orv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
@@ -856,7 +856,7 @@ define i16 @orv_v16i16(ptr %a) vscale_range(2,0) #0 {
 define i16 @orv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: orv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
@@ -945,7 +945,7 @@ define i32 @orv_v8i32(ptr %a) vscale_range(2,0) #0 {
 define i32 @orv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: orv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
@@ -1032,7 +1032,7 @@ define i64 @orv_v4i64(ptr %a) vscale_range(2,0) #0 {
 define i64 @orv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: orv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]

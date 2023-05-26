@@ -208,7 +208,7 @@ define void @store_i32_stride4_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[0,1,3,2,4,5,7,6]
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm2 = ymm5[0,1,2],ymm2[3],ymm5[4,5],ymm2[6],ymm5[7]
 ; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,2,3,7,6,6,7]
-; AVX1-ONLY-NEXT:    vpermilpd {{.*#+}} ymm3 = ymm4[1,0,3,2]
+; AVX1-ONLY-NEXT:    vshufpd {{.*#+}} ymm3 = ymm4[1,0,3,2]
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2,3],ymm0[4],ymm3[5,6,7]
 ; AVX1-ONLY-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm2[2,3],ymm0[4,5],ymm2[6,7]
 ; AVX1-ONLY-NEXT:    vmovaps %ymm0, 32(%r8)

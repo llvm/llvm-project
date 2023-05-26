@@ -138,7 +138,6 @@ struct PackOpInterface
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     assert(op->getNumResults() == 1);
-    assert(isUniqueCOOType(op->getResultTypes()[0].cast<RankedTensorType>()));
     // PackOp reuses the input tensors as values/coordinates instead of
     // creating new ones when packing into a COO format.
     return {{op->getOpResult(0), BufferRelation::Equivalent}};
@@ -154,25 +153,32 @@ struct UnpackOpInterface
     : public BufferizableOpInterface::ExternalModel<UnpackOpInterface,
                                                     sparse_tensor::UnpackOp> {
   bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
-    // Similar to InsertOp, reallocation is not considered to allocate a new
-    // piece of memory.
+    // The output buffer is pre-allocated by the user.
     return false;
   }
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    return true;
+    // The first operand is the sparse tensor that we are unpacking.
+    return opOperand.getOperandNumber() == 0;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    return false;
+    // We write into the output operand.
+    assert(op->getNumOperands() == op->getNumResults() + 1);
+    return opOperand.getOperandNumber() > 0;
   }
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    // Conceptually, UnpackOp equals to a list of toCoordinates/toValueOp
-    return {};
+    assert(op->getNumOperands() == op->getNumResults() + 1);
+
+    if (opOperand.getOperandNumber() == 0)
+      return {};
+    // We write directly into the output tensors and returns them.
+    return {{op->getResult(opOperand.getOperandNumber() - 1),
+             BufferRelation::Equivalent}};
   }
 };
 

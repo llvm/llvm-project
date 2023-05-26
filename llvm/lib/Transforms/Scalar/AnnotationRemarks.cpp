@@ -16,7 +16,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/MemoryOpRemark.h"
 
 using namespace llvm;
@@ -58,7 +57,12 @@ static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
 
     for (const MDOperand &Op :
          I.getMetadata(LLVMContext::MD_annotation)->operands()) {
-      auto Iter = Mapping.insert({cast<MDString>(Op.get())->getString(), 0});
+      StringRef AnnotationStr =
+          isa<MDString>(Op.get())
+              ? cast<MDString>(Op.get())->getString()
+              : cast<MDString>(cast<MDTuple>(Op.get())->getOperand(0).get())
+                    ->getString();
+      auto Iter = Mapping.insert({AnnotationStr, 0});
       Iter.first->second++;
     }
   }

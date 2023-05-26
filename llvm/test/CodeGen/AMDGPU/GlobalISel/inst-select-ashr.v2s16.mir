@@ -18,21 +18,6 @@ regBankSelected: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
-    ; GFX6-LABEL: name: ashr_v2s16_ss
-    ; GFX6: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; GFX6: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr1
-    ; GFX6: [[ASHR:%[0-9]+]]:sgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX6: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
-    ; GFX7-LABEL: name: ashr_v2s16_ss
-    ; GFX7: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; GFX7: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr1
-    ; GFX7: [[ASHR:%[0-9]+]]:sgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX7: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
-    ; GFX8-LABEL: name: ashr_v2s16_ss
-    ; GFX8: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr1
-    ; GFX8: [[ASHR:%[0-9]+]]:sgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX8: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
     ; GFX9-LABEL: name: ashr_v2s16_ss
     ; GFX9: liveins: $sgpr0, $sgpr1
     ; GFX9-NEXT: {{  $}}
@@ -61,21 +46,6 @@ regBankSelected: true
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0
-    ; GFX6-LABEL: name: ashr_v2s16_sv
-    ; GFX6: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; GFX6: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; GFX6: [[ASHR:%[0-9]+]]:vgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX6: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
-    ; GFX7-LABEL: name: ashr_v2s16_sv
-    ; GFX7: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; GFX7: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; GFX7: [[ASHR:%[0-9]+]]:vgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX7: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
-    ; GFX8-LABEL: name: ashr_v2s16_sv
-    ; GFX8: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; GFX8: [[ASHR:%[0-9]+]]:vgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX8: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
     ; GFX9-LABEL: name: ashr_v2s16_sv
     ; GFX9: liveins: $sgpr0, $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -104,21 +74,6 @@ regBankSelected: true
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0
-    ; GFX6-LABEL: name: ashr_v2s16_vs
-    ; GFX6: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; GFX6: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; GFX6: [[ASHR:%[0-9]+]]:vgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX6: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
-    ; GFX7-LABEL: name: ashr_v2s16_vs
-    ; GFX7: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; GFX7: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; GFX7: [[ASHR:%[0-9]+]]:vgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX7: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
-    ; GFX8-LABEL: name: ashr_v2s16_vs
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; GFX8: [[ASHR:%[0-9]+]]:vgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX8: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
     ; GFX9-LABEL: name: ashr_v2s16_vs
     ; GFX9: liveins: $sgpr0, $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -147,21 +102,6 @@ regBankSelected: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
-    ; GFX6-LABEL: name: ashr_v2s16_vv
-    ; GFX6: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; GFX6: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr1
-    ; GFX6: [[ASHR:%[0-9]+]]:vgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX6: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
-    ; GFX7-LABEL: name: ashr_v2s16_vv
-    ; GFX7: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; GFX7: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr1
-    ; GFX7: [[ASHR:%[0-9]+]]:vgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX7: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
-    ; GFX8-LABEL: name: ashr_v2s16_vv
-    ; GFX8: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; GFX8: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr1
-    ; GFX8: [[ASHR:%[0-9]+]]:vgpr(<2 x s16>) = G_ASHR [[COPY]], [[COPY1]](<2 x s16>)
-    ; GFX8: S_ENDPGM 0, implicit [[ASHR]](<2 x s16>)
     ; GFX9-LABEL: name: ashr_v2s16_vv
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}

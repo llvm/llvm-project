@@ -34,8 +34,8 @@ STATISTIC(NumDeadPHICycles, "Number of dead PHI cycles");
 namespace {
 
   class OptimizePHIs : public MachineFunctionPass {
-    MachineRegisterInfo *MRI;
-    const TargetInstrInfo *TII;
+    MachineRegisterInfo *MRI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
 
   public:
     static char ID; // Pass identification

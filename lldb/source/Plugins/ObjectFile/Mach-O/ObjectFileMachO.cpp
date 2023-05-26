@@ -14,7 +14,6 @@
 #include "Plugins/Process/Utility/RegisterContextDarwin_i386.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -36,6 +35,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
@@ -140,26 +140,6 @@ using namespace lldb_private;
 using namespace llvm::MachO;
 
 LLDB_PLUGIN_DEFINE(ObjectFileMachO)
-
-// Some structure definitions needed for parsing the dyld shared cache files
-// found on iOS devices.
-
-struct lldb_copy_dyld_cache_header_v1 {
-  char magic[16];         // e.g. "dyld_v0    i386", "dyld_v1   armv7", etc.
-  uint32_t mappingOffset; // file offset to first dyld_cache_mapping_info
-  uint32_t mappingCount;  // number of dyld_cache_mapping_info entries
-  uint32_t imagesOffset;
-  uint32_t imagesCount;
-  uint64_t dyldBaseAddress;
-  uint64_t codeSignatureOffset;
-  uint64_t codeSignatureSize;
-  uint64_t slideInfoOffset;
-  uint64_t slideInfoSize;
-  uint64_t localSymbolsOffset;
-  uint64_t localSymbolsSize;
-  uint8_t uuid[16]; // v1 and above, also recorded in dyld_all_image_infos v13
-                    // and later
-};
 
 static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
                                const char *alt_name, size_t reg_byte_size,
@@ -531,21 +511,18 @@ public:
       lldb::offset_t next_thread_state = offset + (count * 4);
       switch (flavor) {
       case GPRAltRegSet:
-      case GPRRegSet:
-        // On ARM, the CPSR register is also included in the count but it is
-        // not included in gpr.r so loop until (count-1).
-
-        // Prevent static analysis warnings by explicitly contstraining 'count'
-        // to acceptable range. Handle possible underflow of count-1
-        if (count > 0 && count <= sizeof(gpr.r) / sizeof(gpr.r[0])) {
+      case GPRRegSet: {
+        // r0-r15, plus CPSR
+        uint32_t gpr_buf_count = (sizeof(gpr.r) / sizeof(gpr.r[0])) + 1;
+        if (count == gpr_buf_count) {
           for (uint32_t i = 0; i < (count - 1); ++i) {
             gpr.r[i] = data.GetU32(&offset);
           }
-        }
-        // Save cpsr explicitly.
-        gpr.cpsr = data.GetU32(&offset);
+          gpr.cpsr = data.GetU32(&offset);
 
-        SetError(GPRRegSet, Read, 0);
+          SetError(GPRRegSet, Read, 0);
+        }
+      }
         offset = next_thread_state;
         break;
 
@@ -963,9 +940,9 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
                                  lldb::offset_t file_offset,
                                  lldb::offset_t length)
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
-      m_mach_segments(), m_mach_sections(), m_entry_point_address(),
-      m_thread_context_offsets(), m_thread_context_offsets_valid(false),
-      m_reexported_dylibs(), m_allow_assembly_emulation_unwind_plans(true) {
+      m_mach_sections(), m_entry_point_address(), m_thread_context_offsets(),
+      m_thread_context_offsets_valid(false), m_reexported_dylibs(),
+      m_allow_assembly_emulation_unwind_plans(true) {
   ::memset(&m_header, 0, sizeof(m_header));
   ::memset(&m_dysymtab, 0, sizeof(m_dysymtab));
 }
@@ -975,9 +952,9 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
                                  const lldb::ProcessSP &process_sp,
                                  lldb::addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
-      m_mach_segments(), m_mach_sections(), m_entry_point_address(),
-      m_thread_context_offsets(), m_thread_context_offsets_valid(false),
-      m_reexported_dylibs(), m_allow_assembly_emulation_unwind_plans(true) {
+      m_mach_sections(), m_entry_point_address(), m_thread_context_offsets(),
+      m_thread_context_offsets_valid(false), m_reexported_dylibs(),
+      m_allow_assembly_emulation_unwind_plans(true) {
   ::memset(&m_header, 0, sizeof(m_header));
   ::memset(&m_dysymtab, 0, sizeof(m_dysymtab));
 }
@@ -1385,9 +1362,11 @@ void ObjectFileMachO::SanitizeSegmentCommand(
     // shared cache file, and not the specific image we are
     // examining. Let's fix this up so that it looks like a normal
     // image.
-    if (strncmp(seg_cmd.segname, "__TEXT", sizeof(seg_cmd.segname)) == 0)
+    if (strncmp(seg_cmd.segname, GetSegmentNameTEXT().GetCString(),
+                sizeof(seg_cmd.segname)) == 0)
       m_text_address = seg_cmd.vmaddr;
-    if (strncmp(seg_cmd.segname, "__LINKEDIT", sizeof(seg_cmd.segname)) == 0)
+    if (strncmp(seg_cmd.segname, GetSegmentNameLINKEDIT().GetCString(),
+                sizeof(seg_cmd.segname)) == 0)
       m_linkedit_original_offset = seg_cmd.fileoff;
 
     seg_cmd.fileoff = seg_cmd.vmaddr - m_text_address;
@@ -1642,10 +1621,6 @@ void ObjectFileMachO::ProcessSegmentCommand(
   const uint32_t segment_permissions = GetSegmentPermissions(load_cmd);
   const bool segment_is_encrypted =
       (load_cmd.flags & SG_PROTECTED_VERSION_1) != 0;
-
-  // Keep a list of mach segments around in case we need to get at data that
-  // isn't stored in the abstracted Sections.
-  m_mach_segments.push_back(load_cmd);
 
   // Use a segment ID of the segment index shifted left by 8 so they never
   // conflict with any of the sections.
@@ -2175,35 +2150,6 @@ static SymbolType GetSymbolType(const char *&symbol_name,
   return type;
 }
 
-// Read the UUID out of a dyld_shared_cache file on-disk.
-UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
-                                         const ByteOrder byte_order,
-                                         const uint32_t addr_byte_size) {
-  UUID dsc_uuid;
-  DataBufferSP DscData = MapFileData(
-      dyld_shared_cache, sizeof(struct lldb_copy_dyld_cache_header_v1), 0);
-  if (!DscData)
-    return dsc_uuid;
-  DataExtractor dsc_header_data(DscData, byte_order, addr_byte_size);
-
-  char version_str[7];
-  lldb::offset_t offset = 0;
-  memcpy(version_str, dsc_header_data.GetData(&offset, 6), 6);
-  version_str[6] = '\0';
-  if (strcmp(version_str, "dyld_v") == 0) {
-    offset = offsetof(struct lldb_copy_dyld_cache_header_v1, uuid);
-    dsc_uuid =
-        UUID(dsc_header_data.GetData(&offset, sizeof(uuid_t)), sizeof(uuid_t));
-  }
-  Log *log = GetLog(LLDBLog::Symbols);
-  if (log && dsc_uuid.IsValid()) {
-    LLDB_LOGF(log, "Shared cache %s has UUID %s",
-              dyld_shared_cache.GetPath().c_str(),
-              dsc_uuid.GetAsString().c_str());
-  }
-  return dsc_uuid;
-}
-
 static std::optional<struct nlist_64>
 ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
            size_t nlist_byte_size) {
@@ -2658,9 +2604,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   std::set<lldb::addr_t> resolver_addresses;
 
   if (dyld_trie_data.GetByteSize() > 0) {
-    ConstString text_segment_name("__TEXT");
     SectionSP text_segment_sp =
-        GetSectionList()->FindSectionByName(text_segment_name);
+        GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
     lldb::addr_t text_segment_file_addr = LLDB_INVALID_ADDRESS;
     if (text_segment_sp)
       text_segment_file_addr = text_segment_sp->GetFileAddress();
@@ -3030,7 +2975,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                               // the first contains a directory and the
                               // second contains a full path.
                               sym[sym_idx - 1].GetMangled().SetValue(
-                                  ConstString(symbol_name), false);
+                                  ConstString(symbol_name));
                               m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
                               add_nlist = false;
                             } else {
@@ -3076,7 +3021,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                 full_so_path += '/';
                               full_so_path += symbol_name;
                               sym[sym_idx - 1].GetMangled().SetValue(
-                                  ConstString(full_so_path.c_str()), false);
+                                  ConstString(full_so_path.c_str()));
                               add_nlist = false;
                               m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
                             }
@@ -3468,17 +3413,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         sym[sym_idx].GetMangled().SetDemangledName(
                             ConstString(symbol_name));
                       } else {
-                        bool symbol_name_is_mangled = false;
-
                         if (symbol_name && symbol_name[0] == '_') {
-                          symbol_name_is_mangled = symbol_name[1] == '_';
                           symbol_name++; // Skip the leading underscore
                         }
 
                         if (symbol_name) {
                           ConstString const_symbol_name(symbol_name);
-                          sym[sym_idx].GetMangled().SetValue(
-                              const_symbol_name, symbol_name_is_mangled);
+                          sym[sym_idx].GetMangled().SetValue(const_symbol_name);
                           if (is_gsym && is_debug) {
                             const char *gsym_name =
                                 sym[sym_idx]
@@ -3938,8 +3879,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               if ((N_SO_index == sym_idx - 1) && ((sym_idx - 1) < num_syms)) {
                 // We have two consecutive N_SO entries where the first
                 // contains a directory and the second contains a full path.
-                sym[sym_idx - 1].GetMangled().SetValue(ConstString(symbol_name),
-                                                       false);
+                sym[sym_idx - 1].GetMangled().SetValue(
+                    ConstString(symbol_name));
                 m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
                 add_nlist = false;
               } else {
@@ -3977,7 +3918,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                   full_so_path += '/';
                 full_so_path += symbol_name;
                 sym[sym_idx - 1].GetMangled().SetValue(
-                    ConstString(full_so_path.c_str()), false);
+                    ConstString(full_so_path.c_str()));
                 add_nlist = false;
                 m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
               }
@@ -4330,17 +4271,14 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
             ConstString(symbol_name_non_abi_mangled));
         sym[sym_idx].GetMangled().SetDemangledName(ConstString(symbol_name));
       } else {
-        bool symbol_name_is_mangled = false;
 
         if (symbol_name && symbol_name[0] == '_') {
-          symbol_name_is_mangled = symbol_name[1] == '_';
           symbol_name++; // Skip the leading underscore
         }
 
         if (symbol_name) {
           ConstString const_symbol_name(symbol_name);
-          sym[sym_idx].GetMangled().SetValue(const_symbol_name,
-                                             symbol_name_is_mangled);
+          sym[sym_idx].GetMangled().SetValue(const_symbol_name);
         }
       }
 
@@ -5329,10 +5267,9 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
         }
       } break;
       case LC_MAIN: {
-        ConstString text_segment_name("__TEXT");
         uint64_t entryoffset = m_data.GetU64(&offset);
         SectionSP text_segment_sp =
-            GetSectionList()->FindSectionByName(text_segment_name);
+            GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
         if (text_segment_sp) {
           done = true;
           start_address = text_segment_sp->GetFileAddress() + entryoffset;
@@ -5958,138 +5895,65 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
 #endif
 }
 
-llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
-  if (!m_min_os_version) {
-    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
-      const lldb::offset_t load_cmd_offset = offset;
+static llvm::VersionTuple FindMinimumVersionInfo(DataExtractor &data,
+                                                 lldb::offset_t offset,
+                                                 size_t ncmds) {
+  for (size_t i = 0; i < ncmds; i++) {
+    const lldb::offset_t load_cmd_offset = offset;
+    llvm::MachO::load_command lc = {};
+    if (data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+      break;
 
-      llvm::MachO::version_min_command lc = {};
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
-        break;
-      if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS) {
-        if (m_data.GetU32(&offset, &lc.version,
-                          (sizeof(lc) / sizeof(uint32_t)) - 2)) {
-          const uint32_t xxxx = lc.version >> 16;
-          const uint32_t yy = (lc.version >> 8) & 0xffu;
-          const uint32_t zz = lc.version & 0xffu;
-          if (xxxx) {
-            m_min_os_version = llvm::VersionTuple(xxxx, yy, zz);
-            break;
-          }
-        }
-      } else if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
-        // struct build_version_command {
-        //     uint32_t    cmd;            /* LC_BUILD_VERSION */
-        //     uint32_t    cmdsize;        /* sizeof(struct
-        //     build_version_command) plus */
-        //                                 /* ntools * sizeof(struct
-        //                                 build_tool_version) */
-        //     uint32_t    platform;       /* platform */
-        //     uint32_t    minos;          /* X.Y.Z is encoded in nibbles
-        //     xxxx.yy.zz */ uint32_t    sdk;            /* X.Y.Z is encoded in
-        //     nibbles xxxx.yy.zz */ uint32_t    ntools;         /* number of
-        //     tool entries following this */
-        // };
-
-        offset += 4; // skip platform
-        uint32_t minos = m_data.GetU32(&offset);
-
-        const uint32_t xxxx = minos >> 16;
-        const uint32_t yy = (minos >> 8) & 0xffu;
-        const uint32_t zz = minos & 0xffu;
-        if (xxxx) {
-          m_min_os_version = llvm::VersionTuple(xxxx, yy, zz);
-          break;
-        }
-      }
-
-      offset = load_cmd_offset + lc.cmdsize;
+    uint32_t version = 0;
+    if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
+        lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS ||
+        lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS ||
+        lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS) {
+      // struct version_min_command {
+      //   uint32_t cmd; // LC_VERSION_MIN_*
+      //   uint32_t cmdsize;
+      //   uint32_t version; // X.Y.Z encoded in nibbles xxxx.yy.zz
+      //   uint32_t sdk;
+      // };
+      // We want to read version.
+      version = data.GetU32(&offset);
+    } else if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
+      // struct build_version_command {
+      //   uint32_t cmd; // LC_BUILD_VERSION
+      //   uint32_t cmdsize;
+      //   uint32_t platform;
+      //   uint32_t minos; // X.Y.Z encoded in nibbles xxxx.yy.zz
+      //   uint32_t sdk;
+      //   uint32_t ntools;
+      // };
+      // We want to read minos.
+      offset += sizeof(uint32_t);     // Skip over platform
+      version = data.GetU32(&offset); // Extract minos
     }
 
-    if (!m_min_os_version) {
-      // Set version to an empty value so we don't keep trying to
-      m_min_os_version = llvm::VersionTuple();
+    if (version) {
+      const uint32_t xxxx = version >> 16;
+      const uint32_t yy = (version >> 8) & 0xffu;
+      const uint32_t zz = version & 0xffu;
+      if (xxxx)
+        return llvm::VersionTuple(xxxx, yy, zz);
     }
+    offset = load_cmd_offset + lc.cmdsize;
   }
+  return llvm::VersionTuple();
+}
 
+llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
+  if (!m_min_os_version)
+    m_min_os_version = FindMinimumVersionInfo(
+        m_data, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_min_os_version;
 }
 
 llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
-  if (!m_sdk_versions) {
-    lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
-      const lldb::offset_t load_cmd_offset = offset;
-
-      llvm::MachO::version_min_command lc = {};
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
-        break;
-      if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_IPHONEOS ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_TVOS ||
-          lc.cmd == llvm::MachO::LC_VERSION_MIN_WATCHOS) {
-        if (m_data.GetU32(&offset, &lc.version,
-                          (sizeof(lc) / sizeof(uint32_t)) - 2)) {
-          const uint32_t xxxx = lc.sdk >> 16;
-          const uint32_t yy = (lc.sdk >> 8) & 0xffu;
-          const uint32_t zz = lc.sdk & 0xffu;
-          if (xxxx) {
-            m_sdk_versions = llvm::VersionTuple(xxxx, yy, zz);
-            break;
-          } else {
-            GetModule()->ReportWarning("minimum OS version load command with "
-                                       "invalid (0) version found.");
-          }
-        }
-      }
-      offset = load_cmd_offset + lc.cmdsize;
-    }
-
-    if (!m_sdk_versions) {
-      offset = MachHeaderSizeFromMagic(m_header.magic);
-      for (uint32_t i = 0; i < m_header.ncmds; ++i) {
-        const lldb::offset_t load_cmd_offset = offset;
-
-        llvm::MachO::version_min_command lc = {};
-        if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
-          break;
-        if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
-          // struct build_version_command {
-          //     uint32_t    cmd;            /* LC_BUILD_VERSION */
-          //     uint32_t    cmdsize;        /* sizeof(struct
-          //     build_version_command) plus */
-          //                                 /* ntools * sizeof(struct
-          //                                 build_tool_version) */
-          //     uint32_t    platform;       /* platform */
-          //     uint32_t    minos;          /* X.Y.Z is encoded in nibbles
-          //     xxxx.yy.zz */ uint32_t    sdk;            /* X.Y.Z is encoded
-          //     in nibbles xxxx.yy.zz */ uint32_t    ntools;         /* number
-          //     of tool entries following this */
-          // };
-
-          offset += 4; // skip platform
-          uint32_t minos = m_data.GetU32(&offset);
-
-          const uint32_t xxxx = minos >> 16;
-          const uint32_t yy = (minos >> 8) & 0xffu;
-          const uint32_t zz = minos & 0xffu;
-          if (xxxx) {
-            m_sdk_versions = llvm::VersionTuple(xxxx, yy, zz);
-            break;
-          }
-        }
-        offset = load_cmd_offset + lc.cmdsize;
-      }
-    }
-
-    if (!m_sdk_versions)
-      m_sdk_versions = llvm::VersionTuple();
-  }
-
+  if (!m_sdk_versions)
+    m_sdk_versions = FindMinimumVersionInfo(
+        m_data, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_sdk_versions;
 }
 
@@ -6118,20 +5982,22 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
   SectionList *section_list = GetSectionList();
   if (!section_list)
     return nullptr;
+
+  // Some binaries can have a TEXT segment with a non-zero file offset.
+  // Binaries in the shared cache are one example.  Some hand-generated
+  // binaries may not be laid out in the normal TEXT,DATA,LC_SYMTAB order
+  // in the file, even though they're laid out correctly in vmaddr terms.
+  SectionSP text_segment_sp =
+      section_list->FindSectionByName(GetSegmentNameTEXT());
+  if (text_segment_sp.get() && SectionIsLoadable(text_segment_sp.get()))
+    return text_segment_sp.get();
+
   const size_t num_sections = section_list->GetSize();
   for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
     Section *section = section_list->GetSectionAtIndex(sect_idx).get();
     if (section->GetFileOffset() == 0 && SectionIsLoadable(section))
       return section;
   }
-
-  // We may have a binary in the shared cache that has a non-zero
-  // file address for its first segment, traditionally the __TEXT segment.
-  // Search for it by name and return it as our next best guess.
-  SectionSP text_segment_sp =
-      GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
-  if (text_segment_sp.get() && SectionIsLoadable(text_segment_sp.get()))
-    return text_segment_sp.get();
 
   return nullptr;
 }

@@ -27,7 +27,7 @@ func.func @check_static_return(%static : memref<32x18xf32>) -> memref<32x18xf32>
 // BAREPTR-NEXT: %[[ins3:.*]] = llvm.insertvalue %[[val3]], %[[ins2]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: %[[val4:.*]] = llvm.mlir.constant(1 : index) : i64
 // BAREPTR-NEXT: %[[ins4:.*]] = llvm.insertvalue %[[val4]], %[[ins3]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// BAREPTR-NEXT: %[[base1:.*]] = llvm.extractvalue %[[ins4]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// BAREPTR-NEXT: %[[base1:.*]] = llvm.extractvalue %[[ins4]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: llvm.return %[[base1]] : !llvm.ptr
   return %static : memref<32x18xf32>
 }
@@ -56,7 +56,7 @@ func.func @check_static_return_with_offset(%static : memref<32x18xf32, strided<[
 // BAREPTR-NEXT: %[[ins3:.*]] = llvm.insertvalue %[[val3]], %[[ins2]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: %[[val4:.*]] = llvm.mlir.constant(1 : index) : i64
 // BAREPTR-NEXT: %[[ins4:.*]] = llvm.insertvalue %[[val4]], %[[ins3]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// BAREPTR-NEXT: %[[base1:.*]] = llvm.extractvalue %[[ins4]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+// BAREPTR-NEXT: %[[base1:.*]] = llvm.extractvalue %[[ins4]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // BAREPTR-NEXT: llvm.return %[[base1]] : !llvm.ptr
   return %static : memref<32x18xf32, strided<[22,1], offset: 7>>
 }
@@ -82,7 +82,7 @@ func.func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
   // BAREPTR-NEXT:    %[[c1:.*]] = llvm.mlir.constant(1 : index) : i64
   // BAREPTR-NEXT:    %[[outDesc:.*]] = llvm.insertvalue %[[c1]], %[[desc6]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   %res = call @foo(%in) : (memref<10xi8>) -> (memref<20xi8>)
-  // BAREPTR-NEXT:    %[[res:.*]] = llvm.extractvalue %[[outDesc]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // BAREPTR-NEXT:    %[[res:.*]] = llvm.extractvalue %[[outDesc]][0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // BAREPTR-NEXT:    llvm.return %[[res]] : !llvm.ptr
   return %res : memref<20xi8>
 }
@@ -95,3 +95,22 @@ func.func @check_return(%in : memref<?xi8>) -> memref<?xi8> {
   // BAREPTR: llvm.return {{.*}} : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   return %in : memref<?xi8>
 }
+
+// -----
+
+// BAREPTR-LABEL: func @unconvertible_multiresult
+// BAREPTR-SAME: %{{.*}}: memref<?xf32>, %{{.*}}: memref<?xf32>) -> (memref<?xf32>, memref<?xf32>)
+func.func @unconvertible_multiresult(%arg0: memref<?xf32> , %arg1: memref<?xf32>) -> (memref<?xf32>, memref<?xf32>) {
+  return %arg0, %arg1 : memref<?xf32>, memref<?xf32>
+}
+
+// -----
+// BAREPTR-LABEL: func @unranked_memref(
+// BAREPTR-SAME: %{{.*}}: memref<*xi32>)
+func.func @unranked_memref(%arg0:memref<*xi32>) {
+  // BAREPTR:      call @printMemrefI32(%arg{{.*}}) : (memref<*xi32>) -> ()
+  // BAREPTR-NEXT: llvm.return
+  call @printMemrefI32(%arg0) : (memref<*xi32>) -> ()
+  return
+}
+func.func private @printMemrefI32(memref<*xi32>)

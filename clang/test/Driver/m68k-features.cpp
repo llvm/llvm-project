@@ -59,3 +59,23 @@
 // RUN: FileCheck --check-prefix=CHECK-FIXED-D7 < %t %s
 // CHECK-FIXED-D7: "-target-feature" "+reserve-d7"
 
+// ==== Floating point ====
+// RUN: %clang -target m68k -m68000 -mhard-float -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-MX881 < %t %s
+// RUN: %clang -target m68k -m68000 -m68881 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-MX881 < %t %s
+
+// RUN: %clang -target m68k -m68010 -mhard-float -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-MX881 < %t %s
+// RUN: %clang -target m68k -m68010 -m68881 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-MX881 < %t %s
+
+// RUN: %clang -target m68k -m68020 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-MX881 < %t %s
+
+// RUN: %clang -target m68k -m68030 -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-MX882 < %t %s
+
+// CHECK-MX881: "-target-feature" "+isa-68881"
+// CHECK-MX882: "-target-feature" "+isa-68882"
+

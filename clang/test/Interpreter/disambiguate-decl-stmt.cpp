@@ -7,6 +7,10 @@ extern "C" int printf(const char*,...);
 
 // Decls which are hard to disambiguate
 
+// Templates
+namespace ns1 { template<typename T> void tmplt(T &) {}}
+int arg_tmplt = 12; ns1::tmplt(arg_tmplt);
+
 // ParseStatementOrDeclaration returns multiple statements.
 #ifdef MS
 int g_bFlag = 1;
@@ -25,6 +29,13 @@ using I = int;
 I x = 10;
 x.I::~I();
 x = 20;
+
+struct Dtor1 {~Dtor1();};
+Dtor1::~Dtor1() { printf("Dtor1\n"); }
+Dtor1 d1;
+
+struct ANestedDtor { struct A1 { struct A2 { ~A2(); }; }; };
+ANestedDtor::A1::A2::~A2() { printf("Dtor A::A1::A2::~A2\n"); }
 
 // Ctors
 

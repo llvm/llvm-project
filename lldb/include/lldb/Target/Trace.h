@@ -570,7 +570,7 @@ private:
     llvm::DenseMap<ConstString, uint64_t> live_process_data;
     /// \}
 
-    /// The list of cpus being traced. Might be \b None depending on the
+    /// The list of cpus being traced. Might be \b std::nullopt depending on the
     /// plug-in.
     std::optional<std::vector<lldb::cpu_id_t>> cpus;
 

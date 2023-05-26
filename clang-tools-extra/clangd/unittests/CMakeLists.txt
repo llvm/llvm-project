@@ -79,8 +79,9 @@ add_unittest(ClangdUnitTests ClangdTests
   PrintASTTests.cpp
   ProjectAwareIndexTests.cpp
   QualityTests.cpp
-  RenameTests.cpp
   RIFFTests.cpp
+  RenameTests.cpp
+  ReplayPeambleTests.cpp
   SelectionTests.cpp
   SemanticHighlightingTests.cpp
   SemanticSelectionTests.cpp
@@ -157,7 +158,6 @@ clang_target_link_libraries(ClangdTests
   clangLex
   clangSema
   clangSerialization
-  clangTesting
   clangTooling
   clangToolingCore
   clangToolingInclusions
@@ -172,6 +172,7 @@ target_link_libraries(ClangdTests
 
   clangDaemon
   clangIncludeCleaner
+  clangTesting
   clangTidy
   clangdSupport
   )

@@ -89,8 +89,8 @@ int main(int, char**)
     test<std::int_least32_t>();
     test<std::int_least64_t>();
 
-    test<intmax_t>();
-    test<intptr_t>();
+    test<std::intmax_t>();
+    test<std::intptr_t>();
 
     test<std::uint8_t>();
     test<std::uint16_t>();
@@ -107,8 +107,8 @@ int main(int, char**)
     test<std::uint_least32_t>();
     test<std::uint_least64_t>();
 
-    test<uintmax_t>();
-    test<uintptr_t>();
+    test<std::uintmax_t>();
+    test<std::uintptr_t>();
 
 #ifndef TEST_HAS_NO_INT128
     test<__int128_t>();

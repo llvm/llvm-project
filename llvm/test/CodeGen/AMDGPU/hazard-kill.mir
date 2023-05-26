@@ -8,8 +8,8 @@
   define amdgpu_ps void @_amdgpu_ps_main() #0 { ret void }
 ...
 ---
-# CHECK-LABEL: name: _amdgpu_ps_main
-# CHECK-LABEL: bb.0:
+# GFX90-LABEL: name: _amdgpu_ps_main
+# GFX90-LABEL: bb.0:
 # GFX90: $m0 = S_MOV_B32 killed renamable $sgpr4
 # GFX90-NEXT: KILL undef renamable $sgpr2
 # GFX90-NEXT: S_MOV_B32 0

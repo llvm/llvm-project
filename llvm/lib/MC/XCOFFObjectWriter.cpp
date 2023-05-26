@@ -206,7 +206,7 @@ struct DwarfSectionEntry : public SectionEntry {
 
 struct ExceptionTableEntry {
   const MCSymbol *Trap;
-  uint64_t TrapAddress;
+  uint64_t TrapAddress = ~0ul;
   unsigned Lang;
   unsigned Reason;
 
@@ -663,7 +663,10 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     // instr address plus any constant value.
     FixedValue =
         SectionMap[SymASec]->Address - BRInstrAddress + Target.getConstant();
-  }
+  } else if (Type == XCOFF::RelocationType::R_REF)
+    // The FixedValue should always be 0 since it specifies a nonrelocating
+    // reference.
+    FixedValue = 0;
 
   assert((Fixup.getOffset() <=
           MaxRawDataSize - Layout.getFragmentOffset(Fragment)) &&

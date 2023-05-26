@@ -46,12 +46,12 @@ define i16 @alloca_write(i16 %x) {
 entry:
 ; CHECK-LABEL: alloca_write:
 ; Small offset here
-; CHECK: std Y+23, {{.*}}
 ; CHECK: std Y+24, {{.*}}
+; CHECK: std Y+23, {{.*}}
 ; Big offset here
 ; CHECK: adiw r28, 57
-; CHECK: std Y+62, {{.*}}
 ; CHECK: std Y+63, {{.*}}
+; CHECK: std Y+62, {{.*}}
 ; CHECK: sbiw r28, 57
   %p = alloca [15 x i16]
   %k = alloca [14 x i16]
@@ -71,8 +71,8 @@ define void @alloca_write_huge() {
 ; CHECK-LABEL: alloca_write_huge:
 ; CHECK: subi r28, 41
 ; CHECK: sbci r29, 255
-; CHECK: std Y+62, {{.*}}
 ; CHECK: std Y+63, {{.*}}
+; CHECK: std Y+62, {{.*}}
 ; CHECK: subi r28, 215
 ; CHECK: sbci r29, 0
   %k = alloca [140 x i16]

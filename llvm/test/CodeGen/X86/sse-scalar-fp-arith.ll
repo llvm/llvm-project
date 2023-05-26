@@ -1489,7 +1489,7 @@ define float @PR26515(<4 x float> %0) nounwind {
 ; X86-AVX-LABEL: PR26515:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %eax
-; X86-AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; X86-AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X86-AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; X86-AVX-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX-NEXT:    flds (%esp)
@@ -1505,7 +1505,7 @@ define float @PR26515(<4 x float> %0) nounwind {
 ;
 ; X64-AVX-LABEL: PR26515:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; X64-AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X64-AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; X64-AVX-NEXT:    retq
   %2 = shufflevector <4 x float> %0, <4 x float> poison, <4 x i32> <i32 2, i32 undef, i32 undef, i32 undef>

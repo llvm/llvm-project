@@ -311,7 +311,7 @@ class MCAlignFragment : public MCFragment {
   unsigned MaxBytesToEmit;
 
   /// When emitting Nops some subtargets have specific nop encodings.
-  const MCSubtargetInfo *STI;
+  const MCSubtargetInfo *STI = nullptr;
 
 public:
   MCAlignFragment(Align Alignment, int64_t Value, unsigned ValueSize,

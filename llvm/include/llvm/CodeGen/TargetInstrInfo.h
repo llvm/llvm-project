@@ -1005,6 +1005,10 @@ public:
     return false;
   }
 
+  /// Return an index for MachineJumpTableInfo if \p insn is an indirect jump
+  /// using a jump table, otherwise -1.
+  virtual int getJumpTableIndex(const MachineInstr &MI) const { return -1; }
+
 protected:
   /// Target-dependent implementation for IsCopyInstr.
   /// If the specific machine instruction is a instruction that moves/copies
@@ -1222,6 +1226,13 @@ public:
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const;
+
+  /// When calculate the latency of the root instruction, accumulate the
+  /// latency of the sequence to the root latency.
+  /// \param Root - Instruction that could be combined with one of its operands
+  virtual bool accumulateInstrSeqToRootLatency(MachineInstr &Root) const {
+    return true;
+  }
 
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.
@@ -1966,7 +1977,7 @@ public:
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific
-  /// information for a set of outlining candidates. Returns None if the
+  /// information for a set of outlining candidates. Returns std::nullopt if the
   /// candidates are not suitable for outlining.
   virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {

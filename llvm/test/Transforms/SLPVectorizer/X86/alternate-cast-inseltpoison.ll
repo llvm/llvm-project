@@ -209,10 +209,10 @@ define <8 x float> @sitofp_uitofp_4i32_8i16_16i8(<4 x i32> %a, <8 x i16> %b, <16
 ; CHECK-NEXT:    [[TMP9:%.*]] = sitofp <2 x i8> [[TMP8]] to <2 x float>
 ; CHECK-NEXT:    [[TMP10:%.*]] = uitofp <2 x i8> [[TMP8]] to <2 x float>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[R52:%.*]] = shufflevector <8 x float> [[TMP12]], <8 x float> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[R52:%.*]] = shufflevector <8 x float> [[TMP12]], <8 x float> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[R71:%.*]] = shufflevector <8 x float> [[R52]], <8 x float> [[TMP14]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; CHECK-NEXT:    ret <8 x float> [[R71]]
 ;

@@ -121,7 +121,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
 
   // Now, go through each block (with the current terminator type)
   // we've recorded, and rewrite it to branch to the new common block.
-  const DILocation *CommonDebugLoc = nullptr;
+  DILocation *CommonDebugLoc = nullptr;
   for (BasicBlock *BB : BBs) {
     auto *Term = BB->getTerminator();
     assert(Term->getOpcode() == CanonicalTerm->getOpcode() &&
@@ -228,8 +228,8 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 32> Edges;
   FindFunctionBackedges(F, Edges);
   SmallPtrSet<BasicBlock *, 16> UniqueLoopHeaders;
-  for (unsigned i = 0, e = Edges.size(); i != e; ++i)
-    UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edges[i].second));
+  for (const auto &Edge : Edges)
+    UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edge.second));
 
   SmallVector<WeakVH, 16> LoopHeaders(UniqueLoopHeaders.begin(),
                                       UniqueLoopHeaders.end());

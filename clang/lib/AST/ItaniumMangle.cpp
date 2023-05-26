@@ -208,7 +208,6 @@ public:
   }
 
   bool isInternalLinkageDecl(const NamedDecl *ND);
-  const DeclContext *IgnoreLinkageSpecDecls(const DeclContext *DC);
 
   /// @}
 };
@@ -396,7 +395,6 @@ class CXXNameMangler {
   bool isStdNamespace(const DeclContext *DC);
 
   const RecordDecl *GetLocalClassDecl(const Decl *D);
-  const DeclContext *IgnoreLinkageSpecDecls(const DeclContext *DC);
   bool isSpecializedAs(QualType S, llvm::StringRef Name, QualType A);
   bool isStdCharSpecialization(const ClassTemplateSpecializationDecl *SD,
                                llvm::StringRef Name, bool HasAllocator);
@@ -563,6 +561,8 @@ private:
   void mangleAArch64NeonVectorType(const DependentVectorType *T);
   void mangleAArch64FixedSveVectorType(const VectorType *T);
   void mangleAArch64FixedSveVectorType(const DependentVectorType *T);
+  void mangleRISCVFixedRVVVectorType(const VectorType *T);
+  void mangleRISCVFixedRVVVectorType(const DependentVectorType *T);
 
   void mangleIntegerLiteral(QualType T, const llvm::APSInt &Value);
   void mangleFloatLiteral(QualType T, const llvm::APFloat &V);
@@ -3812,6 +3812,68 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
   Diags.Report(T->getAttributeLoc(), DiagID);
 }
 
+void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
+  assert(T->getVectorKind() == VectorType::RVVFixedLengthDataVector &&
+         "expected fixed-length RVV vector!");
+
+  QualType EltType = T->getElementType();
+  assert(EltType->isBuiltinType() &&
+         "expected builtin type for fixed-length RVV vector!");
+
+  StringRef TypeName;
+  switch (cast<BuiltinType>(EltType)->getKind()) {
+  case BuiltinType::SChar:
+    TypeName = "__rvv_int8m1_t";
+    break;
+  case BuiltinType::UChar:
+    TypeName = "__rvv_uint8m1_t";
+    break;
+  case BuiltinType::Short:
+    TypeName = "__rvv_int16m1_t";
+    break;
+  case BuiltinType::UShort:
+    TypeName = "__rvv_uint16m1_t";
+    break;
+  case BuiltinType::Int:
+    TypeName = "__rvv_int32m1_t";
+    break;
+  case BuiltinType::UInt:
+    TypeName = "__rvv_uint32m1_t";
+    break;
+  case BuiltinType::Long:
+    TypeName = "__rvv_int64m1_t";
+    break;
+  case BuiltinType::ULong:
+    TypeName = "__rvv_uint64m1_t";
+    break;
+  case BuiltinType::Half:
+    TypeName = "__rvv_float16m1_t";
+    break;
+  case BuiltinType::Float:
+    TypeName = "__rvv_float32m1_t";
+    break;
+  case BuiltinType::Double:
+    TypeName = "__rvv_float64m1_t";
+    break;
+  default:
+    llvm_unreachable("unexpected element type for fixed-length RVV vector!");
+  }
+
+  unsigned VecSizeInBits = getASTContext().getTypeInfo(T).Width;
+
+  Out << "9__RVV_VLSI" << 'u' << TypeName.size() << TypeName << "Lj"
+      << VecSizeInBits << "EE";
+}
+
+void CXXNameMangler::mangleRISCVFixedRVVVectorType(
+    const DependentVectorType *T) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error,
+      "cannot mangle this dependent fixed-length RVV vector type yet");
+  Diags.Report(T->getAttributeLoc(), DiagID);
+}
+
 // GNU extension: vector types
 // <type>                  ::= <vector-type>
 // <vector-type>           ::= Dv <positive dimension number> _
@@ -3835,6 +3897,9 @@ void CXXNameMangler::mangleType(const VectorType *T) {
   } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
              T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
     mangleAArch64FixedSveVectorType(T);
+    return;
+  } else if (T->getVectorKind() == VectorType::RVVFixedLengthDataVector) {
+    mangleRISCVFixedRVVVectorType(T);
     return;
   }
   Out << "Dv" << T->getNumElements() << '_';
@@ -3861,6 +3926,9 @@ void CXXNameMangler::mangleType(const DependentVectorType *T) {
   } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
              T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
     mangleAArch64FixedSveVectorType(T);
+    return;
+  } else if (T->getVectorKind() == VectorType::RVVFixedLengthDataVector) {
+    mangleRISCVFixedRVVVectorType(T);
     return;
   }
 

@@ -72,13 +72,14 @@ ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
 
 ConceptSpecializationExpr::ConceptSpecializationExpr(
     const ASTContext &C, ConceptDecl *NamedConcept,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ImplicitConceptSpecializationDecl *SpecDecl,
     const ConstraintSatisfaction *Satisfaction, bool Dependent,
     bool ContainsUnexpandedParameterPack)
     : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_PRValue, OK_Ordinary),
       ConceptReference(NestedNameSpecifierLoc(), SourceLocation(),
                        DeclarationNameInfo(), NamedConcept, NamedConcept,
-                       nullptr),
+                       ArgsAsWritten),
       SpecDecl(SpecDecl),
       Satisfaction(Satisfaction
                        ? ASTConstraintSatisfaction::Create(C, *Satisfaction)
@@ -95,12 +96,13 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
 
 ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
     const ASTContext &C, ConceptDecl *NamedConcept,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ImplicitConceptSpecializationDecl *SpecDecl,
     const ConstraintSatisfaction *Satisfaction, bool Dependent,
     bool ContainsUnexpandedParameterPack) {
-  return new (C)
-      ConceptSpecializationExpr(C, NamedConcept, SpecDecl, Satisfaction,
-                                Dependent, ContainsUnexpandedParameterPack);
+  return new (C) ConceptSpecializationExpr(C, NamedConcept, ArgsAsWritten,
+                                           SpecDecl, Satisfaction, Dependent,
+                                           ContainsUnexpandedParameterPack);
 }
 
 const TypeConstraint *
@@ -110,6 +112,19 @@ concepts::ExprRequirement::ReturnTypeRequirement::getTypeConstraint() const {
       TypeConstraintInfo.getPointer().get<TemplateParameterList *>();
   return cast<TemplateTypeParmDecl>(TPL->getParam(0))
       ->getTypeConstraint();
+}
+
+// Search through the requirements, and see if any have a RecoveryExpr in it,
+// which means this RequiresExpr ALSO needs to be invalid.
+static bool RequirementContainsError(concepts::Requirement *R) {
+  if (auto *ExprReq = dyn_cast<concepts::ExprRequirement>(R))
+    return ExprReq->getExpr() && ExprReq->getExpr()->containsErrors();
+
+  if (auto *NestedReq = dyn_cast<concepts::NestedRequirement>(R))
+    return !NestedReq->hasInvalidConstraint() &&
+           NestedReq->getConstraintExpr() &&
+           NestedReq->getConstraintExpr()->containsErrors();
+  return false;
 }
 
 RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
@@ -138,6 +153,9 @@ RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
       if (!RequiresExprBits.IsSatisfied)
         break;
     }
+
+    if (RequirementContainsError(R))
+      setDependence(getDependence() | ExprDependence::Error);
   }
   std::copy(LocalParameters.begin(), LocalParameters.end(),
             getTrailingObjects<ParmVarDecl *>());

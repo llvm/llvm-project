@@ -8,13 +8,19 @@
 
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 
 struct FIRTypesTest : public testing::Test {
 public:
-  void SetUp() { fir::support::loadDialects(context); }
-
+  void SetUp() {
+    fir::support::loadDialects(context);
+    kindMap = new fir::KindMapping(&context, kindMapInit, "r42a10c14d28i40l41");
+  }
   mlir::MLIRContext context;
+  fir::KindMapping *kindMap{};
+  std::string kindMapInit =
+      "i10:80,l3:24,a1:8,r54:Double,r62:X86_FP80,r11:PPC_FP128";
 };
 
 // Test fir::isPolymorphicType from flang/Optimizer/Dialect/FIRType.h.
@@ -252,4 +258,29 @@ TEST_F(FIRTypesTest, updateTypeForUnlimitedPolymorphic) {
     mlir::Type ptrArrTy = fir::PointerType::get(arrTy);
     EXPECT_EQ(ptrArrNone, fir::updateTypeForUnlimitedPolymorphic(ptrArrTy));
   }
+}
+
+TEST_F(FIRTypesTest, getTypeAsString) {
+  EXPECT_EQ("i32",
+      fir::getTypeAsString(mlir::IntegerType::get(&context, 32), *kindMap));
+  EXPECT_EQ("ref_i32",
+      fir::getTypeAsString(
+          fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)),
+          *kindMap));
+  EXPECT_EQ(
+      "f64", fir::getTypeAsString(mlir::FloatType::getF64(&context), *kindMap));
+  EXPECT_EQ(
+      "l8", fir::getTypeAsString(fir::LogicalType::get(&context, 1), *kindMap));
+  EXPECT_EQ("z32",
+      fir::getTypeAsString(
+          mlir::ComplexType::get(mlir::FloatType::getF32(&context)), *kindMap));
+  EXPECT_EQ("c8",
+      fir::getTypeAsString(fir::CharacterType::get(&context, 1, 1), *kindMap));
+  EXPECT_EQ("c8x10",
+      fir::getTypeAsString(fir::CharacterType::get(&context, 1, 10), *kindMap));
+  mlir::Type ty = mlir::IntegerType::get(&context, 64);
+  mlir::Type arrTy = fir::SequenceType::get({10, 20}, ty);
+  EXPECT_EQ("10x20xi64", fir::getTypeAsString(arrTy, *kindMap));
+  EXPECT_EQ(
+      "idx", fir::getTypeAsString(mlir::IndexType::get(&context), *kindMap));
 }

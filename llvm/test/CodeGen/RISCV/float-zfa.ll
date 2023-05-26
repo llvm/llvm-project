@@ -125,7 +125,7 @@ declare float @roundf(float) nounwind readnone
 define float @fround_s_2(float %a) nounwind {
 ; CHECK-LABEL: fround_s_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fround.s fa0, fa0, rup
+; CHECK-NEXT:    fround.s fa0, fa0, rdn
 ; CHECK-NEXT:    ret
   %call = tail call float @floorf(float %a) nounwind readnone
   ret float %call
@@ -137,7 +137,7 @@ declare float @floorf(float) nounwind readnone
 define float @fround_s_3(float %a) nounwind {
 ; CHECK-LABEL: fround_s_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fround.s fa0, fa0, rdn
+; CHECK-NEXT:    fround.s fa0, fa0, rup
 ; CHECK-NEXT:    ret
   %call = tail call float @ceilf(float %a) nounwind readnone
   ret float %call

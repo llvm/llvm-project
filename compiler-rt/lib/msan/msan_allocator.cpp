@@ -145,8 +145,13 @@ AllocatorCache *GetAllocatorCache(MsanThreadLocalMallocStorage *ms) {
   return reinterpret_cast<AllocatorCache *>(ms->allocator_cache);
 }
 
+void MsanThreadLocalMallocStorage::Init() {
+  allocator.InitCache(GetAllocatorCache(this));
+}
+
 void MsanThreadLocalMallocStorage::CommitBack() {
   allocator.SwallowCache(GetAllocatorCache(this));
+  allocator.DestroyCache(GetAllocatorCache(this));
 }
 
 static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
@@ -260,12 +265,31 @@ static void *MsanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
   return MsanAllocate(stack, nmemb * size, sizeof(u64), true);
 }
 
+static const void *AllocationBegin(const void *p) {
+  if (!p)
+    return nullptr;
+  void *beg = allocator.GetBlockBegin(p);
+  if (!beg)
+    return nullptr;
+  Metadata *b = (Metadata *)allocator.GetMetaData(beg);
+  if (!b)
+    return nullptr;
+  if (b->requested_size == 0)
+    return nullptr;
+
+  return (const void *)beg;
+}
+
 static uptr AllocationSize(const void *p) {
   if (!p) return 0;
   const void *beg = allocator.GetBlockBegin(p);
   if (beg != p) return 0;
   Metadata *b = (Metadata *)allocator.GetMetaData(p);
   return b->requested_size;
+}
+
+static uptr AllocationSizeFast(const void *p) {
+  return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
 }
 
 void *msan_malloc(uptr size, StackTrace *stack) {
@@ -373,4 +397,17 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) { return AllocationSize(p) != 0; }
 
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return AllocationBegin(p);
+}
+
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = AllocationSizeFast(p);
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
+}
+
+void __sanitizer_purge_allocator() { allocator.ForceReleaseToOS(); }

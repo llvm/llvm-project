@@ -10,14 +10,15 @@
 #include "src/errno/libc_errno.h"
 #include "src/stdlib/strtof.h"
 
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
 
 #include <limits.h>
 #include <stddef.h>
 
-using __llvm_libc::testutils::ForceRoundingModeTest;
-using __llvm_libc::testutils::RoundingMode;
+using __llvm_libc::fputil::testing::ForceRoundingModeTest;
+using __llvm_libc::fputil::testing::RoundingMode;
 
 class LlvmLibcStrToFTest : public __llvm_libc::testing::Test,
                            ForceRoundingModeTest<RoundingMode::Nearest> {
@@ -46,15 +47,8 @@ public:
     libc_errno = 0;
     float result = __llvm_libc::strtof(inputString, &str_end);
 
-    __llvm_libc::fputil::FPBits<float> actual_fp =
-        __llvm_libc::fputil::FPBits<float>(result);
-
     EXPECT_EQ(str_end - inputString, expectedStrLen);
-
-    EXPECT_EQ(actual_fp.bits, expected_fp.bits);
-    EXPECT_EQ(actual_fp.get_sign(), expected_fp.get_sign());
-    EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
-    EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
+    EXPECT_FP_EQ(result, static_cast<float>(expected_fp));
     EXPECT_EQ(libc_errno, expectedErrno);
   }
 };

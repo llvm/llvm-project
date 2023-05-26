@@ -146,6 +146,9 @@
 // CHECK-ASAN-EMSCRIPTEN: "-fsanitize=address"
 // CHECK-ASAN-EMSCRIPTEN: "-fsanitize-address-globals-dead-stripping"
 
+// RUN: %clang -### %s -fsanitize=function --target=wasm32-unknown-emscripten 2>&1 | FileCheck --check-prefix=FUNCTION %s
+// FUNCTION: error: unsupported option '-fsanitize=function' for target 'wasm32-unknown-emscripten'
+
 // Basic exec-model tests.
 
 // RUN: %clang -### %s --target=wasm32-unknown-unknown --sysroot=%s/no-sysroot-there -mexec-model=command 2>&1 \

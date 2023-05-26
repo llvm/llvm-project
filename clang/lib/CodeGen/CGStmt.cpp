@@ -428,7 +428,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     llvm_unreachable("target parallel loop directive not supported yet.");
     break;
   case Stmt::OMPParallelMaskedDirectiveClass:
-    llvm_unreachable("parallel masked directive not supported yet.");
+    EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
   }
 }
@@ -2779,7 +2779,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
          "unwind clobber can't be used with asm goto");
 
   // Add machine specific clobbers
-  std::string MachineClobbers = getTarget().getClobbers();
+  std::string_view MachineClobbers = getTarget().getClobbers();
   if (!MachineClobbers.empty()) {
     if (!Constraints.empty())
       Constraints += ',';

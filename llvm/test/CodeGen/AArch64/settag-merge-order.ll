@@ -11,8 +11,8 @@ entry:
 ; CHECK-LABEL: stg128_128_gap_128_128:
 ; CHECK: mov     x8, #512
 ; CHECK: st2g    sp, [sp], #32
-; CHECK: sub     x8, x8, #32
-; CHECK: cbnz    x8,
+; CHECK: subs    x8, x8, #32
+; CHECK: b.ne
 ; CHECK: ret
   %a = alloca i8, i32 128, align 16
   %a2 = alloca i8, i32 128, align 16
@@ -40,18 +40,18 @@ entry:
 
 if.then:
 ; CHECK: mov     x8, #320
-; CHECK: sub     x8, x8, #32
+; CHECK: subs    x8, x8, #32
 ; CHECK: st2g    x9, [x9], #32
-; CHECK: cbnz    x8,
+; CHECK: b.ne
   call void @llvm.aarch64.settag(ptr %a, i64 160)
   call void @llvm.aarch64.settag(ptr %a2, i64 160)
   br label %if.end
 
 if.else:
 ; CHECK: mov     x8, #256
-; CHECK: sub     x8, x8, #32
+; CHECK: subs    x8, x8, #32
 ; CHECK: st2g    x9, [x9], #32
-; CHECK: cbnz    x8,
+; CHECK: b.ne
   call void @llvm.aarch64.settag(ptr %c, i64 128)
   call void @llvm.aarch64.settag(ptr %c2, i64 128)
   br label %if.end
@@ -59,8 +59,8 @@ if.else:
 if.end:
 ; CHECK: mov     x8, #576
 ; CHECK: st2g    sp, [sp], #32
-; CHECK: sub     x8, x8, #32
-; CHECK: cbnz    x8,
+; CHECK: subs    x8, x8, #32
+; CHECK: b.ne
   call void @llvm.aarch64.settag(ptr %a, i64 160)
   call void @llvm.aarch64.settag(ptr %a2, i64 160)
   call void @llvm.aarch64.settag(ptr %c, i64 128)

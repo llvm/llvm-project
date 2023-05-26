@@ -23,6 +23,7 @@ namespace func {
 class FuncOp;
 } // namespace func
 
+namespace affine {
 class AffineForOp;
 
 /// Fusion mode to attempt. The default mode `Greedy` does both
@@ -123,6 +124,7 @@ std::unique_ptr<Pass> createAffineExpandIndexOpsPass();
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Affine/Passes.h.inc"
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_PASSES_H

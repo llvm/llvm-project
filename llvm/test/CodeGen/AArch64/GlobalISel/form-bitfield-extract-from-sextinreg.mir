@@ -13,12 +13,13 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: sextinreg_ashr_to_sbfx
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %lsb:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-    ; CHECK: %sext_inreg:_(s32) = G_SBFX %x, %lsb(s32), [[C]]
-    ; CHECK: $w0 = COPY %sext_inreg(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %lsb:_(s32) = G_CONSTANT i32 5
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %sext_inreg:_(s32) = G_SBFX %x, %lsb(s32), [[C]]
+    ; CHECK-NEXT: $w0 = COPY %sext_inreg(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %lsb:_(s32) = G_CONSTANT i32 5
     %shift:_(s32) = G_ASHR %x, %lsb
@@ -36,12 +37,13 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: sextinreg_lshr_to_sbfx
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %lsb:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-    ; CHECK: %sext_inreg:_(s32) = G_SBFX %x, %lsb(s32), [[C]]
-    ; CHECK: $w0 = COPY %sext_inreg(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %lsb:_(s32) = G_CONSTANT i32 5
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %sext_inreg:_(s32) = G_SBFX %x, %lsb(s32), [[C]]
+    ; CHECK-NEXT: $w0 = COPY %sext_inreg(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %lsb:_(s32) = G_CONSTANT i32 5
     %shift:_(s32) = G_LSHR %x, %lsb
@@ -62,12 +64,13 @@ body:             |
 
     ; CHECK-LABEL: name: dont_apply_no_constant
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %y:_(s32) = COPY $w0
-    ; CHECK: %shift:_(s32) = G_LSHR %x, %y(s32)
-    ; CHECK: %sext_inreg:_(s32) = G_SEXT_INREG %shift, 10
-    ; CHECK: $w0 = COPY %sext_inreg(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w0
+    ; CHECK-NEXT: %shift:_(s32) = G_LSHR %x, %y(s32)
+    ; CHECK-NEXT: %sext_inreg:_(s32) = G_SEXT_INREG %shift, 10
+    ; CHECK-NEXT: $w0 = COPY %sext_inreg(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w0
     %shift:_(s32) = G_LSHR %x, %y
@@ -88,12 +91,12 @@ body:             |
 
     ; CHECK-LABEL: name: dont_apply_shift_imm_too_large
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %lsb:_(s32) = G_CONSTANT i32 32
-    ; CHECK: %shift:_(s32) = G_ASHR %x, %lsb(s32)
-    ; CHECK: %sext_inreg:_(s32) = G_SEXT_INREG %shift, 1
-    ; CHECK: $w0 = COPY %sext_inreg(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %lsb:_(s32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: %shift:_(s32) = G_ASHR %x, %lsb(s32)
+    ; CHECK-NEXT: $w0 = COPY %shift(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %lsb:_(s32) = G_CONSTANT i32 32
     %shift:_(s32) = G_ASHR %x, %lsb
@@ -114,12 +117,12 @@ body:             |
 
     ; CHECK-LABEL: name: dont_apply_negative_shift_imm
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %lsb:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: %shift:_(s32) = G_ASHR %x, %lsb(s32)
-    ; CHECK: %sext_inreg:_(s32) = G_SEXT_INREG %shift, 1
-    ; CHECK: $w0 = COPY %sext_inreg(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %lsb:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %shift:_(s32) = G_ASHR %x, %lsb(s32)
+    ; CHECK-NEXT: $w0 = COPY %shift(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %lsb:_(s32) = G_CONSTANT i32 -1
     %shift:_(s32) = G_ASHR %x, %lsb
@@ -137,13 +140,14 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: dont_apply_more_than_one_use
     ; CHECK: liveins: $w0
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %lsb:_(s32) = G_CONSTANT i32 1
-    ; CHECK: %shift:_(s32) = G_ASHR %x, %lsb(s32)
-    ; CHECK: %sext_inreg:_(s32) = G_SEXT_INREG %shift, 1
-    ; CHECK: %mul:_(s32) = G_MUL %shift, %sext_inreg
-    ; CHECK: $w0 = COPY %mul(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %lsb:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %shift:_(s32) = G_ASHR %x, %lsb(s32)
+    ; CHECK-NEXT: %sext_inreg:_(s32) = G_SEXT_INREG %shift, 1
+    ; CHECK-NEXT: %mul:_(s32) = G_MUL %shift, %sext_inreg
+    ; CHECK-NEXT: $w0 = COPY %mul(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %lsb:_(s32) = G_CONSTANT i32 1
     %shift:_(s32) = G_ASHR %x, %lsb

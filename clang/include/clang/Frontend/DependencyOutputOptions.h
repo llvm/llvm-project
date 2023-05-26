@@ -34,6 +34,8 @@ enum ExtraDepKind {
 class DependencyOutputOptions {
 public:
   unsigned IncludeSystemHeaders : 1; ///< Include system header dependencies.
+  unsigned
+      CanonicalSystemHeaders : 1; ///< canonicalize system header dependencies.
   unsigned ShowHeaderIncludes : 1;   ///< Show header inclusions (-H).
   unsigned UsePhonyTargets : 1;      ///< Include phony targets for each
                                      /// dependency, which can avoid some 'make'
@@ -85,10 +87,11 @@ public:
 
 public:
   DependencyOutputOptions()
-      : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
-        AddMissingHeaderDeps(0), IncludeModuleFiles(0),
-        ShowSkippedHeaderIncludes(0), HeaderIncludeFormat(HIFMT_Textual),
-        HeaderIncludeFiltering(HIFIL_None) {}
+      : IncludeSystemHeaders(0), CanonicalSystemHeaders(0),
+        ShowHeaderIncludes(0), UsePhonyTargets(0), AddMissingHeaderDeps(0),
+        IncludeModuleFiles(0), ShowSkippedHeaderIncludes(0),
+        HeaderIncludeFormat(HIFMT_Textual), HeaderIncludeFiltering(HIFIL_None) {
+  }
 };
 
 }  // end namespace clang

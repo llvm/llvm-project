@@ -29,7 +29,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <3 x double> [[TMP15]], double [[TMP16]], i64 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> [[TMP11]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <6 x double> [[TMP18]], <6 x double> [[TMP19]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
@@ -55,7 +55,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <3 x double> [[SPLIT2]], i64 2
 ; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <3 x double> [[TMP36]], double [[TMP37]], i64 2
 ; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <3 x double> [[TMP26]], <3 x double> [[TMP32]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <3 x double> [[TMP38]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <3 x double> [[TMP38]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <6 x double> [[TMP39]], <6 x double> [[TMP40]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -83,7 +83,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[SPLAT_SPLAT17:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT16]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul <1 x double> [[BLOCK15]], [[SPLAT_SPLAT17]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = fadd <1 x double> [[TMP46]], [[TMP48]]
-; CHECK-NEXT:    [[TMP50:%.*]] = shufflevector <1 x double> [[TMP49]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP50:%.*]] = shufflevector <1 x double> [[TMP49]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP51:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP50]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK18:%.*]] = shufflevector <3 x double> [[SPLIT6]], <3 x double> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <3 x double> [[SPLIT9]], i64 0
@@ -102,7 +102,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[SPLAT_SPLAT26:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT25]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP58:%.*]] = fmul <1 x double> [[BLOCK24]], [[SPLAT_SPLAT26]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = fadd <1 x double> [[TMP56]], [[TMP58]]
-; CHECK-NEXT:    [[TMP60:%.*]] = shufflevector <1 x double> [[TMP59]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP60:%.*]] = shufflevector <1 x double> [[TMP59]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP61:%.*]] = shufflevector <3 x double> [[TMP51]], <3 x double> [[TMP60]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK27:%.*]] = shufflevector <3 x double> [[SPLIT6]], <3 x double> poison, <1 x i32> <i32 2>
 ; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <3 x double> [[SPLIT9]], i64 0
@@ -121,7 +121,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[SPLAT_SPLAT35:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT34]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP68:%.*]] = fmul <1 x double> [[BLOCK33]], [[SPLAT_SPLAT35]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = fadd <1 x double> [[TMP66]], [[TMP68]]
-; CHECK-NEXT:    [[TMP70:%.*]] = shufflevector <1 x double> [[TMP69]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP70:%.*]] = shufflevector <1 x double> [[TMP69]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP71:%.*]] = shufflevector <3 x double> [[TMP61]], <3 x double> [[TMP70]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[BLOCK36:%.*]] = shufflevector <3 x double> [[SPLIT6]], <3 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP72:%.*]] = extractelement <3 x double> [[SPLIT10]], i64 0
@@ -140,7 +140,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[SPLAT_SPLAT44:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT43]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP78:%.*]] = fmul <1 x double> [[BLOCK42]], [[SPLAT_SPLAT44]]
 ; CHECK-NEXT:    [[TMP79:%.*]] = fadd <1 x double> [[TMP76]], [[TMP78]]
-; CHECK-NEXT:    [[TMP80:%.*]] = shufflevector <1 x double> [[TMP79]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP80:%.*]] = shufflevector <1 x double> [[TMP79]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP81:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP80]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK45:%.*]] = shufflevector <3 x double> [[SPLIT6]], <3 x double> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <3 x double> [[SPLIT10]], i64 0
@@ -159,7 +159,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[SPLAT_SPLAT53:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT52]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP88:%.*]] = fmul <1 x double> [[BLOCK51]], [[SPLAT_SPLAT53]]
 ; CHECK-NEXT:    [[TMP89:%.*]] = fadd <1 x double> [[TMP86]], [[TMP88]]
-; CHECK-NEXT:    [[TMP90:%.*]] = shufflevector <1 x double> [[TMP89]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP90:%.*]] = shufflevector <1 x double> [[TMP89]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP91:%.*]] = shufflevector <3 x double> [[TMP81]], <3 x double> [[TMP90]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK54:%.*]] = shufflevector <3 x double> [[SPLIT6]], <3 x double> poison, <1 x i32> <i32 2>
 ; CHECK-NEXT:    [[TMP92:%.*]] = extractelement <3 x double> [[SPLIT10]], i64 0
@@ -178,7 +178,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[SPLAT_SPLAT62:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT61]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP98:%.*]] = fmul <1 x double> [[BLOCK60]], [[SPLAT_SPLAT62]]
 ; CHECK-NEXT:    [[TMP99:%.*]] = fadd <1 x double> [[TMP96]], [[TMP98]]
-; CHECK-NEXT:    [[TMP100:%.*]] = shufflevector <1 x double> [[TMP99]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP100:%.*]] = shufflevector <1 x double> [[TMP99]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP101:%.*]] = shufflevector <3 x double> [[TMP91]], <3 x double> [[TMP100]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[BLOCK63:%.*]] = shufflevector <3 x double> [[SPLIT6]], <3 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP102:%.*]] = extractelement <3 x double> [[SPLIT11]], i64 0
@@ -197,7 +197,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[SPLAT_SPLAT71:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT70]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP108:%.*]] = fmul <1 x double> [[BLOCK69]], [[SPLAT_SPLAT71]]
 ; CHECK-NEXT:    [[TMP109:%.*]] = fadd <1 x double> [[TMP106]], [[TMP108]]
-; CHECK-NEXT:    [[TMP110:%.*]] = shufflevector <1 x double> [[TMP109]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP110:%.*]] = shufflevector <1 x double> [[TMP109]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP111:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP110]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK72:%.*]] = shufflevector <3 x double> [[SPLIT6]], <3 x double> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP112:%.*]] = extractelement <3 x double> [[SPLIT11]], i64 0
@@ -216,7 +216,7 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[SPLAT_SPLAT80:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT79]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP118:%.*]] = fmul <1 x double> [[BLOCK78]], [[SPLAT_SPLAT80]]
 ; CHECK-NEXT:    [[TMP119:%.*]] = fadd <1 x double> [[TMP116]], [[TMP118]]
-; CHECK-NEXT:    [[TMP120:%.*]] = shufflevector <1 x double> [[TMP119]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP120:%.*]] = shufflevector <1 x double> [[TMP119]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP121:%.*]] = shufflevector <3 x double> [[TMP111]], <3 x double> [[TMP120]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK81:%.*]] = shufflevector <3 x double> [[SPLIT6]], <3 x double> poison, <1 x i32> <i32 2>
 ; CHECK-NEXT:    [[TMP122:%.*]] = extractelement <3 x double> [[SPLIT11]], i64 0
@@ -235,10 +235,10 @@ define <9 x double> @unsupported_phi(i1 %cond, <9 x double> %A, <9 x double> %B,
 ; CHECK-NEXT:    [[SPLAT_SPLAT89:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT88]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP128:%.*]] = fmul <1 x double> [[BLOCK87]], [[SPLAT_SPLAT89]]
 ; CHECK-NEXT:    [[TMP129:%.*]] = fadd <1 x double> [[TMP126]], [[TMP128]]
-; CHECK-NEXT:    [[TMP130:%.*]] = shufflevector <1 x double> [[TMP129]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP130:%.*]] = shufflevector <1 x double> [[TMP129]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP131:%.*]] = shufflevector <3 x double> [[TMP121]], <3 x double> [[TMP130]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP132:%.*]] = shufflevector <3 x double> [[TMP71]], <3 x double> [[TMP101]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP133:%.*]] = shufflevector <3 x double> [[TMP131]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP133:%.*]] = shufflevector <3 x double> [[TMP131]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP134:%.*]] = shufflevector <6 x double> [[TMP132]], <6 x double> [[TMP133]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    ret <9 x double> [[TMP134]]
 ;
@@ -287,7 +287,7 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <3 x double> [[SPLIT2]], i64 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <3 x double> [[TMP16]], double [[TMP17]], i64 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <3 x double> [[TMP6]], <3 x double> [[TMP12]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <3 x double> [[TMP18]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <3 x double> [[TMP18]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <6 x double> [[TMP19]], <6 x double> [[TMP20]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[A_FOO:%.*]] = call <9 x double> @foo(<9 x double> [[TMP21]])
 ; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <9 x double> [[B:%.*]], <9 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -313,7 +313,7 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[SPLAT_SPLAT14:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT13]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP28:%.*]] = fmul <1 x double> [[BLOCK12]], [[SPLAT_SPLAT14]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd <1 x double> [[TMP26]], [[TMP28]]
-; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <1 x double> [[TMP29]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <1 x double> [[TMP29]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP30]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK15:%.*]] = shufflevector <3 x double> [[SPLIT3]], <3 x double> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <3 x double> [[SPLIT6]], i64 0
@@ -332,7 +332,7 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[SPLAT_SPLAT23:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT22]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP38:%.*]] = fmul <1 x double> [[BLOCK21]], [[SPLAT_SPLAT23]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = fadd <1 x double> [[TMP36]], [[TMP38]]
-; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <1 x double> [[TMP39]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <1 x double> [[TMP39]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <3 x double> [[TMP31]], <3 x double> [[TMP40]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK24:%.*]] = shufflevector <3 x double> [[SPLIT3]], <3 x double> poison, <1 x i32> <i32 2>
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <3 x double> [[SPLIT6]], i64 0
@@ -351,7 +351,7 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[SPLAT_SPLAT32:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT31]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul <1 x double> [[BLOCK30]], [[SPLAT_SPLAT32]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = fadd <1 x double> [[TMP46]], [[TMP48]]
-; CHECK-NEXT:    [[TMP50:%.*]] = shufflevector <1 x double> [[TMP49]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP50:%.*]] = shufflevector <1 x double> [[TMP49]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP51:%.*]] = shufflevector <3 x double> [[TMP41]], <3 x double> [[TMP50]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[BLOCK33:%.*]] = shufflevector <3 x double> [[SPLIT3]], <3 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <3 x double> [[SPLIT7]], i64 0
@@ -370,7 +370,7 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[SPLAT_SPLAT41:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT40]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP58:%.*]] = fmul <1 x double> [[BLOCK39]], [[SPLAT_SPLAT41]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = fadd <1 x double> [[TMP56]], [[TMP58]]
-; CHECK-NEXT:    [[TMP60:%.*]] = shufflevector <1 x double> [[TMP59]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP60:%.*]] = shufflevector <1 x double> [[TMP59]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP61:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP60]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK42:%.*]] = shufflevector <3 x double> [[SPLIT3]], <3 x double> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <3 x double> [[SPLIT7]], i64 0
@@ -389,7 +389,7 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[SPLAT_SPLAT50:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT49]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP68:%.*]] = fmul <1 x double> [[BLOCK48]], [[SPLAT_SPLAT50]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = fadd <1 x double> [[TMP66]], [[TMP68]]
-; CHECK-NEXT:    [[TMP70:%.*]] = shufflevector <1 x double> [[TMP69]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP70:%.*]] = shufflevector <1 x double> [[TMP69]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP71:%.*]] = shufflevector <3 x double> [[TMP61]], <3 x double> [[TMP70]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK51:%.*]] = shufflevector <3 x double> [[SPLIT3]], <3 x double> poison, <1 x i32> <i32 2>
 ; CHECK-NEXT:    [[TMP72:%.*]] = extractelement <3 x double> [[SPLIT7]], i64 0
@@ -408,7 +408,7 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[SPLAT_SPLAT59:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT58]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP78:%.*]] = fmul <1 x double> [[BLOCK57]], [[SPLAT_SPLAT59]]
 ; CHECK-NEXT:    [[TMP79:%.*]] = fadd <1 x double> [[TMP76]], [[TMP78]]
-; CHECK-NEXT:    [[TMP80:%.*]] = shufflevector <1 x double> [[TMP79]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP80:%.*]] = shufflevector <1 x double> [[TMP79]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP81:%.*]] = shufflevector <3 x double> [[TMP71]], <3 x double> [[TMP80]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[BLOCK60:%.*]] = shufflevector <3 x double> [[SPLIT3]], <3 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <3 x double> [[SPLIT8]], i64 0
@@ -427,7 +427,7 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[SPLAT_SPLAT68:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT67]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP88:%.*]] = fmul <1 x double> [[BLOCK66]], [[SPLAT_SPLAT68]]
 ; CHECK-NEXT:    [[TMP89:%.*]] = fadd <1 x double> [[TMP86]], [[TMP88]]
-; CHECK-NEXT:    [[TMP90:%.*]] = shufflevector <1 x double> [[TMP89]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP90:%.*]] = shufflevector <1 x double> [[TMP89]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP91:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP90]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK69:%.*]] = shufflevector <3 x double> [[SPLIT3]], <3 x double> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP92:%.*]] = extractelement <3 x double> [[SPLIT8]], i64 0
@@ -446,7 +446,7 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[SPLAT_SPLAT77:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT76]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP98:%.*]] = fmul <1 x double> [[BLOCK75]], [[SPLAT_SPLAT77]]
 ; CHECK-NEXT:    [[TMP99:%.*]] = fadd <1 x double> [[TMP96]], [[TMP98]]
-; CHECK-NEXT:    [[TMP100:%.*]] = shufflevector <1 x double> [[TMP99]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP100:%.*]] = shufflevector <1 x double> [[TMP99]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP101:%.*]] = shufflevector <3 x double> [[TMP91]], <3 x double> [[TMP100]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK78:%.*]] = shufflevector <3 x double> [[SPLIT3]], <3 x double> poison, <1 x i32> <i32 2>
 ; CHECK-NEXT:    [[TMP102:%.*]] = extractelement <3 x double> [[SPLIT8]], i64 0
@@ -465,10 +465,10 @@ define <9 x double> @unsupported_call(i1 %cond, <9 x double> %A, <9 x double> %B
 ; CHECK-NEXT:    [[SPLAT_SPLAT86:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT85]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP108:%.*]] = fmul <1 x double> [[BLOCK84]], [[SPLAT_SPLAT86]]
 ; CHECK-NEXT:    [[TMP109:%.*]] = fadd <1 x double> [[TMP106]], [[TMP108]]
-; CHECK-NEXT:    [[TMP110:%.*]] = shufflevector <1 x double> [[TMP109]], <1 x double> poison, <3 x i32> <i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP110:%.*]] = shufflevector <1 x double> [[TMP109]], <1 x double> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP111:%.*]] = shufflevector <3 x double> [[TMP101]], <3 x double> [[TMP110]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP112:%.*]] = shufflevector <3 x double> [[TMP51]], <3 x double> [[TMP81]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP113:%.*]] = shufflevector <3 x double> [[TMP111]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP113:%.*]] = shufflevector <3 x double> [[TMP111]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP114:%.*]] = shufflevector <6 x double> [[TMP112]], <6 x double> [[TMP113]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    ret <9 x double> [[TMP114]]
 ;

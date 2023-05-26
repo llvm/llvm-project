@@ -42,7 +42,7 @@ struct TestTopologicalSortAnalysisPass
           // If the root has an "ordered" attribute, we fill the selectedOps
           // vector in a certain order.
           int64_t pos =
-              selected->getAttr("selected").cast<IntegerAttr>().getInt();
+              cast<IntegerAttr>(selected->getAttr("selected")).getInt();
           if (pos >= static_cast<int64_t>(selectedOps.size()))
             selectedOps.append(pos + 1 - selectedOps.size(), nullptr);
           selectedOps[pos] = selected;

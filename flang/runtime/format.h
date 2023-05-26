@@ -61,7 +61,7 @@ struct DataEdit {
     return IsListDirected() && modes.inNamelist;
   }
 
-  static constexpr char DefinedDerivedType{'d'}; // DT user-defined derived type
+  static constexpr char DefinedDerivedType{'d'}; // DT defined I/O
 
   char variation{'\0'}; // N, S, or X for EN, ES, EX
   std::optional<int> width; // the 'w' field; optional for A
@@ -71,7 +71,7 @@ struct DataEdit {
   int repeat{1};
 
   // "iotype" &/or "v_list" values for a DT'iotype'(v_list)
-  // user-defined derived type data edit descriptor
+  // defined I/O data edit descriptor
   static constexpr std::size_t maxIoTypeChars{32};
   static constexpr std::size_t maxVListEntries{4};
   std::uint8_t ioTypeChars{0};

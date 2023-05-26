@@ -32,14 +32,14 @@ protected:
   _LIBCPP_HIDE_FROM_ABI bad_expected_access(bad_expected_access&&)                 = default;
   _LIBCPP_HIDE_FROM_ABI bad_expected_access& operator=(const bad_expected_access&) = default;
   _LIBCPP_HIDE_FROM_ABI bad_expected_access& operator=(bad_expected_access&&)      = default;
-  ~bad_expected_access() override                                                  = default;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_expected_access() override                    = default;
 
 public:
   // The way this has been designed (by using a class template below) means that we'll already
   // have a profusion of these vtables in TUs, and the dynamic linker will already have a bunch
   // of work to do. So it is not worth hiding the <void> specialization in the dylib, given that
   // it adds deployment target restrictions.
-  const char* what() const noexcept override { return "bad access to std::expected"; }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const noexcept override { return "bad access to std::expected"; }
 };
 
 template <class _Err>

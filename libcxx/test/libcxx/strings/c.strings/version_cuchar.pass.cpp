@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// The system-provided <uchar.h> seems to be broken on AIX
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <cuchar>
 
 #include <cuchar>

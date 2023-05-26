@@ -14,8 +14,8 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_WINDOWS
 
-#include "sanitizer_dbghelp.h"
-#include "sanitizer_symbolizer_internal.h"
+#  include "sanitizer_dbghelp.h"
+#  include "sanitizer_symbolizer_internal.h"
 
 namespace __sanitizer {
 
@@ -231,8 +231,6 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
     // Check that tool command lines are simple and that complete escaping is
     // unnecessary.
     CHECK(!internal_strchr(arg, '"') && "quotes in args unsupported");
-    CHECK(!internal_strstr(arg, "\\\\") &&
-          "double backslashes in args unsupported");
     CHECK(arglen > 0 && arg[arglen - 1] != '\\' &&
           "args ending in backslash and empty args unsupported");
     command_line.append("\"%s\" ", arg);

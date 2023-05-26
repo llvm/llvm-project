@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 class _LIBCPP_TYPE_VIS __libcpp_debug_randomizer {
 public:
-  __libcpp_debug_randomizer() {
+  _LIBCPP_HIDE_FROM_ABI __libcpp_debug_randomizer() {
     __state_ = __seed();
     __inc_ = __state_ + 0xda3e39cb94b95bdbULL;
     __inc_ = (__inc_ << 1) | 1;
@@ -85,8 +85,8 @@ public:
 
     result_type operator()();
 
-    static _LIBCPP_CONSTEXPR result_type min() {return _Min;}
-    static _LIBCPP_CONSTEXPR result_type max() {return _Max;}
+    static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type min() {return _Min;}
+    static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type max() {return _Max;}
 
     friend _LIBCPP_FUNC_VIS __rs_default __rs_get();
 };

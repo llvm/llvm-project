@@ -52,6 +52,34 @@ TEST_CONSTEXPR_CXX14 void for_each(type_list<Types...>, Functor f) {
   swallow((f.template operator()<Types>(), 0)...);
 }
 
+template <class T>
+struct type_identity {
+  using type = T;
+};
+
+#if TEST_STD_VER >= 17
+template <class Func>
+struct apply_type_identity {
+  Func func_;
+
+  apply_type_identity(Func func) : func_(func) {}
+
+  template <class... Args>
+  decltype(auto) operator()() const {
+    return func_(type_identity<Args>{}...);
+  }
+};
+
+template <class T>
+apply_type_identity(T) -> apply_type_identity<T>;
+
+#endif
+template <template <class...> class T, class... Args>
+struct partial_instantiation {
+  template <class Other>
+  using apply = T<Args..., Other>;
+};
+
 // type categories defined in [basic.fundamental] plus extensions (without CV-qualifiers)
 
 using character_types =
@@ -95,7 +123,9 @@ using unsigned_integer_types =
 #endif
               >;
 
-using integral_types = concatenate_t<character_types, signed_integer_types, unsigned_integer_types, type_list<bool> >;
+using integer_types = concatenate_t<character_types, signed_integer_types, unsigned_integer_types>;
+
+using integral_types = concatenate_t<integer_types, type_list<bool> >;
 
 using floating_point_types = type_list<float, double, long double>;
 

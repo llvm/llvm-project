@@ -21,8 +21,9 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Affine_Dialect : Dialect {
   let name = "affine";
-  let cppNamespace = "mlir";
+  let cppNamespace = "::mlir::affine";
   let hasConstantMaterializer = 1;
+  let usePropertiesForAttributes = 1;
   let dependentDialects = ["arith::ArithDialect"];
 }
 
@@ -96,6 +97,18 @@ def AffineApplyOp : Affine_Op<"apply", [Pure]> {
     /// Returns true if the result of this operation is a symbol for all its
     /// uses in `region`.
     bool isValidSymbol(Region *region);
+
+    /// Returns all dimension operands.
+    ValueRange getDimOperands() {
+      return OperandRange{getOperands().begin(),
+                          getOperands().begin() + getMap().getNumDims()};
+    }
+
+    /// Returns all symbol operands.
+    ValueRange getSymbolOperands() {
+      return OperandRange{getOperands().begin() + getMap().getNumDims(),
+                          getOperands().end()};
+    }
   }];
 
   let hasCanonicalizer = 1;
@@ -272,18 +285,18 @@ def AffineForOp : Affine_Op<"for",
 
     /// Returns loop step.
     int64_t getStep() {
-      return (*this)->getAttr(getStepAttrStrName()).cast<IntegerAttr>().getInt();
+      return ::llvm::cast<IntegerAttr>((*this)->getAttr(getStepAttrStrName())).getInt();
     }
 
     /// Returns affine map for the lower bound.
     AffineMap getLowerBoundMap() { return getLowerBoundMapAttr().getValue(); }
     AffineMapAttr getLowerBoundMapAttr() {
-      return (*this)->getAttr(getLowerBoundAttrStrName()).cast<AffineMapAttr>();
+      return ::llvm::cast<AffineMapAttr>((*this)->getAttr(getLowerBoundAttrStrName()));
     }
     /// Returns affine map for the upper bound. The upper bound is exclusive.
     AffineMap getUpperBoundMap() { return getUpperBoundMapAttr().getValue(); }
     AffineMapAttr getUpperBoundMapAttr() {
-      return (*this)->getAttr(getUpperBoundAttrStrName()).cast<AffineMapAttr>();
+      return ::llvm::cast<AffineMapAttr>((*this)->getAttr(getUpperBoundAttrStrName()));
     }
 
     /// Set lower bound. The new bound must have the same number of operands as
@@ -495,7 +508,7 @@ class AffineLoadOpBase<string mnemonic, list<Trait> traits = []> :
 
     /// Returns the affine map used to index the memref for this operation.
     AffineMapAttr getAffineMapAttr() {
-      return (*this)->getAttr(getMapAttrStrName()).cast<AffineMapAttr>();
+      return ::llvm::cast<AffineMapAttr>((*this)->getAttr(getMapAttrStrName()));
     }
 
     static StringRef getMapAttrStrName() { return "map"; }
@@ -811,13 +824,13 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return getMemref().getType().cast<MemRefType>();
+      return ::llvm::cast<MemRefType>(getMemref().getType());
     }
 
     /// Returns the affine map used to index the memref for this operation.
     AffineMap getAffineMap() { return getAffineMapAttr().getValue(); }
     AffineMapAttr getAffineMapAttr() {
-      return (*this)->getAttr(getMapAttrStrName()).cast<AffineMapAttr>();
+      return ::llvm::cast<AffineMapAttr>((*this)->getAttr(getMapAttrStrName()));
     }
 
     /// Impelements the AffineMapAccessInterface.
@@ -862,7 +875,7 @@ class AffineStoreOpBase<string mnemonic, list<Trait> traits = []> :
 
     /// Returns the affine map used to index the memref for this operation.
     AffineMapAttr getAffineMapAttr() {
-      return (*this)->getAttr(getMapAttrStrName()).cast<AffineMapAttr>();
+      return ::llvm::cast<AffineMapAttr>((*this)->getAttr(getMapAttrStrName()));
     }
 
     static StringRef getMapAttrStrName() { return "map"; }
@@ -999,7 +1012,7 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
     VectorType getVectorType() {
-      return getResult().getType().cast<VectorType>();
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
 
@@ -1065,7 +1078,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
     VectorType getVectorType() {
-      return getValue().getType().cast<VectorType>();
+      return ::llvm::cast<VectorType>(getValue().getType());
     }
   }];
 

@@ -63,7 +63,7 @@ const char *SBEvent::GetDataFlavor() {
   if (lldb_event) {
     EventData *event_data = lldb_event->GetData();
     if (event_data)
-      return lldb_event->GetData()->GetFlavor().AsCString();
+      return ConstString(lldb_event->GetData()->GetFlavor()).GetCString();
   }
   return nullptr;
 }
@@ -166,8 +166,9 @@ SBEvent::operator bool() const {
 const char *SBEvent::GetCStringFromEvent(const SBEvent &event) {
   LLDB_INSTRUMENT_VA(event);
 
-  return static_cast<const char *>(
-      EventDataBytes::GetBytesFromEvent(event.get()));
+  return ConstString(static_cast<const char *>(
+                         EventDataBytes::GetBytesFromEvent(event.get())))
+      .GetCString();
 }
 
 bool SBEvent::GetDescription(SBStream &description) {

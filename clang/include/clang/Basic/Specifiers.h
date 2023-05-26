@@ -19,6 +19,9 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 namespace clang {
 
   /// Define the meaning of possible values of the kind in ExplicitSpecifier.
@@ -333,6 +336,8 @@ namespace clang {
     // parameters are assumed to only get null on error.
     NullableResult,
   };
+  /// Prints human-readable debug representation.
+  llvm::raw_ostream &operator<<(llvm::raw_ostream&, NullabilityKind);
 
   /// Return true if \p L has a weaker nullability annotation than \p R. The
   /// ordering is: Unspecified < Nullable < NonNull.

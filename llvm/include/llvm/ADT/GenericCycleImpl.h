@@ -177,8 +177,7 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   CurrentContainer.pop_back();
   Child->ParentCycle = NewParent;
 
-  NewParent->Blocks.insert(NewParent->Blocks.end(), Child->block_begin(),
-                           Child->block_end());
+  NewParent->Blocks.insert(Child->block_begin(), Child->block_end());
 
   for (auto &It : BlockMapTopLevel)
     if (It.second == Child)
@@ -266,7 +265,7 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
       } else {
         Info.BlockMap.try_emplace(Block, NewCycle.get());
         assert(!is_contained(NewCycle->Blocks, Block));
-        NewCycle->Blocks.push_back(Block);
+        NewCycle->Blocks.insert(Block);
         ProcessPredecessors(Block);
         Info.BlockMapTopLevel.try_emplace(Block, NewCycle.get());
       }

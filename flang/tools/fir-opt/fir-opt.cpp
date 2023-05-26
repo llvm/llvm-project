@@ -35,5 +35,5 @@ int main(int argc, char **argv) {
   DialectRegistry registry;
   fir::support::registerDialects(registry);
   return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
-      registry, /*preloadDialectsInContext=*/false));
+      registry));
 }

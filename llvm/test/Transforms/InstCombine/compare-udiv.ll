@@ -3,7 +3,7 @@
 
 define i1 @test1(i32 %n, i32 %d) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 %d, %n
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[D:%.*]], [[N:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 %n, %d
@@ -13,7 +13,7 @@ define i1 @test1(i32 %n, i32 %d) {
 
 define <2 x i1> @test1vec(<2 x i32> %n, <2 x i32> %d) {
 ; CHECK-LABEL: @test1vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> %d, %n
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[D:%.*]], [[N:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> %n, %d
@@ -23,7 +23,7 @@ define <2 x i1> @test1vec(<2 x i32> %n, <2 x i32> %d) {
 
 define i1 @test2(i32 %d) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 %d, 64
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[D:%.*]], 64
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 64, %d
@@ -33,7 +33,7 @@ define i1 @test2(i32 %d) {
 
 define <2 x i1> @test2vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test2vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> %d, <i32 64, i32 63>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[D:%.*]], <i32 64, i32 63>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 64, i32 63>, %d
@@ -43,7 +43,7 @@ define <2 x i1> @test2vec(<2 x i32> %d) {
 
 define i1 @test3(i32 %n, i32 %d) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 %d, %n
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[D:%.*]], [[N:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 %n, %d
@@ -53,7 +53,7 @@ define i1 @test3(i32 %n, i32 %d) {
 
 define <2 x i1> @test3vec(<2 x i32> %n, <2 x i32> %d) {
 ; CHECK-LABEL: @test3vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule <2 x i32> %d, %n
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule <2 x i32> [[D:%.*]], [[N:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> %n, %d
@@ -63,7 +63,7 @@ define <2 x i1> @test3vec(<2 x i32> %n, <2 x i32> %d) {
 
 define i1 @test4(i32 %d) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 %d, 65
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[D:%.*]], 65
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 64, %d
@@ -73,7 +73,7 @@ define i1 @test4(i32 %d) {
 
 define <2 x i1> @test4vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test4vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> %d, <i32 65, i32 66>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[D:%.*]], <i32 65, i32 66>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 64, i32 65>, %d
@@ -101,7 +101,7 @@ define <2 x i1> @test5vec(<2 x i32> %d) {
 
 define i1 @test6(i32 %d) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 %d, 6
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[D:%.*]], 6
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 5, %d
@@ -111,7 +111,7 @@ define i1 @test6(i32 %d) {
 
 define <2 x i1> @test6vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test6vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> %d, <i32 6, i32 6>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[D:%.*]], <i32 6, i32 6>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 5, i32 5>, %d
@@ -140,7 +140,7 @@ define <2 x i1> @test7vec(<2 x i32> %d) {
 
 define i1 @test8(i32 %d) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 %d, 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[D:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 4, %d
@@ -150,7 +150,7 @@ define i1 @test8(i32 %d) {
 
 define <2 x i1> @test8vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test8vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> %d, <i32 2, i32 2>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[D:%.*]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 4, i32 4>, %d
@@ -160,7 +160,7 @@ define <2 x i1> @test8vec(<2 x i32> %d) {
 
 define i1 @test9(i32 %d) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 %d, 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[D:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 4, %d
@@ -170,7 +170,7 @@ define i1 @test9(i32 %d) {
 
 define <2 x i1> @test9vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test9vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> %d, <i32 2, i32 2>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[D:%.*]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 4, i32 4>, %d
@@ -180,7 +180,7 @@ define <2 x i1> @test9vec(<2 x i32> %d) {
 
 define i1 @test10(i32 %d) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 %d, 3
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[D:%.*]], 3
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 4, %d
@@ -190,7 +190,7 @@ define i1 @test10(i32 %d) {
 
 define <2 x i1> @test10vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test10vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> %d, <i32 3, i32 3>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[D:%.*]], <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 4, i32 4>, %d
@@ -200,7 +200,7 @@ define <2 x i1> @test10vec(<2 x i32> %d) {
 
 define i1 @test11(i32 %d) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 %d, 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[D:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 4, %d
@@ -210,7 +210,7 @@ define i1 @test11(i32 %d) {
 
 define <2 x i1> @test11vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test11vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> %d, <i32 4, i32 4>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[D:%.*]], <i32 4, i32 4>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 4, i32 4>, %d
@@ -220,7 +220,7 @@ define <2 x i1> @test11vec(<2 x i32> %d) {
 
 define i1 @test12(i32 %d) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 %d, 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[D:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 4, %d
@@ -230,7 +230,7 @@ define i1 @test12(i32 %d) {
 
 define <2 x i1> @test12vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test12vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> %d, <i32 2, i32 2>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[D:%.*]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 4, i32 4>, %d
@@ -240,7 +240,7 @@ define <2 x i1> @test12vec(<2 x i32> %d) {
 
 define i1 @test13(i32 %d) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 %d, 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[D:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 4, %d
@@ -250,7 +250,7 @@ define i1 @test13(i32 %d) {
 
 define <2 x i1> @test13vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test13vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> %d, <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[D:%.*]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 4, i32 4>, %d
@@ -260,7 +260,7 @@ define <2 x i1> @test13vec(<2 x i32> %d) {
 
 define i1 @test14(i32 %d) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 %d, 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[D:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %div = udiv i32 4, %d
@@ -270,7 +270,7 @@ define i1 @test14(i32 %d) {
 
 define <2 x i1> @test14vec(<2 x i32> %d) {
 ; CHECK-LABEL: @test14vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> %d, <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[D:%.*]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %div = udiv <2 x i32> <i32 4, i32 4>, %d

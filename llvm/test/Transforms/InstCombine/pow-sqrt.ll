@@ -21,8 +21,8 @@ define double @pow_intrinsic_half_no_FMF(double %x) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[POW:%.*]] = select i1 [[ISINF]], double 0x7FF0000000000000, double [[ABS]]
+; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call double @llvm.pow.f64(double %x, double 5.0e-01)
   ret double %pow
@@ -52,8 +52,8 @@ define <2 x double> @pow_intrinsic_half_approx(<2 x double> %x) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call afn <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call afn <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
-; CHECK-NEXT:    [[TMP1:%.*]] = select afn <2 x i1> [[ISINF]], <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[ABS]]
-; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+; CHECK-NEXT:    [[POW:%.*]] = select afn <2 x i1> [[ISINF]], <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[ABS]]
+; CHECK-NEXT:    ret <2 x double> [[POW]]
 ;
   %pow = call afn <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double 5.0e-01, double 5.0e-01>)
   ret <2 x double> %pow
@@ -117,8 +117,8 @@ define double @pow_intrinsic_half_nsz(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_half_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nsz double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[TMP1:%.*]] = select nsz i1 [[ISINF]], double 0x7FF0000000000000, double [[SQRT]]
-; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK-NEXT:    [[POW:%.*]] = select nsz i1 [[ISINF]], double 0x7FF0000000000000, double [[SQRT]]
+; CHECK-NEXT:    ret double [[POW]]
 ;
   %pow = call nsz double @llvm.pow.f64(double %x, double 5.0e-01)
   ret double %pow
@@ -222,8 +222,8 @@ define <2 x double> @pow_intrinsic_neghalf_reassoc(<2 x double> %x) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call reassoc <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call reassoc <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp reassoc oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
-; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv reassoc <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select <2 x i1> [[ISINF]], <2 x double> zeroinitializer, <2 x double> [[ABS_OP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select <2 x i1> [[ISINF]], <2 x double> zeroinitializer, <2 x double> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
 ;
   %pow = call reassoc <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
@@ -239,8 +239,8 @@ define <2 x double> @pow_intrinsic_neghalf_afn(<2 x double> %x) {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call afn <2 x double> @llvm.sqrt.v2f64(<2 x double> [[X:%.*]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call afn <2 x double> @llvm.fabs.v2f64(<2 x double> [[SQRT]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp afn oeq <2 x double> [[X]], <double 0xFFF0000000000000, double 0xFFF0000000000000>
-; CHECK-NEXT:    [[ABS_OP:%.*]] = fdiv afn <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select <2 x i1> [[ISINF]], <2 x double> zeroinitializer, <2 x double> [[ABS_OP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv afn <2 x double> <double 1.000000e+00, double 1.000000e+00>, [[ABS]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select <2 x i1> [[ISINF]], <2 x double> zeroinitializer, <2 x double> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x double> [[RECIPROCAL]]
 ;
   %pow = call afn <2 x double> @llvm.pow.v2f64(<2 x double> %x, <2 x double> <double -5.0e-01, double -5.0e-01>)
@@ -286,8 +286,8 @@ define double @pow_intrinsic_neghalf_nsz(double %x) {
 ; CHECK-LABEL: @pow_intrinsic_neghalf_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nsz afn double @llvm.sqrt.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[ISINF:%.*]] = fcmp nsz afn oeq double [[X]], 0xFFF0000000000000
-; CHECK-NEXT:    [[SQRT_OP:%.*]] = fdiv nsz afn double 1.000000e+00, [[SQRT]]
-; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], double 0.000000e+00, double [[SQRT_OP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv nsz afn double 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[RECIPROCAL:%.*]] = select i1 [[ISINF]], double 0.000000e+00, double [[TMP1]]
 ; CHECK-NEXT:    ret double [[RECIPROCAL]]
 ;
   %pow = call afn nsz double @llvm.pow.f64(double %x, double -5.0e-01)

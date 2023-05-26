@@ -523,6 +523,17 @@ namespace llvm {
     /// string is well-formed in the given radix.
     bool getAsInteger(unsigned Radix, APInt &Result) const;
 
+    /// Parse the current string as an integer of the specified \p Radix.  If
+    /// \p Radix is specified as zero, this does radix autosensing using
+    /// extended C rules: 0 is octal, 0x is hex, 0b is binary.
+    ///
+    /// If the string does not begin with a number of the specified radix,
+    /// this returns true to signify the error. The string is considered
+    /// erroneous if empty.
+    /// The portion of the string representing the discovered numeric value
+    /// is removed from the beginning of the string.
+    bool consumeInteger(unsigned Radix, APInt &Result);
+
     /// Parse the current string as an IEEE double-precision floating
     /// point value.  The string must be a well-formed double.
     ///
@@ -630,7 +641,7 @@ namespace llvm {
     /// Returns true if this StringRef has the given prefix, ignoring case,
     /// and removes that prefix.
     bool consume_front_insensitive(StringRef Prefix) {
-      if (!startswith_insensitive(Prefix))
+      if (!starts_with_insensitive(Prefix))
         return false;
 
       *this = substr(Prefix.size());
@@ -650,7 +661,7 @@ namespace llvm {
     /// Returns true if this StringRef has the given suffix, ignoring case,
     /// and removes that suffix.
     bool consume_back_insensitive(StringRef Suffix) {
-      if (!endswith_insensitive(Suffix))
+      if (!ends_with_insensitive(Suffix))
         return false;
 
       *this = substr(0, size() - Suffix.size());

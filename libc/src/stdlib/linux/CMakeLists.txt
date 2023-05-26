@@ -1,16 +1,4 @@
 add_entrypoint_object(
-  _Exit
-  SRCS
-    _Exit.cpp
-  HDRS
-    ../_Exit.h
-  DEPENDS
-    libc.include.sys_syscall
-    libc.include.stdlib
-    libc.src.__support.OSUtil.osutil
-)
-
-add_entrypoint_object(
   abort
   SRCS
     abort.cpp

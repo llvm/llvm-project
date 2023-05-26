@@ -114,12 +114,9 @@ EventDataBytes::EventDataBytes(const void *src, size_t src_len) : m_bytes() {
 
 EventDataBytes::~EventDataBytes() = default;
 
-ConstString EventDataBytes::GetFlavorString() {
-  static ConstString g_flavor("EventDataBytes");
-  return g_flavor;
-}
+llvm::StringRef EventDataBytes::GetFlavorString() { return "EventDataBytes"; }
 
-ConstString EventDataBytes::GetFlavor() const {
+llvm::StringRef EventDataBytes::GetFlavor() const {
   return EventDataBytes::GetFlavorString();
 }
 
@@ -182,6 +179,10 @@ void EventDataBytes::SwapBytes(std::string &new_bytes) {
   m_bytes.swap(new_bytes);
 }
 
+llvm::StringRef EventDataReceipt::GetFlavorString() {
+  return "Process::ProcessEventData";
+}
+
 #pragma mark -
 #pragma mark EventStructuredData
 
@@ -200,7 +201,7 @@ EventDataStructuredData::~EventDataStructuredData() = default;
 
 // EventDataStructuredData member functions
 
-ConstString EventDataStructuredData::GetFlavor() const {
+llvm::StringRef EventDataStructuredData::GetFlavor() const {
   return EventDataStructuredData::GetFlavorString();
 }
 
@@ -280,7 +281,6 @@ EventDataStructuredData::GetPluginFromEvent(const Event *event_ptr) {
     return StructuredDataPluginSP();
 }
 
-ConstString EventDataStructuredData::GetFlavorString() {
-  static ConstString s_flavor("EventDataStructuredData");
-  return s_flavor;
+llvm::StringRef EventDataStructuredData::GetFlavorString() {
+  return "EventDataStructuredData";
 }

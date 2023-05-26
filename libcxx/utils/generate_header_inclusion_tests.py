@@ -8,9 +8,11 @@ def get_libcxx_paths():
     script_name = os.path.basename(__file__)
     assert os.path.exists(utils_path)
     src_root = os.path.dirname(utils_path)
-    test_path = os.path.join(src_root, 'test', 'libcxx', 'inclusions')
+    test_path = os.path.join(src_root, "test", "libcxx", "inclusions")
     assert os.path.exists(test_path)
-    assert os.path.exists(os.path.join(test_path, 'algorithm.inclusions.compile.pass.cpp'))
+    assert os.path.exists(
+        os.path.join(test_path, "algorithm.inclusions.compile.pass.cpp")
+    )
     return script_name, src_root, test_path
 
 
@@ -93,46 +95,46 @@ assert all(v == sorted(v) for k, v in mandatory_inclusions.items())
 # <thread> should be marked as UNSUPPORTED, because including <thread>
 # is a hard error in that case.
 lit_markup = {
-  "barrier": ["UNSUPPORTED: no-threads"],
-  "filesystem": ["UNSUPPORTED: no-filesystem"],
-  "format": ["UNSUPPORTED: libcpp-has-no-incomplete-format"],
-  "iomanip": ["UNSUPPORTED: no-localization"],
-  "ios": ["UNSUPPORTED: no-localization"],
-  "iostream": ["UNSUPPORTED: no-localization"],
-  "istream": ["UNSUPPORTED: no-localization"],
-  "latch": ["UNSUPPORTED: no-threads"],
-  "locale": ["UNSUPPORTED: no-localization"],
-  "mutex": ["UNSUPPORTED: no-threads"],
-  "ostream": ["UNSUPPORTED: no-localization"],
-  "regex": ["UNSUPPORTED: no-localization"],
-  "semaphore": ["UNSUPPORTED: no-threads"],
-  "shared_mutex": ["UNSUPPORTED: no-threads"],
-  "thread": ["UNSUPPORTED: no-threads"]
+    "barrier": ["UNSUPPORTED: no-threads"],
+    "filesystem": ["UNSUPPORTED: no-filesystem"],
+    "iomanip": ["UNSUPPORTED: no-localization"],
+    "ios": ["UNSUPPORTED: no-localization"],
+    "iostream": ["UNSUPPORTED: no-localization"],
+    "istream": ["UNSUPPORTED: no-localization"],
+    "latch": ["UNSUPPORTED: no-threads"],
+    "locale": ["UNSUPPORTED: no-localization"],
+    "mutex": ["UNSUPPORTED: no-threads"],
+    "ostream": ["UNSUPPORTED: no-localization"],
+    "regex": ["UNSUPPORTED: no-localization"],
+    "semaphore": ["UNSUPPORTED: no-threads"],
+    "shared_mutex": ["UNSUPPORTED: no-threads"],
+    "thread": ["UNSUPPORTED: no-threads"],
 }
 
 
 def get_std_ver_test(includee):
     v = new_in_version.get(includee, "03")
     if v == "03":
-        return ''
+        return ""
     versions = ["03", "11", "14", "17", "20"]
-    return 'TEST_STD_VER > {} && '.format(max(i for i in versions if i < v))
+    return "TEST_STD_VER > {} && ".format(max(i for i in versions if i < v))
 
 
 def get_unsupported_line(includee):
     v = new_in_version.get(includee, "03")
     return {
         "03": [],
-        "11": ['UNSUPPORTED: c++03'],
-        "14": ['UNSUPPORTED: c++03, c++11'],
-        "17": ['UNSUPPORTED: c++03, c++11, c++14'],
-        "20": ['UNSUPPORTED: c++03, c++11, c++14, c++17'],
-        "2b": ['UNSUPPORTED: c++03, c++11, c++14, c++17, c++20'],
+        "11": ["UNSUPPORTED: c++03"],
+        "14": ["UNSUPPORTED: c++03, c++11"],
+        "17": ["UNSUPPORTED: c++03, c++11, c++14"],
+        "20": ["UNSUPPORTED: c++03, c++11, c++14, c++17"],
+        "23": ["UNSUPPORTED: c++03, c++11, c++14, c++17, c++20"],
+        "26": ["UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23"],
     }[v]
 
 
 def get_libcpp_header_symbol(header_name):
-    return '_LIBCPP_' + header_name.upper().replace('.', '_')
+    return "_LIBCPP_" + header_name.upper().replace(".", "_")
 
 
 def get_includer_symbol_test(includer):
@@ -157,7 +159,9 @@ def get_ifdef(includer, includee):
     """.strip().format(
         includee_test=get_std_ver_test(includee),
         symbol=symbol,
-        message="<{}> should include <{}> in C++{} and later".format(includer, includee, version)
+        message="<{}> should include <{}> in C++{} and later".format(
+            includer, includee, version
+        ),
     )
 
 
@@ -193,15 +197,19 @@ def produce_tests():
         test_body = test_body_template.format(
             script_name=script_name,
             header=includer,
-            markup=('\n' + '\n'.join('// ' + m for m in markup_tags) + '\n') if markup_tags else '',
+            markup=("\n" + "\n".join("// " + m for m in markup_tags) + "\n")
+            if markup_tags
+            else "",
             test_includers_symbol=get_includer_symbol_test(includer),
-            test_per_includee='\n'.join(get_ifdef(includer, includee) for includee in includees),
+            test_per_includee="\n".join(
+                get_ifdef(includer, includee) for includee in includees
+            ),
         )
         test_name = "{header}.inclusions.compile.pass.cpp".format(header=includer)
         out_path = os.path.join(test_path, test_name)
-        with open(out_path, 'w', newline='\n') as f:
-            f.write(test_body + '\n')
+        with open(out_path, "w", newline="\n") as f:
+            f.write(test_body + "\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     produce_tests()

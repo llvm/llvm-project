@@ -1,5 +1,5 @@
 ! Test derived type finalization
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir %s -o - | FileCheck %s
 
 ! Missing tests:
 ! - finalization within BLOCK construct
@@ -182,7 +182,7 @@ contains
 ! CHECK: %{{.*}} = fir.call @_FortranAioBeginExternalListOutput
 ! CHECK: %[[RES:.*]] = fir.call @_QMderived_type_finalizationPget_t1(%{{.*}}) {{.*}} : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
 ! CHECK: fir.save_result %[[RES]] to %[[TMP]] : !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>, !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>
-! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor
+! CHECK: %{{.*}} = fir.call @_FortranAioOutputDerivedType
 ! CHECK-NOT: %{{.*}} = fir.call @_FortranADestroy
 ! CHECK: %{{.*}} = fir.call @_FortranAioEndIoStatement
 ! CHECK: return

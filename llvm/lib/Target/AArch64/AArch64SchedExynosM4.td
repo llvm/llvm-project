@@ -166,8 +166,8 @@ def M4WriteAV : SchedWriteVariant<[SchedVar<ExynosResetPred,   [M4WriteZ0]>,
 def M4WriteAX : SchedWriteVariant<[SchedVar<ExynosArithPred,   [M4WriteA1]>,
                                    SchedVar<ExynosLogicExPred, [M4WriteA1]>,
                                    SchedVar<NoSchedPred,       [M4WriteAA]>]>;
-def M4WriteAY : SchedWriteVariant<[SchedVar<ExynosRotateRightImmPred, [M4WriteA1]>,
-                                   SchedVar<NoSchedPred,              [M4WriteAF]>]>;
+def M4WriteAY : SchedWriteVariant<[SchedVar<IsRORImmIdiomPred, [M4WriteA1]>,
+                                   SchedVar<NoSchedPred,       [M4WriteAF]>]>;
 
 def M4WriteB1 : SchedWriteRes<[M4UnitB]> { let Latency = 1; }
 def M4WriteBX : SchedWriteVariant<[SchedVar<ExynosBranchLinkLRPred, [M4WriteAC]>,

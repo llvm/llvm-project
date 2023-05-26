@@ -175,7 +175,15 @@ def int_wasm_shuffle :
                          llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                          llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                          llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-                        [IntrNoMem, IntrSpeculatable]>;
+                        [IntrNoMem, IntrSpeculatable,
+                         ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>,
+                         ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>,
+                         ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>,
+                         ImmArg<ArgIndex<8>>, ImmArg<ArgIndex<9>>,
+                         ImmArg<ArgIndex<10>>, ImmArg<ArgIndex<11>>,
+                         ImmArg<ArgIndex<12>>, ImmArg<ArgIndex<13>>,
+                         ImmArg<ArgIndex<14>>, ImmArg<ArgIndex<15>>,
+                         ImmArg<ArgIndex<16>>, ImmArg<ArgIndex<17>>]>;
 def int_wasm_sub_sat_signed :
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>],

@@ -20,13 +20,13 @@ define void @test_lsr_pre_inc_offset_check(ptr %p) {
 ; CHECK-LABEL: test_lsr_pre_inc_offset_check:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #165
-; CHECK-NEXT:    add x9, x0, #340
+; CHECK-NEXT:    add x9, x0, #339
 ; CHECK-NEXT:    mov w10, #2
 ; CHECK-NEXT:  .LBB0_1: // %main
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    stur wzr, [x9, #-1]
+; CHECK-NEXT:    str wzr, [x9]
 ; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    strb w10, [x9]
+; CHECK-NEXT:    strb w10, [x9, #1]
 ; CHECK-NEXT:    add x9, x9, #338
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit

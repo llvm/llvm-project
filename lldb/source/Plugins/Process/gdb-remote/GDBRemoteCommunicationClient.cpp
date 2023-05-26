@@ -69,10 +69,10 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_vFileSize(true), m_supports_vFileMode(true),
       m_supports_vFileExists(true), m_supports_vRun(true),
 
-      m_host_arch(), m_process_arch(), m_os_build(), m_os_kernel(),
-      m_hostname(), m_gdb_server_name(), m_default_packet_timeout(0),
-      m_qSupported_response(), m_supported_async_json_packets_sp(),
-      m_qXfer_memory_map() {}
+      m_host_arch(), m_host_distribution_id(), m_process_arch(), m_os_build(),
+      m_os_kernel(), m_hostname(), m_gdb_server_name(),
+      m_default_packet_timeout(0), m_qSupported_response(),
+      m_supported_async_json_packets_sp(), m_qXfer_memory_map() {}
 
 // Destructor
 GDBRemoteCommunicationClient::~GDBRemoteCommunicationClient() {
@@ -307,6 +307,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_qSymbol_requests_done = false;
     m_supports_qModuleInfo = true;
     m_host_arch.Clear();
+    m_host_distribution_id.clear();
     m_os_version = llvm::VersionTuple();
     m_os_build.clear();
     m_os_kernel.clear();
@@ -549,8 +550,7 @@ StructuredData::ObjectSP GDBRemoteCommunicationClient::GetThreadsInfo() {
       if (response.IsUnsupportedResponse()) {
         m_supports_jThreadsInfo = false;
       } else if (!response.Empty()) {
-        object_sp =
-            StructuredData::ParseJSON(std::string(response.GetStringRef()));
+        object_sp = StructuredData::ParseJSON(response.GetStringRef());
       }
     }
   }
@@ -1207,7 +1207,6 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
         std::string environment;
         std::string vendor_name;
         std::string triple;
-        std::string distribution_id;
         uint32_t pointer_byte_size = 0;
         ByteOrder byte_order = eByteOrderInvalid;
         uint32_t num_keys_decoded = 0;
@@ -1229,7 +1228,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             ++num_keys_decoded;
           } else if (name.equals("distribution_id")) {
             StringExtractor extractor(value);
-            extractor.GetHexByteString(distribution_id);
+            extractor.GetHexByteString(m_host_distribution_id);
             ++num_keys_decoded;
           } else if (name.equals("os_build")) {
             StringExtractor extractor(value);
@@ -1377,8 +1376,6 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
                     m_host_arch.GetTriple().getTriple().c_str(),
                     triple.c_str());
         }
-        if (!distribution_id.empty())
-          m_host_arch.SetDistributionId(distribution_id.c_str());
       }
     }
   }
@@ -2620,7 +2617,7 @@ size_t GDBRemoteCommunicationClient::QueryGDBServer(
     return 0;
 
   StructuredData::ObjectSP data =
-      StructuredData::ParseJSON(std::string(response.GetStringRef()));
+      StructuredData::ParseJSON(response.GetStringRef());
   if (!data)
     return 0;
 
@@ -2636,7 +2633,7 @@ size_t GDBRemoteCommunicationClient::QueryGDBServer(
     uint16_t port = 0;
     if (StructuredData::ObjectSP port_osp =
             element->GetValueForKey(llvm::StringRef("port")))
-      port = port_osp->GetIntegerValue(0);
+      port = port_osp->GetUnsignedIntegerValue(0);
 
     std::string socket_name;
     if (StructuredData::ObjectSP socket_name_osp =
@@ -3868,7 +3865,7 @@ GDBRemoteCommunicationClient::GetModulesInfo(
   }
 
   StructuredData::ObjectSP response_object_sp =
-      StructuredData::ParseJSON(std::string(response.GetStringRef()));
+      StructuredData::ParseJSON(response.GetStringRef());
   if (!response_object_sp)
     return std::nullopt;
 
@@ -4031,52 +4028,45 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
               lldb_private::SymbolContextList sc_list;
               process->GetTarget().GetImages().FindSymbolsWithNameAndType(
                   ConstString(symbol_name), eSymbolTypeAny, sc_list);
-              if (!sc_list.IsEmpty()) {
-                const size_t num_scs = sc_list.GetSize();
-                for (size_t sc_idx = 0;
-                     sc_idx < num_scs &&
-                     symbol_load_addr == LLDB_INVALID_ADDRESS;
-                     ++sc_idx) {
-                  SymbolContext sc;
-                  if (sc_list.GetContextAtIndex(sc_idx, sc)) {
-                    if (sc.symbol) {
-                      switch (sc.symbol->GetType()) {
-                      case eSymbolTypeInvalid:
-                      case eSymbolTypeAbsolute:
-                      case eSymbolTypeUndefined:
-                      case eSymbolTypeSourceFile:
-                      case eSymbolTypeHeaderFile:
-                      case eSymbolTypeObjectFile:
-                      case eSymbolTypeCommonBlock:
-                      case eSymbolTypeBlock:
-                      case eSymbolTypeLocal:
-                      case eSymbolTypeParam:
-                      case eSymbolTypeVariable:
-                      case eSymbolTypeVariableType:
-                      case eSymbolTypeLineEntry:
-                      case eSymbolTypeLineHeader:
-                      case eSymbolTypeScopeBegin:
-                      case eSymbolTypeScopeEnd:
-                      case eSymbolTypeAdditional:
-                      case eSymbolTypeCompiler:
-                      case eSymbolTypeInstrumentation:
-                      case eSymbolTypeTrampoline:
-                        break;
+              for (const SymbolContext &sc : sc_list) {
+                if (symbol_load_addr != LLDB_INVALID_ADDRESS)
+                  break;
+                if (sc.symbol) {
+                  switch (sc.symbol->GetType()) {
+                  case eSymbolTypeInvalid:
+                  case eSymbolTypeAbsolute:
+                  case eSymbolTypeUndefined:
+                  case eSymbolTypeSourceFile:
+                  case eSymbolTypeHeaderFile:
+                  case eSymbolTypeObjectFile:
+                  case eSymbolTypeCommonBlock:
+                  case eSymbolTypeBlock:
+                  case eSymbolTypeLocal:
+                  case eSymbolTypeParam:
+                  case eSymbolTypeVariable:
+                  case eSymbolTypeVariableType:
+                  case eSymbolTypeLineEntry:
+                  case eSymbolTypeLineHeader:
+                  case eSymbolTypeScopeBegin:
+                  case eSymbolTypeScopeEnd:
+                  case eSymbolTypeAdditional:
+                  case eSymbolTypeCompiler:
+                  case eSymbolTypeInstrumentation:
+                  case eSymbolTypeTrampoline:
+                    break;
 
-                      case eSymbolTypeCode:
-                      case eSymbolTypeResolver:
-                      case eSymbolTypeData:
-                      case eSymbolTypeRuntime:
-                      case eSymbolTypeException:
-                      case eSymbolTypeObjCClass:
-                      case eSymbolTypeObjCMetaClass:
-                      case eSymbolTypeObjCIVar:
-                      case eSymbolTypeReExported:
-                        symbol_load_addr =
-                            sc.symbol->GetLoadAddress(&process->GetTarget());
-                        break;
-                      }
-                    }
+                  case eSymbolTypeCode:
+                  case eSymbolTypeResolver:
+                  case eSymbolTypeData:
+                  case eSymbolTypeRuntime:
+                  case eSymbolTypeException:
+                  case eSymbolTypeObjCClass:
+                  case eSymbolTypeObjCMetaClass:
+                  case eSymbolTypeObjCIVar:
+                  case eSymbolTypeReExported:
+                    symbol_load_addr =
+                        sc.symbol->GetLoadAddress(&process->GetTarget());
+                    break;
                   }
                 }
               }
@@ -4126,7 +4116,7 @@ GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins() {
     if (SendPacketAndWaitForResponse("qStructuredDataPlugins", response) ==
         PacketResult::Success) {
       m_supported_async_json_packets_sp =
-          StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          StructuredData::ParseJSON(response.GetStringRef());
       if (m_supported_async_json_packets_sp &&
           !m_supported_async_json_packets_sp->GetAsArray()) {
         // We were returned something other than a JSON array.  This is

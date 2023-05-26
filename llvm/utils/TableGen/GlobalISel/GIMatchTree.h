@@ -390,7 +390,7 @@ protected:
   /// The leaves that the resulting decision tree will distinguish.
   LeafVec Leaves;
   /// The tree node being constructed.
-  GIMatchTree *TreeNode;
+  GIMatchTree *TreeNode = nullptr;
   /// The builders for each subtree resulting from the current decision.
   std::vector<GIMatchTreeBuilder> SubtreeBuilders;
   /// The possible partitioners we could apply right now.

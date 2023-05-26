@@ -64,7 +64,7 @@ struct AssumingOpInterface
     rewriter.setInsertionPointAfter(newOp);
     SmallVector<Value> newResults;
     for (const auto &it : llvm::enumerate(assumingOp->getResultTypes())) {
-      if (it.value().isa<TensorType>()) {
+      if (isa<TensorType>(it.value())) {
         newResults.push_back(rewriter.create<bufferization::ToTensorOp>(
             assumingOp.getLoc(), newOp->getResult(it.index())));
       } else {
@@ -116,7 +116,7 @@ struct AssumingYieldOpInterface
     auto yieldOp = cast<shape::AssumingYieldOp>(op);
     SmallVector<Value> newResults;
     for (Value value : yieldOp.getOperands()) {
-      if (value.getType().isa<TensorType>()) {
+      if (isa<TensorType>(value.getType())) {
         FailureOr<Value> buffer = getBuffer(rewriter, value, options);
         if (failed(buffer))
           return failure();

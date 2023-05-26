@@ -4,7 +4,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK-MIR
 
 #X = #sparse_tensor.encoding<{
- dimLevelType = [ "dense", "dense", "dense" ],
+ lvlTypes = [ "dense", "dense", "dense" ],
  dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
 }>
 

@@ -16,12 +16,9 @@ header_restrictions = {
     "shared_mutex": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "stdatomic.h": "__cplusplus > 202002L && !defined(_LIBCPP_HAS_NO_THREADS)",
     "thread": "!defined(_LIBCPP_HAS_NO_THREADS)",
-
     "filesystem": "!defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)",
-
-    # TODO LLVM17: simplify this to __cplusplus >= 202002L
+    # TODO(LLVM-17): simplify this to __cplusplus >= 202002L
     "coroutine": "(defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)",
-
     "clocale": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "codecvt": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "fstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)",
@@ -36,12 +33,10 @@ header_restrictions = {
     "sstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "streambuf": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "strstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-
     "wctype.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
     "cwctype": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
     "cwchar": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
     "wchar.h": "!defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)",
-
     "experimental/algorithm": "__cplusplus >= 201103L",
     "experimental/deque": "__cplusplus >= 201103L",
     "experimental/forward_list": "__cplusplus >= 201103L",
@@ -64,91 +59,133 @@ header_restrictions = {
 }
 
 private_headers_still_public_in_modules = [
-    '__assert', '__bsd_locale_defaults.h', '__bsd_locale_fallbacks.h', '__config',
-    '__config_site.in', '__debug', '__hash_table',
-    '__threading_support', '__tree', '__undef_macros', '__verbose_abort'
+    "__assert",
+    "__config",
+    "__config_site.in",
+    "__debug",
+    "__hash_table",
+    "__threading_support",
+    "__tree",
+    "__undef_macros",
+    "__verbose_abort",
 ]
+
 
 def find_script(file):
     """Finds the script used to generate a file inside the file itself. The script is delimited by
-       BEGIN-SCRIPT and END-SCRIPT markers.
+    BEGIN-SCRIPT and END-SCRIPT markers.
     """
-    with open(file, 'r') as f:
+    with open(file, "r") as f:
         content = f.read()
 
-    match = re.search(r'^BEGIN-SCRIPT$(.+)^END-SCRIPT$', content, flags=re.MULTILINE | re.DOTALL)
+    match = re.search(
+        r"^BEGIN-SCRIPT$(.+)^END-SCRIPT$", content, flags=re.MULTILINE | re.DOTALL
+    )
     if not match:
-        raise RuntimeError("Was unable to find a script delimited with BEGIN-SCRIPT/END-SCRIPT markers in {}".format(test_file))
+        raise RuntimeError(
+            "Was unable to find a script delimited with BEGIN-SCRIPT/END-SCRIPT markers in {}".format(
+                test_file
+            )
+        )
     return match.group(1)
+
 
 def execute_script(script, variables):
     """Executes the provided Mako template with the given variables available during the
-       evaluation of the script, and returns the result.
+    evaluation of the script, and returns the result.
     """
-    code = compile(script, 'fake-filename', 'exec')
+    code = compile(script, "fake-filename", "exec")
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
         exec(code, variables)
         output = output.getvalue()
     return output
 
+
 def generate_new_file(file, new_content):
     """Generates the new content of the file by inserting the new content in-between
-       two '// GENERATED-MARKER' markers located in the file.
+    two '// GENERATED-MARKER' markers located in the file.
     """
-    with open(file, 'r') as f:
+    with open(file, "r") as f:
         old_content = f.read()
 
     try:
-        before, begin_marker, _, end_marker, after = re.split(r'(// GENERATED-MARKER\n)', old_content, flags=re.MULTILINE | re.DOTALL)
+        before, begin_marker, _, end_marker, after = re.split(
+            r"(// GENERATED-MARKER\n)", old_content, flags=re.MULTILINE | re.DOTALL
+        )
     except ValueError:
-        raise RuntimeError("Failed to split {} based on markers, please make sure the file has exactly two '// GENERATED-MARKER' occurrences".format(file))
+        raise RuntimeError(
+            "Failed to split {} based on markers, please make sure the file has exactly two '// GENERATED-MARKER' occurrences".format(
+                file
+            )
+        )
 
     return before + begin_marker + new_content + end_marker + after
+
 
 def produce(test_file, variables):
     script = find_script(test_file)
     result = execute_script(script, variables)
     new_content = generate_new_file(test_file, result)
-    with open(test_file, 'w', newline='\n') as f:
+    with open(test_file, "w", newline="\n") as f:
         f.write(new_content)
+
 
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
-    return not file.is_dir() and not file.name == 'module.modulemap.in' and file.name != 'libcxx.imp'
+    return (
+        not file.is_dir()
+        and not file.name == "module.modulemap.in"
+        and file.name != "libcxx.imp"
+    )
 
 
 def main():
-    monorepo_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    include = pathlib.Path(os.path.join(monorepo_root, 'libcxx', 'include'))
-    test = pathlib.Path(os.path.join(monorepo_root, 'libcxx', 'test'))
-    assert(monorepo_root.exists())
+    monorepo_root = pathlib.Path(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
+    include = pathlib.Path(os.path.join(monorepo_root, "libcxx", "include"))
+    test = pathlib.Path(os.path.join(monorepo_root, "libcxx", "test"))
+    assert monorepo_root.exists()
 
-    toplevel_headers     = sorted(str(p.relative_to(include)) for p in include.glob('[a-z]*') if is_header(p))
-    experimental_headers = sorted(str(p.relative_to(include)) for p in include.glob('experimental/[a-z]*') if is_header(p))
-    extended_headers     = sorted(str(p.relative_to(include)) for p in include.glob('ext/[a-z]*') if is_header(p))
-    public_headers       = toplevel_headers + experimental_headers + extended_headers
-    private_headers      = sorted(str(p.relative_to(include)) for p in include.rglob('*') if is_header(p) and str(p.relative_to(include)).startswith('__'))
+    toplevel_headers = sorted(
+        str(p.relative_to(include)) for p in include.glob("[a-z]*") if is_header(p)
+    )
+    experimental_headers = sorted(
+        str(p.relative_to(include))
+        for p in include.glob("experimental/[a-z]*")
+        if is_header(p)
+    )
+    public_headers = toplevel_headers + experimental_headers
+    private_headers = sorted(
+        str(p.relative_to(include))
+        for p in include.rglob("*")
+        if is_header(p)
+        and str(p.relative_to(include)).startswith("__")
+        and not p.name.startswith("pstl")
+    )
     variables = {
-        'toplevel_headers': toplevel_headers,
-        'experimental_headers': experimental_headers,
-        'extended_headers': extended_headers,
-        'public_headers': public_headers,
-        'private_headers': private_headers,
-        'header_restrictions': header_restrictions,
-        'private_headers_still_public_in_modules': private_headers_still_public_in_modules
+        "toplevel_headers": toplevel_headers,
+        "experimental_headers": experimental_headers,
+        "public_headers": public_headers,
+        "private_headers": private_headers,
+        "header_restrictions": header_restrictions,
+        "private_headers_still_public_in_modules": private_headers_still_public_in_modules,
     }
 
-    produce(test.joinpath('libcxx/assertions/headers_declare_verbose_abort.sh.cpp'), variables)
-    produce(test.joinpath('libcxx/clang_tidy.sh.cpp'), variables)
-    produce(test.joinpath('libcxx/double_include.sh.cpp'), variables)
-    produce(test.joinpath('libcxx/min_max_macros.compile.pass.cpp'), variables)
-    produce(test.joinpath('libcxx/modules_include.sh.cpp'), variables)
-    produce(test.joinpath('libcxx/nasty_macros.compile.pass.cpp'), variables)
-    produce(test.joinpath('libcxx/no_assert_include.compile.pass.cpp'), variables)
-    produce(test.joinpath('libcxx/private_headers.verify.cpp'), variables)
-    produce(test.joinpath('libcxx/transitive_includes.sh.cpp'), variables)
+    produce(
+        test.joinpath("libcxx/assertions/headers_declare_verbose_abort.sh.cpp"),
+        variables,
+    )
+    produce(test.joinpath("libcxx/clang_tidy.sh.cpp"), variables)
+    produce(test.joinpath("libcxx/double_include.sh.cpp"), variables)
+    produce(test.joinpath("libcxx/min_max_macros.compile.pass.cpp"), variables)
+    produce(test.joinpath("libcxx/modules_include.sh.cpp"), variables)
+    produce(test.joinpath("libcxx/nasty_macros.compile.pass.cpp"), variables)
+    produce(test.joinpath("libcxx/no_assert_include.compile.pass.cpp"), variables)
+    produce(test.joinpath("libcxx/private_headers.verify.cpp"), variables)
+    produce(test.joinpath("libcxx/transitive_includes.sh.cpp"), variables)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

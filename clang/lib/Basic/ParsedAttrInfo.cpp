@@ -25,7 +25,7 @@ clang::getAttributePluginInstances() {
   static llvm::ManagedStatic<std::list<std::unique_ptr<ParsedAttrInfo>>>
       PluginAttrInstances;
   if (PluginAttrInstances->empty())
-    for (auto It : ParsedAttrInfoRegistry::entries())
+    for (const auto &It : ParsedAttrInfoRegistry::entries())
       PluginAttrInstances->emplace_back(It.instantiate());
 
   return *PluginAttrInstances;

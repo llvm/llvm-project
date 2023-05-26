@@ -15,12 +15,14 @@
 #ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 #define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -52,6 +54,9 @@ public:
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.
   std::vector<std::string> OffloadObjects;
+
+  /// The directory where temp files are stored if specified by -save-temps
+  std::optional<std::string> SaveTempsDir;
 
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)

@@ -126,17 +126,19 @@ namespace {
 /// Calculate the fragment of a variable to use when slicing a store
 /// based on the slice dimensions, existing fragment, and base storage
 /// fragment.
-/// Note that a returned value of std::nullopt indicates that there is
-/// no appropriate fragment available (rather than meaning use the whole
-/// variable, which is a common usage). Because the store is being sliced
-/// we always expect a fragment - there's never a case where the whole
-/// variable should be used.
-static std::optional<DIExpression::FragmentInfo>
-calculateFragment(uint64_t NewStorageSliceOffsetInBits,
+/// Results:
+/// UseFrag - Use Target as the new fragment.
+/// UseNoFrag - The new slice already covers the whole variable.
+/// Skip - The new alloca slice doesn't include this variable.
+/// FIXME: Can we use calculateFragmentIntersect instead?
+enum FragCalcResult { UseFrag, UseNoFrag, Skip };
+static FragCalcResult
+calculateFragment(DILocalVariable *Variable,
+                  uint64_t NewStorageSliceOffsetInBits,
                   uint64_t NewStorageSliceSizeInBits,
                   std::optional<DIExpression::FragmentInfo> StorageFragment,
-                  std::optional<DIExpression::FragmentInfo> CurrentFragment) {
-  DIExpression::FragmentInfo Target;
+                  std::optional<DIExpression::FragmentInfo> CurrentFragment,
+                  DIExpression::FragmentInfo &Target) {
   // If the base storage describes part of the variable apply the offset and
   // the size constraint.
   if (StorageFragment) {
@@ -149,20 +151,32 @@ calculateFragment(uint64_t NewStorageSliceOffsetInBits,
     Target.OffsetInBits = NewStorageSliceOffsetInBits;
   }
 
+  // If this slice extracts the entirety of an independent variable from a
+  // larger alloca, do not produce a fragment expression, as the variable is
+  // not fragmented.
+  if (!CurrentFragment) {
+    if (auto Size = Variable->getSizeInBits()) {
+      // Treat the current fragment as covering the whole variable.
+      CurrentFragment =  DIExpression::FragmentInfo(*Size, 0);
+      if (Target == CurrentFragment)
+        return UseNoFrag;
+    }
+  }
+
   // No additional work to do if there isn't a fragment already, or there is
   // but it already exactly describes the new assignment.
   if (!CurrentFragment || *CurrentFragment == Target)
-    return Target;
+    return UseFrag;
 
   // Reject the target fragment if it doesn't fit wholly within the current
   // fragment. TODO: We could instead chop up the target to fit in the case of
   // a partial overlap.
   if (Target.startInBits() < CurrentFragment->startInBits() ||
       Target.endInBits() > CurrentFragment->endInBits())
-    return std::nullopt;
+    return Skip;
 
   // Target fits within the current fragment, return it.
-  return Target;
+  return UseFrag;
 }
 
 static DebugVariable getAggregateVariable(DbgVariableIntrinsic *DVI) {
@@ -225,9 +239,10 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
+    bool SetKillLocation = false;
 
     if (IsSplit) {
-      std::optional<DIExpression::FragmentInfo> BaseFragment = std::nullopt;
+      std::optional<DIExpression::FragmentInfo> BaseFragment;
       {
         auto R = BaseFragments.find(getAggregateVariable(DbgAssign));
         if (R == BaseFragments.end())
@@ -236,27 +251,34 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
       }
       std::optional<DIExpression::FragmentInfo> CurrentFragment =
           Expr->getFragmentInfo();
-      std::optional<DIExpression::FragmentInfo> NewFragment =
-          calculateFragment(OldAllocaOffsetInBits, SliceSizeInBits,
-                            BaseFragment, CurrentFragment);
-      // Note that std::nullopt here means "skip this fragment" rather than
-      // "there is no fragment / use the whole variable".
-      if (!NewFragment)
-        continue;
+      DIExpression::FragmentInfo NewFragment;
+      FragCalcResult Result = calculateFragment(
+          DbgAssign->getVariable(), OldAllocaOffsetInBits, SliceSizeInBits,
+          BaseFragment, CurrentFragment, NewFragment);
 
-      if (!(NewFragment == CurrentFragment)) {
+      if (Result == Skip)
+        continue;
+      if (Result == UseFrag && !(NewFragment == CurrentFragment)) {
         if (CurrentFragment) {
           // Rewrite NewFragment to be relative to the existing one (this is
           // what createFragmentExpression wants).  CalculateFragment has
           // already resolved the size for us. FIXME: Should it return the
           // relative fragment too?
-          NewFragment->OffsetInBits -= CurrentFragment->OffsetInBits;
+          NewFragment.OffsetInBits -= CurrentFragment->OffsetInBits;
         }
-
-        auto E = DIExpression::createFragmentExpression(
-            Expr, NewFragment->OffsetInBits, NewFragment->SizeInBits);
-        assert(E && "Failed to create fragment expr!");
-        Expr = *E;
+        // Add the new fragment info to the existing expression if possible.
+        if (auto E = DIExpression::createFragmentExpression(
+                Expr, NewFragment.OffsetInBits, NewFragment.SizeInBits)) {
+          Expr = *E;
+        } else {
+          // Otherwise, add the new fragment info to an empty expression and
+          // discard the value component of this dbg.assign as the value cannot
+          // be computed with the new fragment.
+          Expr = *DIExpression::createFragmentExpression(
+              DIExpression::get(Expr->getContext(), std::nullopt),
+              NewFragment.OffsetInBits, NewFragment.SizeInBits);
+          SetKillLocation = true;
+        }
       }
     }
 
@@ -266,10 +288,26 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
       Inst->setMetadata(LLVMContext::MD_DIAssignID, NewID);
     }
 
-    Value = Value ? Value : DbgAssign->getValue();
+    ::Value *NewValue = Value ? Value : DbgAssign->getValue();
     auto *NewAssign = DIB.insertDbgAssign(
-        Inst, Value, DbgAssign->getVariable(), Expr, Dest,
+        Inst, NewValue, DbgAssign->getVariable(), Expr, Dest,
         DIExpression::get(Ctx, std::nullopt), DbgAssign->getDebugLoc());
+
+    // If we've updated the value but the original dbg.assign has an arglist
+    // then kill it now - we can't use the requested new value.
+    // We can't replace the DIArgList with the new value as it'd leave
+    // the DIExpression in an invalid state (DW_OP_LLVM_arg operands without
+    // an arglist). And we can't keep the DIArgList in case the linked store
+    // is being split - in which case the DIArgList + expression may no longer
+    // be computing the correct value.
+    // This should be a very rare situation as it requires the value being
+    // stored to differ from the dbg.assign (i.e., the value has been
+    // represented differently in the debug intrinsic for some reason).
+    SetKillLocation |=
+        Value && (DbgAssign->hasArgList() ||
+                  !DbgAssign->getExpression()->isSingleLocationExpression());
+    if (SetKillLocation)
+      NewAssign->setKillLocation();
 
     // We could use more precision here at the cost of some additional (code)
     // complexity - if the original dbg.assign was adjacent to its store, we
@@ -1651,15 +1689,17 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
     bool IsThen = SuccBB == HeadBI->getSuccessor(0);
     int SuccIdx = IsThen ? 0 : 1;
     auto *NewMemOpBB = SuccBB == Tail ? Head : SuccBB;
+    auto &CondMemOp = cast<T>(*I.clone());
     if (NewMemOpBB != Head) {
       NewMemOpBB->setName(Head->getName() + (IsThen ? ".then" : ".else"));
       if (isa<LoadInst>(I))
         ++NumLoadsPredicated;
       else
         ++NumStoresPredicated;
-    } else
+    } else {
+      CondMemOp.dropUBImplyingAttrsAndMetadata();
       ++NumLoadsSpeculated;
-    auto &CondMemOp = cast<T>(*I.clone());
+    }
     CondMemOp.insertBefore(NewMemOpBB->getTerminator());
     Value *Ptr = SI.getOperand(1 + SuccIdx);
     if (auto *PtrTy = Ptr->getType();
@@ -3937,6 +3977,10 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
     return nullptr;
 
   const StructLayout *SL = DL.getStructLayout(STy);
+
+  if (SL->getSizeInBits().isScalable())
+    return nullptr;
+
   if (Offset >= SL->getSizeInBytes())
     return nullptr;
   uint64_t EndOffset = Offset + Size;

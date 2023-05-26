@@ -213,6 +213,15 @@ public:
         .getNonConst();
   }
 
+  /// Returns the first potential AsynchEH faulty instruction
+  /// currently it checks for loads/stores (which may dereference a null
+  /// pointer) and calls/invokes (which may propagate exceptions)
+  const Instruction* getFirstMayFaultInst() const;
+  Instruction* getFirstMayFaultInst() {
+      return const_cast<Instruction*>(
+          static_cast<const BasicBlock*>(this)->getFirstMayFaultInst());
+  }
+
   /// Return a const iterator range over the instructions in the block, skipping
   /// any debug instructions. Skip any pseudo operations as well if \c
   /// SkipPseudoOp is true.

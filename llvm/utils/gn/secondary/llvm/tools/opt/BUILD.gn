@@ -22,8 +22,6 @@ executable("opt") {
     "//llvm/lib/Transforms/Vectorize",
   ]
   sources = [
-    "AnalysisWrappers.cpp",
-    "BreakpointPrinter.cpp",
     "NewPMDriver.cpp",
     "opt.cpp",
   ]

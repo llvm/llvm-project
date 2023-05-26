@@ -20,6 +20,8 @@
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/Support/Debug.h"
@@ -115,7 +117,7 @@ using SymbolNameVector = std::vector<SymbolStringPtr>;
 
 /// A map from symbol names (as SymbolStringPtrs) to JITSymbols
 /// (address/flags pairs).
-using SymbolMap = DenseMap<SymbolStringPtr, JITEvaluatedSymbol>;
+using SymbolMap = DenseMap<SymbolStringPtr, ExecutorSymbolDef>;
 
 /// A map from symbol names (as SymbolStringPtrs) to JITSymbolFlags.
 using SymbolFlagsMap = DenseMap<SymbolStringPtr, JITSymbolFlags>;
@@ -762,7 +764,7 @@ private:
 /// \code{.cpp}
 ///   JITDylib &JD = ...;
 ///   SymbolStringPtr Foo = ...;
-///   JITEvaluatedSymbol FooSym = ...;
+///   ExecutorSymbolDef FooSym = ...;
 ///   if (auto Err = JD.define(absoluteSymbols({{Foo, FooSym}})))
 ///     return Err;
 /// \endcode
@@ -866,7 +868,7 @@ public:
 
   /// Notify the query that a requested symbol has reached the required state.
   void notifySymbolMetRequiredState(const SymbolStringPtr &Name,
-                                    JITEvaluatedSymbol Sym);
+                                    ExecutorSymbolDef Sym);
 
   /// Returns true if all symbols covered by this query have been
   ///        resolved.
@@ -1054,6 +1056,11 @@ public:
   void setLinkOrder(JITDylibSearchOrder NewSearchOrder,
                     bool LinkAgainstThisJITDylibFirst = true);
 
+  /// Append the given JITDylibSearchOrder to the link order for this
+  /// JITDylib (discarding any elements already present in this JITDylib's
+  /// link order).
+  void addToLinkOrder(const JITDylibSearchOrder &NewLinks);
+
   /// Add the given JITDylib to the link order for definitions in this
   /// JITDylib.
   ///
@@ -1234,9 +1241,7 @@ private:
       this->PendingRemoval = PendingRemoval;
     }
 
-    JITEvaluatedSymbol getSymbol() const {
-      return JITEvaluatedSymbol(Addr.getValue(), Flags);
-    }
+    ExecutorSymbolDef getSymbol() const { return {Addr, Flags}; }
 
   private:
     ExecutorAddr Addr;
@@ -1553,21 +1558,21 @@ public:
   /// Convenience version of blocking lookup.
   /// Searches each of the JITDylibs in the search order in turn for the given
   /// symbol.
-  Expected<JITEvaluatedSymbol>
+  Expected<ExecutorSymbolDef>
   lookup(const JITDylibSearchOrder &SearchOrder, SymbolStringPtr Symbol,
          SymbolState RequiredState = SymbolState::Ready);
 
   /// Convenience version of blocking lookup.
   /// Searches each of the JITDylibs in the search order in turn for the given
   /// symbol. The search will not find non-exported symbols.
-  Expected<JITEvaluatedSymbol>
+  Expected<ExecutorSymbolDef>
   lookup(ArrayRef<JITDylib *> SearchOrder, SymbolStringPtr Symbol,
          SymbolState RequiredState = SymbolState::Ready);
 
   /// Convenience version of blocking lookup.
   /// Searches each of the JITDylibs in the search order in turn for the given
   /// symbol. The search will not find non-exported symbols.
-  Expected<JITEvaluatedSymbol>
+  Expected<ExecutorSymbolDef>
   lookup(ArrayRef<JITDylib *> SearchOrder, StringRef Symbol,
          SymbolState RequiredState = SymbolState::Ready);
 
@@ -1672,10 +1677,9 @@ public:
   /// Run a registered jit-side wrapper function.
   /// This should be called by the ExecutorProcessControl instance in response
   /// to incoming jit-dispatch requests from the executor.
-  void
-  runJITDispatchHandler(SendResultFunction SendResult,
-                        JITTargetAddress HandlerFnTagAddr,
-                        ArrayRef<char> ArgBuffer);
+  void runJITDispatchHandler(SendResultFunction SendResult,
+                             ExecutorAddr HandlerFnTagAddr,
+                             ArrayRef<char> ArgBuffer);
 
   /// Dump the state of all the JITDylibs in this session.
   void dump(raw_ostream &OS);
@@ -1777,7 +1781,7 @@ private:
       OutstandingMUs;
 
   mutable std::mutex JITDispatchHandlersMutex;
-  DenseMap<JITTargetAddress, std::shared_ptr<JITDispatchHandlerFunction>>
+  DenseMap<ExecutorAddr, std::shared_ptr<JITDispatchHandlerFunction>>
       JITDispatchHandlers;
 };
 

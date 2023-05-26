@@ -133,6 +133,9 @@ void bar(void) {
 
   // CHECK: __rvv_int8mf2_t x43;
   __rvv_int8mf2_t x43;
+
+  // CHECK: __rvv_int32m1x2_t x44;
+  __rvv_int32m1x2_t x44;
 }
 
 typedef __rvv_bool4_t vbool4_t;

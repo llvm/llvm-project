@@ -164,7 +164,7 @@ public:
 private:
     _LIBCPP_INLINE_VISIBILITY
     result_type __eval(false_type);
-    result_type __eval(true_type);
+    _LIBCPP_HIDE_FROM_ABI result_type __eval(true_type);
 
     template <size_t __count>
         _LIBCPP_INLINE_VISIBILITY

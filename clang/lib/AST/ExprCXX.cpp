@@ -1392,17 +1392,16 @@ ExprWithCleanups *ExprWithCleanups::Create(const ASTContext &C,
   return new (buffer) ExprWithCleanups(empty, numObjects);
 }
 
-CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(QualType T,
-                                                       TypeSourceInfo *TSI,
-                                                       SourceLocation LParenLoc,
-                                                       ArrayRef<Expr *> Args,
-                                                       SourceLocation RParenLoc)
+CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(
+    QualType T, TypeSourceInfo *TSI, SourceLocation LParenLoc,
+    ArrayRef<Expr *> Args, SourceLocation RParenLoc, bool IsListInit)
     : Expr(CXXUnresolvedConstructExprClass, T,
            (TSI->getType()->isLValueReferenceType()   ? VK_LValue
             : TSI->getType()->isRValueReferenceType() ? VK_XValue
                                                       : VK_PRValue),
            OK_Ordinary),
-      TSI(TSI), LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
+      TypeAndInitForm(TSI, IsListInit), LParenLoc(LParenLoc),
+      RParenLoc(RParenLoc) {
   CXXUnresolvedConstructExprBits.NumArgs = Args.size();
   auto **StoredArgs = getTrailingObjects<Expr *>();
   for (unsigned I = 0; I != Args.size(); ++I)
@@ -1411,11 +1410,12 @@ CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(QualType T,
 }
 
 CXXUnresolvedConstructExpr *CXXUnresolvedConstructExpr::Create(
-    const ASTContext &Context, QualType T, TypeSourceInfo *TSI, SourceLocation LParenLoc,
-    ArrayRef<Expr *> Args, SourceLocation RParenLoc) {
+    const ASTContext &Context, QualType T, TypeSourceInfo *TSI,
+    SourceLocation LParenLoc, ArrayRef<Expr *> Args, SourceLocation RParenLoc,
+    bool IsListInit) {
   void *Mem = Context.Allocate(totalSizeToAlloc<Expr *>(Args.size()));
-  return new (Mem)
-      CXXUnresolvedConstructExpr(T, TSI, LParenLoc, Args, RParenLoc);
+  return new (Mem) CXXUnresolvedConstructExpr(T, TSI, LParenLoc, Args,
+                                              RParenLoc, IsListInit);
 }
 
 CXXUnresolvedConstructExpr *
@@ -1426,7 +1426,7 @@ CXXUnresolvedConstructExpr::CreateEmpty(const ASTContext &Context,
 }
 
 SourceLocation CXXUnresolvedConstructExpr::getBeginLoc() const {
-  return TSI->getTypeLoc().getBeginLoc();
+  return TypeAndInitForm.getPointer()->getTypeLoc().getBeginLoc();
 }
 
 CXXDependentScopeMemberExpr::CXXDependentScopeMemberExpr(

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/IdenticalCodeFolding.h"
+#include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -336,74 +337,6 @@ typedef std::unordered_map<BinaryFunction *, std::set<BinaryFunction *>,
 typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
                            KeyHash, KeyEqual>
     IdenticalBucketsMap;
-
-static std::string hashInteger(uint64_t Value) {
-  std::string HashString;
-  if (Value == 0)
-    HashString.push_back(0);
-
-  while (Value) {
-    uint8_t LSB = Value & 0xff;
-    HashString.push_back(LSB);
-    Value >>= 8;
-  }
-
-  return HashString;
-}
-
-static std::string hashSymbol(BinaryContext &BC, const MCSymbol &Symbol) {
-  std::string HashString;
-
-  // Ignore function references.
-  if (BC.getFunctionForSymbol(&Symbol))
-    return HashString;
-
-  llvm::ErrorOr<uint64_t> ErrorOrValue = BC.getSymbolValue(Symbol);
-  if (!ErrorOrValue)
-    return HashString;
-
-  // Ignore jump table references.
-  if (BC.getJumpTableContainingAddress(*ErrorOrValue))
-    return HashString;
-
-  return HashString.append(hashInteger(*ErrorOrValue));
-}
-
-static std::string hashExpr(BinaryContext &BC, const MCExpr &Expr) {
-  switch (Expr.getKind()) {
-  case MCExpr::Constant:
-    return hashInteger(cast<MCConstantExpr>(Expr).getValue());
-  case MCExpr::SymbolRef:
-    return hashSymbol(BC, cast<MCSymbolRefExpr>(Expr).getSymbol());
-  case MCExpr::Unary: {
-    const auto &UnaryExpr = cast<MCUnaryExpr>(Expr);
-    return hashInteger(UnaryExpr.getOpcode())
-        .append(hashExpr(BC, *UnaryExpr.getSubExpr()));
-  }
-  case MCExpr::Binary: {
-    const auto &BinaryExpr = cast<MCBinaryExpr>(Expr);
-    return hashExpr(BC, *BinaryExpr.getLHS())
-        .append(hashInteger(BinaryExpr.getOpcode()))
-        .append(hashExpr(BC, *BinaryExpr.getRHS()));
-  }
-  case MCExpr::Target:
-    return std::string();
-  }
-
-  llvm_unreachable("invalid expression kind");
-}
-
-static std::string hashInstOperand(BinaryContext &BC,
-                                   const MCOperand &Operand) {
-  if (Operand.isImm())
-    return hashInteger(Operand.getImm());
-  if (Operand.isReg())
-    return hashInteger(Operand.getReg());
-  if (Operand.isExpr())
-    return hashExpr(BC, *Operand.getExpr());
-
-  return std::string();
-}
 
 namespace llvm {
 namespace bolt {

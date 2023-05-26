@@ -471,7 +471,7 @@ template <class T> class [[nodiscard]] Expected {
   template <class T1> friend class ExpectedAsOutParameter;
   template <class OtherT> friend class Expected;
 
-  static constexpr bool isRef = std::is_reference<T>::value;
+  static constexpr bool isRef = std::is_reference_v<T>;
 
   using wrap = std::reference_wrapper<std::remove_reference_t<T>>;
 
@@ -577,9 +577,9 @@ public:
 
   /// Returns \a takeError() after moving the held T (if any) into \p V.
   template <class OtherT>
-  Error moveInto(OtherT &Value,
-                 std::enable_if_t<std::is_assignable<OtherT &, T &&>::value> * =
-                     nullptr) && {
+  Error moveInto(
+      OtherT &Value,
+      std::enable_if_t<std::is_assignable_v<OtherT &, T &&>> * = nullptr) && {
     if (*this)
       Value = std::move(get());
     return takeError();

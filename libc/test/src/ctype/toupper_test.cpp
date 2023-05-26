@@ -10,7 +10,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcToUpper, DefaultLocale) {
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     // This follows pattern 'a' - 32 = 'A'.
     if ('a' <= ch && ch <= 'z')
       EXPECT_EQ(__llvm_libc::toupper(ch), ch - 32);

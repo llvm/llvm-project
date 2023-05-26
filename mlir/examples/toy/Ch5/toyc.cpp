@@ -119,7 +119,8 @@ int dumpMLIR() {
 
   mlir::PassManager pm(module.get()->getName());
   // Apply any generic pass manager command line options and run the pipeline.
-  applyPassManagerCLOptions(pm);
+  if (mlir::failed(mlir::applyPassManagerCLOptions(pm)))
+    return 4;
 
   // Check to see what granularity of MLIR we are compiling to.
   bool isLoweringToAffine = emitAction >= Action::DumpMLIRAffine;
@@ -147,8 +148,8 @@ int dumpMLIR() {
 
     // Add optimizations if enabled.
     if (enableOpt) {
-      optPM.addPass(mlir::createLoopFusionPass());
-      optPM.addPass(mlir::createAffineScalarReplacementPass());
+      optPM.addPass(mlir::affine::createLoopFusionPass());
+      optPM.addPass(mlir::affine::createAffineScalarReplacementPass());
     }
   }
 

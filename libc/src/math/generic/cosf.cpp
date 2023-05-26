@@ -129,8 +129,8 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
 
   sincosf_eval(xd, x_abs, sin_k, cos_k, sin_y, cosm1_y);
 
-  return fputil::multiply_add(sin_y, -sin_k,
-                              fputil::multiply_add(cosm1_y, cos_k, cos_k));
+  return static_cast<float>(fputil::multiply_add(
+      sin_y, -sin_k, fputil::multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
 } // namespace __llvm_libc

@@ -1027,10 +1027,10 @@ unsigned MachinePointerInfo::getAddrSpace() const { return AddrSpace; }
 /// Offset + Size byte.
 bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
                                            const DataLayout &DL) const {
-  if (!V.is<const Value *>())
+  if (!isa<const Value *>(V))
     return false;
 
-  const Value *BasePtr = V.get<const Value *>();
+  const Value *BasePtr = cast<const Value *>(V);
   if (BasePtr == nullptr)
     return false;
 
@@ -1075,8 +1075,8 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
                                      AtomicOrdering FailureOrdering)
     : PtrInfo(ptrinfo), MemoryType(type), FlagVals(f), BaseAlign(a),
       AAInfo(AAInfo), Ranges(Ranges) {
-  assert((PtrInfo.V.isNull() || PtrInfo.V.is<const PseudoSourceValue *>() ||
-          isa<PointerType>(PtrInfo.V.get<const Value *>()->getType())) &&
+  assert((PtrInfo.V.isNull() || isa<const PseudoSourceValue *>(PtrInfo.V) ||
+          isa<PointerType>(cast<const Value *>(PtrInfo.V)->getType())) &&
          "invalid pointer value");
   assert((isLoad() || isStore()) && "Not a load/store!");
 

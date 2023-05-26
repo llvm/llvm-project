@@ -312,6 +312,20 @@ public:
       insert(*I);
   }
 
+  /// Returns the value associated to the key in the map if it exists. If it
+  /// does not exist, emplace a default value for the key and returns a
+  /// reference to the newly created value.
+  ValueT &getOrInsertDefault(KeyT &&Key) {
+    return try_emplace(Key).first->second;
+  }
+
+  /// Returns the value associated to the key in the map if it exists. If it
+  /// does not exist, emplace a default value for the key and returns a
+  /// reference to the newly created value.
+  ValueT &getOrInsertDefault(const KeyT &Key) {
+    return try_emplace(Key).first->second;
+  }
+
   bool erase(const KeyT &Val) {
     BucketT *TheBucket;
     if (!LookupBucketFor(Val, TheBucket))

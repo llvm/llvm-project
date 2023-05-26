@@ -85,6 +85,16 @@ define amdgpu_kernel void @test_kernel() {
 
 ; ----------------------------------GFX9---------------------------------------
 ;
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx942 %t.o > %t-specify.txt
+; RUN: llvm-objdump -D %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx941 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx941 %t.o > %t-specify.txt
+; RUN: llvm-objdump -D %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -filetype=obj -O0 -o %t.o %s
 ; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx940 %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt

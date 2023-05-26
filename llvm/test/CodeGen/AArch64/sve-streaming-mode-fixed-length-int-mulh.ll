@@ -71,39 +71,12 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 define void @smulh_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: smulh_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    sunpklo z4.h, z1.b
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    sunpklo z1.h, z1.b
-; CHECK-NEXT:    ldp q3, q2, [x1]
-; CHECK-NEXT:    sunpklo z5.h, z0.b
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    sunpklo z0.h, z0.b
-; CHECK-NEXT:    sunpklo z6.h, z3.b
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
-; CHECK-NEXT:    sunpklo z3.h, z3.b
-; CHECK-NEXT:    sunpklo z7.h, z2.b
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
-; CHECK-NEXT:    sunpklo z2.h, z2.b
-; CHECK-NEXT:    mul z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
-; CHECK-NEXT:    movprfx z2, z5
-; CHECK-NEXT:    mul z2.h, p0/m, z2.h, z7.h
-; CHECK-NEXT:    movprfx z3, z4
-; CHECK-NEXT:    mul z3.h, p0/m, z3.h, z6.h
-; CHECK-NEXT:    lsr z1.h, z1.h, #8
-; CHECK-NEXT:    lsr z3.h, z3.h, #8
-; CHECK-NEXT:    lsr z2.h, z2.h, #8
-; CHECK-NEXT:    lsr z0.h, z0.h, #8
-; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
-; CHECK-NEXT:    uzp1 z3.b, z3.b, z3.b
-; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
-; CHECK-NEXT:    splice z3.b, p0, z3.b, z1.b
-; CHECK-NEXT:    splice z2.b, p0, z2.b, z0.b
-; CHECK-NEXT:    stp q3, q2, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    smulh z1.b, p0/m, z1.b, z3.b
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
   %op2 = load <32 x i8>, ptr %b
@@ -174,23 +147,10 @@ define void @smulh_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: smulh_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    mov z5.d, z0.d
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    mov z4.d, z1.d
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
-; CHECK-NEXT:    mov z6.d, z2.d
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z2.h
-; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
-; CHECK-NEXT:    mov z2.d, z3.d
 ; CHECK-NEXT:    smulh z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z3.b, #8
-; CHECK-NEXT:    movprfx z3, z5
-; CHECK-NEXT:    smulh z3.h, p0/m, z3.h, z6.h
-; CHECK-NEXT:    smulh z2.h, p0/m, z2.h, z4.h
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z3.h
-; CHECK-NEXT:    splice z1.h, p0, z1.h, z2.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
@@ -242,23 +202,10 @@ define void @smulh_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: smulh_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    mov z5.d, z0.d
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    mov z4.d, z1.d
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
-; CHECK-NEXT:    mov z6.d, z2.d
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
-; CHECK-NEXT:    mov z2.d, z3.d
 ; CHECK-NEXT:    smulh z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    ext z2.b, z2.b, z3.b, #8
-; CHECK-NEXT:    movprfx z3, z5
-; CHECK-NEXT:    smulh z3.s, p0/m, z3.s, z6.s
-; CHECK-NEXT:    smulh z2.s, p0/m, z2.s, z4.s
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z3.s
-; CHECK-NEXT:    splice z1.s, p0, z1.s, z2.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
@@ -312,31 +259,11 @@ define void @smulh_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: smulh_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    mov z4.d, z1.d[1]
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    fmov x13, d4
-; CHECK-NEXT:    fmov x10, d1
-; CHECK-NEXT:    mov z0.d, z2.d[1]
-; CHECK-NEXT:    fmov x12, d2
-; CHECK-NEXT:    fmov x11, d0
-; CHECK-NEXT:    mov z0.d, z3.d[1]
-; CHECK-NEXT:    fmov x14, d0
-; CHECK-NEXT:    smulh x9, x9, x12
-; CHECK-NEXT:    smulh x10, x10, x11
-; CHECK-NEXT:    fmov x11, d3
-; CHECK-NEXT:    smulh x12, x13, x14
-; CHECK-NEXT:    smulh x8, x8, x11
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    fmov d1, x10
-; CHECK-NEXT:    fmov d3, x12
-; CHECK-NEXT:    fmov d2, x8
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
-; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
-; CHECK-NEXT:    stp q0, q2, [x0]
+; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    smulh z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %op2 = load <4 x i64>, ptr %b
@@ -410,39 +337,12 @@ define <16 x i8> @umulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 define void @umulh_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: umulh_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    uunpklo z4.h, z1.b
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    ldp q3, q2, [x1]
-; CHECK-NEXT:    uunpklo z5.h, z0.b
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z6.h, z3.b
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
-; CHECK-NEXT:    uunpklo z3.h, z3.b
-; CHECK-NEXT:    uunpklo z7.h, z2.b
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
-; CHECK-NEXT:    uunpklo z2.h, z2.b
-; CHECK-NEXT:    mul z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
-; CHECK-NEXT:    movprfx z2, z5
-; CHECK-NEXT:    mul z2.h, p0/m, z2.h, z7.h
-; CHECK-NEXT:    movprfx z3, z4
-; CHECK-NEXT:    mul z3.h, p0/m, z3.h, z6.h
-; CHECK-NEXT:    lsr z1.h, z1.h, #8
-; CHECK-NEXT:    lsr z3.h, z3.h, #8
-; CHECK-NEXT:    lsr z2.h, z2.h, #8
-; CHECK-NEXT:    lsr z0.h, z0.h, #8
-; CHECK-NEXT:    ptrue p0.b, vl8
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uzp1 z1.b, z1.b, z1.b
-; CHECK-NEXT:    uzp1 z3.b, z3.b, z3.b
-; CHECK-NEXT:    uzp1 z2.b, z2.b, z2.b
-; CHECK-NEXT:    splice z3.b, p0, z3.b, z1.b
-; CHECK-NEXT:    splice z2.b, p0, z2.b, z0.b
-; CHECK-NEXT:    stp q3, q2, [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    umulh z1.b, p0/m, z1.b, z3.b
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
   %op2 = load <32 x i8>, ptr %b
@@ -513,23 +413,10 @@ define void @umulh_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: umulh_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    mov z5.d, z0.d
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    mov z4.d, z1.d
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
-; CHECK-NEXT:    mov z6.d, z2.d
 ; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z2.h
-; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
-; CHECK-NEXT:    mov z2.d, z3.d
 ; CHECK-NEXT:    umulh z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z3.b, #8
-; CHECK-NEXT:    movprfx z3, z5
-; CHECK-NEXT:    umulh z3.h, p0/m, z3.h, z6.h
-; CHECK-NEXT:    umulh z2.h, p0/m, z2.h, z4.h
-; CHECK-NEXT:    splice z0.h, p0, z0.h, z3.h
-; CHECK-NEXT:    splice z1.h, p0, z1.h, z2.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
@@ -581,23 +468,10 @@ define void @umulh_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: umulh_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    mov z5.d, z0.d
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    mov z4.d, z1.d
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
-; CHECK-NEXT:    mov z6.d, z2.d
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
-; CHECK-NEXT:    mov z2.d, z3.d
 ; CHECK-NEXT:    umulh z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    ext z2.b, z2.b, z3.b, #8
-; CHECK-NEXT:    movprfx z3, z5
-; CHECK-NEXT:    umulh z3.s, p0/m, z3.s, z6.s
-; CHECK-NEXT:    umulh z2.s, p0/m, z2.s, z4.s
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z3.s
-; CHECK-NEXT:    splice z1.s, p0, z1.s, z2.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
@@ -651,31 +525,11 @@ define void @umulh_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: umulh_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    mov z4.d, z1.d[1]
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    fmov x13, d4
-; CHECK-NEXT:    fmov x10, d1
-; CHECK-NEXT:    mov z0.d, z2.d[1]
-; CHECK-NEXT:    fmov x12, d2
-; CHECK-NEXT:    fmov x11, d0
-; CHECK-NEXT:    mov z0.d, z3.d[1]
-; CHECK-NEXT:    fmov x14, d0
-; CHECK-NEXT:    umulh x9, x9, x12
-; CHECK-NEXT:    umulh x10, x10, x11
-; CHECK-NEXT:    fmov x11, d3
-; CHECK-NEXT:    umulh x12, x13, x14
-; CHECK-NEXT:    umulh x8, x8, x11
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    fmov d1, x10
-; CHECK-NEXT:    fmov d3, x12
-; CHECK-NEXT:    fmov d2, x8
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
-; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
-; CHECK-NEXT:    stp q0, q2, [x0]
+; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    umulh z1.d, p0/m, z1.d, z3.d
+; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
   %op2 = load <4 x i64>, ptr %b

@@ -384,7 +384,7 @@ static APInt findDemandedEltsByAllUsers(Value *V) {
 /// return it with the canonical type if it isn't already canonical.  We
 /// arbitrarily pick 64 bit as our canonical type.  The actual bitwidth doesn't
 /// matter, we just want a consistent type to simplify CSE.
-ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
+static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
   const unsigned IndexBW = IndexC->getType()->getBitWidth();
   if (IndexBW == 64 || IndexC->getValue().getActiveBits() > 64)
     return nullptr;
@@ -550,9 +550,9 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
           SrcIdx -= LHSWidth;
           Src = SVI->getOperand(1);
         }
-        Type *Int32Ty = Type::getInt32Ty(EI.getContext());
+        Type *Int64Ty = Type::getInt64Ty(EI.getContext());
         return ExtractElementInst::Create(
-            Src, ConstantInt::get(Int32Ty, SrcIdx, false));
+            Src, ConstantInt::get(Int64Ty, SrcIdx, false));
       }
     } else if (auto *CI = dyn_cast<CastInst>(I)) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
@@ -594,6 +594,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
                   SrcVec, DemandedElts, UndefElts, 0 /* Depth */,
                   true /* AllowMultipleUsers */)) {
             if (V != SrcVec) {
+              Worklist.addValue(SrcVec);
               SrcVec->replaceAllUsesWith(V);
               return &EI;
             }
@@ -640,11 +641,11 @@ static bool collectSingleShuffleElements(Value *V, Value *LHS, Value *RHS,
       return false;
     unsigned InsertedIdx = cast<ConstantInt>(IdxOp)->getZExtValue();
 
-    if (isa<UndefValue>(ScalarOp)) {  // inserting undef into vector.
+    if (isa<PoisonValue>(ScalarOp)) {  // inserting poison into vector.
       // We can handle this if the vector we are inserting into is
       // transitively ok.
       if (collectSingleShuffleElements(VecOp, LHS, RHS, Mask)) {
-        // If so, update the mask to reflect the inserted undef.
+        // If so, update the mask to reflect the inserted poison.
         Mask[InsertedIdx] = -1;
         return true;
       }
@@ -749,6 +750,9 @@ static void replaceExtractElements(InsertElementInst *InsElt,
     auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
     NewExt->insertAfter(OldExt);
     IC.replaceInstUsesWith(*OldExt, NewExt);
+    // Add the old extracts to the worklist for DCE. We can't remove the
+    // extracts directly, because they may still be used by the calling code.
+    IC.addToWorklist(OldExt);
   }
 }
 
@@ -1240,22 +1244,22 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   if (FirstIE == &InsElt)
     return nullptr;
 
-  // If we are not inserting into an undef vector, make sure we've seen an
+  // If we are not inserting into a poison vector, make sure we've seen an
   // insert into every element.
   // TODO: If the base vector is not undef, it might be better to create a splat
   //       and then a select-shuffle (blend) with the base vector.
-  if (!match(FirstIE->getOperand(0), m_Undef()))
+  if (!match(FirstIE->getOperand(0), m_Poison()))
     if (!ElementPresent.all())
       return nullptr;
 
   // Create the insert + shuffle.
-  Type *Int32Ty = Type::getInt32Ty(InsElt.getContext());
+  Type *Int64Ty = Type::getInt64Ty(InsElt.getContext());
   PoisonValue *PoisonVec = PoisonValue::get(VecTy);
-  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+  Constant *Zero = ConstantInt::get(Int64Ty, 0);
   if (!cast<ConstantInt>(FirstIE->getOperand(2))->isZero())
     FirstIE = InsertElementInst::Create(PoisonVec, SplatVal, Zero, "", &InsElt);
 
-  // Splat from element 0, but replace absent elements with undef in the mask.
+  // Splat from element 0, but replace absent elements with poison in the mask.
   SmallVector<int, 16> Mask(NumElements, 0);
   for (unsigned i = 0; i != NumElements; ++i)
     if (!ElementPresent[i])
@@ -1344,7 +1348,7 @@ static Instruction *foldInsEltIntoIdentityShuffle(InsertElementInst &InsElt) {
       // (demanded elements analysis may unset it later).
       return nullptr;
     } else {
-      assert(OldMask[i] == UndefMaskElem &&
+      assert(OldMask[i] == PoisonMaskElem &&
              "Unexpected shuffle mask element for identity shuffle");
       NewMask[i] = IdxC;
     }
@@ -1820,9 +1824,9 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
 
 /// Rebuild a new instruction just like 'I' but with the new operands given.
 /// In the event of type mismatch, the type of the operands is correct.
-static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps) {
-  // We don't want to use the IRBuilder here because we want the replacement
-  // instructions to appear next to 'I', not the builder's insertion point.
+static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
+                       IRBuilderBase &Builder) {
+  Builder.SetInsertPoint(I);
   switch (I->getOpcode()) {
     case Instruction::Add:
     case Instruction::FAdd:
@@ -1844,28 +1848,29 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps) {
     case Instruction::Xor: {
       BinaryOperator *BO = cast<BinaryOperator>(I);
       assert(NewOps.size() == 2 && "binary operator with #ops != 2");
-      BinaryOperator *New =
-          BinaryOperator::Create(cast<BinaryOperator>(I)->getOpcode(),
-                                 NewOps[0], NewOps[1], "", BO);
-      if (isa<OverflowingBinaryOperator>(BO)) {
-        New->setHasNoUnsignedWrap(BO->hasNoUnsignedWrap());
-        New->setHasNoSignedWrap(BO->hasNoSignedWrap());
+      Value *New = Builder.CreateBinOp(cast<BinaryOperator>(I)->getOpcode(),
+                                       NewOps[0], NewOps[1]);
+      if (auto *NewI = dyn_cast<Instruction>(New)) {
+        if (isa<OverflowingBinaryOperator>(BO)) {
+          NewI->setHasNoUnsignedWrap(BO->hasNoUnsignedWrap());
+          NewI->setHasNoSignedWrap(BO->hasNoSignedWrap());
+        }
+        if (isa<PossiblyExactOperator>(BO)) {
+          NewI->setIsExact(BO->isExact());
+        }
+        if (isa<FPMathOperator>(BO))
+          NewI->copyFastMathFlags(I);
       }
-      if (isa<PossiblyExactOperator>(BO)) {
-        New->setIsExact(BO->isExact());
-      }
-      if (isa<FPMathOperator>(BO))
-        New->copyFastMathFlags(I);
       return New;
     }
     case Instruction::ICmp:
       assert(NewOps.size() == 2 && "icmp with #ops != 2");
-      return new ICmpInst(I, cast<ICmpInst>(I)->getPredicate(),
-                          NewOps[0], NewOps[1]);
+      return Builder.CreateICmp(cast<ICmpInst>(I)->getPredicate(), NewOps[0],
+                                NewOps[1]);
     case Instruction::FCmp:
       assert(NewOps.size() == 2 && "fcmp with #ops != 2");
-      return new FCmpInst(I, cast<FCmpInst>(I)->getPredicate(),
-                          NewOps[0], NewOps[1]);
+      return Builder.CreateFCmp(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
+                                NewOps[1]);
     case Instruction::Trunc:
     case Instruction::ZExt:
     case Instruction::SExt:
@@ -1881,27 +1886,26 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps) {
           I->getType()->getScalarType(),
           cast<VectorType>(NewOps[0]->getType())->getElementCount());
       assert(NewOps.size() == 1 && "cast with #ops != 1");
-      return CastInst::Create(cast<CastInst>(I)->getOpcode(), NewOps[0], DestTy,
-                              "", I);
+      return Builder.CreateCast(cast<CastInst>(I)->getOpcode(), NewOps[0],
+                                DestTy);
     }
     case Instruction::GetElementPtr: {
       Value *Ptr = NewOps[0];
       ArrayRef<Value*> Idx = NewOps.slice(1);
-      GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          cast<GetElementPtrInst>(I)->getSourceElementType(), Ptr, Idx, "", I);
-      GEP->setIsInBounds(cast<GetElementPtrInst>(I)->isInBounds());
-      return GEP;
+      return Builder.CreateGEP(cast<GEPOperator>(I)->getSourceElementType(),
+                               Ptr, Idx, "",
+                               cast<GEPOperator>(I)->isInBounds());
     }
   }
   llvm_unreachable("failed to rebuild vector instructions");
 }
 
-static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
+static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask,
+                                              IRBuilderBase &Builder) {
   // Mask.size() does not need to be equal to the number of vector elements.
 
   assert(V->getType()->isVectorTy() && "can't reorder non-vector elements");
   Type *EltTy = V->getType()->getScalarType();
-  Type *I32Ty = IntegerType::getInt32Ty(V->getContext());
   if (match(V, m_Undef()))
     return UndefValue::get(FixedVectorType::get(EltTy, Mask.size()));
 
@@ -1955,15 +1959,14 @@ static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
         // as well. E.g. GetElementPtr may have scalar operands even if the
         // return value is a vector, so we need to examine the operand type.
         if (I->getOperand(i)->getType()->isVectorTy())
-          V = evaluateInDifferentElementOrder(I->getOperand(i), Mask);
+          V = evaluateInDifferentElementOrder(I->getOperand(i), Mask, Builder);
         else
           V = I->getOperand(i);
         NewOps.push_back(V);
         NeedsRebuild |= (V != I->getOperand(i));
       }
-      if (NeedsRebuild) {
-        return buildNew(I, NewOps);
-      }
+      if (NeedsRebuild)
+        return buildNew(I, NewOps, Builder);
       return I;
     }
     case Instruction::InsertElement: {
@@ -1984,11 +1987,12 @@ static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
       // If element is not in Mask, no need to handle the operand 1 (element to
       // be inserted). Just evaluate values in operand 0 according to Mask.
       if (!Found)
-        return evaluateInDifferentElementOrder(I->getOperand(0), Mask);
+        return evaluateInDifferentElementOrder(I->getOperand(0), Mask, Builder);
 
-      Value *V = evaluateInDifferentElementOrder(I->getOperand(0), Mask);
-      return InsertElementInst::Create(V, I->getOperand(1),
-                                       ConstantInt::get(I32Ty, Index), "", I);
+      Value *V = evaluateInDifferentElementOrder(I->getOperand(0), Mask,
+                                                 Builder);
+      Builder.SetInsertPoint(I);
+      return Builder.CreateInsertElement(V, I->getOperand(1), Index);
     }
   }
   llvm_unreachable("failed to reorder elements of vector instruction!");
@@ -2145,7 +2149,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
                                 ConstantExpr::getShuffleVector(IdC, C, Mask);
 
   bool MightCreatePoisonOrUB =
-      is_contained(Mask, UndefMaskElem) &&
+      is_contained(Mask, PoisonMaskElem) &&
       (Instruction::isIntDivRem(BOpcode) || Instruction::isShift(BOpcode));
   if (MightCreatePoisonOrUB)
     NewC = InstCombiner::getSafeVectorConstantForBinop(BOpcode, NewC, true);
@@ -2159,7 +2163,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.
   // If we already made a safe constant, then there's no danger.
-  if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
+  if (is_contained(Mask, PoisonMaskElem) && !MightCreatePoisonOrUB)
     NewBO->dropPoisonGeneratingFlags();
   return NewBO;
 }
@@ -2183,8 +2187,7 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
 
   // Insert into element 0 of an undef vector.
   UndefValue *UndefVec = UndefValue::get(Shuf.getType());
-  Constant *Zero = Builder.getInt32(0);
-  Value *NewIns = Builder.CreateInsertElement(UndefVec, X, Zero);
+  Value *NewIns = Builder.CreateInsertElement(UndefVec, X, (uint64_t)0);
 
   // Splat from element 0. Any mask element that is undefined remains undefined.
   // For example:
@@ -2194,7 +2197,7 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
       cast<FixedVectorType>(Shuf.getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumMaskElts, 0);
   for (unsigned i = 0; i != NumMaskElts; ++i)
-    if (Mask[i] == UndefMaskElem)
+    if (Mask[i] == PoisonMaskElem)
       NewMask[i] = Mask[i];
 
   return new ShuffleVectorInst(NewIns, NewMask);
@@ -2279,7 +2282,7 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
   // mask element, the result is undefined, but it is not poison or undefined
   // behavior. That is not necessarily true for div/rem/shift.
   bool MightCreatePoisonOrUB =
-      is_contained(Mask, UndefMaskElem) &&
+      is_contained(Mask, PoisonMaskElem) &&
       (Instruction::isIntDivRem(BOpc) || Instruction::isShift(BOpc));
   if (MightCreatePoisonOrUB)
     NewC = InstCombiner::getSafeVectorConstantForBinop(BOpc, NewC,
@@ -2330,7 +2333,7 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
     NewI->andIRFlags(B1);
     if (DropNSW)
       NewI->setHasNoSignedWrap(false);
-    if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
+    if (is_contained(Mask, PoisonMaskElem) && !MightCreatePoisonOrUB)
       NewI->dropPoisonGeneratingFlags();
   }
   return replaceInstUsesWith(Shuf, NewBO);
@@ -2366,7 +2369,7 @@ static Instruction *foldTruncShuffle(ShuffleVectorInst &Shuf,
       SrcType->getScalarSizeInBits() / DestType->getScalarSizeInBits();
   ArrayRef<int> Mask = Shuf.getShuffleMask();
   for (unsigned i = 0, e = Mask.size(); i != e; ++i) {
-    if (Mask[i] == UndefMaskElem)
+    if (Mask[i] == PoisonMaskElem)
       continue;
     uint64_t LSBIndex = IsBigEndian ? (i + 1) * TruncRatio - 1 : i * TruncRatio;
     assert(LSBIndex <= INT32_MAX && "Overflowed 32-bits");
@@ -2552,7 +2555,7 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   for (unsigned i = 0; i != NumElts; ++i) {
     int ExtractMaskElt = Shuf.getMaskValue(i);
     int MaskElt = Mask[i];
-    NewMask[i] = ExtractMaskElt == UndefMaskElem ? ExtractMaskElt : MaskElt;
+    NewMask[i] = ExtractMaskElt == PoisonMaskElem ? ExtractMaskElt : MaskElt;
   }
   return new ShuffleVectorInst(X, Y, NewMask);
 }
@@ -2779,7 +2782,6 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   }
 
   ArrayRef<int> Mask = SVI.getShuffleMask();
-  Type *Int32Ty = Type::getInt32Ty(SVI.getContext());
 
   // Peek through a bitcasted shuffle operand by scaling the mask. If the
   // simulated shuffle can simplify, then this shuffle is unnecessary:
@@ -2860,7 +2862,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
 
   if (match(RHS, m_Undef()) && canEvaluateShuffled(LHS, Mask)) {
-    Value *V = evaluateInDifferentElementOrder(LHS, Mask);
+    Value *V = evaluateInDifferentElementOrder(LHS, Mask, Builder);
     return replaceInstUsesWith(SVI, V);
   }
 
@@ -2943,8 +2945,8 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
               : Builder.CreateBitCast(V, CastSrcTy, SVI.getName() + ".bc");
       if (!BCAlreadyExists)
         NewBCs[CastSrcTy] = NewBC;
-      auto *Ext = Builder.CreateExtractElement(
-          NewBC, ConstantInt::get(Int32Ty, BegIdx), SVI.getName() + ".extract");
+      auto *Ext = Builder.CreateExtractElement(NewBC, BegIdx,
+                                               SVI.getName() + ".extract");
       // The shufflevector isn't being replaced: the bitcast that used it
       // is. InstCombine will visit the newly-created instructions.
       replaceInstUsesWith(*BC, Ext);
@@ -3062,7 +3064,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   for (unsigned i = 0; i < VWidth; ++i) {
     int eltMask;
     if (Mask[i] < 0) {
-      // This element is an undef value.
+      // This element is a poison value.
       eltMask = -1;
     } else if (Mask[i] < (int)LHSWidth) {
       // This element is from left hand side vector operand.
@@ -3071,27 +3073,27 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       // new mask value for the element.
       if (newLHS != LHS) {
         eltMask = LHSMask[Mask[i]];
-        // If the value selected is an undef value, explicitly specify it
+        // If the value selected is an poison value, explicitly specify it
         // with a -1 mask value.
-        if (eltMask >= (int)LHSOp0Width && isa<UndefValue>(LHSOp1))
+        if (eltMask >= (int)LHSOp0Width && isa<PoisonValue>(LHSOp1))
           eltMask = -1;
       } else
         eltMask = Mask[i];
     } else {
       // This element is from right hand side vector operand
       //
-      // If the value selected is an undef value, explicitly specify it
+      // If the value selected is a poison value, explicitly specify it
       // with a -1 mask value. (case 1)
-      if (match(RHS, m_Undef()))
+      if (match(RHS, m_Poison()))
         eltMask = -1;
       // If RHS is going to be replaced (case 3 or 4), calculate the
       // new mask value for the element.
       else if (newRHS != RHS) {
         eltMask = RHSMask[Mask[i]-LHSWidth];
-        // If the value selected is an undef value, explicitly specify it
+        // If the value selected is an poison value, explicitly specify it
         // with a -1 mask value.
         if (eltMask >= (int)RHSOp0Width) {
-          assert(match(RHSShuffle->getOperand(1), m_Undef()) &&
+          assert(match(RHSShuffle->getOperand(1), m_Poison()) &&
                  "should have been check above");
           eltMask = -1;
         }
@@ -3122,7 +3124,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   // or is a splat, do the replacement.
   if (isSplat || newMask == LHSMask || newMask == RHSMask || newMask == Mask) {
     if (!newRHS)
-      newRHS = UndefValue::get(newLHS->getType());
+      newRHS = PoisonValue::get(newLHS->getType());
     return new ShuffleVectorInst(newLHS, newRHS, newMask);
   }
 

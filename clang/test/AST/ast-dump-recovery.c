@@ -98,3 +98,22 @@ void test3() {
   // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
   ext(undef_var);
 }
+
+// Verify no crash.
+void test4() {
+  enum GH62446 {
+    // CHECK:      RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
+    // CHECK-NEXT: |-StringLiteral {{.*}} "a"
+    // CHECK-NEXT: `-IntegerLiteral {{.*}} 2
+    invalid_enum_value = "a" * 2,
+    b,
+  };
+}
+
+// Verify no crash
+void test5_GH62711() {
+  // CHECK:      VAArgExpr {{.*}} 'int' contains-errors
+  // CHECK-NEXT: | `-ImplicitCastExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: |   `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  if (__builtin_va_arg(undef, int) << 1);
+}

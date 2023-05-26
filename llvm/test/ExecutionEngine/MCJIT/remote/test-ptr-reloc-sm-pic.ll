@@ -2,6 +2,7 @@
 ; RUN:   -O0 -relocation-model=pic -code-model=small %s
 ; XFAIL: target={{(mips|mipsel)-.*}}, target={{(aarch64|arm).*}}, target={{(i686|i386).*}}
 ; XFAIL: target={{.*-windows-(gnu|msvc)}}
+; REQUIRES: thread_support
 ; UNSUPPORTED: target=powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 

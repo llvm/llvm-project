@@ -45,7 +45,7 @@ TEST(LlvmLibcUtilsTest, Log2) {
       6                                               // 64
   };
   for (size_t i = 0; i < kExpectedValues.size(); ++i)
-    EXPECT_EQ(log2(i), kExpectedValues[i]);
+    EXPECT_EQ(log2s(i), kExpectedValues[i]);
 }
 
 TEST(LlvmLibcUtilsTest, LEPowerOf2) {
@@ -141,6 +141,46 @@ TEST(LlvmLibcUtilsTest, Align2) {
     EXPECT_GT(p2, &b);
     EXPECT_EQ(size_t(p1 - &a), base_size - size);
     EXPECT_EQ(size_t(p2 - &b), base_size - size);
+  }
+}
+
+TEST(LlvmLibcUtilsTest, LoadStoreAligned) {
+  const uint64_t init = 0xDEAD'C0DE'BEEF'F00D;
+  CPtr const src = reinterpret_cast<CPtr>(&init);
+  uint64_t store;
+  Ptr const dst = reinterpret_cast<Ptr>(&store);
+
+  using LoadFun = uint64_t (*)(CPtr);
+  using StoreFun = void (*)(uint64_t, Ptr);
+
+  {
+    LoadFun ld = load_aligned<uint64_t, uint64_t>;
+    StoreFun st = store_aligned<uint64_t, uint64_t>;
+    const uint64_t loaded = ld(src);
+    EXPECT_EQ(init, loaded);
+    store = 0;
+    st(init, dst);
+    EXPECT_EQ(init, store);
+  }
+
+  {
+    LoadFun ld = load_aligned<uint64_t, uint32_t, uint32_t>;
+    StoreFun st = store_aligned<uint64_t, uint32_t, uint32_t>;
+    const uint64_t loaded = ld(src);
+    EXPECT_EQ(init, loaded);
+    store = 0;
+    st(init, dst);
+    EXPECT_EQ(init, store);
+  }
+
+  {
+    LoadFun ld = load_aligned<uint64_t, uint32_t, uint16_t, uint8_t, uint8_t>;
+    StoreFun st = store_aligned<uint64_t, uint32_t, uint16_t, uint8_t, uint8_t>;
+    const uint64_t loaded = ld(src);
+    EXPECT_EQ(init, loaded);
+    store = 0;
+    st(init, dst);
+    EXPECT_EQ(init, store);
   }
 }
 

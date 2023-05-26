@@ -767,6 +767,7 @@ extern "C" __device__ float test_exp2f(float x) {
   return exp2f(x);
 }
 
+//
 // DEFAULT-LABEL: @test_exp2(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_exp2_f64(double noundef [[X:%.*]]) #[[ATTR14]]
@@ -937,13 +938,13 @@ extern "C" __device__ double test_floor(double x) {
 
 // DEFAULT-LABEL: @test_fmaf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_fma_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR13]]
-// DEFAULT-NEXT:    ret float [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fmaf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fma_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]], float noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
-// FINITEONLY-NEXT:    ret float [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_fmaf(float x, float y, float z) {
   return fmaf(x, y, z);
@@ -951,13 +952,13 @@ extern "C" __device__ float test_fmaf(float x, float y, float z) {
 
 // DEFAULT-LABEL: @test_fma(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_fma_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR13]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fma(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fma_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_fma(double x, double y, double z) {
   return fma(x, y, z);
@@ -965,13 +966,13 @@ extern "C" __device__ double test_fma(double x, double y, double z) {
 
 // DEFAULT-LABEL: @test_fma_rn(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_fma_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR13]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_fma_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fma_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_fma_rn(double x, double y, double z) {
   return __fma_rn(x, y, z);
@@ -3414,13 +3415,13 @@ extern "C" __device__ float test___fdividef(float x, float y) {
 
 // DEFAULT-LABEL: @test__fmaf_rn(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_fma_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) #[[ATTR13]]
-// DEFAULT-NEXT:    ret float [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test__fmaf_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_fma_f32(float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]], float noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
-// FINITEONLY-NEXT:    ret float [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test__fmaf_rn(float x, float y, float z) {
   return __fmaf_rn(x, y, z);
@@ -3692,13 +3693,13 @@ extern "C" __device__ double test___dsqrt_rn(double x) {
 
 // DEFAULT-LABEL: @test__fma_rn(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_fma_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], double noundef [[Z:%.*]]) #[[ATTR13]]
-// DEFAULT-NEXT:    ret double [[CALL_I]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test__fma_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_fma_f64(double noundef nofpclass(nan inf) [[X:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) #[[ATTR13]]
-// FINITEONLY-NEXT:    ret double [[CALL_I]]
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test__fma_rn(double x, double y, double z) {
   return __fma_rn(x, y, z);

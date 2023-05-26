@@ -38,11 +38,18 @@ void populateArithWideIntEmulationPatterns(
 /// Add patterns to expand Arith ceil/floor division ops.
 void populateCeilFloorDivExpandOpsPatterns(RewritePatternSet &patterns);
 
+/// Add patterns to expand Arith bf16 patterns to lower level bitcasts/shifts.
+void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
+
 /// Add patterns to expand Arith ops.
 void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
 
 /// Create a pass to legalize Arith ops.
 std::unique_ptr<Pass> createArithExpandOpsPass();
+
+/// Create a pass to legalize Arith ops with specified configuration.
+std::unique_ptr<Pass>
+createArithExpandOpsPass(const ArithExpandOpsOptions &options);
 
 /// Create a pass to replace signed ops with unsigned ones where they are proven
 /// equivalent.
@@ -54,6 +61,10 @@ void populateIntRangeOptimizationsPatterns(RewritePatternSet &patterns,
 
 /// Create a pass which do optimizations based on integer range analysis.
 std::unique_ptr<Pass> createIntRangeOptimizationsPass();
+
+/// Add patterns for integer bitwidth narrowing.
+void populateArithIntNarrowingPatterns(RewritePatternSet &patterns,
+                                       const ArithIntNarrowingOptions &options);
 
 //===----------------------------------------------------------------------===//
 // Registration

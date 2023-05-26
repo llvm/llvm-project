@@ -150,7 +150,6 @@ public:
   Instruction *visitPHINode(PHINode &PN);
   Instruction *visitGetElementPtrInst(GetElementPtrInst &GEP);
   Instruction *visitGEPOfGEP(GetElementPtrInst &GEP, GEPOperator *Src);
-  Instruction *visitGEPOfBitcast(BitCastInst *BCI, GetElementPtrInst &GEP);
   Instruction *visitAllocaInst(AllocaInst &AI);
   Instruction *visitAllocSite(Instruction &FI);
   Instruction *visitFree(CallInst &FI, Value *FreedOp);
@@ -550,7 +549,7 @@ public:
                            ICmpInst::Predicate Cond, Instruction &I);
   Instruction *foldSelectICmp(ICmpInst::Predicate Pred, SelectInst *SI,
                               Value *RHS, const ICmpInst &I);
-  Instruction *foldAllocaCmp(ICmpInst &ICI, const AllocaInst *Alloca);
+  bool foldAllocaCmp(AllocaInst *Alloca);
   Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
                                             GetElementPtrInst *GEP,
                                             GlobalVariable *GV, CmpInst &ICI,
@@ -637,10 +636,11 @@ public:
                             SelectPatternFlavor SPF2, Value *C);
   Instruction *foldSelectInstWithICmp(SelectInst &SI, ICmpInst *ICI);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, ICmpInst &ICI);
+  bool replaceInInstruction(Value *V, Value *Old, Value *New,
+                            unsigned Depth = 0);
 
   Value *insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
                          bool isSigned, bool Inside);
-  Instruction *PromoteCastOfAllocation(BitCastInst &CI, AllocaInst &AI);
   bool mergeStoreIntoSuccessor(StoreInst &SI);
 
   /// Given an initial instruction, check to see if it is the root of a
@@ -654,10 +654,7 @@ public:
 
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
 
-  /// Returns a value X such that Val = X * Scale, or null if none.
-  ///
-  /// If the multiplication is known not to overflow then NoSignedWrap is set.
-  Value *Descale(Value *Val, APInt Scale, bool &NoSignedWrap);
+  bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
 };
 
 class Negator final {

@@ -963,17 +963,7 @@ def Attr : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def AttrChanMatchClass : AsmOperandClass {
-  let Name = "AttrChan";
-  let PredicateMethod = "isAttrChan";
-  let RenderMethod = "addImmOperands";
-}
-
-def AttrChan : Operand<i32> {
-  let PrintMethod = "printInterpAttrChan";
-  let ParserMatchClass = AttrChanMatchClass;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+def AttrChan : ImmOperand<i32, "AttrChan", 0, "printInterpAttrChan">;
 
 def SendMsgMatchClass : AsmOperandClass {
   let Name = "SendMsg";
@@ -996,13 +986,6 @@ def EndpgmMatchClass : AsmOperandClass {
   let ParserMethod = "parseEndpgmOp";
   let RenderMethod = "addImmOperands";
   let IsOptional = 1;
-}
-
-def ExpTgtMatchClass : AsmOperandClass {
-  let Name = "ExpTgt";
-  let PredicateMethod = "isExpTgt";
-  let ParserMethod = "parseExpTgt";
-  let RenderMethod = "printExpTgt";
 }
 
 def SWaitMatchClass : AsmOperandClass {
@@ -1217,6 +1200,17 @@ class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
   let ParserMatchClass = MatchClass;
 }
 
+class SDWAOperandClass<string Id, string Name>
+    : CustomOperandClass<Name, 1> {
+  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
+  let ParserMethod =
+    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "return parseSDWASel(Operands, \""#Id#"\", "#ImmTy#"); }";
+}
+
+class SDWAOperand<string Id, string Name = NAME>
+  : CustomOperand<i32, 1, Name, SDWAOperandClass<Id, Name>>;
+
 let OperandType = "OPERAND_IMMEDIATE" in {
 
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
@@ -1257,33 +1251,32 @@ def FORMAT : CustomOperand<i8>;
 def DMask : NamedIntOperand<i16, "dmask">;
 def Dim : CustomOperand<i8>;
 
-def dst_sel : NamedOperandU32<"SDWADstSel", NamedMatchClass<"SDWADstSel">>;
-def src0_sel : NamedOperandU32<"SDWASrc0Sel", NamedMatchClass<"SDWASrc0Sel">>;
-def src1_sel : NamedOperandU32<"SDWASrc1Sel", NamedMatchClass<"SDWASrc1Sel">>;
-def dst_unused : NamedOperandU32<"SDWADstUnused", NamedMatchClass<"SDWADstUnused">>;
+def dst_sel : SDWAOperand<"dst_sel", "SDWADstSel">;
+def src0_sel : SDWAOperand<"src0_sel", "SDWASrc0Sel">;
+def src1_sel : SDWAOperand<"src1_sel", "SDWASrc1Sel">;
+def dst_unused : CustomOperand<i32, 1, "SDWADstUnused">;
 
 def op_sel0 : NamedOperandU32Default0<"OpSel", NamedMatchClass<"OpSel">>;
 def op_sel_hi0 : NamedOperandU32Default0<"OpSelHi", NamedMatchClass<"OpSelHi">>;
 def neg_lo0 : NamedOperandU32Default0<"NegLo", NamedMatchClass<"NegLo">>;
 def neg_hi0 : NamedOperandU32Default0<"NegHi", NamedMatchClass<"NegHi">>;
 
-def dpp8 : NamedOperandU32<"DPP8", NamedMatchClass<"DPP8", 0>>;
-def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
+def dpp8 : CustomOperand<i32, 0, "DPP8">;
+def dpp_ctrl : CustomOperand<i32, 0, "DPPCtrl">;
 
-def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;
-def bank_mask : NamedOperandU32<"BankMask", NamedMatchClass<"BankMask">>;
-def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl", "ConvertDppBoundCtrl">;
-def FI : NamedOperandU32<"FI", NamedMatchClass<"FI">>;
+def row_mask : NamedIntOperand<i32, "row_mask", "DppRowMask">;
+def bank_mask : NamedIntOperand<i32, "bank_mask", "DppBankMask">;
+def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl",
+    "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }">;
+def FI : NamedIntOperand<i32, "fi", "DppFI">;
 
-def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
-def cbsz : NamedOperandU32<"CBSZ", NamedMatchClass<"CBSZ">>;
-def abid : NamedOperandU32<"ABID", NamedMatchClass<"ABID">>;
+def blgp : CustomOperand<i32, 1, "BLGP">;
+def cbsz : NamedIntOperand<i32, "cbsz", "CBSZ">;
+def abid : NamedIntOperand<i32, "abid", "ABID">;
 
-def hwreg : NamedOperandU32<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
+def hwreg : CustomOperand<i32, 0, "Hwreg">;
 
-def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
-
-}
+def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
 def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
 def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
@@ -2381,14 +2374,6 @@ class getLdStRegisterOperand<RegisterClass RC> {
     )))));
 }
 
-class BitOr<bit a, bit b> {
-  bit ret = !if(a, 1, !if(b, 1, 0));
-}
-
-class BitAnd<bit a, bit b> {
-  bit ret = !if(a, !if(b, 1, 0), 0);
-}
-
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32, ValueType Src2VT = i32> {
   bit ret =    !if(!eq(DstVT.Size, 64),
@@ -2500,8 +2485,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit HasExt = getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtVOP3DPP = getHasVOP3DPP<DstVT, Src0VT, Src1VT, Src2VT>.ret;
-  field bit HasExtDPP = !if(!or(getHasDPP<NumSrcArgs>.ret,
-                HasExtVOP3DPP), 1, 0);
+  field bit HasExtDPP = !or(getHasDPP<NumSrcArgs>.ret, HasExtVOP3DPP);
   field bit HasExt32BitDPP = getHasExt32BitDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExt64BitDPP = getHasExt64BitDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtSDWA = getHasSDWA<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;

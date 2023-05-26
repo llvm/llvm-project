@@ -96,7 +96,8 @@ bool locationInRange(SourceLocation L, CharSourceRange R,
 
 // Clang diags have a location (shown as ^) and 0 or more ranges (~~~~).
 // LSP needs a single range.
-Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
+std::optional<Range> diagnosticRange(const clang::Diagnostic &D,
+                                     const LangOptions &L) {
   auto &M = D.getSourceManager();
   auto PatchedRange = [&M](CharSourceRange &R) {
     R.setBegin(translatePreamblePatchLocation(R.getBegin(), M));
@@ -115,13 +116,18 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
     if (locationInRange(Loc, R, M))
       return halfOpenToRange(M, PatchedRange(R));
   }
+  // Source locations from stale preambles might become OOB.
+  // FIXME: These diagnostics might point to wrong locations even when they're
+  // not OOB.
+  auto [FID, Offset] = M.getDecomposedLoc(Loc);
+  if (Offset > M.getBufferData(FID).size())
+    return std::nullopt;
   // If the token at the location is not a comment, we use the token.
   // If we can't get the token at the location, fall back to using the location
   auto R = CharSourceRange::getCharRange(Loc);
   Token Tok;
-  if (!Lexer::getRawToken(Loc, Tok, M, L, true) && Tok.isNot(tok::comment)) {
+  if (!Lexer::getRawToken(Loc, Tok, M, L, true) && Tok.isNot(tok::comment))
     R = CharSourceRange::getTokenRange(Tok.getLocation(), Tok.getEndLoc());
-  }
   return halfOpenToRange(M, PatchedRange(R));
 }
 
@@ -423,15 +429,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diag &D) {
   return OS;
 }
 
-CodeAction toCodeAction(const Fix &F, const URIForFile &File) {
-  CodeAction Action;
-  Action.title = F.Message;
-  Action.kind = std::string(CodeAction::QUICKFIX_KIND);
-  Action.edit.emplace();
-  Action.edit->changes[File.uri()] = {F.Edits.begin(), F.Edits.end()};
-  return Action;
-}
-
 Diag toDiag(const llvm::SMDiagnostic &D, Diag::DiagSource Source) {
   Diag Result;
   Result.Message = D.getMessage().str();
@@ -498,13 +495,6 @@ void toLSPDiags(
     break;
   case Diag::Unknown:
     break;
-  }
-  if (Opts.EmbedFixesInDiagnostics) {
-    Main.codeActions.emplace();
-    for (const auto &Fix : D.Fixes)
-      Main.codeActions->push_back(toCodeAction(Fix, File));
-    if (Main.codeActions->size() == 1)
-      Main.codeActions->front().isPreferred = true;
   }
   if (Opts.SendDiagnosticCategory && !D.Category.empty())
     Main.category = D.Category;
@@ -713,11 +703,14 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     SourceLocation PatchLoc =
         translatePreamblePatchLocation(Info.getLocation(), SM);
     D.InsideMainFile = isInsideMainFile(PatchLoc, SM);
-    D.Range = diagnosticRange(Info, *LangOpts);
+    if (auto DRange = diagnosticRange(Info, *LangOpts))
+      D.Range = *DRange;
+    else
+      D.Severity = DiagnosticsEngine::Ignored;
     auto FID = SM.getFileID(Info.getLocation());
-    if (auto *FE = SM.getFileEntryForID(FID)) {
+    if (const auto FE = SM.getFileEntryRefForID(FID)) {
       D.File = FE->getName().str();
-      D.AbsFile = getCanonicalPath(FE, SM);
+      D.AbsFile = getCanonicalPath(*FE, SM);
     }
     D.ID = Info.getID();
     return D;
@@ -786,7 +779,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
     LastDiag->Fixes.push_back(
-        Fix{std::string(Message.str()), std::move(Edits)});
+        Fix{std::string(Message.str()), std::move(Edits), {}});
     return true;
   };
 
@@ -934,7 +927,7 @@ std::optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
         .str();
   }
   case Diag::Clangd:
-    if (Name == "unused-includes")
+    if (Name == "unused-includes" || Name == "missing-includes")
       return {"https://clangd.llvm.org/guides/include-cleaner"};
     break;
   case Diag::ClangdConfig:

@@ -56,6 +56,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
 try:
     import configparser
 except ImportError:
@@ -64,28 +65,37 @@ import io
 
 import obj_diff
 
+
 def is_windows():
     """Returns True if running on Windows."""
-    return platform.system() == 'Windows'
+    return platform.system() == "Windows"
+
 
 class WrapperStepException(Exception):
     """Exception type to be used when a step other than the original compile
     fails."""
+
     def __init__(self, msg, stdout, stderr):
         self.msg = msg
         self.stdout = stdout
         self.stderr = stderr
 
+
 class WrapperCheckException(Exception):
     """Exception type to be used when a comparison check fails."""
+
     def __init__(self, msg):
         self.msg = msg
 
+
 def main_is_frozen():
     """Returns True when running as a py2exe executable."""
-    return (hasattr(sys, "frozen") or # new py2exe
-            hasattr(sys, "importers") or # old py2exe
-            imp.is_frozen("__main__")) # tools/freeze
+    return (
+        hasattr(sys, "frozen")
+        or hasattr(sys, "importers")  # new py2exe
+        or imp.is_frozen("__main__")  # old py2exe
+    )  # tools/freeze
+
 
 def get_main_dir():
     """Get the directory that the script or executable is located in."""
@@ -93,30 +103,35 @@ def get_main_dir():
         return os.path.dirname(sys.executable)
     return os.path.dirname(sys.argv[0])
 
+
 def remove_dir_from_path(path_var, directory):
     """Remove the specified directory from path_var, a string representing
     PATH"""
     pathlist = path_var.split(os.pathsep)
     norm_directory = os.path.normpath(os.path.normcase(directory))
-    pathlist = [x for x in pathlist if os.path.normpath(
-        os.path.normcase(x)) != norm_directory]
+    pathlist = [
+        x for x in pathlist if os.path.normpath(os.path.normcase(x)) != norm_directory
+    ]
     return os.pathsep.join(pathlist)
+
 
 def path_without_wrapper():
     """Returns the PATH variable modified to remove the path to this program."""
     scriptdir = get_main_dir()
-    path = os.environ['PATH']
+    path = os.environ["PATH"]
     return remove_dir_from_path(path, scriptdir)
+
 
 def flip_dash_g(args):
     """Search for -g in args. If it exists then return args without. If not then
     add it."""
-    if '-g' in args:
+    if "-g" in args:
         # Return args without any -g
-        return [x for x in args if x != '-g']
+        return [x for x in args if x != "-g"]
     else:
         # No -g, add one
-        return args + ['-g']
+        return args + ["-g"]
+
 
 def derive_output_file(args):
     """Derive output file from the input file (if just one) or None
@@ -125,7 +140,8 @@ def derive_output_file(args):
     if infile is None:
         return None
     else:
-        return '{}.o'.format(os.path.splitext(infile)[0])
+        return "{}.o".format(os.path.splitext(infile)[0])
+
 
 def get_output_file(args):
     """Return the output file specified by this command or None if not
@@ -134,19 +150,21 @@ def get_output_file(args):
     for arg in args:
         if grabnext:
             return arg
-        if arg == '-o':
+        if arg == "-o":
             # Specified as a separate arg
             grabnext = True
-        elif arg.startswith('-o'):
+        elif arg.startswith("-o"):
             # Specified conjoined with -o
             return arg[2:]
     assert grabnext == False
 
     return None
 
+
 def is_output_specified(args):
     """Return true is output file is specified in args."""
     return get_output_file(args) is not None
+
 
 def replace_output_file(args, new_name):
     """Replaces the specified name of an output file with the specified name.
@@ -154,10 +172,10 @@ def replace_output_file(args, new_name):
     replaceidx = None
     attached = False
     for idx, val in enumerate(args):
-        if val == '-o':
+        if val == "-o":
             replaceidx = idx + 1
             attached = False
-        elif val.startswith('-o'):
+        elif val.startswith("-o"):
             replaceidx = idx
             attached = True
 
@@ -165,13 +183,15 @@ def replace_output_file(args, new_name):
         raise Exception
     replacement = new_name
     if attached == True:
-        replacement = '-o' + new_name
+        replacement = "-o" + new_name
     args[replaceidx] = replacement
     return args
 
+
 def add_output_file(args, output_file):
     """Append an output file to args, presuming not already specified."""
-    return args + ['-o', output_file]
+    return args + ["-o", output_file]
+
 
 def set_output_file(args, output_file):
     """Set the output file within the arguments. Appends or replaces as
@@ -182,7 +202,9 @@ def set_output_file(args, output_file):
         args = add_output_file(args, output_file)
     return args
 
-gSrcFileSuffixes = ('.c', '.cpp', '.cxx', '.c++', '.cp', '.cc')
+
+gSrcFileSuffixes = (".c", ".cpp", ".cxx", ".c++", ".cp", ".cc")
+
 
 def get_input_file(args):
     """Return the input file string if it can be found (and there is only
@@ -203,6 +225,7 @@ def get_input_file(args):
     else:
         return None
 
+
 def set_input_file(args, input_file):
     """Replaces the input file with that specified."""
     infile = get_input_file(args)
@@ -214,29 +237,39 @@ def set_input_file(args, input_file):
         # Could not find input file
         assert False
 
+
 def is_normal_compile(args):
     """Check if this is a normal compile which will output an object file rather
     than a preprocess or link. args is a list of command line arguments."""
-    compile_step = '-c' in args
+    compile_step = "-c" in args
     # Bitcode cannot be disassembled in the same way
-    bitcode = '-flto' in args or '-emit-llvm' in args
+    bitcode = "-flto" in args or "-emit-llvm" in args
     # Version and help are queries of the compiler and override -c if specified
-    query = '--version' in args or '--help' in args
+    query = "--version" in args or "--help" in args
     # Options to output dependency files for make
-    dependency = '-M' in args or '-MM' in args
+    dependency = "-M" in args or "-MM" in args
     # Check if the input is recognised as a source file (this may be too
     # strong a restriction)
     input_is_valid = bool(get_input_file(args))
-    return compile_step and not bitcode and not query and not dependency and input_is_valid
+    return (
+        compile_step and not bitcode and not query and not dependency and input_is_valid
+    )
+
 
 def run_step(command, my_env, error_on_failure):
     """Runs a step of the compilation. Reports failure as exception."""
     # Need to use shell=True on Windows as Popen won't use PATH otherwise.
-    p = subprocess.Popen(command, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, env=my_env, shell=is_windows())
+    p = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=my_env,
+        shell=is_windows(),
+    )
     (stdout, stderr) = p.communicate()
     if p.returncode != 0:
         raise WrapperStepException(error_on_failure, stdout, stderr)
+
 
 def get_temp_file_name(suffix):
     """Get a temporary file name with a particular suffix. Let the caller be
@@ -245,8 +278,10 @@ def get_temp_file_name(suffix):
     tf.close()
     return tf.name
 
+
 class WrapperCheck(object):
     """Base class for a check. Subclass this to add a check."""
+
     def __init__(self, output_file_a):
         """Record the base output file that will be compared against."""
         self._output_file_a = output_file_a
@@ -256,10 +291,11 @@ class WrapperCheck(object):
         checks."""
         raise NotImplementedError("Please Implement this method")
 
+
 class dash_g_no_change(WrapperCheck):
     def perform_check(self, arguments, my_env):
         """Check if different code is generated with/without the -g flag."""
-        output_file_b = get_temp_file_name('.o')
+        output_file_b = get_temp_file_name(".o")
 
         alternate_command = list(arguments)
         alternate_command = flip_dash_g(alternate_command)
@@ -267,56 +303,61 @@ class dash_g_no_change(WrapperCheck):
         run_step(alternate_command, my_env, "Error compiling with -g")
 
         # Compare disassembly (returns first diff if differs)
-        difference = obj_diff.compare_object_files(self._output_file_a,
-                                                   output_file_b)
+        difference = obj_diff.compare_object_files(self._output_file_a, output_file_b)
         if difference:
             raise WrapperCheckException(
-                "Code difference detected with -g\n{}".format(difference))
+                "Code difference detected with -g\n{}".format(difference)
+            )
 
         # Clean up temp file if comparison okay
         os.remove(output_file_b)
+
 
 class dash_s_no_change(WrapperCheck):
     def perform_check(self, arguments, my_env):
         """Check if compiling to asm then assembling in separate steps results
         in different code than compiling to object directly."""
-        output_file_b = get_temp_file_name('.o')
+        output_file_b = get_temp_file_name(".o")
 
-        alternate_command = arguments + ['-via-file-asm']
+        alternate_command = arguments + ["-via-file-asm"]
         alternate_command = set_output_file(alternate_command, output_file_b)
-        run_step(alternate_command, my_env,
-                 "Error compiling with -via-file-asm")
+        run_step(alternate_command, my_env, "Error compiling with -via-file-asm")
 
         # Compare if object files are exactly the same
         exactly_equal = obj_diff.compare_exact(self._output_file_a, output_file_b)
         if not exactly_equal:
             # Compare disassembly (returns first diff if differs)
-            difference = obj_diff.compare_object_files(self._output_file_a,
-                                                       output_file_b)
+            difference = obj_diff.compare_object_files(
+                self._output_file_a, output_file_b
+            )
             if difference:
                 raise WrapperCheckException(
-                    "Code difference detected with -S\n{}".format(difference))
+                    "Code difference detected with -S\n{}".format(difference)
+                )
 
             # Code is identical, compare debug info
-            dbgdifference = obj_diff.compare_debug_info(self._output_file_a,
-                                                        output_file_b)
+            dbgdifference = obj_diff.compare_debug_info(
+                self._output_file_a, output_file_b
+            )
             if dbgdifference:
                 raise WrapperCheckException(
-                    "Debug info difference detected with -S\n{}".format(dbgdifference))
+                    "Debug info difference detected with -S\n{}".format(dbgdifference)
+                )
 
             raise WrapperCheckException("Object files not identical with -S\n")
 
         # Clean up temp file if comparison okay
         os.remove(output_file_b)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Create configuration defaults from list of checks
     default_config = """
 [Checks]
 """
 
     # Find all subclasses of WrapperCheck
-    checks = [cls.__name__ for cls in vars()['WrapperCheck'].__subclasses__()]
+    checks = [cls.__name__ for cls in vars()["WrapperCheck"].__subclasses__()]
 
     for c in checks:
         default_config += "{} = false\n".format(c)
@@ -324,15 +365,14 @@ if __name__ == '__main__':
     config = configparser.RawConfigParser()
     config.readfp(io.BytesIO(default_config))
     scriptdir = get_main_dir()
-    config_path = os.path.join(scriptdir, 'check_cfc.cfg')
+    config_path = os.path.join(scriptdir, "check_cfc.cfg")
     try:
         config.read(os.path.join(config_path))
     except:
-        print("Could not read config from {}, "
-              "using defaults.".format(config_path))
+        print("Could not read config from {}, " "using defaults.".format(config_path))
 
     my_env = os.environ.copy()
-    my_env['PATH'] = path_without_wrapper()
+    my_env["PATH"] = path_without_wrapper()
 
     arguments_a = list(sys.argv)
 
@@ -340,10 +380,10 @@ if __name__ == '__main__':
     arguments_a[0] = os.path.basename(arguments_a[0])
 
     # Basic correctness check
-    enabled_checks = [check_name
-                      for check_name in checks
-                      if config.getboolean('Checks', check_name)]
-    checks_comma_separated = ', '.join(enabled_checks)
+    enabled_checks = [
+        check_name for check_name in checks if config.getboolean("Checks", check_name)
+    ]
+    checks_comma_separated = ", ".join(enabled_checks)
     print("Check CFC, checking: {}".format(checks_comma_separated))
 
     # A - original compilation
@@ -370,21 +410,23 @@ if __name__ == '__main__':
         sys.exit(0)
 
     # Copy output file to a temp file
-    temp_output_file_orig = get_temp_file_name('.o')
+    temp_output_file_orig = get_temp_file_name(".o")
     shutil.copyfile(output_file_orig, temp_output_file_orig)
 
     # Run checks, if they are enabled in config and if they are appropriate for
     # this command line.
     current_module = sys.modules[__name__]
     for check_name in checks:
-        if config.getboolean('Checks', check_name):
+        if config.getboolean("Checks", check_name):
             class_ = getattr(current_module, check_name)
             checker = class_(temp_output_file_orig)
             try:
                 checker.perform_check(arguments_a, my_env)
             except WrapperCheckException as e:
                 # Check failure
-                print("{} {}".format(get_input_file(arguments_a), e.msg), file=sys.stderr)
+                print(
+                    "{} {}".format(get_input_file(arguments_a), e.msg), file=sys.stderr
+                )
 
                 # Remove file to comply with build system expectations (no
                 # output file if failed)

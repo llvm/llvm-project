@@ -23,8 +23,8 @@ namespace {
 
 std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("wasm32-unknown-unknown"));
-  std::string CPU("");
-  std::string FS("");
+  std::string CPU;
+  std::string FS;
 
   LLVMInitializeWebAssemblyTargetInfo();
   LLVMInitializeWebAssemblyTarget();

@@ -16,8 +16,8 @@ define void @test(i1 %c, ptr %arg) {
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x ptr> [[TMP4]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, <2 x ptr> [[SHUFFLE1]], <2 x i64> <i64 32, i64 24>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> poison, ptr [[ARG]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x ptr> [[TMP5]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP6]], <4 x ptr> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 undef, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x ptr> [[TMP5]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP6]], <4 x ptr> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 poison, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x ptr> [[TMP8]], ptr [[ARG_1]], i32 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[TMP9]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i64> poison)
 ; CHECK-NEXT:    br label [[JOIN]]

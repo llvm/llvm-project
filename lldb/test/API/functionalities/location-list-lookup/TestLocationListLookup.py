@@ -7,7 +7,6 @@ from lldbsuite.test import lldbutil
 
 
 class LocationListLookupTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -28,7 +27,7 @@ class LocationListLookupTestCase(TestBase):
         self.assertTrue(process.IsValid())
         self.assertTrue(process.is_stopped)
 
-        # Find `main` on the stack, then 
+        # Find `main` on the stack, then
         # find `argv` local variable, then
         # check that we can read the c-string in argv[0]
         for f in process.GetSelectedThread().frames:
@@ -36,4 +35,4 @@ class LocationListLookupTestCase(TestBase):
                 argv = f.GetValueForVariablePath("argv").GetChildAtIndex(0)
                 strm = lldb.SBStream()
                 argv.GetDescription(strm)
-                self.assertNotEqual(strm.GetData().find('a.out'), -1)
+                self.assertNotEqual(strm.GetData().find("a.out"), -1)

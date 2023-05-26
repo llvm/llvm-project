@@ -531,7 +531,7 @@ cc_test(
         "libclang/TestUtils.h",
     ],
     args = select({
-        "@bazel_tools//src/conditions:windows": [
+        "@platforms//os:windows": [
             # Need to disable the VFS tests that don't use Windows friendly
             # paths. These are also disabled on Windows in the CMake build.
             "--gtest_filter=-*VirtualFileOverlay*",

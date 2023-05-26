@@ -128,35 +128,10 @@ void ExecutionEngine::registerSymbols(
           mainJitDylib.getExecutionSession(), jit->getDataLayout())))));
 }
 
-// Setup LLVM target triple from the current machine.
-bool ExecutionEngine::setupTargetTriple(Module *llvmModule) {
-  // Setup the machine properties from the current architecture.
-  auto targetTriple = llvm::sys::getDefaultTargetTriple();
-  std::string errorMessage;
-  const auto *target =
-      llvm::TargetRegistry::lookupTarget(targetTriple, errorMessage);
-  if (!target) {
-    errs() << "NO target: " << errorMessage << "\n";
-    return true;
-  }
-
-  std::string cpu(llvm::sys::getHostCPUName());
-  llvm::SubtargetFeatures features;
-  llvm::StringMap<bool> hostFeatures;
-
-  if (llvm::sys::getHostCPUFeatures(hostFeatures))
-    for (const auto &[feature, isEnabled] : hostFeatures)
-      features.AddFeature(feature, isEnabled);
-
-  std::unique_ptr<llvm::TargetMachine> machine(target->createTargetMachine(
-      targetTriple, cpu, features.getString(), {}, {}));
-  if (!machine) {
-    errs() << "Unable to create target machine\n";
-    return true;
-  }
-  llvmModule->setDataLayout(machine->createDataLayout());
-  llvmModule->setTargetTriple(targetTriple);
-  return false;
+void ExecutionEngine::setupTargetTripleAndDataLayout(Module *llvmModule,
+                                                     llvm::TargetMachine *tm) {
+  llvmModule->setDataLayout(tm->createDataLayout());
+  llvmModule->setTargetTriple(tm->getTargetTriple().getTriple());
 }
 
 static std::string makePackedFunctionName(StringRef name) {
@@ -248,7 +223,8 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 }
 
 Expected<std::unique_ptr<ExecutionEngine>>
-ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options) {
+ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
+                        std::unique_ptr<llvm::TargetMachine> tm) {
   auto engine = std::make_unique<ExecutionEngine>(
       options.enableObjectDump, options.enableGDBNotificationListener,
       options.enablePerfNotificationListener);
@@ -267,10 +243,26 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options) {
                         : translateModuleToLLVMIR(m, *ctx);
   if (!llvmModule)
     return makeStringError("could not convert to LLVM IR");
-  // FIXME: the triple should be passed to the translation or dialect conversion
-  // instead of this.  Currently, the LLVM module created above has no triple
-  // associated with it.
-  setupTargetTriple(llvmModule.get());
+
+  // If no valid TargetMachine was passed, create a default TM ignoring any
+  // input arguments from the user.
+  if (!tm) {
+    auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+    if (!tmBuilderOrError)
+      return tmBuilderOrError.takeError();
+
+    auto tmOrError = tmBuilderOrError->createTargetMachine();
+    if (!tmOrError)
+      return tmOrError.takeError();
+    tm = std::move(tmOrError.get());
+  }
+
+  // TODO: Currently, the LLVM module created above has no triple associated
+  // with it. Instead, the triple is extracted from the TargetMachine, which is
+  // either based on the host defaults or command line arguments when specified
+  // (set-up by callers of this method). It could also be passed to the
+  // translation or dialect conversion instead of this.
+  setupTargetTripleAndDataLayout(llvmModule.get(), tm.get());
   packFunctionArguments(llvmModule.get());
 
   auto dataLayout = llvmModule->getDataLayout();
@@ -328,10 +320,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options) {
       -> Expected<std::unique_ptr<IRCompileLayer::IRCompiler>> {
     if (options.jitCodeGenOptLevel)
       jtmb.setCodeGenOptLevel(*options.jitCodeGenOptLevel);
-    auto tm = jtmb.createTargetMachine();
-    if (!tm)
-      return tm.takeError();
-    return std::make_unique<TMOwningSimpleCompiler>(std::move(*tm),
+    return std::make_unique<TMOwningSimpleCompiler>(std::move(tm),
                                                     engine->cache.get());
   };
 
@@ -340,6 +329,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options) {
       cantFail(llvm::orc::LLJITBuilder()
                    .setCompileFunctionCreator(compileFunctionCreator)
                    .setObjectLinkingLayerCreator(objectLinkingLayerCreator)
+                   .setDataLayout(dataLayout)
                    .create());
 
   // Add a ThreadSafemodule to the engine and return.

@@ -38,7 +38,8 @@ enum CondCodes {
 FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
                                  llvm::CodeGenOpt::Level OptLevel);
 ModulePass *createNVPTXAssignValidGlobalNamesPass();
-ModulePass *createGenericToNVVMPass();
+ModulePass *createGenericToNVVMLegacyPass();
+ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVVMIntrRangePass(unsigned int SmVersion);
 FunctionPass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
@@ -65,6 +66,10 @@ struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
 
 private:
   unsigned SmVersion;
+};
+
+struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 namespace NVPTX {

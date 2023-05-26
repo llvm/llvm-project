@@ -11,6 +11,7 @@
 #include "CommonArgs.h"
 
 #include "clang/Driver/Options.h"
+#include "llvm/Frontend/Debug/Options.h"
 
 #include <cassert>
 
@@ -29,19 +30,27 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(
-      CmdArgs, {options::OPT_ffixed_form, options::OPT_ffree_form,
-                options::OPT_ffixed_line_length_EQ, options::OPT_fopenmp,
-                options::OPT_fopenacc, options::OPT_finput_charset_EQ,
-                options::OPT_fimplicit_none, options::OPT_fno_implicit_none,
-                options::OPT_fbackslash, options::OPT_fno_backslash,
-                options::OPT_flogical_abbreviations,
-                options::OPT_fno_logical_abbreviations,
-                options::OPT_fxor_operator, options::OPT_fno_xor_operator,
-                options::OPT_falternative_parameter_statement,
-                options::OPT_fdefault_real_8, options::OPT_fdefault_integer_8,
-                options::OPT_fdefault_double_8, options::OPT_flarge_sizes,
-                options::OPT_fno_automatic});
+  Args.AddAllArgs(CmdArgs, {options::OPT_ffixed_form,
+                            options::OPT_ffree_form,
+                            options::OPT_ffixed_line_length_EQ,
+                            options::OPT_fopenmp,
+                            options::OPT_fopenmp_version_EQ,
+                            options::OPT_fopenacc,
+                            options::OPT_finput_charset_EQ,
+                            options::OPT_fimplicit_none,
+                            options::OPT_fno_implicit_none,
+                            options::OPT_fbackslash,
+                            options::OPT_fno_backslash,
+                            options::OPT_flogical_abbreviations,
+                            options::OPT_fno_logical_abbreviations,
+                            options::OPT_fxor_operator,
+                            options::OPT_fno_xor_operator,
+                            options::OPT_falternative_parameter_statement,
+                            options::OPT_fdefault_real_8,
+                            options::OPT_fdefault_integer_8,
+                            options::OPT_fdefault_double_8,
+                            options::OPT_flarge_sizes,
+                            options::OPT_fno_automatic});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -49,6 +58,55 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
   Args.AddAllArgs(CmdArgs,
                   {options::OPT_P, options::OPT_D, options::OPT_U,
                    options::OPT_I, options::OPT_cpp, options::OPT_nocpp});
+}
+
+/// @C shouldLoopVersion
+///
+/// Check if Loop Versioning should be enabled.
+/// We look for the last of one of the following:
+///   -Ofast, -O4, -O<number> and -f[no-]version-loops-for-stride.
+/// Loop versioning is disabled if the last option is
+///  -fno-version-loops-for-stride.
+/// Loop versioning is enabled if the last option is one of:
+///  -floop-versioning
+///  -Ofast
+///  -O4
+///  -O3
+/// For all other cases, loop versioning is is disabled.
+///
+/// The gfortran compiler automatically enables the option for -O3 or -Ofast.
+///
+/// @return true if loop-versioning should be enabled, otherwise false.
+static bool shouldLoopVersion(const ArgList &Args) {
+  const Arg *LoopVersioningArg = Args.getLastArg(
+      options::OPT_Ofast, options::OPT_O, options::OPT_O4,
+      options::OPT_floop_versioning, options::OPT_fno_loop_versioning);
+  if (!LoopVersioningArg)
+    return false;
+
+  if (LoopVersioningArg->getOption().matches(options::OPT_fno_loop_versioning))
+    return false;
+
+  if (LoopVersioningArg->getOption().matches(options::OPT_floop_versioning))
+    return true;
+
+  if (LoopVersioningArg->getOption().matches(options::OPT_Ofast) ||
+      LoopVersioningArg->getOption().matches(options::OPT_O4))
+    return true;
+
+  if (LoopVersioningArg->getOption().matches(options::OPT_O)) {
+    StringRef S(LoopVersioningArg->getValue());
+    unsigned OptLevel = 0;
+    // Note -Os or Oz woould "fail" here, so return false. Which is the
+    // desiered behavior.
+    if (S.getAsInteger(10, OptLevel))
+      return false;
+
+    return OptLevel > 2;
+  }
+
+  llvm_unreachable("We should not end up here");
+  return false;
 }
 
 void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -59,12 +117,31 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring});
 
+  llvm::codegenoptions::DebugInfoKind DebugInfoKind;
+  if (Args.hasArg(options::OPT_gN_Group)) {
+    Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
+    DebugInfoKind = debugLevelToInfoKind(*gNArg);
+  } else if (Args.hasArg(options::OPT_g_Flag)) {
+    DebugInfoKind = llvm::codegenoptions::DebugLineTablesOnly;
+  } else {
+    DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
+  }
+  addDebugInfoKind(CmdArgs, DebugInfoKind);
+}
+
+void Flang::addCodegenOptions(const ArgList &Args,
+                              ArgStringList &CmdArgs) const {
   Arg *stackArrays =
       Args.getLastArg(options::OPT_Ofast, options::OPT_fstack_arrays,
                       options::OPT_fno_stack_arrays);
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  if (Args.hasArg(options::OPT_flang_experimental_hlfir))
+    CmdArgs.push_back("-flang-experimental-hlfir");
+  if (shouldLoopVersion(Args))
+    CmdArgs.push_back("-fversion-loops-for-stride");
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -104,6 +181,8 @@ void Flang::addTargetOptions(const ArgList &Args,
   switch (TC.getArch()) {
   default:
     break;
+  case llvm::Triple::r600:
+  case llvm::Triple::amdgcn:
   case llvm::Triple::aarch64:
   case llvm::Triple::riscv64:
   case llvm::Triple::x86_64:
@@ -123,15 +202,29 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
 
   // Skips the primary input file, which is the input file that the compilation
   // proccess will be executed upon (e.g. the host bitcode file) and
-  // adds the other secondary input (e.g. device bitcode files for embedding)
-  // to the embed offload object. This is condensed logic from the Clang driver
-  // for embedding offload objects during HostOffloading.
-  if (IsHostOffloadingAction) {
-    for (size_t i = 1; i < Inputs.size(); ++i) {
-      if (Inputs[i].getType() != types::TY_Nothing)
-        CmdArgs.push_back(
-            Args.MakeArgString("-fembed-offload-object=" +
-                               getToolChain().getInputFilename(Inputs[i])));
+  // adds other secondary input (e.g. device bitcode files for embedding to the
+  // -fembed-offload-object argument or the host IR file for proccessing
+  // during device compilation to the fopenmp-host-ir-file-path argument via
+  // OpenMPDeviceInput). This is condensed logic from the ConstructJob
+  // function inside of the Clang driver for pushing on further input arguments
+  // needed for offloading during various phases of compilation.
+  for (size_t i = 1; i < Inputs.size(); ++i) {
+    if (Inputs[i].getType() == types::TY_Nothing) {
+      // contains nothing, so it's skippable
+    } else if (IsHostOffloadingAction) {
+      CmdArgs.push_back(
+          Args.MakeArgString("-fembed-offload-object=" +
+                             getToolChain().getInputFilename(Inputs[i])));
+    } else if (IsOpenMPDevice) {
+      if (Inputs[i].getFilename()) {
+        CmdArgs.push_back("-fopenmp-host-ir-file-path");
+        CmdArgs.push_back(Args.MakeArgString(Inputs[i].getFilename()));
+      } else {
+        llvm_unreachable("missing openmp host-ir file for device offloading");
+      }
+    } else {
+      llvm_unreachable(
+          "unexpectedly given multiple inputs or given unknown input");
     }
   }
 
@@ -140,6 +233,27 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     // generating code for a device, so that only the relevant code is
     // emitted.
     CmdArgs.push_back("-fopenmp-is-device");
+
+    // When in OpenMP offloading mode, enable debugging on the device.
+    Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);
+    if (Args.hasFlag(options::OPT_fopenmp_target_debug,
+                     options::OPT_fno_openmp_target_debug, /*Default=*/false))
+      CmdArgs.push_back("-fopenmp-target-debug");
+
+    // When in OpenMP offloading mode, forward assumptions information about
+    // thread and team counts in the device.
+    if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
+                     options::OPT_fno_openmp_assume_teams_oversubscription,
+                     /*Default=*/false))
+      CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
+    if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
+                     options::OPT_fno_openmp_assume_threads_oversubscription,
+                     /*Default=*/false))
+      CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
+    if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
+      CmdArgs.push_back("-fopenmp-assume-no-thread-state");
+    if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
+      CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
   }
 }
 
@@ -353,6 +467,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs);
 
+  // Add Codegen options
+  addCodegenOptions(Args, CmdArgs);
+
   // Add other compile options
   addOtherOptions(Args, CmdArgs);
 
@@ -401,6 +518,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   assert(Input.isFilename() && "Invalid input.");
+
+  if (Args.getLastArg(options::OPT_save_temps_EQ))
+    Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
   addDashXForInput(Args, Input, CmdArgs);
 

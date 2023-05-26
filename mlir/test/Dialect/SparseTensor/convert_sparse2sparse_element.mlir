@@ -1,13 +1,13 @@
 // RUN: mlir-opt %s --sparse-tensor-codegen --canonicalize --cse | FileCheck %s
 
 #SparseVector64 = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"],
+  lvlTypes = ["compressed"],
   posWidth = 64,
   crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"],
+  lvlTypes = ["compressed"],
   posWidth = 32,
   crdWidth = 32
 }>

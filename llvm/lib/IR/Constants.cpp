@@ -899,14 +899,6 @@ ConstantInt *ConstantInt::get(IntegerType *Ty, uint64_t V, bool isSigned) {
   return get(Ty->getContext(), APInt(Ty->getBitWidth(), V, isSigned));
 }
 
-ConstantInt *ConstantInt::getSigned(IntegerType *Ty, int64_t V) {
-  return get(Ty, V, true);
-}
-
-Constant *ConstantInt::getSigned(Type *Ty, int64_t V) {
-  return get(Ty, V, true);
-}
-
 Constant *ConstantInt::get(Type *Ty, const APInt& V) {
   ConstantInt *C = get(Ty->getContext(), V);
   assert(C->getType() == Ty->getScalarType() &&
@@ -1015,13 +1007,6 @@ Constant *ConstantFP::getZero(Type *Ty, bool Negative) {
     return ConstantVector::getSplat(VTy->getElementCount(), C);
 
   return C;
-}
-
-Constant *ConstantFP::getZeroValueForNegation(Type *Ty) {
-  if (Ty->isFPOrFPVectorTy())
-    return getNegativeZero(Ty);
-
-  return Constant::getNullValue(Ty);
 }
 
 
@@ -2274,21 +2259,8 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::URem:
-  case Instruction::SRem:
     assert(C1->getType()->isIntOrIntVectorTy() &&
            "Tried to create an integer operation on a non-integer type!");
-    break;
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::FRem:
-    assert(C1->getType()->isFPOrFPVectorTy() &&
-           "Tried to create a floating-point operation on a "
-           "non-floating-point type!");
     break;
   case Instruction::And:
   case Instruction::Or:
@@ -2609,8 +2581,7 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
 Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
   assert(C->getType()->isIntOrIntVectorTy() &&
          "Cannot NEG a nonintegral value!");
-  return getSub(ConstantFP::getZeroValueForNegation(C->getType()),
-                C, HasNUW, HasNSW);
+  return getSub(ConstantInt::get(C->getType(), 0), C, HasNUW, HasNSW);
 }
 
 Constant *ConstantExpr::getNot(Constant *C) {

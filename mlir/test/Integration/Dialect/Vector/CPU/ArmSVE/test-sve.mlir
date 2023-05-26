@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-arm-sve" -finalize-memref-to-llvm -convert-func-to-llvm -convert-arith-to-llvm -canonicalize | \
 // RUN: mlir-translate -mlir-to-llvmir | \
-// RUN: %lli --entry-function=entry --march=aarch64 --mattr="+sve" --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: %lli_aarch64_cmd --entry-function=entry --march=aarch64 --mattr="+sve" --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 // Note: To run this test, your CPU must support SVE

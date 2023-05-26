@@ -389,7 +389,7 @@ public:
       Mods = getNextModifiers(Proto, Pos);
     }
 
-    for (auto Type : Types) {
+    for (const auto &Type : Types) {
       // If this builtin takes an immediate argument, we need to #define it rather
       // than use a standard declaration, so that SemaChecking can range check
       // the immediate passed by the user.
@@ -2353,7 +2353,6 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#include <stdint.h>\n\n";
 
   OS << "#include <arm_bf16.h>\n";
-  OS << "typedef __bf16 bfloat16_t;\n";
 
   // Emit NEON-specific scalar typedefs.
   OS << "typedef float float32_t;\n";

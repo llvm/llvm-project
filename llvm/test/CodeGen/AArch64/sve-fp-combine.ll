@@ -823,6 +823,7 @@ define <vscale x 2 x double> @fnmsb_d(<vscale x 2 x double> %m1, <vscale x 2 x d
   ret <vscale x 2 x double> %res
 }
 
+
 define <vscale x 8 x half> @fadd_h_sel(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: fadd_h_sel:
 ; CHECK:       // %bb.0:
@@ -883,36 +884,114 @@ define <vscale x 2 x double> @fsub_d_sel(<vscale x 2 x double> %a, <vscale x 2 x
   ret <vscale x 2 x double> %fsub
 }
 
+
+
+define <vscale x 8 x half> @fadd_h_sel_negzero(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: fadd_h_sel_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %nz = fneg <vscale x 8 x half> zeroinitializer
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %b, <vscale x 8 x half> %nz
+  %fadd = fadd <vscale x 8 x half> %a, %sel
+  ret <vscale x 8 x half> %fadd
+}
+
+define <vscale x 4 x float> @fadd_s_sel_negzero(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: fadd_s_sel_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %nz = fneg <vscale x 4 x float> zeroinitializer
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %b, <vscale x 4 x float> %nz
+  %fadd = fadd <vscale x 4 x float> %a, %sel
+  ret <vscale x 4 x float> %fadd
+}
+
+define <vscale x 2 x double> @fadd_d_sel_negzero(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: fadd_d_sel_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %nz = fneg <vscale x 2 x double> zeroinitializer
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %b, <vscale x 2 x double> %nz
+  %fadd = fadd <vscale x 2 x double> %a, %sel
+  ret <vscale x 2 x double> %fadd
+}
+
+define <vscale x 8 x half> @fsub_h_sel_negzero(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: fsub_h_sel_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %nz = fneg <vscale x 8 x half> zeroinitializer
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %b, <vscale x 8 x half> %nz
+  %fsub = fsub nsz <vscale x 8 x half> %a, %sel
+  ret <vscale x 8 x half> %fsub
+}
+
+define <vscale x 4 x float> @fsub_s_sel_negzero(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: fsub_s_sel_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %nz = fneg <vscale x 4 x float> zeroinitializer
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %b, <vscale x 4 x float> %nz
+  %fsub = fsub nsz <vscale x 4 x float> %a, %sel
+  ret <vscale x 4 x float> %fsub
+}
+
+define <vscale x 2 x double> @fsub_d_sel_negzero(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: fsub_d_sel_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %nz = fneg <vscale x 2 x double> zeroinitializer
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %b, <vscale x 2 x double> %nz
+  %fsub = fsub nsz <vscale x 2 x double> %a, %sel
+  ret <vscale x 2 x double> %fsub
+}
+
+
 define <vscale x 8 x half> @fadd_sel_fmul_h(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    mov z3.h, #0 // =0x0
+; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z3.h
+; CHECK-NEXT:    fadd z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 8 x half> %b, %c
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %fmul, <vscale x 8 x half> zeroinitializer
-  %fadd = fadd nsz contract <vscale x 8 x half> %a, %sel
+  %fadd = fadd contract <vscale x 8 x half> %a, %sel
   ret <vscale x 8 x half> %fadd
 }
 
 define <vscale x 4 x float> @fadd_sel_fmul_s(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    mov z3.s, #0 // =0x0
+; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z3.s
+; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 4 x float> %b, %c
   %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %fmul, <vscale x 4 x float> zeroinitializer
-  %fadd = fadd nsz contract <vscale x 4 x float> %a, %sel
+  %fadd = fadd contract <vscale x 4 x float> %a, %sel
   ret <vscale x 4 x float> %fadd
 }
 
 define <vscale x 2 x double> @fadd_sel_fmul_d(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    mov z3.d, #0 // =0x0
+; CHECK-NEXT:    fmul z1.d, z1.d, z2.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z3.d
+; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %fmul = fmul <vscale x 2 x double> %b, %c
   %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %fmul, <vscale x 2 x double> zeroinitializer
-  %fadd = fadd nsz contract <vscale x 2 x double> %a, %sel
+  %fadd = fadd contract <vscale x 2 x double> %a, %sel
   ret <vscale x 2 x double> %fadd
 }
 
@@ -949,6 +1028,233 @@ define <vscale x 2 x double> @fsub_sel_fmul_d(<vscale x 2 x double> %a, <vscale 
   ret <vscale x 2 x double> %fsub
 }
 
+define <vscale x 8 x half> @fadd_sel_fmul_h_nsz(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: fadd_sel_fmul_h_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 8 x half> %b, %c
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %fmul, <vscale x 8 x half> zeroinitializer
+  %fadd = fadd nsz contract <vscale x 8 x half> %a, %sel
+  ret <vscale x 8 x half> %fadd
+}
+
+define <vscale x 4 x float> @fadd_sel_fmul_s_nsz(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: fadd_sel_fmul_s_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 4 x float> %b, %c
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %fmul, <vscale x 4 x float> zeroinitializer
+  %fadd = fadd nsz contract <vscale x 4 x float> %a, %sel
+  ret <vscale x 4 x float> %fadd
+}
+
+define <vscale x 2 x double> @fadd_sel_fmul_d_nsz(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: fadd_sel_fmul_d_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 2 x double> %b, %c
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %fmul, <vscale x 2 x double> zeroinitializer
+  %fadd = fadd nsz contract <vscale x 2 x double> %a, %sel
+  ret <vscale x 2 x double> %fadd
+}
+
+define <vscale x 8 x half> @fsub_sel_fmul_h_nsz(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: fsub_sel_fmul_h_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmls z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 8 x half> %b, %c
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %fmul, <vscale x 8 x half> zeroinitializer
+  %fsub = fsub nsz contract <vscale x 8 x half> %a, %sel
+  ret <vscale x 8 x half> %fsub
+}
+
+define <vscale x 4 x float> @fsub_sel_fmul_s_nsz(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: fsub_sel_fmul_s_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmls z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 4 x float> %b, %c
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %fmul, <vscale x 4 x float> zeroinitializer
+  %fsub = fsub nsz contract <vscale x 4 x float> %a, %sel
+  ret <vscale x 4 x float> %fsub
+}
+
+define <vscale x 2 x double> @fsub_sel_fmul_d_nsz(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: fsub_sel_fmul_d_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmls z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 2 x double> %b, %c
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %fmul, <vscale x 2 x double> zeroinitializer
+  %fsub = fsub nsz contract <vscale x 2 x double> %a, %sel
+  ret <vscale x 2 x double> %fsub
+}
+
+
+define <vscale x 8 x half> @fadd_sel_fmul_h_negzero(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: fadd_sel_fmul_h_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 8 x half> %b, %c
+  %nz = fneg <vscale x 8 x half> zeroinitializer
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %fmul, <vscale x 8 x half> %nz
+  %fadd = fadd contract <vscale x 8 x half> %a, %sel
+  ret <vscale x 8 x half> %fadd
+}
+
+define <vscale x 4 x float> @fadd_sel_fmul_s_negzero(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: fadd_sel_fmul_s_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 4 x float> %b, %c
+  %nz = fneg <vscale x 4 x float> zeroinitializer
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %fmul, <vscale x 4 x float> %nz
+  %fadd = fadd contract <vscale x 4 x float> %a, %sel
+  ret <vscale x 4 x float> %fadd
+}
+
+define <vscale x 2 x double> @fadd_sel_fmul_d_negzero(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: fadd_sel_fmul_d_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 2 x double> %b, %c
+  %nz = fneg <vscale x 2 x double> zeroinitializer
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %fmul, <vscale x 2 x double> %nz
+  %fadd = fadd contract <vscale x 2 x double> %a, %sel
+  ret <vscale x 2 x double> %fadd
+}
+
+define <vscale x 8 x half> @fsub_sel_fmul_h_negzero(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: fsub_sel_fmul_h_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
+; CHECK-NEXT:    fmul z1.h, z1.h, z2.h
+; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
+; CHECK-NEXT:    fsub z0.h, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 8 x half> %b, %c
+  %nz = fneg <vscale x 8 x half> zeroinitializer
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %fmul, <vscale x 8 x half> %nz
+  %fsub = fsub contract <vscale x 8 x half> %a, %sel
+  ret <vscale x 8 x half> %fsub
+}
+
+define <vscale x 4 x float> @fsub_sel_fmul_s_negzero(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: fsub_sel_fmul_s_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
+; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
+; CHECK-NEXT:    mov z2.s, w8
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
+; CHECK-NEXT:    fsub z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 4 x float> %b, %c
+  %nz = fneg <vscale x 4 x float> zeroinitializer
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %fmul, <vscale x 4 x float> %nz
+  %fsub = fsub contract <vscale x 4 x float> %a, %sel
+  ret <vscale x 4 x float> %fsub
+}
+
+define <vscale x 2 x double> @fsub_sel_fmul_d_negzero(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: fsub_sel_fmul_d_negzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    fmul z1.d, z1.d, z2.d
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
+; CHECK-NEXT:    fsub z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 2 x double> %b, %c
+  %nz = fneg <vscale x 2 x double> zeroinitializer
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %fmul, <vscale x 2 x double> %nz
+  %fsub = fsub contract <vscale x 2 x double> %a, %sel
+  ret <vscale x 2 x double> %fsub
+}
+
+
+
+define <vscale x 8 x half> @fadd_sel_fmul_h_negzero_nsz(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: fadd_sel_fmul_h_negzero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 8 x half> %b, %c
+  %nz = fneg <vscale x 8 x half> zeroinitializer
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %fmul, <vscale x 8 x half> %nz
+  %fadd = fadd nsz contract <vscale x 8 x half> %a, %sel
+  ret <vscale x 8 x half> %fadd
+}
+
+define <vscale x 4 x float> @fadd_sel_fmul_s_negzero_nsz(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: fadd_sel_fmul_s_negzero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 4 x float> %b, %c
+  %nz = fneg <vscale x 4 x float> zeroinitializer
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %fmul, <vscale x 4 x float> %nz
+  %fadd = fadd nsz contract <vscale x 4 x float> %a, %sel
+  ret <vscale x 4 x float> %fadd
+}
+
+define <vscale x 2 x double> @fadd_sel_fmul_d_negzero_nsz(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: fadd_sel_fmul_d_negzero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 2 x double> %b, %c
+  %nz = fneg <vscale x 2 x double> zeroinitializer
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %fmul, <vscale x 2 x double> %nz
+  %fadd = fadd nsz contract <vscale x 2 x double> %a, %sel
+  ret <vscale x 2 x double> %fadd
+}
+
+define <vscale x 8 x half> @fsub_sel_fmul_h_negzero_nsz(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: fsub_sel_fmul_h_negzero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmls z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 8 x half> %b, %c
+  %nz = fneg <vscale x 8 x half> zeroinitializer
+  %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x half> %fmul, <vscale x 8 x half> %nz
+  %fsub = fsub nsz contract <vscale x 8 x half> %a, %sel
+  ret <vscale x 8 x half> %fsub
+}
+
+define <vscale x 4 x float> @fsub_sel_fmul_s_negzero_nsz(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: fsub_sel_fmul_s_negzero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmls z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 4 x float> %b, %c
+  %nz = fneg <vscale x 4 x float> zeroinitializer
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %fmul, <vscale x 4 x float> %nz
+  %fsub = fsub nsz contract <vscale x 4 x float> %a, %sel
+  ret <vscale x 4 x float> %fsub
+}
+
+define <vscale x 2 x double> @fsub_sel_fmul_d_negzero_nsz(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: fsub_sel_fmul_d_negzero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmls z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %fmul = fmul <vscale x 2 x double> %b, %c
+  %nz = fneg <vscale x 2 x double> zeroinitializer
+  %sel = select <vscale x 2 x i1> %mask, <vscale x 2 x double> %fmul, <vscale x 2 x double> %nz
+  %fsub = fsub nsz contract <vscale x 2 x double> %a, %sel
+  ret <vscale x 2 x double> %fsub
+}
+
+
+
 ; Verify combine requires contract fast-math flag.
 define <vscale x 4 x float> @fadd_sel_fmul_no_contract_s(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: fadd_sel_fmul_no_contract_s:
@@ -959,20 +1265,5 @@ define <vscale x 4 x float> @fadd_sel_fmul_no_contract_s(<vscale x 4 x float> %a
   %fmul = fmul <vscale x 4 x float> %b, %c
   %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %fmul, <vscale x 4 x float> zeroinitializer
   %fadd = fadd nsz <vscale x 4 x float> %a, %sel
-  ret <vscale x 4 x float> %fadd
-}
-
-; Verify combine requires no-signed zeros fast-math flag.
-define <vscale x 4 x float> @fadd_sel_fmul_no_nsz_s(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %mask) {
-; CHECK-LABEL: fadd_sel_fmul_no_nsz_s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z3.s, #0 // =0x0
-; CHECK-NEXT:    fmul z1.s, z1.s, z2.s
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z3.s
-; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
-; CHECK-NEXT:    ret
-  %fmul = fmul <vscale x 4 x float> %b, %c
-  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x float> %fmul, <vscale x 4 x float> zeroinitializer
-  %fadd = fadd contract <vscale x 4 x float> %a, %sel
   ret <vscale x 4 x float> %fadd
 }

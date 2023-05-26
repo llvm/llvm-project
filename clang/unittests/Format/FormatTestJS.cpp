@@ -1476,6 +1476,17 @@ TEST_F(FormatTestJS, ImportExportASI) {
                " export class Y {}");
 }
 
+TEST_F(FormatTestJS, ImportExportType) {
+  verifyFormat("import type {x, y} from 'y';\n"
+               "import type * as x from 'y';\n"
+               "import type x from 'y';\n"
+               "import {x, type yu, z} from 'y';\n");
+  verifyFormat("export type {x, y} from 'y';\n"
+               "export {x, type yu, z} from 'y';\n"
+               "export type {x, y};\n"
+               "export {x, type yu, z};\n");
+}
+
 TEST_F(FormatTestJS, ClosureStyleCasts) {
   verifyFormat("var x = /** @type {foo} */ (bar);");
 }

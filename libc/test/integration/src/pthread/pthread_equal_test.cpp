@@ -18,6 +18,7 @@
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
+#include <stdint.h> // uintptr_t
 
 pthread_t child_thread;
 pthread_mutex_t mutex;

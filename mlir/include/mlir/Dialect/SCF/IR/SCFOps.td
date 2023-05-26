@@ -26,6 +26,7 @@ def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
   let dependentDialects = ["arith::ArithDialect"];
+  let usePropertiesForAttributes = 1;
 }
 
 // Base class for SCF dialect ops.
@@ -362,6 +363,7 @@ def ForallOp : SCF_Op<"forall", [
        AutomaticAllocationScope,
        RecursiveMemoryEffects,
        SingleBlockImplicitTerminator<"scf::InParallelOp">,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      ]> {
   let summary = "evaluate a block multiple times in parallel";
   let description = [{
@@ -813,6 +815,7 @@ def ParallelOp : SCF_Op<"parallel",
      AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<LoopLikeOpInterface>,
      RecursiveMemoryEffects,
+     DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      SingleBlockImplicitTerminator<"scf::YieldOp">]> {
   let summary = "parallel for operation";
   let description = [{

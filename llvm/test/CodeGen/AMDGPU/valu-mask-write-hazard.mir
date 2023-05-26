@@ -135,20 +135,6 @@ body:            |
 ...
 
 ---
-name:            mask_hazard_cndmask_dpp3
-body:            |
-  bb.0:
-    ; GCN-LABEL: name: mask_hazard_cndmask_dpp3
-    ; GCN: $vgpr0 = V_CNDMASK_B16_dpp $vgpr0, 0, $vgpr1, 0, $vgpr2, 1, 15, 15, 1, implicit $vcc, implicit $exec
-    ; GCN-NEXT: $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
-    ; GCN-NEXT: S_ENDPGM 0
-    $vgpr0 = V_CNDMASK_B16_dpp $vgpr0, 0, $vgpr1, 0, $vgpr2, 1, 15, 15, 1, implicit $vcc, implicit $exec
-    $vcc = S_CSELECT_B64 -1, 0, implicit $scc
-    S_ENDPGM 0
-...
-
----
 name:            mask_hazard_cndmask_dpp4
 body:            |
   bb.0:

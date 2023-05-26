@@ -97,7 +97,7 @@ choose ``unknown`` and the defaults will be used. If you choose a parameter
 that Clang doesn't know, like ``blerg``, it'll ignore and assume
 ``unknown``, which is not always desired, so be careful.
 
-Finally, the env (enviornment) option is something that will pick default
+Finally, the env (environment) option is something that will pick default
 CPU/FPU, define the specific behaviour of your code (PCS, extensions),
 and also choose the correct library calls, etc.
 

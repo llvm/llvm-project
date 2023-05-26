@@ -1176,6 +1176,14 @@ foreach ((A a, B b) in someList) {
   verifyFormat(R"(override (string name, int age) methodTuple() {})", Style);
   verifyFormat(R"(async (string name, int age) methodTuple() {})", Style);
   verifyFormat(R"(unsafe (string name, int age) methodTuple() {})", Style);
+
+  Style.SpacesInSquareBrackets = false;
+  Style.SpaceBeforeSquareBrackets = true;
+  verifyFormat("return a is [1, 2, 3];", Style);
+  verifyFormat("return a is [..];", Style);
+  Style.SpaceBeforeSquareBrackets = false;
+  verifyFormat("return a is [1, 2, 3];", Style);
+  verifyFormat("return a is [..];", Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpNullableTypes) {

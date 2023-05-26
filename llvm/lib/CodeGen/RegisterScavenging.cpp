@@ -198,25 +198,13 @@ void RegScavenger::forward() {
         // S1 is can be freely clobbered.
         // Ideally we would like a way to model this, but leaving the
         // insert_subreg around causes both correctness and performance issues.
-        bool SubUsed = false;
-        for (const MCPhysReg &SubReg : TRI->subregs(Reg))
-          if (isRegUsed(SubReg)) {
-            SubUsed = true;
-            break;
-          }
-        bool SuperUsed = false;
-        for (MCSuperRegIterator SR(Reg, TRI); SR.isValid(); ++SR) {
-          if (isRegUsed(*SR)) {
-            SuperUsed = true;
-            break;
-          }
-        }
-        if (!SubUsed && !SuperUsed) {
+        if (none_of(TRI->subregs(Reg),
+                    [&](MCPhysReg SR) { return isRegUsed(SR); }) &&
+            none_of(TRI->superregs(Reg),
+                    [&](MCPhysReg SR) { return isRegUsed(SR); })) {
           MBB->getParent()->verify(nullptr, "In Register Scavenger");
           llvm_unreachable("Using an undefined register!");
         }
-        (void)SubUsed;
-        (void)SuperUsed;
       }
     } else {
       assert(MO.isDef());
@@ -284,9 +272,18 @@ BitVector RegScavenger::getRegsAvailable(const TargetRegisterClass *RC) {
 
 Register RegScavenger::findSurvivorReg(MachineBasicBlock::iterator StartMI,
                                        BitVector &Candidates,
+                                       ArrayRef<MCPhysReg> AllocationOrder,
                                        unsigned InstrLimit,
                                        MachineBasicBlock::iterator &UseMI) {
-  int Survivor = Candidates.find_first();
+  auto FindFirstCandidate = [&]() -> int {
+    for (MCPhysReg Reg : AllocationOrder) {
+      if (Candidates.test(Reg))
+        return Reg;
+    }
+    return -1;
+  };
+
+  int Survivor = FindFirstCandidate();
   assert(Survivor > 0 && "No candidates for scavenging");
 
   MachineBasicBlock::iterator ME = MBB->getFirstTerminator();
@@ -334,7 +331,7 @@ Register RegScavenger::findSurvivorReg(MachineBasicBlock::iterator StartMI,
     if (Candidates.none())
       break;
 
-    Survivor = Candidates.find_first();
+    Survivor = FindFirstCandidate();
   }
   // If we ran off the end, that's where we want to restore.
   if (MI == ME) RestorePointMI = ME;
@@ -563,7 +560,8 @@ Register RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
 
   // Find the register whose use is furthest away.
   MachineBasicBlock::iterator UseMI;
-  Register SReg = findSurvivorReg(I, Candidates, 25, UseMI);
+  Register SReg =
+      findSurvivorReg(I, Candidates, RC->getRawAllocationOrder(MF), 25, UseMI);
 
   // If we found an unused register there is no reason to spill it.
   if (!isRegUsed(SReg)) {

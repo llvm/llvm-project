@@ -48,9 +48,9 @@ a list of open projects that one can start with:
    CI builders.
 
 #. **double and higher precision math functions** - These are under active
-   developement but you can take a shot at those not yet implemented. See
+   development but you can take a shot at those not yet implemented. See
    :ref:`math` for more information.
 
 #. **Contribute a new OS/Architecture port** - You can contribute a new
    operating system or target architecture port. See :ref:`porting` for more
-   informaton.
+   information.

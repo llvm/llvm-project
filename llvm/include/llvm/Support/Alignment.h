@@ -100,7 +100,7 @@ public:
   /// Allow constructions of constexpr Align from types.
   /// Compile time equivalent to Align(alignof(T)).
   template <typename T> constexpr static Align Of() {
-    return Constant<std::alignment_of<T>::value>();
+    return Constant<std::alignment_of_v<T>>();
   }
 
   /// Constexpr constructor from LogValue type.

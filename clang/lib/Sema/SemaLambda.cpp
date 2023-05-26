@@ -283,11 +283,13 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     Normal,
     DefaultArgument,
     DataMember,
-    StaticDataMember,
     InlineVariable,
-    VariableTemplate,
+    TemplatedVariable,
     Concept
   } Kind = Normal;
+
+  bool IsInNonspecializedTemplate =
+      inTemplateInstantiation() || CurContext->isDependentContext();
 
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
@@ -299,15 +301,15 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
         if (LexicalDC->isRecord())
           Kind = DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
-      if (Var->getDeclContext()->isRecord())
-        Kind = StaticDataMember;
-      else if (Var->getMostRecentDecl()->isInline())
+      if (Var->getMostRecentDecl()->isInline())
         Kind = InlineVariable;
+      else if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
+        Kind = TemplatedVariable;
       else if (Var->getDescribedVarTemplate())
-        Kind = VariableTemplate;
+        Kind = TemplatedVariable;
       else if (auto *VTS = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
         if (!VTS->isExplicitSpecialization())
-          Kind = VariableTemplate;
+          Kind = TemplatedVariable;
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       Kind = DataMember;
@@ -319,12 +321,9 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // Itanium ABI [5.1.7]:
   //   In the following contexts [...] the one-definition rule requires closure
   //   types in different translation units to "correspond":
-  bool IsInNonspecializedTemplate =
-      inTemplateInstantiation() || CurContext->isDependentContext();
   switch (Kind) {
   case Normal: {
-    //  -- the bodies of non-exported nonspecialized template functions
-    //  -- the bodies of inline functions
+    //  -- the bodies of inline or templated functions
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
         isInInlineFunction(CurContext)) {
@@ -341,21 +340,13 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     // however the ManglingContextDecl is important for the purposes of
     // re-forming the template argument list of the lambda for constraint
     // evaluation.
-  case StaticDataMember:
-    //  -- the initializers of nonspecialized static members of template classes
-    if (!IsInNonspecializedTemplate)
-      return std::make_tuple(nullptr, ManglingContextDecl);
-    // Fall through to get the current context.
-    [[fallthrough]];
-
   case DataMember:
-    //  -- the in-class initializers of class members
+    //  -- default member initializers
   case DefaultArgument:
     //  -- default arguments appearing in class definitions
   case InlineVariable:
-    //  -- the initializers of inline variables
-  case VariableTemplate:
-    //  -- the initializers of templated variables
+  case TemplatedVariable:
+    //  -- the initializers of inline or templated variables
     return std::make_tuple(
         &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
                                           ManglingContextDecl),
@@ -389,18 +380,13 @@ buildTypeForLambdaCallOperator(Sema &S, clang::CXXRecordDecl *Class,
 
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
-    std::optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling) {
-  if (Mangling) {
-    bool HasKnownInternalLinkage;
-    unsigned ManglingNumber, DeviceManglingNumber;
-    Decl *ManglingContextDecl;
-    std::tie(HasKnownInternalLinkage, ManglingNumber, DeviceManglingNumber,
-             ManglingContextDecl) = *Mangling;
-    Class->setLambdaMangling(ManglingNumber, ManglingContextDecl,
-                             HasKnownInternalLinkage);
-    Class->setDeviceLambdaManglingNumber(DeviceManglingNumber);
+    std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
+  if (NumberingOverride) {
+    Class->setLambdaNumbering(*NumberingOverride);
     return;
   }
+
+  ContextRAII ManglingContext(*this, Class->getDeclContext());
 
   auto getMangleNumberingContext =
       [this](CXXRecordDecl *Class,
@@ -416,11 +402,10 @@ void Sema::handleLambdaNumbering(
     return &Context.getManglingNumberContext(DC);
   };
 
+  CXXRecordDecl::LambdaNumbering Numbering;
   MangleNumberingContext *MCtx;
-  Decl *ManglingContextDecl;
-  std::tie(MCtx, ManglingContextDecl) =
+  std::tie(MCtx, Numbering.ContextDecl) =
       getCurrentMangleNumberContext(Class->getDeclContext());
-  bool HasKnownInternalLinkage = false;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
                 getLangOpts().SYCLIsHost)) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
@@ -430,15 +415,19 @@ void Sema::handleLambdaNumbering(
     // Also force for SYCL, since we need this for the
     // __builtin_sycl_unique_stable_name implementation, which depends on lambda
     // mangling.
-    MCtx = getMangleNumberingContext(Class, ManglingContextDecl);
+    MCtx = getMangleNumberingContext(Class, Numbering.ContextDecl);
     assert(MCtx && "Retrieving mangle numbering context failed!");
-    HasKnownInternalLinkage = true;
+    Numbering.HasKnownInternalLinkage = true;
   }
   if (MCtx) {
-    unsigned ManglingNumber = MCtx->getManglingNumber(Method);
-    Class->setLambdaMangling(ManglingNumber, ManglingContextDecl,
-                             HasKnownInternalLinkage);
-    Class->setDeviceLambdaManglingNumber(MCtx->getDeviceManglingNumber(Method));
+    Numbering.IndexInContext = MCtx->getNextLambdaIndex();
+    Numbering.ManglingNumber = MCtx->getManglingNumber(Method);
+    Numbering.DeviceManglingNumber = MCtx->getDeviceManglingNumber(Method);
+    Class->setLambdaNumbering(Numbering);
+
+    if (auto *Source =
+            dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
+      Source->AssignedLambdaNumbering(Class);
   }
 }
 
@@ -967,8 +956,7 @@ void Sema::CompleteLambdaCallOperator(
     CheckParmsForFunctionDef(Params, /*CheckParameterNames=*/false);
     Method->setParams(Params);
     for (auto P : Method->parameters()) {
-      if (!P)
-        continue;
+      assert(P && "null in a parameter list");
       P->setOwningFunction(Method);
     }
   }
@@ -1324,8 +1312,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       ParamInfo.getDeclSpec().getConstexprSpecifier(),
       IsLambdaStatic ? SC_Static : SC_None, Params, ExplicitResultType);
 
-  ContextRAII ManglingContext(*this, Class->getDeclContext());
-
   CheckCXXDefaultArguments(Method);
 
   // This represents the function body for the lambda function, check if we
@@ -1349,8 +1335,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Method);
 
   handleLambdaNumbering(Class, Method);
-
-  ManglingContext.pop();
 
   for (auto &&C : LSI->Captures) {
     if (!C.isVariableCapture())
@@ -1379,6 +1363,57 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     if (CheckRedefinition(P))
       CheckShadow(CurScope, P);
     PushOnScopeChains(P, CurScope);
+  }
+
+  // C++23 [expr.prim.lambda.capture]p5:
+  // If an identifier in a capture appears as the declarator-id of a parameter
+  // of the lambda-declarator's parameter-declaration-clause or as the name of a
+  // template parameter of the lambda-expression's template-parameter-list, the
+  // program is ill-formed.
+  TemplateParameterList *TemplateParams =
+      getGenericLambdaTemplateParameterList(LSI, *this);
+  if (TemplateParams) {
+    for (const auto *TP : TemplateParams->asArray()) {
+      if (!TP->getIdentifier())
+        continue;
+      for (const auto &Capture : Intro.Captures) {
+        if (Capture.Id == TP->getIdentifier()) {
+          Diag(Capture.Loc, diag::err_template_param_shadow) << Capture.Id;
+          Diag(TP->getLocation(), diag::note_template_param_here);
+        }
+      }
+    }
+  }
+
+  // C++20: dcl.decl.general p4:
+  // The optional requires-clause ([temp.pre]) in an init-declarator or
+  // member-declarator shall be present only if the declarator declares a
+  // templated function ([dcl.fct]).
+  if (Expr *TRC = Method->getTrailingRequiresClause()) {
+    // [temp.pre]/8:
+    // An entity is templated if it is
+    // - a template,
+    // - an entity defined ([basic.def]) or created ([class.temporary]) in a
+    // templated entity,
+    // - a member of a templated entity,
+    // - an enumerator for an enumeration that is a templated entity, or
+    // - the closure type of a lambda-expression ([expr.prim.lambda.closure])
+    // appearing in the declaration of a templated entity. [Note 6: A local
+    // class, a local or block variable, or a friend function defined in a
+    // templated entity is a templated entity.  — end note]
+    //
+    // A templated function is a function template or a function that is
+    // templated. A templated class is a class template or a class that is
+    // templated. A templated variable is a variable template or a variable
+    // that is templated.
+
+    // Note: we only have to check if this is defined in a template entity, OR
+    // if we are a template, since the rest don't apply. The requires clause
+    // applies to the call operator, which we already know is a member function,
+    // AND defined.
+    if (!Method->getDescribedFunctionTemplate() && !Method->isTemplated()) {
+      Diag(TRC->getBeginLoc(), diag::err_constrained_non_templated_function);
+    }
   }
 
   // Enter a new evaluation context to insulate the lambda from any

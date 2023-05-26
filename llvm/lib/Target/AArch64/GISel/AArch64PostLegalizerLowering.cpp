@@ -961,9 +961,10 @@ static bool lowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   const auto Pred =
       static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
   Register LHS = MI.getOperand(2).getReg();
-  // TODO: Handle v4s16 case.
   unsigned EltSize = MRI.getType(LHS).getScalarSizeInBits();
-  if (EltSize != 32 && EltSize != 64)
+  if (EltSize == 16 && !ST.hasFullFP16())
+    return false;
+  if (EltSize != 16 && EltSize != 32 && EltSize != 64)
     return false;
   Register RHS = MI.getOperand(3).getReg();
   auto Splat = getAArch64VectorSplat(*MRI.getVRegDef(RHS), MRI);

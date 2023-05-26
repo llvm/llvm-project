@@ -172,16 +172,15 @@ protected:
   bool isInlineStorage() const { return CallbackAndInlineFlag.getInt(); }
 
   bool isTrivialCallback() const {
-    return CallbackAndInlineFlag.getPointer().template is<TrivialCallback *>();
+    return isa<TrivialCallback *>(CallbackAndInlineFlag.getPointer());
   }
 
   CallPtrT getTrivialCallback() const {
-    return CallbackAndInlineFlag.getPointer().template get<TrivialCallback *>()->CallPtr;
+    return cast<TrivialCallback *>(CallbackAndInlineFlag.getPointer())->CallPtr;
   }
 
   NonTrivialCallbacks *getNonTrivialCallbacks() const {
-    return CallbackAndInlineFlag.getPointer()
-        .template get<NonTrivialCallbacks *>();
+    return cast<NonTrivialCallbacks *>(CallbackAndInlineFlag.getPointer());
   }
 
   CallPtrT getCallPtr() const {

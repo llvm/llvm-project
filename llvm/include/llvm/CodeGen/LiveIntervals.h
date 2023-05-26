@@ -51,11 +51,11 @@ class TargetInstrInfo;
 class VirtRegMap;
 
   class LiveIntervals : public MachineFunctionPass {
-    MachineFunction* MF;
-    MachineRegisterInfo* MRI;
-    const TargetRegisterInfo* TRI;
-    const TargetInstrInfo *TII;
-    SlotIndexes* Indexes;
+    MachineFunction *MF = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
+    SlotIndexes *Indexes = nullptr;
     MachineDominatorTree *DomTree = nullptr;
     LiveIntervalCalc *LICalc = nullptr;
 

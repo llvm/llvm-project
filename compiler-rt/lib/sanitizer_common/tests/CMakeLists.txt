@@ -46,6 +46,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_suppressions_test.cpp
   sanitizer_symbolizer_test.cpp
   sanitizer_test_main.cpp
+  sanitizer_thread_arg_retval_test.cpp
   sanitizer_thread_registry_test.cpp
   sanitizer_type_traits_test.cpp
   sanitizer_vector_test.cpp
@@ -113,6 +114,8 @@ endif()
 # The default stack size for clang is 8M.
 if(MSVC)
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,/STACK:0xC00000)
+elseif (MINGW)
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,--stack=0xC00000)
 endif()
 
 set(SANITIZER_TEST_LINK_LIBS)

@@ -197,7 +197,7 @@ bool isDwoSection(const MCSection &Sec) {
 }
 
 class WasmObjectWriter : public MCObjectWriter {
-  support::endian::Writer *W;
+  support::endian::Writer *W = nullptr;
 
   /// The target specific Wasm writer instance.
   std::unique_ptr<MCWasmObjectTargetWriter> TargetObjectWriter;

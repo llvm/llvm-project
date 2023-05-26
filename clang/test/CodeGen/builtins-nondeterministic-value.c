@@ -52,7 +52,7 @@ void clang_nondet_fv( ) {
 void clang_nondet_bv( ) {
 // CHECK: [[A:%.*]] = alloca i8, align
 // CHECK: [[V:%.*]] = freeze <4 x i1> poison
-// CHECK: [[SV:%.*]] = shufflevector <4 x i1> [[V]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+// CHECK: [[SV:%.*]] = shufflevector <4 x i1> [[V]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 // CHECK: [[BC:%.*]] = bitcast <8 x i1> [[SV]] to i8
 // CHECK: store i8 [[BC]], ptr [[A]], align
 // CHECK: ret void

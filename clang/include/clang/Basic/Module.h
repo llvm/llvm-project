@@ -103,16 +103,22 @@ public:
   /// The location of the module definition.
   SourceLocation DefinitionLoc;
 
+  // FIXME: Consider if reducing the size of this enum (having Partition and
+  // Named modules only) then representing interface/implementation separately
+  // is more efficient.
   enum ModuleKind {
     /// This is a module that was defined by a module map and built out
     /// of header files.
     ModuleMapModule,
 
+    /// This is a C++ 20 header unit.
+    ModuleHeaderUnit,
+
     /// This is a C++20 module interface unit.
     ModuleInterfaceUnit,
 
-    /// This is a C++ 20 header unit.
-    ModuleHeaderUnit,
+    /// This is a C++20 module implementation unit.
+    ModuleImplementationUnit,
 
     /// This is a C++ 20 module partition interface.
     ModulePartitionInterface,
@@ -169,9 +175,16 @@ public:
   /// Does this Module scope describe part of the purview of a standard named
   /// C++ module?
   bool isModulePurview() const {
-    return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface ||
-           Kind == ModulePartitionImplementation ||
-           Kind == PrivateModuleFragment;
+    switch (Kind) {
+    case ModuleInterfaceUnit:
+    case ModuleImplementationUnit:
+    case ModulePartitionInterface:
+    case ModulePartitionImplementation:
+    case PrivateModuleFragment:
+      return true;
+    default:
+      return false;
+    }
   }
 
   /// Does this Module scope describe a fragment of the global module within
@@ -561,6 +574,11 @@ public:
            Kind == ModulePartitionImplementation;
   }
 
+  /// Is this a module implementation.
+  bool isModuleImplementation() const {
+    return Kind == ModuleImplementationUnit;
+  }
+
   /// Is this module a header unit.
   bool isHeaderUnit() const { return Kind == ModuleHeaderUnit; }
   // Is this a C++20 module interface or a partition.
@@ -723,16 +741,11 @@ public:
   using submodule_iterator = std::vector<Module *>::iterator;
   using submodule_const_iterator = std::vector<Module *>::const_iterator;
 
-  submodule_iterator submodule_begin() { return SubModules.begin(); }
-  submodule_const_iterator submodule_begin() const {return SubModules.begin();}
-  submodule_iterator submodule_end()   { return SubModules.end(); }
-  submodule_const_iterator submodule_end() const { return SubModules.end(); }
-
   llvm::iterator_range<submodule_iterator> submodules() {
-    return llvm::make_range(submodule_begin(), submodule_end());
+    return llvm::make_range(SubModules.begin(), SubModules.end());
   }
   llvm::iterator_range<submodule_const_iterator> submodules() const {
-    return llvm::make_range(submodule_begin(), submodule_end());
+    return llvm::make_range(SubModules.begin(), SubModules.end());
   }
 
   /// Appends this module's list of exported modules to \p Exported.

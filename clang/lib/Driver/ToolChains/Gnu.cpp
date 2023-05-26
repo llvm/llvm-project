@@ -9,6 +9,7 @@
 #include "Gnu.h"
 #include "Arch/ARM.h"
 #include "Arch/CSKY.h"
+#include "Arch/LoongArch.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
@@ -857,6 +858,13 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     Args.AddLastArg(CmdArgs, options::OPT_march_EQ);
     normalizeCPUNamesForAssembler(Args, CmdArgs);
 
+    break;
+  }
+  // TODO: handle loongarch32.
+  case llvm::Triple::loongarch64: {
+    StringRef ABIName =
+        loongarch::getLoongArchABI(D, Args, getToolChain().getTriple());
+    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
     break;
   }
   case llvm::Triple::mips:
@@ -2431,9 +2439,6 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     static const char *const AArch64AndroidTriples[] = {
         "aarch64-linux-android"};
     static const char *const ARMAndroidTriples[] = {"arm-linux-androideabi"};
-    static const char *const MIPSELAndroidTriples[] = {"mipsel-linux-android"};
-    static const char *const MIPS64ELAndroidTriples[] = {
-        "mips64el-linux-android"};
     static const char *const X86AndroidTriples[] = {"i686-linux-android"};
     static const char *const X86_64AndroidTriples[] = {"x86_64-linux-android"};
 
@@ -2447,22 +2452,6 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     case llvm::Triple::thumb:
       LibDirs.append(begin(ARMLibDirs), end(ARMLibDirs));
       TripleAliases.append(begin(ARMAndroidTriples), end(ARMAndroidTriples));
-      break;
-    case llvm::Triple::mipsel:
-      LibDirs.append(begin(MIPSELLibDirs), end(MIPSELLibDirs));
-      TripleAliases.append(begin(MIPSELAndroidTriples),
-                           end(MIPSELAndroidTriples));
-      BiarchLibDirs.append(begin(MIPS64ELLibDirs), end(MIPS64ELLibDirs));
-      BiarchTripleAliases.append(begin(MIPS64ELAndroidTriples),
-                                 end(MIPS64ELAndroidTriples));
-      break;
-    case llvm::Triple::mips64el:
-      LibDirs.append(begin(MIPS64ELLibDirs), end(MIPS64ELLibDirs));
-      TripleAliases.append(begin(MIPS64ELAndroidTriples),
-                           end(MIPS64ELAndroidTriples));
-      BiarchLibDirs.append(begin(MIPSELLibDirs), end(MIPSELLibDirs));
-      BiarchTripleAliases.append(begin(MIPSELAndroidTriples),
-                                 end(MIPSELAndroidTriples));
       break;
     case llvm::Triple::x86_64:
       LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
@@ -2935,44 +2924,12 @@ bool Generic_GCC::isPICDefaultForced() const {
 
 bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   switch (getTriple().getArch()) {
-  case llvm::Triple::aarch64:
-  case llvm::Triple::aarch64_be:
-  case llvm::Triple::amdgcn:
-  case llvm::Triple::arm:
-  case llvm::Triple::armeb:
-  case llvm::Triple::avr:
-  case llvm::Triple::bpfel:
-  case llvm::Triple::bpfeb:
-  case llvm::Triple::csky:
-  case llvm::Triple::hexagon:
-  case llvm::Triple::lanai:
-  case llvm::Triple::loongarch32:
-  case llvm::Triple::loongarch64:
-  case llvm::Triple::m68k:
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-  case llvm::Triple::msp430:
-  case llvm::Triple::ppc:
-  case llvm::Triple::ppcle:
-  case llvm::Triple::ppc64:
-  case llvm::Triple::ppc64le:
-  case llvm::Triple::r600:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64:
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel:
-  case llvm::Triple::sparcv9:
-  case llvm::Triple::systemz:
-  case llvm::Triple::thumb:
-  case llvm::Triple::thumbeb:
-  case llvm::Triple::ve:
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    return true;
-  default:
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+  case llvm::Triple::xcore:
     return false;
+  default:
+    return getTriple().getVendor() != llvm::Triple::Myriad;
   }
 }
 

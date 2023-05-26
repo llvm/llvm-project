@@ -14,6 +14,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
@@ -28,7 +29,6 @@
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1585,9 +1585,11 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
   InstructionCost VectorCost =
       NumElems * LT.first * ST->getMVEVectorCostFactor(CostKind);
   // The scalarization cost should be a lot higher. We use the number of vector
-  // elements plus the scalarization overhead.
+  // elements plus the scalarization overhead. If masking is required then a lot
+  // of little blocks will be needed and potentially a scalarized p0 mask,
+  // greatly increasing the cost.
   InstructionCost ScalarCost =
-      NumElems * LT.first +
+      NumElems * LT.first + (VariableMask ? NumElems * 5 : 0) +
       BaseT::getScalarizationOverhead(VTy, /*Insert*/ true, /*Extract*/ false,
                                       CostKind) +
       BaseT::getScalarizationOverhead(VTy, /*Insert*/ false, /*Extract*/ true,
@@ -1689,7 +1691,7 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
 InstructionCost ARMTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
+    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -2238,10 +2240,7 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   return true;
 }
 
-bool ARMTTIImpl::preferPredicateOverEpilogue(
-    Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
-    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL,
-    InterleavedAccessInfo *IAI) {
+bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
   if (!EnableTailPredication) {
     LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
     return false;
@@ -2253,6 +2252,9 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(
   if (!ST->hasMVEIntegerOps())
     return false;
 
+  LoopVectorizationLegality *LVL = TFI->LVL;
+  Loop *L = LVL->getLoop();
+
   // For now, restrict this to single block loops.
   if (L->getNumBlocks() > 1) {
     LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: not a single block "
@@ -2262,6 +2264,7 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(
 
   assert(L->isInnermost() && "preferPredicateOverEpilogue: inner-loop expected");
 
+  LoopInfo *LI = LVL->getLoopInfo();
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(*LI)) {
     LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
@@ -2269,21 +2272,25 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(
     return false;
   }
 
+  AssumptionCache *AC = LVL->getAssumptionCache();
+  ScalarEvolution *SE = LVL->getScalarEvolution();
+
   // This checks if we have the low-overhead branch architecture
   // extension, and if we will create a hardware-loop:
-  if (!isHardwareLoopProfitable(L, SE, AC, TLI, HWLoopInfo)) {
+  if (!isHardwareLoopProfitable(L, *SE, *AC, TFI->TLI, HWLoopInfo)) {
     LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
                          "profitable.\n");
     return false;
   }
 
-  if (!HWLoopInfo.isHardwareLoopCandidate(SE, *LI, *DT)) {
+  DominatorTree *DT = LVL->getDominatorTree();
+  if (!HWLoopInfo.isHardwareLoopCandidate(*SE, *LI, *DT)) {
     LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
                          "a candidate.\n");
     return false;
   }
 
-  return canTailPredicateLoop(L, LI, SE, DL, LVL->getLAI());
+  return canTailPredicateLoop(L, LI, *SE, DL, LVL->getLAI());
 }
 
 TailFoldingStyle

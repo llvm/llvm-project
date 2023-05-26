@@ -22,10 +22,10 @@ namespace clang::tidy::openmp {
 void UseDefaultNoneCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       ompExecutableDirective(
-          allOf(isAllowedToContainClauseKind(llvm::omp::OMPC_default),
-                anyOf(unless(hasAnyClause(ompDefaultClause())),
-                      hasAnyClause(ompDefaultClause(unless(isNoneKind()))
-                                       .bind("clause")))))
+          isAllowedToContainClauseKind(llvm::omp::OMPC_default),
+          anyOf(unless(hasAnyClause(ompDefaultClause())),
+                hasAnyClause(
+                    ompDefaultClause(unless(isNoneKind())).bind("clause"))))
           .bind("directive"),
       this);
 }

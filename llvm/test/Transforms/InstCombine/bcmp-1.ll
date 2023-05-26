@@ -76,8 +76,8 @@ define i32 @test_simplify6() {
 
 define i1 @test_simplify7(i64 %x, i64 %y) {
 ; CHECK-LABEL: @test_simplify7(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[DOTNOT]]
 ;
   %x.addr = alloca i64, align 8
   %y.addr = alloca i64, align 8
@@ -92,8 +92,8 @@ define i1 @test_simplify7(i64 %x, i64 %y) {
 
 define i1 @test_simplify8(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_simplify8(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[DOTNOT]]
 ;
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
@@ -108,8 +108,8 @@ define i1 @test_simplify8(i32 %x, i32 %y) {
 
 define i1 @test_simplify9(i16 %x, i16 %y) {
 ; CHECK-LABEL: @test_simplify9(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[DOTNOT]]
 ;
   %x.addr = alloca i16, align 2
   %y.addr = alloca i16, align 2

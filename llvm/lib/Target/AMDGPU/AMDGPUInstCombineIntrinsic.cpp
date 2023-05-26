@@ -23,6 +23,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "AMDGPUtti"
 
@@ -328,7 +329,8 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
       });
 }
 
-bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,
+bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
+                                           const Value *Op0, const Value *Op1,
                                            InstCombiner &IC) const {
   // The legacy behaviour is that multiplying +/-0.0 by anything, even NaN or
   // infinity, gives +0.0. If we can prove we don't have one of the special
@@ -340,12 +342,37 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,
     // One operand is not zero or infinity or NaN.
     return true;
   }
+
   auto *TLI = &IC.getTargetLibraryInfo();
-  if (isKnownNeverInfinity(Op0, TLI) && isKnownNeverNaN(Op0, TLI) &&
-      isKnownNeverInfinity(Op1, TLI) && isKnownNeverNaN(Op1, TLI)) {
+  if (isKnownNeverInfOrNaN(Op0, IC.getDataLayout(), TLI, 0,
+                           &IC.getAssumptionCache(), &I, &IC.getDominatorTree(),
+                           &IC.getOptimizationRemarkEmitter()) &&
+      isKnownNeverInfOrNaN(Op1, IC.getDataLayout(), TLI, 0,
+                           &IC.getAssumptionCache(), &I, &IC.getDominatorTree(),
+                           &IC.getOptimizationRemarkEmitter())) {
     // Neither operand is infinity or NaN.
     return true;
   }
+  return false;
+}
+
+/// Match an fpext from half to float, or a constant we can convert.
+static bool matchFPExtFromF16(Value *Arg, Value *&FPExtSrc) {
+  if (match(Arg, m_OneUse(m_FPExt(m_Value(FPExtSrc)))))
+    return FPExtSrc->getType()->isHalfTy();
+
+  ConstantFP *CFP;
+  if (match(Arg, m_ConstantFP(CFP))) {
+    bool LosesInfo;
+    APFloat Val(CFP->getValueAPF());
+    Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
+    if (LosesInfo)
+      return false;
+
+    FPExtSrc = ConstantFP::get(Type::getHalfTy(Arg->getContext()), Val);
+    return true;
+  }
+
   return false;
 }
 
@@ -423,85 +450,25 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Src0 = II.getArgOperand(0);
     Value *Src1 = II.getArgOperand(1);
     const ConstantInt *CMask = dyn_cast<ConstantInt>(Src1);
-    if (!CMask) {
-      if (isa<UndefValue>(Src0)) {
-        return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
-      }
+    if (CMask) {
+      II.setCalledOperand(Intrinsic::getDeclaration(
+          II.getModule(), Intrinsic::is_fpclass, Src0->getType()));
 
-      if (isa<UndefValue>(Src1)) {
-        return IC.replaceInstUsesWith(II,
-                                      ConstantInt::get(II.getType(), false));
-      }
-      break;
+      // Clamp any excess bits, as they're illegal for the generic intrinsic.
+      II.setArgOperand(1, ConstantInt::get(Src1->getType(),
+                                           CMask->getZExtValue() & fcAllFlags));
+      return &II;
     }
 
-    uint32_t Mask = CMask->getZExtValue();
+    // FIXME: Should propagate poison.
+    if (isa<UndefValue>(Src0))
+      return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
 
-    // If all tests are made, it doesn't matter what the value is.
-    if ((Mask & fcAllFlags) == fcAllFlags) {
-      return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
-    }
-
-    if ((Mask & fcAllFlags) == 0) {
+    if (isa<UndefValue>(Src1)) {
       return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), false));
     }
 
-    if (Mask == fcNan && !II.isStrictFP()) {
-      // Equivalent of isnan. Replace with standard fcmp.
-      Value *FCmp = IC.Builder.CreateFCmpUNO(Src0, Src0);
-      FCmp->takeName(&II);
-      return IC.replaceInstUsesWith(II, FCmp);
-    }
-
-    if (Mask == fcZero && !II.isStrictFP()) {
-      // Equivalent of == 0.
-      Value *FCmp =
-          IC.Builder.CreateFCmpOEQ(Src0, ConstantFP::get(Src0->getType(), 0.0));
-
-      FCmp->takeName(&II);
-      return IC.replaceInstUsesWith(II, FCmp);
-    }
-
-    // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
-    if ((Mask & fcNan) && isKnownNeverNaN(Src0, &IC.getTargetLibraryInfo())) {
-      return IC.replaceOperand(
-          II, 1, ConstantInt::get(Src1->getType(), Mask & ~fcNan));
-    }
-
-    const ConstantFP *CVal = dyn_cast<ConstantFP>(Src0);
-    if (!CVal) {
-      if (isa<UndefValue>(Src0)) {
-        return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
-      }
-
-      // Clamp mask to used bits
-      if ((Mask & fcAllFlags) != Mask) {
-        CallInst *NewCall = IC.Builder.CreateCall(
-            II.getCalledFunction(),
-            {Src0, ConstantInt::get(Src1->getType(), Mask & fcAllFlags)});
-
-        NewCall->takeName(&II);
-        return IC.replaceInstUsesWith(II, NewCall);
-      }
-
-      break;
-    }
-
-    const APFloat &Val = CVal->getValueAPF();
-
-    bool Result =
-        ((Mask & fcSNan) && Val.isNaN() && Val.isSignaling()) ||
-        ((Mask & fcQNan) && Val.isNaN() && !Val.isSignaling()) ||
-        ((Mask & fcNegInf) && Val.isInfinity() && Val.isNegative()) ||
-        ((Mask & fcNegNormal) && Val.isNormal() && Val.isNegative()) ||
-        ((Mask & fcNegSubnormal) && Val.isDenormal() && Val.isNegative()) ||
-        ((Mask & fcNegZero) && Val.isZero() && Val.isNegative()) ||
-        ((Mask & fcPosZero) && Val.isZero() && !Val.isNegative()) ||
-        ((Mask & fcPosSubnormal) && Val.isDenormal() && !Val.isNegative()) ||
-        ((Mask & fcPosNormal) && Val.isNormal() && !Val.isNegative()) ||
-        ((Mask & fcPosInf) && Val.isInfinity() && !Val.isNegative());
-
-    return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Result));
+    break;
   }
   case Intrinsic::amdgcn_cvt_pkrtz: {
     Value *Src0 = II.getArgOperand(0);
@@ -693,6 +660,20 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
               II, ConstantFP::get(IC.Builder.getContext(), Result));
         }
       }
+    }
+
+    if (!ST->hasMed3_16())
+      break;
+
+    Value *X, *Y, *Z;
+
+    // Repeat floating-point width reduction done for minnum/maxnum.
+    // fmed3((fpext X), (fpext Y), (fpext Z)) -> fpext (fmed3(X, Y, Z))
+    if (matchFPExtFromF16(Src0, X) && matchFPExtFromF16(Src1, Y) &&
+        matchFPExtFromF16(Src2, Z)) {
+      Value *NewCall = IC.Builder.CreateIntrinsic(IID, {X->getType()},
+                                                  {X, Y, Z}, &II, II.getName());
+      return new FPExtInst(NewCall, II.getType());
     }
 
     break;
@@ -1001,11 +982,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // TODO: Move to InstSimplify?
     if (match(Op0, PatternMatch::m_AnyZeroFP()) ||
         match(Op1, PatternMatch::m_AnyZeroFP()))
-      return IC.replaceInstUsesWith(II, ConstantFP::getNullValue(II.getType()));
+      return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
 
     // If we can prove we don't have one of the special cases then we can use a
     // normal fmul instruction instead.
-    if (canSimplifyLegacyMulToMul(Op0, Op1, IC)) {
+    if (canSimplifyLegacyMulToMul(II, Op0, Op1, IC)) {
       auto *FMul = IC.Builder.CreateFMulFMF(Op0, Op1, &II);
       FMul->takeName(&II);
       return IC.replaceInstUsesWith(II, FMul);
@@ -1024,7 +1005,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         match(Op1, PatternMatch::m_AnyZeroFP())) {
       // It's tempting to just return Op2 here, but that would give the wrong
       // result if Op2 was -0.0.
-      auto *Zero = ConstantFP::getNullValue(II.getType());
+      auto *Zero = ConstantFP::getZero(II.getType());
       auto *FAdd = IC.Builder.CreateFAddFMF(Zero, Op2, &II);
       FAdd->takeName(&II);
       return IC.replaceInstUsesWith(II, FAdd);
@@ -1032,7 +1013,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // If we can prove we don't have one of the special cases then we can use a
     // normal fma instead.
-    if (canSimplifyLegacyMulToMul(Op0, Op1, IC)) {
+    if (canSimplifyLegacyMulToMul(II, Op0, Op1, IC)) {
       II.setCalledOperand(Intrinsic::getDeclaration(
           II.getModule(), Intrinsic::fma, II.getType()));
       return &II;

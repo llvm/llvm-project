@@ -337,7 +337,7 @@ def PPCbctrl_load_toc_rm : SDNode<"PPCISD::BCTRL_LOAD_TOC_RM",
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
 
-def retflag       : SDNode<"PPCISD::RET_FLAG", SDTNone,
+def retglue       : SDNode<"PPCISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def PPCtc_return : SDNode<"PPCISD::TC_RETURN", SDT_PPCTC_ret,
@@ -1202,7 +1202,7 @@ def RESTORE_CRBIT : PPCEmitTimePseudo<(outs crbitrc:$cond), (ins memri:$F),
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let isPredicable = 1, isReturn = 1, Uses = [LR, RM] in
     def BLR : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
-                           [(retflag)]>, Requires<[In32BitMode]>;
+                           [(retglue)]>, Requires<[In32BitMode]>;
   let isBranch = 1, isIndirectBranch = 1, Uses = [CTR] in {
     let isPredicable = 1 in
       def BCTR : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
@@ -3321,6 +3321,7 @@ include "PPCInstrP10.td"
 include "PPCInstrFutureMMA.td"
 include "PPCInstrFuture.td"
 include "PPCInstrMMA.td"
+include "PPCInstrDFP.td"
 
 // Patterns for arithmetic i1 operations.
 def : Pat<(add i1:$a, i1:$b),
@@ -3348,9 +3349,9 @@ def : Pat<(i64 (sext i1:$in)),
 // FIXME: We should choose either a zext or a sext based on other constants
 // already around.
 def : Pat<(i32 (anyext i1:$in)),
-          (SELECT_I4 crbitrc:$in, (LI 1), (LI 0))>;
+          (SELECT_I4 $in, (LI 1), (LI 0))>;
 def : Pat<(i64 (anyext i1:$in)),
-          (SELECT_I8 crbitrc:$in, (LI8 1), (LI8 0))>;
+          (SELECT_I8 $in, (LI8 1), (LI8 0))>;
 
 // match setcc on i1 variables.
 // CRANDC is:
@@ -3756,34 +3757,34 @@ defm : CRNotPat<(i1 (setcc i64:$s1, i64:$s2, SETNE)),
 
 multiclass FSetCCPat<SDPatternOperator SetCC, ValueType Ty, I FCmp> {
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETUGE)),
-                  (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_lt)>;
+                  (EXTRACT_SUBREG (FCmp $s1, $s2), sub_lt)>;
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETGE)),
-                  (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_lt)>;
+                  (EXTRACT_SUBREG (FCmp $s1, $s2), sub_lt)>;
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETULE)),
-                  (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_gt)>;
+                  (EXTRACT_SUBREG (FCmp $s1, $s2), sub_gt)>;
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETLE)),
-                  (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_gt)>;
+                  (EXTRACT_SUBREG (FCmp $s1, $s2), sub_gt)>;
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETUNE)),
-                  (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_eq)>;
+                  (EXTRACT_SUBREG (FCmp $s1, $s2), sub_eq)>;
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETNE)),
-                  (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_eq)>;
+                  (EXTRACT_SUBREG (FCmp $s1, $s2), sub_eq)>;
   defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETO)),
-                  (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_un)>;
+                  (EXTRACT_SUBREG (FCmp $s1, $s2), sub_un)>;
 
   def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETOLT)),
-            (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_lt)>;
+            (EXTRACT_SUBREG (FCmp $s1, $s2), sub_lt)>;
   def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETLT)),
-            (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_lt)>;
+            (EXTRACT_SUBREG (FCmp $s1, $s2), sub_lt)>;
   def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETOGT)),
-            (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_gt)>;
+            (EXTRACT_SUBREG (FCmp $s1, $s2), sub_gt)>;
   def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETGT)),
-            (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_gt)>;
+            (EXTRACT_SUBREG (FCmp $s1, $s2), sub_gt)>;
   def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETOEQ)),
-            (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_eq)>;
+            (EXTRACT_SUBREG (FCmp $s1, $s2), sub_eq)>;
   def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETEQ)),
-            (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_eq)>;
+            (EXTRACT_SUBREG (FCmp $s1, $s2), sub_eq)>;
   def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETUO)),
-            (EXTRACT_SUBREG (FCmp Ty:$s1, Ty:$s2), sub_un)>;
+            (EXTRACT_SUBREG (FCmp $s1, $s2), sub_un)>;
 }
 
 let Predicates = [HasFPU] in {

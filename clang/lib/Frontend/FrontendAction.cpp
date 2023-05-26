@@ -429,11 +429,9 @@ static std::error_code collectModuleHeaderIncludes(
   }
 
   // Recurse into submodules.
-  for (clang::Module::submodule_iterator Sub = Module->submodule_begin(),
-                                      SubEnd = Module->submodule_end();
-       Sub != SubEnd; ++Sub)
+  for (auto *Submodule : Module->submodules())
     if (std::error_code Err = collectModuleHeaderIncludes(
-            LangOpts, FileMgr, Diag, ModMap, *Sub, Includes))
+            LangOpts, FileMgr, Diag, ModMap, Submodule, Includes))
       return Err;
 
   return std::error_code();
@@ -614,7 +612,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         std::string(InputFile), CI.getPCHContainerReader(),
         ASTUnit::LoadPreprocessorOnly, ASTDiags, CI.getFileSystemOpts(),
-        CI.getCodeGenOpts().DebugTypeExtRefs);
+        /*HeaderSearchOptions=*/nullptr, CI.getCodeGenOpts().DebugTypeExtRefs);
     if (!AST)
       return false;
 
@@ -682,6 +680,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         std::string(InputFile), CI.getPCHContainerReader(),
         ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOptsPtr(),
         CI.getCodeGenOpts().DebugTypeExtRefs);
 
     if (!AST)

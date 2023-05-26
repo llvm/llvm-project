@@ -250,8 +250,8 @@ public:
   /// For C++ the name is "this", for Objective-C the name is "self".
   ///
   /// \return
-  ///     Returns a string for the name of the instance variable.
-  ConstString GetInstanceVariableName();
+  ///     Returns a StringRef for the name of the instance variable.
+  llvm::StringRef GetInstanceVariableName();
 
   /// Sorts the types in TypeMap according to SymbolContext to TypeList
   ///
@@ -451,11 +451,15 @@ public:
 protected:
   typedef std::vector<SymbolContext>
       collection; ///< The collection type for the list.
+  typedef collection::const_iterator const_iterator;
 
   // Member variables.
   collection m_symbol_contexts; ///< The list of symbol contexts.
 
 public:
+  const_iterator begin() const { return m_symbol_contexts.begin(); }
+  const_iterator end() const { return m_symbol_contexts.end(); }
+
   typedef AdaptedIterable<collection, SymbolContext, vector_adapter>
       SymbolContextIterable;
   SymbolContextIterable SymbolContexts() {

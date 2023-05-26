@@ -74,7 +74,7 @@ let Definition = "debugger" in {
     Global,
     DefaultEnumValue<"eLanguageTypeUnknown">,
     Desc<"The language to use for the REPL.">;
-  def StopDisassemblyCount: Property<"stop-disassembly-count", "SInt64">,
+  def StopDisassemblyCount: Property<"stop-disassembly-count", "UInt64">,
     Global,
     DefaultUnsignedValue<4>,
     Desc<"The number of disassembly lines to show when displaying a stopped context.">;
@@ -87,11 +87,11 @@ let Definition = "debugger" in {
     Global,
     DefaultUnsignedValue<32000>,
     Desc<"The size limit to use when disassembling large functions (default: 32KB).">;
-  def StopLineCountAfter: Property<"stop-line-count-after", "SInt64">,
+  def StopLineCountAfter: Property<"stop-line-count-after", "UInt64">,
     Global,
     DefaultUnsignedValue<3>,
     Desc<"The number of sources lines to display that come after the current source line when displaying a stopped context.">;
-  def StopLineCountBefore: Property<"stop-line-count-before", "SInt64">,
+  def StopLineCountBefore: Property<"stop-line-count-before", "UInt64">,
     Global,
     DefaultUnsignedValue<3>,
     Desc<"The number of sources lines to display that come before the current source line when displaying a stopped context.">;
@@ -135,6 +135,10 @@ let Definition = "debugger" in {
     Global,
     DefaultFalse,
     Desc<"Whether to use an external editor or not.">;
+  def ExternalEditor: Property<"external-editor", "String">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"External editor to use when use-external-editor is enabled.">;
   def UseColor: Property<"use-color", "Boolean">,
     Global,
     DefaultTrue,

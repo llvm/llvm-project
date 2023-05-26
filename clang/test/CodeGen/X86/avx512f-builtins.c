@@ -8987,13 +8987,23 @@ __m512i test_mm512_castpd_si512 (__m512d __A)
 
 __m512 test_mm512_castps128_ps512(__m128 __A) {
   // CHECK-LABEL: @test_mm512_castps128_ps512
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[B:%.*]] = freeze <8 x float> poison
+  // CHECK: store <8 x float> [[B]], ptr [[BA:%.*]]
+  // CHECK: [[A:%.*]] = freeze <4 x float> poison 
+  // CHECK: [[SV:%.*]] = shufflevector <4 x float> %{{.*}}, <4 x float> [[A]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: [[C:%.*]] = load <8 x float>, ptr [[BA]]
+  // CHECK: shufflevector <8 x float> [[SV]], <8 x float> [[C]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   return _mm512_castps128_ps512(__A); 
 }
 
 __m512d test_mm512_castpd128_pd512(__m128d __A) {
   // CHECK-LABEL: @test_mm512_castpd128_pd512
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[B:%.*]] = freeze <4 x double> poison
+  // CHECK: store <4 x double> [[B]], ptr [[BA:%.*]]
+  // CHECK: [[A:%.*]] = freeze <2 x double> poison 
+  // CHECK: [[SV:%.*]] = shufflevector <2 x double> %{{.*}}, <2 x double> [[A]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: [[C:%.*]] = load <4 x double>, ptr [[BA]]
+  // CHECK: shufflevector <4 x double> [[SV]], <4 x double> [[C]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm512_castpd128_pd512(__A); 
 }
 
@@ -9086,7 +9096,8 @@ __m512d test_mm512_setr4_pd(double e0, double e1, double e2, double e3)
 __m512d test_mm512_castpd256_pd512(__m256d a)
 {
   // CHECK-LABEL: @test_mm512_castpd256_pd512
-  // CHECK: shufflevector <4 x double> {{.*}} <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[A:%.*]] = freeze <4 x double> poison 
+  // CHECK: shufflevector <4 x double> %{{.}}, <4 x double> [[A]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm512_castpd256_pd512(a);
 }
 
@@ -9112,13 +9123,19 @@ __m512i test_mm512_castps_si512 (__m512 __A)
 }
 __m512i test_mm512_castsi128_si512(__m128i __A) {
   // CHECK-LABEL: @test_mm512_castsi128_si512
-  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[B:%.*]] = freeze <4 x i64> poison
+  // CHECK: store <4 x i64> [[B]], ptr [[BA:%.*]]
+  // CHECK: [[A:%.*]] = freeze <2 x i64> poison 
+  // CHECK: [[SV:%.*]] = shufflevector <2 x i64> %{{.*}}, <2 x i64> [[A]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: [[C:%.*]] = load <4 x i64>, ptr [[BA]]
+  // CHECK: shufflevector <4 x i64> [[SV]], <4 x i64> [[C]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm512_castsi128_si512(__A); 
 }
 
 __m512i test_mm512_castsi256_si512(__m256i __A) {
   // CHECK-LABEL: @test_mm512_castsi256_si512
-  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[A:%.*]] = freeze <4 x i64> poison 
+  // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> [[A]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm512_castsi256_si512(__A); 
 }
 

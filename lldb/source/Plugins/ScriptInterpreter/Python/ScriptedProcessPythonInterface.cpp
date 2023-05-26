@@ -48,7 +48,7 @@ StructuredData::GenericSP ScriptedProcessPythonInterface::CreatePluginObject(
   lldb::ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
 
-  PythonObject ret_val = LLDBSwigPythonCreateScriptedObject(
+  PythonObject ret_val = SWIGBridge::LLDBSwigPythonCreateScriptedObject(
       class_name.str().c_str(), m_interpreter.GetDictionaryName(),
       exe_ctx_ref_sp, args_impl, error_string);
 
@@ -81,21 +81,8 @@ Status ScriptedProcessPythonInterface::Launch() {
 }
 
 Status ScriptedProcessPythonInterface::Resume() {
-  return GetStatusFromMethod("resume");
-}
-
-bool ScriptedProcessPythonInterface::ShouldStop() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("is_alive", error);
-
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
-    return {};
-
-  return obj->GetBooleanValue();
-}
-
-Status ScriptedProcessPythonInterface::Stop() {
-  return GetStatusFromMethod("stop");
+  // When calling ScriptedProcess.Resume from lldb we should always stop.
+  return GetStatusFromMethod("resume", /*should_stop=*/true);
 }
 
 std::optional<MemoryRegionInfo>
@@ -121,6 +108,22 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetThreadsInfo() {
     return {};
 
   return dict;
+}
+
+bool ScriptedProcessPythonInterface::CreateBreakpoint(lldb::addr_t addr,
+                                                      Status &error) {
+  Status py_error;
+  StructuredData::ObjectSP obj =
+      Dispatch("create_breakpoint", py_error, addr, error);
+
+  // If there was an error on the python call, surface it to the user.
+  if (py_error.Fail())
+    error = py_error;
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+    return {};
+
+  return obj->GetBooleanValue();
 }
 
 lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
@@ -149,7 +152,7 @@ lldb::offset_t ScriptedProcessPythonInterface::WriteMemoryAtAddress(
   if (py_error.Fail())
     error = py_error;
 
-  return obj->GetIntegerValue(LLDB_INVALID_OFFSET);
+  return obj->GetUnsignedIntegerValue(LLDB_INVALID_OFFSET);
 }
 
 StructuredData::ArraySP ScriptedProcessPythonInterface::GetLoadedImages() {
@@ -170,7 +173,7 @@ lldb::pid_t ScriptedProcessPythonInterface::GetProcessID() {
   if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
     return LLDB_INVALID_PROCESS_ID;
 
-  return obj->GetIntegerValue(LLDB_INVALID_PROCESS_ID);
+  return obj->GetUnsignedIntegerValue(LLDB_INVALID_PROCESS_ID);
 }
 
 bool ScriptedProcessPythonInterface::IsAlive() {

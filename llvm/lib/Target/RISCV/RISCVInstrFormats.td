@@ -1,4 +1,4 @@
-//===-- RISCVInstrFormats.td - RISCV Instruction Formats ---*- tablegen -*-===//
+//===-- RISCVInstrFormats.td - RISC-V Instruction Formats --*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -153,6 +153,7 @@ def OPC_BRANCH    : RISCVOpcode<"BRANCH",    0b1100011>;
 def OPC_JALR      : RISCVOpcode<"JALR",      0b1100111>;
 def OPC_JAL       : RISCVOpcode<"JAL",       0b1101111>;
 def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
+def OPC_OP_P      : RISCVOpcode<"OP_P",      0b1110111>;
 def OPC_CUSTOM_3  : RISCVOpcode<"CUSTOM_3",  0b1111011>;
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
@@ -225,7 +226,7 @@ class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string
   let isCodeGenOnly = 1;
 }
 
-class PseudoQuietFCMP<RegisterClass Ty>
+class PseudoQuietFCMP<DAGOperand Ty>
     : Pseudo<(outs GPR:$rd), (ins Ty:$rs1, Ty:$rs2), []> {
   let hasSideEffects = 1;
   let mayLoad = 0;

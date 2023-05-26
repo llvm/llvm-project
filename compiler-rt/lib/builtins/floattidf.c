@@ -29,7 +29,7 @@ COMPILER_RT_ABI double __floattidf(ti_int a) {
   const ti_int s = a >> (N - 1);
   a = (a ^ s) - s;
   int sd = N - __clzti2(a); // number of significant digits
-  int e = sd - 1;           // exponent
+  si_int e = sd - 1;        // exponent
   if (sd > DBL_MANT_DIG) {
     // start:  0000000000000000000001xxxxxxxxxxxxxxxxxxxxxxPQxxxxxxxxxxxxxxxxxx
     //  finish: 000000000000000000000000000000000000001xxxxxxxxxxxxxxxxxxxxxxPQR

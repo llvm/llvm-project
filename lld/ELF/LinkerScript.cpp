@@ -101,9 +101,9 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
   }
 
   for (StringRef v :
-       {".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss",
-        ".gcc_except_table", ".init_array", ".fini_array", ".tbss", ".tdata",
-        ".ARM.exidx", ".ARM.extab", ".ctors", ".dtors"})
+       {".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss", ".ldata",
+        ".lrodata", ".lbss", ".gcc_except_table", ".init_array", ".fini_array",
+        ".tbss", ".tdata", ".ARM.exidx", ".ARM.extab", ".ctors", ".dtors"})
     if (isSectionPrefix(v, s->name))
       return v;
 
@@ -157,8 +157,8 @@ OutputDesc *LinkerScript::getOrCreateOutputSection(StringRef name) {
 static void expandMemoryRegion(MemoryRegion *memRegion, uint64_t size,
                                StringRef secName) {
   memRegion->curPos += size;
-  uint64_t newSize = memRegion->curPos - (memRegion->origin)().getValue();
-  uint64_t length = (memRegion->length)().getValue();
+  uint64_t newSize = memRegion->curPos - memRegion->getOrigin();
+  uint64_t length = memRegion->getLength();
   if (newSize > length)
     error("section '" + secName + "' will not fit in region '" +
           memRegion->name + "': overflowed by " + Twine(newSize - length) +
@@ -1428,4 +1428,31 @@ SmallVector<size_t, 0> LinkerScript::getPhdrIndices(OutputSection *cmd) {
             "' is not listed in PHDRS");
   }
   return ret;
+}
+
+void LinkerScript::printMemoryUsage(raw_ostream& os) {
+  auto printSize = [&](uint64_t size) {
+    if ((size & 0x3fffffff) == 0)
+      os << format_decimal(size >> 30, 10) << " GB";
+    else if ((size & 0xfffff) == 0)
+      os << format_decimal(size >> 20, 10) << " MB";
+    else if ((size & 0x3ff) == 0)
+      os << format_decimal(size >> 10, 10) << " KB";
+    else
+      os << " " << format_decimal(size, 10) << " B";
+  };
+  os << "Memory region         Used Size  Region Size  %age Used\n";
+  for (auto &pair : memoryRegions) {
+    MemoryRegion *m = pair.second;
+    uint64_t usedLength = m->curPos - m->getOrigin();
+    os << right_justify(m->name, 16) << ": ";
+    printSize(usedLength);
+    uint64_t length = m->getLength();
+    if (length != 0) {
+      printSize(length);
+      double percent = usedLength * 100.0 / length;
+      os << "    " << format("%6.2f%%", percent);
+    }
+    os << '\n';
+  }
 }

@@ -29,6 +29,7 @@ unittest("ScudoUnitTest") {
     "size_class_map_test.cpp",
     "stats_test.cpp",
     "strings_test.cpp",
+    "timing_test.cpp",
     "tsd_test.cpp",
     "vector_test.cpp",
   ]

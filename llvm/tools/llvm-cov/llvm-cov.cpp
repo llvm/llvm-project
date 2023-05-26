@@ -59,7 +59,7 @@ int main(int argc, const char **argv) {
   InitLLVM X(argc, argv);
 
   // If argv[0] is or ends with 'gcov', always be gcov compatible
-  if (sys::path::stem(argv[0]).endswith_insensitive("gcov"))
+  if (sys::path::stem(argv[0]).ends_with_insensitive("gcov"))
     return gcovMain(argc, argv);
 
   // Check if we are invoking a specific tool command.

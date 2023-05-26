@@ -11,10 +11,6 @@ body: |
   bb.0:
     liveins: $vgpr0
 
-    ; GFX89-LABEL: name: test_fexp2_s32
-    ; GFX89: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX89: [[FEXP2_:%[0-9]+]]:_(s32) = G_FEXP2 [[COPY]]
-    ; GFX89: $vgpr0 = COPY [[FEXP2_]](s32)
     ; GFX6-LABEL: name: test_fexp2_s32
     ; GFX6: liveins: $vgpr0
     ; GFX6-NEXT: {{  $}}

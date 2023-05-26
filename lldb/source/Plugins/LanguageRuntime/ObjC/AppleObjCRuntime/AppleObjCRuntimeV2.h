@@ -96,18 +96,6 @@ public:
   void GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
                                     lldb::addr_t &cf_false) override;
 
-  // none of these are valid ISAs - we use them to infer the type
-  // of tagged pointers - if we have something meaningful to say
-  // we report an actual type - otherwise, we just say tagged
-  // there is no connection between the values here and the tagged pointers map
-  static const ObjCLanguageRuntime::ObjCISA g_objc_Tagged_ISA = 1;
-  static const ObjCLanguageRuntime::ObjCISA g_objc_Tagged_ISA_NSAtom = 2;
-  static const ObjCLanguageRuntime::ObjCISA g_objc_Tagged_ISA_NSNumber = 3;
-  static const ObjCLanguageRuntime::ObjCISA g_objc_Tagged_ISA_NSDateTS = 4;
-  static const ObjCLanguageRuntime::ObjCISA g_objc_Tagged_ISA_NSManagedObject =
-      5;
-  static const ObjCLanguageRuntime::ObjCISA g_objc_Tagged_ISA_NSDate = 6;
-
 protected:
   lldb::BreakpointResolverSP
   CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,

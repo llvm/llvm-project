@@ -427,7 +427,13 @@ void TailDuplicator::duplicateInstruction(
           } else {
             // For mapped registers that do not have sub-registers, simply
             // restrict their class to match the original one.
-            ConstrRC = MRI->constrainRegClass(VI->second.Reg, OrigRC);
+
+            // We don't want debug instructions affecting the resulting code so
+            // if we're cloning a debug instruction then just use MappedRC
+            // rather than constraining the register class further.
+            ConstrRC = NewMI.isDebugInstr()
+                           ? MappedRC
+                           : MRI->constrainRegClass(VI->second.Reg, OrigRC);
           }
 
           if (ConstrRC) {
@@ -1013,13 +1019,11 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
 
     DenseMap<Register, RegSubRegPair> LocalVRMap;
     SmallVector<std::pair<Register, RegSubRegPair>, 4> CopyInfos;
-    MachineBasicBlock::iterator I = TailBB->begin();
     // Process PHI instructions first.
-    while (I != TailBB->end() && I->isPHI()) {
+    for (MachineInstr &MI : make_early_inc_range(TailBB->phis())) {
       // Replace the uses of the def of the PHI with the register coming
       // from PredBB.
-      MachineInstr *MI = &*I++;
-      processPHI(MI, TailBB, PredBB, LocalVRMap, CopyInfos, UsedByPhi, false);
+      processPHI(&MI, TailBB, PredBB, LocalVRMap, CopyInfos, UsedByPhi, false);
     }
     appendCopies(PredBB, CopyInfos, Copies);
   }

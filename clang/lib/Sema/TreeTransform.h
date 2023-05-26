@@ -19,8 +19,8 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/OpenMPClause.h"
@@ -31,6 +31,7 @@
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Sema/Designator.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -3173,6 +3174,13 @@ public:
                                           Expr *Sub,
                                           SourceLocation RParenLoc,
                                           bool ListInitialization) {
+    // If Sub is a ParenListExpr, then Sub is the syntatic form of a
+    // CXXParenListInitExpr. Pass its expanded arguments so that the
+    // CXXParenListInitExpr can be rebuilt.
+    if (auto *PLE = dyn_cast<ParenListExpr>(Sub))
+      return getSema().BuildCXXTypeConstructExpr(
+          TInfo, LParenLoc, MultiExprArg(PLE->getExprs(), PLE->getNumExprs()),
+          RParenLoc, ListInitialization);
     return getSema().BuildCXXTypeConstructExpr(TInfo, LParenLoc,
                                                MultiExprArg(&Sub, 1), RParenLoc,
                                                ListInitialization);
@@ -3900,16 +3908,6 @@ public:
   ExprResult RebuildEmptyCXXFoldExpr(SourceLocation EllipsisLoc,
                                      BinaryOperatorKind Operator) {
     return getSema().BuildEmptyCXXFoldExpr(EllipsisLoc, Operator);
-  }
-
-  ExprResult RebuildCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
-                                         unsigned NumUserSpecifiedExprs,
-                                         SourceLocation InitLoc,
-                                         SourceLocation LParenLoc,
-                                         SourceLocation RParenLoc) {
-    return CXXParenListInitExpr::Create(getSema().Context, Args, T,
-                                        NumUserSpecifiedExprs, InitLoc,
-                                        LParenLoc, RParenLoc);
   }
 
   /// Build a new atomic operation expression.
@@ -8103,6 +8101,13 @@ TreeTransform<Derived>::TransformCoroutineBodyStmt(CoroutineBodyStmt *S) {
       return StmtError();
     Builder.Deallocate = DeallocRes.get();
 
+    if (auto *ResultDecl = S->getResultDecl()) {
+      StmtResult Res = getDerived().TransformStmt(ResultDecl);
+      if (Res.isInvalid())
+        return StmtError();
+      Builder.ResultDecl = Res.get();
+    }
+
     if (auto *ReturnStmt = S->getReturnStmt()) {
       StmtResult Res = getDerived().TransformStmt(ReturnStmt);
       if (Res.isInvalid())
@@ -11397,7 +11402,8 @@ TreeTransform<Derived>::TransformBinaryOperator(BinaryOperator *E) {
   if (LHS.isInvalid())
     return ExprError();
 
-  ExprResult RHS = getDerived().TransformExpr(E->getRHS());
+  ExprResult RHS =
+      getDerived().TransformInitializer(E->getRHS(), /*NotCopyInit=*/false);
   if (RHS.isInvalid())
     return ExprError();
 
@@ -11657,13 +11663,12 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
   bool ExprChanged = false;
   for (const DesignatedInitExpr::Designator &D : E->designators()) {
     if (D.isFieldDesignator()) {
-      Desig.AddDesignator(Designator::getField(D.getFieldName(),
-                                               D.getDotLoc(),
-                                               D.getFieldLoc()));
-      if (D.getField()) {
+      Desig.AddDesignator(Designator::CreateFieldDesignator(
+          D.getFieldName(), D.getDotLoc(), D.getFieldLoc()));
+      if (D.getFieldDecl()) {
         FieldDecl *Field = cast_or_null<FieldDecl>(
-            getDerived().TransformDecl(D.getFieldLoc(), D.getField()));
-        if (Field != D.getField())
+            getDerived().TransformDecl(D.getFieldLoc(), D.getFieldDecl()));
+        if (Field != D.getFieldDecl())
           // Rebuild the expression when the transformed FieldDecl is
           // different to the already assigned FieldDecl.
           ExprChanged = true;
@@ -11682,7 +11687,7 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
         return ExprError();
 
       Desig.AddDesignator(
-          Designator::getArray(Index.get(), D.getLBracketLoc()));
+          Designator::CreateArrayDesignator(Index.get(), D.getLBracketLoc()));
 
       ExprChanged = ExprChanged || Init.get() != E->getArrayIndex(D);
       ArrayExprs.push_back(Index.get());
@@ -11699,10 +11704,8 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
     if (End.isInvalid())
       return ExprError();
 
-    Desig.AddDesignator(Designator::getArrayRange(Start.get(),
-                                                  End.get(),
-                                                  D.getLBracketLoc(),
-                                                  D.getEllipsisLoc()));
+    Desig.AddDesignator(Designator::CreateArrayRangeDesignator(
+        Start.get(), End.get(), D.getLBracketLoc(), D.getEllipsisLoc()));
 
     ExprChanged = ExprChanged || Start.get() != E->getArrayRangeStart(D) ||
                   End.get() != E->getArrayRangeEnd(D);
@@ -11948,7 +11951,8 @@ TreeTransform<Derived>::TransformCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
 
   ExprResult Second;
   if (E->getNumArgs() == 2) {
-    Second = getDerived().TransformExpr(E->getArg(1));
+    Second =
+        getDerived().TransformInitializer(E->getArg(1), /*NotCopyInit=*/false);
     if (Second.isInvalid())
       return ExprError();
   }
@@ -13309,13 +13313,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       E->getCaptureDefault());
   getDerived().transformedLocalDecl(OldClass, {Class});
 
-  std::optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling;
-  if (getDerived().ReplacingOriginal())
-    Mangling = std::make_tuple(OldClass->hasKnownLambdaInternalLinkage(),
-                               OldClass->getLambdaManglingNumber(),
-                               OldClass->getDeviceLambdaManglingNumber(),
-                               OldClass->getLambdaContextDecl());
-
   CXXMethodDecl *NewCallOperator =
       getSema().CreateLambdaCallOperator(E->getIntroducerRange(), Class);
   NewCallOperator->setLexicalDeclContext(getSema().CurContext);
@@ -13495,7 +13492,13 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   {
     // Number the lambda for linkage purposes if necessary.
     Sema::ContextRAII ManglingContext(getSema(), Class->getDeclContext());
-    getSema().handleLambdaNumbering(Class, NewCallOperator, Mangling);
+
+    std::optional<CXXRecordDecl::LambdaNumbering> Numbering;
+    if (getDerived().ReplacingOriginal()) {
+      Numbering = OldClass->getLambdaNumbering();
+    }
+
+    getSema().handleLambdaNumbering(Class, NewCallOperator, Numbering);
   }
 
   // FIXME: Sema's lambda-building mechanism expects us to push an expression
@@ -14128,9 +14131,8 @@ TreeTransform<Derived>::TransformCXXParenListInitExpr(CXXParenListInitExpr *E) {
                      TransformedInits))
     return ExprError();
 
-  return getDerived().RebuildCXXParenListInitExpr(
-      TransformedInits, E->getType(), E->getUserSpecifiedInitExprs().size(),
-      E->getInitLoc(), E->getBeginLoc(), E->getEndLoc());
+  return getDerived().RebuildParenListExpr(E->getBeginLoc(), TransformedInits,
+                                           E->getEndLoc());
 }
 
 template<typename Derived>

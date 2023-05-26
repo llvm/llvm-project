@@ -31,7 +31,7 @@ class year_month {
     chrono::year  __y_;
     chrono::month __m_;
 public:
-    _LIBCPP_HIDE_FROM_ABI year_month() = default;
+    year_month() = default;
     _LIBCPP_HIDE_FROM_ABI constexpr year_month(const chrono::year& __yval, const chrono::month& __mval) noexcept
         : __y_{__yval}, __m_{__mval} {}
     _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::year  year()  const noexcept { return __y_; }

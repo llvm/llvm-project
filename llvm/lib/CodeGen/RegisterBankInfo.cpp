@@ -87,9 +87,10 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
   }
 
   const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-  if (auto *RB = RegClassOrBank.dyn_cast<const RegisterBank *>())
+  if (auto *RB = dyn_cast_if_present<const RegisterBank *>(RegClassOrBank))
     return RB;
-  if (auto *RC = RegClassOrBank.dyn_cast<const TargetRegisterClass *>())
+  if (auto *RC =
+          dyn_cast_if_present<const TargetRegisterClass *>(RegClassOrBank))
     return &getRegBankFromRegClass(*RC, MRI.getType(Reg));
   return nullptr;
 }
@@ -131,10 +132,10 @@ const TargetRegisterClass *RegisterBankInfo::constrainGenericRegister(
 
   // If the register already has a class, fallback to MRI::constrainRegClass.
   auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-  if (RegClassOrBank.is<const TargetRegisterClass *>())
+  if (isa<const TargetRegisterClass *>(RegClassOrBank))
     return MRI.constrainRegClass(Reg, &RC);
 
-  const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();
+  const RegisterBank *RB = cast<const RegisterBank *>(RegClassOrBank);
   // Otherwise, all we can do is ensure the bank covers the class, and set it.
   if (RB && !RB->covers(RC))
     return nullptr;

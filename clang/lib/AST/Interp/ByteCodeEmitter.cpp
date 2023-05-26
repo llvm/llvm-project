@@ -22,51 +22,50 @@ using Error = llvm::Error;
 
 Expected<Function *>
 ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+  // Set up argument indices.
+  unsigned ParamOffset = 0;
+  SmallVector<PrimType, 8> ParamTypes;
+  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
+
+  // If the return is not a primitive, a pointer to the storage where the
+  // value is initialized in is passed as the first argument. See 'RVO'
+  // elsewhere in the code.
+  QualType Ty = FuncDecl->getReturnType();
+  bool HasRVO = false;
+  if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
+    HasRVO = true;
+    ParamTypes.push_back(PT_Ptr);
+    ParamOffset += align(primSize(PT_Ptr));
+  }
+
+  // If the function decl is a member decl, the next parameter is
+  // the 'this' pointer. This parameter is pop()ed from the
+  // InterpStack when calling the function.
+  bool HasThisPointer = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MD && MD->isInstance()) {
+    HasThisPointer = true;
+    ParamTypes.push_back(PT_Ptr);
+    ParamOffset += align(primSize(PT_Ptr));
+  }
+
+  // Assign descriptors to all parameters.
+  // Composite objects are lowered to pointers.
+  for (const ParmVarDecl *PD : FuncDecl->parameters()) {
+    PrimType Ty = Ctx.classify(PD->getType()).value_or(PT_Ptr);
+    Descriptor *Desc = P.createDescriptor(PD, Ty);
+    ParamDescriptors.insert({ParamOffset, {Ty, Desc}});
+    Params.insert({PD, ParamOffset});
+    ParamOffset += align(primSize(Ty));
+    ParamTypes.push_back(Ty);
+  }
+
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
-  if (!Func) {
-    // Set up argument indices.
-    unsigned ParamOffset = 0;
-    SmallVector<PrimType, 8> ParamTypes;
-    llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
-
-    // If the return is not a primitive, a pointer to the storage where the
-    // value is initialized in is passed as the first argument. See 'RVO'
-    // elsewhere in the code.
-    QualType Ty = FuncDecl->getReturnType();
-    bool HasRVO = false;
-    if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
-      HasRVO = true;
-      ParamTypes.push_back(PT_Ptr);
-      ParamOffset += align(primSize(PT_Ptr));
-    }
-
-    // If the function decl is a member decl, the next parameter is
-    // the 'this' pointer. This parameter is pop()ed from the
-    // InterpStack when calling the function.
-    bool HasThisPointer = false;
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
-        MD && MD->isInstance()) {
-      HasThisPointer = true;
-      ParamTypes.push_back(PT_Ptr);
-      ParamOffset += align(primSize(PT_Ptr));
-    }
-
-    // Assign descriptors to all parameters.
-    // Composite objects are lowered to pointers.
-    for (const ParmVarDecl *PD : FuncDecl->parameters()) {
-      PrimType Ty = Ctx.classify(PD->getType()).value_or(PT_Ptr);
-      Descriptor *Desc = P.createDescriptor(PD, Ty);
-      ParamDescriptors.insert({ParamOffset, {Ty, Desc}});
-      Params.insert({PD, ParamOffset});
-      ParamOffset += align(primSize(Ty));
-      ParamTypes.push_back(Ty);
-    }
-
+  if (!Func)
     Func =
         P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
                          std::move(ParamDescriptors), HasThisPointer, HasRVO);
-  }
 
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and
@@ -92,7 +91,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
     // Set the function's code.
     Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
-                  std::move(Scopes));
+                  std::move(Scopes), FuncDecl->hasBody());
     Func->setIsFullyCompiled(true);
     return Func;
   }

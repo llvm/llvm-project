@@ -113,21 +113,38 @@ int main(int argc, const char **argv) {
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
     // FIXME: Add LE.setListCompleter
+    std::string Input;
     while (std::optional<std::string> Line = LE.readLine()) {
-      if (*Line == R"(%quit)")
+      llvm::StringRef L = *Line;
+      L = L.trim();
+      if (L.endswith("\\")) {
+        // FIXME: Support #ifdef X \ ...
+        Input += L.drop_back(1);
+        LE.setPrompt("clang-repl...   ");
+        continue;
+      }
+
+      Input += L;
+
+      if (Input == R"(%quit)") {
         break;
-      if (*Line == R"(%undo)") {
+      } else if (Input == R"(%undo)") {
         if (auto Err = Interp->Undo()) {
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
           HasError = true;
         }
-        continue;
-      }
-
-      if (auto Err = Interp->ParseAndExecute(*Line)) {
+      } else if (Input.rfind("%lib ", 0) == 0) {
+        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5)) {
+          llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+          HasError = true;
+        }
+      } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
         HasError = true;
       }
+
+      Input = "";
+      LE.setPrompt("clang-repl> ");
     }
   }
 

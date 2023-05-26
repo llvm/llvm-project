@@ -1176,11 +1176,13 @@ TEST(DWARFDebugInfo, TestStringOffsets) {
   EXPECT_STREQ(String1, *Extracted3);
 }
 
-#if defined(_AIX) && defined(__64BIT__)
+// AIX does not support string offset section.
+#if defined(_AIX)
 TEST(DWARFDebugInfo, DISABLED_TestEmptyStringOffsets) {
 #else
 TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
 #endif
+
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1209,11 +1211,7 @@ TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
       DwarfContext->getDWARFObj().getStrOffsetsSection().Data.empty());
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestRelations) {
-#else
 TEST(DWARFDebugInfo, TestRelations) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1400,11 +1398,7 @@ TEST(DWARFDebugInfo, TestDWARFDie) {
   EXPECT_FALSE(DefaultDie.getSibling().isValid());
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestChildIterators) {
-#else
 TEST(DWARFDebugInfo, TestChildIterators) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1513,11 +1507,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
   EXPECT_EQ(CUDie.begin(), CUDie.end());
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestAttributeIterators) {
-#else
 TEST(DWARFDebugInfo, TestAttributeIterators) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1579,11 +1569,7 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
   EXPECT_EQ(E, ++I);
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestFindRecurse) {
-#else
 TEST(DWARFDebugInfo, TestFindRecurse) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1797,11 +1783,7 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   // Test
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestFindAttrs) {
-#else
 TEST(DWARFDebugInfo, TestFindAttrs) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1864,7 +1846,8 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
   EXPECT_EQ(DieMangled, toString(NameOpt, ""));
 }
 
-#if defined(_AIX) && defined(__64BIT__)
+// AIX does not support debug_addr section.
+#if defined(_AIX)
 TEST(DWARFDebugInfo, DISABLED_TestImplicitConstAbbrevs) {
 #else
 TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {

@@ -45,7 +45,7 @@ public:
   std::string ABI;
 
   /// The EABI version to use
-  llvm::EABI EABIVersion;
+  llvm::EABI EABIVersion = llvm::EABI::Default;
 
   /// If given, the version string of the linker in use.
   std::string LinkerVersion;
@@ -88,7 +88,7 @@ public:
     COV_5 = 500,
   };
   /// \brief Code object version for AMDGPU.
-  CodeObjectVersionKind CodeObjectVersion;
+  CodeObjectVersionKind CodeObjectVersion = CodeObjectVersionKind::COV_None;
 
   // The code model to be used as specified by the user. Corresponds to
   // CodeModel::Model enum defined in include/llvm/Support/CodeGen.h, plus

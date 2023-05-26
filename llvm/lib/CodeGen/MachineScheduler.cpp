@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -56,7 +57,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -792,7 +792,7 @@ void ScheduleDAGMI::schedule() {
   // Build the DAG.
   buildSchedGraph(AA);
 
-  postprocessDAG();
+  postProcessDAG();
 
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
   findRootsAndBiasEdges(TopRoots, BotRoots);
@@ -859,7 +859,7 @@ void ScheduleDAGMI::schedule() {
 }
 
 /// Apply each ScheduleDAGMutation step in order.
-void ScheduleDAGMI::postprocessDAG() {
+void ScheduleDAGMI::postProcessDAG() {
   for (auto &m : Mutations)
     m->apply(this);
 }
@@ -1383,7 +1383,7 @@ void ScheduleDAGMILive::schedule() {
   LLVM_DEBUG(SchedImpl->dumpPolicy());
   buildDAGWithRegPressure();
 
-  postprocessDAG();
+  postProcessDAG();
 
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
   findRootsAndBiasEdges(TopRoots, BotRoots);

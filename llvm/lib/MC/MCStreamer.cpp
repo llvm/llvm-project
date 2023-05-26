@@ -219,7 +219,8 @@ void MCStreamer::emitGPRel32Value(const MCExpr *Value) {
 /// Emit NumBytes bytes worth of the value specified by FillValue.
 /// This implements directives such as '.space'.
 void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
-  emitFill(*MCConstantExpr::create(NumBytes, getContext()), FillValue);
+  if (NumBytes)
+    emitFill(*MCConstantExpr::create(NumBytes, getContext()), FillValue);
 }
 
 void llvm::MCStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLen,
@@ -1104,7 +1105,7 @@ void MCStreamer::emitInstruction(const MCInst &Inst, const MCSubtargetInfo &) {
 }
 
 void MCStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
-                                 uint64_t Attr,
+                                 uint64_t Attr, uint64_t Discriminator,
                                  const MCPseudoProbeInlineStack &InlineStack,
                                  MCSymbol *FnSym) {
   auto &Context = getContext();
@@ -1116,7 +1117,7 @@ void MCStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
   emitLabel(ProbeSym);
 
   // Create a (local) probe entry with the symbol.
-  MCPseudoProbe Probe(ProbeSym, Guid, Index, Type, Attr);
+  MCPseudoProbe Probe(ProbeSym, Guid, Index, Type, Attr, Discriminator);
 
   // Add the probe entry to this section's entries.
   Context.getMCPseudoProbeTable().getProbeSections().addPseudoProbe(
@@ -1190,12 +1191,12 @@ void MCStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
                    "XCOFF targets");
 }
 
-void MCStreamer::emitXCOFFRefDirective(StringRef Name) {
+void MCStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   llvm_unreachable("emitXCOFFRefDirective is only supported on XCOFF targets");
 }
 
 void MCStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
-                                          const MCSymbol *Trap, 
+                                          const MCSymbol *Trap,
                                           unsigned Lang, unsigned Reason,
                                           unsigned FunctionSize,
                                           bool hasDebug) {

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Investigate this failure on x86_64 macOS back deployment
-// XFAIL: use_system_cxx_lib && target=x86_64-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
+// XFAIL: stdlib=apple-libc++ && target=x86_64-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan

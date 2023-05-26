@@ -71,7 +71,7 @@ define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32
 ; CHECK-NEXT:    store <4 x float> [[TMP14]], ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC4]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N5:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[CMP_N5]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -417,7 +417,7 @@ define void @f3(ptr noalias %A, i64 %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <2 x i8> <i8 1, i8 1>, ptr [[TMP6]], align 1
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX5]], 2
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP7]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP7]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.middle.block:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N4]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]

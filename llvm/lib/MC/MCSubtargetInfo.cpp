@@ -142,7 +142,7 @@ static void cpuHelp(ArrayRef<SubtargetSubTypeKV> CPUTable) {
   errs() << '\n';
 
   errs() << "Use -mcpu or -mtune to specify the target's processor.\n"
-            "For example, clang --target=aarch64-unknown-linux-gui "
+            "For example, clang --target=aarch64-unknown-linux-gnu "
             "-mcpu=cortex-a35\n";
 
   PrintOnce = true;

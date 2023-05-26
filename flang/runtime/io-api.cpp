@@ -1379,6 +1379,16 @@ bool IONAME(InputLogical)(Cookie cookie, bool &truth) {
   return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
+bool IONAME(OutputDerivedType)(Cookie cookie, const Descriptor &descriptor,
+    const NonTbpDefinedIoTable *table) {
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor, table);
+}
+
+bool IONAME(InputDerivedType)(Cookie cookie, const Descriptor &descriptor,
+    const NonTbpDefinedIoTable *table) {
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor, table);
+}
+
 std::size_t IONAME(GetSize)(Cookie cookie) {
   IoStatementState &io{*cookie};
   IoErrorHandler &handler{io.GetIoErrorHandler()};

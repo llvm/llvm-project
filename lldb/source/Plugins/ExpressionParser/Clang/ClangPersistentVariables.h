@@ -31,16 +31,16 @@ class TypeSystemClang;
 /// A list of variables that can be accessed and updated by any expression.  See
 /// ClangPersistentVariable for more discussion.  Also provides an increasing,
 /// 0-based counter for naming result variables.
-class ClangPersistentVariables : public PersistentExpressionState {
+class ClangPersistentVariables
+    : public llvm::RTTIExtends<ClangPersistentVariables,
+                               PersistentExpressionState> {
 public:
+  // LLVM RTTI support
+  static char ID;
+
   ClangPersistentVariables(std::shared_ptr<Target> target_sp);
 
   ~ClangPersistentVariables() override = default;
-
-  // llvm casting support
-  static bool classof(const PersistentExpressionState *pv) {
-    return pv->getKind() == PersistentExpressionState::eKindClang;
-  }
 
   std::shared_ptr<ClangASTImporter> GetClangASTImporter();
   std::shared_ptr<ClangModulesDeclVendor> GetClangModulesDeclVendor();

@@ -87,7 +87,7 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   // type. Producer must have full tensor semantics to avoid potential
   // aliasing between producer and consumer memrefs.
   if (!producer.hasTensorSemantics() ||
-      !fusedOperand->get().getType().isa<RankedTensorType>())
+      !isa<RankedTensorType>(fusedOperand->get().getType()))
     return false;
 
   // Verify that
@@ -179,7 +179,7 @@ static void generateFusedElementwiseOpRegion(
                     });
     for (IndexOp indexOp :
          llvm::make_early_inc_range(producerBlock.getOps<IndexOp>())) {
-      Value newIndex = rewriter.create<mlir::AffineApplyOp>(
+      Value newIndex = rewriter.create<affine::AffineApplyOp>(
           producer.getLoc(),
           consumerToProducerLoopsMap.getSubMap(indexOp.getDim()), fusedIndices);
       mapper.map(indexOp.getResult(), newIndex);
@@ -232,14 +232,14 @@ static void generateFusedElementwiseOpRegion(
   // forward the yield operand.
   auto producerYieldOp = cast<linalg::YieldOp>(producerBlock.getTerminator());
   unsigned producerResultNumber =
-      fusedOperand->get().cast<OpResult>().getResultNumber();
+      cast<OpResult>(fusedOperand->get()).getResultNumber();
   Value replacement =
       mapper.lookupOrDefault(producerYieldOp.getOperand(producerResultNumber));
 
   // Sanity checks, if replacement is not already in the mapper then it must be
   // produced outside.
   if (replacement == producerYieldOp.getOperand(producerResultNumber)) {
-    if (auto bb = replacement.dyn_cast<BlockArgument>())
+    if (auto bb = dyn_cast<BlockArgument>(replacement))
       assert(bb.getOwner() != &producerBlock &&
              "yielded block argument must have been mapped");
     else
@@ -278,7 +278,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
                                  OpOperand *fusedOperand) {
   assert(areElementwiseOpsFusable(fusedOperand) &&
          "expected elementwise operation pre-conditions to pass");
-  auto producerResult = fusedOperand->get().cast<OpResult>();
+  auto producerResult = cast<OpResult>(fusedOperand->get());
   auto producer = cast<GenericOp>(producerResult.getOwner());
   auto consumer = cast<GenericOp>(fusedOperand->getOwner());
   // TODO: allow fusing the producer of an output operand.
@@ -357,7 +357,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
     fusedOutputOperands.push_back(opOperand->get());
     fusedIndexMaps.push_back(consumer.getMatchingIndexingMap(opOperand));
     Type resultType = opOperand->get().getType();
-    if (!resultType.isa<MemRefType>())
+    if (!isa<MemRefType>(resultType))
       fusedResultTypes.push_back(resultType);
   }
 
@@ -512,7 +512,7 @@ static bool isFusableWithReshapeByDimExpansion(GenericOp genericOp,
   return genericOp.hasTensorSemantics() &&
          llvm::all_of(genericOp.getIndexingMaps().getValue(),
                       [](Attribute attr) {
-                        return attr.cast<AffineMapAttr>()
+                        return cast<AffineMapAttr>(attr)
                             .getValue()
                             .isProjectedPermutation();
                       }) &&
@@ -719,7 +719,7 @@ static void updateExpandedGenericOpRegion(PatternRewriter &rewriter,
       assert(!ShapedType::isDynamic(std::get<0>(it)));
       AffineExpr idx, acc;
       bindDims(rewriter.getContext(), idx, acc);
-      newIndex = rewriter.create<AffineApplyOp>(
+      newIndex = rewriter.create<affine::AffineApplyOp>(
           indexOp.getLoc(), idx + acc * std::get<0>(it),
           ValueRange{std::get<1>(it), newIndex});
     }
@@ -776,7 +776,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
       continue;
     }
     if (auto opOperandType =
-            opOperand->get().getType().dyn_cast<RankedTensorType>()) {
+            dyn_cast<RankedTensorType>(opOperand->get().getType())) {
       AffineMap indexingMap = genericOp.getMatchingIndexingMap(opOperand);
       RankedTensorType expandedOperandType =
           getExpandedType(opOperandType, indexingMap, expansionInfo);
@@ -805,7 +805,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
   SmallVector<Value> outputs;
   for (OpOperand *opOperand : genericOp.getDpsInitOperands()) {
     AffineMap indexingMap = genericOp.getMatchingIndexingMap(opOperand);
-    auto opOperandType = opOperand->get().getType().cast<RankedTensorType>();
+    auto opOperandType = cast<RankedTensorType>(opOperand->get().getType());
     RankedTensorType expandedOutputType =
         getExpandedType(opOperandType, indexingMap, expansionInfo);
     if (expandedOutputType != opOperand->get().getType()) {
@@ -921,7 +921,7 @@ struct FoldReshapeWithGenericOpByExpansion
   LogicalResult matchAndRewrite(tensor::ExpandShapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
     // Fold only if all constraints of fusing with reshape by expansion are met.
-    auto producerResult = reshapeOp.getSrc().dyn_cast<OpResult>();
+    auto producerResult = dyn_cast<OpResult>(reshapeOp.getSrc());
     if (!producerResult) {
       return rewriter.notifyMatchFailure(reshapeOp,
                                          "source not produced by an operation");
@@ -959,8 +959,9 @@ struct FoldReshapeWithGenericOpByExpansion
     // same type as the returns of the original generic op, the consumer reshape
     // op can be replaced by the source of the collapse_shape op that defines
     // the replacement.
-    Value reshapeReplacement = (*replacementValues)
-        [reshapeOp.getSrc().cast<OpResult>().getResultNumber()];
+    Value reshapeReplacement =
+        (*replacementValues)[cast<OpResult>(reshapeOp.getSrc())
+                                 .getResultNumber()];
     if (auto collapseOp =
             reshapeReplacement.getDefiningOp<tensor::CollapseShapeOp>()) {
       reshapeReplacement = collapseOp.getSrc();
@@ -1004,8 +1005,8 @@ getDomainReassociation(AffineMap indexingMap,
 /// For a given `dimSequence`, check if the sequence is conserved in the
 /// `indexingMap`. `indexingMap` is expected to be a projected permutation.
 /// Non-existence of the sequence returns true as well.
-static bool isDimSequencePreserved(AffineMap indexingMap,
-                                   ReassociationIndicesRef dimSequence) {
+bool mlir::linalg::isDimSequencePreserved(AffineMap indexingMap,
+                                          ReassociationIndicesRef dimSequence) {
   assert(!dimSequence.empty() &&
          "expected non-empty list for dimension sequence");
   assert(indexingMap.isProjectedPermutation() &&
@@ -1043,6 +1044,15 @@ static bool isDimSequencePreserved(AffineMap indexingMap,
   }
   // 3. No element of sequence found. Return true.
   return true;
+}
+
+bool mlir::linalg::areDimSequencesPreserved(
+    ArrayRef<AffineMap> maps, ArrayRef<ReassociationIndices> dimSequences) {
+  return llvm::all_of(maps, [&](AffineMap map) {
+    return llvm::all_of(dimSequences, [&](ReassociationIndicesRef dimSequence) {
+      return isDimSequencePreserved(map, dimSequence);
+    });
+  });
 }
 
 // Return the list of dimensions of the iteration domain that can be
@@ -1437,8 +1447,8 @@ FailureOr<SmallVector<Value>> mlir::linalg::collapseGenericOpIterationDims(
       cast<LinalgOp>(genericOp.getOperation())
           .createLoopRanges(rewriter, genericOp.getLoc());
   auto opFoldIsConstantValue = [](OpFoldResult ofr, int64_t value) {
-    if (auto attr = ofr.dyn_cast<Attribute>())
-      return attr.cast<IntegerAttr>().getInt() == value;
+    if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr))
+      return cast<IntegerAttr>(attr).getInt() == value;
     llvm::APInt actual;
     return matchPattern(ofr.get<Value>(), m_ConstantInt(&actual)) &&
            actual.getSExtValue() == value;
@@ -1512,8 +1522,8 @@ FailureOr<SmallVector<Value>> mlir::linalg::collapseGenericOpIterationDims(
     Value collapsedOpResult =
         collapsedGenericOp->getResult(originalResult.index());
     auto originalResultType =
-        originalResult.value().getType().cast<ShapedType>();
-    auto collapsedOpResultType = collapsedOpResult.getType().cast<ShapedType>();
+        cast<ShapedType>(originalResult.value().getType());
+    auto collapsedOpResultType = cast<ShapedType>(collapsedOpResult.getType());
     if (collapsedOpResultType.getRank() != originalResultType.getRank()) {
       AffineMap indexingMap =
           genericOp.getIndexingMapMatchingResult(originalResult.value());
@@ -1592,6 +1602,13 @@ public:
     if (collapsableIterationDims.empty())
       return failure();
 
+    // Check if the specified list of dimensions to collapse is a valid list.
+    if (!areDimSequencesPreserved(genericOp.getIndexingMapsArray(),
+                                  collapsableIterationDims)) {
+      return rewriter.notifyMatchFailure(
+          genericOp, "specified dimensions cannot be collapsed");
+    }
+
     std::optional<SmallVector<Value>> replacements =
         collapseGenericOpIterationDims(genericOp, collapsableIterationDims,
                                        rewriter);
@@ -1655,7 +1672,7 @@ public:
         return false;
       };
 
-      auto resultValue = opOperand->get().dyn_cast<OpResult>();
+      auto resultValue = dyn_cast<OpResult>(opOperand->get());
       if (!def || !resultValue || !isScalarOrSplatConstantOp(def))
         continue;
 
@@ -1688,8 +1705,8 @@ public:
       }
 
       // Create a constant scalar value from the splat constant.
-      Value scalarConstant = rewriter.create<arith::ConstantOp>(
-          def->getLoc(), constantAttr, constantAttr.getType());
+      Value scalarConstant =
+          rewriter.create<arith::ConstantOp>(def->getLoc(), constantAttr);
 
       SmallVector<Value> outputOperands = genericOp.getOutputs();
       auto fusedOp = rewriter.create<GenericOp>(
@@ -1740,7 +1757,7 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
     for (OpOperand *opOperand : op.getDpsInitOperands()) {
       if (!op.payloadUsesValueFromOperand(opOperand)) {
         Value operandVal = opOperand->get();
-        auto operandType = operandVal.getType().dyn_cast<RankedTensorType>();
+        auto operandType = dyn_cast<RankedTensorType>(operandVal.getType());
         if (!operandType)
           continue;
 
@@ -1794,7 +1811,7 @@ struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
       fillFound = true;
       Value fillVal = fillOp.value();
       auto resultType =
-          fillOp.result().getType().cast<RankedTensorType>().getElementType();
+          cast<RankedTensorType>(fillOp.result().getType()).getElementType();
       Value convertedVal =
           convertScalarToDtype(rewriter, fillOp.getLoc(), fillVal, resultType,
                                /*isUnsignedCast =*/false);
@@ -1871,7 +1888,7 @@ struct LinalgElementwiseOpFusionPass
     populateFoldReshapeOpsByExpansionPatterns(patterns, defaultControlFn);
 
     // General canonicalization patterns.
-    AffineApplyOp::getCanonicalizationPatterns(patterns, context);
+    affine::AffineApplyOp::getCanonicalizationPatterns(patterns, context);
     GenericOp::getCanonicalizationPatterns(patterns, context);
     tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
     tensor::CollapseShapeOp::getCanonicalizationPatterns(patterns, context);

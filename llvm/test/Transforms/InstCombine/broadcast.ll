@@ -76,8 +76,9 @@ define <4 x float> @good5(float %v) {
 
 define <4 x float> @splat_undef1(float %arg) {
 ; CHECK-LABEL: @splat_undef1(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[ARG:%.*]], i64 0
-; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 undef, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[T4:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i64 1
+; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T4]], float [[ARG:%.*]], i64 2
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG:%.*]], i64 3
 ; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
   %t = insertelement <4 x float> undef, float %arg, i32 1
@@ -92,7 +93,8 @@ define <4 x float> @splat_undef1(float %arg) {
 define <4 x float> @splat_undef2(float %arg) {
 ; CHECK-LABEL: @splat_undef2(
 ; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i64 0
-; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[T]], <4 x float> poison, <4 x i32> <i32 0, i32 undef, i32 0, i32 0>
+; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T]], float [[ARG:%.*]], i64 2
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG:%.*]], i64 3
 ; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
   %t = insertelement <4 x float> undef, float %arg, i32 0
@@ -131,8 +133,9 @@ define <1 x float> @bad4(float %arg) {
 define <4 x float> @splat_undef3(float %arg) {
 ; CHECK-LABEL: @splat_undef3(
 ; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i64 0
-; CHECK-NEXT:    [[T4:%.*]] = shufflevector <4 x float> [[T]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[T]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[T4:%.*]] = insertelement <4 x float> [[T]], float [[ARG:%.*]], i64 1
+; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T4]], float [[ARG:%.*]], i64 2
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG:%.*]], i64 3
 ; CHECK-NEXT:    [[T7:%.*]] = fadd <4 x float> [[T6]], [[T4]]
 ; CHECK-NEXT:    ret <4 x float> [[T7]]
 ;

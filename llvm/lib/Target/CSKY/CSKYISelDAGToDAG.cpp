@@ -74,10 +74,10 @@ void CSKYDAGToDAGISel::Select(SDNode *N) {
   switch (Opcode) {
   default:
     break;
-  case ISD::ADDCARRY:
+  case ISD::UADDO_CARRY:
     IsSelected = selectAddCarry(N);
     break;
-  case ISD::SUBCARRY:
+  case ISD::USUBO_CARRY:
     IsSelected = selectSubCarry(N);
     break;
   case ISD::GLOBAL_OFFSET_TABLE: {

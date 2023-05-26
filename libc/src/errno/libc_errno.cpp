@@ -6,7 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/properties/architectures.h"
+
 namespace __llvm_libc {
+
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+struct ErrnoConsumer {
+  void operator=(int) {}
+};
+#endif
 
 extern "C" {
 #ifdef LIBC_COPT_PUBLIC_PACKAGING
@@ -18,9 +27,17 @@ extern "C" {
 // macro defined in LLVM libc's public errno.h header file.
 // TODO: Use a macro to distinguish full build and overlay build which can be
 //       used to exclude __llvmlibc_errno under overlay build.
-thread_local int __llvmlibc_errno;
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+ErrnoConsumer __llvmlibc_errno;
 #else
-thread_local int __llvmlibc_internal_errno;
+LIBC_THREAD_LOCAL int __llvmlibc_errno;
+#endif // LIBC_TARGET_ARCH_IS_GPU
+#else
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+ErrnoConsumer __llvmlibc_internal_errno;
+#else
+LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
+#endif // LIBC_TARGET_ARCH_IS_GPU
 #endif
 } // extern "C"
 

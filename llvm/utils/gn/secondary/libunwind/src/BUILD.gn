@@ -38,7 +38,6 @@ unwind_sources = [
   "UnwindLevel1.c",
   "UnwindRegistersRestore.S",
   "UnwindRegistersSave.S",
-  "Unwind_AIXExtras.cpp",
   "assembly.h",
   "cet_unwind.h",
   "config.h",
@@ -46,8 +45,8 @@ unwind_sources = [
   "libunwind.cpp",
   "libunwind_ext.h",
 ]
-if (current_os == "mac") {
-  unwind_sources += [ "Unwind_AppleExtras.cpp" ]
+if (current_os == "aix") {
+  unwind_sources += [ "Unwind_AIXExtras.cpp" ]
 }
 
 if (current_os == "android") {

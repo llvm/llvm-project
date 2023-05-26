@@ -351,9 +351,24 @@ def push_state: F<"push-state">,
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
+def print_memory_usage: F<"print-memory-usage">,
+  HelpText<"Report target memory usage">;
+
 defm relax: BB<"relax",
   "Enable target-specific relaxations if supported (default)",
   "Disable target-specific relaxations">;
+
+defm relax_gp: BB<"relax-gp",
+  "Enable global pointer relaxation",
+  "Disable global pointer relaxation (default)">;
+
+defm remap_inputs: EEq<"remap-inputs",
+  "Remap input files matching <from-glob> to <to-file>">,
+  MetaVarName<"<from-glob>=<to-file>">;
+
+def remap_inputs_file: JJ<"remap-inputs-file=">,
+  HelpText<"Each line contains 'from-glob=to-file'. An input file matching <from-glob> is remapped to <to-file>">,
+  MetaVarName<"<file>">;
 
 defm reproduce:
   EEq<"reproduce",

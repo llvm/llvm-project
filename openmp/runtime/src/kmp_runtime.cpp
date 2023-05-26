@@ -553,6 +553,14 @@ static void __kmp_fini_allocator() { __kmp_fini_memkind(); }
 
 /* ------------------------------------------------------------------------ */
 
+#if ENABLE_LIBOMPTARGET
+static void __kmp_init_omptarget() {
+  __kmp_init_target_task();
+}
+#endif
+
+/* ------------------------------------------------------------------------ */
+
 #if KMP_DYNAMIC_LIB
 #if KMP_OS_WINDOWS
 
@@ -7041,6 +7049,11 @@ static void __kmp_do_serial_initialize(void) {
 
   __kmp_validate_locks();
 
+#if ENABLE_LIBOMPTARGET
+  /* Initialize functions from libomptarget */
+  __kmp_init_omptarget();
+#endif
+
   /* Initialize internal memory allocator */
   __kmp_init_allocator();
 
@@ -8814,7 +8827,6 @@ __kmp_determine_reduction_method(
 
   int team_size;
 
-  KMP_DEBUG_ASSERT(loc); // it would be nice to test ( loc != 0 )
   KMP_DEBUG_ASSERT(lck); // it would be nice to test ( lck != 0 )
 
 #define FAST_REDUCTION_ATOMIC_METHOD_GENERATED                                 \

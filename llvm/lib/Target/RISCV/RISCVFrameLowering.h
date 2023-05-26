@@ -1,4 +1,4 @@
-//===-- RISCVFrameLowering.h - Define frame lowering for RISCV -*- C++ -*--===//
+//===-- RISCVFrameLowering.h - Define frame lowering for RISC-V -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This class implements RISCV-specific bits of TargetFrameLowering class.
+// This class implements RISC-V specific bits of TargetFrameLowering class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -74,7 +74,7 @@ public:
   TargetStackID::Value getStackIDForScalableVectors() const override;
 
   bool isStackIdSafeForLocalArea(unsigned StackId) const override {
-    // We don't support putting RISCV Vector objects into the pre-allocated
+    // We don't support putting RISC-V Vector objects into the pre-allocated
     // local frame block at the moment.
     return StackId != TargetStackID::ScalableVector;
   }

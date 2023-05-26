@@ -882,7 +882,7 @@ define double @broadcast_scale_xyz(ptr nocapture readonly, ptr nocapture readonl
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    vmulpd (%eax), %xmm0, %xmm1
 ; X86-NEXT:    vmulsd 16(%eax), %xmm0, %xmm0
-; X86-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; X86-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X86-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
 ; X86-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovsd %xmm0, (%esp)
@@ -895,7 +895,7 @@ define double @broadcast_scale_xyz(ptr nocapture readonly, ptr nocapture readonl
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    vmulpd (%rsi), %xmm0, %xmm1
 ; X64-NEXT:    vmulsd 16(%rsi), %xmm0, %xmm0
-; X64-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; X64-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X64-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq

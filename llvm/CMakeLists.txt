@@ -1136,11 +1136,6 @@ endif( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
 # use export_executable_symbols(target).
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
-set(LLVM_EXTRACT_SYMBOLS_FLAGS ""
-  CACHE STRING "Additional options to pass to llvm/utils/extract_symbols.py.
-  These cannot override the options set by cmake, but can add extra options
-  such as --tools.")
-
 include(AddLLVM)
 include(TableGen)
 
@@ -1163,7 +1158,7 @@ add_subdirectory(lib/TableGen)
 
 add_subdirectory(utils/TableGen)
 
-add_subdirectory(include/llvm)
+add_subdirectory(include)
 
 add_subdirectory(lib)
 
@@ -1275,14 +1270,14 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   if (LLVM_INSTALL_MODULEMAPS)
-    install(DIRECTORY include/llvm include/llvm-c
+    install(DIRECTORY include
             DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
             COMPONENT llvm-headers
             FILES_MATCHING
             PATTERN "module.modulemap"
             )
-    install(FILES include/llvm/module.install.modulemap
-            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm"
+    install(FILES include/module.install.modulemap
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
             COMPONENT llvm-headers
             RENAME "module.extern.modulemap"
             )

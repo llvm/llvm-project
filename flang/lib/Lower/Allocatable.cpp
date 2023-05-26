@@ -41,11 +41,15 @@ static llvm::cl::opt<bool> useAllocateRuntime(
     llvm::cl::desc("Lower allocations to fortran runtime calls"),
     llvm::cl::init(false));
 /// Switch to force lowering of allocatable and pointers to descriptors in all
-/// cases for debug purposes.
+/// cases. This is now turned on by default since that is what will happen with
+/// HLFIR lowering, so this allows getting early feedback of the impact.
+/// If this turns out to cause performance regressions, a dedicated fir.box
+/// "discretization pass" would make more sense to cover all the fir.box usage
+/// (taking advantage of any future inlining for instance).
 static llvm::cl::opt<bool> useDescForMutableBox(
     "use-desc-for-alloc",
     llvm::cl::desc("Always use descriptors for POINTER and ALLOCATABLE"),
-    llvm::cl::init(false));
+    llvm::cl::init(true));
 
 //===----------------------------------------------------------------------===//
 // Error management

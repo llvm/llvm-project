@@ -72,14 +72,14 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
   auto [strides, offset] = getStridesAndOffset(type);
 
   MemRefDescriptor memRefDescriptor(memRefDesc);
-  Value base = memRefDescriptor.alignedPtr(rewriter, loc);
+  // Use a canonical representation of the start address so that later
+  // optimizations have a longer sequence of instructions to CSE.
+  // If we don't do that we would sprinkle the memref.offset in various
+  // position of the different address computations.
+  Value base =
+      memRefDescriptor.bufferPtr(rewriter, loc, *getTypeConverter(), type);
 
   Value index;
-  if (offset != 0) // Skip if offset is zero.
-    index = ShapedType::isDynamic(offset)
-                ? memRefDescriptor.offset(rewriter, loc)
-                : createIndexConstant(rewriter, loc, offset);
-
   for (int i = 0, e = indices.size(); i < e; ++i) {
     Value increment = indices[i];
     if (strides[i] != 1) { // Skip if stride is 1.
@@ -121,7 +121,7 @@ Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
     Location loc, MemRefType memRefType, ValueRange dynamicSizes,
     ConversionPatternRewriter &rewriter, SmallVectorImpl<Value> &sizes,
-    SmallVectorImpl<Value> &strides, Value &sizeBytes) const {
+    SmallVectorImpl<Value> &strides, Value &size, bool sizeInBytes) const {
   assert(isConvertibleAndHasIdentityMaps(memRefType) &&
          "layout maps must have been normalized away");
   assert(count(memRefType.getShape(), ShapedType::kDynamic) ==
@@ -143,14 +143,14 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
   for (auto i = memRefType.getRank(); i-- > 0;) {
     strides[i] = runningStride;
 
-    int64_t size = memRefType.getShape()[i];
-    if (size == 0)
+    int64_t staticSize = memRefType.getShape()[i];
+    if (staticSize == 0)
       continue;
     bool useSizeAsStride = stride == 1;
-    if (size == ShapedType::kDynamic)
+    if (staticSize == ShapedType::kDynamic)
       stride = ShapedType::kDynamic;
     if (stride != ShapedType::kDynamic)
-      stride *= size;
+      stride *= staticSize;
 
     if (useSizeAsStride)
       runningStride = sizes[i];
@@ -160,14 +160,17 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
     else
       runningStride = createIndexConstant(rewriter, loc, stride);
   }
-
-  // Buffer size in bytes.
-  Type elementType = typeConverter->convertType(memRefType.getElementType());
-  Type elementPtrType = getTypeConverter()->getPointerType(elementType);
-  Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
-  Value gepPtr = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, elementType,
-                                              nullPtr, runningStride);
-  sizeBytes = rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
+  if (sizeInBytes) {
+    // Buffer size in bytes.
+    Type elementType = typeConverter->convertType(memRefType.getElementType());
+    Type elementPtrType = getTypeConverter()->getPointerType(elementType);
+    Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
+    Value gepPtr = rewriter.create<LLVM::GEPOp>(
+        loc, elementPtrType, elementType, nullPtr, runningStride);
+    size = rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
+  } else {
+    size = runningStride;
+  }
 }
 
 Value ConvertToLLVMPattern::getSizeInBytes(
@@ -186,13 +189,30 @@ Value ConvertToLLVMPattern::getSizeInBytes(
 }
 
 Value ConvertToLLVMPattern::getNumElements(
-    Location loc, ArrayRef<Value> shape,
+    Location loc, MemRefType memRefType, ValueRange dynamicSizes,
     ConversionPatternRewriter &rewriter) const {
+  assert(count(memRefType.getShape(), ShapedType::kDynamic) ==
+             static_cast<ssize_t>(dynamicSizes.size()) &&
+         "dynamicSizes size doesn't match dynamic sizes count in memref shape");
+
+  Value numElements = memRefType.getRank() == 0
+                          ? createIndexConstant(rewriter, loc, 1)
+                          : nullptr;
+  unsigned dynamicIndex = 0;
+
   // Compute the total number of memref elements.
-  Value numElements =
-      shape.empty() ? createIndexConstant(rewriter, loc, 1) : shape.front();
-  for (unsigned i = 1, e = shape.size(); i < e; ++i)
-    numElements = rewriter.create<LLVM::MulOp>(loc, numElements, shape[i]);
+  for (int64_t staticSize : memRefType.getShape()) {
+    if (numElements) {
+      Value size = staticSize == ShapedType::kDynamic
+                       ? dynamicSizes[dynamicIndex++]
+                       : createIndexConstant(rewriter, loc, staticSize);
+      numElements = rewriter.create<LLVM::MulOp>(loc, numElements, size);
+    } else {
+      numElements = staticSize == ShapedType::kDynamic
+                        ? dynamicSizes[dynamicIndex++]
+                        : createIndexConstant(rewriter, loc, staticSize);
+    }
+  }
   return numElements;
 }
 
@@ -235,7 +255,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   SmallVector<UnrankedMemRefDescriptor> unrankedMemrefs;
   SmallVector<unsigned> unrankedAddressSpaces;
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
-    if (auto memRefType = origTypes[i].dyn_cast<UnrankedMemRefType>()) {
+    if (auto memRefType = dyn_cast<UnrankedMemRefType>(origTypes[i])) {
       unrankedMemrefs.emplace_back(operands[i]);
       FailureOr<unsigned> addressSpace =
           getTypeConverter()->getMemRefAddressSpace(memRefType);
@@ -276,7 +296,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   unsigned unrankedMemrefPos = 0;
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
     Type type = origTypes[i];
-    if (!type.isa<UnrankedMemRefType>())
+    if (!isa<UnrankedMemRefType>(type))
       continue;
     Value allocationSize = sizes[unrankedMemrefPos++];
     UnrankedMemRefDescriptor desc(operands[i]);
@@ -329,7 +349,7 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   SmallVector<Type> resultTypes;
   if (numResults != 0) {
     resultTypes.push_back(
-        typeConverter.packFunctionResults(op->getResultTypes()));
+        typeConverter.packOperationResults(op->getResultTypes()));
     if (!resultTypes.back())
       return failure();
   }

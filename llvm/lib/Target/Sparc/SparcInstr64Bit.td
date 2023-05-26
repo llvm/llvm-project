@@ -356,15 +356,15 @@ def FMOVQ_XCC : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
 
 // Branch On integer register with Prediction (BPr).
 let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in
-multiclass BranchOnReg<bits<3> cond, string OpcStr> {
-  def napt : F2_4<cond, 0, 1, (outs), (ins I64Regs:$rs1, bprtarget16:$imm16),
-             !strconcat(OpcStr, " $rs1, $imm16"), []>;
-  def apt  : F2_4<cond, 1, 1, (outs), (ins I64Regs:$rs1, bprtarget16:$imm16),
-             !strconcat(OpcStr, ",a $rs1, $imm16"), []>;
-  def napn  : F2_4<cond, 0, 0, (outs), (ins I64Regs:$rs1, bprtarget16:$imm16),
-             !strconcat(OpcStr, ",pn $rs1, $imm16"), []>;
-  def apn : F2_4<cond, 1, 0, (outs), (ins I64Regs:$rs1, bprtarget16:$imm16),
-             !strconcat(OpcStr, ",a,pn $rs1, $imm16"), []>;
+multiclass BranchOnReg<list<dag> CCPattern> {
+  def R    : F2_4<0, 1, (outs), (ins bprtarget16:$imm16, RegCCOp:$rcond, I64Regs:$rs1),
+             "br$rcond $rs1, $imm16", CCPattern>;
+  def RA   : F2_4<1, 1, (outs), (ins bprtarget16:$imm16, RegCCOp:$rcond, I64Regs:$rs1),
+             "br$rcond,a $rs1, $imm16", []>;
+  def RNT  : F2_4<0, 0, (outs), (ins bprtarget16:$imm16, RegCCOp:$rcond, I64Regs:$rs1),
+             "br$rcond,pn $rs1, $imm16", []>;
+  def RANT : F2_4<1, 0, (outs), (ins bprtarget16:$imm16, RegCCOp:$rcond, I64Regs:$rs1),
+             "br$rcond,a,pn $rs1, $imm16", []>;
 }
 
 multiclass bpr_alias<string OpcStr, Instruction NAPT, Instruction APT> {
@@ -374,19 +374,8 @@ multiclass bpr_alias<string OpcStr, Instruction NAPT, Instruction APT> {
                   (APT I64Regs:$rs1, bprtarget16:$imm16), 0>;
 }
 
-defm BPZ   : BranchOnReg<0b001, "brz">;
-defm BPLEZ : BranchOnReg<0b010, "brlez">;
-defm BPLZ  : BranchOnReg<0b011, "brlz">;
-defm BPNZ  : BranchOnReg<0b101, "brnz">;
-defm BPGZ  : BranchOnReg<0b110, "brgz">;
-defm BPGEZ : BranchOnReg<0b111, "brgez">;
-
-defm : bpr_alias<"brz",   BPZnapt,   BPZapt  >;
-defm : bpr_alias<"brlez", BPLEZnapt, BPLEZapt>;
-defm : bpr_alias<"brlz",  BPLZnapt,  BPLZapt >;
-defm : bpr_alias<"brnz",  BPNZnapt,  BPNZapt >;
-defm : bpr_alias<"brgz",  BPGZnapt,  BPGZapt >;
-defm : bpr_alias<"brgez", BPGEZnapt, BPGEZapt>;
+let Predicates = [Is64Bit] in
+  defm BP : BranchOnReg<[(SPbrreg bb:$imm16, imm:$rcond, i64:$rs1)]>;
 
 // Move integer register on register condition (MOVr).
 let Predicates = [Is64Bit], Constraints = "$f = $rd" in {

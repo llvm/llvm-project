@@ -99,6 +99,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
+#include "llvm/Object/ELFTypes.h"
 #include "llvm/Pass.h"
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/Casting.h"
@@ -133,7 +134,7 @@ static cl::opt<std::string> BasicBlockProfileDump(
     "mbb-profile-dump", cl::Hidden,
     cl::desc("Basic block profile dump for external cost modelling. If "
              "matching up BBs with afterwards, the compilation must be "
-             "performed with -fbasic-block-sections=labels. Enabling this "
+             "performed with -basic-block-sections=labels. Enabling this "
              "flag during in-process ThinLTO is not supported."));
 
 const char DWARFGroupName[] = "dwarf";
@@ -927,13 +928,6 @@ void AsmPrinter::emitFunctionHeader() {
   if (F.hasFnAttribute(Attribute::Cold))
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_Cold);
 
-  if (isVerbose()) {
-    F.printAsOperand(OutStreamer->getCommentOS(),
-                     /*PrintType=*/false, F.getParent());
-    emitFunctionHeaderComment();
-    OutStreamer->getCommentOS() << '\n';
-  }
-
   // Emit the prefix data.
   if (F.hasPrefixData()) {
     if (MAI->hasSubsectionsViaSymbols()) {
@@ -975,6 +969,23 @@ void AsmPrinter::emitFunctionHeader() {
     // May be reassigned when emitting the body, to reference the label after
     // the initial BTI (AArch64) or endbr32/endbr64 (x86).
     CurrentPatchableFunctionEntrySym = CurrentFnBegin;
+  }
+
+  // Emit the function prologue data for the indirect call sanitizer.
+  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_func_sanitize)) {
+    assert(MD->getNumOperands() == 2);
+
+    auto *PrologueSig = mdconst::extract<Constant>(MD->getOperand(0));
+    auto *TypeHash = mdconst::extract<Constant>(MD->getOperand(1));
+    emitGlobalConstant(F.getParent()->getDataLayout(), PrologueSig);
+    emitGlobalConstant(F.getParent()->getDataLayout(), TypeHash);
+  }
+
+  if (isVerbose()) {
+    F.printAsOperand(OutStreamer->getCommentOS(),
+                     /*PrintType=*/false, F.getParent());
+    emitFunctionHeaderComment();
+    OutStreamer->getCommentOS() << '\n';
   }
 
   // Emit the function descriptor. This is a virtual function to allow targets
@@ -1024,24 +1035,6 @@ void AsmPrinter::emitFunctionHeader() {
   // Emit the prologue data.
   if (F.hasPrologueData())
     emitGlobalConstant(F.getParent()->getDataLayout(), F.getPrologueData());
-
-  // Emit the function prologue data for the indirect call sanitizer.
-  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_func_sanitize)) {
-    assert(TM.getTargetTriple().getArch() == Triple::x86 ||
-           TM.getTargetTriple().getArch() == Triple::x86_64);
-    assert(MD->getNumOperands() == 2);
-
-    auto *PrologueSig = mdconst::extract<Constant>(MD->getOperand(0));
-    auto *FTRTTIProxy = mdconst::extract<Constant>(MD->getOperand(1));
-    assert(PrologueSig && FTRTTIProxy);
-    emitGlobalConstant(F.getParent()->getDataLayout(), PrologueSig);
-
-    const MCExpr *Proxy = lowerConstant(FTRTTIProxy);
-    const MCExpr *FnExp = MCSymbolRefExpr::create(CurrentFnSym, OutContext);
-    const MCExpr *PCRel = MCBinaryExpr::createSub(Proxy, FnExp, OutContext);
-    // Use 32 bit since only small code model is supported.
-    OutStreamer->emitValue(PCRel, 4u);
-  }
 }
 
 /// EmitFunctionEntryLabel - Emit the label that is the entrypoint for the
@@ -1273,6 +1266,7 @@ AsmPrinter::getFunctionCFISectionType(const Function &F) const {
       F.needsUnwindTableEntry())
     return CFISection::EH;
 
+  assert(MMI != nullptr && "Invalid machine module info");
   if (MMI->hasDebugInfo() || TM.Options.ForceDwarfFrameSection)
     return CFISection::Debug;
 
@@ -1329,21 +1323,16 @@ void AsmPrinter::emitFrameAlloc(const MachineInstr &MI) {
                              MCConstantExpr::create(FrameOffset, OutContext));
 }
 
-/// Returns the BB metadata to be emitted in the .llvm_bb_addr_map section for a
-/// given basic block. This can be used to capture more precise profile
-/// information. We use the last 4 bits (LSBs) to encode the following
-/// information:
-///  * (1): set if return block (ret or tail call).
-///  * (2): set if ends with a tail call.
-///  * (3): set if exception handling (EH) landing pad.
-///  * (4): set if the block can fall through to its next.
-/// The remaining bits are zero.
-static unsigned getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
+/// Returns the BB metadata to be emitted in the SHT_LLVM_BB_ADDR_MAP section
+/// for a given basic block. This can be used to capture more precise profile
+/// information.
+static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
   const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
-  return ((unsigned)MBB.isReturnBlock()) |
-         ((!MBB.empty() && TII->isTailCall(MBB.back())) << 1) |
-         (MBB.isEHPad() << 2) |
-         (const_cast<MachineBasicBlock &>(MBB).canFallThrough() << 3);
+  return object::BBAddrMap::BBEntry::Metadata{
+      MBB.isReturnBlock(), !MBB.empty() && TII->isTailCall(MBB.back()),
+      MBB.isEHPad(), const_cast<MachineBasicBlock &>(MBB).canFallThrough(),
+      !MBB.empty() && MBB.rbegin()->isIndirectBranch()}
+      .encode();
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1627,6 +1616,7 @@ void AsmPrinter::emitFunctionBody() {
   // Print out code for the function.
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
+  bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   for (auto &MBB : *MF) {
@@ -1665,9 +1655,24 @@ void AsmPrinter::emitFunctionBody() {
         emitFrameAlloc(MI);
         break;
       case TargetOpcode::ANNOTATION_LABEL:
-      case TargetOpcode::EH_LABEL:
       case TargetOpcode::GC_LABEL:
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
+        break;
+      case TargetOpcode::EH_LABEL:
+        OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
+        // For AsynchEH, insert a Nop if followed by a trap inst
+        //   Or the exception won't be caught.
+        //   (see MCConstantExpr::create(1,..) in WinException.cpp)
+        //  Ignore SDiv/UDiv because a DIV with Const-0 divisor
+        //    must have being turned into an UndefValue.
+        //  Div with variable opnds won't be the first instruction in
+        //  an EH region as it must be led by at least a Load
+        {
+          auto MI2 = std::next(MI.getIterator());
+          if (IsEHa && MI2 != MBB.end() &&
+              (MI2->mayLoadOrStore() || MI2->mayRaiseFPException()))
+            emitNops(1);
+        }
         break;
       case TargetOpcode::INLINEASM:
       case TargetOpcode::INLINEASM_BR:
@@ -1908,14 +1913,19 @@ void AsmPrinter::emitFunctionBody() {
 
   OutStreamer->addBlankLine();
 
-  // Output MBB numbers, function names, and frequencies if the flag to dump
+  // Output MBB ids, function names, and frequencies if the flag to dump
   // MBB profile information has been set
   if (MBBProfileDumpFileOutput) {
+    if (!MF->hasBBLabels())
+      MF->getContext().reportError(
+          SMLoc(),
+          "Unable to find BB labels for MBB profile dump. -mbb-profile-dump "
+          "must be called with -basic-block-sections=labels");
     MachineBlockFrequencyInfo &MBFI =
         getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
     for (const auto &MBB : *MF) {
       *MBBProfileDumpFileOutput.get()
-          << MF->getName() << "," << MBB.getNumber() << ","
+          << MF->getName() << "," << MBB.getBBID() << ","
           << MBFI.getBlockFreqRelativeToEntryBlock(&MBB) << "\n";
     }
   }
@@ -3369,7 +3379,8 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
       ExtraBitsSize = alignTo(ExtraBitsSize, 8);
       ExtraBits = Realigned.getRawData()[0] &
         (((uint64_t)-1) >> (64 - ExtraBitsSize));
-      Realigned.lshrInPlace(ExtraBitsSize);
+      if (BitWidth >= 64)
+        Realigned.lshrInPlace(ExtraBitsSize);
     } else
       ExtraBits = Realigned.getRawData()[BitWidth / 64];
   }
@@ -4122,7 +4133,7 @@ unsigned int AsmPrinter::getDwarfOffsetByteSize() const {
 }
 
 dwarf::FormParams AsmPrinter::getDwarfFormParams() const {
-  return {getDwarfVersion(), uint8_t(getPointerSize()),
+  return {getDwarfVersion(), uint8_t(MAI->getCodePointerSize()),
           OutStreamer->getContext().getDwarfFormat(),
           doesDwarfUseRelocationsAcrossSections()};
 }

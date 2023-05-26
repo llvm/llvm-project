@@ -336,11 +336,12 @@ define void @ae16min(ptr nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    rlwinm 6, 3, 3, 27, 27
+; CHECK-NEXT:    extsh 4, 4
 ; CHECK-NEXT:    ori 7, 5, 65535
 ; CHECK-NEXT:    xori 5, 6, 16
+; CHECK-NEXT:    rldicr 3, 3, 0, 61
 ; CHECK-NEXT:    slw 8, 4, 5
 ; CHECK-NEXT:    slw 6, 7, 5
-; CHECK-NEXT:    rldicr 3, 3, 0, 61
 ; CHECK-NEXT:    and 7, 8, 6
 ; CHECK-NEXT:  .LBB16_1: # %entry
 ; CHECK-NEXT:    #
@@ -369,11 +370,12 @@ define void @ae16max(ptr nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    rlwinm 6, 3, 3, 27, 27
+; CHECK-NEXT:    extsh 4, 4
 ; CHECK-NEXT:    ori 7, 5, 65535
 ; CHECK-NEXT:    xori 5, 6, 16
+; CHECK-NEXT:    rldicr 3, 3, 0, 61
 ; CHECK-NEXT:    slw 8, 4, 5
 ; CHECK-NEXT:    slw 6, 7, 5
-; CHECK-NEXT:    rldicr 3, 3, 0, 61
 ; CHECK-NEXT:    and 7, 8, 6
 ; CHECK-NEXT:  .LBB17_1: # %entry
 ; CHECK-NEXT:    #
@@ -464,10 +466,11 @@ define void @ae8min(ptr nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 5, 3, 3, 27, 28
 ; CHECK-NEXT:    li 6, 255
+; CHECK-NEXT:    extsb 4, 4
 ; CHECK-NEXT:    xori 5, 5, 24
-; CHECK-NEXT:    rldicr 3, 3, 0, 61
 ; CHECK-NEXT:    slw 7, 4, 5
 ; CHECK-NEXT:    slw 6, 6, 5
+; CHECK-NEXT:    rldicr 3, 3, 0, 61
 ; CHECK-NEXT:    and 7, 7, 6
 ; CHECK-NEXT:  .LBB20_1: # %entry
 ; CHECK-NEXT:    #
@@ -496,10 +499,11 @@ define void @ae8max(ptr nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 5, 3, 3, 27, 28
 ; CHECK-NEXT:    li 6, 255
+; CHECK-NEXT:    extsb 4, 4
 ; CHECK-NEXT:    xori 5, 5, 24
-; CHECK-NEXT:    rldicr 3, 3, 0, 61
 ; CHECK-NEXT:    slw 7, 4, 5
 ; CHECK-NEXT:    slw 6, 6, 5
+; CHECK-NEXT:    rldicr 3, 3, 0, 61
 ; CHECK-NEXT:    and 7, 7, 6
 ; CHECK-NEXT:  .LBB21_1: # %entry
 ; CHECK-NEXT:    #

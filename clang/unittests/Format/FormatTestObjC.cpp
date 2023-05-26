@@ -89,6 +89,11 @@ TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
+  Style =
+      getStyle("{}", "a.h", "none", "typedef NS_ERROR_ENUM(int, Foo) {};\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
   Style = getStyle("{}", "a.h", "none", "enum Foo {};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);

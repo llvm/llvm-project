@@ -46,7 +46,7 @@ public:
 
   synchronized_pool_resource(const synchronized_pool_resource&) = delete;
 
-  ~synchronized_pool_resource() override = default;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~synchronized_pool_resource() override = default;
 
   synchronized_pool_resource& operator=(const synchronized_pool_resource&) = delete;
 

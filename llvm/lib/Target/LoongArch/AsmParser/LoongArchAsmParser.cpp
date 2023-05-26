@@ -64,7 +64,8 @@ class LoongArchAsmParser : public MCTargetAsmParser {
                                       unsigned Kind) override;
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
-                                  int64_t Lower, int64_t Upper, Twine Msg);
+                                  int64_t Lower, int64_t Upper,
+                                  const Twine &Msg);
 
   /// Helper for processing MC instructions that have been successfully matched
   /// by MatchAndEmitInstruction.
@@ -1242,7 +1243,7 @@ LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
 bool LoongArchAsmParser::generateImmOutOfRangeError(
     OperandVector &Operands, uint64_t ErrorInfo, int64_t Lower, int64_t Upper,
-    Twine Msg = "immediate must be an integer in the range") {
+    const Twine &Msg = "immediate must be an integer in the range") {
   SMLoc ErrorLoc = ((LoongArchOperand &)*Operands[ErrorInfo]).getStartLoc();
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
@@ -1334,6 +1335,9 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidUImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 6) - 1);
+  case Match_InvalidUImm8:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 8) - 1);
   case Match_InvalidUImm12:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 12) - 1);

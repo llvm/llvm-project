@@ -47,24 +47,13 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
   return false;
 }
 
-static bool IsDescriptor(const ProcEntityDetails &details) {
-  // A procedure pointer or dummy procedure must be & is a descriptor if
-  // and only if it requires a static link.
-  // TODO: refine this placeholder
-  return details.HasExplicitInterface();
-}
-
 bool IsDescriptor(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [&](const ObjectEntityDetails &d) {
             return IsAllocatableOrPointer(symbol) || IsDescriptor(d);
           },
-          [&](const ProcEntityDetails &d) {
-            return (symbol.attrs().test(Attr::POINTER) ||
-                       symbol.attrs().test(Attr::EXTERNAL)) &&
-                IsDescriptor(d);
-          },
+          [&](const ProcEntityDetails &d) { return false; },
           [&](const EntityDetails &d) { return IsDescriptor(d.type()); },
           [](const AssocEntityDetails &d) {
             if (const auto &expr{d.expr()}) {
@@ -87,6 +76,39 @@ bool IsDescriptor(const Symbol &symbol) {
           [](const auto &) { return false; },
       },
       symbol.details());
+}
+
+bool IsPassedViaDescriptor(const Symbol &symbol) {
+  if (!IsDescriptor(symbol)) {
+    return false;
+  }
+  if (IsAllocatableOrPointer(symbol)) {
+    return true;
+  }
+  if (const auto *object{
+          symbol.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    if (object->isDummy()) {
+      if (object->type() &&
+          object->type()->category() == DeclTypeSpec::Character) {
+        return false;
+      }
+      if (object->IsAssumedSize()) {
+        return false;
+      }
+      bool isExplicitShape{true};
+      for (const ShapeSpec &shapeSpec : object->shape()) {
+        if (!shapeSpec.lbound().GetExplicit() ||
+            !shapeSpec.ubound().GetExplicit()) {
+          isExplicitShape = false;
+          break;
+        }
+      }
+      if (isExplicitShape) {
+        return false; // explicit shape but non-constant bounds
+      }
+    }
+  }
+  return true;
 }
 } // namespace Fortran::semantics
 
@@ -130,8 +152,21 @@ std::optional<Expr<SubscriptInteger>> DynamicType::GetCharLength() const {
 std::size_t DynamicType::GetAlignment(
     const TargetCharacteristics &targetCharacteristics) const {
   if (category_ == TypeCategory::Derived) {
-    if (derived_ && derived_->scope()) {
-      return derived_->scope()->alignment().value_or(1);
+    switch (GetDerivedTypeSpec().category()) {
+      SWITCH_COVERS_ALL_CASES
+    case semantics::DerivedTypeSpec::Category::DerivedType:
+      if (derived_ && derived_->scope()) {
+        return derived_->scope()->alignment().value_or(1);
+      }
+      break;
+    case semantics::DerivedTypeSpec::Category::IntrinsicVector:
+    case semantics::DerivedTypeSpec::Category::PairVector:
+    case semantics::DerivedTypeSpec::Category::QuadVector:
+      if (derived_ && derived_->scope()) {
+        return derived_->scope()->size();
+      } else {
+        common::die("Missing scope for Vector type.");
+      }
     }
   } else {
     return targetCharacteristics.GetAlignment(category_, kind_);
@@ -473,6 +508,21 @@ bool DynamicType::IsTkCompatibleWith(const DynamicType &that) const {
   return AreCompatibleTypes(*this, that, false, true);
 }
 
+bool DynamicType::IsTkCompatibleWith(
+    const DynamicType &that, common::IgnoreTKRSet ignoreTKR) const {
+  if (ignoreTKR.test(common::IgnoreTKR::Type) &&
+      (category() == TypeCategory::Derived ||
+          that.category() == TypeCategory::Derived ||
+          category() != that.category())) {
+    return true;
+  } else if (ignoreTKR.test(common::IgnoreTKR::Kind) &&
+      category() == that.category()) {
+    return true;
+  } else {
+    return AreCompatibleTypes(*this, that, false, true);
+  }
+}
+
 bool DynamicType::IsTkLenCompatibleWith(const DynamicType &that) const {
   return AreCompatibleTypes(*this, that, false, false);
 }
@@ -697,7 +747,8 @@ std::optional<DynamicType> ComparisonType(
   }
 }
 
-bool IsInteroperableIntrinsicType(const DynamicType &type) {
+bool IsInteroperableIntrinsicType(
+    const DynamicType &type, bool checkCharLength) {
   switch (type.category()) {
   case TypeCategory::Integer:
     return true;
@@ -707,7 +758,10 @@ bool IsInteroperableIntrinsicType(const DynamicType &type) {
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL
   case TypeCategory::Character:
-    return type.kind() == 1 /* C_CHAR */ && type.knownLength().value_or(0) == 1;
+    if (checkCharLength && type.knownLength().value_or(0) != 1) {
+      return false;
+    }
+    return type.kind() == 1 /* C_CHAR */;
   default:
     // Derived types are tested in Semantics/check-declarations.cpp
     return false;

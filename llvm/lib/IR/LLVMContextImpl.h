@@ -513,11 +513,20 @@ template <> struct MDNodeKeyImpl<DIStringType> {
 
   bool isKeyOf(const DIStringType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
+           StringLength == RHS->getRawStringLength() &&
+           StringLengthExp == RHS->getRawStringLengthExp() &&
+           StringLocationExp == RHS->getRawStringLocationExp() &&
            SizeInBits == RHS->getSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
            Encoding == RHS->getEncoding();
   }
-  unsigned getHashValue() const { return hash_combine(Tag, Name, Encoding); }
+  unsigned getHashValue() const {
+    // Intentionally computes the hash on a subset of the operands for
+    // performance reason. The subset has to be significant enough to avoid
+    // collision "most of the time". There is no correctness issue in case of
+    // collision because of the full check above.
+    return hash_combine(Tag, Name, StringLength, Encoding);
+  }
 };
 
 template <> struct MDNodeKeyImpl<DIDerivedType> {

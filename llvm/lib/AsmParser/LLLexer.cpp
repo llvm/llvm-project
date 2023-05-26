@@ -158,8 +158,7 @@ static const char *isLabelTail(const char *CurPtr) {
 
 LLLexer::LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &Err,
                  LLVMContext &C)
-    : CurBuf(StartBuf), ErrorInfo(Err), SM(SM), Context(C), APFloatVal(0.0),
-      IgnoreColonInIdentifiers(false) {
+    : CurBuf(StartBuf), ErrorInfo(Err), SM(SM), Context(C) {
   CurPtr = CurBuf.begin();
 }
 
@@ -799,7 +798,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(versions);
   KEYWORD(memProf);
   KEYWORD(notcold);
-  KEYWORD(notcoldandcold);
 
 #undef KEYWORD
 

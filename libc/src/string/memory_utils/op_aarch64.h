@@ -30,11 +30,10 @@ static inline constexpr bool kNeon = LLVM_LIBC_IS_DEFINED(__ARM_NEON);
 
 namespace neon {
 
-template <size_t Size> struct BzeroCacheLine {
-  static constexpr size_t SIZE = Size;
+struct BzeroCacheLine {
+  static constexpr size_t SIZE = 64;
 
   LIBC_INLINE static void block(Ptr dst, uint8_t) {
-    static_assert(Size == 64);
 #if __SIZEOF_POINTER__ == 4
     asm("dc zva, %w[dst]" : : [dst] "r"(dst) : "memory");
 #else
@@ -43,15 +42,13 @@ template <size_t Size> struct BzeroCacheLine {
   }
 
   LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
     size_t offset = 0;
     do {
       block(dst + offset, value);
       offset += SIZE;
     } while (offset < count - SIZE);
     // Unaligned store, we can't use 'dc zva' here.
-    static constexpr size_t kMaxSize = kNeon ? 16 : 8;
-    generic::Memset<Size, kMaxSize>::tail(dst, value, count);
+    generic::Memset<uint8x64_t>::tail(dst, value, count);
   }
 };
 

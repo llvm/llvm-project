@@ -748,7 +748,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
       Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
       !(Current.MacroParent && Previous.MacroParent) &&
-      (Current.isNot(TT_LineComment) || Previous.is(BK_BracedInit))) {
+      (Current.isNot(TT_LineComment) ||
+       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen))) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
   }
@@ -1125,8 +1126,15 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
            Style.IndentWidth;
   }
 
-  if (NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block))
-    return Current.NestingLevel == 0 ? State.FirstIndent : CurrentState.Indent;
+  if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
+      (Style.isVerilog() && Keywords.isVerilogBegin(*NextNonComment))) {
+    if (Current.NestingLevel == 0 ||
+        (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
+         State.NextToken->is(TT_LambdaLBrace))) {
+      return State.FirstIndent;
+    }
+    return CurrentState.Indent;
+  }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
        (Current.is(tok::greater) &&
         (Style.Language == FormatStyle::LK_Proto ||
@@ -1659,10 +1667,14 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     if (Current.opensBlockOrBlockTypeList(Style)) {
       NewIndent = Style.IndentWidth +
                   std::min(State.Column, CurrentState.NestedBlockIndent);
+    } else if (Current.is(tok::l_brace)) {
+      NewIndent =
+          CurrentState.LastSpace + Style.BracedInitializerIndentWidth.value_or(
+                                       Style.ContinuationIndentWidth);
     } else {
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }
-    const FormatToken *NextNoComment = Current.getNextNonComment();
+    const FormatToken *NextNonComment = Current.getNextNonComment();
     bool EndsInComma = Current.MatchingParen &&
                        Current.MatchingParen->Previous &&
                        Current.MatchingParen->Previous->is(tok::comma);
@@ -1670,9 +1682,9 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
                       Style.Language == FormatStyle::LK_Proto ||
                       Style.Language == FormatStyle::LK_TextProto ||
                       !Style.BinPackArguments ||
-                      (NextNoComment &&
-                       NextNoComment->isOneOf(TT_DesignatedInitializerPeriod,
-                                              TT_DesignatedInitializerLSquare));
+                      (NextNonComment && NextNonComment->isOneOf(
+                                             TT_DesignatedInitializerPeriod,
+                                             TT_DesignatedInitializerLSquare));
     BreakBeforeParameter = EndsInComma;
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);
@@ -1830,6 +1842,10 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
 }
 
 void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
+  if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
+      State.NextToken->is(TT_LambdaLBrace)) {
+    State.Stack.back().NestedBlockIndent = State.FirstIndent;
+  }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;
   // ObjC block sometimes follow special indentation rules.
   unsigned NewIndent =

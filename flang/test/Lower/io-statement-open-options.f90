@@ -15,6 +15,6 @@ subroutine test_convert_specifier(unit)
   close(unit)
 end subroutine
 
-! CHECK: fir.global linkonce @[[be_str_name]] constant : !fir.char<1,10> {
+! CHECK: fir.global internal @[[be_str_name]] constant : !fir.char<1,10> {
 ! CHECK: %[[be_str_lit:.*]] = fir.string_lit "BIG_ENDIAN"(10) : !fir.char<1,10>
 ! CHECK: fir.has_value %[[be_str_lit]] : !fir.char<1,10>

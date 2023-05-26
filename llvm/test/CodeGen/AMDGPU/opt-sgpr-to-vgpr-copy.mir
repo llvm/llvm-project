@@ -97,8 +97,7 @@ body:             |
   ; GCN-NEXT:   [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[S_LOAD_DWORDX2_IMM1]].sub0, [[REG_SEQUENCE]].sub0, implicit-def $vcc, implicit $exec
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_LOAD_DWORDX2_IMM1]].sub1
   ; GCN-NEXT:   [[V_ADDC_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADDC_U32_e32 0, [[COPY3]], implicit-def $vcc, implicit $vcc, implicit $exec
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY killed [[V_ADD_CO_U32_e32_]], implicit $exec
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[COPY4]], %subreg.sub0, killed [[V_ADDC_U32_e32_]], %subreg.sub1
+  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_ADD_CO_U32_e32_]], %subreg.sub0, killed [[V_ADDC_U32_e32_]], %subreg.sub1
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
   ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
@@ -374,8 +373,7 @@ body:             |
   ; GCN-NEXT:   [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[S_LOAD_DWORDX2_IMM1]].sub0, [[REG_SEQUENCE]].sub0, implicit-def $vcc, implicit $exec
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_LOAD_DWORDX2_IMM1]].sub1
   ; GCN-NEXT:   [[V_ADDC_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADDC_U32_e32 0, [[COPY3]], implicit-def $vcc, implicit $vcc, implicit $exec
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY killed [[V_ADD_CO_U32_e32_]], implicit $exec
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[COPY4]], %subreg.sub0, killed [[V_ADDC_U32_e32_]], %subreg.sub1
+  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_ADD_CO_U32_e32_]], %subreg.sub0, killed [[V_ADDC_U32_e32_]], %subreg.sub1
   ; GCN-NEXT:   [[V_CMP_LT_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_U32_e64 killed [[REG_SEQUENCE1]].sub0, 12, implicit $exec
   ; GCN-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_LT_U32_e64_]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1

@@ -143,6 +143,15 @@ llvm.func @bitreverse_test(%arg0: i32, %arg1: vector<8xi32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @byteswap_test
+llvm.func @byteswap_test(%arg0: i32, %arg1: vector<8xi32>) {
+  // CHECK: call i32 @llvm.bswap.i32
+  "llvm.intr.bswap"(%arg0) : (i32) -> i32
+  // CHECK: call <8 x i32> @llvm.bswap.v8i32
+  "llvm.intr.bswap"(%arg1) : (vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
 // CHECK-LABEL: @ctlz_test
 llvm.func @ctlz_test(%arg0: i32, %arg1: vector<8xi32>) {
   %i1 = llvm.mlir.constant(false) : i1
@@ -169,6 +178,24 @@ llvm.func @ctpop_test(%arg0: i32, %arg1: vector<8xi32>) {
   "llvm.intr.ctpop"(%arg0) : (i32) -> i32
   // CHECK: call <8 x i32> @llvm.ctpop.v8i32
   "llvm.intr.ctpop"(%arg1) : (vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @fshl_test
+llvm.func @fshl_test(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: vector<8xi32>, %arg4: vector<8xi32>, %arg5: vector<8xi32>) {
+  // CHECK: call i32 @llvm.fshl.i32
+  "llvm.intr.fshl"(%arg0, %arg1, %arg2) : (i32, i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.fshl.v8i32
+  "llvm.intr.fshl"(%arg3, %arg4, %arg5) : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @fshr_test
+llvm.func @fshr_test(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: vector<8xi32>, %arg4: vector<8xi32>, %arg5: vector<8xi32>) {
+  // CHECK: call i32 @llvm.fshr.i32
+  "llvm.intr.fshr"(%arg0, %arg1, %arg2) : (i32, i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.fshr.v8i32
+  "llvm.intr.fshr"(%arg3, %arg4, %arg5) : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   llvm.return
 }
 
@@ -347,6 +374,17 @@ llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr<f32>, %mask: vector
   llvm.return
 }
 
+// CHECK-LABEL: @trap_intrinsics
+llvm.func @trap_intrinsics() {
+  // CHECK: call void @llvm.trap()
+  "llvm.intr.trap"() : () -> ()
+  // CHECK: call void @llvm.debugtrap()
+  "llvm.intr.debugtrap"() : () -> ()
+  // CHECK: call void @llvm.ubsantrap(i8 1)
+  "llvm.intr.ubsantrap"() {failureKind = 1 : i8} : () -> ()
+  llvm.return
+}
+
 // CHECK-LABEL: @memcpy_test
 llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
   %i1 = llvm.mlir.constant(false) : i1
@@ -425,6 +463,83 @@ llvm.func @umul_with_overflow_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>,
   "llvm.intr.umul.with.overflow"(%arg0, %arg1) : (i32, i32) -> !llvm.struct<(i32, i1)>
   // CHECK: call { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32
   "llvm.intr.umul.with.overflow"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> !llvm.struct<(vector<8xi32>, vector<8xi1>)>
+  llvm.return
+}
+
+// CHECK-LABEL: @is_constant
+llvm.func @is_constant(%arg0: i32) {
+  // CHECK: call i1 @llvm.is.constant.i32(i32 %{{.*}})
+  %0 = "llvm.intr.is.constant"(%arg0) : (i32) -> i1
+  llvm.return
+}
+
+// CHECK-LABEL: @expect
+llvm.func @expect(%arg0: i32) {
+  %0 = llvm.mlir.constant(42 : i32) : i32
+  // CHECK: call i32 @llvm.expect.i32(i32 %{{.*}}, i32 42)
+  %1 = llvm.intr.expect %arg0, %0 : i32
+  llvm.return
+}
+
+// CHECK-LABEL: @expect_with_probability
+llvm.func @expect_with_probability(%arg0: i16) {
+  %0 = llvm.mlir.constant(42 : i16) : i16
+  // CHECK: call i16 @llvm.expect.with.probability.i16(i16 %{{.*}}, i16 42, double 5.000000e-01)
+  %1 = llvm.intr.expect.with.probability %arg0, %0, 5.000000e-01 : i16
+  llvm.return
+}
+
+// CHECK-LABEL: @sadd_sat_test
+llvm.func @sadd_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.sadd.sat.i32
+  "llvm.intr.sadd.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.sadd.sat.v8i32
+  "llvm.intr.sadd.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @uadd_sat_test
+llvm.func @uadd_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.uadd.sat.i32
+  "llvm.intr.uadd.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.uadd.sat.v8i32
+  "llvm.intr.uadd.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @ssub_sat_test
+llvm.func @ssub_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.ssub.sat.i32
+  "llvm.intr.ssub.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.ssub.sat.v8i32
+  "llvm.intr.ssub.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @usub_sat_test
+llvm.func @usub_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.usub.sat.i32
+  "llvm.intr.usub.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.usub.sat.v8i32
+  "llvm.intr.usub.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @sshl_sat_test
+llvm.func @sshl_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.sshl.sat.i32
+  "llvm.intr.sshl.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.sshl.sat.v8i32
+  "llvm.intr.sshl.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @ushl_sat_test
+llvm.func @ushl_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.ushl.sat.i32
+  "llvm.intr.ushl.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.ushl.sat.v8i32
+  "llvm.intr.ushl.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   llvm.return
 }
 
@@ -761,6 +876,9 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, i32 immarg, <7 x i1>)
 // CHECK-DAG: declare <7 x float> @llvm.masked.expandload.v7f32(ptr nocapture, <7 x i1>, <7 x float>)
 // CHECK-DAG: declare void @llvm.masked.compressstore.v7f32(<7 x float>, ptr nocapture, <7 x i1>)
+// CHECK-DAG: declare void @llvm.trap()
+// CHECK-DAG: declare void @llvm.debugtrap()
+// CHECK-DAG: declare void @llvm.ubsantrap(i8 immarg)
 // CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
 // CHECK-DAG: declare void @llvm.memcpy.inline.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64 immarg, i1 immarg)
 // CHECK-DAG: declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
@@ -773,6 +891,21 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.usub.with.overflow.v8i32(<8 x i32>, <8 x i32>)
 // CHECK-DAG: declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.sadd.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.sadd.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.uadd.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.uadd.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.ssub.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.ssub.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.usub.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.usub.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.sshl.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.sshl.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.ushl.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.ushl.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i1 @llvm.is.constant.i32(i32)
+// CHECK-DAG: declare i32 @llvm.expect.i32(i32, i32)
+// CHECK-DAG: declare i16 @llvm.expect.with.probability.i16(i16, i16, double immarg)
 // CHECK-DAG: declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 // CHECK-DAG: declare ptr @llvm.coro.begin(token, ptr writeonly)
 // CHECK-DAG: declare i64 @llvm.coro.size.i64()

@@ -1,4 +1,4 @@
-//===-- RISCVELFStreamer.cpp - RISCV ELF Target Streamer Methods ----------===//
+//===-- RISCVELFStreamer.cpp - RISC-V ELF Target Streamer Methods ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides RISCV specific target streamer methods.
+// This file provides RISC-V specific target streamer methods.
 //
 //===----------------------------------------------------------------------===//
 
@@ -103,6 +103,7 @@ void RISCVTargetELFStreamer::finish() {
     EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
     break;
   case RISCVABI::ABI_ILP32E:
+  case RISCVABI::ABI_LP64E:
     EFlags |= ELF::EF_RISCV_RVE;
     break;
   case RISCVABI::ABI_Unknown:

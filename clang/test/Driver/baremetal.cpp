@@ -15,7 +15,7 @@
 // CHECK-V6M-C-SAME: "-T" "semihosted.lds" "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
 // CHECK-V6M-C-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
 // CHECK-V6M-C-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-V6M-C-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "-o" "{{.*}}.tmp.out"
+// CHECK-V6M-C-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "--target2=rel" "-o" "{{.*}}.tmp.out"
 
 // RUN: %clang %s -### --target=armv6m-none-eabi -nostdlibinc -nobuiltininc 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm | FileCheck --check-prefix=CHECK-V6M-LIBINC %s
@@ -42,7 +42,7 @@
 // CHECK-V6M-DEFAULTCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
 // CHECK-V6M-DEFAULTCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-V6M-DEFAULTCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-V6M-DEFAULTCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "-o" "a.out"
+// CHECK-V6M-DEFAULTCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "--target2=rel" "-o" "a.out"
 
 // RUN: %clangxx %s -### --target=armv6m-none-eabi -stdlib=libc++ 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm | FileCheck --check-prefix=CHECK-V6M-LIBCXX %s
@@ -53,7 +53,7 @@
 // CHECK-V6M-LIBCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
 // CHECK-V6M-LIBCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-V6M-LIBCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-V6M-LIBCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "-o" "a.out"
+// CHECK-V6M-LIBCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "--target2=rel" "-o" "a.out"
 
 // RUN: %clangxx %s -### --target=armv6m-none-eabi 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
@@ -66,7 +66,7 @@
 // CHECK-V6M-LIBSTDCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
 // CHECK-V6M-LIBSTDCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-V6M-LIBSTDCXX-SAME: "-lstdc++" "-lsupc++" "-lunwind"
-// CHECK-V6M-LIBSTDCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "-o" "a.out"
+// CHECK-V6M-LIBSTDCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "--target2=rel" "-o" "a.out"
 
 // RUN: %clangxx %s -### --target=armv6m-none-eabi 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \

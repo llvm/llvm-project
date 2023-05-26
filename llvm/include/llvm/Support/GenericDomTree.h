@@ -227,7 +227,7 @@ template <typename NodeT> struct DomTreeNodeTraits {
   using NodeType = NodeT;
   using NodePtr = NodeT *;
   using ParentPtr = decltype(std::declval<NodePtr>()->getParent());
-  static_assert(std::is_pointer<ParentPtr>::value,
+  static_assert(std::is_pointer_v<ParentPtr>,
                 "Currently NodeT's parent must be a pointer type");
   using ParentType = std::remove_pointer_t<ParentPtr>;
 
@@ -242,13 +242,13 @@ template <typename NodeT> struct DomTreeNodeTraits {
 template <typename NodeT, bool IsPostDom>
 class DominatorTreeBase {
  public:
-  static_assert(std::is_pointer<typename GraphTraits<NodeT *>::NodeRef>::value,
+  static_assert(std::is_pointer_v<typename GraphTraits<NodeT *>::NodeRef>,
                 "Currently DominatorTreeBase supports only pointer nodes");
   using NodeTrait = DomTreeNodeTraits<NodeT>;
   using NodeType = typename NodeTrait::NodeType;
   using NodePtr = typename NodeTrait::NodePtr;
   using ParentPtr = typename NodeTrait::ParentPtr;
-  static_assert(std::is_pointer<ParentPtr>::value,
+  static_assert(std::is_pointer_v<ParentPtr>,
                 "Currently NodeT's parent must be a pointer type");
   using ParentType = std::remove_pointer_t<ParentPtr>;
   static constexpr bool IsPostDominator = IsPostDom;

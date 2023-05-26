@@ -20,7 +20,7 @@ define void @test_basic() #0 !dbg !4 {
 ; ARM-linux-NEXT: mov     r5, sp
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB0_2
+; ARM-linux-NEXT: bls     .LBB0_2
 
 ; ARM-linux:      mov     r4, #48
 ; ARM-linux-NEXT: mov     r5, #0

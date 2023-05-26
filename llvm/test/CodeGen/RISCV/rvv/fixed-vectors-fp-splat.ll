@@ -245,10 +245,10 @@ define void @splat_negzero_v4f32(ptr %x) {
 define void @splat_negzero_v2f64(ptr %x) {
 ; CHECK-RV32-LABEL: splat_negzero_v2f64:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    fcvt.d.w ft0, zero
-; CHECK-RV32-NEXT:    fneg.d ft0, ft0
+; CHECK-RV32-NEXT:    fcvt.d.w fa5, zero
+; CHECK-RV32-NEXT:    fneg.d fa5, fa5
 ; CHECK-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-RV32-NEXT:    vfmv.v.f v8, ft0
+; CHECK-RV32-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-RV32-NEXT:    vse64.v v8, (a0)
 ; CHECK-RV32-NEXT:    ret
 ;
@@ -317,10 +317,10 @@ define void @splat_negzero_v8f32(ptr %x) {
 define void @splat_negzero_v4f64(ptr %x) {
 ; RV32-LMULMAX2-LABEL: splat_negzero_v4f64:
 ; RV32-LMULMAX2:       # %bb.0:
-; RV32-LMULMAX2-NEXT:    fcvt.d.w ft0, zero
-; RV32-LMULMAX2-NEXT:    fneg.d ft0, ft0
+; RV32-LMULMAX2-NEXT:    fcvt.d.w fa5, zero
+; RV32-LMULMAX2-NEXT:    fneg.d fa5, fa5
 ; RV32-LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-LMULMAX2-NEXT:    vfmv.v.f v8, ft0
+; RV32-LMULMAX2-NEXT:    vfmv.v.f v8, fa5
 ; RV32-LMULMAX2-NEXT:    vse64.v v8, (a0)
 ; RV32-LMULMAX2-NEXT:    ret
 ;
@@ -335,10 +335,10 @@ define void @splat_negzero_v4f64(ptr %x) {
 ;
 ; RV32-LMULMAX1-LABEL: splat_negzero_v4f64:
 ; RV32-LMULMAX1:       # %bb.0:
-; RV32-LMULMAX1-NEXT:    fcvt.d.w ft0, zero
-; RV32-LMULMAX1-NEXT:    fneg.d ft0, ft0
+; RV32-LMULMAX1-NEXT:    fcvt.d.w fa5, zero
+; RV32-LMULMAX1-NEXT:    fneg.d fa5, fa5
 ; RV32-LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-LMULMAX1-NEXT:    vfmv.v.f v8, ft0
+; RV32-LMULMAX1-NEXT:    vfmv.v.f v8, fa5
 ; RV32-LMULMAX1-NEXT:    addi a1, a0, 16
 ; RV32-LMULMAX1-NEXT:    vse64.v v8, (a1)
 ; RV32-LMULMAX1-NEXT:    vse64.v v8, (a0)

@@ -14,7 +14,7 @@ define void @foo() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([4 x [4 x i32]], ptr @bar, i64 0, i64 3, i64 2), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[ADD277]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> undef, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i32> [[TMP6]], <i32 6, i32 6, i32 6, i32 6>

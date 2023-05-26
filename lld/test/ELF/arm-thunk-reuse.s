@@ -4,6 +4,10 @@
 # RUN: ld.lld -pie -T %t/lds %t/a.o -o %t/a
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/a | FileCheck %s
 
+# RUN: llvm-mc -filetype=obj -triple=armv7eb-a-none-eabi --arm-add-build-attributes -mcpu=cortex-a8 %t/a.s -o %t/a.o
+# RUN: ld.lld -pie -T %t/lds %t/a.o -o %t/a
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/a | FileCheck %s
+
 ## We create a thunk for dest.
 # CHECK-LABEL: <mid>:
 # CHECK-NEXT:   2010004:     b       0x2010008 <__ARMV7PILongThunk_dest>

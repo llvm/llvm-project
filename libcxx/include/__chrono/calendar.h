@@ -31,7 +31,7 @@ using local_time  = time_point<local_t, Duration>;
 using local_seconds = local_time<seconds>;
 using local_days    = local_time<days>;
 
-struct last_spec { _LIBCPP_HIDE_FROM_ABI explicit last_spec() = default; };
+struct last_spec { explicit last_spec() = default; };
 inline constexpr last_spec last{};
 
 

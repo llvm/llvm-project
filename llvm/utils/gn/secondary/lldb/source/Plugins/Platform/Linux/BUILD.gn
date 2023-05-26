@@ -15,8 +15,5 @@ static_library("Linux") {
 
   # Reaches into Plugins/Platform/POSIX.
   include_dirs = [ "//lldb/source" ]
-  sources = [
-    "LinuxSignals.cpp",
-    "PlatformLinux.cpp",
-  ]
+  sources = [ "PlatformLinux.cpp" ]
 }

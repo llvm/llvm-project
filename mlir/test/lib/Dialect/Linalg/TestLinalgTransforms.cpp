@@ -39,7 +39,7 @@ struct TestLinalgTransforms
 
   void getDependentDialects(DialectRegistry &registry) const override {
     // clang-format off
-    registry.insert<AffineDialect,
+    registry.insert<affine::AffineDialect,
                     bufferization::BufferizationDialect,
                     memref::MemRefDialect,
                     scf::SCFDialect,

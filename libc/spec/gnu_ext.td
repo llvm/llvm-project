@@ -32,7 +32,7 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
         FunctionSpec<"exp10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
       ]
   >;
- 
+
   HeaderSpec Sched = HeaderSpec<
       "sched.h",
       [], // Macros
@@ -51,13 +51,18 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
         >,
       ]
   >;
- 
+
   HeaderSpec String = HeaderSpec<
       "string.h",
       [], // Macros
       [], // Types
       [], // Enumerations
-      [ 
+      [
+         FunctionSpec<
+            "memmem",
+            RetValSpec<VoidPtr>,
+            [ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>]
+        >,
         FunctionSpec<
             "memrchr",
             RetValSpec<VoidPtr>,
@@ -72,6 +77,11 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
             "strcasestr",
             RetValSpec<CharPtr>,
             [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
+        >,
+        FunctionSpec<
+            "strchrnul",
+            RetValSpec<CharPtr>,
+            [ArgSpec<ConstCharPtr>, ArgSpec<IntType>]
         >,
       ]
   >;

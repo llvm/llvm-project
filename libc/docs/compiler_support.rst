@@ -5,7 +5,7 @@ Compiler Support
 ================
 
 ``LLVM libc`` compiles from both ``Clang`` and ``GCC`` but for maximum
-performance we recommand using ``Clang``.
+performance we recommend using ``Clang``.
 
 Indeed, some memory function implementations rely on `compiler intrinsics`__
 that are not currently available in ``GCC``.

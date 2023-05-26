@@ -14,8 +14,8 @@ define <4 x double> @PR60649() {
 ; CHECK:       end:
 ; CHECK-NEXT:    [[T0:%.*]] = phi <4 x double> [ zeroinitializer, [[ENTRY:%.*]] ], [ zeroinitializer, [[UNREACHABLE:%.*]] ]
 ; CHECK-NEXT:    [[T1:%.*]] = phi <4 x double> [ zeroinitializer, [[ENTRY]] ], [ zeroinitializer, [[UNREACHABLE]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x double> [[T0]], <4 x double> [[T0]], <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[T0]], <4 x double> [[T0]], <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x double> [[T0]], <4 x double> [[T0]], <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[T0]], <4 x double> [[T0]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fdiv <4 x double> [[TMP1]], <double 0.000000e+00, double 0.000000e+00, double undef, double undef>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x double> [[TMP0]], <double 0.000000e+00, double 0.000000e+00, double undef, double undef>
 ; CHECK-NEXT:    [[T5:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>

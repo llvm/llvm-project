@@ -20,6 +20,8 @@ enum Fixups {
   fixup_riscv_hi20 = FirstTargetFixupKind,
   // 12-bit fixup corresponding to %lo(foo) for instructions like addi
   fixup_riscv_lo12_i,
+  // 12-bit fixup corresponding to foo-bar for instructions like addi
+  fixup_riscv_12_i,
   // 12-bit fixup corresponding to %lo(foo) for the S-type store instructions
   fixup_riscv_lo12_s,
   // 20-bit fixup corresponding to %pcrel_hi(foo) for instructions like auipc

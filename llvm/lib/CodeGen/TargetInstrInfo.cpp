@@ -1343,11 +1343,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     if (Reg == DestReg)
       return ParamLoadedValue(*DestSrc->Source, Expr);
 
-    // Cases where super- or sub-registers needs to be described should
-    // be handled by the target's hook implementation.
-    assert(!TRI->isSuperOrSubRegisterEq(Reg, DestReg) &&
-           "TargetInstrInfo::describeLoadedValue can't describe super- or "
-           "sub-regs for copy instructions");
+    // If the target's hook couldn't describe this copy, give up.
     return std::nullopt;
   } else if (auto RegImm = isAddImmediate(MI, Reg)) {
     Register SrcReg = RegImm->Reg;
@@ -1579,10 +1575,6 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
     // Just go right to the target implementation.
     return getOutliningTypeImpl(MIT, Flags);
 
-  // Don't allow instructions that don't materialize to impact analysis.
-  if (MI.isMetaInstruction())
-    return outliner::InstrType::Invisible;
-
   // Be conservative about inline assembly.
   if (MI.isInlineAsm())
     return outliner::InstrType::Illegal;
@@ -1590,6 +1582,21 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
   // Labels generally can't safely be outlined.
   if (MI.isLabel())
     return outliner::InstrType::Illegal;
+
+  // Don't let debug instructions impact analysis.
+  if (MI.isDebugInstr())
+    return outliner::InstrType::Invisible;
+
+  // Some other special cases.
+  switch (MI.getOpcode()) {
+    case TargetOpcode::IMPLICIT_DEF:
+    case TargetOpcode::KILL:
+    case TargetOpcode::LIFETIME_START:
+    case TargetOpcode::LIFETIME_END:
+      return outliner::InstrType::Invisible;
+    default:
+      break;
+  }
 
   // Is this a terminator for a basic block?
   if (MI.isTerminator()) {
@@ -1640,10 +1647,25 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
   // Some instrumentations create special TargetOpcode at the start which
   // expands to special code sequences which must be present.
   auto First = MBB.getFirstNonDebugInstr();
-  if (First != MBB.end() &&
-      (First->getOpcode() == TargetOpcode::FENTRY_CALL ||
-       First->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER))
+  if (First == MBB.end())
+    return true;
+
+  if (First->getOpcode() == TargetOpcode::FENTRY_CALL ||
+      First->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER)
     return false;
 
+  // Some instrumentations create special pseudo-instructions at or just before
+  // the end that must be present.
+  auto Last = MBB.getLastNonDebugInstr();
+  if (Last->getOpcode() == TargetOpcode::PATCHABLE_RET ||
+      Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
+    return false;
+
+  if (Last != First && Last->isReturn()) {
+    --Last;
+    if (Last->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_EXIT ||
+        Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
+      return false;
+  }
   return true;
 }

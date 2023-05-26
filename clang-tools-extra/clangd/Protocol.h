@@ -238,6 +238,8 @@ struct ReferenceLocation : Location {
 llvm::json::Value toJSON(const ReferenceLocation &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ReferenceLocation &);
 
+using ChangeAnnotationIdentifier = std::string;
+// A combination of a LSP standard TextEdit and AnnotatedTextEdit.
 struct TextEdit {
   /// The range of the text document to be manipulated. To insert
   /// text into a document create a range where start === end.
@@ -246,13 +248,45 @@ struct TextEdit {
   /// The string to be inserted. For delete operations use an
   /// empty string.
   std::string newText;
+
+  /// The actual annotation identifier (optional)
+  /// If empty, then this field is nullopt.
+  ChangeAnnotationIdentifier annotationId = "";
 };
 inline bool operator==(const TextEdit &L, const TextEdit &R) {
-  return std::tie(L.newText, L.range) == std::tie(R.newText, R.range);
+  return std::tie(L.newText, L.range, L.annotationId) ==
+         std::tie(R.newText, R.range, L.annotationId);
 }
 bool fromJSON(const llvm::json::Value &, TextEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const TextEdit &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
+
+struct ChangeAnnotation {
+  /// A human-readable string describing the actual change. The string
+  /// is rendered prominent in the user interface.
+  std::string label;
+
+  /// A flag which indicates that user confirmation is needed
+  /// before applying the change.
+  std::optional<bool> needsConfirmation;
+
+  /// A human-readable string which is rendered less prominent in
+  /// the user interface.
+  std::string description;
+};
+bool fromJSON(const llvm::json::Value &, ChangeAnnotation &, llvm::json::Path);
+llvm::json::Value toJSON(const ChangeAnnotation &);
+
+struct TextDocumentEdit {
+  /// The text document to change.
+  VersionedTextDocumentIdentifier textDocument;
+
+	/// The edits to be applied.
+  /// FIXME: support the AnnotatedTextEdit variant.
+  std::vector<TextEdit> edits;
+};
+bool fromJSON(const llvm::json::Value &, TextDocumentEdit &, llvm::json::Path);
+llvm::json::Value toJSON(const TextDocumentEdit &);
 
 struct TextDocumentItem {
   /// The text document's URI.
@@ -516,6 +550,16 @@ struct ClientCapabilities {
   /// Whether the client implementation supports a refresh request sent from the
   /// server to the client.
   bool SemanticTokenRefreshSupport = false;
+
+  /// The client supports versioned document changes for WorkspaceEdit.
+  bool DocumentChanges = false;
+  
+  /// The client supports change annotations on text edits,
+  bool ChangeAnnotation = false;
+
+  /// Whether the client supports the textDocument/inactiveRegions
+  /// notification. This is a clangd extension.
+  bool InactiveRegions = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
               llvm::json::Path);
@@ -966,12 +1010,22 @@ struct CodeActionParams {
 };
 bool fromJSON(const llvm::json::Value &, CodeActionParams &, llvm::json::Path);
 
+/// The edit should either provide changes or documentChanges. If the client
+/// can handle versioned document edits and if documentChanges are present,
+/// the latter are preferred over changes.
 struct WorkspaceEdit {
   /// Holds changes to existing resources.
-  std::map<std::string, std::vector<TextEdit>> changes;
-
-  /// Note: "documentChanges" is not currently used because currently there is
-  /// no support for versioned edits.
+  std::optional<std::map<std::string, std::vector<TextEdit>>> changes;
+  /// Versioned document edits.
+  ///
+  /// If a client neither supports `documentChanges` nor
+	/// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
+	/// using the `changes` property are supported.
+  std::optional<std::vector<TextDocumentEdit>> documentChanges;
+  
+  /// A map of change annotations that can be referenced in
+	/// AnnotatedTextEdit.
+  std::map<std::string, ChangeAnnotation> changeAnnotations;
 };
 bool fromJSON(const llvm::json::Value &, WorkspaceEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const WorkspaceEdit &WE);
@@ -1438,7 +1492,7 @@ struct TypeHierarchyItem {
   /// Used to resolve a client provided item back.
   struct ResolveParams {
     SymbolID symbolID;
-    /// None means parents aren't resolved and empty is no parents.
+    /// std::nullopt means parents aren't resolved and empty is no parents.
     std::optional<std::vector<ResolveParams>> parents;
   };
   /// A data entry field that is preserved between a type hierarchy prepare and
@@ -1564,8 +1618,8 @@ struct InlayHintsParams {
 
   /// The visible document range for which inlay hints should be computed.
   ///
-  /// None is a clangd extension, which hints for computing hints on the whole
-  /// file.
+  /// std::nullopt is a clangd extension, which hints for computing hints on the
+  /// whole file.
   std::optional<Range> range;
 };
 bool fromJSON(const llvm::json::Value &, InlayHintsParams &, llvm::json::Path);
@@ -1735,6 +1789,16 @@ struct SemanticTokensOrDelta {
   std::optional<std::vector<SemanticToken>> tokens; // encoded as integer array
 };
 llvm::json::Value toJSON(const SemanticTokensOrDelta &);
+
+/// Parameters for the inactive regions (server-side) push notification.
+/// This is a clangd extension.
+struct InactiveRegionsParams {
+  /// The textdocument these inactive regions belong to.
+  TextDocumentIdentifier TextDocument;
+  /// The inactive regions that should be sent.
+  std::vector<Range> InactiveRegions;
+};
+llvm::json::Value toJSON(const InactiveRegionsParams &InactiveRegions);
 
 struct SelectionRangeParams {
   /// The text document.

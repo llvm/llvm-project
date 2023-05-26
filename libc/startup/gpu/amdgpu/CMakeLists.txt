@@ -4,6 +4,9 @@ add_startup_object(
     start.cpp
   DEPENDS
     libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+    libc.src.stdlib.exit
+    libc.src.stdlib.atexit
   COMPILE_OPTIONS
     -ffreestanding # To avoid compiler warnings about calling the main function.
     -fno-builtin
@@ -22,4 +25,5 @@ target_link_libraries(
   "-mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}"
   "--target=${LIBC_GPU_TARGET_TRIPLE}"
   "-flto"
+  "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0"
 )

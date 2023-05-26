@@ -32,12 +32,19 @@ bool llvm::isGuardAsWidenableBranch(const User *U) {
   if (!parseWidenableBranch(U, Condition, WidenableCondition, GuardedBB,
                             DeoptBB))
     return false;
-  for (auto &Insn : *DeoptBB) {
-    if (match(&Insn, m_Intrinsic<Intrinsic::experimental_deoptimize>()))
-      return true;
-    if (Insn.mayHaveSideEffects())
+  SmallPtrSet<const BasicBlock *, 2> Visited;
+  Visited.insert(DeoptBB);
+  do {
+    for (auto &Insn : *DeoptBB) {
+      if (match(&Insn, m_Intrinsic<Intrinsic::experimental_deoptimize>()))
+        return true;
+      if (Insn.mayHaveSideEffects())
+        return false;
+    }
+    DeoptBB = DeoptBB->getUniqueSuccessor();
+    if (!DeoptBB)
       return false;
-  }
+  } while (Visited.insert(DeoptBB).second);
   return false;
 }
 

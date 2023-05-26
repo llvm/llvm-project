@@ -123,18 +123,34 @@ func.func @to_unsigned_signed_dot_acc(%arg0: vector<4xi8>, %arg1: vector<4xi8>, 
   return %red : i32
 }
 
-// -----
-// Negative tests.
-
-// CHECK-LABEL: func.func @too_short
-//  CHECK-SAME:   ([[ARG0:%.+]]: vector<3xi8>, [[ARG1:%.+]]: vector<3xi8>)
-//  CHECK:        [[RED:%.+]] = vector.reduction
-//  CHECK-NEXT:   return [[RED]] : i32
-func.func @too_short(%arg0: vector<3xi8>, %arg1: vector<3xi8>) -> i32 {
+// CHECK-LABEL: func.func @to_sdot_vector3
+//  CHECK-SAME: (%[[ARG0:.+]]: vector<3xi8>, %[[ARG1:.+]]: vector<3xi8>)
+//       CHECK:   %[[ZERO:.+]] = spirv.Constant 0 : i8
+//       CHECK:   %[[LHS:.+]] = spirv.CompositeConstruct %[[ARG0]], %[[ZERO]] : (vector<3xi8>, i8) -> vector<4xi8>
+//       CHECK:   %[[RHS:.+]] = spirv.CompositeConstruct %[[ARG1]], %[[ZERO]] : (vector<3xi8>, i8) -> vector<4xi8>
+//       CHECK:   %[[SDOT:.+]] = spirv.SDot %[[LHS]], %[[RHS]] : (vector<4xi8>, vector<4xi8>) -> i32
+//       CHECK:   return %[[SDOT]]
+func.func @to_sdot_vector3(%arg0: vector<3xi8>, %arg1: vector<3xi8>) -> i32 {
   %lhs = arith.extsi %arg0 : vector<3xi8> to vector<3xi32>
   %rhs = arith.extsi %arg1 : vector<3xi8> to vector<3xi32>
   %mul = arith.muli %lhs, %rhs : vector<3xi32>
   %red = vector.reduction <add>, %mul : vector<3xi32> into i32
+  return %red : i32
+}
+
+// -----
+
+// Negative tests.
+
+// CHECK-LABEL: func.func @too_short
+//  CHECK-SAME:   ([[ARG0:%.+]]: vector<2xi8>, [[ARG1:%.+]]: vector<2xi8>)
+//  CHECK:        [[RED:%.+]] = vector.reduction
+//  CHECK-NEXT:   return [[RED]] : i32
+func.func @too_short(%arg0: vector<2xi8>, %arg1: vector<2xi8>) -> i32 {
+  %lhs = arith.extsi %arg0 : vector<2xi8> to vector<2xi32>
+  %rhs = arith.extsi %arg1 : vector<2xi8> to vector<2xi32>
+  %mul = arith.muli %lhs, %rhs : vector<2xi32>
+  %red = vector.reduction <add>, %mul : vector<2xi32> into i32
   return %red : i32
 }
 

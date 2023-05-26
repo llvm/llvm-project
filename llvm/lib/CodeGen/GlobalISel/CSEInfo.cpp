@@ -396,9 +396,10 @@ GISelInstProfileBuilder::addNodeIDReg(Register Reg) const {
     addNodeIDRegType(Ty);
 
   if (const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(Reg)) {
-    if (const auto *RB = RCOrRB.dyn_cast<const RegisterBank *>())
+    if (const auto *RB = dyn_cast_if_present<const RegisterBank *>(RCOrRB))
       addNodeIDRegType(RB);
-    else if (const auto *RC = RCOrRB.dyn_cast<const TargetRegisterClass *>())
+    else if (const auto *RC =
+                 dyn_cast_if_present<const TargetRegisterClass *>(RCOrRB))
       addNodeIDRegType(RC);
   }
   return *this;

@@ -67,7 +67,7 @@ struct __throw_with_nested<_Tp, _Up, false> {
 template <class _Tp>
 _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI void throw_with_nested(_Tp&& __t) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-  typedef typename decay<_Tp>::type _Up;
+  using _Up = __decay_t<_Tp>;
   static_assert(is_copy_constructible<_Up>::value, "type thrown must be CopyConstructible");
   __throw_with_nested<_Tp,
                       _Up,

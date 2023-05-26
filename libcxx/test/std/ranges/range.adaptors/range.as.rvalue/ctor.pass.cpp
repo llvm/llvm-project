@@ -13,6 +13,7 @@
 #include <cassert>
 #include <ranges>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 struct DefaultConstructibleView : std::ranges::view_base {

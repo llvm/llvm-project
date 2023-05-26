@@ -32,6 +32,13 @@ add_custom_target(libcxx-generate-escaped-output-table
         "${LIBCXX_SOURCE_DIR}/include/__format/escaped_output_table.h"
     COMMENT "Generate the escaped output header")
 
+add_custom_target(libcxx-generate-width-estimation-table
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${LIBCXX_SOURCE_DIR}/utils/generate_width_estimation_table.py"
+        "${LIBCXX_SOURCE_DIR}/include/__format/width_estimation_table.h"
+    COMMENT "Generate the width estimation header")
+
 add_custom_target(libcxx-generate-iwyu-mapping
     COMMAND
         "${Python3_EXECUTABLE}"
@@ -45,5 +52,6 @@ add_custom_target(libcxx-generate-files
             libcxx-generate-extended-grapheme-cluster-tables
             libcxx-generate-extended-grapheme-cluster-tests
             libcxx-generate-escaped-output-table
+            libcxx-generate-width-estimation-table
             libcxx-generate-iwyu-mapping
     COMMENT "Create all the auto-generated files in libc++ and its tests.")

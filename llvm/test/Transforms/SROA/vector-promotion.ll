@@ -518,13 +518,13 @@ define <4 x float> @test_subvec_memcpy(ptr %x, ptr %y, ptr %z, ptr %f, ptr %out)
 ; CHECK-LABEL: @test_subvec_memcpy(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_0_COPYLOAD:%.*]] = load <2 x float>, ptr [[X:%.*]], align 1
-; CHECK-NEXT:    [[A_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_0_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[A_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_0_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> [[A_0_VEC_EXPAND]], <4 x float> undef
 ; CHECK-NEXT:    [[A_4_COPYLOAD:%.*]] = load <2 x float>, ptr [[Y:%.*]], align 1
-; CHECK-NEXT:    [[A_4_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_4_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 undef>
+; CHECK-NEXT:    [[A_4_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_4_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 poison>
 ; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x float> [[A_4_VEC_EXPAND]], <4 x float> [[A_0_VECBLEND]]
 ; CHECK-NEXT:    [[A_8_COPYLOAD:%.*]] = load <2 x float>, ptr [[Z:%.*]], align 1
-; CHECK-NEXT:    [[A_8_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_8_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
+; CHECK-NEXT:    [[A_8_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_8_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
 ; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x float> [[A_8_VEC_EXPAND]], <4 x float> [[A_4_VECBLEND]]
 ; CHECK-NEXT:    [[A_12_COPYLOAD:%.*]] = load float, ptr [[F:%.*]], align 1
 ; CHECK-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float [[A_12_COPYLOAD]], i32 3
@@ -536,15 +536,15 @@ define <4 x float> @test_subvec_memcpy(ptr %x, ptr %y, ptr %z, ptr %f, ptr %out)
 ; DEBUG-NEXT:  entry:
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META232:![0-9]+]], metadata !DIExpression()), !dbg [[DBG237:![0-9]+]]
 ; DEBUG-NEXT:    [[A_0_COPYLOAD:%.*]] = load <2 x float>, ptr [[X:%.*]], align 1, !dbg [[DBG238:![0-9]+]]
-; DEBUG-NEXT:    [[A_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_0_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>, !dbg [[DBG238]]
+; DEBUG-NEXT:    [[A_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_0_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>, !dbg [[DBG238]]
 ; DEBUG-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> [[A_0_VEC_EXPAND]], <4 x float> undef, !dbg [[DBG238]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META233:![0-9]+]], metadata !DIExpression()), !dbg [[DBG239:![0-9]+]]
 ; DEBUG-NEXT:    [[A_4_COPYLOAD:%.*]] = load <2 x float>, ptr [[Y:%.*]], align 1, !dbg [[DBG240:![0-9]+]]
-; DEBUG-NEXT:    [[A_4_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_4_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 undef>, !dbg [[DBG240]]
+; DEBUG-NEXT:    [[A_4_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_4_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 poison>, !dbg [[DBG240]]
 ; DEBUG-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x float> [[A_4_VEC_EXPAND]], <4 x float> [[A_0_VECBLEND]], !dbg [[DBG240]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META234:![0-9]+]], metadata !DIExpression()), !dbg [[DBG241:![0-9]+]]
 ; DEBUG-NEXT:    [[A_8_COPYLOAD:%.*]] = load <2 x float>, ptr [[Z:%.*]], align 1, !dbg [[DBG242:![0-9]+]]
-; DEBUG-NEXT:    [[A_8_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_8_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>, !dbg [[DBG242]]
+; DEBUG-NEXT:    [[A_8_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_8_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>, !dbg [[DBG242]]
 ; DEBUG-NEXT:    [[A_8_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x float> [[A_8_VEC_EXPAND]], <4 x float> [[A_4_VECBLEND]], !dbg [[DBG242]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META235:![0-9]+]], metadata !DIExpression()), !dbg [[DBG243:![0-9]+]]
 ; DEBUG-NEXT:    [[A_12_COPYLOAD:%.*]] = load float, ptr [[F:%.*]], align 1, !dbg [[DBG244:![0-9]+]]

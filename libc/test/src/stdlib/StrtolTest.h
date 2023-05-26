@@ -313,6 +313,75 @@ struct StrtoTest : public __llvm_libc::testing::Test {
     ASSERT_EQ(func(letter_after_prefix, &str_end, 16), ReturnT(0xabc123));
     ASSERT_EQ(libc_errno, 0);
     EXPECT_EQ(str_end - letter_after_prefix, ptrdiff_t(8));
+
+    // These tests check what happens when the number passed is exactly the max
+    // value for the conversion.
+
+    // Max size for unsigned 32 bit numbers
+
+    const char *max_32_bit_value = "0xFFFFFFFF";
+    libc_errno = 0;
+    ASSERT_EQ(func(max_32_bit_value, &str_end, 0),
+              ((is_signed_v<ReturnT> && sizeof(ReturnT) == 4)
+                   ? T_MAX
+                   : ReturnT(0xFFFFFFFF)));
+    ASSERT_EQ(libc_errno, 0);
+    EXPECT_EQ(str_end - max_32_bit_value, ptrdiff_t(10));
+
+    const char *negative_max_32_bit_value = "-0xFFFFFFFF";
+    libc_errno = 0;
+    ASSERT_EQ(func(negative_max_32_bit_value, &str_end, 0),
+              ((is_signed_v<ReturnT> && sizeof(ReturnT) == 4)
+                   ? T_MIN
+                   : -ReturnT(0xFFFFFFFF)));
+    ASSERT_EQ(libc_errno, 0);
+    EXPECT_EQ(str_end - negative_max_32_bit_value, ptrdiff_t(11));
+
+    // Max size for signed 32 bit numbers
+
+    const char *max_31_bit_value = "0x7FFFFFFF";
+    libc_errno = 0;
+    ASSERT_EQ(func(max_31_bit_value, &str_end, 0), ReturnT(0x7FFFFFFF));
+    ASSERT_EQ(libc_errno, 0);
+    EXPECT_EQ(str_end - max_31_bit_value, ptrdiff_t(10));
+
+    const char *negative_max_31_bit_value = "-0x7FFFFFFF";
+    libc_errno = 0;
+    ASSERT_EQ(func(negative_max_31_bit_value, &str_end, 0),
+              -ReturnT(0x7FFFFFFF));
+    ASSERT_EQ(libc_errno, 0);
+    EXPECT_EQ(str_end - negative_max_31_bit_value, ptrdiff_t(11));
+
+    // Max size for unsigned 64 bit numbers
+
+    const char *max_64_bit_value = "0xFFFFFFFFFFFFFFFF";
+    libc_errno = 0;
+    ASSERT_EQ(func(max_64_bit_value, &str_end, 0),
+              (is_signed_v<ReturnT> ? T_MAX : ReturnT(0xFFFFFFFFFFFFFFFF)));
+    ASSERT_EQ(libc_errno, (is_signed_v<ReturnT> ? ERANGE : 0));
+    EXPECT_EQ(str_end - max_64_bit_value, ptrdiff_t(18));
+
+    const char *negative_max_64_bit_value = "-0xFFFFFFFFFFFFFFFF";
+    libc_errno = 0;
+    ASSERT_EQ(func(negative_max_64_bit_value, &str_end, 0),
+              (is_signed_v<ReturnT> ? T_MIN : -ReturnT(0xFFFFFFFFFFFFFFFF)));
+    ASSERT_EQ(libc_errno, (is_signed_v<ReturnT> ? ERANGE : 0));
+    EXPECT_EQ(str_end - negative_max_64_bit_value, ptrdiff_t(19));
+
+    // Max size for signed 64 bit numbers
+
+    const char *max_63_bit_value = "0x7FFFFFFFFFFFFFFF";
+    libc_errno = 0;
+    ASSERT_EQ(func(max_63_bit_value, &str_end, 0), ReturnT(0x7FFFFFFFFFFFFFFF));
+    ASSERT_EQ(libc_errno, 0);
+    EXPECT_EQ(str_end - max_63_bit_value, ptrdiff_t(18));
+
+    const char *negative_max_63_bit_value = "-0x7FFFFFFFFFFFFFFF";
+    libc_errno = 0;
+    ASSERT_EQ(func(negative_max_63_bit_value, &str_end, 0),
+              -ReturnT(0x7FFFFFFFFFFFFFFF));
+    ASSERT_EQ(libc_errno, 0);
+    EXPECT_EQ(str_end - negative_max_63_bit_value, ptrdiff_t(19));
   }
 
   void MessyBaseSixteenDecode(FunctionT func) {

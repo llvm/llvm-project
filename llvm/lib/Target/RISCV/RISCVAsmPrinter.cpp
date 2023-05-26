@@ -1,4 +1,4 @@
-//===-- RISCVAsmPrinter.cpp - RISCV LLVM assembly writer ------------------===//
+//===-- RISCVAsmPrinter.cpp - RISC-V LLVM assembly writer -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains a printer that converts from our internal representation
-// of machine-dependent LLVM code to the RISCV assembly language.
+// of machine-dependent LLVM code to the RISC-V assembly language.
 //
 //===----------------------------------------------------------------------===//
 
@@ -53,7 +53,7 @@ public:
                            std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)) {}
 
-  StringRef getPassName() const override { return "RISCV Assembly Printer"; }
+  StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -85,6 +85,8 @@ public:
 
 private:
   void emitAttributes();
+
+  void emitNTLHint(const MachineInstr *MI);
 };
 }
 
@@ -100,9 +102,43 @@ void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 // instructions) auto-generated.
 #include "RISCVGenMCPseudoLowering.inc"
 
+// If the target supports Zihintnthl and the instruction has a nontemporal
+// MachineMemOperand, emit an NTLH hint instruction before it.
+void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
+  if (!STI->hasStdExtZihintntl())
+    return;
+
+  if (MI->memoperands_empty())
+    return;
+
+  MachineMemOperand *MMO = *(MI->memoperands_begin());
+  if (!MMO->isNonTemporal())
+    return;
+
+  unsigned NontemporalMode = 0;
+  if (MMO->getFlags() & MONontemporalBit0)
+    NontemporalMode += 0b1;
+  if (MMO->getFlags() & MONontemporalBit1)
+    NontemporalMode += 0b10;
+
+  MCInst Hint;
+  if (STI->hasStdExtCOrZca() && STI->enableRVCHintInstrs())
+    Hint.setOpcode(RISCV::C_ADD_HINT);
+  else
+    Hint.setOpcode(RISCV::ADD);
+
+  Hint.addOperand(MCOperand::createReg(RISCV::X0));
+  Hint.addOperand(MCOperand::createReg(RISCV::X0));
+  Hint.addOperand(MCOperand::createReg(RISCV::X2 + NontemporalMode));
+
+  EmitToStreamer(*OutStreamer, Hint);
+}
+
 void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   RISCV_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
+
+  emitNTLHint(MI);
 
   // Do any auto-generated pseudo lowerings.
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
@@ -181,13 +217,18 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   if (ExtraCode)
     return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
 
-  const MachineOperand &MO = MI->getOperand(OpNo);
-  // For now, we only support register memory operands in registers and
-  // assume there is no addend
-  if (!MO.isReg())
+  const MachineOperand &AddrReg = MI->getOperand(OpNo);
+  assert(MI->getNumOperands() > OpNo + 1 && "Expected additional operand");
+  const MachineOperand &DispImm = MI->getOperand(OpNo + 1);
+  // All memory operands should have a register and an immediate operand (see
+  // RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand).
+  if (!AddrReg.isReg())
+    return true;
+  if (!DispImm.isImm())
     return true;
 
-  OS << "0(" << RISCVInstPrinter::getRegisterName(MO.getReg()) << ")";
+  OS << DispImm.getImm() << "("
+     << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
   return false;
 }
 
@@ -224,7 +265,7 @@ void RISCVAsmPrinter::emitAttributes() {
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
-  RTS.emitTargetAttributes(*TM.getMCSubtargetInfo());
+  RTS.emitTargetAttributes(*TM.getMCSubtargetInfo(), /*EmitStackAlign*/ true);
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {

@@ -347,7 +347,7 @@ private:
   SDValue PromoteIntRes_SRL(SDNode *N);
   SDValue PromoteIntRes_TRUNCATE(SDNode *N);
   SDValue PromoteIntRes_UADDSUBO(SDNode *N, unsigned ResNo);
-  SDValue PromoteIntRes_ADDSUBCARRY(SDNode *N, unsigned ResNo);
+  SDValue PromoteIntRes_UADDSUBO_CARRY(SDNode *N, unsigned ResNo);
   SDValue PromoteIntRes_SADDSUBO_CARRY(SDNode *N, unsigned ResNo);
   SDValue PromoteIntRes_UNDEF(SDNode *N);
   SDValue PromoteIntRes_VAARG(SDNode *N);
@@ -396,7 +396,7 @@ private:
   SDValue PromoteIntOp_MLOAD(MaskedLoadSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MGATHER(MaskedGatherSDNode *N, unsigned OpNo);
-  SDValue PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_ADDSUBO_CARRY(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_FRAMERETURNADDR(SDNode *N);
   SDValue PromoteIntOp_PREFETCH(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_FIX(SDNode *N);
@@ -449,7 +449,7 @@ private:
   void ExpandIntRes_ADDSUB            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ADDSUBC           (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ADDSUBE           (SDNode *N, SDValue &Lo, SDValue &Hi);
-  void ExpandIntRes_ADDSUBCARRY       (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_UADDSUBO_CARRY    (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_SADDSUBO_CARRY    (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_BITREVERSE        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_BSWAP             (SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -946,6 +946,7 @@ private:
   // Widen Vector Result Promotion.
   void WidenVectorResult(SDNode *N, unsigned ResNo);
   SDValue WidenVecRes_MERGE_VALUES(SDNode* N, unsigned ResNo);
+  SDValue WidenVecRes_AssertZext(SDNode* N);
   SDValue WidenVecRes_BITCAST(SDNode* N);
   SDValue WidenVecRes_BUILD_VECTOR(SDNode* N);
   SDValue WidenVecRes_CONCAT_VECTORS(SDNode* N);
@@ -1075,6 +1076,7 @@ private:
   // Generic Result Splitting.
   void SplitRes_MERGE_VALUES(SDNode *N, unsigned ResNo,
                              SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_AssertZext  (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_ARITH_FENCE (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_Select      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);

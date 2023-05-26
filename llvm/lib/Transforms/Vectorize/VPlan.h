@@ -25,7 +25,6 @@
 
 #include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -33,11 +32,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
-#include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/IR/Operator.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -47,7 +47,6 @@ namespace llvm {
 
 class BasicBlock;
 class DominatorTree;
-class InductionDescriptor;
 class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
@@ -62,6 +61,7 @@ class VPlan;
 class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
+class LoopVersioning;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -76,16 +76,17 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step);
 
-const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE);
+const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE,
+                                Loop *CurLoop = nullptr);
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
-/// [1, 9) = {1, 2, 4, 8}
+/// [1, 16) = {1, 2, 4, 8}
 struct VFRange {
   // A power of 2.
   const ElementCount Start;
 
-  // Need not be a power of 2. If End <= Start range is empty.
+  // A power of 2. If End <= Start range is empty.
   ElementCount End;
 
   bool isEmpty() const {
@@ -98,6 +99,33 @@ struct VFRange {
            "Both Start and End should have the same scalable flag");
     assert(isPowerOf2_32(Start.getKnownMinValue()) &&
            "Expected Start to be a power of 2");
+    assert(isPowerOf2_32(End.getKnownMinValue()) &&
+           "Expected End to be a power of 2");
+  }
+
+  /// Iterator to iterate over vectorization factors in a VFRange.
+  class iterator
+      : public iterator_facade_base<iterator, std::forward_iterator_tag,
+                                    ElementCount> {
+    ElementCount VF;
+
+  public:
+    iterator(ElementCount VF) : VF(VF) {}
+
+    bool operator==(const iterator &Other) const { return VF == Other.VF; }
+
+    ElementCount operator*() const { return VF; }
+
+    iterator &operator++() {
+      VF *= 2;
+      return *this;
+    }
+  };
+
+  iterator begin() { return iterator(Start); }
+  iterator end() {
+    assert(isPowerOf2_32(End.getKnownMinValue()));
+    return iterator(End);
   }
 };
 
@@ -370,10 +398,6 @@ struct VPTransformState {
   /// Pointer to the VPlan code is generated for.
   VPlan *Plan;
 
-  /// Holds recipes that may generate a poison value that is used after
-  /// vectorization, even when their operands are not poison.
-  SmallPtrSet<VPRecipeBase *, 16> MayGeneratePoisonRecipes;
-
   /// The loop object for the current parent region, or nullptr.
   Loop *CurrentVectorLoop = nullptr;
 
@@ -382,7 +406,11 @@ struct VPTransformState {
   ///
   /// This is currently only used to add no-alias metadata based on the
   /// memchecks.  The actually versioning is performed manually.
-  std::unique_ptr<LoopVersioning> LVer;
+  LoopVersioning *LVer = nullptr;
+
+  /// Map SCEVs to their expanded values. Populated when executing
+  /// VPExpandSCEVRecipes.
+  DenseMap<const SCEV *, Value *> ExpandedSCEVs;
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
@@ -639,6 +667,10 @@ public:
   VPLiveOut(PHINode *Phi, VPValue *Op)
       : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi) {}
 
+  static inline bool classof(const VPUser *U) {
+    return U->getVPUserID() == VPUser::VPUserID::LiveOut;
+  }
+
   /// Fixup the wrapped LCSSA phi node in the unique exit block.  This simply
   /// means we need to add the appropriate incoming value from the middle
   /// block as exiting edges from the scalar epilogue loop (if present) are
@@ -654,6 +686,11 @@ public:
   }
 
   PHINode *getPhi() const { return Phi; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the VPLiveOut to \p O.
+  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
+#endif
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
@@ -905,14 +942,169 @@ public:
   }
 };
 
+/// Class to record LLVM IR flag for a recipe along with it.
+class VPRecipeWithIRFlags : public VPRecipeBase {
+  enum class OperationType : unsigned char {
+    OverflowingBinOp,
+    PossiblyExactOp,
+    GEPOp,
+    FPMathOp,
+    Other
+  };
+  struct WrapFlagsTy {
+    char HasNUW : 1;
+    char HasNSW : 1;
+  };
+  struct ExactFlagsTy {
+    char IsExact : 1;
+  };
+  struct GEPFlagsTy {
+    char IsInBounds : 1;
+  };
+  struct FastMathFlagsTy {
+    char AllowReassoc : 1;
+    char NoNaNs : 1;
+    char NoInfs : 1;
+    char NoSignedZeros : 1;
+    char AllowReciprocal : 1;
+    char AllowContract : 1;
+    char ApproxFunc : 1;
+  };
+
+  OperationType OpType;
+
+  union {
+    WrapFlagsTy WrapFlags;
+    ExactFlagsTy ExactFlags;
+    GEPFlagsTy GEPFlags;
+    FastMathFlagsTy FMFs;
+    unsigned char AllFlags;
+  };
+
+public:
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, iterator_range<IterT> Operands)
+      : VPRecipeBase(SC, Operands) {
+    OpType = OperationType::Other;
+    AllFlags = 0;
+  }
+
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, iterator_range<IterT> Operands,
+                      Instruction &I)
+      : VPRecipeWithIRFlags(SC, Operands) {
+    if (auto *Op = dyn_cast<OverflowingBinaryOperator>(&I)) {
+      OpType = OperationType::OverflowingBinOp;
+      WrapFlags.HasNUW = Op->hasNoUnsignedWrap();
+      WrapFlags.HasNSW = Op->hasNoSignedWrap();
+    } else if (auto *Op = dyn_cast<PossiblyExactOperator>(&I)) {
+      OpType = OperationType::PossiblyExactOp;
+      ExactFlags.IsExact = Op->isExact();
+    } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      OpType = OperationType::GEPOp;
+      GEPFlags.IsInBounds = GEP->isInBounds();
+    } else if (auto *Op = dyn_cast<FPMathOperator>(&I)) {
+      OpType = OperationType::FPMathOp;
+      FastMathFlags FMF = Op->getFastMathFlags();
+      FMFs.AllowReassoc = FMF.allowReassoc();
+      FMFs.NoNaNs = FMF.noNaNs();
+      FMFs.NoInfs = FMF.noInfs();
+      FMFs.NoSignedZeros = FMF.noSignedZeros();
+      FMFs.AllowReciprocal = FMF.allowReciprocal();
+      FMFs.AllowContract = FMF.allowContract();
+      FMFs.ApproxFunc = FMF.approxFunc();
+    }
+  }
+
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
+           R->getVPDefID() == VPRecipeBase::VPReplicateSC;
+  }
+
+  /// Drop all poison-generating flags.
+  void dropPoisonGeneratingFlags() {
+    // NOTE: This needs to be kept in-sync with
+    // Instruction::dropPoisonGeneratingFlags.
+    switch (OpType) {
+    case OperationType::OverflowingBinOp:
+      WrapFlags.HasNUW = false;
+      WrapFlags.HasNSW = false;
+      break;
+    case OperationType::PossiblyExactOp:
+      ExactFlags.IsExact = false;
+      break;
+    case OperationType::GEPOp:
+      GEPFlags.IsInBounds = false;
+      break;
+    case OperationType::FPMathOp:
+      FMFs.NoNaNs = false;
+      FMFs.NoInfs = false;
+      break;
+    case OperationType::Other:
+      break;
+    }
+  }
+
+  /// Set the IR flags for \p I.
+  void setFlags(Instruction *I) const {
+    switch (OpType) {
+    case OperationType::OverflowingBinOp:
+      I->setHasNoUnsignedWrap(WrapFlags.HasNUW);
+      I->setHasNoSignedWrap(WrapFlags.HasNSW);
+      break;
+    case OperationType::PossiblyExactOp:
+      I->setIsExact(ExactFlags.IsExact);
+      break;
+    case OperationType::GEPOp:
+      cast<GetElementPtrInst>(I)->setIsInBounds(GEPFlags.IsInBounds);
+      break;
+    case OperationType::FPMathOp:
+      I->setHasAllowReassoc(FMFs.AllowReassoc);
+      I->setHasNoNaNs(FMFs.NoNaNs);
+      I->setHasNoInfs(FMFs.NoInfs);
+      I->setHasNoSignedZeros(FMFs.NoSignedZeros);
+      I->setHasAllowReciprocal(FMFs.AllowReciprocal);
+      I->setHasAllowContract(FMFs.AllowContract);
+      I->setHasApproxFunc(FMFs.ApproxFunc);
+      break;
+    case OperationType::Other:
+      break;
+    }
+  }
+
+  bool isInBounds() const {
+    assert(OpType == OperationType::GEPOp &&
+           "recipe doesn't have inbounds flag");
+    return GEPFlags.IsInBounds;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  FastMathFlags getFastMathFlags() const {
+    FastMathFlags Res;
+    Res.setAllowReassoc(FMFs.AllowReassoc);
+    Res.setNoNaNs(FMFs.NoNaNs);
+    Res.setNoInfs(FMFs.NoInfs);
+    Res.setNoSignedZeros(FMFs.NoSignedZeros);
+    Res.setAllowReciprocal(FMFs.AllowReciprocal);
+    Res.setAllowContract(FMFs.AllowContract);
+    Res.setApproxFunc(FMFs.ApproxFunc);
+    return Res;
+  }
+
+  void printFlags(raw_ostream &O) const;
+#endif
+};
+
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
 /// ingredient. This recipe covers most of the traditional vectorization cases
 /// where each ingredient transforms into a vectorized version of itself.
-class VPWidenRecipe : public VPRecipeBase, public VPValue {
+class VPWidenRecipe : public VPRecipeWithIRFlags, public VPValue {
+
 public:
   template <typename IterT>
   VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPDef::VPWidenSC, Operands), VPValue(this, &I) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPValue(this, &I) {}
 
   ~VPWidenRecipe() override = default;
 
@@ -926,6 +1118,44 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+};
+
+/// VPWidenCastRecipe is a recipe to create vector cast instructions.
+class VPWidenCastRecipe : public VPRecipeBase, public VPValue {
+  /// Cast instruction opcode.
+  Instruction::CastOps Opcode;
+
+  /// Result type for the cast.
+  Type *ResultTy;
+
+public:
+  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
+                    CastInst *UI = nullptr)
+      : VPRecipeBase(VPDef::VPWidenCastSC, Op), VPValue(this, UI),
+        Opcode(Opcode), ResultTy(ResultTy) {
+    assert((!UI || UI->getOpcode() == Opcode) &&
+           "opcode of underlying cast doesn't match");
+    assert((!UI || UI->getType() == ResultTy) &&
+           "result type of underlying cast doesn't match");
+  }
+
+  ~VPWidenCastRecipe() override = default;
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
+
+  /// Produce widened copies of the cast.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  Instruction::CastOps getOpcode() const { return Opcode; }
+
+  /// Returns the result type of the cast.
+  Type *getResultType() const { return ResultTy; }
 };
 
 /// A recipe for widening Call instructions.
@@ -990,7 +1220,7 @@ struct VPWidenSelectRecipe : public VPRecipeBase, public VPValue {
 };
 
 /// A recipe for handling GEP instructions.
-class VPWidenGEPRecipe : public VPRecipeBase, public VPValue {
+class VPWidenGEPRecipe : public VPRecipeWithIRFlags, public VPValue {
   bool isPointerLoopInvariant() const {
     return getOperand(0)->isDefinedOutsideVectorRegions();
   }
@@ -1008,7 +1238,8 @@ class VPWidenGEPRecipe : public VPRecipeBase, public VPValue {
 public:
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPDef::VPWidenGEPSC, Operands), VPValue(this, GEP) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP),
+        VPValue(this, GEP) {}
 
   ~VPWidenGEPRecipe() override = default;
 
@@ -1108,22 +1339,20 @@ class VPWidenIntOrFpInductionRecipe : public VPHeaderPHIRecipe {
   PHINode *IV;
   TruncInst *Trunc;
   const InductionDescriptor &IndDesc;
-  bool NeedsVectorIV;
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                const InductionDescriptor &IndDesc,
-                                bool NeedsVectorIV)
+                                const InductionDescriptor &IndDesc)
       : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start), IV(IV),
-        Trunc(nullptr), IndDesc(IndDesc), NeedsVectorIV(NeedsVectorIV) {
+        Trunc(nullptr), IndDesc(IndDesc) {
     addOperand(Step);
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc,
-                                TruncInst *Trunc, bool NeedsVectorIV)
+                                TruncInst *Trunc)
       : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionSC, Trunc, Start),
-        IV(IV), Trunc(Trunc), IndDesc(IndDesc), NeedsVectorIV(NeedsVectorIV) {
+        IV(IV), Trunc(Trunc), IndDesc(IndDesc) {
     addOperand(Step);
   }
 
@@ -1177,9 +1406,6 @@ public:
   const Type *getScalarType() const {
     return Trunc ? Trunc->getType() : IV->getType();
   }
-
-  /// Returns true if a vector phi needs to be created for the induction.
-  bool needsVectorIV() const { return NeedsVectorIV; }
 };
 
 class VPWidenPointerInductionRecipe : public VPHeaderPHIRecipe {
@@ -1391,12 +1617,20 @@ public:
 class VPInterleaveRecipe : public VPRecipeBase {
   const InterleaveGroup<Instruction> *IG;
 
+  /// Indicates if the interleave group is in a conditional block and requires a
+  /// mask.
   bool HasMask = false;
+
+  /// Indicates if gaps between members of the group need to be masked out or if
+  /// unusued gaps can be loaded speculatively.
+  bool NeedsMaskForGaps = false;
 
 public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
-                     ArrayRef<VPValue *> StoredValues, VPValue *Mask)
-      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr}), IG(IG) {
+                     ArrayRef<VPValue *> StoredValues, VPValue *Mask,
+                     bool NeedsMaskForGaps)
+      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr}), IG(IG),
+        NeedsMaskForGaps(NeedsMaskForGaps) {
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *I = IG->getMember(i)) {
         if (I->getType()->isVoidTy())
@@ -1507,7 +1741,7 @@ public:
 /// copies of the original scalar type, one per lane, instead of producing a
 /// single copy of widened type for all lanes. If the instruction is known to be
 /// uniform only one copy, per lane zero, will be generated.
-class VPReplicateRecipe : public VPRecipeBase, public VPValue {
+class VPReplicateRecipe : public VPRecipeWithIRFlags, public VPValue {
   /// Indicator if only a single replica per lane is needed.
   bool IsUniform;
 
@@ -1518,8 +1752,8 @@ public:
   template <typename IterT>
   VPReplicateRecipe(Instruction *I, iterator_range<IterT> Operands,
                     bool IsUniform, VPValue *Mask = nullptr)
-      : VPRecipeBase(VPDef::VPReplicateSC, Operands), VPValue(this, I),
-        IsUniform(IsUniform), IsPredicated(Mask) {
+      : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, *I),
+        VPValue(this, I), IsUniform(IsUniform), IsPredicated(Mask) {
     if (Mask)
       addOperand(Mask);
   }
@@ -1808,9 +2042,11 @@ public:
     return true;
   }
 
-  /// Check if the induction described by \p ID is canonical, i.e.  has the same
-  /// start, step (of 1), and type as the canonical IV.
-  bool isCanonical(const InductionDescriptor &ID, Type *Ty) const;
+  /// Check if the induction described by \p Kind, /p Start and \p Step is
+  /// canonical, i.e.  has the same start, step (of 1), and type as the
+  /// canonical IV.
+  bool isCanonical(InductionDescriptor::InductionKind Kind, VPValue *Start,
+                   VPValue *Step, Type *Ty) const;
 };
 
 /// A recipe for generating the active lane mask for the vector loop that is
@@ -2173,13 +2409,19 @@ public:
 /// to produce efficient output IR, including which branches, basic-blocks and
 /// output IR instructions to generate, and their cost. VPlan holds a
 /// Hierarchical-CFG of VPBasicBlocks and VPRegionBlocks rooted at an Entry
-/// VPBlock.
+/// VPBasicBlock.
 class VPlan {
   friend class VPlanPrinter;
   friend class VPSlotTracker;
 
-  /// Hold the single entry to the Hierarchical CFG of the VPlan.
-  VPBlockBase *Entry;
+  /// Hold the single entry to the Hierarchical CFG of the VPlan, i.e. the
+  /// preheader of the vector loop.
+  VPBasicBlock *Entry;
+
+  /// VPBasicBlock corresponding to the original preheader. Used to place
+  /// VPExpandSCEV recipes for expressions used during skeleton creation and the
+  /// rest of VPlan execution.
+  VPBasicBlock *Preheader;
 
   /// Holds the VFs applicable to this VPlan.
   SmallSetVector<ElementCount, 2> VFs;
@@ -2190,10 +2432,6 @@ class VPlan {
 
   /// Holds the name of the VPlan, for printing.
   std::string Name;
-
-  /// Holds all the external definitions created for this VPlan. External
-  /// definitions must be immutable and hold a pointer to their underlying IR.
-  DenseMap<Value *, VPValue *> VPExternalDefs;
 
   /// Represents the trip count of the original loop, for folding
   /// the tail.
@@ -2210,9 +2448,9 @@ class VPlan {
   /// VPlan.
   Value2VPValueTy Value2VPValue;
 
-  /// Contains all VPValues that been allocated by addVPValue directly and need
-  /// to be free when the plan's destructor is called.
-  SmallVector<VPValue *, 16> VPValuesToFree;
+  /// Contains all the external definitions created for this VPlan. External
+  /// definitions are VPValues that hold a pointer to their underlying IR.
+  SmallVector<VPValue *, 16> VPLiveInsToFree;
 
   /// Indicates whether it is safe use the Value2VPValue mapping or if the
   /// mapping cannot be used any longer, because it is stale.
@@ -2221,13 +2459,40 @@ class VPlan {
   /// Values used outside the plan.
   MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
+  /// Mapping from SCEVs to the VPValues representing their expansions.
+  /// NOTE: This mapping is temporary and will be removed once all users have
+  /// been modeled in VPlan directly.
+  DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
+
 public:
-  VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {
-    if (Entry)
-      Entry->setPlan(this);
+  /// Construct a VPlan with original preheader \p Preheader, trip count \p TC
+  /// and \p Entry to the plan. At the moment, \p Preheader and \p Entry need to
+  /// be disconnected, as the bypass blocks between them are not yet modeled in
+  /// VPlan.
+  VPlan(VPBasicBlock *Preheader, VPValue *TC, VPBasicBlock *Entry)
+      : VPlan(Preheader, Entry) {
+    TripCount = TC;
+  }
+
+  /// Construct a VPlan with original preheader \p Preheader and \p Entry to
+  /// the plan. At the moment, \p Preheader and \p Entry need to be
+  /// disconnected, as the bypass blocks between them are not yet modeled in
+  /// VPlan.
+  VPlan(VPBasicBlock *Preheader, VPBasicBlock *Entry)
+      : Entry(Entry), Preheader(Preheader) {
+    Entry->setPlan(this);
+    Preheader->setPlan(this);
+    assert(Preheader->getNumSuccessors() == 0 &&
+           Preheader->getNumPredecessors() == 0 &&
+           "preheader must be disconnected");
   }
 
   ~VPlan();
+
+  /// Create an initial VPlan with preheader and entry blocks. Creates a
+  /// VPExpandSCEVRecipe for \p TripCount and uses it as plan's trip count.
+  static VPlanPtr createInitialVPlan(const SCEV *TripCount,
+                                     ScalarEvolution &PSE);
 
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
@@ -2237,19 +2502,12 @@ public:
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
 
-  VPBlockBase *getEntry() { return Entry; }
-  const VPBlockBase *getEntry() const { return Entry; }
-
-  VPBlockBase *setEntry(VPBlockBase *Block) {
-    Entry = Block;
-    Block->setPlan(this);
-    return Entry;
-  }
+  VPBasicBlock *getEntry() { return Entry; }
+  const VPBasicBlock *getEntry() const { return Entry; }
 
   /// The trip count of the original loop.
-  VPValue *getOrCreateTripCount() {
-    if (!TripCount)
-      TripCount = new VPValue();
+  VPValue *getTripCount() const {
+    assert(TripCount && "trip count needs to be set before accessing it");
     return TripCount;
   }
 
@@ -2292,50 +2550,35 @@ public:
 
   void setName(const Twine &newName) { Name = newName.str(); }
 
-  /// Get the existing or add a new external definition for \p V.
-  VPValue *getOrAddExternalDef(Value *V) {
-    auto I = VPExternalDefs.insert({V, nullptr});
-    if (I.second)
-      I.first->second = new VPValue(V);
-    return I.first->second;
-  }
-
-  void addVPValue(Value *V) {
-    assert(Value2VPValueEnabled &&
-           "IR value to VPValue mapping may be out of date!");
-    assert(V && "Trying to add a null Value to VPlan");
-    assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
-    VPValue *VPV = new VPValue(V);
-    Value2VPValue[V] = VPV;
-    VPValuesToFree.push_back(VPV);
-  }
-
   void addVPValue(Value *V, VPValue *VPV) {
-    assert(Value2VPValueEnabled && "Value2VPValue mapping may be out of date!");
+    assert((Value2VPValueEnabled || VPV->isLiveIn()) &&
+           "Value2VPValue mapping may be out of date!");
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
     Value2VPValue[V] = VPV;
   }
 
   /// Returns the VPValue for \p V. \p OverrideAllowed can be used to disable
-  /// checking whether it is safe to query VPValues using IR Values.
+  ///   /// checking whether it is safe to query VPValues using IR Values.
   VPValue *getVPValue(Value *V, bool OverrideAllowed = false) {
-    assert((OverrideAllowed || isa<Constant>(V) || Value2VPValueEnabled) &&
-           "Value2VPValue mapping may be out of date!");
     assert(V && "Trying to get the VPValue of a null Value");
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
+    assert((Value2VPValueEnabled || OverrideAllowed ||
+            Value2VPValue[V]->isLiveIn()) &&
+           "Value2VPValue mapping may be out of date!");
     return Value2VPValue[V];
   }
 
-  /// Gets the VPValue or adds a new one (if none exists yet) for \p V. \p
-  /// OverrideAllowed can be used to disable checking whether it is safe to
-  /// query VPValues using IR Values.
-  VPValue *getOrAddVPValue(Value *V, bool OverrideAllowed = false) {
-    assert((OverrideAllowed || isa<Constant>(V) || Value2VPValueEnabled) &&
-           "Value2VPValue mapping may be out of date!");
+  /// Gets the VPValue for \p V or adds a new live-in (if none exists yet) for
+  /// \p V.
+  VPValue *getVPValueOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
-    if (!Value2VPValue.count(V))
-      addVPValue(V);
+    if (!Value2VPValue.count(V)) {
+      VPValue *VPV = new VPValue(V);
+      VPLiveInsToFree.push_back(VPV);
+      addVPValue(V, VPV);
+    }
+
     return getVPValue(V);
   }
 
@@ -2361,7 +2604,7 @@ public:
   iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
   mapToVPValues(User::op_range Operands) {
     std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
-      return getOrAddVPValue(Op);
+      return getVPValueOrAddLiveIn(Op);
     };
     return map_range(Operands, Fn);
   }
@@ -2390,12 +2633,6 @@ public:
 
   void addLiveOut(PHINode *PN, VPValue *V);
 
-  void clearLiveOuts() {
-    for (auto &KV : LiveOuts)
-      delete KV.second;
-    LiveOuts.clear();
-  }
-
   void removeLiveOut(PHINode *PN) {
     delete LiveOuts[PN];
     LiveOuts.erase(PN);
@@ -2404,6 +2641,22 @@ public:
   const MapVector<PHINode *, VPLiveOut *> &getLiveOuts() const {
     return LiveOuts;
   }
+
+  VPValue *getSCEVExpansion(const SCEV *S) const {
+    auto I = SCEVToExpansion.find(S);
+    if (I == SCEVToExpansion.end())
+      return nullptr;
+    return I->second;
+  }
+
+  void addSCEVExpansion(const SCEV *S, VPValue *V) {
+    assert(!SCEVToExpansion.contains(S) && "SCEV already expanded");
+    SCEVToExpansion[S] = V;
+  }
+
+  /// \return The block corresponding to the original preheader.
+  VPBasicBlock *getPreheader() { return Preheader; }
+  const VPBasicBlock *getPreheader() const { return Preheader; }
 
 private:
   /// Add to the given dominator tree the header block and every new basic block

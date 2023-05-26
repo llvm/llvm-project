@@ -570,8 +570,8 @@ define i1 @sgt_and_min(ptr %x, ptr %y)  {
 ; CHECK-LABEL: @sgt_and_min(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq ptr [[X:%.*]], null
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sgt ptr %x, %y
   %cmpeq = icmp eq ptr %x, null
@@ -583,8 +583,8 @@ define i1 @sgt_and_min_logical(ptr %x, ptr %y)  {
 ; CHECK-LABEL: @sgt_and_min_logical(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq ptr [[X:%.*]], null
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sgt ptr %x, %y
   %cmpeq = icmp eq ptr %x, null
@@ -596,8 +596,8 @@ define i1 @sle_or_not_min(ptr %x, ptr %y)  {
 ; CHECK-LABEL: @sle_or_not_min(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne ptr [[X:%.*]], null
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sle ptr %x, %y
   %cmpeq = icmp ne ptr %x, null
@@ -609,8 +609,8 @@ define i1 @sle_or_not_min_logical(ptr %x, ptr %y)  {
 ; CHECK-LABEL: @sle_or_not_min_logical(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne ptr [[X:%.*]], null
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sle ptr %x, %y
   %cmpeq = icmp ne ptr %x, null
@@ -622,8 +622,8 @@ define i1 @sle_and_min(ptr %x, ptr %y)  {
 ; CHECK-LABEL: @sle_and_min(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq ptr [[X:%.*]], null
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sle ptr %x, %y
   %cmpeq = icmp eq ptr %x, null
@@ -635,8 +635,8 @@ define i1 @sle_and_min_logical(ptr %x, ptr %y)  {
 ; CHECK-LABEL: @sle_and_min_logical(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq ptr [[X:%.*]], null
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sle ptr %x, %y
   %cmpeq = icmp eq ptr %x, null
@@ -674,8 +674,8 @@ define i1 @sgt_or_not_min(ptr %x, ptr %y)  {
 ; CHECK-LABEL: @sgt_or_not_min(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne ptr [[X:%.*]], null
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sgt ptr %x, %y
   %cmpeq = icmp ne ptr %x, null
@@ -687,8 +687,8 @@ define i1 @sgt_or_not_min_logical(ptr %x, ptr %y)  {
 ; CHECK-LABEL: @sgt_or_not_min_logical(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne ptr [[X:%.*]], null
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[Y:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp sgt ptr %x, %y
   %cmpeq = icmp ne ptr %x, null
@@ -700,8 +700,8 @@ define i1 @slt_and_min(ptr %a, ptr %b) {
 ; CHECK-LABEL: @slt_and_min(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt ptr [[B:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmpeq = icmp eq ptr %a, null
   %cmp = icmp slt ptr %a, %b
@@ -712,8 +712,8 @@ define i1 @slt_and_min(ptr %a, ptr %b) {
 define i1 @slt_and_min_logical(ptr %a, ptr %b) {
 ; CHECK-LABEL: @slt_and_min_logical(
 ; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq ptr [[A:%.*]], null
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr [[B:%.*]], null
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt ptr [[B:%.*]], null
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPEQ]], i1 [[TMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmpeq = icmp eq ptr %a, null

@@ -116,10 +116,10 @@ bool VirtRegMap::hasPreferredPhys(Register VirtReg) const {
 }
 
 bool VirtRegMap::hasKnownPreference(Register VirtReg) const {
-  std::pair<unsigned, unsigned> Hint = MRI->getRegAllocationHint(VirtReg);
-  if (Register::isPhysicalRegister(Hint.second))
+  std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(VirtReg);
+  if (Hint.second.isPhysical())
     return true;
-  if (Register::isVirtualRegister(Hint.second))
+  if (Hint.second.isVirtual())
     return hasPhys(Hint.second);
   return false;
 }
@@ -181,14 +181,14 @@ LLVM_DUMP_METHOD void VirtRegMap::dump() const {
 namespace {
 
 class VirtRegRewriter : public MachineFunctionPass {
-  MachineFunction *MF;
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
-  MachineRegisterInfo *MRI;
-  SlotIndexes *Indexes;
-  LiveIntervals *LIS;
-  VirtRegMap *VRM;
-  LiveDebugVariables *DebugVars;
+  MachineFunction *MF = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  SlotIndexes *Indexes = nullptr;
+  LiveIntervals *LIS = nullptr;
+  VirtRegMap *VRM = nullptr;
+  LiveDebugVariables *DebugVars = nullptr;
   DenseSet<Register> RewriteRegs;
   bool ClearVirtRegs;
 

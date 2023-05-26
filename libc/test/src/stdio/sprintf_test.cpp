@@ -10,8 +10,8 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
 
 // #include <stdio.h>
 // namespace __llvm_libc {
@@ -505,8 +505,8 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
 
 TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
-  __llvm_libc::testutils::ForceRoundingMode r(
-      __llvm_libc::testutils::RoundingMode::Nearest);
+  __llvm_libc::fputil::testing::ForceRoundingMode r(
+      __llvm_libc::fputil::testing::RoundingMode::Nearest);
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
 
@@ -706,8 +706,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   // Rounding Mode Tests.
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Nearest);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Nearest);
 
     written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
     ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
@@ -735,8 +735,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Upward);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Upward);
 
     written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
     ASSERT_STREQ_LEN(written, buff, "0x1.1p+0");
@@ -764,8 +764,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Downward);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Downward);
 
     written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
     ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
@@ -793,8 +793,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::TowardZero);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::TowardZero);
 
     written = __llvm_libc::sprintf(buff, "%.1a", 0x1.08p0);
     ASSERT_STREQ_LEN(written, buff, "0x1.0p+0");
@@ -866,8 +866,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
 }
 
 TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
-  __llvm_libc::testutils::ForceRoundingMode r(
-      __llvm_libc::testutils::RoundingMode::Nearest);
+  __llvm_libc::fputil::testing::ForceRoundingMode r(
+      __llvm_libc::fputil::testing::RoundingMode::Nearest);
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
 
@@ -1222,8 +1222,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   // Rounding Mode Tests.
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Nearest);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Nearest);
 
     written = __llvm_libc::sprintf(buff, "%.1f", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8");
@@ -1263,8 +1263,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Upward);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Upward);
 
     written = __llvm_libc::sprintf(buff, "%.1f", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8");
@@ -1304,8 +1304,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Downward);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Downward);
 
     written = __llvm_libc::sprintf(buff, "%.1f", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7");
@@ -1345,8 +1345,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::TowardZero);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::TowardZero);
 
     written = __llvm_libc::sprintf(buff, "%.1f", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7");
@@ -1453,8 +1453,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 }
 
 TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
-  __llvm_libc::testutils::ForceRoundingMode r(
-      __llvm_libc::testutils::RoundingMode::Nearest);
+  __llvm_libc::fputil::testing::ForceRoundingMode r(
+      __llvm_libc::fputil::testing::RoundingMode::Nearest);
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
 
@@ -1808,8 +1808,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   // Rounding Mode Tests.
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Nearest);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Nearest);
 
     written = __llvm_libc::sprintf(buff, "%.1e", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8e+00");
@@ -1849,8 +1849,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Upward);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Upward);
 
     written = __llvm_libc::sprintf(buff, "%.1e", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8e+00");
@@ -1890,8 +1890,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Downward);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Downward);
 
     written = __llvm_libc::sprintf(buff, "%.1e", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7e+00");
@@ -1931,8 +1931,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::TowardZero);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::TowardZero);
 
     written = __llvm_libc::sprintf(buff, "%.1e", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7e+00");
@@ -2048,8 +2048,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
 }
 
 TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
-  __llvm_libc::testutils::ForceRoundingMode r(
-      __llvm_libc::testutils::RoundingMode::Nearest);
+  __llvm_libc::fputil::testing::ForceRoundingMode r(
+      __llvm_libc::fputil::testing::RoundingMode::Nearest);
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
 
@@ -2427,8 +2427,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   // Rounding Mode Tests.
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Nearest);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Nearest);
 
     written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8");
@@ -2468,8 +2468,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Upward);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Upward);
 
     written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.8");
@@ -2509,8 +2509,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::Downward);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::Downward);
 
     written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7");
@@ -2550,8 +2550,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   }
 
   {
-    __llvm_libc::testutils::ForceRoundingMode r(
-        __llvm_libc::testutils::RoundingMode::TowardZero);
+    __llvm_libc::fputil::testing::ForceRoundingMode r(
+        __llvm_libc::fputil::testing::RoundingMode::TowardZero);
 
     written = __llvm_libc::sprintf(buff, "%.2g", 1.75);
     ASSERT_STREQ_LEN(written, buff, "1.7");

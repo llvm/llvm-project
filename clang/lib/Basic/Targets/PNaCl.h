@@ -69,7 +69,7 @@ public:
     return false;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   bool hasBitIntType() const override { return true; }
 };

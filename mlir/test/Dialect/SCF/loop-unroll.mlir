@@ -5,6 +5,7 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
 // RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=6 unroll-up-to-factor=true' | FileCheck %s --check-prefix UNROLL-UP-TO
 // RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=5 cleanup-unroll=true' | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
+// RUN: mlir-opt %s --affine-loop-unroll --split-input-file | FileCheck %s
 
 func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3: memref<?xf32>) {
@@ -340,3 +341,80 @@ func.func @static_loop_unroll_by_5_with_cleanup(%arg0 : memref<?xf32>) {
 //   CLEANUP-UNROLL-BY-5-NEXT: %[[V2:.*]] = affine.apply {{.*}}
 //   CLEANUP-UNROLL-BY-5-NEXT: memref.store %{{.*}}, %[[MEM]][%[[V2]]] : memref<?xf32>
 //   CLEANUP-UNROLL-BY-5-NEXT: return
+
+// -----
+
+// Test loop unrolling when the yielded value remains unchanged.
+// CHECK: [[$MAP:#map]] = affine_map<(d0) -> (-d0 + 64, (d0 floordiv 8) ceildiv 64, -d0 - 16, d0 * -64)>
+// CHECK-LABEL: func @loop_unroll_static_yield_value
+func.func @loop_unroll_static_yield_value_test1() {
+  %true_4 = arith.constant true
+  %c1 = arith.constant 1 : index
+  %103 = affine.for %arg2 = 0 to 40 iter_args(%arg3 = %true_4) -> (i1) {
+    %324 = affine.max affine_map<(d0) -> (-d0 + 64, (d0 floordiv 8) ceildiv 64, -d0 - 16, d0 * -64)>(%c1)
+    affine.yield %true_4 : i1
+  }
+  return
+}
+// CHECK:         %[[TRUE:.*]] = arith.constant true
+// CHECK-NEXT:    %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NEXT:    affine.for %{{.*}} = 0 to 40 step 4 iter_args(%{{.*}} = %[[TRUE]]) -> (i1) {
+// CHECK-NEXT:      affine.max [[$MAP]](%[[C1]])
+// CHECK-NEXT:      affine.max [[$MAP]](%[[C1]])
+// CHECK-NEXT:      affine.max [[$MAP]](%[[C1]])
+// CHECK-NEXT:      affine.max [[$MAP]](%[[C1]])
+// CHECK-NEXT:      affine.yield %[[TRUE]] : i1
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return
+
+// -----
+
+// Loop unrolling when the yielded value is loop iv.
+// CHECK: [[$MAP0:#map[0-9]*]] = affine_map<(d0) -> (-d0 + 64, (d0 floordiv 8) ceildiv 64, -d0 - 16, d0 * -64)>
+// CHECK: [[$MAP1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 2)>
+// CHECK: [[$MAP2:#map[0-9]*]] = affine_map<(d0) -> (d0 + 4)>
+// CHECK: [[$MAP3:#map[0-9]*]] = affine_map<(d0) -> (d0 + 6)>
+// CHECK-LABEL: func @loop_unroll_yield_loop_iv
+func.func @loop_unroll_yield_loop_iv() {
+  %c1 = arith.constant 1 : index
+  %103 = affine.for %arg2 = 0 to 40 step 2 iter_args(%arg3 = %c1) -> (index) {
+    %324 = affine.max affine_map<(d0) -> (-d0 + 64, (d0 floordiv 8) ceildiv 64, -d0 - 16, d0 * -64)>(%arg2)
+    affine.yield %arg2 : index
+  }
+  return
+}
+// CHECK:         %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NEXT:    affine.for %[[LOOP_IV:.*]] = 0 to 40 step 8 iter_args(%{{.*}} = %[[C1]]) -> (index) {
+// CHECK-NEXT:    affine.max [[$MAP0]](%[[LOOP_IV]])
+// CHECK-NEXT:    %[[LOOP_IV_PLUS_2:.*]] = affine.apply [[$MAP1]](%[[LOOP_IV]])
+// CHECK-NEXT:    affine.max [[$MAP0]](%[[LOOP_IV_PLUS_2]])
+// CHECK-NEXT:    %[[LOOP_IV_PLUS_4:.*]] = affine.apply [[$MAP2]](%[[LOOP_IV]])
+// CHECK-NEXT:    affine.max [[$MAP0]](%[[LOOP_IV_PLUS_4]])
+// CHECK-NEXT:    %[[LOOP_IV_PLUS_6:.*]] = affine.apply [[$MAP3]](%[[LOOP_IV]])
+// CHECK-NEXT:    affine.max [[$MAP0]](%[[LOOP_IV_PLUS_6]])
+// CHECK-NEXT:    affine.yield %[[LOOP_IV]] : index
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+
+// -----
+
+// Loop unrolling when the yielded value is iter_arg.
+// CHECK: [[$MAP:#map]] = affine_map<(d0) -> (-d0 + 64, (d0 floordiv 8) ceildiv 64, -d0 - 16, d0 * -64)>
+// CHECK-LABEL: func @loop_unroll_yield_iter_arg
+func.func @loop_unroll_yield_iter_arg() {
+  %c1 = arith.constant 1 : index
+  %103 = affine.for %arg2 = 0 to 40 step 2 iter_args(%arg3 = %c1) -> (index) {
+    %324 = affine.max affine_map<(d0) -> (-d0 + 64, (d0 floordiv 8) ceildiv 64, -d0 - 16, d0 * -64)>(%arg3)
+    affine.yield %arg3 : index
+  }
+  return
+}
+// CHECK:         %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NEXT:    affine.for %{{.*}} = 0 to 40 step 8 iter_args(%[[ITER_ARG:.*]] = %[[C1]]) -> (index) {
+// CHECK-NEXT:      affine.max [[$MAP]](%[[ITER_ARG]])
+// CHECK-NEXT:      affine.max [[$MAP]](%[[ITER_ARG]])
+// CHECK-NEXT:      affine.max [[$MAP]](%[[ITER_ARG]])
+// CHECK-NEXT:      affine.max [[$MAP]](%[[ITER_ARG]])
+// CHECK-NEXT:      affine.yield %[[ITER_ARG]] : index
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return

@@ -1721,7 +1721,8 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
     for (MachineInstr &MI : *MBB) {
-      if (SIInstrInfo::isVMEM(MI)) {
+      if (SIInstrInfo::isVMEM(MI) ||
+          (SIInstrInfo::isFLAT(MI) && mayAccessVMEMThroughFlat(MI))) {
         if (MI.mayLoad())
           HasVMemLoad = true;
         if (MI.mayStore())

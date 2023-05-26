@@ -18,9 +18,9 @@ def RocketModel : SchedMachineModel {
   let MispredictPenalty = 3;
   let CompleteModel = false;
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
-                             HasStdExtZknd, HasStdExtZkne, HasStdExtZknh,
-                             HasStdExtZksed, HasStdExtZksh, HasStdExtZkr,
-                             HasVInstructions, HasVInstructionsI64];
+                             HasStdExtZcmt, HasStdExtZknd, HasStdExtZkne,
+                             HasStdExtZknh, HasStdExtZksed, HasStdExtZksh,
+                             HasStdExtZkr, HasVInstructions, HasVInstructionsI64];
 }
 
 //===----------------------------------------------------------------------===//
@@ -244,6 +244,7 @@ defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbs;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
+defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedZfh;
 defm : UnsupportedSchedSFB;
 }

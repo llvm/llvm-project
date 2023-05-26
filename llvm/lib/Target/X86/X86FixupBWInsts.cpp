@@ -148,8 +148,8 @@ private:
   /// Register Liveness information after the current instruction.
   LivePhysRegs LiveRegs;
 
-  ProfileSummaryInfo *PSI;
-  MachineBlockFrequencyInfo *MBFI;
+  ProfileSummaryInfo *PSI = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 };
 char FixupBWInstPass::ID = 0;
 }

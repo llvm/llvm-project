@@ -165,8 +165,8 @@ class InlineSpiller : public Spiller {
   const MachineBlockFrequencyInfo &MBFI;
 
   // Variables that are valid during spill(), but used by multiple methods.
-  LiveRangeEdit *Edit;
-  LiveInterval *StackInt;
+  LiveRangeEdit *Edit = nullptr;
+  LiveInterval *StackInt = nullptr;
   int StackSlot;
   Register Original;
 

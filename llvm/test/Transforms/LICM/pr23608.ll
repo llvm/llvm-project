@@ -25,9 +25,8 @@ define void @fn1() {
 ; NO_ASSUME-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP4]], 0
 ; NO_ASSUME-NEXT:    br i1 [[TOBOOL]], label [[BB13:%.*]], label [[BB15:%.*]]
 ; NO_ASSUME:       bb13:
-; NO_ASSUME-NEXT:    [[F_IBLOCK_LCSSA:%.*]] = phi ptr [ [[TMP]], [[BB2]] ]
-; NO_ASSUME-NEXT:    [[TMP4_LE:%.*]] = ptrtoint ptr [[F_IBLOCK_LCSSA]] to i64
-; NO_ASSUME-NEXT:    [[TMP8_LE:%.*]] = inttoptr i64 [[TMP4_LE]] to ptr
+; NO_ASSUME-NEXT:    [[TMP4_LCSSA:%.*]] = phi i64 [ [[TMP4]], [[BB2]] ]
+; NO_ASSUME-NEXT:    [[TMP8_LE:%.*]] = inttoptr i64 [[TMP4_LCSSA]] to ptr
 ; NO_ASSUME-NEXT:    call void @__msan_warning_noreturn()
 ; NO_ASSUME-NEXT:    unreachable
 ; NO_ASSUME:       bb15:
@@ -54,9 +53,8 @@ define void @fn1() {
 ; USE_ASSUME-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP4]], 0
 ; USE_ASSUME-NEXT:    br i1 [[TOBOOL]], label [[BB13:%.*]], label [[BB15:%.*]]
 ; USE_ASSUME:       bb13:
-; USE_ASSUME-NEXT:    [[F_IBLOCK_LCSSA:%.*]] = phi ptr [ [[TMP]], [[BB2]] ]
-; USE_ASSUME-NEXT:    [[TMP4_LE:%.*]] = ptrtoint ptr [[F_IBLOCK_LCSSA]] to i64
-; USE_ASSUME-NEXT:    [[TMP8_LE:%.*]] = inttoptr i64 [[TMP4_LE]] to ptr
+; USE_ASSUME-NEXT:    [[TMP4_LCSSA:%.*]] = phi i64 [ [[TMP4]], [[BB2]] ]
+; USE_ASSUME-NEXT:    [[TMP8_LE:%.*]] = inttoptr i64 [[TMP4_LCSSA]] to ptr
 ; USE_ASSUME-NEXT:    call void @__msan_warning_noreturn()
 ; USE_ASSUME-NEXT:    unreachable
 ; USE_ASSUME:       bb15:

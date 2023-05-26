@@ -2133,3 +2133,13 @@ define <4 x i8> @ult_yx_umax_select_y_shuf_mask_fval(<4 x i8> %x, <4 x i8> %y) {
   %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
   ret <4 x i8> %r
 }
+
+define i8 @select_umin_with_icmp_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_umin_with_icmp_zero(
+; CHECK-NEXT:    ret i8 0
+;
+  %min = call i8 @llvm.umin.i8(i8 %x, i8 %y)
+  %cmp = icmp eq i8 %x, 0
+  %sel = select i1 %cmp, i8 %min, i8 0
+  ret i8 %sel
+}

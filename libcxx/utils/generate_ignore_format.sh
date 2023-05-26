@@ -12,7 +12,7 @@ rm libcxx/utils/data/ignore_format.txt
 # Since it's hard to match empty extensions the following
 # method is used, remove all files with an extension, then
 # add the list of extensions that should be formatted.
-for file in $(find libcxx/{benchmarks,include,src}/ -type f -not -name '*.*' -or \( \
+for file in $(find libcxx/{benchmarks,include,src} -type f -not -name '*.*' -or \( \
 	 -name "*.h" -or -name "*.hpp" -or \
 	 -name "*.c" -or -name "*.cpp" -or \
 	 -name "*.inc" -or -name "*.ipp" \

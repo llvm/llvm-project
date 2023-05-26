@@ -23,7 +23,9 @@ add_flang_library(FIRBuilder
   Runtime/Ragged.cpp
   Runtime/Reduction.cpp
   Runtime/Stop.cpp
+  Runtime/TemporaryStack.cpp
   Runtime/Transformational.cpp
+  TemporaryStorage.cpp
 
   DEPENDS
   FIRDialect

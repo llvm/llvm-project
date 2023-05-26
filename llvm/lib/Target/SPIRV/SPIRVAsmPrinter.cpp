@@ -134,8 +134,6 @@ void SPIRVAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
-  if (MAI->MBBsToSkip.contains(&MBB))
-    return;
   MCInst LabelInst;
   LabelInst.setOpcode(SPIRV::OpLabel);
   LabelInst.addOperand(MCOperand::createReg(MAI->getOrCreateMBBRegister(MBB)));
@@ -143,6 +141,8 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
 }
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
+  assert(!MBB.empty() && "MBB is empty!");
+
   // If it's the first MBB in MF, it has OpFunction and OpFunctionParameter, so
   // OpLabel should be output after them.
   if (MBB.getNumber() == MF->front().getNumber()) {

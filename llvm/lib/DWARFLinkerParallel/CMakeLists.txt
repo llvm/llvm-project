@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMDWARFLinkerParallel
   DWARFLinker.cpp
+  StringPool.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinkerParallel
@@ -8,11 +9,11 @@ add_llvm_component_library(LLVMDWARFLinkerParallel
   intrinsics_gen
 
   LINK_COMPONENTS
-  BinaryFormat
-  DebugInfoDWARF
   AsmPrinter
+  BinaryFormat
   CodeGen
+  DebugInfoDWARF
   MC
   Object
   Support
-)
+  )

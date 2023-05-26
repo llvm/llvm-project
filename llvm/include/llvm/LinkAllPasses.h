@@ -69,8 +69,6 @@ namespace {
         return;
 
       (void) llvm::createAAEvalPass();
-      (void)llvm::createBitTrackingDCEPass();
-      (void) llvm::createAlignmentFromAssumptionsPass();
       (void) llvm::createBasicAAWrapperPass();
       (void) llvm::createSCEVAAWrapperPass();
       (void) llvm::createTypeBasedAAWrapperPass();
@@ -92,12 +90,11 @@ namespace {
       (void) llvm::createGlobalsAAWrapperPass();
       (void) llvm::createGuardWideningPass();
       (void) llvm::createLoopGuardWideningPass();
-      (void) llvm::createInductiveRangeCheckEliminationPass();
       (void) llvm::createInstSimplifyLegacyPass();
       (void) llvm::createInstructionCombiningPass();
       (void) llvm::createJMCInstrumenterPass();
+      (void) llvm::createKCFIPass();
       (void) llvm::createLCSSAPass();
-      (void) llvm::createLegacyDivergenceAnalysisPass();
       (void) llvm::createLICMPass();
       (void) llvm::createLoopSinkPass();
       (void) llvm::createLazyValueInfoPass();
@@ -141,8 +138,6 @@ namespace {
       (void) llvm::createMergedLoadStoreMotionPass();
       (void) llvm::createGVNPass();
       (void) llvm::createPostDomTree();
-      (void) llvm::createInstructionNamerPass();
-      (void) llvm::createMetaRenamerPass();
       (void) llvm::createMergeICmpsLegacyPass();
       (void) llvm::createExpandLargeDivRemPass();
       (void) llvm::createExpandMemCmpPass();
@@ -152,7 +147,6 @@ namespace {
       (void) llvm::createPrintModulePass(os);
       (void) llvm::createPrintFunctionPass(os);
       (void) llvm::createModuleDebugInfoPrinterPass();
-      (void) llvm::createLintLegacyPassPass();
       (void) llvm::createSinkingPass();
       (void) llvm::createLowerAtomicPass();
       (void) llvm::createMemDepPrinter();
@@ -169,7 +163,6 @@ namespace {
       (void) llvm::createMustBeExecutedContextPrinter();
       (void)llvm::createScalarizeMaskedMemIntrinLegacyPass();
       (void) llvm::createHardwareLoopsLegacyPass();
-      (void) llvm::createInjectTLIMappingsLegacyPass();
       (void) llvm::createUnifyLoopExitsPass();
       (void) llvm::createFixIrreduciblePass();
       (void)llvm::createSelectOptimizePass();

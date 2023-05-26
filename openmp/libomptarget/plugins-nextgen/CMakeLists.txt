@@ -49,13 +49,18 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
         PRIVATE
         elf_common
         MemoryManager
+        OMPT
         PluginInterface
         ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
         ${OPENMP_PTHREAD_LIB}
-        "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
 
       NO_INSTALL_RPATH
     )
+
+    if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+      target_link_libraries("omptarget.rtl.${tmachine_libname}.nextgen" PRIVATE
+        "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
+    endif()
 
     # Install plugin under the lib destination folder.
     install(TARGETS "omptarget.rtl.${tmachine_libname}.nextgen"

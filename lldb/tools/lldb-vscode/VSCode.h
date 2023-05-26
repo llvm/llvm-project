@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <iosfwd>
 #include <map>
+#include <optional>
 #include <set>
 #include <thread>
 
@@ -141,10 +142,17 @@ struct VSCode {
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
   std::vector<std::string> terminate_commands;
+  // A copy of the last LaunchRequest or AttachRequest so we can reuse its
+  // arguments if we get a RestartRequest.
+  std::optional<llvm::json::Object> last_launch_or_attach_request;
   lldb::tid_t focus_tid;
   bool sent_terminated_event;
   bool stop_at_entry;
   bool is_attach;
+  // The process event thread normally responds to process exited events by
+  // shutting down the entire adapter. When we're restarting, we keep the id of
+  // the old process here so we can detect this case and keep running.
+  lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
   uint32_t reverse_request_seq;
   std::map<std::string, RequestCallback> request_handlers;

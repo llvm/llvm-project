@@ -31,7 +31,7 @@ void Executable::print(raw_ostream &os) const {
 }
 
 void Executable::onUpdate(DataFlowSolver *solver) const {
-  if (auto *block = point.dyn_cast<Block *>()) {
+  if (auto *block = llvm::dyn_cast_if_present<Block *>(point)) {
     // Re-invoke the analyses on the block itself.
     for (DataFlowAnalysis *analysis : subscribers)
       solver->enqueue({block, analysis});
@@ -39,7 +39,7 @@ void Executable::onUpdate(DataFlowSolver *solver) const {
     for (DataFlowAnalysis *analysis : subscribers)
       for (Operation &op : *block)
         solver->enqueue({&op, analysis});
-  } else if (auto *programPoint = point.dyn_cast<GenericProgramPoint *>()) {
+  } else if (auto *programPoint = llvm::dyn_cast_if_present<GenericProgramPoint *>(point)) {
     // Re-invoke the analysis on the successor block.
     if (auto *edge = dyn_cast<CFGEdge>(programPoint)) {
       for (DataFlowAnalysis *analysis : subscribers)
@@ -219,7 +219,7 @@ void DeadCodeAnalysis::markEntryBlocksLive(Operation *op) {
 LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
   if (point.is<Block *>())
     return success();
-  auto *op = point.dyn_cast<Operation *>();
+  auto *op = llvm::dyn_cast_if_present<Operation *>(point);
   if (!op)
     return emitError(point.getLoc(), "unknown program point kind");
 
@@ -309,8 +309,8 @@ void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
 }
 
 /// Get the constant values of the operands of an operation. If any of the
-/// constant value lattices are uninitialized, return none to indicate the
-/// analysis should bail out.
+/// constant value lattices are uninitialized, return std::nullopt to indicate
+/// the analysis should bail out.
 static std::optional<SmallVector<Attribute>> getOperandValuesImpl(
     Operation *op,
     function_ref<const Lattice<ConstantValue> *(Value)> getLattice) {

@@ -249,6 +249,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ArraySpec &);
 // The name may not match the symbol's name in case of a USE rename.
 class DerivedTypeSpec {
 public:
+  enum class Category { DerivedType, IntrinsicVector, PairVector, QuadVector };
+
   using RawParameter = std::pair<const parser::Keyword *, ParamValue>;
   using RawParameters = std::vector<RawParameter>;
   using ParameterMapType = std::map<SourceName, ParamValue>;
@@ -266,7 +268,8 @@ public:
 
   bool MightBeParameterized() const;
   bool IsForwardReferenced() const;
-  bool HasDefaultInitialization(bool ignoreAllocatable = false) const;
+  bool HasDefaultInitialization(
+      bool ignoreAllocatable = false, bool ignorePointer = true) const;
   bool HasDestruction() const;
 
   // The "raw" type parameter list is a simple transcription from the
@@ -304,6 +307,13 @@ public:
   bool Match(const DerivedTypeSpec &) const;
   std::string AsFortran() const;
 
+  Category category() const { return category_; }
+  void set_category(Category category) { category_ = category; }
+  bool IsVectorType() const {
+    return category_ == Category::IntrinsicVector ||
+        category_ == Category::PairVector || category_ == Category::QuadVector;
+  }
+
 private:
   SourceName name_;
   const Symbol &typeSymbol_;
@@ -313,6 +323,7 @@ private:
   bool instantiated_{false};
   RawParameters rawParameters_;
   ParameterMapType parameters_;
+  Category category_{Category::DerivedType};
   bool RawEquals(const DerivedTypeSpec &that) const {
     return &typeSymbol_ == &that.typeSymbol_ && cooked_ == that.cooked_ &&
         rawParameters_ == that.rawParameters_;

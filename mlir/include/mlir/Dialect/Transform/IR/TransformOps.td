@@ -17,6 +17,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
@@ -76,16 +77,16 @@ def AlternativesOp : TransformDialectOp<"alternatives",
 
     ```mlir
     %result = transform.alternatives %scope {
-    ^bb0(%arg0: !pdl.operation):
+    ^bb0(%arg0: !transform.any_op):
       // Try a fallible transformation.
       %0 = transform.fallible %arg0 // ...
       // If succeeded, yield the the result of the transformation.
-      transform.yield %0 : !pdl.operation
+      transform.yield %0 : !transform.any_op
     }, {
-    ^bb0(%arg0: !pdl.operation):
+    ^bb0(%arg0: !transform.any_op):
       // Otherwise, the second alternative is tried and it always succeeds by
       // returning the original handle.
-      transform.yield %arg0 : !pdl.operation
+      transform.yield %arg0 : !transform.any_op
     }
     ```
   }];
@@ -114,6 +115,69 @@ def CastOp : TransformDialectOp<"cast",
       ::mlir::transform::ApplyToEachResultList &results,
       ::mlir::transform::TransformState &state);
   }];
+}
+
+def ForeachMatchOp : TransformDialectOp<"foreach_match", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+    DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let summary = "Applies named sequences when a named matcher succeeds";
+  let description = [{
+    Given a pair of co-indexed lists of transform dialect symbols (such as
+    `transform.named_sequence`), walks the payload IR associated with the root
+    handle and interprets the symbols as matcher/action pairs by applying the
+    body of the corresponding symbol definition. The symbol from the first list
+    is the matcher part: if it results in a silenceable error, the error is
+    silenced and the next matcher is attempted. Definite failures from any
+    matcher stop the application immediately and are propagated unconditionally.
+    If none of the matchers succeeds, the next payload operation in walk order
+    (post-order at the moment of writing, double check `Operation::walk`) is
+    matched. If a matcher succeeds, the co-indexed action symbol is applied and
+    the following matchers are not applied to the same payload operation. If the
+    action succeeds, the next payload operation in walk order is matched. If it
+    fails, both silenceable and definite errors are propagated as the result of
+    this op.
+
+    The matcher symbol must take one operand of a type that implements the same
+    transform dialect interface as the `root` operand (a check is performed at
+    application time to see if the associated payload satisfies the constraints
+    of the actual type). It must not consume the operand as multiple matchers
+    may be applied. The matcher may produce any number of results. The action
+    symbol paired with the matcher must take the same number of arguments as the
+    matcher has results, and these arguments must implement the same transform
+    dialect interfaces, but not necessarily have the exact same type (again, a
+    check is performed at application time to see if the associated payload
+    satisfies the constraints of actual types on both sides). The action symbol
+    may not have results. The actions are expected to only modify payload
+    operations nested in the `root` payload operations associated with the
+    operand of this transform operation.
+
+    This operation consumes the operand and produces a new handle associated
+    with the same payload. This is necessary to trigger invalidation of handles
+    to any of the payload operations nested in the payload operations associated
+    with the operand, as those are likely to be modified by actions. Note that
+    the root payload operation associated with the operand are not matched.
+
+    The operation succeeds if none of the matchers produced a definite failure
+    during application and if all of the applied actions produced success. Note
+    that it also succeeds if all the matchers failed on all payload operations,
+    i.e. failure to apply is not an error. The operation produces a silenceable
+    failure if any applied action produced a silenceable failure. In this case,
+    the resulting handle is associated with an empty payload. The operation
+    produces a definite failure if any of the applied matchers or actions
+    produced a definite failure.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$root,
+                       SymbolRefArrayAttr:$matchers,
+                       SymbolRefArrayAttr:$actions);
+  let results = (outs TransformHandleTypeInterface:$updated);
+
+  let assemblyFormat =
+      "`in` $root custom<ForeachMatchSymbols>($matchers, $actions) "
+      "attr-dict `:` functional-type($root, $updated)";
+
+  let hasVerifier = 1;
 }
 
 def ForeachOp : TransformDialectOp<"foreach",
@@ -270,6 +334,7 @@ def GetResultOp : TransformDialectOp<"get_result",
 
 def IncludeOp : TransformDialectOp<"include",
     [CallOpInterface,
+     MatchOpInterface,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<SymbolUserOpInterface>,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -307,10 +372,54 @@ def IncludeOp : TransformDialectOp<"include",
       return getTarget();
     }
 
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      setTargetAttr(callee.get<SymbolRefAttr>());
+    }
+
     ::mlir::Operation::operand_range getArgOperands() {
       return getOperands();
     }
   }];
+}
+
+def MatchOperationNameOp : TransformDialectOp<"match.operation_name",
+    [SingleOpMatcher,
+     MatchOpInterface,
+     MemoryEffectsOpInterface]> {
+  let summary = "Matches a single operation of one of the given kinds";
+  let description = [{
+    Succeeds if the operation associated with the operand handle has one of the
+    given operation names. Produces a silenceable failure otherwise.
+
+    If more than one payload operation is associated with the operand handle,
+    produces a definite failure.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$operand_handle,
+                       StrArrayAttr:$op_names);
+  let assemblyFormat =
+      "$operand_handle $op_names attr-dict `:` type($operand_handle)";
+  let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
+}
+
+def MatchParamCmpIOp : Op<Transform_Dialect, "match.param.cmpi", [
+    DeclareOpInterfaceMethods<TransformOpInterface>,
+    MatchOpInterface,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    SameTypeOperands]> {
+  let summary =
+    "Matches if two parameter lists are associated with the same value";
+  let description = [{
+    Succeeds if all of the co-indexed values associated with the given
+    parameters relate as specified by the predicate (greater than, less than,
+    equal to, or their combinations). Comparison treats all values as signed.
+    Produces a silenceable failure otherwise.
+  }];
+  let arguments = (ins TransformParamTypeInterface:$param,
+                       TransformParamTypeInterface:$reference,
+                       MatchCmpIPredicateAttr:$predicate);
+  let assemblyFormat =
+      "$predicate $param `,` $reference attr-dict `:` type($param)";
 }
 
 def MergeHandlesOp : TransformDialectOp<"merge_handles",
@@ -332,7 +441,7 @@ def MergeHandlesOp : TransformDialectOp<"merge_handles",
   let arguments = (ins Variadic<TransformHandleTypeInterface>:$handles,
                        UnitAttr:$deduplicate);
   let results = (outs TransformHandleTypeInterface:$result);
-  let assemblyFormat = "($deduplicate^)? $handles attr-dict `:` type($result)";
+  let assemblyFormat = "(`deduplicate` $deduplicate^)? $handles attr-dict `:` type($result)";
   let hasFolder = 1;
 }
 
@@ -373,9 +482,10 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
     SymbolNameAttr:$sym_name,
     TypeAttrBase<"::mlir::FunctionType",
                  "function type attribute">:$function_type,
+    OptionalAttr<StrAttr>:$sym_visibility,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs);
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region MaxSizedRegion<1>:$body);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -394,70 +504,75 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
     ::llvm::ArrayRef<::mlir::Type> getCallableResults() {
       return getFunctionType().getResults();
     }
+    ::mlir::ArrayAttr getCallableArgAttrs() {
+      return getArgAttrs().value_or(nullptr);
+    }
+    ::mlir::ArrayAttr getCallableResAttrs() {
+      return getResAttrs().value_or(nullptr);
+    }
   }];
 }
 
-def SplitHandlesOp : TransformDialectOp<"split_handles",
+def SplitHandleOp : TransformDialectOp<"split_handle",
     [FunctionalStyleTransformOpTrait,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let summary = "Splits handles from a union of payload ops to a list";
+  let summary = "Splits a handle of payload ops into handles with a single op";
   let description = [{
-    Creates `num_result_handles` transform IR handles extracted from the
-    `handle` operand. The resulting Payload IR operation handles are listed
-    in the same order as the operations appear in the source `handle`.
-    This is useful for ensuring a statically known number of operations are
-    tracked by the source `handle` and to extract them into individual handles
-    that can be further manipulated in isolation.
+    Splits `handle` into one or multiple handles, as specified by the number
+    of results of this operation. `handle` should be mapped to as many payload
+    ops as there are results. Otherwise, this transform will fail silently by
+    default. Each result handle is mapped to exactly one payload op. The order
+    of the payload ops is preserved, i.e., the i-th payload op is mapped to the
+    i-th result handle.
 
-    This operation succeeds and returns `num_result_handles` if the statically
-    specified `num_result_handles` corresponds to the dynamic number of
-    operations contained in the source `handle`. Otherwise it silently fails.
+    This operation is useful for ensuring a statically known number of
+    operations are tracked by the source `handle` and to extract them into
+    individual handles that can be further manipulated in isolation.
+
+    If there are more payload ops than results, the remaining ops are mapped to
+    the result with index `overflow_result`. If no `overflow_result` is
+    specified, the transform fails silently.
+
+    If there are fewer payload ops than results, the transform fails silently
+    if `fail_on_payload_too_small` is set to "true". Otherwise, it succeeds and
+    the remaining result handles are not mapped to any op. It also succeeds if
+    `handle` is empty and `pass_through_empty_handle` is set to "true",
+    regardless of `fail_on_payload_too_small`.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$handle,
-                       I64Attr:$num_result_handles);
+                       DefaultValuedAttr<BoolAttr, "true">:$pass_through_empty_handle,
+                       DefaultValuedAttr<BoolAttr, "true">:$fail_on_payload_too_small,
+                       OptionalAttr<I64Attr>:$overflow_result);
   let results = (outs Variadic<TransformHandleTypeInterface>:$results);
+  let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$handle, "int64_t":$numResultHandles)>
   ];
 
   let assemblyFormat = [{
-    $handle `in` `[` $num_result_handles `]`
-    attr-dict `:` functional-type(operands, results)
+    $handle attr-dict `:` functional-type(operands, results)
   }];
 }
 
-def PDLMatchOp : TransformDialectOp<"pdl_match",
-    [DeclareOpInterfaceMethods<TransformOpInterface>,
-     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let summary = "Finds ops that match the named PDL pattern";
+def ParamConstantOp : Op<Transform_Dialect, "param.constant", [
+    MatchOpInterface,
+    DeclareOpInterfaceMethods<TransformOpInterface>,
+    MemoryEffectsOpInterface,
+    ParamProducerTransformOpTrait]> {
+  let summary = "Produces a new transform dialect parameter value associated "
+                "with the given attribute";
   let description = [{
-    Find Payload IR ops nested within the Payload IR op associated with the
-    operand that match the PDL pattern identified by its name. The pattern is
-    expected to be defined in the closest surrounding `WithPDLPatternsOp`.
-
-    Produces a Transform IR value associated with the list of Payload IR ops
-    that matched the pattern. The order of results in the list is that of the
-    Operation::walk, clients are advised not to rely on a specific order though.
-    If the operand is associated with multiple Payload IR ops, finds matching
-    ops nested within each of those and produces a single list containing all
-    of the matched ops.
-
-    The transformation is considered successful regardless of whether some
-    Payload IR ops actually matched the pattern and only fails if the pattern
-    could not be looked up or compiled.
+    Produces a new transform dialect parameter associated with the singleton
+    list containing the given attribute. The operation itself always succeeds,
+    but the general association check may fail if the parameter type does not
+    accept the given kind of attribute as valid.
   }];
-
-  let arguments = (ins
-    Arg<TransformHandleTypeInterface, "Payload IR scope to match within">:$root,
-    SymbolRefAttr:$pattern_name);
-  let results = (outs
-    Res<TransformHandleTypeInterface, "Handle to the matched Payload IR ops">:$matched);
-
-  let assemblyFormat = "$pattern_name `in` $root attr-dict `:` "
-                       "functional-type(operands, results)";
+  let arguments = (ins AnyAttr:$value);
+  let results = (outs TransformParamTypeInterface:$param);
+  let assemblyFormat = "$value attr-dict `->` type($param)";
 }
 
 def PrintOp : TransformDialectOp<"print",
@@ -605,61 +720,6 @@ def SequenceOp : TransformDialectOp<"sequence",
   }];
 
   let hasVerifier = 1;
-}
-
-def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
-    [DeclareOpInterfaceMethods<TransformOpInterface>, NoTerminator,
-     OpAsmOpInterface, PossibleTopLevelTransformOpTrait,
-     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     SymbolTable]> {
-  let summary = "Contains PDL patterns available for use in transforms";
-  let description = [{
-    This op contains a set of named PDL patterns that are available for the
-    Transform dialect operations to be used for pattern matching. For example,
-    PDLMatchOp can be used to produce a Transform IR value associated with all
-    Payload IR operations that match the pattern as follows:
-
-    ```mlir
-    transform.with_pdl_patterns {
-    ^bb0(%arg0: !pdl.operation):
-      pdl.pattern @my_pattern : benefit(1) {
-        %0 = pdl.operation //...
-        // Regular PDL goes here.
-        pdl.rewrite %0 with "transform.dialect"
-      }
-
-      sequence %arg0 failures(propagate) {
-      ^bb0(%arg1: !pdl.operation):
-        %1 = pdl_match @my_pattern in %arg1
-        // Use %1 as handle
-      }
-    }
-    ```
-
-    Note that the pattern is expected to finish with a `pdl.rewrite` terminator
-    that points to the custom rewriter named "transform.dialect". The rewriter
-    actually does nothing, but the transform application will keep track of the
-    operations that matched the pattern.
-
-    This op is expected to contain `pdl.pattern` operations and exactly one
-    another Transform dialect operation that gets executed with all patterns
-    available. This op is a possible top-level Transform IR op, the argument of
-    its entry block corresponds to either the root op of the payload IR or the
-    ops associated with its operand when provided.
-  }];
-
-  let arguments = (ins
-    Arg<Optional<TransformHandleTypeInterface>, "Root operation of the Payload IR"
-        >:$root);
-  let regions = (region SizedRegion<1>:$body);
-  let assemblyFormat = "($root^ `:` type($root))? attr-dict-with-keyword regions";
-
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    /// Allow the dialect prefix to be omitted.
-    static StringRef getDefaultDialect() { return "transform"; }
-  }];
 }
 
 def YieldOp : TransformDialectOp<"yield",

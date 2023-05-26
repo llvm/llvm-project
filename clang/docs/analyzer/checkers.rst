@@ -2317,7 +2317,7 @@ Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
 
 ENV31-C:
 Rule is about the possible problem with `main` function's third argument, environment pointer,
-"envp". When enviornment array is modified using some modification function
+"envp". When environment array is modified using some modification function
 such as putenv, setenv or others, It may happen that memory is reallocated,
 however "envp" is not updated to reflect the changes and points to old memory
 region.
@@ -2432,48 +2432,14 @@ not representable as unsigned char and is not equal to ``EOF``.
 
 .. code-block:: c
 
+  #define EOF -1
   void test_alnum_concrete(int v) {
     int ret = isalnum(256); // \
-    // warning: Function argument constraint is not satisfied
+    // warning: Function argument outside of allowed range
     (void)ret;
   }
 
-If the argument's value is unknown then the value is assumed to hold the proper value range.
-
-.. code-block:: c
-
-  #define EOF -1
-  int test_alnum_symbolic(int x) {
-    int ret = isalnum(x);
-    // after the call, ret is assumed to be in the range [-1, 255]
-
-    if (ret > 255)      // impossible (infeasible branch)
-      if (x == 0)
-        return ret / x; // division by zero is not reported
-    return ret;
-  }
-
-If the user disables the checker then the argument violation warning is
-suppressed. However, the assumption about the argument is still modeled. This
-is because exploring an execution path that already contains undefined behavior
-is not valuable.
-
-There are different kind of constraints modeled: range constraint, not null
-constraint, buffer size constraint. A **range constraint** requires the
-argument's value to be in a specific range, see ``isalnum`` as an example above.
-A **not null constraint** requires the pointer argument to be non-null.
-
-A **buffer size** constraint specifies the minimum size of the buffer
-argument. The size might be a known constant. For example, ``asctime_r`` requires
-that the buffer argument's size must be greater than or equal to ``26`` bytes. In
-other cases, the size is denoted by another argument or as a multiplication of
-two arguments.
-For instance, ``size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)``.
-Here, ``ptr`` is the buffer, and its minimum size is ``size * nmemb``
-
-.. code-block:: c
-
-  void buffer_size_constraint_violation(FILE *file) {
+  void buffer_size_violation(FILE *file) {
     enum { BUFFER_SIZE = 1024 };
     wchar_t wbuf[BUFFER_SIZE];
 
@@ -2486,22 +2452,68 @@ Here, ``ptr`` is the buffer, and its minimum size is ``size * nmemb``
     fread(wbuf, size, nitems, file);
   }
 
+You can think of this checker as defining restrictions (pre- and postconditions)
+on standard library functions. Preconditions are checked, and when they are
+violated, a warning is emitted. Post conditions are added to the analysis, e.g.
+that the return value must be no greater than 255.
+
+These are the possible checks on the values passed as function arguments:
+ - The argument has an allowed range (or multiple ranges) of values. The checker
+   can detect if a passed value is outside of the allowed range and show the
+   actual and allowed values.
+ - The argument has pointer type and is not allowed to be null pointer. Many
+   (but not all) standard functions can produce undefined behavior if a null
+   pointer is passed, these cases can be detected by the checker.
+ - The argument is a pointer to a memory block and the minimal size of this
+   buffer is determined by another argument to the function, or by
+   multiplication of two arguments (like at function ``fread``), or is a fixed
+   value (for example ``asctime_r`` requires at least a buffer of size 26). The
+   checker can detect if the buffer size is too small and in optimal case show
+   the size of the buffer and the values of the corresponding arguments.
+
+If the user disables the checker then the argument violation warning is
+suppressed. However, the assumption about the argument is still modeled.
+For instance, if the argument to a function must be in between 0 and 255,
+but the value of the argument is unknown, the analyzer will conservatively
+assume that it is in this interval, even if warnings for this checker are
+disabled. Similarly, if a function mustn't be called with a null pointer but it
+is, analysis will stop on that execution path (similarly to a division by zero),
+with or without a warning. If the null value of the argument can not be proven,
+the analyzer will assume that it is non-null.
+
+.. code-block:: c
+
+  int test_alnum_symbolic(int x) {
+    int ret = isalnum(x);
+    // after the call, ret is assumed to be in the range [-1, 255]
+
+    if (ret > 255)      // impossible (infeasible branch)
+      if (x == 0)
+        return ret / x; // division by zero is not reported
+    return ret;
+  }
+
 **Limitations**
 
-The checker is in alpha because the reports cannot provide notes about the
-values of the arguments. Without this information it is hard to confirm if the
-constraint is indeed violated. For example, consider the above case for
-``fread``. We display in the warning message that the size of the 1st arg
-should be equal to or less than the value of the 2nd arg times the 3rd arg.
-However, we fail to display the concrete values (``4`` and ``4096``) for those
-arguments.
+The checker can not always provide notes about the values of the arguments.
+Without this information it is hard to confirm if the constraint is indeed
+violated. The argument values are shown if they are known constants or the value
+is determined by previous (not too complicated) assumptions.
+
+The checker can produce false positives in cases such as if the program has
+invariants not known to the analyzer engine or the bug report path contains
+calls to unknown functions. In these cases the analyzer fails to detect the real
+range of the argument.
 
 **Parameters**
 
 The checker models functions (and emits diagnostics) from the C standard by
-default. The ``ModelPOSIX`` option enables the checker to model (and emit
-diagnostics) for functions that are defined in the POSIX standard. This option
-is disabled by default.
+default. The ``apiModeling.StdCLibraryFunctions:ModelPOSIX`` option enables
+modeling (and emit diagnostics) of additional functions that are defined in the
+POSIX standard. This option is disabled by default. Note that this option
+belongs to a separate built-in checker ``apiModeling.StdCLibraryFunctions`` and
+can have effect on other checkers because it toggles modeling of the functions
+in various aspects.
 
 .. _alpha-unix-BlockInCriticalSection:
 

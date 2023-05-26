@@ -478,6 +478,8 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_modfl:
     Changed |= setDoesNotThrow(F);
     Changed |= setWillReturn(F);
+    Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setOnlyWritesMemory(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_memcpy:
@@ -725,6 +727,8 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_frexpl:
     Changed |= setDoesNotThrow(F);
     Changed |= setWillReturn(F);
+    Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setOnlyWritesMemory(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_fstatvfs:
@@ -1933,6 +1937,90 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
 
   if (const auto *F =
           dyn_cast<Function>(Calloc.getCallee()->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
+                            const TargetLibraryInfo *TLI, LibFunc NewFunc,
+                            uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, NewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(NewFunc);
+  FunctionCallee Func = M->getOrInsertFunction(Name, B.getInt8PtrTy(),
+                                               Num->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, Name);
+
+  if (const Function *F =
+          dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
+                                   const TargetLibraryInfo *TLI,
+                                   LibFunc NewFunc, uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, NewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(NewFunc);
+  FunctionCallee Func =
+      M->getOrInsertFunction(Name, B.getInt8PtrTy(), Num->getType(),
+                             NoThrow->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI = B.CreateCall(Func, {Num, NoThrow, B.getInt8(HotCold)}, Name);
+
+  if (const Function *F =
+          dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
+                                   const TargetLibraryInfo *TLI,
+                                   LibFunc NewFunc, uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, NewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(NewFunc);
+  FunctionCallee Func = M->getOrInsertFunction(
+      Name, B.getInt8PtrTy(), Num->getType(), Align->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI = B.CreateCall(Func, {Num, Align, B.getInt8(HotCold)}, Name);
+
+  if (const Function *F =
+          dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdNewAlignedNoThrow(Value *Num, Value *Align,
+                                          Value *NoThrow, IRBuilderBase &B,
+                                          const TargetLibraryInfo *TLI,
+                                          LibFunc NewFunc, uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, NewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(NewFunc);
+  FunctionCallee Func = M->getOrInsertFunction(
+      Name, B.getInt8PtrTy(), Num->getType(), Align->getType(),
+      NoThrow->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI =
+      B.CreateCall(Func, {Num, Align, NoThrow, B.getInt8(HotCold)}, Name);
+
+  if (const Function *F =
+          dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
 
   return CI;

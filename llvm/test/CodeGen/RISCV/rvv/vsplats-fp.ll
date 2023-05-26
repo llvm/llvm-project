@@ -84,9 +84,9 @@ define <vscale x 8 x float> @vsplat_load_nxv8f32(ptr %ptr) {
 ;
 ; NOT-OPTIMIZED-LABEL: vsplat_load_nxv8f32:
 ; NOT-OPTIMIZED:       # %bb.0:
-; NOT-OPTIMIZED-NEXT:    flw ft0, 0(a0)
+; NOT-OPTIMIZED-NEXT:    flw fa5, 0(a0)
 ; NOT-OPTIMIZED-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; NOT-OPTIMIZED-NEXT:    vfmv.v.f v8, ft0
+; NOT-OPTIMIZED-NEXT:    vfmv.v.f v8, fa5
 ; NOT-OPTIMIZED-NEXT:    ret
   %f = load float, ptr %ptr
   %head = insertelement <vscale x 8 x float> poison, float %f, i32 0

@@ -13,10 +13,10 @@
 #ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 #define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 
-#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/XRayInstr.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
@@ -163,6 +163,12 @@ public:
     Never,    // No loop is assumed to be finite.
   };
 
+  enum AssignmentTrackingOpts {
+    Disabled,
+    Enabled,
+    Forced,
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -200,8 +206,11 @@ public:
   /// if non-empty.
   std::string RecordCommandLine;
 
-  std::map<std::string, std::string> DebugPrefixMap;
-  std::map<std::string, std::string> CoveragePrefixMap;
+  llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
+
+  /// Prefix replacement map for source-based code coverage to remap source
+  /// file paths in coverage mapping.
+  llvm::SmallVector<std::pair<std::string, std::string>, 0> CoveragePrefixMap;
 
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
@@ -326,12 +335,12 @@ public:
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
-    RemarkKind Kind;
+    RemarkKind Kind = RK_Missing;
     std::string Pattern;
     std::shared_ptr<llvm::Regex> Regex;
 
     /// By default, optimization remark is missing.
-    OptRemark() : Kind(RK_Missing), Regex(nullptr) {}
+    OptRemark() = default;
 
     /// Returns true iff the optimization remark holds a valid regular
     /// expression.
@@ -361,9 +370,6 @@ public:
   /// they want to explain why they decided to apply or not apply a given
   /// transformation.
   OptRemark OptimizationRemarkAnalysis;
-
-  /// Set of files defining the rules for the symbol rewriting.
-  std::vector<std::string> RewriteMapFiles;
 
   /// Set of sanitizer checks that are non-fatal (i.e. execution should be
   /// continued when possible).
@@ -499,12 +505,12 @@ public:
 
   /// Check if type and variable info should be emitted.
   bool hasReducedDebugInfo() const {
-    return getDebugInfo() >= codegenoptions::DebugInfoConstructor;
+    return getDebugInfo() >= llvm::codegenoptions::DebugInfoConstructor;
   }
 
   /// Check if maybe unused type info should be emitted.
   bool hasMaybeUnusedDebugInfo() const {
-    return getDebugInfo() >= codegenoptions::UnusedTypeInfo;
+    return getDebugInfo() >= llvm::codegenoptions::UnusedTypeInfo;
   }
 
   // Check if any one of SanitizeCoverage* is enabled.

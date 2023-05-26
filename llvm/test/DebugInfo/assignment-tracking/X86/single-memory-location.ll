@@ -2,7 +2,11 @@
 ; RUN: | FileCheck %s
 
 ;; Check that a dbg.assign for a fully stack-homed variable causes the variable
-;; location to appear in the Machine Function side table.
+;; location to appear in the Machine Function side table (variable 'local').
+;;
+;; The variable 'local2' is tracked using a dbg.declare. Check the variable is
+;; dropped and doesn't cause a crash when the address is an empty metadata
+;; tuple and assignment tracking is enabled for the function.
 ;;
 ;; $ cat test.cpp
 ;; void maybe_writes(int*);
@@ -17,10 +21,13 @@
 
 ; CHECK: ![[VAR:[0-9]+]] = !DILocalVariable(name: "local",
 ; CHECK: stack:
-; CHECK-NEXT: - { id: 0, name: local, type: default, offset: 0, size: 4, alignment: 4, 
-; CHECK-NEXT:     stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-; CHECK-NEXT:     debug-info-variable: '![[VAR]]', debug-info-expression: '!DIExpression()', 
+; CHECK-NEXT: - { id: 0, name: local, type: default, offset: 0, size: 4, alignment: 4,
+; CHECK-NEXT:     stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+; CHECK-NEXT:     debug-info-variable: '![[VAR]]', debug-info-expression: '!DIExpression()',
 ; CHECK-NEXT:     debug-info-location: '!{{.+}}' }
+; CHECK-NEXT: - { id: 1, name: local2, type: default, offset: 0, size: 4, alignment: 4,
+; CHECK-NEXT:     stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+; CHECK-NEXT:     debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 
 source_filename = "test.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -30,6 +37,8 @@ define dso_local i32 @_Z7examplev() local_unnamed_addr !dbg !7 {
 entry:
   %local = alloca i32, align 4, !DIAssignID !13
   call void @llvm.dbg.assign(metadata i1 undef, metadata !12, metadata !DIExpression(), metadata !13, metadata ptr %local, metadata !DIExpression()), !dbg !14
+  %local2 = alloca i32, align 4
+  call void @llvm.dbg.declare(metadata !2, metadata !32, metadata !DIExpression()), !dbg !14
   %0 = bitcast ptr %local to ptr, !dbg !15
   call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %0), !dbg !15
   call void @_Z12maybe_writesPi(ptr nonnull %local), !dbg !16
@@ -44,6 +53,7 @@ declare !dbg !29 dso_local void @_Z3extiiiiiiiiii(i32, i32, i32, i32, i32, i32, 
 declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !1000}
@@ -77,4 +87,5 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !29 = !DISubprogram(name: "ext", linkageName: "_Z3extiiiiiiiiii", scope: !1, file: !1, line: 2, type: !30, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
 !30 = !DISubroutineType(types: !31)
 !31 = !{null, !10, !10, !10, !10, !10, !10, !10, !10, !10, !10}
+!32 = !DILocalVariable(name: "local2", scope: !7, file: !1, line: 4, type: !10)
 !1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

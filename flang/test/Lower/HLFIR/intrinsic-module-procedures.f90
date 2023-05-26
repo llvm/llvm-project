@@ -8,7 +8,7 @@
 subroutine foo(cptr, x)
   use iso_c_binding, only : c_ptr, c_loc
   type(c_ptr) :: cptr
-  integer :: x
+  integer, target :: x
   cptr = c_loc(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPfoo(

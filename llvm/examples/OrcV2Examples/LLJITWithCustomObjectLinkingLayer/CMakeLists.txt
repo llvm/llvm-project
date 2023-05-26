@@ -10,3 +10,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(LLJITWithCustomObjectLinkingLayer
   LLJITWithCustomObjectLinkingLayer.cpp
   )
+
+export_executable_symbols(LLJITWithCustomObjectLinkingLayer)

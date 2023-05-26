@@ -23,8 +23,9 @@ public:
           const llvm::opt::ArgList &Args);
 
   bool HasNativeLLVMSupport() const override { return true; }
-  bool IsIntegratedAssemblerDefault() const override { return true; }
+
   bool IsMathErrnoDefault() const override { return false; }
+
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
   }
@@ -82,7 +83,8 @@ protected:
   SanitizerMask getSupportedSanitizers() const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs) const override;
-  std::string getArchSpecificLibPath() const override;
+  path_list getArchSpecificLibPaths() const override;
+
 private:
   Multilib SelectedMultilib;
 };

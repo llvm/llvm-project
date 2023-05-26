@@ -13,7 +13,7 @@
 TEST(LlvmLibcIsAlNum, DefaultLocale) {
   // Loops through all characters, verifying that numbers and letters
   // return non-zero integer and everything else returns a zero.
-  for (int c = 0; c < 255; ++c) {
+  for (int c = -255; c < 255; ++c) {
     if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
         ('0' <= c && c <= '9'))
       EXPECT_NE(__llvm_libc::isalnum(c), 0);

@@ -376,6 +376,7 @@ def : SourceOfDivergence<int_amdgcn_wmma_i32_16x16x16_iu4>;
 def : SourceOfDivergence<int_amdgcn_if>;
 def : SourceOfDivergence<int_amdgcn_else>;
 def : SourceOfDivergence<int_amdgcn_loop>;
+def : SourceOfDivergence<int_amdgcn_inverse_ballot>;
 
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;

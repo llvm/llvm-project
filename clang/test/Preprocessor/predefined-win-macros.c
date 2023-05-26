@@ -52,7 +52,7 @@
 // CHECK-MS-CPP20: #define _MSVC_LANG 202002L
 
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=19.00 -std=c++2b -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2B
+// RUN:     -fms-compatibility-version=19.00 -std=c++23 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2B
 // CHECK-MS-CPP2B: #define _MSC_VER 1900
 // CHECK-MS-CPP2B: #define _MSVC_LANG 202004L
 
@@ -129,4 +129,5 @@
 // CHECK-ARM64-MINGW: #define WINNT 1
 // CHECK-ARM64-MINGW: #define _WIN32 1
 // CHECK-ARM64-MINGW: #define _WIN64 1
+// CHECK-ARM64-MINGW: #define __GCC_ASM_FLAG_OUTPUTS__ 1
 // CHECK-ARM64-MINGW: #define __aarch64__ 1

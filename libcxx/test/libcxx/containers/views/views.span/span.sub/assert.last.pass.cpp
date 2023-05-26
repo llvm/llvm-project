@@ -14,7 +14,7 @@
 // Make sure that creating a sub-span with an incorrect number of elements triggers an assertion.
 
 // REQUIRES: has-unix-headers
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
+// XFAIL: availability-verbose_abort-missing
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 #include <array>

@@ -134,7 +134,7 @@ define void @test3(<4 x i32> %induction30, ptr %tmp16, ptr %tmp17,  <4 x i16> %t
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX512-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vpternlogq $226, %xmm2, %xmm0, %xmm1
 ; AVX512-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovq %xmm1, (%rsi)
 ; AVX512-NEXT:    vzeroupper

@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -61,7 +60,7 @@ static Value buildLinearThreadId(RewriterBase &rewriter, Location loc,
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::z).getResult()};
   threadsAndWorkGroups.push_back(blockDimsOfr[0]);
   threadsAndWorkGroups.push_back(blockDimsOfr[1]);
-  OpFoldResult ofr = makeComposedFoldedAffineApply(
+  OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
       rewriter, loc, tx + ty * BDX + tz * BDX * BDY, threadsAndWorkGroups);
   return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
 }
@@ -137,7 +136,7 @@ struct GpuWarpIdBuilder : public GpuIdBuilder {
       // `forallMappingSizes`.
       Value linearId = buildLinearThreadId(rewriter, loc, this->blockDimsOfr);
       AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
-      OpFoldResult warpIdOfr = makeComposedFoldedAffineApply(
+      OpFoldResult warpIdOfr = affine::makeComposedFoldedAffineApply(
           rewriter, loc, d0.floorDiv(kWarpSize), {linearId});
       Value warpId = getValueOrCreateConstantIndexOp(rewriter, loc, warpIdOfr);
       // Sizes in [x, y, z] -> [z, y x] order to properly compute strides in
@@ -149,7 +148,8 @@ struct GpuWarpIdBuilder : public GpuIdBuilder {
       SmallVector<Value> ids;
       // Reverse back to be in [x, y, z] order.
       for (AffineExpr e : llvm::reverse(delinearizingExprs))
-        ids.push_back(makeComposedAffineApply(rewriter, loc, e, warpId));
+        ids.push_back(
+            affine::makeComposedAffineApply(rewriter, loc, e, warpId));
 
       // clang-format off
       LDBG("----linearId: " << linearId);
@@ -204,7 +204,8 @@ struct GpuLinearIdBuilder : public GpuIdBuilder {
       SmallVector<Value> ids;
       // Reverse back to be in [x, y, z] order.
       for (AffineExpr e : llvm::reverse(delinearizingExprs))
-        ids.push_back(makeComposedAffineApply(rewriter, loc, e, linearId));
+        ids.push_back(
+            affine::makeComposedAffineApply(rewriter, loc, e, linearId));
 
       // clang-format off
       LLVM_DEBUG(llvm::interleaveComma(reverseBasisSizes,
@@ -255,19 +256,19 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
 
   bool hasBlockMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return attr.isa<GPUBlockMappingAttr>();
+        return isa<GPUBlockMappingAttr>(attr);
       });
   bool hasThreadMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return attr.isa<GPUThreadMappingAttr>();
+        return isa<GPUThreadMappingAttr>(attr);
       });
   bool hasWarpMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return attr.isa<GPUWarpMappingAttr>();
+        return isa<GPUWarpMappingAttr>(attr);
       });
   bool hasLinearMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return attr.isa<GPULinearIdMappingAttr>();
+        return isa<GPULinearIdMappingAttr>(attr);
       });
   int64_t countMappingTypes = 0;
   countMappingTypes += hasBlockMapping ? 1 : 0;
@@ -490,9 +491,9 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
       llvm::dbgs() << "\n");
 
   // Step 2. sort the values by the corresponding DeviceMappingAttrInterface.
-  auto comparator = [&](DeviceMappingAttrInterface a,
-                        DeviceMappingAttrInterface b) -> bool {
-    return a.getMappingId() < b.getMappingId();
+  auto comparator = [&](Attribute a, Attribute b) -> bool {
+    return cast<DeviceMappingAttrInterface>(a).getMappingId() <
+           cast<DeviceMappingAttrInterface>(b).getMappingId();
   };
   SmallVector<int64_t> forallMappingSizes =
       getValuesSortedByKey(forallMappingAttrs, tmpMappingSizes, comparator);
@@ -518,7 +519,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
                        ArrayRef<Attribute>{forallMappingAttrs}.take_front(
                            forallOp.getInductionVars().size()))) {
     Value peIdOp = mappingIdOps[static_cast<int64_t>(
-        dim.cast<DeviceMappingAttrInterface>().getMappingId())];
+        cast<DeviceMappingAttrInterface>(dim).getMappingId())];
     bvm.map(iv, peIdOp);
   }
 
@@ -902,7 +903,6 @@ class GPUTransformDialectExtension
           GPUTransformDialectExtension> {
 public:
   GPUTransformDialectExtension() {
-    declareDependentDialect<pdl::PDLDialect>();
     declareGeneratedDialect<scf::SCFDialect>();
     declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<GPUDialect>();

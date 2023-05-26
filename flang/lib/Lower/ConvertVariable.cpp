@@ -68,8 +68,21 @@ static bool hasDefaultInitialization(const Fortran::semantics::Symbol &sym) {
     if (!Fortran::semantics::IsAllocatableOrPointer(sym))
       if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
         if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
-                declTypeSpec->AsDerived())
-          return derivedTypeSpec->HasDefaultInitialization();
+                declTypeSpec->AsDerived()) {
+          // Pointer assignments in the runtime may hit undefined behaviors if
+          // the RHS contains garbage. Pointer objects are always established by
+          // lowering to NULL() (in Fortran::lower::createMutableBox). However,
+          // pointer components need special care here so that local and global
+          // derived type containing pointers are always initialized.
+          // Intent(out), however, do not need to be initialized since the
+          // related descriptor storage comes from a local or global that has
+          // been initialized (it may not be NULL() anymore, but the rank, type,
+          // and non deferred length parameters are still correct in a
+          // conformant program, and that is what matters).
+          const bool ignorePointer = Fortran::semantics::IsIntentOut(sym);
+          return derivedTypeSpec->HasDefaultInitialization(
+              /*ignoreAllocatable=*/false, ignorePointer);
+        }
   return false;
 }
 
@@ -418,14 +431,9 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
 
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
-  // rank-1 Fortran arrays of integer, real, or logical. The tensor
-  // type does not support nested structures which are needed for
-  // complex numbers.
-  // To get multidimensional arrays to work, we will have to use column major
-  // array ordering with the tensor type (so it matches column major ordering
-  // with the Fortran fir.array). By default, tensor types assume row major
-  // ordering. How to create this tensor type is to be determined.
-  if (symTy.isa<fir::SequenceType>() && sym.Rank() == 1 &&
+  // Fortran arrays of integer, real, or logical. The tensor type does
+  // not support nested structures which are needed for complex numbers.
+  if (symTy.isa<fir::SequenceType>() &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
     mlir::Type eleTy = symTy.cast<fir::SequenceType>().getEleTy();
     if (eleTy.isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>()) {
@@ -495,7 +503,9 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   } else {
     TODO(loc, "global"); // Procedure pointer or something else
   }
-  // Creates undefined initializer for globals without initializers
+  // Creates zero or undefined initializer for globals without initializers
+  // Zero initializer is used for "simple types" (integer, real and logical),
+  // undefined is used for types aside from those types.
   if (!globalIsInitialized(global)) {
     // TODO: Is it really required to add the undef init if the Public
     // visibility is set ? We need to make sure the global is not optimized out
@@ -507,8 +517,12 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       TODO(loc, "BIND(C) module variable linkage");
     Fortran::lower::createGlobalInitialization(
         builder, global, [&](fir::FirOpBuilder &builder) {
-          builder.create<fir::HasValueOp>(
-              loc, builder.create<fir::UndefOp>(loc, symTy));
+          mlir::Value initValue;
+          if (symTy.isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>())
+            initValue = builder.create<fir::ZeroOp>(loc, symTy);
+          else
+            initValue = builder.create<fir::UndefOp>(loc, symTy);
+          builder.create<fir::HasValueOp>(loc, initValue);
         });
   }
   // Set public visibility to prevent global definition to be optimized out
@@ -721,9 +735,12 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
     if (auto mutBox = extVal.getBoxOf<fir::MutableBoxValue>()) {
       // The dummy argument is not passed in the ENTRY so it should not be
       // deallocated.
-      if (mlir::Operation *op = mutBox->getAddr().getDefiningOp())
-        if (mlir::isa<fir::AllocaOp>(op))
+      if (mlir::Operation *op = mutBox->getAddr().getDefiningOp()) {
+        if (auto declOp = mlir::dyn_cast<hlfir::DeclareOp>(op))
+          op = declOp.getMemref().getDefiningOp();
+        if (op && mlir::isa<fir::AllocaOp>(op))
           return;
+      }
       mlir::Location loc = converter.getCurrentLocation();
       fir::FirOpBuilder &builder = converter.getFirOpBuilder();
       auto genDeallocateWithTypeDesc = [&]() {
@@ -1837,14 +1854,15 @@ void Fortran::lower::mapSymbolAttributes(
     }
   }
 
+  if (addr && addr.getDefiningOp<fir::UnboxCharOp>()) {
+    // Ensure proper type is given to array/scalar that transited via
+    // fir.boxchar arg.
+    mlir::Type castTy = builder.getRefType(converter.genType(var));
+    addr = builder.createConvert(loc, castTy, addr);
+  }
+
   // Compute array extents and lower bounds.
   if (ba.isArray()) {
-    if (addr && addr.getDefiningOp<fir::UnboxCharOp>()) {
-      // Ensure proper type is given to array that transited via fir.boxchar
-      // arg.
-      mlir::Type castTy = builder.getRefType(converter.genType(var));
-      addr = builder.createConvert(loc, castTy, addr);
-    }
     if (ba.isStaticArray()) {
       if (ba.lboundIsAllOnes()) {
         for (std::int64_t extent :

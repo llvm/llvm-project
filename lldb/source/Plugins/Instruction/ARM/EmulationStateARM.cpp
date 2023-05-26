@@ -264,11 +264,10 @@ bool EmulationStateARM::LoadRegistersStateFromDictionary(
   for (int i = 0; i < num; ++i) {
     sstr.Clear();
     sstr.Printf("%c%d", kind, i);
-    OptionValueSP value_sp =
-        reg_dict->GetValueForKey(ConstString(sstr.GetString()));
+    OptionValueSP value_sp = reg_dict->GetValueForKey(sstr.GetString());
     if (value_sp.get() == nullptr)
       return false;
-    uint64_t reg_value = value_sp->GetUInt64Value();
+    uint64_t reg_value = value_sp->GetValueAs<uint64_t>().value_or(0);
     StorePseudoRegisterValue(first_reg + i, reg_value);
   }
 
@@ -277,8 +276,8 @@ bool EmulationStateARM::LoadRegistersStateFromDictionary(
 
 bool EmulationStateARM::LoadStateFromDictionary(
     OptionValueDictionary *test_data) {
-  static ConstString memory_key("memory");
-  static ConstString registers_key("registers");
+  static constexpr llvm::StringLiteral memory_key("memory");
+  static constexpr llvm::StringLiteral registers_key("registers");
 
   if (!test_data)
     return false;
@@ -288,8 +287,8 @@ bool EmulationStateARM::LoadStateFromDictionary(
   // Load memory, if present.
 
   if (value_sp.get() != nullptr) {
-    static ConstString address_key("address");
-    static ConstString data_key("data");
+    static constexpr llvm::StringLiteral address_key("address");
+    static constexpr llvm::StringLiteral data_key("data");
     uint64_t start_address = 0;
 
     OptionValueDictionary *mem_dict = value_sp->GetAsDictionary();
@@ -297,7 +296,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
     if (value_sp.get() == nullptr)
       return false;
     else
-      start_address = value_sp->GetUInt64Value();
+      start_address = value_sp->GetValueAs<uint64_t>().value_or(0);
 
     value_sp = mem_dict->GetValueForKey(data_key);
     OptionValueArray *mem_array = value_sp->GetAsArray();
@@ -311,7 +310,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
       value_sp = mem_array->GetValueAtIndex(i);
       if (value_sp.get() == nullptr)
         return false;
-      uint64_t value = value_sp->GetUInt64Value();
+      uint64_t value = value_sp->GetValueAs<uint64_t>().value_or(0);
       StoreToPseudoAddress(address, value);
       address = address + 4;
     }
@@ -327,11 +326,12 @@ bool EmulationStateARM::LoadStateFromDictionary(
   if (!LoadRegistersStateFromDictionary(reg_dict, 'r', dwarf_r0, 16))
     return false;
 
-  static ConstString cpsr_name("cpsr");
+  static constexpr llvm::StringLiteral cpsr_name("cpsr");
   value_sp = reg_dict->GetValueForKey(cpsr_name);
   if (value_sp.get() == nullptr)
     return false;
-  StorePseudoRegisterValue(dwarf_cpsr, value_sp->GetUInt64Value());
+  StorePseudoRegisterValue(dwarf_cpsr,
+                           value_sp->GetValueAs<uint64_t>().value_or(0));
 
   // Load s/d Registers
   // To prevent you giving both types in a state and overwriting

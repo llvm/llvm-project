@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -42,7 +43,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
@@ -258,8 +258,7 @@ static bool willLowerDirectly(SDValue Incoming) {
   if (Incoming.getValueType().getSizeInBits() > 64)
     return false;
 
-  return (isa<ConstantSDNode>(Incoming) || isa<ConstantFPSDNode>(Incoming) ||
-          Incoming.isUndef());
+  return isIntOrFPConstant(Incoming) || Incoming.isUndef();
 }
 
 /// Try to find existing copies of the incoming values in stack slots used for

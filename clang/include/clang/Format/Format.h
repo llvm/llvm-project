@@ -944,6 +944,39 @@ struct FormatStyle {
   /// \version 12
   BitFieldColonSpacingStyle BitFieldColonSpacing;
 
+  /// The number of columns to use to indent the contents of braced init lists.
+  /// If unset, ``ContinuationIndentWidth`` is used.
+  /// \code
+  ///   AlignAfterOpenBracket: AlwaysBreak
+  ///   BracedInitializerIndentWidth: 2
+  ///
+  ///   void f() {
+  ///     SomeClass c{
+  ///       "foo",
+  ///       "bar",
+  ///       "baz",
+  ///     };
+  ///     auto s = SomeStruct{
+  ///       .foo = "foo",
+  ///       .bar = "bar",
+  ///       .baz = "baz",
+  ///     };
+  ///     SomeArrayT a[3] = {
+  ///       {
+  ///         foo,
+  ///         bar,
+  ///       },
+  ///       {
+  ///         foo,
+  ///         bar,
+  ///       },
+  ///       SomeArrayT{},
+  ///     };
+  ///   }
+  /// \endcode
+  /// \version 17
+  std::optional<unsigned> BracedInitializerIndentWidth;
+
   /// Different ways to wrap braces after control statements.
   enum BraceWrappingAfterControlStatementStyle : int8_t {
     /// Never wrap braces after a control statement.
@@ -1768,7 +1801,7 @@ struct FormatStyle {
     BBCDS_Never,
     /// Breaking between template declaration and ``concept`` is allowed. The
     /// actual behavior depends on the content and line breaking rules and
-    /// penalities.
+    /// penalties.
     BBCDS_Allowed,
     /// Always break before ``concept``, putting it in the line after the
     /// template declaration.
@@ -2500,6 +2533,10 @@ struct FormatStyle {
   ///     Decimal: 3
   ///     Hex: -1
   /// \endcode
+  ///
+  /// You can also specify a minimum number of digits (``BinaryMinDigits``,
+  /// ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
+  /// have in order for the separators to be inserted.
   struct IntegerLiteralSeparatorStyle {
     /// Format separators in binary literals.
     /// \code{.text}
@@ -2509,6 +2546,14 @@ struct FormatStyle {
     ///   /*  4: */ b = 0b1001'1110'1101;
     /// \endcode
     int8_t Binary;
+    /// Format separators in binary literals with a minimum number of digits.
+    /// \code{.text}
+    ///   // Binary: 3
+    ///   // BinaryMinDigits: 7
+    ///   b1 = 0b101101;
+    ///   b2 = 0b1'101'101;
+    /// \endcode
+    int8_t BinaryMinDigits;
     /// Format separators in decimal literals.
     /// \code{.text}
     ///   /* -1: */ d = 18446744073709550592ull;
@@ -2516,6 +2561,14 @@ struct FormatStyle {
     ///   /*  3: */ d = 18'446'744'073'709'550'592ull;
     /// \endcode
     int8_t Decimal;
+    /// Format separators in decimal literals with a minimum number of digits.
+    /// \code{.text}
+    ///   // Decimal: 3
+    ///   // DecimalMinDigits: 5
+    ///   d1 = 2023;
+    ///   d2 = 10'000;
+    /// \endcode
+    int8_t DecimalMinDigits;
     /// Format separators in hexadecimal literals.
     /// \code{.text}
     ///   /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
@@ -2523,6 +2576,20 @@ struct FormatStyle {
     ///   /*  2: */ h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;
     /// \endcode
     int8_t Hex;
+    /// Format separators in hexadecimal literals with a minimum number of
+    /// digits.
+    /// \code{.text}
+    ///   // Hex: 2
+    ///   // HexMinDigits: 6
+    ///   h1 = 0xABCDE;
+    ///   h2 = 0xAB'CD'EF;
+    /// \endcode
+    int8_t HexMinDigits;
+    bool operator==(const IntegerLiteralSeparatorStyle &R) const {
+      return Binary == R.Binary && BinaryMinDigits == R.BinaryMinDigits &&
+             Decimal == R.Decimal && DecimalMinDigits == R.DecimalMinDigits &&
+             Hex == R.Hex && HexMinDigits == R.HexMinDigits;
+    }
   };
 
   /// Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
@@ -2636,6 +2703,11 @@ struct FormatStyle {
     ///        [](SomeReallyLongLambdaSignatureArgument foo) {
     ///      return;
     ///    });
+    ///
+    ///    someMethod(someOtherMethod(
+    ///        [](SomeReallyLongLambdaSignatureArgument foo) {
+    ///      return;
+    ///    }));
     /// \endcode
     LBI_OuterScope,
   };
@@ -2644,11 +2716,7 @@ struct FormatStyle {
   /// causes the lambda body to be indented one additional level relative to
   /// the indentation level of the signature. ``OuterScope`` forces the lambda
   /// body to be indented one additional level relative to the parent scope
-  /// containing the lambda signature. For callback-heavy code, it may improve
-  /// readability to have the signature indented two levels and to use
-  /// ``OuterScope``. The KJ style guide requires ``OuterScope``.
-  /// `KJ style guide
-  /// <https://github.com/capnproto/capnproto/blob/master/style-guide.md>`_
+  /// containing the lambda signature.
   /// \version 13
   LambdaBodyIndentationKind LambdaBodyIndentation;
 
@@ -2754,28 +2822,35 @@ struct FormatStyle {
   /// \code
   ///   A(a*b);
   /// \endcode
+  ///
   /// will usually be interpreted as a call to a function A, and the
   /// multiplication expression will be formatted as `a * b`.
   ///
   /// If we specify the macro definition:
-  /// \code
+  /// \code{.yaml}
   ///   Macros:
   ///   - A(x)=x
   /// \endcode
+  ///
   /// the code will now be parsed as a declaration of the variable b of type a*,
   /// and formatted as `a* b` (depending on pointer-binding rules).
   ///
   /// Features and restrictions:
-  /// *  Both function-like macros and object-like macros are supported.
-  /// *  Macro arguments must be used exactly once in the expansion.
-  /// *  No recursive expansion; macros referencing other macros will be
+  ///  * Both function-like macros and object-like macros are supported.
+  ///  * Macro arguments must be used exactly once in the expansion.
+  ///  * No recursive expansion; macros referencing other macros will be
   ///    ignored.
-  /// *  Overloading by arity is supported: for example, given the macro
-  ///    definitions A=x, A()=y, A(a)=a,
-  ///    'A;' -> 'x;'
-  ///    'A();' -> 'y;'
-  ///    'A(z);' -> 'z;'
-  ///    'A(a, b) will not be expanded.
+  ///  * Overloading by arity is supported: for example, given the macro
+  ///    definitions A=x, A()=y, A(a)=a
+  ///
+  /// \code
+  ///    A; -> x;
+  ///    A(); -> y;
+  ///    A(z); -> z;
+  ///    A(a, b); // will not be expanded.
+  /// \endcode
+  ///
+  /// \version 17.0
   std::vector<std::string> Macros;
 
   /// The maximum number of consecutive empty lines to keep.
@@ -3526,11 +3601,6 @@ struct FormatStyle {
   };
 
   /// Controls if and how clang-format will sort ``#includes``.
-  /// If ``Never``, includes are never sorted.
-  /// If ``CaseInsensitive``, includes are sorted in an ASCIIbetical or case
-  /// insensitive fashion.
-  /// If ``CaseSensitive``, includes are sorted in an alphabetical or case
-  /// sensitive fashion.
   /// \version 3.8
   SortIncludesOptions SortIncludes;
 
@@ -3706,6 +3776,17 @@ struct FormatStyle {
   /// \endcode
   /// \version 7
   bool SpaceBeforeInheritanceColon;
+
+  /// If ``true``, a space will be added before a JSON colon. For other
+  /// languages, e.g. JavaScript, use ``SpacesInContainerLiterals`` instead.
+  /// \code
+  ///    true:                                  false:
+  ///    {                                      {
+  ///      "key" : "value"              vs.       "key": "value"
+  ///    }                                      }
+  /// \endcode
+  /// \version 17
+  bool SpaceBeforeJsonColon;
 
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
@@ -3933,9 +4014,12 @@ struct FormatStyle {
   /// The number of spaces before trailing line comments
   /// (``//`` - comments).
   ///
-  /// This does not affect trailing block comments (``/*`` - comments) as
-  /// those commonly have different usage patterns and a number of special
-  /// cases.
+  /// This does not affect trailing block comments (``/*`` - comments) as those
+  /// commonly have different usage patterns and a number of special cases.  In
+  /// the case of Verilog, it doesn't affect a comment right after the opening
+  /// parenthesis in the port or parameter list in a module header, because it
+  /// is probably for the port on the following line instead of the parenthesis
+  /// it follows.
   /// \code
   ///    SpacesBeforeTrailingComments: 3
   ///    void f() {
@@ -3980,8 +4064,9 @@ struct FormatStyle {
   /// \version 10
   bool SpacesInConditionalStatement;
 
-  /// If ``true``, spaces are inserted inside container literals (e.g.
-  /// ObjC and Javascript array and dict literals).
+  /// If ``true``, spaces are inserted inside container literals (e.g.  ObjC and
+  /// Javascript array and dict literals). For JSON, use
+  /// ``SpaceBeforeJsonColon`` instead.
   /// \code{.js}
   ///    true:                                  false:
   ///    var arr = [ 1, 2, 3 ];         vs.     var arr = [1, 2, 3];
@@ -4168,6 +4253,20 @@ struct FormatStyle {
   /// \version 3.7
   UseTabStyle UseTab;
 
+  /// For Verilog, put each port on its own line in module instantiations.
+  /// \code
+  ///    true:
+  ///    ffnand ff1(.q(),
+  ///               .qbar(out1),
+  ///               .clear(in1),
+  ///               .preset(in2));
+  ///
+  ///    false:
+  ///    ffnand ff1(.q(), .qbar(out1), .clear(in1), .preset(in2));
+  /// \endcode
+  /// \version 17
+  bool VerilogBreakBetweenInstancePorts;
+
   /// A vector of macros which are whitespace-sensitive and should not
   /// be touched.
   ///
@@ -4218,6 +4317,7 @@ struct FormatStyle {
            BinPackArguments == R.BinPackArguments &&
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
+           BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakArrays == R.BreakArrays &&
@@ -4260,10 +4360,7 @@ struct FormatStyle {
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            InsertBraces == R.InsertBraces &&
            InsertNewlineAtEOF == R.InsertNewlineAtEOF &&
-           IntegerLiteralSeparator.Binary == R.IntegerLiteralSeparator.Binary &&
-           IntegerLiteralSeparator.Decimal ==
-               R.IntegerLiteralSeparator.Decimal &&
-           IntegerLiteralSeparator.Hex == R.IntegerLiteralSeparator.Hex &&
+           IntegerLiteralSeparator == R.IntegerLiteralSeparator &&
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
@@ -4272,7 +4369,7 @@ struct FormatStyle {
            Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
-           MacroBlockEnd == R.MacroBlockEnd &&
+           MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
@@ -4316,6 +4413,7 @@ struct FormatStyle {
            SpaceBeforeCtorInitializerColon ==
                R.SpaceBeforeCtorInitializerColon &&
            SpaceBeforeInheritanceColon == R.SpaceBeforeInheritanceColon &&
+           SpaceBeforeJsonColon == R.SpaceBeforeJsonColon &&
            SpaceBeforeParens == R.SpaceBeforeParens &&
            SpaceBeforeParensOptions == R.SpaceBeforeParensOptions &&
            SpaceAroundPointerQualifiers == R.SpaceAroundPointerQualifiers &&
@@ -4339,8 +4437,9 @@ struct FormatStyle {
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
            StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
            TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
-           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
-           Macros == R.Macros;
+           VerilogBreakBetweenInstancePorts ==
+               R.VerilogBreakBetweenInstancePorts &&
+           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
   }
 
   std::optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

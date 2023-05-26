@@ -1036,7 +1036,7 @@ void CodeGenPGO::loadRegionCounts(llvm::IndexedInstrProfReader *PGOReader,
   llvm::Expected<llvm::InstrProfRecord> RecordExpected =
       PGOReader->getInstrProfRecord(FuncName, FunctionHash);
   if (auto E = RecordExpected.takeError()) {
-    auto IPE = llvm::InstrProfError::take(std::move(E));
+    auto IPE = std::get<0>(llvm::InstrProfError::take(std::move(E)));
     if (IPE == llvm::instrprof_error::unknown_function)
       CGM.getPGOStats().addMissing(IsInMainFile);
     else if (IPE == llvm::instrprof_error::hash_mismatch)

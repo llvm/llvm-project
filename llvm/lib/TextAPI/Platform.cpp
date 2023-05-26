@@ -132,5 +132,12 @@ std::string getOSAndEnvironmentName(PlatformType Platform,
   llvm_unreachable("Unknown llvm::MachO::PlatformType enum");
 }
 
+VersionTuple mapToSupportedOSVersion(const Triple &Triple) {
+  const VersionTuple MinSupportedOS = Triple.getMinimumSupportedOSVersion();
+  if (MinSupportedOS > Triple.getOSVersion())
+    return MinSupportedOS;
+  return Triple.getOSVersion();
+}
+
 } // end namespace MachO.
 } // end namespace llvm.

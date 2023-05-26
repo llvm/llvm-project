@@ -12,7 +12,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Stream.h"
 
@@ -36,7 +35,7 @@
   "na", nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                  \
       {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},                              \
-      nullptr, nullptr
+      nullptr, nullptr, nullptr
 
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT
 

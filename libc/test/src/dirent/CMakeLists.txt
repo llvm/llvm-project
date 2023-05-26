@@ -1,5 +1,5 @@
 add_subdirectory(testdata)
-add_libc_testsuite(libc_dirent_unittests)
+add_custom_target(libc_dirent_unittests)
 
 add_libc_unittest(
   dirent_test

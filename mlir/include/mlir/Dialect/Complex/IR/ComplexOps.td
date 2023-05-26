@@ -44,7 +44,7 @@ class ComplexUnaryOp<string mnemonic, list<Trait> traits = []> :
 def AbsOp : ComplexUnaryOp<"abs",
     [TypesMatchWith<"complex element type matches result type",
                     "complex", "result",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
+                    "::llvm::cast<ComplexType>($_self).getElementType()">]> {
   let summary = "computes absolute value of a complex number";
   let description = [{
     The `abs` op takes a single complex number and computes its absolute value.
@@ -158,10 +158,10 @@ def CreateOp : Complex_Op<"create",
      AllTypesMatch<["real", "imaginary"]>,
      TypesMatchWith<"complex element type matches real operand type",
                     "complex", "real",
-                    "$_self.cast<ComplexType>().getElementType()">,
+                    "::llvm::cast<ComplexType>($_self).getElementType()">,
      TypesMatchWith<"complex element type matches imaginary operand type",
                     "complex", "imaginary",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
+                    "::llvm::cast<ComplexType>($_self).getElementType()">]> {
 
   let summary = "complex number creation operation";
   let description = [{
@@ -276,7 +276,7 @@ def Expm1Op : ComplexUnaryOp<"expm1", [SameOperandsAndResultType]> {
 def ImOp : ComplexUnaryOp<"im",
     [TypesMatchWith<"complex element type matches result type",
                     "complex", "imaginary",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
+                    "::llvm::cast<ComplexType>($_self).getElementType()">]> {
   let summary = "extracts the imaginary part of a complex number";
   let description = [{
     The `im` op takes a single complex number and extracts the imaginary part.
@@ -422,7 +422,7 @@ def PowOp : ComplexArithmeticOp<"pow"> {
 def ReOp : ComplexUnaryOp<"re",
     [TypesMatchWith<"complex element type matches result type",
                     "complex", "real",
-                    "$_self.cast<ComplexType>().getElementType()">]> {
+                    "::llvm::cast<ComplexType>($_self).getElementType()">]> {
   let summary = "extracts the real part of a complex number";
   let description = [{
     The `re` op takes a single complex number and extracts the real part.
@@ -602,7 +602,7 @@ def ConjOp : ComplexUnaryOp<"conj", [SameOperandsAndResultType]> {
 def AngleOp : ComplexUnaryOp<"angle",
                            [TypesMatchWith<"complex element type matches result type",
                                            "complex", "result",
-                                           "$_self.cast<ComplexType>().getElementType()">]> {
+                                           "::llvm::cast<ComplexType>($_self).getElementType()">]> {
   let summary = "computes argument value of a complex number";
   let description = [{
     The `angle` op takes a single complex number and computes its argument value with a branch cut along the negative real axis.

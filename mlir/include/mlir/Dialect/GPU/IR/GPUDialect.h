@@ -163,6 +163,23 @@ public:
 // Adds a `gpu.async.token` to the front of the argument list.
 void addAsyncDependency(Operation *op, Value token);
 
+// Handle types for sparse.
+enum class SparseHandleKind { Env, DnVec, DnMat, SpMat };
+
+template <SparseHandleKind K>
+class SparseHandleType
+    : public Type::TypeBase<SparseHandleType<K>, Type, TypeStorage> {
+public:
+  using Base =
+      typename Type::TypeBase<SparseHandleType<K>, Type, TypeStorage>::Base;
+  using Base::Base;
+};
+
+using SparseEnvHandleType = SparseHandleType<SparseHandleKind::Env>;
+using SparseDnVecHandleType = SparseHandleType<SparseHandleKind::DnVec>;
+using SparseDnMatHandleType = SparseHandleType<SparseHandleKind::DnMat>;
+using SparseSpMatHandleType = SparseHandleType<SparseHandleKind::SpMat>;
+
 } // namespace gpu
 } // namespace mlir
 

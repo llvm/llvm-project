@@ -1798,6 +1798,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_GNR_M32
 // CHECK_GNR_M32: #define __AES__ 1
 // CHECK_GNR_M32: #define __AMX_BF16__ 1
+// CHECK_GNR_M32: #define __AMX_COMPLEX__ 1
 // CHECK_GNR_M32: #define __AMX_FP16__ 1
 // CHECK_GNR_M32: #define __AMX_INT8__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
@@ -1872,6 +1873,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_GNR_M64
 // CHECK_GNR_M64: #define __AES__ 1
 // CHECK_GNR_M64: #define __AMX_BF16__ 1
+// CHECK_GNR_M64: #define __AMX_COMPLEX__ 1
 // CHECK_GNR_M64: #define __AMX_FP16__ 1
 // CHECK_GNR_M64: #define __AMX_INT8__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1

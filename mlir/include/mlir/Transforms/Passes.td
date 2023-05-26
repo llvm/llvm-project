@@ -172,6 +172,40 @@ def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
   let constructor = "mlir::createLoopInvariantCodeMotionPass()";
 }
 
+def Mem2Reg : Pass<"mem2reg"> {
+  let summary = "Promotes memory slots into values.";
+  let description = [{
+    This pass removes loads out of and stores into a memory slot, and turns
+    them into direct uses of SSA values. This is done generically using the
+    `PromoteAllocationOpInterface`, `PromoteOpInterface` and
+    `PromoteMemOpInterface` interfaces.
+
+    This pass will attempt to compute which definitions of the content of
+    the memory slot reach operations that use the memory slot pointer. It
+    will rewire or remove operations that use the slot pointer so they no
+    longer use it. If any of this is not possible, the IR will be left
+    without mutation.
+
+    This pass only supports unstructured control-flow. Promotion of operations
+    within subregions will not happen.
+  }];
+
+  let options = [
+    Option<"enableRegionSimplification", "region-simplify", "bool",
+       /*default=*/"true",
+       "Perform control flow optimizations to the region tree">,
+  ];
+
+  let statistics = [
+    Statistic<"promotedAmount",
+              "promoted slots",
+              "Total amount of memory slot promoted">,
+    Statistic<"newBlockArgumentAmount",
+              "new block args",
+              "Total amount of new block argument inserted in blocks">,
+  ];
+}
+
 def PrintOpStats : Pass<"print-op-stats"> {
   let summary = "Print statistics of operations";
   let constructor = "mlir::createPrintOpStatsPass()";
@@ -193,6 +227,42 @@ def SCCP : Pass<"sccp"> {
     in [“Constant Propagation with Conditional Branches”](https://dl.acm.org/doi/10.1145/103135.103136) (1991).
   }];
   let constructor = "mlir::createSCCPPass()";
+}
+
+def SROA : Pass<"sroa"> {
+  let summary = "Scalar Replacement of Aggregates";
+  let description = [{
+    Scalar Replacement of Aggregates. Replaces allocations of aggregates into
+    independant allocations of its elements.
+
+    Allocators must implement `DestructurableAllocationOpInterface` to provide
+    the list of memory slots for which destructuring should be attempted.
+
+    This pass will only be applied if all accessors of the aggregate implement
+    the `DestructurableAccessorOpInterface`. If the accessors provide a view
+    into the struct, users of the view must ensure it is used in a type-safe
+    manner and within bounds by implementing `TypeSafeOpInterface`.
+  }];
+
+  let statistics = [
+    Statistic<
+      "destructuredAmount",
+      "destructured slots",
+      "Total amount of memory slots destructured"
+    >,
+    Statistic<
+      "slotsWithMemoryBenefit",
+      "slots with memory benefit",
+      "Total amount of memory slots in which the destructured size was smaller "
+      "than the total size after eliminating unused fields"
+    >,
+    Statistic<
+      "maxSubelementAmount",
+      "max subelement number",
+      "Maximal number of sub-elements a successfully destructured slot "
+      "initially had"
+    >,
+  ];
 }
 
 def StripDebugInfo : Pass<"strip-debuginfo"> {

@@ -37,15 +37,14 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
 
     ```mlir
     // Custom form of applying the & operator.
-    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.opaque<"int32_t*">
+    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.ptr<i32>
 
     // Generic form of the same operation.
     %0 = "emitc.apply"(%arg0) {applicableOperator = "&"}
-        : (i32) -> !emitc.opaque<"int32_t*">
+        : (i32) -> !emitc.ptr<i32>
 
     ```
   }];
-  // TODO: Disallow to apply the operator & (address of) to emitc.constant operations.
   let arguments = (ins
     Arg<StrAttr, "the operator to apply">:$applicableOperator,
     AnyType:$operand
@@ -143,7 +142,6 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   let results = (outs AnyType);
 
   let hasFolder = 1;
-  // TODO: Disallow empty constants.
   let hasVerifier = 1;
 }
 

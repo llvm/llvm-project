@@ -54,4 +54,15 @@ static_assert(std::ranges::view<SizedRandomAccessView>);
 static_assert(std::ranges::random_access_range<SizedRandomAccessView>);
 static_assert(std::ranges::sized_range<SizedRandomAccessView>);
 
+struct View : std::ranges::view_base {
+  constexpr explicit View(int* b, int* e) : begin_(b), end_(e) { }
+
+  constexpr int* begin() const { return begin_; }
+  constexpr int* end() const { return end_; }
+
+private:
+  int* begin_;
+  int* end_;
+};
+
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_TAKE_TYPES_H

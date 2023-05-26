@@ -37,9 +37,11 @@ enum class CudaVersion {
   CUDA_116,
   CUDA_117,
   CUDA_118,
-  FULLY_SUPPORTED = CUDA_115,
+  CUDA_120,
+  CUDA_121,
+  FULLY_SUPPORTED = CUDA_118,
   PARTIALLY_SUPPORTED =
-      CUDA_118, // Partially supported. Proceed with a warning.
+      CUDA_121, // Partially supported. Proceed with a warning.
   NEW = 10000,  // Too new. Issue a warning, but allow using it.
 };
 const char *CudaVersionToString(CudaVersion V);
@@ -92,6 +94,8 @@ enum class CudaArch {
   GFX90a,
   GFX90c,
   GFX940,
+  GFX941,
+  GFX942,
   GFX1010,
   GFX1011,
   GFX1012,

@@ -13,9 +13,9 @@ define <3 x float> @func(i32 %inval) {
 ; CHECK-NEXT:    [[DOTI12:%.*]] = phi float [ 0.000000e+00, [[DOTENTRY]] ], [ [[DOTI12]], [[TMP3]] ]
 ; CHECK-NEXT:    [[DOTI23:%.*]] = phi float [ 0.000000e+00, [[DOTENTRY]] ], [ [[DOTI23]], [[TMP3]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi float [ 1.000000e+00, [[DOTENTRY]] ], [ 2.000000e+00, [[TMP3]] ]
-; CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <3 x float> poison, float [[DOTI01]], i32 0
-; CHECK-NEXT:    [[DOTUPTO1:%.*]] = insertelement <3 x float> [[DOTUPTO0]], float [[DOTI12]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[DOTUPTO1]], float [[DOTI23]], i32 2
+; CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <3 x float> poison, float [[DOTI01]], i64 0
+; CHECK-NEXT:    [[DOTUPTO1:%.*]] = insertelement <3 x float> [[DOTUPTO0]], float [[DOTI12]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[DOTUPTO1]], float [[DOTI23]], i64 2
 ; CHECK-NEXT:    br label [[TMP3]]
 ; CHECK:       3:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[INVAL:%.*]], 0

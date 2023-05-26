@@ -97,8 +97,8 @@ define <4 x i32> @add_non_select_mask(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @add_masks_with_undefs(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @add_masks_with_undefs(
-; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[SEL1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 poison, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[SEL2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <4 x i32> <i32 poison, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    [[R:%.*]] = add nsw <4 x i32> [[SEL1]], [[SEL2]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;

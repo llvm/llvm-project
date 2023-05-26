@@ -6,7 +6,7 @@ subroutine acc_shutdown
   logical :: ifCondition = .TRUE.
 
   !$acc shutdown
-!CHECK: acc.shutdown{{$}}
+!CHECK: acc.shutdown{{ *}}{{$}}
 
   !$acc shutdown if(.true.)
 !CHECK: [[IF1:%.*]] = arith.constant true

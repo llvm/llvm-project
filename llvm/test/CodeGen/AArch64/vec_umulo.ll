@@ -296,18 +296,15 @@ define <4 x i32> @umulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d2, d0
+; CHECK-NEXT:    adrp x8, .LCPI10_0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    shl v0.4h, v0.4h, #15
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    addv h1, v0.4h
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    and v1.8b, v2.8b, v1.8b
-; CHECK-NEXT:    umov w8, v1.h[0]
-; CHECK-NEXT:    umov w9, v1.h[1]
-; CHECK-NEXT:    umov w10, v1.h[2]
-; CHECK-NEXT:    umov w11, v1.h[3]
-; CHECK-NEXT:    and w8, w8, #0x1
-; CHECK-NEXT:    bfi w8, w9, #1, #1
-; CHECK-NEXT:    bfi w8, w10, #2, #1
-; CHECK-NEXT:    orr w8, w8, w11, lsl #3
-; CHECK-NEXT:    and w8, w8, #0xf
+; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    strb w8, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<4 x i1>, <4 x i1>} @llvm.umul.with.overflow.v4i1(<4 x i1> %a0, <4 x i1> %a1)

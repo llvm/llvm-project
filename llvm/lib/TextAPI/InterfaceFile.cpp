@@ -174,6 +174,8 @@ bool InterfaceFile::operator==(const InterfaceFile &O) const {
   if (!(isYAMLTextStub(FileKind)) && !(isYAMLTextStub(O.FileKind))) {
     if (RPaths != O.RPaths)
       return false;
+    if (mapToPlatformVersionSet(Targets) != mapToPlatformVersionSet(O.Targets))
+      return false;
   }
 
   if (!std::equal(Documents.begin(), Documents.end(), O.Documents.begin(),

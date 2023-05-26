@@ -296,14 +296,6 @@ standard error in a human-readable form.
 This pass, only available in ``opt``, printsthe SCCs of each function CFG to
 standard error in a human-readable fom.
 
-``-print-externalfnconstants``: Print external fn callsites passed constants
-----------------------------------------------------------------------------
-
-This pass, only available in ``opt``, prints out call sites to external
-functions that are called with constant arguments.  This can be useful when
-looking for standard library functions we should constant fold or handle in
-alias analyses.
-
 ``-print-function``: Print function to stderr
 ---------------------------------------------
 

@@ -12,9 +12,11 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
+#include <vector>
 
 namespace Fortran::common {
 
+// Non-conforming extensions & legacies
 ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     FixedFormContinuationWithColumn1Ampersand, LogicalAbbreviations,
     XOROperator, PunctuationInNames, OptionalFreeFormSpace, BOZExtensions,
@@ -33,9 +35,17 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     ProgramReturn, ImplicitNoneTypeNever, ImplicitNoneTypeAlways,
     ForwardRefImplicitNone, OpenAccessAppend, BOZAsDefaultInteger,
     DistinguishableSpecifics, DefaultSave, PointerInSeqType, NonCharacterFormat,
-    SaveMainProgram, SaveBigMainProgramVariables)
+    SaveMainProgram, SaveBigMainProgramVariables,
+    DistinctArrayConstructorLengths, PPCVector)
+
+// Portability and suspicious usage warnings for conforming code
+ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
+    NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
+    ShortCharacterActual, ExprPassedToVolatile, ImplicitInterfaceActual,
+    PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
+using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
 
 class LanguageFeatureControl {
 public:
@@ -57,13 +67,22 @@ public:
   }
   LanguageFeatureControl(const LanguageFeatureControl &) = default;
   void Enable(LanguageFeature f, bool yes = true) { disable_.set(f, !yes); }
-  void EnableWarning(LanguageFeature f, bool yes = true) { warn_.set(f, yes); }
-  void WarnOnAllNonstandard(bool yes = true) { warnAll_ = yes; }
+  void EnableWarning(LanguageFeature f, bool yes = true) {
+    warnLanguage_.set(f, yes);
+  }
+  void EnableWarning(UsageWarning w, bool yes = true) {
+    warnUsage_.set(w, yes);
+  }
+  void WarnOnAllNonstandard(bool yes = true) { warnAllLanguage_ = yes; }
+  void WarnOnAllUsage(bool yes = true) { warnAllUsage_ = yes; }
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const {
-    return (warnAll_ && f != LanguageFeature::OpenMP &&
+    return (warnAllLanguage_ && f != LanguageFeature::OpenMP &&
                f != LanguageFeature::OpenACC) ||
-        warn_.test(f);
+        warnLanguage_.test(f);
+  }
+  bool ShouldWarn(UsageWarning w) const {
+    return warnAllUsage_ || warnUsage_.test(w);
   }
   // Return all spellings of operators names, depending on features enabled
   std::vector<const char *> GetNames(LogicalOperator) const;
@@ -71,8 +90,10 @@ public:
 
 private:
   LanguageFeatures disable_;
-  LanguageFeatures warn_;
-  bool warnAll_{false};
+  LanguageFeatures warnLanguage_;
+  bool warnAllLanguage_{false};
+  UsageWarnings warnUsage_;
+  bool warnAllUsage_{false};
 };
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_FORTRAN_FEATURES_H_

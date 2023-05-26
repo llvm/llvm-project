@@ -15,6 +15,8 @@
 ; RUN:     | FileCheck -check-prefix=X86_64 %s
 ; RUN: llc < %s -mtriple=i386-linux-gnu -relocation-model=pic \
 ; RUN:     | FileCheck -check-prefix=NoEMU %s
+; RUN: llc < %s -mtriple=i686-linux-android29 -relocation-model=pic \
+; RUN:     | FileCheck -check-prefix=NoEMU %s
 
 ; NoEMU-NOT: __emutls
 

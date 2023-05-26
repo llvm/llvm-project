@@ -12,9 +12,8 @@
 #include "src/unistd/fsync.h"
 #include "src/unistd/read.h"
 #include "src/unistd/write.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
 TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;

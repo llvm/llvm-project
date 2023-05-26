@@ -117,7 +117,6 @@ if (LIBOMPTARGET_FOUND_AMDGPU_GPU OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.amdgpu")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()
-  libomptarget_say("Not generating amdgcn test targets as libhsa is not linkable")
+  libomptarget_say("Not generating AMDGPU tests, no supported devices detected. Use 'LIBOMPTARGET_FORCE_AMDGPU_TESTS' to override.")
   return()
 endif()
-

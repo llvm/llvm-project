@@ -65,6 +65,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoSSE1();
   setLegalizerInfoSSE2();
   setLegalizerInfoSSE41();
+  setLegalizerInfoSSE42();
   setLegalizerInfoAVX();
   setLegalizerInfoAVX2();
   setLegalizerInfoAVX512();
@@ -286,6 +287,23 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
                        LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_MERGE_VALUES, 1, s128}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_UNMERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
+
+  if (Subtarget.hasPOPCNT()) {
+    // popcount
+    getActionDefinitionsBuilder(G_CTPOP)
+      .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
+      .widenScalarToNextPow2(1, /*Min=*/16)
+      .clampScalar(1, s16, s64);
+  }
+
+  if (Subtarget.hasLZCNT()) {
+    // count leading zeros (LZCNT)
+    getActionDefinitionsBuilder(G_CTLZ)
+      .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
+      .widenScalarToNextPow2(1, /*Min=*/16)
+      .clampScalar(1, s16, s64);
+  }
+
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE1() {
@@ -384,6 +402,12 @@ void X86LegalizerInfo::setLegalizerInfoSSE41() {
   LegacyInfo.setAction({G_MUL, v4s32}, LegacyLegalizeActions::Legal);
 }
 
+void X86LegalizerInfo::setLegalizerInfoSSE42() {
+  if (!Subtarget.hasSSE42())
+    return;
+
+}
+
 void X86LegalizerInfo::setLegalizerInfoAVX() {
   if (!Subtarget.hasAVX())
     return;
@@ -465,6 +489,9 @@ void X86LegalizerInfo::setLegalizerInfoAVX2() {
                          LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
   }
+
+  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
+    .legalFor({v8s32, v4s64});
 }
 
 void X86LegalizerInfo::setLegalizerInfoAVX512() {

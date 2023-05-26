@@ -32,9 +32,9 @@ def SDT_AVRSelectCC
 // AVR Specific Node Definitions
 //===----------------------------------------------------------------------===//
 
-def AVRretflag : SDNode<"AVRISD::RET_FLAG", SDTNone,
+def AVRretglue : SDNode<"AVRISD::RET_GLUE", SDTNone,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def AVRretiflag : SDNode<"AVRISD::RETI_FLAG", SDTNone,
+def AVRretiglue : SDNode<"AVRISD::RETI_GLUE", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def AVRcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_AVRCallSeqStart,
@@ -1010,9 +1010,9 @@ let isCall = 1 in {
 // Return instructions.
 //===----------------------------------------------------------------------===//
 let isTerminator = 1, isReturn = 1, isBarrier = 1 in {
-  def RET : F16<0b1001010100001000, (outs), (ins), "ret", [(AVRretflag)]>;
+  def RET : F16<0b1001010100001000, (outs), (ins), "ret", [(AVRretglue)]>;
 
-  def RETI : F16<0b1001010100011000, (outs), (ins), "reti", [(AVRretiflag)]>;
+  def RETI : F16<0b1001010100011000, (outs), (ins), "reti", [(AVRretiglue)]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1690,6 +1690,16 @@ let canFoldAsLoad = 1, isReMaterializable = 1, mayLoad = 1,
       : F16<0b1001010111001000, (outs), (ins), "lpm", []>,
       Requires<[HasLPM]>;
 
+  // These pseudo instructions are combination of the OUT and LPM instructions.
+  let Defs = [R0] in {
+    def LPMBRdZ : Pseudo<(outs GPR8:$dst), (ins ZREG:$z), "lpmb\t$dst, $z", []>,
+                  Requires<[HasLPM]>;
+
+    let Constraints = "@earlyclobber $dst" in
+    def LPMWRdZ : Pseudo<(outs DREGS:$dst), (ins ZREG:$z), "lpmw\t$dst, $z", []>,
+                  Requires<[HasLPM]>;
+  }
+
   def LPMRdZ : FLPMX<0, 0,
                      (outs GPR8
                       : $rd),
@@ -1707,14 +1717,6 @@ let canFoldAsLoad = 1, isReMaterializable = 1, mayLoad = 1,
                           : $z),
                          "lpm\t$rd, $z+", []>,
                    Requires<[HasLPMX]>;
-
-    let Constraints = "@earlyclobber $dst" in
-    def LPMWRdZ : Pseudo<(outs DREGS
-                          : $dst),
-                         (ins ZREG
-                          : $z),
-                         "lpmw\t$dst, $z", []>,
-                  Requires<[HasLPMX]>;
 
     def LPMWRdZPi : Pseudo<(outs DREGS
                             : $dst),
@@ -1742,19 +1744,20 @@ let mayLoad = 1, hasSideEffects = 0 in {
                     Requires<[HasELPMX]>;
   }
 
-  // This pseudo is combination of the OUT and ELPM instructions.
-  let Defs = [R0] in
-  def ELPMBRdZ : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
-                        "elpmb\t$dst, $z, $p", []>,
-                 Requires<[HasELPM]>;
+  // These pseudo instructions are combination of the OUT and ELPM instructions.
+  let Defs = [R0] in {
+    def ELPMBRdZ : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
+                          "elpmb\t$dst, $z, $p", []>,
+                   Requires<[HasELPM]>;
 
-  // These pseudos are combination of the OUT and ELPM instructions.
-  let Defs = [R31R30], hasSideEffects = 1 in {
     let Constraints = "@earlyclobber $dst" in
     def ELPMWRdZ : Pseudo<(outs DREGS:$dst), (ins ZREG:$z, LD8:$p),
                           "elpmw\t$dst, $z, $p", []>,
-                   Requires<[HasELPMX]>;
+                   Requires<[HasELPM]>;
+  }
 
+  // These pseudos are combination of the OUT and ELPM instructions.
+  let Defs = [R31R30], hasSideEffects = 1 in {
     def ELPMBRdZPi : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
                             "elpmb\t$dst, $z+, $p", []>,
                      Requires<[HasELPMX]>;

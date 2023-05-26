@@ -7,23 +7,30 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Support for big-endian architectures.
-// TODO: Properly preserve use lists of values.
 
 #include "mlir/Bytecode/BytecodeReader.h"
-#include "../Encoding.h"
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/IR/Visitors.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
+#include <list>
+#include <memory>
+#include <numeric>
 #include <optional>
 
 #define DEBUG_TYPE "mlir-bytecode-reader"
@@ -271,6 +278,8 @@ public:
     return parseBytes(static_cast<size_t>(length), sectionData);
   }
 
+  Location getLoc() const { return fileLoc; }
+
 private:
   /// Parse a variable length encoded integer from the byte stream. This method
   /// is a fallback when the number of bytes used to encode the value is greater
@@ -508,6 +517,7 @@ public:
 private:
   /// The table of dialect resources within the bytecode file.
   SmallVector<AsmDialectResourceHandle> dialectResources;
+  llvm::StringMap<std::string> dialectResourceHandleRenamingMap;
 };
 
 class ParsedResourceEntry : public AsmParsedResourceEntry {
@@ -596,6 +606,7 @@ parseResourceGroup(Location fileLoc, bool allowEmpty,
                    EncodingReader &offsetReader, EncodingReader &resourceReader,
                    StringSectionReader &stringReader, T *handler,
                    const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef,
+                   function_ref<StringRef(StringRef)> remapKey = {},
                    function_ref<LogicalResult(StringRef)> processKeyFn = {}) {
   uint64_t numResources;
   if (failed(offsetReader.parseVarInt(numResources)))
@@ -627,6 +638,7 @@ parseResourceGroup(Location fileLoc, bool allowEmpty,
 
     // Otherwise, parse the resource value.
     EncodingReader entryReader(data, fileLoc);
+    key = remapKey(key);
     ParsedResourceEntry entry(key, kind, entryReader, stringReader,
                               bufferOwnerRef);
     if (failed(handler->parseResource(entry)))
@@ -657,8 +669,16 @@ LogicalResult ResourceSectionReader::initialize(
   // provides most of the arguments.
   auto parseGroup = [&](auto *handler, bool allowEmpty = false,
                         function_ref<LogicalResult(StringRef)> keyFn = {}) {
+    auto resolveKey = [&](StringRef key) -> StringRef {
+      auto it = dialectResourceHandleRenamingMap.find(key);
+      if (it == dialectResourceHandleRenamingMap.end())
+        return "";
+      return it->second;
+    };
+
     return parseResourceGroup(fileLoc, allowEmpty, offsetReader, resourceReader,
-                              stringReader, handler, bufferOwnerRef, keyFn);
+                              stringReader, handler, bufferOwnerRef, resolveKey,
+                              keyFn);
   };
 
   // Read the external resources from the bytecode.
@@ -706,6 +726,7 @@ LogicalResult ResourceSectionReader::initialize(
                << "unknown 'resource' key '" << key << "' for dialect '"
                << dialect->name << "'";
       }
+      dialectResourceHandleRenamingMap[key] = handler->getResourceKey(*handle);
       dialectResources.push_back(*handle);
       return success();
     };
@@ -783,7 +804,7 @@ public:
     Attribute baseResult;
     if (failed(parseAttribute(reader, baseResult)))
       return failure();
-    if ((result = baseResult.dyn_cast<T>()))
+    if ((result = dyn_cast<T>(baseResult)))
       return success();
     return reader.emitError("expected attribute of type: ",
                             llvm::getTypeName<T>(), ", but got: ", baseResult);
@@ -834,6 +855,13 @@ public:
   InFlightDiagnostic emitError(const Twine &msg) override {
     return reader.emitError(msg);
   }
+
+  DialectReader withEncodingReader(EncodingReader &encReader) {
+    return DialectReader(attrTypeReader, stringReader, resourceReader,
+                         encReader);
+  }
+
+  Location getLoc() const { return reader.getLoc(); }
 
   //===--------------------------------------------------------------------===//
   // IR
@@ -1054,7 +1082,6 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
   DialectReader dialectReader(*this, stringReader, resourceReader, reader);
   if (failed(entry.dialect->load(dialectReader, fileLoc.getContext())))
     return failure();
-
   // Ensure that the dialect implements the bytecode interface.
   if (!entry.dialect->interface) {
     return reader.emitError("dialect '", entry.dialect->name,
@@ -1084,25 +1111,93 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
 // Bytecode Reader
 //===----------------------------------------------------------------------===//
 
-namespace {
 /// This class is used to read a bytecode buffer and translate it into MLIR.
-class BytecodeReader {
+class mlir::BytecodeReader::Impl {
+  struct RegionReadState;
+  using LazyLoadableOpsInfo =
+      std::list<std::pair<Operation *, RegionReadState>>;
+  using LazyLoadableOpsMap =
+      DenseMap<Operation *, LazyLoadableOpsInfo::iterator>;
+
 public:
-  BytecodeReader(Location fileLoc, const ParserConfig &config,
-                 const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef)
-      : config(config), fileLoc(fileLoc),
+  Impl(Location fileLoc, const ParserConfig &config, bool lazyLoading,
+       llvm::MemoryBufferRef buffer,
+       const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef)
+      : config(config), fileLoc(fileLoc), lazyLoading(lazyLoading),
         attrTypeReader(stringReader, resourceReader, fileLoc),
         // Use the builtin unrealized conversion cast operation to represent
         // forward references to values that aren't yet defined.
         forwardRefOpState(UnknownLoc::get(config.getContext()),
                           "builtin.unrealized_conversion_cast", ValueRange(),
                           NoneType::get(config.getContext())),
-        bufferOwnerRef(bufferOwnerRef) {}
+        buffer(buffer), bufferOwnerRef(bufferOwnerRef) {}
 
   /// Read the bytecode defined within `buffer` into the given block.
-  LogicalResult read(llvm::MemoryBufferRef buffer, Block *block);
+  LogicalResult read(Block *block,
+                     llvm::function_ref<bool(Operation *)> lazyOps);
+
+  /// Return the number of ops that haven't been materialized yet.
+  int64_t getNumOpsToMaterialize() const { return lazyLoadableOpsMap.size(); }
+
+  bool isMaterializable(Operation *op) { return lazyLoadableOpsMap.count(op); }
+
+  /// Materialize the provided operation, invoke the lazyOpsCallback on every
+  /// newly found lazy operation.
+  LogicalResult
+  materialize(Operation *op,
+              llvm::function_ref<bool(Operation *)> lazyOpsCallback) {
+    this->lazyOpsCallback = lazyOpsCallback;
+    auto resetlazyOpsCallback =
+        llvm::make_scope_exit([&] { this->lazyOpsCallback = nullptr; });
+    auto it = lazyLoadableOpsMap.find(op);
+    assert(it != lazyLoadableOpsMap.end() &&
+           "materialize called on non-materializable op");
+    return materialize(it);
+  }
+
+  /// Materialize all operations.
+  LogicalResult materializeAll() {
+    while (!lazyLoadableOpsMap.empty()) {
+      if (failed(materialize(lazyLoadableOpsMap.begin())))
+        return failure();
+    }
+    return success();
+  }
+
+  /// Finalize the lazy-loading by calling back with every op that hasn't been
+  /// materialized to let the client decide if the op should be deleted or
+  /// materialized. The op is materialized if the callback returns true, deleted
+  /// otherwise.
+  LogicalResult finalize(function_ref<bool(Operation *)> shouldMaterialize) {
+    while (!lazyLoadableOps.empty()) {
+      Operation *op = lazyLoadableOps.begin()->first;
+      if (shouldMaterialize(op)) {
+        if (failed(materialize(lazyLoadableOpsMap.find(op))))
+          return failure();
+        continue;
+      }
+      op->dropAllReferences();
+      op->erase();
+      lazyLoadableOps.pop_front();
+      lazyLoadableOpsMap.erase(op);
+    }
+    return success();
+  }
 
 private:
+  LogicalResult materialize(LazyLoadableOpsMap::iterator it) {
+    assert(it != lazyLoadableOpsMap.end() &&
+           "materialize called on non-materializable op");
+    valueScopes.emplace_back();
+    std::vector<RegionReadState> regionStack;
+    regionStack.push_back(std::move(it->getSecond()->second));
+    lazyLoadableOps.erase(it->getSecond());
+    lazyLoadableOpsMap.erase(it);
+    auto result = parseRegions(regionStack, regionStack.back());
+    assert(regionStack.empty());
+    return result;
+  }
+
   /// Return the context for this config.
   MLIRContext *getContext() const { return config.getContext(); }
 
@@ -1143,14 +1238,22 @@ private:
   /// This struct represents the current read state of a range of regions. This
   /// struct is used to enable iterative parsing of regions.
   struct RegionReadState {
-    RegionReadState(Operation *op, bool isIsolatedFromAbove)
-        : RegionReadState(op->getRegions(), isIsolatedFromAbove) {}
-    RegionReadState(MutableArrayRef<Region> regions, bool isIsolatedFromAbove)
-        : curRegion(regions.begin()), endRegion(regions.end()),
+    RegionReadState(Operation *op, EncodingReader *reader,
+                    bool isIsolatedFromAbove)
+        : RegionReadState(op->getRegions(), reader, isIsolatedFromAbove) {}
+    RegionReadState(MutableArrayRef<Region> regions, EncodingReader *reader,
+                    bool isIsolatedFromAbove)
+        : curRegion(regions.begin()), endRegion(regions.end()), reader(reader),
           isIsolatedFromAbove(isIsolatedFromAbove) {}
 
     /// The current regions being read.
     MutableArrayRef<Region>::iterator curRegion, endRegion;
+    /// This is the reader to use for this region, this pointer is pointing to
+    /// the parent region reader unless the current region is IsolatedFromAbove,
+    /// in which case the pointer is pointing to the `owningReader` which is a
+    /// section dedicated to the current region.
+    EncodingReader *reader;
+    std::unique_ptr<EncodingReader> owningReader;
 
     /// The number of values defined immediately within this region.
     unsigned numValues = 0;
@@ -1168,15 +1271,15 @@ private:
   };
 
   LogicalResult parseIRSection(ArrayRef<uint8_t> sectionData, Block *block);
-  LogicalResult parseRegions(EncodingReader &reader,
-                             std::vector<RegionReadState> &regionStack,
+  LogicalResult parseRegions(std::vector<RegionReadState> &regionStack,
                              RegionReadState &readState);
   FailureOr<Operation *> parseOpWithoutRegions(EncodingReader &reader,
                                                RegionReadState &readState,
                                                bool &isIsolatedFromAbove);
 
-  LogicalResult parseRegion(EncodingReader &reader, RegionReadState &readState);
-  LogicalResult parseBlock(EncodingReader &reader, RegionReadState &readState);
+  LogicalResult parseRegion(RegionReadState &readState);
+  LogicalResult parseBlockHeader(EncodingReader &reader,
+                                 RegionReadState &readState);
   LogicalResult parseBlockArguments(EncodingReader &reader, Block *block);
 
   //===--------------------------------------------------------------------===//
@@ -1191,6 +1294,42 @@ private:
 
   /// Create a value to use for a forward reference.
   Value createForwardRef();
+
+  //===--------------------------------------------------------------------===//
+  // Use-list order helpers
+
+  /// This struct is a simple storage that contains information required to
+  /// reorder the use-list of a value with respect to the pre-order traversal
+  /// ordering.
+  struct UseListOrderStorage {
+    UseListOrderStorage(bool isIndexPairEncoding,
+                        SmallVector<unsigned, 4> &&indices)
+        : indices(std::move(indices)),
+          isIndexPairEncoding(isIndexPairEncoding){};
+    /// The vector containing the information required to reorder the
+    /// use-list of a value.
+    SmallVector<unsigned, 4> indices;
+
+    /// Whether indices represent a pair of type `(src, dst)` or it is a direct
+    /// indexing, such as `dst = order[src]`.
+    bool isIndexPairEncoding;
+  };
+
+  /// Parse use-list order from bytecode for a range of values if available. The
+  /// range is expected to be either a block argument or an op result range. On
+  /// success, return a map of the position in the range and the use-list order
+  /// encoding. The function assumes to know the size of the range it is
+  /// processing.
+  using UseListMapT = DenseMap<unsigned, UseListOrderStorage>;
+  FailureOr<UseListMapT> parseUseListOrderForRange(EncodingReader &reader,
+                                                   uint64_t rangeSize);
+
+  /// Shuffle the use-chain according to the order parsed.
+  LogicalResult sortUseListOrder(Value value);
+
+  /// Recursively visit all the values defined within topLevelOp and sort the
+  /// use-list orders according to the indices parsed.
+  LogicalResult processUseLists(Operation *topLevelOp);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -1226,6 +1365,16 @@ private:
   /// A location to use when emitting errors.
   Location fileLoc;
 
+  /// Flag that indicates if lazyloading is enabled.
+  bool lazyLoading;
+
+  /// Keep track of operations that have been lazy loaded (their regions haven't
+  /// been materialized), along with the `RegionReadState` that allows to
+  /// lazy-load the regions nested under the operation.
+  LazyLoadableOpsInfo lazyLoadableOps;
+  LazyLoadableOpsMap lazyLoadableOpsMap;
+  llvm::function_ref<bool(Operation *)> lazyOpsCallback;
+
   /// The reader used to process attribute and types within the bytecode.
   AttrTypeReader attrTypeReader;
 
@@ -1242,28 +1391,44 @@ private:
   /// The reader used to process resources within the bytecode.
   ResourceSectionReader resourceReader;
 
+  /// Worklist of values with custom use-list orders to process before the end
+  /// of the parsing.
+  DenseMap<void *, UseListOrderStorage> valueToUseListMap;
+
   /// The table of strings referenced within the bytecode file.
   StringSectionReader stringReader;
 
   /// The current set of available IR value scopes.
   std::vector<ValueScope> valueScopes;
+
+  /// The global pre-order operation ordering.
+  DenseMap<Operation *, unsigned> operationIDs;
+
   /// A block containing the set of operations defined to create forward
   /// references.
   Block forwardRefOps;
+
   /// A block containing previously created, and no longer used, forward
   /// reference operations.
   Block openForwardRefOps;
+
   /// An operation state used when instantiating forward references.
   OperationState forwardRefOpState;
+
+  /// Reference to the input buffer.
+  llvm::MemoryBufferRef buffer;
 
   /// The optional owning source manager, which when present may be used to
   /// extend the lifetime of the input buffer.
   const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef;
 };
-} // namespace
 
-LogicalResult BytecodeReader::read(llvm::MemoryBufferRef buffer, Block *block) {
+LogicalResult BytecodeReader::Impl::read(
+    Block *block, llvm::function_ref<bool(Operation *)> lazyOpsCallback) {
   EncodingReader reader(buffer.getBuffer(), fileLoc);
+  this->lazyOpsCallback = lazyOpsCallback;
+  auto resetlazyOpsCallback =
+      llvm::make_scope_exit([&] { this->lazyOpsCallback = nullptr; });
 
   // Skip over the bytecode header, this should have already been checked.
   if (failed(reader.skipBytes(StringRef("ML\xefR").size())))
@@ -1294,7 +1459,7 @@ LogicalResult BytecodeReader::read(llvm::MemoryBufferRef buffer, Block *block) {
     // Check for duplicate sections, we only expect one instance of each.
     if (sectionDatas[sectionID]) {
       return reader.emitError("duplicate top-level section: ",
-                              toString(sectionID));
+                              ::toString(sectionID));
     }
     sectionDatas[sectionID] = sectionData;
   }
@@ -1303,7 +1468,7 @@ LogicalResult BytecodeReader::read(llvm::MemoryBufferRef buffer, Block *block) {
     bytecode::Section::ID sectionID = static_cast<bytecode::Section::ID>(i);
     if (!sectionDatas[i] && !isSectionOptional(sectionID)) {
       return reader.emitError("missing data for top-level section: ",
-                              toString(sectionID));
+                              ::toString(sectionID));
     }
   }
 
@@ -1332,7 +1497,7 @@ LogicalResult BytecodeReader::read(llvm::MemoryBufferRef buffer, Block *block) {
   return parseIRSection(*sectionDatas[bytecode::Section::kIR], block);
 }
 
-LogicalResult BytecodeReader::parseVersion(EncodingReader &reader) {
+LogicalResult BytecodeReader::Impl::parseVersion(EncodingReader &reader) {
   if (failed(reader.parseVarInt(version)))
     return failure();
 
@@ -1349,6 +1514,9 @@ LogicalResult BytecodeReader::parseVersion(EncodingReader &reader) {
                             " is newer than the current version ",
                             currentVersion);
   }
+  // Override any request to lazy-load if the bytecode version is too old.
+  if (version < 2)
+    lazyLoading = false;
   return success();
 }
 
@@ -1378,7 +1546,9 @@ LogicalResult BytecodeDialect::load(DialectReader &reader, MLIRContext *ctx) {
              << name
              << "' does not implement the bytecode interface, "
                 "but found a version entry";
-    loadedVersion = interface->readVersion(reader);
+    EncodingReader encReader(versionBuffer, reader.getLoc());
+    DialectReader versionReader = reader.withEncodingReader(encReader);
+    loadedVersion = interface->readVersion(versionReader);
     if (!loadedVersion)
       return failure();
   }
@@ -1386,7 +1556,7 @@ LogicalResult BytecodeDialect::load(DialectReader &reader, MLIRContext *ctx) {
 }
 
 LogicalResult
-BytecodeReader::parseDialectSection(ArrayRef<uint8_t> sectionData) {
+BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
   EncodingReader sectionReader(sectionData, fileLoc);
 
   // Parse the number of dialects in the section.
@@ -1433,13 +1603,22 @@ BytecodeReader::parseDialectSection(ArrayRef<uint8_t> sectionData) {
     opNames.emplace_back(dialect, opName);
     return success();
   };
+  // Avoid re-allocation in bytecode version > 3 where the number of ops are
+  // known.
+  if (version > 3) {
+    uint64_t numOps;
+    if (failed(sectionReader.parseVarInt(numOps)))
+      return failure();
+    opNames.reserve(numOps);
+  }
   while (!sectionReader.empty())
     if (failed(parseDialectGrouping(sectionReader, dialects, parseOpName)))
       return failure();
   return success();
 }
 
-FailureOr<OperationName> BytecodeReader::parseOpName(EncodingReader &reader) {
+FailureOr<OperationName>
+BytecodeReader::Impl::parseOpName(EncodingReader &reader) {
   BytecodeOperationName *opName = nullptr;
   if (failed(parseEntry(reader, opNames, opName, "operation name")))
     return failure();
@@ -1448,13 +1627,24 @@ FailureOr<OperationName> BytecodeReader::parseOpName(EncodingReader &reader) {
   // haven't, load the dialect and build the operation name.
   if (!opName->opName) {
     // Load the dialect and its version.
-    EncodingReader versionReader(opName->dialect->versionBuffer, fileLoc);
     DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                                versionReader);
+                                reader);
     if (failed(opName->dialect->load(dialectReader, getContext())))
       return failure();
-    opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
-                           getContext());
+    // If the opName is empty, this is because we use to accept names such as
+    // `foo` without any `.` separator. We shouldn't tolerate this in textual
+    // format anymore but for now we'll be backward compatible. This can only
+    // happen with unregistered dialects.
+    if (opName->name.empty()) {
+      if (opName->dialect->getLoadedDialect())
+        return emitError(fileLoc) << "has an empty opname for dialect '"
+                                  << opName->dialect->name << "'\n";
+
+      opName->opName.emplace(opName->dialect->name, getContext());
+    } else {
+      opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
+                             getContext());
+    }
   }
   return *opName->opName;
 }
@@ -1462,7 +1652,7 @@ FailureOr<OperationName> BytecodeReader::parseOpName(EncodingReader &reader) {
 //===----------------------------------------------------------------------===//
 // Resource Section
 
-LogicalResult BytecodeReader::parseResourceSection(
+LogicalResult BytecodeReader::Impl::parseResourceSection(
     EncodingReader &reader, std::optional<ArrayRef<uint8_t>> resourceData,
     std::optional<ArrayRef<uint8_t>> resourceOffsetData) {
   // Ensure both sections are either present or not.
@@ -1488,10 +1678,170 @@ LogicalResult BytecodeReader::parseResourceSection(
 }
 
 //===----------------------------------------------------------------------===//
+// UseListOrder Helpers
+
+FailureOr<BytecodeReader::Impl::UseListMapT>
+BytecodeReader::Impl::parseUseListOrderForRange(EncodingReader &reader,
+                                                uint64_t numResults) {
+  BytecodeReader::Impl::UseListMapT map;
+  uint64_t numValuesToRead = 1;
+  if (numResults > 1 && failed(reader.parseVarInt(numValuesToRead)))
+    return failure();
+
+  for (size_t valueIdx = 0; valueIdx < numValuesToRead; valueIdx++) {
+    uint64_t resultIdx = 0;
+    if (numResults > 1 && failed(reader.parseVarInt(resultIdx)))
+      return failure();
+
+    uint64_t numValues;
+    bool indexPairEncoding;
+    if (failed(reader.parseVarIntWithFlag(numValues, indexPairEncoding)))
+      return failure();
+
+    SmallVector<unsigned, 4> useListOrders;
+    for (size_t idx = 0; idx < numValues; idx++) {
+      uint64_t index;
+      if (failed(reader.parseVarInt(index)))
+        return failure();
+      useListOrders.push_back(index);
+    }
+
+    // Store in a map the result index
+    map.try_emplace(resultIdx, UseListOrderStorage(indexPairEncoding,
+                                                   std::move(useListOrders)));
+  }
+
+  return map;
+}
+
+/// Sorts each use according to the order specified in the use-list parsed. If
+/// the custom use-list is not found, this means that the order needs to be
+/// consistent with the reverse pre-order walk of the IR. If multiple uses lie
+/// on the same operation, the order will follow the reverse operand number
+/// ordering.
+LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
+  // Early return for trivial use-lists.
+  if (value.use_empty() || value.hasOneUse())
+    return success();
+
+  bool hasIncomingOrder =
+      valueToUseListMap.contains(value.getAsOpaquePointer());
+
+  // Compute the current order of the use-list with respect to the global
+  // ordering. Detect if the order is already sorted while doing so.
+  bool alreadySorted = true;
+  auto &firstUse = *value.use_begin();
+  uint64_t prevID =
+      bytecode::getUseID(firstUse, operationIDs.at(firstUse.getOwner()));
+  llvm::SmallVector<std::pair<unsigned, uint64_t>> currentOrder = {{0, prevID}};
+  for (auto item : llvm::drop_begin(llvm::enumerate(value.getUses()))) {
+    uint64_t currentID = bytecode::getUseID(
+        item.value(), operationIDs.at(item.value().getOwner()));
+    alreadySorted &= prevID > currentID;
+    currentOrder.push_back({item.index(), currentID});
+    prevID = currentID;
+  }
+
+  // If the order is already sorted, and there wasn't a custom order to apply
+  // from the bytecode file, we are done.
+  if (alreadySorted && !hasIncomingOrder)
+    return success();
+
+  // If not already sorted, sort the indices of the current order by descending
+  // useIDs.
+  if (!alreadySorted)
+    std::sort(
+        currentOrder.begin(), currentOrder.end(),
+        [](auto elem1, auto elem2) { return elem1.second > elem2.second; });
+
+  if (!hasIncomingOrder) {
+    // If the bytecode file did not contain any custom use-list order, it means
+    // that the order was descending useID. Hence, shuffle by the first index
+    // of the `currentOrder` pair.
+    SmallVector<unsigned> shuffle = SmallVector<unsigned>(
+        llvm::map_range(currentOrder, [&](auto item) { return item.first; }));
+    value.shuffleUseList(shuffle);
+    return success();
+  }
+
+  // Pull the custom order info from the map.
+  UseListOrderStorage customOrder =
+      valueToUseListMap.at(value.getAsOpaquePointer());
+  SmallVector<unsigned, 4> shuffle = std::move(customOrder.indices);
+  uint64_t numUses =
+      std::distance(value.getUses().begin(), value.getUses().end());
+
+  // If the encoding was a pair of indices `(src, dst)` for every permutation,
+  // reconstruct the shuffle vector for every use. Initialize the shuffle vector
+  // as identity, and then apply the mapping encoded in the indices.
+  if (customOrder.isIndexPairEncoding) {
+    // Return failure if the number of indices was not representing pairs.
+    if (shuffle.size() & 1)
+      return failure();
+
+    SmallVector<unsigned, 4> newShuffle(numUses);
+    size_t idx = 0;
+    std::iota(newShuffle.begin(), newShuffle.end(), idx);
+    for (idx = 0; idx < shuffle.size(); idx += 2)
+      newShuffle[shuffle[idx]] = shuffle[idx + 1];
+
+    shuffle = std::move(newShuffle);
+  }
+
+  // Make sure that the indices represent a valid mapping. That is, the sum of
+  // all the values needs to be equal to (numUses - 1) * numUses / 2, and no
+  // duplicates are allowed in the list.
+  DenseSet<unsigned> set;
+  uint64_t accumulator = 0;
+  for (const auto &elem : shuffle) {
+    if (set.contains(elem))
+      return failure();
+    accumulator += elem;
+    set.insert(elem);
+  }
+  if (numUses != shuffle.size() ||
+      accumulator != (((numUses - 1) * numUses) >> 1))
+    return failure();
+
+  // Apply the current ordering map onto the shuffle vector to get the final
+  // use-list sorting indices before shuffling.
+  shuffle = SmallVector<unsigned, 4>(llvm::map_range(
+      currentOrder, [&](auto item) { return shuffle[item.first]; }));
+  value.shuffleUseList(shuffle);
+  return success();
+}
+
+LogicalResult BytecodeReader::Impl::processUseLists(Operation *topLevelOp) {
+  // Precompute operation IDs according to the pre-order walk of the IR. We
+  // can't do this while parsing since parseRegions ordering is not strictly
+  // equal to the pre-order walk.
+  unsigned operationID = 0;
+  topLevelOp->walk<mlir::WalkOrder::PreOrder>(
+      [&](Operation *op) { operationIDs.try_emplace(op, operationID++); });
+
+  auto blockWalk = topLevelOp->walk([this](Block *block) {
+    for (auto arg : block->getArguments())
+      if (failed(sortUseListOrder(arg)))
+        return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+
+  auto resultWalk = topLevelOp->walk([this](Operation *op) {
+    for (auto result : op->getResults())
+      if (failed(sortUseListOrder(result)))
+        return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+
+  return failure(blockWalk.wasInterrupted() || resultWalk.wasInterrupted());
+}
+
+//===----------------------------------------------------------------------===//
 // IR Section
 
-LogicalResult BytecodeReader::parseIRSection(ArrayRef<uint8_t> sectionData,
-                                             Block *block) {
+LogicalResult
+BytecodeReader::Impl::parseIRSection(ArrayRef<uint8_t> sectionData,
+                                     Block *block) {
   EncodingReader reader(sectionData, fileLoc);
 
   // A stack of operation regions currently being read from the bytecode.
@@ -1499,22 +1849,27 @@ LogicalResult BytecodeReader::parseIRSection(ArrayRef<uint8_t> sectionData,
 
   // Parse the top-level block using a temporary module operation.
   OwningOpRef<ModuleOp> moduleOp = ModuleOp::create(fileLoc);
-  regionStack.emplace_back(*moduleOp, /*isIsolatedFromAbove=*/true);
+  regionStack.emplace_back(*moduleOp, &reader, /*isIsolatedFromAbove=*/true);
   regionStack.back().curBlocks.push_back(moduleOp->getBody());
   regionStack.back().curBlock = regionStack.back().curRegion->begin();
-  if (failed(parseBlock(reader, regionStack.back())))
+  if (failed(parseBlockHeader(reader, regionStack.back())))
     return failure();
   valueScopes.emplace_back();
   valueScopes.back().push(regionStack.back());
 
   // Iteratively parse regions until everything has been resolved.
   while (!regionStack.empty())
-    if (failed(parseRegions(reader, regionStack, regionStack.back())))
+    if (failed(parseRegions(regionStack, regionStack.back())))
       return failure();
   if (!forwardRefOps.empty()) {
     return reader.emitError(
         "not all forward unresolved forward operand references");
   }
+
+  // Sort use-lists according to what specified in bytecode.
+  if (failed(processUseLists(*moduleOp)))
+    return reader.emitError(
+        "parsed use-list orders were invalid and could not be applied");
 
   // Resolve dialect version.
   for (const BytecodeDialect &byteCodeDialect : dialects) {
@@ -1540,15 +1895,18 @@ LogicalResult BytecodeReader::parseIRSection(ArrayRef<uint8_t> sectionData,
 }
 
 LogicalResult
-BytecodeReader::parseRegions(EncodingReader &reader,
-                             std::vector<RegionReadState> &regionStack,
-                             RegionReadState &readState) {
-  // Read the regions of this operation.
+BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
+                                   RegionReadState &readState) {
+  // Process regions, blocks, and operations until the end or if a nested
+  // region is encountered. In this case we push a new state in regionStack and
+  // return, the processing of the current region will resume afterward.
   for (; readState.curRegion != readState.endRegion; ++readState.curRegion) {
     // If the current block hasn't been setup yet, parse the header for this
-    // region.
+    // region. The current block is already setup when this function was
+    // interrupted to recurse down in a nested region and we resume the current
+    // block after processing the nested region.
     if (readState.curBlock == Region::iterator()) {
-      if (failed(parseRegion(reader, readState)))
+      if (failed(parseRegion(readState)))
         return failure();
 
       // If the region is empty, there is nothing to more to do.
@@ -1557,6 +1915,7 @@ BytecodeReader::parseRegions(EncodingReader &reader,
     }
 
     // Parse the blocks within the region.
+    EncodingReader &reader = *readState.reader;
     do {
       while (readState.numOpsRemaining--) {
         // Read in the next operation. We don't read its regions directly, we
@@ -1567,9 +1926,38 @@ BytecodeReader::parseRegions(EncodingReader &reader,
         if (failed(op))
           return failure();
 
-        // If the op has regions, add it to the stack for processing.
+        // If the op has regions, add it to the stack for processing and return:
+        // we stop the processing of the current region and resume it after the
+        // inner one is completed. Unless LazyLoading is activated in which case
+        // nested region parsing is delayed.
         if ((*op)->getNumRegions()) {
-          regionStack.emplace_back(*op, isIsolatedFromAbove);
+          RegionReadState childState(*op, &reader, isIsolatedFromAbove);
+
+          // Isolated regions are encoded as a section in version 2 and above.
+          if (version >= 2 && isIsolatedFromAbove) {
+            bytecode::Section::ID sectionID;
+            ArrayRef<uint8_t> sectionData;
+            if (failed(reader.parseSection(sectionID, sectionData)))
+              return failure();
+            if (sectionID != bytecode::Section::kIR)
+              return emitError(fileLoc, "expected IR section for region");
+            childState.owningReader =
+                std::make_unique<EncodingReader>(sectionData, fileLoc);
+            childState.reader = childState.owningReader.get();
+          }
+
+          if (lazyLoading) {
+            // If the user has a callback set, they have the opportunity
+            // to control lazyloading as we go.
+            if (!lazyOpsCallback || !lazyOpsCallback(*op)) {
+              lazyLoadableOps.push_back(
+                  std::make_pair(*op, std::move(childState)));
+              lazyLoadableOpsMap.try_emplace(*op,
+                                             std::prev(lazyLoadableOps.end()));
+              continue;
+            }
+          }
+          regionStack.push_back(std::move(childState));
 
           // If the op is isolated from above, push a new value scope.
           if (isIsolatedFromAbove)
@@ -1581,7 +1969,7 @@ BytecodeReader::parseRegions(EncodingReader &reader,
       // Move to the next block of the region.
       if (++readState.curBlock == readState.curRegion->end())
         break;
-      if (failed(parseBlock(reader, readState)))
+      if (failed(parseBlockHeader(reader, readState)))
         return failure();
     } while (true);
 
@@ -1592,16 +1980,19 @@ BytecodeReader::parseRegions(EncodingReader &reader,
 
   // When the regions have been fully parsed, pop them off of the read stack. If
   // the regions were isolated from above, we also pop the last value scope.
-  if (readState.isIsolatedFromAbove)
+  if (readState.isIsolatedFromAbove) {
+    assert(!valueScopes.empty() && "Expect a valueScope after reading region");
     valueScopes.pop_back();
+  }
+  assert(!regionStack.empty() && "Expect a regionStack after reading region");
   regionStack.pop_back();
   return success();
 }
 
 FailureOr<Operation *>
-BytecodeReader::parseOpWithoutRegions(EncodingReader &reader,
-                                      RegionReadState &readState,
-                                      bool &isIsolatedFromAbove) {
+BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
+                                            RegionReadState &readState,
+                                            bool &isIsolatedFromAbove) {
   // Parse the name of the operation.
   FailureOr<OperationName> opName = parseOpName(reader);
   if (failed(opName))
@@ -1665,6 +2056,17 @@ BytecodeReader::parseOpWithoutRegions(EncodingReader &reader,
     }
   }
 
+  /// Parse the use-list orders for the results of the operation. Use-list
+  /// orders are available since version 3 of the bytecode.
+  std::optional<UseListMapT> resultIdxToUseListMap = std::nullopt;
+  if (version > 2 && (opMask & bytecode::OpEncodingMask::kHasUseListOrders)) {
+    size_t numResults = opState.types.size();
+    auto parseResult = parseUseListOrderForRange(reader, numResults);
+    if (failed(parseResult))
+      return failure();
+    resultIdxToUseListMap = std::move(*parseResult);
+  }
+
   /// Parse the regions of the operation.
   if (opMask & bytecode::OpEncodingMask::kHasInlineRegions) {
     uint64_t numRegions;
@@ -1684,11 +2086,22 @@ BytecodeReader::parseOpWithoutRegions(EncodingReader &reader,
   if (op->getNumResults() && failed(defineValues(reader, op->getResults())))
     return failure();
 
+  /// Store a map for every value that received a custom use-list order from the
+  /// bytecode file.
+  if (resultIdxToUseListMap.has_value()) {
+    for (size_t idx = 0; idx < op->getNumResults(); idx++) {
+      if (resultIdxToUseListMap->contains(idx)) {
+        valueToUseListMap.try_emplace(op->getResult(idx).getAsOpaquePointer(),
+                                      resultIdxToUseListMap->at(idx));
+      }
+    }
+  }
   return op;
 }
 
-LogicalResult BytecodeReader::parseRegion(EncodingReader &reader,
-                                          RegionReadState &readState) {
+LogicalResult BytecodeReader::Impl::parseRegion(RegionReadState &readState) {
+  EncodingReader &reader = *readState.reader;
+
   // Parse the number of blocks in the region.
   uint64_t numBlocks;
   if (failed(reader.parseVarInt(numBlocks)))
@@ -1718,11 +2131,12 @@ LogicalResult BytecodeReader::parseRegion(EncodingReader &reader,
 
   // Parse the entry block of the region.
   readState.curBlock = readState.curRegion->begin();
-  return parseBlock(reader, readState);
+  return parseBlockHeader(reader, readState);
 }
 
-LogicalResult BytecodeReader::parseBlock(EncodingReader &reader,
-                                         RegionReadState &readState) {
+LogicalResult
+BytecodeReader::Impl::parseBlockHeader(EncodingReader &reader,
+                                       RegionReadState &readState) {
   bool hasArgs;
   if (failed(reader.parseVarIntWithFlag(readState.numOpsRemaining, hasArgs)))
     return failure();
@@ -1731,12 +2145,34 @@ LogicalResult BytecodeReader::parseBlock(EncodingReader &reader,
   if (hasArgs && failed(parseBlockArguments(reader, &*readState.curBlock)))
     return failure();
 
+  // Uselist orders are available since version 3 of the bytecode.
+  if (version < 3)
+    return success();
+
+  uint8_t hasUseListOrders = 0;
+  if (hasArgs && failed(reader.parseByte(hasUseListOrders)))
+    return failure();
+
+  if (!hasUseListOrders)
+    return success();
+
+  Block &blk = *readState.curBlock;
+  auto argIdxToUseListMap =
+      parseUseListOrderForRange(reader, blk.getNumArguments());
+  if (failed(argIdxToUseListMap) || argIdxToUseListMap->empty())
+    return failure();
+
+  for (size_t idx = 0; idx < blk.getNumArguments(); idx++)
+    if (argIdxToUseListMap->contains(idx))
+      valueToUseListMap.try_emplace(blk.getArgument(idx).getAsOpaquePointer(),
+                                    argIdxToUseListMap->at(idx));
+
   // We don't parse the operations of the block here, that's done elsewhere.
   return success();
 }
 
-LogicalResult BytecodeReader::parseBlockArguments(EncodingReader &reader,
-                                                  Block *block) {
+LogicalResult BytecodeReader::Impl::parseBlockArguments(EncodingReader &reader,
+                                                        Block *block) {
   // Parse the value ID for the first argument, and the number of arguments.
   uint64_t numArgs;
   if (failed(reader.parseVarInt(numArgs)))
@@ -1747,13 +2183,25 @@ LogicalResult BytecodeReader::parseBlockArguments(EncodingReader &reader,
   argTypes.reserve(numArgs);
   argLocs.reserve(numArgs);
 
+  Location unknownLoc = UnknownLoc::get(config.getContext());
   while (numArgs--) {
     Type argType;
-    LocationAttr argLoc;
-    if (failed(parseType(reader, argType)) ||
-        failed(parseAttribute(reader, argLoc)))
-      return failure();
-
+    LocationAttr argLoc = unknownLoc;
+    if (version > 3) {
+      // Parse the type with hasLoc flag to determine if it has type.
+      uint64_t typeIdx;
+      bool hasLoc;
+      if (failed(reader.parseVarIntWithFlag(typeIdx, hasLoc)) ||
+          !(argType = attrTypeReader.resolveType(typeIdx)))
+        return failure();
+      if (hasLoc && failed(parseAttribute(reader, argLoc)))
+        return failure();
+    } else {
+      // All args has type and location.
+      if (failed(parseType(reader, argType)) ||
+          failed(parseAttribute(reader, argLoc)))
+        return failure();
+    }
     argTypes.push_back(argType);
     argLocs.push_back(argLoc);
   }
@@ -1764,7 +2212,7 @@ LogicalResult BytecodeReader::parseBlockArguments(EncodingReader &reader,
 //===----------------------------------------------------------------------===//
 // Value Processing
 
-Value BytecodeReader::parseOperand(EncodingReader &reader) {
+Value BytecodeReader::Impl::parseOperand(EncodingReader &reader) {
   std::vector<Value> &values = valueScopes.back().values;
   Value *value = nullptr;
   if (failed(parseEntry(reader, values, value, "value")))
@@ -1776,8 +2224,8 @@ Value BytecodeReader::parseOperand(EncodingReader &reader) {
   return *value;
 }
 
-LogicalResult BytecodeReader::defineValues(EncodingReader &reader,
-                                           ValueRange newValues) {
+LogicalResult BytecodeReader::Impl::defineValues(EncodingReader &reader,
+                                                 ValueRange newValues) {
   ValueScope &valueScope = valueScopes.back();
   std::vector<Value> &values = valueScope.values;
 
@@ -1812,7 +2260,7 @@ LogicalResult BytecodeReader::defineValues(EncodingReader &reader,
   return success();
 }
 
-Value BytecodeReader::createForwardRef() {
+Value BytecodeReader::Impl::createForwardRef() {
   // Check for an avaliable existing operation to use. Otherwise, create a new
   // fake operation to use for the reference.
   if (!openForwardRefOps.empty()) {
@@ -1827,6 +2275,41 @@ Value BytecodeReader::createForwardRef() {
 //===----------------------------------------------------------------------===//
 // Entry Points
 //===----------------------------------------------------------------------===//
+
+BytecodeReader::~BytecodeReader() { assert(getNumOpsToMaterialize() == 0); }
+
+BytecodeReader::BytecodeReader(
+    llvm::MemoryBufferRef buffer, const ParserConfig &config, bool lazyLoading,
+    const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef) {
+  Location sourceFileLoc =
+      FileLineColLoc::get(config.getContext(), buffer.getBufferIdentifier(),
+                          /*line=*/0, /*column=*/0);
+  impl = std::make_unique<Impl>(sourceFileLoc, config, lazyLoading, buffer,
+                                bufferOwnerRef);
+}
+
+LogicalResult BytecodeReader::readTopLevel(
+    Block *block, llvm::function_ref<bool(Operation *)> lazyOpsCallback) {
+  return impl->read(block, lazyOpsCallback);
+}
+
+int64_t BytecodeReader::getNumOpsToMaterialize() const {
+  return impl->getNumOpsToMaterialize();
+}
+
+bool BytecodeReader::isMaterializable(Operation *op) {
+  return impl->isMaterializable(op);
+}
+
+LogicalResult BytecodeReader::materialize(
+    Operation *op, llvm::function_ref<bool(Operation *)> lazyOpsCallback) {
+  return impl->materialize(op, lazyOpsCallback);
+}
+
+LogicalResult
+BytecodeReader::finalize(function_ref<bool(Operation *)> shouldMaterialize) {
+  return impl->finalize(shouldMaterialize);
+}
 
 bool mlir::isBytecode(llvm::MemoryBufferRef buffer) {
   return buffer.getBuffer().startswith("ML\xefR");
@@ -1847,8 +2330,9 @@ readBytecodeFileImpl(llvm::MemoryBufferRef buffer, Block *block,
                      "input buffer is not an MLIR bytecode file");
   }
 
-  BytecodeReader reader(sourceFileLoc, config, bufferOwnerRef);
-  return reader.read(buffer, block);
+  BytecodeReader::Impl reader(sourceFileLoc, config, /*lazyLoading=*/false,
+                              buffer, bufferOwnerRef);
+  return reader.read(block, /*lazyOpsCallback=*/nullptr);
 }
 
 LogicalResult mlir::readBytecodeFile(llvm::MemoryBufferRef buffer, Block *block,

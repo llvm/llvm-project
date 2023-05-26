@@ -1,4 +1,10 @@
-add_libc_testsuite(libc_math_unittests)
+add_custom_target(libc_math_unittests)
+
+add_library(
+  libc_math_test_utils
+  RandUtils.cpp
+  RandUtils.h
+)
 
 add_fp_unittest(
   cosf_test
@@ -1262,15 +1268,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  mod_k_pi_test
-  NEED_MPFR
-  SUITE
-    libc-long-running-tests
-  SRCS
-    mod_k_pi_test.cpp
-  DEPENDS
-    libc.src.math.generic.dp_trig
-    libc.src.__support.FPUtil.fp_bits
+ log_test
+ NEED_MPFR
+ SUITE
+   libc_math_unittests
+ SRCS
+   log_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.include.math
+   libc.src.math.log
+   libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1285,6 +1293,20 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.logf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+log2_test
+ NEED_MPFR
+ SUITE
+   libc_math_unittests
+ SRCS
+   log2_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.include.math
+   libc.src.math.log2
+   libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1313,8 +1335,6 @@ add_fp_unittest(
    libc.include.math
    libc.src.math.log10
    libc.src.__support.FPUtil.fp_bits
- FLAGS
-   FMA_OPT__ONLY
 )
 
 add_fp_unittest(
@@ -1329,6 +1349,20 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.log10f
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+log1p_test
+ NEED_MPFR
+ SUITE
+   libc_math_unittests
+ SRCS
+   log1p_test.cpp
+ DEPENDS
+   libc.src.errno.errno
+   libc.include.math
+   libc.src.math.log1p
+   libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1489,18 +1523,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  asin_test
-  NEED_MPFR
-  SUITE
-    libc_math_unittests
-  SRCS
-    asin_test.cpp
-  DEPENDS
-    libc.src.errno.errno
-    libc.src.math.asin
-)
-
-add_fp_unittest(
   acosf_test
   NEED_MPFR
   SUITE
@@ -1538,18 +1560,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.generic.inv_trigf_utils
     libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  pow_test
-  NEED_MPFR
-  SUITE
-    libc_math_unittests
-  SRCS
-    pow_test.cpp
-  DEPENDS
-    libc.src.errno.errno
-    libc.src.math.pow
 )
 
 add_fp_unittest(
@@ -1601,5 +1611,8 @@ add_fp_unittest(
 )
 
 add_subdirectory(generic)
-add_subdirectory(exhaustive)
-add_subdirectory(differential_testing)
+
+if(NOT LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(exhaustive)
+  add_subdirectory(differential_testing)
+endif()

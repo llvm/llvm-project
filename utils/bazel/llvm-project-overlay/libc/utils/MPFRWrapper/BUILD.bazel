@@ -10,6 +10,7 @@ licenses(["notice"])
 
 cc_library(
     name = "mpfr_impl",
+    hdrs = ["mpfr_inc.h"],
     target_compatible_with = select({
         "//conditions:default": [],
         "//libc:mpfr_disable": ["@platforms//:incompatible"],
@@ -38,6 +39,7 @@ cc_library(
         "//libc:__support_common",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
+        "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
         "//libc:__support_cpp_type_traits",
         "//libc:__support_fputil_fp_bits",
@@ -46,6 +48,5 @@ cc_library(
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_impl",
-        "//libc/utils/testutils:libc_test_utils",
     ],
 )

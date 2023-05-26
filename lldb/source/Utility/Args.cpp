@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
@@ -385,20 +384,21 @@ void Args::Clear() {
 std::string Args::GetShellSafeArgument(const FileSpec &shell,
                                        llvm::StringRef unsafe_arg) {
   struct ShellDescriptor {
-    ConstString m_basename;
+    llvm::StringRef m_basename;
     llvm::StringRef m_escapables;
   };
 
-  static ShellDescriptor g_Shells[] = {{ConstString("bash"), " '\"<>()&;"},
-                                       {ConstString("fish"), " '\"<>()&\\|;"},
-                                       {ConstString("tcsh"), " '\"<>()&;"},
-                                       {ConstString("zsh"), " '\"<>()&;\\|"},
-                                       {ConstString("sh"), " '\"<>()&;"}};
+  static ShellDescriptor g_Shells[] = {{"bash", " '\"<>()&;"},
+                                       {"fish", " '\"<>()&\\|;"},
+                                       {"tcsh", " '\"<>()&;"},
+                                       {"zsh", " '\"<>()&;\\|"},
+                                       {"sh", " '\"<>()&;"}};
 
   // safe minimal set
   llvm::StringRef escapables = " '\"";
 
-  if (auto basename = shell.GetFilename()) {
+  auto basename = shell.GetFilename().GetStringRef();
+  if (!basename.empty()) {
     for (const auto &Shell : g_Shells) {
       if (Shell.m_basename == basename) {
         escapables = Shell.m_escapables;

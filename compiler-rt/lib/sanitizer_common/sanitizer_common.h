@@ -211,6 +211,7 @@ class LowLevelAllocator {
  public:
   // Requires an external lock.
   void *Allocate(uptr size);
+
  private:
   char *allocated_end_;
   char *allocated_current_;

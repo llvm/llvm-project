@@ -531,7 +531,7 @@ public:
                          __p, _VSTD::forward<_Args>(__args)...);}
 
     template <class _T1, class _T2, class... _Args1, class... _Args2>
-    void construct(pair<_T1, _T2>* __p, piecewise_construct_t,
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p, piecewise_construct_t,
                        tuple<_Args1...> __x, tuple<_Args2...> __y)
     {
         typedef __outermost<outer_allocator_type> _OM;
@@ -555,25 +555,25 @@ public:
     }
 
     template <class _T1, class _T2>
-    void construct(pair<_T1, _T2>* __p)
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p)
     { construct(__p, piecewise_construct, tuple<>{}, tuple<>{}); }
 
     template <class _T1, class _T2, class _Up, class _Vp>
-    void construct(pair<_T1, _T2>* __p, _Up&& __x, _Vp&& __y) {
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p, _Up&& __x, _Vp&& __y) {
         construct(__p, piecewise_construct,
                   _VSTD::forward_as_tuple(_VSTD::forward<_Up>(__x)),
                   _VSTD::forward_as_tuple(_VSTD::forward<_Vp>(__y)));
     }
 
     template <class _T1, class _T2, class _Up, class _Vp>
-    void construct(pair<_T1, _T2>* __p, const pair<_Up, _Vp>& __x) {
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p, const pair<_Up, _Vp>& __x) {
         construct(__p, piecewise_construct,
                   _VSTD::forward_as_tuple(__x.first),
                   _VSTD::forward_as_tuple(__x.second));
     }
 
     template <class _T1, class _T2, class _Up, class _Vp>
-    void construct(pair<_T1, _T2>* __p, pair<_Up, _Vp>&& __x) {
+    _LIBCPP_HIDE_FROM_ABI void construct(pair<_T1, _T2>* __p, pair<_Up, _Vp>&& __x) {
         construct(__p, piecewise_construct,
                   _VSTD::forward_as_tuple(_VSTD::forward<_Up>(__x.first)),
                   _VSTD::forward_as_tuple(_VSTD::forward<_Vp>(__x.second)));

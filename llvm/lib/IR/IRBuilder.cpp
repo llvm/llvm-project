@@ -102,9 +102,7 @@ Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
   Function *TheFn =
       Intrinsic::getDeclaration(M, Intrinsic::vscale, {Scaling->getType()});
   CallInst *CI = CreateCall(TheFn, {}, {}, Name);
-  return cast<ConstantInt>(Scaling)->getSExtValue() == 1
-             ? CI
-             : CreateMul(CI, Scaling);
+  return cast<ConstantInt>(Scaling)->isOne() ? CI : CreateMul(CI, Scaling);
 }
 
 Value *IRBuilderBase::CreateElementCount(Type *DstType, ElementCount EC) {

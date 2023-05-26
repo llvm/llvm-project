@@ -113,6 +113,8 @@ private:
                          StringRef BinaryPath);
 
   void Warning(const Twine &Msg, StringRef File = StringRef()) {
+    assert(Result &&
+           "The debug map must be initialized before calling this function");
     WithColor::warning() << "("
                          << MachOUtils::getArchName(
                                 Result->getTriple().getArchName())
@@ -200,10 +202,9 @@ static std::string getArchName(const object::MachOObjectFile &Obj) {
 std::unique_ptr<DebugMap>
 MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
                                     StringRef BinaryPath) {
+  Result = std::make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath,
+                                      MainBinary.getUuid());
   loadMainBinarySymbols(MainBinary);
-  ArrayRef<uint8_t> UUID = MainBinary.getUuid();
-  Result =
-      std::make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath, UUID);
   MainBinaryStrings = MainBinary.getStringTableData();
   for (const SymbolRef &Symbol : MainBinary.symbols()) {
     const DataRefImpl &DRI = Symbol.getRawDataRefImpl();

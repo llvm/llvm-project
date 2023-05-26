@@ -511,9 +511,9 @@ private:
         ShouldMerge = !Style.BraceWrapping.AfterClass ||
                       (NextLine.First->is(tok::r_brace) &&
                        !Style.BraceWrapping.SplitEmptyRecord);
-      } if(TheLine->InPPDirective ||
-               !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
-                                        tok::kw_struct)) {
+      } else if (TheLine->InPPDirective ||
+                 !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
+                                          tok::kw_struct)) {
         // Try to merge a block with left brace unwrapped that wasn't yet
         // covered.
         ShouldMerge = !Style.BraceWrapping.AfterFunction ||
@@ -888,7 +888,10 @@ private:
   }
 
   bool containsMustBreak(const AnnotatedLine *Line) {
-    for (const FormatToken *Tok = Line->First; Tok; Tok = Tok->Next)
+    assert(Line->First);
+    // Ignore the first token, because in this situation, it applies more to the
+    // last token of the previous line.
+    for (const FormatToken *Tok = Line->First->Next; Tok; Tok = Tok->Next)
       if (Tok->MustBreakBefore)
         return true;
     return false;
@@ -1002,17 +1005,6 @@ protected:
 
       int AdditionalIndent =
           P.Indent - Previous.Children[0]->Level * Style.IndentWidth;
-
-      if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
-          P.NestedBlockIndent == P.LastSpace) {
-        if (State.NextToken->MatchingParen &&
-            State.NextToken->MatchingParen->is(TT_LambdaLBrace)) {
-          State.Stack.pop_back();
-        }
-        if (LBrace->is(TT_LambdaLBrace))
-          AdditionalIndent = 0;
-      }
-
       Penalty +=
           BlockFormatter->format(Previous.Children, DryRun, AdditionalIndent,
                                  /*FixBadIndentation=*/true);

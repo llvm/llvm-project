@@ -612,11 +612,11 @@ define <8 x i8> @test_vcopy_lane_swap_s8(<8 x i8> %v1, <8 x i8> %v2) {
 define <16 x i8> @test_vcopyq_laneq_swap_s8(<16 x i8> %v1, <16 x i8> %v2) {
 ; CHECK-LABEL: test_vcopyq_laneq_swap_s8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vorr q9, q1, q1
-; CHECK-NEXT:    vldr d20, .LCPI53_0
-; CHECK-NEXT:    vorr q8, q0, q0
-; CHECK-NEXT:    vtbl.8 d18, {d17, d18}, d20
-; CHECK-NEXT:    vorr q0, q9, q9
+; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    vldr d16, .LCPI53_0
+; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    vtbl.8 d2, {d1, d2}, d16
+; CHECK-NEXT:    vorr q0, q1, q1
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
 ; CHECK-NEXT:  @ %bb.1:

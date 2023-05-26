@@ -30,14 +30,14 @@ struct TransferReadOpInterface
                                                     vector::TransferReadOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    assert(opOperand.get().getType().isa<RankedTensorType>() &&
+    assert(isa<RankedTensorType>(opOperand.get().getType()) &&
            "only tensor types expected");
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    assert(opOperand.get().getType().isa<RankedTensorType>() &&
+    assert(isa<RankedTensorType>(opOperand.get().getType()) &&
            "only tensor types expected");
     return false;
   }
@@ -50,7 +50,7 @@ struct TransferReadOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto readOp = cast<vector::TransferReadOp>(op);
-    assert(readOp.getShapedType().isa<TensorType>() &&
+    assert(isa<TensorType>(readOp.getShapedType()) &&
            "only tensor types expected");
     FailureOr<Value> buffer = getBuffer(rewriter, readOp.getSource(), options);
     if (failed(buffer))
@@ -74,7 +74,7 @@ struct TransferWriteOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto writeOp = cast<vector::TransferWriteOp>(op);
-    assert(writeOp.getShapedType().isa<TensorType>() &&
+    assert(isa<TensorType>(writeOp.getShapedType()) &&
            "only tensor types expected");
 
     // Create a new transfer_write on buffer that doesn't have a return value.
@@ -99,14 +99,14 @@ struct GatherOpInterface
                                                     vector::GatherOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    assert(opOperand.get().getType().isa<RankedTensorType>() &&
+    assert(isa<RankedTensorType>(opOperand.get().getType()) &&
            "only tensor types expected");
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    assert(opOperand.get().getType().isa<RankedTensorType>() &&
+    assert(isa<RankedTensorType>(opOperand.get().getType()) &&
            "only tensor types expected");
     return false;
   }
@@ -119,7 +119,7 @@ struct GatherOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto gatherOp = cast<vector::GatherOp>(op);
-    assert(gatherOp.getBaseType().isa<TensorType>() &&
+    assert(isa<TensorType>(gatherOp.getBaseType()) &&
            "only tensor types expected");
     FailureOr<Value> buffer = getBuffer(rewriter, gatherOp.getBase(), options);
     if (failed(buffer))
@@ -266,7 +266,7 @@ struct YieldOpInterface
     // may get dropped during the bufferization of vector.mask.
     SmallVector<Value> newResults;
     for (Value value : yieldOp.getOperands()) {
-      if (value.getType().isa<TensorType>()) {
+      if (isa<TensorType>(value.getType())) {
         FailureOr<Value> maybeBuffer = getBuffer(rewriter, value, options);
         if (failed(maybeBuffer))
           return failure();

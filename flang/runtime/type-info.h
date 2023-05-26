@@ -133,6 +133,13 @@ public:
     // higher-ranked final procedures follow
   };
 
+  // Special bindings can be created during execution to handle defined
+  // I/O procedures that are not type-bound.
+  SpecialBinding(Which which, ProcedurePointer proc, std::uint8_t isArgDescSet,
+      std::uint8_t isTypeBound)
+      : which_{which}, isArgDescriptorSet_{isArgDescSet},
+        isTypeBound_{isTypeBound}, proc_{proc} {}
+
   static constexpr Which RankFinal(int rank) {
     return static_cast<Which>(static_cast<int>(Which::ScalarFinal) + rank);
   }
@@ -141,6 +148,7 @@ public:
   bool IsArgDescriptor(int zeroBasedArg) const {
     return (isArgDescriptorSet_ >> zeroBasedArg) & 1;
   }
+  bool isTypeBound() const { return isTypeBound_; }
   template <typename PROC> PROC GetProc() const {
     return reinterpret_cast<PROC>(proc_);
   }
@@ -170,12 +178,13 @@ private:
   //     elemental final subroutine must be scalar and monomorphic, but
   //     use a descriptors when the type has LEN parameters.)
   //   Which::AssumedRankFinal: flag must necessarily be set
-  //   User derived type I/O:
+  //   Defined I/O:
   //     Set to 1 when "dtv" initial dummy argument is polymorphic, which is
   //     the case when and only when the derived type is extensible.
-  //     When false, the user derived type I/O subroutine must have been
+  //     When false, the defined I/O subroutine must have been
   //     called via a generic interface, not a generic TBP.
   std::uint8_t isArgDescriptorSet_{0};
+  std::uint8_t isTypeBound_{0};
 
   ProcedurePointer proc_{nullptr};
 };

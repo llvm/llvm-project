@@ -17,7 +17,7 @@ The API config file lists two kinds of items:
 
 1. The list of standards from which the public entities available on the platform
    are derived from.
-2. For each header file exposed on the platfrom, the list of public members
+2. For each header file exposed on the platform, the list of public members
    provided in that header file.
 
 Note that, the header generator only learns the names of the public entities

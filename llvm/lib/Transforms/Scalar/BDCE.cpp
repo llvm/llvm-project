@@ -23,11 +23,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
@@ -173,34 +170,3 @@ PreservedAnalyses BDCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
-
-namespace {
-struct BDCELegacyPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  BDCELegacyPass() : FunctionPass(ID) {
-    initializeBDCELegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    auto &DB = getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
-    return bitTrackingDCE(F, DB);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<DemandedBitsWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-}
-
-char BDCELegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(BDCELegacyPass, "bdce",
-                      "Bit-Tracking Dead Code Elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
-INITIALIZE_PASS_END(BDCELegacyPass, "bdce",
-                    "Bit-Tracking Dead Code Elimination", false, false)
-
-FunctionPass *llvm::createBitTrackingDCEPass() { return new BDCELegacyPass(); }

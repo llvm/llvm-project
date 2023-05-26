@@ -27,8 +27,7 @@ LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
     return clock_t(-1);
   }
 
-  // The above syscall gets the CPU time in seconds plus nanoseconds. We should
-  // make sure that corresponding clocks can actually be represented by clock-t.
+  // The above syscall gets the CPU time in seconds plus nanoseconds.
   // The standard requires that we return clock_t(-1) if we cannot represent
   // clocks as a clock_t value.
   constexpr clock_t CLOCK_SECS_MAX =

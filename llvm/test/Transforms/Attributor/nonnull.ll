@@ -957,7 +957,7 @@ define ptr addrspace(3) @gep2(ptr addrspace(3) %p) {
 define ptr addrspace(3) @as(ptr addrspace(3) dereferenceable(4) %p) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@as
-; CHECK-SAME: (ptr addrspace(3) nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr addrspace(3) nofree noundef nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    ret ptr addrspace(3) [[P]]
 ;
   ret ptr addrspace(3) %p

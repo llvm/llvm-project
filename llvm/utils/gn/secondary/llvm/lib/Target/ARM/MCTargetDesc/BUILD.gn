@@ -51,6 +51,7 @@ static_library("MCTargetDesc") {
   deps = [
     ":ARMGenAsmWriter",
     ":ARMGenMCCodeEmitter",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Support",

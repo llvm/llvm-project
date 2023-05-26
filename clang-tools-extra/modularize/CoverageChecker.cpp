@@ -226,9 +226,8 @@ bool CoverageChecker::collectModuleHeaders(const Module &Mod) {
       ModuleMapHeadersSet.insert(ModularizeUtilities::getCanonicalPath(
         Header.Entry->getName()));
 
-  for (auto MI = Mod.submodule_begin(), MIEnd = Mod.submodule_end();
-       MI != MIEnd; ++MI)
-    collectModuleHeaders(**MI);
+  for (auto *Submodule : Mod.submodules())
+    collectModuleHeaders(*Submodule);
 
   return true;
 }

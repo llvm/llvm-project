@@ -284,3 +284,1238 @@ define i64 @mulw_d_wu(i32 %a, i32 %b) {
   %3 = mul i64 %1, %2
   ret i64 %3
 }
+
+define signext i32 @mul_i32_11(i32 %a) {
+; LA32-LABEL: mul_i32_11:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 2
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_11:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 2
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 11
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_13(i32 %a) {
+; LA32-LABEL: mul_i32_13:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 1
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_13:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 1
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 2
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 13
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_19(i32 %a) {
+; LA32-LABEL: mul_i32_19:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 3
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_19:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 3
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 19
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_21(i32 %a) {
+; LA32-LABEL: mul_i32_21:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 2
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_21:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 2
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 2
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 21
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_25(i32 %a) {
+; LA32-LABEL: mul_i32_25:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 1
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 3
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_25:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 1
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 25
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_27(i32 %a) {
+; LA32-LABEL: mul_i32_27:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 1
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_27:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 1
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 27
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_35(i32 %a) {
+; LA32-LABEL: mul_i32_35:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 4
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_35:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 4
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 35
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_37(i32 %a) {
+; LA32-LABEL: mul_i32_37:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 3
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_37:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 3
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 2
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 37
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_41(i32 %a) {
+; LA32-LABEL: mul_i32_41:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 2
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 3
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_41:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 2
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 41
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_45(i32 %a) {
+; LA32-LABEL: mul_i32_45:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_45:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 45
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_49(i32 %a) {
+; LA32-LABEL: mul_i32_49:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 1
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_49:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 1
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 49
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_51(i32 %a) {
+; LA32-LABEL: mul_i32_51:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 1
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_51:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 1
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 51
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_69(i32 %a) {
+; LA32-LABEL: mul_i32_69:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 4
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_69:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 4
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 2
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 69
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_73(i32 %a) {
+; LA32-LABEL: mul_i32_73:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 3
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 3
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_73:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 3
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 73
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_81(i32 %a) {
+; LA32-LABEL: mul_i32_81:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 2
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_81:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 2
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 81
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_85(i32 %a) {
+; LA32-LABEL: mul_i32_85:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_85:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 85
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_137(i32 %a) {
+; LA32-LABEL: mul_i32_137:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 4
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 3
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_137:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 4
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 137
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_145(i32 %a) {
+; LA32-LABEL: mul_i32_145:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 3
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_145:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 3
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 145
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_153(i32 %a) {
+; LA32-LABEL: mul_i32_153:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_153:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 153
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_273(i32 %a) {
+; LA32-LABEL: mul_i32_273:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a1, $a0, $a0, 4
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_273:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a1, $a0, $a0, 4
+; LA64-NEXT:    alsl.w $a0, $a1, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 273
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_289(i32 %a) {
+; LA32-LABEL: mul_i32_289:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_289:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 289
+  ret i32 %b
+}
+
+define i64 @mul_i64_11(i64 %a) {
+; LA32-LABEL: mul_i64_11:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 11
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_11:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 2
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 11
+  ret i64 %b
+}
+
+define i64 @mul_i64_13(i64 %a) {
+; LA32-LABEL: mul_i64_13:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 13
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_13:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 13
+  ret i64 %b
+}
+
+define i64 @mul_i64_19(i64 %a) {
+; LA32-LABEL: mul_i64_19:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 19
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_19:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 3
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 19
+  ret i64 %b
+}
+
+define i64 @mul_i64_21(i64 %a) {
+; LA32-LABEL: mul_i64_21:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 21
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_21:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 2
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 21
+  ret i64 %b
+}
+
+define i64 @mul_i64_25(i64 %a) {
+; LA32-LABEL: mul_i64_25:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 25
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_25:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 25
+  ret i64 %b
+}
+
+define i64 @mul_i64_27(i64 %a) {
+; LA32-LABEL: mul_i64_27:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 27
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_27:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 1
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 27
+  ret i64 %b
+}
+
+define i64 @mul_i64_35(i64 %a) {
+; LA32-LABEL: mul_i64_35:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 35
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_35:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 4
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 35
+  ret i64 %b
+}
+
+define i64 @mul_i64_37(i64 %a) {
+; LA32-LABEL: mul_i64_37:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 37
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_37:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 3
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 37
+  ret i64 %b
+}
+
+define i64 @mul_i64_41(i64 %a) {
+; LA32-LABEL: mul_i64_41:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 41
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_41:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 2
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 41
+  ret i64 %b
+}
+
+define i64 @mul_i64_45(i64 %a) {
+; LA32-LABEL: mul_i64_45:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 45
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_45:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 2
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 45
+  ret i64 %b
+}
+
+define i64 @mul_i64_49(i64 %a) {
+; LA32-LABEL: mul_i64_49:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 49
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_49:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 1
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 49
+  ret i64 %b
+}
+
+define i64 @mul_i64_51(i64 %a) {
+; LA32-LABEL: mul_i64_51:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 51
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_51:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 1
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 51
+  ret i64 %b
+}
+
+define i64 @mul_i64_69(i64 %a) {
+; LA32-LABEL: mul_i64_69:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 69
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_69:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 4
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 2
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 69
+  ret i64 %b
+}
+
+define i64 @mul_i64_73(i64 %a) {
+; LA32-LABEL: mul_i64_73:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 73
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_73:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 3
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 73
+  ret i64 %b
+}
+
+define i64 @mul_i64_81(i64 %a) {
+; LA32-LABEL: mul_i64_81:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 81
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_81:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 2
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 81
+  ret i64 %b
+}
+
+define i64 @mul_i64_85(i64 %a) {
+; LA32-LABEL: mul_i64_85:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 85
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_85:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 2
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 85
+  ret i64 %b
+}
+
+define i64 @mul_i64_137(i64 %a) {
+; LA32-LABEL: mul_i64_137:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 137
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_137:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 4
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 3
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 137
+  ret i64 %b
+}
+
+define i64 @mul_i64_145(i64 %a) {
+; LA32-LABEL: mul_i64_145:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 145
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_145:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 3
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 145
+  ret i64 %b
+}
+
+define i64 @mul_i64_153(i64 %a) {
+; LA32-LABEL: mul_i64_153:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 153
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_153:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 3
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 153
+  ret i64 %b
+}
+
+define i64 @mul_i64_273(i64 %a) {
+; LA32-LABEL: mul_i64_273:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 273
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_273:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a1, $a0, $a0, 4
+; LA64-NEXT:    alsl.d $a0, $a1, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 273
+  ret i64 %b
+}
+
+define i64 @mul_i64_289(i64 %a) {
+; LA32-LABEL: mul_i64_289:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 289
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_289:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 289
+  ret i64 %b
+}
+
+define signext i32 @mul_i32_4098(i32 %a) {
+; LA32-LABEL: mul_i32_4098:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 12
+; LA32-NEXT:    alsl.w $a0, $a0, $a1, 1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_4098:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.w $a0, $a0, $a1, 1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 4098
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_4100(i32 %a) {
+; LA32-LABEL: mul_i32_4100:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 12
+; LA32-NEXT:    alsl.w $a0, $a0, $a1, 2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_4100:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.w $a0, $a0, $a1, 2
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 4100
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_4104(i32 %a) {
+; LA32-LABEL: mul_i32_4104:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 12
+; LA32-NEXT:    alsl.w $a0, $a0, $a1, 3
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_4104:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.w $a0, $a0, $a1, 3
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 4104
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_4112(i32 %a) {
+; LA32-LABEL: mul_i32_4112:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 12
+; LA32-NEXT:    alsl.w $a0, $a0, $a1, 4
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_4112:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.w $a0, $a0, $a1, 4
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 4112
+  ret i32 %b
+}
+
+define i64 @mul_i64_4098(i64 %a) {
+; LA32-LABEL: mul_i64_4098:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 1
+; LA32-NEXT:    ori $a2, $a2, 2
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_4098:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.d $a0, $a0, $a1, 1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 4098
+  ret i64 %b
+}
+
+define i64 @mul_i64_4100(i64 %a) {
+; LA32-LABEL: mul_i64_4100:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 1
+; LA32-NEXT:    ori $a2, $a2, 4
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_4100:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.d $a0, $a0, $a1, 2
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 4100
+  ret i64 %b
+}
+
+define i64 @mul_i64_4104(i64 %a) {
+; LA32-LABEL: mul_i64_4104:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 1
+; LA32-NEXT:    ori $a2, $a2, 8
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_4104:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.d $a0, $a0, $a1, 3
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 4104
+  ret i64 %b
+}
+
+define i64 @mul_i64_4112(i64 %a) {
+; LA32-LABEL: mul_i64_4112:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 1
+; LA32-NEXT:    ori $a2, $a2, 16
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_4112:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 12
+; LA64-NEXT:    alsl.d $a0, $a0, $a1, 4
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 4112
+  ret i64 %b
+}
+
+define signext i32 @mul_i32_768(i32 %a) {
+; LA32-LABEL: mul_i32_768:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 1
+; LA32-NEXT:    slli.w $a0, $a0, 8
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_768:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 1
+; LA64-NEXT:    slli.w $a0, $a0, 8
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 768
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_1280(i32 %a) {
+; LA32-LABEL: mul_i32_1280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA32-NEXT:    slli.w $a0, $a0, 8
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_1280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA64-NEXT:    slli.w $a0, $a0, 8
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 1280
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_2304(i32 %a) {
+; LA32-LABEL: mul_i32_2304:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA32-NEXT:    slli.w $a0, $a0, 8
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_2304:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA64-NEXT:    slli.w $a0, $a0, 8
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 2304
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_4352(i32 %a) {
+; LA32-LABEL: mul_i32_4352:
+; LA32:       # %bb.0:
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA32-NEXT:    slli.w $a0, $a0, 8
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_4352:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.w $a0, $a0, $a0, 4
+; LA64-NEXT:    slli.w $a0, $a0, 8
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 4352
+  ret i32 %b
+}
+
+define i64 @mul_i64_768(i64 %a) {
+; LA32-LABEL: mul_i64_768:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 768
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_768:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 1
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 768
+  ret i64 %b
+}
+
+define i64 @mul_i64_1280(i64 %a) {
+; LA32-LABEL: mul_i64_1280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 1280
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_1280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 2
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 1280
+  ret i64 %b
+}
+
+define i64 @mul_i64_2304(i64 %a) {
+; LA32-LABEL: mul_i64_2304:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 2304
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_2304:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 3
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 2304
+  ret i64 %b
+}
+
+define i64 @mul_i64_4352(i64 %a) {
+; LA32-LABEL: mul_i64_4352:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 1
+; LA32-NEXT:    ori $a2, $a2, 256
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_4352:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 4352
+  ret i64 %b
+}
+
+define signext i32 @mul_i32_65792(i32 %a) {
+; LA32-LABEL: mul_i32_65792:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 8
+; LA32-NEXT:    slli.w $a0, $a0, 16
+; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_65792:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 8
+; LA64-NEXT:    slli.d $a0, $a0, 16
+; LA64-NEXT:    add.w $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 65792
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_65280(i32 %a) {
+; LA32-LABEL: mul_i32_65280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 8
+; LA32-NEXT:    slli.w $a0, $a0, 16
+; LA32-NEXT:    sub.w $a0, $a0, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_65280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 8
+; LA64-NEXT:    slli.d $a0, $a0, 16
+; LA64-NEXT:    sub.w $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, 65280
+  ret i32 %b
+}
+
+define signext i32 @mul_i32_minus_65280(i32 %a) {
+; LA32-LABEL: mul_i32_minus_65280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 16
+; LA32-NEXT:    slli.w $a0, $a0, 8
+; LA32-NEXT:    sub.w $a0, $a0, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i32_minus_65280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 16
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    sub.w $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i32 %a, -65280
+  ret i32 %b
+}
+
+define i64 @mul_i64_65792(i64 %a) {
+; LA32-LABEL: mul_i64_65792:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 16
+; LA32-NEXT:    ori $a2, $a2, 256
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_65792:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 8
+; LA64-NEXT:    slli.d $a0, $a0, 16
+; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 65792
+  ret i64 %b
+}
+
+define i64 @mul_i64_65280(i64 %a) {
+; LA32-LABEL: mul_i64_65280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 15
+; LA32-NEXT:    ori $a2, $a2, 3840
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_65280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 8
+; LA64-NEXT:    slli.d $a0, $a0, 16
+; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 65280
+  ret i64 %b
+}
+
+define i64 @mul_i64_minus_65280(i64 %a) {
+; LA32-LABEL: mul_i64_minus_65280:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, -16
+; LA32-NEXT:    ori $a2, $a2, 256
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    sub.w $a3, $a3, $a0
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_minus_65280:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 16
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, -65280
+  ret i64 %b
+}
+
+;; This multiplication is not transformed, due to
+;; 1088 can be composed via a single ORI.
+define i64 @mul_i64_1088(i64 %a) {
+; LA32-LABEL: mul_i64_1088:
+; LA32:       # %bb.0:
+; LA32-NEXT:    ori $a2, $zero, 1088
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_1088:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    slli.d $a0, $a0, 6
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 1088
+  ret i64 %b
+}
+
+;; This multiplication is not transformed, due to
+;; -992 can be composed via a single ADDI.
+define i64 @mul_i64_minus_992(i64 %a) {
+; LA32-LABEL: mul_i64_minus_992:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a2, $zero, -992
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    sub.w $a3, $a3, $a0
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_minus_992:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.w $a1, $zero, -992
+; LA64-NEXT:    mul.d $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %b = mul i64 %a, -992
+  ret i64 %b
+}
+
+;; This multiplication is not transformed, due to
+;; 4456448 can be composed via a single LUI.
+define i64 @mul_i64_4456448(i64 %a) {
+; LA32-LABEL: mul_i64_4456448:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a2, 1088
+; LA32-NEXT:    mul.w $a1, $a1, $a2
+; LA32-NEXT:    mulh.wu $a3, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_4456448:
+; LA64:       # %bb.0:
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 4
+; LA64-NEXT:    slli.d $a0, $a0, 18
+; LA64-NEXT:    ret
+  %b = mul i64 %a, 4456448
+  ret i64 %b
+}
+
+;; This multiplication is not transformed, due to
+;; 65280 is used multiple times.
+define i64 @mul_i64_65280_twice(i64 %a, i64 %b) {
+; LA32-LABEL: mul_i64_65280_twice:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a4, 15
+; LA32-NEXT:    ori $a4, $a4, 3840
+; LA32-NEXT:    mul.w $a3, $a3, $a4
+; LA32-NEXT:    mulh.wu $a5, $a2, $a4
+; LA32-NEXT:    add.w $a3, $a5, $a3
+; LA32-NEXT:    mul.w $a1, $a1, $a4
+; LA32-NEXT:    mulh.wu $a5, $a0, $a4
+; LA32-NEXT:    add.w $a1, $a5, $a1
+; LA32-NEXT:    xor $a1, $a1, $a3
+; LA32-NEXT:    mul.w $a2, $a2, $a4
+; LA32-NEXT:    mul.w $a0, $a0, $a4
+; LA32-NEXT:    xor $a0, $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_i64_65280_twice:
+; LA64:       # %bb.0:
+; LA64-NEXT:    lu12i.w $a2, 15
+; LA64-NEXT:    ori $a2, $a2, 3840
+; LA64-NEXT:    mul.d $a1, $a1, $a2
+; LA64-NEXT:    mul.d $a0, $a0, $a2
+; LA64-NEXT:    xor $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %c = mul i64 %a, 65280
+  %d = mul i64 %b, 65280
+  %e = xor i64 %c, %d
+  ret i64 %e
+}

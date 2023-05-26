@@ -18,9 +18,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Object/ModuleSymbolTable.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -510,15 +508,17 @@ bool hasTypeMetadata(Module &M) {
   return false;
 }
 
-void writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
+bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
                          function_ref<AAResults &(Function &)> AARGetter,
                          Module &M, const ModuleSummaryIndex *Index) {
   std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
   // See if this module has any type metadata. If so, we try to split it
   // or at least promote type ids to enable WPD.
   if (hasTypeMetadata(M)) {
-    if (enableSplitLTOUnit(M))
-      return splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, M);
+    if (enableSplitLTOUnit(M)) {
+      splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, M);
+      return true;
+    }
     // Promote type ids as needed for index-based WPD.
     std::string ModuleId = getUniqueModuleId(&M);
     if (!ModuleId.empty()) {
@@ -551,6 +551,7 @@ void writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
   // given OS.
   if (ThinLinkOS && Index)
     writeThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash);
+  return false;
 }
 
 } // anonymous namespace
@@ -559,10 +560,11 @@ PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  writeThinLTOBitcode(OS, ThinLinkOS,
-                      [&FAM](Function &F) -> AAResults & {
-                        return FAM.getResult<AAManager>(F);
-                      },
-                      M, &AM.getResult<ModuleSummaryIndexAnalysis>(M));
-  return PreservedAnalyses::all();
+  bool Changed = writeThinLTOBitcode(
+      OS, ThinLinkOS,
+      [&FAM](Function &F) -> AAResults & {
+        return FAM.getResult<AAManager>(F);
+      },
+      M, &AM.getResult<ModuleSummaryIndexAnalysis>(M));
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

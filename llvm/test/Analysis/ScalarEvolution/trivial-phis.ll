@@ -24,7 +24,7 @@ do.end:                                           ; preds = %do.body
 
 ; CHECK-LABEL: @test2
 ; CHECK:      %tmp24 = phi i64 [ %tmp14, %bb22 ], [ %tmp14, %bb13 ]
-; CHECK-NEXT: -->  %tmp24 U: full-set S: full-set       Exits: <<Unknown>>      LoopDispositions: { %bb13: Variant, %bb8: Variant, %bb17: Invariant, %bb27: Invariant }
+; CHECK-NEXT: -->  {1,+,1}<nuw><nsw><%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807) Exits: (-2 + %arg)
 
 define void @test2(i64 %arg, ptr noalias %arg1) {
 bb:

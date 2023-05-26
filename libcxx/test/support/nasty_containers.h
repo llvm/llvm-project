@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <vector>
 #include <list>
+#include <type_traits>
 
 #include "test_macros.h"
 

@@ -56,8 +56,6 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -244,7 +242,7 @@ bool lowertypetests::isJumpTableCanonical(Function *F) {
     return false;
   auto *CI = mdconst::extract_or_null<ConstantInt>(
       F->getParent()->getModuleFlag("CFI Canonical Jump Tables"));
-  if (!CI || CI->getZExtValue() != 0)
+  if (!CI || !CI->isZero())
     return true;
   return F->hasFnAttribute("cfi-canonical-jump-table");
 }
@@ -700,7 +698,7 @@ static bool isKnownTypeIdMember(Metadata *TypeId, const DataLayout &DL,
   }
 
   if (auto GEP = dyn_cast<GEPOperator>(V)) {
-    APInt APOffset(DL.getPointerSizeInBits(0), 0);
+    APInt APOffset(DL.getIndexSizeInBits(0), 0);
     bool Result = GEP->accumulateConstantOffset(DL, APOffset);
     if (!Result)
       return false;
@@ -1242,7 +1240,7 @@ void LowerTypeTestsModule::createJumpTableEntry(
     bool Endbr = false;
     if (const auto *MD = mdconst::extract_or_null<ConstantInt>(
           Dest->getParent()->getModuleFlag("cf-protection-branch")))
-      Endbr = MD->getZExtValue() != 0;
+      Endbr = !MD->isZero();
     if (Endbr)
       AsmOS << (JumpTableArch == Triple::x86 ? "endbr32\n" : "endbr64\n");
     AsmOS << "jmp ${" << ArgIndex << ":c}@plt\n";
@@ -2271,9 +2269,9 @@ bool LowerTypeTestsModule::lower() {
     unsigned MaxUniqueId = 0;
     for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(I);
          MI != GlobalClasses.member_end(); ++MI) {
-      if (auto *MD = MI->dyn_cast<Metadata *>())
+      if (auto *MD = dyn_cast_if_present<Metadata *>(*MI))
         MaxUniqueId = std::max(MaxUniqueId, TypeIdInfo[MD].UniqueId);
-      else if (auto *BF = MI->dyn_cast<ICallBranchFunnel *>())
+      else if (auto *BF = dyn_cast_if_present<ICallBranchFunnel *>(*MI))
         MaxUniqueId = std::max(MaxUniqueId, BF->UniqueId);
     }
     Sets.emplace_back(I, MaxUniqueId);
@@ -2289,12 +2287,12 @@ bool LowerTypeTestsModule::lower() {
     for (GlobalClassesTy::member_iterator MI =
              GlobalClasses.member_begin(S.first);
          MI != GlobalClasses.member_end(); ++MI) {
-      if (MI->is<Metadata *>())
-        TypeIds.push_back(MI->get<Metadata *>());
-      else if (MI->is<GlobalTypeMember *>())
-        Globals.push_back(MI->get<GlobalTypeMember *>());
+      if (isa<Metadata *>(*MI))
+        TypeIds.push_back(cast<Metadata *>(*MI));
+      else if (isa<GlobalTypeMember *>(*MI))
+        Globals.push_back(cast<GlobalTypeMember *>(*MI));
       else
-        ICallBranchFunnels.push_back(MI->get<ICallBranchFunnel *>());
+        ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(*MI));
     }
 
     // Order type identifiers by unique ID for determinism. This ordering is

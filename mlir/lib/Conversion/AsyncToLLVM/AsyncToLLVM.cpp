@@ -366,12 +366,12 @@ public:
 
   static std::optional<Type> convertAsyncTypes(Type type,
                                                bool useOpaquePointers) {
-    if (type.isa<TokenType, GroupType, ValueType>())
+    if (isa<TokenType, GroupType, ValueType>(type))
       return AsyncAPI::opaquePointerType(type.getContext(), useOpaquePointers);
 
-    if (type.isa<CoroIdType, CoroStateType>())
+    if (isa<CoroIdType, CoroStateType>(type))
       return AsyncAPI::tokenType(type.getContext());
-    if (type.isa<CoroHandleType>())
+    if (isa<CoroHandleType>(type))
       return AsyncAPI::opaquePointerType(type.getContext(), useOpaquePointers);
 
     return std::nullopt;
@@ -656,14 +656,14 @@ public:
     Type resultType = op->getResultTypes()[0];
 
     // Tokens creation maps to a simple function call.
-    if (resultType.isa<TokenType>()) {
+    if (isa<TokenType>(resultType)) {
       rewriter.replaceOpWithNewOp<func::CallOp>(
           op, kCreateToken, converter->convertType(resultType));
       return success();
     }
 
     // To create a value we need to compute the storage requirement.
-    if (auto value = resultType.dyn_cast<ValueType>()) {
+    if (auto value = dyn_cast<ValueType>(resultType)) {
       // Returns the size requirements for the async value storage.
       auto sizeOf = [&](ValueType valueType) -> Value {
         auto loc = op->getLoc();
@@ -994,7 +994,7 @@ public:
   matchAndRewrite(RuntimeAddToGroupOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Currently we can only add tokens to the group.
-    if (!op.getOperand().getType().isa<TokenType>())
+    if (!isa<TokenType>(op.getOperand().getType()))
       return rewriter.notifyMatchFailure(op, "only token type is supported");
 
     // Replace with a runtime API function call.

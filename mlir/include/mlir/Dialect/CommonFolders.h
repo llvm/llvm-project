@@ -36,9 +36,9 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
   if (!resultType || !operands[0] || !operands[1])
     return {};
 
-  if (operands[0].isa<AttrElementT>() && operands[1].isa<AttrElementT>()) {
-    auto lhs = operands[0].cast<AttrElementT>();
-    auto rhs = operands[1].cast<AttrElementT>();
+  if (isa<AttrElementT>(operands[0]) && isa<AttrElementT>(operands[1])) {
+    auto lhs = cast<AttrElementT>(operands[0]);
+    auto rhs = cast<AttrElementT>(operands[1]);
     if (lhs.getType() != rhs.getType())
       return {};
 
@@ -50,12 +50,12 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
     return AttrElementT::get(resultType, *calRes);
   }
 
-  if (operands[0].isa<SplatElementsAttr>() &&
-      operands[1].isa<SplatElementsAttr>()) {
+  if (isa<SplatElementsAttr>(operands[0]) &&
+      isa<SplatElementsAttr>(operands[1])) {
     // Both operands are splats so we can avoid expanding the values out and
     // just fold based on the splat value.
-    auto lhs = operands[0].cast<SplatElementsAttr>();
-    auto rhs = operands[1].cast<SplatElementsAttr>();
+    auto lhs = cast<SplatElementsAttr>(operands[0]);
+    auto rhs = cast<SplatElementsAttr>(operands[1]);
     if (lhs.getType() != rhs.getType())
       return {};
 
@@ -64,14 +64,14 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
     if (!elementResult)
       return {};
 
-    return DenseElementsAttr::get(resultType, *elementResult);
+    return DenseElementsAttr::get(cast<ShapedType>(resultType), *elementResult);
   }
 
-  if (operands[0].isa<ElementsAttr>() && operands[1].isa<ElementsAttr>()) {
+  if (isa<ElementsAttr>(operands[0]) && isa<ElementsAttr>(operands[1])) {
     // Operands are ElementsAttr-derived; perform an element-wise fold by
     // expanding the values.
-    auto lhs = operands[0].cast<ElementsAttr>();
-    auto rhs = operands[1].cast<ElementsAttr>();
+    auto lhs = cast<ElementsAttr>(operands[0]);
+    auto rhs = cast<ElementsAttr>(operands[1]);
     if (lhs.getType() != rhs.getType())
       return {};
 
@@ -86,7 +86,7 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
       elementResults.push_back(*elementResult);
     }
 
-    return DenseElementsAttr::get(resultType, elementResults);
+    return DenseElementsAttr::get(cast<ShapedType>(resultType), elementResults);
   }
   return {};
 }
@@ -103,7 +103,7 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
                                        const CalculationT &calculate) {
   assert(operands.size() == 2 && "binary op takes two operands");
   auto getResultType = [](Attribute attr) -> Type {
-    if (auto typed = attr.dyn_cast_or_null<TypedAttr>())
+    if (auto typed = dyn_cast_or_null<TypedAttr>(attr))
       return typed.getType();
     return {};
   };
@@ -158,27 +158,27 @@ Attribute constFoldUnaryOpConditional(ArrayRef<Attribute> operands,
   if (!operands[0])
     return {};
 
-  if (operands[0].isa<AttrElementT>()) {
-    auto op = operands[0].cast<AttrElementT>();
+  if (isa<AttrElementT>(operands[0])) {
+    auto op = cast<AttrElementT>(operands[0]);
 
     auto res = calculate(op.getValue());
     if (!res)
       return {};
     return AttrElementT::get(op.getType(), *res);
   }
-  if (operands[0].isa<SplatElementsAttr>()) {
+  if (isa<SplatElementsAttr>(operands[0])) {
     // Both operands are splats so we can avoid expanding the values out and
     // just fold based on the splat value.
-    auto op = operands[0].cast<SplatElementsAttr>();
+    auto op = cast<SplatElementsAttr>(operands[0]);
 
     auto elementResult = calculate(op.getSplatValue<ElementValueT>());
     if (!elementResult)
       return {};
     return DenseElementsAttr::get(op.getType(), *elementResult);
-  } else if (operands[0].isa<ElementsAttr>()) {
+  } else if (isa<ElementsAttr>(operands[0])) {
     // Operands are ElementsAttr-derived; perform an element-wise fold by
     // expanding the values.
-    auto op = operands[0].cast<ElementsAttr>();
+    auto op = cast<ElementsAttr>(operands[0]);
 
     auto opIt = op.value_begin<ElementValueT>();
     SmallVector<ElementValueT> elementResults;
@@ -189,7 +189,7 @@ Attribute constFoldUnaryOpConditional(ArrayRef<Attribute> operands,
         return {};
       elementResults.push_back(*elementResult);
     }
-    return DenseElementsAttr::get(op.getType(), elementResults);
+    return DenseElementsAttr::get(op.getShapedType(), elementResults);
   }
   return {};
 }
@@ -216,29 +216,29 @@ Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
   if (!operands[0])
     return {};
 
-  if (operands[0].isa<AttrElementT>()) {
-    auto op = operands[0].cast<AttrElementT>();
+  if (isa<AttrElementT>(operands[0])) {
+    auto op = cast<AttrElementT>(operands[0]);
     bool castStatus = true;
     auto res = calculate(op.getValue(), castStatus);
     if (!castStatus)
       return {};
     return TargetAttrElementT::get(resType, res);
   }
-  if (operands[0].isa<SplatElementsAttr>()) {
+  if (isa<SplatElementsAttr>(operands[0])) {
     // The operand is a splat so we can avoid expanding the values out and
     // just fold based on the splat value.
-    auto op = operands[0].cast<SplatElementsAttr>();
+    auto op = cast<SplatElementsAttr>(operands[0]);
     bool castStatus = true;
     auto elementResult =
         calculate(op.getSplatValue<ElementValueT>(), castStatus);
     if (!castStatus)
       return {};
-    return DenseElementsAttr::get(resType, elementResult);
+    return DenseElementsAttr::get(cast<ShapedType>(resType), elementResult);
   }
-  if (operands[0].isa<ElementsAttr>()) {
+  if (isa<ElementsAttr>(operands[0])) {
     // Operand is ElementsAttr-derived; perform an element-wise fold by
     // expanding the value.
-    auto op = operands[0].cast<ElementsAttr>();
+    auto op = cast<ElementsAttr>(operands[0]);
     bool castStatus = true;
     auto opIt = op.value_begin<ElementValueT>();
     SmallVector<TargetElementValueT> elementResults;
@@ -250,7 +250,7 @@ Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
       elementResults.push_back(elt);
     }
 
-    return DenseElementsAttr::get(resType, elementResults);
+    return DenseElementsAttr::get(cast<ShapedType>(resType), elementResults);
   }
   return {};
 }

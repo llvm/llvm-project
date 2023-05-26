@@ -156,6 +156,11 @@ public:
     denoms[i] = divisor;
   }
 
+  // Find the greatest common divisor (GCD) of the dividends and divisor for
+  // each valid division. Divide the dividends and divisor by the GCD to
+  // simplify the expression.
+  void normalizeDivs();
+
   void insertDiv(unsigned pos, ArrayRef<MPInt> dividend, const MPInt &divisor);
   void insertDiv(unsigned pos, unsigned num = 1);
 

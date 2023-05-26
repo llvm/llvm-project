@@ -57,7 +57,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -72,6 +71,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/ThreadSafeDenseMap.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
@@ -399,6 +399,7 @@ bool TypeSystemClang::IsOperator(llvm::StringRef name,
                 .Case("=", clang::OO_Equal)
                 .Case("==", clang::OO_EqualEqual)
                 .Case("<", clang::OO_Less)
+                .Case("<=>", clang::OO_Spaceship)
                 .Case("<<", clang::OO_LessLess)
                 .Case("<<=", clang::OO_LessLessEqual)
                 .Case("<=", clang::OO_LessEqual)
@@ -510,6 +511,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   Opts.C99 = Std.isC99();
   Opts.CPlusPlus = Std.isCPlusPlus();
   Opts.CPlusPlus11 = Std.isCPlusPlus11();
+  Opts.CPlusPlus14 = Std.isCPlusPlus14();
+  Opts.CPlusPlus17 = Std.isCPlusPlus17();
+  Opts.CPlusPlus20 = Std.isCPlusPlus20();
   Opts.Digraphs = Std.hasDigraphs();
   Opts.GNUMode = Std.isGNUMode();
   Opts.GNUInline = !Std.isC99();
@@ -627,6 +631,8 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForTypes() {
   languages.Insert(lldb::eLanguageTypeC_plus_plus_11);
   languages.Insert(lldb::eLanguageTypeC11);
   languages.Insert(lldb::eLanguageTypeC_plus_plus_14);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_17);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_20);
   return languages;
 }
 
@@ -637,6 +643,8 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForExpressions() {
   languages.Insert(lldb::eLanguageTypeC_plus_plus_03);
   languages.Insert(lldb::eLanguageTypeC_plus_plus_11);
   languages.Insert(lldb::eLanguageTypeC_plus_plus_14);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_17);
+  languages.Insert(lldb::eLanguageTypeC_plus_plus_20);
   return languages;
 }
 
@@ -5107,6 +5115,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::RvvBool16:
     case clang::BuiltinType::RvvBool32:
     case clang::BuiltinType::RvvBool64:
+    case clang::BuiltinType::RvvInt32m1x2:
       break;
 
     // WebAssembly builtin types.

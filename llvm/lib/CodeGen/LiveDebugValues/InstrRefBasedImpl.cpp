@@ -1544,12 +1544,12 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
       if (Size != MainRegSize || Offset) {
         // Enumerate all subregisters, searching.
         Register NewReg = 0;
-        for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
-          unsigned Subreg = TRI->getSubRegIndex(Reg, *SRI);
+        for (MCPhysReg SR : TRI->subregs(Reg)) {
+          unsigned Subreg = TRI->getSubRegIndex(Reg, SR);
           unsigned SubregSize = TRI->getSubRegIdxSize(Subreg);
           unsigned SubregOffset = TRI->getSubRegIdxOffset(Subreg);
           if (SubregSize == Size && SubregOffset == Offset) {
-            NewReg = *SRI;
+            NewReg = SR;
             break;
           }
         }
@@ -2066,12 +2066,12 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
     };
 
     // Then, transfer subreg bits.
-    for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
+    for (MCPhysReg SR : TRI->subregs(Reg)) {
       // Ensure this reg is tracked,
-      (void)MTracker->lookupOrTrackRegister(*SRI);
-      unsigned SubregIdx = TRI->getSubRegIndex(Reg, *SRI);
+      (void)MTracker->lookupOrTrackRegister(SR);
+      unsigned SubregIdx = TRI->getSubRegIndex(Reg, SR);
       unsigned SpillID = MTracker->getLocID(Loc, SubregIdx);
-      DoTransfer(*SRI, SpillID);
+      DoTransfer(SR, SpillID);
     }
 
     // Directly lookup size of main source reg, and transfer.
@@ -2101,10 +2101,10 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
       MTracker->setReg(DestReg, ReadValue);
     };
 
-    for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
-      unsigned Subreg = TRI->getSubRegIndex(Reg, *SRI);
+    for (MCPhysReg SR : TRI->subregs(Reg)) {
+      unsigned Subreg = TRI->getSubRegIndex(Reg, SR);
       unsigned SpillID = MTracker->getLocID(*Loc, Subreg);
-      DoTransfer(*SRI, SpillID);
+      DoTransfer(SR, SpillID);
     }
 
     // Directly look up this registers slot idx by size, and transfer.
@@ -3716,7 +3716,12 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
 
     unsigned BlockNo = Num.getBlock();
     LocIdx LocNo = Num.getLoc();
-    Num = MInLocs[BlockNo][LocNo.asU64()];
+    ValueIDNum ResolvedValue = MInLocs[BlockNo][LocNo.asU64()];
+    // If there is no resolved value for this live-in then it is not directly
+    // reachable from the entry block -- model it as a PHI on entry to this
+    // block, which means we leave the ValueIDNum unchanged.
+    if (ResolvedValue != ValueIDNum::EmptyValue)
+      Num = ResolvedValue;
   }
   // Later, we'll be looking up ranges of instruction numbers.
   llvm::sort(DebugPHINumToValue);

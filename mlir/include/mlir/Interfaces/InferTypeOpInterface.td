@@ -44,6 +44,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
                     "::std::optional<::mlir::Location>":$location,
                     "::mlir::ValueRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::OpaqueProperties":$properties,
                     "::mlir::RegionRange":$regions,
                     "::llvm::SmallVectorImpl<::mlir::Type>&":$inferredReturnTypes)
     >,
@@ -75,13 +76,14 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
                     "::std::optional<::mlir::Location>":$location,
                     "::mlir::ValueRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::OpaqueProperties":$properties,
                     "::mlir::RegionRange":$regions,
                     "::llvm::SmallVectorImpl<::mlir::Type>&":$returnTypes),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
           llvm::SmallVector<Type, 4> inferredReturnTypes;
           if (failed(ConcreteOp::inferReturnTypes(context, location, operands,
-                                                  attributes, regions,
+                                                  attributes, properties, regions,
                                                   inferredReturnTypes)))
             return failure();
           if (!ConcreteOp::isCompatibleReturnTypes(inferredReturnTypes,
@@ -147,6 +149,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
                     "::std::optional<::mlir::Location>":$location,
                     "::mlir::ValueShapeRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::OpaqueProperties":$properties,
                     "::mlir::RegionRange":$regions,
                     "::llvm::SmallVectorImpl<::mlir::ShapedTypeComponents>&":
                       $inferredReturnShapes),

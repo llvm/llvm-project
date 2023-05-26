@@ -20,6 +20,7 @@ define ptr @test1() {
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
+; CHECK-NEXT:    [[SCEVGEP_LCSSA:%.*]] = phi ptr [ [[SCEVGEP]], [[LOOP]] ]
 ; CHECK-NEXT:    br i1 false, label [[BBA:%.*]], label [[BBB:%.*]]
 ; CHECK:       bbA:
 ; CHECK-NEXT:    switch i32 0, label [[BBA_BB89_CRIT_EDGE:%.*]] [
@@ -36,7 +37,7 @@ define ptr @test1() {
 ; CHECK:       bbB.bb89_crit_edge:
 ; CHECK-NEXT:    br label [[BB89]]
 ; CHECK:       bb89:
-; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi ptr [ [[SCEVGEP]], [[BBA_BB89_CRIT_EDGE]] ], [ [[SCEVGEP]], [[BBB_BB89_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi ptr [ [[SCEVGEP_LCSSA]], [[BBA_BB89_CRIT_EDGE]] ], [ [[SCEVGEP_LCSSA]], [[BBB_BB89_CRIT_EDGE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret ptr [[TMP75PHI]]
@@ -84,6 +85,8 @@ define ptr @test2() {
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
+; CHECK-NEXT:    [[SCEVGEP_LCSSA1:%.*]] = phi ptr [ [[SCEVGEP]], [[LOOP]] ]
+; CHECK-NEXT:    [[SCEVGEP_LCSSA:%.*]] = phi ptr [ [[SCEVGEP]], [[LOOP]] ]
 ; CHECK-NEXT:    br i1 false, label [[BBA:%.*]], label [[BBB:%.*]]
 ; CHECK:       bbA:
 ; CHECK-NEXT:    switch i32 0, label [[BB89:%.*]] [
@@ -98,10 +101,10 @@ define ptr @test2() {
 ; CHECK:       bbB.exit_crit_edge:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       bb89:
-; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi ptr [ [[SCEVGEP]], [[BBA]] ], [ [[SCEVGEP]], [[BBA]] ], [ [[SCEVGEP]], [[BBA]] ]
+; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi ptr [ [[SCEVGEP_LCSSA1]], [[BBA]] ], [ [[SCEVGEP_LCSSA1]], [[BBA]] ], [ [[SCEVGEP_LCSSA1]], [[BBA]] ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi ptr [ [[TMP75PHI]], [[BB89]] ], [ [[SCEVGEP]], [[BBB_EXIT_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[RESULT:%.*]] = phi ptr [ [[TMP75PHI]], [[BB89]] ], [ [[SCEVGEP_LCSSA]], [[BBB_EXIT_CRIT_EDGE]] ]
 ; CHECK-NEXT:    ret ptr [[RESULT]]
 ;
 entry:

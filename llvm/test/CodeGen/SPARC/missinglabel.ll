@@ -8,8 +8,7 @@ define void @f(i64 %a0) align 2 {
 ; CHECK-LABEL: f:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0: ! %entry
-; CHECK-NEXT:    cmp %o0, 0
-; CHECK-NEXT:    be %xcc, .LBB0_2
+; CHECK-NEXT:    brz %o0, .LBB0_2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.1: ! %cond.false
 ; CHECK-NEXT:  .LBB0_2: ! %targetblock

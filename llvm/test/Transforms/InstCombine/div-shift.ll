@@ -1000,3 +1000,28 @@ define i8 @udiv_shl_nuw_divisor(i8 %x, i8 %y, i8 %z) {
   %d = udiv i8 %x, %s
   ret i8 %d
 }
+
+define i8 @udiv_fail_shl_overflow(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_fail_shl_overflow(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 2, [[Y:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umax.i8(i8 [[SHL]], i8 1)
+; CHECK-NEXT:    [[MUL:%.*]] = udiv i8 [[X:%.*]], [[MIN]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %shl = shl i8 2, %y
+  %min = call i8 @llvm.umax.i8(i8 %shl, i8 1)
+  %mul = udiv i8 %x, %min
+  ret i8 %mul
+}
+
+define i8 @udiv_shl_no_overflow(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_shl_no_overflow(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[MUL1:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MUL1]]
+;
+  %shl = shl nuw i8 2, %y
+  %min = call i8 @llvm.umax.i8(i8 %shl, i8 1)
+  %mul = udiv i8 %x, %min
+  ret i8 %mul
+}

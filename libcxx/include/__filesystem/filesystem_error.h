@@ -14,11 +14,13 @@
 #include <__config>
 #include <__filesystem/path.h>
 #include <__memory/shared_ptr.h>
+#include <__system_error/error_code.h>
+#include <__system_error/system_error.h>
 #include <__utility/forward.h>
 #include <__verbose_abort>
 #include <iosfwd>
 #include <new>
-#include <system_error>
+#include <string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -58,7 +60,7 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   const path& path2() const noexcept { return __storage_->__p2_; }
 
-  filesystem_error(const filesystem_error&) = default;
+  _LIBCPP_HIDE_FROM_ABI filesystem_error(const filesystem_error&) = default;
   ~filesystem_error() override; // key function
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL

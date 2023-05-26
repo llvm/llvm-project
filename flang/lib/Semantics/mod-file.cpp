@@ -480,7 +480,6 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     }
   }
   os << '\n';
-
   // walk symbols, collect ones needed for interface
   const Scope &scope{
       details.entryScope() ? *details.entryScope() : DEREF(symbol.scope())};
@@ -684,6 +683,33 @@ void ModFileWriter::PutObjectEntity(
   PutShape(os, details.coshape(), '[', ']');
   PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit());
   os << '\n';
+  if (auto tkr{GetIgnoreTKR(symbol)}; !tkr.empty()) {
+    os << "!dir$ ignore_tkr(";
+    tkr.IterateOverMembers([&](common::IgnoreTKR tkr) {
+      switch (tkr) {
+        SWITCH_COVERS_ALL_CASES
+      case common::IgnoreTKR::Type:
+        os << 't';
+        break;
+      case common::IgnoreTKR::Kind:
+        os << 'k';
+        break;
+      case common::IgnoreTKR::Rank:
+        os << 'r';
+        break;
+      case common::IgnoreTKR::Device:
+        os << 'd';
+        break;
+      case common::IgnoreTKR::Managed:
+        os << 'm';
+        break;
+      case common::IgnoreTKR::Contiguous:
+        os << 'c';
+        break;
+      }
+    });
+    os << ") " << symbol.name() << '\n';
+  }
 }
 
 void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {

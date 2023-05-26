@@ -993,8 +993,8 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1048575
-    ; GFX10-NEXT: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0 :: (load (s32), addrspace 4)
-    ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
+    ; GFX10-NEXT: [[S_LOAD_DWORD_SGPR_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR_IMM [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load (s32), addrspace 4)
+    ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR_IMM]]
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_CONSTANT i64 1048575
     %2:sgpr(p4) = G_PTR_ADD %0, %1
@@ -1039,8 +1039,8 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1048576
-    ; GFX10-NEXT: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0 :: (load (s32), addrspace 4)
-    ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
+    ; GFX10-NEXT: [[S_LOAD_DWORD_SGPR_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR_IMM [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load (s32), addrspace 4)
+    ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR_IMM]]
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_CONSTANT i64 1048576
     %2:sgpr(p4) = G_PTR_ADD %0, %1
@@ -1086,8 +1086,8 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1073741823
-    ; GFX10-NEXT: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0 :: (load (s32), addrspace 4)
-    ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
+    ; GFX10-NEXT: [[S_LOAD_DWORD_SGPR_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR_IMM [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load (s32), addrspace 4)
+    ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR_IMM]]
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_CONSTANT i64 1073741823
     %2:sgpr(p4) = G_PTR_ADD %0, %1

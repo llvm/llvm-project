@@ -152,11 +152,11 @@ def ARMcall_nolink   : SDNode<"ARMISD::CALL_NOLINK", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                SDNPVariadic]>;
 
-def ARMretflag       : SDNode<"ARMISD::RET_FLAG", SDTNone,
+def ARMretglue       : SDNode<"ARMISD::RET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def ARMseretflag     : SDNode<"ARMISD::SERET_FLAG", SDTNone,
+def ARMseretglue     : SDNode<"ARMISD::SERET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def ARMintretflag    : SDNode<"ARMISD::INTRET_FLAG", SDT_ARMcall,
+def ARMintretglue    : SDNode<"ARMISD::INTRET_GLUE", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
                               [SDNPInGlue]>;
@@ -192,8 +192,8 @@ def ARMasrl          : SDNode<"ARMISD::ASRL", SDT_ARMIntShiftParts, []>;
 def ARMlsrl          : SDNode<"ARMISD::LSRL", SDT_ARMIntShiftParts, []>;
 def ARMlsll          : SDNode<"ARMISD::LSLL", SDT_ARMIntShiftParts, []>;
 
-def ARMsrl_flag      : SDNode<"ARMISD::SRL_FLAG", SDTIntUnaryOp, [SDNPOutGlue]>;
-def ARMsra_flag      : SDNode<"ARMISD::SRA_FLAG", SDTIntUnaryOp, [SDNPOutGlue]>;
+def ARMsrl_glue      : SDNode<"ARMISD::SRL_GLUE", SDTIntUnaryOp, [SDNPOutGlue]>;
+def ARMsra_glue      : SDNode<"ARMISD::SRA_GLUE", SDTIntUnaryOp, [SDNPOutGlue]>;
 def ARMrrx           : SDNode<"ARMISD::RRX"     , SDTIntUnaryOp, [SDNPInGlue ]>;
 
 def ARMaddc          : SDNode<"ARMISD::ADDC",  SDTBinaryArithWithFlags,
@@ -458,6 +458,11 @@ def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
 // An 'fsub' node which checks for single non-hazardous use.
 def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
+}]>;
+
+// An 'fadd' node which can be contracted into a fma
+def fadd_contract : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
+  return N->getFlags().hasAllowContract();
 }]>;
 
 def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
@@ -2450,14 +2455,14 @@ def LEApcrelJT : ARMPseudoInst<(outs GPR:$Rd),
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   // ARMV4T and above
   def BX_RET : AI<(outs), (ins), BrMiscFrm, IIC_Br,
-                  "bx", "\tlr", [(ARMretflag)]>,
+                  "bx", "\tlr", [(ARMretglue)]>,
                Requires<[IsARM, HasV4T]>, Sched<[WriteBr]> {
     let Inst{27-0}  = 0b0001001011111111111100011110;
   }
 
   // ARMV4 only
   def MOVPCLR : AI<(outs), (ins), BrMiscFrm, IIC_Br,
-                  "mov", "\tpc, lr", [(ARMretflag)]>,
+                  "mov", "\tpc, lr", [(ARMretglue)]>,
                Requires<[IsARM, NoV4T]>, Sched<[WriteBr]> {
     let Inst{27-0} = 0b0001101000001111000000001110;
   }
@@ -2466,7 +2471,7 @@ let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   // the user-space one).
   def SUBS_PC_LR : ARMPseudoInst<(outs), (ins i32imm:$offset, pred:$p),
                                  4, IIC_Br,
-                                 [(ARMintretflag imm:$offset)]>;
+                                 [(ARMintretglue imm:$offset)]>;
 }
 
 // Indirect branches
@@ -3709,14 +3714,14 @@ def RRX: PseudoInst<(outs GPR:$Rd), (ins GPR:$Rm), IIC_iMOVsi,
                     Requires<[IsARM]>, Sched<[WriteALU]>;
 
 // These aren't really mov instructions, but we have to define them this way
-// due to flag operands.
+// due to glue operands.
 
 let Defs = [CPSR] in {
-def MOVsrl_flag : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                      [(set GPR:$dst, (ARMsrl_flag GPR:$src))]>, UnaryDP,
+def MOVsrl_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                      [(set GPR:$dst, (ARMsrl_glue GPR:$src))]>, UnaryDP,
                       Sched<[WriteALU]>, Requires<[IsARM]>;
-def MOVsra_flag : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
-                      [(set GPR:$dst, (ARMsra_flag GPR:$src))]>, UnaryDP,
+def MOVsra_glue : PseudoInst<(outs GPR:$dst), (ins GPR:$src), IIC_iMOVsi,
+                      [(set GPR:$dst, (ARMsra_glue GPR:$src))]>, UnaryDP,
                       Sched<[WriteALU]>, Requires<[IsARM]>;
 }
 

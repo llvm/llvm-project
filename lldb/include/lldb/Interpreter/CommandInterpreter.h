@@ -324,8 +324,9 @@ public:
                          lldb::CommandObjectSP &command_obj_sp,
                          llvm::StringRef args_string = llvm::StringRef());
 
-  // Remove a command if it is removable (python or regex command)
-  bool RemoveCommand(llvm::StringRef cmd);
+  /// Remove a command if it is removable (python or regex command). If \b force
+  /// is provided, the command is removed regardless of its removable status.
+  bool RemoveCommand(llvm::StringRef cmd, bool force = false);
 
   bool RemoveAlias(llvm::StringRef alias_name);
 
@@ -637,6 +638,9 @@ public:
 
   bool IOHandlerInterrupt(IOHandler &io_handler) override;
 
+  Status PreprocessCommand(std::string &command);
+  Status PreprocessToken(std::string &token);
+
 protected:
   friend class Debugger;
 
@@ -670,8 +674,6 @@ private:
   void OverrideExecutionContext(const ExecutionContext &override_context);
 
   void RestoreExecutionContext();
-
-  Status PreprocessCommand(std::string &command);
 
   void SourceInitFile(FileSpec file, CommandReturnObject &result);
 

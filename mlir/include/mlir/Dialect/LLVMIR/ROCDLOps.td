@@ -252,6 +252,25 @@ def ROCDL_RawBufferStoreOp :
   let hasCustomAssemblyFormat = 1;
 }
 
+def ROCDL_RawBufferAtomicCmpSwap :
+  ROCDL_Op<"raw.buffer.atomic.cmpswap", [AllTypesMatch<["res", "src", "cmp"]>]>,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$src,
+                 LLVM_Type:$cmp,
+                 LLVM_Type:$rsrc,
+                 I32:$offset,
+                 I32:$soffset,
+                 I32:$aux)>{
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_raw_buffer_atomic_cmpswap, {$src, $cmp, $rsrc,
+            $offset, $soffset, $aux}, {$_resultType});
+  }];
+  let assemblyFormat = [{
+    attr-dict `(` operands `)` `:` type($res) `,` type($rsrc)
+  }];
+}
+
 //===---------------------------------------------------------------------===//
 // MI-100 and MI-200 buffer atomic floating point add intrinsic
 

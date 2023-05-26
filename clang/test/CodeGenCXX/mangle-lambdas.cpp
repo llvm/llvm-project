@@ -290,6 +290,17 @@ template void ft4<int>();
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZ3ft4IiEvvEN2lc2mfEiEd_NKUlvE_clEv
 
 
+extern int ExternalVariable;
+struct StaticInlineMember {
+  static constexpr auto x = [] { return ExternalVariable; };
+};
+
+// CHECK-LABEL: define void @_Z23test_StaticInlineMemberv
+// CHECK: call {{.*}} @_ZNK18StaticInlineMember1xMUlvE_clEv
+void test_StaticInlineMember() {
+  StaticInlineMember::x();
+}
+
 // Check linkage of the various lambdas.
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZZ11inline_funciENKUlvE_clEv
 // CHECK: ret i32 1

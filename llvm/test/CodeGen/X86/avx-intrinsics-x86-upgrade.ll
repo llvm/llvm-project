@@ -843,13 +843,13 @@ declare void @llvm.x86.avx.storeu.ps.256(ptr, <8 x float>) nounwind
 define <2 x double> @test_x86_avx_vpermil_pd(<2 x double> %a0) {
 ; AVX-LABEL: test_x86_avx_vpermil_pd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd $1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; AVX-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; AVX-NEXT:    # xmm0 = xmm0[1,0]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx_vpermil_pd:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpermilpd $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; AVX512VL-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; AVX512VL-NEXT:    # xmm0 = xmm0[1,0]
 ; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.avx.vpermil.pd(<2 x double> %a0, i8 1) ; <<2 x double>> [#uses=1]
@@ -861,13 +861,13 @@ declare <2 x double> @llvm.x86.avx.vpermil.pd(<2 x double>, i8) nounwind readnon
 define <4 x double> @test_x86_avx_vpermil_pd_256(<4 x double> %a0) {
 ; AVX-LABEL: test_x86_avx_vpermil_pd_256:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd $7, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x05,0xc0,0x07]
+; AVX-NEXT:    vshufpd $7, %ymm0, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0xc6,0xc0,0x07]
 ; AVX-NEXT:    # ymm0 = ymm0[1,1,3,2]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_x86_avx_vpermil_pd_256:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpermilpd $7, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x05,0xc0,0x07]
+; AVX512VL-NEXT:    vshufpd $7, %ymm0, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xc6,0xc0,0x07]
 ; AVX512VL-NEXT:    # ymm0 = ymm0[1,1,3,2]
 ; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <4 x double> @llvm.x86.avx.vpermil.pd.256(<4 x double> %a0, i8 7) ; <<4 x double>> [#uses=1]

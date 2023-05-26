@@ -76,13 +76,41 @@ SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
 }
 
 std::optional<Token>
+findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
+                               const LangOptions &LangOpts) {
+  // `Lexer::findNextToken` will ignore comment
+  if (Start.isMacroID())
+    return std::nullopt;
+  Start = Lexer::getLocForEndOfToken(Start, 0, SM, LangOpts);
+  // Break down the source location.
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Start);
+  bool InvalidTemp = false;
+  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
+  if (InvalidTemp)
+    return std::nullopt;
+  // Lex from the start of the given location.
+  Lexer L(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
+          File.data() + LocInfo.second, File.end());
+  L.SetCommentRetentionState(true);
+  // Find the token.
+  Token Tok;
+  L.LexFromRawLexer(Tok);
+  return Tok;
+}
+
+std::optional<Token>
 findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
                               const LangOptions &LangOpts) {
-  std::optional<Token> CurrentToken;
-  do {
-    CurrentToken = Lexer::findNextToken(Start, SM, LangOpts);
-  } while (CurrentToken && CurrentToken->is(tok::comment));
-  return CurrentToken;
+  while (Start.isValid()) {
+    std::optional<Token> CurrentToken =
+        Lexer::findNextToken(Start, SM, LangOpts);
+    if (!CurrentToken || !CurrentToken->is(tok::comment))
+      return CurrentToken;
+
+    Start = CurrentToken->getLocation();
+  }
+
+  return std::nullopt;
 }
 
 bool rangeContainsExpansionsOrDirectives(SourceRange Range,
@@ -91,7 +119,7 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
   assert(Range.isValid() && "Invalid Range for relexing provided");
   SourceLocation Loc = Range.getBegin();
 
-  while (Loc < Range.getEnd()) {
+  while (Loc <= Range.getEnd()) {
     if (Loc.isMacroID())
       return true;
 
@@ -103,7 +131,7 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
     if (Tok->is(tok::hash))
       return true;
 
-    Loc = Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts).getLocWithOffset(1);
+    Loc = Tok->getLocation();
   }
 
   return false;

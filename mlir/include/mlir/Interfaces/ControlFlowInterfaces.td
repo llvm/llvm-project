@@ -67,7 +67,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
     >,
     InterfaceMethod<[{
         Returns the `BlockArgument` corresponding to operand `operandIndex` in
-        some successor, or None if `operandIndex` isn't a successor operand
+        some successor, or std::nullopt if `operandIndex` isn't a successor operand
         index.
       }],
       "::std::optional<::mlir::BlockArgument>", "getSuccessorBlockArgument",

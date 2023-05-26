@@ -165,7 +165,7 @@ define <4 x double> @fmul_v2f64(<2 x  double> %x, <2 x double> %y) {
 ; AVX1-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmulpd %xmm2, %xmm2, %xmm1
 ; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: fmul_v2f64:
@@ -175,7 +175,7 @@ define <4 x double> @fmul_v2f64(<2 x  double> %x, <2 x double> %y) {
 ; AVX2-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmulpd %xmm2, %xmm2, %xmm1
 ; AVX2-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: fmul_v2f64:
@@ -184,7 +184,7 @@ define <4 x double> @fmul_v2f64(<2 x  double> %x, <2 x double> %y) {
 ; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vfmadd231pd {{.*#+}} xmm0 = (xmm2 * xmm2) + xmm0
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    retq
   %s = shufflevector <2 x double> %x, <2 x double> %y, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
   %bo = fmul fast <4 x double> %s, %s

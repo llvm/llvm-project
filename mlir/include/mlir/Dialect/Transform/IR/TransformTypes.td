@@ -63,9 +63,14 @@ def Transform_AnyValue : TypeDef<Transform_Dialect, "AnyValue",
 
 class Transform_ConcreteOpType<string opname>
   : Type<And<[Transform_OperationType.predicate,
-              CPred<"$_self.cast<::mlir::transform::OperationType>()"
+              CPred<"::llvm::cast<::mlir::transform::OperationType>($_self)"
                     ".getOperationName() == \"" # opname # "\"">]>,
          "Transform IR handle to " # opname # " operations",
          "::mlir::transform::OperationType">;
+
+def TransformAnyHandle : Type<
+    Or<[TransformHandleTypeInterface.predicate,
+        TransformValueHandleTypeInterface.predicate]>,
+    "transform operation or value handle">;
 
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES

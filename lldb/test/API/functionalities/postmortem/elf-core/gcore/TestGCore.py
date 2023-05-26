@@ -3,7 +3,6 @@ Test signal reporting when debugging with linux core files.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -16,14 +15,14 @@ class GCoreTestCase(TestBase):
     _i386_pid = 5586
     _x86_64_pid = 5669
 
-    @skipIf(oslist=['windows'])
-    @skipIf(triple='^mips')
+    @skipIf(oslist=["windows"])
+    @skipIf(triple="^mips")
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("linux-i386", self._i386_pid)
 
-    @skipIf(oslist=['windows'])
-    @skipIf(triple='^mips')
+    @skipIf(oslist=["windows"])
+    @skipIf(triple="^mips")
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("linux-x86_64", self._x86_64_pid)

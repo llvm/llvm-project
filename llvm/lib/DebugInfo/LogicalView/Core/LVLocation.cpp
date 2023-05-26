@@ -659,7 +659,7 @@ void LVLocationSymbol::printExtra(raw_ostream &OS, bool Full) const {
   if (Full && Entries) {
     bool CodeViewLocation = getParentSymbol()->getHasCodeViewLocation();
     std::stringstream Stream;
-    std::string Leading = "";
+    std::string Leading;
     for (LVOperation *Operation : *Entries) {
       Stream << Leading
              << (CodeViewLocation ? Operation->getOperandsCodeViewInfo()

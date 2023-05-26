@@ -16,13 +16,13 @@ define <vscale x 1 x half> @intrinsic_vfmv.f.s_s_nxv1f16(<vscale x 1 x half> %0,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmv.f.s ft0, v8
-; CHECK-NEXT:    fsh ft0, 14(sp) # 2-byte Folded Spill
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    fsh fa5, 14(sp) # 2-byte Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    flh ft0, 14(sp) # 2-byte Folded Reload
-; CHECK-NEXT:    vfmv.v.f v8, ft0
+; CHECK-NEXT:    flh fa5, 14(sp) # 2-byte Folded Reload
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
@@ -37,13 +37,13 @@ define <vscale x 1 x float> @intrinsic_vfmv.f.s_s_nxv1f32(<vscale x 1 x float> %
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmv.f.s ft0, v8
-; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    flw ft0, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    vfmv.v.f v8, ft0
+; CHECK-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
@@ -58,13 +58,13 @@ define <vscale x 1 x double> @intrinsic_vfmv.f.s_s_nxv1f64(<vscale x 1 x double>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s ft0, v8
-; CHECK-NEXT:    fsd ft0, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    fsd fa5, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    fld ft0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    vfmv.v.f v8, ft0
+; CHECK-NEXT:    fld fa5, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:

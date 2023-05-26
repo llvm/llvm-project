@@ -17,7 +17,7 @@ define i1 @test() {
 ; CHECK-NEXT:    [[T13:%.*]] = and <2 x i32> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    br label [[ELSE1:%.*]]
 ; CHECK:       else1:
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[T13]], <2 x i32> poison, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[T13]], <2 x i32> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[BF_CAST162]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt <2 x i32> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1

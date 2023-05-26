@@ -1100,6 +1100,12 @@ extern void __kmp_init_target_mem();
 
 /* ------------------------------------------------------------------------ */
 
+#if ENABLE_LIBOMPTARGET
+extern void __kmp_init_target_task();
+#endif
+
+/* ------------------------------------------------------------------------ */
+
 #define KMP_UINT64_MAX                                                         \
   (~((kmp_uint64)1 << ((sizeof(kmp_uint64) * (1 << 3)) - 1)))
 
@@ -2481,6 +2487,62 @@ typedef struct {
   } ed;
 } kmp_event_t;
 
+#if OMPX_TASKGRAPH
+// Initial number of allocated nodes while recording
+#define INIT_MAPSIZE 50
+
+typedef struct kmp_taskgraph_flags { /*This needs to be exactly 32 bits */
+  unsigned nowait : 1;
+  unsigned re_record : 1;
+  unsigned reserved : 30;
+} kmp_taskgraph_flags_t;
+
+/// Represents a TDG node
+typedef struct kmp_node_info {
+  kmp_task_t *task; // Pointer to the actual task
+  kmp_int32 *successors; // Array of the succesors ids
+  kmp_int32 nsuccessors; // Number of succesors of the node
+  std::atomic<kmp_int32>
+      npredecessors_counter; // Number of predessors on the fly
+  kmp_int32 npredecessors; // Total number of predecessors
+  kmp_int32 successors_size; // Number of allocated succesors ids
+  kmp_taskdata_t *parent_task; // Parent implicit task
+} kmp_node_info_t;
+
+/// Represent a TDG's current status
+typedef enum kmp_tdg_status {
+  KMP_TDG_NONE = 0,
+  KMP_TDG_RECORDING = 1,
+  KMP_TDG_READY = 2
+} kmp_tdg_status_t;
+
+/// Structure that contains a TDG
+typedef struct kmp_tdg_info {
+  kmp_int32 tdg_id; // Unique idenfifier of the TDG
+  kmp_taskgraph_flags_t tdg_flags; // Flags related to a TDG
+  kmp_int32 map_size; // Number of allocated TDG nodes
+  kmp_int32 num_roots; // Number of roots tasks int the TDG
+  kmp_int32 *root_tasks; // Array of tasks identifiers that are roots
+  kmp_node_info_t *record_map; // Array of TDG nodes
+  kmp_tdg_status_t tdg_status =
+      KMP_TDG_NONE; // Status of the TDG (recording, ready...)
+  std::atomic<kmp_int32> num_tasks; // Number of TDG nodes
+  kmp_bootstrap_lock_t
+      graph_lock; // Protect graph attributes when updated via taskloop_recur
+  // Taskloop reduction related
+  void *rec_taskred_data; // Data to pass to __kmpc_task_reduction_init or
+                          // __kmpc_taskred_init
+  kmp_int32 rec_num_taskred;
+} kmp_tdg_info_t;
+
+extern kmp_int32 __kmp_max_tdgs;
+extern kmp_tdg_info_t **__kmp_global_tdgs;
+extern kmp_int32 __kmp_curr_tdg_idx;
+extern kmp_int32 __kmp_successors_size;
+extern std::atomic<kmp_int32> __kmp_tdg_task_id;
+extern kmp_int32 __kmp_num_tdg;
+#endif
+
 #ifdef BUILD_TIED_TASK_STACK
 
 /* Tied Task stack definitions */
@@ -2528,7 +2590,12 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned complete : 1; /* 1==complete, 0==not complete   */
   unsigned freed : 1; /* 1==freed, 0==allocated        */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
+#if OMPX_TASKGRAPH
+  unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
+  unsigned reserved31 : 6; /* reserved for library use */
+#else
   unsigned reserved31 : 7; /* reserved for library use */
+#endif
 
 } kmp_tasking_flags_t;
 
@@ -2577,6 +2644,10 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
   kmp_event_t td_allow_completion_event;
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
+#endif
+#if OMPX_TASKGRAPH
+  bool is_taskgraph = 0; // whether the task is within a TDG
+  kmp_tdg_info_t *tdg; // used to associate task with a TDG
 #endif
   kmp_target_data_t td_target_data;
 }; // struct kmp_taskdata
@@ -4118,6 +4189,20 @@ KMP_EXPORT void __kmpc_init_nest_lock_with_hint(ident_t *loc, kmp_int32 gtid,
                                                 void **user_lock,
                                                 uintptr_t hint);
 
+#if OMPX_TASKGRAPH
+// Taskgraph's Record & Replay mechanism
+// __kmp_tdg_is_recording: check whether a given TDG is recording
+// status: the tdg's current status
+static inline bool __kmp_tdg_is_recording(kmp_tdg_status_t status) {
+  return status == KMP_TDG_RECORDING;
+}
+
+KMP_EXPORT kmp_int32 __kmpc_start_record_task(ident_t *loc, kmp_int32 gtid,
+                                              kmp_int32 input_flags,
+                                              kmp_int32 tdg_id);
+KMP_EXPORT void __kmpc_end_record_task(ident_t *loc, kmp_int32 gtid,
+                                       kmp_int32 input_flags, kmp_int32 tdg_id);
+#endif
 /* Interface to fast scalable reduce methods routines */
 
 KMP_EXPORT kmp_int32 __kmpc_reduce_nowait(

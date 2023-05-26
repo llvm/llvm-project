@@ -147,6 +147,26 @@ main_body:
   ret half %res
 }
 
+define amdgpu_ps half @v_interp_f16_imm_params(float inreg %i, float inreg %j) #0 {
+; GCN-LABEL: v_interp_f16_imm_params:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GCN-NEXT:    v_interp_p10_f16_f32 v1, v0, v1, v0 wait_exp:7
+; GCN-NEXT:    v_interp_p2_f16_f32 v0, v0, v2, v0 wait_exp:7
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GCN-NEXT:    v_add_f16_e32 v0, v1, v0
+; GCN-NEXT:    ; return to shader part epilog
+main_body:
+  %l_p0 = call float @llvm.amdgcn.interp.inreg.p10.f16(float 0.0, float %i, float 0.0, i1 0)
+  %l_p1 = call half @llvm.amdgcn.interp.inreg.p2.f16(float 0.0, float %j, float 0.0, i1 0)
+  %h = fptrunc float %l_p0 to half
+  %res = fadd half %h, %l_p1
+  ret half %res
+}
+
 declare float @llvm.amdgcn.lds.param.load(i32, i32, i32) #1
 declare float @llvm.amdgcn.interp.inreg.p10(float, float, float) #0
 declare float @llvm.amdgcn.interp.inreg.p2(float, float, float) #0

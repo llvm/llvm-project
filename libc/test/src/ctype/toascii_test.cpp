@@ -15,8 +15,8 @@ TEST(LlvmLibcToAscii, DefaultLocale) {
   //    (which are all 7 bit unsigned integers)
   // return themself, and that all other characters return themself
   // mod 128 (which is equivalent to & 0x7f)
-  for (int ch = 0; ch < 255; ++ch) {
-    if (ch <= 0x7f)
+  for (int ch = -255; ch < 255; ++ch) {
+    if (0 <= ch && ch <= 0x7f)
       EXPECT_EQ(__llvm_libc::toascii(ch), ch);
     else
       EXPECT_EQ(__llvm_libc::toascii(ch), ch & 0x7f);

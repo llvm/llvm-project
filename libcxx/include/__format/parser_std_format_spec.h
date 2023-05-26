@@ -16,6 +16,7 @@
 /// This header has some support for the chrono-format-spec since it doesn't
 /// affect the std-format-spec.
 
+#include <__algorithm/copy_n.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
 #include <__assert>
@@ -28,8 +29,10 @@
 #include <__format/format_parse_context.h>
 #include <__format/format_string.h>
 #include <__format/unicode.h>
+#include <__format/width_estimation_table.h>
 #include <__iterator/concepts.h>
 #include <__iterator/readable_traits.h> // iter_value_t
+#include <__memory/addressof.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__variant/monostate.h>
@@ -49,16 +52,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __format_spec {
 
-template <contiguous_iterator _Iterator>
+template <contiguous_iterator _Iterator, class _ParseContext>
 _LIBCPP_HIDE_FROM_ABI constexpr __format::__parse_number_result<_Iterator>
-__parse_arg_id(_Iterator __begin, _Iterator __end, auto& __parse_ctx) {
+__parse_arg_id(_Iterator __begin, _Iterator __end, _ParseContext& __ctx) {
   using _CharT = iter_value_t<_Iterator>;
   // This function is a wrapper to call the real parser. But it does the
   // validation for the pre-conditions and post-conditions.
   if (__begin == __end)
     std::__throw_format_error("End of input while parsing format-spec arg-id");
 
-  __format::__parse_number_result __r = __format::__parse_arg_id(__begin, __end, __parse_ctx);
+  __format::__parse_number_result __r = __format::__parse_arg_id(__begin, __end, __ctx);
 
   if (__r.__last == __end || *__r.__last != _CharT('}'))
     std::__throw_format_error("Invalid arg-id");
@@ -81,22 +84,33 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
   return _VSTD::__visit_format_arg(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
-        if constexpr (integral<_Type>) {
+        if constexpr (same_as<_Type, monostate>)
+          std::__throw_format_error("Argument index out of bounds");
+
+        // [format.string.std]/8
+        // If { arg-idopt } is used in a width or precision, the value of the
+        // corresponding formatting argument is used in its place. If the
+        // corresponding formatting argument is not of standard signed or unsigned
+        // integer type, or its value is negative for precision or non-positive for
+        // width, an exception of type format_error is thrown.
+        //
+        // When an integral is used in a format function, it is stored as one of
+        // the types checked below. Other integral types are promoted. For example,
+        // a signed char is stored as an int.
+        if constexpr (same_as<_Type, int> || same_as<_Type, unsigned int> || //
+                      same_as<_Type, long long> || same_as<_Type, unsigned long long>) {
           if constexpr (signed_integral<_Type>) {
             if (__arg < 0)
               std::__throw_format_error("A format-spec arg-id replacement shouldn't have a negative value");
           }
 
           using _CT = common_type_t<_Type, decltype(__format::__number_max)>;
-          if (static_cast<_CT>(__arg) >
-              static_cast<_CT>(__format::__number_max))
+          if (static_cast<_CT>(__arg) > static_cast<_CT>(__format::__number_max))
             std::__throw_format_error("A format-spec arg-id replacement exceeds the maximum supported value");
 
           return __arg;
-        } else if constexpr (same_as<_Type, monostate>)
-          std::__throw_format_error("Argument index out of bounds");
-        else
-          std::__throw_format_error("A format-spec arg-id replacement argument isn't an integral type");
+        } else
+          std::__throw_format_error("Replacement argument isn't a standard signed or unsigned integer type");
       },
       __format_arg);
 }
@@ -143,6 +157,7 @@ inline constexpr __fields __fields_pointer{.__type_ = true};
 #  if _LIBCPP_STD_VER >= 23
 inline constexpr __fields __fields_tuple{.__use_range_fill_ = true};
 inline constexpr __fields __fields_range{.__use_range_fill_ = true};
+inline constexpr __fields __fields_fill_align_width{};
 #  endif
 
 enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {
@@ -207,6 +222,25 @@ struct __chrono {
   bool __month_name_ : 1;
 };
 
+// The fill UCS scalar value.
+//
+// This is always an array, with 1, 2, or 4 elements.
+// The size of the data structure is always 32-bits.
+template <class _CharT>
+struct __code_point;
+
+template <>
+struct __code_point<char> {
+  char __data[4] = {' '};
+};
+
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <>
+struct __code_point<wchar_t> {
+  wchar_t __data[4 / sizeof(wchar_t)] = {L' '};
+};
+#  endif
+
 /// Contains the parsed formatting specifications.
 ///
 /// This contains information for both the std-format-spec and the
@@ -242,7 +276,7 @@ struct __parsed_specifications {
   /// replaced with the value of that arg-id.
   int32_t __precision_;
 
-  _CharT __fill_;
+  __code_point<_CharT> __fill_;
 
   _LIBCPP_HIDE_FROM_ABI constexpr bool __has_width() const { return __width_ > 0; }
 
@@ -269,11 +303,10 @@ static_assert(is_trivially_copyable_v<__parsed_specifications<wchar_t>>);
 template <class _CharT>
 class _LIBCPP_TEMPLATE_VIS __parser {
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr auto __parse(basic_format_parse_context<_CharT>& __parse_ctx, __fields __fields)
-      -> decltype(__parse_ctx.begin()) {
-
-    auto __begin = __parse_ctx.begin();
-    auto __end = __parse_ctx.end();
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator __parse(_ParseContext& __ctx, __fields __fields) {
+    auto __begin = __ctx.begin();
+    auto __end   = __ctx.end();
     if (__begin == __end)
       return __begin;
 
@@ -289,10 +322,10 @@ public:
     if (__fields.__zero_padding_ && __parse_zero_padding(__begin) && __begin == __end)
       return __begin;
 
-    if (__parse_width(__begin, __end, __parse_ctx) && __begin == __end)
+    if (__parse_width(__begin, __end, __ctx) && __begin == __end)
       return __begin;
 
-    if (__fields.__precision_ && __parse_precision(__begin, __end, __parse_ctx) && __begin == __end)
+    if (__fields.__precision_ && __parse_precision(__begin, __end, __ctx) && __begin == __end)
       return __begin;
 
     if (__fields.__locale_specific_form_ && __parse_locale_specific_form(__begin) && __begin == __end)
@@ -373,11 +406,7 @@ public:
   /// The requested precision, either the value or the arg-id.
   int32_t __precision_{-1};
 
-  // LWG 3576 will probably change this to always accept a Unicode code point
-  // To avoid changing the size with that change align the field so when it
-  // becomes 32-bit its alignment will remain the same. That also means the
-  // size will remain the same. (D2572 addresses the solution for LWG 3576.)
-  _CharT __fill_{_CharT(' ')};
+  __code_point<_CharT> __fill_{};
 
 private:
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_alignment(_CharT __c) {
@@ -397,19 +426,90 @@ private:
     return false;
   }
 
+  _LIBCPP_HIDE_FROM_ABI constexpr void __validate_fill_character(_CharT __fill, bool __use_range_fill) {
+    // The forbidden fill characters all code points formed from a single code unit, thus the
+    // check can be omitted when more code units are used.
+    if (__use_range_fill && (__fill == _CharT('{') || __fill == _CharT('}') || __fill == _CharT(':')))
+      std::__throw_format_error("The format-spec range-fill field contains an invalid character");
+    else if (__fill == _CharT('{') || __fill == _CharT('}'))
+      std::__throw_format_error("The format-spec fill field contains an invalid character");
+  }
+
+#  ifndef _LIBCPP_HAS_NO_UNICODE
+  // range-fill and tuple-fill are identical
+  template <contiguous_iterator _Iterator>
+    requires same_as<_CharT, char>
+#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+          || (same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
+#    endif
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+    _LIBCPP_ASSERT(__begin != __end,
+                   "when called with an empty input the function will cause "
+                   "undefined behavior by evaluating data not in the input");
+    __unicode::__code_point_view<_CharT> __view{__begin, __end};
+    __unicode::__consume_result __consumed = __view.__consume();
+    if (__consumed.__status != __unicode::__consume_result::__ok)
+      std::__throw_format_error("The format-spec contains malformed Unicode characters");
+
+    if (__view.__position() < __end && __parse_alignment(*__view.__position())) {
+      ptrdiff_t __code_units = __view.__position() - __begin;
+      if (__code_units == 1)
+        // The forbidden fill characters all are code points encoded
+        // in one code unit, thus the check can be omitted when more
+        // code units are used.
+        __validate_fill_character(*__begin, __use_range_fill);
+
+      std::copy_n(__begin, __code_units, std::addressof(__fill_.__data[0]));
+      __begin += __code_units + 1;
+      return true;
+    }
+
+    if (!__parse_alignment(*__begin))
+      return false;
+
+    ++__begin;
+    return true;
+  }
+
+#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+  template <contiguous_iterator _Iterator>
+    requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
+    _LIBCPP_ASSERT(__begin != __end,
+                   "when called with an empty input the function will cause "
+                   "undefined behavior by evaluating data not in the input");
+    if (__begin + 1 != __end && __parse_alignment(*(__begin + 1))) {
+      if (!__unicode::__is_scalar_value(*__begin))
+        std::__throw_format_error("The fill character contains an invalid value");
+
+      __validate_fill_character(*__begin, __use_range_fill);
+
+      __fill_.__data[0] = *__begin;
+      __begin += 2;
+      return true;
+    }
+
+    if (!__parse_alignment(*__begin))
+      return false;
+
+    ++__begin;
+    return true;
+  }
+
+#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+
+#  else // _LIBCPP_HAS_NO_UNICODE
   // range-fill and tuple-fill are identical
   template <contiguous_iterator _Iterator>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
-    _LIBCPP_ASSERT(__begin != __end, "when called with an empty input the function will cause "
-                                     "undefined behavior by evaluating data not in the input");
+    _LIBCPP_ASSERT(__begin != __end,
+                   "when called with an empty input the function will cause "
+                   "undefined behavior by evaluating data not in the input");
     if (__begin + 1 != __end) {
       if (__parse_alignment(*(__begin + 1))) {
-        if (__use_range_fill && (*__begin == _CharT('{') || *__begin == _CharT('}') || *__begin == _CharT(':')))
-          std::__throw_format_error("The format-spec range-fill field contains an invalid character");
-        else if (*__begin == _CharT('{') || *__begin == _CharT('}'))
-          std::__throw_format_error("The format-spec fill field contains an invalid character");
+        __validate_fill_character(*__begin, __use_range_fill);
 
-        __fill_ = *__begin;
+        __fill_.__data[0] = *__begin;
         __begin += 2;
         return true;
       }
@@ -421,6 +521,8 @@ private:
     ++__begin;
     return true;
   }
+
+#  endif // _LIBCPP_HAS_NO_UNICODE
 
   template <contiguous_iterator _Iterator>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_sign(_Iterator& __begin) {
@@ -463,12 +565,12 @@ private:
   }
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_width(_Iterator& __begin, _Iterator __end, auto& __parse_ctx) {
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_width(_Iterator& __begin, _Iterator __end, auto& __ctx) {
     if (*__begin == _CharT('0'))
       std::__throw_format_error("A format-spec width field shouldn't have a leading zero");
 
     if (*__begin == _CharT('{')) {
-      __format::__parse_number_result __r = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
+      __format::__parse_number_result __r = __format_spec::__parse_arg_id(++__begin, __end, __ctx);
       __width_as_arg_ = true;
       __width_ = __r.__value;
       __begin = __r.__last;
@@ -487,7 +589,7 @@ private:
   }
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_precision(_Iterator& __begin, _Iterator __end, auto& __parse_ctx) {
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_precision(_Iterator& __begin, _Iterator __end, auto& __ctx) {
     if (*__begin != _CharT('.'))
       return false;
 
@@ -496,7 +598,7 @@ private:
       std::__throw_format_error("End of input while parsing format-spec precision");
 
     if (*__begin == _CharT('{')) {
-      __format::__parse_number_result __arg_id = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
+      __format::__parse_number_result __arg_id = __format_spec::__parse_arg_id(++__begin, __end, __ctx);
       __precision_as_arg_ = true;
       __precision_ = __arg_id.__value;
       __begin = __arg_id.__last;
@@ -774,57 +876,6 @@ enum class __column_width_rounding { __down, __up };
 #  ifndef _LIBCPP_HAS_NO_UNICODE
 
 namespace __detail {
-
-/// Converts a code point to the column width.
-///
-/// The estimations are conforming to [format.string.general]/11
-///
-/// This version expects a value less than 0x1'0000, which is a 3-byte UTF-8
-/// character.
-_LIBCPP_HIDE_FROM_ABI constexpr int __column_width_3(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c < 0x10000, "Use __column_width_4 or __column_width for larger values");
-
-  // clang-format off
-  return 1 + (__c >= 0x1100 && (__c <= 0x115f ||
-             (__c >= 0x2329 && (__c <= 0x232a ||
-             (__c >= 0x2e80 && (__c <= 0x303e ||
-             (__c >= 0x3040 && (__c <= 0xa4cf ||
-             (__c >= 0xac00 && (__c <= 0xd7a3 ||
-             (__c >= 0xf900 && (__c <= 0xfaff ||
-             (__c >= 0xfe10 && (__c <= 0xfe19 ||
-             (__c >= 0xfe30 && (__c <= 0xfe6f ||
-             (__c >= 0xff00 && (__c <= 0xff60 ||
-             (__c >= 0xffe0 && (__c <= 0xffe6
-             ))))))))))))))))))));
-  // clang-format on
-}
-
-/// @overload
-///
-/// This version expects a value greater than or equal to 0x1'0000, which is a
-/// 4-byte UTF-8 character.
-_LIBCPP_HIDE_FROM_ABI constexpr int __column_width_4(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c >= 0x10000, "Use __column_width_3 or __column_width for smaller values");
-
-  // clang-format off
-  return 1 + (__c >= 0x1'f300 && (__c <= 0x1'f64f ||
-             (__c >= 0x1'f900 && (__c <= 0x1'f9ff ||
-             (__c >= 0x2'0000 && (__c <= 0x2'fffd ||
-             (__c >= 0x3'0000 && (__c <= 0x3'fffd
-             ))))))));
-  // clang-format on
-}
-
-/// @overload
-///
-/// The general case, accepting all values.
-_LIBCPP_HIDE_FROM_ABI constexpr int __column_width(uint32_t __c) noexcept {
-  if (__c < 0x10000)
-    return __detail::__column_width_3(__c);
-
-  return __detail::__column_width_4(__c);
-}
-
 template <contiguous_iterator _Iterator>
 _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_Iterator> __estimate_column_width_grapheme_clustering(
     _Iterator __first, _Iterator __last, size_t __maximum, __column_width_rounding __rounding) noexcept {
@@ -834,7 +885,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_Iterator> __estimate_colu
   __column_width_result<_Iterator> __result{0, __first};
   while (__result.__last_ != __last && __result.__width_ <= __maximum) {
     typename __unicode::__extended_grapheme_cluster_view<_CharT>::__cluster __cluster = __view.__consume();
-    int __width = __detail::__column_width(__cluster.__code_point_);
+    int __width = __width_estimation_table::__estimated_width(__cluster.__code_point_);
 
     // When the next entry would exceed the maximum width the previous width
     // might be returned. For example when a width of 100 is requested the

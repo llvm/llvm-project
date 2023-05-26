@@ -22,7 +22,6 @@ public:
   void Leave(const parser::DeallocateStmt &);
 
 private:
-  bool CheckPolymorphism(parser::CharBlock, const Symbol &);
   SemanticsContext &context_;
 };
 } // namespace Fortran::semantics

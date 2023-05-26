@@ -300,7 +300,7 @@ static bool hasInstrProfHashMismatch(MachineFunction &MF) {
   if (Existing) {
     MDTuple *Tuple = cast<MDTuple>(Existing);
     for (const auto &N : Tuple->operands())
-      if (cast<MDString>(N.get())->getString() == MetadataName)
+      if (N.equalsStr(MetadataName))
         return true;
   }
 

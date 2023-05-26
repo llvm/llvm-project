@@ -66,7 +66,7 @@ MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::OneShotAnalysisState)
 using namespace mlir;
 using namespace mlir::bufferization;
 
-static bool isaTensor(Type t) { return t.isa<TensorType>(); }
+static bool isaTensor(Type t) { return isa<TensorType>(t); }
 
 //===----------------------------------------------------------------------===//
 // Bufferization-specific attribute manipulation.
@@ -79,17 +79,19 @@ static bool isaTensor(Type t) { return t.isa<TensorType>(); }
 /// Attribute marker to specify op operands that bufferize in-place.
 constexpr StringLiteral kInPlaceOperandsAttrName = "__inplace_operands_attr__";
 
+constexpr StringLiteral kAliasSetAttrName = "__alias_set_attr__";
+
 /// Mark whether OpOperand will be bufferized inplace.
 static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
   Operation *op = opOperand.getOwner();
   SmallVector<StringRef> inPlaceVector;
   if (auto attr = op->getAttr(kInPlaceOperandsAttrName)) {
     inPlaceVector = SmallVector<StringRef>(llvm::to_vector<4>(
-        attr.cast<ArrayAttr>().getAsValueRange<StringAttr>()));
+        cast<ArrayAttr>(attr).getAsValueRange<StringAttr>()));
   } else {
     inPlaceVector = SmallVector<StringRef>(op->getNumOperands(), "none");
     for (OpOperand &opOperand : op->getOpOperands())
-      if (opOperand.get().getType().isa<TensorType>())
+      if (isa<TensorType>(opOperand.get().getType()))
         inPlaceVector[opOperand.getOperandNumber()] = "false";
   }
   inPlaceVector[opOperand.getOperandNumber()] = inPlace ? "true" : "false";
@@ -107,12 +109,12 @@ OneShotAnalysisState::OneShotAnalysisState(
   // Set up alias sets.
   op->walk([&](Operation *op) {
     for (Value v : op->getResults())
-      if (v.getType().isa<TensorType>())
+      if (isa<TensorType>(v.getType()))
         createAliasInfoEntry(v);
     for (Region &r : op->getRegions())
       for (Block &b : r.getBlocks())
         for (auto bbArg : b.getArguments())
-          if (bbArg.getType().isa<TensorType>())
+          if (isa<TensorType>(bbArg.getType()))
             createAliasInfoEntry(bbArg);
   });
 
@@ -121,7 +123,7 @@ OneShotAnalysisState::OneShotAnalysisState(
     if (!options.isOpAllowed(bufferizableOp))
       return WalkResult::skip();
     for (OpOperand &opOperand : bufferizableOp->getOpOperands())
-      if (opOperand.get().getType().isa<TensorType>())
+      if (isa<TensorType>(opOperand.get().getType()))
         if (bufferizableOp.mustBufferizeInPlace(opOperand, *this))
           bufferizeInPlace(opOperand);
     return WalkResult::advance();
@@ -187,13 +189,13 @@ void OneShotAnalysisState::gatherYieldedTensors(Operation *op) {
     for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
       Value returnVal = returnValOperand.get();
       // Skip non-tensor values.
-      if (!returnVal.getType().isa<TensorType>())
+      if (!isa<TensorType>(returnVal.getType()))
         continue;
 
       // Add all aliases of the returned value. But only the ones that are in
       // the same block.
       applyOnAliases(returnVal, [&](Value v) {
-        if (auto bbArg = v.dyn_cast<BlockArgument>()) {
+        if (auto bbArg = dyn_cast<BlockArgument>(v)) {
           if (bbArg.getOwner()->getParentOp() == returnOp->getParentOp())
             yieldedTensors.insert(bbArg);
           return;
@@ -217,7 +219,7 @@ void OneShotAnalysisState::gatherUndefinedTensorUses(Operation *op) {
 
     // Check all tensor OpResults.
     for (OpResult opResult : op->getOpResults()) {
-      if (!opResult.getType().isa<TensorType>())
+      if (!isa<TensorType>(opResult.getType()))
         continue;
 
       // If there is no preceding definition, the tensor contents are
@@ -259,7 +261,7 @@ bool OneShotAnalysisState::isWritable(Value value) const {
     return bufferizableOp.isWritable(value, *this);
 
   // Query BufferizableOpInterface to see if the BlockArgument is writable.
-  if (auto bbArg = value.dyn_cast<BlockArgument>())
+  if (auto bbArg = dyn_cast<BlockArgument>(value))
     if (auto bufferizableOp =
             getOptions().dynCastBufferizableOp(bbArg.getOwner()->getParentOp()))
       return bufferizableOp.isWritable(bbArg, *this);
@@ -431,12 +433,12 @@ static void annotateConflict(OpOperand *uRead, OpOperand *uConflictingWrite,
       id + "[READ: " + std::to_string(uRead->getOperandNumber()) + "]";
   readingOp->setAttr(readAttr, b.getUnitAttr());
 
-  if (auto opResult = definition.dyn_cast<OpResult>()) {
+  if (auto opResult = dyn_cast<OpResult>(definition)) {
     std::string defAttr =
         id + "[DEF: result " + std::to_string(opResult.getResultNumber()) + "]";
     opResult.getDefiningOp()->setAttr(defAttr, b.getUnitAttr());
   } else {
-    auto bbArg = definition.cast<BlockArgument>();
+    auto bbArg = cast<BlockArgument>(definition);
     std::string defAttr =
         id + "[DEF: bbArg " + std::to_string(bbArg.getArgNumber()) + "]";
     bbArg.getOwner()->getParentOp()->setAttr(defAttr, b.getUnitAttr());
@@ -581,7 +583,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
             continue;
           }
         } else {
-          auto bbArg = definition.cast<BlockArgument>();
+          auto bbArg = cast<BlockArgument>(definition);
           Block *block = bbArg.getOwner();
           if (!block->findAncestorOpInBlock(*conflictingWritingOp)) {
             LLVM_DEBUG(llvm::dbgs() << "    no conflict: definition is bbArg "
@@ -715,12 +717,12 @@ static void annotateNonWritableTensor(Value value) {
   static int64_t counter = 0;
   OpBuilder b(value.getContext());
   std::string id = "W_" + std::to_string(counter++);
-  if (auto opResult = value.dyn_cast<OpResult>()) {
+  if (auto opResult = dyn_cast<OpResult>(value)) {
     std::string attr = id + "[NOT-WRITABLE: result " +
                        std::to_string(opResult.getResultNumber()) + "]";
     opResult.getDefiningOp()->setAttr(attr, b.getUnitAttr());
   } else {
-    auto bbArg = value.cast<BlockArgument>();
+    auto bbArg = cast<BlockArgument>(value);
     std::string attr = id + "[NOT-WRITABLE: bbArg " +
                        std::to_string(bbArg.getArgNumber()) + "]";
     bbArg.getOwner()->getParentOp()->setAttr(attr, b.getUnitAttr());
@@ -775,11 +777,8 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
 // Find the values that define the contents of the given value.
 const llvm::SetVector<Value> &
 OneShotAnalysisState::findDefinitionsCached(Value value) {
-  if (!cachedDefinitions.count(value)) {
-    cachedDefinitions[value] = findValueInReverseUseDefChain(
-        value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
-        /*followEquivalentOnly=*/false, /*alwaysIncludeLeaves=*/false);
-  }
+  if (!cachedDefinitions.count(value))
+    cachedDefinitions[value] = findDefinitions(value);
   return cachedDefinitions[value];
 }
 
@@ -812,7 +811,7 @@ LogicalResult
 OneShotAnalysisState::analyzeSingleOp(Operation *op,
                                       const DominanceInfo &domInfo) {
   for (OpOperand &opOperand : op->getOpOperands())
-    if (opOperand.get().getType().isa<TensorType>())
+    if (isa<TensorType>(opOperand.get().getType()))
       if (failed(bufferizableInPlaceAnalysisImpl(opOperand, *this, domInfo)))
         return failure();
   return success();
@@ -831,7 +830,7 @@ static void equivalenceAnalysis(SmallVector<Operation *> &ops,
   for (Operation *op : ops) {
     if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op)) {
       for (OpResult opResult : op->getOpResults()) {
-        if (!opResult.getType().isa<TensorType>())
+        if (!isa<TensorType>(opResult.getType()))
           continue;
         AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
         if (aliases.getNumAliases() == 0)
@@ -958,7 +957,7 @@ static LogicalResult checkAliasInfoConsistency(Operation *op,
     }
 
     for (OpOperand &opOperand : op->getOpOperands()) {
-      if (opOperand.get().getType().isa<TensorType>()) {
+      if (isa<TensorType>(opOperand.get().getType())) {
         if (wouldCreateReadAfterWriteInterference(
                 opOperand, domInfo, state,
                 /*checkConsistencyOnly=*/true)) {
@@ -984,8 +983,31 @@ annotateOpsWithBufferizationMarkers(Operation *op,
   // Add __inplace_operands_attr__.
   op->walk([&](Operation *op) {
     for (OpOperand &opOperand : op->getOpOperands())
-      if (opOperand.get().getType().isa<TensorType>())
+      if (isa<TensorType>(opOperand.get().getType()))
         setInPlaceOpOperand(opOperand, state.isInPlace(opOperand));
+  });
+}
+
+static void annotateOpsWithAliasSets(Operation *op,
+                                     const OneShotAnalysisState &state) {
+  AsmState asmState(op);
+  Builder b(op->getContext());
+  op->walk([&](Operation *op) {
+    SmallVector<Attribute> aliasSets;
+    for (OpResult opResult : op->getOpResults()) {
+      if (llvm::isa<TensorType>(opResult.getType())) {
+        SmallVector<Attribute> aliases;
+        state.applyOnAliases(opResult, [&](Value alias) {
+          std::string buffer;
+          llvm::raw_string_ostream stream(buffer);
+          alias.printAsOperand(stream, asmState);
+          aliases.push_back(b.getStringAttr(stream.str()));
+        });
+        aliasSets.push_back(b.getArrayAttr(aliases));
+      }
+    }
+    if (!aliasSets.empty())
+      op->setAttr(kAliasSetAttrName, b.getArrayAttr(aliasSets));
   });
 }
 
@@ -1031,12 +1053,12 @@ static LogicalResult assertNoAllocsReturned(Operation *op,
     for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
       Value returnVal = returnValOperand.get();
       // Skip non-tensor values.
-      if (!returnVal.getType().isa<TensorType>())
+      if (!isa<TensorType>(returnVal.getType()))
         continue;
 
       bool foundEquivValue = false;
       state.applyOnEquivalenceClass(returnVal, [&](Value equivVal) {
-        if (auto bbArg = equivVal.dyn_cast<BlockArgument>()) {
+        if (auto bbArg = dyn_cast<BlockArgument>(equivVal)) {
           Operation *definingOp = bbArg.getOwner()->getParentOp();
           if (definingOp->isProperAncestor(returnOp))
             foundEquivValue = true;
@@ -1103,6 +1125,8 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   // Annotate operations if we only want to report the analysis.
   if (options.testAnalysisOnly)
     annotateOpsWithBufferizationMarkers(op, state);
+  if (options.dumpAliasSets)
+    annotateOpsWithAliasSets(op, state);
 
   return success(!failedAnalysis);
 }

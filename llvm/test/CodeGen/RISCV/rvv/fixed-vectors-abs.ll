@@ -36,6 +36,41 @@ define void @abs_v8i16(ptr %x) {
 }
 declare <8 x i16> @llvm.abs.v8i16(<8 x i16>, i1)
 
+define void @abs_v6i16(ptr %x) {
+; LMULMAX1-RV32-LABEL: abs_v6i16:
+; LMULMAX1-RV32:       # %bb.0:
+; LMULMAX1-RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; LMULMAX1-RV32-NEXT:    vle16.v v8, (a0)
+; LMULMAX1-RV32-NEXT:    vrsub.vi v9, v8, 0
+; LMULMAX1-RV32-NEXT:    vmax.vv v8, v8, v9
+; LMULMAX1-RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; LMULMAX1-RV32-NEXT:    vslidedown.vi v9, v8, 2
+; LMULMAX1-RV32-NEXT:    addi a1, a0, 8
+; LMULMAX1-RV32-NEXT:    vse32.v v9, (a1)
+; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; LMULMAX1-RV32-NEXT:    vse16.v v8, (a0)
+; LMULMAX1-RV32-NEXT:    ret
+;
+; LMULMAX1-RV64-LABEL: abs_v6i16:
+; LMULMAX1-RV64:       # %bb.0:
+; LMULMAX1-RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; LMULMAX1-RV64-NEXT:    vle16.v v8, (a0)
+; LMULMAX1-RV64-NEXT:    vrsub.vi v9, v8, 0
+; LMULMAX1-RV64-NEXT:    vmax.vv v8, v8, v9
+; LMULMAX1-RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)
+; LMULMAX1-RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; LMULMAX1-RV64-NEXT:    vslidedown.vi v8, v8, 2
+; LMULMAX1-RV64-NEXT:    addi a0, a0, 8
+; LMULMAX1-RV64-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-RV64-NEXT:    ret
+  %a = load <6 x i16>, ptr %x
+  %b = call <6 x i16> @llvm.abs.v6i16(<6 x i16> %a, i1 false)
+  store <6 x i16> %b, ptr %x
+  ret void
+}
+declare <6 x i16> @llvm.abs.v6i16(<6 x i16>, i1)
+
 define void @abs_v4i32(ptr %x) {
 ; CHECK-LABEL: abs_v4i32:
 ; CHECK:       # %bb.0:

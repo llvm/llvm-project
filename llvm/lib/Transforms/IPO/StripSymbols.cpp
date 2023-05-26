@@ -30,8 +30,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"

@@ -13,7 +13,7 @@
 #define _FOO
 
 template <typename T> struct Foo {
-  Foo(T) {}
+  Foo(T f) {}
 };
 
 template <typename T> Foo(T&) -> Foo<T>;
@@ -24,6 +24,16 @@ struct Bar {
   void baz() const {}
 };
 
+template <typename T> struct Foo2 {
+  Foo2(T f) {}
+};
+
+struct Bar2 {
+  template <typename T>
+    requires requires { Foo2{T()}; }
+  void baz2() const {}
+};
+
 #endif
 
 //--- A.cppm
@@ -32,6 +42,7 @@ module;
 export module A;
 export using ::Foo;
 export using ::Bar;
+export using ::Bar2;
 
 //--- B.cppm
 module;
@@ -46,4 +57,7 @@ import B;
 void use() {
   Bar _; 
   _.baz<int>();
+
+  Bar2 __; 
+  __.baz2<int>();
 }

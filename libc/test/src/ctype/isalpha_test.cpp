@@ -13,7 +13,7 @@
 TEST(LlvmLibcIsAlpha, DefaultLocale) {
   // Loops through all characters, verifying that letters return a
   // non-zero integer and everything else returns zero.
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))
       EXPECT_NE(__llvm_libc::isalpha(ch), 0);
     else

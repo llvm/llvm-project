@@ -1,4 +1,4 @@
-//===-- RISCVInstrInfo.h - RISCV Instruction Information --------*- C++ -*-===//
+//===-- RISCVInstrInfo.h - RISC-V Instruction Information -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the RISCV implementation of the TargetInstrInfo class.
+// This file contains the RISC-V implementation of the TargetInstrInfo class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,6 +24,11 @@
 namespace llvm {
 
 class RISCVSubtarget;
+
+static const MachineMemOperand::Flags MONontemporalBit0 =
+    MachineMemOperand::MOTargetFlag1;
+static const MachineMemOperand::Flags MONontemporalBit1 =
+    MachineMemOperand::MOTargetFlag2;
 
 namespace RISCVCC {
 
@@ -227,16 +232,8 @@ public:
 
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
-  // Returns true if all uses of OrigMI only depend on the lower \p NBits bits
-  // of its output.
-  bool hasAllNBitUsers(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                       unsigned NBits) const;
-  // Returns true if all uses of OrigMI only depend on the lower word of its
-  // output, so we can transform OrigMI to the corresponding W-version.
-  bool hasAllWUsers(const MachineInstr &MI,
-                    const MachineRegisterInfo &MRI) const {
-    return hasAllNBitUsers(MI, MRI, 32);
-  }
+  ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
+  getSerializableMachineMemOperandTargetFlags() const override;
 
 protected:
   const RISCVSubtarget &STI;
@@ -268,6 +265,17 @@ bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
 
+// Mask assignments for floating-point
+static constexpr unsigned FPMASK_Negative_Infinity = 0x001;
+static constexpr unsigned FPMASK_Negative_Normal = 0x002;
+static constexpr unsigned FPMASK_Negative_Subnormal = 0x004;
+static constexpr unsigned FPMASK_Negative_Zero = 0x008;
+static constexpr unsigned FPMASK_Positive_Zero = 0x010;
+static constexpr unsigned FPMASK_Positive_Subnormal = 0x020;
+static constexpr unsigned FPMASK_Positive_Normal = 0x040;
+static constexpr unsigned FPMASK_Positive_Infinity = 0x080;
+static constexpr unsigned FPMASK_Signaling_NaN = 0x100;
+static constexpr unsigned FPMASK_Quiet_NaN = 0x200;
 } // namespace RISCV
 
 namespace RISCVVPseudosTable {

@@ -88,7 +88,7 @@ CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(bool, XCOFFTracebackTable)
 CGOPT(std::string, BBSections)
 CGOPT(unsigned, TLSSize)
-CGOPT(bool, EmulatedTLS)
+CGOPT_EXP(bool, EmulatedTLS)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(EABI, EABIVersion)
@@ -103,6 +103,7 @@ CGOPT(bool, XRayOmitFunctionIndex)
 CGOPT(bool, DebugStrictDwarf)
 CGOPT(unsigned, AlignLoops)
 CGOPT(bool, JMCInstrument)
+CGOPT(bool, XCOFFReadOnlyPointers)
 
 codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
 #define CGBINDOPT(NAME)                                                        \
@@ -240,14 +241,15 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableNoTrappingFPMath);
 
-  static const auto DenormFlagEnumOptions =
-  cl::values(clEnumValN(DenormalMode::IEEE, "ieee",
-                        "IEEE 754 denormal numbers"),
-             clEnumValN(DenormalMode::PreserveSign, "preserve-sign",
-                        "the sign of a  flushed-to-zero number is preserved "
-                        "in the sign of 0"),
-             clEnumValN(DenormalMode::PositiveZero, "positive-zero",
-                        "denormals are flushed to positive zero"));
+  static const auto DenormFlagEnumOptions = cl::values(
+      clEnumValN(DenormalMode::IEEE, "ieee", "IEEE 754 denormal numbers"),
+      clEnumValN(DenormalMode::PreserveSign, "preserve-sign",
+                 "the sign of a  flushed-to-zero number is preserved "
+                 "in the sign of 0"),
+      clEnumValN(DenormalMode::PositiveZero, "positive-zero",
+                 "denormals are flushed to positive zero"),
+      clEnumValN(DenormalMode::Dynamic, "dynamic",
+                 "denormals have unknown treatment"));
 
   // FIXME: Doesn't have way to specify separate input and output modes.
   static cl::opt<DenormalMode::DenormalModeKind> DenormalFPMath(
@@ -478,6 +480,13 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(JMCInstrument);
 
+  static cl::opt<bool> XCOFFReadOnlyPointers(
+      "mxcoff-roptr",
+      cl::desc("When set to true, const objects with relocatable address "
+               "values are put into the RO data section."),
+      cl::init(false));
+  CGBINDOPT(XCOFFReadOnlyPointers);
+
 #undef CGBINDOPT
 
   mc::RegisterMCTargetOptionsFlags();
@@ -541,8 +550,8 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
   Options.TLSSize = getTLSSize();
-  Options.EmulatedTLS = getEmulatedTLS();
-  Options.ExplicitEmulatedTLS = EmulatedTLSView->getNumOccurrences() > 0;
+  Options.EmulatedTLS =
+      getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());
   Options.ExceptionModel = getExceptionModel();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
@@ -554,6 +563,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.DebugStrictDwarf = getDebugStrictDwarf();
   Options.LoopAlignment = getAlignLoops();
   Options.JMCInstrument = getJMCInstrument();
+  Options.XCOFFReadOnlyPointers = getXCOFFReadOnlyPointers();
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 

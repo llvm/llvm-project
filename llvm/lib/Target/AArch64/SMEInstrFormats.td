@@ -760,12 +760,6 @@ multiclass sme_spill<string opcodestr> {
   // base
   def : Pat<(int_aarch64_sme_str MatrixIndexGPR32Op12_15:$idx, GPR64sp:$base),
             (!cast<Instruction>(NAME) ZA, $idx, 0, $base, 0)>;
-  // scalar + immediate (mul vl)
-  let AddedComplexity = 2 in {
-    def : Pat<(int_aarch64_sme_str MatrixIndexGPR32Op12_15:$idx,
-                                   (am_sme_indexed_b4 GPR64sp:$base, imm0_15:$imm4)),
-              (!cast<Instruction>(NAME) ZA, $idx, 0, $base, $imm4)>;
-  }
 }
 
 multiclass sme_fill<string opcodestr> {
@@ -785,12 +779,6 @@ multiclass sme_fill<string opcodestr> {
   // base
   def : Pat<(int_aarch64_sme_ldr MatrixIndexGPR32Op12_15:$idx, GPR64sp:$base),
             (!cast<Instruction>(NAME # _PSEUDO) $idx, 0, $base)>;
-  // scalar + immediate (mul vl)
-  let AddedComplexity = 2 in {
-    def : Pat<(int_aarch64_sme_ldr MatrixIndexGPR32Op12_15:$idx,
-                                   (am_sme_indexed_b4 GPR64sp:$base, imm0_15:$imm4)),
-              (!cast<Instruction>(NAME # _PSEUDO) $idx, $imm4, $base)>;
-  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1321,30 +1309,30 @@ multiclass sve2_int_perm_sel_p<string asm, SDPatternOperator op> {
                   (!cast<Instruction>(NAME # _D) PNRAny:$Pd,
                       PNRAny:$Pn, PPR64:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_1:$imm), 0>;
 
-  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPRAny:$Pm),
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPR8:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),
             (!cast<Instruction>(NAME # _B) $Pn, $Pm, $idx, 0)>;
-  def : Pat<(nxv8i1 (op (nxv8i1 PPRAny:$Pn), (nxv8i1 PPRAny:$Pm),
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv8i1 PPR16:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),
             (!cast<Instruction>(NAME # _H) $Pn, $Pm, $idx, 0)>;
-  def : Pat<(nxv4i1 (op (nxv4i1 PPRAny:$Pn), (nxv4i1 PPRAny:$Pm),
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv4i1 PPR32:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),
             (!cast<Instruction>(NAME # _S) $Pn, $Pm, $idx, 0)>;
-  def : Pat<(nxv2i1 (op (nxv2i1 PPRAny:$Pn), (nxv2i1 PPRAny:$Pm),
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv2i1 PPR64:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),
             (!cast<Instruction>(NAME # _D) $Pn, $Pm, $idx, 0)>;
 
   let AddedComplexity = 1 in {
-    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPRAny:$Pm),
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPR8:$Pm),
                (i32 (tileslice8 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm)))),
               (!cast<Instruction>(NAME # _B) $Pn, $Pm, $idx, $imm)>;
-    def : Pat<(nxv8i1 (op (nxv8i1 PPRAny:$Pn), (nxv8i1 PPRAny:$Pm),
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv8i1 PPR16:$Pm),
                (i32 (tileslice16 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_7:$imm)))),
               (!cast<Instruction>(NAME # _H) $Pn, $Pm, $idx, $imm)>;
-    def : Pat<(nxv4i1 (op (nxv4i1 PPRAny:$Pn), (nxv4i1 PPRAny:$Pm),
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv4i1 PPR32:$Pm),
                (i32 (tileslice32 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_3:$imm)))),
               (!cast<Instruction>(NAME # _S) $Pn, $Pm, $idx, $imm)>;
-    def : Pat<(nxv2i1 (op (nxv2i1 PPRAny:$Pn), (nxv2i1 PPRAny:$Pm),
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv2i1 PPR64:$Pm),
                (i32 (tileslice64 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_1:$imm)))),
               (!cast<Instruction>(NAME # _D) $Pn, $Pm, $idx, $imm)>;
   }

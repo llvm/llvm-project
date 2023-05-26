@@ -50,11 +50,15 @@ std::string mangleName(const semantics::Symbol &,
 /// Convert a derived type instance to an internal name.
 std::string mangleName(const semantics::DerivedTypeSpec &, ScopeBlockIdMap &);
 
+/// Add a scope specific mangling prefix to a compiler generated name.
+std::string mangleName(std::string &, const Fortran::semantics::Scope &,
+                       ScopeBlockIdMap &);
+
 /// Recover the bare name of the original symbol from an internal name.
 std::string demangleName(llvm::StringRef name);
 
 std::string
-mangleArrayLiteral(const uint8_t *addr, size_t size,
+mangleArrayLiteral(size_t size,
                    const Fortran::evaluate::ConstantSubscripts &shape,
                    Fortran::common::TypeCategory cat, int kind = 0,
                    Fortran::common::ConstantSubscript charLen = -1,
@@ -64,9 +68,8 @@ template <Fortran::common::TypeCategory TC, int KIND>
 std::string mangleArrayLiteral(
     mlir::Type,
     const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>> &x) {
-  return mangleArrayLiteral(
-      reinterpret_cast<const uint8_t *>(x.values().data()),
-      x.values().size() * sizeof(x.values()[0]), x.shape(), TC, KIND);
+  return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
+                            x.shape(), TC, KIND);
 }
 
 template <int KIND>
@@ -74,25 +77,18 @@ std::string
 mangleArrayLiteral(mlir::Type,
                    const Fortran::evaluate::Constant<Fortran::evaluate::Type<
                        Fortran::common::TypeCategory::Character, KIND>> &x) {
-  return mangleArrayLiteral(
-      reinterpret_cast<const uint8_t *>(x.values().data()),
-      x.values().size() * sizeof(x.values()[0]), x.shape(),
-      Fortran::common::TypeCategory::Character, KIND, x.LEN());
+  return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
+                            x.shape(), Fortran::common::TypeCategory::Character,
+                            KIND, x.LEN());
 }
 
-// FIXME: derived type mangling is safe but not reproducible between two
-// compilation of a same file because `values().data()` is a nontrivial compile
-// time data structure containing pointers and vectors. In particular, this
-// means that similar structure constructors are not "combined" into the same
-// global constant by lowering.
 inline std::string mangleArrayLiteral(
     mlir::Type eleTy,
     const Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived> &x) {
-  return mangleArrayLiteral(
-      reinterpret_cast<const uint8_t *>(x.values().data()),
-      x.values().size() * sizeof(x.values()[0]), x.shape(),
-      Fortran::common::TypeCategory::Derived, /*kind=*/0, /*charLen=*/-1,
-      eleTy.cast<fir::RecordType>().getName());
+  return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
+                            x.shape(), Fortran::common::TypeCategory::Derived,
+                            /*kind=*/0, /*charLen=*/-1,
+                            eleTy.cast<fir::RecordType>().getName());
 }
 
 /// Return the compiler-generated name of a static namelist variable descriptor.

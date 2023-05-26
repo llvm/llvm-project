@@ -21,6 +21,7 @@ module m
   procedure(h) :: i
   procedure(forward) :: j
   !ERROR: 'bad1' must be an abstract interface or a procedure with an explicit interface
+  !ERROR: Procedure 'k1' may not be an array without an explicit interface
   procedure(bad1) :: k1
   !ERROR: 'bad2' must be an abstract interface or a procedure with an explicit interface
   procedure(bad2) :: k2
@@ -52,6 +53,10 @@ module m
   external :: foo
   !ERROR: EXTERNAL attribute not allowed on 'bar'
   external :: bar
+
+  !ERROR: An entity may not have the ASYNCHRONOUS attribute unless it is a variable
+  asynchronous :: async
+  external :: async
 
   !ERROR: PARAMETER attribute not allowed on 'm'
   parameter(m=2)

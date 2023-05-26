@@ -17,7 +17,7 @@ includes standard libraries, tools, and packaging for producing WebAssembly
 applications that can run in browsers and other environments.
 
 wasi-sdk provides a more minimal C/C++ SDK based on clang, llvm and a libc based
-on musl, for producing WebAssemmbly applictions that use the WASI ABI.
+on musl, for producing WebAssembly applications that use the WASI ABI.
 
 Rust provides WebAssembly support integrated into Cargo. There are two
 main options:

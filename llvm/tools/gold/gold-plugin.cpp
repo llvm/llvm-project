@@ -891,9 +891,12 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   if (options::thinlto_index_only) {
     std::string OldPrefix, NewPrefix;
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
-    Backend = createWriteIndexesThinBackend(OldPrefix, NewPrefix,
-                                            options::thinlto_emit_imports_files,
-                                            LinkedObjectsFile, OnIndexWrite);
+    Backend = createWriteIndexesThinBackend(
+        OldPrefix, NewPrefix,
+        // TODO: Add support for optional native object path in
+        // thinlto_prefix_replace option to match lld.
+        /*NativeObjectPrefix=*/"", options::thinlto_emit_imports_files,
+        LinkedObjectsFile, OnIndexWrite);
   } else {
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(options::Parallelism));

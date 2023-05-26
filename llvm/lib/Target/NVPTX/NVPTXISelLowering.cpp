@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -48,7 +49,6 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -88,6 +88,12 @@ static cl::opt<bool> UsePrecSqrtF32(
     "nvptx-prec-sqrtf32", cl::Hidden,
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
+
+static cl::opt<bool> ForceMinByValParamAlign(
+    "nvptx-force-min-byval-param-align", cl::Hidden,
+    cl::desc("NVPTX Specific: force 4-byte minimal alignment for byval"
+             " params of device functions."),
+    cl::init(false));
 
 int NVPTXTargetLowering::getDivF32Level() const {
   if (UsePrecDivF32.getNumOccurrences() > 0) {
@@ -653,8 +659,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     break;
   case NVPTXISD::CALL:
     return "NVPTXISD::CALL";
-  case NVPTXISD::RET_FLAG:
-    return "NVPTXISD::RET_FLAG";
+  case NVPTXISD::RET_GLUE:
+    return "NVPTXISD::RET_GLUE";
   case NVPTXISD::LOAD_PARAM:
     return "NVPTXISD::LOAD_PARAM";
   case NVPTXISD::Wrapper:
@@ -1523,7 +1529,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   unsigned UniqueCallSite = GlobalUniqueCallSite.fetch_add(1);
   SDValue TempChain = Chain;
   Chain = DAG.getCALLSEQ_START(Chain, UniqueCallSite, 0, dl);
-  SDValue InFlag = Chain.getValue(1);
+  SDValue InGlue = Chain.getValue(1);
 
   unsigned ParamCount = 0;
   // Args.size() and Outs.size() need not match.
@@ -1576,7 +1582,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         SDValue DeclareParamOps[] = {
             Chain, DAG.getConstant(STI.getMaxRequiredAlignment(), dl, MVT::i32),
             DAG.getConstant(ParamCount, dl, MVT::i32),
-            DAG.getConstant(1, dl, MVT::i32), InFlag};
+            DAG.getConstant(1, dl, MVT::i32), InGlue};
         VADeclareParam = Chain = DAG.getNode(NVPTXISD::DeclareParam, dl,
                                              DeclareParamVTs, DeclareParamOps);
       }
@@ -1588,7 +1594,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SDValue DeclareParamOps[] = {
           Chain, DAG.getConstant(ArgAlign.value(), dl, MVT::i32),
           DAG.getConstant(ParamCount, dl, MVT::i32),
-          DAG.getConstant(TypeSize, dl, MVT::i32), InFlag};
+          DAG.getConstant(TypeSize, dl, MVT::i32), InGlue};
       Chain = DAG.getNode(NVPTXISD::DeclareParam, dl, DeclareParamVTs,
                           DeclareParamOps);
       NeedAlign = true;
@@ -1603,12 +1609,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SDValue DeclareScalarParamOps[] = {
           Chain, DAG.getConstant(ParamCount, dl, MVT::i32),
           DAG.getConstant(TypeSize * 8, dl, MVT::i32),
-          DAG.getConstant(0, dl, MVT::i32), InFlag};
+          DAG.getConstant(0, dl, MVT::i32), InGlue};
       Chain = DAG.getNode(NVPTXISD::DeclareScalarParam, dl, DeclareParamVTs,
                           DeclareScalarParamOps);
       NeedAlign = false;
     }
-    InFlag = Chain.getValue(1);
+    InGlue = Chain.getValue(1);
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter
     // than 32-bits are sign extended or zero extended, depending on
@@ -1689,7 +1695,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           llvm_unreachable("Invalid vector info.");
         }
 
-        StoreOperands.push_back(InFlag);
+        StoreOperands.push_back(InGlue);
 
         // Adjust type of the store op if we've extended the scalar
         // return value.
@@ -1699,7 +1705,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             Op, dl, DAG.getVTList(MVT::Other, MVT::Glue), StoreOperands,
             TheStoreType, MachinePointerInfo(), PartAlign,
             MachineMemOperand::MOStore);
-        InFlag = Chain.getValue(1);
+        InGlue = Chain.getValue(1);
 
         // Cleanup.
         StoreOperands.clear();
@@ -1746,10 +1752,10 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SDVTList DeclareRetVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       SDValue DeclareRetOps[] = { Chain, DAG.getConstant(1, dl, MVT::i32),
                                   DAG.getConstant(resultsz, dl, MVT::i32),
-                                  DAG.getConstant(0, dl, MVT::i32), InFlag };
+                                  DAG.getConstant(0, dl, MVT::i32), InGlue };
       Chain = DAG.getNode(NVPTXISD::DeclareRet, dl, DeclareRetVTs,
                           DeclareRetOps);
-      InFlag = Chain.getValue(1);
+      InGlue = Chain.getValue(1);
     } else {
       retAlignment = getArgumentAlignment(Callee, CB, RetTy, 0, DL);
       assert(retAlignment && "retAlignment is guaranteed to be set");
@@ -1757,10 +1763,10 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       SDValue DeclareRetOps[] = {
           Chain, DAG.getConstant(retAlignment->value(), dl, MVT::i32),
           DAG.getConstant(resultsz / 8, dl, MVT::i32),
-          DAG.getConstant(0, dl, MVT::i32), InFlag};
+          DAG.getConstant(0, dl, MVT::i32), InGlue};
       Chain = DAG.getNode(NVPTXISD::DeclareRetParam, dl, DeclareRetVTs,
                           DeclareRetOps);
-      InFlag = Chain.getValue(1);
+      InGlue = Chain.getValue(1);
     }
   }
 
@@ -1815,15 +1821,15 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDValue ProtoOps[] = {
         Chain,
         DAG.getTargetExternalSymbol(ProtoStr, MVT::i32),
-        InFlag,
+        InGlue,
     };
     Chain = DAG.getNode(NVPTXISD::CallPrototype, dl, ProtoVTs, ProtoOps);
-    InFlag = Chain.getValue(1);
+    InGlue = Chain.getValue(1);
   }
   // Op to just print "call"
   SDVTList PrintCallVTs = DAG.getVTList(MVT::Other, MVT::Glue);
   SDValue PrintCallOps[] = {
-    Chain, DAG.getConstant((Ins.size() == 0) ? 0 : 1, dl, MVT::i32), InFlag
+    Chain, DAG.getConstant((Ins.size() == 0) ? 0 : 1, dl, MVT::i32), InGlue
   };
   // We model convergent calls as separate opcodes.
   unsigned Opcode = isIndirectCall ? NVPTXISD::PrintCall : NVPTXISD::PrintCallUni;
@@ -1831,20 +1837,20 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Opcode = Opcode == NVPTXISD::PrintCallUni ? NVPTXISD::PrintConvergentCallUni
                                               : NVPTXISD::PrintConvergentCall;
   Chain = DAG.getNode(Opcode, dl, PrintCallVTs, PrintCallOps);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   // Ops to print out the function name
   SDVTList CallVoidVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDValue CallVoidOps[] = { Chain, Callee, InFlag };
+  SDValue CallVoidOps[] = { Chain, Callee, InGlue };
   Chain = DAG.getNode(NVPTXISD::CallVoid, dl, CallVoidVTs, CallVoidOps);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   // Ops to print out the param list
   SDVTList CallArgBeginVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDValue CallArgBeginOps[] = { Chain, InFlag };
+  SDValue CallArgBeginOps[] = { Chain, InGlue };
   Chain = DAG.getNode(NVPTXISD::CallArgBegin, dl, CallArgBeginVTs,
                       CallArgBeginOps);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   for (unsigned i = 0, e = std::min(CLI.NumFixedArgs + 1, ParamCount); i != e;
        ++i) {
@@ -1855,23 +1861,23 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       opcode = NVPTXISD::CallArg;
     SDVTList CallArgVTs = DAG.getVTList(MVT::Other, MVT::Glue);
     SDValue CallArgOps[] = { Chain, DAG.getConstant(1, dl, MVT::i32),
-                             DAG.getConstant(i, dl, MVT::i32), InFlag };
+                             DAG.getConstant(i, dl, MVT::i32), InGlue };
     Chain = DAG.getNode(opcode, dl, CallArgVTs, CallArgOps);
-    InFlag = Chain.getValue(1);
+    InGlue = Chain.getValue(1);
   }
   SDVTList CallArgEndVTs = DAG.getVTList(MVT::Other, MVT::Glue);
   SDValue CallArgEndOps[] = { Chain,
                               DAG.getConstant(isIndirectCall ? 0 : 1, dl, MVT::i32),
-                              InFlag };
+                              InGlue };
   Chain = DAG.getNode(NVPTXISD::CallArgEnd, dl, CallArgEndVTs, CallArgEndOps);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   if (isIndirectCall) {
     SDVTList PrototypeVTs = DAG.getVTList(MVT::Other, MVT::Glue);
     SDValue PrototypeOps[] = {
-        Chain, DAG.getConstant(UniqueCallSite, dl, MVT::i32), InFlag};
+        Chain, DAG.getConstant(UniqueCallSite, dl, MVT::i32), InGlue};
     Chain = DAG.getNode(NVPTXISD::Prototype, dl, PrototypeVTs, PrototypeOps);
-    InFlag = Chain.getValue(1);
+    InGlue = Chain.getValue(1);
   }
 
   SmallVector<SDValue, 16> ProxyRegOps;
@@ -1948,7 +1954,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
         SDValue LoadOperands[] = {
             Chain, DAG.getConstant(1, dl, MVT::i32),
-            DAG.getConstant(Offsets[VecIdx], dl, MVT::i32), InFlag};
+            DAG.getConstant(Offsets[VecIdx], dl, MVT::i32), InGlue};
         SDValue RetVal = DAG.getMemIntrinsicNode(
             Op, dl, DAG.getVTList(LoadVTs), LoadOperands, TheLoadType,
             MachinePointerInfo(), EltAlign,
@@ -1964,7 +1970,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         }
 
         Chain = RetVal.getValue(NumElts);
-        InFlag = RetVal.getValue(NumElts + 1);
+        InGlue = RetVal.getValue(NumElts + 1);
 
         // Cleanup
         VecIdx = -1;
@@ -1974,8 +1980,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   Chain =
-      DAG.getCALLSEQ_END(Chain, UniqueCallSite, UniqueCallSite + 1, InFlag, dl);
-  InFlag = Chain.getValue(1);
+      DAG.getCALLSEQ_END(Chain, UniqueCallSite, UniqueCallSite + 1, InGlue, dl);
+  InGlue = Chain.getValue(1);
 
   // Append ProxyReg instructions to the chain to make sure that `callseq_end`
   // will not get lost. Otherwise, during libcalls expansion, the nodes can become
@@ -1984,11 +1990,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SDValue Ret = DAG.getNode(
       NVPTXISD::ProxyReg, dl,
       DAG.getVTList(ProxyRegOps[i].getSimpleValueType(), MVT::Other, MVT::Glue),
-      { Chain, ProxyRegOps[i], InFlag }
+      { Chain, ProxyRegOps[i], InGlue }
     );
 
     Chain = Ret.getValue(1);
-    InFlag = Ret.getValue(2);
+    InGlue = Ret.getValue(2);
 
     if (ProxyRegTruncates[i]) {
       Ret = DAG.getNode(ISD::TRUNCATE, dl, *ProxyRegTruncates[i], Ret);
@@ -2908,7 +2914,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     }
   }
 
-  return DAG.getNode(NVPTXISD::RET_FLAG, dl, MVT::Other, Chain);
+  return DAG.getNode(NVPTXISD::RET_GLUE, dl, MVT::Other, Chain);
 }
 
 void NVPTXTargetLowering::LowerAsmOperandForConstraint(
@@ -4502,16 +4508,17 @@ Align NVPTXTargetLowering::getFunctionByValParamAlign(
   if (F)
     ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(F, ArgTy, DL));
 
-  // Work around a bug in ptxas. When PTX code takes address of
+  // Old ptx versions have a bug. When PTX code takes address of
   // byval parameter with alignment < 4, ptxas generates code to
   // spill argument into memory. Alas on sm_50+ ptxas generates
   // SASS code that fails with misaligned access. To work around
   // the problem, make sure that we align byval parameters by at
-  // least 4.
-  // TODO: this will need to be undone when we get to support multi-TU
-  // device-side compilation as it breaks ABI compatibility with nvcc.
-  // Hopefully ptxas bug is fixed by then.
-  ArgAlign = std::max(ArgAlign, Align(4));
+  // least 4. This bug seems to be fixed at least starting from
+  // ptxas > 9.0.
+  // TODO: remove this after verifying the bug is not reproduced
+  // on non-deprecated ptxas versions.
+  if (ForceMinByValParamAlign)
+    ArgAlign = std::max(ArgAlign, Align(4));
 
   return ArgAlign;
 }

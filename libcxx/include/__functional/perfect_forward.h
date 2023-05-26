@@ -36,14 +36,14 @@ public:
   template <class... _Args, class = enable_if_t<
     is_constructible_v<tuple<_BoundArgs...>, _Args&&...>
   >>
-  explicit constexpr __perfect_forward_impl(_Args&&... __bound_args)
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr __perfect_forward_impl(_Args&&... __bound_args)
     : __bound_args_(_VSTD::forward<_Args>(__bound_args)...) {}
 
-  __perfect_forward_impl(__perfect_forward_impl const&) = default;
-  __perfect_forward_impl(__perfect_forward_impl&&) = default;
+  _LIBCPP_HIDE_FROM_ABI __perfect_forward_impl(__perfect_forward_impl const&) = default;
+  _LIBCPP_HIDE_FROM_ABI __perfect_forward_impl(__perfect_forward_impl&&) = default;
 
-  __perfect_forward_impl& operator=(__perfect_forward_impl const&) = default;
-  __perfect_forward_impl& operator=(__perfect_forward_impl&&) = default;
+  _LIBCPP_HIDE_FROM_ABI __perfect_forward_impl& operator=(__perfect_forward_impl const&) = default;
+  _LIBCPP_HIDE_FROM_ABI __perfect_forward_impl& operator=(__perfect_forward_impl&&) = default;
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs&..., _Args...>>>
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) &

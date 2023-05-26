@@ -8,9 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// Aligned deallocation isn't provided before macOS 10.14, and some tests for overaligned types
-// below require that feature.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13}}
+// This test requires support for aligned allocation to test overaligned types.
+// XFAIL: availability-aligned_allocation-missing
 
 // <memory>
 

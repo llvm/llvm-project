@@ -33,22 +33,6 @@ Sema::SemaDiagnosticBuilder Sema::SYCLDiagIfDeviceCode(SourceLocation Loc,
   return SemaDiagnosticBuilder(DiagKind, Loc, DiagID, FD, *this);
 }
 
-bool Sema::checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
-  assert(getLangOpts().SYCLIsDevice &&
-         "Should only be called during SYCL compilation");
-  assert(Callee && "Callee may not be null.");
-
-  // Errors in an unevaluated context don't need to be generated,
-  // so we can safely skip them.
-  if (isUnevaluatedContext() || isConstantEvaluated())
-    return true;
-
-  SemaDiagnosticBuilder::Kind DiagKind = SemaDiagnosticBuilder::K_Nop;
-
-  return DiagKind != SemaDiagnosticBuilder::K_Immediate &&
-         DiagKind != SemaDiagnosticBuilder::K_ImmediateWithCallStack;
-}
-
 static bool isZeroSizedArray(Sema &SemaRef, QualType Ty) {
   if (const auto *CAT = SemaRef.getASTContext().getAsConstantArrayType(Ty))
     return CAT->getSize() == 0;

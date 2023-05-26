@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRLinalgUtils
   Utils.cpp
+  IndexingUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
@@ -16,4 +17,4 @@ add_mlir_dialect_library(MLIRLinalgUtils
   MLIRPass
   MLIRTensorUtils
   MLIRTransformUtils
-  )
+)

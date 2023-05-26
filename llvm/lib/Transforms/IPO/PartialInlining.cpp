@@ -14,6 +14,7 @@
 #include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -41,8 +42,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/User.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
@@ -981,7 +980,7 @@ PartialInlinerImpl::FunctionCloner::FunctionCloner(
 
   // Go through all Outline Candidate Regions and update all BasicBlock
   // information.
-  for (FunctionOutliningMultiRegionInfo::OutlineRegionInfo RegionInfo :
+  for (const FunctionOutliningMultiRegionInfo::OutlineRegionInfo &RegionInfo :
        OI->ORI) {
     SmallVector<BasicBlock *, 8> Region;
     for (BasicBlock *BB : RegionInfo.Region)
@@ -1180,14 +1179,14 @@ PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
   ToExtract.push_back(ClonedOI->NonReturnBlock);
   OutlinedRegionCost += PartialInlinerImpl::computeBBInlineCost(
       ClonedOI->NonReturnBlock, ClonedFuncTTI);
-  for (BasicBlock &BB : *ClonedFunc)
-    if (!ToBeInlined(&BB) && &BB != ClonedOI->NonReturnBlock) {
-      ToExtract.push_back(&BB);
+  for (BasicBlock *BB : depth_first(&ClonedFunc->getEntryBlock()))
+    if (!ToBeInlined(BB) && BB != ClonedOI->NonReturnBlock) {
+      ToExtract.push_back(BB);
       // FIXME: the code extractor may hoist/sink more code
       // into the outlined function which may make the outlining
       // overhead (the difference of the outlined function cost
       // and OutliningRegionCost) look larger.
-      OutlinedRegionCost += computeBBInlineCost(&BB, ClonedFuncTTI);
+      OutlinedRegionCost += computeBBInlineCost(BB, ClonedFuncTTI);
     }
 
   // Extract the body of the if.

@@ -14,6 +14,7 @@
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryDomTree.h"
 #include "bolt/Core/DynoStats.h"
+#include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/NameShortener.h"
@@ -470,6 +471,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Image       : 0x" << Twine::utohexstr(getImageAddress());
   if (ExecutionCount != COUNT_NO_PROFILE) {
     OS << "\n  Exec Count  : " << ExecutionCount;
+    OS << "\n  Branch Count: " << RawBranchCount;
     OS << "\n  Profile Acc : " << format("%.1f%%", ProfileMatchRatio * 100.0f);
   }
 
@@ -1535,8 +1537,7 @@ bool BinaryFunction::scanExternalRefs() {
     // Emit the instruction using temp emitter and generate relocations.
     SmallString<256> Code;
     SmallVector<MCFixup, 4> Fixups;
-    raw_svector_ostream VecOS(Code);
-    Emitter.MCE->encodeInstruction(Instruction, VecOS, Fixups, *BC.STI);
+    Emitter.MCE->encodeInstruction(Instruction, Code, Fixups, *BC.STI);
 
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {
@@ -2038,6 +2039,7 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       MCInst *PrevInstr = PrevBB->getLastNonPseudoInstr();
       assert(PrevInstr && "no previous instruction for a fall through");
       if (MIB->isUnconditionalBranch(Instr) &&
+          !MIB->isIndirectBranch(*PrevInstr) &&
           !MIB->isUnconditionalBranch(*PrevInstr) &&
           !MIB->getConditionalTailCall(*PrevInstr) &&
           !MIB->isReturn(*PrevInstr)) {
@@ -3603,34 +3605,18 @@ size_t BinaryFunction::computeHash(bool UseDFS,
   // The hash is computed by creating a string of all instruction opcodes and
   // possibly their operands and then hashing that string with std::hash.
   std::string HashString;
-  for (const BinaryBasicBlock *BB : Order) {
-    for (const MCInst &Inst : *BB) {
-      unsigned Opcode = Inst.getOpcode();
-
-      if (BC.MIB->isPseudo(Inst))
-        continue;
-
-      // Ignore unconditional jumps since we check CFG consistency by processing
-      // basic blocks in order and do not rely on branches to be in-sync with
-      // CFG. Note that we still use condition code of conditional jumps.
-      if (BC.MIB->isUnconditionalBranch(Inst))
-        continue;
-
-      if (Opcode == 0)
-        HashString.push_back(0);
-
-      while (Opcode) {
-        uint8_t LSB = Opcode & 0xff;
-        HashString.push_back(LSB);
-        Opcode = Opcode >> 8;
-      }
-
-      for (const MCOperand &Op : MCPlus::primeOperands(Inst))
-        HashString.append(OperandHashFunc(Op));
-    }
-  }
+  for (const BinaryBasicBlock *BB : Order)
+    HashString.append(hashBlock(BC, *BB, OperandHashFunc));
 
   return Hash = std::hash<std::string>{}(HashString);
+}
+
+void BinaryFunction::computeBlockHashes() const {
+  for (const BinaryBasicBlock *BB : BasicBlocks) {
+    std::string Hash =
+        hashBlock(BC, *BB, [](const MCOperand &Op) { return std::string(); });
+    BB->setHash(std::hash<std::string>{}(Hash));
+  }
 }
 
 void BinaryFunction::insertBasicBlocks(

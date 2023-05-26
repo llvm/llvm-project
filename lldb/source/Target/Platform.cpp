@@ -99,29 +99,27 @@ PlatformProperties::PlatformProperties() {
 
 bool PlatformProperties::GetUseModuleCache() const {
   const auto idx = ePropertyUseModuleCache;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_platform_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_platform_properties[idx].default_uint_value != 0);
 }
 
 bool PlatformProperties::SetUseModuleCache(bool use_module_cache) {
-  return m_collection_sp->SetPropertyAtIndexAsBoolean(
-      nullptr, ePropertyUseModuleCache, use_module_cache);
+  return SetPropertyAtIndex(ePropertyUseModuleCache, use_module_cache);
 }
 
 FileSpec PlatformProperties::GetModuleCacheDirectory() const {
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(
-      nullptr, ePropertyModuleCacheDirectory);
+  return GetPropertyAtIndexAs<FileSpec>(ePropertyModuleCacheDirectory, {});
 }
 
 bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
-  return m_collection_sp->SetPropertyAtIndexAsFileSpec(
-      nullptr, ePropertyModuleCacheDirectory, dir_spec);
+  return m_collection_sp->SetPropertyAtIndex(ePropertyModuleCacheDirectory,
+                                             dir_spec);
 }
 
 void PlatformProperties::SetDefaultModuleCacheDirectory(
     const FileSpec &dir_spec) {
   auto f_spec_opt = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(
-        nullptr, false, ePropertyModuleCacheDirectory);
+      ePropertyModuleCacheDirectory);
   assert(f_spec_opt);
   f_spec_opt->SetDefaultValue(dir_spec);
 }
@@ -435,7 +433,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // make the new directory and get in there
     FileSpec dst_dir = rc_baton->dst;
     if (!dst_dir.GetFilename())
-      dst_dir.SetFilename(src.GetLastPathComponent());
+      dst_dir.SetFilename(src.GetFilename());
     Status error = rc_baton->platform_ptr->MakeDirectory(
         dst_dir, lldb::eFilePermissionsDirectoryDefault);
     if (error.Fail()) {
@@ -1672,7 +1670,7 @@ FileSpec Platform::GetModuleCacheRoot() {
 
 const char *Platform::GetCacheHostname() { return GetHostname(); }
 
-UnixSignalsSP Platform::GetRemoteUnixSignals() {
+const UnixSignalsSP &Platform::GetRemoteUnixSignals() {
   static const auto s_default_unix_signals_sp = std::make_shared<UnixSignals>();
   return s_default_unix_signals_sp;
 }
@@ -1815,8 +1813,9 @@ lldb::ProcessSP Platform::DoConnectProcess(llvm::StringRef connect_url,
                                      nullptr);
     process_sp->RestoreProcessEvents();
     bool pop_process_io_handler = false;
-    Process::HandleProcessStateChangedEvent(event_sp, stream,
-                                            pop_process_io_handler);
+    // This is a user-level stop, so we allow recognizers to select frames.
+    Process::HandleProcessStateChangedEvent(
+        event_sp, stream, SelectMostRelevantFrame, pop_process_io_handler);
   }
 
   return process_sp;
@@ -1893,6 +1892,12 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     static const uint8_t g_hex_opcode[] = {0x0d, 0x00, 0x00, 0x00};
     trap_opcode = g_hex_opcode;
     trap_opcode_size = sizeof(g_hex_opcode);
+  } break;
+
+  case llvm::Triple::msp430: {
+    static const uint8_t g_msp430_opcode[] = {0x43, 0x43};
+    trap_opcode = g_msp430_opcode;
+    trap_opcode_size = sizeof(g_msp430_opcode);
   } break;
 
   case llvm::Triple::systemz: {

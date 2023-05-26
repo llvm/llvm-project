@@ -17,18 +17,18 @@ subroutine name_and_value_only(name, value)
     character(len=32) :: name, value
     call get_environment_variable(name, value)
 ! CHECK: %[[nameUnbox:.*]]:2 = fir.unboxchar %[[nameArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT: %[[nameLength:.*]] = arith.constant 32 : index
+! CHECK-NEXT: %[[nameCast:.*]] = fir.convert %[[nameUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
 ! CHECK-NEXT: %[[valueUnbox:.*]]:2 = fir.unboxchar %[[valueArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT: %[[valueLength:.*]] = arith.constant 32 : index
-! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %[[nameUnbox]]#0 typeparams %[[nameLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK-NEXT: %[[valueBox:.*]] = fir.embox %[[valueUnbox]]#0 typeparams %[[valueLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT: %[[valueCast:.*]] = fir.convert %[[valueUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
+! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %[[nameCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
+! CHECK-NEXT: %[[valueBox:.*]] = fir.embox %[[valueCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
 ! CHECK-NEXT: %true = arith.constant true
 ! CHECK-NEXT: %[[length:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQcl{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 11]] : i32
-! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK-NEXT: %[[value:.*]] = fir.convert %[[valueBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
+! CHECK-NEXT: %[[value:.*]] = fir.convert %[[valueBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileLength]]>>) -> !fir.ref<i8>
 ! CHECK-NEXT: %{{[0-9]+}} = fir.call @_FortranAGetEnvVariable(%[[name]], %[[value]], %[[length]], %true, %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-NEXT: return
@@ -42,15 +42,15 @@ subroutine name_and_length_only(name, length)
     integer :: length
     call get_environment_variable(name, LENGTH=length)
 ! CHECK: %[[nameUnbox:.*]]:2 = fir.unboxchar %[[nameArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT: %[[nameLength:.*]] = arith.constant 32 : index
-! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %0#0 typeparams %[[nameLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT: %[[nameCast:.*]] = fir.convert %[[nameUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
+! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %[[nameCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
 ! CHECK-NEXT: %[[lengthBox:.*]] = fir.embox %arg1 : (!fir.ref<i[[DEFAULT_INTEGER_SIZE]]>) -> !fir.box<i[[DEFAULT_INTEGER_SIZE]]>
 ! CHECK-NEXT: %true = arith.constant true
 ! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.absent !fir.box<none>
 ! CHECK: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 9]] : i32
-! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[length:.*]] = fir.convert %[[lengthBox]] : (!fir.box<i[[DEFAULT_INTEGER_SIZE]]>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileLength]]>>) -> !fir.ref<i8>
 ! CHECK-NEXT: %{{.*}} = fir.call @_FortranAGetEnvVariable(%[[name]], %[[value]], %[[length]], %true, %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -64,15 +64,15 @@ subroutine name_and_status_only(name, status)
     integer :: status
     call get_environment_variable(name, STATUS=status)
 ! CHECK: %[[nameUnbox:.*]]:2 = fir.unboxchar %[[nameArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT: %[[nameLength:.*]] = arith.constant 32 : index
-! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %[[nameUnbox]]#0 typeparams %[[nameLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT: %[[nameCast:.*]] = fir.convert %[[nameUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
+! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %[[nameCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
 ! CHECK-NEXT: %true = arith.constant true
 ! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[length:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[errmsg:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 9]] : i32
-! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileLength]]>>) -> !fir.ref<i8>
 ! CHECK-32-NEXT: %[[status:.*]] = fir.call @_FortranAGetEnvVariable(%[[name]], %[[value]], %[[length]], %true, %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-64-NEXT: %[[status32:.*]] = fir.call @_FortranAGetEnvVariable(%[[name]], %[[value]], %[[length]], %true, %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -98,18 +98,18 @@ subroutine name_and_errmsg_only(name, errmsg)
     character(len=32) :: name, errmsg
     call get_environment_variable(name, ERRMSG=errmsg)
 ! CHECK: %[[errmsgUnbox:.*]]:2 = fir.unboxchar %[[errmsgArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT: %[[errmsgLength:.*]] = arith.constant 32 : index
+! CHECK-NEXT: %[[errmsgCast:.*]] = fir.convert %[[errmsgUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
 ! CHECK-NEXT: %[[nameUnbox:.*]]:2 = fir.unboxchar %[[nameArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT: %[[nameLength:.*]] = arith.constant 32 : index
-! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %[[nameUnbox]]#0 typeparams %[[nameLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK-NEXT: %[[errmsgBox:.*]] = fir.embox %[[errmsgUnbox]]#0 typeparams %c32 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT: %[[nameCast:.*]] = fir.convert %[[nameUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
+! CHECK-NEXT: %[[nameBox:.*]] = fir.embox %[[nameCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
+! CHECK-NEXT: %[[errmsgBox:.*]] = fir.embox %[[errmsgCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
 ! CHECK-NEXT: %true = arith.constant true
 ! CHECK-NEXT: %[[value:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[length:.*]] = fir.absent !fir.box<none>
 ! CHECK-NEXT: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,[[sourceFileLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 11]] : i32
-! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK-NEXT: %[[errmsg:.*]] = fir.convert %[[errmsgBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
+! CHECK-NEXT: %[[errmsg:.*]] = fir.convert %[[errmsgBox]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[sourceFileLength]]>>) -> !fir.ref<i8>
 ! CHECK-NEXT: %{{[0-9]+}} = fir.call @_FortranAGetEnvVariable(%[[name]], %[[value]], %[[length]], %true, %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-NEXT: return
@@ -128,15 +128,15 @@ subroutine all_arguments(name, value, length, status, trim_name, errmsg)
     logical :: trim_name
     call get_environment_variable(name, value, length, status, trim_name, errmsg)
 ! CHECK: %[[errmsgUnbox:.*]]:2 = fir.unboxchar %[[errmsgArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT: %[[errmsgLength:.*]] = arith.constant 32 : index
+! CHECK-NEXT: %[[errmsgCast:.*]] = fir.convert %[[errmsgUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
 ! CHECK-NEXT: %[[nameUnbox:.*]]:2 = fir.unboxchar %[[nameArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT: %[[nameLength:.*]] = arith.constant 32 : index
+! CHECK-NEXT: %[[nameCast:.*]] = fir.convert %[[nameUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
 ! CHECK-NEXT: %[[valueUnbox:.*]]:2 = fir.unboxchar %[[valueArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT: %[[valueLength:.*]] = arith.constant 32 : index
-! CHECK-NEXT: %[[nameBoxed:.*]] = fir.embox %[[nameUnbox]]#0 typeparams %[[nameLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK-NEXT: %[[valueBoxed:.*]] = fir.embox %[[valueUnbox]]#0 typeparams %[[valueLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT: %[[valueCast:.*]] = fir.convert %[[valueUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,32>>
+! CHECK-NEXT: %[[nameBoxed:.*]] = fir.embox %[[nameCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
+! CHECK-NEXT: %[[valueBoxed:.*]] = fir.embox %[[valueCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
 ! CHECK-NEXT: %[[lengthBoxed:.*]] = fir.embox %[[lengthArg]] : (!fir.ref<i[[DEFAULT_INTEGER_SIZE]]>) -> !fir.box<i[[DEFAULT_INTEGER_SIZE]]>
-! CHECK-NEXT: %[[errmsgBoxed:.*]] = fir.embox %[[errmsgUnbox]]#0 typeparams %[[errmsgLength]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT: %[[errmsgBoxed:.*]] = fir.embox %[[errmsgCast]] : (!fir.ref<!fir.char<1,32>>) -> !fir.box<!fir.char<1,32>>
 ! CHECK:      %[[trimName:.*]] = fir.if %{{.*}} -> (i1) {
 ! CHECK-NEXT:   %[[trimNameLoaded:.*]] = fir.load %[[trimNameArg]] : !fir.ref<!fir.logical<4>>
 ! CHECK-NEXT:   %[[trimCast:.*]] = fir.convert %[[trimNameLoaded]] : (!fir.logical<4>) -> i1
@@ -147,10 +147,10 @@ subroutine all_arguments(name, value, length, status, trim_name, errmsg)
 ! CHECK-NEXT: }
 ! CHECK: %[[sourceFileString:.*]] = fir.address_of(@_QQcl.[[fileString:.*]]) : !fir.ref<!fir.char<1,[[fileStringLength:.*]]>>
 ! CHECK-NEXT: %[[sourceLine:.*]] = arith.constant [[# @LINE - 20]] : i32
-! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBoxed]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK-NEXT: %[[value:.*]] = fir.convert %[[valueBoxed]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK-NEXT: %[[name:.*]] = fir.convert %[[nameBoxed]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
+! CHECK-NEXT: %[[value:.*]] = fir.convert %[[valueBoxed]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[length:.*]] = fir.convert %[[lengthBoxed]] : (!fir.box<i[[DEFAULT_INTEGER_SIZE]]>) -> !fir.box<none>
-! CHECK-NEXT: %[[errmsg:.*]] = fir.convert %[[errmsgBoxed]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK-NEXT: %[[errmsg:.*]] = fir.convert %[[errmsgBoxed]] : (!fir.box<!fir.char<1,32>>) -> !fir.box<none>
 ! CHECK-NEXT: %[[sourceFile:.*]] = fir.convert %[[sourceFileString]] : (!fir.ref<!fir.char<1,[[fileStringLength]]>>) -> !fir.ref<i8>
 ! CHECK-32-NEXT: %[[status:.*]] = fir.call @_FortranAGetEnvVariable(%[[name]], %[[value]], %[[length]], %[[trimName]], %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-64-NEXT: %[[status32:.*]] = fir.call @_FortranAGetEnvVariable(%[[name]], %[[value]], %[[length]], %[[trimName]], %[[errmsg]], %[[sourceFile]], %[[sourceLine]]) {{.*}}: (!fir.box<none>, !fir.box<none>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32

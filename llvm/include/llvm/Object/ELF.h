@@ -316,7 +316,16 @@ public:
                       ") or size (0x" + Twine::utohexstr(Phdr.p_filesz) + ")");
       return Elf_Note_Iterator(Err);
     }
-    return Elf_Note_Iterator(base() + Phdr.p_offset, Phdr.p_filesz, Err);
+    // Allow 4, 8, and (for Linux core dumps) 0.
+    // TODO: Disallow 1 after all tests are fixed.
+    if (Phdr.p_align != 0 && Phdr.p_align != 1 && Phdr.p_align != 4 &&
+        Phdr.p_align != 8) {
+      Err =
+          createError("alignment (" + Twine(Phdr.p_align) + ") is not 4 or 8");
+      return Elf_Note_Iterator(Err);
+    }
+    return Elf_Note_Iterator(base() + Phdr.p_offset, Phdr.p_filesz,
+                             std::max<size_t>(Phdr.p_align, 4), Err);
   }
 
   /// Get an iterator over notes in a section.
@@ -335,7 +344,15 @@ public:
                       ") or size (0x" + Twine::utohexstr(Shdr.sh_size) + ")");
       return Elf_Note_Iterator(Err);
     }
-    return Elf_Note_Iterator(base() + Shdr.sh_offset, Shdr.sh_size, Err);
+    // TODO: Allow just 4 and 8 after all tests are fixed.
+    if (Shdr.sh_addralign != 0 && Shdr.sh_addralign != 1 &&
+        Shdr.sh_addralign != 4 && Shdr.sh_addralign != 8) {
+      Err = createError("alignment (" + Twine(Shdr.sh_addralign) +
+                        ") is not 4 or 8");
+      return Elf_Note_Iterator(Err);
+    }
+    return Elf_Note_Iterator(base() + Shdr.sh_offset, Shdr.sh_size,
+                             std::max<size_t>(Shdr.sh_addralign, 4), Err);
   }
 
   /// Get the end iterator for notes.
@@ -1236,16 +1253,13 @@ Expected<StringRef> ELFFile<ELFT>::getSectionName(const Elf_Shdr &Section,
 /// This function returns the hash value for a symbol in the .dynsym section
 /// Name of the API remains consistent as specified in the libelf
 /// REF : http://www.sco.com/developers/gabi/latest/ch5.dynamic.html#hash
-inline unsigned hashSysV(StringRef SymbolName) {
-  unsigned h = 0, g;
-  for (char C : SymbolName) {
-    h = (h << 4) + C;
-    g = h & 0xf0000000L;
-    if (g != 0)
-      h ^= g >> 24;
-    h &= ~g;
+inline uint32_t hashSysV(StringRef SymbolName) {
+  uint32_t H = 0;
+  for (uint8_t C : SymbolName) {
+    H = (H << 4) + C;
+    H ^= (H >> 24) & 0xf0;
   }
-  return h;
+  return H & 0x0fffffff;
 }
 
 /// This function returns the hash value for a symbol in the .dynsym section

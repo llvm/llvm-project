@@ -33,14 +33,14 @@ using namespace llvm;
 typedef MCDisassembler::DecodeStatus DecodeStatus;
 
 static const unsigned RegisterDecode[] = {
-    M68k::D0, M68k::D1, M68k::D2, M68k::D3, M68k::D4, M68k::D5,
-    M68k::D6, M68k::D7, M68k::A0, M68k::A1, M68k::A2, M68k::A3,
-    M68k::A4, M68k::A5, M68k::A6, M68k::SP,
-};
+    M68k::D0,  M68k::D1,  M68k::D2,  M68k::D3,  M68k::D4,  M68k::D5,
+    M68k::D6,  M68k::D7,  M68k::A0,  M68k::A1,  M68k::A2,  M68k::A3,
+    M68k::A4,  M68k::A5,  M68k::A6,  M68k::SP,  M68k::FP0, M68k::FP1,
+    M68k::FP2, M68k::FP3, M68k::FP4, M68k::FP5, M68k::FP6, M68k::FP7};
 
 static DecodeStatus DecodeRegisterClass(MCInst &Inst, uint64_t RegNo,
                                         uint64_t Address, const void *Decoder) {
-  if (RegNo >= 16)
+  if (RegNo >= 24)
     return DecodeStatus::Fail;
   Inst.addOperand(MCOperand::createReg(RegisterDecode[RegNo]));
   return DecodeStatus::Success;
@@ -88,6 +88,15 @@ static DecodeStatus DecodeXR16RegisterClass(MCInst &Inst, uint64_t RegNo,
   return DecodeRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
+static DecodeStatus DecodeFPDRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  return DecodeRegisterClass(Inst, RegNo | 16ULL, Address, Decoder);
+}
+#define DecodeFPDR32RegisterClass DecodeFPDRRegisterClass
+#define DecodeFPDR64RegisterClass DecodeFPDRRegisterClass
+#define DecodeFPDR80RegisterClass DecodeFPDRRegisterClass
+
 static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, APInt &Insn,
                                             uint64_t Address,
                                             const void *Decoder) {
@@ -101,6 +110,10 @@ static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
 }
 
 #include "M68kGenDisassemblerTable.inc"
+
+#undef DecodeFPDR32RegisterClass
+#undef DecodeFPDR64RegisterClass
+#undef DecodeFPDR80RegisterClass
 
 /// A disassembler class for M68k.
 struct M68kDisassembler : public MCDisassembler {

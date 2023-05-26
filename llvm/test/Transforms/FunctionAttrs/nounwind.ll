@@ -125,6 +125,208 @@ define i32 @catch_thing_user() {
   ret i32 %catch_thing_call
 }
 
+declare void @do_throw()
+declare void @abort() nounwind
+@catch_ty = external global ptr
+
+define void @catch_specific_landingpad() personality ptr @__gxx_personality_v0 {
+; CHECK: Function Attrs: noreturn
+; CHECK-LABEL: define {{[^@]+}}@catch_specific_landingpad
+; CHECK-SAME: () #[[ATTR3:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    invoke void @do_throw()
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    catch ptr @catch_ty
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+;
+  invoke void @do_throw()
+  to label %unreachable unwind label %lpad
+
+lpad:
+  %lp = landingpad { ptr, i32 }
+  catch ptr @catch_ty
+  call void @abort()
+  unreachable
+
+unreachable:
+  unreachable
+}
+
+define void @catch_all_landingpad() personality ptr @__gxx_personality_v0 {
+; CHECK: Function Attrs: noreturn nounwind
+; CHECK-LABEL: define {{[^@]+}}@catch_all_landingpad
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    invoke void @do_throw()
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+;
+  invoke void @do_throw()
+  to label %unreachable unwind label %lpad
+
+lpad:
+  %lp = landingpad { ptr, i32 }
+  catch ptr null
+  call void @abort()
+  unreachable
+
+unreachable:
+  unreachable
+}
+
+define void @filter_specific_landingpad() personality ptr @__gxx_personality_v0 {
+; CHECK: Function Attrs: noreturn
+; CHECK-LABEL: define {{[^@]+}}@filter_specific_landingpad
+; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    invoke void @do_throw()
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    filter [1 x ptr] [ptr @catch_ty]
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+;
+  invoke void @do_throw()
+  to label %unreachable unwind label %lpad
+
+lpad:
+  %lp = landingpad { ptr, i32 }
+  filter [1 x ptr] [ptr @catch_ty]
+  call void @abort()
+  unreachable
+
+unreachable:
+  unreachable
+}
+
+define void @filter_none_landingpad() personality ptr @__gxx_personality_v0 {
+; CHECK: Function Attrs: noreturn nounwind
+; CHECK-LABEL: define {{[^@]+}}@filter_none_landingpad
+; CHECK-SAME: () #[[ATTR4]] personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    invoke void @do_throw()
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+;
+  invoke void @do_throw()
+  to label %unreachable unwind label %lpad
+
+lpad:
+  %lp = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
+  call void @abort()
+  unreachable
+
+unreachable:
+  unreachable
+}
+
+define void @cleanup_landingpad() personality ptr @__gxx_personality_v0 {
+; CHECK: Function Attrs: noreturn
+; CHECK-LABEL: define {{[^@]+}}@cleanup_landingpad
+; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    invoke void @do_throw()
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+;
+  invoke void @do_throw()
+  to label %unreachable unwind label %lpad
+
+lpad:
+  %lp = landingpad { ptr, i32 }
+  cleanup
+  call void @abort()
+  unreachable
+
+unreachable:
+  unreachable
+}
+
+define void @cleanuppad() personality ptr @__gxx_personality_v0 {
+; CHECK: Function Attrs: noreturn
+; CHECK-LABEL: define {{[^@]+}}@cleanuppad
+; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    invoke void @do_throw()
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CPAD:%.*]]
+; CHECK:       cpad:
+; CHECK-NEXT:    [[CP:%.*]] = cleanuppad within none []
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+;
+  invoke void @do_throw()
+  to label %unreachable unwind label %cpad
+
+cpad:
+  %cp = cleanuppad within none []
+  call void @abort()
+  unreachable
+
+unreachable:
+  unreachable
+}
+
+define void @catchswitch_cleanuppad() personality ptr @__gxx_personality_v0 {
+; CHECK: Function Attrs: noreturn
+; CHECK-LABEL: define {{[^@]+}}@catchswitch_cleanuppad
+; CHECK-SAME: () #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    invoke void @do_throw()
+; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CS:%.*]]
+; CHECK:       cs:
+; CHECK-NEXT:    [[TOK:%.*]] = catchswitch within none [label %catch] unwind label [[CPAD:%.*]]
+; CHECK:       catch:
+; CHECK-NEXT:    [[C:%.*]] = catchpad within [[TOK]] [ptr @catch_ty, i32 0, ptr null]
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       cpad:
+; CHECK-NEXT:    [[CP:%.*]] = cleanuppad within none []
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       unreachable:
+; CHECK-NEXT:    unreachable
+;
+  invoke void @do_throw()
+  to label %unreachable unwind label %cs
+
+cs:
+  %tok = catchswitch within none [label %catch] unwind label %cpad
+
+catch:
+  %c = catchpad within %tok [ptr @catch_ty, i32 0, ptr null]
+  call void @abort()
+  unreachable
+
+cpad:
+  %cp = cleanuppad within none []
+  call void @abort()
+  unreachable
+
+unreachable:
+  unreachable
+}
 
 declare i32 @__gxx_personality_v0(...)
 

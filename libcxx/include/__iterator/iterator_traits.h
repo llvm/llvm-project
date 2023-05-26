@@ -453,18 +453,18 @@ template <class _Tp, class _Up>
 struct __has_iterator_concept_convertible_to<_Tp, _Up, false> : false_type {};
 
 template <class _Tp>
-struct __is_cpp17_input_iterator : public __has_iterator_category_convertible_to<_Tp, input_iterator_tag> {};
+using __has_input_iterator_category = __has_iterator_category_convertible_to<_Tp, input_iterator_tag>;
 
 template <class _Tp>
-struct __is_cpp17_forward_iterator : public __has_iterator_category_convertible_to<_Tp, forward_iterator_tag> {};
+using __has_forward_iterator_category = __has_iterator_category_convertible_to<_Tp, forward_iterator_tag>;
 
 template <class _Tp>
-struct __is_cpp17_bidirectional_iterator : public __has_iterator_category_convertible_to<_Tp, bidirectional_iterator_tag> {};
+using __has_bidirectional_iterator_category = __has_iterator_category_convertible_to<_Tp, bidirectional_iterator_tag>;
 
 template <class _Tp>
-struct __is_cpp17_random_access_iterator : public __has_iterator_category_convertible_to<_Tp, random_access_iterator_tag> {};
+using __has_random_access_iterator_category = __has_iterator_category_convertible_to<_Tp, random_access_iterator_tag>;
 
-// __is_cpp17_contiguous_iterator determines if an iterator is known by
+// __libcpp_is_contiguous_iterator determines if an iterator is known by
 // libc++ to be contiguous, either because it advertises itself as such
 // (in C++20) or because it is a pointer type or a known trivial wrapper
 // around a (possibly fancy) pointer type, such as __wrap_iter<T*>.
@@ -473,40 +473,40 @@ struct __is_cpp17_random_access_iterator : public __has_iterator_category_conver
 //
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-struct __is_cpp17_contiguous_iterator : _Or<
+struct __libcpp_is_contiguous_iterator : _Or<
     __has_iterator_category_convertible_to<_Tp, contiguous_iterator_tag>,
     __has_iterator_concept_convertible_to<_Tp, contiguous_iterator_tag>
 > {};
 #else
 template <class _Tp>
-struct __is_cpp17_contiguous_iterator : false_type {};
+struct __libcpp_is_contiguous_iterator : false_type {};
 #endif
 
 // Any native pointer which is an iterator is also a contiguous iterator.
 template <class _Up>
-struct __is_cpp17_contiguous_iterator<_Up*> : true_type {};
+struct __libcpp_is_contiguous_iterator<_Up*> : true_type {};
 
 
 template <class _Iter>
 class __wrap_iter;
 
 template <class _Tp>
-struct __is_exactly_cpp17_input_iterator
-    : public integral_constant<bool,
+using __has_exactly_input_iterator_category
+    = integral_constant<bool,
          __has_iterator_category_convertible_to<_Tp, input_iterator_tag>::value &&
-        !__has_iterator_category_convertible_to<_Tp, forward_iterator_tag>::value> {};
+        !__has_iterator_category_convertible_to<_Tp, forward_iterator_tag>::value>;
 
 template <class _Tp>
-struct __is_exactly_cpp17_forward_iterator
-    : public integral_constant<bool,
+using __has_exactly_forward_iterator_category
+    = integral_constant<bool,
          __has_iterator_category_convertible_to<_Tp, forward_iterator_tag>::value &&
-        !__has_iterator_category_convertible_to<_Tp, bidirectional_iterator_tag>::value> {};
+        !__has_iterator_category_convertible_to<_Tp, bidirectional_iterator_tag>::value>;
 
 template <class _Tp>
-struct __is_exactly_cpp17_bidirectional_iterator
-    : public integral_constant<bool,
+using __has_exactly_bidirectional_iterator_category
+    = integral_constant<bool,
          __has_iterator_category_convertible_to<_Tp, bidirectional_iterator_tag>::value &&
-        !__has_iterator_category_convertible_to<_Tp, random_access_iterator_tag>::value> {};
+        !__has_iterator_category_convertible_to<_Tp, random_access_iterator_tag>::value>;
 
 template<class _InputIterator>
 using __iter_value_type = typename iterator_traits<_InputIterator>::value_type;
@@ -531,8 +531,8 @@ using __iterator_pointer_type = typename iterator_traits<_Iter>::pointer;
 template <class _Iter>
 using __iter_diff_t = typename iterator_traits<_Iter>::difference_type;
 
-template<class _InputIterator>
-using __iter_value_type = typename iterator_traits<_InputIterator>::value_type;
+template <class _Iter>
+using __iter_reference = typename iterator_traits<_Iter>::reference;
 
 _LIBCPP_END_NAMESPACE_STD
 

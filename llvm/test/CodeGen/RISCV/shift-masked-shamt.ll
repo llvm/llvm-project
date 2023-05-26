@@ -175,9 +175,8 @@ define i64 @sll_redundant_mask_zeros_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    or a1, a1, a4
 ; RV32I-NEXT:  .LBB9_3:
 ; RV32I-NEXT:    sll a0, a0, a2
-; RV32I-NEXT:    slti a2, a3, 0
-; RV32I-NEXT:    neg a2, a2
-; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    srai a3, a3, 31
+; RV32I-NEXT:    and a0, a3, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sll_redundant_mask_zeros_i64:
@@ -209,9 +208,8 @@ define i64 @srl_redundant_mask_zeros_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    or a0, a0, a4
 ; RV32I-NEXT:  .LBB10_3:
 ; RV32I-NEXT:    srl a1, a1, a2
-; RV32I-NEXT:    slti a2, a3, 0
-; RV32I-NEXT:    neg a2, a2
-; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    srai a3, a3, 31
+; RV32I-NEXT:    and a1, a3, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: srl_redundant_mask_zeros_i64:

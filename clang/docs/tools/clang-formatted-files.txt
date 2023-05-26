@@ -2594,6 +2594,7 @@ libc/include/llvm-libc-types/fexcept_t.h
 libc/include/llvm-libc-types/FILE.h
 libc/include/llvm-libc-types/float_t.h
 libc/include/llvm-libc-types/imaxdiv_t.h
+libc/include/llvm-libc-types/jmp_buf.h
 libc/include/llvm-libc-types/ldiv_t.h
 libc/include/llvm-libc-types/lldiv_t.h
 libc/include/llvm-libc-types/mode_t.h
@@ -5250,6 +5251,7 @@ llvm/include/llvm/Debuginfod/DIFetcher.h
 llvm/include/llvm/Debuginfod/HTTPClient.h
 llvm/include/llvm/Demangle/Demangle.h
 llvm/include/llvm/Demangle/StringView.h
+llvm/include/llvm/Demangle/StringViewExtras.h
 llvm/include/llvm/Demangle/Utility.h
 llvm/include/llvm/DWARFLinker/DWARFLinker.h
 llvm/include/llvm/DWARFLinker/DWARFLinkerCompileUnit.h
@@ -5706,7 +5708,6 @@ llvm/include/llvm-c/Comdat.h
 llvm/include/llvm-c/Error.h
 llvm/include/llvm-c/ErrorHandling.h
 llvm/include/llvm-c/ExternC.h
-llvm/include/llvm-c/Initialization.h
 llvm/include/llvm-c/IRReader.h
 llvm/include/llvm-c/LLJIT.h
 llvm/include/llvm-c/OrcEE.h
@@ -8249,7 +8250,6 @@ mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/Bufferize.cpp
 mlir/lib/Dialect/Tensor/Transforms/PassDetail.h
-mlir/lib/Dialect/Tensor/Transforms/SplitPadding.cpp
 mlir/lib/Dialect/Tensor/Utils/Utils.cpp
 mlir/lib/Dialect/Tosa/IR/TosaOps.cpp
 mlir/lib/Dialect/Tosa/Transforms/TosaDecomposeConv2D.cpp

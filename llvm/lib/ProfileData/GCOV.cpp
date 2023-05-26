@@ -337,10 +337,8 @@ StringRef GCOVFunction::getName(bool demangle) const {
   if (demangled.empty()) {
     do {
       if (Name.startswith("_Z")) {
-        int status = 0;
         // Name is guaranteed to be NUL-terminated.
-        char *res = itaniumDemangle(Name.data(), nullptr, nullptr, &status);
-        if (status == 0) {
+        if (char *res = itaniumDemangle(Name.data())) {
           demangled = res;
           free(res);
           break;

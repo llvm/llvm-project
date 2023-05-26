@@ -527,6 +527,7 @@ void MachORewriteInstance::emitAndLink() {
   mapCodeSections();
   mapInstrumentationSection("__counters");
   mapInstrumentationSection("__tables");
+  RTDyld->finalizeWithMemoryManagerLocking();
 
           // TODO: Refactor addRuntimeLibSections to work properly on Mach-O
           // and use it here.

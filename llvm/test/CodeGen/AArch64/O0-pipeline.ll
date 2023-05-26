@@ -39,11 +39,12 @@
 ; CHECK-NEXT:       IRTranslator
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       AArch64O0PreLegalizerCombiner
+; CHECK-NEXT:       Localizer
 ; CHECK-NEXT:       Analysis containing CSE Info
+; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       Legalizer
 ; CHECK-NEXT:       AArch64PostLegalizerLowering
 ; CHECK-NEXT:       RegBankSelect
-; CHECK-NEXT:       Localizer
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       InstructionSelect
 ; CHECK-NEXT:       ResetMachineFunction

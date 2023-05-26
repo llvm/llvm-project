@@ -88,21 +88,19 @@ struct UserArea {
 
 RegisterContextLinux_i386::RegisterContextLinux_i386(
     const ArchSpec &target_arch)
-    : RegisterInfoInterface(target_arch) {
-  RegisterInfo orig_ax = {
-      "orig_eax",
-      nullptr,
-      sizeof(((GPR *)nullptr)->orig_eax),
-      (LLVM_EXTENSION offsetof(GPR, orig_eax)),
-      eEncodingUint,
-      eFormatHex,
-      {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
-       LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
-      nullptr,
-      nullptr,
-  };
-  d_register_infos.push_back(orig_ax);
-}
+    : RegisterContextLinux_x86(
+          target_arch,
+          {"orig_eax",
+           nullptr,
+           sizeof(((GPR *)nullptr)->orig_eax),
+           (LLVM_EXTENSION offsetof(GPR, orig_eax)),
+           eEncodingUint,
+           eFormatHex,
+           {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+            LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
+           nullptr,
+           nullptr,
+           nullptr}) {}
 
 size_t RegisterContextLinux_i386::GetGPRSizeStatic() { return sizeof(GPR); }
 
@@ -124,9 +122,4 @@ uint32_t RegisterContextLinux_i386::GetRegisterCount() const {
 
 uint32_t RegisterContextLinux_i386::GetUserRegisterCount() const {
   return static_cast<uint32_t>(k_num_user_registers_i386);
-}
-
-const std::vector<lldb_private::RegisterInfo> *
-RegisterContextLinux_i386::GetDynamicRegisterInfoP() const {
-  return &d_register_infos;
 }

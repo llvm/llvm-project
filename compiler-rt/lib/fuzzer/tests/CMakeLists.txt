@@ -20,7 +20,7 @@ set_target_properties(FuzzedDataProviderUnitTests PROPERTIES FOLDER "Compiler-RT
 set(LIBFUZZER_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS})
 list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS --driver-mode=g++)
 
-if(WIN32)
+if(MSVC)
   list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -Wl,-defaultlib:libcmt,-defaultlib:oldnames)
 else()
   if (APPLE)

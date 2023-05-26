@@ -430,10 +430,9 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
   for (; MII != MEE; ++MII) {
     for (const MachineOperand &MO : MII->operands())
       if (MO.isReg() && MO.getReg().isPhysical()) {
-        for (MCSuperRegIterator SI(MO.getReg(), this, true/*IncludeSelf*/);
-             SI.isValid(); ++SI)
-          if (NewRC->contains(*SI)) {
-            PhysClobbered.set(*SI);
+        for (MCPhysReg SI : superregs_inclusive(MO.getReg()))
+          if (NewRC->contains(SI)) {
+            PhysClobbered.set(SI);
             break;
           }
       }

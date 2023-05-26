@@ -732,8 +732,16 @@ void DebugLoclistWriter::addList(AttrInfo &AttrVal,
 uint32_t DebugLoclistWriter::LoclistBaseOffset = 0;
 void DebugLoclistWriter::finalizeDWARF5(
     DebugInfoBinaryPatcher &DebugInfoPatcher, DebugAbbrevWriter &AbbrevWriter) {
-  if (LocBodyBuffer->empty())
+  if (LocBodyBuffer->empty()) {
+    std::optional<AttrInfo> AttrInfoVal =
+        findAttributeInfo(CU.getUnitDIE(), dwarf::DW_AT_loclists_base);
+    // Pointing to first one, because it doesn't matter. There are no uses of it
+    // in this CU.
+    if (!isSplitDwarf() && AttrInfoVal)
+      DebugInfoPatcher.addLE32Patch(AttrInfoVal->Offset,
+                                    getDWARF5RngListLocListHeaderSize());
     return;
+  }
 
   std::unique_ptr<DebugBufferVector> LocArrayBuffer =
       std::make_unique<DebugBufferVector>();
@@ -1166,7 +1174,7 @@ void DebugStrOffsetsWriter::initialize(
          "Dwarf String Offsets Byte Size is not supported.");
   uint32_t Index = 0;
   for (uint64_t Offset = 0; Offset < Contr->Size; Offset += DwarfOffsetByteSize)
-    IndexToAddressMap[Index++] = *reinterpret_cast<const uint32_t *>(
+    IndexToAddressMap[Index++] = support::endian::read32le(
         StrOffsetsSection.Data.data() + Contr->Base + Offset);
 }
 

@@ -24,11 +24,18 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
+#if __has_builtin(__is_convertible) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
+
+template <class _T1, class _T2>
+struct _LIBCPP_TEMPLATE_VIS is_convertible : public integral_constant<bool, __is_convertible(_T1, _T2)> {};
+
+#elif __has_builtin(__is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
 
 template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS is_convertible
     : public integral_constant<bool, __is_convertible_to(_T1, _T2)> {};
 
+// TODO: Remove this fallback when GCC < 13 support is no longer required.
+// GCC 13 has the __is_convertible built-in.
 #else  // __has_builtin(__is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
 
 namespace __is_convertible_imp

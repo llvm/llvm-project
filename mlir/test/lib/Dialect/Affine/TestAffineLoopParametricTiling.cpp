@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 #define DEBUG_TYPE "test-affine-parametric-tile"
 
@@ -37,20 +38,25 @@ struct TestAffineLoopParametricTiling
 /// Checks if the function enclosing the loop nest has any arguments passed to
 /// it, which can be used as tiling parameters. Assumes that atleast 'n'
 /// arguments are passed, where 'n' is the number of loops in the loop nest.
-static void checkIfTilingParametersExist(ArrayRef<AffineForOp> band) {
+static LogicalResult checkIfTilingParametersExist(ArrayRef<AffineForOp> band) {
   assert(!band.empty() && "no loops in input band");
   AffineForOp topLoop = band[0];
 
   if (func::FuncOp funcOp = dyn_cast<func::FuncOp>(topLoop->getParentOp()))
-    assert(funcOp.getNumArguments() >= band.size() && "Too few tile sizes");
+    if (funcOp.getNumArguments() < band.size())
+      return topLoop->emitError(
+          "too few tile sizes provided in the argument list of the function "
+          "which contains the current band");
+  return success();
 }
 
 /// Captures tiling parameters, which are expected to be passed as arguments
 /// to the function enclosing the loop nest. Also checks if the required
 /// parameters are of index type. This approach is temporary for testing
 /// purposes.
-static void getTilingParameters(ArrayRef<AffineForOp> band,
-                                SmallVectorImpl<Value> &tilingParameters) {
+static LogicalResult
+getTilingParameters(ArrayRef<AffineForOp> band,
+                    SmallVectorImpl<Value> &tilingParameters) {
   AffineForOp topLoop = band[0];
   Region *funcOpRegion = topLoop->getParentRegion();
   unsigned nestDepth = band.size();
@@ -58,11 +64,13 @@ static void getTilingParameters(ArrayRef<AffineForOp> band,
   for (BlockArgument blockArgument :
        funcOpRegion->getArguments().take_front(nestDepth)) {
     if (blockArgument.getArgNumber() < nestDepth) {
-      assert(blockArgument.getType().isIndex() &&
-             "expected tiling parameters to be of index type.");
+      if (!blockArgument.getType().isIndex())
+        return topLoop->emitError(
+            "expected tiling parameters to be of index type");
       tilingParameters.push_back(blockArgument);
     }
   }
+  return success();
 }
 
 void TestAffineLoopParametricTiling::runOnOperation() {
@@ -77,10 +85,12 @@ void TestAffineLoopParametricTiling::runOnOperation() {
     SmallVector<AffineForOp, 6> tiledNest;
     SmallVector<Value, 6> tilingParameters;
     // Check if tiling parameters are present.
-    checkIfTilingParametersExist(band);
+    if (checkIfTilingParametersExist(band).failed())
+      return;
 
     // Get function arguments as tiling parameters.
-    getTilingParameters(band, tilingParameters);
+    if (getTilingParameters(band, tilingParameters).failed())
+      return;
 
     (void)tilePerfectlyNestedParametric(band, tilingParameters, &tiledNest);
   }

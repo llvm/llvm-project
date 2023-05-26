@@ -31,6 +31,7 @@
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -1135,7 +1136,6 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
     auto C = CurLSI->getCXXThisCapture();
 
     if (C.isCopyCapture()) {
-      ClassType.removeLocalCVRQualifiers(Qualifiers::CVRMask);
       if (!CurLSI->Mutable)
         ClassType.addConst();
       return ASTCtx.getPointerType(ClassType);
@@ -1175,7 +1175,6 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
     while (Closure &&
            IsThisCaptured(Closure, IsByCopyCapture, IsConstCapture)) {
       if (IsByCopyCapture) {
-        ClassType.removeLocalCVRQualifiers(Qualifiers::CVRMask);
         if (IsConstCapture)
           ClassType.addConst();
         return ASTCtx.getPointerType(ClassType);
@@ -1362,15 +1361,7 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
 
     // The type of the corresponding data member (not a 'this' pointer if 'by
     // copy').
-    QualType CaptureType = ThisTy;
-    if (ByCopy) {
-      // If we are capturing the object referred to by '*this' by copy, ignore
-      // any cv qualifiers inherited from the type of the member function for
-      // the type of the closure-type's corresponding data member and any use
-      // of 'this'.
-      CaptureType = ThisTy->getPointeeType();
-      CaptureType.removeLocalCVRQualifiers(Qualifiers::CVRMask);
-    }
+    QualType CaptureType = ByCopy ? ThisTy->getPointeeType() : ThisTy;
 
     bool isNested = NumCapturingClosures > 1;
     CSI->addThisCapture(isNested, Loc, CaptureType, ByCopy);
@@ -1476,10 +1467,10 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
           : InitializationKind::CreateValue(TyBeginLoc, LParenOrBraceLoc,
                                             RParenOrBraceLoc);
 
-  // C++1z [expr.type.conv]p1:
+  // C++17 [expr.type.conv]p1:
   //   If the type is a placeholder for a deduced class type, [...perform class
   //   template argument deduction...]
-  // C++2b:
+  // C++23:
   //   Otherwise, if the type contains a placeholder type, it is replaced by the
   //   type determined by placeholder type deduction.
   DeducedType *Deduced = Ty->getContainedDeducedType();
@@ -1506,7 +1497,7 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
                             diag::err_auto_expr_init_multiple_expressions)
                        << Ty << FullRange);
     }
-    if (getLangOpts().CPlusPlus2b) {
+    if (getLangOpts().CPlusPlus23) {
       if (Ty->getAs<AutoType>())
         Diag(TyBeginLoc, diag::warn_cxx20_compat_auto_expr) << FullRange;
     }
@@ -1532,16 +1523,10 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
   }
 
-  if (Ty->isDependentType() || CallExpr::hasAnyTypeDependentArguments(Exprs)) {
-    // FIXME: CXXUnresolvedConstructExpr does not model list-initialization
-    // directly. We work around this by dropping the locations of the braces.
-    SourceRange Locs = ListInitialization
-                           ? SourceRange()
-                           : SourceRange(LParenOrBraceLoc, RParenOrBraceLoc);
-    return CXXUnresolvedConstructExpr::Create(Context, Ty.getNonReferenceType(),
-                                              TInfo, Locs.getBegin(), Exprs,
-                                              Locs.getEnd());
-  }
+  if (Ty->isDependentType() || CallExpr::hasAnyTypeDependentArguments(Exprs))
+    return CXXUnresolvedConstructExpr::Create(
+        Context, Ty.getNonReferenceType(), TInfo, LParenOrBraceLoc, Exprs,
+        RParenOrBraceLoc, ListInitialization);
 
   // C++ [expr.type.conv]p1:
   // If the expression list is a parenthesized single expression, the type
@@ -1590,6 +1575,9 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   Expr *Inner = Result.get();
   if (CXXBindTemporaryExpr *BTE = dyn_cast_or_null<CXXBindTemporaryExpr>(Inner))
     Inner = BTE->getSubExpr();
+  if (auto *CE = dyn_cast<ConstantExpr>(Inner);
+      CE && CE->isImmediateInvocation())
+    Inner = CE->getSubExpr();
   if (!isa<CXXTemporaryObjectExpr>(Inner) &&
       !isa<CXXScalarValueInitExpr>(Inner)) {
     // If we created a CXXTemporaryObjectExpr, that node also represents the
@@ -4034,7 +4022,7 @@ ExprResult Sema::CheckCXXBooleanCondition(Expr *CondExpr, bool IsConstexpr) {
   // The value of a condition that is an expression is the value of the
   // expression, implicitly converted to bool.
   //
-  // C++2b 8.5.2p2
+  // C++23 8.5.2p2
   // If the if statement is of the form if constexpr, the value of the condition
   // is contextually converted to bool and the converted expression shall be
   // a constant expression.
@@ -4578,6 +4566,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_SVE_Vector_Conversion:
+  case ICK_RVV_Vector_Conversion:
     From = ImpCastExprToType(From, ToType, CK_BitCast, VK_PRValue,
                              /*BasePath=*/nullptr, CCK)
                .get();
@@ -4883,8 +4872,10 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsStandardLayout:
   case UTT_IsPOD:
   case UTT_IsLiteral:
-  // By analogy, is_trivially_relocatable imposes the same constraints.
+  // By analogy, is_trivially_relocatable and is_trivially_equality_comparable
+  // impose the same constraints.
   case UTT_IsTriviallyRelocatable:
+  case UTT_IsTriviallyEqualityComparable:
   case UTT_CanPassInRegs:
   // Per the GCC type traits documentation, T shall be a complete type, cv void,
   // or an array of unknown bound. But GCC actually imposes the same constraints
@@ -5379,6 +5370,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return RD->canPassInRegisters();
     Self.Diag(KeyLoc, diag::err_builtin_pass_in_regs_non_class) << T;
     return false;
+  case UTT_IsTriviallyEqualityComparable:
+    return T.isTriviallyEqualityComparableType(C);
   }
 }
 
@@ -8239,12 +8232,12 @@ static inline bool VariableCanNeverBeAConstantExpression(VarDecl *Var,
   const VarDecl *DefVD = nullptr;
 
   // If there is no initializer - this can not be a constant expression.
-  if (!Var->getAnyInitializer(DefVD)) return true;
+  const Expr *Init = Var->getAnyInitializer(DefVD);
+  if (!Init)
+    return true;
   assert(DefVD);
-  if (DefVD->isWeak()) return false;
-  EvaluatedStmt *Eval = DefVD->ensureEvaluatedStmt();
-
-  Expr *Init = cast<Expr>(Eval->Value);
+  if (DefVD->isWeak())
+    return false;
 
   if (Var->getType()->isDependentType() || Init->isValueDependent()) {
     // FIXME: Teach the constant evaluator to deal with the non-dependent parts

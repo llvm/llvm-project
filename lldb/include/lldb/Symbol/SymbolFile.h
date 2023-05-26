@@ -30,6 +30,7 @@
 
 #include <mutex>
 #include <optional>
+#include <unordered_map>
 
 #if defined(LLDB_CONFIGURATION_DEBUG)
 #define ASSERT_MODULE_LOCK(expr) (expr->AssertModuleLock())
@@ -326,8 +327,17 @@ public:
   virtual llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) = 0;
 
+  /// Finds a namespace of name \ref name and whose parent
+  /// context is \ref parent_decl_ctx.
+  ///
+  /// If \code{.cpp} !parent_decl_ctx.IsValid() \endcode
+  /// then this function will consider all namespaces that
+  /// match the name. If \ref only_root_namespaces is
+  /// true, only consider in the search those DIEs that
+  /// represent top-level namespaces.
   virtual CompilerDeclContext
-  FindNamespace(ConstString name, const CompilerDeclContext &parent_decl_ctx) {
+  FindNamespace(ConstString name, const CompilerDeclContext &parent_decl_ctx,
+                bool only_root_namespaces = false) {
     return CompilerDeclContext();
   }
 
@@ -435,8 +445,19 @@ public:
 
   virtual lldb::TypeSP CopyType(const lldb::TypeSP &other_type) = 0;
 
+  /// Returns a map of compilation unit to the compile option arguments
+  /// associated with that compilation unit.
+  std::unordered_map<lldb::CompUnitSP, Args> GetCompileOptions() {
+    std::unordered_map<lldb::CompUnitSP, Args> args;
+    GetCompileOptions(args);
+    return args;
+  }
+
 protected:
   void AssertModuleLock();
+
+  virtual void GetCompileOptions(
+      std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) {}
 
 private:
   SymbolFile(const SymbolFile &) = delete;

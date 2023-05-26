@@ -69,7 +69,6 @@ private:
   void printU2ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU3ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU4ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  void printU6ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printS8ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU8ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU12ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);

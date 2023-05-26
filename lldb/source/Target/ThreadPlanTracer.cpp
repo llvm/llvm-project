@@ -223,7 +223,7 @@ void ThreadPlanAssemblyTracer::Log() {
           reg_value != m_register_values[reg_num]) {
         if (reg_value.GetType() != RegisterValue::eTypeInvalid) {
           stream->PutCString("\n\t");
-          DumpRegisterValue(reg_value, stream, reg_info, true, false,
+          DumpRegisterValue(reg_value, *stream, *reg_info, true, false,
                             eFormatDefault);
         }
       }

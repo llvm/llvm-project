@@ -17,8 +17,8 @@ define void @fold_fls(i16 %x) {
 ; CHECK-NEXT:    call void @sink(i16 0)
 ; CHECK-NEXT:    call void @sink(i16 1)
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i16 16, [[CTLZ]]
-; CHECK-NEXT:    call void @sink(i16 [[TMP1]])
+; CHECK-NEXT:    [[NX:%.*]] = sub nuw nsw i16 16, [[CTLZ]]
+; CHECK-NEXT:    call void @sink(i16 [[NX]])
 ; CHECK-NEXT:    ret void
 ;
   %n0 = call i16 @fls(i16 0)

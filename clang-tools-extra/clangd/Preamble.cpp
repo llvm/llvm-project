@@ -133,22 +133,19 @@ public:
     CanonIncludes.addSystemHeadersMapping(CI.getLangOpts());
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
+    PP = &CI.getPreprocessor();
     Includes.collect(CI);
-    if (Config::current().Diagnostics.UnusedIncludes ==
-                Config::IncludesPolicy::Strict ||
-            Config::current().Diagnostics.MissingIncludes ==
-            Config::IncludesPolicy::Strict)
-      Pragmas.record(CI);
+    Pragmas.record(CI);
     if (BeforeExecuteCallback)
       BeforeExecuteCallback(CI);
   }
 
   std::unique_ptr<PPCallbacks> createPPCallbacks() override {
-    assert(SourceMgr && LangOpts &&
-           "SourceMgr and LangOpts must be set at this point");
+    assert(SourceMgr && LangOpts && PP &&
+           "SourceMgr, LangOpts and PP must be set at this point");
 
     return std::make_unique<PPChainedCallbacks>(
-        std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
+        std::make_unique<CollectMainFileMacros>(*PP, Macros),
         collectPragmaMarksCallback(*SourceMgr, Marks));
   }
 
@@ -215,6 +212,7 @@ private:
   std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
+  const Preprocessor *PP = nullptr;
   PreambleBuildStats *Stats;
   bool ParseForwardingFunctions;
   std::function<void(CompilerInstance &)> BeforeExecuteCallback;
@@ -382,7 +380,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   PP.addPPCallbacks(
       std::make_unique<DirectiveCollector>(PP, SP.TextualDirectives));
   PP.addPPCallbacks(collectPragmaMarksCallback(SM, SP.Marks));
-  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(SM, SP.Macros));
+  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(PP, SP.Macros));
   if (llvm::Error Err = Action.Execute())
     return std::move(Err);
   Action.EndSourceFile();
@@ -740,6 +738,14 @@ static std::vector<Diag> patchDiags(llvm::ArrayRef<Diag> BaselineDiags,
   return PatchedDiags;
 }
 
+static std::string getPatchName(llvm::StringRef FileName) {
+  // This shouldn't coincide with any real file name.
+  llvm::SmallString<128> PatchName;
+  llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
+                          PreamblePatch::HeaderName);
+  return PatchName.str().str();
+}
+
 PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
                                     const ParseInputs &Modified,
                                     const PreambleData &Baseline,
@@ -778,11 +784,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
 
   PreamblePatch PP;
   PP.Baseline = &Baseline;
-  // This shouldn't coincide with any real file name.
-  llvm::SmallString<128> PatchName;
-  llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
-                          PreamblePatch::HeaderName);
-  PP.PatchFileName = PatchName.str().str();
+  PP.PatchFileName = getPatchName(FileName);
   PP.ModifiedBounds = ModifiedScan->Bounds;
 
   llvm::raw_string_ostream Patch(PP.PatchContents);
@@ -922,6 +924,14 @@ const MainFileMacros &PreamblePatch::mainFileMacros() const {
   if (PatchContents.empty())
     return Baseline->Macros;
   return PatchedMacros;
+}
+
+const FileEntry *PreamblePatch::getPatchEntry(llvm::StringRef MainFilePath,
+                                              const SourceManager &SM) {
+  auto PatchFilePath = getPatchName(MainFilePath);
+  if (auto File = SM.getFileManager().getFile(PatchFilePath))
+    return *File;
+  return nullptr;
 }
 } // namespace clangd
 } // namespace clang

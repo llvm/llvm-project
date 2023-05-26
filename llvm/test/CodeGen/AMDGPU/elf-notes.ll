@@ -25,40 +25,38 @@
 ; OSABI-UNK-ELF-NOT: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 ; OSABI-UNK-ELF-NOT: Unknown note type
 
-; OSABI-HSA: .hsa_code_object_version
-; OSABI-HSA: .hsa_code_object_isa
-; OSABI-HSA: .amd_amdgpu_isa "amdgcn-amd-amdhsa--gfx802"
-; OSABI-HSA: .amd_amdgpu_hsa_metadata
+; OSABI-HSA: amdhsa.target:   amdgcn-amd-amdhsa--gfx802
+; OSABI-HSA: amdhsa.version:
+; OSABI-HSA: .end_amdgpu_metadata
 ; OSABI-HSA-NOT: .amd_amdgpu_pal_metadata
 
-; OSABI-HSA-ELF: NT_AMD_HSA_CODE_OBJECT_VERSION (AMD HSA Code Object Version)
-; OSABI-HSA-ELF: NT_AMD_HSA_ISA_VERSION (AMD HSA ISA Version)
-; OSABI-HSA-ELF: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
-; OSABI-HSA-ELF: AMD HSA ISA Name:
-; OSABI-HSA-ELF: amdgcn-amd-amdhsa--gfx802
-; OSABI-HSA-ELF: NT_AMD_HSA_METADATA (AMD HSA Metadata)
-; OSABI-HSA-ELF: HSA Metadata:
+; OSABI-HSA-ELF: NT_AMDGPU_METADATA (AMDGPU Metadata)
 ; OSABI-HSA-ELF: ---
-; OSABI-HSA-ELF: Version: [ 1, 0 ]
-; OSABI-HSA-ELF: Kernels:
-; OSABI-HSA-ELF:   - Name:       elf_notes
-; OSABI-HSA-ELF:     SymbolName: 'elf_notes@kd'
-; OSABI-HSA-ELF:     CodeProps:
-; OSABI-HSA-ELF:       KernargSegmentSize: 0
-; OSABI-HSA-ELF:       GroupSegmentFixedSize: 0
-; OSABI-HSA-ELF:       PrivateSegmentFixedSize: 0
-; OSABI-HSA-ELF:       KernargSegmentAlign: 4
-; OSABI-HSA-ELF:       WavefrontSize:   64
-; OSABI-HSA-ELF:       NumSGPRs:        96
+; OSABI-HSA-ELF: amdhsa.kernels:
+; OSABI-HSA-ELF:   - .args:           []
+; OSABI-HSA-ELF:     .group_segment_fixed_size: 0
+; OSABI-HSA-ELF:     .kernarg_segment_align: 4
+; OSABI-HSA-ELF:     .kernarg_segment_size: 0
+; OSABI-HSA-ELF:     .max_flat_workgroup_size: 1024
+; OSABI-HSA-ELF:     .name:           elf_notes
+; OSABI-HSA-ELF:     .private_segment_fixed_size: 0
+; OSABI-HSA-ELF:     .sgpr_count:     96
+; OSABI-HSA-ELF:     .sgpr_spill_count: 0
+; OSABI-HSA-ELF:     .symbol:         elf_notes.kd
+; OSABI-HSA-ELF:     .vgpr_count:     0
+; OSABI-HSA-ELF:     .vgpr_spill_count: 0
+; OSABI-HSA-ELF:     .wavefront_size: 64
+; OSABI-HSA-ELF: amdhsa.target:   amdgcn-amd-amdhsa--gfx802
+; OSABI-HSA-ELF: amdhsa.version:
+; OSABI-HSA-ELF:   - 1
+; OSABI-HSA-ELF:   - 1
 ; OSABI-HSA-ELF: ...
 ; OSABI-HSA-ELF-NOT: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 
-; OSABI-PAL-NOT: .hsa_code_object_version
-; OSABI-PAL: .hsa_code_object_isa
-; OSABI-PAL: .amd_amdgpu_isa "amdgcn-amd-amdpal--gfx802"
+; OSABI-PAL: .amd_amdgpu_isa  "amdgcn-amd-amdpal--gfx802"
+; OSABI-PAL: .amdgpu_pal_metadata
 ; OSABI-PAL-NOT: .amd_amdgpu_hsa_metadata
 
-; OSABI-PAL-ELF: NT_AMD_HSA_ISA_VERSION (AMD HSA ISA Version)
 ; OSABI-PAL-ELF: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 ; OSABI-PAL-ELF: AMD HSA ISA Name:
 ; OSABI-PAL-ELF: amdgcn-amd-amdpal--gfx802
@@ -75,16 +73,6 @@
 ; OSABI-PAL-ELF:     .registers:
 ; OSABI-PAL-ELF:       11794:           11469504
 ; OSABI-PAL-ELF:       11795:           128
-; OSABI-PAL: amdpal.pipelines:
-; OSABI-PAL:   - .hardware_stages:
-; OSABI-PAL:       .cs:
-; OSABI-PAL:         .entry_point:    elf_notes
-; OSABI-PAL:         .scratch_memory_size: 0
-; OSABI-PAL:         .sgpr_count:     0x60
-; OSABI-PAL:         .vgpr_count:     0x1
-; OSABI-PAL:     .registers:
-; OSABI-PAL:       0x2e12 (COMPUTE_PGM_RSRC1): 0xaf02c0
-; OSABI-PAL:       0x2e13 (COMPUTE_PGM_RSRC2): 0x80
 
 ; R600-NOT: .hsa_code_object_version
 ; R600-NOT: .hsa_code_object_isa
@@ -97,4 +85,4 @@ define amdgpu_kernel void @elf_notes() {
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

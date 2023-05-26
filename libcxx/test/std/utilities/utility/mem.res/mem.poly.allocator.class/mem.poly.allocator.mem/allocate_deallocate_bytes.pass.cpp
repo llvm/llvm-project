@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
+// XFAIL: availability-pmr-missing
 
 // test_memory_resource requires RTTI for dynamic_cast
 // UNSUPPORTED: no-rtti
@@ -38,10 +37,10 @@ void test() {
     auto ptr                                      = static_cast<char*>(allocation);
     std::fill(ptr, ptr + 13, '0');
     assert(last_size == 13);
-    assert(last_alignment == alignof(max_align_t));
+    assert(last_alignment == alignof(std::max_align_t));
     allocator.deallocate_bytes(allocation, 13);
     assert(last_size == 13);
-    assert(last_alignment == alignof(max_align_t));
+    assert(last_alignment == alignof(std::max_align_t));
   }
   {
     void* allocation = allocator.allocate_bytes(13, 64);

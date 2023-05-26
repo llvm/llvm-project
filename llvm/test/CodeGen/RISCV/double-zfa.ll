@@ -170,7 +170,7 @@ declare double @round(double) nounwind readnone
 define double @fround_d_2(double %a) nounwind {
 ; CHECK-LABEL: fround_d_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fround.d fa0, fa0, rup
+; CHECK-NEXT:    fround.d fa0, fa0, rdn
 ; CHECK-NEXT:    ret
   %call = tail call double @floor(double %a) nounwind readnone
   ret double %call
@@ -182,7 +182,7 @@ declare double @floor(double) nounwind readnone
 define double @fround_d_3(double %a) nounwind {
 ; CHECK-LABEL: fround_d_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fround.d fa0, fa0, rdn
+; CHECK-NEXT:    fround.d fa0, fa0, rup
 ; CHECK-NEXT:    ret
   %call = tail call double @ceil(double %a) nounwind readnone
   ret double %call

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86InstrRelaxTables.h"
+#include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86MCSymbolizer.h"
 #include "bolt/Core/MCPlus.h"
@@ -49,21 +49,6 @@ static cl::opt<bool> X86StripRedundantAddressSize(
 } // namespace opts
 
 namespace {
-
-unsigned getShortBranchOpcode(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return Opcode;
-  case X86::JMP_2: return X86::JMP_1;
-  case X86::JMP_4: return X86::JMP_1;
-  case X86::JCC_2: return X86::JCC_1;
-  case X86::JCC_4: return X86::JCC_1;
-  }
-}
-
-unsigned getShortArithOpcode(unsigned Opcode) {
-  return X86::getShortOpcodeArith(Opcode);
-}
 
 bool isMOVSX64rm32(const MCInst &Inst) {
   return Inst.getOpcode() == X86::MOVSX64rm32;
@@ -281,7 +266,7 @@ public:
     case X86::PUSHFS16:
     case X86::PUSHGS16:
     case X86::PUSHSS16:
-    case X86::PUSHi16:
+    case X86::PUSH16i:
       return 2;
     case X86::PUSH32i8:
     case X86::PUSH32r:
@@ -295,7 +280,7 @@ public:
     case X86::PUSHFS32:
     case X86::PUSHGS32:
     case X86::PUSHSS32:
-    case X86::PUSHi32:
+    case X86::PUSH32i:
       return 4;
     case X86::PUSH64i32:
     case X86::PUSH64i8:
@@ -1159,13 +1144,9 @@ public:
       break;
     }
 
-    const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
-    for (int I = 0, E = MCII.getNumDefs(); I != E; ++I) {
-      const MCOperand &Operand = Inst.getOperand(I);
-      if (Operand.isReg() && Operand.getReg() == X86::RSP)
-        return true;
-    }
-    return false;
+    return any_of(defOperands(Inst), [](const MCOperand &Op) {
+      return Op.isReg() && Op.getReg() == X86::RSP;
+    });
   }
 
   bool
@@ -1298,19 +1279,11 @@ public:
 
     // If potential leak, check if it is not just writing to itself/sp/bp
     if (DoesLeak) {
-      for (int I = 0, E = NumDefs; I != E; ++I) {
-        const MCOperand &Operand = Inst.getOperand(I);
-        if (HasFramePointer && Operand.isReg() &&
-            SPBPAliases[Operand.getReg()]) {
-          DoesLeak = false;
-          break;
-        }
-        if (!HasFramePointer && Operand.isReg() &&
-            SPAliases[Operand.getReg()]) {
-          DoesLeak = false;
-          break;
-        }
-      }
+      DoesLeak = !any_of(defOperands(Inst), [&](const MCOperand &Operand) {
+        assert(Operand.isReg());
+        MCPhysReg Reg = Operand.getReg();
+        return HasFramePointer ? SPBPAliases[Reg] : SPAliases[Reg];
+      });
     }
     return DoesLeak;
   }
@@ -1737,7 +1710,7 @@ public:
       }
     } else {
       // If it's arithmetic instruction check if signed operand fits in 1 byte.
-      const unsigned ShortOpcode = getShortArithOpcode(OldOpcode);
+      const unsigned ShortOpcode = X86::getOpcodeForShortImmediateForm(OldOpcode);
       if (ShortOpcode != OldOpcode &&
           Inst.getOperand(MCPlus::getNumPrimeOperands(Inst) - 1).isImm()) {
         int64_t Imm =
@@ -2571,8 +2544,8 @@ public:
     default: {
       switch (getPushSize(Inst)) {
 
-      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSHi16}}}; break;
-      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSHi32}}}; break;
+      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSH16i}}}; break;
+      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSH32i}}}; break;
       case 8: I = {8, false, {{CHECK8, X86::PUSH64i8},
                               {CHECK32, X86::PUSH64i32},
                               {NOCHECK, Inst.getOpcode()}}}; break;
@@ -2867,6 +2840,21 @@ public:
 
   MCPhysReg getX86R11() const override { return X86::R11; }
 
+  unsigned getShortBranchOpcode(unsigned Opcode) const override {
+    switch (Opcode) {
+    default:
+      return Opcode;
+    case X86::JMP_2:
+      return X86::JMP_1;
+    case X86::JMP_4:
+      return X86::JMP_1;
+    case X86::JCC_2:
+      return X86::JCC_1;
+    case X86::JCC_4:
+      return X86::JCC_1;
+    }
+  }
+
   MCPhysReg getIntArgRegister(unsigned ArgNo) const override {
     // FIXME: this should depend on the calling convention.
     switch (ArgNo) {
@@ -3117,17 +3105,9 @@ public:
     // Check if the target address expression used in the original indirect call
     // uses the stack pointer, which we are going to clobber.
     static BitVector SPAliases(getAliases(X86::RSP));
-    bool UsesSP = false;
-    // Skip defs.
-    for (unsigned I = Info->get(CallInst.getOpcode()).getNumDefs(),
-                  E = MCPlus::getNumPrimeOperands(CallInst);
-         I != E; ++I) {
-      const MCOperand &Operand = CallInst.getOperand(I);
-      if (Operand.isReg() && SPAliases[Operand.getReg()]) {
-        UsesSP = true;
-        break;
-      }
-    }
+    bool UsesSP = any_of(useOperands(CallInst), [&](const MCOperand &Op) {
+      return Op.isReg() && SPAliases[Op.getReg()];
+    });
 
     InstructionListType Insts;
     MCPhysReg TempReg = getIntArgRegister(0);

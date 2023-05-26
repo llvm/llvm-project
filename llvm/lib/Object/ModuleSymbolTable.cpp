@@ -174,12 +174,12 @@ void ModuleSymbolTable::CollectAsmSymvers(
 }
 
 void ModuleSymbolTable::printSymbolName(raw_ostream &OS, Symbol S) const {
-  if (S.is<AsmSymbol *>()) {
-    OS << S.get<AsmSymbol *>()->first;
+  if (isa<AsmSymbol *>(S)) {
+    OS << cast<AsmSymbol *>(S)->first;
     return;
   }
 
-  auto *GV = S.get<GlobalValue *>();
+  auto *GV = cast<GlobalValue *>(S);
   if (GV->hasDLLImportStorageClass())
     OS << "__imp_";
 
@@ -187,10 +187,10 @@ void ModuleSymbolTable::printSymbolName(raw_ostream &OS, Symbol S) const {
 }
 
 uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
-  if (S.is<AsmSymbol *>())
-    return S.get<AsmSymbol *>()->second;
+  if (isa<AsmSymbol *>(S))
+    return cast<AsmSymbol *>(S)->second;
 
-  auto *GV = S.get<GlobalValue *>();
+  auto *GV = cast<GlobalValue *>(S);
 
   uint32_t Res = BasicSymbolRef::SF_None;
   if (GV->isDeclarationForLinker())

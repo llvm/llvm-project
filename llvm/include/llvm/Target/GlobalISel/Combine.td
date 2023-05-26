@@ -243,6 +243,14 @@ def reduce_shl_of_extend : GICombineRule<
          [{ return Helper.matchCombineShlOfExtend(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineShlOfExtend(*${mi}, ${matchinfo}); }])>;
 
+// Combine (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
+// Combine (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
+def commute_shift : GICombineRule<
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHL):$d,
+         [{ return Helper.matchCommuteShift(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
+
 def narrow_binop_feeding_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND):$root,
@@ -461,13 +469,25 @@ def simplify_add_to_sub: GICombineRule <
 >;
 
 // Fold fp_op(cst) to the constant result of the floating point operation.
-def constant_fp_op_matchinfo: GIDefMatchData<"std::optional<APFloat>">;
-def constant_fp_op: GICombineRule <
-  (defs root:$root, constant_fp_op_matchinfo:$info),
-  (match (wip_match_opcode G_FNEG, G_FABS, G_FPTRUNC, G_FSQRT, G_FLOG2):$root,
-    [{ return Helper.matchCombineConstantFoldFpUnary(*${root}, ${info}); }]),
-  (apply [{ Helper.applyCombineConstantFoldFpUnary(*${root}, ${info}); }])
+class constant_fold_unary_fp_op_rule<Instruction opcode> : GICombineRule <
+  (defs root:$dst),
+  (match (opcode $dst, $src0):$root, (G_FCONSTANT $src0, $cst)),
+  (apply [{ Helper.applyCombineConstantFoldFpUnary(*${root}, ${cst}.getFPImm()); }])
 >;
+
+def constant_fold_fneg : constant_fold_unary_fp_op_rule<G_FNEG>;
+def constant_fold_fabs : constant_fold_unary_fp_op_rule<G_FABS>;
+def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
+def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
+def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
+
+def constant_fold_fp_ops : GICombineGroup<[
+  constant_fold_fneg,
+  constant_fold_fabs,
+  constant_fold_fsqrt,
+  constant_fold_flog2,
+  constant_fold_fptrunc
+]>;
 
 // Fold int2ptr(ptr2int(x)) -> x
 def p2i_to_i2p: GICombineRule<
@@ -714,14 +734,6 @@ def load_or_combine : GICombineRule<
   (match (wip_match_opcode G_OR):$root,
     [{ return Helper.matchLoadOrCombine(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])>;
-
-
-def truncstore_merge_matcdata : GIDefMatchData<"MergeTruncStoresInfo">;
-def truncstore_merge : GICombineRule<
-  (defs root:$root, truncstore_merge_matcdata:$info),
-  (match (wip_match_opcode G_STORE):$root,
-   [{ return Helper.matchTruncStoreMerge(*${root}, ${info}); }]),
-  (apply [{ Helper.applyTruncStoreMerge(*${root}, ${info}); }])>;
 
 def extend_through_phis_matchdata: GIDefMatchData<"MachineInstr*">;
 def extend_through_phis : GICombineRule<
@@ -1036,6 +1048,14 @@ def bitcast_bitcast_fold : GICombineRule<
       [{ return MRI.getType(${src0}.getReg()) == MRI.getType(${dst}.getReg()); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${src0}.getReg()); }])>;
 
+
+def fptrunc_fpext_fold : GICombineRule<
+  (defs root:$dst),
+  (match (G_FPTRUNC $dst, $src1):$op, (G_FPEXT $src1, $src0),
+      [{ return MRI.getType(${src0}.getReg()) == MRI.getType(${dst}.getReg()); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${src0}.getReg()); }])>;
+
+
 def select_to_minmax: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_SELECT):$root,
@@ -1063,9 +1083,9 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         add_sub_reg, buildvector_identity_fold,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
-                                        bitcast_bitcast_fold]>;
+                                        bitcast_bitcast_fold, fptrunc_fpext_fold]>;
 
-def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
+def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
                                      addo_by_0, adde_to_addo,
                                      combine_minmax_nan]>;
@@ -1105,7 +1125,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shift,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
+    div_rem_to_divrem, funnel_shift_combines, commute_shift,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,

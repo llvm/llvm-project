@@ -429,18 +429,16 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
     return true;
 
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
-    if (CI->getBitWidth() > 64 ||
-        (CI->getBitWidth() & 7) != 0)
+    if ((CI->getBitWidth() & 7) != 0)
       return false;
-
-    uint64_t Val = CI->getZExtValue();
+    const APInt &Val = CI->getValue();
     unsigned IntBytes = unsigned(CI->getBitWidth()/8);
 
     for (unsigned i = 0; i != BytesLeft && ByteOffset != IntBytes; ++i) {
-      int n = ByteOffset;
+      unsigned n = ByteOffset;
       if (!DL.isLittleEndian())
         n = IntBytes - n - 1;
-      CurPtr[i] = (unsigned char)(Val >> (n * 8));
+      CurPtr[i] = Val.extractBits(8, n * 8).getZExtValue();
       ++ByteOffset;
     }
     return true;
@@ -501,16 +499,22 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
   if (isa<ConstantArray>(C) || isa<ConstantVector>(C) ||
       isa<ConstantDataSequential>(C)) {
-    uint64_t NumElts;
+    uint64_t NumElts, EltSize;
     Type *EltTy;
     if (auto *AT = dyn_cast<ArrayType>(C->getType())) {
       NumElts = AT->getNumElements();
       EltTy = AT->getElementType();
+      EltSize = DL.getTypeAllocSize(EltTy);
     } else {
       NumElts = cast<FixedVectorType>(C->getType())->getNumElements();
       EltTy = cast<FixedVectorType>(C->getType())->getElementType();
+      // TODO: For non-byte-sized vectors, current implementation assumes there is
+      // padding to the next byte boundary between elements.
+      if (!DL.typeSizeEqualsStoreSize(EltTy))
+        return false;
+
+      EltSize = DL.getTypeStoreSize(EltTy);
     }
-    uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     uint64_t Index = ByteOffset / EltSize;
     uint64_t Offset = ByteOffset - Index * EltSize;
 
@@ -1326,7 +1330,11 @@ Constant *llvm::ConstantFoldCompareInstOperands(
   // Flush any denormal constant float input according to denormal handling
   // mode.
   Ops0 = FlushFPConstant(Ops0, I, /* IsOutput */ false);
+  if (!Ops0)
+    return nullptr;
   Ops1 = FlushFPConstant(Ops1, I, /* IsOutput */ false);
+  if (!Ops1)
+    return nullptr;
 
   return ConstantExpr::getCompare(Predicate, Ops0, Ops1);
 }
@@ -1361,6 +1369,10 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *I,
     return Operand;
 
   const APFloat &APF = CFP->getValueAPF();
+  // TODO: Should this canonicalize nans?
+  if (!APF.isDenormal())
+    return Operand;
+
   Type *Ty = CFP->getType();
   DenormalMode DenormMode =
       I->getFunction()->getDenormalMode(Ty->getFltSemantics());
@@ -1369,7 +1381,8 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *I,
   switch (Mode) {
   default:
     llvm_unreachable("unknown denormal mode");
-    return Operand;
+  case DenormalMode::Dynamic:
+    return nullptr;
   case DenormalMode::IEEE:
     return Operand;
   case DenormalMode::PreserveSign:
@@ -1395,7 +1408,11 @@ Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
   if (Instruction::isBinaryOp(Opcode)) {
     // Flush denormal inputs if needed.
     Constant *Op0 = FlushFPConstant(LHS, I, /* IsOutput */ false);
+    if (!Op0)
+      return nullptr;
     Constant *Op1 = FlushFPConstant(RHS, I, /* IsOutput */ false);
+    if (!Op1)
+      return nullptr;
 
     // Calculate constant result.
     Constant *C = ConstantFoldBinaryOpOperands(Opcode, Op0, Op1, DL);
@@ -1969,13 +1986,26 @@ static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
   if (Src.isDenormal() && CI->getParent() && CI->getFunction()) {
     DenormalMode DenormMode =
         CI->getFunction()->getDenormalMode(Src.getSemantics());
+
+    // TODO: Should allow folding for pure IEEE.
     if (DenormMode == DenormalMode::getIEEE())
+      return nullptr;
+
+    if (DenormMode == DenormalMode::getDynamic())
+      return nullptr;
+
+    // If we know if either input or output is flushed, we can fold.
+    if ((DenormMode.Input == DenormalMode::Dynamic &&
+         DenormMode.Output == DenormalMode::IEEE) ||
+        (DenormMode.Input == DenormalMode::IEEE &&
+         DenormMode.Output == DenormalMode::Dynamic))
       return nullptr;
 
     bool IsPositive =
         (!Src.isNegative() || DenormMode.Input == DenormalMode::PositiveZero ||
          (DenormMode.Output == DenormalMode::PositiveZero &&
           DenormMode.Input == DenormalMode::IEEE));
+
     return ConstantFP::get(CI->getContext(),
                            APFloat::getZero(Src.getSemantics(), !IsPositive));
   }
@@ -2583,7 +2613,7 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         // The legacy behaviour is that multiplying +/- 0.0 by anything, even
         // NaN or infinity, gives +0.0.
         if (Op1V.isZero() || Op2V.isZero())
-          return ConstantFP::getNullValue(Ty);
+          return ConstantFP::getZero(Ty);
         return ConstantFP::get(Ty->getContext(), Op1V * Op2V);
       }
 

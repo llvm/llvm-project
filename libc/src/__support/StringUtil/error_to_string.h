@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/span.h"
-#include "src/__support/CPP/string_view.h"
-
 #ifndef LLVM_LIBC_SRC_SUPPORT_ERROR_TO_STRING_H
 #define LLVM_LIBC_SRC_SUPPORT_ERROR_TO_STRING_H
+
+#include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 
 namespace __llvm_libc {
 

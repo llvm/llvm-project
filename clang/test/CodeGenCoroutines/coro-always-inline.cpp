@@ -33,11 +33,8 @@ struct coroutine_traits {
 
 // CHECK-LABEL: @_Z3foov
 // CHECK-LABEL: entry:
-// CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %ref.tmp{{.*}})
-// CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %ref.tmp{{.*}})
-
-// CHECK: call void @llvm.lifetime.start.p0(i64 1, ptr %ref.tmp{{.*}})
-// CHECK: call void @llvm.lifetime.end.p0(i64 1, ptr %ref.tmp{{.*}})
+// CHECK: %ref.tmp.reload.addr = getelementptr
+// CHECK: %ref.tmp4.reload.addr = getelementptr
 void foo() { co_return; }
 
 // Check that bar is not inlined even it's marked as always_inline.

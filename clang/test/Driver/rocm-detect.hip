@@ -25,6 +25,31 @@
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-ENV %s
 
+// Test interaction between environment variables HIP_PATH and ROCM_PATH.
+// Device libs are found under ROCM_PATH. HIP include files and HIP runtime library
+// are found under HIP_PATH.
+
+// RUN: rm -rf %t/myhip
+// RUN: mkdir -p %t/myhip
+// RUN: cp -r %S/Inputs/rocm/bin %t/myhip
+// RUN: env ROCM_PATH=%S/Inputs/rocm HIP_PATH=%t/myhip \
+// RUN:   %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 --hip-link \
+// RUN:   --print-rocm-search-dirs %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ROCM-ENV,HIP-PATH %s
+
+// Test --hip-path option overrides environment variable HIP_PATH.
+
+// RUN: rm -rf %t/myhip
+// RUN: rm -rf %t/myhip_nouse
+// RUN: mkdir -p %t/myhip
+// RUN: mkdir -p %t/myhip_nouse
+// RUN: cp -r %S/Inputs/rocm/bin %t/myhip
+// RUN: cp -r %S/Inputs/rocm/bin %t/myhip_nouse
+// RUN: env ROCM_PATH=%S/Inputs/rocm HIP_PATH=%t/myhip_nouse \
+// RUN:   %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 --hip-link \
+// RUN:   --hip-path=%t/myhip --print-rocm-search-dirs %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ROCM-ENV,HIP-PATH %s
+
 // Test detecting latest /opt/rocm-{release} directory.
 // RUN: rm -rf %T/opt
 // RUN: mkdir -p %T/opt
@@ -75,7 +100,11 @@
 
 // COMMON: "-triple" "amdgcn-amd-amdhsa"
 
-// ROCM-ENV: ROCm installation search path: {{.*}}/Inputs/rocm
+// ROCM-ENV: ROCm installation search path: [[ROCM_PATH:.*/Inputs/rocm]]
+
+// HIP-PATH: "-mlink-builtin-bitcode" "[[ROCM_PATH]]/amdgcn/bitcode/oclc_isa_version_1010.bc"
+// HIP-PATH: "-idirafter" "[[HIP_PATH:.*/myhip]]/include"
+// HIP-PATH: "-L[[HIP_PATH]]/lib" "-lamdhip64"
 
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0

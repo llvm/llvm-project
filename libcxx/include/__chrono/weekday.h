@@ -35,7 +35,7 @@ private:
     unsigned char __wd_;
     _LIBCPP_HIDE_FROM_ABI static constexpr unsigned char __weekday_from_days(int __days) noexcept;
 public:
-  _LIBCPP_HIDE_FROM_ABI weekday() = default;
+  weekday() = default;
   _LIBCPP_HIDE_FROM_ABI inline explicit constexpr weekday(unsigned __val) noexcept : __wd_(static_cast<unsigned char>(__val == 7 ? 0 : __val)) {}
   _LIBCPP_HIDE_FROM_ABI inline constexpr          weekday(const sys_days& __sysd) noexcept
           : __wd_(__weekday_from_days(__sysd.time_since_epoch().count())) {}
@@ -126,7 +126,7 @@ private:
     chrono::weekday __wd_;
     unsigned char   __idx_;
 public:
-    _LIBCPP_HIDE_FROM_ABI weekday_indexed() = default;
+    weekday_indexed() = default;
     _LIBCPP_HIDE_FROM_ABI inline constexpr weekday_indexed(const chrono::weekday& __wdval, unsigned __idxval) noexcept
         : __wd_{__wdval}, __idx_(__idxval) {}
     _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::weekday weekday() const noexcept { return __wd_; }

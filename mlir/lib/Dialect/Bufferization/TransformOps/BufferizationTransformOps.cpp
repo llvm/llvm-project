@@ -11,11 +11,11 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/IR/FunctionInterfaces.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -36,17 +36,17 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
   options.testAnalysisOnly = getTestAnalysisOnly();
   options.printConflicts = getPrintConflicts();
   if (getFunctionBoundaryTypeConversion().has_value())
-    options.functionBoundaryTypeConversion =
-        *getFunctionBoundaryTypeConversion();
+    options.setFunctionBoundaryTypeConversion(
+        *getFunctionBoundaryTypeConversion());
 
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  auto payloadOps = state.getPayloadOps(getTarget());
   for (Operation *target : payloadOps) {
+    if (!isa<ModuleOp, FunctionOpInterface>(target))
+      return emitSilenceableError() << "expected module or function target";
     auto moduleOp = dyn_cast<ModuleOp>(target);
-    if (getTargetIsModule() && !moduleOp)
-      return emitSilenceableError() << "expected ModuleOp target";
     if (options.bufferizeFunctionBoundaries) {
       if (!moduleOp)
-        return emitSilenceableError() << "expected ModuleOp target";
+        return emitSilenceableError() << "expected module target";
       if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options)))
         return emitSilenceableError() << "bufferization failed";
     } else {
@@ -55,19 +55,40 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
     }
   }
 
+  // This transform op is currently restricted to ModuleOps and function ops.
+  // Such ops are modified in-place.
+  transformResults.set(cast<OpResult>(getTransformed()), payloadOps);
   return DiagnosedSilenceableFailure::success();
 }
 
-void transform::OneShotBufferizeOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  // Handles that are not modules are not longer usable.
-  if (!getTargetIsModule()) {
-    consumesHandle(getTarget(), effects);
-  } else {
-    onlyReadsHandle(getTarget(), effects);
-  }
+//===----------------------------------------------------------------------===//
+// EliminateEmptyTensorsOp
+//===----------------------------------------------------------------------===//
 
+void transform::EliminateEmptyTensorsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTarget(), effects);
   modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+transform::EliminateEmptyTensorsOp::apply(TransformResults &transformResults,
+                                          TransformState &state) {
+  IRRewriter rewriter(getContext());
+  OneShotBufferizationOptions options;
+  options.allowReturnAllocs = true;
+
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    OneShotAnalysisState state(target, options);
+    if (failed(analyzeOp(target, state)))
+      return mlir::emitSilenceableFailure(target->getLoc())
+             << "failed to analyze op";
+    if (failed(bufferization::insertSliceAnchoredEmptyTensorEliminationStep(
+            rewriter, target, state)))
+      return mlir::emitSilenceableFailure(target->getLoc())
+             << "failed to eliminate insert_slice anchored tensor.empty ops";
+  }
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -100,8 +121,6 @@ public:
   using Base::Base;
 
   void init() {
-    declareDependentDialect<pdl::PDLDialect>();
-
     declareGeneratedDialect<bufferization::BufferizationDialect>();
     declareGeneratedDialect<memref::MemRefDialect>();
 

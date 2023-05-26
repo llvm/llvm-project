@@ -1884,7 +1884,7 @@ private:
           C.SemaResult->Kind == CodeCompletionResult::RK_Macro) ||
          (C.IndexResult &&
           C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro)) &&
-        !C.Name.startswith_insensitive(Filter->pattern()))
+        !C.Name.starts_with_insensitive(Filter->pattern()))
       return std::nullopt;
     return Filter->match(C.Name);
   }
@@ -2242,7 +2242,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   }
   LSP.sortText = sortText(Score.Total, FilterText);
   LSP.filterText = FilterText;
-  LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name};
+  LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name, ""};
   // Merge continuous additionalTextEdits into main edit. The main motivation
   // behind this is to help LSP clients, it seems most of them are confused when
   // they are provided with additionalTextEdits that are consecutive to main

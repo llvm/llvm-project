@@ -482,11 +482,11 @@ void foo() {
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[CSIZE_CASTED]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[CSIZE_CASTED]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @.omp_outlined., i64 [[TMP2]], ptr [[TMP3]])
+// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 2, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l55.omp_outlined, i64 [[TMP2]], ptr [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN1C3barER10descriptorIfE_l55.omp_outlined
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[CSIZE:%.*]], ptr noundef nonnull align 8 dereferenceable(40) [[D:%.*]]) #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8

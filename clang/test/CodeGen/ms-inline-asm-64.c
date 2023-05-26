@@ -68,7 +68,7 @@ void t5(void) {
   }
   // CHECK: t5
   // CHECK: call void asm sideeffect inteldialect
-  // CHECK-SAME: call qword ptr ${0:P}
-  // CHECK-SAME: jmp qword ptr ${1:P}
+  // CHECK-SAME: call ${0:P}
+  // CHECK-SAME: jmp ${1:P}
   // CHECK-SAME: "*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void (...)) @bar, ptr elementtype(void (...)) @bar)
 }

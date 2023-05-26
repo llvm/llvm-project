@@ -33,7 +33,7 @@ protected:
   InsertedThunksTy InsertedThunks;
   void doInitialization(Module &M) {}
   void createThunkFunction(MachineModuleInfo &MMI, StringRef Name,
-                           bool Comdat = true);
+                           bool Comdat = true, StringRef TargetAttrs = "");
 
 public:
   void init(Module &M) {
@@ -46,7 +46,8 @@ public:
 
 template <typename Derived, typename InsertedThunksTy>
 void ThunkInserter<Derived, InsertedThunksTy>::createThunkFunction(
-    MachineModuleInfo &MMI, StringRef Name, bool Comdat) {
+    MachineModuleInfo &MMI, StringRef Name, bool Comdat,
+    StringRef TargetAttrs) {
   assert(Name.startswith(getDerived().getThunkPrefix()) &&
          "Created a thunk with an unexpected prefix!");
 
@@ -67,6 +68,8 @@ void ThunkInserter<Derived, InsertedThunksTy>::createThunkFunction(
   AttrBuilder B(Ctx);
   B.addAttribute(llvm::Attribute::NoUnwind);
   B.addAttribute(llvm::Attribute::Naked);
+  if (TargetAttrs != "")
+    B.addAttribute("target-features", TargetAttrs);
   F->addFnAttrs(B);
 
   // Populate our function a bit so that we can verify.

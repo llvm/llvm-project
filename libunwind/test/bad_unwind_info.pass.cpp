@@ -10,7 +10,7 @@
 // Ensure that libunwind doesn't crash on invalid info; the Linux aarch64
 // sigreturn frame check would previously attempt to access invalid memory in
 // this scenario.
-// REQUIRES: linux && (target={{aarch64-.+}} || target={{s390x-.+}} || target={{x86_64-.+}})
+// REQUIRES: target={{(aarch64|s390x|x86_64)-.+linux.*}}
 
 // GCC doesn't support __attribute__((naked)) on AArch64.
 // UNSUPPORTED: gcc

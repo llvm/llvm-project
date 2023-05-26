@@ -157,3 +157,24 @@ int h() {
 }
 
 }
+
+namespace NestedConstraintsDiffer {
+  template<typename T> concept A = true;
+  template<typename T> concept B = A<T> && true;
+
+  // This is valid: we can compare the constraints of the two overloads of `f`
+  // because the template-parameters are equivalent, despite having different
+  // constraints.
+  template<typename T> struct Z {};
+  template<template<typename T> typename> struct X {};
+  template<A U, template<A T> typename TT> void f(U, X<TT>) {}
+  template<B U, template<B T> typename TT> void f(U, X<TT>) {}
+  void g(X<Z> x) { f(0, x); }
+
+  // Same thing with a constrained non-type parameter.
+  template<auto N> struct W {};
+  template<template<auto> typename> struct Y {};
+  template<A U, template<A auto> typename TT> void h(U, Y<TT>) {}
+  template<B U, template<B auto> typename TT> void h(U, Y<TT>) {}
+  void i(Y<W> x) { h(0, x); }
+}

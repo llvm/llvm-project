@@ -23,6 +23,29 @@ class CoreAPIsStandardTest : public CoreAPIsBasedStandardTest {};
 
 namespace {
 
+TEST_F(CoreAPIsStandardTest, JITDylibAddToLinkOrder) {
+  // Check that the JITDylib::addToLinkOrder methods behave as expected.
+  auto &JD2 = ES.createBareJITDylib("JD2");
+  auto &JD3 = ES.createBareJITDylib("JD3");
+
+  JD.addToLinkOrder(JD2);
+  JD.withLinkOrderDo([&](const JITDylibSearchOrder &SO) {
+    EXPECT_EQ(SO.size(), 2U);
+    EXPECT_EQ(SO[0].first, &JD);
+    EXPECT_EQ(SO[1].first, &JD2);
+  });
+
+  JD.addToLinkOrder(makeJITDylibSearchOrder({&JD2, &JD3}));
+  JD.withLinkOrderDo([&](const JITDylibSearchOrder &SO) {
+    // JD2 was already in the search order, so we expect just one extra item
+    // here.
+    EXPECT_EQ(SO.size(), 3U);
+    EXPECT_EQ(SO[0].first, &JD);
+    EXPECT_EQ(SO[1].first, &JD2);
+    EXPECT_EQ(SO[2].first, &JD3);
+  });
+}
+
 TEST_F(CoreAPIsStandardTest, BasicSuccessfulLookup) {
   bool OnCompletionRun = false;
 
@@ -260,7 +283,7 @@ TEST_F(CoreAPIsStandardTest, DiscardInitSymbol) {
 
 TEST_F(CoreAPIsStandardTest, LookupWithHiddenSymbols) {
   auto BarHiddenFlags = BarSym.getFlags() & ~JITSymbolFlags::Exported;
-  auto BarHiddenSym = JITEvaluatedSymbol(BarSym.getAddress(), BarHiddenFlags);
+  auto BarHiddenSym = ExecutorSymbolDef(BarSym.getAddress(), BarHiddenFlags);
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarHiddenSym}})));
 
@@ -1084,8 +1107,8 @@ TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
 }
 
 TEST_F(CoreAPIsStandardTest, GeneratorTest) {
-  JITEvaluatedSymbol BazHiddenSym(
-      BazSym.getAddress(), BazSym.getFlags() & ~JITSymbolFlags::Exported);
+  ExecutorSymbolDef BazHiddenSym(BazSym.getAddress(),
+                                 BazSym.getFlags() & ~JITSymbolFlags::Exported);
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Baz, BazHiddenSym}})));
 
   class TestGenerator : public DefinitionGenerator {

@@ -26,6 +26,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   set(LLVM_COMMON_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../cmake")
   set(LLVM_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../llvm/cmake")
+  set(CLANG_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../clang/cmake")
 
   # Add path for custom modules
   list(INSERT CMAKE_MODULE_PATH 0
@@ -35,8 +36,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     "${LLVM_COMMON_CMAKE_UTILS}/Modules"
     "${LLVM_CMAKE_UTILS}"
     "${LLVM_CMAKE_UTILS}/modules"
+    "${CLANG_CMAKE_UTILS}/modules"
     )
 
+  include(AddClang)
   include(AddLLVM)
   include(AddFlang)
   include(HandleLLVMOptions)
@@ -130,6 +133,7 @@ add_flang_library(FortranRuntime
   memory.cpp
   misc-intrinsic.cpp
   namelist.cpp
+  non-tbp-dio.cpp
   numeric.cpp
   ragged.cpp
   random.cpp
@@ -140,6 +144,7 @@ add_flang_library(FortranRuntime
   stop.cpp
   sum.cpp
   support.cpp
+  temporary-stack.cpp
   terminator.cpp
   time-intrinsic.cpp
   tools.cpp

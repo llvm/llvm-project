@@ -8,6 +8,7 @@
 
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDataExtractor.h"
+#include "DWARFFormValue.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -23,26 +24,26 @@ void DWARFAbbreviationDeclarationSet::Clear() {
 llvm::Error
 DWARFAbbreviationDeclarationSet::extract(const DWARFDataExtractor &data,
                                          lldb::offset_t *offset_ptr) {
+  llvm::DataExtractor llvm_data = data.GetAsLLVM();
   const lldb::offset_t begin_offset = *offset_ptr;
   m_offset = begin_offset;
   Clear();
   DWARFAbbreviationDeclaration abbrevDeclaration;
-  dw_uleb128_t prev_abbr_code = 0;
+  uint32_t prev_abbr_code = 0;
   while (true) {
-    llvm::Expected<DWARFEnumState> es =
-        abbrevDeclaration.extract(data, offset_ptr);
+    llvm::Expected<llvm::DWARFAbbreviationDeclaration::ExtractState> es =
+        abbrevDeclaration.extract(llvm_data, offset_ptr);
     if (!es)
       return es.takeError();
-    if (*es == DWARFEnumState::Complete)
+    if (*es == llvm::DWARFAbbreviationDeclaration::ExtractState::Complete)
       break;
-    m_decls.push_back(abbrevDeclaration);
     if (m_idx_offset == 0)
-      m_idx_offset = abbrevDeclaration.Code();
-    else if (prev_abbr_code + 1 != abbrevDeclaration.Code()) {
-      // Out of order indexes, we can't do O(1) lookups...
+      m_idx_offset = abbrevDeclaration.getCode();
+    else if (prev_abbr_code + 1 != abbrevDeclaration.getCode())
       m_idx_offset = UINT32_MAX;
-    }
-    prev_abbr_code = abbrevDeclaration.Code();
+
+    prev_abbr_code = abbrevDeclaration.getCode();
+    m_decls.push_back(abbrevDeclaration);
   }
   return llvm::ErrorSuccess();
 }
@@ -50,32 +51,26 @@ DWARFAbbreviationDeclarationSet::extract(const DWARFDataExtractor &data,
 // DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration()
 const DWARFAbbreviationDeclaration *
 DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
-    dw_uleb128_t abbrCode) const {
+    uint32_t abbrCode) const {
   if (m_idx_offset == UINT32_MAX) {
-    DWARFAbbreviationDeclarationCollConstIter pos;
-    DWARFAbbreviationDeclarationCollConstIter end = m_decls.end();
-    for (pos = m_decls.begin(); pos != end; ++pos) {
-      if (pos->Code() == abbrCode)
-        return &(*pos);
+    for (const auto &decl : m_decls) {
+      if (decl.getCode() == abbrCode)
+        return &decl;
     }
-  } else {
-    uint32_t idx = abbrCode - m_idx_offset;
-    if (idx < m_decls.size())
-      return &m_decls[idx];
+    return nullptr;
   }
-  return nullptr;
+  if (abbrCode < m_idx_offset || abbrCode >= m_idx_offset + m_decls.size())
+    return nullptr;
+  return &m_decls[abbrCode - m_idx_offset];
 }
-
 
 // DWARFAbbreviationDeclarationSet::GetUnsupportedForms()
 void DWARFAbbreviationDeclarationSet::GetUnsupportedForms(
     std::set<dw_form_t> &invalid_forms) const {
-  for (const auto &abbr_decl : m_decls) {
-    const size_t num_attrs = abbr_decl.NumAttributes();
-    for (size_t i=0; i<num_attrs; ++i) {
-      dw_form_t form = abbr_decl.GetFormByIndex(i);
-      if (!DWARFFormValue::FormIsSupported(form))
-        invalid_forms.insert(form);
+  for (const auto &decl : m_decls) {
+    for (const auto &attr : decl.attributes()) {
+      if (!DWARFFormValue::FormIsSupported(attr.Form))
+        invalid_forms.insert(attr.Form);
     }
   }
 }

@@ -7,14 +7,14 @@
 // RUN: %clang   -x c   -fsanitize=implicit-integer-arithmetic-value-change %s -DV6 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V6
 // RUN: %clang   -x c   -fsanitize=implicit-integer-arithmetic-value-change %s -DV7 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V7
 
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV0 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V0
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV1 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V1
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV2 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V2
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV3 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V3
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV4 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V4
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV5 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V5
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV6 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V6
-// RUN: %clang   -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV7 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V7
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV0 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V0
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV1 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V1
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV2 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V2
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV3 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V3
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV4 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V4
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV5 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V5
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV6 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V6
+// RUN: %clangxx -x c++ -fsanitize=implicit-integer-arithmetic-value-change %s -DV7 -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion" --check-prefixes=CHECK-V7
 
 #include <stdint.h>
 

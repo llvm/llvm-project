@@ -129,9 +129,9 @@ static void MaximalByteOffsetRange(
     if (extent > 0) {
       auto sm{dim.ByteStride()};
       if (sm < 0) {
-        least += extent * sm;
+        least += (extent - 1) * sm;
       } else {
-        most += extent * sm;
+        most += (extent - 1) * sm;
       }
     }
   }
@@ -223,12 +223,13 @@ static void BlankPadCharacterAssignment(Descriptor &to, const Descriptor &from,
     SubscriptValue toAt[], SubscriptValue fromAt[], std::size_t elements,
     std::size_t toElementBytes, std::size_t fromElementBytes) {
   std::size_t padding{(toElementBytes - fromElementBytes) / sizeof(CHAR)};
+  std::size_t copiedCharacters{fromElementBytes / sizeof(CHAR)};
   for (; elements-- > 0;
        to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     CHAR *p{to.Element<CHAR>(toAt)};
     std::memmove(
         p, from.Element<std::add_const_t<CHAR>>(fromAt), fromElementBytes);
-    p += fromElementBytes;
+    p += copiedCharacters;
     for (auto n{padding}; n-- > 0;) {
       *p++ = CHAR{' '};
     }
@@ -293,6 +294,10 @@ static void Assign(
       StaticDescriptor<maxRank, true, 16> staticDesc;
       Descriptor &newFrom{staticDesc.descriptor()};
       std::memcpy(&newFrom, &from, descBytes);
+      // Pretend the temporary descriptor is for an ALLOCATABLE
+      // entity, otherwise, the Deallocate() below will not
+      // free the descriptor memory.
+      newFrom.raw().attribute = CFI_attribute_allocatable;
       auto stat{ReturnError(terminator, newFrom.Allocate())};
       if (stat == StatOk) {
         char *toAt{newFrom.OffsetElement()};
@@ -381,10 +386,7 @@ static void Assign(
       // when the components are polymorphic; when they're not, they're both
       // not, and their declared types will match.
       int nestedFlags{MaybeReallocate | PolymorphicLHS};
-      if (comp.genre() != typeInfo::Component::Genre::Allocatable &&
-          (flags & ComponentCanBeDefinedAssignment)) {
-        // Allocatable components are assigned via intrinsic assignment,
-        // not defined assignment (see F'2018 10.2.1.3 paragraph 13).
+      if (flags & ComponentCanBeDefinedAssignment) {
         nestedFlags |= CanBeDefinedAssignment | ComponentCanBeDefinedAssignment;
       }
       switch (comp.genre()) {
@@ -441,6 +443,15 @@ static void Assign(
             }
             if (!fromDesc->IsAllocated()) {
               continue; // F'2018 10.2.1.3(13)(2)
+            }
+
+            // F'2018 10.2.1.3(13) (2)
+            // If from is allocated, allocate to with the same type.
+            if (nestedFlags & CanBeDefinedAssignment) {
+              if (AllocateAssignmentLHS(
+                      *toDesc, *fromDesc, terminator, nestedFlags) != StatOk) {
+                return;
+              }
             }
           }
           Assign(*toDesc, *fromDesc, terminator, nestedFlags);
@@ -539,7 +550,41 @@ void RTNAME(Assign)(Descriptor &to, const Descriptor &from,
 void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
+  // Initialize the "to" if it is of derived type that needs initialization.
+  if (const DescriptorAddendum * addendum{to.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (!derived->noInitializationNeeded()) {
+        if (ReturnError(terminator, Initialize(to, *derived, terminator)) !=
+            StatOk) {
+          return;
+        }
+      }
+    }
+  }
+
   Assign(to, from, terminator, PolymorphicLHS);
+}
+
+void RTNAME(CopyOutAssign)(Descriptor &to, const Descriptor &from,
+    bool skipToInit, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  // Initialize the "to" if it is of derived type that needs initialization.
+  if (!skipToInit) {
+    if (const DescriptorAddendum * addendum{to.Addendum()}) {
+      if (const auto *derived{addendum->derivedType()}) {
+        if (!derived->noInitializationNeeded()) {
+          if (ReturnError(terminator, Initialize(to, *derived, terminator)) !=
+              StatOk) {
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  // Copyout from the temporary must not cause any finalizations
+  // for LHS.
+  Assign(to, from, terminator, NoAssignFlags);
 }
 
 void RTNAME(AssignExplicitLengthCharacter)(Descriptor &to,

@@ -20,11 +20,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include <cassert>
@@ -554,6 +554,12 @@ public:
 
   /// Returns true if the register class is considered divergent.
   virtual bool isDivergentRegClass(const TargetRegisterClass *RC) const {
+    return false;
+  }
+
+  /// Returns true if the register is considered uniform.
+  virtual bool isUniformReg(const MachineRegisterInfo &MRI,
+                            const RegisterBankInfo &RBI, Register Reg) const {
     return false;
   }
 

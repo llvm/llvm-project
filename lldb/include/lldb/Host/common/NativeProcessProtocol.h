@@ -256,7 +256,7 @@ public:
   virtual Status GetFileLoadAddress(const llvm::StringRef &file_name,
                                     lldb::addr_t &load_addr) = 0;
 
-  /// Extension flag constants, returned by Factory::GetSupportedExtensions()
+  /// Extension flag constants, returned by Manager::GetSupportedExtensions()
   /// and passed to SetEnabledExtension()
   enum class Extension {
     multiprocess = (1u << 0),
@@ -272,9 +272,14 @@ public:
     LLVM_MARK_AS_BITMASK_ENUM(siginfo_read)
   };
 
-  class Factory {
+  class Manager {
   public:
-    virtual ~Factory();
+    Manager(MainLoop &mainloop) : m_mainloop(mainloop) {}
+    Manager(const Manager &) = delete;
+    Manager &operator=(const Manager &) = delete;
+
+    virtual ~Manager();
+
     /// Launch a process for debugging.
     ///
     /// \param[in] launch_info
@@ -294,8 +299,8 @@ public:
     ///     A NativeProcessProtocol shared pointer if the operation succeeded or
     ///     an error object if it failed.
     virtual llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-    Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
-           MainLoop &mainloop) const = 0;
+    Launch(ProcessLaunchInfo &launch_info,
+           NativeDelegate &native_delegate) = 0;
 
     /// Attach to an existing process.
     ///
@@ -316,14 +321,16 @@ public:
     ///     A NativeProcessProtocol shared pointer if the operation succeeded or
     ///     an error object if it failed.
     virtual llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-    Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
-           MainLoop &mainloop) const = 0;
+    Attach(lldb::pid_t pid, NativeDelegate &native_delegate) = 0;
 
     /// Get the bitmask of extensions supported by this process plugin.
     ///
     /// \return
     ///     A NativeProcessProtocol::Extension bitmask.
     virtual Extension GetSupportedExtensions() const { return {}; }
+
+  protected:
+    MainLoop &m_mainloop;
   };
 
   /// Notify tracers that the target process will resume

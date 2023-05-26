@@ -127,10 +127,10 @@ define fastcc void @dct36(ptr %inbuf) {
 ; CHECK-LABEL: @dct36(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds double, ptr [[INBUF:%.*]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[INBUF]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[ARRAYIDX44]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[INBUF]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[ARRAYIDX44]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

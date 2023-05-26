@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -53,7 +54,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -3994,7 +3994,7 @@ bool PPCDAGToDAGISel::tryBitPermutation(SDNode *N) {
       if (SRLConst && SRLConst->getSExtValue() == 16)
         return false;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::ROTL:
   case ISD::SHL:
   case ISD::AND:
@@ -4504,9 +4504,9 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   // Force the ccreg into CR7.
   SDValue CR7Reg = CurDAG->getRegister(PPC::CR7, MVT::i32);
 
-  SDValue InFlag;  // Null incoming flag value.
+  SDValue InGlue;  // Null incoming flag value.
   CCReg = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, CR7Reg, CCReg,
-                               InFlag).getValue(1);
+                               InGlue).getValue(1);
 
   IntCR = SDValue(CurDAG->getMachineNode(PPC::MFOCRF, dl, MVT::i32, CR7Reg,
                                          CCReg), 0);
@@ -5368,9 +5368,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     return;
 
   case PPCISD::MFOCRF: {
-    SDValue InFlag = N->getOperand(1);
+    SDValue InGlue = N->getOperand(1);
     ReplaceNode(N, CurDAG->getMachineNode(PPC::MFOCRF, dl, MVT::i32,
-                                          N->getOperand(0), InFlag));
+                                          N->getOperand(0), InGlue));
     return;
   }
 
@@ -5722,21 +5722,18 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     }
 
     // Handle the setcc cases here.  select_cc lhs, 0, 1, 0, cc
-    if (!isPPC64)
-      if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-        if (ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N->getOperand(2)))
-          if (ConstantSDNode *N3C = dyn_cast<ConstantSDNode>(N->getOperand(3)))
-            if (N1C->isZero() && N3C->isZero() && N2C->getZExtValue() == 1ULL &&
-                CC == ISD::SETNE &&
-                // FIXME: Implement this optzn for PPC64.
-                N->getValueType(0) == MVT::i32) {
-              SDNode *Tmp =
-                CurDAG->getMachineNode(PPC::ADDIC, dl, MVT::i32, MVT::Glue,
-                                       N->getOperand(0), getI32Imm(~0U, dl));
-              CurDAG->SelectNodeTo(N, PPC::SUBFE, MVT::i32, SDValue(Tmp, 0),
-                                   N->getOperand(0), SDValue(Tmp, 1));
-              return;
-            }
+    if (!isPPC64 && isNullConstant(N->getOperand(1)) &&
+        isOneConstant(N->getOperand(2)) && isNullConstant(N->getOperand(3)) &&
+        CC == ISD::SETNE &&
+        // FIXME: Implement this optzn for PPC64.
+        N->getValueType(0) == MVT::i32) {
+      SDNode *Tmp =
+          CurDAG->getMachineNode(PPC::ADDIC, dl, MVT::i32, MVT::Glue,
+                                 N->getOperand(0), getI32Imm(~0U, dl));
+      CurDAG->SelectNodeTo(N, PPC::SUBFE, MVT::i32, SDValue(Tmp, 0),
+                           N->getOperand(0), SDValue(Tmp, 1));
+      return;
+    }
 
     SDValue CCReg = SelectCC(N->getOperand(0), N->getOperand(1), CC, dl);
 

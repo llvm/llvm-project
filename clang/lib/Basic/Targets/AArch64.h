@@ -173,26 +173,14 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
 
-  std::string convertConstraint(const char *&Constraint) const override {
-    std::string R;
-    switch (*Constraint) {
-    case 'U': // Three-character constraint; add "@3" hint for later parsing.
-      R = std::string("@3") + std::string(Constraint, 3);
-      Constraint += 2;
-      break;
-    default:
-      R = TargetInfo::convertConstraint(Constraint);
-      break;
-    }
-    return R;
-  }
+  std::string convertConstraint(const char *&Constraint) const override;
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
   bool
   validateConstraintModifier(StringRef Constraint, char Modifier, unsigned Size,
                              std::string &SuggestedModifier) const override;
-  const char *getClobbers() const override;
+  std::string_view getClobbers() const override;
 
   StringRef getConstraintRegister(StringRef Constraint,
                                   StringRef Expression) const override {

@@ -31,7 +31,7 @@ namespace llvm {
 
   class LatencyPriorityQueue : public SchedulingPriorityQueue {
     // SUnits - The SUnits for the current graph.
-    std::vector<SUnit> *SUnits;
+    std::vector<SUnit> *SUnits = nullptr;
 
     /// NumNodesSolelyBlocking - This vector contains, for every node in the
     /// Queue, the number of nodes that the node is the sole unscheduled

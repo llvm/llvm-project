@@ -1451,6 +1451,14 @@ private:
     // in some cases. Non-dummy procedures don't.
     if (semantics::IsProcedure(sym) && !isProcedurePointerOrDummy)
       return 0;
+    // Derived type component symbols may be collected by "CollectSymbols"
+    // below when processing something like "real :: x(derived%component)". The
+    // symbol "component" has "ObjectEntityDetails", but it should not be
+    // instantiated: it is is part of "derived" that should be the only one to
+    // be instantiated.
+    if (sym.owner().IsDerivedType())
+      return 0;
+
     semantics::Symbol ultimate = sym.GetUltimate();
     if (const auto *details =
             ultimate.detailsIf<semantics::NamelistDetails>()) {

@@ -70,14 +70,14 @@ class latch
     __atomic_base<ptrdiff_t> __a_;
 
 public:
-    static constexpr ptrdiff_t max() noexcept {
+    static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept {
         return numeric_limits<ptrdiff_t>::max();
     }
 
     inline _LIBCPP_INLINE_VISIBILITY
     constexpr explicit latch(ptrdiff_t __expected) : __a_(__expected) { }
 
-    ~latch() = default;
+    _LIBCPP_HIDE_FROM_ABI ~latch() = default;
     latch(const latch&) = delete;
     latch& operator=(const latch&) = delete;
 

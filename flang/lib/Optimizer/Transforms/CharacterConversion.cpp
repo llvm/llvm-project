@@ -110,7 +110,7 @@ public:
       mlir::RewritePatternSet patterns(context);
       patterns.insert<CharacterConvertConversion>(context);
       mlir::ConversionTarget target(*context);
-      target.addLegalDialect<mlir::AffineDialect, fir::FIROpsDialect,
+      target.addLegalDialect<mlir::affine::AffineDialect, fir::FIROpsDialect,
                              mlir::arith::ArithDialect,
                              mlir::func::FuncDialect>();
 

@@ -95,7 +95,7 @@ for.body:
   %conv = sitofp i8 %i.08 to float
   %add = fadd float %s.09, %conv
   %inc = add nuw nsw i8 %i.08, 1
-  %exitcond.not = icmp eq i8 %inc, 12345
+  %exitcond.not = icmp eq i8 %inc, 241
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:

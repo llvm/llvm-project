@@ -23,7 +23,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -210,7 +209,7 @@ void LoopVersioning::prepareNoAliasMetadata() {
   // Finally, transform the above to actually map to scope list which is what
   // the metadata uses.
 
-  for (auto Pair : GroupToNonAliasingScopes)
+  for (const auto &Pair : GroupToNonAliasingScopes)
     GroupToNonAliasingScopeList[Pair.first] = MDNode::get(Context, Pair.second);
 }
 

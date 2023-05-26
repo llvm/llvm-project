@@ -73,30 +73,9 @@ static bool canRemoveInstruction(Instruction *I) {
 }
 
 bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
-  Constant *Const = nullptr;
-  if (V->getType()->isStructTy()) {
-    std::vector<ValueLatticeElement> IVs = getStructLatticeValueFor(V);
-    if (llvm::any_of(IVs, isOverdefined))
-      return false;
-    std::vector<Constant *> ConstVals;
-    auto *ST = cast<StructType>(V->getType());
-    for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
-      ValueLatticeElement V = IVs[i];
-      ConstVals.push_back(SCCPSolver::isConstant(V)
-                              ? getConstant(V)
-                              : UndefValue::get(ST->getElementType(i)));
-    }
-    Const = ConstantStruct::get(ST, ConstVals);
-  } else {
-    const ValueLatticeElement &IV = getLatticeValueFor(V);
-    if (isOverdefined(IV))
-      return false;
-
-    Const = SCCPSolver::isConstant(IV) ? getConstant(IV)
-                                       : UndefValue::get(V->getType());
-  }
-  assert(Const && "Constant is nullptr here!");
-
+  Constant *Const = getConstantOrNull(V);
+  if (!Const)
+    return false;
   // Replacing `musttail` instructions with constant breaks `musttail` invariant
   // unless the call itself can be removed.
   // Calls with "clang.arc.attachedcall" implicitly use the return value and
@@ -373,6 +352,10 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
   MapVector<std::pair<Function *, unsigned>, ValueLatticeElement>
       TrackedMultipleRetVals;
 
+  /// The set of values whose lattice has been invalidated.
+  /// Populated by resetLatticeValueFor(), cleared after resolving undefs.
+  DenseSet<Value *> Invalidated;
+
   /// MRVFunctionsTracked - Each function in TrackedMultipleRetVals is
   /// represented here for efficient lookup.
   SmallPtrSet<Function *, 16> MRVFunctionsTracked;
@@ -496,6 +479,64 @@ private:
 
     // All others are underdefined by default.
     return LV;
+  }
+
+  /// Traverse the use-def chain of \p Call, marking itself and its users as
+  /// "unknown" on the way.
+  void invalidate(CallBase *Call) {
+    SmallVector<Instruction *, 64> ToInvalidate;
+    ToInvalidate.push_back(Call);
+
+    while (!ToInvalidate.empty()) {
+      Instruction *Inst = ToInvalidate.pop_back_val();
+
+      if (!Invalidated.insert(Inst).second)
+        continue;
+
+      if (!BBExecutable.count(Inst->getParent()))
+        continue;
+
+      Value *V = nullptr;
+      // For return instructions we need to invalidate the tracked returns map.
+      // Anything else has its lattice in the value map.
+      if (auto *RetInst = dyn_cast<ReturnInst>(Inst)) {
+        Function *F = RetInst->getParent()->getParent();
+        if (auto It = TrackedRetVals.find(F); It != TrackedRetVals.end()) {
+          It->second = ValueLatticeElement();
+          V = F;
+        } else if (MRVFunctionsTracked.count(F)) {
+          auto *STy = cast<StructType>(F->getReturnType());
+          for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I)
+            TrackedMultipleRetVals[{F, I}] = ValueLatticeElement();
+          V = F;
+        }
+      } else if (auto *STy = dyn_cast<StructType>(Inst->getType())) {
+        for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
+          if (auto It = StructValueState.find({Inst, I});
+              It != StructValueState.end()) {
+            It->second = ValueLatticeElement();
+            V = Inst;
+          }
+        }
+      } else if (auto It = ValueState.find(Inst); It != ValueState.end()) {
+        It->second = ValueLatticeElement();
+        V = Inst;
+      }
+
+      if (V) {
+        LLVM_DEBUG(dbgs() << "Invalidated lattice for " << *V << "\n");
+
+        for (User *U : V->users())
+          if (auto *UI = dyn_cast<Instruction>(U))
+            ToInvalidate.push_back(UI);
+
+        auto It = AdditionalUsers.find(V);
+        if (It != AdditionalUsers.end())
+          for (User *U : It->second)
+            if (auto *UI = dyn_cast<Instruction>(U))
+              ToInvalidate.push_back(UI);
+      }
+    }
   }
 
   /// markEdgeExecutable - Mark a basic block as executable, adding it to the BB
@@ -623,13 +664,6 @@ public:
     return A->second.PredInfo->getPredicateInfoFor(I);
   }
 
-  const LoopInfo &getLoopInfo(Function &F) {
-    auto A = AnalysisResults.find(&F);
-    assert(A != AnalysisResults.end() && A->second.LI &&
-           "Need LoopInfo analysis results for function.");
-    return *A->second.LI;
-  }
-
   DomTreeUpdater getDTU(Function &F) {
     auto A = AnalysisResults.find(&F);
     assert(A != AnalysisResults.end() && "Need analysis results for function.");
@@ -678,6 +712,8 @@ public:
 
   void solve();
 
+  bool resolvedUndef(Instruction &I);
+
   bool resolvedUndefsIn(Function &F);
 
   bool isBlockExecutable(BasicBlock *BB) const {
@@ -699,6 +735,19 @@ public:
   }
 
   void removeLatticeValueFor(Value *V) { ValueState.erase(V); }
+
+  /// Invalidate the Lattice Value of \p Call and its users after specializing
+  /// the call. Then recompute it.
+  void resetLatticeValueFor(CallBase *Call) {
+    // Calls to void returning functions do not need invalidation.
+    Function *F = Call->getCalledFunction();
+    (void)F;
+    assert(!F->getReturnType()->isVoidTy() &&
+           (TrackedRetVals.count(F) || MRVFunctionsTracked.count(F)) &&
+           "All non void specializations should be tracked");
+    invalidate(Call);
+    handleCallResult(*Call);
+  }
 
   const ValueLatticeElement &getLatticeValueFor(Value *V) const {
     assert(!V->getType()->isStructTy() &&
@@ -734,12 +783,14 @@ public:
 
   Constant *getConstant(const ValueLatticeElement &LV) const;
 
+  Constant *getConstantOrNull(Value *V) const;
+
   SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() {
     return TrackingIncomingArguments;
   }
 
-  void markArgInFuncSpecialization(Function *F,
-                                   const SmallVectorImpl<ArgInfo> &Args);
+  void setLatticeValueForSpecializationArguments(Function *F,
+                                       const SmallVectorImpl<ArgInfo> &Args);
 
   void markFunctionUnreachable(Function *F) {
     for (auto &BB : *F)
@@ -764,6 +815,18 @@ public:
       for (Function *F : WorkList)
         ResolvedUndefs |= resolvedUndefsIn(*F);
     }
+  }
+
+  void solveWhileResolvedUndefs() {
+    bool ResolvedUndefs = true;
+    while (ResolvedUndefs) {
+      solve();
+      ResolvedUndefs = false;
+      for (Value *V : Invalidated)
+        if (auto *I = dyn_cast<Instruction>(V))
+          ResolvedUndefs |= resolvedUndef(*I);
+    }
+    Invalidated.clear();
   }
 };
 
@@ -833,36 +896,68 @@ Constant *SCCPInstVisitor::getConstant(const ValueLatticeElement &LV) const {
   return nullptr;
 }
 
-void SCCPInstVisitor::markArgInFuncSpecialization(
-    Function *F, const SmallVectorImpl<ArgInfo> &Args) {
+Constant *SCCPInstVisitor::getConstantOrNull(Value *V) const {
+  Constant *Const = nullptr;
+  if (V->getType()->isStructTy()) {
+    std::vector<ValueLatticeElement> LVs = getStructLatticeValueFor(V);
+    if (any_of(LVs, SCCPSolver::isOverdefined))
+      return nullptr;
+    std::vector<Constant *> ConstVals;
+    auto *ST = cast<StructType>(V->getType());
+    for (unsigned I = 0, E = ST->getNumElements(); I != E; ++I) {
+      ValueLatticeElement LV = LVs[I];
+      ConstVals.push_back(SCCPSolver::isConstant(LV)
+                              ? getConstant(LV)
+                              : UndefValue::get(ST->getElementType(I)));
+    }
+    Const = ConstantStruct::get(ST, ConstVals);
+  } else {
+    const ValueLatticeElement &LV = getLatticeValueFor(V);
+    if (SCCPSolver::isOverdefined(LV))
+      return nullptr;
+    Const = SCCPSolver::isConstant(LV) ? getConstant(LV)
+                                       : UndefValue::get(V->getType());
+  }
+  assert(Const && "Constant is nullptr here!");
+  return Const;
+}
+
+void SCCPInstVisitor::setLatticeValueForSpecializationArguments(Function *F,
+                                        const SmallVectorImpl<ArgInfo> &Args) {
   assert(!Args.empty() && "Specialization without arguments");
   assert(F->arg_size() == Args[0].Formal->getParent()->arg_size() &&
          "Functions should have the same number of arguments");
 
   auto Iter = Args.begin();
-  Argument *NewArg = F->arg_begin();
-  Argument *OldArg = Args[0].Formal->getParent()->arg_begin();
+  Function::arg_iterator NewArg = F->arg_begin();
+  Function::arg_iterator OldArg = Args[0].Formal->getParent()->arg_begin();
   for (auto End = F->arg_end(); NewArg != End; ++NewArg, ++OldArg) {
 
     LLVM_DEBUG(dbgs() << "SCCP: Marking argument "
                       << NewArg->getNameOrAsOperand() << "\n");
 
-    if (Iter != Args.end() && OldArg == Iter->Formal) {
-      // Mark the argument constants in the new function.
-      markConstant(NewArg, Iter->Actual);
+    // Mark the argument constants in the new function
+    // or copy the lattice state over from the old function.
+    if (Iter != Args.end() && Iter->Formal == &*OldArg) {
+      if (auto *STy = dyn_cast<StructType>(NewArg->getType())) {
+        for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
+          ValueLatticeElement &NewValue = StructValueState[{&*NewArg, I}];
+          NewValue.markConstant(Iter->Actual->getAggregateElement(I));
+        }
+      } else {
+        ValueState[&*NewArg].markConstant(Iter->Actual);
+      }
       ++Iter;
-    } else if (ValueState.count(OldArg)) {
-      // For the remaining arguments in the new function, copy the lattice state
-      // over from the old function.
-      //
-      // Note: This previously looked like this:
-      // ValueState[NewArg] = ValueState[OldArg];
-      // This is incorrect because the DenseMap class may resize the underlying
-      // memory when inserting `NewArg`, which will invalidate the reference to
-      // `OldArg`. Instead, we make sure `NewArg` exists before setting it.
-      auto &NewValue = ValueState[NewArg];
-      NewValue = ValueState[OldArg];
-      pushToWorkList(NewValue, NewArg);
+    } else {
+      if (auto *STy = dyn_cast<StructType>(NewArg->getType())) {
+        for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
+          ValueLatticeElement &NewValue = StructValueState[{&*NewArg, I}];
+          NewValue = StructValueState[{&*OldArg, I}];
+        }
+      } else {
+        ValueLatticeElement &NewValue = ValueState[&*NewArg];
+        NewValue = ValueState[&*OldArg];
+      }
     }
   }
 }
@@ -1707,6 +1802,7 @@ void SCCPInstVisitor::solve() {
     // things to overdefined more quickly.
     while (!OverdefinedInstWorkList.empty()) {
       Value *I = OverdefinedInstWorkList.pop_back_val();
+      Invalidated.erase(I);
 
       LLVM_DEBUG(dbgs() << "\nPopped off OI-WL: " << *I << '\n');
 
@@ -1723,6 +1819,7 @@ void SCCPInstVisitor::solve() {
     // Process the instruction work list.
     while (!InstWorkList.empty()) {
       Value *I = InstWorkList.pop_back_val();
+      Invalidated.erase(I);
 
       LLVM_DEBUG(dbgs() << "\nPopped off I-WL: " << *I << '\n');
 
@@ -1750,6 +1847,61 @@ void SCCPInstVisitor::solve() {
   }
 }
 
+bool SCCPInstVisitor::resolvedUndef(Instruction &I) {
+  // Look for instructions which produce undef values.
+  if (I.getType()->isVoidTy())
+    return false;
+
+  if (auto *STy = dyn_cast<StructType>(I.getType())) {
+    // Only a few things that can be structs matter for undef.
+
+    // Tracked calls must never be marked overdefined in resolvedUndefsIn.
+    if (auto *CB = dyn_cast<CallBase>(&I))
+      if (Function *F = CB->getCalledFunction())
+        if (MRVFunctionsTracked.count(F))
+          return false;
+
+    // extractvalue and insertvalue don't need to be marked; they are
+    // tracked as precisely as their operands.
+    if (isa<ExtractValueInst>(I) || isa<InsertValueInst>(I))
+      return false;
+    // Send the results of everything else to overdefined.  We could be
+    // more precise than this but it isn't worth bothering.
+    for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+      ValueLatticeElement &LV = getStructValueState(&I, i);
+      if (LV.isUnknown()) {
+        markOverdefined(LV, &I);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  ValueLatticeElement &LV = getValueState(&I);
+  if (!LV.isUnknown())
+    return false;
+
+  // There are two reasons a call can have an undef result
+  // 1. It could be tracked.
+  // 2. It could be constant-foldable.
+  // Because of the way we solve return values, tracked calls must
+  // never be marked overdefined in resolvedUndefsIn.
+  if (auto *CB = dyn_cast<CallBase>(&I))
+    if (Function *F = CB->getCalledFunction())
+      if (TrackedRetVals.count(F))
+        return false;
+
+  if (isa<LoadInst>(I)) {
+    // A load here means one of two things: a load of undef from a global,
+    // a load from an unknown pointer.  Either way, having it return undef
+    // is okay.
+    return false;
+  }
+
+  markOverdefined(&I);
+  return true;
+}
+
 /// While solving the dataflow for a function, we don't compute a result for
 /// operations with an undef operand, to allow undef to be lowered to a
 /// constant later. For example, constant folding of "zext i8 undef to i16"
@@ -1769,60 +1921,8 @@ bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
     if (!BBExecutable.count(&BB))
       continue;
 
-    for (Instruction &I : BB) {
-      // Look for instructions which produce undef values.
-      if (I.getType()->isVoidTy())
-        continue;
-
-      if (auto *STy = dyn_cast<StructType>(I.getType())) {
-        // Only a few things that can be structs matter for undef.
-
-        // Tracked calls must never be marked overdefined in resolvedUndefsIn.
-        if (auto *CB = dyn_cast<CallBase>(&I))
-          if (Function *F = CB->getCalledFunction())
-            if (MRVFunctionsTracked.count(F))
-              continue;
-
-        // extractvalue and insertvalue don't need to be marked; they are
-        // tracked as precisely as their operands.
-        if (isa<ExtractValueInst>(I) || isa<InsertValueInst>(I))
-          continue;
-        // Send the results of everything else to overdefined.  We could be
-        // more precise than this but it isn't worth bothering.
-        for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-          ValueLatticeElement &LV = getStructValueState(&I, i);
-          if (LV.isUnknown()) {
-            markOverdefined(LV, &I);
-            MadeChange = true;
-          }
-        }
-        continue;
-      }
-
-      ValueLatticeElement &LV = getValueState(&I);
-      if (!LV.isUnknown())
-        continue;
-
-      // There are two reasons a call can have an undef result
-      // 1. It could be tracked.
-      // 2. It could be constant-foldable.
-      // Because of the way we solve return values, tracked calls must
-      // never be marked overdefined in resolvedUndefsIn.
-      if (auto *CB = dyn_cast<CallBase>(&I))
-        if (Function *F = CB->getCalledFunction())
-          if (TrackedRetVals.count(F))
-            continue;
-
-      if (isa<LoadInst>(I)) {
-        // A load here means one of two things: a load of undef from a global,
-        // a load from an unknown pointer.  Either way, having it return undef
-        // is okay.
-        continue;
-      }
-
-      markOverdefined(&I);
-      MadeChange = true;
-    }
+    for (Instruction &I : BB)
+      MadeChange |= resolvedUndef(I);
   }
 
   LLVM_DEBUG(if (MadeChange) dbgs()
@@ -1853,10 +1953,6 @@ bool SCCPSolver::markBlockExecutable(BasicBlock *BB) {
 
 const PredicateBase *SCCPSolver::getPredicateInfoFor(Instruction *I) {
   return Visitor->getPredicateInfoFor(I);
-}
-
-const LoopInfo &SCCPSolver::getLoopInfo(Function &F) {
-  return Visitor->getLoopInfo(F);
 }
 
 DomTreeUpdater SCCPSolver::getDTU(Function &F) { return Visitor->getDTU(F); }
@@ -1900,6 +1996,10 @@ SCCPSolver::solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList) {
   Visitor->solveWhileResolvedUndefsIn(WorkList);
 }
 
+void SCCPSolver::solveWhileResolvedUndefs() {
+  Visitor->solveWhileResolvedUndefs();
+}
+
 bool SCCPSolver::isBlockExecutable(BasicBlock *BB) const {
   return Visitor->isBlockExecutable(BB);
 }
@@ -1915,6 +2015,10 @@ SCCPSolver::getStructLatticeValueFor(Value *V) const {
 
 void SCCPSolver::removeLatticeValueFor(Value *V) {
   return Visitor->removeLatticeValueFor(V);
+}
+
+void SCCPSolver::resetLatticeValueFor(CallBase *Call) {
+  Visitor->resetLatticeValueFor(Call);
 }
 
 const ValueLatticeElement &SCCPSolver::getLatticeValueFor(Value *V) const {
@@ -1945,13 +2049,17 @@ Constant *SCCPSolver::getConstant(const ValueLatticeElement &LV) const {
   return Visitor->getConstant(LV);
 }
 
+Constant *SCCPSolver::getConstantOrNull(Value *V) const {
+  return Visitor->getConstantOrNull(V);
+}
+
 SmallPtrSetImpl<Function *> &SCCPSolver::getArgumentTrackedFunctions() {
   return Visitor->getArgumentTrackedFunctions();
 }
 
-void SCCPSolver::markArgInFuncSpecialization(
-    Function *F, const SmallVectorImpl<ArgInfo> &Args) {
-  Visitor->markArgInFuncSpecialization(F, Args);
+void SCCPSolver::setLatticeValueForSpecializationArguments(Function *F,
+                                   const SmallVectorImpl<ArgInfo> &Args) {
+  Visitor->setLatticeValueForSpecializationArguments(F, Args);
 }
 
 void SCCPSolver::markFunctionUnreachable(Function *F) {

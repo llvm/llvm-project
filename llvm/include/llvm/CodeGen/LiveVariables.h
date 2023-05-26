@@ -124,11 +124,11 @@ private:
   SparseBitVector<> PHIJoins;
 
 private:   // Intermediate data structures
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
 
-  MachineRegisterInfo* MRI;
+  MachineRegisterInfo *MRI = nullptr;
 
-  const TargetRegisterInfo *TRI;
+  const TargetRegisterInfo *TRI = nullptr;
 
   // PhysRegInfo - Keep track of which instruction was the last def of a
   // physical register. This is a purely local property, because all physical

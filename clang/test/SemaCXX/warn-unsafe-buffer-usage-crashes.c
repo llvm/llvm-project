@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -Wunsafe-buffer-usage %s -verify %s
+// RUN: %clang_cc1 -Wunsafe-buffer-usage -fsafe-buffer-usage-suggestions \
+// RUN:            %s -verify %s
 
 void gnu_stmtexpr_crash(void) {
   struct A {};

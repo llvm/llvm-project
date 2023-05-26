@@ -99,6 +99,15 @@ static const GlobalVariable *getKernelLDSGlobalFromFunction(const Function &F) {
   return M->getNamedGlobal(KernelLDSName);
 }
 
+static const GlobalVariable *
+getKernelDynLDSGlobalFromFunction(const Function &F) {
+  const Module *M = F.getParent();
+  std::string KernelDynLDSName = "llvm.amdgcn.";
+  KernelDynLDSName += F.getName();
+  KernelDynLDSName += ".dynlds";
+  return M->getNamedGlobal(KernelDynLDSName);
+}
+
 // This kernel calls no functions that require the module lds struct
 static bool canElideModuleLDS(const Function &F) {
   return F.hasFnAttribute("amdgpu-elide-module-lds");
@@ -131,11 +140,12 @@ void AMDGPUMachineFunction::allocateKnownAddressLDSGlobal(const Function &F) {
 
     const GlobalVariable *GV = M->getNamedGlobal(ModuleLDSName);
     const GlobalVariable *KV = getKernelLDSGlobalFromFunction(F);
+    const GlobalVariable *Dyn = getKernelDynLDSGlobalFromFunction(F);
 
     if (GV && !canElideModuleLDS(F)) {
       unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *GV, Align());
       std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*GV);
-      if (!Expect || (Offset != Expect)) {
+      if (!Expect || (Offset != *Expect)) {
         report_fatal_error("Inconsistent metadata on module LDS variable");
       }
     }
@@ -145,8 +155,21 @@ void AMDGPUMachineFunction::allocateKnownAddressLDSGlobal(const Function &F) {
       // before any other non-module LDS variables.
       unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *KV, Align());
       std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*KV);
-      if (!Expect || (Offset != Expect)) {
+      if (!Expect || (Offset != *Expect)) {
         report_fatal_error("Inconsistent metadata on kernel LDS variable");
+      }
+    }
+
+    if (Dyn) {
+      // The dynamic LDS is deterministic because the per-kernel one has the
+      // maximum alignment of any reachable and all remaining LDS variables,
+      // if this is present, are themselves dynamic LDS and will be allocated
+      // at the same address.
+      setDynLDSAlign(F, *Dyn);
+      unsigned Offset = LDSSize;
+      std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*Dyn);
+      if (!Expect || (Offset != *Expect)) {
+        report_fatal_error("Inconsistent metadata on dynamic LDS variable");
       }
     }
   }
@@ -187,8 +210,10 @@ AMDGPUMachineFunction::getLDSAbsoluteAddress(const GlobalValue &GV) {
   return {};
 }
 
-void AMDGPUMachineFunction::setDynLDSAlign(const DataLayout &DL,
+void AMDGPUMachineFunction::setDynLDSAlign(const Function &F,
                                            const GlobalVariable &GV) {
+  const Module *M = F.getParent();
+  const DataLayout &DL = M->getDataLayout();
   assert(DL.getTypeAllocSize(GV.getValueType()).isZero());
 
   Align Alignment =
@@ -198,4 +223,17 @@ void AMDGPUMachineFunction::setDynLDSAlign(const DataLayout &DL,
 
   LDSSize = alignTo(StaticLDSSize, Alignment);
   DynLDSAlign = Alignment;
+
+  // If there is a dynamic LDS variable associated with this function F, every
+  // further dynamic LDS instance (allocated by calling setDynLDSAlign) must
+  // map to the same address. This holds because no LDS is allocated after the
+  // lowering pass if there are dynamic LDS variables present.
+  const GlobalVariable *Dyn = getKernelDynLDSGlobalFromFunction(F);
+  if (Dyn) {
+    unsigned Offset = LDSSize; // return this?
+    std::optional<uint32_t> Expect = getLDSAbsoluteAddress(*Dyn);
+    if (!Expect || (Offset != *Expect)) {
+      report_fatal_error("Inconsistent metadata on dynamic LDS variable");
+    }
+  }
 }

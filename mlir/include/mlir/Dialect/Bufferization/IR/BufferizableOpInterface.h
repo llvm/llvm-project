@@ -19,6 +19,9 @@
 
 namespace mlir {
 class OpBuilder;
+namespace func {
+class FuncOp;
+}
 
 namespace bufferization {
 
@@ -250,6 +253,11 @@ struct BufferizationOptions {
   /// Initializer function for analysis state.
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
   /// Tensor -> MemRef type converter.
+  /// Parameters: Value, memory space, func op, bufferization options
+  using FunctionArgTypeConverterFn =
+      std::function<BaseMemRefType(TensorType, Attribute memorySpace,
+                                   func::FuncOp, const BufferizationOptions &)>;
+  /// Tensor -> MemRef type converter.
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
       Value, Attribute memorySpace, const BufferizationOptions &)>;
@@ -313,7 +321,8 @@ struct BufferizationOptions {
   /// OpOperands out-of-place.
   bool enforceAliasingInvariants = true;
 
-  /// This flag controls buffer types on function signatures.
+  /// This function controls buffer types on function signatures. Sets
+  /// `functionArgTypeConverterFn` and `inferFunctionResultLayout` accordingly.
   ///
   /// * InferLayoutMap: All function parameter types have a fully dynamic layout
   ///   map, but function result types are inferred from the body of the
@@ -326,13 +335,25 @@ struct BufferizationOptions {
   ///   additional buffer allocs and copies because layout maps cannot be casted
   ///   away.
   ///
-  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
-  ///
   /// Note: Inferred layout maps may not be desireable when interacting with
   /// external functions, because the generated function signatures will be less
   /// predictable.
-  LayoutMapOption functionBoundaryTypeConversion =
-      LayoutMapOption::InferLayoutMap;
+  void setFunctionBoundaryTypeConversion(LayoutMapOption layoutMapOption);
+
+  /// Type converter from tensors to memrefs. This type converter is used to
+  /// determine bufferized function argument types. By default, a type
+  /// converter that returns a memref type with a fully dynamic layout map is
+  /// used.
+  ///
+  /// If `bufferizeFunctionBoundaries` is not set, this function isn't used.
+  FunctionArgTypeConverterFn functionArgTypeConverterFn = nullptr;
+
+  /// If true, function result types are inferred from the body of the function.
+  /// Otherwise, function result type is determined by
+  /// `functionArgTypeConverterFn`.
+  ///
+  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
+  bool inferFunctionResultLayout = true;
 
   /// Type converter from tensors to memrefs. This type converter is used if no
   /// memref type could be inferred during bufferization. By default, a type
@@ -370,6 +391,23 @@ struct BufferizationOptions {
 
 /// Return `true` if the given value is a BlockArgument of a func::FuncOp.
 bool isFunctionArgument(Value value);
+
+/// Traversal parameters for `findValueInReverseUseDefChain`.
+struct TraversalConfig {
+  /// Specifies if leaves (that do not have further OpOperands to follow)
+  /// should be returned even if they do not match the specified filter.
+  bool alwaysIncludeLeaves = true;
+
+  /// Specifies whether out-of-place/undecided OpOperands should be followed.
+  bool followInPlaceOnly = false;
+
+  /// Specifies whether non-equivalent OpOperands should be followed.
+  bool followEquivalentOnly = false;
+
+  /// Specifies whether unknown/non-bufferizable/ops not included in the
+  /// OpFilter of BufferizationOptions should be followed.
+  bool followUnknownOps = false;
+};
 
 /// AnalysisState provides a variety of helper functions for dealing with
 /// tensor values.
@@ -416,9 +454,8 @@ public:
   /// `condition` evaluates to true. OpOperands of such matching Values are not
   /// traversed any further.
   ///
-  /// When reaching the end of a chain (BlockArgument or Value without aliasing
-  /// OpOperands), also return the last Value of that chain if
-  /// `alwaysIncludeLeaves` is set.
+  /// When reaching the end of a chain, also return the last Value of that
+  /// chain if `config.alwaysIncludeLeaves` is set.
   ///
   /// Example:
   ///
@@ -436,10 +473,11 @@ public:
   /// starting the traversal from Value 1, the resulting SetVector is:
   /// { 2, 7, 8, 5 }
   ///
-  /// If `followEquivalentOnly` is set, only equivalent OpOperands are selected.
+  /// Additional stopping conditions for the traversal can be specified in
+  /// `config`.
   SetVector<Value> findValueInReverseUseDefChain(
       Value value, llvm::function_ref<bool(Value)> condition,
-      bool followEquivalentOnly = false, bool alwaysIncludeLeaves = true) const;
+      TraversalConfig config = TraversalConfig()) const;
 
   /// Find the values that may define the contents of the given value at
   /// runtime. A block argument is always a definition. An OpResult is a

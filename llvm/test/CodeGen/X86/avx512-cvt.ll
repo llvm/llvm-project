@@ -180,13 +180,13 @@ define <4 x i64> @f64to4sl(<4 x double> %a) {
 ; NODQ-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; NODQ-NEXT:    vcvttsd2si %xmm1, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm2
-; NODQ-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; NODQ-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
 ; NODQ-NEXT:    vcvttsd2si %xmm1, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm1
 ; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; NODQ-NEXT:    vcvttsd2si %xmm0, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm2
-; NODQ-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; NODQ-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; NODQ-NEXT:    vcvttsd2si %xmm0, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm0
 ; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
@@ -214,7 +214,7 @@ define <4 x i64> @f32to4sl(<4 x float> %a) {
 ; NODQ-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; NODQ-NEXT:    vcvttss2si %xmm1, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm1
-; NODQ-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; NODQ-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
 ; NODQ-NEXT:    vcvttss2si %xmm2, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm2
 ; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]

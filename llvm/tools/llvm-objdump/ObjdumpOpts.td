@@ -145,10 +145,10 @@ def reloc : Flag<["--"], "reloc">,
 def : Flag<["-"], "r">, Alias<reloc>, HelpText<"Alias for --reloc">;
 
 def print_imm_hex : Flag<["--"], "print-imm-hex">,
-  HelpText<"Use hex format for immediate values">;
+  HelpText<"Use hex format for immediate values (default)">;
 
 def no_print_imm_hex : Flag<["--"], "no-print-imm-hex">,
-  HelpText<"Do not use hex format for immediate values (default)">;
+  HelpText<"Do not use hex format for immediate values">;
 def : Flag<["--"], "print-imm-hex=false">, Alias<no_print_imm_hex>;
 
 def private_headers : Flag<["--"], "private-headers">,

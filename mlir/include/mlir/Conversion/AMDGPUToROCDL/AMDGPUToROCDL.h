@@ -8,7 +8,7 @@
 #ifndef MLIR_CONVERSION_AMDGPUTOROCDL_AMDGPUTOROCDL_H_
 #define MLIR_CONVERSION_AMDGPUTOROCDL_AMDGPUTOROCDL_H_
 
-#include "mlir/Conversion/AMDGPUToROCDL/Chipset.h"
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include <memory>
 #include <string>
 

@@ -122,8 +122,6 @@ public:
     ProcessInfo::operator=(launch_info);
     SetProcessPluginName(launch_info.GetProcessPluginName());
     SetResumeCount(launch_info.GetResumeCount());
-    SetListener(launch_info.GetListener());
-    SetHijackListener(launch_info.GetHijackListener());
     m_detach_on_error = launch_info.GetDetachOnError();
   }
 
@@ -174,28 +172,13 @@ public:
     return false;
   }
 
-  lldb::ListenerSP GetHijackListener() const { return m_hijack_listener_sp; }
-
-  void SetHijackListener(const lldb::ListenerSP &listener_sp) {
-    m_hijack_listener_sp = listener_sp;
-  }
-
   bool GetDetachOnError() const { return m_detach_on_error; }
 
   void SetDetachOnError(bool enable) { m_detach_on_error = enable; }
 
-  // Get and set the actual listener that will be used for the process events
-  lldb::ListenerSP GetListener() const { return m_listener_sp; }
-
-  void SetListener(const lldb::ListenerSP &listener_sp) {
-    m_listener_sp = listener_sp;
-  }
-
   lldb::ListenerSP GetListenerForProcess(Debugger &debugger);
 
 protected:
-  lldb::ListenerSP m_listener_sp;
-  lldb::ListenerSP m_hijack_listener_sp;
   std::string m_plugin_name;
   uint32_t m_resume_count = 0; // How many times do we resume after launching
   bool m_wait_for_launch = false;
@@ -282,6 +265,13 @@ public:
       return false;
 
     return m_resume_id == m_last_user_expression_resume;
+  }
+
+  bool IsRunningExpression() const {
+    // Don't return true if we are no longer running an expression:
+    if (m_running_user_expression || m_running_utility_function)
+      return true;
+    return false;
   }
 
   void SetRunningUserExpression(bool on) {
@@ -379,8 +369,19 @@ public:
 
   static ConstString &GetStaticBroadcasterClass();
 
+  static constexpr llvm::StringRef AttachSynchronousHijackListenerName =
+      "lldb.internal.Process.AttachSynchronous.hijack";
+  static constexpr llvm::StringRef LaunchSynchronousHijackListenerName =
+      "lldb.internal.Process.LaunchSynchronous.hijack";
+  static constexpr llvm::StringRef ResumeSynchronousHijackListenerName =
+      "lldb.internal.Process.ResumeSynchronous.hijack";
+
   ConstString &GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
+  }
+
+  void SetShadowListener(lldb::ListenerSP listener_sp) override {
+    Broadcaster::SetShadowListener(listener_sp);
   }
 
 /// A notification structure that can be used by clients to listen
@@ -404,9 +405,9 @@ public:
 
     ~ProcessEventData() override;
 
-    static ConstString GetFlavorString();
+    static llvm::StringRef GetFlavorString();
 
-    ConstString GetFlavor() const override;
+    llvm::StringRef GetFlavor() const override;
 
     lldb::ProcessSP GetProcessSP() const { return m_process_wp.lock(); }
 
@@ -818,6 +819,7 @@ public:
   /// \see Thread:Suspend()
   Status Resume();
 
+  /// Resume a process, and wait for it to stop.
   Status ResumeSynchronous(Stream *stream);
 
   /// Halts a running process.
@@ -2153,12 +2155,17 @@ public:
   // process is hijacked and use_run_lock is true (the default), then this
   // function releases the run lock after the stop. Setting use_run_lock to
   // false will avoid this behavior.
+  // If we are waiting to stop that will return control to the user,
+  // then we also want to run SelectMostRelevantFrame, which is controlled
+  // by "select_most_relevant".
   lldb::StateType
   WaitForProcessToStop(const Timeout<std::micro> &timeout,
                        lldb::EventSP *event_sp_ptr = nullptr,
                        bool wait_always = true,
                        lldb::ListenerSP hijack_listener = lldb::ListenerSP(),
-                       Stream *stream = nullptr, bool use_run_lock = true);
+                       Stream *stream = nullptr, bool use_run_lock = true,
+                       SelectMostRelevant select_most_relevant =
+                           DoNoSelectMostRelevantFrame);
 
   uint32_t GetIOHandlerID() const { return m_iohandler_sync.GetValue(); }
 
@@ -2196,9 +2203,10 @@ public:
   /// \return
   ///     \b true if the event describes a process state changed event, \b false
   ///     otherwise.
-  static bool HandleProcessStateChangedEvent(const lldb::EventSP &event_sp,
-                                             Stream *stream,
-                                             bool &pop_process_io_handler);
+  static bool
+  HandleProcessStateChangedEvent(const lldb::EventSP &event_sp, Stream *stream,
+                                 SelectMostRelevant select_most_relevant,
+                                 bool &pop_process_io_handler);
 
   Event *PeekAtStateChangedEvents();
 
@@ -2543,6 +2551,8 @@ void PruneThreadPlans();
   GetStructuredDataPlugin(ConstString type_name) const;
 
   virtual void *GetImplementation() { return nullptr; }
+
+  virtual void ForceScriptedState(lldb::StateType state) {}
 
 protected:
   friend class Trace;

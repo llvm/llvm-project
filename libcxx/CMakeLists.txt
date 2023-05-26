@@ -68,7 +68,6 @@ endif()
 option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ library"
     ${ENABLE_FILESYSTEM_DEFAULT})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
-option(LIBCXX_ENABLE_PARALLEL_ALGORITHMS "Enable the parallel algorithms library. This requires the PSTL to be available." OFF)
 option(LIBCXX_ENABLE_DEBUG_MODE
   "Whether to build libc++ with the debug mode enabled.
    By default, this is turned off. Turning it on results in a different ABI (additional
@@ -287,6 +286,12 @@ option(LIBCXX_HAS_EXTERNAL_THREAD_API
 option(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY
     "Build libc++ with an externalized threading library.
      This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON" OFF)
+
+if (LIBCXX_ENABLE_THREADS)
+  set(LIBCXX_PSTL_CPU_BACKEND "std_thread" CACHE STRING "Which PSTL CPU backend to use")
+else()
+  set(LIBCXX_PSTL_CPU_BACKEND "serial" CACHE STRING "Which PSTL CPU backend to use")
+endif()
 
 # Misc options ----------------------------------------------------------------
 # FIXME: Turn -pedantic back ON. It is currently off because it warns
@@ -764,14 +769,6 @@ function(cxx_add_windows_flags target)
                                  # Use the ISO conforming behaviour for conversion
                                  # in printf, scanf.
                                  _CRT_STDIO_ISO_WIDE_SPECIFIERS)
-    # Clang-cl shared builds don't support the experimental library.
-    # To avoid linker errors the format_error destructor is inlined for the
-    # dylib. Users can never use format in this mode.
-    # TODO FMT Remove when format becomes mainline.
-    if (LIBCXX_ENABLE_SHARED)
-      target_compile_definitions(${target} PRIVATE
-                                 _LIBCPP_INLINE_FORMAT_ERROR_DTOR)
-    endif()
   endif()
 endfunction()
 
@@ -791,7 +788,6 @@ config_define_if(LIBCXX_HAS_WIN32_THREAD_API _LIBCPP_HAS_THREAD_API_WIN32)
 config_define_if(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY _LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL)
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
-config_define_if(LIBCXX_ENABLE_PARALLEL_ALGORITHMS _LIBCPP_HAS_PARALLEL_ALGORITHMS)
 config_define_if_not(LIBCXX_ENABLE_FILESYSTEM _LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
 config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
@@ -804,6 +800,15 @@ if (LIBCXX_ENABLE_ASSERTIONS)
   config_define(1 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
 else()
   config_define(0 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
+endif()
+
+if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "serial")
+  config_define(1 _LIBCPP_PSTL_CPU_BACKEND_SERIAL)
+elseif(LIBCXX_PSTL_CPU_BACKEND STREQUAL "std_thread")
+  config_define(1 _LIBCPP_PSTL_CPU_BACKEND_THREAD)
+else()
+  message(FATAL_ERROR "LIBCXX_PSTL_CPU_BACKEND is set to ${LIBCXX_PSTL_CPU_BACKEND}, which is not a valid backend.
+                       Valid backends are: serial, std_thread")
 endif()
 
 if (LIBCXX_ABI_DEFINES)

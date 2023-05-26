@@ -167,7 +167,7 @@ def AttrC : TestAttr<"TestF"> {
 
 // ATTR-LABEL: Attribute TestGAttr::parse
 // ATTR: if (odsType)
-// ATTR:   if (auto reqType = odsType.dyn_cast<::mlir::Type>())
+// ATTR:   if (auto reqType = ::llvm::dyn_cast<::mlir::Type>(odsType))
 // ATTR:     _result_type = reqType
 // ATTR: TestGAttr::get
 // ATTR-NEXT: *_result_a

@@ -9,7 +9,7 @@ define <8 x i32> @shuffle_v8i32_0dcd3f14(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[3,1,1,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; CHECK-NEXT:    vpermilpd {{.*#+}} ymm1 = ymm1[0,0,3,2]
+; CHECK-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[0,0,3,2]
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5],ymm0[6,7]
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 0, i32 13, i32 12, i32 13, i32 3, i32 15, i32 1, i32 4>

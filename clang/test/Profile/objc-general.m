@@ -1,9 +1,9 @@
 // Test instrumentation of general constructs in objective C.
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument=clang | FileCheck -check-prefix=PGOGEN %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument=clang | FileCheck -check-prefix=PGOGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/objc-general.proftext -o %t.profdata
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument-use-path=%t.profdata 2>&1 | FileCheck -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument-use-path=%t.profdata 2>&1 | FileCheck -check-prefix=PGOUSE %s
 
 // PGOUSE-NOT: warning: profile data may be out of date
 
@@ -44,7 +44,7 @@ struct NSFastEnumerationState;
 @implementation A
 // PGOGEN: define {{.*}}+[A foreach:]
 // PGOUSE: define {{.*}}+[A foreach:]
-// PGOGEN: store {{.*}} @[[FRC]], i32 0, i32 0
+// PGOGEN: store {{.*}} @[[FRC]]
 + (void)foreach: (NSArray *)array
 {
   __block id result;
@@ -54,7 +54,7 @@ struct NSFastEnumerationState;
   for (id x in array) {
     // PGOGEN: define {{.*}}_block_invoke
     // PGOUSE: define {{.*}}_block_invoke
-    // PGOGEN: store {{.*}} @[[BLC]], i32 0, i32 0
+    // PGOGEN: store {{.*}} @[[BLC]]
     ^{
       static int init = 0;
       // PGOGEN: store {{.*}} @[[BLC]], i32 0, i32 1

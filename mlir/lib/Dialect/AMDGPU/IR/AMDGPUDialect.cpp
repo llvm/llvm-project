@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/AMDGPU/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -30,16 +30,16 @@
 using namespace mlir;
 using namespace mlir::amdgpu;
 
-#include "mlir/Dialect/AMDGPU/AMDGPUDialect.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.cpp.inc"
 
 void AMDGPUDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/AMDGPU/AMDGPU.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "mlir/Dialect/AMDGPU/AMDGPUAttributes.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
       >();
 }
 
@@ -48,14 +48,15 @@ void AMDGPUDialect::initialize() {
 //===----------------------------------------------------------------------===//
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
-  MemRefType bufferType = op.getMemref().getType().template cast<MemRefType>();
+  MemRefType bufferType = llvm::cast<MemRefType>(op.getMemref().getType());
   Attribute memorySpace = bufferType.getMemorySpace();
   bool isGlobal = false;
   if (!memorySpace)
     isGlobal = true;
-  else if (auto intMemorySpace = memorySpace.dyn_cast<IntegerAttr>())
+  else if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
     isGlobal = intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  else if (auto gpuMemorySpace = memorySpace.dyn_cast<gpu::AddressSpaceAttr>())
+  else if (auto gpuMemorySpace =
+               llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     isGlobal = gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
 
   if (!isGlobal)
@@ -87,6 +88,10 @@ LogicalResult RawBufferAtomicSmaxOp::verify() {
 }
 
 LogicalResult RawBufferAtomicUminOp::verify() {
+  return verifyRawBufferOp(*this);
+}
+
+LogicalResult RawBufferAtomicCmpswapOp::verify() {
   return verifyRawBufferOp(*this);
 }
 
@@ -136,12 +141,11 @@ static bool staticallyOutOfBounds(OpType op) {
 }
 
 namespace {
-struct RemoveStaticallyOobBufferLoads final
-    : public OpRewritePattern<RawBufferLoadOp> {
-  using OpRewritePattern<RawBufferLoadOp>::OpRewritePattern;
+template <typename OpType>
+struct RemoveStaticallyOobBufferLoads final : public OpRewritePattern<OpType> {
+  using OpRewritePattern<OpType>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(RawBufferLoadOp op,
-                                PatternRewriter &rw) const override {
+  LogicalResult matchAndRewrite(OpType op, PatternRewriter &rw) const override {
     if (!staticallyOutOfBounds(op))
       return failure();
     Type loadType = op.getResult().getType();
@@ -167,7 +171,7 @@ struct RemoveStaticallyOobBufferWrites final : public OpRewritePattern<OpType> {
 
 void RawBufferLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferLoads>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferLoadOp>>(context);
 }
 
 void RawBufferStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -195,6 +199,12 @@ void RawBufferAtomicUminOp::getCanonicalizationPatterns(
   results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicUminOp>>(context);
 }
 
+void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicCmpswapOp>>(
+      context);
+}
+
 //===----------------------------------------------------------------------===//
 // MFMAOp
 //===----------------------------------------------------------------------===//
@@ -207,11 +217,11 @@ LogicalResult MFMAOp::verify() {
 
   Type sourceElem = sourceType, destElem = destType;
   uint32_t sourceLen = 1, destLen = 1;
-  if (auto sourceVector = sourceType.dyn_cast<VectorType>()) {
+  if (auto sourceVector = llvm::dyn_cast<VectorType>(sourceType)) {
     sourceLen = sourceVector.getNumElements();
     sourceElem = sourceVector.getElementType();
   }
-  if (auto destVector = destType.dyn_cast<VectorType>()) {
+  if (auto destVector = llvm::dyn_cast<VectorType>(destType)) {
     destLen = destVector.getNumElements();
     destElem = destVector.getElementType();
   }
@@ -220,7 +230,7 @@ LogicalResult MFMAOp::verify() {
   if (sourceElem.isFloat8E5M2FNUZ() || sourceElem.isFloat8E4M3FNUZ()) {
     int64_t sourceBLen = 1;
     Type sourceBElem = sourceBType;
-    if (auto sourceBVector = sourceBType.dyn_cast<VectorType>()) {
+    if (auto sourceBVector = llvm::dyn_cast<VectorType>(sourceBType)) {
       sourceBLen = sourceBVector.getNumElements();
       sourceBElem = sourceBVector.getElementType();
     }
@@ -273,10 +283,10 @@ LogicalResult MFMAOp::verify() {
   return success();
 }
 
-#include "mlir/Dialect/AMDGPU/AMDGPUEnums.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/AMDGPU/AMDGPUAttributes.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/AMDGPU/AMDGPU.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"

@@ -1299,6 +1299,15 @@ void PDBASTParser::AddRecordMembers(
       // Query the symbol's value as the variable initializer if valid.
       if (member_comp_type.IsConst()) {
         auto value = member->getValue();
+        if (value.Type == llvm::pdb::Empty) {
+          LLDB_LOG(GetLog(LLDBLog::AST),
+                   "Class '{0}' has member '{1}' of type '{2}' with an unknown "
+                   "constant size.",
+                   record_type.GetTypeName(), member_name,
+                   member_comp_type.GetTypeName());
+          continue;
+        }
+
         clang::QualType qual_type = decl->getType();
         unsigned type_width = m_ast.getASTContext().getIntWidth(qual_type);
         unsigned constant_width = value.getBitWidth();

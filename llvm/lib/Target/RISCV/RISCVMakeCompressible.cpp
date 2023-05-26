@@ -75,7 +75,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-make-compressible"
-#define RISCV_COMPRESS_INSTRS_NAME "RISCV Make Compressible"
+#define RISCV_COMPRESS_INSTRS_NAME "RISC-V Make Compressible"
 
 namespace {
 
@@ -227,9 +227,6 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
   const TargetRegisterInfo *TRI =
       MBB.getParent()->getSubtarget().getRegisterInfo();
 
-  RegScavenger RS;
-  RS.enterBasicBlock(MBB);
-
   for (MachineBasicBlock::instr_iterator I = FirstMI.getIterator(),
                                          E = MBB.instr_end();
        I != E; ++I) {
@@ -238,14 +235,8 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
     // Determine if this is an instruction which would benefit from using the
     // new register.
     RegImmPair CandidateRegImm = getRegImmPairPreventingCompression(MI);
-    if (CandidateRegImm.Reg == RegImm.Reg &&
-        CandidateRegImm.Imm == RegImm.Imm) {
-      // Advance tracking since the value in the new register must be live for
-      // this instruction too.
-      RS.forward(I);
-
+    if (CandidateRegImm.Reg == RegImm.Reg && CandidateRegImm.Imm == RegImm.Imm)
       MIs.push_back(&MI);
-    }
 
     // If RegImm.Reg is modified by this instruction, then we cannot optimize
     // past this instruction. If the register is already compressed, then it may
@@ -278,6 +269,9 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
   else
     return RISCV::NoRegister;
 
+  RegScavenger RS;
+  RS.enterBasicBlockEnd(MBB);
+  RS.backward(MIs.back()->getIterator());
   return RS.scavengeRegisterBackwards(*RCToScavenge, FirstMI.getIterator(),
                                       /*RestoreAfter=*/false, /*SPAdj=*/0,
                                       /*AllowSpill=*/false);

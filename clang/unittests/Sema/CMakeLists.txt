@@ -24,7 +24,7 @@ clang_target_link_libraries(SemaTests
 
 target_link_libraries(SemaTests
   PRIVATE
-  clangTesting
   LLVMTestingAnnotations
   LLVMTestingSupport
-)
+  clangTesting
+  )

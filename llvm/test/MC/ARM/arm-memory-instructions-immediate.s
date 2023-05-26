@@ -21,5 +21,5 @@ foo:
 // CHECK-NEXT: strb r0, [r1, #1024]
 .ifdef ERR
     str r0, [r1, 1b]
-// ERR:[[#@LINE-1]]:5: error: unsupported relocation on symbol
+// ERR:[[#@LINE-1]]:5: error: unsupported relocation type
 .endif

@@ -94,7 +94,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
     /// computeDependence).
     bool CanReorder;
 
-    /// If non-None, then an instruction in \p Insts that also must be
+    /// If non-std::nullopt, then an instruction in \p Insts that also must be
     /// hoisted.
     std::optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence;
 

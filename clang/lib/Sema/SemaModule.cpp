@@ -156,11 +156,16 @@ static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
   if (Reason == Reserved && S.getSourceManager().isInSystemHeader(Loc))
     Reason = Valid;
 
-  if (Reason != Valid) {
-    S.Diag(Loc, diag::err_invalid_module_name) << II << (int)Reason;
-    return true;
+  switch (Reason) {
+  case Valid:
+    return false;
+  case Invalid:
+    return S.Diag(Loc, diag::err_invalid_module_name) << II;
+  case Reserved:
+    S.Diag(Loc, diag::warn_reserved_module_name) << II;
+    return false;
   }
-  return false;
+  llvm_unreachable("fell off a fully covered switch");
 }
 
 Sema::DeclGroupPtrTy
@@ -250,7 +255,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     }
   }
 
-  // C++2b [module.unit]p1: ... The identifiers module and import shall not
+  // C++23 [module.unit]p1: ... The identifiers module and import shall not
   // appear as identifiers in a module-name or module-partition. All
   // module-names either beginning with an identifier consisting of std
   // followed by zero or more digits or containing a reserved identifier
@@ -263,11 +268,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   if (!getSourceManager().isInSystemHeader(Path[0].second) &&
       (FirstComponentName == "std" ||
        (FirstComponentName.startswith("std") &&
-        llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit)))) {
-    Diag(Path[0].second, diag::err_invalid_module_name)
-        << Path[0].first << /*reserved*/ 1;
-    return nullptr;
-  }
+        llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit))))
+    Diag(Path[0].second, diag::warn_reserved_module_name) << Path[0].first;
 
   // Then test all of the components in the path to see if any of them are
   // using another kind of reserved or invalid identifier.
@@ -298,8 +300,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
 
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
-  Module *Mod;
-
+  Module *Mod;                 // The module we are creating.
+  Module *Interface = nullptr; // The interface for an implementation.
   switch (MDK) {
   case ModuleDeclKind::Interface:
   case ModuleDeclKind::PartitionInterface: {
@@ -336,18 +338,19 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     // we're building if `LangOpts.CurrentModule` equals to 'ModuleName'.
     // Change the value for `LangOpts.CurrentModule` temporarily to make the
     // module loader work properly.
-    const_cast<LangOptions&>(getLangOpts()).CurrentModule = "";
-    Mod = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
-                                       Module::AllVisible,
-                                       /*IsInclusionDirective=*/false);
+    const_cast<LangOptions &>(getLangOpts()).CurrentModule = "";
+    Interface = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
+                                             Module::AllVisible,
+                                             /*IsInclusionDirective=*/false);
     const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
 
-    if (!Mod) {
+    if (!Interface) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
       // Create an empty module interface unit for error recovery.
       Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName);
+    } else {
+      Mod = Map.createModuleForImplementationUnit(ModuleLoc, ModuleName);
     }
-
   } break;
 
   case ModuleDeclKind::PartitionImplementation:
@@ -386,19 +389,31 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // statements, so imports are allowed.
   ImportState = ModuleImportState::ImportAllowed;
 
-  // For an implementation, We already made an implicit import (its interface).
-  // Make and return the import decl to be added to the current TU.
-  if (MDK == ModuleDeclKind::Implementation) {
-    // Make the import decl for the interface.
-    ImportDecl *Import =
-        ImportDecl::Create(Context, CurContext, ModuleLoc, Mod, Path[0].second);
-    // and return it to be added.
+  getASTContext().setCurrentNamedModule(Mod);
+
+  // We already potentially made an implicit import (in the case of a module
+  // implementation unit importing its interface).  Make this module visible
+  // and return the import decl to be added to the current TU.
+  if (Interface) {
+
+    VisibleModules.setVisible(Interface, ModuleLoc);
+
+    // Make the import decl for the interface in the impl module.
+    ImportDecl *Import = ImportDecl::Create(Context, CurContext, ModuleLoc,
+                                            Interface, Path[0].second);
+    CurContext->addDecl(Import);
+
+    // Sequence initialization of the imported module before that of the current
+    // module, if any.
+    Context.addModuleInitializer(ModuleScopes.back().Module, Import);
+    Mod->Imports.insert(Interface); // As if we imported it.
+    // Also save this as a shortcut to checking for decls in the interface
+    ThePrimaryInterface = Interface;
+    // If we made an implicit import of the module interface, then return the
+    // imported module decl.
     return ConvertDeclToDeclGroup(Import);
   }
 
-  getASTContext().setNamedModuleForCodeGen(Mod);
-
-  // FIXME: Create a ModuleDecl.
   return nullptr;
 }
 
@@ -424,19 +439,17 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
     Diag(ModuleScopes.back().BeginLoc, diag::note_previous_definition);
     return nullptr;
 
-  case Module::ModuleInterfaceUnit:
-    break;
-  }
-
-  if (!ModuleScopes.back().ModuleInterface) {
+  case Module::ModuleImplementationUnit:
     Diag(PrivateLoc, diag::err_private_module_fragment_not_module_interface);
     Diag(ModuleScopes.back().BeginLoc,
          diag::note_not_module_interface_add_export)
         << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
     return nullptr;
+
+  case Module::ModuleInterfaceUnit:
+    break;
   }
 
-  // FIXME: Check this isn't a module interface partition.
   // FIXME: Check that this translation unit does not import any partitions;
   // such imports would violate [basic.link]/2's "shall be the only module unit"
   // restriction.
@@ -531,6 +544,9 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
                                    SourceLocation ExportLoc,
                                    SourceLocation ImportLoc, Module *Mod,
                                    ModuleIdPath Path) {
+  if (Mod->isHeaderUnit())
+    Diag(ImportLoc, diag::warn_experimental_header_unit);
+
   VisibleModules.setVisible(Mod, ImportLoc);
 
   checkModuleImportContext(*this, Mod, ImportLoc, CurContext);
@@ -1007,17 +1023,4 @@ void Sema::PopImplicitGlobalModuleFragment() {
          getCurrentModule()->isImplicitGlobalModule() &&
          "left the wrong module scope, which is not global module fragment");
   ModuleScopes.pop_back();
-}
-
-bool Sema::isModuleUnitOfCurrentTU(const Module *M) const {
-  assert(M);
-
-  Module *CurrentModuleUnit = getCurrentModule();
-
-  // If we are not in a module currently, M must not be the module unit of
-  // current TU.
-  if (!CurrentModuleUnit)
-    return false;
-
-  return M->isSubModuleOf(CurrentModuleUnit->getTopLevelModule());
 }

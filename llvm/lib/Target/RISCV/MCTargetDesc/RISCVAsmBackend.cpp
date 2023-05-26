@@ -53,6 +53,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // name                      offset bits  flags
       {"fixup_riscv_hi20", 12, 20, 0},
       {"fixup_riscv_lo12_i", 20, 12, 0},
+      {"fixup_riscv_12_i", 20, 12, 0},
       {"fixup_riscv_lo12_s", 0, 32, 0},
       {"fixup_riscv_pcrel_hi20", 12, 20,
        MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},
@@ -375,7 +376,7 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   }
 
   bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
-                          STI->hasFeature(RISCV::FeatureExtZca);
+                          STI->hasFeature(RISCV::FeatureStdExtZca);
   // The canonical nop on RVC is c.nop.
   if (Count % 4 == 2) {
     OS.write(UseCompressedNop ? "\x01\0" : "\0\0", 2);
@@ -420,6 +421,12 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case RISCV::fixup_riscv_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_tprel_lo12_i:
+    return Value & 0xfff;
+  case RISCV::fixup_riscv_12_i:
+    if (!isInt<12>(Value)) {
+      Ctx.reportError(Fixup.getLoc(),
+                      "operand must be a constant 12-bit integer");
+    }
     return Value & 0xfff;
   case RISCV::fixup_riscv_lo12_s:
   case RISCV::fixup_riscv_pcrel_lo12_s:
@@ -606,7 +613,7 @@ bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
     return false;
 
   bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
-                          STI->hasFeature(RISCV::FeatureExtZca);
+                          STI->hasFeature(RISCV::FeatureStdExtZca);
   unsigned MinNopLen = UseCompressedNop ? 2 : 4;
 
   if (AF.getAlignment() <= MinNopLen) {

@@ -799,10 +799,10 @@ multiclass SInstZPZZZ<string name, string types, string m_intrinsic, string x_in
   def _N_Z : SInst<name # "[_n_{d}]", "dPdda", types, MergeZero, m_intrinsic, flags>;
 }
 
-defm SVMAD : SInstZPZZZ<"svmad", "csilUcUsUiUl", "aarch64_sve_mad", "aarch64_sve_mad">;
-defm SVMLA : SInstZPZZZ<"svmla", "csilUcUsUiUl", "aarch64_sve_mla", "aarch64_sve_mla">;
-defm SVMLS : SInstZPZZZ<"svmls", "csilUcUsUiUl", "aarch64_sve_mls", "aarch64_sve_mls">;
-defm SVMSB : SInstZPZZZ<"svmsb", "csilUcUsUiUl", "aarch64_sve_msb", "aarch64_sve_msb">;
+defm SVMAD : SInstZPZZZ<"svmad", "csilUcUsUiUl", "aarch64_sve_mad", "aarch64_sve_mla_u", [ReverseMergeAnyAccOp]>;
+defm SVMLA : SInstZPZZZ<"svmla", "csilUcUsUiUl", "aarch64_sve_mla", "aarch64_sve_mla_u">;
+defm SVMLS : SInstZPZZZ<"svmls", "csilUcUsUiUl", "aarch64_sve_mls", "aarch64_sve_mls_u">;
+defm SVMSB : SInstZPZZZ<"svmsb", "csilUcUsUiUl", "aarch64_sve_msb", "aarch64_sve_mls_u", [ReverseMergeAnyAccOp]>;
 
 //------------------------------------------------------------------------------
 
@@ -2103,4 +2103,13 @@ def SVBEXT   : SInst<"svbext[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sv
 def SVBEXT_N : SInst<"svbext[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sve_bext_x">;
 def SVBGRP   : SInst<"svbgrp[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bgrp_x">;
 def SVBGRP_N : SInst<"svbgrp[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sve_bgrp_x">;
+}
+
+let TargetGuard = "sve2p1" in {
+def SVFCLAMP   : SInst<"svclamp[_{d}]", "dddd", "hfd", MergeNone, "aarch64_sve_fclamp", [], []>;
+}
+
+let TargetGuard = "sve2p1" in {
+def SVSCLAMP : SInst<"svclamp[_{d}]", "dddd", "csil",     MergeNone, "aarch64_sve_sclamp", [], []>;
+def SVUCLAMP : SInst<"svclamp[_{d}]", "dddd", "UcUsUiUl", MergeNone, "aarch64_sve_uclamp", [], []>;
 }

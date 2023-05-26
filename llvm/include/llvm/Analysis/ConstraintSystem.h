@@ -13,13 +13,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <string>
 
 namespace llvm {
 
 class Value;
-
 class ConstraintSystem {
   struct Entry {
     int64_t Coefficient;
@@ -68,8 +68,14 @@ class ConstraintSystem {
 
 public:
   ConstraintSystem() {}
+  ConstraintSystem(ArrayRef<Value *> FunctionArgs) {
+    NumVariables += FunctionArgs.size();
+    for (auto *Arg : FunctionArgs) {
+      Value2Index.insert({Arg, Value2Index.size() + 1});
+    }
+  }
   ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index)
-      : Value2Index(Value2Index) {}
+      : NumVariables(Value2Index.size()), Value2Index(Value2Index) {}
 
   bool addVariableRow(ArrayRef<int64_t> R) {
     assert(Constraints.empty() || R.size() == NumVariables);
@@ -117,7 +123,8 @@ public:
     // the constant.
     R[0] += 1;
     for (auto &C : R)
-      C *= -1;
+      if (MulOverflow(C, int64_t(-1), C))
+        return {};
     return R;
   }
 

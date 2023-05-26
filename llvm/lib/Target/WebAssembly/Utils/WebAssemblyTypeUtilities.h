@@ -17,9 +17,9 @@
 
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
 
@@ -76,7 +76,7 @@ wasm::ValType regClassToValType(const TargetRegisterClass *RC);
 
 /// Sets a Wasm Symbol Type.
 void wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                       const SmallVector<MVT, 1> &VTs);
+                       const ArrayRef<MVT> &VTs);
 
 } // end namespace WebAssembly
 } // end namespace llvm

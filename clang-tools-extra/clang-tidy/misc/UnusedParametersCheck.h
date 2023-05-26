@@ -25,6 +25,7 @@ public:
 
 private:
   const bool StrictMode;
+  const bool IgnoreVirtual;
   class IndexerVisitor;
   std::unique_ptr<IndexerVisitor> Indexer;
 

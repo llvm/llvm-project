@@ -56,7 +56,7 @@ def OpD : NS_Op<"type_attr_as_result_type", [FirstAttrDerivedResultType]> {
 
 // CHECK-LABEL: OpD definitions
 // CHECK: void OpD::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
-// CHECK: odsState.addTypes({attr.getValue().cast<::mlir::TypeAttr>().getValue()});
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypeAttr>(attr.getValue()).getValue()});
 
 def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
   let arguments = (ins I32:$x, F32Attr:$attr);
@@ -65,7 +65,7 @@ def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
 
 // CHECK-LABEL: OpE definitions
 // CHECK: void OpE::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
-// CHECK: odsState.addTypes({attr.getValue().cast<::mlir::TypedAttr>().getType()});
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypedAttr>(attr.getValue()).getType()});
 
 def OpF : NS_Op<"one_variadic_result_op", []> {
   let results = (outs Variadic<I32>:$x);
@@ -152,7 +152,7 @@ def OpL3 : NS_Op<"op_with_all_types_constraint",
 
 // CHECK-LABEL: LogicalResult OpL3::inferReturnTypes
 // CHECK-NOT: }
-// CHECK: ::mlir::Type odsInferredType0 = attributes.get("a").cast<::mlir::TypedAttr>().getType();
+// CHECK: ::mlir::Type odsInferredType0 = odsInferredTypeAttr0.getType();
 // CHECK: inferredReturnTypes[0] = odsInferredType0;
 
 def OpL4 : NS_Op<"two_inference_edges", [

@@ -34,19 +34,18 @@ enum {
   TB_FOLDED_BCAST = 1 << 7,
 
   // Minimum alignment required for load/store.
-  // Used for RegOp->MemOp conversion. Encoded as Log2(Align) + 1 to allow 0
-  // to mean align of 0.
-  // (stored in bits 8 - 11)
+  // Used for RegOp->MemOp conversion. Encoded as Log2(Align)
+  // (stored in bits 9 - 11)
   TB_ALIGN_SHIFT = 8,
-  TB_ALIGN_NONE  =   0 << TB_ALIGN_SHIFT,
-  TB_ALIGN_16    =   5 << TB_ALIGN_SHIFT,
-  TB_ALIGN_32    =   6 << TB_ALIGN_SHIFT,
-  TB_ALIGN_64    =   7 << TB_ALIGN_SHIFT,
-  TB_ALIGN_MASK  = 0xf << TB_ALIGN_SHIFT,
+  TB_ALIGN_1     =   0 << TB_ALIGN_SHIFT,
+  TB_ALIGN_16    =   4 << TB_ALIGN_SHIFT,
+  TB_ALIGN_32    =   5 << TB_ALIGN_SHIFT,
+  TB_ALIGN_64    =   6 << TB_ALIGN_SHIFT,
+  TB_ALIGN_MASK  = 0x7 << TB_ALIGN_SHIFT,
 
   // Broadcast type.
   // (stored in bits 12 - 13)
-  TB_BCAST_TYPE_SHIFT = 12,
+  TB_BCAST_TYPE_SHIFT = TB_ALIGN_SHIFT + 3,
   TB_BCAST_D    =   0 << TB_BCAST_TYPE_SHIFT,
   TB_BCAST_Q    =   1 << TB_BCAST_TYPE_SHIFT,
   TB_BCAST_SS   =   2 << TB_BCAST_TYPE_SHIFT,

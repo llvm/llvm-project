@@ -1100,20 +1100,20 @@ void test_status(TestFunction check, ExceptionTest check_exception) {
 
 template <class CharT, class TestFunction, class ExceptionTest>
 void test_pair_tuple(TestFunction check, ExceptionTest check_exception, auto&& input) {
-  check(SV("{(1, a), (42, *)}"), SV("{}"), input);
+  check(SV("{(1, 'a'), (42, '*')}"), SV("{}"), input);
 
   // ***** underlying has no format-spec
 
   // *** align-fill & width ***
-  check(SV("{(1, a), (42, *)}     "), SV("{:22}"), input);
-  check(SV("{(1, a), (42, *)}*****"), SV("{:*<22}"), input);
-  check(SV("__{(1, a), (42, *)}___"), SV("{:_^22}"), input);
-  check(SV("#####{(1, a), (42, *)}"), SV("{:#>22}"), input);
+  check(SV("{(1, 'a'), (42, '*')}     "), SV("{:26}"), input);
+  check(SV("{(1, 'a'), (42, '*')}*****"), SV("{:*<26}"), input);
+  check(SV("__{(1, 'a'), (42, '*')}___"), SV("{:_^26}"), input);
+  check(SV("#####{(1, 'a'), (42, '*')}"), SV("{:#>26}"), input);
 
-  check(SV("{(1, a), (42, *)}     "), SV("{:{}}"), input, 22);
-  check(SV("{(1, a), (42, *)}*****"), SV("{:*<{}}"), input, 22);
-  check(SV("__{(1, a), (42, *)}___"), SV("{:_^{}}"), input, 22);
-  check(SV("#####{(1, a), (42, *)}"), SV("{:#>{}}"), input, 22);
+  check(SV("{(1, 'a'), (42, '*')}     "), SV("{:{}}"), input, 26);
+  check(SV("{(1, 'a'), (42, '*')}*****"), SV("{:*<{}}"), input, 26);
+  check(SV("__{(1, 'a'), (42, '*')}___"), SV("{:_^{}}"), input, 26);
+  check(SV("#####{(1, 'a'), (42, '*')}"), SV("{:#>{}}"), input, 26);
 
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
   check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
@@ -1137,11 +1137,11 @@ void test_pair_tuple(TestFunction check, ExceptionTest check_exception, auto&& i
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
-  check(SV("__(1, a), (42, *)___"), SV("{:_^20n}"), input);
-  check(SV("__(1, a), (42, *)___"), SV("{:_^20nm}"), input); // m should have no effect
+  check(SV("__(1, 'a'), (42, '*')___"), SV("{:_^24n}"), input);
+  check(SV("__(1, 'a'), (42, '*')___"), SV("{:_^24nm}"), input); // m should have no effect
 
   // *** type ***
-  check(SV("__{(1, a), (42, *)}___"), SV("{:_^22m}"), input);
+  check(SV("__{(1, 'a'), (42, '*')}___"), SV("{:_^26m}"), input);
   check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
   check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
 

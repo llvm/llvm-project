@@ -27,7 +27,7 @@
 namespace fir::support {
 
 #define FLANG_NONCODEGEN_DIALECT_LIST                                          \
-  mlir::AffineDialect, FIROpsDialect, hlfir::hlfirDialect,                     \
+  mlir::affine::AffineDialect, FIROpsDialect, hlfir::hlfirDialect,             \
       mlir::acc::OpenACCDialect, mlir::omp::OpenMPDialect,                     \
       mlir::scf::SCFDialect, mlir::arith::ArithDialect,                        \
       mlir::cf::ControlFlowDialect, mlir::func::FuncDialect,                   \
@@ -63,25 +63,25 @@ inline void loadDialects(mlir::MLIRContext &context) {
 inline void registerMLIRPassesForFortranTools() {
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
-  mlir::registerAffineLoopFusionPass();
+  mlir::affine::registerAffineLoopFusionPass();
   mlir::registerLoopInvariantCodeMotionPass();
-  mlir::registerLoopCoalescingPass();
+  mlir::affine::registerLoopCoalescingPass();
   mlir::registerStripDebugInfoPass();
   mlir::registerPrintOpStatsPass();
   mlir::registerInlinerPass();
   mlir::registerSCCPPass();
-  mlir::registerAffineScalarReplacementPass();
+  mlir::affine::registerAffineScalarReplacementPass();
   mlir::registerSymbolDCEPass();
   mlir::registerLocationSnapshotPass();
-  mlir::registerAffinePipelineDataTransferPass();
+  mlir::affine::registerAffinePipelineDataTransferPass();
 
-  mlir::registerAffineVectorizePass();
-  mlir::registerAffineLoopUnrollPass();
-  mlir::registerAffineLoopUnrollAndJamPass();
-  mlir::registerSimplifyAffineStructuresPass();
-  mlir::registerAffineLoopInvariantCodeMotionPass();
-  mlir::registerAffineLoopTilingPass();
-  mlir::registerAffineDataCopyGenerationPass();
+  mlir::affine::registerAffineVectorizePass();
+  mlir::affine::registerAffineLoopUnrollPass();
+  mlir::affine::registerAffineLoopUnrollAndJamPass();
+  mlir::affine::registerSimplifyAffineStructuresPass();
+  mlir::affine::registerAffineLoopInvariantCodeMotionPass();
+  mlir::affine::registerAffineLoopTilingPass();
+  mlir::affine::registerAffineDataCopyGenerationPass();
 
   mlir::registerConvertAffineToStandardPass();
 }

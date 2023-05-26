@@ -63,7 +63,7 @@ public:
   };
 
 private:
-  TokenKind Kind;
+  TokenKind Kind = TokenKind::Eof;
 
   /// A reference to the entire token contents; this is always a pointer into
   /// a memory buffer owned by the source manager.

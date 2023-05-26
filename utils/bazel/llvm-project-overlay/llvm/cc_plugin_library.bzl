@@ -43,8 +43,8 @@ def cc_plugin_library(name, srcs, hdrs, include_prefix = None, strip_include_pre
     native.filegroup(
         name = interface_output_name,
         srcs = select({
-            "@bazel_tools//src/conditions:windows": [":" + dll_name],
-            "@bazel_tools//src/conditions:darwin": [":" + dylib_name],
+            "@platforms//os:windows": [":" + dll_name],
+            "@platforms//os:macos": [":" + dylib_name],
             "//conditions:default": [":" + so_name],
         }),
         output_group = "interface_library",
@@ -53,8 +53,8 @@ def cc_plugin_library(name, srcs, hdrs, include_prefix = None, strip_include_pre
         name = import_name,
         interface_library = ":" + interface_output_name,
         shared_library = select({
-            "@bazel_tools//src/conditions:windows": ":" + dll_name,
-            "@bazel_tools//src/conditions:darwin": ":" + dylib_name,
+            "@platforms//os:windows": ":" + dll_name,
+            "@platforms//os:macos": ":" + dylib_name,
             "//conditions:default": ":" + so_name,
         }),
         alwayslink = alwayslink,

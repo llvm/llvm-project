@@ -60,26 +60,13 @@ public:
 
 private:
   typename ELFT::Shdr *Header;
-
-  bool isTextOrDataSection() const;
 };
 
 template <typename ELFT>
 void ELFDebugObjectSection<ELFT>::setTargetMemoryRange(SectionRange Range) {
-  // Only patch load-addresses for executable and data sections.
-  if (isTextOrDataSection())
-    Header->sh_addr =
-        static_cast<typename ELFT::uint>(Range.getStart().getValue());
-}
-
-template <typename ELFT>
-bool ELFDebugObjectSection<ELFT>::isTextOrDataSection() const {
-  switch (Header->sh_type) {
-  case ELF::SHT_PROGBITS:
-  case ELF::SHT_X86_64_UNWIND:
-    return Header->sh_flags & (ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
-  }
-  return false;
+  // All recorded sections are candidates for load-address patching.
+  Header->sh_addr =
+      static_cast<typename ELFT::uint>(Range.getStart().getValue());
 }
 
 template <typename ELFT>
@@ -106,16 +93,19 @@ Error ELFDebugObjectSection<ELFT>::validateInBounds(StringRef Buffer,
 
 template <typename ELFT>
 void ELFDebugObjectSection<ELFT>::dump(raw_ostream &OS, StringRef Name) {
-  if (auto Addr = static_cast<JITTargetAddress>(Header->sh_addr)) {
+  if (uint64_t Addr = Header->sh_addr) {
     OS << formatv("  {0:x16} {1}\n", Addr, Name);
   } else {
     OS << formatv("                     {0}\n", Name);
   }
 }
 
-enum class Requirement {
+enum DebugObjectFlags : int {
   // Request final target memory load-addresses for all sections.
-  ReportFinalSectionLoadAddresses,
+  ReportFinalSectionLoadAddresses = 1 << 0,
+
+  // We found sections with debug information when processing the input object.
+  HasDebugSections = 1 << 1,
 };
 
 /// The plugin creates a debug object from when JITLink starts processing the
@@ -127,10 +117,15 @@ class DebugObject {
 public:
   DebugObject(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
               ExecutionSession &ES)
-      : MemMgr(MemMgr), JD(JD), ES(ES) {}
+      : MemMgr(MemMgr), JD(JD), ES(ES), Flags(DebugObjectFlags{}) {}
 
-  void set(Requirement Req) { Reqs.insert(Req); }
-  bool has(Requirement Req) const { return Reqs.count(Req) > 0; }
+  bool hasFlags(DebugObjectFlags F) const { return Flags & F; }
+  void setFlags(DebugObjectFlags F) {
+    Flags = static_cast<DebugObjectFlags>(Flags | F);
+  }
+  void clearFlags(DebugObjectFlags F) {
+    Flags = static_cast<DebugObjectFlags>(Flags & ~F);
+  }
 
   using FinalizeContinuation = std::function<void(Expected<ExecutorAddrRange>)>;
 
@@ -159,7 +154,7 @@ protected:
 
 private:
   ExecutionSession &ES;
-  std::set<Requirement> Reqs;
+  DebugObjectFlags Flags;
   FinalizedAlloc Alloc;
 };
 
@@ -171,8 +166,7 @@ void DebugObject::finalizeAsync(FinalizeContinuation OnFinalize) {
 
   if (auto SimpleSegAlloc = finalizeWorkingMemory()) {
     auto ROSeg = SimpleSegAlloc->getSegInfo(MemProt::Read);
-    ExecutorAddrRange DebugObjRange(ExecutorAddr(ROSeg.Addr),
-                                    ExecutorAddrDiff(ROSeg.WorkingMem.size()));
+    ExecutorAddrRange DebugObjRange(ROSeg.Addr, ROSeg.WorkingMem.size());
     SimpleSegAlloc->finalize(
         [this, DebugObjRange,
          OnFinalize = std::move(OnFinalize)](Expected<FinalizedAlloc> FA) {
@@ -222,7 +216,7 @@ private:
                  JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
                  ExecutionSession &ES)
       : DebugObject(MemMgr, JD, ES), Buffer(std::move(Buffer)) {
-    set(Requirement::ReportFinalSectionLoadAddresses);
+    setFlags(ReportFinalSectionLoadAddresses);
   }
 
   std::unique_ptr<WritableMemoryBuffer> Buffer;
@@ -271,37 +265,29 @@ ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
   if (!ObjRef)
     return ObjRef.takeError();
 
-  // TODO: Add support for other architectures.
-  uint16_t TargetMachineArch = ObjRef->getHeader().e_machine;
-  if (TargetMachineArch != ELF::EM_X86_64)
-    return nullptr;
-
   Expected<ArrayRef<SectionHeader>> Sections = ObjRef->sections();
   if (!Sections)
     return Sections.takeError();
 
-  bool HasDwarfSection = false;
   for (const SectionHeader &Header : *Sections) {
     Expected<StringRef> Name = ObjRef->getSectionName(Header);
     if (!Name)
       return Name.takeError();
     if (Name->empty())
       continue;
-    HasDwarfSection |= isDwarfSection(*Name);
+    if (isDwarfSection(*Name))
+      DebugObj->setFlags(HasDebugSections);
 
+    // Only record text and data sections (i.e. no bss, comments, rel, etc.)
+    if (Header.sh_type != ELF::SHT_PROGBITS &&
+        Header.sh_type != ELF::SHT_X86_64_UNWIND)
+      continue;
     if (!(Header.sh_flags & ELF::SHF_ALLOC))
       continue;
 
     auto Wrapped = std::make_unique<ELFDebugObjectSection<ELFT>>(&Header);
     if (Error Err = DebugObj->recordSection(*Name, std::move(Wrapped)))
       return std::move(Err);
-  }
-
-  if (!HasDwarfSection) {
-    LLVM_DEBUG(dbgs() << "Aborting debug registration for LinkGraph \""
-                      << DebugObj->Buffer->getBufferIdentifier()
-                      << "\": input object contains no debug info\n");
-    return nullptr;
   }
 
   return std::move(DebugObj);
@@ -371,12 +357,11 @@ Error ELFDebugObject::recordSection(
     StringRef Name, std::unique_ptr<ELFDebugObjectSection<ELFT>> Section) {
   if (Error Err = Section->validateInBounds(this->getBuffer(), Name.data()))
     return Err;
-  auto ItInserted = Sections.try_emplace(Name, std::move(Section));
-  if (!ItInserted.second)
-    return make_error<StringError>("In " + Buffer->getBufferIdentifier() +
-				   ", encountered duplicate section \"" +
-				   Name + "\" while building debug object",
-                                   inconvertibleErrorCode());
+  bool Inserted = Sections.try_emplace(Name, std::move(Section)).second;
+  if (!Inserted)
+    LLVM_DEBUG(dbgs() << "Skipping debug registration for section '" << Name
+                      << "' in object " << Buffer->getBufferIdentifier()
+                      << " (duplicate name)\n");
   return Error::success();
 }
 
@@ -403,8 +388,15 @@ createDebugObjectFromBuffer(ExecutionSession &ES, LinkGraph &G,
 }
 
 DebugObjectManagerPlugin::DebugObjectManagerPlugin(
+    ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target,
+    bool RequireDebugSections, bool AutoRegisterCode)
+    : ES(ES), Target(std::move(Target)),
+      RequireDebugSections(RequireDebugSections),
+      AutoRegisterCode(AutoRegisterCode) {}
+
+DebugObjectManagerPlugin::DebugObjectManagerPlugin(
     ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target)
-    : ES(ES), Target(std::move(Target)) {}
+    : DebugObjectManagerPlugin(ES, std::move(Target), true, true) {}
 
 DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
 
@@ -418,8 +410,14 @@ void DebugObjectManagerPlugin::notifyMaterializing(
 
   if (auto DebugObj = createDebugObjectFromBuffer(ES, G, Ctx, ObjBuffer)) {
     // Not all link artifacts allow debugging.
-    if (*DebugObj != nullptr)
-      PendingObjs[&MR] = std::move(*DebugObj);
+    if (*DebugObj == nullptr)
+      return;
+    if (RequireDebugSections && !(**DebugObj).hasFlags(HasDebugSections)) {
+      LLVM_DEBUG(dbgs() << "Skipping debug registration for LinkGraph '"
+                        << G.getName() << "': no debug info\n");
+      return;
+    }
+    PendingObjs[&MR] = std::move(*DebugObj);
   } else {
     ES.reportError(DebugObj.takeError());
   }
@@ -435,7 +433,7 @@ void DebugObjectManagerPlugin::modifyPassConfig(
     return;
 
   DebugObject &DebugObj = *It->second;
-  if (DebugObj.has(Requirement::ReportFinalSectionLoadAddresses)) {
+  if (DebugObj.hasFlags(ReportFinalSectionLoadAddresses)) {
     PassConfig.PostAllocationPasses.push_back(
         [&DebugObj](LinkGraph &Graph) -> Error {
           for (const Section &GraphSection : Graph.sections())
@@ -467,7 +465,8 @@ Error DebugObjectManagerPlugin::notifyEmitted(
           FinalizePromise.set_value(TargetMem.takeError());
           return;
         }
-        if (Error Err = Target->registerDebugObject(*TargetMem)) {
+        if (Error Err =
+                Target->registerDebugObject(*TargetMem, AutoRegisterCode)) {
           FinalizePromise.set_value(std::move(Err));
           return;
         }

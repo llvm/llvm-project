@@ -133,6 +133,10 @@ public:
 
   bool canRealignStack(const MachineFunction &MF) const override;
 
+  void eliminateFrameIndex(MachineBasicBlock::iterator II,
+                           unsigned FIOperandNum, Register BaseReg,
+                           int FIOffset) const;
+
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI,
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;

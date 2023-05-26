@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <type_traits>
 #include <optional>
+#include <type_traits>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 
@@ -20,6 +20,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -101,7 +102,8 @@ static void getXferIndices(OpBuilder &b, OpTy xferOp, Value iv,
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value offset = adaptor.getIndices()[*dim];
-    indices[*dim] = makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    indices[*dim] =
+        affine::makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
   }
 }
 
@@ -177,7 +179,8 @@ static Value generateInBoundsCheck(
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value base = xferOp.getIndices()[*dim];
-    Value memrefIdx = makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
+    Value memrefIdx =
+        affine::makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
     cond = lb.create<arith::CmpIOp>(arith::CmpIPredicate::sgt, memrefDim,
                                     memrefIdx);
   }
@@ -255,7 +258,7 @@ static void maybeApplyPassLabel(OpBuilder &b, OpTy newXferOp,
 /// Return true if this transfer op operates on a source tensor.
 template <typename OpTy>
 static bool isTensorOp(OpTy xferOp) {
-  if (xferOp.getShapedType().template isa<RankedTensorType>()) {
+  if (isa<RankedTensorType>(xferOp.getShapedType())) {
     if (xferOp.getOperationName().equals(TransferWriteOp::getOperationName())) {
       // TransferWriteOps on tensors have a result.
       assert(xferOp->getNumResults() > 0);
@@ -311,7 +314,7 @@ static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
 ///
 /// E.g.: memref<9xvector<5x6xf32>> --> memref<9x5xvector<6xf32>>
 static MemRefType unpackOneDim(MemRefType type) {
-  auto vectorType = type.getElementType().dyn_cast<VectorType>();
+  auto vectorType = dyn_cast<VectorType>(type.getElementType());
   auto memrefShape = type.getShape();
   SmallVector<int64_t, 8> newMemrefShape;
   newMemrefShape.append(memrefShape.begin(), memrefShape.end());
@@ -405,8 +408,8 @@ struct Strategy<TransferReadOp> {
     getXferIndices(b, xferOp, iv, xferIndices);
 
     Location loc = xferOp.getLoc();
-    auto bufferType = buffer.getType().dyn_cast<ShapedType>();
-    auto vecType = bufferType.getElementType().dyn_cast<VectorType>();
+    auto bufferType = dyn_cast<ShapedType>(buffer.getType());
+    auto vecType = dyn_cast<VectorType>(bufferType.getElementType());
     auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
     auto newXferOp = b.create<vector::TransferReadOp>(
         loc, vecType, xferOp.getSource(), xferIndices,
@@ -429,8 +432,8 @@ struct Strategy<TransferReadOp> {
     storeIndices.push_back(iv);
 
     Location loc = xferOp.getLoc();
-    auto bufferType = buffer.getType().dyn_cast<ShapedType>();
-    auto vecType = bufferType.getElementType().dyn_cast<VectorType>();
+    auto bufferType = dyn_cast<ShapedType>(buffer.getType());
+    auto vecType = dyn_cast<VectorType>(bufferType.getElementType());
     auto vec = b.create<vector::SplatOp>(loc, vecType, xferOp.getPadding());
     b.create<memref::StoreOp>(loc, vec, buffer, storeIndices);
 
@@ -695,7 +698,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     // Find and cast data buffer. How the buffer can be found depends on OpTy.
     ImplicitLocOpBuilder locB(xferOp.getLoc(), rewriter);
     auto dataBuffer = Strategy<OpTy>::getBuffer(xferOp);
-    auto dataBufferType = dataBuffer.getType().template dyn_cast<MemRefType>();
+    auto dataBufferType = dyn_cast<MemRefType>(dataBuffer.getType());
     auto castedDataType = unpackOneDim(dataBufferType);
     auto castedDataBuffer =
         locB.create<vector::TypeCastOp>(castedDataType, dataBuffer);
@@ -704,8 +707,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     Value castedMaskBuffer;
     if (xferOp.getMask()) {
       auto maskBuffer = getMaskBuffer(xferOp);
-      auto maskBufferType =
-          maskBuffer.getType().template dyn_cast<MemRefType>();
+      auto maskBufferType = dyn_cast<MemRefType>(maskBuffer.getType());
       if (xferOp.isBroadcastDim(0) || xferOp.getMaskType().getRank() == 1) {
         // Do not unpack a dimension of the mask, if:
         // * To-be-unpacked transfer op dimension is a broadcast.
@@ -886,7 +888,7 @@ struct UnrollTransferReadConversion
                            SmallVector<int64_t, 8> &indices) const {
     if (auto insertOp = getInsertOp(xferOp)) {
       for (Attribute attr : insertOp.getPosition())
-        indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
+        indices.push_back(dyn_cast<IntegerAttr>(attr).getInt());
     }
   }
 
@@ -905,7 +907,7 @@ struct UnrollTransferReadConversion
 
     auto insertOp = getInsertOp(xferOp);
     auto vec = getResultVector(xferOp, rewriter);
-    auto vecType = vec.getType().dyn_cast<VectorType>();
+    auto vecType = dyn_cast<VectorType>(vec.getType());
     auto xferVecType = xferOp.getVectorType();
     auto newXferVecType = VectorType::get(xferVecType.getShape().drop_front(),
                                           xferVecType.getElementType());
@@ -1013,7 +1015,7 @@ struct UnrollTransferWriteConversion
                             SmallVector<int64_t, 8> &indices) const {
     if (auto extractOp = getExtractOp(xferOp)) {
       for (Attribute attr : extractOp.getPosition())
-        indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
+        indices.push_back(dyn_cast<IntegerAttr>(attr).getInt());
     }
   }
 
@@ -1110,7 +1112,8 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value offset = memrefIndices[dim];
-    memrefIndices[dim] = makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    memrefIndices[dim] =
+        affine::makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
     return dim;
   }
 
@@ -1231,7 +1234,7 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
     if (xferOp.getTransferRank() == 0)
       return failure();
     auto map = xferOp.getPermutationMap();
-    auto memRefType = xferOp.getShapedType().template dyn_cast<MemRefType>();
+    auto memRefType = dyn_cast<MemRefType>(xferOp.getShapedType());
 
     if (!memRefType)
       return failure();

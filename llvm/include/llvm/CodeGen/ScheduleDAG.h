@@ -93,7 +93,7 @@ class TargetRegisterInfo;
     /// The time associated with this edge. Often this is just the value of the
     /// Latency field of the predecessor, however advanced models may provide
     /// additional information about specific edges.
-    unsigned Latency;
+    unsigned Latency = 0u;
 
   public:
     /// Constructs a null SDep. This is only for use by container classes which

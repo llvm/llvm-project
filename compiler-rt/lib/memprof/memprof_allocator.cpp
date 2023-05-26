@@ -555,6 +555,10 @@ struct Allocator {
     return user_requested_size;
   }
 
+  uptr AllocationSizeFast(uptr p) {
+    return reinterpret_cast<MemprofChunk *>(p - kChunkHeaderSize)->UsedSize();
+  }
+
   void Purge(BufferedStackTrace *stack) { allocator.ForceReleaseToOS(); }
 
   void PrintStats() { allocator.PrintStats(); }
@@ -681,6 +685,18 @@ int memprof_posix_memalign(void **memptr, uptr alignment, uptr size,
   return 0;
 }
 
+static const void *memprof_malloc_begin(const void *p) {
+  u64 user_requested_size;
+  MemprofChunk *m =
+      instance.GetMemprofChunkByAddr((uptr)p, user_requested_size);
+  if (!m)
+    return nullptr;
+  if (user_requested_size == 0)
+    return nullptr;
+
+  return (const void *)m->Beg();
+}
+
 uptr memprof_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
   if (!ptr)
     return 0;
@@ -699,8 +715,19 @@ int __sanitizer_get_ownership(const void *p) {
   return memprof_malloc_usable_size(p, 0, 0) != 0;
 }
 
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return memprof_malloc_begin(p);
+}
+
 uptr __sanitizer_get_allocated_size(const void *p) {
   return memprof_malloc_usable_size(p, 0, 0);
+}
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = instance.AllocationSizeFast(reinterpret_cast<uptr>(p));
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
 }
 
 int __memprof_profile_dump() {

@@ -111,8 +111,12 @@ public:
   /// either getSExtValue() or getZExtValue() will yield a correctly sized and
   /// signed value for the type Ty.
   /// Get a ConstantInt for a specific signed value.
-  static ConstantInt *getSigned(IntegerType *Ty, int64_t V);
-  static Constant *getSigned(Type *Ty, int64_t V);
+  static ConstantInt *getSigned(IntegerType *Ty, int64_t V) {
+    return get(Ty, V, true);
+  }
+  static Constant *getSigned(Type *Ty, int64_t V) {
+    return get(Ty, V, true);
+  }
 
   /// Return a ConstantInt with the specified value and an implied Type. The
   /// type is the integer type that corresponds to the bit width of the value.
@@ -264,11 +268,6 @@ class ConstantFP final : public ConstantData {
 
 public:
   ConstantFP(const ConstantFP &) = delete;
-
-  /// Floating point negation must be implemented with f(x) = -0.0 - x. This
-  /// method returns the negative zero constant for floating point or vector
-  /// floating point types; for all other types, it returns the null value.
-  static Constant *getZeroValueForNegation(Type *Ty);
 
   /// This returns a ConstantFP, or a vector containing a splat of a ConstantFP,
   /// for the specified value in the specified type. This should only be used

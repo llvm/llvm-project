@@ -33,8 +33,8 @@ define void @foo() personality ptr @bar {
 ; CHECK:       bb9:
 ; CHECK-NEXT:    [[INDVARS_IV528799:%.*]] = phi i64 [ poison, [[BB10]] ], [ poison, [[BB12]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ [[TMP9:%.*]], [[BB10]] ], [ [[TMP10:%.*]], [[BB12]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP8]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[TMP9]] = phi <2 x i32> [ [[TMP1]], [[BB3]] ]

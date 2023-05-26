@@ -610,7 +610,7 @@ def AArch64csel          : SDNode<"AArch64ISD::CSEL", SDT_AArch64CSel>;
 def AArch64csinv         : SDNode<"AArch64ISD::CSINV", SDT_AArch64CSel>;
 def AArch64csneg         : SDNode<"AArch64ISD::CSNEG", SDT_AArch64CSel>;
 def AArch64csinc         : SDNode<"AArch64ISD::CSINC", SDT_AArch64CSel>;
-def AArch64retflag       : SDNode<"AArch64ISD::RET_FLAG", SDTNone,
+def AArch64retglue       : SDNode<"AArch64ISD::RET_GLUE", SDTNone,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def AArch64adc       : SDNode<"AArch64ISD::ADC",  SDTBinaryArithWithFlagsIn >;
 def AArch64sbc       : SDNode<"AArch64ISD::SBC",  SDTBinaryArithWithFlagsIn>;
@@ -774,6 +774,12 @@ def AArch64faddp     : PatFrags<(ops node:$Rn, node:$Rm),
                                 [(AArch64addp_n node:$Rn, node:$Rm),
                                  (int_aarch64_neon_faddp node:$Rn, node:$Rm)]>;
 def AArch64roundingvlshr : ComplexPattern<vAny, 2, "SelectRoundingVLShr", [AArch64vlshr]>;
+def AArch64facge     : PatFrags<(ops node:$Rn, node:$Rm),
+                                [(AArch64fcmge (fabs node:$Rn), (fabs node:$Rm)),
+                                 (int_aarch64_neon_facge node:$Rn, node:$Rm)]>;
+def AArch64facgt     : PatFrags<(ops node:$Rn, node:$Rm),
+                                [(AArch64fcmgt (fabs node:$Rn), (fabs node:$Rm)),
+                                 (int_aarch64_neon_facgt node:$Rn, node:$Rm)]>;
 
 def SDT_AArch64SETTAG : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def AArch64stg : SDNode<"AArch64ISD::STG", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
@@ -1273,6 +1279,8 @@ def : Pat<(v2i64 (int_aarch64_crypto_rax1 (v2i64 V128:$Vn), (v2i64 V128:$Vm))),
 def : Pat<(v2i64 (int_aarch64_crypto_xar (v2i64 V128:$Vn), (v2i64 V128:$Vm), (i64 timm0_63:$imm))),
           (XAR (v2i64 V128:$Vn), (v2i64 V128:$Vm), (timm0_63:$imm))>;
 
+def : Pat<(xor  (v2i64 V128:$Vn), (or (AArch64vlshr (v2i64 V128:$Vm), (i32 63)), (AArch64vshl (v2i64 V128:$Vm), (i32 1)))),
+          (RAX1 (v2i64 V128:$Vn), (v2i64 V128:$Vm))>;
 
 } // HasSHA3
 
@@ -2658,7 +2666,7 @@ def BR  : BranchReg<0b0000, "br", [(brind GPR64:$Rn)]>;
 // Create a separate pseudo-instruction for codegen to use so that we don't
 // flag lr as used in every function. It'll be restored before the RET by the
 // epilogue if it's legitimately used.
-def RET_ReallyLR : Pseudo<(outs), (ins), [(AArch64retflag)]>,
+def RET_ReallyLR : Pseudo<(outs), (ins), [(AArch64retglue)]>,
                    Sched<[WriteBrReg]> {
   let isTerminator = 1;
   let isBarrier = 1;
@@ -2804,7 +2812,7 @@ defm LDRW  : Load32RO<0b10, 0, 0b01, GPR32, "ldr", i32, load>;
 defm LDRX  : Load64RO<0b11, 0, 0b01, GPR64, "ldr", i64, load>;
 
 // Floating-point
-defm LDRB : Load8RO<0b00,   1, 0b01, FPR8Op,   "ldr", untyped, load>;
+defm LDRB : Load8RO<0b00,   1, 0b01, FPR8Op,   "ldr", i8, load>;
 defm LDRH : Load16RO<0b01,  1, 0b01, FPR16Op,  "ldr", f16, load>;
 defm LDRS : Load32RO<0b10,  1, 0b01, FPR32Op,  "ldr", f32, load>;
 defm LDRD : Load64RO<0b11,  1, 0b01, FPR64Op,  "ldr", f64, load>;
@@ -3569,7 +3577,7 @@ defm STRX  : Store64RO<0b11, 0, 0b00, GPR64, "str",  i64, store>;
 
 
 // Floating-point
-defm STRB : Store8RO< 0b00,  1, 0b00, FPR8Op,   "str", untyped, store>;
+defm STRB : Store8RO< 0b00,  1, 0b00, FPR8Op,   "str", i8, store>;
 defm STRH : Store16RO<0b01,  1, 0b00, FPR16Op,  "str", f16,     store>;
 defm STRS : Store32RO<0b10,  1, 0b00, FPR32Op,  "str", f32,     store>;
 defm STRD : Store64RO<0b11,  1, 0b00, FPR64Op,  "str", f64,     store>;
@@ -3979,7 +3987,7 @@ defm STTRB : StoreUnprivileged<0b00, 0, 0b00, GPR32, "sttrb">;
 // (immediate pre-indexed)
 def STRWpre : StorePreIdx<0b10, 0, 0b00, GPR32z, "str",  pre_store, i32>;
 def STRXpre : StorePreIdx<0b11, 0, 0b00, GPR64z, "str",  pre_store, i64>;
-def STRBpre : StorePreIdx<0b00, 1, 0b00, FPR8Op,  "str",  pre_store, untyped>;
+def STRBpre : StorePreIdx<0b00, 1, 0b00, FPR8Op,  "str",  pre_store, i8>;
 def STRHpre : StorePreIdx<0b01, 1, 0b00, FPR16Op, "str",  pre_store, f16>;
 def STRSpre : StorePreIdx<0b10, 1, 0b00, FPR32Op, "str",  pre_store, f32>;
 def STRDpre : StorePreIdx<0b11, 1, 0b00, FPR64Op, "str",  pre_store, f64>;
@@ -4033,7 +4041,7 @@ def : Pat<(pre_store (v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
 // (immediate post-indexed)
 def STRWpost : StorePostIdx<0b10, 0, 0b00, GPR32z,  "str", post_store, i32>;
 def STRXpost : StorePostIdx<0b11, 0, 0b00, GPR64z,  "str", post_store, i64>;
-def STRBpost : StorePostIdx<0b00, 1, 0b00, FPR8Op,   "str", post_store, untyped>;
+def STRBpost : StorePostIdx<0b00, 1, 0b00, FPR8Op,   "str", post_store, i8>;
 def STRHpost : StorePostIdx<0b01, 1, 0b00, FPR16Op,  "str", post_store, f16>;
 def STRSpost : StorePostIdx<0b10, 1, 0b00, FPR32Op,  "str", post_store, f32>;
 def STRDpost : StorePostIdx<0b11, 1, 0b00, FPR64Op,  "str", post_store, f64>;
@@ -4872,8 +4880,8 @@ let Predicates = [HasNEON, HasFullFP16] in {
 foreach VT = [ v4f16, v8f16 ] in
 def : Pat<(fabs (fsub VT:$Rn, VT:$Rm)), (!cast<Instruction>("FABD"#VT) VT:$Rn, VT:$Rm)>;
 }
-defm FACGE   : SIMDThreeSameVectorFPCmp<1,0,0b101,"facge",int_aarch64_neon_facge>;
-defm FACGT   : SIMDThreeSameVectorFPCmp<1,1,0b101,"facgt",int_aarch64_neon_facgt>;
+defm FACGE   : SIMDThreeSameVectorFPCmp<1,0,0b101,"facge",AArch64facge>;
+defm FACGT   : SIMDThreeSameVectorFPCmp<1,1,0b101,"facgt",AArch64facgt>;
 defm FADDP   : SIMDThreeSameVectorFP<1,0,0b010,"faddp", AArch64faddp>;
 defm FADD    : SIMDThreeSameVectorFP<0,0,0b010,"fadd", any_fadd>;
 defm FCMEQ   : SIMDThreeSameVectorFPCmp<0, 0, 0b100, "fcmeq", AArch64fcmeq>;

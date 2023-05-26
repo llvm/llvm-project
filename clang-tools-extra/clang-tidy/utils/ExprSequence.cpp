@@ -131,6 +131,16 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
           }
         }
       }
+    } else if (const auto *ConstructExpr = dyn_cast<CXXConstructExpr>(Parent)) {
+      // Constructor arguments are sequenced if the constructor call is written
+      // as list-initialization.
+      if (ConstructExpr->isListInitialization()) {
+        for (unsigned I = 1; I < ConstructExpr->getNumArgs(); ++I) {
+          if (ConstructExpr->getArg(I - 1) == S) {
+            return ConstructExpr->getArg(I);
+          }
+        }
+      }
     } else if (const auto *Compound = dyn_cast<CompoundStmt>(Parent)) {
       // Compound statement: Each sub-statement is sequenced after the
       // statements that precede it.

@@ -83,7 +83,7 @@ public:
     Attribute baseResult;
     if (failed(readAttribute(baseResult)))
       return failure();
-    if ((result = baseResult.dyn_cast<T>()))
+    if ((result = dyn_cast<T>(baseResult)))
       return success();
     return emitError() << "expected " << llvm::getTypeName<T>()
                        << ", but got: " << baseResult;
@@ -100,7 +100,7 @@ public:
     Type baseResult;
     if (failed(readType(baseResult)))
       return failure();
-    if ((result = baseResult.dyn_cast<T>()))
+    if ((result = dyn_cast<T>(baseResult)))
       return success();
     return emitError() << "expected " << llvm::getTypeName<T>()
                        << ", but got: " << baseResult;
@@ -233,6 +233,9 @@ public:
   /// guaranteed to not die before the end of the bytecode process. The blob is
   /// written as-is, with no additional compression or compaction.
   virtual void writeOwnedBlob(ArrayRef<char> blob) = 0;
+
+  /// Return the bytecode version being emitted for.
+  virtual int64_t getBytecodeVersion() const = 0;
 };
 
 //===--------------------------------------------------------------------===//
@@ -344,6 +347,37 @@ public:
     return success();
   }
 };
+
+/// Helper for resource handle reading that returns LogicalResult.
+template <typename T, typename... Ts>
+static LogicalResult readResourceHandle(DialectBytecodeReader &reader,
+                                        FailureOr<T> &value, Ts &&...params) {
+  FailureOr<T> handle = reader.readResourceHandle<T>();
+  if (failed(handle))
+    return failure();
+  if (auto *result = dyn_cast<T>(&*handle)) {
+    value = std::move(*result);
+    return success();
+  }
+  return failure();
+}
+
+/// Helper method that injects context only if needed, this helps unify some of
+/// the attribute construction methods.
+template <typename T, typename... Ts>
+auto get(MLIRContext *context, Ts &&...params) {
+  // Prefer a direct `get` method if one exists.
+  if constexpr (llvm::is_detected<detail::has_get_method, T, Ts...>::value) {
+    (void)context;
+    return T::get(std::forward<Ts>(params)...);
+  } else if constexpr (llvm::is_detected<detail::has_get_method, T,
+                                         MLIRContext *, Ts...>::value) {
+    return T::get(context, std::forward<Ts>(params)...);
+  } else {
+    // Otherwise, pass to the base get.
+    return T::Base::get(context, std::forward<Ts>(params)...);
+  }
+}
 
 } // namespace mlir
 

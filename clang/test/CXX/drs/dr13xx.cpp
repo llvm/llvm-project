@@ -23,6 +23,18 @@ int complete = alignof(Complete(&)[]);
 }
 #endif
 
+namespace dr1307 { // dr1307: 14
+#if __cplusplus >= 201103L
+void f(int const (&)[2]);
+void f(int const (&)[3]);
+
+void caller() {
+  // This should not be ambiguous, the 2nd overload is better.
+  f({1, 2, 3});
+}
+#endif // __cplusplus >= 201103L
+} // namespace dr1307
+
 namespace dr1310 { // dr1310: 5
   struct S {} * sp = new S::S; // expected-error {{qualified reference to 'S' is a constructor name}}
   void f() {
@@ -476,15 +488,3 @@ namespace dr1399 { // dr1399: dup 1388
     f(0, 0, 0); // expected-error {{no match}}
   }
 }
-
-namespace dr1307 { // dr1307: 14
-#if __cplusplus >= 201103L
-void f(int const (&)[2]);
-void f(int const (&)[3]);
-
-void caller() {
-  // This should not be ambiguous, the 2nd overload is better.
-  f({1, 2, 3});
-}
-#endif // __cplusplus >= 201103L
-} // namespace dr1307

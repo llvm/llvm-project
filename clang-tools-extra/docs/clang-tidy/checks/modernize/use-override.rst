@@ -27,6 +27,11 @@ Options
 
    If set to `true`, this check will not diagnose destructors. Default is `false`.
 
+.. option:: IgnoreTemplateInstantiations
+
+   If set to `true`, instructs this check to ignore virtual function overrides
+   that are part of template instantiations. Default is `false`.
+
 .. option:: AllowOverrideAndFinal
 
    If set to `true`, this check will not diagnose ``override`` as redundant

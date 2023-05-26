@@ -23,10 +23,10 @@ define void @test(ptr %arg) {
 ; CHECK-NEXT:    [[I12:%.*]] = load ptr addrspace(13), ptr addrspace(11) [[I10]], align 8
 ; CHECK-NEXT:    [[I13:%.*]] = load i64, ptr [[I5]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[I6]], 3
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr addrspace(13) [[I12]], i64 [[TMP0]]
-; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr addrspace(13) [[I9]], i64 [[TMP0]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr addrspace(13) [[I12]], [[UGLYGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr addrspace(13) [[I9]], [[UGLYGEP]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(13) [[I12]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(13) [[I9]], i64 [[TMP0]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr addrspace(13) [[I12]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr addrspace(13) [[I9]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[I13]], 1
 ; CHECK-NEXT:    [[LVER_SAFE:%.*]] = or i1 [[FOUND_CONFLICT]], [[IDENT_CHECK]]

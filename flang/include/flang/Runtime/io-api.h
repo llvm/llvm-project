@@ -23,6 +23,7 @@ class Descriptor;
 
 namespace Fortran::runtime::io {
 
+struct NonTbpDefinedIoTable;
 class NamelistGroup;
 class IoStatementState;
 using Cookie = IoStatementState *;
@@ -274,6 +275,20 @@ bool IONAME(InputLogical)(Cookie, bool &);
 // list-directed I/O statement.
 bool IONAME(OutputNamelist)(Cookie, const NamelistGroup &);
 bool IONAME(InputNamelist)(Cookie, const NamelistGroup &);
+
+// When an I/O list item has a derived type with a specific defined
+// I/O subroutine of the appropriate generic kind for the active
+// I/O data transfer statement (read/write, formatted/unformatted)
+// that pertains to the type or its components, and those subroutines
+// are dynamic or neither type-bound nor defined with interfaces
+// in the same scope as the derived type (or an IMPORT statement has
+// made such a generic interface inaccessible), these data item transfer
+// APIs enable the I/O runtime to make the right calls to defined I/O
+// subroutines.
+bool IONAME(OutputDerivedType)(
+    Cookie, const Descriptor &, const NonTbpDefinedIoTable *);
+bool IONAME(InputDerivedType)(
+    Cookie, const Descriptor &, const NonTbpDefinedIoTable *);
 
 // Additional specifier interfaces for the connection-list of
 // on OPEN statement (only).  SetBlank(), SetDecimal(),

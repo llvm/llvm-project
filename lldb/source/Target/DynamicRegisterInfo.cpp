@@ -262,7 +262,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       return 0;
     }
 
-    int64_t bitsize = 0;
+    uint64_t bitsize = 0;
     if (!reg_info_dict->GetValueForKeyAsInteger("bitsize", bitsize)) {
       Clear();
       printf("error: invalid or missing 'bitsize' key/value pair in register "
@@ -296,7 +296,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
                                              eEncodingUint);
 
     size_t set = 0;
-    if (!reg_info_dict->GetValueForKeyAsInteger<size_t>("set", set, -1) ||
+    if (!reg_info_dict->GetValueForKeyAsInteger("set", set) ||
         set >= m_sets.size()) {
       Clear();
       printf("error: invalid 'set' value in register dictionary, valid values "
@@ -407,7 +407,7 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
           {reg.regnum_ehframe, reg.regnum_dwarf, reg.regnum_generic,
            reg.regnum_remote, local_regnum},
           // value_regs and invalidate_regs are filled by Finalize()
-          nullptr, nullptr
+          nullptr, nullptr, reg.flags_type
     };
 
     m_regs.push_back(reg_info);

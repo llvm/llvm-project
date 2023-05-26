@@ -36,6 +36,7 @@
 #define DEBUG_TYPE "loops-to-gpu"
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::scf;
 
 // Name of internal attribute to mark visited operations during conversion.
@@ -440,7 +441,7 @@ static LogicalResult processParallelLoop(
     Value iv, lowerBound, upperBound, step;
     std::tie(mappingAttribute, iv, lowerBound, upperBound, step) = config;
     auto annotation =
-        mappingAttribute.dyn_cast<gpu::ParallelLoopDimMappingAttr>();
+        dyn_cast<gpu::ParallelLoopDimMappingAttr>(mappingAttribute);
     if (!annotation)
       return parallelOp.emitOpError()
              << "expected mapping attribute for lowering to GPU";

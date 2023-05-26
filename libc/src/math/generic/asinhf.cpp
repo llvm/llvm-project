@@ -27,8 +27,9 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
   if (LIBC_UNLIKELY(x_abs <= 0x3e80'0000U)) {
     // |x| <= 2^-26
     if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
-      return LIBC_UNLIKELY(x_abs == 0) ? x
-                                       : (x - 0x1.5555555555555p-3 * x * x * x);
+      return static_cast<float>(LIBC_UNLIKELY(x_abs == 0)
+                                    ? x
+                                    : (x - 0x1.5555555555555p-3 * x * x * x));
     }
 
     double x_d = x;
@@ -40,7 +41,7 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
         x_sq, 0.0, -0x1.555555555551ep-3, 0x1.3333333325495p-4,
         -0x1.6db6db5a7622bp-5, 0x1.f1c70f82928c6p-6, -0x1.6e893934266b7p-6,
         0x1.1c0b41d3fbe78p-6, -0x1.c0f47810b3c4fp-7, 0x1.2c8602690143dp-7);
-    return fputil::multiply_add(x_d, p, x_d);
+    return static_cast<float>(fputil::multiply_add(x_d, p, x_d));
   }
 
   const double SIGN[2] = {1.0, -1.0};
@@ -97,9 +98,10 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
   }
 
   // asinh(x) = log(x + sqrt(x^2 + 1))
-  return x_sign *
-         log_eval(fputil::multiply_add(
-             x_d, x_sign, fputil::sqrt(fputil::multiply_add(x_d, x_d, 1.0))));
+  return static_cast<float>(
+      x_sign *
+      log_eval(fputil::multiply_add(
+          x_d, x_sign, fputil::sqrt(fputil::multiply_add(x_d, x_d, 1.0)))));
 }
 
 } // namespace __llvm_libc

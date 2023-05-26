@@ -2,8 +2,9 @@ add_llvm_component_library(LLVMXCoreDisassembler
   XCoreDisassembler.cpp
 
   LINK_COMPONENTS
-  MCDisassembler
+  CodeGenTypes
   MC
+  MCDisassembler
   Support
   XCoreInfo
 

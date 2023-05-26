@@ -63,22 +63,22 @@ static cl::opt<bool> VerifyPatternOrder(
 
 namespace {
 class MachineCombiner : public MachineFunctionPass {
-  const TargetSubtargetInfo *STI;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
+  const TargetSubtargetInfo *STI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   MCSchedModel SchedModel;
-  MachineRegisterInfo *MRI;
-  MachineLoopInfo *MLI; // Current MachineLoopInfo
-  MachineTraceMetrics *Traces;
-  MachineTraceMetrics::Ensemble *TraceEnsemble;
-  MachineBlockFrequencyInfo *MBFI;
-  ProfileSummaryInfo *PSI;
+  MachineRegisterInfo *MRI = nullptr;
+  MachineLoopInfo *MLI = nullptr; // Current MachineLoopInfo
+  MachineTraceMetrics *Traces = nullptr;
+  MachineTraceMetrics::Ensemble *TraceEnsemble = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+  ProfileSummaryInfo *PSI = nullptr;
   RegisterClassInfo RegClassInfo;
 
   TargetSchedModel TSchedModel;
 
   /// True if optimizing for code size.
-  bool OptSize;
+  bool OptSize = false;
 
 public:
   static char ID;
@@ -149,7 +149,8 @@ void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MachineInstr *MachineCombiner::getOperandDef(const MachineOperand &MO) {
+MachineInstr *
+MachineCombiner::getOperandDef(const MachineOperand &MO) {
   MachineInstr *DefInstr = nullptr;
   // We need a virtual register definition.
   if (MO.isReg() && MO.getReg().isVirtual())
@@ -404,8 +405,13 @@ bool MachineCombiner::improvesCriticalPathLen(
 
   // Account for the latency of the inserted and deleted instructions by
   unsigned NewRootLatency, RootLatency;
-  std::tie(NewRootLatency, RootLatency) =
-      getLatenciesForInstrSequences(*Root, InsInstrs, DelInstrs, BlockTrace);
+  if (TII->accumulateInstrSeqToRootLatency(*Root)) {
+    std::tie(NewRootLatency, RootLatency) =
+        getLatenciesForInstrSequences(*Root, InsInstrs, DelInstrs, BlockTrace);
+  } else {
+    NewRootLatency = TSchedModel.computeInstrLatency(InsInstrs.back());
+    RootLatency = TSchedModel.computeInstrLatency(Root);
+  }
 
   unsigned RootSlack = BlockTrace.getInstrSlack(*Root);
   unsigned NewCycleCount = NewRootDepth + NewRootLatency;
@@ -496,8 +502,8 @@ bool MachineCombiner::preservesResourceLen(
 ///                          otherwise invalidate the trace
 static void insertDeleteInstructions(
     MachineBasicBlock *MBB, MachineInstr &MI,
-    SmallVector<MachineInstr *, 16> InsInstrs,
-    SmallVector<MachineInstr *, 16> DelInstrs,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
     MachineTraceMetrics::Ensemble *TraceEnsemble,
     SparseSet<LiveRegUnit> &RegUnits, const TargetInstrInfo *TII,
     MachineCombinerPattern Pattern, bool IncrementalUpdate) {

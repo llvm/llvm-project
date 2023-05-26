@@ -551,7 +551,7 @@ public:
 
   /// Finds the token that comes right after the given location.
   ///
-  /// Returns the next token, or none if the location is inside a macro.
+  /// Returns the next token, or std::nullopt if the location is inside a macro.
   static std::optional<Token> findNextToken(SourceLocation Loc,
                                             const SourceManager &SM,
                                             const LangOptions &LangOpts);

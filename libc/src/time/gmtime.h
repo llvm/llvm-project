@@ -18,5 +18,3 @@ struct tm *gmtime(const time_t *timer);
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_TIME_GMTIME_H
-
-#include "include/time.h"

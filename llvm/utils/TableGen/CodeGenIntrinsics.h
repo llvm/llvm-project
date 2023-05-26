@@ -15,7 +15,6 @@
 
 #include "SDNodeProperties.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/ModRef.h"
 #include <string>
 #include <tuple>
@@ -24,13 +23,6 @@
 namespace llvm {
 class Record;
 class RecordKeeper;
-
-// FIXME: Sweep this in the near future.
-namespace tmp {
-/// getValueType - Return the MVT::SimpleValueType that the specified TableGen
-/// record corresponds to.
-MVT::SimpleValueType getValueType(Record *Rec);
-} // namespace tmp
 
 struct CodeGenIntrinsic {
   Record *TheDef;             // The actual record defining this intrinsic.
@@ -50,19 +42,13 @@ struct CodeGenIntrinsic {
     /// only populated when in the context of a target .td file. When building
     /// Intrinsics.td, this isn't available, because we don't know the target
     /// pointer size.
-    std::vector<MVT::SimpleValueType> RetVTs;
-
-    /// The records for each return type.
-    std::vector<Record *> RetTypeDefs;
+    std::vector<Record *> RetTys;
 
     /// The MVT::SimpleValueType for each parameter type. Note that this list is
     /// only populated when in the context of a target .td file.  When building
     /// Intrinsics.td, this isn't available, because we don't know the target
     /// pointer size.
-    std::vector<MVT::SimpleValueType> ParamVTs;
-
-    /// The records for each parameter type.
-    std::vector<Record *> ParamTypeDefs;
+    std::vector<Record *> ParamTys;
   };
 
   IntrinsicSignature IS;

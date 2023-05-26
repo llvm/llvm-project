@@ -138,7 +138,8 @@ public:
     options = options.enableExpensiveChecks(enableExpensiveChecks);
     if (failed(transform::detail::interpreterBaseRunOnOperationImpl(
             getOperation(), getArgument(), getSharedTransformModule(),
-            extraMapping, options, transformFileName, debugPayloadRootTag,
+            getTransformLibraryModule(), extraMapping, options,
+            transformFileName, transformLibraryFileName, debugPayloadRootTag,
             debugTransformRootTag, getBinaryName())))
       return signalPassFailure();
   }
@@ -193,6 +194,11 @@ public:
           "the given value as container IR for top-level transform ops. This "
           "allows user control on what transformation to apply. If empty, "
           "select the container of the top-level transform op.")};
+  Option<std::string> transformLibraryFileName{
+      *this, "transform-library-file-name", llvm::cl::init(""),
+      llvm::cl::desc(
+          "Optional name of the file containing transform dialect symbol "
+          "definitions to be injected into the transform module.")};
 };
 
 struct TestTransformDialectEraseSchedulePass

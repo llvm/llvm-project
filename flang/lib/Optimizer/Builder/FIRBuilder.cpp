@@ -70,6 +70,8 @@ mlir::Type fir::FirOpBuilder::getRealType(int kind) {
   switch (kindMap.getRealTypeID(kind)) {
   case llvm::Type::TypeID::HalfTyID:
     return mlir::FloatType::getF16(getContext());
+  case llvm::Type::TypeID::BFloatTyID:
+    return mlir::FloatType::getBF16(getContext());
   case llvm::Type::TypeID::FloatTyID:
     return mlir::FloatType::getF32(getContext());
   case llvm::Type::TypeID::DoubleTyID:
@@ -997,7 +999,9 @@ fir::ExtendedValue fir::factory::createStringLiteral(fir::FirOpBuilder &builder,
           auto stringLitOp = builder.createStringLitOp(loc, str);
           builder.create<fir::HasValueOp>(loc, stringLitOp);
         },
-        builder.createLinkOnceLinkage());
+        builder.createInternalLinkage());
+  // TODO: This can be changed to linkonce linkage once we have support for
+  // generating comdat sections
   auto addr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
                                             global.getSymbol());
   auto len = builder.createIntegerConstant(

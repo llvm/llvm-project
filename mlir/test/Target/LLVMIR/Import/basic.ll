@@ -53,40 +53,6 @@ if.end:
 }
 ; CHECK-DBG: } loc(#[[MODULELOC]])
 
-
-@_ZTIi = external dso_local constant ptr
-@_ZTIii= external dso_local constant ptr
-declare void @foo(ptr)
-declare ptr @bar(ptr)
-declare i32 @__gxx_personality_v0(...)
-
-; CHECK-LABEL: @invokeLandingpad
-define i32 @invokeLandingpad() personality ptr @__gxx_personality_v0 {
-  ; CHECK: %[[a1:[0-9]+]] = llvm.mlir.addressof @_ZTIii : !llvm.ptr
-  ; CHECK: %[[a3:[0-9]+]] = llvm.alloca %{{[0-9]+}} x i8 {alignment = 1 : i64} : (i32) -> !llvm.ptr
-  %1 = alloca i8
-  ; CHECK: llvm.invoke @foo(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm.ptr) -> ()
-  invoke void @foo(ptr %1) to label %4 unwind label %2
-
-; CHECK: ^bb1:
-  ; CHECK: %{{[0-9]+}} = llvm.landingpad (catch %{{[0-9]+}} : !llvm.ptr) (catch %[[a1]] : !llvm.ptr) (filter %{{[0-9]+}} : !llvm.array<1 x i1>) : !llvm.struct<(ptr, i32)>
-  %3 = landingpad { ptr, i32 } catch ptr @_ZTIi catch ptr @_ZTIii
-          filter [1 x i1] [i1 1]
-  resume { ptr, i32 } %3
-
-; CHECK: ^bb2:
-  ; CHECK: llvm.return %{{[0-9]+}} : i32
-  ret i32 1
-
-; CHECK: ^bb3:
-  ; CHECK: %{{[0-9]+}} = llvm.invoke @bar(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm.ptr) -> !llvm.ptr
-  %6 = invoke ptr @bar(ptr %1) to label %4 unwind label %2
-
-; CHECK: ^bb4:
-  ; CHECK: llvm.return %{{[0-9]+}} : i32
-  ret i32 0
-}
-
 ; CHECK-LABEL: @hasGCFunction
 ; CHECK-SAME: garbageCollector = "statepoint-example"
 define void @hasGCFunction() gc "statepoint-example" {

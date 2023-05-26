@@ -5,7 +5,8 @@ function(_get_common_compile_options output_var flags)
   if(${fma} LESS 0)
     list(FIND flags "${FMA_OPT_FLAG}__ONLY" fma)
   endif()
-  if((${fma} GREATER -1) AND (LIBC_CPU_FEATURES MATCHES "FMA"))
+  if((${fma} GREATER -1) AND (LIBC_TARGET_ARCHITECTURE_IS_RISCV64 OR
+                              (LIBC_CPU_FEATURES MATCHES "FMA")))
     set(ADD_FMA_FLAG TRUE)
   endif()
 
@@ -39,8 +40,12 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-Wthread-safety")
     endif()
     if(ADD_FMA_FLAG)
-      list(APPEND compile_options "-mavx2")
-      list(APPEND compile_options "-mfma")
+      if(LIBC_TARGET_ARCHITECTURE_IS_X86)
+        list(APPEND compile_options "-mavx2")
+        list(APPEND compile_options "-mfma")
+      elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
+        list(APPEND compile_option "-D__LIBC_RISCV_USE_FMA")
+      endif()
     endif()
     if(ADD_SSE4_2_FLAG)
       list(APPEND compile_options "-msse4.2")
@@ -57,6 +62,53 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fvisibility=hidden")
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()
+
+# Obtains NVPTX specific arguments for compilation.
+# The PTX feature is primarily based on the CUDA toolchain version. We want to
+# be able to target NVPTX without an existing CUDA installation, so we need to
+# set this manually. This simply sets the PTX feature to the minimum required
+# for the features we wish to use on that target. The minimum PTX features used
+# here roughly corresponds to the CUDA 9.0 release.
+# Adjust as needed for desired PTX features.
+function(get_nvptx_compile_options output_var gpu_arch)
+  set(nvptx_options "")
+  list(APPEND nvptx_options "-march=${gpu_arch}")
+  list(APPEND nvptx_options "-Wno-unknown-cuda-version")
+  if(${gpu_arch} STREQUAL "sm_35")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
+  elseif(${gpu_arch} STREQUAL "sm_37")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
+  elseif(${gpu_arch} STREQUAL "sm_50")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
+  elseif(${gpu_arch} STREQUAL "sm_52")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
+  elseif(${gpu_arch} STREQUAL "sm_53")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_60")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_61")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_62")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_70")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_72")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_75")
+    list(APPEND nvptx_options "--cuda-feature=+ptx63")
+  elseif(${gpu_arch} STREQUAL "sm_80")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  elseif(${gpu_arch} STREQUAL "sm_86")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  else()
+    message(FATAL_ERROR "Unknown Nvidia GPU architecture '${gpu_arch}'")
+  endif()
+
+  if(LIBC_CUDA_ROOT)
+    list(APPEND nvptx_options "--cuda-path=${LIBC_CUDA_ROOT}")
+  endif()
+  set(${output_var} ${nvptx_options} PARENT_SCOPE)
 endfunction()
 
 # Builds the object target for the GPU.
@@ -84,6 +136,9 @@ function(_build_gpu_objects fq_target_name internal_target_name)
 
   set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
   set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
+  if(NOT ADD_GPU_OBJ_CXX_STANDARD)
+    set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+  endif()
 
   foreach(add_gpu_obj_src ${ADD_GPU_OBJ_SRCS})
     # The packaged version will be built for every target GPU architecture. We do
@@ -98,7 +153,8 @@ function(_build_gpu_objects fq_target_name internal_target_name)
         list(APPEND compile_options "-mcpu=${gpu_arch}")
       elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
         set(gpu_target_triple "nvptx64-nvidia-cuda")
-        list(APPEND compile_options "-march=${gpu_arch}")
+        get_nvptx_compile_options(nvptx_options ${gpu_arch})
+        list(APPEND compile_options "${nvptx_options}")
       else()
         message(FATAL_ERROR "Unknown GPU architecture '${gpu_arch}'")
       endif()
@@ -117,6 +173,11 @@ function(_build_gpu_objects fq_target_name internal_target_name)
       target_compile_options(${gpu_target_name} PRIVATE ${compile_options})
       target_include_directories(${gpu_target_name} PRIVATE ${include_dirs})
       target_compile_definitions(${gpu_target_name} PRIVATE LIBC_COPT_PUBLIC_PACKAGING)
+      set_target_properties(
+        ${gpu_target_name}
+        PROPERTIES
+          CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD}
+      )
       if(ADD_GPU_OBJ_DEPENDS)
         add_dependencies(${gpu_target_name} ${ADD_GPU_OBJ_DEPENDS})
       endif()
@@ -193,9 +254,10 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     target_compile_options(${internal_target_name} BEFORE PRIVATE
                            ${common_compile_options} --target=${LIBC_GPU_TARGET_TRIPLE})
     if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-      target_compile_options(${internal_target_name} PRIVATE -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE})
+      target_compile_options(${internal_target_name} PRIVATE -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
     elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-      target_compile_options(${internal_target_name} PRIVATE -march=${LIBC_GPU_TARGET_ARCHITECTURE})
+      get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
+      target_compile_options(${internal_target_name} PRIVATE ${nvptx_options})
     endif()
     target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
     if(full_deps_list)
@@ -270,6 +332,7 @@ function(create_object_library fq_target_name)
       SRCS ${ADD_OBJECT_SRCS}
       HDRS ${ADD_OBJECT_HDRS}
       DEPENDS ${fq_deps_list}
+      CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
       COMPILE_OPTIONS ${compile_options}
     )
   else()
@@ -544,6 +607,7 @@ function(create_entrypoint_object fq_target_name)
       SRCS ${ADD_ENTRYPOINT_OBJ_SRCS}
       HDRS ${ADD_ENTRYPOINT_OBJ_HDRS}
       COMPILE_OPTIONS ${common_compile_options}
+      CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
       DEPENDS ${full_deps_list}
       FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
     )

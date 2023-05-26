@@ -11,7 +11,7 @@
 
 namespace Fortran::runtime::io::descr {
 
-// User-defined derived type formatted I/O (maybe)
+// Defined formatted I/O (maybe)
 std::optional<bool> DefinedFormattedIo(IoStatementState &io,
     const Descriptor &descriptor, const typeInfo::DerivedType &derived,
     const typeInfo::SpecialBinding &special) {
@@ -19,7 +19,7 @@ std::optional<bool> DefinedFormattedIo(IoStatementState &io,
   if (peek &&
       (peek->descriptor == DataEdit::DefinedDerivedType ||
           peek->descriptor == DataEdit::ListDirected)) {
-    // User-defined derived type formatting
+    // Defined formatting
     IoErrorHandler &handler{io.GetIoErrorHandler()};
     DataEdit edit{*io.GetNextDataEdit(1)}; // now consume it; no repeats
     RUNTIME_CHECK(handler, edit.descriptor == peek->descriptor);
@@ -105,14 +105,14 @@ std::optional<bool> DefinedFormattedIo(IoStatementState &io,
     }
     return handler.GetIoStat() == IostatOk;
   } else {
-    // There's a user-defined I/O subroutine, but there's a FORMAT present and
+    // There's a defined I/O subroutine, but there's a FORMAT present and
     // it does not have a DT data edit descriptor, so apply default formatting
     // to the components of the derived type as usual.
     return std::nullopt;
   }
 }
 
-// User-defined derived type unformatted I/O
+// Defined unformatted I/O
 bool DefinedUnformattedIo(IoStatementState &io, const Descriptor &descriptor,
     const typeInfo::DerivedType &derived,
     const typeInfo::SpecialBinding &special) {

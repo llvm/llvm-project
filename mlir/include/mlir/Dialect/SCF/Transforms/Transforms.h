@@ -120,6 +120,12 @@ void populateSCFStructuralTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
 
+/// Populates the provided pattern set with patterns that do 1:N type
+/// conversions on (some) SCF ops. This is intended to be used with
+/// applyPartialOneToNConversion.
+void populateSCFStructuralOneToNTypeConversions(TypeConverter &typeConverter,
+                                                RewritePatternSet &patterns);
+
 /// Options to dictate how loops should be pipelined.
 struct PipeliningOption {
   /// Lambda returning all the operation in the forOp, with their stage, in the

@@ -23,7 +23,8 @@ struct LoopMetadataConversion {
   /// Converts this structs loop metadata node into a LoopAnnotationAttr.
   LoopAnnotationAttr convert();
 
-  LogicalResult initPropertyMap();
+  /// Initializes the shared state for the conversion member functions.
+  LogicalResult initConversionState();
 
   /// Helper function to get and erase a property.
   const llvm::MDNode *lookupAndEraseProperty(StringRef name);
@@ -53,7 +54,10 @@ struct LoopMetadataConversion {
   FailureOr<LoopPeeledAttr> convertPeeledAttr();
   FailureOr<LoopUnswitchAttr> convertUnswitchAttr();
   FailureOr<SmallVector<SymbolRefAttr>> convertParallelAccesses();
+  FusedLoc convertStartLoc();
+  FailureOr<FusedLoc> convertEndLoc();
 
+  llvm::SmallVector<llvm::DILocation *, 2> locations;
   llvm::StringMap<const llvm::MDNode *> propertyMap;
   const llvm::MDNode *node;
   Location loc;
@@ -62,16 +66,17 @@ struct LoopMetadataConversion {
 };
 } // namespace
 
-LogicalResult LoopMetadataConversion::initPropertyMap() {
+LogicalResult LoopMetadataConversion::initConversionState() {
   // Check if it's a valid node.
   if (node->getNumOperands() == 0 ||
       dyn_cast<llvm::MDNode>(node->getOperand(0)) != node)
     return emitWarning(loc) << "invalid loop node";
 
   for (const llvm::MDOperand &operand : llvm::drop_begin(node->operands())) {
-    // Skip over DILocations.
-    if (isa<llvm::DILocation>(operand))
+    if (auto *diLoc = dyn_cast<llvm::DILocation>(operand)) {
+      locations.push_back(diLoc);
       continue;
+    }
 
     auto *property = dyn_cast<llvm::MDNode>(operand);
     if (!property)
@@ -396,15 +401,34 @@ LoopMetadataConversion::convertParallelAccesses() {
   for (llvm::MDNode *node : *nodes) {
     FailureOr<SmallVector<SymbolRefAttr>> accessGroups =
         loopAnnotationImporter.lookupAccessGroupAttrs(node);
-    if (failed(accessGroups))
-      return emitWarning(loc) << "could not lookup access group";
+    if (failed(accessGroups)) {
+      emitWarning(loc) << "could not lookup access group";
+      continue;
+    }
     llvm::append_range(refs, *accessGroups);
   }
   return refs;
 }
 
+FusedLoc LoopMetadataConversion::convertStartLoc() {
+  if (locations.empty())
+    return {};
+  return dyn_cast<FusedLoc>(
+      loopAnnotationImporter.moduleImport.translateLoc(locations[0]));
+}
+
+FailureOr<FusedLoc> LoopMetadataConversion::convertEndLoc() {
+  if (locations.size() < 2)
+    return FusedLoc();
+  if (locations.size() > 2)
+    return emitError(loc)
+           << "expected loop metadata to have at most two DILocations";
+  return dyn_cast<FusedLoc>(
+      loopAnnotationImporter.moduleImport.translateLoc(locations[1]));
+}
+
 LoopAnnotationAttr LoopMetadataConversion::convert() {
-  if (failed(initPropertyMap()))
+  if (failed(initConversionState()))
     return {};
 
   FailureOr<BoolAttr> disableNonForced =
@@ -431,10 +455,14 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
     return {};
   }
 
+  FailureOr<FusedLoc> startLoc = convertStartLoc();
+  FailureOr<FusedLoc> endLoc = convertEndLoc();
+
   return createIfNonNull<LoopAnnotationAttr>(
       ctx, disableNonForced, vecAttr, interleaveAttr, unrollAttr,
       unrollAndJamAttr, licmAttr, distributeAttr, pipelineAttr, peeledAttr,
-      unswitchAttr, mustProgress, isVectorized, parallelAccesses);
+      unswitchAttr, mustProgress, isVectorized, parallelAccesses, startLoc,
+      endLoc);
 }
 
 LoopAnnotationAttr

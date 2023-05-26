@@ -62,7 +62,7 @@ define void @cond_call(ptr readonly %src, ptr noalias %dest, i64 %N) {
 ; CHECK-NEXT:    store i64 [[ST_VALUE]], ptr [[ST_ADDR]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[LOOPCOND]], label [[END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[LOOPCOND]], label [[END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;

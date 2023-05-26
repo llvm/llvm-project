@@ -72,5 +72,5 @@ Status CommandOptionsProcessAttach::SetOptionValue(
 }
 
 llvm::ArrayRef<OptionDefinition> CommandOptionsProcessAttach::GetDefinitions() {
-  return llvm::makeArrayRef(g_process_attach_options);
+  return llvm::ArrayRef(g_process_attach_options);
 }

@@ -116,3 +116,27 @@ void method() {
 }
 
 } // namespace GH60166
+
+namespace GH61142 {
+
+template <typename T>
+struct Test {
+  constexpr static void bar() {
+    foo();
+  }
+  consteval static void foo() {};
+};
+
+consteval void a() {
+  Test<int>::bar();
+}
+
+void b() {
+  Test<int>::bar();
+}
+
+// Make sure consteval function is not emitted.
+// CHECK-NOT: call {{.*}}foo{{.*}}()
+// CHECK-NOT: define {{.*}}foo{{.*}}()
+
+} // namespace GH61142

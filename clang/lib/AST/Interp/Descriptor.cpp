@@ -9,6 +9,7 @@
 #include "Descriptor.h"
 #include "Boolean.h"
 #include "Floating.h"
+#include "FunctionPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"

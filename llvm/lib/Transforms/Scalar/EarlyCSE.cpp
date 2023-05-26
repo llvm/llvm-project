@@ -318,6 +318,14 @@ static unsigned getHashValueImpl(SimpleValue Val) {
     return hash_combine(GCR->getOpcode(), GCR->getOperand(0),
                         GCR->getBasePtr(), GCR->getDerivedPtr());
 
+  // Don't CSE convergent calls in different basic blocks, because they
+  // implicitly depend on the set of threads that is currently executing.
+  if (CallInst *CI = dyn_cast<CallInst>(Inst); CI && CI->isConvergent()) {
+    return hash_combine(
+        Inst->getOpcode(), Inst->getParent(),
+        hash_combine_range(Inst->value_op_begin(), Inst->value_op_end()));
+  }
+
   // Mix in the opcode.
   return hash_combine(
       Inst->getOpcode(),
@@ -344,8 +352,16 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
 
   if (LHSI->getOpcode() != RHSI->getOpcode())
     return false;
-  if (LHSI->isIdenticalToWhenDefined(RHSI))
+  if (LHSI->isIdenticalToWhenDefined(RHSI)) {
+    // Convergent calls implicitly depend on the set of threads that is
+    // currently executing, so conservatively return false if they are in
+    // different basic blocks.
+    if (CallInst *CI = dyn_cast<CallInst>(LHSI);
+        CI && CI->isConvergent() && LHSI->getParent() != RHSI->getParent())
+      return false;
+
     return true;
+  }
 
   // If we're not strictly identical, we still might be a commutable instruction
   if (BinaryOperator *LHSBinOp = dyn_cast<BinaryOperator>(LHSI)) {
@@ -578,12 +594,13 @@ public:
     unsigned Generation = 0;
     int MatchingId = -1;
     bool IsAtomic = false;
+    bool IsLoad = false;
 
     LoadValue() = default;
     LoadValue(Instruction *Inst, unsigned Generation, unsigned MatchingId,
-              bool IsAtomic)
+              bool IsAtomic, bool IsLoad)
         : DefInst(Inst), Generation(Generation), MatchingId(MatchingId),
-          IsAtomic(IsAtomic) {}
+          IsAtomic(IsAtomic), IsLoad(IsLoad) {}
   };
 
   using LoadMapAllocator =
@@ -1476,6 +1493,9 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
+        if (InVal.IsLoad)
+          if (auto *I = dyn_cast<Instruction>(Op))
+            combineMetadataForCSE(I, &Inst, false);
         if (!Inst.use_empty())
           Inst.replaceAllUsesWith(Op);
         salvageKnowledge(&Inst, &AC);
@@ -1490,7 +1510,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       AvailableLoads.insert(MemInst.getPointerOperand(),
                             LoadValue(&Inst, CurrentGeneration,
                                       MemInst.getMatchingId(),
-                                      MemInst.isAtomic()));
+                                      MemInst.isAtomic(),
+                                      MemInst.isLoad()));
       LastStore = nullptr;
       continue;
     }
@@ -1614,7 +1635,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         AvailableLoads.insert(MemInst.getPointerOperand(),
                               LoadValue(&Inst, CurrentGeneration,
                                         MemInst.getMatchingId(),
-                                        MemInst.isAtomic()));
+                                        MemInst.isAtomic(),
+                                        MemInst.isLoad()));
 
         // Remember that this was the last unordered store we saw for DSE. We
         // don't yet handle DSE on ordered or volatile stores since we don't

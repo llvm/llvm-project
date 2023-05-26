@@ -1,4 +1,4 @@
-//===- GIMatchDagEdge.h - Represent a shared operand list for nodes -------===//
+//===- GIMatchDagEdge.h - Represent node shared operand lists ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

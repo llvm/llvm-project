@@ -209,10 +209,10 @@ public:
   unsigned short SchedClass;     // enum identifying instr sched class
   unsigned char NumImplicitUses; // Num of regs implicitly used
   unsigned char NumImplicitDefs; // Num of regs implicitly defined
+  unsigned short ImplicitOffset; // Offset to start of implicit op list
+  unsigned short OpInfoOffset;   // Offset to info about operands
   uint64_t Flags;                // Flags identifying machine instr class
   uint64_t TSFlags;              // Target Specific Flag values
-  const MCPhysReg *ImplicitOps;  // List of implicit uses followed by defs
-  const MCOperandInfo *OpInfo;   // 'NumOperands' entries about operands
 
   /// Returns the value of the specified operand constraint if
   /// it is present. Returns -1 if it is not present.
@@ -237,7 +237,8 @@ public:
   unsigned getNumOperands() const { return NumOperands; }
 
   ArrayRef<MCOperandInfo> operands() const {
-    return ArrayRef(OpInfo, NumOperands);
+    auto OpInfo = reinterpret_cast<const MCOperandInfo *>(this + Opcode + 1);
+    return ArrayRef(OpInfo + OpInfoOffset, NumOperands);
   }
 
   /// Return the number of MachineOperands that are register
@@ -563,6 +564,8 @@ public:
   /// reading the flags.  Likewise, the variable shift instruction on X86 is
   /// marked as implicitly reading the 'CL' register, which it always does.
   ArrayRef<MCPhysReg> implicit_uses() const {
+    auto ImplicitOps =
+        reinterpret_cast<const MCPhysReg *>(this + Opcode + 1) + ImplicitOffset;
     return {ImplicitOps, NumImplicitUses};
   }
 
@@ -575,6 +578,8 @@ public:
   /// registers.  For that instruction, this will return a list containing the
   /// EAX/EDX/EFLAGS registers.
   ArrayRef<MCPhysReg> implicit_defs() const {
+    auto ImplicitOps =
+        reinterpret_cast<const MCPhysReg *>(this + Opcode + 1) + ImplicitOffset;
     return {ImplicitOps + NumImplicitUses, NumImplicitDefs};
   }
 

@@ -135,7 +135,7 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Thread *thread = m_exe_ctx.GetThreadPtr();
-    StackFrameSP frame_sp = thread->GetSelectedFrame();
+    StackFrameSP frame_sp = thread->GetSelectedFrame(SelectMostRelevantFrame);
 
     ValueObjectSP valobj_sp;
 
@@ -308,7 +308,7 @@ protected:
     uint32_t frame_idx = UINT32_MAX;
     if (m_options.relative_frame_offset) {
       // The one and only argument is a signed relative frame index
-      frame_idx = thread->GetSelectedFrameIndex();
+      frame_idx = thread->GetSelectedFrameIndex(SelectMostRelevantFrame);
       if (frame_idx == UINT32_MAX)
         frame_idx = 0;
 
@@ -362,7 +362,7 @@ protected:
           return false;
         }
       } else if (command.GetArgumentCount() == 0) {
-        frame_idx = thread->GetSelectedFrameIndex();
+        frame_idx = thread->GetSelectedFrameIndex(SelectMostRelevantFrame);
         if (frame_idx == UINT32_MAX) {
           frame_idx = 0;
         }
@@ -372,7 +372,7 @@ protected:
     bool success = thread->SetSelectedFrameByIndexNoisily(
         frame_idx, result.GetOutputStream());
     if (success) {
-      m_exe_ctx.SetFrameSP(thread->GetSelectedFrame());
+      m_exe_ctx.SetFrameSP(thread->GetSelectedFrame(SelectMostRelevantFrame));
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendErrorWithFormat("Frame index (%u) out of range.\n",

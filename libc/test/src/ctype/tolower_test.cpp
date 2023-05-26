@@ -10,7 +10,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcToLower, DefaultLocale) {
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     // This follows pattern 'A' + 32 = 'a'.
     if ('A' <= ch && ch <= 'Z')
       EXPECT_EQ(__llvm_libc::tolower(ch), ch + 32);

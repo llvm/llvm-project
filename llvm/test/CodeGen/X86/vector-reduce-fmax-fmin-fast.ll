@@ -65,7 +65,7 @@ define float @test_v4f32(<4 x float> %a0) {
 ;
 ; AVX-LABEL: test_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
@@ -73,7 +73,7 @@ define float @test_v4f32(<4 x float> %a0) {
 ;
 ; AVX512-LABEL: test_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
@@ -108,7 +108,7 @@ define float @test_v8f32(<8 x float> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vminps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vminps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vminss %xmm1, %xmm0, %xmm0
@@ -119,7 +119,7 @@ define float @test_v8f32(<8 x float> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vminps %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX512-NEXT:    vminps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vminss %xmm1, %xmm0, %xmm0
@@ -160,7 +160,7 @@ define float @test_v16f32(<16 x float> %a0) {
 ; AVX-NEXT:    vmaxps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
@@ -173,7 +173,7 @@ define float @test_v16f32(<16 x float> %a0) {
 ; AVX512-NEXT:    vmaxps %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
@@ -197,13 +197,13 @@ define double @test_v2f64(<2 x double> %a0) {
 ;
 ; AVX-LABEL: test_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vminsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v2f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX512-NEXT:    vminsd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = call fast double @llvm.vector.reduce.fmin.v2f64(<2 x double> %a0)
@@ -223,7 +223,7 @@ define double @test_v4f64(<4 x double> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -232,7 +232,7 @@ define double @test_v4f64(<4 x double> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -256,7 +256,7 @@ define double @test_v8f64(<8 x double> %a0) {
 ; AVX-NEXT:    vminpd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vminpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vminsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -267,7 +267,7 @@ define double @test_v8f64(<8 x double> %a0) {
 ; AVX512-NEXT:    vminpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vminpd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX512-NEXT:    vminsd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -297,7 +297,7 @@ define double @test_v16f64(<16 x double> %a0) {
 ; AVX-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -309,7 +309,7 @@ define double @test_v16f64(<16 x double> %a0) {
 ; AVX512-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

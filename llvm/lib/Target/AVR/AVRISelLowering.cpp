@@ -245,8 +245,8 @@ const char *AVRTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
   default:
     return nullptr;
-    NODE(RET_FLAG);
-    NODE(RETI_FLAG);
+    NODE(RET_GLUE);
+    NODE(RETI_GLUE);
     NODE(CALL);
     NODE(WRAPPER);
     NODE(LSL);
@@ -1128,9 +1128,15 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
       return false;
   } else if (const StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     VT = ST->getMemoryVT();
-    if (AVR::isProgramMemoryAccess(ST)) {
+    // We can not store to program memory.
+    if (AVR::isProgramMemoryAccess(ST))
       return false;
-    }
+    // Since the high byte need to be stored first, we can not emit
+    // i16 post increment store like:
+    // st X+, r24
+    // st X+, r25
+    if (VT == MVT::i16 && !Subtarget.hasLowByteFirst())
+      return false;
   } else {
     return false;
   }
@@ -1150,6 +1156,12 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
     if ((VT == MVT::i16 && RHSC != 2) || (VT == MVT::i8 && RHSC != 1)) {
       return false;
     }
+
+    // FIXME: We temporarily disable post increment load from program memory,
+    //        due to bug https://github.com/llvm/llvm-project/issues/59914.
+    if (const LoadSDNode *LD = dyn_cast<LoadSDNode>(N))
+      if (AVR::isProgramMemoryAccess(LD))
+        return false;
 
     Base = Op->getOperand(0);
     Offset = DAG.getConstant(RHSC, DL, MVT::i8);
@@ -1429,7 +1441,7 @@ SDValue AVRTargetLowering::LowerFormalArguments(
   // If the function takes variable number of arguments, make a frame index for
   // the start of the first vararg value... for expansion of llvm.va_start.
   if (isVarArg) {
-    unsigned StackSize = CCInfo.getNextStackOffset();
+    unsigned StackSize = CCInfo.getStackSize();
     AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
 
     AFI->setVarArgsFrameIndex(MFI.CreateFixedObject(2, StackSize, true));
@@ -1490,7 +1502,7 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getNextStackOffset();
+  unsigned NumBytes = CCInfo.getStackSize();
 
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
 
@@ -1566,12 +1578,12 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain and
-  // flag operands which copy the outgoing args into registers.  The InFlag in
+  // flag operands which copy the outgoing args into registers.  The InGlue in
   // necessary since all emited instructions must be stuck together.
-  SDValue InFlag;
+  SDValue InGlue;
   for (auto Reg : RegsToPass) {
-    Chain = DAG.getCopyToReg(Chain, DL, Reg.first, Reg.second, InFlag);
-    InFlag = Chain.getValue(1);
+    Chain = DAG.getCopyToReg(Chain, DL, Reg.first, Reg.second, InGlue);
+    InGlue = Chain.getValue(1);
   }
 
   // Returns a chain & a flag for retval copy to use.
@@ -1597,23 +1609,23 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
-  if (InFlag.getNode()) {
-    Ops.push_back(InFlag);
+  if (InGlue.getNode()) {
+    Ops.push_back(InGlue);
   }
 
   Chain = DAG.getNode(AVRISD::CALL, DL, NodeTys, Ops);
-  InFlag = Chain.getValue(1);
+  InGlue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, DL);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, DL);
 
   if (!Ins.empty()) {
-    InFlag = Chain.getValue(1);
+    InGlue = Chain.getValue(1);
   }
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, InFlag, CallConv, isVarArg, Ins, DL, DAG,
+  return LowerCallResult(Chain, InGlue, CallConv, isVarArg, Ins, DL, DAG,
                          InVals);
 }
 
@@ -1621,7 +1633,7 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 /// appropriate copies out of appropriate physical registers.
 ///
 SDValue AVRTargetLowering::LowerCallResult(
-    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
+    SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
@@ -1640,9 +1652,9 @@ SDValue AVRTargetLowering::LowerCallResult(
   // Copy all of the result registers out of their specified physreg.
   for (CCValAssign const &RVLoc : RVLocs) {
     Chain = DAG.getCopyFromReg(Chain, dl, RVLoc.getLocReg(), RVLoc.getValVT(),
-                               InFlag)
+                               InGlue)
                 .getValue(1);
-    InFlag = Chain.getValue(2);
+    InGlue = Chain.getValue(2);
     InVals.push_back(Chain.getValue(0));
   }
 
@@ -1688,17 +1700,17 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     analyzeReturnValues(Outs, CCInfo, Subtarget.hasTinyEncoding());
   }
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
   // Copy the result values into the output registers.
   for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
     CCValAssign &VA = RVLocs[i];
     assert(VA.isRegLoc() && "Can only return in registers!");
 
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Flag);
+    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Glue);
 
     // Guarantee that all emitted copies are stuck together with flags.
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
@@ -1719,12 +1731,12 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   }
 
   unsigned RetOpc =
-      AFI->isInterruptOrSignalHandler() ? AVRISD::RETI_FLAG : AVRISD::RET_FLAG;
+      AFI->isInterruptOrSignalHandler() ? AVRISD::RETI_GLUE : AVRISD::RET_GLUE;
 
   RetOps[0] = Chain; // Update chain.
 
-  if (Flag.getNode()) {
-    RetOps.push_back(Flag);
+  if (Glue.getNode()) {
+    RetOps.push_back(Glue);
   }
 
   return DAG.getNode(RetOpc, dl, MVT::Other, RetOps);

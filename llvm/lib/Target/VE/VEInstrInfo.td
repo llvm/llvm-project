@@ -441,7 +441,7 @@ def call          : SDNode<"VEISD::CALL", SDT_SPCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;
 
-def retflag       : SDNode<"VEISD::RET_FLAG", SDTNone,
+def retglue       : SDNode<"VEISD::RET_GLUE", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def getGOT        : Operand<iPTR>;
@@ -1466,7 +1466,7 @@ def : Pat<(brind tblockaddress:$imm), (BCFLazi_t 0, $imm)>;
 let Uses = [SX10], bpf = 3 /* TAKEN */, cond = 15 /* AT */, cy = 0, sy = 0,
     sz = 10 /* SX10 */, imm32 = 0, isReturn = 1, isTerminator = 1,
     isBarrier = 1, isCodeGenOnly = 1, hasSideEffects = 0 in
-def RET : CF<0x19, (outs), (ins), "b.l.t (, %s10)", [(retflag)]>;
+def RET : CF<0x19, (outs), (ins), "b.l.t (, %s10)", [(retglue)]>;
 
 // Section 8.8.2 - BCS (Branch on Condition Single)
 defm BCFW : BCm<"b${cond}.w", "b.w", "baf.w", 0x1B, I32, simm7>;

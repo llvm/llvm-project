@@ -267,6 +267,7 @@ cc_library(
         "//llvm:MCParser",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:ir_headers",
     ],
 )

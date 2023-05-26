@@ -55,9 +55,9 @@ static OpFoldResult getCollapsedOutputDimFromInputShape(
     AffineExpr currExpr = builder.getAffineSymbolExpr(dim - startPos);
     expr = (expr ? expr * currExpr : currExpr);
   }
-  return applyMapToValues(builder, loc,
-                          AffineMap::get(0, endPos - startPos + 1, expr),
-                          dynamicDims)[0];
+  return affine::applyMapToValues(
+      builder, loc, AffineMap::get(0, endPos - startPos + 1, expr),
+      dynamicDims)[0];
 }
 
 /// Given the `src` of a collapsing reshape op and its reassociation maps,
@@ -103,7 +103,7 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
     linearizedStaticDim *= d.value();
   }
   Value sourceDim = builder.create<tensor::DimOp>(loc, src, sourceDimPos);
-  return applyMapToValues(
+  return affine::applyMapToValues(
       builder, loc,
       AffineMap::get(
           0, 1, builder.getAffineSymbolExpr(0).floorDiv(linearizedStaticDim)),
@@ -130,7 +130,8 @@ getReshapeOutputShapeFromInputShape(OpBuilder &builder, Location loc, Value src,
                                     ArrayRef<int64_t> dstStaticShape,
                                     ArrayRef<AffineMap> reassocation) {
   return dstStaticShape.size() >
-                 static_cast<size_t>(src.getType().cast<ShapedType>().getRank())
+                 static_cast<size_t>(
+                     llvm::cast<ShapedType>(src.getType()).getRank())
              ? getExpandedOutputShapeFromInputShape(
                    builder, loc, src, dstStaticShape, reassocation)
              : getCollapsedOutputShapeFromInputShape(
@@ -179,18 +180,18 @@ struct ReifyPadOp
       AffineExpr expr = b.getAffineDimExpr(0);
       unsigned numSymbols = 0;
       auto addOpFoldResult = [&](OpFoldResult valueOrAttr) {
-        if (Value v = valueOrAttr.dyn_cast<Value>()) {
+        if (Value v = llvm::dyn_cast_if_present<Value>(valueOrAttr)) {
           expr = expr + b.getAffineSymbolExpr(numSymbols++);
           mapOperands.push_back(v);
           return;
         }
         int64_t staticValue =
-            valueOrAttr.get<Attribute>().cast<IntegerAttr>().getInt();
+            llvm::cast<IntegerAttr>(valueOrAttr.get<Attribute>()).getInt();
         expr = expr + staticValue;
       };
       addOpFoldResult(lowPad[dim]);
       addOpFoldResult(highPad[dim]);
-      shapes.push_back(applyMapToValues(
+      shapes.push_back(affine::applyMapToValues(
           b, loc, AffineMap::get(1, numSymbols, expr), mapOperands)[0]);
     }
     reifiedReturnShapes.emplace_back(std::move(shapes));

@@ -49,8 +49,8 @@ private:
   const TargetLoweringBase *TLI = nullptr;
   Triple Trip;
 
-  Function *F;
-  Module *M;
+  Function *F = nullptr;
+  Module *M = nullptr;
 
   std::optional<DomTreeUpdater> DTU;
 

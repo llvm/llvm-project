@@ -100,18 +100,22 @@ func.func @conv1d_nwc_4x2x8_i8i8i32_memref(%input: memref<4x6x3xi8>, %filter: me
 // CHECK-SAME:     {offsets = [0, 1, 0], sizes = [4, 1, 8], strides = [1, 1, 1]} : vector<4x2x8xi32> to vector<4x1x8xi32>
 
 /// w == 0, kw == 0
+//      CHECK:   %[[EXT_LHS_0:.+]] = arith.extsi %[[V_INPUT_0]] : vector<4x1x3xi8> to vector<4x1x3xi32>
+//      CHECK:   %[[EXT_RHS_0:.+]] = arith.extsi %[[V_FILTER]] : vector<3x8xi8> to vector<3x8xi32>
 //      CHECK:   %[[CONTRACT_0:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
 // CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
-// CHECK-SAME:     %[[V_INPUT_0]], %[[V_FILTER]], %[[V_OUTPUT_0]]
-// CHECK-SAME:     : vector<4x1x3xi8>, vector<3x8xi8> into vector<4x1x8xi32>
+// CHECK-SAME:     %[[EXT_LHS_0]], %[[EXT_RHS_0]], %[[V_OUTPUT_0]]
+// CHECK-SAME:     : vector<4x1x3xi32>, vector<3x8xi32> into vector<4x1x8xi32>
 
 /// w == 1, kw == 0
+//      CHECK:   %[[EXT_LHS_1:.+]] = arith.extsi %[[V_INPUT_1]] : vector<4x1x3xi8> to vector<4x1x3xi32>
+//      CHECK:   %[[EXT_RHS_1:.+]] = arith.extsi %[[V_FILTER]] : vector<3x8xi8> to vector<3x8xi32>
 //      CHECK:   %[[CONTRACT_1:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
 // CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
-// CHECK-SAME:     %[[V_INPUT_1]], %[[V_FILTER]], %[[V_OUTPUT_1]]
-// CHECK-SAME:     : vector<4x1x3xi8>, vector<3x8xi8> into vector<4x1x8xi32>
+// CHECK-SAME:     %[[EXT_LHS_1]], %[[EXT_RHS_1]], %[[V_OUTPUT_1]]
+// CHECK-SAME:     : vector<4x1x3xi32>, vector<3x8xi32> into vector<4x1x8xi32>
 
 /// w == 0, kw == 0
 //      CHECK:   %[[RES_0:.+]] = vector.insert_strided_slice %[[CONTRACT_0]], %[[V_OUTPUT_R]]

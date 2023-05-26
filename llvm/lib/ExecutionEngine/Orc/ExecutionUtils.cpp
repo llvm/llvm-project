@@ -156,8 +156,7 @@ Error CtorDtorRunner::run() {
     for (auto &KV : CtorDtorsByPriority) {
       for (auto &Name : KV.second) {
         assert(CtorDtorMap->count(Name) && "No entry for Name");
-        auto CtorDtor = reinterpret_cast<CtorDtorTy>(
-            static_cast<uintptr_t>((*CtorDtorMap)[Name].getAddress()));
+        auto CtorDtor = (*CtorDtorMap)[Name].getAddress().toPtr<CtorDtorTy>();
         CtorDtor();
       }
     }
@@ -186,12 +185,10 @@ int LocalCXXRuntimeOverridesBase::CXAAtExitOverride(DestructorPtr Destructor,
 Error LocalCXXRuntimeOverrides::enable(JITDylib &JD,
                                         MangleAndInterner &Mangle) {
   SymbolMap RuntimeInterposes;
-  RuntimeInterposes[Mangle("__dso_handle")] =
-    JITEvaluatedSymbol(toTargetAddress(&DSOHandleOverride),
-                       JITSymbolFlags::Exported);
-  RuntimeInterposes[Mangle("__cxa_atexit")] =
-    JITEvaluatedSymbol(toTargetAddress(&CXAAtExitOverride),
-                       JITSymbolFlags::Exported);
+  RuntimeInterposes[Mangle("__dso_handle")] = {
+      ExecutorAddr::fromPtr(&DSOHandleOverride), JITSymbolFlags::Exported};
+  RuntimeInterposes[Mangle("__cxa_atexit")] = {
+      ExecutorAddr::fromPtr(&CXAAtExitOverride), JITSymbolFlags::Exported};
 
   return JD.define(absoluteSymbols(std::move(RuntimeInterposes)));
 }
@@ -257,11 +254,8 @@ Error DynamicLibrarySearchGenerator::tryToGenerate(
 
     std::string Tmp((*Name).data() + HasGlobalPrefix,
                     (*Name).size() - HasGlobalPrefix);
-    if (void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str())) {
-      NewSymbols[Name] = JITEvaluatedSymbol(
-          static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(Addr)),
-          JITSymbolFlags::Exported);
-    }
+    if (void *P = Dylib.getAddressOfSymbol(Tmp.c_str()))
+      NewSymbols[Name] = {ExecutorAddr::fromPtr(P), JITSymbolFlags::Exported};
   }
 
   if (NewSymbols.empty())
@@ -574,7 +568,7 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
 
   for (auto &KV : Resolved) {
     jitlink::Symbol &Target = G->addAbsoluteSymbol(
-        *KV.first, ExecutorAddr(KV.second.getAddress()), *PointerSize,
+        *KV.first, KV.second.getAddress(), *PointerSize,
         jitlink::Linkage::Strong, jitlink::Scope::Local, false);
 
     // Create __imp_ symbol

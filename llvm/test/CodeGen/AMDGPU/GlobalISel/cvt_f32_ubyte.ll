@@ -1530,15 +1530,16 @@ define float @v_test_uitofp_i16_byte_to_f32(i16 %arg0) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; SI-NEXT:    v_bfe_u32 v0, v0, 0, 16
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_test_uitofp_i16_byte_to_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+; VI-NEXT:    v_mov_b32_e32 v1, 0xffff
+; VI-NEXT:    v_and_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %masked = and i16 %arg0, 255
   %itofp = uitofp i16 %masked to float

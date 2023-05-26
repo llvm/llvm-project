@@ -69,9 +69,9 @@ enum GDBRemoteServerError {
 
 // GDBRemoteCommunicationServerLLGS constructor
 GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(
-    MainLoop &mainloop, const NativeProcessProtocol::Factory &process_factory)
+    MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager)
     : GDBRemoteCommunicationServerCommon(), m_mainloop(mainloop),
-      m_process_factory(process_factory), m_current_process(nullptr),
+      m_process_manager(process_manager), m_current_process(nullptr),
       m_continue_process(nullptr), m_stdio_communication() {
   RegisterPacketHandlers();
 }
@@ -286,8 +286,7 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     std::lock_guard<std::recursive_mutex> guard(m_debugged_process_mutex);
     assert(m_debugged_processes.empty() && "lldb-server creating debugged "
                                            "process but one already exists");
-    auto process_or =
-        m_process_factory.Launch(m_process_launch_info, *this, m_mainloop);
+    auto process_or = m_process_manager.Launch(m_process_launch_info, *this);
     if (!process_or)
       return Status(process_or.takeError());
     m_continue_process = m_current_process = process_or->get();
@@ -356,7 +355,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
                   pid, m_current_process->GetID());
 
   // Try to attach.
-  auto process_or = m_process_factory.Attach(pid, *this, m_mainloop);
+  auto process_or = m_process_manager.Attach(pid, *this);
   if (!process_or) {
     Status status(process_or.takeError());
     llvm::errs() << llvm::formatv("failed to attach to process {0}: {1}\n", pid,
@@ -4209,7 +4208,7 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
 
   // report server-only features
   using Extension = NativeProcessProtocol::Extension;
-  Extension plugin_features = m_process_factory.GetSupportedExtensions();
+  Extension plugin_features = m_process_manager.GetSupportedExtensions();
   if (bool(plugin_features & Extension::pass_signals))
     ret.push_back("QPassSignals+");
   if (bool(plugin_features & Extension::auxv))
@@ -4255,7 +4254,7 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
 void GDBRemoteCommunicationServerLLGS::SetEnabledExtensions(
     NativeProcessProtocol &process) {
   NativeProcessProtocol::Extension flags = m_extensions_supported;
-  assert(!bool(flags & ~m_process_factory.GetSupportedExtensions()));
+  assert(!bool(flags & ~m_process_manager.GetSupportedExtensions()));
   process.SetEnabledExtensions(flags);
 }
 

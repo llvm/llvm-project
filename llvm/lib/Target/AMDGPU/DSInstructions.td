@@ -220,7 +220,7 @@ multiclass DS_1A1D_RET_mc_gfx9 <string opName, RegisterClass rc = VGPR_32,
   let has_m0_read = 0 in {
     def "" : DS_1A1D_RET<opName, rc>,
       AtomicNoRet<!if(!eq(NoRetOp, ""), "", NoRetOp),
-                  !if(!eq(NoRetOp, ""), 0, 1)>;
+                  !ne(NoRetOp, "")>;
   }
 }
 
@@ -494,12 +494,12 @@ let SubtargetPredicate = isGFX90APlus in {
   defm DS_ADD_RTN_F64 : DS_1A1D_RET_mc_gfx9<"ds_add_rtn_f64", VReg_64, "ds_add_f64">;
 } // End SubtargetPredicate = isGFX90APlus
 
-let SubtargetPredicate = isGFX940Plus in {
+let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
   defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_f16">;
   defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_f16", VGPR_32, "ds_pk_add_f16">;
   defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_bf16">;
   defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_bf16", VGPR_32, "ds_pk_add_bf16">;
-} // End SubtargetPredicate = isGFX940Plus
+} // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 defm DS_CMPSTORE_B32     : DS_1A2D_NORET_mc<"ds_cmpstore_b32">;
 defm DS_CMPSTORE_F32     : DS_1A2D_NORET_mc<"ds_cmpstore_f32">;
@@ -1133,7 +1133,7 @@ let AddedComplexity = 1 in
 def : DSAtomicRetPatIntrinsic<DS_ADD_F64, f64, int_amdgcn_flat_atomic_fadd_noret_local_addrspace>;
 }
 
-let SubtargetPredicate = isGFX940Plus in {
+let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
 def : DSAtomicRetPat<DS_PK_ADD_RTN_F16, v2f16, atomic_load_fadd_v2f16_local_32>;
 let AddedComplexity = 1 in
 def : DSAtomicRetPat<DS_PK_ADD_F16, v2f16, atomic_load_fadd_v2f16_local_noret_32>;
@@ -1146,7 +1146,7 @@ def : GCNPat <
   (v2i16 (int_amdgcn_ds_fadd_v2bf16_noret i32:$ptr, v2i16:$src)),
   (DS_PK_ADD_BF16 VGPR_32:$ptr, VGPR_32:$src, 0, 0)
 >;
-}
+} // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 def : Pat <
   (SIds_ordered_count i32:$value, i16:$offset),

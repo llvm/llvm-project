@@ -286,11 +286,11 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
         // Find the 'd' register that has this 's' register as a sub-register,
         // and determine the lane number.
-        for (MCSuperRegIterator SR(Reg, TRI); SR.isValid(); ++SR) {
-          if (!ARM::DPRRegClass.contains(*SR))
+        for (MCPhysReg SR : TRI->superregs(Reg)) {
+          if (!ARM::DPRRegClass.contains(SR))
             continue;
-          bool Lane0 = TRI->getSubReg(*SR, ARM::ssub_0) == Reg;
-          O << ARMInstPrinter::getRegisterName(*SR) << (Lane0 ? "[0]" : "[1]");
+          bool Lane0 = TRI->getSubReg(SR, ARM::ssub_0) == Reg;
+          O << ARMInstPrinter::getRegisterName(SR) << (Lane0 ? "[0]" : "[1]");
           return false;
         }
       }
@@ -762,7 +762,7 @@ void ARMAsmPrinter::emitAttributes() {
 
     auto *PACValue = mdconst::extract_or_null<ConstantInt>(
         SourceModule->getModuleFlag("sign-return-address"));
-    if (PACValue && PACValue->getZExtValue() == 1) {
+    if (PACValue && PACValue->isOne()) {
       // If "+pacbti" is used as an architecture extension,
       // Tag_PAC_extension is emitted in
       // ARMTargetStreamer::emitTargetAttributes().
@@ -775,7 +775,7 @@ void ARMAsmPrinter::emitAttributes() {
 
     auto *BTIValue = mdconst::extract_or_null<ConstantInt>(
         SourceModule->getModuleFlag("branch-target-enforcement"));
-    if (BTIValue && BTIValue->getZExtValue() == 1) {
+    if (BTIValue && BTIValue->isOne()) {
       // If "+pacbti" is used as an architecture extension,
       // Tag_BTI_extension is emitted in
       // ARMTargetStreamer::emitTargetAttributes().

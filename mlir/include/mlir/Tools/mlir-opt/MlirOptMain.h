@@ -13,6 +13,7 @@
 #ifndef MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 #define MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 
+#include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -35,12 +36,12 @@ class PassManager;
 /// supported options.
 /// The API is fluent, and the options are sorted in alphabetical order below.
 /// The options can be exposed to the LLVM command line by registering them
-/// with `MlirOptMainConfig::registerCLOptions();` and creating a config using
-/// `auto config = MlirOptMainConfig::createFromCLOptions();`.
+/// with `MlirOptMainConfig::registerCLOptions(DialectRegistry &);` and creating
+/// a config using `auto config = MlirOptMainConfig::createFromCLOptions();`.
 class MlirOptMainConfig {
 public:
   /// Register the options as global LLVM command line options.
-  static void registerCLOptions();
+  static void registerCLOptions(DialectRegistry &dialectRegistry);
 
   /// Create a new config with the default set from the CL options.
   static MlirOptMainConfig createFromCLOptions();
@@ -60,6 +61,14 @@ public:
     return allowUnregisteredDialectsFlag;
   }
 
+  /// Set the debug configuration to use.
+  MlirOptMainConfig &setDebugConfig(tracing::DebugConfig config) {
+    debugConfig = std::move(config);
+    return *this;
+  }
+  tracing::DebugConfig &getDebugConfig() { return debugConfig; }
+  const tracing::DebugConfig &getDebugConfig() const { return debugConfig; }
+
   /// Print the pass-pipeline as text before executing.
   MlirOptMainConfig &dumpPassPipeline(bool dump) {
     dumpPassPipelineFlag = dump;
@@ -74,13 +83,21 @@ public:
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
 
-  /// Set the filename to use for logging actions, use "-" for stdout.
-  MlirOptMainConfig &logActionsTo(StringRef filename) {
-    logActionsToFlag = filename;
+  /// Set the IRDL file to load before processing the input.
+  MlirOptMainConfig &setIrdlFile(StringRef file) {
+    irdlFileFlag = file;
     return *this;
   }
-  /// Get the filename to use for logging actions.
-  StringRef getLogActionsTo() const { return logActionsToFlag; }
+  StringRef getIrdlFile() const { return irdlFileFlag; }
+
+  /// Set the bytecode version to emit.
+  MlirOptMainConfig &setEmitBytecodeVersion(int64_t version) {
+    emitBytecodeVersion = version;
+    return *this;
+  }
+  std::optional<int64_t> bytecodeVersionToEmit() const {
+    return emitBytecodeVersion;
+  }
 
   /// Set the callback to populate the pass manager.
   MlirOptMainConfig &
@@ -99,14 +116,15 @@ public:
     return success();
   }
 
-  // Deprecated.
-  MlirOptMainConfig &preloadDialectsInContext(bool preload) {
-    preloadDialectsInContextFlag = preload;
+  /// Enable running the reproducer information stored in resources (if
+  /// present).
+  MlirOptMainConfig &runReproducer(bool enableReproducer) {
+    runReproducerFlag = enableReproducer;
     return *this;
-  }
-  bool shouldPreloadDialectsInContext() const {
-    return preloadDialectsInContextFlag;
-  }
+  };
+
+  /// Return true if the reproducer should be run.
+  bool shouldRunReproducer() const { return runReproducerFlag; }
 
   /// Show the registered dialects before trying to load the input file.
   MlirOptMainConfig &showDialects(bool show) {
@@ -145,11 +163,21 @@ public:
   }
   bool shouldVerifyPasses() const { return verifyPassesFlag; }
 
+  /// Set whether to run the verifier after each transformation pass.
+  MlirOptMainConfig &verifyRoundtrip(bool verify) {
+    verifyRoundtripFlag = verify;
+    return *this;
+  }
+  bool shouldVerifyRoundtrip() const { return verifyRoundtripFlag; }
+
 protected:
   /// Allow operation with no registered dialects.
   /// This option is for convenience during testing only and discouraged in
   /// general.
   bool allowUnregisteredDialectsFlag = false;
+
+  /// Configuration for the debugging hooks.
+  tracing::DebugConfig debugConfig;
 
   /// Print the pipeline that will be run.
   bool dumpPassPipelineFlag = false;
@@ -157,14 +185,23 @@ protected:
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
 
-  /// Log action execution to the given file (or "-" for stdout)
-  std::string logActionsToFlag;
+  /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
+  bool enableDebuggerActionHookFlag = false;
+
+  /// IRDL file to register before processing the input.
+  std::string irdlFileFlag = "";
+
+  /// Location Breakpoints to filter the action logging.
+  std::vector<tracing::BreakpointManager *> logActionLocationFilter;
+
+  /// Emit bytecode at given version.
+  std::optional<int64_t> emitBytecodeVersion = std::nullopt;
 
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;
 
-  /// Deprecated.
-  bool preloadDialectsInContextFlag = false;
+  /// Enable running the reproducer.
+  bool runReproducerFlag = false;
 
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
@@ -182,6 +219,9 @@ protected:
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;
+
+  /// Verify that the input IR round-trips perfectly.
+  bool verifyRoundtripFlag = false;
 };
 
 /// This defines the function type used to setup the pass manager. This can be
@@ -199,36 +239,11 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           DialectRegistry &registry,
                           const MlirOptMainConfig &config);
 
-/// Perform the core processing behind `mlir-opt`.
-/// This API is deprecated, use the MlirOptMainConfig version above instead.
-LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
-                          std::unique_ptr<llvm::MemoryBuffer> buffer,
-                          const PassPipelineCLParser &passPipeline,
-                          DialectRegistry &registry, bool splitInputFile,
-                          bool verifyDiagnostics, bool verifyPasses,
-                          bool allowUnregisteredDialects,
-                          bool preloadDialectsInContext = false,
-                          bool emitBytecode = false, bool explicitModule = true,
-                          bool dumpPassPipeline = false);
-
-/// Perform the core processing behind `mlir-opt`.
-/// This API is deprecated, use the MlirOptMainConfig version above instead.
-LogicalResult MlirOptMain(
-    llvm::raw_ostream &outputStream, std::unique_ptr<llvm::MemoryBuffer> buffer,
-    PassPipelineFn passManagerSetupFn, DialectRegistry &registry,
-    bool splitInputFile, bool verifyDiagnostics, bool verifyPasses,
-    bool allowUnregisteredDialects, bool preloadDialectsInContext = false,
-    bool emitBytecode = false, bool explicitModule = true);
-
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.
 /// - registry should contain all the dialects that can be parsed in the source.
-/// - preloadDialectsInContext will trigger the upfront loading of all
-///   dialects from the global registry in the MLIRContext. This option is
-///   deprecated and will be removed soon.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
-                          DialectRegistry &registry,
-                          bool preloadDialectsInContext = false);
+                          DialectRegistry &registry);
 
 /// Helper wrapper to return the result of MlirOptMain directly from main.
 ///

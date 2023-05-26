@@ -18,6 +18,7 @@
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 #define DEBUG_TYPE "decompose-affine-ops"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
@@ -38,8 +39,8 @@ static int64_t numEnclosingInvariantLoops(OpOperand &operand) {
   return count;
 }
 
-void mlir::reorderOperandsByHoistability(RewriterBase &rewriter,
-                                         AffineApplyOp op) {
+void mlir::affine::reorderOperandsByHoistability(RewriterBase &rewriter,
+                                                 AffineApplyOp op) {
   SmallVector<int64_t> numInvariant = llvm::to_vector(
       llvm::map_range(op->getOpOperands(), [&](OpOperand &operand) {
         return numEnclosingInvariantLoops(operand);
@@ -92,8 +93,8 @@ static AffineApplyOp createSubApply(RewriterBase &rewriter,
                                         rhsOperands);
 }
 
-FailureOr<AffineApplyOp> mlir::decompose(RewriterBase &rewriter,
-                                         AffineApplyOp op) {
+FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
+                                                 AffineApplyOp op) {
   // 1. Preconditions: only handle dimensionless AffineApplyOp maps with a
   // top-level binary expression that we can reassociate (i.e. add or mul).
   AffineMap m = op.getAffineMap();

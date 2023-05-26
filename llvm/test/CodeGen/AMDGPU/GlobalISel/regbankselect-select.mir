@@ -1160,7 +1160,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
-    ; CHECK-LABEL: name: select_v4s16_vcc_sv
     ; FAST-LABEL: name: select_v4s16_vcc_sv
     ; FAST: liveins: $sgpr0_sgpr1, $vgpr0, $vgpr1, $vgpr2_vgpr3
     ; FAST-NEXT: {{  $}}

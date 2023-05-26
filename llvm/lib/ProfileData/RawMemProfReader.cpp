@@ -17,9 +17,12 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
@@ -34,6 +37,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "memprof"
@@ -185,10 +189,20 @@ RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
   if (Error E = checkBuffer(*Buffer))
     return report(std::move(E), Path.getSingleStringRef());
 
-  if (ProfiledBinary.empty())
+  if (ProfiledBinary.empty()) {
+    // Peek the build ids to print a helpful error message.
+    const std::vector<std::string> BuildIds = peekBuildIds(Buffer.get());
+    std::string ErrorMessage(
+        R"(Path to profiled binary is empty, expected binary with one of the following build ids:
+)");
+    for (const auto &Id : BuildIds) {
+      ErrorMessage += "\n BuildId: ";
+      ErrorMessage += Id;
+    }
     return report(
-        errorCodeToError(make_error_code(std::errc::invalid_argument)),
-        "Path to profiled binary is empty!");
+        make_error<StringError>(ErrorMessage, inconvertibleErrorCode()),
+        /*Context=*/"");
+  }
 
   auto BinaryOr = llvm::object::createBinary(ProfiledBinary);
   if (!BinaryOr) {
@@ -268,8 +282,8 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
   }
 
   // Check whether the profiled binary was built with position independent code
-  // (PIC). For now we provide a error message until symbolization support
-  // is added for pic.
+  // (PIC). Perform sanity checks for assumptions we rely on to simplify
+  // symbolization.
   auto* Elf64LEObject = llvm::cast<llvm::object::ELF64LEObjectFile>(ElfObject);
   const llvm::object::ELF64LEFile& ElfFile = Elf64LEObject->getELFFile();
   auto PHdrsOr = ElfFile.program_headers();
@@ -337,12 +351,11 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
 
 Error RawMemProfReader::setupForSymbolization() {
   auto *Object = cast<object::ObjectFile>(Binary.getBinary());
-  auto BuildIdOr = object::getBuildID(Object);
-  if (!BuildIdOr.has_value())
+  object::BuildIDRef BinaryId = object::getBuildID(Object);
+  if (BinaryId.empty())
     return make_error<StringError>(Twine("No build id found in binary ") +
                                        Binary.getBinary()->getFileName(),
                                    inconvertibleErrorCode());
-  llvm::ArrayRef<uint8_t> BinaryId = BuildIdOr.value();
 
   int NumMatched = 0;
   for (const auto &Entry : SegmentInfo) {
@@ -360,10 +373,10 @@ Error RawMemProfReader::setupForSymbolization() {
     }
   }
   assert(NumMatched != 0 && "No matching executable segments in segment info.");
-  assert(PreferredTextSegmentAddress == 0 ||
-         (PreferredTextSegmentAddress == ProfiledTextSegmentStart) &&
-             "Expect text segment address to be 0 or equal to profiled text "
-             "segment start.");
+  assert((PreferredTextSegmentAddress == 0 ||
+          (PreferredTextSegmentAddress == ProfiledTextSegmentStart)) &&
+         "Expect text segment address to be 0 or equal to profiled text "
+         "segment start.");
   return Error::success();
 }
 
@@ -521,6 +534,36 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
         "no entries in callstack map after symbolization");
 
   return Error::success();
+}
+
+std::vector<std::string>
+RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
+  const char *Next = DataBuffer->getBufferStart();
+  // Use a set + vector since a profile file may contain multiple raw profile
+  // dumps, each with segment information. We want them unique and in order they
+  // were stored in the profile; the profiled binary should be the first entry.
+  // The runtime uses dl_iterate_phdr and the "... first object visited by
+  // callback is the main program."
+  // https://man7.org/linux/man-pages/man3/dl_iterate_phdr.3.html
+  std::vector<std::string> BuildIds;
+  llvm::SmallSet<StringRef, 4> BuildIdsSet;
+  while (Next < DataBuffer->getBufferEnd()) {
+    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+
+    const llvm::SmallVector<SegmentEntry> Entries =
+        readSegmentEntries(Next + Header->SegmentOffset);
+
+    for (const auto &Entry : Entries) {
+      const std::string Id = getBuildIdString(Entry);
+      if (BuildIdsSet.contains(Id))
+        continue;
+      BuildIds.push_back(Id);
+      BuildIdsSet.insert(BuildIds.back());
+    }
+
+    Next += Header->TotalSize;
+  }
+  return BuildIds;
 }
 
 Error RawMemProfReader::readRawProfile(

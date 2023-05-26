@@ -121,6 +121,9 @@ def ignore_auto_link_option_eq : Joined<["--"], "ignore-auto-link-option=">,
 def strict_auto_link : Flag<["--"], "strict-auto-link">,
     HelpText<"Always warn for missing frameworks or libraries if they are loaded via LC_LINKER_OPTIONS">,
     Group<grp_lld>;
+def check_category_conflicts : Flag<["--"], "check-category-conflicts">,
+    HelpText<"Check for conflicts between category & class methods">,
+    Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
@@ -666,6 +669,9 @@ def adhoc_codesign : Flag<["-"], "adhoc_codesign">,
     Group<grp_rare>;
 def no_adhoc_codesign : Flag<["-"], "no_adhoc_codesign">,
     HelpText<"Do not write an ad-hoc code signature to the output file (default for x86_64 binaries)">,
+    Group<grp_rare>;
+def reproducible : Flag<["-"], "reproducible">,
+    HelpText<"Make the output reproducible by removing timestamps and other non-deterministic data. This is the default behavior.">,
     Group<grp_rare>;
 def version_details : Flag<["-"], "version_details">,
     HelpText<"Print the linker version in JSON form">,

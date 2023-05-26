@@ -229,6 +229,10 @@ int main(int argc, const char **argv) {
     Tool.applyAllReplacements(Rewrite);
     for (const auto &File : Files) {
       auto Entry = FileMgr.getFile(File);
+      if (!Entry) {
+        errs() << "clang-rename: " << File << " does not exist.\n";
+        return 1;
+      }
       const auto ID = Sources.getOrCreateFileID(*Entry, SrcMgr::C_User);
       Rewrite.getEditBuffer(ID).write(outs());
     }

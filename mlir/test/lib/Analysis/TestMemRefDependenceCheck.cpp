@@ -21,6 +21,7 @@
 #define DEBUG_TYPE "test-memref-dependence-check"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 

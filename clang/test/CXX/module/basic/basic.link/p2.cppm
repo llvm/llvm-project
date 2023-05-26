@@ -39,19 +39,21 @@ void use() {
 }
 
 //--- M.cpp
-// expected-no-diagnostics
+
 module M;
 
-// FIXME: Use of internal linkage entities should be rejected.
 void use_from_module_impl() {
   external_linkage_fn();
   module_linkage_fn();
-  internal_linkage_fn();
+  internal_linkage_fn(); // expected-error {{no matching function for call to 'internal_linkage_fn'}}
   (void)external_linkage_class{};
   (void)module_linkage_class{};
-  (void)internal_linkage_class{};
   (void)external_linkage_var;
   (void)module_linkage_var;
+
+  // FIXME: Issue #61427 Internal-linkage declarations in the interface TU
+  // should not be not visible here.
+  (void)internal_linkage_class{};
   (void)internal_linkage_var;
 }
 

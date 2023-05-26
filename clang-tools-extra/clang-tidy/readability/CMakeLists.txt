@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyReadabilityModule
   AvoidConstParamsInDecls.cpp
+  AvoidUnconditionalPreprocessorIfCheck.cpp
   BracesAroundStatementsCheck.cpp
   ConstReturnTypeCheck.cpp
   ContainerContainsCheck.cpp
@@ -28,6 +29,7 @@ add_clang_library(clangTidyReadabilityModule
   NamedParameterCheck.cpp
   NamespaceCommentCheck.cpp
   NonConstParameterCheck.cpp
+  OperatorsRepresentationCheck.cpp
   QualifiedAutoCheck.cpp
   ReadabilityTidyModule.cpp
   RedundantAccessSpecifiersCheck.cpp

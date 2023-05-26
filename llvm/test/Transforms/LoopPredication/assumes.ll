@@ -21,6 +21,7 @@ define i32 @test0(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, i1 %c, i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[IV_2_END]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[IV_1_START]], [[IV_1_END]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[IV_1_NEXT:%.*]], [[LOOP_NEXT:%.*]] ], [ [[IV_1_START]], [[LOOP_PREHEADER]] ]
@@ -29,8 +30,8 @@ define i32 @test0(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, i1 %c, i32 %x) {
 ; CHECK-NEXT:    [[VALUE:%.*]] = load i8, ptr [[GEP_1]], align 1
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[IV_1]], [[IV_1_END]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[WC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_NEXT]], label [[DEOPT:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP5]], [[WC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[LOOP_NEXT]], label [[DEOPT:%.*]]
 ; CHECK:       loop.next:
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND_1]])
 ; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, ptr [[P4:%.*]], i32 [[IV_1]]

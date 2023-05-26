@@ -82,7 +82,7 @@ public:
 
   uint32_t GetDependentModules(FileSpecList &files) override { return 0; }
 
-  Type CalculateType() override { return eTypeDebugInfo; }
+  Type CalculateType() override { return m_type; }
 
   Strata CalculateStrata() override { return eStrataUser; }
 
@@ -92,21 +92,27 @@ public:
   struct Header {
     std::string triple;
     std::string uuid;
+    std::optional<ObjectFile::Type> type;
   };
 
   struct Body {
+    std::vector<JSONSection> sections;
     std::vector<JSONSymbol> symbols;
   };
 
 private:
   ArchSpec m_arch;
   UUID m_uuid;
+  ObjectFile::Type m_type;
+  std::optional<uint64_t> m_size;
   std::vector<JSONSymbol> m_symbols;
+  std::vector<JSONSection> m_sections;
 
   ObjectFileJSON(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
                  lldb::offset_t data_offset, const FileSpec *file,
                  lldb::offset_t offset, lldb::offset_t length, ArchSpec arch,
-                 UUID uuid, std::vector<JSONSymbol> symbols);
+                 UUID uuid, Type type, std::vector<JSONSymbol> symbols,
+                 std::vector<JSONSection> sections);
 };
 
 bool fromJSON(const llvm::json::Value &value, ObjectFileJSON::Header &header,

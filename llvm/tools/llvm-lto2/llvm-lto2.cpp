@@ -320,11 +320,12 @@ static int run(int argc, char **argv) {
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
-    Backend =
-        createWriteIndexesThinBackend(/* OldPrefix */ "",
-                                      /* NewPrefix */ "", ThinLTOEmitImports,
-                                      /* LinkedObjectsFile */ nullptr,
-                                      /* OnWrite */ {});
+    Backend = createWriteIndexesThinBackend(/*OldPrefix=*/"",
+                                            /*NewPrefix=*/"",
+                                            /*NativeObjectPrefix=*/"",
+                                            ThinLTOEmitImports,
+                                            /*LinkedObjectsFile=*/nullptr,
+                                            /*OnWrite=*/{});
   else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),

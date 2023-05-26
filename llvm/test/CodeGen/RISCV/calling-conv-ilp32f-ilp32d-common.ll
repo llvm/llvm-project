@@ -79,9 +79,9 @@ define i32 @caller_float_in_fpr_exhausted_gprs() nounwind {
 define i32 @callee_float_in_gpr_exhausted_fprs(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, float %i) nounwind {
 ; RV32-ILP32FD-LABEL: callee_float_in_gpr_exhausted_fprs:
 ; RV32-ILP32FD:       # %bb.0:
-; RV32-ILP32FD-NEXT:    fmv.w.x ft0, a0
+; RV32-ILP32FD-NEXT:    fmv.w.x fa5, a0
 ; RV32-ILP32FD-NEXT:    fcvt.w.s a0, fa7, rtz
-; RV32-ILP32FD-NEXT:    fcvt.w.s a1, ft0, rtz
+; RV32-ILP32FD-NEXT:    fcvt.w.s a1, fa5, rtz
 ; RV32-ILP32FD-NEXT:    add a0, a0, a1
 ; RV32-ILP32FD-NEXT:    ret
   %h_fptosi = fptosi float %h to i32
@@ -126,8 +126,8 @@ define i32 @caller_float_in_gpr_exhausted_fprs() nounwind {
 define i32 @callee_float_on_stack_exhausted_gprs_fprs(i64 %a, float %b, i64 %c, float %d, i64 %e, float %f, i64 %g, float %h, float %i, float %j, float %k, float %l, float %m) nounwind {
 ; RV32-ILP32FD-LABEL: callee_float_on_stack_exhausted_gprs_fprs:
 ; RV32-ILP32FD:       # %bb.0:
-; RV32-ILP32FD-NEXT:    flw ft0, 0(sp)
-; RV32-ILP32FD-NEXT:    fcvt.w.s a0, ft0, rtz
+; RV32-ILP32FD-NEXT:    flw fa5, 0(sp)
+; RV32-ILP32FD-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV32-ILP32FD-NEXT:    add a0, a6, a0
 ; RV32-ILP32FD-NEXT:    ret
   %g_trunc = trunc i64 %g to i32

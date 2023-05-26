@@ -6,6 +6,9 @@
 // RUN: %env_tool_opts=handle_sigbus=2 not %run %t 4 2>&1 | FileCheck %s -DSIGNAME=BUS
 // RUN: %env_tool_opts=handle_sigtrap=2 not %run %t 5 2>&1 | FileCheck %s -DSIGNAME=TRAP
 
+// FIXME: Hwasan misclassify TRAP as tag missmatch.
+// XFAIL: hwasan && !hwasan-aliasing
+
 #include <signal.h>
 #include <stdlib.h>
 

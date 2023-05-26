@@ -1,4 +1,4 @@
-//===-- RISCVMCInstLower.cpp - Convert RISCV MachineInstr to an MCInst ------=//
+//===-- RISCVMCInstLower.cpp - Convert RISC-V MachineInstr to an MCInst -----=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains code to lower RISCV MachineInstrs to their corresponding
+// This file contains code to lower RISC-V MachineInstrs to their corresponding
 // MCInst records.
 //
 //===----------------------------------------------------------------------===//
@@ -193,6 +193,19 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
       } else if (RISCV::FPR64RegClass.contains(Reg)) {
         Reg = TRI->getSubReg(Reg, RISCV::sub_32);
         assert(Reg && "Superregister does not exist");
+      } else if (RISCV::VRN2M1RegClass.contains(Reg) ||
+                 RISCV::VRN2M2RegClass.contains(Reg) ||
+                 RISCV::VRN2M4RegClass.contains(Reg) ||
+                 RISCV::VRN3M1RegClass.contains(Reg) ||
+                 RISCV::VRN3M2RegClass.contains(Reg) ||
+                 RISCV::VRN4M1RegClass.contains(Reg) ||
+                 RISCV::VRN4M2RegClass.contains(Reg) ||
+                 RISCV::VRN5M1RegClass.contains(Reg) ||
+                 RISCV::VRN6M1RegClass.contains(Reg) ||
+                 RISCV::VRN7M1RegClass.contains(Reg) ||
+                 RISCV::VRN8M1RegClass.contains(Reg)) {
+        Reg = TRI->getSubReg(Reg, RISCV::sub_vrm1_0);
+        assert(Reg && "Subregister does not exist");
       }
 
       MCOp = MCOperand::createReg(Reg);
@@ -240,18 +253,6 @@ bool llvm::lowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
     }
     break;
   }
-  case RISCV::PseudoReadVLENB:
-    OutMI.setOpcode(RISCV::CSRRS);
-    OutMI.addOperand(MCOperand::createImm(
-        RISCVSysReg::lookupSysRegByName("VLENB")->Encoding));
-    OutMI.addOperand(MCOperand::createReg(RISCV::X0));
-    break;
-  case RISCV::PseudoReadVL:
-    OutMI.setOpcode(RISCV::CSRRS);
-    OutMI.addOperand(
-        MCOperand::createImm(RISCVSysReg::lookupSysRegByName("VL")->Encoding));
-    OutMI.addOperand(MCOperand::createReg(RISCV::X0));
-    break;
   }
   return false;
 }

@@ -8,6 +8,7 @@ struct X {
 
 void take_by_copy(auto &...args) {
   [...args = args] {}(); // expected-error {{call to deleted constructor}}
+                         // expected-note@-1 {{substituting into a lambda}}
 }
 
 void take_by_ref(auto &...args) {

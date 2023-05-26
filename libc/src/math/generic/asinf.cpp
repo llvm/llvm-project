@@ -99,7 +99,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
     double xsq = xd * xd;
     double x3 = xd * xsq;
     double r = asin_eval(xsq);
-    return fputil::multiply_add(x3, r, xd);
+    return static_cast<float>(fputil::multiply_add(x3, r, xd));
   }
 
   // |x| > 1, return NaNs.
@@ -149,7 +149,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   double c3 = c1 * u;
 
   double r = asin_eval(u);
-  return fputil::multiply_add(c3, r, c2);
+  return static_cast<float>(fputil::multiply_add(c3, r, c2));
 }
 
 } // namespace __llvm_libc

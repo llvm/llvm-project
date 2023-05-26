@@ -36,8 +36,10 @@
 #include "MisplacedPointerArithmeticInAllocCheck.h"
 #include "MisplacedWideningCastCheck.h"
 #include "MoveForwardingReferenceCheck.h"
+#include "MultipleNewInOneExpressionCheck.h"
 #include "MultipleStatementMacroCheck.h"
 #include "NoEscapeCheck.h"
+#include "NonZeroEnumToBoolConversionCheck.h"
 #include "NotNullTerminatedResultCheck.h"
 #include "ParentVirtualCallCheck.h"
 #include "PosixReturnCheck.h"
@@ -132,6 +134,8 @@ public:
         "bugprone-misplaced-widening-cast");
     CheckFactories.registerCheck<MoveForwardingReferenceCheck>(
         "bugprone-move-forwarding-reference");
+    CheckFactories.registerCheck<MultipleNewInOneExpressionCheck>(
+        "bugprone-multiple-new-in-one-expression");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
     CheckFactories.registerCheck<RedundantBranchConditionCheck>(
@@ -139,6 +143,8 @@ public:
     CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(
         "bugprone-narrowing-conversions");
     CheckFactories.registerCheck<NoEscapeCheck>("bugprone-no-escape");
+    CheckFactories.registerCheck<NonZeroEnumToBoolConversionCheck>(
+        "bugprone-non-zero-enum-to-bool-conversion");
     CheckFactories.registerCheck<NotNullTerminatedResultCheck>(
         "bugprone-not-null-terminated-result");
     CheckFactories.registerCheck<ParentVirtualCallCheck>(

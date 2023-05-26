@@ -130,7 +130,7 @@ private:
     return false;
   }
 
-  const char *getClobbers() const final { return ""; }
+  std::string_view getClobbers() const final { return ""; }
 
   bool isCLZForZeroUndef() const final { return false; }
 

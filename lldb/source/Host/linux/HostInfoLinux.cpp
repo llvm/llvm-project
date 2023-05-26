@@ -200,17 +200,13 @@ void HostInfoLinux::ComputeHostArchitectureSupport(ArchSpec &arch_32,
                                                    ArchSpec &arch_64) {
   HostInfoPosix::ComputeHostArchitectureSupport(arch_32, arch_64);
 
-  const char *distribution_id = GetDistributionId().data();
-
   // On Linux, "unknown" in the vendor slot isn't what we want for the default
   // triple.  It's probably an artifact of config.guess.
   if (arch_32.IsValid()) {
-    arch_32.SetDistributionId(distribution_id);
     if (arch_32.GetTriple().getVendor() == llvm::Triple::UnknownVendor)
       arch_32.GetTriple().setVendorName(llvm::StringRef());
   }
   if (arch_64.IsValid()) {
-    arch_64.SetDistributionId(distribution_id);
     if (arch_64.GetTriple().getVendor() == llvm::Triple::UnknownVendor)
       arch_64.GetTriple().setVendorName(llvm::StringRef());
   }

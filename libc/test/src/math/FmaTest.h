@@ -12,8 +12,8 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+#include "test/src/math/RandUtils.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/testutils/RandUtils.h"
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 

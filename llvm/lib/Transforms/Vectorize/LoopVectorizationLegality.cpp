@@ -37,6 +37,11 @@ static cl::opt<bool>
     EnableIfConversion("enable-if-conversion", cl::init(true), cl::Hidden,
                        cl::desc("Enable if-conversion during vectorization."));
 
+static cl::opt<bool>
+AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
+                       cl::desc("Enable recognition of non-constant strided "
+                                "pointer induction variables."));
+
 namespace llvm {
 cl::opt<bool>
     HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
@@ -447,8 +452,12 @@ static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
 
 int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
                                                 Value *Ptr) const {
-  const ValueToValueMap &Strides =
-      getSymbolicStrides() ? *getSymbolicStrides() : ValueToValueMap();
+  // FIXME: Currently, the set of symbolic strides is sometimes queried before
+  // it's collected.  This happens from canVectorizeWithIfConvert, when the
+  // pointer is checked to reference consecutive elements suitable for a
+  // masked access.
+  const auto &Strides =
+    LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
 
   Function *F = TheLoop->getHeader()->getParent();
   bool OptForSize = F->hasOptSize() ||
@@ -700,6 +709,18 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
+        // We prevent matching non-constant strided pointer IVS to preserve
+        // historical vectorizer behavior after a generalization of the
+        // IVDescriptor code.  The intent is to remove this check, but we
+        // have to fix issues around code quality for such loops first.
+        auto isDisallowedStridedPointerInduction =
+          [](const InductionDescriptor &ID) {
+          if (AllowStridedPointerIVs)
+            return false;
+          return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
+            ID.getConstIntStepValue() == nullptr;
+        };
+
         // TODO: Instead of recording the AllowedExit, it would be good to
         // record the complementary set: NotAllowedExit. These include (but may
         // not be limited to):
@@ -715,14 +736,14 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // By recording these, we can then reason about ways to vectorize each
         // of these NotAllowedExit.
         InductionDescriptor ID;
-        if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID)) {
+        if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID) &&
+            !isDisallowedStridedPointerInduction(ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
           Requirements->addExactFPMathInst(ID.getExactFPMathInst());
           continue;
         }
 
-        if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop,
-                                                         SinkAfter, DT)) {
+        if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {
           AllowedExit.insert(Phi);
           FixedOrderRecurrences.insert(Phi);
           continue;
@@ -730,7 +751,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
         // As a last resort, coerce the PHI to a AddRec expression
         // and re-try classifying it a an induction PHI.
-        if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true)) {
+        if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
+            !isDisallowedStridedPointerInduction(ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
           continue;
         }
@@ -893,18 +915,6 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       LLVM_DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
     }
   }
-
-  // For fixed order recurrences, we use the previous value (incoming value from
-  // the latch) to check if it dominates all users of the recurrence. Bail out
-  // if we have to sink such an instruction for another recurrence, as the
-  // dominance requirement may not hold after sinking.
-  BasicBlock *LoopLatch = TheLoop->getLoopLatch();
-  if (any_of(FixedOrderRecurrences, [LoopLatch, this](const PHINode *Phi) {
-        Instruction *V =
-            cast<Instruction>(Phi->getIncomingValueForBlock(LoopLatch));
-        return SinkAfter.contains(V);
-      }))
-    return false;
 
   // Now we know the widest induction type, check if our found induction
   // is the same size. If it's not, unset it here and InnerLoopVectorizer
@@ -1128,15 +1138,11 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     // if we end up scalarizing due to the cost model calculations.
     // TODO: Allow other calls if they have appropriate attributes... readonly
     // and argmemonly?
-    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-      // Check whether we have at least one masked vector version of a scalar
-      // function.
-      if (any_of(VFDatabase::getMappings(*CI),
-                 [](VFInfo &Info) { return Info.isMasked(); })) {
+    if (CallInst *CI = dyn_cast<CallInst>(&I))
+      if (VFDatabase::hasMaskedVariant(*CI)) {
         MaskedOp.insert(CI);
         continue;
       }
-    }
 
     // Loads are handled via masking (or speculated if safe to do so.)
     if (auto *LI = dyn_cast<LoadInst>(&I)) {

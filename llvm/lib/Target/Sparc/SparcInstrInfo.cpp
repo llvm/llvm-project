@@ -32,6 +32,10 @@ static cl::opt<unsigned> BPccDisplacementBits(
     "sparc-bpcc-offset-bits", cl::Hidden, cl::init(19),
     cl::desc("Restrict range of BPcc/FBPfcc instructions (DEBUG)"));
 
+static cl::opt<unsigned>
+    BPrDisplacementBits("sparc-bpr-offset-bits", cl::Hidden, cl::init(16),
+                        cl::desc("Restrict range of BPr instructions (DEBUG)"));
+
 // Pin the vtable to this file.
 void SparcInstrInfo::anchor() {}
 
@@ -166,6 +170,11 @@ static bool isI64CondBranchOpcode(int Opc) {
          Opc == SP::BPXCCANT;
 }
 
+static bool isRegCondBranchOpcode(int Opc) {
+  return Opc == SP::BPR || Opc == SP::BPRA || Opc == SP::BPRNT ||
+         Opc == SP::BPRANT;
+}
+
 static bool isFCondBranchOpcode(int Opc) {
   return Opc == SP::FBCOND || Opc == SP::FBCONDA || Opc == SP::FBCOND_V9 ||
          Opc == SP::FBCONDA_V9;
@@ -173,7 +182,7 @@ static bool isFCondBranchOpcode(int Opc) {
 
 static bool isCondBranchOpcode(int Opc) {
   return isI32CondBranchOpcode(Opc) || isI64CondBranchOpcode(Opc) ||
-         isFCondBranchOpcode(Opc);
+         isRegCondBranchOpcode(Opc) || isFCondBranchOpcode(Opc);
 }
 
 static bool isIndirectBranchOpcode(int Opc) {
@@ -189,6 +198,13 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
   // it can use the information to emit the correct SPARC branch opcode.
   Cond.push_back(MachineOperand::CreateImm(Opc));
   Cond.push_back(MachineOperand::CreateImm(CC));
+
+  // Branch on register contents need another argument to indicate
+  // the register it branches on.
+  if (isRegCondBranchOpcode(Opc)) {
+      Register Reg = LastInst->getOperand(2).getReg();
+      Cond.push_back(MachineOperand::CreateReg(Reg, false));
+  }
 
   Target = LastInst->getOperand(0).getMBB();
 }
@@ -217,6 +233,10 @@ SparcInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case SP::BPFCCANT:
   case SP::FBCOND_V9:
   case SP::FBCONDA_V9:
+  case SP::BPR:
+  case SP::BPRA:
+  case SP::BPRNT:
+  case SP::BPRANT:
       return MI.getOperand(0).getMBB();
   }
 }
@@ -311,8 +331,8 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       const DebugLoc &DL,
                                       int *BytesAdded) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
-  assert((Cond.size() <= 2) &&
-         "Sparc branch conditions should have at most two components!");
+  assert((Cond.size() <= 3) &&
+         "Sparc branch conditions should have at most three components!");
 
   if (Cond.empty()) {
     assert(!FBB && "Unconditional branch with multiple successors!");
@@ -325,7 +345,12 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
   // Conditional branch
   unsigned Opc = Cond[0].getImm();
   unsigned CC = Cond[1].getImm();
-  BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC);
+  if (isRegCondBranchOpcode(Opc)) {
+    Register Reg = Cond[2].getReg();
+    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC).addReg(Reg);
+  } else {
+    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC);
+  }
 
   if (!FBB) {
     if (BytesAdded)
@@ -367,7 +392,7 @@ unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
 bool SparcInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  assert(Cond.size() <= 2);
+  assert(Cond.size() <= 3);
   SPCC::CondCodes CC = static_cast<SPCC::CondCodes>(Cond[1].getImm());
   Cond[1].setImm(GetOppositeBranchCondition(CC));
   return false;
@@ -399,6 +424,12 @@ bool SparcInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   case SP::FBCOND_V9:
   case SP::FBCONDA_V9:
     return isIntN(BPccDisplacementBits, Offset >> 2);
+
+  case SP::BPR:
+  case SP::BPRA:
+  case SP::BPRNT:
+  case SP::BPRANT:
+    return isIntN(BPrDisplacementBits, Offset >> 2);
   }
 
   llvm_unreachable("Unknown branch instruction!");

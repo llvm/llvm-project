@@ -108,15 +108,15 @@ struct ClangTidyOptions {
 
   /// Helper structure for storing option value with priority of the value.
   struct ClangTidyValue {
-    ClangTidyValue() : Value(), Priority(0) {}
-    ClangTidyValue(const char *Value) : Value(Value), Priority(0) {}
+    ClangTidyValue() = default;
+    ClangTidyValue(const char *Value) : Value(Value) {}
     ClangTidyValue(llvm::StringRef Value, unsigned Priority = 0)
         : Value(Value), Priority(Priority) {}
 
     std::string Value;
     /// Priority stores relative precedence of the value loaded from config
     /// files to disambiguate local vs global value from different levels.
-    unsigned Priority;
+    unsigned Priority = 0;
   };
   typedef std::pair<std::string, std::string> StringPair;
   typedef llvm::StringMap<ClangTidyValue> OptionMap;

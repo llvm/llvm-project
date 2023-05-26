@@ -19,6 +19,8 @@
 
 namespace clang {
 
+using DefMapTy = llvm::DenseMap<const VarDecl *, std::vector<const VarDecl *>>;
+
 /// The interface that lets the caller handle unsafe buffer usage analysis
 /// results by overriding this class's handle... methods.
 class UnsafeBufferUsageHandler {
@@ -34,16 +36,19 @@ public:
   virtual void handleUnsafeOperation(const Stmt *Operation,
                                      bool IsRelatedToDecl) = 0;
 
-  /// Invoked when a fix is suggested against a variable.
-  virtual void handleFixableVariable(const VarDecl *Variable,
-                                     FixItList &&List) = 0;
+  /// Invoked when a fix is suggested against a variable. This function groups
+  /// all variables that must be fixed together (i.e their types must be changed to the
+  /// same target type to prevent type mismatches) into a single fixit.
+  virtual void handleUnsafeVariableGroup(const VarDecl *Variable,
+                                         const DefMapTy &VarGrpMap,
+                                         FixItList &&Fixes) = 0;
 
   /// Returns a reference to the `Preprocessor`:
   virtual bool isSafeBufferOptOut(const SourceLocation &Loc) const = 0;
 
   /// Returns the text indicating that the user needs to provide input there:
   virtual std::string
-  getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
+  getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") const {
     std::string s = std::string("<# ");
     s += HintTextToUser;
     s += " #>";
@@ -54,7 +59,7 @@ public:
 // This function invokes the analysis and allows the caller to react to it
 // through the handler class.
 void checkUnsafeBufferUsage(const Decl *D, UnsafeBufferUsageHandler &Handler,
-                            bool EmitFixits);
+                            bool EmitSuggestions);
 
 namespace internal {
 // Tests if any two `FixItHint`s in `FixIts` conflict.  Two `FixItHint`s

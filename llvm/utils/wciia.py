@@ -26,28 +26,28 @@ code_owners = {}
 
 
 def process_files_and_folders(owner):
-    filesfolders = owner['filesfolders']
+    filesfolders = owner["filesfolders"]
     # paths must be in ( ... ) so strip them
-    lpar = filesfolders.find('(')
-    rpar = filesfolders.rfind(')')
+    lpar = filesfolders.find("(")
+    rpar = filesfolders.rfind(")")
     if rpar <= lpar:
         # give up
         return
-    paths = filesfolders[lpar + 1:rpar]
+    paths = filesfolders[lpar + 1 : rpar]
     # split paths
-    owner['paths'] = []
+    owner["paths"] = []
     for path in paths.split():
-        owner['paths'].append(path)
+        owner["paths"].append(path)
 
 
 def process_code_owner(owner):
-    if 'filesfolders' in owner:
-        filesfolders = owner['filesfolders']
+    if "filesfolders" in owner:
+        filesfolders = owner["filesfolders"]
     else:
-        #		print "F: field missing, using D: field"
-        owner['filesfolders'] = owner['description']
+        # 		print "F: field missing, using D: field"
+        owner["filesfolders"] = owner["description"]
     process_files_and_folders(owner)
-    code_owners[owner['name']] = owner
+    code_owners[owner["name"]] = owner
 
 
 # process CODE_OWNERS.TXT first
@@ -61,16 +61,16 @@ for line in code_owners_file:
                 process_code_owner(code_owner)
                 code_owner = {}
             # reset the values
-            code_owner['name'] = name
+            code_owner["name"] = name
         if word == "E:":
             email = line[2:].strip()
-            code_owner['email'] = email
+            code_owner["email"] = email
         if word == "D:":
             description = line[2:].strip()
-            code_owner['description'] = description
+            code_owner["description"] = description
         if word == "F:":
             filesfolders = line[2:].strip()
-            code_owner['filesfolders'].append(filesfolders)
+            code_owner["filesfolders"].append(filesfolders)
 
 
 def find_owners(fpath):
@@ -79,14 +79,14 @@ def find_owners(fpath):
     #  very simplistic way of findning the best match
     for name in code_owners:
         owner = code_owners[name]
-        if 'paths' in owner:
-            for path in owner['paths']:
-                #				print "searching (" + path + ")"
+        if "paths" in owner:
+            for path in owner["paths"]:
+                # 				print "searching (" + path + ")"
                 # try exact match
                 if fpath == path:
                     return name
                 # see if path ends with a *
-                rstar = path.rfind('*')
+                rstar = path.rfind("*")
                 if rstar > 0:
                     # try the longest match,
                     rpos = -1
@@ -94,7 +94,7 @@ def find_owners(fpath):
                         rpos = path.find(fpath)
                     if rpos == 0:
                         onames.append(name)
-    onames.append('Chris Lattner')
+    onames.append("Chris Lattner")
     return onames
 
 

@@ -6,9 +6,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT Evaluate gcc-12 status
 // UNSUPPORTED: gcc-12
+
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // Tests whether a move only type can be formatted. This is required by
 // P2418R2 "Add support for std::generator-like types to std::format"

@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(int, chmod, (const char *path, mode_t mode)) {
 #elif defined(SYS_fchmodat)
   long ret = __llvm_libc::syscall_impl(SYS_fchmodat, AT_FDCWD, path, mode);
 #else
-#error "chmod and chmodat syscalls not available."
+#error "chmod and fchmodat syscalls not available."
 #endif
 
   if (ret < 0) {

@@ -546,9 +546,11 @@ void Host::Kill(lldb::pid_t pid, int signo) { ::kill(pid, signo); }
 #endif
 
 #if !defined(__APPLE__)
-bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
-                                    uint32_t line_no) {
-  return false;
+llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
+                                           const FileSpec &file_spec,
+                                           uint32_t line_no) {
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
 }
 
 bool Host::IsInteractiveGraphicSession() { return false; }

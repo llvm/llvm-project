@@ -32,8 +32,8 @@ class Value;
 /// generated along the way.
 class OperationFolder {
 public:
-  OperationFolder(MLIRContext *ctx, RewriterBase::Listener *listener = nullptr)
-      : interfaces(ctx), listener(listener) {}
+  OperationFolder(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
+      : interfaces(ctx), rewriter(ctx, listener) {}
 
   /// Tries to perform folding on the given `op`, including unifying
   /// deduplicated constants. If successful, replaces `op`'s uses with
@@ -61,10 +61,11 @@ public:
   /// Clear out any constants cached inside of the folder.
   void clear();
 
-  /// Get or create a constant using the given builder. On success this returns
-  /// the constant operation, nullptr otherwise.
-  Value getOrCreateConstant(OpBuilder &builder, Dialect *dialect,
-                            Attribute value, Type type, Location loc);
+  /// Get or create a constant for use in the specified block. The constant may
+  /// be created in a parent block. On success this returns the constant
+  /// operation, nullptr otherwise.
+  Value getOrCreateConstant(Block *block, Dialect *dialect, Attribute value,
+                            Type type, Location loc);
 
 private:
   /// This map keeps track of uniqued constants by dialect, attribute, and type.
@@ -74,29 +75,25 @@ private:
   using ConstantMap =
       DenseMap<std::tuple<Dialect *, Attribute, Type>, Operation *>;
 
-  /// Erase the given operation and notify the listener.
-  void eraseOp(Operation *op);
-
   /// Returns true if the given operation is an already folded constant that is
   /// owned by this folder.
   bool isFolderOwnedConstant(Operation *op) const;
 
   /// Tries to perform folding on the given `op`. If successful, populates
   /// `results` with the results of the folding.
-  LogicalResult tryToFold(OpBuilder &builder, Operation *op,
-                          SmallVectorImpl<Value> &results);
+  LogicalResult tryToFold(Operation *op, SmallVectorImpl<Value> &results);
 
-  /// Try to process a set of fold results, generating constants as necessary.
-  /// Populates `results` on success, otherwise leaves it unchanged.
-  LogicalResult processFoldResults(OpBuilder &builder, Operation *op,
+  /// Try to process a set of fold results. Populates `results` on success,
+  /// otherwise leaves it unchanged.
+  LogicalResult processFoldResults(Operation *op,
                                    SmallVectorImpl<Value> &results,
                                    ArrayRef<OpFoldResult> foldResults);
 
   /// Try to get or create a new constant entry. On success this returns the
   /// constant operation, nullptr otherwise.
   Operation *tryGetOrCreateConstant(ConstantMap &uniquedConstants,
-                                    Dialect *dialect, OpBuilder &builder,
-                                    Attribute value, Type type, Location loc);
+                                    Dialect *dialect, Attribute value,
+                                    Type type, Location loc);
 
   /// A mapping between an insertion region and the constants that have been
   /// created within it.
@@ -109,8 +106,8 @@ private:
   /// A collection of dialect folder interfaces.
   DialectInterfaceCollection<DialectFoldInterface> interfaces;
 
-  /// An optional listener that is notified of all IR changes.
-  RewriterBase::Listener *listener = nullptr;
+  /// A rewriter that performs all IR modifications.
+  IRRewriter rewriter;
 };
 
 } // namespace mlir

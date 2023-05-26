@@ -48,7 +48,7 @@ using namespace loongarch_dwarf;
   {                                                                            \
     #reg, #alt, 8, GPR_OFFSET(gpr_##reg##_loongarch - gpr_first_loongarch),    \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
-    GPR64_KIND(gpr_##reg, generic_kind), nullptr, nullptr                      \
+    GPR64_KIND(gpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
   }
 
 // Defines a 64-bit floating point register
@@ -57,21 +57,21 @@ using namespace loongarch_dwarf;
   {                                                                            \
     #reg, #alt, 8, FPR_OFFSET(fpr_##reg##_loongarch - fpr_first_loongarch),    \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
-    FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr                      \
+    FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
   }
 
 #define DEFINE_FCC(reg, generic_kind)                                          \
   {                                                                            \
     #reg, nullptr, 1, FCC_OFFSET(fpr_##reg##_loongarch - fpr_fcc0_loongarch),  \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
-    FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr                      \
+    FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
   }
 
 #define DEFINE_FCSR(reg, generic_kind)                                         \
   {                                                                            \
     #reg, nullptr, 4, FCSR_OFFSET,                                             \
     lldb::eEncodingUint, lldb::eFormatHex,                                     \
-    FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr                      \
+    FPR64_KIND(fpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
   }
 
 // clang-format on

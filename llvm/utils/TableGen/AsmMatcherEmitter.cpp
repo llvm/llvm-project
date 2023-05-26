@@ -506,9 +506,9 @@ struct MatchableInfo {
   PointerUnion<const CodeGenInstruction*, const CodeGenInstAlias*> DefRec;
 
   const CodeGenInstruction *getResultInst() const {
-    if (DefRec.is<const CodeGenInstruction*>())
-      return DefRec.get<const CodeGenInstruction*>();
-    return DefRec.get<const CodeGenInstAlias*>()->ResultInst;
+    if (isa<const CodeGenInstruction *>(DefRec))
+      return cast<const CodeGenInstruction *>(DefRec);
+    return cast<const CodeGenInstAlias *>(DefRec)->ResultInst;
   }
 
   /// ResOperands - This is the operand list that should be built for the result
@@ -534,7 +534,7 @@ struct MatchableInfo {
   std::string ConversionFnKind;
 
   /// If this instruction is deprecated in some form.
-  bool HasDeprecation;
+  bool HasDeprecation = false;
 
   /// If this is an alias, this is use to determine whether or not to using
   /// the conversion function defined by the instruction's AsmMatchConverter
@@ -564,11 +564,11 @@ struct MatchableInfo {
         ConversionFnKind(RHS.ConversionFnKind),
         HasDeprecation(RHS.HasDeprecation),
         UseInstAsmMatchConverter(RHS.UseInstAsmMatchConverter) {
-    assert(!DefRec.is<const CodeGenInstAlias *>());
+    assert(!isa<const CodeGenInstAlias *>(DefRec));
   }
 
   ~MatchableInfo() {
-    delete DefRec.dyn_cast<const CodeGenInstAlias*>();
+    delete dyn_cast_if_present<const CodeGenInstAlias *>(DefRec);
   }
 
   // Two-operand aliases clone from the main matchable, but mark the second
@@ -630,6 +630,17 @@ struct MatchableInfo {
         return false;
     }
 
+    // For X86 AVX/AVX512 instructions, we prefer vex encoding because the
+    // vex encoding size is smaller. Since X86InstrSSE.td is included ahead
+    // of X86InstrAVX512.td, the AVX instruction ID is less than AVX512 ID.
+    // We use the ID to sort AVX instruction before AVX512 instruction in
+    // matching table.
+    if (TheDef->isSubClassOf("Instruction") &&
+        TheDef->getValueAsBit("HasPositionOrder") &&
+        RHS.TheDef->isSubClassOf("Instruction") &&
+        RHS.TheDef->getValueAsBit("HasPositionOrder"))
+      return TheDef->getID() < RHS.TheDef->getID();
+
     // Give matches that require more features higher precedence. This is useful
     // because we cannot define AssemblerPredicates with the negation of
     // processor features. For example, ARM v6 "nop" may be either a HINT or
@@ -638,15 +649,6 @@ struct MatchableInfo {
     // requires V6 while MOV does not.
     if (RequiredFeatures.size() != RHS.RequiredFeatures.size())
       return RequiredFeatures.size() > RHS.RequiredFeatures.size();
-
-    // For X86 AVX/AVX512 instructions, we prefer vex encoding because the
-    // vex encoding size is smaller. Since X86InstrSSE.td is included ahead
-    // of X86InstrAVX512.td, the AVX instruction ID is less than AVX512 ID.
-    // We use the ID to sort AVX instruction before AVX512 instruction in
-    // matching table.
-    if (TheDef->isSubClassOf("Instruction") &&
-        TheDef->getValueAsBit("HasPositionOrder"))
-      return TheDef->getID() < RHS.TheDef->getID();
 
     return false;
   }
@@ -1614,13 +1616,13 @@ void AsmMatcherInfo::buildInfo() {
       else
         OperandName = Token.substr(1);
 
-      if (II->DefRec.is<const CodeGenInstruction*>())
+      if (isa<const CodeGenInstruction *>(II->DefRec))
         buildInstructionOperandReference(II.get(), OperandName, i);
       else
         buildAliasOperandReference(II.get(), OperandName, Op);
     }
 
-    if (II->DefRec.is<const CodeGenInstruction*>()) {
+    if (isa<const CodeGenInstruction *>(II->DefRec)) {
       II->buildInstructionResultOperands();
       // If the instruction has a two-operand alias, build up the
       // matchable here. We'll add them in bulk at the end to avoid
@@ -1683,7 +1685,7 @@ void AsmMatcherInfo::
 buildInstructionOperandReference(MatchableInfo *II,
                                  StringRef OperandName,
                                  unsigned AsmOpIdx) {
-  const CodeGenInstruction &CGI = *II->DefRec.get<const CodeGenInstruction*>();
+  const CodeGenInstruction &CGI = *cast<const CodeGenInstruction *>(II->DefRec);
   const CGIOperandList &Operands = CGI.Operands;
   MatchableInfo::AsmOperand *Op = &II->AsmOperands[AsmOpIdx];
 
@@ -1746,7 +1748,7 @@ buildInstructionOperandReference(MatchableInfo *II,
 void AsmMatcherInfo::buildAliasOperandReference(MatchableInfo *II,
                                                 StringRef OperandName,
                                                 MatchableInfo::AsmOperand &Op) {
-  const CodeGenInstAlias &CGA = *II->DefRec.get<const CodeGenInstAlias*>();
+  const CodeGenInstAlias &CGA = *cast<const CodeGenInstAlias *>(II->DefRec);
 
   // Set up the operand class.
   for (unsigned i = 0, e = CGA.ResultOperands.size(); i != e; ++i)
@@ -1819,7 +1821,7 @@ void MatchableInfo::buildInstructionResultOperands() {
 }
 
 void MatchableInfo::buildAliasResultOperands(bool AliasConstraintsAreChecked) {
-  const CodeGenInstAlias &CGA = *DefRec.get<const CodeGenInstAlias*>();
+  const CodeGenInstAlias &CGA = *cast<const CodeGenInstAlias *>(DefRec);
   const CodeGenInstruction *ResultInst = getResultInst();
 
   // Map of:  $reg -> #lastref

@@ -345,7 +345,7 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
         // TODO: Support inlining nested call references.
         CallInterfaceCallable callable = call.getCallableForCallee();
         if (SymbolRefAttr symRef = dyn_cast<SymbolRefAttr>(callable)) {
-          if (!symRef.isa<FlatSymbolRefAttr>())
+          if (!isa<FlatSymbolRefAttr>(symRef))
             continue;
         }
 
@@ -373,7 +373,7 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
 
 #ifndef NDEBUG
 static std::string getNodeName(CallOpInterface op) {
-  if (auto sym = op.getCallableForCallee().dyn_cast<SymbolRefAttr>())
+  if (auto sym = llvm::dyn_cast_if_present<SymbolRefAttr>(op.getCallableForCallee()))
     return debugString(op);
   return "_unnamed_callee_";
 }

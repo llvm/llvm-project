@@ -448,9 +448,13 @@ public:
   /// and does not consult the external source. (Those checks are the
   /// responsibility of \ref HeaderSearch.)
   ///
+  /// \param AllowCreation Whether to allow inference of a new submodule, or to
+  ///        only return existing known modules.
+  ///
   /// Typically, \ref findModuleForHeader should be used instead, as it picks
   /// the preferred module for the header.
-  ArrayRef<KnownHeader> findAllModulesForHeader(const FileEntry *File);
+  ArrayRef<KnownHeader> findAllModulesForHeader(const FileEntry *File,
+                                                bool AllowCreation = true);
 
   /// Like \ref findAllModulesForHeader, but do not attempt to infer module
   /// ownership from umbrella headers if we've not already done so.
@@ -560,6 +564,11 @@ public:
   Module *createPrivateModuleFragmentForInterfaceUnit(Module *Parent,
                                                       SourceLocation Loc);
 
+  /// Create a new C++ module with the specified kind, and reparent any pending
+  /// global module fragment(s) to it.
+  Module *createModuleUnitWithKind(SourceLocation Loc, StringRef Name,
+                                   Module::ModuleKind Kind);
+
   /// Create a new module for a C++ module interface unit.
   /// The module must not already exist, and will be configured for the current
   /// compilation.
@@ -568,6 +577,13 @@ public:
   ///
   /// \returns The newly-created module.
   Module *createModuleForInterfaceUnit(SourceLocation Loc, StringRef Name);
+
+  /// Create a new module for a C++ module implementation unit.
+  /// The interface module for this implementation (implicitly imported) must
+  /// exist and be loaded and present in the modules map.
+  ///
+  /// \returns The newly-created module.
+  Module *createModuleForImplementationUnit(SourceLocation Loc, StringRef Name);
 
   /// Create a C++20 header unit.
   Module *createHeaderUnit(SourceLocation Loc, StringRef Name,

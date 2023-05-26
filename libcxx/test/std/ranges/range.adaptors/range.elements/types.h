@@ -93,7 +93,7 @@ template <class Derived>
 struct IterBase {
   using iterator_concept = std::random_access_iterator_tag;
   using value_type       = std::tuple<int>;
-  using difference_type  = intptr_t;
+  using difference_type  = std::intptr_t;
 
   constexpr std::tuple<int> operator*() const { return std::tuple<int>(5); }
 

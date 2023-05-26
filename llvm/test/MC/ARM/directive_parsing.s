@@ -63,7 +63,7 @@
 // CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
         .personality __gxx_personality_v0 @ EOL COMMENET
 
-// CHECK: [[@LINE+1]]:28: error: unexpected token
+// CHECK: [[#@LINE+1]]:28: error: expected newline
         .setfp  fp, sp, #0 $
 // CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:
         .setfp  fp, sp, #0 @ EOL COMMENT

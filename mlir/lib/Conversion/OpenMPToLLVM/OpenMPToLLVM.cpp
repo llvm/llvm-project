@@ -70,7 +70,7 @@ struct RegionLessOpWithVarOperandsConversion
       Value originalVariableOperand = curOp.getVariableOperand(idx);
       if (!originalVariableOperand)
         return failure();
-      if (originalVariableOperand.getType().isa<MemRefType>()) {
+      if (isa<MemRefType>(originalVariableOperand.getType())) {
         // TODO: Support memref type in variable operands
         return rewriter.notifyMatchFailure(curOp,
                                            "memref is not supported yet");
@@ -101,7 +101,7 @@ struct RegionOpWithVarOperandsConversion : public ConvertOpToLLVMPattern<T> {
       Value originalVariableOperand = curOp.getVariableOperand(idx);
       if (!originalVariableOperand)
         return failure();
-      if (originalVariableOperand.getType().isa<MemRefType>()) {
+      if (isa<MemRefType>(originalVariableOperand.getType())) {
         // TODO: Support memref type in variable operands
         return rewriter.notifyMatchFailure(curOp,
                                            "memref is not supported yet");
@@ -143,24 +143,12 @@ struct ReductionOpConversion : public ConvertOpToLLVMPattern<omp::ReductionOp> {
   LogicalResult
   matchAndRewrite(omp::ReductionOp curOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (curOp.getAccumulator().getType().isa<MemRefType>()) {
+    if (isa<MemRefType>(curOp.getAccumulator().getType())) {
       // TODO: Support memref type in variable operands
       return rewriter.notifyMatchFailure(curOp, "memref is not supported yet");
     }
     rewriter.replaceOpWithNewOp<omp::ReductionOp>(
         curOp, TypeRange(), adaptor.getOperands(), curOp->getAttrs());
-    return success();
-  }
-};
-
-template <typename Op>
-struct LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
-  using ConvertOpToLLVMPattern<Op>::ConvertOpToLLVMPattern;
-  LogicalResult
-  matchAndRewrite(Op curOp, typename Op::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<Op>(curOp, TypeRange(), adaptor.getOperands(),
-                                    curOp.getOperation()->getAttrs());
     return success();
   }
 };
@@ -192,10 +180,11 @@ struct ReductionDeclareOpConversion
 void mlir::configureOpenMPToLLVMConversionLegality(
     ConversionTarget &target, LLVMTypeConverter &typeConverter) {
   target.addDynamicallyLegalOp<
-      mlir::omp::AtomicUpdateOp, mlir::omp::CriticalOp, mlir::omp::DataOp,
-      mlir::omp::ParallelOp, mlir::omp::WsLoopOp, mlir::omp::SimdLoopOp,
-      mlir::omp::MasterOp, mlir::omp::SectionOp, mlir::omp::SectionsOp,
-      mlir::omp::SingleOp, mlir::omp::TaskOp>([&](Operation *op) {
+      mlir::omp::AtomicUpdateOp, mlir::omp::CriticalOp, mlir::omp::TargetOp,
+      mlir::omp::DataOp, mlir::omp::ParallelOp, mlir::omp::WsLoopOp,
+      mlir::omp::SimdLoopOp, mlir::omp::MasterOp, mlir::omp::SectionOp,
+      mlir::omp::SectionsOp, mlir::omp::SingleOp, mlir::omp::TaskGroupOp,
+      mlir::omp::TaskOp>([&](Operation *op) {
     return typeConverter.isLegal(&op->getRegion(0)) &&
            typeConverter.isLegal(op->getOperandTypes()) &&
            typeConverter.isLegal(op->getResultTypes());
@@ -224,21 +213,22 @@ void mlir::configureOpenMPToLLVMConversionLegality(
 void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns) {
   patterns.add<
-      LegalizeDataOpForLLVMTranslation<omp::DataOp>,
-      LegalizeDataOpForLLVMTranslation<omp::EnterDataOp>,
-      LegalizeDataOpForLLVMTranslation<omp::ExitDataOp>, ReductionOpConversion,
-      ReductionDeclareOpConversion, RegionOpConversion<omp::CriticalOp>,
-      RegionOpConversion<omp::MasterOp>, ReductionOpConversion,
-      RegionOpConversion<omp::ParallelOp>, RegionOpConversion<omp::WsLoopOp>,
-      RegionOpConversion<omp::SectionsOp>, RegionOpConversion<omp::SectionOp>,
-      RegionOpConversion<omp::SimdLoopOp>, RegionOpConversion<omp::SingleOp>,
+      ReductionOpConversion, ReductionDeclareOpConversion,
+      RegionOpConversion<omp::CriticalOp>, RegionOpConversion<omp::MasterOp>,
+      ReductionOpConversion, RegionOpConversion<omp::ParallelOp>,
+      RegionOpConversion<omp::WsLoopOp>, RegionOpConversion<omp::SectionsOp>,
+      RegionOpConversion<omp::SectionOp>, RegionOpConversion<omp::SimdLoopOp>,
+      RegionOpConversion<omp::SingleOp>, RegionOpConversion<omp::TaskGroupOp>,
       RegionOpConversion<omp::TaskOp>, RegionOpConversion<omp::DataOp>,
+      RegionOpConversion<omp::TargetOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicReadOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicWriteOp>,
       RegionOpWithVarOperandsConversion<omp::AtomicUpdateOp>,
       RegionLessOpWithVarOperandsConversion<omp::FlushOp>,
       RegionLessOpWithVarOperandsConversion<omp::ThreadprivateOp>,
-      RegionLessOpConversion<omp::YieldOp>>(converter);
+      RegionLessOpConversion<omp::YieldOp>,
+      RegionLessOpConversion<omp::EnterDataOp>,
+      RegionLessOpConversion<omp::ExitDataOp>>(converter);
 }
 
 namespace {

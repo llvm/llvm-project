@@ -133,7 +133,6 @@ class M68kOperand : public MCParsedAsmOperand {
   SMLoc Start, End;
   union {
     StringRef Token;
-    int64_t Imm;
     const MCExpr *Expr;
     M68kMemOp MemOp;
   };
@@ -158,6 +157,7 @@ public:
   bool isReg() const override;
   bool isAReg() const;
   bool isDReg() const;
+  bool isFPDReg() const;
   unsigned getReg() const override;
   void addRegOperands(MCInst &Inst, unsigned N) const;
 
@@ -176,6 +176,11 @@ public:
 
   static std::unique_ptr<M68kOperand> createImm(const MCExpr *Expr, SMLoc Start,
                                                 SMLoc End);
+
+  // Imm for TRAP instruction
+  bool isTrapImm() const;
+  // Imm for BKPT instruction
+  bool isBkptImm() const;
 
   // MoveMask
   bool isMoveMask() const;
@@ -223,15 +228,16 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kAsmParser() {
   RegisterMCAsmParser<M68kAsmParser> X(getTheM68kTarget());
 }
 
+#define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #include "M68kGenAsmMatcher.inc"
 
 static inline unsigned getRegisterByIndex(unsigned RegisterIndex) {
   static unsigned RegistersByIndex[] = {
-      M68k::D0, M68k::D1, M68k::D2, M68k::D3, M68k::D4, M68k::D5,
-      M68k::D6, M68k::D7, M68k::A0, M68k::A1, M68k::A2, M68k::A3,
-      M68k::A4, M68k::A5, M68k::A6, M68k::SP,
-  };
+      M68k::D0,  M68k::D1,  M68k::D2,  M68k::D3,  M68k::D4,  M68k::D5,
+      M68k::D6,  M68k::D7,  M68k::A0,  M68k::A1,  M68k::A2,  M68k::A3,
+      M68k::A4,  M68k::A5,  M68k::A6,  M68k::SP,  M68k::FP0, M68k::FP1,
+      M68k::FP2, M68k::FP3, M68k::FP4, M68k::FP5, M68k::FP6, M68k::FP7};
   assert(RegisterIndex <=
          sizeof(RegistersByIndex) / sizeof(RegistersByIndex[0]));
   return RegistersByIndex[RegisterIndex];
@@ -242,6 +248,8 @@ static inline unsigned getRegisterIndex(unsigned Register) {
     return Register - M68k::D0;
   if (Register >= M68k::A0 && Register <= M68k::A6)
     return Register - M68k::A0 + 8;
+  if (Register >= M68k::FP0 && Register <= M68k::FP7)
+    return Register - M68k::FP0 + 16;
 
   switch (Register) {
   case M68k::SP:
@@ -348,6 +356,22 @@ std::unique_ptr<M68kOperand> M68kOperand::createImm(const MCExpr *Expr,
   auto Op = std::make_unique<M68kOperand>(KindTy::Imm, Start, End);
   Op->Expr = Expr;
   return Op;
+}
+
+bool M68kOperand::isTrapImm() const {
+  int64_t Value;
+  if (!isImm() || !Expr->evaluateAsAbsolute(Value))
+    return false;
+
+  return isUInt<4>(Value);
+}
+
+bool M68kOperand::isBkptImm() const {
+  int64_t Value;
+  if (!isImm() || !Expr->evaluateAsAbsolute(Value))
+    return false;
+
+  return isUInt<3>(Value);
 }
 
 // MoveMask
@@ -466,7 +490,7 @@ void M68kOperand::addPCIOperands(MCInst &Inst, unsigned N) const {
 }
 
 static inline bool checkRegisterClass(unsigned RegNo, bool Data, bool Address,
-                                      bool SP) {
+                                      bool SP, bool FPDR = false) {
   switch (RegNo) {
   case M68k::A0:
   case M68k::A1:
@@ -494,6 +518,16 @@ static inline bool checkRegisterClass(unsigned RegNo, bool Data, bool Address,
   case M68k::CCR:
     return false;
 
+  case M68k::FP0:
+  case M68k::FP1:
+  case M68k::FP2:
+  case M68k::FP3:
+  case M68k::FP4:
+  case M68k::FP5:
+  case M68k::FP6:
+  case M68k::FP7:
+    return FPDR;
+
   default:
     llvm_unreachable("unexpected register type");
     return false;
@@ -510,6 +544,13 @@ bool M68kOperand::isDReg() const {
   return isReg() && checkRegisterClass(getReg(),
                                        /*Data=*/true,
                                        /*Address=*/false, /*SP=*/false);
+}
+
+bool M68kOperand::isFPDReg() const {
+  return isReg() && checkRegisterClass(getReg(),
+                                       /*Data=*/false,
+                                       /*Address=*/false, /*SP=*/false,
+                                       /*FPDR=*/true);
 }
 
 unsigned M68kAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
@@ -619,6 +660,14 @@ bool M68kAsmParser::parseRegisterName(MCRegister &RegNo, SMLoc Loc,
       }
       break;
     }
+  } else if (StringRef(RegisterNameLower).starts_with("fp") &&
+             RegisterNameLower.size() > 2) {
+    // Floating point data register.
+    auto RegIndex = unsigned(RegisterNameLower[2] - '0');
+    if (RegIndex >= 8 || RegisterNameLower.size() > 3)
+      return false;
+    RegNo = getRegisterByIndex(16 + RegIndex);
+    return true;
   }
 
   return false;
@@ -1019,9 +1068,12 @@ void M68kOperand::print(raw_ostream &OS) const {
     OS << "token '" << Token << "'";
     break;
 
-  case KindTy::Imm:
-    OS << "immediate " << Imm;
+  case KindTy::Imm: {
+    int64_t Value;
+    Expr->evaluateAsAbsolute(Value);
+    OS << "immediate " << Value;
     break;
+  }
 
   case KindTy::MemOp:
     MemOp.print(OS);

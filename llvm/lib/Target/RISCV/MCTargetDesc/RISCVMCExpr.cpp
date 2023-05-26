@@ -1,4 +1,4 @@
-//===-- RISCVMCExpr.cpp - RISCV specific MC expression classes ------------===//
+//===-- RISCVMCExpr.cpp - RISC-V specific MC expression classes -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains the implementation of the assembly expression modifiers
-// accepted by the RISCV architecture (e.g. ":lo12:", ":gottprel_g1:", ...).
+// accepted by the RISC-V architecture (e.g. ":lo12:", ":gottprel_g1:", ...).
 //
 //===----------------------------------------------------------------------===//
 

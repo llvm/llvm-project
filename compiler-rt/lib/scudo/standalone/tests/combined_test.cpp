@@ -12,6 +12,7 @@
 #include "allocator_config.h"
 #include "chunk.h"
 #include "combined.h"
+#include "mem_map.h"
 
 #include <condition_variable>
 #include <memory>
@@ -166,6 +167,8 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
       Allocator->deallocate(P, Origin, Size);
     }
   }
+
+  Allocator->printStats();
 }
 
 #define SCUDO_MAKE_BASIC_TEST(SizeLog)                                         \
@@ -454,6 +457,28 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) NO_THREAD_SAFETY_ANALYSIS {
     TSD->unlock();
 }
 
+SCUDO_TYPED_TEST(ScudoCombinedTest, ForceCacheDrain) NO_THREAD_SAFETY_ANALYSIS {
+  auto *Allocator = this->Allocator.get();
+
+  std::vector<void *> V;
+  for (scudo::uptr I = 0; I < 64U; I++)
+    V.push_back(Allocator->allocate(
+        rand() % (TypeParam::Primary::SizeClassMap::MaxSize / 2U), Origin));
+  for (auto P : V)
+    Allocator->deallocate(P, Origin);
+
+  // `ForceAll` will also drain the caches.
+  Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll);
+
+  bool UnlockRequired;
+  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  EXPECT_TRUE(TSD->getCache().isEmpty());
+  EXPECT_EQ(TSD->getQuarantineCache().getSize(), 0U);
+  EXPECT_TRUE(Allocator->getQuarantine()->isEmpty());
+  if (UnlockRequired)
+    TSD->unlock();
+}
+
 SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
   std::mutex Mutex;
   std::condition_variable Cv;
@@ -495,11 +520,12 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
 // process's signal handlers (GWP-ASan used to do this).
 TEST(ScudoCombinedDeathTest, SKIP_ON_FUCHSIA(testSEGV)) {
   const scudo::uptr Size = 4 * scudo::getPageSizeCached();
-  scudo::MapPlatformData Data = {};
-  void *P = scudo::map(nullptr, Size, "testSEGV", MAP_NOACCESS, &Data);
-  EXPECT_NE(P, nullptr);
+  scudo::ReservedMemoryT ReservedMemory;
+  ASSERT_TRUE(ReservedMemory.create(/*Addr=*/0U, Size, "testSEGV"));
+  void *P = reinterpret_cast<void *>(ReservedMemory.getBase());
+  ASSERT_NE(P, nullptr);
   EXPECT_DEATH(memset(P, 0xaa, Size), "");
-  scudo::unmap(P, Size, UNMAP_ALL, &Data);
+  ReservedMemory.release();
 }
 
 struct DeathSizeClassConfig {

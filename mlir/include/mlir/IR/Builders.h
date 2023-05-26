@@ -64,6 +64,7 @@ public:
   FloatType getFloat8E4M3FNType();
   FloatType getFloat8E5M2FNUZType();
   FloatType getFloat8E4M3FNUZType();
+  FloatType getFloat8E4M3B11FNUZType();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getF32Type();
@@ -115,7 +116,7 @@ public:
   // Returns a 0-valued attribute of the given `type`. This function only
   // supports boolean, integer, and 16-/32-/64-bit float types, and vector or
   // ranked tensor of them. Returns null attribute otherwise.
-  Attribute getZeroAttr(Type type);
+  TypedAttr getZeroAttr(Type type);
 
   // Convenience methods for fixed types.
   FloatAttr getF16FloatAttr(float value);
@@ -402,7 +403,7 @@ public:
     if (Operation *op = val.getDefiningOp()) {
       setInsertionPointAfter(op);
     } else {
-      auto blockArg = val.cast<BlockArgument>();
+      auto blockArg = llvm::cast<BlockArgument>(val);
       setInsertionPointToStart(blockArg.getOwner());
     }
   }

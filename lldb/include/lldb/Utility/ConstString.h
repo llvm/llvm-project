@@ -180,6 +180,9 @@ public:
 
   bool operator<(ConstString rhs) const;
 
+  // Implicitly convert \class ConstString instances to \class StringRef.
+  operator llvm::StringRef() const { return GetStringRef(); }
+
   /// Get the string value as a C string.
   ///
   /// Get the value of the contained string as a NULL terminated C string

@@ -38,9 +38,9 @@ entry:
 define ptr @memset_tagged_1_zeroval(ptr %dst, i64 %size) {
 ; GISel-O0-LABEL: memset_tagged_1_zeroval:
 ; GISel-O0:       // %bb.0: // %entry
-; GISel-O0-NEXT:    mov x9, xzr
 ; GISel-O0-NEXT:    mov w8, #1
 ; GISel-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-O0-NEXT:    mov x9, xzr
 ; GISel-O0-NEXT:    setgp [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setgm [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setge [x0]!, x8!, x9
@@ -69,9 +69,9 @@ entry:
 define ptr @memset_tagged_10_zeroval(ptr %dst, i64 %size) {
 ; GISel-O0-LABEL: memset_tagged_10_zeroval:
 ; GISel-O0:       // %bb.0: // %entry
-; GISel-O0-NEXT:    mov x9, xzr
 ; GISel-O0-NEXT:    mov w8, #10
 ; GISel-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-O0-NEXT:    mov x9, xzr
 ; GISel-O0-NEXT:    setgp [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setgm [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setge [x0]!, x8!, x9
@@ -100,9 +100,9 @@ entry:
 define ptr @memset_tagged_10000_zeroval(ptr %dst, i64 %size) {
 ; GISel-O0-LABEL: memset_tagged_10000_zeroval:
 ; GISel-O0:       // %bb.0: // %entry
-; GISel-O0-NEXT:    mov x9, xzr
 ; GISel-O0-NEXT:    mov w8, #10000
 ; GISel-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-O0-NEXT:    mov x9, xzr
 ; GISel-O0-NEXT:    setgp [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setgm [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setge [x0]!, x8!, x9
@@ -158,9 +158,9 @@ entry:
 define ptr @memset_tagged_0(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_0:
 ; GISel-O0:       // %bb.0: // %entry
+; GISel-O0-NEXT:    mov x8, xzr
 ; GISel-O0-NEXT:    // implicit-def: $x9
 ; GISel-O0-NEXT:    mov w9, w2
-; GISel-O0-NEXT:    mov x8, xzr
 ; GISel-O0-NEXT:    setgp [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setgm [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setge [x0]!, x8!, x9
@@ -192,10 +192,10 @@ entry:
 define ptr @memset_tagged_1(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_1:
 ; GISel-O0:       // %bb.0: // %entry
-; GISel-O0-NEXT:    // implicit-def: $x9
-; GISel-O0-NEXT:    mov w9, w2
 ; GISel-O0-NEXT:    mov w8, #1
 ; GISel-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-O0-NEXT:    // implicit-def: $x9
+; GISel-O0-NEXT:    mov w9, w2
 ; GISel-O0-NEXT:    setgp [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setgm [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setge [x0]!, x8!, x9
@@ -227,10 +227,10 @@ entry:
 define ptr @memset_tagged_10(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_10:
 ; GISel-O0:       // %bb.0: // %entry
-; GISel-O0-NEXT:    // implicit-def: $x9
-; GISel-O0-NEXT:    mov w9, w2
 ; GISel-O0-NEXT:    mov w8, #10
 ; GISel-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-O0-NEXT:    // implicit-def: $x9
+; GISel-O0-NEXT:    mov w9, w2
 ; GISel-O0-NEXT:    setgp [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setgm [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setge [x0]!, x8!, x9
@@ -262,10 +262,10 @@ entry:
 define ptr @memset_tagged_10000(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_10000:
 ; GISel-O0:       // %bb.0: // %entry
-; GISel-O0-NEXT:    // implicit-def: $x9
-; GISel-O0-NEXT:    mov w9, w2
 ; GISel-O0-NEXT:    mov w8, #10000
 ; GISel-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-O0-NEXT:    // implicit-def: $x9
+; GISel-O0-NEXT:    mov w9, w2
 ; GISel-O0-NEXT:    setgp [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setgm [x0]!, x8!, x9
 ; GISel-O0-NEXT:    setge [x0]!, x8!, x9

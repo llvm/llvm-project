@@ -20,7 +20,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
@@ -87,6 +86,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::pow:
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
+  case Intrinsic::is_fpclass:
   case Intrinsic::powi:
   case Intrinsic::canonicalize:
   case Intrinsic::fptosi_sat:
@@ -104,6 +104,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::abs:
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
+  case Intrinsic::is_fpclass:
   case Intrinsic::powi:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
@@ -117,15 +118,17 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 }
 
 bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                                  unsigned OpdIdx) {
+                                                  int OpdIdx) {
   switch (ID) {
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
+    return OpdIdx == -1 || OpdIdx == 0;
+  case Intrinsic::is_fpclass:
     return OpdIdx == 0;
   case Intrinsic::powi:
-    return OpdIdx == 1;
+    return OpdIdx == -1 || OpdIdx == 1;
   default:
-    return false;
+    return OpdIdx == -1;
   }
 }
 
@@ -144,139 +147,6 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
       ID == Intrinsic::sideeffect || ID == Intrinsic::pseudoprobe)
     return ID;
   return Intrinsic::not_intrinsic;
-}
-
-/// Find the operand of the GEP that should be checked for consecutive
-/// stores. This ignores trailing indices that have no effect on the final
-/// pointer.
-unsigned llvm::getGEPInductionOperand(const GetElementPtrInst *Gep) {
-  const DataLayout &DL = Gep->getModule()->getDataLayout();
-  unsigned LastOperand = Gep->getNumOperands() - 1;
-  TypeSize GEPAllocSize = DL.getTypeAllocSize(Gep->getResultElementType());
-
-  // Walk backwards and try to peel off zeros.
-  while (LastOperand > 1 && match(Gep->getOperand(LastOperand), m_Zero())) {
-    // Find the type we're currently indexing into.
-    gep_type_iterator GEPTI = gep_type_begin(Gep);
-    std::advance(GEPTI, LastOperand - 2);
-
-    // If it's a type with the same allocation size as the result of the GEP we
-    // can peel off the zero index.
-    if (DL.getTypeAllocSize(GEPTI.getIndexedType()) != GEPAllocSize)
-      break;
-    --LastOperand;
-  }
-
-  return LastOperand;
-}
-
-/// If the argument is a GEP, then returns the operand identified by
-/// getGEPInductionOperand. However, if there is some other non-loop-invariant
-/// operand, it returns that instead.
-Value *llvm::stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
-  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!GEP)
-    return Ptr;
-
-  unsigned InductionOperand = getGEPInductionOperand(GEP);
-
-  // Check that all of the gep indices are uniform except for our induction
-  // operand.
-  for (unsigned i = 0, e = GEP->getNumOperands(); i != e; ++i)
-    if (i != InductionOperand &&
-        !SE->isLoopInvariant(SE->getSCEV(GEP->getOperand(i)), Lp))
-      return Ptr;
-  return GEP->getOperand(InductionOperand);
-}
-
-/// If a value has only one user that is a CastInst, return it.
-Value *llvm::getUniqueCastUse(Value *Ptr, Loop *Lp, Type *Ty) {
-  Value *UniqueCast = nullptr;
-  for (User *U : Ptr->users()) {
-    CastInst *CI = dyn_cast<CastInst>(U);
-    if (CI && CI->getType() == Ty) {
-      if (!UniqueCast)
-        UniqueCast = CI;
-      else
-        return nullptr;
-    }
-  }
-  return UniqueCast;
-}
-
-/// Get the stride of a pointer access in a loop. Looks for symbolic
-/// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
-Value *llvm::getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
-  auto *PtrTy = dyn_cast<PointerType>(Ptr->getType());
-  if (!PtrTy || PtrTy->isAggregateType())
-    return nullptr;
-
-  // Try to remove a gep instruction to make the pointer (actually index at this
-  // point) easier analyzable. If OrigPtr is equal to Ptr we are analyzing the
-  // pointer, otherwise, we are analyzing the index.
-  Value *OrigPtr = Ptr;
-
-  // The size of the pointer access.
-  int64_t PtrAccessSize = 1;
-
-  Ptr = stripGetElementPtr(Ptr, SE, Lp);
-  const SCEV *V = SE->getSCEV(Ptr);
-
-  if (Ptr != OrigPtr)
-    // Strip off casts.
-    while (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(V))
-      V = C->getOperand();
-
-  const SCEVAddRecExpr *S = dyn_cast<SCEVAddRecExpr>(V);
-  if (!S)
-    return nullptr;
-
-  V = S->getStepRecurrence(*SE);
-  if (!V)
-    return nullptr;
-
-  // Strip off the size of access multiplication if we are still analyzing the
-  // pointer.
-  if (OrigPtr == Ptr) {
-    if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(V)) {
-      if (M->getOperand(0)->getSCEVType() != scConstant)
-        return nullptr;
-
-      const APInt &APStepVal = cast<SCEVConstant>(M->getOperand(0))->getAPInt();
-
-      // Huge step value - give up.
-      if (APStepVal.getBitWidth() > 64)
-        return nullptr;
-
-      int64_t StepVal = APStepVal.getSExtValue();
-      if (PtrAccessSize != StepVal)
-        return nullptr;
-      V = M->getOperand(1);
-    }
-  }
-
-  // Strip off casts.
-  Type *StripedOffRecurrenceCast = nullptr;
-  if (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(V)) {
-    StripedOffRecurrenceCast = C->getType();
-    V = C->getOperand();
-  }
-
-  // Look for the loop invariant symbolic value.
-  const SCEVUnknown *U = dyn_cast<SCEVUnknown>(V);
-  if (!U)
-    return nullptr;
-
-  Value *Stride = U->getValue();
-  if (!Lp->isLoopInvariant(Stride))
-    return nullptr;
-
-  // If we have stripped off the recurrence cast we have to make sure that we
-  // return the value that is used in this loop so that we can replace it later.
-  if (StripedOffRecurrenceCast)
-    Stride = getUniqueCastUse(Stride, Lp, StripedOffRecurrenceCast);
-
-  return Stride;
 }
 
 /// Given a vector and an element number, see if the scalar value is
@@ -574,13 +444,13 @@ void llvm::processShuffleMasks(
       int Idx = I * SzDest + K;
       if (Idx == Sz)
         break;
-      if (Mask[Idx] >= Sz || Mask[Idx] == UndefMaskElem)
+      if (Mask[Idx] >= Sz || Mask[Idx] == PoisonMaskElem)
         continue;
       int SrcRegIdx = Mask[Idx] / SzSrc;
       // Add a cost of PermuteTwoSrc for each new source register permute,
       // if we have more than one source registers.
       if (RegMasks[SrcRegIdx].empty())
-        RegMasks[SrcRegIdx].assign(SzDest, UndefMaskElem);
+        RegMasks[SrcRegIdx].assign(SzDest, PoisonMaskElem);
       RegMasks[SrcRegIdx][K] = Mask[Idx] % SzSrc;
     }
   }
@@ -612,8 +482,8 @@ void llvm::processShuffleMasks(
       auto &&CombineMasks = [](MutableArrayRef<int> FirstMask,
                                ArrayRef<int> SecondMask) {
         for (int Idx = 0, VF = FirstMask.size(); Idx < VF; ++Idx) {
-          if (SecondMask[Idx] != UndefMaskElem) {
-            assert(FirstMask[Idx] == UndefMaskElem &&
+          if (SecondMask[Idx] != PoisonMaskElem) {
+            assert(FirstMask[Idx] == PoisonMaskElem &&
                    "Expected undefined mask element.");
             FirstMask[Idx] = SecondMask[Idx] + VF;
           }
@@ -621,7 +491,7 @@ void llvm::processShuffleMasks(
       };
       auto &&NormalizeMask = [](MutableArrayRef<int> Mask) {
         for (int Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
-          if (Mask[Idx] != UndefMaskElem)
+          if (Mask[Idx] != PoisonMaskElem)
             Mask[Idx] = Idx;
         }
       };
@@ -1141,7 +1011,7 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 
 void InterleavedAccessInfo::collectConstStrideAccesses(
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-    const ValueToValueMap &Strides) {
+    const DenseMap<Value*, const SCEV*> &Strides) {
   auto &DL = TheLoop->getHeader()->getModule()->getDataLayout();
 
   // Since it's desired that the load/store instructions be maintained in
@@ -1221,7 +1091,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
 void InterleavedAccessInfo::analyzeInterleaving(
                                  bool EnablePredicatedInterleavedMemAccesses) {
   LLVM_DEBUG(dbgs() << "LV: Analyzing interleaved accesses...\n");
-  const ValueToValueMap &Strides = LAI->getSymbolicStrides();
+  const auto &Strides = LAI->getSymbolicStrides();
 
   // Holds all accesses with a constant stride.
   MapVector<Instruction *, StrideDescriptor> AccessStrideInfo;
@@ -1529,10 +1399,10 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
 
 std::string VFABI::mangleTLIVectorName(StringRef VectorName,
                                        StringRef ScalarName, unsigned numArgs,
-                                       ElementCount VF) {
+                                       ElementCount VF, bool Masked) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  Out << "_ZGV" << VFABI::_LLVM_ << "N";
+  Out << "_ZGV" << VFABI::_LLVM_ << (Masked ? "M" : "N");
   if (VF.isScalable())
     Out << 'x';
   else

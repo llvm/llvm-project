@@ -1849,8 +1849,12 @@ std::optional<SVal> RegionStoreManager::getSValFromInitListExpr(
     // Go to the nested initializer list.
     ILE = IL;
   }
-  llvm_unreachable(
-      "Unhandled InitListExpr sub-expressions or invalid offsets.");
+
+  assert(ILE);
+
+  // FIXME: Unhandeled InitListExpr sub-expression, possibly constructing an
+  //        enum?
+  return std::nullopt;
 }
 
 /// Returns an SVal, if possible, for the specified position in a string

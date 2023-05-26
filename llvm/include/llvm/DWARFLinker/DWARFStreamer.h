@@ -82,8 +82,11 @@ public:
   /// Emit contents of section SecName From Obj.
   void emitSectionContents(StringRef SecData, StringRef SecName) override;
 
-  /// Emit the string table described by \p Pool.
+  /// Emit the string table described by \p Pool into .debug_str table.
   void emitStrings(const NonRelocatableStringpool &Pool) override;
+
+  /// Emit the string table described by \p Pool into .debug_line_str table.
+  void emitLineStrings(const NonRelocatableStringpool &Pool) override;
 
   /// Emit the swift_ast section stored in \p Buffer.
   void emitSwiftAST(StringRef Buffer);
@@ -128,15 +131,11 @@ public:
     return RngListsSectionSize;
   }
 
-  /// Emit the line table described in \p Rows into the debug_line section.
-  void emitLineTableForUnit(MCDwarfLineTableParams Params,
-                            StringRef PrologueBytes, unsigned MinInstLength,
-                            std::vector<DWARFDebugLine::Row> &Rows,
-                            unsigned AdddressSize) override;
-
-  /// Copy the debug_line over to the updated binary while unobfuscating the
-  /// file names and directories.
-  void translateLineTable(DataExtractor LineData, uint64_t Offset) override;
+  /// Emit .debug_line table entry for specified \p LineTable
+  void emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
+                            const CompileUnit &Unit,
+                            OffsetsStringPool &DebugStrPool,
+                            OffsetsStringPool &DebugLineStrPool) override;
 
   uint64_t getLineSectionSize() const override { return LineSectionSize; }
 
@@ -230,6 +229,32 @@ private:
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
       PatchLocation Patch);
+
+  /// \defgroup Line table emission
+  /// @{
+  void emitLineTablePrologue(const DWARFDebugLine::Prologue &P,
+                             OffsetsStringPool &DebugStrPool,
+                             OffsetsStringPool &DebugLineStrPool);
+  void emitLineTableString(const DWARFDebugLine::Prologue &P,
+                           const DWARFFormValue &String,
+                           OffsetsStringPool &DebugStrPool,
+                           OffsetsStringPool &DebugLineStrPool);
+  void emitLineTableProloguePayload(const DWARFDebugLine::Prologue &P,
+                                    OffsetsStringPool &DebugStrPool,
+                                    OffsetsStringPool &DebugLineStrPool);
+  void emitLineTablePrologueV2IncludeAndFileTable(
+      const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
+      OffsetsStringPool &DebugLineStrPool);
+  void emitLineTablePrologueV5IncludeAndFileTable(
+      const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
+      OffsetsStringPool &DebugLineStrPool);
+  void emitLineTableRows(const DWARFDebugLine::LineTable &LineTable,
+                         MCSymbol *LineEndSym, unsigned AddressByteSize);
+  void emitIntOffset(uint64_t Offset, dwarf::DwarfFormat Format,
+                     uint64_t &SectionSize);
+  void emitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
+                           dwarf::DwarfFormat Format, uint64_t &SectionSize);
+  /// @}
 
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{

@@ -17,7 +17,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ORCABISUPPORT_H
 #define LLVM_EXECUTIONENGINE_ORC_ORCABISUPPORT_H
 
-#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -61,24 +61,25 @@ public:
   static constexpr unsigned ResolverCodeSize = 1;
 
   static void writeResolverCode(char *ResolveWorkingMem,
-                                JITTargetAddress ResolverTargetAddr,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr) {
+                                ExecutorAddr ResolverTargetAddr,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr) {
     llvm_unreachable("writeResolverCode is not supported by the generic host "
                      "support class");
   }
 
   static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                               JITTargetAddress TrampolineBlockTargetAddr,
-                               JITTargetAddress ResolverAddr,
+                               ExecutorAddr TrampolineBlockTargetAddr,
+                               ExecutorAddr ResolverAddr,
                                unsigned NumTrampolines) {
     llvm_unreachable("writeTrampolines is not supported by the generic host "
                      "support class");
   }
 
-  static void writeIndirectStubsBlock(
-      char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-      JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs) {
+  static void writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                      ExecutorAddr StubsBlockTargetAddress,
+                                      ExecutorAddr PointersBlockTargetAddress,
+                                      unsigned NumStubs) {
     llvm_unreachable(
         "writeIndirectStubsBlock is not supported by the generic host "
         "support class");
@@ -101,25 +102,26 @@ public:
   /// argument of writeResolverCode will be passed as the second argument to
   /// the function at ReentryFnAddr.
   static void writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress RentryCtxAddr);
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr RentryCtxAddr);
 
   /// Write the requested number of trampolines into the given memory,
   /// which must be big enough to hold 1 pointer, plus NumTrampolines
   /// trampolines.
   static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                               JITTargetAddress TrampolineBlockTargetAddress,
-                               JITTargetAddress ResolverAddr,
+                               ExecutorAddr TrampolineBlockTargetAddress,
+                               ExecutorAddr ResolverAddr,
                                unsigned NumTrampolines);
 
   /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
   /// Stubs will be written as if linked at StubsBlockTargetAddress, with the
   /// Nth stub using the Nth pointer in memory starting at
   /// PointersBlockTargetAddress.
-  static void writeIndirectStubsBlock(
-      char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-      JITTargetAddress PointersBlockTargetAddress, unsigned MinStubs);
+  static void writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                      ExecutorAddr StubsBlockTargetAddress,
+                                      ExecutorAddr PointersBlockTargetAddress,
+                                      unsigned MinStubs);
 };
 
 /// X86_64 code that's common to all ABIs.
@@ -136,17 +138,18 @@ public:
   /// which must be big enough to hold 1 pointer, plus NumTrampolines
   /// trampolines.
   static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                               JITTargetAddress TrampolineBlockTargetAddress,
-                               JITTargetAddress ResolverAddr,
+                               ExecutorAddr TrampolineBlockTargetAddress,
+                               ExecutorAddr ResolverAddr,
                                unsigned NumTrampolines);
 
   /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
   /// Stubs will be written as if linked at StubsBlockTargetAddress, with the
   /// Nth stub using the Nth pointer in memory starting at
   /// PointersBlockTargetAddress.
-  static void writeIndirectStubsBlock(
-      char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-      JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs);
+  static void writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                      ExecutorAddr StubsBlockTargetAddress,
+                                      ExecutorAddr PointersBlockTargetAddress,
+                                      unsigned NumStubs);
 };
 
 /// X86_64 support for SysV ABI (Linux, MacOSX).
@@ -164,9 +167,9 @@ public:
   /// argument of writeResolverCode will be passed as the second argument to
   /// the function at ReentryFnAddr.
   static void writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr);
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr);
 };
 
 /// X86_64 support for Win32.
@@ -184,9 +187,9 @@ public:
   /// argument of writeResolverCode will be passed as the second argument to
   /// the function at ReentryFnAddr.
   static void writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr);
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr);
 };
 
 /// I386 support.
@@ -208,25 +211,26 @@ public:
   /// argument of writeResolverCode will be passed as the second argument to
   /// the function at ReentryFnAddr.
   static void writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr);
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr);
 
   /// Write the requested number of trampolines into the given memory,
   /// which must be big enough to hold 1 pointer, plus NumTrampolines
   /// trampolines.
   static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                               JITTargetAddress TrampolineBlockTargetAddress,
-                               JITTargetAddress ResolverAddr,
+                               ExecutorAddr TrampolineBlockTargetAddress,
+                               ExecutorAddr ResolverAddr,
                                unsigned NumTrampolines);
 
   /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
   /// Stubs will be written as if linked at StubsBlockTargetAddress, with the
   /// Nth stub using the Nth pointer in memory starting at
   /// PointersBlockTargetAddress.
-  static void writeIndirectStubsBlock(
-      char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-      JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs);
+  static void writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                      ExecutorAddr StubsBlockTargetAddress,
+                                      ExecutorAddr PointersBlockTargetAddress,
+                                      unsigned NumStubs);
 };
 
 // @brief Mips32 support.
@@ -244,8 +248,8 @@ public:
   /// which must be big enough to hold 1 pointer, plus NumTrampolines
   /// trampolines.
   static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                               JITTargetAddress TrampolineBlockTargetAddress,
-                               JITTargetAddress ResolverAddr,
+                               ExecutorAddr TrampolineBlockTargetAddress,
+                               ExecutorAddr ResolverAddr,
                                unsigned NumTrampolines);
 
   /// Write the resolver code into the given memory. The user is
@@ -256,25 +260,25 @@ public:
   /// argument of writeResolverCode will be passed as the second argument to
   /// the function at ReentryFnAddr.
   static void writeResolverCode(char *ResolverBlockWorkingMem,
-                                JITTargetAddress ResolverBlockTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr,
-                                bool isBigEndian);
+                                ExecutorAddr ResolverBlockTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr, bool isBigEndian);
   /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
   /// Stubs will be written as if linked at StubsBlockTargetAddress, with the
   /// Nth stub using the Nth pointer in memory starting at
   /// PointersBlockTargetAddress.
-  static void writeIndirectStubsBlock(
-      char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-      JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs);
+  static void writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                      ExecutorAddr StubsBlockTargetAddress,
+                                      ExecutorAddr PointersBlockTargetAddress,
+                                      unsigned NumStubs);
 };
 
 class OrcMips32Le : public OrcMips32_Base {
 public:
   static void writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr) {
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr) {
     OrcMips32_Base::writeResolverCode(ResolverWorkingMem, ResolverTargetAddress,
                                       ReentryFnAddr, ReentryCtxAddr, false);
   }
@@ -283,9 +287,9 @@ public:
 class OrcMips32Be : public OrcMips32_Base {
 public:
   static void writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr) {
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr) {
     OrcMips32_Base::writeResolverCode(ResolverWorkingMem, ResolverTargetAddress,
                                       ReentryFnAddr, ReentryCtxAddr, true);
   }
@@ -310,24 +314,25 @@ public:
   /// argument of writeResolverCode will be passed as the second argument to
   /// the function at ReentryFnAddr.
   static void writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr);
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr);
 
   /// Write the requested number of trampolines into the given memory,
   /// which must be big enough to hold 1 pointer, plus NumTrampolines
   /// trampolines.
   static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                               JITTargetAddress TrampolineBlockTargetAddress,
-                               JITTargetAddress ResolverFnAddr,
+                               ExecutorAddr TrampolineBlockTargetAddress,
+                               ExecutorAddr ResolverFnAddr,
                                unsigned NumTrampolines);
   /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
   /// Stubs will be written as if linked at StubsBlockTargetAddress, with the
   /// Nth stub using the Nth pointer in memory starting at
   /// PointersBlockTargetAddress.
-  static void writeIndirectStubsBlock(
-      char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-      JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs);
+  static void writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                      ExecutorAddr StubsBlockTargetAddress,
+                                      ExecutorAddr PointersBlockTargetAddress,
+                                      unsigned NumStubs);
 };
 
 // @brief riscv64 support.
@@ -349,24 +354,25 @@ public:
   /// argument of writeResolverCode will be passed as the second argument to
   /// the function at ReentryFnAddr.
   static void writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr);
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr);
 
   /// Write the requested number of trampolines into the given memory,
   /// which must be big enough to hold 1 pointer, plus NumTrampolines
   /// trampolines.
   static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                               JITTargetAddress TrampolineBlockTargetAddress,
-                               JITTargetAddress ResolverFnAddr,
+                               ExecutorAddr TrampolineBlockTargetAddress,
+                               ExecutorAddr ResolverFnAddr,
                                unsigned NumTrampolines);
   /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
   /// Stubs will be written as if linked at StubsBlockTargetAddress, with the
   /// Nth stub using the Nth pointer in memory starting at
   /// PointersBlockTargetAddress.
-  static void writeIndirectStubsBlock(
-      char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-      JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs);
+  static void writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                      ExecutorAddr StubsBlockTargetAddress,
+                                      ExecutorAddr PointersBlockTargetAddress,
+                                      unsigned NumStubs);
 };
 
 // @brief loongarch64 support.
@@ -388,25 +394,26 @@ public:
   /// argument of writeResolverCode will be passed as the second argument to
   /// the function at ReentryFnAddr.
   static void writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr);
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr);
 
   /// Write the requested number of trampolines into the given memory,
   /// which must be big enough to hold 1 pointer, plus NumTrampolines
   /// trampolines.
   static void writeTrampolines(char *TrampolineBlockWorkingMem,
-                               JITTargetAddress TrampolineBlockTargetAddress,
-                               JITTargetAddress ResolverFnAddr,
+                               ExecutorAddr TrampolineBlockTargetAddress,
+                               ExecutorAddr ResolverFnAddr,
                                unsigned NumTrampolines);
 
   /// Write NumStubs indirect stubs to working memory at StubsBlockWorkingMem.
   /// Stubs will be written as if linked at StubsBlockTargetAddress, with the
   /// Nth stub using the Nth pointer in memory starting at
   /// PointersBlockTargetAddress.
-  static void writeIndirectStubsBlock(
-      char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-      JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs);
+  static void writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                      ExecutorAddr StubsBlockTargetAddress,
+                                      ExecutorAddr PointersBlockTargetAddress,
+                                      unsigned NumStubs);
 };
 
 } // end namespace orc

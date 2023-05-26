@@ -455,9 +455,7 @@ namespace testClassTemplateDecl {
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-148]]:3, col:31> col:31 TestTemplateDefaultNonType
 // CHECK-NEXT:  |-NonTypeTemplateParmDecl 0x{{.+}} <col:12, col:20> col:16 'int' depth 0 index 0 I
 // CHECK-NEXT:  | `-TemplateArgument expr
-// CHECK-NEXT:  |   `-ConstantExpr 0x{{.+}} <col:20> 'int'
-// CHECK-NEXT:  |     |-value: Int 42
-// CHECK-NEXT:  |     `-IntegerLiteral 0x{{.+}} <col:20> 'int' 42
+// CHECK-NEXT:  |   `-IntegerLiteral 0x{{.+}} <col:20> 'int' 42
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 struct TestTemplateDefaultNonType
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:{{.*}}:3, col:68> col:68 TestTemplateTemplateDefaultType
@@ -661,9 +659,7 @@ namespace TestNonTypeTemplateParmDecl {
 // CHECK-NEXT:   FunctionTemplateDecl
 // CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 0 I
 // CHECK-NEXT:       TemplateArgument expr
-// CHECK-NEXT:         ConstantExpr{{.*}} 'int'
-// CHECK-NEXT:           value: Int 1
-// CHECK-NEXT:           IntegerLiteral{{.*}} 'int' 1
+// CHECK-NEXT:         IntegerLiteral{{.*}} 'int' 1
 // CHECK-NEXT:     NonTypeTemplateParmDecl{{.*}} 'int' depth 0 index 1 ... J
 
 namespace TestTemplateTemplateParmDecl {
@@ -822,3 +818,38 @@ namespace Comment {
 // CHECK:       `-TextComment
 // CHECK: VarDecl {{.*}} Test 'int' extern
 // CHECK-NOT: FullComment
+
+namespace TestConstexprVariableTemplateWithInitializer {
+  template<typename T> constexpr T foo{};
+  // CHECK:      VarTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-1]]:3, col:40> col:36 foo
+  // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 referenced typename depth 0 index 0 T
+  // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:24, col:40> col:36 foo 'const T' constexpr listinit
+  // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:39, col:40> 'void'
+
+  template<typename T> constexpr int val{42};
+  // CHECK:      VarTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-1]]:3, col:44> col:38 val
+  // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T
+  // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:24, col:44> col:38 val 'const int' constexpr listinit
+  // CHECK-NEXT:  |-value: Int 42
+  // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:41, col:44> 'int'
+
+  template <typename _Tp>
+  struct in_place_type_t {
+    explicit in_place_type_t() = default;
+  };
+
+  template <typename _Tp>
+  inline constexpr in_place_type_t<_Tp> in_place_type{};
+  // CHECK:     -VarTemplateDecl 0x{{.+}} <line:[[@LINE-2]]:3, line:[[@LINE-1]]:55> col:41 in_place_type
+  // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <line:[[@LINE-3]]:13, col:22> col:22 referenced typename depth 0 index 0 _Tp
+  // CHECK-NEXT: `-VarDecl 0x{{.+}} <line:[[@LINE-3]]:3, col:55> col:41 in_place_type 'const in_place_type_t<_Tp>':'const in_place_type_t<_Tp>' inline constexpr listinit
+  // CHECK-NEXT:  `-InitListExpr 0x{{.+}} <col:54, col:55> 'void'
+
+  template <typename T> constexpr T call_init(0);
+  // CHECK:     -VarTemplateDecl 0x{{.+}} <line:[[@LINE-1]]:3, col:48> col:37 call_init
+  // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:13, col:22> col:22 referenced typename depth 0 index 0 T
+  // CHECK-NEXT: `-VarDecl 0x{{.+}} <col:25, col:48> col:37 call_init 'const T' constexpr callinit
+  // CHECK-NEXT:  `-ParenListExpr 0x{{.+}} <col:46, col:48> 'NULL TYPE'
+  // CHECK-NEXT:   `-IntegerLiteral 0x{{.+}} <col:47> 'int' 0
+
+}

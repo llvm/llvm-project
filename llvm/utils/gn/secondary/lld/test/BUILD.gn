@@ -21,6 +21,7 @@ write_cmake_config("lit_site_cfg") {
     "LLD_SOURCE_DIR=" + rebase_path("//lld"),
     "LLVM_BINARY_DIR=" +
         rebase_path(get_label_info("//llvm", "target_out_dir")),
+    "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_LIBS_DIR=",  # needed only for shared builds
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_SOURCE_DIR=" + rebase_path("//llvm"),

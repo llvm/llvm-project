@@ -52,11 +52,6 @@ static cl::opt<bool> UnrollRuntimeLocal(
   cl::desc("Allow runtime unroll for AMDGPU if local memory used in a loop"),
   cl::init(true), cl::Hidden);
 
-static cl::opt<bool> UseLegacyDA(
-  "amdgpu-use-legacy-divergence-analysis",
-  cl::desc("Enable legacy divergence analysis for AMDGPU"),
-  cl::init(false), cl::Hidden);
-
 static cl::opt<unsigned> UnrollMaxBlockToAnalyze(
     "amdgpu-unroll-max-block-to-analyze",
     cl::desc("Inner loop block size threshold to analyze in unroll for AMDGPU"),
@@ -117,6 +112,9 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Conditional branch in a loop back edge needs 3 additional exec
   // manipulations in average.
   UP.BEInsns += 3;
+
+  // We want to run unroll even for the loops which have been vectorized.
+  UP.UnrollVectorizedLoop = true;
 
   // TODO: Do we want runtime unrolling?
 
@@ -360,7 +358,8 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
       AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
       AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
+      AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
+      AddrSpace == AMDGPUAS::BUFFER_RESOURCE) {
     return 512;
   }
 
@@ -779,14 +778,14 @@ GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
 InstructionCost
 GCNTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                   bool IsUnsigned,
+                                   bool IsUnsigned, FastMathFlags FMF,
                                    TTI::TargetCostKind CostKind) {
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
   // Computes cost on targets that have packed math instructions(which support
   // 16-bit types only).
   if (!ST->hasVOP3PInsts() || OrigTy.getScalarSizeInBits() != 16)
-    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
+    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   return LT.first * getHalfRateInstrCost(CostKind);
@@ -858,11 +857,6 @@ bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
   }
 
   return false;
-}
-
-/// \returns true if the new GPU divergence analysis is enabled.
-bool GCNTTIImpl::useGPUDivergenceAnalysis() const {
-  return !UseLegacyDA;
 }
 
 bool GCNTTIImpl::isReadRegisterSourceOfDivergence(
@@ -1091,9 +1085,12 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin: {
-    Module *M = II->getParent()->getParent()->getParent();
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
+    unsigned NewAS = SrcTy->getPointerAddressSpace();
+    if (!AMDGPU::isExtendedGlobalAddrSpace(NewAS))
+      return nullptr;
+    Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getDeclaration(M, II->getIntrinsicID(),
                                                   {DestTy, SrcTy, DestTy});
     II->setArgOperand(0, NewV);

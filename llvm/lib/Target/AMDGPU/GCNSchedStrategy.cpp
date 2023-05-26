@@ -872,7 +872,8 @@ void GCNSchedStage::setupNewBlock() {
   DAG.startBlock(CurrentMBB);
   // Get real RP for the region if it hasn't be calculated before. After the
   // initial schedule stage real RP will be collected after scheduling.
-  if (StageID == GCNSchedStageID::OccInitialSchedule)
+  if (StageID == GCNSchedStageID::OccInitialSchedule ||
+      StageID == GCNSchedStageID::ILPInitialSchedule)
     DAG.computeBlockPressure(RegionIdx, CurrentMBB);
 }
 

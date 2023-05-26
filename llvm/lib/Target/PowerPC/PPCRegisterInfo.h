@@ -179,9 +179,12 @@ public:
       case 'a':
         if (RegName[1] == 'c' && RegName[2] == 'c')
           return RegName + 3;
-      break;
-      case 'r':
+        break;
       case 'f':
+        if (RegName[1] == 'p')
+          return RegName + 2;
+        [[fallthrough]];
+      case 'r':
       case 'v':
         if (RegName[1] == 's') {
           if (RegName[2] == 'p')

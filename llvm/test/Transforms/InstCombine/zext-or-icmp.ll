@@ -123,8 +123,8 @@ block2:
 define i32 @zext_or_eq_ult_add(i32 %i) {
 ; CHECK-LABEL: @zext_or_eq_ult_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[O:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[O]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %i, -3
@@ -138,8 +138,8 @@ define i32 @zext_or_eq_ult_add(i32 %i) {
 define i32 @select_zext_or_eq_ult_add(i32 %i) {
 ; CHECK-LABEL: @select_zext_or_eq_ult_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[I:%.*]], -3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[NARROW:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %i, -3
@@ -248,7 +248,7 @@ define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[F]], align 4
 ; CHECK-NEXT:    [[REM18:%.*]] = srem i32 [[LOR_EXT]], [[ADD]]
 ; CHECK-NEXT:    [[CONV19:%.*]] = zext i32 [[REM18]] to i64
-; CHECK-NEXT:    store i32 0, ptr [[D]], align 8
+; CHECK-NEXT:    store i32 [[SROA38]], ptr [[D]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[INSERT_INSERT41]], [[CONV19]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[R]])
 ; CHECK-NEXT:    ret i1 true

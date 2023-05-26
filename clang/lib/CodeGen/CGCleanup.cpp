@@ -782,7 +782,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   if (!RequiresNormalCleanup) {
     // Mark CPP scope end for passed-by-value Arg temp
     //   per Windows ABI which is "normally" Cleanup in callee
-    if (IsEHa && getInvokeDest()) {
+    if (IsEHa && getInvokeDest() && Builder.GetInsertBlock()) {
       if (Personality.isMSVCXXPersonality())
         EmitSehCppScopeEnd();
     }
@@ -836,7 +836,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       EmitBlock(NormalEntry);
 
       // intercept normal cleanup to mark SEH scope end
-      if (IsEHa) {
+      if (IsEHa && getInvokeDest()) {
         if (Personality.isMSVCXXPersonality())
           EmitSehCppScopeEnd();
         else
@@ -1031,6 +1031,8 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
     if (!Personality.isMSVCPersonality()) {
       EHStack.pushTerminate();
       PushedTerminate = true;
+    } else if (IsEHa && getInvokeDest()) {
+      EmitSehCppScopeEnd();
     }
 
     // We only actually emit the cleanup code if the cleanup is either

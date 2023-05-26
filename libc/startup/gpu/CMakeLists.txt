@@ -56,8 +56,4 @@ set(startup_components crt1)
 foreach(target IN LISTS startup_components)
   set(fq_target_name libc.startup.gpu.${target})
   add_dependencies(libc-startup ${fq_target_name})
-  install(FILES $<TARGET_OBJECTS:${fq_target_name}>
-          DESTINATION ${CMAKE_INSTALL_LIBDIR}
-          RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
-          COMPONENT libc)
 endforeach()

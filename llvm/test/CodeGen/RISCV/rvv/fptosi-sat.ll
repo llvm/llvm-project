@@ -155,12 +155,12 @@ define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 ; CHECK-LABEL: test_signed_v4f64_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI10_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI10_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI10_0)(a0)
 ; CHECK-NEXT:    lui a0, %hi(.LCPI10_1)
-; CHECK-NEXT:    fld ft1, %lo(.LCPI10_1)(a0)
+; CHECK-NEXT:    fld fa4, %lo(.LCPI10_1)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vfmax.vf v12, v8, ft0
-; CHECK-NEXT:    vfmin.vf v12, v12, ft1
+; CHECK-NEXT:    vfmax.vf v12, v8, fa5
+; CHECK-NEXT:    vfmin.vf v12, v12, fa4
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v16, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
@@ -178,12 +178,12 @@ define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK-LABEL: test_signed_v8f64_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI11_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI11_0)(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI11_0)(a0)
 ; CHECK-NEXT:    lui a0, %hi(.LCPI11_1)
-; CHECK-NEXT:    fld ft1, %lo(.LCPI11_1)(a0)
+; CHECK-NEXT:    fld fa4, %lo(.LCPI11_1)(a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vfmax.vf v16, v8, ft0
-; CHECK-NEXT:    vfmin.vf v16, v16, ft1
+; CHECK-NEXT:    vfmax.vf v16, v8, fa5
+; CHECK-NEXT:    vfmin.vf v16, v16, fa4
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v24, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma

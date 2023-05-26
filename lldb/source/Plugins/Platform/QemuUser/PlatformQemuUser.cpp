@@ -41,33 +41,28 @@ public:
   }
 
   llvm::StringRef GetArchitecture() {
-    return m_collection_sp->GetPropertyAtIndexAsString(
-        nullptr, ePropertyArchitecture, "");
+    return GetPropertyAtIndexAs<llvm::StringRef>(ePropertyArchitecture, "");
   }
 
   FileSpec GetEmulatorPath() {
-    return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr,
-                                                         ePropertyEmulatorPath);
+    return GetPropertyAtIndexAs<FileSpec>(ePropertyEmulatorPath, {});
   }
 
   Args GetEmulatorArgs() {
     Args result;
-    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEmulatorArgs,
-                                              result);
+    m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyEmulatorArgs, result);
     return result;
   }
 
   Environment GetEmulatorEnvVars() {
     Args args;
-    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEmulatorEnvVars,
-                                              args);
+    m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyEmulatorEnvVars, args);
     return Environment(args);
   }
 
   Environment GetTargetEnvVars() {
     Args args;
-    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyTargetEnvVars,
-                                              args);
+    m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyTargetEnvVars, args);
     return Environment(args);
   }
 };
@@ -98,7 +93,7 @@ void PlatformQemuUser::DebuggerInitialize(Debugger &debugger) {
           debugger, ConstString(GetPluginNameStatic()))) {
     PluginManager::CreateSettingForPlatformPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the qemu-user platform plugin."),
+        "Properties for the qemu-user platform plugin.",
         /*is_global_property=*/true);
   }
 }

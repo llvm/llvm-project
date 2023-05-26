@@ -30,15 +30,16 @@ namespace process_freebsd {
 class NativeProcessFreeBSD : public NativeProcessELF,
                              private NativeProcessSoftwareSingleStep {
 public:
-  class Factory : public NativeProcessProtocol::Factory {
+  class Manager : public NativeProcessProtocol::Manager {
   public:
-    llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-    Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
-           MainLoop &mainloop) const override;
+    using NativeProcessProtocol::Manager::Manager;
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-    Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
-           MainLoop &mainloop) const override;
+    Launch(ProcessLaunchInfo &launch_info,
+           NativeDelegate &native_delegate) override;
+
+    llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
+    Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
 
     Extension GetSupportedExtensions() const override;
   };

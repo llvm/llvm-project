@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkLinker.h"
+#include <mutex>
 
 namespace llvm {
 namespace dsymutil {
@@ -35,14 +36,21 @@ namespace dsymutil {
 class DwarfLinkerForBinary {
 public:
   DwarfLinkerForBinary(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-                       LinkOptions Options)
-      : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)) {}
+                       LinkOptions Options, std::mutex &ErrorHandlerMutex)
+      : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)),
+        ErrorHandlerMutex(ErrorHandlerMutex) {}
 
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
 
-  void reportWarning(const Twine &Warning, StringRef Context,
+  void reportWarning(Twine Warning, Twine Context = {},
                      const DWARFDie *DIE = nullptr) const;
+  void reportError(Twine Error, Twine Context = {},
+                   const DWARFDie *DIE = nullptr) const;
+
+  /// Returns true if input verification is enabled and verification errors were
+  /// found.
+  bool InputVerificationFailed() const { return HasVerificationErrors; }
 
   /// Flags passed to DwarfLinker::lookForDIEsToKeep
   enum TraversalFlags {
@@ -100,8 +108,8 @@ private:
     /// \returns resolved value.
     uint64_t relocate(const ValidReloc &Reloc) const;
 
-    /// Fill \p Info with address information for the specified \p Reloc.
-    void fillDieInfo(const ValidReloc &Reloc, CompileUnit::DIEInfo &Info);
+    /// \returns value for the specified \p Reloc.
+    int64_t getRelocValue(const ValidReloc &Reloc);
 
     /// Print contents of debug map entry for the specified \p Reloc.
     void printReloc(const ValidReloc &Reloc);
@@ -164,15 +172,16 @@ private:
     /// Checks that there is a relocation in the \p Relocs array against a
     /// debug map entry between \p StartOffset and \p NextOffset.
     ///
-    /// \returns true and sets Info.InDebugMap if it is the case.
-    bool hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
-                              uint64_t StartOffset, uint64_t EndOffset,
-                              CompileUnit::DIEInfo &Info);
+    /// \returns relocation value if relocation exist, otherwise std::nullopt.
+    std::optional<int64_t>
+    hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
+                         uint64_t StartOffset, uint64_t EndOffset);
 
-    bool isLiveVariable(const DWARFDie &DIE,
-                        CompileUnit::DIEInfo &Info) override;
-    bool isLiveSubprogram(const DWARFDie &DIE,
-                          CompileUnit::DIEInfo &Info) override;
+    std::optional<int64_t> getExprOpAddressRelocAdjustment(
+        DWARFUnit &U, const DWARFExpression::Operation &Op,
+        uint64_t StartOffset, uint64_t EndOffset) override;
+    std::optional<int64_t>
+    getSubprogramRelocAdjustment(const DWARFDie &DIE) override;
 
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                           bool IsLittleEndian) override;
@@ -207,6 +216,8 @@ private:
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply) const;
 
+  Error copySwiftInterfaces(StringRef Architecture) const;
+
   void copySwiftReflectionMetadata(
       const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
       std::vector<uint64_t> &SectionToOffsetInDwarf,
@@ -216,6 +227,8 @@ private:
   raw_fd_ostream &OutFile;
   BinaryHolder &BinHolder;
   LinkOptions Options;
+  std::mutex &ErrorHandlerMutex;
+
   std::unique_ptr<DwarfStreamer> Streamer;
   std::vector<std::unique_ptr<DWARFFile>> ObjectsForLinking;
   std::vector<std::unique_ptr<DWARFContext>> ContextForLinking;
@@ -230,6 +243,7 @@ private:
 
   bool ModuleCacheHintDisplayed = false;
   bool ArchiveHintDisplayed = false;
+  bool HasVerificationErrors = false;
 };
 
 } // end namespace dsymutil

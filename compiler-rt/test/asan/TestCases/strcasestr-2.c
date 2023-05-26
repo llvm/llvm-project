@@ -6,7 +6,7 @@
 // RUN: %env_asan_opts=intercept_strstr=false:replace_str=false:intercept_strlen=false %run %t 2>&1
 
 // There's no interceptor for strcasestr on Windows
-// XFAIL: target={{.*windows-msvc.*}}
+// XFAIL: target={{.*windows-(msvc.*|gnu)}}
 
 #define _GNU_SOURCE
 #include <assert.h>

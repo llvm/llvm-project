@@ -14,8 +14,8 @@
 
 // Before https://llvm.org/D110647, the shared library did not contain
 // std::ctype<char>::table_size, so this test fails with a link error.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0|13.0}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{11.0|12.0|13.0}}
 
 #include <locale>
 #include <cassert>

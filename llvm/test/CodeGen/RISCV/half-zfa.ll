@@ -41,7 +41,7 @@ declare half @llvm.round.f16(half) nounwind readnone
 define half @fround_h_2(half %a) nounwind {
 ; CHECK-LABEL: fround_h_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fround.h fa0, fa0, rup
+; CHECK-NEXT:    fround.h fa0, fa0, rdn
 ; CHECK-NEXT:    ret
   %call = tail call half @llvm.floor.f16(half %a) nounwind readnone
   ret half %call
@@ -53,7 +53,7 @@ declare half @llvm.floor.f16(half) nounwind readnone
 define half @fround_h_3(half %a) nounwind {
 ; CHECK-LABEL: fround_h_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fround.h fa0, fa0, rdn
+; CHECK-NEXT:    fround.h fa0, fa0, rup
 ; CHECK-NEXT:    ret
   %call = tail call half @llvm.ceil.f16(half %a) nounwind readnone
   ret half %call

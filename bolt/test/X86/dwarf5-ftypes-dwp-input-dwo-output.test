@@ -4,7 +4,9 @@
 ; RUN: cd %t
 ; RUN: llvm-mc --split-dwarf-file=main.dwo --triple=x86_64-unknown-linux-gnu \
 ; RUN: --filetype=obj %p/Inputs/dwarf5-ftypes-split-dwarf.s -o=main.o
-; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o -o main.exe
+; RUN: llvm-mc --split-dwarf-file=helper.dwo --triple=x86_64-unknown-linux-gnu \
+; RUN: --filetype=obj %p/Inputs/dwarf5-ftypes-split-dwarf-helper.s -o=helper.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
 ; RUN: llvm-dwp -e main.exe -o main.exe.dwp
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.dwp | FileCheck -check-prefix=PRE-BOLT %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-tu-index main.exe.dwp | FileCheck -check-prefix=PRE-BOLT-DWP-TU-INDEX %s

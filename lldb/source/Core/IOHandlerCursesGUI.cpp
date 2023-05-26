@@ -5259,7 +5259,8 @@ public:
     for (size_t i = 0; i < num_threads; ++i) {
       ThreadSP thread = threads.GetThreadAtIndex(i);
       if (selected_thread->GetID() == thread->GetID()) {
-        selected_item = &root[i][thread->GetSelectedFrameIndex()];
+        selected_item =
+            &root[i][thread->GetSelectedFrameIndex(SelectMostRelevantFrame)];
         selection_index = selected_item->GetRowIndex();
         return;
       }
@@ -6411,7 +6412,8 @@ public:
         if (process && process->IsAlive() &&
             StateIsStoppedState(process->GetState(), true)) {
           Thread *thread = exe_ctx.GetThreadPtr();
-          uint32_t frame_idx = thread->GetSelectedFrameIndex();
+          uint32_t frame_idx =
+              thread->GetSelectedFrameIndex(SelectMostRelevantFrame);
           exe_ctx.GetThreadRef().StepOut(frame_idx);
         }
       }
@@ -6827,7 +6829,7 @@ public:
       if (process_alive) {
         thread = exe_ctx.GetThreadPtr();
         if (thread) {
-          frame_sp = thread->GetSelectedFrame();
+          frame_sp = thread->GetSelectedFrame(SelectMostRelevantFrame);
           auto tid = thread->GetID();
           thread_changed = tid != m_tid;
           m_tid = tid;
@@ -7374,7 +7376,8 @@ public:
         if (exe_ctx.HasThreadScope() &&
             StateIsStoppedState(exe_ctx.GetProcessRef().GetState(), true)) {
           Thread *thread = exe_ctx.GetThreadPtr();
-          uint32_t frame_idx = thread->GetSelectedFrameIndex();
+          uint32_t frame_idx =
+              thread->GetSelectedFrameIndex(SelectMostRelevantFrame);
           exe_ctx.GetThreadRef().StepOut(frame_idx);
         }
       }
@@ -7413,7 +7416,8 @@ public:
           m_debugger.GetCommandInterpreter().GetExecutionContext();
       if (exe_ctx.HasThreadScope()) {
         Thread *thread = exe_ctx.GetThreadPtr();
-        uint32_t frame_idx = thread->GetSelectedFrameIndex();
+        uint32_t frame_idx =
+            thread->GetSelectedFrameIndex(SelectMostRelevantFrame);
         if (frame_idx == UINT32_MAX)
           frame_idx = 0;
         if (c == 'u' && frame_idx + 1 < thread->GetStackFrameCount())
@@ -7421,7 +7425,7 @@ public:
         else if (c == 'd' && frame_idx > 0)
           --frame_idx;
         if (thread->SetSelectedFrameByIndex(frame_idx, true))
-          exe_ctx.SetFrameSP(thread->GetSelectedFrame());
+          exe_ctx.SetFrameSP(thread->GetSelectedFrame(SelectMostRelevantFrame));
       }
     }
       return eKeyHandled;

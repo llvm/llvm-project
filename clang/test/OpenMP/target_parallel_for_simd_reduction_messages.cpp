@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
@@ -11,6 +14,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 #pragma omp requires dynamic_allocators
 
@@ -171,7 +177,7 @@ T tmain(T argc) {
 #pragma omp target parallel for simd reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp target parallel for simd reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp target parallel for simd reduction(- : da) // expected-error 2 {{const-qualified variable cannot be reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp target parallel for simd reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -293,7 +299,7 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for simd reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp target parallel for simd reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp target parallel for simd reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp target parallel for simd reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -344,7 +350,7 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for simd reduction(+ : m) // OK
   for (int i = 0; i < 10; ++i)
     m++;
-#pragma omp target parallel for simd reduction(task, + : m) // omp45-error 2 {{expected expression}} omp45-warning {{missing ':' after reduction identifier - ignoring}} omp50-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}}
+#pragma omp target parallel for simd reduction(task, + : m) // omp45-error 2 {{expected expression}} omp45-warning {{missing ':' after reduction identifier - ignoring}} omp50-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}} omp52-error {{'reduction' clause with 'task' modifier allowed only on non-simd parallel or worksharing constructs}}
   for (int i = 0; i < 10; ++i)
     m++;
 

@@ -536,20 +536,18 @@ define void @masked_scatter_v2f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ldr s1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ldr q3, [x1]
 ; CHECK-NEXT:    fcmeq v2.4h, v1.4h, #0.0
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    mov v0.h[0], v2.h[0]
 ; CHECK-NEXT:    mov w8, v2.s[1]
-; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    uunpklo z0.d, z1.s
-; CHECK-NEXT:    st1h { z0.d }, p0, [z2.d]
+; CHECK-NEXT:    st1h { z0.d }, p0, [z3.d]
 ; CHECK-NEXT:    ret
   %vals = load <2 x half>, ptr %a
   %ptrs = load <2 x ptr>, ptr %b

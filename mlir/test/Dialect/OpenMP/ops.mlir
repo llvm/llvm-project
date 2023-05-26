@@ -480,14 +480,21 @@ func.func @omp_simdloop_pretty_multiple(%lb1 : index, %ub1 : index, %step1 : ind
 }
 
 // CHECK-LABEL: omp_target
-func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32) -> () {
+func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
 
     // Test with optional operands; if_expr, device, thread_limit, private, firstprivate and nowait.
     // CHECK: omp.target if({{.*}}) device({{.*}}) thread_limit({{.*}}) nowait
     "omp.target"(%if_cond, %device, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {nowait, operand_segment_sizes = array<i32: 1,1,1>} : ( i1, si32, i32 ) -> ()
+    }) {nowait, operand_segment_sizes = array<i32: 1,1,1,0>} : ( i1, si32, i32 ) -> ()
+
+    // Test with optional map clause.
+    // CHECK: omp.target map((tofrom -> %{{.*}} : memref<?xi32>), (alloc -> %{{.*}} : memref<?xi32>)) {
+    omp.target map((tofrom -> %map1 : memref<?xi32>), (alloc -> %map2 : memref<?xi32>)){}
+
+    // CHECK: omp.target map((to -> %{{.*}} : memref<?xi32>), (always, from -> %{{.*}} : memref<?xi32>)) {
+    omp.target map((to -> %map1 : memref<?xi32>), (always, from -> %map2 : memref<?xi32>)){}
 
     // CHECK: omp.barrier
     omp.barrier

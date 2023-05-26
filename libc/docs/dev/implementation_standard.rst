@@ -15,7 +15,7 @@ tested independent of each other and hence will live in a directory named
 the directory of its own named ``src/math/round/``.
 
 Implementation of entrypoints can span multiple ``.cpp`` and ``.h`` files, but
-there will be atleast one header file with name of the form
+there will be at least one header file with name of the form
 ``<entrypoint name>.h`` for every entrypoint. This header file is called as the
 implementation header file. For the ``round`` function, the path to the
 implementation header file will be ``src/math/round/round.h``. The rest of this

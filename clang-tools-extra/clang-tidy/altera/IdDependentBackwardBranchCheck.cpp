@@ -31,12 +31,12 @@ void IdDependentBackwardBranchCheck::registerMatchers(MatchFinder *Finder) {
               stmt(
                   anyOf(declStmt(hasDescendant(varDecl(hasInitializer(ThreadID))
                                                    .bind("tid_dep_var"))),
-                        binaryOperator(allOf(
+                        binaryOperator(
                             isAssignmentOperator(), hasRHS(ThreadID),
                             hasLHS(anyOf(
                                 declRefExpr(to(varDecl().bind("tid_dep_var"))),
                                 memberExpr(member(
-                                    fieldDecl().bind("tid_dep_field")))))))))
+                                    fieldDecl().bind("tid_dep_field"))))))))
                   .bind("straight_assignment"))),
       this);
 

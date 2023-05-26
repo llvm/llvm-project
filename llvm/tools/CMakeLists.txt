@@ -21,6 +21,10 @@ if(CYGWIN OR NOT LLVM_ENABLE_PIC)
   set(LLVM_TOOL_LTO_BUILD Off)
 endif()
 
+if(NOT LLVM_ENABLE_HTTPLIB)
+  set(LLVM_TOOL_LLVM_DEBUGINFOD_BUILD Off)
+endif()
+
 if (LLVM_TOOL_LLVM_DRIVER_BUILD)
   add_llvm_tool(llvm-driver)
 endif()

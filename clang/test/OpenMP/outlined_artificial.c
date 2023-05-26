@@ -54,7 +54,7 @@ int main() {
 // CHECK-DAG: !DISubprogram(name: "__captured_stmt"
 // CHECK-DAG-SAME: flags: DIFlagArtificial
 
-// CHECK-DAG: !DISubprogram(name: ".omp_outlined._debug__"
+// CHECK-DAG: !DISubprogram(name: "main.omp_outlined_debug__"
 // CHECK-DAG-SAME: flags: DIFlagArtificial
 
 // CHECK-DAG: !DISubprogram(linkageName: ".omp_task_entry."
@@ -63,5 +63,5 @@ int main() {
 // CHECK-DAG: !DISubprogram(name: ".omp_outlined."
 // CHECK-DAG-SAME: flags: DIFlagArtificial
 
-// CHECK-DAG: !DISubprogram(name: ".omp_outlined..1"
+// CHECK-DAG: !DISubprogram(name: "main.omp_outlined"
 // CHECK-DAG-SAME: flags: DIFlagArtificial

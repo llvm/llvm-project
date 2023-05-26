@@ -2,15 +2,24 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -target-abi lp64f -disable-strictnode-mutation < %s | \
 ; RUN:   FileCheck %s -check-prefix=RV64IZFHMIN
+; RUN: llc -mtriple=riscv64 -mattr=+zhinxmin -verify-machineinstrs \
+; RUN:   -target-abi lp64 -disable-strictnode-mutation < %s | \
+; RUN:   FileCheck %s -check-prefix=RV64IZHINXMIN
 
 ; This file exhaustively checks half<->i32 conversions.
 
 define i32 @aext_fptosi(half %a) nounwind {
 ; RV64IZFHMIN-LABEL: aext_fptosi:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFHMIN-NEXT:    fcvt.w.s a0, ft0, rtz
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: aext_fptosi:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %a, metadata !"fpexcept.strict") strictfp
   ret i32 %1
 }
@@ -19,9 +28,15 @@ declare i32 @llvm.experimental.constrained.fptosi.i32.f16(half, metadata)
 define signext i32 @sext_fptosi(half %a) nounwind {
 ; RV64IZFHMIN-LABEL: sext_fptosi:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFHMIN-NEXT:    fcvt.w.s a0, ft0, rtz
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: sext_fptosi:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %a, metadata !"fpexcept.strict") strictfp
   ret i32 %1
 }
@@ -29,11 +44,19 @@ define signext i32 @sext_fptosi(half %a) nounwind {
 define zeroext i32 @zext_fptosi(half %a) nounwind {
 ; RV64IZFHMIN-LABEL: zext_fptosi:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFHMIN-NEXT:    fcvt.w.s a0, ft0, rtz
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64IZFHMIN-NEXT:    slli a0, a0, 32
 ; RV64IZFHMIN-NEXT:    srli a0, a0, 32
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: zext_fptosi:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
+; RV64IZHINXMIN-NEXT:    slli a0, a0, 32
+; RV64IZHINXMIN-NEXT:    srli a0, a0, 32
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %a, metadata !"fpexcept.strict") strictfp
   ret i32 %1
 }
@@ -41,9 +64,15 @@ define zeroext i32 @zext_fptosi(half %a) nounwind {
 define i32 @aext_fptoui(half %a) nounwind {
 ; RV64IZFHMIN-LABEL: aext_fptoui:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFHMIN-NEXT:    fcvt.wu.s a0, ft0, rtz
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IZFHMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: aext_fptoui:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %a, metadata !"fpexcept.strict") strictfp
   ret i32 %1
 }
@@ -52,9 +81,15 @@ declare i32 @llvm.experimental.constrained.fptoui.i32.f16(half, metadata)
 define signext i32 @sext_fptoui(half %a) nounwind {
 ; RV64IZFHMIN-LABEL: sext_fptoui:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFHMIN-NEXT:    fcvt.wu.s a0, ft0, rtz
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IZFHMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: sext_fptoui:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %a, metadata !"fpexcept.strict") strictfp
   ret i32 %1
 }
@@ -62,9 +97,15 @@ define signext i32 @sext_fptoui(half %a) nounwind {
 define zeroext i32 @zext_fptoui(half %a) nounwind {
 ; RV64IZFHMIN-LABEL: zext_fptoui:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; RV64IZFHMIN-NEXT:    fcvt.lu.s a0, ft0, rtz
+; RV64IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; RV64IZFHMIN-NEXT:    fcvt.lu.s a0, fa5, rtz
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: zext_fptoui:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.lu.s a0, a0, rtz
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %a, metadata !"fpexcept.strict") strictfp
   ret i32 %1
 }
@@ -74,9 +115,17 @@ define half @uitofp_aext_i32_to_f16(i32 %a) nounwind {
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    slli a0, a0, 32
 ; RV64IZFHMIN-NEXT:    srli a0, a0, 32
-; RV64IZFHMIN-NEXT:    fcvt.s.lu ft0, a0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: uitofp_aext_i32_to_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    slli a0, a0, 32
+; RV64IZHINXMIN-NEXT:    srli a0, a0, 32
+; RV64IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -87,9 +136,17 @@ define half @uitofp_sext_i32_to_f16(i32 signext %a) nounwind {
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    slli a0, a0, 32
 ; RV64IZFHMIN-NEXT:    srli a0, a0, 32
-; RV64IZFHMIN-NEXT:    fcvt.s.lu ft0, a0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: uitofp_sext_i32_to_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    slli a0, a0, 32
+; RV64IZHINXMIN-NEXT:    srli a0, a0, 32
+; RV64IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -97,9 +154,15 @@ define half @uitofp_sext_i32_to_f16(i32 signext %a) nounwind {
 define half @uitofp_zext_i32_to_f16(i32 zeroext %a) nounwind {
 ; RV64IZFHMIN-LABEL: uitofp_zext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.lu ft0, a0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: uitofp_zext_i32_to_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -108,9 +171,16 @@ define half @sitofp_aext_i32_to_f16(i32 %a) nounwind {
 ; RV64IZFHMIN-LABEL: sitofp_aext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    sext.w a0, a0
-; RV64IZFHMIN-NEXT:    fcvt.s.l ft0, a0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: sitofp_aext_i32_to_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    sext.w a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -119,9 +189,15 @@ declare half @llvm.experimental.constrained.sitofp.f16.i32(i32 %a, metadata, met
 define half @sitofp_sext_i32_to_f16(i32 signext %a) nounwind {
 ; RV64IZFHMIN-LABEL: sitofp_sext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.l ft0, a0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: sitofp_sext_i32_to_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -130,9 +206,16 @@ define half @sitofp_zext_i32_to_f16(i32 zeroext %a) nounwind {
 ; RV64IZFHMIN-LABEL: sitofp_zext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    sext.w a0, a0
-; RV64IZFHMIN-NEXT:    fcvt.s.l ft0, a0
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; RV64IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: sitofp_zext_i32_to_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    sext.w a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }

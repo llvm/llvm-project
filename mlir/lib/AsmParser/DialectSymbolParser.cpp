@@ -260,7 +260,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
       });
 
   // Ensure that the attribute has the same type as requested.
-  auto typedAttr = attr.dyn_cast_or_null<TypedAttr>();
+  auto typedAttr = dyn_cast_or_null<TypedAttr>(attr);
   if (type && typedAttr && typedAttr.getType() != type) {
     emitError("attribute type different than expected: expected ")
         << type << ", but got " << typedAttr.getType();

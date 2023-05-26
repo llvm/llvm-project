@@ -67,9 +67,8 @@ static std::unique_ptr<raw_fd_ostream> openLTOOutputFile(StringRef file) {
 }
 
 static std::string getThinLTOOutputFile(StringRef modulePath) {
-  return lto::getThinLTOOutputFile(
-      std::string(modulePath), std::string(config->thinLTOPrefixReplace.first),
-      std::string(config->thinLTOPrefixReplace.second));
+  return lto::getThinLTOOutputFile(modulePath, config->thinLTOPrefixReplaceOld,
+                                   config->thinLTOPrefixReplaceNew);
 }
 
 static lto::Config createConfig() {
@@ -196,8 +195,9 @@ BitcodeCompiler::BitcodeCompiler() {
   auto onIndexWrite = [&](StringRef s) { thinIndices.erase(s); };
   if (config->thinLTOIndexOnly) {
     backend = lto::createWriteIndexesThinBackend(
-        std::string(config->thinLTOPrefixReplace.first),
-        std::string(config->thinLTOPrefixReplace.second),
+        std::string(config->thinLTOPrefixReplaceOld),
+        std::string(config->thinLTOPrefixReplaceNew),
+        std::string(config->thinLTOPrefixReplaceNativeObject),
         config->thinLTOEmitImportsFiles, indexFile.get(), onIndexWrite);
   } else {
     backend = lto::createInProcessThinBackend(

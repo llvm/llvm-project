@@ -16,7 +16,15 @@ func.func @_QQmain() {
 
 // PASSES: Pass statistics report
 
-// PASSES:      CSE
+// PASSES:        Canonicalizer
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   SimplifyHLFIRIntrinsics
+// PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   LowerHLFIROrderedAssignments
+// PASSES-NEXT:   LowerHLFIRIntrinsics
+// PASSES-NEXT:   BufferizeHLFIR
+// PASSES-NEXT:   ConvertHLFIRtoFIR
+// PASSES-NEXT:   CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 

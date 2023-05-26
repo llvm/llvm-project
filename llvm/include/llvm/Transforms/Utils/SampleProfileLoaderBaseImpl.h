@@ -34,6 +34,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/CommandLine.h"
@@ -79,6 +80,55 @@ template <> struct IRTraits<BasicBlock> {
 };
 
 } // end namespace afdo_detail
+
+// This class serves sample counts correlation for SampleProfileLoader by
+// analyzing pseudo probes and their function descriptors injected by
+// SampleProfileProber.
+class PseudoProbeManager {
+  DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
+
+  const PseudoProbeDescriptor *getDesc(const Function &F) const {
+    auto I = GUIDToProbeDescMap.find(
+        Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
+    return I == GUIDToProbeDescMap.end() ? nullptr : &I->second;
+  }
+
+public:
+  PseudoProbeManager(const Module &M) {
+    if (NamedMDNode *FuncInfo =
+            M.getNamedMetadata(PseudoProbeDescMetadataName)) {
+      for (const auto *Operand : FuncInfo->operands()) {
+        const auto *MD = cast<MDNode>(Operand);
+        auto GUID = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0))
+                        ->getZExtValue();
+        auto Hash = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))
+                        ->getZExtValue();
+        GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
+      }
+    }
+  }
+
+  bool moduleIsProbed(const Module &M) const {
+    return M.getNamedMetadata(PseudoProbeDescMetadataName);
+  }
+
+  bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
+    const auto *Desc = getDesc(F);
+    if (!Desc) {
+      LLVM_DEBUG(dbgs() << "Probe descriptor missing for Function "
+                        << F.getName() << "\n");
+      return false;
+    }
+    if (Desc->getFunctionHash() != Samples.getFunctionHash()) {
+      LLVM_DEBUG(dbgs() << "Hash mismatch for Function " << F.getName()
+                        << "\n");
+      return false;
+    }
+    return true;
+  }
+};
+
+
 
 extern cl::opt<bool> SampleProfileUseProfi;
 
@@ -137,6 +187,7 @@ protected:
   unsigned getFunctionLoc(FunctionT &Func);
   virtual ErrorOr<uint64_t> getInstWeight(const InstructionT &Inst);
   ErrorOr<uint64_t> getInstWeightImpl(const InstructionT &Inst);
+  virtual ErrorOr<uint64_t> getProbeWeight(const InstructionT &Inst);
   ErrorOr<uint64_t> getBlockWeight(const BasicBlockT *BB);
   mutable DenseMap<const DILocation *, const FunctionSamples *>
       DILocation2SampleMap;
@@ -211,6 +262,9 @@ protected:
 
   /// Profile reader object.
   std::unique_ptr<SampleProfileReader> Reader;
+
+  // A pseudo probe helper to correlate the imported sample counts.
+  std::unique_ptr<PseudoProbeManager> ProbeManager;
 
   /// Samples collected for the body of this function.
   FunctionSamples *Samples = nullptr;
@@ -299,6 +353,8 @@ void SampleProfileLoaderBaseImpl<BT>::printBlockWeight(
 template <typename BT>
 ErrorOr<uint64_t>
 SampleProfileLoaderBaseImpl<BT>::getInstWeight(const InstructionT &Inst) {
+  if (FunctionSamples::ProfileIsProbeBased)
+    return getProbeWeight(Inst);
   return getInstWeightImpl(Inst);
 }
 
@@ -342,6 +398,65 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
     LLVM_DEBUG(dbgs() << "    " << DLoc.getLine() << "." << Discriminator << ":"
                       << Inst << " (line offset: " << LineOffset << "."
                       << Discriminator << " - weight: " << R.get() << ")\n");
+  }
+  return R;
+}
+
+// Here use error_code to represent: 1) The dangling probe. 2) Ignore the weight
+// of non-probe instruction. So if all instructions of the BB give error_code,
+// tell the inference algorithm to infer the BB weight.
+template <typename BT>
+ErrorOr<uint64_t>
+SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
+  assert(FunctionSamples::ProfileIsProbeBased &&
+         "Profile is not pseudo probe based");
+  std::optional<PseudoProbe> Probe = extractProbe(Inst);
+  // Ignore the non-probe instruction. If none of the instruction in the BB is
+  // probe, we choose to infer the BB's weight.
+  if (!Probe)
+    return std::error_code();
+
+  const FunctionSamples *FS = findFunctionSamples(Inst);
+  // If none of the instruction has FunctionSample, we choose to return zero
+  // value sample to indicate the BB is cold. This could happen when the
+  // instruction is from inlinee and no profile data is found.
+  // FIXME: This should not be affected by the source drift issue as 1) if the
+  // newly added function is top-level inliner, it won't match the CFG checksum
+  // in the function profile or 2) if it's the inlinee, the inlinee should have
+  // a profile, otherwise it wouldn't be inlined. For non-probe based profile,
+  // we can improve it by adding a switch for profile-sample-block-accurate for
+  // block level counts in the future.
+  if (!FS)
+    return 0;
+
+  auto R = FS->findSamplesAt(Probe->Id, Probe->Discriminator);
+  if (R) {
+    uint64_t Samples = R.get() * Probe->Factor;
+    bool FirstMark = CoverageTracker.markSamplesUsed(FS, Probe->Id, 0, Samples);
+    if (FirstMark) {
+      ORE->emit([&]() {
+        OptRemarkAnalysisT Remark(DEBUG_TYPE, "AppliedSamples", &Inst);
+        Remark << "Applied " << ore::NV("NumSamples", Samples);
+        Remark << " samples from profile (ProbeId=";
+        Remark << ore::NV("ProbeId", Probe->Id);
+        if (Probe->Discriminator) {
+          Remark << ".";
+          Remark << ore::NV("Discriminator", Probe->Discriminator);
+        }
+        Remark << ", Factor=";
+        Remark << ore::NV("Factor", Probe->Factor);
+        Remark << ", OriginalSamples=";
+        Remark << ore::NV("OriginalSamples", R.get());
+        Remark << ")";
+        return Remark;
+      });
+    }
+    LLVM_DEBUG({dbgs() << "    " << Probe->Id;
+      if (Probe->Discriminator)
+        dbgs() << "." << Probe->Discriminator;
+      dbgs() << ":" << Inst << " - weight: " << R.get()
+             << " - factor: " << format("%0.2f", Probe->Factor) << ")\n";});
+    return Samples;
   }
   return R;
 }

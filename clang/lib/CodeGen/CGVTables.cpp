@@ -1045,19 +1045,20 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     switch (keyFunction->getTemplateSpecializationKind()) {
       case TSK_Undeclared:
       case TSK_ExplicitSpecialization:
-        assert((def || CodeGenOpts.OptimizationLevel > 0 ||
-                CodeGenOpts.getDebugInfo() != codegenoptions::NoDebugInfo) &&
-               "Shouldn't query vtable linkage without key function, "
-               "optimizations, or debug info");
-        if (!def && CodeGenOpts.OptimizationLevel > 0)
-          return llvm::GlobalVariable::AvailableExternallyLinkage;
+      assert(
+          (def || CodeGenOpts.OptimizationLevel > 0 ||
+           CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo) &&
+          "Shouldn't query vtable linkage without key function, "
+          "optimizations, or debug info");
+      if (!def && CodeGenOpts.OptimizationLevel > 0)
+        return llvm::GlobalVariable::AvailableExternallyLinkage;
 
-        if (keyFunction->isInlined())
-          return !Context.getLangOpts().AppleKext ?
-                   llvm::GlobalVariable::LinkOnceODRLinkage :
-                   llvm::Function::InternalLinkage;
+      if (keyFunction->isInlined())
+        return !Context.getLangOpts().AppleKext
+                   ? llvm::GlobalVariable::LinkOnceODRLinkage
+                   : llvm::Function::InternalLinkage;
 
-        return llvm::GlobalVariable::ExternalLinkage;
+      return llvm::GlobalVariable::ExternalLinkage;
 
       case TSK_ImplicitInstantiation:
         return !Context.getLangOpts().AppleKext ?
@@ -1211,7 +1212,8 @@ void CodeGenModule::EmitDeferredVTables() {
 }
 
 bool CodeGenModule::AlwaysHasLTOVisibilityPublic(const CXXRecordDecl *RD) {
-  if (RD->hasAttr<LTOVisibilityPublicAttr>() || RD->hasAttr<UuidAttr>())
+  if (RD->hasAttr<LTOVisibilityPublicAttr>() || RD->hasAttr<UuidAttr>() ||
+      RD->hasAttr<DLLExportAttr>() || RD->hasAttr<DLLImportAttr>())
     return true;
 
   if (!getCodeGenOpts().LTOVisibilityPublicStd)
@@ -1238,13 +1240,9 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
   if (!isExternallyVisible(LV.getLinkage()))
     return true;
 
-  if (getTriple().isOSBinFormatCOFF()) {
-    if (RD->hasAttr<DLLExportAttr>() || RD->hasAttr<DLLImportAttr>())
-      return false;
-  } else {
-    if (LV.getVisibility() != HiddenVisibility)
-      return false;
-  }
+  if (!getTriple().isOSBinFormatCOFF() &&
+      LV.getVisibility() != HiddenVisibility)
+    return false;
 
   return !AlwaysHasLTOVisibilityPublic(RD);
 }
@@ -1268,13 +1266,13 @@ llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
   else
     TypeVis = llvm::GlobalObject::VCallVisibilityPublic;
 
-  for (auto B : RD->bases())
+  for (const auto &B : RD->bases())
     if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
       TypeVis = std::min(
           TypeVis,
           GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl(), Visited));
 
-  for (auto B : RD->vbases())
+  for (const auto &B : RD->vbases())
     if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
       TypeVis = std::min(
           TypeVis,

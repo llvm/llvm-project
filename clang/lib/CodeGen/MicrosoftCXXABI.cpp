@@ -3757,7 +3757,7 @@ llvm::GlobalVariable *MSRTTIBuilder::getClassHierarchyDescriptor() {
   Classes.front().initialize(/*Parent=*/nullptr, /*Specifier=*/nullptr);
   detectAmbiguousBases(Classes);
   int Flags = 0;
-  for (auto Class : Classes) {
+  for (const MSRTTIClass &Class : Classes) {
     if (Class.RD->getNumBases() > 1)
       Flags |= HasBranchingHierarchy;
     // Note: cl.exe does not calculate "HasAmbiguousBases" correctly.  We

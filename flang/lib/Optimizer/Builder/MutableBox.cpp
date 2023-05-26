@@ -674,10 +674,11 @@ void fir::factory::disassociateMutableBox(fir::FirOpBuilder &builder,
     auto boxTy = box.getBoxTy().dyn_cast<fir::BaseBoxType>();
     auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy.getEleTy());
     mlir::Type derivedType = fir::getDerivedType(eleTy);
-    if (auto recTy = derivedType.dyn_cast<fir::RecordType>())
+    if (auto recTy = derivedType.dyn_cast<fir::RecordType>()) {
       fir::runtime::genNullifyDerivedType(builder, loc, box.getAddr(), recTy,
                                           box.rank());
-    return;
+      return;
+    }
   }
   MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
 }
@@ -932,4 +933,14 @@ void fir::factory::syncMutableBoxFromIRBox(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            const fir::MutableBoxValue &box) {
   MutablePropertyWriter{builder, loc, box}.syncMutablePropertiesFromIRBox();
+}
+
+mlir::Value fir::factory::genNullBoxStorage(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Type boxTy) {
+  mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
+  mlir::Value nullBox = fir::factory::createUnallocatedBox(
+      builder, loc, boxTy, /*nonDeferredParams=*/{});
+  builder.create<fir::StoreOp>(loc, nullBox, boxStorage);
+  return boxStorage;
 }

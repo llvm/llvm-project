@@ -64,7 +64,6 @@ public:
 #include <__verbose_abort>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -360,7 +359,7 @@ class _LIBCPP_EXCEPTION_ABI bad_cast
 {
  public:
   bad_cast() _NOEXCEPT;
-  bad_cast(const bad_cast&) _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI bad_cast(const bad_cast&) _NOEXCEPT = default;
   ~bad_cast() _NOEXCEPT override;
   const char* what() const _NOEXCEPT override;
 };
@@ -415,6 +414,7 @@ void __throw_bad_cast()
 _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstdlib>
 #  include <exception>
 #  include <type_traits>
 #endif

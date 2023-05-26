@@ -38,11 +38,11 @@ namespace ranges {
     _Rp __r_ = _Rp();
 
 public:
-    owning_view() requires default_initializable<_Rp> = default;
+    _LIBCPP_HIDE_FROM_ABI owning_view() requires default_initializable<_Rp> = default;
     _LIBCPP_HIDE_FROM_ABI constexpr owning_view(_Rp&& __r) : __r_(std::move(__r)) {}
 
-    owning_view(owning_view&&) = default;
-    owning_view& operator=(owning_view&&) = default;
+    _LIBCPP_HIDE_FROM_ABI owning_view(owning_view&&) = default;
+    _LIBCPP_HIDE_FROM_ABI owning_view& operator=(owning_view&&) = default;
 
     _LIBCPP_HIDE_FROM_ABI constexpr _Rp& base() & noexcept { return __r_; }
     _LIBCPP_HIDE_FROM_ABI constexpr const _Rp& base() const& noexcept { return __r_; }

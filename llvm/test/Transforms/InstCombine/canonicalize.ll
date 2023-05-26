@@ -457,5 +457,20 @@ define i1 @canonicalize_uno_arg_f32(float %x) {
   ret i1 %cmp
 }
 
+; --------------------------------------------------------------------
+; Others
+; --------------------------------------------------------------------
+
+; Regression test checking that the vector version of llvm.canonicalize works.
+define <2 x i1> @vec_canonicalize_with_fpclass(<2 x float> %x) {
+; CHECK-LABEL: @vec_canonicalize_with_fpclass(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %canon = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
+  %fpclass = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %canon, i32 1)
+  ret <2 x i1> %fpclass
+}
+
 declare float @llvm.canonicalize.f32(float)
 declare <2 x float> @llvm.canonicalize.v2f32(<2 x float>)
+declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32 immarg)

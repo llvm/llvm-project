@@ -49,7 +49,7 @@ extern "C" {
    in C2x mode; switch to the correct values once they've been published. */
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ < 202000L) ||               \
     defined(__cplusplus)
-/* ATOMIC_VAR_INIT was removed in C2x, but still remains in C++2b. */
+/* ATOMIC_VAR_INIT was removed in C2x, but still remains in C++23. */
 #define ATOMIC_VAR_INIT(value) (value)
 #endif
 

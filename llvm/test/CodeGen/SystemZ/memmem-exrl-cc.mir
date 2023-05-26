@@ -1,0 +1,126 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -O3 -start-before=finalize-isel %s -o - \
+# RUN:   -verify-machineinstrs | FileCheck %s
+#
+# Test that the exrl used for the remainder of a memset (after xc loop) is
+# not rescheduled incorrectly in a way that interfers with CC liveness.
+
+--- |
+  define void @fun(ptr %Src, ptr %Dst, i64 %Len) { ret void }
+...
+
+# CHECK-LABEL: fun:
+
+# CHECK:       exrl    %r4, .Ltmp0
+# CHECK-NEXT:  cgije
+
+# CHECK:       exrl    %r4, .Ltmp1
+# CHECK-NEXT:  tmll
+# CHECK-NEXT:  jne
+
+# CHECK:       .Ltmp1:
+# CHECK-NEXT:  xc      0(1,%r3), 0(%r2)
+# CHECK-NEXT:  .Ltmp0:
+# CHECK-NEXT:  xc      0(1,%r14), 0(%r14)
+---
+name:            fun
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: grx32bit }
+  - { id: 1, class: addr64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: gr64bit }
+  - { id: 4, class: gr64bit }
+  - { id: 5, class: grx32bit }
+  - { id: 6, class: addr64bit }
+  - { id: 7, class: addr64bit }
+  - { id: 8, class: gr64bit }
+  - { id: 9, class: gr128bit }
+  - { id: 10, class: gr64bit }
+  - { id: 11, class: gr32bit }
+  - { id: 12, class: gr32bit }
+  - { id: 13, class: gr32bit }
+  - { id: 14, class: addr64bit }
+  - { id: 15, class: gr64bit }
+  - { id: 16, class: gr64bit }
+  - { id: 17, class: addr64bit }
+  - { id: 18, class: gr64bit }
+  - { id: 19, class: vr128bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%1' }
+  - { reg: '$r3d', virtual-reg: '%2' }
+  - { reg: '$r4d', virtual-reg: '%3' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.1', '%bb.2', '%bb.5', '%bb.6', '%bb.7', '%bb.7', 
+                         '%bb.7', '%bb.7', '%bb.7', '%bb.7', '%bb.7', '%bb.7', 
+                         '%bb.2', '%bb.5', '%bb.6', '%bb.7', '%bb.1', '%bb.2', 
+                         '%bb.7', '%bb.7', '%bb.5' ]
+body:             |
+  bb.0:
+    liveins: $r2d, $r3d, $r4d
+  
+    %3:gr64bit = COPY $r4d
+    %2:addr64bit = COPY $r3d
+    %1:addr64bit = COPY $r2d
+    %4:gr64bit = LGHI 0
+  
+  bb.8:
+    successors: %bb.1(0x00000000), %bb.2(0x00000000), %bb.5(0x00000000), %bb.6(0x00000000), %bb.7(0x80000000)
+  
+    %6:addr64bit = SLLG %4, $noreg, 3
+    %7:addr64bit = LARL %jump-table.0
+    BI killed %6, 0, killed %7 :: (load (s64) from jump-table)
+  
+  bb.1:
+    successors: 
+  
+  
+  bb.2:
+    successors: %bb.4(0x30000000), %bb.3(0x50000000)
+  
+    %8:gr64bit = LG %1, 0, $noreg
+    %9:gr128bit = FLOGR killed %8, implicit-def dead $cc
+    %10:gr64bit = COPY %9.subreg_h64
+    %11:gr32bit = COPY %10.subreg_l32
+    %12:gr32bit = LHIMux 64
+    %13:gr32bit = nuw nsw SRK killed %12, killed %11, implicit-def dead $cc
+    %0:grx32bit = COPY %13
+    %14:addr64bit = AGHIK %3, -1, implicit-def dead $cc
+    XCReg %1, 0, %1, 0, %14, implicit-def dead $cc
+    XCReg %2, 0, %1, 0, %14, implicit-def dead $cc
+    TMLMux %13, 7, implicit-def $cc
+    BRC 15, 8, %bb.4, implicit $cc
+    J %bb.3
+  
+  bb.3:
+    successors: 
+  
+    %16:gr64bit = IMPLICIT_DEF
+    %15:gr64bit = INSERT_SUBREG %16, %0, %subreg.subreg_l32
+    %18:gr64bit = IMPLICIT_DEF
+    %17:addr64bit = RISBGN %18, killed %15, 54, 185, 3
+    %19:vr128bit = VGBM 0
+    VST killed %19, killed %17, 16, $noreg
+  
+  bb.4:
+    successors: 
+  
+  
+  bb.5:
+    successors: 
+  
+  
+  bb.6:
+    successors: 
+  
+  
+  bb.7:
+    Return
+
+...

@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/TypeSize.h"
 #include "gtest/gtest.h"
 

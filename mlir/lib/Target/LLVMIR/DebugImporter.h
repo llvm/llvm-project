@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LIB_TARGET_LLVMIR_DEBUGIMPORT_H_
-#define MLIR_LIB_TARGET_LLVMIR_DEBUGIMPORT_H_
+#ifndef MLIR_LIB_TARGET_LLVMIR_DEBUGIMPORTER_H_
+#define MLIR_LIB_TARGET_LLVMIR_DEBUGIMPORTER_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -86,4 +86,4 @@ private:
 } // namespace LLVM
 } // namespace mlir
 
-#endif // MLIR_LIB_TARGET_LLVMIR_DEBUIMPORTN_H_
+#endif // MLIR_LIB_TARGET_LLVMIR_DEBUGIMPORTER_H_

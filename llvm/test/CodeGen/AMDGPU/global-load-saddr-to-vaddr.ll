@@ -62,7 +62,6 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr_d16_hi(ptr addrspace(1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:  .LBB1_1: ; %bb3
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_lshlrev_b64 v[2:3], 1, v[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-NEXT:    v_add_co_u32_e32 v2, vcc, s0, v2

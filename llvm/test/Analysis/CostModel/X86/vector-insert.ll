@@ -663,7 +663,7 @@ define i32 @insert_i16(i32 %arg) {
 
 define i32 @insert_i8(i32 %arg) {
 ; SSE2-LABEL: 'insert_i8'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
@@ -696,7 +696,7 @@ define i32 @insert_i8(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'insert_i8'
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
@@ -729,7 +729,7 @@ define i32 @insert_i8(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'insert_i8'
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
@@ -762,7 +762,7 @@ define i32 @insert_i8(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE4-LABEL: 'insert_i8'
-; SSE4-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
@@ -795,7 +795,7 @@ define i32 @insert_i8(i32 %arg) {
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX-LABEL: 'insert_i8'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
@@ -828,7 +828,7 @@ define i32 @insert_i8(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'insert_i8'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
@@ -861,7 +861,7 @@ define i32 @insert_i8(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'insert_i8'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
@@ -894,7 +894,7 @@ define i32 @insert_i8(i32 %arg) {
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; GLM-LABEL: 'insert_i8'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i8_a = insertelement <2 x i8> undef, i8 undef, i32 %arg
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_0 = insertelement <2 x i8> undef, i8 undef, i32 0
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i8_3 = insertelement <2 x i8> undef, i8 undef, i32 1
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> undef, i8 undef, i32 %arg
@@ -967,16 +967,16 @@ define i32 @insert_i8(i32 %arg) {
 
 define i32 @insert_i1(i32 %arg) {
 ; SSE2-LABEL: 'insert_i1'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_2 = insertelement <4 x i1> undef, i1 undef, i32 2
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> undef, i1 undef, i32 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_8 = insertelement <16 x i1> undef, i1 undef, i32 8
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_15 = insertelement <16 x i1> undef, i1 undef, i32 15
@@ -1000,16 +1000,16 @@ define i32 @insert_i1(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'insert_i1'
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_2 = insertelement <4 x i1> undef, i1 undef, i32 2
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> undef, i1 undef, i32 4
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_8 = insertelement <16 x i1> undef, i1 undef, i32 8
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_15 = insertelement <16 x i1> undef, i1 undef, i32 15
@@ -1033,16 +1033,16 @@ define i32 @insert_i1(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'insert_i1'
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_2 = insertelement <4 x i1> undef, i1 undef, i32 2
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> undef, i1 undef, i32 4
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i1_8 = insertelement <16 x i1> undef, i1 undef, i32 8
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i1_15 = insertelement <16 x i1> undef, i1 undef, i32 15
@@ -1066,16 +1066,16 @@ define i32 @insert_i1(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE4-LABEL: 'insert_i1'
-; SSE4-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
-; SSE4-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_2 = insertelement <4 x i1> undef, i1 undef, i32 2
-; SSE4-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> undef, i1 undef, i32 4
-; SSE4-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
+; SSE4-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_8 = insertelement <16 x i1> undef, i1 undef, i32 8
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_15 = insertelement <16 x i1> undef, i1 undef, i32 15
@@ -1099,16 +1099,16 @@ define i32 @insert_i1(i32 %arg) {
 ; SSE4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX-LABEL: 'insert_i1'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_2 = insertelement <4 x i1> undef, i1 undef, i32 2
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> undef, i1 undef, i32 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_8 = insertelement <16 x i1> undef, i1 undef, i32 8
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_15 = insertelement <16 x i1> undef, i1 undef, i32 15
@@ -1132,27 +1132,27 @@ define i32 @insert_i1(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'insert_i1'
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_2 = insertelement <4 x i1> undef, i1 undef, i32 2
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> undef, i1 undef, i32 4
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_8 = insertelement <16 x i1> undef, i1 undef, i32 8
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_15 = insertelement <16 x i1> undef, i1 undef, i32 15
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v32i1_a = insertelement <32 x i1> undef, i1 undef, i32 %arg
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v32i1_a = insertelement <32 x i1> undef, i1 undef, i32 %arg
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_0 = insertelement <32 x i1> undef, i1 undef, i32 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_7 = insertelement <32 x i1> undef, i1 undef, i32 7
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_8 = insertelement <32 x i1> undef, i1 undef, i32 8
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_15 = insertelement <32 x i1> undef, i1 undef, i32 15
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_24 = insertelement <32 x i1> undef, i1 undef, i32 24
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v32i1_31 = insertelement <32 x i1> undef, i1 undef, i32 31
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v64i1_a = insertelement <64 x i1> undef, i1 undef, i32 %arg
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v64i1_a = insertelement <64 x i1> undef, i1 undef, i32 %arg
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_0 = insertelement <64 x i1> undef, i1 undef, i32 0
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_7 = insertelement <64 x i1> undef, i1 undef, i32 7
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i1_8 = insertelement <64 x i1> undef, i1 undef, i32 8
@@ -1165,16 +1165,16 @@ define i32 @insert_i1(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'insert_i1'
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_2 = insertelement <4 x i1> undef, i1 undef, i32 2
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> undef, i1 undef, i32 4
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_8 = insertelement <16 x i1> undef, i1 undef, i32 8
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_15 = insertelement <16 x i1> undef, i1 undef, i32 15
@@ -1198,16 +1198,16 @@ define i32 @insert_i1(i32 %arg) {
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'insert_i1'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_2 = insertelement <4 x i1> undef, i1 undef, i32 2
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> undef, i1 undef, i32 4
-; SLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_8 = insertelement <16 x i1> undef, i1 undef, i32 8
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_15 = insertelement <16 x i1> undef, i1 undef, i32 15
@@ -1231,16 +1231,16 @@ define i32 @insert_i1(i32 %arg) {
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; GLM-LABEL: 'insert_i1'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i1_a = insertelement <2 x i1> undef, i1 undef, i32 %arg
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_0 = insertelement <2 x i1> undef, i1 undef, i32 0
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i1_1 = insertelement <2 x i1> undef, i1 undef, i32 1
-; GLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i1_a = insertelement <4 x i1> undef, i1 undef, i32 %arg
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_0 = insertelement <4 x i1> undef, i1 undef, i32 0
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i1_2 = insertelement <4 x i1> undef, i1 undef, i32 2
-; GLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i1_a = insertelement <8 x i1> undef, i1 undef, i32 %arg
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> undef, i1 undef, i32 0
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> undef, i1 undef, i32 4
-; GLM-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
+; GLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v16i1_a = insertelement <16 x i1> undef, i1 undef, i32 %arg
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_0 = insertelement <16 x i1> undef, i1 undef, i32 0
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_8 = insertelement <16 x i1> undef, i1 undef, i32 8
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i1_15 = insertelement <16 x i1> undef, i1 undef, i32 15

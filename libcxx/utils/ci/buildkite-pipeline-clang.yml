@@ -14,14 +14,19 @@
 # in various configurations.
 #
 env:
+    # LLVM RELEASE bump version
     LLVM_HEAD_VERSION: "17"
 steps:
   - label: "Building clang"
     commands:
       - "mkdir install"
-      - "cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=install -DLLVM_ENABLE_PROJECTS=\"clang;compiler-rt\""
+      # We use Release here to avoid including debug information. Otherwise, the clang binary is very large, which
+      # is problematic because we need to upload the artifacts for other jobs to use. This may seem like nothing,
+      # but with the number of jobs we run daily, this can result in thousands of GB of network I/O.
+      - "cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DLLVM_ENABLE_PROJECTS=\"clang;compiler-rt\""
       - "ninja -C build install-clang install-clang-resource-headers"
-      - "buildkite-agent artifact upload 'install/**/*'"
+      - "tar -cJvf install.tar.xz install/"
+      - "buildkite-agent artifact upload --debug install.tar.xz"
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
@@ -38,7 +43,8 @@ steps:
 
   - label: "C++03"
     commands:
-      - "buildkite-agent artifact download 'install/**' ."
+      - "buildkite-agent artifact download install.tar.xz ."
+      - "tar -xvf install.tar.xz"
       - "export CC=$(pwd)/install/bin/clang"
       - "export CXX=$(pwd)/install/bin/clang++"
       - "chmod +x install/bin/clang install/bin/clang++"
@@ -58,13 +64,14 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "C++2b"
+  - label: "C++26"
     commands:
-      - "buildkite-agent artifact download 'install/**' ."
+      - "buildkite-agent artifact download install.tar.xz ."
+      - "tar -xvf install.tar.xz"
       - "export CC=$(pwd)/install/bin/clang"
       - "export CXX=$(pwd)/install/bin/clang++"
       - "chmod +x install/bin/clang install/bin/clang++"
-      - "libcxx/utils/ci/run-buildbot generic-cxx2b"
+      - "libcxx/utils/ci/run-buildbot generic-cxx26"
     artifact_paths:
       - "**/test-results.xml"
       - "**/crash_diagnostics/*"
@@ -82,7 +89,8 @@ steps:
 
   - label: "Modules"
     commands:
-      - "buildkite-agent artifact download 'install/**' ."
+      - "buildkite-agent artifact download install.tar.xz ."
+      - "tar -xvf install.tar.xz"
       - "export CC=$(pwd)/install/bin/clang"
       - "export CXX=$(pwd)/install/bin/clang++"
       - "chmod +x install/bin/clang install/bin/clang++"

@@ -3,6 +3,10 @@
 cert-dcl21-cpp
 ==============
 
+.. note::
+  This check is deprecated since it's no longer part of the CERT standard.
+  It will be removed in :program:`clang-tidy` version 19.
+
 This check flags postfix ``operator++`` and ``operator--`` declarations
 if the return type is not a const object. This also warns if the return type
 is a reference type.

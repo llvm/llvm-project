@@ -281,7 +281,7 @@ uint32_t PlatformAndroid::GetSdkVersion() {
 Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
                                            const FileSpec &dst_file_spec) {
   // For oat file we can try to fetch additional debug info from the device
-  ConstString extension = module_sp->GetFileSpec().GetFileNameExtension();
+  llvm::StringRef extension = module_sp->GetFileSpec().GetFileNameExtension();
   if (extension != ".oat" && extension != ".odex")
     return Status(
         "Symbol file downloading only supported for oat and odex files");

@@ -21,8 +21,6 @@
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 

@@ -56,10 +56,9 @@ entry:
 ; CHECK-NEXT:  L..func_begin0:
 ; CHECK-NEXT:  # %bb.0:                                # %entry
 ; CHECK-NEXT:  L..tmp0:
-; CHECK-NEXT:  L..tmp1:
 ; CHECK-NEXT:          li 3, 1
 ; CHECK-NEXT:          blr
-; CHECK-NEXT:  L..tmp2:
+; CHECK-NEXT:  L..tmp1:
 ; CHECK-NEXT:  L..bar0:
 ; CHECK-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; CHECK-NEXT:          .byte   0x00                            # Version = 0
@@ -92,22 +91,22 @@ entry:
 ; CHECK-NEXT:  .main:
 ; CHECK-NEXT:  L..func_begin1:
 ; CHECK-NEXT:  # %bb.0:                                # %entry
-; CHECK-NEXT:  L..tmp3:
+; CHECK-NEXT:  L..tmp2:
 ; CHECK-NEXT:          mflr 0
 ; CHECK-NEXT:          stwu 1, -64(1)
 ; CHECK-NEXT:          li 3, 0
 ; CHECK-NEXT:          stw 0, 72(1)
 ; CHECK-NEXT:          stw 3, 60(1)
+; CHECK-NEXT:  L..tmp3:
 ; CHECK-NEXT:  L..tmp4:
-; CHECK-NEXT:  L..tmp5:
 ; CHECK-NEXT:          bl .bar
 ; CHECK-NEXT:          nop
-; CHECK-NEXT:  L..tmp6:
+; CHECK-NEXT:  L..tmp5:
 ; CHECK-NEXT:          addi 1, 1, 64
 ; CHECK-NEXT:          lwz 0, 8(1)
 ; CHECK-NEXT:          mtlr 0
 ; CHECK-NEXT:          blr
-; CHECK-NEXT:  L..tmp7:
+; CHECK-NEXT:  L..tmp6:
 ; CHECK-NEXT:  L..main0:
 ; CHECK-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; CHECK-NEXT:          .byte   0x00                            # Version = 0
@@ -281,21 +280,14 @@ entry:
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:  L..prologue_end0:
+; CHECK-NEXT:          .byte   5
+; CHECK-NEXT:          .byte   12
+; CHECK-NEXT:          .byte   10
 ; CHECK-NEXT:          .byte   0                               # Set address to L..tmp0
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   2
 ; CHECK-NEXT:          .vbyte  4, L..tmp0
 ; CHECK-NEXT:          .byte   1                               # Start sequence
-; CHECK-NEXT:          .byte   5
-; CHECK-NEXT:          .byte   12
-; CHECK-NEXT:          .byte   10
-; CHECK-NEXT:          .byte   0                               # Set address to L..tmp1
-; CHECK-NEXT:          .byte   5
-; CHECK-NEXT:          .byte   2
-; CHECK-NEXT:          .vbyte  4, L..tmp1
-; CHECK-NEXT:          .byte   3                               # Advance line 0
-; CHECK-NEXT:          .byte   0
-; CHECK-NEXT:          .byte   1
 ; CHECK-NEXT:          .byte   0                               # Set address to L..func_end0
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   2
@@ -303,28 +295,28 @@ entry:
 ; CHECK-NEXT:          .byte   0                               # End sequence
 ; CHECK-NEXT:          .byte   1
 ; CHECK-NEXT:          .byte   1
-; CHECK-NEXT:          .byte   0                               # Set address to L..tmp3
+; CHECK-NEXT:          .byte   0                               # Set address to L..tmp2
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   2
-; CHECK-NEXT:          .vbyte  4, L..tmp3
+; CHECK-NEXT:          .vbyte  4, L..tmp2
 ; CHECK-NEXT:          .byte   19                              # Start sequence
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   10
 ; CHECK-NEXT:          .byte   10
-; CHECK-NEXT:          .byte   0                               # Set address to L..tmp5
+; CHECK-NEXT:          .byte   0                               # Set address to L..tmp4
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   2
-; CHECK-NEXT:          .vbyte  4, L..tmp5
+; CHECK-NEXT:          .vbyte  4, L..tmp4
 ; CHECK-NEXT:          .byte   3                               # Advance line 1
 ; CHECK-NEXT:          .byte   1
 ; CHECK-NEXT:          .byte   1
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   3
 ; CHECK-NEXT:          .byte   6
-; CHECK-NEXT:          .byte   0                               # Set address to L..tmp6
+; CHECK-NEXT:          .byte   0                               # Set address to L..tmp5
 ; CHECK-NEXT:          .byte   5
 ; CHECK-NEXT:          .byte   2
-; CHECK-NEXT:          .vbyte  4, L..tmp6
+; CHECK-NEXT:          .vbyte  4, L..tmp5
 ; CHECK-NEXT:          .byte   3                               # Advance line 0
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:          .byte   1

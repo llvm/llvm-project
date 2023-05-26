@@ -44,6 +44,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <optional>
@@ -567,18 +568,17 @@ bool CodeGenFunction::AlwaysEmitXRayTypedEvents() const {
               XRayInstrKind::Typed);
 }
 
-llvm::Value *
-CodeGenFunction::DecodeAddrUsedInPrologue(llvm::Value *F,
-                                          llvm::Value *EncodedAddr) {
-  // Reconstruct the address of the global.
-  auto *PCRelAsInt = Builder.CreateSExt(EncodedAddr, IntPtrTy);
-  auto *FuncAsInt = Builder.CreatePtrToInt(F, IntPtrTy, "func_addr.int");
-  auto *GOTAsInt = Builder.CreateAdd(PCRelAsInt, FuncAsInt, "global_addr.int");
-  auto *GOTAddr = Builder.CreateIntToPtr(GOTAsInt, Int8PtrPtrTy, "global_addr");
-
-  // Load the original pointer through the global.
-  return Builder.CreateLoad(Address(GOTAddr, Int8PtrTy, getPointerAlign()),
-                            "decoded_addr");
+llvm::ConstantInt *
+CodeGenFunction::getUBSanFunctionTypeHash(QualType Ty) const {
+  // Remove any (C++17) exception specifications, to allow calling e.g. a
+  // noexcept function through a non-noexcept pointer.
+  if (!isa<FunctionNoProtoType>(Ty))
+    Ty = getContext().getFunctionTypeWithExceptionSpec(Ty, EST_None);
+  std::string Mangled;
+  llvm::raw_string_ostream Out(Mangled);
+  CGM.getCXXABI().getMangleContext().mangleTypeName(Ty, Out, false);
+  return llvm::ConstantInt::get(CGM.Int32Ty,
+                                static_cast<uint32_t>(llvm::xxHash64(Mangled)));
 }
 
 void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
@@ -730,31 +730,38 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   if (D) {
     const bool SanitizeBounds = SanOpts.hasOneOf(SanitizerKind::Bounds);
+    SanitizerMask no_sanitize_mask;
     bool NoSanitizeCoverage = false;
 
     for (auto *Attr : D->specific_attrs<NoSanitizeAttr>()) {
-      // Apply the no_sanitize* attributes to SanOpts.
-      SanitizerMask mask = Attr->getMask();
-      SanOpts.Mask &= ~mask;
-      if (mask & SanitizerKind::Address)
-        SanOpts.set(SanitizerKind::KernelAddress, false);
-      if (mask & SanitizerKind::KernelAddress)
-        SanOpts.set(SanitizerKind::Address, false);
-      if (mask & SanitizerKind::HWAddress)
-        SanOpts.set(SanitizerKind::KernelHWAddress, false);
-      if (mask & SanitizerKind::KernelHWAddress)
-        SanOpts.set(SanitizerKind::HWAddress, false);
-
+      no_sanitize_mask |= Attr->getMask();
       // SanitizeCoverage is not handled by SanOpts.
       if (Attr->hasCoverage())
         NoSanitizeCoverage = true;
     }
+
+    // Apply the no_sanitize* attributes to SanOpts.
+    SanOpts.Mask &= ~no_sanitize_mask;
+    if (no_sanitize_mask & SanitizerKind::Address)
+      SanOpts.set(SanitizerKind::KernelAddress, false);
+    if (no_sanitize_mask & SanitizerKind::KernelAddress)
+      SanOpts.set(SanitizerKind::Address, false);
+    if (no_sanitize_mask & SanitizerKind::HWAddress)
+      SanOpts.set(SanitizerKind::KernelHWAddress, false);
+    if (no_sanitize_mask & SanitizerKind::KernelHWAddress)
+      SanOpts.set(SanitizerKind::HWAddress, false);
 
     if (SanitizeBounds && !SanOpts.hasOneOf(SanitizerKind::Bounds))
       Fn->addFnAttr(llvm::Attribute::NoSanitizeBounds);
 
     if (NoSanitizeCoverage && CGM.getCodeGenOpts().hasSanitizeCoverage())
       Fn->addFnAttr(llvm::Attribute::NoSanitizeCoverage);
+
+    // Some passes need the non-negated no_sanitize attribute. Pass them on.
+    if (CGM.getCodeGenOpts().hasSanitizeBinaryMetadata()) {
+      if (no_sanitize_mask & SanitizerKind::Thread)
+        Fn->addFnAttr("no_sanitize_thread");
+    }
   }
 
   if (ShouldSkipSanitizerInstrumentation()) {
@@ -939,21 +946,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   // If we are checking function types, emit a function type signature as
   // prologue data.
-  if (FD && getLangOpts().CPlusPlus && SanOpts.has(SanitizerKind::Function)) {
+  if (FD && SanOpts.has(SanitizerKind::Function)) {
     if (llvm::Constant *PrologueSig = getPrologueSignature(CGM, FD)) {
-      // Remove any (C++17) exception specifications, to allow calling e.g. a
-      // noexcept function through a non-noexcept pointer.
-      auto ProtoTy = getContext().getFunctionTypeWithExceptionSpec(
-          FD->getType(), EST_None);
-      llvm::Constant *FTRTTIConst =
-          CGM.GetAddrOfRTTIDescriptor(ProtoTy, /*ForEH=*/true);
-      llvm::GlobalVariable *FTRTTIProxy =
-          CGM.GetOrCreateRTTIProxyGlobalVariable(FTRTTIConst);
       llvm::LLVMContext &Ctx = Fn->getContext();
       llvm::MDBuilder MDB(Ctx);
-      Fn->setMetadata(llvm::LLVMContext::MD_func_sanitize,
-                      MDB.createRTTIPointerPrologue(PrologueSig, FTRTTIProxy));
-      CGM.addCompilerUsedGlobal(FTRTTIProxy);
+      Fn->setMetadata(
+          llvm::LLVMContext::MD_func_sanitize,
+          MDB.createRTTIPointerPrologue(
+              PrologueSig, getUBSanFunctionTypeHash(FD->getType())));
     }
   }
 
@@ -2534,7 +2534,7 @@ void CodeGenFunction::InsertHelper(llvm::Instruction *I,
                                    llvm::BasicBlock::iterator InsertPt) const {
   LoopStack.InsertHelper(I);
   if (IsSanitizerScope)
-    CGM.getSanitizerMetadata()->disableSanitizerForInstruction(I);
+    I->setNoSanitizeMetadata();
 }
 
 void CGBuilderInserter::InsertHelper(

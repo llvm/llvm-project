@@ -52,7 +52,8 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(anyOf(isNoThrow(), cxxDestructorDecl(),
+      functionDecl(isDefinition(),
+                   anyOf(isNoThrow(), cxxDestructorDecl(),
                          cxxConstructorDecl(isMoveConstructor()),
                          cxxMethodDecl(isMoveAssignmentOperator()),
                          hasName("main"), hasName("swap"),

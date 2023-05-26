@@ -1565,13 +1565,14 @@ HeaderSearch::findModuleForHeader(const FileEntry *File, bool AllowTextual,
 }
 
 ArrayRef<ModuleMap::KnownHeader>
-HeaderSearch::findAllModulesForHeader(const FileEntry *File) const {
+HeaderSearch::findAllModulesForHeader(const FileEntry *File,
+                                      bool AllowCreation) const {
   if (ExternalSource) {
     // Make sure the external source has handled header info about this file,
     // which includes whether the file is part of a module.
     (void)getExistingFileInfo(File);
   }
-  return ModMap.findAllModulesForHeader(File);
+  return ModMap.findAllModulesForHeader(File, AllowCreation);
 }
 
 static bool suggestModule(HeaderSearch &HS, const FileEntry *File,

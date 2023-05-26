@@ -119,7 +119,7 @@ public:
         explicit basic_string(const T& t, const Allocator& a = Allocator());                    // C++17, constexpr since C++20
     basic_string(const value_type* s, const allocator_type& a = allocator_type());              // constexpr since C++20
     basic_string(const value_type* s, size_type n, const allocator_type& a = allocator_type()); // constexpr since C++20
-    basic_string(nullptr_t) = delete; // C++2b
+    basic_string(nullptr_t) = delete; // C++23
     basic_string(size_type n, value_type c, const allocator_type& a = allocator_type());        // constexpr since C++20
     template<class InputIterator>
         basic_string(InputIterator begin, InputIterator end,
@@ -140,7 +140,7 @@ public:
              allocator_type::propagate_on_container_move_assignment::value ||
              allocator_type::is_always_equal::value );                                          // C++17, constexpr since C++20
     basic_string& operator=(const value_type* s);                                               // constexpr since C++20
-    basic_string& operator=(nullptr_t) = delete; // C++2b
+    basic_string& operator=(nullptr_t) = delete; // C++23
     basic_string& operator=(value_type c);                                                      // constexpr since C++20
     basic_string& operator=(initializer_list<value_type>);                                      // constexpr since C++20
 
@@ -342,9 +342,9 @@ public:
     constexpr bool ends_with(charT c) const noexcept;                                           // C++20
     constexpr bool ends_with(const charT* s) const;                                             // C++20
 
-    constexpr bool contains(basic_string_view<charT, traits> sv) const noexcept;                // C++2b
-    constexpr bool contains(charT c) const noexcept;                                            // C++2b
-    constexpr bool contains(const charT* s) const;                                              // C++2b
+    constexpr bool contains(basic_string_view<charT, traits> sv) const noexcept;                // C++23
+    constexpr bool contains(charT c) const noexcept;                                            // C++23
+    constexpr bool contains(const charT* s) const;                                              // C++23
 };
 
 template<class InputIterator,
@@ -578,7 +578,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <climits>
 #include <cstdint>
 #include <cstdio>  // EOF
-#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <stdexcept>
@@ -1032,14 +1031,14 @@ public:
     std::__debug_db_insert_c(this);
   }
 
-  template <class _InputIterator, __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, int> = 0>
+  template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(_InputIterator __first, _InputIterator __last)
       : __r_(__default_init_tag(), __default_init_tag()) {
     __init(__first, __last);
     std::__debug_db_insert_c(this);
   }
 
-  template <class _InputIterator, __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, int> = 0>
+  template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   basic_string(_InputIterator __first, _InputIterator __last, const allocator_type& __a)
       : __r_(__default_init_tag(), __a) {
@@ -1248,7 +1247,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void __append_default_init(size_type __n);
 
-    template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value, int> = 0>
+    template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
     append(_InputIterator __first, _InputIterator __last) {
         const basic_string __temp(__first, __last, __alloc());
@@ -1256,7 +1255,7 @@ public:
         return *this;
     }
 
-    template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> = 0>
+    template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
     append(_ForwardIterator __first, _ForwardIterator __last);
 
@@ -1315,11 +1314,11 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(const value_type* __s, size_type __n);
     _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(const value_type* __s);
     _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& assign(size_type __n, value_type __c);
-    template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value, int> = 0>
+    template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
     assign(_InputIterator __first, _InputIterator __last);
 
-    template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> = 0>
+    template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
     assign(_ForwardIterator __first, _ForwardIterator __last);
 
@@ -1363,11 +1362,11 @@ public:
     return begin() + __p;
   }
 
-  template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value, int> = 0>
+  template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator
   insert(const_iterator __pos, _InputIterator __first, _InputIterator __last);
 
-  template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> = 0>
+  template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator
   insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last);
 
@@ -1438,7 +1437,7 @@ public:
     return replace(static_cast<size_type>(__i1 - begin()), static_cast<size_type>(__i2 - __i1), __n, __c);
   }
 
-  template <class _InputIterator, __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, int> = 0>
+  template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   replace(const_iterator __i1, const_iterator __i2, _InputIterator __j1, _InputIterator __j2);
 
@@ -1823,10 +1822,10 @@ private:
     // to only inline the fast path code directly in the ctor.
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init_copy_ctor_external(const value_type* __s, size_type __sz);
 
-    template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value, int> = 0>
+    template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
     inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(_InputIterator __first, _InputIterator __last);
 
-    template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> = 0>
+    template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
     inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(_ForwardIterator __first, _ForwardIterator __last);
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -1991,7 +1990,7 @@ private:
 template<class _InputIterator,
          class _CharT = __iter_value_type<_InputIterator>,
          class _Allocator = allocator<_CharT>,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
          class = enable_if_t<__is_allocator<_Allocator>::value>
          >
 basic_string(_InputIterator, _InputIterator, _Allocator = _Allocator())
@@ -2156,7 +2155,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(size_type __n, value_type __c)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value, int> >
+template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 void basic_string<_CharT, _Traits, _Allocator>::__init(_InputIterator __first, _InputIterator __last)
 {
@@ -2179,7 +2178,7 @@ void basic_string<_CharT, _Traits, _Allocator>::__init(_InputIterator __first, _
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> >
+template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 basic_string<_CharT, _Traits, _Allocator>::__init(_ForwardIterator __first, _ForwardIterator __last)
 {
@@ -2444,7 +2443,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
 #endif
 
 template <class _CharT, class _Traits, class _Allocator>
-template<class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value, int> >
+template<class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
 {
@@ -2454,7 +2453,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(_InputIterator __first, _Input
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template<class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> >
+template<class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(_ForwardIterator __first, _ForwardIterator __last)
 {
@@ -2631,7 +2630,7 @@ basic_string<_CharT, _Traits, _Allocator>::push_back(value_type __c)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template<class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> >
+template<class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::append(
     _ForwardIterator __first, _ForwardIterator __last)
@@ -2770,7 +2769,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, size_type __n
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template<class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value, int> >
+template<class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _InputIterator __first, _InputIterator __last)
 {
@@ -2782,7 +2781,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _InputIt
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template<class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> >
+template<class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last)
 {
@@ -2958,7 +2957,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-template<class _InputIterator, __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, int> >
+template<class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2,
                                                    _InputIterator __j1, _InputIterator __j2)
@@ -4389,13 +4388,12 @@ _LIBCPP_POP_MACROS
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
 #  include <concepts>
-#  include <functional>
+#  include <cstdlib>
 #  include <iterator>
 #  include <new>
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>
-#  include <vector>
 #endif
 
 #endif // _LIBCPP_STRING

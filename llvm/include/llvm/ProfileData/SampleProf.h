@@ -90,10 +90,16 @@ namespace sampleprof {
 enum SampleProfileFormat {
   SPF_None = 0,
   SPF_Text = 0x1,
-  SPF_Compact_Binary = 0x2,
+  SPF_Compact_Binary = 0x2, // Deprecated
   SPF_GCC = 0x3,
   SPF_Ext_Binary = 0x4,
   SPF_Binary = 0xff
+};
+
+enum SampleProfileLayout {
+  SPL_None = 0,
+  SPL_Nest = 0x1,
+  SPL_Flat = 0x2,
 };
 
 static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
@@ -163,7 +169,7 @@ struct SecHdrTableEntry {
   uint64_t Size;
   // The index indicating the location of the current entry in
   // SectionHdrLayout table.
-  uint32_t LayoutIndex;
+  uint64_t LayoutIndex;
 };
 
 // Flags common for all sections are defined here. In SecHdrTableEntry::Flags,
@@ -717,6 +723,8 @@ using BodySampleMap = std::map<LineLocation, SampleRecord>;
 // memory, which is *very* significant for large profiles.
 using FunctionSamplesMap = std::map<std::string, FunctionSamples, std::less<>>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
+using LocToLocMap =
+    std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
 
 /// Representation of the samples collected for a function.
 ///
@@ -747,6 +755,8 @@ public:
 
   void setTotalSamples(uint64_t Num) { TotalSamples = Num; }
 
+  void setHeadSamples(uint64_t Num) { TotalHeadSamples = Num; }
+
   sampleprof_error addHeadSamples(uint64_t Num, uint64_t Weight = 1) {
     bool Overflowed;
     TotalHeadSamples =
@@ -769,6 +779,11 @@ public:
         FName, Num, Weight);
   }
 
+  sampleprof_error addSampleRecord(LineLocation Location,
+                                   const SampleRecord &SampleRecord, uint64_t Weight = 1) {
+    return BodySamples[Location].merge(SampleRecord, Weight);
+  }
+
   // Remove a call target and decrease the body sample correspondingly. Return
   // the number of body samples actually decreased.
   uint64_t removeCalledTargetAndBodySample(uint32_t LineOffset,
@@ -783,13 +798,6 @@ public:
         BodySamples.erase(I);
     }
     return Count;
-  }
-
-  sampleprof_error addBodySamplesForProbe(uint32_t Index, uint64_t Num,
-                                          uint64_t Weight = 1) {
-    SampleRecord S;
-    S.addSamples(Num, Weight);
-    return BodySamples[LineLocation(Index, 0)].merge(S, Weight);
   }
 
   // Accumulate all call target samples to update the body samples.
@@ -829,12 +837,26 @@ public:
     }
   }
 
+  // Query the stale profile matching results and remap the location.
+  const LineLocation &mapIRLocToProfileLoc(const LineLocation &IRLoc) const {
+    // There is no remapping if the profile is not stale or the matching gives
+    // the same location.
+    if (!IRToProfileLocationMap)
+      return IRLoc;
+    const auto &ProfileLoc = IRToProfileLocationMap->find(IRLoc);
+    if (ProfileLoc != IRToProfileLocationMap->end())
+      return ProfileLoc->second;
+    else
+      return IRLoc;
+  }
+
   /// Return the number of samples collected at the given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
   ErrorOr<uint64_t> findSamplesAt(uint32_t LineOffset,
                                   uint32_t Discriminator) const {
-    const auto &ret = BodySamples.find(LineLocation(LineOffset, Discriminator));
+    const auto &ret = BodySamples.find(
+        mapIRLocToProfileLoc(LineLocation(LineOffset, Discriminator)));
     if (ret == BodySamples.end())
       return std::error_code();
     return ret->second.getSamples();
@@ -845,7 +867,8 @@ public:
   /// If the location is not found in profile, return error.
   ErrorOr<SampleRecord::CallTargetMap>
   findCallTargetMapAt(uint32_t LineOffset, uint32_t Discriminator) const {
-    const auto &ret = BodySamples.find(LineLocation(LineOffset, Discriminator));
+    const auto &ret = BodySamples.find(
+        mapIRLocToProfileLoc(LineLocation(LineOffset, Discriminator)));
     if (ret == BodySamples.end())
       return std::error_code();
     return ret->second.getCallTargets();
@@ -855,7 +878,7 @@ public:
   /// CallSite. If the location is not found in profile, return error.
   ErrorOr<SampleRecord::CallTargetMap>
   findCallTargetMapAt(const LineLocation &CallSite) const {
-    const auto &Ret = BodySamples.find(CallSite);
+    const auto &Ret = BodySamples.find(mapIRLocToProfileLoc(CallSite));
     if (Ret == BodySamples.end())
       return std::error_code();
     return Ret->second.getCallTargets();
@@ -863,13 +886,13 @@ public:
 
   /// Return the function samples at the given callsite location.
   FunctionSamplesMap &functionSamplesAt(const LineLocation &Loc) {
-    return CallsiteSamples[Loc];
+    return CallsiteSamples[mapIRLocToProfileLoc(Loc)];
   }
 
   /// Returns the FunctionSamplesMap at the given \p Loc.
   const FunctionSamplesMap *
   findFunctionSamplesMapAt(const LineLocation &Loc) const {
-    auto iter = CallsiteSamples.find(Loc);
+    auto iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
     if (iter == CallsiteSamples.end())
       return nullptr;
     return &iter->second;
@@ -933,6 +956,8 @@ public:
   const CallsiteSampleMap &getCallsiteSamples() const {
     return CallsiteSamples;
   }
+
+  CallsiteSampleMap &getCallsiteSamples() { return CallsiteSamples; }
 
   /// Return the maximum of sample counts in a function body. When SkipCallSite
   /// is false, which is the default, the return count includes samples in the
@@ -1030,6 +1055,11 @@ public:
   void setFunctionHash(uint64_t Hash) { FunctionHash = Hash; }
 
   uint64_t getFunctionHash() const { return FunctionHash; }
+
+  void setIRToProfileLocationMap(const LocToLocMap *LTLM) {
+    assert(IRToProfileLocationMap == nullptr && "this should be set only once");
+    IRToProfileLocationMap = LTLM;
+  }
 
   /// Return the canonical name for a function, taking into account
   /// suffix elision policy attributes.
@@ -1214,6 +1244,25 @@ private:
   /// in the call to bar() at line offset 1, the other for all the samples
   /// collected in the call to baz() at line offset 8.
   CallsiteSampleMap CallsiteSamples;
+
+  /// IR to profile location map generated by stale profile matching.
+  ///
+  /// Each entry is a mapping from the location on current build to the matched
+  /// location in the "stale" profile. For example:
+  ///   Profiled source code:
+  ///      void foo() {
+  ///   1    bar();
+  ///      }
+  ///
+  ///   Current source code:
+  ///      void foo() {
+  ///   1    // Code change
+  ///   2    bar();
+  ///      }
+  /// Supposing the stale profile matching algorithm generated the mapping [2 ->
+  /// 1], the profile query using the location of bar on the IR which is 2 will
+  /// be remapped to 1 and find the location of bar in the profile.
+  const LocToLocMap *IRToProfileLocationMap = nullptr;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
@@ -1274,12 +1323,16 @@ private:
   SampleProfileMap &ProfileMap;
 };
 
-// CSProfileConverter converts a full context-sensitive flat sample profile into
-// a nested context-sensitive sample profile.
-class CSProfileConverter {
+/// Helper class for profile conversion.
+///
+/// It supports full context-sensitive profile to nested profile conversion,
+/// nested profile to flatten profile conversion, etc.
+class ProfileConverter {
 public:
-  CSProfileConverter(SampleProfileMap &Profiles);
-  void convertProfiles();
+  ProfileConverter(SampleProfileMap &Profiles);
+  // Convert a full context-sensitive flat sample profile into a nested sample
+  // profile.
+  void convertCSProfiles();
   struct FrameNode {
     FrameNode(StringRef FName = StringRef(),
               FunctionSamples *FSamples = nullptr,
@@ -1299,9 +1352,84 @@ public:
                                      StringRef CalleeName);
   };
 
+  static void flattenProfile(SampleProfileMap &ProfileMap,
+                             bool ProfileIsCS = false) {
+    SampleProfileMap TmpProfiles;
+    flattenProfile(ProfileMap, TmpProfiles, ProfileIsCS);
+    ProfileMap = std::move(TmpProfiles);
+  }
+
+  static void flattenProfile(const SampleProfileMap &InputProfiles,
+                             SampleProfileMap &OutputProfiles,
+                             bool ProfileIsCS = false) {
+    if (ProfileIsCS) {
+      for (const auto &I : InputProfiles)
+        OutputProfiles[I.second.getName()].merge(I.second);
+      // Retain the profile name and clear the full context for each function
+      // profile.
+      for (auto &I : OutputProfiles)
+        I.second.setContext(SampleContext(I.first));
+    } else {
+      for (const auto &I : InputProfiles)
+        flattenNestedProfile(OutputProfiles, I.second);
+    }
+  }
+
 private:
+  static void flattenNestedProfile(SampleProfileMap &OutputProfiles,
+                                   const FunctionSamples &FS) {
+    // To retain the context, checksum, attributes of the original profile, make
+    // a copy of it if no profile is found.
+    SampleContext &Context = FS.getContext();
+    auto Ret = OutputProfiles.try_emplace(Context, FS);
+    FunctionSamples &Profile = Ret.first->second;
+    if (Ret.second) {
+      // When it's the copy of the old profile, just clear all the inlinees'
+      // samples.
+      Profile.getCallsiteSamples().clear();
+      // We recompute TotalSamples later, so here set to zero.
+      Profile.setTotalSamples(0);
+    } else {
+      for (const auto &[LineLocation, SampleRecord] : FS.getBodySamples()) {
+        Profile.addSampleRecord(LineLocation, SampleRecord);
+      }
+    }
+
+    assert(Profile.getCallsiteSamples().empty() &&
+           "There should be no inlinees' profiles after flattening.");
+
+    // TotalSamples might not be equal to the sum of all samples from
+    // BodySamples and CallsiteSamples. So here we use "TotalSamples =
+    // Original_TotalSamples - All_of_Callsite_TotalSamples +
+    // All_of_Callsite_HeadSamples" to compute the new TotalSamples.
+    uint64_t TotalSamples = FS.getTotalSamples();
+
+    for (const auto &I : FS.getCallsiteSamples()) {
+      for (const auto &Callee : I.second) {
+        const auto &CalleeProfile = Callee.second;
+        // Add body sample.
+        Profile.addBodySamples(I.first.LineOffset, I.first.Discriminator,
+                               CalleeProfile.getHeadSamplesEstimate());
+        // Add callsite sample.
+        Profile.addCalledTargetSamples(
+            I.first.LineOffset, I.first.Discriminator, CalleeProfile.getName(),
+            CalleeProfile.getHeadSamplesEstimate());
+        // Update total samples.
+        TotalSamples = TotalSamples >= CalleeProfile.getTotalSamples()
+                           ? TotalSamples - CalleeProfile.getTotalSamples()
+                           : 0;
+        TotalSamples += CalleeProfile.getHeadSamplesEstimate();
+        // Recursively convert callee profile.
+        flattenNestedProfile(OutputProfiles, CalleeProfile);
+      }
+    }
+    Profile.addTotalSamples(TotalSamples);
+
+    Profile.setHeadSamples(Profile.getHeadSamplesEstimate());
+  }
+
   // Nest all children profiles into the profile of Node.
-  void convertProfiles(FrameNode &Node);
+  void convertCSProfiles(FrameNode &Node);
   FrameNode *getOrCreateContextPath(const SampleContext &Context);
 
   SampleProfileMap &ProfileMap;

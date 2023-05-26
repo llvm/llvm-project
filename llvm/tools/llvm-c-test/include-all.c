@@ -26,7 +26,6 @@
 #include "llvm-c/Error.h"
 #include "llvm-c/ErrorHandling.h"
 #include "llvm-c/ExecutionEngine.h"
-#include "llvm-c/Initialization.h"
 #include "llvm-c/IRReader.h"
 #include "llvm-c/Linker.h"
 #include "llvm-c/Object.h"

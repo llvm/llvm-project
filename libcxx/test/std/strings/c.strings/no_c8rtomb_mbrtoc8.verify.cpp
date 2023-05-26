@@ -8,13 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// The system-provided <uchar.h> seems to be broken on AIX:
-//   error: 'error' diagnostics seen but not expected:
-//     File /usr/include/uchar.h Line 38: cannot combine with previous 'type-name' declaration specifier
-//     File /usr/include/uchar.h Line 39: cannot combine with previous 'type-name' declaration specifier
-//   2 errors generated.
-// XFAIL: LIBCXX-AIX-FIXME
-
 #include <uchar.h>
 
 #include "test_macros.h"

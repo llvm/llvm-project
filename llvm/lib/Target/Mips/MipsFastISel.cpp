@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -63,7 +64,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -1135,7 +1135,7 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
   CCState CCInfo(CC, false, *FuncInfo.MF, ArgLocs, *Context);
   CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
   // Get a count of how many bytes are to be pushed on the stack.
-  NumBytes = CCInfo.getNextStackOffset();
+  NumBytes = CCInfo.getStackSize();
   // This is the minimum argument area used for A0-A3.
   if (NumBytes < 16)
     NumBytes = 16;

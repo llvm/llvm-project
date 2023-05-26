@@ -112,7 +112,7 @@ define void @test3(ptr sret(%struct.s) %a4) {
 ; Check that the alignment is bumped up the alignment of the sret type.
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[A4:%.*]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    call void @use(ptr [[A4:%.*]])
+; CHECK-NEXT:    call void @use(ptr [[A4]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr %a4, i8 0, i64 16, i1 false)

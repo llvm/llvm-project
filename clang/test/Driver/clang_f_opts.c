@@ -140,6 +140,10 @@
 // CHECK-PROFILE-USE-DIR: "-fprofile-instrument-use-path={{.*}}.d/some/dir{{/|\\\\}}default.profdata"
 // CHECK-PROFILE-USE-FILE: "-fprofile-instrument-use-path=/tmp/somefile.prof"
 
+// RUN: %clang -### -S -fprofile-instr-use=%t.profdata -fdiagnostics-misexpect-tolerance=10 -Wmisexpect %s 2>&1 | FileCheck %s --check-prefix=CHECK-MISEXPECT-TOLLERANCE
+// CHECK-MISEXPECT-TOLLERANCE: "-fdiagnostics-misexpect-tolerance=10"
+// CHECK-MISEXPECT-TOLLERANCE-NOT: argument unused
+
 // RUN: %clang -### -S -fvectorize %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S -fno-vectorize -fvectorize %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S -fno-vectorize %s 2>&1 | FileCheck -check-prefix=CHECK-NO-VECTORIZE %s

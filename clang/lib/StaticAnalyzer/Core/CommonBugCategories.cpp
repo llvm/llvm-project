@@ -23,6 +23,7 @@ const char *const CXXObjectLifecycle = "C++ object lifecycle";
 const char *const CXXMoveSemantics = "C++ move semantics";
 const char *const SecurityError = "Security error";
 const char *const UnusedCode = "Unused code";
+const char *const TaintedData = "Tainted data used";
 } // namespace categories
 } // namespace ento
 } // namespace clang

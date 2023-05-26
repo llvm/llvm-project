@@ -37,5 +37,6 @@ OpClass::OpClass(StringRef name, StringRef extraClassDeclaration,
 void OpClass::finalize() {
   Class::finalize();
   declare<VisibilityDeclaration>(Visibility::Public);
-  declare<ExtraClassDeclaration>(extraClassDeclaration, extraClassDefinition);
+  declare<ExtraClassDeclaration>(extraClassDeclaration.str(),
+                                 extraClassDefinition);
 }

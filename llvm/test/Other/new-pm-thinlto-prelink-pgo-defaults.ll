@@ -124,7 +124,7 @@
 ; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
-; CHECK-O3-NEXT: Running pass: AggressiveInstCombinePass
+; CHECK-O23SZ-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O23SZ-NEXT: Running pass: ConstraintEliminationPass
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
@@ -134,7 +134,6 @@
 ; CHECK-O23SZ-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-O-NEXT: Running analysis: ScalarEvolutionAnalysis
@@ -172,6 +171,7 @@
 ; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass
+; CHECK-O23SZ-NEXT: Running pass: MoveAutoInitPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass
@@ -189,6 +189,7 @@
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on bar
+; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-EXT: Running pass: {{.*}}::Bye
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: CanonicalizeAliasesPass

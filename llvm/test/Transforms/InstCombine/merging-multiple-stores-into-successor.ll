@@ -71,3 +71,233 @@ bb10:                                             ; preds = %bb
 bb12:                                             ; preds = %bb10, %bb9
   ret void
 }
+
+define half @diff_types_same_width_merge(i1 %cond, half %a, i16 %b) {
+; CHECK-LABEL: @diff_types_same_width_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16 [[B:%.*]] to half
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi half [ [[TMP0]], [[BB1]] ], [ [[A:%.*]], [[BB0]] ]
+; CHECK-NEXT:    ret half [[STOREMERGE]]
+;
+entry:
+  %alloca = alloca half
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store half %a, ptr %alloca
+  br label %sink
+BB1:
+  store i16 %b, ptr %alloca
+  br label %sink
+sink:
+  %val = load half, ptr %alloca
+  ret half %val
+}
+
+define i32 @diff_types_diff_width_no_merge(i1 %cond, i32 %a, i64 %b) {
+; CHECK-LABEL: @diff_types_diff_width_no_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[ALLOCA]], align 8
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    store i64 [[B:%.*]], ptr [[ALLOCA]], align 8
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ALLOCA]], align 8
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %alloca = alloca i64
+  br i1 %cond, label %A, label %B
+A:
+  store i32 %a, ptr %alloca
+  br label %sink
+B:
+  store i64 %b, ptr %alloca
+  br label %sink
+sink:
+  %val = load i32, ptr %alloca
+  ret i32 %val
+}
+
+define <4 x i32> @vec_no_merge(i1 %cond, <2 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @vec_no_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 16
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    store <2 x i32> [[A:%.*]], ptr [[ALLOCA]], align 16
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    store <4 x i32> [[B:%.*]], ptr [[ALLOCA]], align 16
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[VAL:%.*]] = load <4 x i32>, ptr [[ALLOCA]], align 16
+; CHECK-NEXT:    ret <4 x i32> [[VAL]]
+;
+entry:
+  %alloca = alloca i64
+  br i1 %cond, label %A, label %B
+A:
+  store <2 x i32> %a, ptr %alloca
+  br label %sink
+B:
+  store <4 x i32> %b, ptr %alloca
+  br label %sink
+sink:
+  %val = load <4 x i32>, ptr %alloca
+  ret <4 x i32> %val
+}
+
+%struct.half = type { half };
+
+define %struct.half @one_elem_struct_merge(i1 %cond, %struct.half %a, half %b) {
+; CHECK-LABEL: @one_elem_struct_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_HALF:%.*]] [[A:%.*]], 0
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi half [ [[TMP0]], [[BB0]] ], [ [[B:%.*]], [[BB1]] ]
+; CHECK-NEXT:    [[VAL1:%.*]] = insertvalue [[STRUCT_HALF]] poison, half [[STOREMERGE]], 0
+; CHECK-NEXT:    ret [[STRUCT_HALF]] [[VAL1]]
+;
+entry:
+  %alloca = alloca i64
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store %struct.half %a, ptr %alloca
+  br label %sink
+BB1:
+  store half %b, ptr %alloca
+  br label %sink
+sink:
+  %val = load %struct.half, ptr %alloca
+  ret %struct.half %val
+}
+
+%struct.tup = type { half, i32 };
+
+define %struct.tup @multi_elem_struct_no_merge(i1 %cond, %struct.tup %a, half %b) {
+; CHECK-LABEL: @multi_elem_struct_no_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    store [[STRUCT_TUP:%.*]] [[A:%.*]], ptr [[ALLOCA]], align 8
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    store half [[B:%.*]], ptr [[ALLOCA]], align 8
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[VAL:%.*]] = load [[STRUCT_TUP]], ptr [[ALLOCA]], align 8
+; CHECK-NEXT:    ret [[STRUCT_TUP]] [[VAL]]
+;
+entry:
+  %alloca = alloca i64
+  br i1 %cond, label %A, label %B
+A:
+  store %struct.tup %a, ptr %alloca
+  br label %sink
+B:
+  store half %b, ptr %alloca
+  br label %sink
+sink:
+  %val = load %struct.tup, ptr %alloca
+  ret %struct.tup %val
+}
+
+define i16 @same_types_diff_align_no_merge(i1 %cond, i16 %a, i16 %b) {
+; CHECK-LABEL: @same_types_diff_align_no_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i16, align 4
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    store i16 [[A:%.*]], ptr [[ALLOCA]], align 8
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    store i16 [[B:%.*]], ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[VAL:%.*]] = load i16, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    ret i16 [[VAL]]
+;
+entry:
+  %alloca = alloca i16, align 4
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store i16 %a, ptr %alloca, align 8
+  br label %sink
+BB1:
+  store i16 %b, ptr %alloca, align 4
+  br label %sink
+sink:
+  %val = load i16, ptr %alloca
+  ret i16 %val
+}
+
+define i64 @ptrtoint_merge(i1 %cond, i64 %a, ptr %b) {
+; CHECK-LABEL: @ptrtoint_merge(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i64 [ [[A:%.*]], [[BB0]] ], [ [[TMP0]], [[BB1]] ]
+; CHECK-NEXT:    ret i64 [[STOREMERGE]]
+;
+entry:
+  %alloca = alloca ptr
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store i64 %a, ptr %alloca
+  br label %sink
+BB1:
+  store ptr %b, ptr %alloca
+  br label %sink
+sink:
+  %val = load i64, ptr %alloca
+  ret i64 %val
+}
+
+define ptr @inttoptr_merge(i1 %cond, i64 %a, ptr %b) {
+; CHECK-LABEL: define ptr @inttoptr_merge
+; CHECK-SAME: (i1 [[COND:%.*]], i64 [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND]], label [[BB0:%.*]], label [[BB1:%.*]]
+; CHECK:       BB0:
+; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[A]] to ptr
+; CHECK-NEXT:    br label [[SINK:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    br label [[SINK]]
+; CHECK:       sink:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi ptr [ [[B]], [[BB1]] ], [ [[TMP0]], [[BB0]] ]
+; CHECK-NEXT:    ret ptr [[STOREMERGE]]
+;
+entry:
+  %alloca = alloca ptr
+  br i1 %cond, label %BB0, label %BB1
+BB0:
+  store i64 %a, ptr %alloca, align 8
+  br label %sink
+BB1:
+  store ptr %b, ptr %alloca, align 8
+  br label %sink
+sink:
+  %val = load ptr, ptr %alloca
+  ret ptr %val
+}

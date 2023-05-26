@@ -16,9 +16,10 @@ For general information on debugging OpenMP target offloading applications, see
 LLVM/OpenMP Host Runtime (``libomp``)
 -------------------------------------
 
-An `early (2015) design document <https://openmp.llvm.org/Reference.pdf>`_ for
-the LLVM/OpenMP host runtime, aka.  `libomp.so`, is available as a `pdf
-<https://openmp.llvm.org/Reference.pdf>`_.
+An `early (2015) design document
+<https://raw.githubusercontent.com/llvm/llvm-project/main/openmp/runtime/doc/Reference.pdf>`_
+for the LLVM/OpenMP host runtime, aka.  `libomp.so`, is available as a `pdf
+<https://raw.githubusercontent.com/llvm/llvm-project/main/openmp/runtime/doc/Reference.pdf>`_.
 
 .. _libomp_environment_vars:
 
@@ -1159,6 +1160,7 @@ There are several environment variables to change the behavior of the plugins:
 * ``LIBOMPTARGET_AMDGPU_TEAMS_PER_CU``
 * ``LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES``
 * ``LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS``
+* ``LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT``
 
 The environment variables ``LIBOMPTARGET_SHARED_MEMORY_SIZE``,
 ``LIBOMPTARGET_STACK_SIZE`` and ``LIBOMPTARGET_HEAP_SIZE`` are described in
@@ -1236,6 +1238,14 @@ in the AMDGPU plugin. There is one resource manager of signals per device
 managing several pre-created signals. These signals are mainly used by AMDGPU
 streams. More HSA signals will be created dynamically throughout the execution
 if needed. The default value is ``64``.
+
+LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT
+"""""""""""""""""""""""""""""""""""
+
+This environment variable controls the timeout hint in microseconds for the
+HSA wait state within the AMDGPU plugin. For the duration of this value
+the HSA runtime may busy wait. This can reduce overall latency.
+The default value is ``2000000``.
 
 .. _remote_offloading_plugin:
 

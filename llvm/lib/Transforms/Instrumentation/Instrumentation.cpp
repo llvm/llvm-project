@@ -12,11 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation.h"
-#include "llvm-c/Initialization.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;

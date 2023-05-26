@@ -66,8 +66,9 @@ define i5 @biggest_divisor(i5 %x) {
 
 define i8 @urem_with_sext_bool_divisor(i1 %x, i8 %y) {
 ; CHECK-LABEL: @urem_with_sext_bool_divisor(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[REM:%.*]] = select i1 [[TMP1]], i8 0, i8 [[Y]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze i8 [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[Y_FROZEN]], -1
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[TMP1]], i8 0, i8 [[Y_FROZEN]]
 ; CHECK-NEXT:    ret i8 [[REM]]
 ;
   %s = sext i1 %x to i8
@@ -77,8 +78,9 @@ define i8 @urem_with_sext_bool_divisor(i1 %x, i8 %y) {
 
 define <2 x i8> @urem_with_sext_bool_divisor_vec(<2 x i1> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @urem_with_sext_bool_divisor_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[REM:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> zeroinitializer, <2 x i8> [[Y]]
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[Y_FROZEN]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[REM:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> zeroinitializer, <2 x i8> [[Y_FROZEN]]
 ; CHECK-NEXT:    ret <2 x i8> [[REM]]
 ;
   %s = sext <2 x i1> %x to <2 x i8>
@@ -1019,4 +1021,17 @@ define i32 @urem_select_of_constants_divisor(i1 %b, i32 %x) {
   %s = select i1 %b, i32 12, i32 -3
   %r = urem i32 %x, %s
   ret i32 %r
+}
+
+; https://alive2.llvm.org/ce/z/bh2KHm
+define <2 x i32> @PR62401(<2 x i1> %x, <2 x i32> %y) {
+; CHECK-LABEL: @PR62401(
+; CHECK-NEXT:    [[Y_FROZEN:%.*]] = freeze <2 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[Y_FROZEN]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> zeroinitializer, <2 x i32> [[Y_FROZEN]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %sext.i1 = sext <2 x i1> %x to <2 x i32>
+  %r = urem <2 x i32> %y, %sext.i1
+  ret <2 x i32> %r
 }

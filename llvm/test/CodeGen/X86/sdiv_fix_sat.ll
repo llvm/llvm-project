@@ -579,9 +579,8 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,1,3,3]
 ; X64-NEXT:    psllq $32, %xmm3
-; X64-NEXT:    movdqa %xmm3, %xmm2
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,3,2,3]
 ; X64-NEXT:    psrad $31, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
 ; X64-NEXT:    psrlq $31, %xmm3
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,2,2,3]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
@@ -703,9 +702,8 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    pshufd $212, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; X64-NEXT:    # xmm0 = mem[0,1,1,3]
 ; X64-NEXT:    psllq $32, %xmm0
-; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,3,2,3]
 ; X64-NEXT:    psrad $31, %xmm1
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
 ; X64-NEXT:    psrlq $31, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]

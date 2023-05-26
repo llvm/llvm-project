@@ -110,8 +110,16 @@ TEST(AddressSanitizer, WcsLenTest) {
 }
 #endif
 
+// This test fails on MinGW-w64 because it still ships a static copy of strnlen
+// despite it being available from UCRT.
+#if defined(__MINGW32__)
+#  define MAYBE_StrNLenOOBTest DISABLED_StrNLenOOBTest
+#else
+#  define MAYBE_StrNLenOOBTest StrNLenOOBTest
+#endif
+
 #if SANITIZER_TEST_HAS_STRNLEN
-TEST(AddressSanitizer, StrNLenOOBTest) {
+TEST(AddressSanitizer, MAYBE_StrNLenOOBTest) {
   size_t size = Ident(123);
   char *str = MallocAndMemsetString(size);
   // Normal strnlen calls.
@@ -132,10 +140,10 @@ TEST(AddressSanitizer, StrNLenOOBTest) {
 
 // This test fails with the WinASan dynamic runtime because we fail to intercept
 // strdup.
-#if defined(_MSC_VER) && defined(_DLL)
-#define MAYBE_StrDupOOBTest DISABLED_StrDupOOBTest
+#if (defined(_MSC_VER) && defined(_DLL)) || defined(__MINGW32__)
+#  define MAYBE_StrDupOOBTest DISABLED_StrDupOOBTest
 #else
-#define MAYBE_StrDupOOBTest StrDupOOBTest
+#  define MAYBE_StrDupOOBTest StrDupOOBTest
 #endif
 
 TEST(AddressSanitizer, MAYBE_StrDupOOBTest) {

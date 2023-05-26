@@ -7,8 +7,8 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
-class BuiltinDebugTrapTestCase(TestBase):
 
+class BuiltinDebugTrapTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     # Currently this depends on behavior in debugserver to
@@ -17,11 +17,11 @@ class BuiltinDebugTrapTestCase(TestBase):
     # should be moved up into lldb instead of depending on the
     # remote stub rewriting the pc values.
     @skipUnlessDarwin
-
     def test(self):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "// Set a breakpoint here", lldb.SBFileSpec("main.cpp"))
+            self, "// Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
 
         # Continue to __builtin_debugtrap()
         process.Continue()
@@ -30,8 +30,9 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("bt")
             self.runCmd("ta v global")
 
-        self.assertEqual(process.GetSelectedThread().GetStopReason(), 
-                         lldb.eStopReasonException)
+        self.assertEqual(
+            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonException
+        )
 
         list = target.FindGlobalVariables("global", 1, lldb.eMatchTypeNormal)
         self.assertEqual(list.GetSize(), 1)
@@ -39,7 +40,7 @@ class BuiltinDebugTrapTestCase(TestBase):
 
         self.assertEqual(global_value.GetValueAsUnsigned(), 5)
 
-        # Continue to the __builtin_trap() -- we should be able to 
+        # Continue to the __builtin_trap() -- we should be able to
         # continue past __builtin_debugtrap.
         process.Continue()
         if self.TraceOn():
@@ -47,8 +48,9 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("bt")
             self.runCmd("ta v global")
 
-        self.assertEqual(process.GetSelectedThread().GetStopReason(), 
-                         lldb.eStopReasonException)
+        self.assertEqual(
+            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonException
+        )
 
         # "global" is now 10.
         self.assertEqual(global_value.GetValueAsUnsigned(), 10)
@@ -61,8 +63,9 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("bt")
             self.runCmd("ta v global")
 
-        self.assertEqual(process.GetSelectedThread().GetStopReason(), 
-                         lldb.eStopReasonException)
+        self.assertEqual(
+            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonException
+        )
 
         # "global" is still 10.
         self.assertEqual(global_value.GetValueAsUnsigned(), 10)

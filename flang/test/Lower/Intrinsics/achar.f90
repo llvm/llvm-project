@@ -1,21 +1,22 @@
 ! RUN: bbc -emit-fir %s -o - | fir-opt --canonicalize | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir %s -o - | fir-opt --canonicalize | FileCheck %s
 
-! CHECK-LABEL: test1
-! CHECK-SAME: (%[[XREF:.*]]: !fir.ref<i32> {{.*}}, %[[CBOX:.*]]: !fir.boxchar<1> {{.*}})
-! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-! CHECK-DAG: %[[FALSE:.*]] = arith.constant false
-! CHECK: %[[TEMP:.*]] = fir.alloca !fir.char<1> {adapt.valuebyref}
-! CHECK: %[[C:.*]]:2 = fir.unboxchar %[[CBOX]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK: %[[X:.*]] = fir.load %[[XREF]] : !fir.ref<i32>
-! CHECK: %[[X_I8:.*]] = fir.convert %[[X]] : (i32) -> i8
-! CHECK: %[[UNDEF:.*]] = fir.undefined !fir.char<1>
-! CHECK: %[[XCHAR:.*]] = fir.insert_value %[[UNDEF]], %[[X_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-! CHECK: fir.store %[[XCHAR]] to %[[TEMP]] : !fir.ref<!fir.char<1>>
-! CHECK: %[[C1_I64:.*]] = fir.convert %[[C1]] : (index) -> i64
-! CHECK: %[[C_CVT:.*]] = fir.convert %[[C]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK: %[[TEMP_WITH_XCHAR:.*]] = fir.convert %[[TEMP]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
-! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[C_CVT]], %[[TEMP_WITH_XCHAR]], %[[C1_I64]], %[[FALSE]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+
+! CHECK-LABEL:   func.func @_QPtest1(
+! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "x"},
+! CHECK-SAME:        %[[VAL_1:.*]]: !fir.boxchar<1> {fir.bindc_name = "c"}) {
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.char<1> {adapt.valuebyref}
+! CHECK:           %[[VAL_3:.*]]:2 = fir.unboxchar %[[VAL_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
+! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
+! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> i8
+! CHECK:           %[[VAL_7:.*]] = fir.undefined !fir.char<1>
+! CHECK:           %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_6]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
+! CHECK:           fir.store %[[VAL_8]] to %[[VAL_2]] : !fir.ref<!fir.char<1>>
+! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.char<1>>
+! CHECK:           fir.store %[[VAL_9]] to %[[VAL_4]] : !fir.ref<!fir.char<1>>
+! CHECK:           return
+! CHECK:         }
 subroutine test1(x, c)
   integer :: x
   character :: c

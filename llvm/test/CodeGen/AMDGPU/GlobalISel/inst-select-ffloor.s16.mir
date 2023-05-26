@@ -82,14 +82,6 @@ body: |
   bb.0:
     liveins: $vgpr0
 
-    ; SI-LABEL: name: ffloor_fneg_s16_vv
-    ; SI: liveins: $vgpr0
-    ; SI: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; SI: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; SI: [[FNEG:%[0-9]+]]:vgpr(s16) = G_FNEG [[TRUNC]]
-    ; SI: [[FFLOOR:%[0-9]+]]:vgpr(s16) = G_FFLOOR [[FNEG]]
-    ; SI: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[FFLOOR]](s16)
-    ; SI: $vgpr0 = COPY [[ANYEXT]](s32)
     ; VI-LABEL: name: ffloor_fneg_s16_vv
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}

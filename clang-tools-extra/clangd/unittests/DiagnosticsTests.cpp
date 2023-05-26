@@ -1908,11 +1908,11 @@ $fix[[  $diag[[#include "unused.h"]]
   auto AST = TU.build();
   EXPECT_THAT(
       *AST.getDiagnostics(),
-      UnorderedElementsAre(AllOf(
-          Diag(Test.range("diag"),
-               "included header unused.h is not used directly"),
-          withTag(DiagnosticTag::Unnecessary), diagSource(Diag::Clangd),
-          withFix(Fix(Test.range("fix"), "", "remove #include directive")))));
+      UnorderedElementsAre(
+          AllOf(Diag(Test.range("diag"),
+                     "included header unused.h is not used directly"),
+                withTag(DiagnosticTag::Unnecessary), diagSource(Diag::Clangd),
+                withFix(Fix(Test.range("fix"), "", "remove #include directive")))));
   auto &Diag = AST.getDiagnostics()->front();
   EXPECT_EQ(getDiagnosticDocURI(Diag.Source, Diag.ID, Diag.Name),
             std::string("https://clangd.llvm.org/guides/include-cleaner"));

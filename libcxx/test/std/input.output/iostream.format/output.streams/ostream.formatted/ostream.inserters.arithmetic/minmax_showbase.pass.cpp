@@ -25,7 +25,7 @@
 
 // This test exposes a regression that was not fixed yet in the libc++
 // shipped with macOS 10.12, 10.13 and 10.14. See D32670 for details.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{12|13|14}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{12|13|14}}
 
 #include <cassert>
 #include <cstdint>

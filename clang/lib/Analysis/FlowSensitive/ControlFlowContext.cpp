@@ -16,6 +16,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
 #include <utility>
@@ -44,10 +45,47 @@ buildStmtToBasicBlockMap(const CFG &Cfg) {
   return StmtToBlock;
 }
 
+static llvm::BitVector findReachableBlocks(const CFG &Cfg) {
+  llvm::BitVector BlockReachable(Cfg.getNumBlockIDs(), false);
+
+  llvm::SmallVector<const CFGBlock *> BlocksToVisit;
+  BlocksToVisit.push_back(&Cfg.getEntry());
+  while (!BlocksToVisit.empty()) {
+    const CFGBlock *Block = BlocksToVisit.back();
+    BlocksToVisit.pop_back();
+
+    if (BlockReachable[Block->getBlockID()])
+      continue;
+
+    BlockReachable[Block->getBlockID()] = true;
+
+    for (const CFGBlock *Succ : Block->succs())
+      if (Succ)
+        BlocksToVisit.push_back(Succ);
+  }
+
+  return BlockReachable;
+}
+
 llvm::Expected<ControlFlowContext>
-ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
+ControlFlowContext::build(const FunctionDecl &Func, ASTContext &C) {
+  if (!Func.hasBody())
+    return llvm::createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Cannot analyze function without a body");
+
+  return build(Func, *Func.getBody(), C);
+}
+
+llvm::Expected<ControlFlowContext>
+ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
+  if (D.isTemplated())
+    return llvm::createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Cannot analyze templated declarations");
+
   CFG::BuildOptions Options;
-  Options.PruneTriviallyFalseEdges = false;
+  Options.PruneTriviallyFalseEdges = true;
   Options.AddImplicitDtors = true;
   Options.AddTemporaryDtors = true;
   Options.AddInitializers = true;
@@ -56,7 +94,7 @@ ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
   // Ensure that all sub-expressions in basic blocks are evaluated.
   Options.setAllAlwaysAdd();
 
-  auto Cfg = CFG::buildCFG(D, &S, &C, Options);
+  auto Cfg = CFG::buildCFG(&D, &S, &C, Options);
   if (Cfg == nullptr)
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
@@ -64,7 +102,21 @@ ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
 
   llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock =
       buildStmtToBasicBlockMap(*Cfg);
-  return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock));
+
+  llvm::BitVector BlockReachable = findReachableBlocks(*Cfg);
+
+  return ControlFlowContext(&D, std::move(Cfg), std::move(StmtToBlock),
+                            std::move(BlockReachable));
+}
+
+llvm::Expected<ControlFlowContext>
+ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
+  if (D == nullptr)
+    return llvm::createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Declaration must not be null");
+
+  return build(*D, S, C);
 }
 
 } // namespace dataflow

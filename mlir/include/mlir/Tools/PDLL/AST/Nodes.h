@@ -1009,7 +1009,7 @@ public:
   static OpNameDecl *create(Context &ctx, const Name &name);
   static OpNameDecl *create(Context &ctx, SMRange loc);
 
-  /// Return the name of this operation, or none if the name is unknown.
+  /// Return the name of this operation, or std::nullopt if the name is unknown.
   std::optional<StringRef> getName() const {
     const Name *name = Decl::getName();
     return name ? std::optional<StringRef>(name->getName()) : std::nullopt;
@@ -1052,7 +1052,8 @@ private:
       : Base(loc, name), benefit(benefit),
         hasBoundedRecursion(hasBoundedRecursion), patternBody(body) {}
 
-  /// The benefit of the pattern if it was explicitly specified, None otherwise.
+  /// The benefit of the pattern if it was explicitly specified, std::nullopt
+  /// otherwise.
   std::optional<uint16_t> benefit;
 
   /// If the pattern has properly bounded rewrite recursion or not.

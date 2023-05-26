@@ -235,7 +235,7 @@ template <class Clock, class Duration1, class Duration2>
 template <class Clock, class Duration1, class Duration2>
    bool operator==(const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
 template <class Clock, class Duration1, class Duration2>
-   bool operator!=(const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
+   bool operator!=(const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs); // removed in C++20
 template <class Clock, class Duration1, class Duration2>
    bool operator< (const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
 template <class Clock, class Duration1, class Duration2>
@@ -244,6 +244,10 @@ template <class Clock, class Duration1, class Duration2>
    bool operator> (const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
 template <class Clock, class Duration1, class Duration2>
    bool operator>=(const time_point<Clock, Duration1>& lhs, const time_point<Clock, Duration2>& rhs);
+template<class Clock, class Duration1,
+         three_way_comparable_with<Duration1> Duration2>
+  constexpr auto operator<=>(const time_point<Clock, Duration1>& lhs,
+                             const time_point<Clock, Duration2>& rhs);                                // since C++20
 
 // time_point_cast (constexpr in C++14)
 
@@ -286,6 +290,10 @@ template <class Duration>
 using sys_seconds = sys_time<seconds>;                  // C++20
 using sys_days    = sys_time<days>;                     // C++20
 
+template<class charT, class traits, class Duration>     // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const sys_time<Duration>& tp);
+
 class file_clock                                        // C++20
 {
 public:
@@ -307,6 +315,10 @@ public:
 template<class Duration>
   using file_time = time_point<file_clock, Duration>;   // C++20
 
+template<class charT, class traits, class Duration>     // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const file_time<Duration>& tp);
+
 class steady_clock
 {
 public:
@@ -327,6 +339,10 @@ template<class Duration>
   using local_time  = time_point<local_t, Duration>;
 using local_seconds = local_time<seconds>;
 using local_days    = local_time<days>;
+
+template<class charT, class traits, class Duration>     // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const local_time<Duration>& tp);
 
 // 25.8.2, class last_spec    // C++20
 struct last_spec;
@@ -682,6 +698,12 @@ bool operator>=(const time_zone& x, const time_zone& y) noexcept;
 }  // chrono
 
 namespace std {
+  template<class Duration, class charT>
+    struct formatter<chrono::sys_time<Duration>, charT>;                          // C++20
+  template<class Duration, class charT>
+    struct formatter<chrono::filetime<Duration>, charT>;                          // C++20
+  template<class Duration, class charT>
+    struct formatter<chrono::local_time<Duration>, charT>;                        // C++20
   template<class Rep, class Period, class charT>
     struct formatter<chrono::duration<Rep, Period>, charT>;                       // C++20
   template<class charT> struct formatter<chrono::day, charT>;                     // C++20
@@ -779,7 +801,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 // [time.syn]
 #include <compare>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) && _LIBCPP_STD_VER >= 20
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && _LIBCPP_STD_VER >= 20
 #  include <__chrono/formatter.h>
 #  include <__chrono/ostream.h>
 #  include <__chrono/parser_std_format_spec.h>
@@ -795,6 +817,10 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #  include <bit>
 #  include <concepts>
 #  include <cstring>
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 20
+#  include <charconv>
 #endif
 
 #endif // _LIBCPP_CHRONO

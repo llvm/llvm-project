@@ -551,34 +551,6 @@ def : InstAlias<"shrd{w}\t{$reg, $mem|$mem, $reg}", (SHRD16mrCL i16mem:$mem, GR1
 def : InstAlias<"shrd{l}\t{$reg, $mem|$mem, $reg}", (SHRD32mrCL i32mem:$mem, GR32:$reg), 0>;
 def : InstAlias<"shrd{q}\t{$reg, $mem|$mem, $reg}", (SHRD64mrCL i64mem:$mem, GR64:$reg), 0>;
 
-/*  FIXME: This is disabled because the asm matcher is currently incapable of
- *  matching a fixed immediate like $1.
-// "shl X, $1" is an alias for "shl X".
-multiclass ShiftRotateByOneAlias<string Mnemonic, string Opc> {
- def : InstAlias<!strconcat(Mnemonic, "b $op, $$1"),
-                 (!cast<Instruction>(!strconcat(Opc, "8r1")) GR8:$op)>;
- def : InstAlias<!strconcat(Mnemonic, "w $op, $$1"),
-                 (!cast<Instruction>(!strconcat(Opc, "16r1")) GR16:$op)>;
- def : InstAlias<!strconcat(Mnemonic, "l $op, $$1"),
-                 (!cast<Instruction>(!strconcat(Opc, "32r1")) GR32:$op)>;
- def : InstAlias<!strconcat(Mnemonic, "q $op, $$1"),
-                 (!cast<Instruction>(!strconcat(Opc, "64r1")) GR64:$op)>;
- def : InstAlias<!strconcat(Mnemonic, "b $op, $$1"),
-                 (!cast<Instruction>(!strconcat(Opc, "8m1")) i8mem:$op)>;
- def : InstAlias<!strconcat(Mnemonic, "w $op, $$1"),
-                 (!cast<Instruction>(!strconcat(Opc, "16m1")) i16mem:$op)>;
- def : InstAlias<!strconcat(Mnemonic, "l $op, $$1"),
-                 (!cast<Instruction>(!strconcat(Opc, "32m1")) i32mem:$op)>;
- def : InstAlias<!strconcat(Mnemonic, "q $op, $$1"),
-                 (!cast<Instruction>(!strconcat(Opc, "64m1")) i64mem:$op)>;
-}
-
-defm : ShiftRotateByOneAlias<"rcl", "RCL">;
-defm : ShiftRotateByOneAlias<"rcr", "RCR">;
-defm : ShiftRotateByOneAlias<"rol", "ROL">;
-defm : ShiftRotateByOneAlias<"ror", "ROR">;
-FIXME */
-
 // test: We accept "testX <reg>, <mem>" and "testX <mem>, <reg>" as synonyms.
 def : InstAlias<"test{b}\t{$mem, $val|$val, $mem}",
                 (TEST8mr  i8mem :$mem, GR8 :$val), 0>;

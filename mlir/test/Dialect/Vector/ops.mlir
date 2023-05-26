@@ -291,6 +291,18 @@ func.func @contraction_to_scalar(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -
   return %0 : f32
 }
 
+// CHECK-LABEL: @contraction_extra_attrs
+func.func @contraction_extra_attrs(%arg0: vector<10xf32>, %arg1: vector<10xf32>) -> f32 {
+  // CHECK:      %[[C0:.*]] = arith.constant 0.000000e+00 : f32
+  %f0 = arith.constant 0.0: f32
+  // CHECK:      %[[X:.*]] = vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["reduction"], kind = #vector.kind<add>} %{{.*}}, %{{.*}}, %[[C0]] {first_attr = 1 : i32, second_attr = "string"} : vector<10xf32>, vector<10xf32> into f32
+  %0 = vector.contract #contraction_to_scalar_trait %arg0, %arg1, %f0
+    {first_attr = 1 : i32, second_attr = "string"}
+    : vector<10xf32>, vector<10xf32> into f32
+  // CHECK:      return %[[X]] : f32
+  return %0 : f32
+}
+
 #contraction_to_scalar_max_accesses = [
   affine_map<(i) -> (i)>,
   affine_map<(i) -> (i)>,
@@ -352,13 +364,6 @@ func.func @contraction(%arg0 : vector<7x8x16x15xf32>, %arg1 : vector<8x16x7x5xf3
   // appear twice in the output.
   // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<add>} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   %1 = vector.contract #contraction_trait1 %arg0, %arg1, %arg3
-      : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
-  // Test contraction with optional vector mask arguments.
-  %lhs_mask = vector.constant_mask [7, 8, 16, 15] : vector<7x8x16x15xi1>
-  %rhs_mask = vector.constant_mask [8, 16, 7, 5] : vector<8x16x7x5xi1>
-  // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<add>} {{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
-  %2 = vector.contract #contraction_trait1 %arg0, %arg1, %arg3, %lhs_mask,
-                                           %rhs_mask
       : vector<7x8x16x15xf32>, vector<8x16x7x5xf32> into vector<8x8x15x5xf32>
   // Test contraction with mixed type.
   // CHECK: vector.contract {indexing_maps = [#{{.*}}, #{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"], kind = #vector.kind<add>} {{.*}}, {{.*}}, {{.*}} : vector<7x8x16x15xf16>, vector<8x16x7x5xf16> into vector<8x8x15x5xf32>
@@ -451,6 +456,18 @@ func.func @shape_cast(%arg0 : vector<5x1x3x2xf32>,
   %3 = vector.shape_cast %arg2 : vector<16x1x1xf32> to vector<16x1xf32>
 
   return %0, %1, %2, %3 : vector<15x2xf32>, vector<8xf32>, vector<16xf32>, vector<16x1xf32>
+}
+
+// CHECK-LABEL: @shape_cast_0d
+func.func @shape_cast_0d(%arg0 : vector<1x1x1x1xf32>) -> (vector<1x1x1x1xf32>) {
+
+  // CHECK: vector.shape_cast %{{.*}} : vector<1x1x1x1xf32> to vector<f32>
+  %0 = vector.shape_cast %arg0 : vector<1x1x1x1xf32> to vector<f32>
+
+  // CHECK: vector.shape_cast %{{.*}} : vector<f32> to vector<1x1x1x1xf32>
+  %1 = vector.shape_cast %0 : vector<f32> to vector<1x1x1x1xf32>
+
+  return %1 : vector<1x1x1x1xf32>
 }
 
 // CHECK-LABEL: @bitcast

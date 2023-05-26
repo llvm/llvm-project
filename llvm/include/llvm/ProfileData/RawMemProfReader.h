@@ -57,6 +57,9 @@ public:
   create(const Twine &Path, const StringRef ProfiledBinary,
          bool KeepName = false);
 
+  // Returns a list of build ids recorded in the segment information.
+  static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
+
   using GuidMemProfRecordPair = std::pair<GlobalValue::GUID, MemProfRecord>;
   using Iterator = InstrProfIterator<GuidMemProfRecordPair, RawMemProfReader>;
   Iterator end() { return Iterator(); }

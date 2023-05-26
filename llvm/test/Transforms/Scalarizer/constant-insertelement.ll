@@ -15,10 +15,10 @@ define <4 x i32> @f1(ptr %src, i32 %repl, i32 %index) {
 ; ALL-NEXT:    [[VAL2_I1:%.*]] = shl i32 2, [[VAL0_I1]]
 ; ALL-NEXT:    [[VAL2_I2:%.*]] = shl i32 3, [[VAL0_I2]]
 ; ALL-NEXT:    [[VAL2_I3:%.*]] = shl i32 4, [[REPL:%.*]]
-; ALL-NEXT:    [[VAL2_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[VAL2_I0]], i32 0
-; ALL-NEXT:    [[VAL2_UPTO1:%.*]] = insertelement <4 x i32> [[VAL2_UPTO0]], i32 [[VAL2_I1]], i32 1
-; ALL-NEXT:    [[VAL2_UPTO2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO1]], i32 [[VAL2_I2]], i32 2
-; ALL-NEXT:    [[VAL2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO2]], i32 [[VAL2_I3]], i32 3
+; ALL-NEXT:    [[VAL2_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[VAL2_I0]], i64 0
+; ALL-NEXT:    [[VAL2_UPTO1:%.*]] = insertelement <4 x i32> [[VAL2_UPTO0]], i32 [[VAL2_I1]], i64 1
+; ALL-NEXT:    [[VAL2_UPTO2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO1]], i32 [[VAL2_I2]], i64 2
+; ALL-NEXT:    [[VAL2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO2]], i32 [[VAL2_I3]], i64 3
 ; ALL-NEXT:    ret <4 x i32> [[VAL2]]
 ;
   %val0 = load <4 x i32> , ptr %src

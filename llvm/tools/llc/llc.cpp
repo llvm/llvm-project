@@ -496,6 +496,25 @@ static int compileModule(char **argv, LLVMContext &Context) {
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
     Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+
+    if (Options.XCOFFReadOnlyPointers) {
+      if (!TheTriple.isOSAIX())
+        reportError("-mxcoff-roptr option is only supported on AIX",
+                    InputFilename);
+
+      // Since the storage mapping class is specified per csect,
+      // without using data sections, it is less effective to use read-only
+      // pointers. Using read-only pointers may cause other RO variables in the
+      // same csect to become RW when the linker acts upon `-bforceimprw`;
+      // therefore, we require that separate data sections are used in the
+      // presence of ReadOnlyPointers. We respect the setting of data-sections
+      // since we have not found reasons to do otherwise that overcome the user
+      // surprise of not respecting the setting.
+      if (!Options.DataSections)
+        reportError("-mxcoff-roptr option must be used with -data-sections",
+                    InputFilename);
+    }
+
     Options.BinutilsVersion =
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
     Options.DisableIntegratedAS = NoIntegratedAssembler;
@@ -680,13 +699,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
       if (!MIR) {
         WithColor::warning(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
+        delete MMIWP;
         return 1;
       }
-      TargetPassConfig &TPC = *LLVMTM.createPassConfig(PM);
+      TargetPassConfig *PTPC = LLVMTM.createPassConfig(PM);
+      TargetPassConfig &TPC = *PTPC;
       if (TPC.hasLimitedCodeGenPipeline()) {
         WithColor::warning(errs(), argv[0])
             << "run-pass cannot be used with "
             << TPC.getLimitedCodeGenPipelineReason(" and ") << ".\n";
+        delete PTPC;
+        delete MMIWP;
         return 1;
       }
 

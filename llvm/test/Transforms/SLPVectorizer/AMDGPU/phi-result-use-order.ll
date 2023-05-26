@@ -14,8 +14,8 @@ define <4 x half> @phis(i1 %cmp1, <4 x half> %in1, <4 x half> %in2)  {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x half> [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP2]], [[BB0]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x half> [ [[TMP1]], [[ENTRY]] ], [ [[TMP3]], [[BB0]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x half> [[TMP4]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x half> [[TMP5]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x half> [[TMP4]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x half> [[TMP5]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[O31:%.*]] = shufflevector <4 x half> [[TMP6]], <4 x half> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x half> [[O31]]
 ;
@@ -59,8 +59,8 @@ define <4 x half> @phis_reverse(i1 %cmp1, <4 x half> %in1, <4 x half> %in2)  {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x half> [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP2]], [[BB0]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x half> [ [[TMP1]], [[ENTRY]] ], [ [[TMP3]], [[BB0]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x half> [[TMP4]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x half> [[TMP5]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x half> [[TMP4]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x half> [[TMP5]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[O31:%.*]] = shufflevector <4 x half> [[TMP6]], <4 x half> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x half> [[O31]]
 ;

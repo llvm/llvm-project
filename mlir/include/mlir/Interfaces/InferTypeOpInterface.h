@@ -39,11 +39,11 @@ reifyResultShapes(OpBuilder &b, Operation *op,
 class ShapeAdaptor {
 public:
   ShapeAdaptor(Type t) {
-    if (auto st = t.dyn_cast<ShapedType>())
+    if (auto st = dyn_cast<ShapedType>(t))
       val = st;
   }
   ShapeAdaptor(Attribute t) {
-    if (auto da = t.dyn_cast<DenseIntElementsAttr>())
+    if (auto da = dyn_cast<DenseIntElementsAttr>(t))
       val = da;
   }
   ShapeAdaptor(ShapedTypeComponents *components) : val(components) {}
@@ -244,11 +244,11 @@ LogicalResult inferReturnTensorTypes(
     function_ref<
         LogicalResult(MLIRContext *, std::optional<Location> location,
                       ValueShapeRange operands, DictionaryAttr attributes,
-                      RegionRange regions,
+                      OpaqueProperties properties, RegionRange regions,
                       SmallVectorImpl<ShapedTypeComponents> &retComponents)>
         componentTypeFn,
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes);
 
 /// Verifies that the inferred result types match the actual result types for
@@ -281,7 +281,7 @@ public:
   static LogicalResult
   inferReturnTypes(MLIRContext *context, std::optional<Location> location,
                    ValueRange operands, DictionaryAttr attributes,
-                   RegionRange regions,
+                   OpaqueProperties properties, RegionRange regions,
                    SmallVectorImpl<Type> &inferredReturnTypes) {
     static_assert(
         ConcreteType::template hasTrait<InferShapedTypeOpInterface::Trait>(),
@@ -291,7 +291,7 @@ public:
         "requires InferTypeOpInterface to ensure succesful invocation");
     return ::mlir::detail::inferReturnTensorTypes(
         ConcreteType::inferReturnTypeComponents, context, location, operands,
-        attributes, regions, inferredReturnTypes);
+        attributes, properties, regions, inferredReturnTypes);
   }
 };
 

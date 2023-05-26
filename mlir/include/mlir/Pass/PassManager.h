@@ -21,10 +21,6 @@
 #include <vector>
 #include <optional>
 
-namespace llvm {
-class Any;
-} // namespace llvm
-
 namespace mlir {
 class AnalysisManager;
 class MLIRContext;
@@ -461,7 +457,7 @@ void registerPassManagerCLOptions();
 
 /// Apply any values provided to the pass manager options that were registered
 /// with 'registerPassManagerOptions'.
-void applyPassManagerCLOptions(PassManager &pm);
+LogicalResult applyPassManagerCLOptions(PassManager &pm);
 
 /// Apply any values provided to the timing manager options that were registered
 /// with `registerDefaultTimingManagerOptions`. This is a handy helper function

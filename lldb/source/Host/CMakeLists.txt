@@ -159,7 +159,7 @@ if (LLDB_ENABLE_LIBEDIT)
   endif()
 endif()
 
-add_lldb_library(lldbHost
+add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
   ${HOST_SOURCES}
 
   LINK_LIBS

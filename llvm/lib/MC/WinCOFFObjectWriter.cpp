@@ -79,7 +79,7 @@ public:
   using AuxiliarySymbols = SmallVector<AuxSymbol, 1>;
 
   name Name;
-  int Index;
+  int Index = 0;
   AuxiliarySymbols Aux;
   COFFSymbol *Other = nullptr;
   COFFSection *Section = nullptr;
@@ -115,7 +115,7 @@ public:
   COFF::section Header = {};
 
   std::string Name;
-  int Number;
+  int Number = 0;
   MCSectionCOFF const *MCSection = nullptr;
   COFFSymbol *Symbol = nullptr;
   relocations Relocations;
@@ -154,7 +154,7 @@ public:
   bool UseBigObj;
   bool UseOffsetLabels = false;
 
-  MCSectionCOFF *AddrsigSection;
+  MCSectionCOFF *AddrsigSection = nullptr;
 
   MCSectionCOFF *CGProfileSection = nullptr;
 

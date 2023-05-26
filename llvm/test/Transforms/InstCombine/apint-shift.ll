@@ -240,8 +240,8 @@ define i23 @test11(i23 %x) {
 
 define i47 @test12(i47 %X) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i47 [[X:%.*]], -256
-; CHECK-NEXT:    ret i47 [[TMP1]]
+; CHECK-NEXT:    [[SH2:%.*]] = and i47 [[X:%.*]], -256
+; CHECK-NEXT:    ret i47 [[SH2]]
 ;
   %sh1 = ashr i47 %X, 8
   %sh2 = shl i47 %sh1, 8
@@ -250,8 +250,8 @@ define i47 @test12(i47 %X) {
 
 define <2 x i47> @test12_splat_vec(<2 x i47> %X) {
 ; CHECK-LABEL: @test12_splat_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i47> [[X:%.*]], <i47 -256, i47 -256>
-; CHECK-NEXT:    ret <2 x i47> [[TMP1]]
+; CHECK-NEXT:    [[SH2:%.*]] = and <2 x i47> [[X:%.*]], <i47 -256, i47 -256>
+; CHECK-NEXT:    ret <2 x i47> [[SH2]]
 ;
   %sh1 = ashr <2 x i47> %X, <i47 8, i47 8>
   %sh2 = shl <2 x i47> %sh1, <i47 8, i47 8>

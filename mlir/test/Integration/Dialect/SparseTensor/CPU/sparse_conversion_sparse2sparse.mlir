@@ -19,7 +19,7 @@
 // Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
 // REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli \
+// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
 // REDEFINE:   --entry-function=entry_lli \
 // REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
 // REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
@@ -28,32 +28,32 @@
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #Tensor1 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense", "compressed" ]
+  lvlTypes = [ "dense", "dense", "compressed" ]
 }>
 
 // NOTE: dense after compressed is not currently supported for the target
 // of direct-sparse2sparse conversion.  (It's fine for the source though.)
 #Tensor2 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed", "dense" ]
+  lvlTypes = [ "dense", "compressed", "dense" ]
 }>
 
 #Tensor3 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense", "compressed" ],
+  lvlTypes = [ "dense", "dense", "compressed" ],
   dimOrdering = affine_map<(i,j,k) -> (i,k,j)>
 }>
 
 #SingletonTensor1 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed", "singleton" ]
+  lvlTypes = [ "dense", "compressed", "singleton" ]
 }>
 
 // This also checks the compressed->dense conversion (when there are zeros).
 #SingletonTensor2 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense", "singleton" ]
+  lvlTypes = [ "dense", "dense", "singleton" ]
 }>
 
 // This also checks the singleton->compressed conversion.
 #SingletonTensor3 = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "dense", "compressed" ]
+  lvlTypes = [ "dense", "dense", "compressed" ]
 }>
 
 module {

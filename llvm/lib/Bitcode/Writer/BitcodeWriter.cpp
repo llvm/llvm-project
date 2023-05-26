@@ -4247,8 +4247,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     NameVals.clear();
   }
 
-  Stream.EmitRecord(bitc::FS_BLOCK_COUNT,
-                    ArrayRef<uint64_t>{Index->getBlockCount()});
+  if (Index->getBlockCount())
+    Stream.EmitRecord(bitc::FS_BLOCK_COUNT,
+                      ArrayRef<uint64_t>{Index->getBlockCount()});
 
   Stream.ExitBlock();
 }
@@ -4578,8 +4579,9 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     }
   }
 
-  Stream.EmitRecord(bitc::FS_BLOCK_COUNT,
-                    ArrayRef<uint64_t>{Index.getBlockCount()});
+  if (Index.getBlockCount())
+    Stream.EmitRecord(bitc::FS_BLOCK_COUNT,
+                      ArrayRef<uint64_t>{Index.getBlockCount()});
 
   Stream.ExitBlock();
 }

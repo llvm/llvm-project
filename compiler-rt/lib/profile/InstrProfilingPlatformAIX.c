@@ -8,7 +8,163 @@
 
 #if defined(_AIX)
 
+#ifdef __64BIT__
+#define __XCOFF64__
+#endif
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ldr.h>
+#include <xcoff.h>
+
 #include "InstrProfiling.h"
+#include "InstrProfilingInternal.h"
+
+#define BIN_ID_PREFIX "xcoff_binary_id:"
+
+// If found, write the build-id into the Result buffer.
+static size_t FindBinaryId(char *Result, size_t Size) {
+  unsigned long EntryAddr = (unsigned long)__builtin_return_address(0);
+
+  // Use loadquery to get information about loaded modules; loadquery writes
+  // its result into a buffer of unknown size.
+  char Buf[1024];
+  size_t BufSize = sizeof(Buf);
+  char *BufPtr = Buf;
+  int RC = -1;
+
+  errno = 0;
+  RC = loadquery(L_GETXINFO | L_IGNOREUNLOAD, BufPtr, (unsigned int)BufSize);
+  if (RC == -1 && errno == ENOMEM) {
+    BufSize = 64000; // should be plenty for any program.
+    BufPtr = malloc(BufSize);
+    if (BufPtr != 0)
+      RC = loadquery(L_GETXINFO | L_IGNOREUNLOAD, BufPtr, (unsigned int)BufSize);
+  }
+
+  if (RC == -1)
+    goto done;
+
+  // Locate the ld_xinfo corresponding to this module.
+  struct ld_xinfo *CurInfo = (struct ld_xinfo *)BufPtr;
+  while (1) {
+    unsigned long CurTextStart = (uint64_t)CurInfo->ldinfo_textorg;
+    unsigned long CurTextEnd = CurTextStart + CurInfo->ldinfo_textsize;
+    if (CurTextStart <= EntryAddr && EntryAddr < CurTextEnd) {
+      // Found my slot. Now search for the build-id.
+      char *p = (char *)CurInfo->ldinfo_textorg;
+
+      FILHDR *f = (FILHDR *)p;
+      AOUTHDR *a = (AOUTHDR *)(p + FILHSZ);
+      SCNHDR *s =
+          (SCNHDR *)(p + FILHSZ + f->f_opthdr + SCNHSZ * (a->o_snloader - 1));
+      LDHDR *ldhdr = (LDHDR *)(p + s->s_scnptr);
+      // This is the loader string table
+      char *lstr = (char *)ldhdr + ldhdr->l_stoff;
+
+      // If the build-id exists, it's the first entry.
+      // Each entry is comprised of a 2-byte size component, followed by the
+      // data.
+      size_t len = *(short *)lstr;
+      char *str = (char *)(lstr + 2);
+      size_t PrefixLen = sizeof(BIN_ID_PREFIX) - 1;
+      if (len > PrefixLen && (len - PrefixLen) <= Size &&
+          strncmp(str, BIN_ID_PREFIX, PrefixLen) == 0) {
+        memcpy(Result, str + PrefixLen, len - PrefixLen);
+        RC = len - PrefixLen;
+        goto done;
+      }
+      break;
+    }
+    if (CurInfo->ldinfo_next == 0u)
+      break;
+    CurInfo = (struct ld_xinfo *)((char *)CurInfo + CurInfo->ldinfo_next);
+  }
+done:
+  if (BufSize != sizeof(Buf) && BufPtr != 0)
+    free(BufPtr);
+  return RC;
+}
+
+static int StrToHexError = 0;
+static uint8_t StrToHex(char c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'a' && c <= 'f')
+    return c - 'a' + 0xa;
+  if (c >= 'A' && c <= 'F')
+    return c - 'A' + 0xa;
+  StrToHexError = 1;
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
+  // 200 bytes should be enough for the build-id hex string.
+  static char Buf[200];
+  // Profile reading tools expect this to be 8-bytes long.
+  static int64_t BinaryIdLen = 0;
+  static uint8_t *BinaryIdData = 0;
+
+  // -1 means we already checked for a BinaryId and didn't find one.
+  if (BinaryIdLen == -1)
+    return 0;
+
+  // Are we being called for the first time?
+  if (BinaryIdLen == 0) {
+    if (getenv("LLVM_PROFILE_NO_BUILD_ID"))
+      goto fail;
+
+    int BuildIdLen = FindBinaryId(Buf, sizeof(Buf));
+    if (BuildIdLen <= 0)
+      goto fail;
+
+    if (Buf[BuildIdLen - 1] == '\0')
+      BuildIdLen--;
+
+    // assume even number of digits/chars, so 0xabc must be 0x0abc
+    if ((BuildIdLen % 2) != 0 || BuildIdLen == 0)
+      goto fail;
+
+    // The numeric ID is represented as an ascii string in the loader section,
+    // so convert it to raw binary.
+    BinaryIdLen = BuildIdLen / 2;
+    BinaryIdData = (uint8_t *)Buf;
+
+    // Skip "0x" prefix if it exists.
+    if (Buf[0] == '0' && Buf[1] == 'x') {
+      BinaryIdLen -= 1;
+      BinaryIdData += 2;
+    }
+
+    StrToHexError = 0;
+    for (int i = 0; i < BinaryIdLen; i++)
+      BinaryIdData[i] = (StrToHex(BinaryIdData[2 * i]) << 4) +
+                        StrToHex(BinaryIdData[2 * i + 1]);
+
+    if (StrToHexError)
+      goto fail;
+
+    if (getenv("LLVM_PROFILE_VERBOSE")) {
+      char *StrBuf = (char *)COMPILER_RT_ALLOCA(2 * BinaryIdLen + 1);
+      for (int i = 0; i < (int)BinaryIdLen; i++)
+        sprintf(&StrBuf[2 * i], "%02x", BinaryIdData[i]);
+      PROF_NOTE("Writing binary id: %s\n", StrBuf);
+    }
+  }
+
+  uint8_t BinaryIdPadding = __llvm_profile_get_num_padding_bytes(BinaryIdLen);
+  if (Writer && lprofWriteOneBinaryId(Writer, BinaryIdLen, BinaryIdData,
+                                      BinaryIdPadding) == -1)
+    return -1; // Return -1 rather goto fail to match the NT_GNU_BUILD_ID path.
+
+  return sizeof(BinaryIdLen) + BinaryIdLen + BinaryIdPadding;
+
+fail:
+  if (getenv("LLVM_PROFILE_VERBOSE"))
+    fprintf(stderr, "no or invalid binary id: %.*s\n", (int)sizeof(Buf), Buf);
+  BinaryIdLen = -1;
+  return 0;
+}
 
 // Empty stubs to allow linking object files using the registration-based scheme
 COMPILER_RT_VISIBILITY

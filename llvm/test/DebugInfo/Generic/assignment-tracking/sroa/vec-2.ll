@@ -30,7 +30,6 @@
 ;; There's a few dbg intrinsics we're not interested in testing wedged in here.
 ; CHECK-NEXT: dbg.value
 ; CHECK-NEXT: dbg.value
-; CHECK-NEXT: dbg.value
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata float %2,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
 
 %class.d = type { %class.a }

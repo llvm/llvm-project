@@ -25,6 +25,7 @@ int y = counter();
 void g() {
   f(0); // ok
   // expected-error@18 {{lvalue of type 'const char *const'}}
+  // expected-note@18 {{substituting into a lambda}}
   f("foo"); // expected-note {{here}}
 }
 

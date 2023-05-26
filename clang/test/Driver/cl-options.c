@@ -604,7 +604,7 @@
 // STDCXX20: -std=c++20
 
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++latest -### -- %s 2>&1 | FileCheck -check-prefix=STDCXXLATEST %s
-// STDCXXLATEST: -std=c++2b
+// STDCXXLATEST: -std=c++26
 
 // RUN: env CL="/Gy" %clang_cl -### -- %s 2>&1 | FileCheck -check-prefix=ENV-CL %s
 // ENV-CL: "-ffunction-sections"
@@ -646,6 +646,13 @@
 
 // RUN: %clang_cl /guard:ehcont -### -- %s 2>&1 | FileCheck -check-prefix=EHCONTGUARD %s
 // EHCONTGUARD: -ehcontguard
+
+// RUN: %clang_cl /guard:cf /guard:ehcont -Wall -Wno-msvc-not-found -### -- %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=BOTHGUARD %s --implicit-check-not=warning:
+// BOTHGUARD: -cfguard
+// BOTHGUARD-SAME: -ehcontguard
+// BOTHGUARD: -guard:cf
+// BOTHGUARD-SAME: -guard:ehcont
 
 // RUN: %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
 // CFGUARDINVALID: invalid value 'foo' in '/guard:'

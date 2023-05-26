@@ -290,14 +290,20 @@ static bool InitializeSingleGlobal(const hwasan_global &global) {
 }
 
 static void InitLoadedGlobals() {
-  dl_iterate_phdr(
-      [](dl_phdr_info *info, size_t /* size */, void * /* data */) -> int {
-        for (const hwasan_global &global : HwasanGlobalsFor(
-                 info->dlpi_addr, info->dlpi_phdr, info->dlpi_phnum))
-          InitializeSingleGlobal(global);
-        return 0;
-      },
-      nullptr);
+  // Fuchsia's libc provides a hook (__sanitizer_module_loaded) that runs on
+  // the startup path which calls into __hwasan_library_loaded on all
+  // initially loaded modules, so explicitly registering the globals here
+  // isn't needed.
+  if constexpr (!SANITIZER_FUCHSIA) {
+    dl_iterate_phdr(
+        [](dl_phdr_info *info, size_t /* size */, void * /* data */) -> int {
+          for (const hwasan_global &global : HwasanGlobalsFor(
+                   info->dlpi_addr, info->dlpi_phdr, info->dlpi_phnum))
+            InitializeSingleGlobal(global);
+          return 0;
+        },
+        nullptr);
+  }
 }
 
 // Prepare to run instrumented code on the main thread.
@@ -364,13 +370,7 @@ __attribute__((constructor(0))) void __hwasan_init() {
   DisableCoreDumperIfNecessary();
 
   InitInstrumentation();
-  if constexpr (!SANITIZER_FUCHSIA) {
-    // Fuchsia's libc provides a hook (__sanitizer_module_loaded) that runs on
-    // the startup path which calls into __hwasan_library_loaded on all
-    // initially loaded modules, so explicitly registering the globals here
-    // isn't needed.
-    InitLoadedGlobals();
-  }
+  InitLoadedGlobals();
 
   // Needs to be called here because flags()->random_tags might not have been
   // initialized when InitInstrumentation() was called.
@@ -445,16 +445,32 @@ void __hwasan_print_shadow(const void *p, uptr sz) {
 sptr __hwasan_test_shadow(const void *p, uptr sz) {
   if (sz == 0)
     return -1;
-  tag_t ptr_tag = GetTagFromPointer((uptr)p);
-  uptr ptr_raw = UntagAddr(reinterpret_cast<uptr>(p));
+  uptr ptr = reinterpret_cast<uptr>(p);
+  tag_t ptr_tag = GetTagFromPointer(ptr);
+  uptr ptr_raw = UntagAddr(ptr);
   uptr shadow_first = MemToShadow(ptr_raw);
-  uptr shadow_last = MemToShadow(ptr_raw + sz - 1);
-  for (uptr s = shadow_first; s <= shadow_last; ++s)
-    if (*(tag_t *)s != ptr_tag) {
-      sptr offset = ShadowToMem(s) - ptr_raw;
+  uptr shadow_last = MemToShadow(ptr_raw + sz);
+  for (uptr s = shadow_first; s < shadow_last; ++s) {
+    if (UNLIKELY(*(tag_t *)s != ptr_tag)) {
+      uptr short_size =
+          ShortTagSize(*(tag_t *)s, AddTagToPointer(ShadowToMem(s), ptr_tag));
+      sptr offset = ShadowToMem(s) - ptr_raw + short_size;
       return offset < 0 ? 0 : offset;
     }
-  return -1;
+  }
+
+  uptr end = ptr + sz;
+  uptr tail_sz = end & (kShadowAlignment - 1);
+  if (!tail_sz)
+    return -1;
+
+  uptr short_size =
+      ShortTagSize(*(tag_t *)shadow_last, end & ~(kShadowAlignment - 1));
+  if (LIKELY(tail_sz <= short_size))
+    return -1;
+
+  sptr offset = sz - tail_sz + short_size;
+  return offset < 0 ? 0 : offset;
 }
 
 u16 __sanitizer_unaligned_load16(const uu16 *p) {
@@ -553,7 +569,7 @@ void __hwasan_store16_noabort(uptr p) {
 }
 
 void __hwasan_tag_memory(uptr p, u8 tag, uptr sz) {
-  TagMemoryAligned(p, sz, tag);
+  TagMemoryAligned(UntagAddr(p), sz, tag);
 }
 
 uptr __hwasan_tag_pointer(uptr p, u8 tag) {
@@ -563,7 +579,7 @@ uptr __hwasan_tag_pointer(uptr p, u8 tag) {
 void __hwasan_handle_longjmp(const void *sp_dst) {
   uptr dst = (uptr)sp_dst;
   // HWASan does not support tagged SP.
-  CHECK(GetTagFromPointer(dst) == 0);
+  CHECK_EQ(GetTagFromPointer(dst), 0);
 
   uptr sp = (uptr)__builtin_frame_address(0);
   static const uptr kMaxExpectedCleanupSize = 64 << 20;  // 64M

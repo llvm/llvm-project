@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBStructuredData.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
-#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Status.h"
@@ -57,9 +57,9 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
   LLDB_INSTRUMENT_VA(this, stream);
 
   lldb::SBError error;
-  std::string json_str(stream.GetData());
 
-  StructuredData::ObjectSP json_obj = StructuredData::ParseJSON(json_str);
+  StructuredData::ObjectSP json_obj =
+      StructuredData::ParseJSON(stream.GetData());
   m_impl_up->SetObjectSP(json_obj);
 
   if (!json_obj || json_obj->GetType() != eStructuredDataTypeDictionary)
@@ -163,6 +163,18 @@ lldb::SBStructuredData SBStructuredData::GetItemAtIndex(size_t idx) const {
 }
 
 uint64_t SBStructuredData::GetIntegerValue(uint64_t fail_value) const {
+  LLDB_INSTRUMENT_VA(this, fail_value);
+
+  return GetUnsignedIntegerValue(fail_value);
+}
+
+uint64_t SBStructuredData::GetUnsignedIntegerValue(uint64_t fail_value) const {
+  LLDB_INSTRUMENT_VA(this, fail_value);
+
+  return m_impl_up->GetIntegerValue(fail_value);
+}
+
+int64_t SBStructuredData::GetSignedIntegerValue(int64_t fail_value) const {
   LLDB_INSTRUMENT_VA(this, fail_value);
 
   return m_impl_up->GetIntegerValue(fail_value);

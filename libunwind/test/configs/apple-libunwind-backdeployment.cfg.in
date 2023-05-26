@@ -54,6 +54,8 @@ config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --env DYLD_LIBRARY_PATH="%{cxx-runtime-root}:%{abi-runtime-root}:%{unwind-runtime-root}" -- '
 ))
 
+config.stdlib = 'apple-libc++'
+
 import os, site
 import libcxx.test.params, libcxx.test.config
 libcxx.test.config.configure(

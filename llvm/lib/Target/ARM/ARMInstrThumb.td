@@ -501,11 +501,11 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   def tBX_RET : tPseudoExpand<(outs), (ins pred:$p), 2, IIC_Br,
-                   [(ARMretflag)], (tBX LR, pred:$p)>, Sched<[WriteBr]>;
+                   [(ARMretglue)], (tBX LR, pred:$p)>, Sched<[WriteBr]>;
 
   // alternative return for CMSE entry functions
   def tBXNS_RET : tPseudoInst<(outs), (ins), 2, IIC_Br,
-                  [(ARMseretflag)]>, Sched<[WriteBr]>;
+                  [(ARMseretglue)]>, Sched<[WriteBr]>;
 
   // Alternative return instruction used by vararg functions.
   def tBX_RET_vararg : tPseudoExpand<(outs), (ins tGPR:$Rm, pred:$p),

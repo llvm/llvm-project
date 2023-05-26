@@ -92,6 +92,24 @@ TEST(LinkGraphTest, AddressAccess) {
   EXPECT_EQ(B1.getFixupAddress(E1), B1Addr + 8) << "Incorrect fixup address";
 }
 
+TEST(LinkGraphTest, SectionEmpty) {
+  // Check that Section::empty behaves as expected.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec1 =
+      G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
+  auto &B =
+      G.createContentBlock(Sec1, BlockContent, orc::ExecutorAddr(0x1000), 8, 0);
+  G.addDefinedSymbol(B, 0, "S", 4, Linkage::Strong, Scope::Default, false,
+                     false);
+
+  auto &Sec2 =
+      G.createSection("__data.2", orc::MemProt::Read | orc::MemProt::Write);
+
+  EXPECT_FALSE(Sec1.empty());
+  EXPECT_TRUE(Sec2.empty());
+}
+
 TEST(LinkGraphTest, BlockAndSymbolIteration) {
   // Check that we can iterate over blocks within Sections and across sections.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
@@ -223,6 +241,15 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
                                          orc::ExecutorAddr(0x10000), 8, 0);
 
   EXPECT_TRUE(B2.isContentMutable()) << "Expected B2 content to be mutable";
+  EXPECT_EQ(B2.getSize(), MutableContent.size());
+
+  // Create a mutable content block with initial zero-fill.
+  auto &B3 =
+      G.createMutableContentBlock(Sec, 16, orc::ExecutorAddr(0x2000), 8, 0);
+  EXPECT_TRUE(B3.isContentMutable()) << "Expected B2 content to be mutable";
+  EXPECT_EQ(B3.getSize(), 16U);
+  EXPECT_TRUE(llvm::all_of(B3.getAlreadyMutableContent(),
+                           [](char C) { return C == 0; }));
 }
 
 TEST(LinkGraphTest, MakeExternal) {

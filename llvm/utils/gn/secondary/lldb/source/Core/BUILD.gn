@@ -58,7 +58,6 @@ static_library("Core") {
     "DynamicLoader.cpp",
     "EmulateInstruction.cpp",
     "FileLineResolver.cpp",
-    "FileSpecList.cpp",
     "FormatEntity.cpp",
     "Highlighter.cpp",
     "IOHandler.cpp",

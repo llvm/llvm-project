@@ -136,12 +136,9 @@ protected:
         }
       }
       const MCInstrDesc &InstInfo = BC.MII->get(Point.getOpcode());
-      for (unsigned I = 0, E = Point.getNumOperands(); I != E; ++I) {
-        if (!Point.getOperand(I).isReg() || I < InstInfo.getNumDefs())
-          continue;
-        Used |= BC.MIB->getAliases(Point.getOperand(I).getReg(),
-                                   /*OnlySmaller=*/false);
-      }
+      for (const MCOperand &Op : BC.MIB->useOperands(Point))
+        if (Op.isReg())
+          Used |= BC.MIB->getAliases(Op.getReg(), /*OnlySmaller=*/false);
       for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
         Used |= BC.MIB->getAliases(ImplicitUse, false);
       if (IsCall &&

@@ -488,15 +488,9 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
     lldb_private::SymbolContextList sc_list;
     module_sp->FindSymbolsWithNameAndType(reexport_name, eSymbolTypeAny,
                                           sc_list);
-    const size_t num_scs = sc_list.GetSize();
-    if (num_scs > 0) {
-      for (size_t i = 0; i < num_scs; ++i) {
-        lldb_private::SymbolContext sc;
-        if (sc_list.GetContextAtIndex(i, sc)) {
-          if (sc.symbol->IsExternal())
-            return sc.symbol;
-        }
-      }
+    for (const SymbolContext &sc : sc_list) {
+      if (sc.symbol->IsExternal())
+        return sc.symbol;
     }
     // If we didn't find the symbol in this module, it may be because this
     // module re-exports some whole other library.  We have to search those as

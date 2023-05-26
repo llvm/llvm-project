@@ -1,5 +1,4 @@
-//===-- Unittests for nanosleep
-//---------------------------------------------===//
+//===-- Unittests for nanosleep -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +10,7 @@
 
 #include "src/errno/libc_errno.h"
 #include "src/time/nanosleep.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 namespace cpp = __llvm_libc::cpp;

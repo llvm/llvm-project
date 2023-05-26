@@ -29,7 +29,7 @@ class day {
 private:
     unsigned char __d_;
 public:
-    _LIBCPP_HIDE_FROM_ABI day() = default;
+    day() = default;
     _LIBCPP_HIDE_FROM_ABI explicit inline constexpr day(unsigned __val) noexcept : __d_(static_cast<unsigned char>(__val)) {}
     _LIBCPP_HIDE_FROM_ABI inline constexpr day& operator++()    noexcept { ++__d_; return *this; }
     _LIBCPP_HIDE_FROM_ABI inline constexpr day  operator++(int) noexcept { day __tmp = *this; ++(*this); return __tmp; }

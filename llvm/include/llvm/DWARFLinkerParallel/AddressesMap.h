@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include <cstdint>
 
 namespace llvm {
@@ -32,14 +33,16 @@ public:
   /// section.
   virtual bool hasValidRelocs() = 0;
 
-  /// Checks that the specified variable \p DIE references the live code
-  /// section and returns the relocation adjustment value (to get the linked
-  /// address this value might be added to the source variable address).
-  /// Allowed kinds of input DIE: DW_TAG_variable, DW_TAG_constant.
+  /// Checks that the specified DWARF expression operand \p Op references live
+  /// code section and returns the relocation adjustment value (to get the
+  /// linked address this value might be added to the source expression operand
+  /// address).
   /// \returns relocation adjustment value or std::nullopt if there is no
   /// corresponding live address.
   virtual std::optional<int64_t>
-  getVariableRelocAdjustment(const DWARFDie &DIE) = 0;
+  getExprOpAddressRelocAdjustment(DWARFUnit &U,
+                                  const DWARFExpression::Operation &Op,
+                                  uint64_t StartOffset, uint64_t EndOffset) = 0;
 
   /// Checks that the specified subprogram \p DIE references the live code
   /// section and returns the relocation adjustment value (to get the linked

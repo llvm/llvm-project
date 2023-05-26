@@ -8,21 +8,21 @@
 // RUN:   FileCheck %s --check-prefix=CHECK-CONVERT
 
 #CSR = #sparse_tensor.encoding<{
-  dimLevelType = [  "dense", "compressed" ]
+  lvlTypes = [  "dense", "compressed" ]
 }>
 
 #CSC = #sparse_tensor.encoding<{
-  dimLevelType = [  "dense", "compressed" ],
+  lvlTypes = [  "dense", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
 #DCSC = #sparse_tensor.encoding<{
-  dimLevelType = [  "compressed", "compressed" ],
+  lvlTypes = [  "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
 #SV = #sparse_tensor.encoding<{
-  dimLevelType = [  "compressed" ]
+  lvlTypes = [  "compressed" ]
 }>
 
 #rowsum = {

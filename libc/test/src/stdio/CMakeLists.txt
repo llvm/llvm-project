@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_stdio_unittests)
+add_custom_target(libc_stdio_unittests)
 
 add_libc_unittest(
   fileop_test
@@ -112,7 +112,7 @@ add_libc_unittest(
     LibcMemoryHelpers
 )
 
-add_libc_unittest(
+add_fp_unittest(
   sprintf_test
   SUITE
     libc_stdio_unittests
@@ -134,6 +134,8 @@ add_libc_unittest(
     libc.src.stdio.snprintf
 )
 
+# In fullbuild mode, fprintf's tests use the internal FILE for other functions.
+if(LLVM_LIBC_FULL_BUILD)
 add_libc_unittest(
   fprintf_test
   SUITE
@@ -147,7 +149,20 @@ add_libc_unittest(
     libc.src.stdio.fopen
     libc.src.stdio.fread
 )
-
+else()
+# Else in overlay mode they use the system's FILE.
+add_libc_unittest(
+  fprintf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.fprintf
+  COMPILE_OPTIONS
+    -DLIBC_COPT_PRINTF_USE_SYSTEM_FILE
+)
+endif()
 
 add_libc_unittest(
   printf_test
@@ -302,6 +317,10 @@ add_libc_unittest(
     libc.src.stdio.fwrite
     libc.src.stdio.setvbuf
 )
+
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  return()
+endif()
 
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)

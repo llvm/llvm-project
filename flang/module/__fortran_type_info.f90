@@ -44,7 +44,7 @@ module __Fortran_type_info
     integer(1) :: hasParent
     integer(1) :: noInitializationNeeded ! 1 if no component w/ init
     integer(1) :: noDestructionNeeded ! 1 if no component w/ dealloc/final
-    integer(1) :: noFinalizationNeeded ! 1 if nothing finalizaable
+    integer(1) :: noFinalizationNeeded ! 1 if nothing finalizeable
     integer(1) :: __padding0(4)
   end type
 
@@ -108,7 +108,8 @@ module __Fortran_type_info
   type, bind(c) :: SpecialBinding
     integer(1) :: which ! SpecialBinding::Which
     integer(1) :: isArgDescriptorSet
-    integer(1) :: __padding0(6)
+    integer(1) :: isTypeBound
+    integer(1) :: __padding0(5)
     type(__builtin_c_funptr) :: proc
   end type
 

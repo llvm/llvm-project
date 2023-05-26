@@ -95,7 +95,7 @@ static void getBackwardSliceImpl(Operation *op,
     if (auto *definingOp = operand.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
         getBackwardSliceImpl(definingOp, backwardSlice, filter);
-    } else if (auto blockArg = operand.dyn_cast<BlockArgument>()) {
+    } else if (auto blockArg = dyn_cast<BlockArgument>(operand)) {
       Block *block = blockArg.getOwner();
       Operation *parentOp = block->getParentOp();
       // TODO: determine whether we want to recurse backward into the other
@@ -132,7 +132,7 @@ void mlir::getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
     getBackwardSlice(definingOp, backwardSlice, filter, inclusive);
     return;
   }
-  Operation *bbAargOwner = root.cast<BlockArgument>().getOwner()->getParentOp();
+  Operation *bbAargOwner = cast<BlockArgument>(root).getOwner()->getParentOp();
   getBackwardSlice(bbAargOwner, backwardSlice, filter, inclusive);
 }
 

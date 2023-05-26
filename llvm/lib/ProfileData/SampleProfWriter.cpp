@@ -557,15 +557,6 @@ std::error_code SampleProfileWriterExtBinary::writeSections(
   return EC;
 }
 
-std::error_code
-SampleProfileWriterCompactBinary::write(const SampleProfileMap &ProfileMap) {
-  if (std::error_code EC = SampleProfileWriter::write(ProfileMap))
-    return EC;
-  if (std::error_code EC = writeFuncOffsetTable())
-    return EC;
-  return sampleprof_error::success;
-}
-
 /// Write samples to a text file.
 ///
 /// Note: it may be tempting to implement this in terms of
@@ -712,41 +703,6 @@ std::error_code SampleProfileWriterBinary::writeNameTable() {
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileWriterCompactBinary::writeFuncOffsetTable() {
-  auto &OS = *OutputStream;
-
-  // Fill the slot remembered by TableOffset with the offset of FuncOffsetTable.
-  uint64_t FuncOffsetTableStart = OS.tell();
-  support::endian::SeekableWriter Writer(static_cast<raw_pwrite_stream &>(OS),
-                                         support::little);
-  Writer.pwrite(FuncOffsetTableStart, TableOffset);
-
-  // Write out the table size.
-  encodeULEB128(FuncOffsetTable.size(), OS);
-
-  // Write out FuncOffsetTable.
-  for (auto Entry : FuncOffsetTable) {
-    if (std::error_code EC = writeNameIdx(Entry.first))
-      return EC;
-    encodeULEB128(Entry.second, OS);
-  }
-  FuncOffsetTable.clear();
-  return sampleprof_error::success;
-}
-
-std::error_code SampleProfileWriterCompactBinary::writeNameTable() {
-  auto &OS = *OutputStream;
-  std::set<StringRef> V;
-  stablizeNameTable(NameTable, V);
-
-  // Write out the name table.
-  encodeULEB128(NameTable.size(), OS);
-  for (auto N : V) {
-    encodeULEB128(MD5Hash(N), OS);
-  }
-  return sampleprof_error::success;
-}
-
 std::error_code
 SampleProfileWriterBinary::writeMagicIdent(SampleProfileFormat Format) {
   auto &OS = *OutputStream;
@@ -848,19 +804,6 @@ std::error_code SampleProfileWriterExtBinaryBase::writeHeader(
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileWriterCompactBinary::writeHeader(
-    const SampleProfileMap &ProfileMap) {
-  support::endian::Writer Writer(*OutputStream, support::little);
-  if (auto EC = SampleProfileWriterBinary::writeHeader(ProfileMap))
-    return EC;
-
-  // Reserve a slot for the offset of function offset table. The slot will
-  // be populated with the offset of FuncOffsetTable later.
-  TableOffset = OutputStream->tell();
-  Writer.write(static_cast<uint64_t>(-2));
-  return sampleprof_error::success;
-}
-
 std::error_code SampleProfileWriterBinary::writeSummary() {
   auto &OS = *OutputStream;
   encodeULEB128(Summary->getTotalCount(), OS);
@@ -930,15 +873,6 @@ SampleProfileWriterBinary::writeSample(const FunctionSamples &S) {
   return writeBody(S);
 }
 
-std::error_code
-SampleProfileWriterCompactBinary::writeSample(const FunctionSamples &S) {
-  uint64_t Offset = OutputStream->tell();
-  StringRef Name = S.getName();
-  FuncOffsetTable[Name] = Offset;
-  encodeULEB128(S.getHeadSamples(), *OutputStream);
-  return writeBody(S);
-}
-
 /// Create a sample profile file writer based on the specified format.
 ///
 /// \param Filename The file to create.
@@ -950,8 +884,7 @@ ErrorOr<std::unique_ptr<SampleProfileWriter>>
 SampleProfileWriter::create(StringRef Filename, SampleProfileFormat Format) {
   std::error_code EC;
   std::unique_ptr<raw_ostream> OS;
-  if (Format == SPF_Binary || Format == SPF_Ext_Binary ||
-      Format == SPF_Compact_Binary)
+  if (Format == SPF_Binary || Format == SPF_Ext_Binary)
     OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::OF_None));
   else
     OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::OF_TextWithCRLF));
@@ -976,15 +909,13 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
 
   // Currently only Text and Extended Binary format are supported for CSSPGO.
   if ((FunctionSamples::ProfileIsCS || FunctionSamples::ProfileIsProbeBased) &&
-      (Format == SPF_Binary || Format == SPF_Compact_Binary))
+      Format == SPF_Binary)
     return sampleprof_error::unsupported_writing_format;
 
   if (Format == SPF_Binary)
     Writer.reset(new SampleProfileWriterRawBinary(OS));
   else if (Format == SPF_Ext_Binary)
     Writer.reset(new SampleProfileWriterExtBinary(OS));
-  else if (Format == SPF_Compact_Binary)
-    Writer.reset(new SampleProfileWriterCompactBinary(OS));
   else if (Format == SPF_Text)
     Writer.reset(new SampleProfileWriterText(OS));
   else if (Format == SPF_GCC)

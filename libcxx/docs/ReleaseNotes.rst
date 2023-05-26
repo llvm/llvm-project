@@ -39,6 +39,11 @@ Implemented Papers
 ------------------
 - P2520R0 - ``move_iterator<T*>`` should be a random access iterator
 - P1328R1 - ``constexpr type_info::operator==()``
+- P1413R3 - Formatting ``thread::id`` (the ``stacktrace`` is not done yet)
+- P2675R1 - ``format``'s width estimation is too approximate and not forward compatible
+- P2505R5 - Monadic operations for ``std::expected``
+- P2711R1 - Making Multi-Param Constructors Of views explicit (``join_with_view`` is not done yet)
+- P2572R1 - ``std::format`` fill character allowances
 
 Improvements and New Features
 -----------------------------
@@ -51,6 +56,14 @@ Improvements and New Features
 - The performance of ``dynamic_cast`` on its hot paths is greatly improved and is as efficient as the
   ``libsupc++`` implementation. Note that the performance improvements are shipped in ``libcxxabi``.
 
+- `D122780 <https://reviews.llvm.org/D122780>`_ Improved the performance of ``std::sort`` and ``std::ranges::sort``
+  by up to 50% for arithmetic types and by approximately 10% for other types.
+
+- The ``<format>`` header is no longer considered experimental. Some
+  ``std::formatter`` specializations are not yet available since the class used
+  in the specialization has not been implemented in libc++. This prevents the
+  feature-test macro to be set.
+
 Deprecations and Removals
 -------------------------
 
@@ -62,7 +75,15 @@ Deprecations and Removals
   includes are removed based on the language version used. Incidental transitive
   inclusions of the following headers have been removed:
 
-  - C++2b: ``atomic``, ``bit``, ``cstring``, ``type_traits``
+  - C++23: ``atomic``, ``bit``, ``cstdint``, ``cstdlib``, ``cstring``, ``initializer_list``, ``limits``, ``new``,
+           ``stdexcept``, ``system_error``, ``type_traits``, ``typeinfo``
+
+- ``<algorithm>`` no longer includes ``<chrono>`` in any C++ version (it was previously included in C++17 and earlier).
+
+- ``<string>`` no longer includes ``<vector>`` in any C++ version (it was previously included in C++20 and earlier).
+
+- ``<string>``, ``<string_view>``, and ``<mutex>`` no longer include ``<functional>``
+  in any C++ version (it was previously included in C++20 and earlier).
 
 - The headers ``<experimental/algorithm>`` and ``<experimental/functional>`` have been removed, since all the contents
   have been implemented in namespace ``std`` for at least two releases.
@@ -82,8 +103,22 @@ Deprecations and Removals
   which led to ODR violations when mixed with the C++03 definition. Cleaning this up is required for libc++ to
   make progress on support for C++20 modules.
 
+- The ``_LIBCPP_ABI_OLD_LOGNORMAL_DISTRIBUTION`` macro has been removed.
+
 Upcoming Deprecations and Removals
 ----------------------------------
+
+LLVM 18
+~~~~~~~
+
+- The base template for ``std::char_traits`` has been marked as deprecated and
+  will be removed in LLVM 18. If you are using ``std::char_traits`` with types
+  other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``, ``char32_t`` or
+  a custom character type for which you specialized ``std::char_traits``, your code
+  will stop working when we remove the base template. The Standard does not
+  mandate that a base template is provided, and such a base template is bound
+  to be incorrect for some types, which could currently cause unexpected
+  behavior while going undetected.
 
 - The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro will not be honored anymore in LLVM 18.
   Please see the updated documentation about the safe libc++ mode and in particular the ``_LIBCPP_VERBOSE_ABORT``
@@ -100,6 +135,14 @@ API Changes
 
 ABI Affecting Changes
 ---------------------
+
+- Symbols for ``std::allocator_arg``, ``std::defer_lock``, ``std::try_to_lock``, ``std::adopt_lock``, and
+  ``std::piecewise_construct`` have been removed from the built library. Under most circumstances, user code
+  should not have been relying on those symbols anyway since those are empty classes and the compiler does
+  not generate an undefined reference unless the address of the object is taken. However, this is an ABI break
+  if the address of one of these objects has been taken in code compiled as C++03, since in those cases the
+  objects were marked as defined in the shared library. In other Standard modes, this should never be a problem
+  since those objects were defined in the headers as ``constexpr``.
 
 Build System Changes
 --------------------

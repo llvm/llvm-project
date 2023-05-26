@@ -1,5 +1,5 @@
 ! Test lowering of of expressions as fir.box
-! RUN: bbc -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -hlfir -o - %s 2>&1 --use-hlfir-intrinsic-ops=false | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPfoo(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>

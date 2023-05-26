@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dominance.h"
@@ -60,11 +61,11 @@ static void replaceUsesAndPropagateType(RewriterBase &rewriter,
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(subviewUse);
     Type newType = memref::SubViewOp::inferRankReducedResultType(
-        subviewUse.getType().getShape(), val.getType().cast<MemRefType>(),
+        subviewUse.getType().getShape(), cast<MemRefType>(val.getType()),
         subviewUse.getStaticOffsets(), subviewUse.getStaticSizes(),
         subviewUse.getStaticStrides());
     Value newSubview = rewriter.create<memref::SubViewOp>(
-        subviewUse->getLoc(), newType.cast<MemRefType>(), val,
+        subviewUse->getLoc(), cast<MemRefType>(newType), val,
         subviewUse.getMixedOffsets(), subviewUse.getMixedSizes(),
         subviewUse.getMixedStrides());
 
@@ -189,7 +190,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   Value stepVal = getValueOrCreateConstantIndexOp(rewriter, loc, *singleStep);
   AffineExpr iv, lb, step;
   bindDims(rewriter.getContext(), iv, lb, step);
-  Value bufferIndex = makeComposedAffineApply(
+  Value bufferIndex = affine::makeComposedAffineApply(
       rewriter, loc, ((iv - lb).floorDiv(step)) % multiBufferingFactor,
       {ivVal, lbVal, stepVal});
   LLVM_DEBUG(DBGS() << "--multi-buffered indexing: " << bufferIndex << "\n");
@@ -208,9 +209,9 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   for (int64_t i = 0, e = originalShape.size(); i != e; ++i)
     sizes[1 + i] = rewriter.getIndexAttr(originalShape[i]);
   // Strides is [1, 1 ... 1 ].
-  auto dstMemref = memref::SubViewOp::inferRankReducedResultType(
-                       originalShape, mbMemRefType, offsets, sizes, strides)
-                       .cast<MemRefType>();
+  auto dstMemref =
+      cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
+          originalShape, mbMemRefType, offsets, sizes, strides));
   Value subview = rewriter.create<memref::SubViewOp>(loc, dstMemref, mbAlloc,
                                                      offsets, sizes, strides);
   LLVM_DEBUG(DBGS() << "--multi-buffered slice: " << subview << "\n");

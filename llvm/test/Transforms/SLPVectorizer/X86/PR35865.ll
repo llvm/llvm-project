@@ -7,7 +7,7 @@ define void @test(<16 x half> %v) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x half> [[V:%.*]], <16 x half> poison, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext <2 x half> [[TMP0]] to <2 x float>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[TMP1]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[VECINS_I_5_I1:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 14, i32 15>
 ; CHECK-NEXT:    ret void
 ;

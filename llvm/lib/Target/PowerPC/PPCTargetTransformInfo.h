@@ -34,8 +34,6 @@ class PPCTTIImpl : public BasicTTIImplBase<PPCTTIImpl> {
 
   const PPCSubtarget *getST() const { return ST; }
   const PPCTargetLowering *getTLI() const { return TLI; }
-  bool mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
-                   SmallPtrSetImpl<const Value *> &Visited);
 
 public:
   explicit PPCTTIImpl(const PPCTargetMachine *TM, const Function &F)

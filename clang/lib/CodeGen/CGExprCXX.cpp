@@ -829,8 +829,8 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
     // going to have to do a comparison for (2), and this happens to
     // take care of (1), too.
     if (numElementsWidth > sizeWidth) {
-      llvm::APInt threshold(numElementsWidth, 1);
-      threshold <<= sizeWidth;
+      llvm::APInt threshold =
+          llvm::APInt::getOneBitSet(numElementsWidth, sizeWidth);
 
       llvm::Value *thresholdV
         = llvm::ConstantInt::get(numElementsType, threshold);

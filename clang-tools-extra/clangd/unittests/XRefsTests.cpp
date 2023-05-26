@@ -43,6 +43,10 @@ using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
 using ::testing::UnorderedPointwise;
 
+std::string guard(llvm::StringRef Code) {
+  return "#pragma once\n" + Code.str();
+}
+
 MATCHER_P2(FileRange, File, Range, "") {
   return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
 }
@@ -2291,6 +2295,50 @@ TEST(FindReferences, ExplicitSymbols) {
   };
   for (const char *Test : Tests)
     checkFindRefs(Test);
+}
+
+TEST(FindReferences, UsedSymbolsFromInclude) {
+  const char *Tests[] = {
+      R"cpp([[#include ^"bar.h"]]
+        #include <vector>
+        int fstBar = [[bar1]]();
+        int sndBar = [[bar2]]();
+        [[Bar]] bar;
+        int macroBar = [[BAR]];
+        std::vector<int> vec;
+      )cpp",
+
+      R"cpp([[#in^clude <vector>]]
+        std::[[vector]]<int> vec;
+      )cpp"};
+  for (const char *Test : Tests) {
+    Annotations T(Test);
+    auto TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-std=c++20");
+    TU.AdditionalFiles["bar.h"] = guard(R"cpp(
+      #define BAR 5
+      int bar1();
+      int bar2();
+      class Bar {};            
+    )cpp");
+    TU.AdditionalFiles["system/vector"] = guard(R"cpp(
+      namespace std {
+        template<typename>
+        class vector{};
+      }
+    )cpp");
+    TU.ExtraArgs.push_back("-isystem" + testPath("system"));
+
+    auto AST = TU.build();
+    std::vector<Matcher<ReferencesResult::Reference>> ExpectedLocations;
+    for (const auto &R : T.ranges())
+      ExpectedLocations.push_back(AllOf(rangeIs(R), attrsAre(0u)));
+    for (const auto &P : T.points()) 
+      EXPECT_THAT(findReferences(AST, P, 0).References,
+                  UnorderedElementsAreArray(ExpectedLocations))
+          << "Failed for Refs at " << P << "\n"
+          << Test;
+  }
 }
 
 TEST(FindReferences, NeedsIndexForSymbols) {

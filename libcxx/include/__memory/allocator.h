@@ -21,7 +21,6 @@
 #include <__utility/forward.h>
 #include <cstddef>
 #include <new>
-#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -99,8 +98,7 @@ public:
     typedef true_type   propagate_on_container_move_assignment;
     typedef true_type   is_always_equal;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-    allocator() _NOEXCEPT = default;
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 
     template <class _Up>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -188,8 +186,7 @@ public:
     typedef true_type   propagate_on_container_move_assignment;
     typedef true_type   is_always_equal;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-    allocator() _NOEXCEPT = default;
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 
     template <class _Up>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20

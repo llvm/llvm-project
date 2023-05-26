@@ -586,7 +586,7 @@ bool findVCToolChainViaEnvironment(vfs::FileSystem &VFS, std::string &Path,
         for (StringRef Prefix : ExpectedPrefixes) {
           if (It == End)
             goto NotAToolChain;
-          if (!It->startswith_insensitive(Prefix))
+          if (!It->starts_with_insensitive(Prefix))
             goto NotAToolChain;
           ++It;
         }

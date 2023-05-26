@@ -278,11 +278,13 @@ fun:strcasecmp=custom
 fun:strchr=custom
 fun:strcmp=custom
 fun:strlen=custom
+fun:strnlen=custom
 fun:strncasecmp=custom
 fun:strncmp=custom
 fun:strpbrk=custom
 fun:strrchr=custom
 fun:strstr=custom
+fun:strsep=custom
 
 # Functions which take action based on global state, such as running a callback
 # set by a separate function.

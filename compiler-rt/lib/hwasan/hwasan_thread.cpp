@@ -58,6 +58,7 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
 #endif
   InitStackAndTls(state);
   dtls_ = DTLS_Get();
+  AllocatorThreadStart(allocator_cache());
 }
 
 void Thread::InitStackRingBuffer(uptr stack_buffer_start,
@@ -100,7 +101,7 @@ void Thread::ClearShadowForThreadStackAndTLS() {
 void Thread::Destroy() {
   if (flags()->verbose_threads)
     Print("Destroying: ");
-  AllocatorSwallowThreadLocalCache(allocator_cache());
+  AllocatorThreadFinish(allocator_cache());
   ClearShadowForThreadStackAndTLS();
   if (heap_allocations_)
     heap_allocations_->Delete();
@@ -173,9 +174,15 @@ static __hwasan::Thread *GetThreadByOsIDLocked(tid_t os_id) {
       [os_id](__hwasan::Thread *t) { return t->os_id() == os_id; });
 }
 
-void LockThreadRegistry() { __hwasan::hwasanThreadList().Lock(); }
+void LockThreads() {
+  __hwasan::hwasanThreadList().Lock();
+  __hwasan::hwasanThreadArgRetval().Lock();
+}
 
-void UnlockThreadRegistry() { __hwasan::hwasanThreadList().Unlock(); }
+void UnlockThreads() {
+  __hwasan::hwasanThreadArgRetval().Unlock();
+  __hwasan::hwasanThreadList().Unlock();
+}
 
 void EnsureMainThreadIDIsCorrect() { __hwasan::EnsureMainThreadIDIsCorrect(); }
 
@@ -202,7 +209,10 @@ void GetThreadExtraStackRangesLocked(tid_t os_id,
                                      InternalMmapVector<Range> *ranges) {}
 void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
-void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {}
+void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
+  __hwasan::hwasanThreadArgRetval().GetAllPtrsLocked(ptrs);
+}
+
 void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {}
 
 }  // namespace __lsan

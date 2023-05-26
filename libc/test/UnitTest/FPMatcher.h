@@ -11,18 +11,15 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/RoundingModeUtils.h"
+#include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
 
 #include <math.h>
 
 namespace __llvm_libc {
 namespace fputil {
 namespace testing {
-
-template <typename ValType, typename StreamType>
-cpp::enable_if_t<cpp::is_floating_point_v<ValType>, void>
-describeValue(const char *label, ValType value, StreamType &stream);
 
 template <typename T, __llvm_libc::testing::TestCondition Condition>
 class FPMatcher : public __llvm_libc::testing::Matcher<T> {
@@ -52,9 +49,12 @@ public:
            (actualBits.uintval() != expectedBits.uintval());
   }
 
-  void explainError(testutils::StreamWrapper &stream) override {
-    describeValue("Expected floating point value: ", expected, stream);
-    describeValue("  Actual floating point value: ", actual, stream);
+  void explainError() override {
+    __llvm_libc::testing::tlog
+        << "Expected floating point value: " << FPBits<T>(expected).str()
+        << '\n';
+    __llvm_libc::testing::tlog
+        << "Actual floating point value: " << FPBits<T>(actual).str() << '\n';
   }
 };
 
@@ -162,7 +162,7 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 
 #define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
   do {                                                                         \
-    using namespace __llvm_libc::testutils;                                    \
+    using namespace __llvm_libc::fputil::testing;                              \
     ForceRoundingMode __r1(RoundingMode::Nearest);                             \
     EXPECT_FP_EQ((expected), (actual));                                        \
     ForceRoundingMode __r2(RoundingMode::Upward);                              \

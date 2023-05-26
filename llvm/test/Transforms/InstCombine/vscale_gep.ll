@@ -25,7 +25,7 @@ define ptr @gep_num_of_indices_1(ptr %p) {
 define void @gep_bitcast(ptr %p) {
 ; CHECK-LABEL: @gep_bitcast(
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[P]], i64 1
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[GEP2]], align 16
 ; CHECK-NEXT:    ret void
 ;

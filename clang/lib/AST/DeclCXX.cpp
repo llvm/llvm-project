@@ -1646,10 +1646,15 @@ Decl *CXXRecordDecl::getLambdaContextDecl() const {
   return getLambdaData().ContextDecl.get(Source);
 }
 
-void CXXRecordDecl::setDeviceLambdaManglingNumber(unsigned Num) const {
+void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
   assert(isLambda() && "Not a lambda closure type!");
-  if (Num)
-    getASTContext().DeviceLambdaManglingNumbers[this] = Num;
+  getLambdaData().ManglingNumber = Numbering.ManglingNumber;
+  if (Numbering.DeviceManglingNumber)
+    getASTContext().DeviceLambdaManglingNumbers[this] =
+        Numbering.DeviceManglingNumber;
+  getLambdaData().IndexInContext = Numbering.IndexInContext;
+  getLambdaData().ContextDecl = Numbering.ContextDecl;
+  getLambdaData().HasKnownInternalLinkage = Numbering.HasKnownInternalLinkage;
 }
 
 unsigned CXXRecordDecl::getDeviceLambdaManglingNumber() const {

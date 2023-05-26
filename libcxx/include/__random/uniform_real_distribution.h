@@ -64,7 +64,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     uniform_real_distribution() : uniform_real_distribution(0) {}
-    explicit uniform_real_distribution(result_type __a, result_type __b = 1)
+    _LIBCPP_HIDE_FROM_ABI explicit uniform_real_distribution(result_type __a, result_type __b = 1)
         : __p_(param_type(__a, __b)) {}
 #else
     _LIBCPP_INLINE_VISIBILITY

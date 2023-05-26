@@ -1,6 +1,7 @@
 executable("clang-repl") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    "//clang/lib/AST",
     "//clang/lib/Basic",
     "//clang/lib/Interpreter",
     "//clang/lib/Tooling",

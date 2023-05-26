@@ -62,10 +62,8 @@ define zeroext i1 @saddo2.i32(i32 signext %v1, ptr %res) {
 ;
 ; RV64-LABEL: saddo2.i32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a2, a0, 4
-; RV64-NEXT:    addiw a0, a0, 4
-; RV64-NEXT:    xor a0, a0, a2
-; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    addiw a2, a0, 4
+; RV64-NEXT:    slt a0, a2, a0
 ; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    ret
 ;
@@ -78,10 +76,8 @@ define zeroext i1 @saddo2.i32(i32 signext %v1, ptr %res) {
 ;
 ; RV64ZBA-LABEL: saddo2.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    addi a2, a0, 4
-; RV64ZBA-NEXT:    addiw a0, a0, 4
-; RV64ZBA-NEXT:    xor a0, a0, a2
-; RV64ZBA-NEXT:    snez a0, a0
+; RV64ZBA-NEXT:    addiw a2, a0, 4
+; RV64ZBA-NEXT:    slt a0, a2, a0
 ; RV64ZBA-NEXT:    sw a2, 0(a1)
 ; RV64ZBA-NEXT:    ret
 entry:
@@ -104,10 +100,9 @@ define zeroext i1 @saddo3.i32(i32 signext %v1, ptr %res) {
 ;
 ; RV64-LABEL: saddo3.i32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a2, a0, -4
-; RV64-NEXT:    addiw a0, a0, -4
-; RV64-NEXT:    xor a0, a0, a2
-; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    addiw a2, a0, -4
+; RV64-NEXT:    slt a0, a2, a0
+; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    ret
 ;
@@ -121,10 +116,9 @@ define zeroext i1 @saddo3.i32(i32 signext %v1, ptr %res) {
 ;
 ; RV64ZBA-LABEL: saddo3.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    addi a2, a0, -4
-; RV64ZBA-NEXT:    addiw a0, a0, -4
-; RV64ZBA-NEXT:    xor a0, a0, a2
-; RV64ZBA-NEXT:    snez a0, a0
+; RV64ZBA-NEXT:    addiw a2, a0, -4
+; RV64ZBA-NEXT:    slt a0, a2, a0
+; RV64ZBA-NEXT:    xori a0, a0, 1
 ; RV64ZBA-NEXT:    sw a2, 0(a1)
 ; RV64ZBA-NEXT:    ret
 entry:
@@ -150,11 +144,9 @@ define zeroext i1 @saddo4.i32(i32 signext %v1, ptr %res) {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lui a2, 4096
 ; RV64-NEXT:    addiw a2, a2, -1
-; RV64-NEXT:    add a3, a0, a2
-; RV64-NEXT:    addw a0, a0, a2
-; RV64-NEXT:    xor a0, a0, a3
-; RV64-NEXT:    snez a0, a0
-; RV64-NEXT:    sw a3, 0(a1)
+; RV64-NEXT:    addw a2, a0, a2
+; RV64-NEXT:    slt a0, a2, a0
+; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    ret
 ;
 ; RV32ZBA-LABEL: saddo4.i32:
@@ -170,11 +162,9 @@ define zeroext i1 @saddo4.i32(i32 signext %v1, ptr %res) {
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    lui a2, 4096
 ; RV64ZBA-NEXT:    addiw a2, a2, -1
-; RV64ZBA-NEXT:    add a3, a0, a2
-; RV64ZBA-NEXT:    addw a0, a0, a2
-; RV64ZBA-NEXT:    xor a0, a0, a3
-; RV64ZBA-NEXT:    snez a0, a0
-; RV64ZBA-NEXT:    sw a3, 0(a1)
+; RV64ZBA-NEXT:    addw a2, a0, a2
+; RV64ZBA-NEXT:    slt a0, a2, a0
+; RV64ZBA-NEXT:    sw a2, 0(a1)
 ; RV64ZBA-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 16777215)
@@ -594,10 +584,8 @@ define zeroext i1 @ssubo2.i32(i32 signext %v1, ptr %res) {
 ;
 ; RV64-LABEL: ssubo2.i32:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a2, a0, 4
-; RV64-NEXT:    addiw a0, a0, 4
-; RV64-NEXT:    xor a0, a0, a2
-; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    addiw a2, a0, 4
+; RV64-NEXT:    slt a0, a2, a0
 ; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    ret
 ;
@@ -610,10 +598,8 @@ define zeroext i1 @ssubo2.i32(i32 signext %v1, ptr %res) {
 ;
 ; RV64ZBA-LABEL: ssubo2.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    addi a2, a0, 4
-; RV64ZBA-NEXT:    addiw a0, a0, 4
-; RV64ZBA-NEXT:    xor a0, a0, a2
-; RV64ZBA-NEXT:    snez a0, a0
+; RV64ZBA-NEXT:    addiw a2, a0, 4
+; RV64ZBA-NEXT:    slt a0, a2, a0
 ; RV64ZBA-NEXT:    sw a2, 0(a1)
 ; RV64ZBA-NEXT:    ret
 entry:
@@ -3961,16 +3947,13 @@ continue:
 define zeroext i1 @uaddo.i64.constant(i64 %v1, ptr %res) {
 ; RV32-LABEL: uaddo.i64.constant:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    mv a3, a0
-; RV32-NEXT:    addi a4, a0, 2
-; RV32-NEXT:    sltu a0, a4, a0
-; RV32-NEXT:    add a5, a1, a0
-; RV32-NEXT:    bgeu a4, a3, .LBB66_2
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    sltu a0, a5, a1
-; RV32-NEXT:  .LBB66_2: # %entry
-; RV32-NEXT:    sw a4, 0(a2)
-; RV32-NEXT:    sw a5, 4(a2)
+; RV32-NEXT:    addi a3, a0, 2
+; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    add a4, a1, a0
+; RV32-NEXT:    sltu a1, a4, a1
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo.i64.constant:
@@ -3982,16 +3965,13 @@ define zeroext i1 @uaddo.i64.constant(i64 %v1, ptr %res) {
 ;
 ; RV32ZBA-LABEL: uaddo.i64.constant:
 ; RV32ZBA:       # %bb.0: # %entry
-; RV32ZBA-NEXT:    mv a3, a0
-; RV32ZBA-NEXT:    addi a4, a0, 2
-; RV32ZBA-NEXT:    sltu a0, a4, a0
-; RV32ZBA-NEXT:    add a5, a1, a0
-; RV32ZBA-NEXT:    bgeu a4, a3, .LBB66_2
-; RV32ZBA-NEXT:  # %bb.1: # %entry
-; RV32ZBA-NEXT:    sltu a0, a5, a1
-; RV32ZBA-NEXT:  .LBB66_2: # %entry
-; RV32ZBA-NEXT:    sw a4, 0(a2)
-; RV32ZBA-NEXT:    sw a5, 4(a2)
+; RV32ZBA-NEXT:    addi a3, a0, 2
+; RV32ZBA-NEXT:    sltu a0, a3, a0
+; RV32ZBA-NEXT:    add a4, a1, a0
+; RV32ZBA-NEXT:    sltu a1, a4, a1
+; RV32ZBA-NEXT:    and a0, a0, a1
+; RV32ZBA-NEXT:    sw a3, 0(a2)
+; RV32ZBA-NEXT:    sw a4, 4(a2)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: uaddo.i64.constant:
@@ -4011,17 +3991,14 @@ entry:
 define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, ptr %res) {
 ; RV32-LABEL: uaddo.i64.constant_2048:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    mv a3, a0
-; RV32-NEXT:    addi a4, a0, 2047
-; RV32-NEXT:    addi a4, a4, 1
-; RV32-NEXT:    sltu a0, a4, a0
-; RV32-NEXT:    add a5, a1, a0
-; RV32-NEXT:    bgeu a4, a3, .LBB67_2
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    sltu a0, a5, a1
-; RV32-NEXT:  .LBB67_2: # %entry
-; RV32-NEXT:    sw a4, 0(a2)
-; RV32-NEXT:    sw a5, 4(a2)
+; RV32-NEXT:    addi a3, a0, 2047
+; RV32-NEXT:    addi a3, a3, 1
+; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    add a4, a1, a0
+; RV32-NEXT:    sltu a1, a4, a1
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo.i64.constant_2048:
@@ -4034,17 +4011,14 @@ define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, ptr %res) {
 ;
 ; RV32ZBA-LABEL: uaddo.i64.constant_2048:
 ; RV32ZBA:       # %bb.0: # %entry
-; RV32ZBA-NEXT:    mv a3, a0
-; RV32ZBA-NEXT:    addi a4, a0, 2047
-; RV32ZBA-NEXT:    addi a4, a4, 1
-; RV32ZBA-NEXT:    sltu a0, a4, a0
-; RV32ZBA-NEXT:    add a5, a1, a0
-; RV32ZBA-NEXT:    bgeu a4, a3, .LBB67_2
-; RV32ZBA-NEXT:  # %bb.1: # %entry
-; RV32ZBA-NEXT:    sltu a0, a5, a1
-; RV32ZBA-NEXT:  .LBB67_2: # %entry
-; RV32ZBA-NEXT:    sw a4, 0(a2)
-; RV32ZBA-NEXT:    sw a5, 4(a2)
+; RV32ZBA-NEXT:    addi a3, a0, 2047
+; RV32ZBA-NEXT:    addi a3, a3, 1
+; RV32ZBA-NEXT:    sltu a0, a3, a0
+; RV32ZBA-NEXT:    add a4, a1, a0
+; RV32ZBA-NEXT:    sltu a1, a4, a1
+; RV32ZBA-NEXT:    and a0, a0, a1
+; RV32ZBA-NEXT:    sw a3, 0(a2)
+; RV32ZBA-NEXT:    sw a4, 4(a2)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: uaddo.i64.constant_2048:
@@ -4065,17 +4039,14 @@ entry:
 define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, ptr %res) {
 ; RV32-LABEL: uaddo.i64.constant_2049:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    mv a3, a0
-; RV32-NEXT:    addi a4, a0, 2047
-; RV32-NEXT:    addi a4, a4, 2
-; RV32-NEXT:    sltu a0, a4, a0
-; RV32-NEXT:    add a5, a1, a0
-; RV32-NEXT:    bgeu a4, a3, .LBB68_2
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    sltu a0, a5, a1
-; RV32-NEXT:  .LBB68_2: # %entry
-; RV32-NEXT:    sw a4, 0(a2)
-; RV32-NEXT:    sw a5, 4(a2)
+; RV32-NEXT:    addi a3, a0, 2047
+; RV32-NEXT:    addi a3, a3, 2
+; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    add a4, a1, a0
+; RV32-NEXT:    sltu a1, a4, a1
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo.i64.constant_2049:
@@ -4088,17 +4059,14 @@ define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, ptr %res) {
 ;
 ; RV32ZBA-LABEL: uaddo.i64.constant_2049:
 ; RV32ZBA:       # %bb.0: # %entry
-; RV32ZBA-NEXT:    mv a3, a0
-; RV32ZBA-NEXT:    addi a4, a0, 2047
-; RV32ZBA-NEXT:    addi a4, a4, 2
-; RV32ZBA-NEXT:    sltu a0, a4, a0
-; RV32ZBA-NEXT:    add a5, a1, a0
-; RV32ZBA-NEXT:    bgeu a4, a3, .LBB68_2
-; RV32ZBA-NEXT:  # %bb.1: # %entry
-; RV32ZBA-NEXT:    sltu a0, a5, a1
-; RV32ZBA-NEXT:  .LBB68_2: # %entry
-; RV32ZBA-NEXT:    sw a4, 0(a2)
-; RV32ZBA-NEXT:    sw a5, 4(a2)
+; RV32ZBA-NEXT:    addi a3, a0, 2047
+; RV32ZBA-NEXT:    addi a3, a3, 2
+; RV32ZBA-NEXT:    sltu a0, a3, a0
+; RV32ZBA-NEXT:    add a4, a1, a0
+; RV32ZBA-NEXT:    sltu a1, a4, a1
+; RV32ZBA-NEXT:    and a0, a0, a1
+; RV32ZBA-NEXT:    sw a3, 0(a2)
+; RV32ZBA-NEXT:    sw a4, 4(a2)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: uaddo.i64.constant_2049:
@@ -4119,22 +4087,18 @@ entry:
 define i64 @uaddo.i64.constant_setcc_on_overflow_flag(ptr %p) {
 ; RV32-LABEL: uaddo.i64.constant_setcc_on_overflow_flag:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lw a4, 0(a0)
-; RV32-NEXT:    lw a3, 4(a0)
-; RV32-NEXT:    addi a0, a4, 2
-; RV32-NEXT:    sltu a2, a0, a4
-; RV32-NEXT:    add a1, a3, a2
-; RV32-NEXT:    bltu a0, a4, .LBB69_3
-; RV32-NEXT:  # %bb.1: # %entry
-; RV32-NEXT:    beqz a2, .LBB69_4
-; RV32-NEXT:  .LBB69_2: # %IfNoOverflow
-; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB69_3: # %entry
-; RV32-NEXT:    sltu a2, a1, a3
+; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    lw a2, 4(a0)
+; RV32-NEXT:    addi a0, a1, 2
+; RV32-NEXT:    sltu a3, a0, a1
+; RV32-NEXT:    add a1, a2, a3
+; RV32-NEXT:    sltu a2, a1, a2
+; RV32-NEXT:    and a2, a3, a2
 ; RV32-NEXT:    bnez a2, .LBB69_2
-; RV32-NEXT:  .LBB69_4: # %IfOverflow
+; RV32-NEXT:  # %bb.1: # %IfOverflow
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    li a1, 0
+; RV32-NEXT:  .LBB69_2: # %IfNoOverflow
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: uaddo.i64.constant_setcc_on_overflow_flag:
@@ -4149,22 +4113,18 @@ define i64 @uaddo.i64.constant_setcc_on_overflow_flag(ptr %p) {
 ;
 ; RV32ZBA-LABEL: uaddo.i64.constant_setcc_on_overflow_flag:
 ; RV32ZBA:       # %bb.0: # %entry
-; RV32ZBA-NEXT:    lw a4, 0(a0)
-; RV32ZBA-NEXT:    lw a3, 4(a0)
-; RV32ZBA-NEXT:    addi a0, a4, 2
-; RV32ZBA-NEXT:    sltu a2, a0, a4
-; RV32ZBA-NEXT:    add a1, a3, a2
-; RV32ZBA-NEXT:    bltu a0, a4, .LBB69_3
-; RV32ZBA-NEXT:  # %bb.1: # %entry
-; RV32ZBA-NEXT:    beqz a2, .LBB69_4
-; RV32ZBA-NEXT:  .LBB69_2: # %IfNoOverflow
-; RV32ZBA-NEXT:    ret
-; RV32ZBA-NEXT:  .LBB69_3: # %entry
-; RV32ZBA-NEXT:    sltu a2, a1, a3
+; RV32ZBA-NEXT:    lw a1, 0(a0)
+; RV32ZBA-NEXT:    lw a2, 4(a0)
+; RV32ZBA-NEXT:    addi a0, a1, 2
+; RV32ZBA-NEXT:    sltu a3, a0, a1
+; RV32ZBA-NEXT:    add a1, a2, a3
+; RV32ZBA-NEXT:    sltu a2, a1, a2
+; RV32ZBA-NEXT:    and a2, a3, a2
 ; RV32ZBA-NEXT:    bnez a2, .LBB69_2
-; RV32ZBA-NEXT:  .LBB69_4: # %IfOverflow
+; RV32ZBA-NEXT:  # %bb.1: # %IfOverflow
 ; RV32ZBA-NEXT:    li a0, 0
 ; RV32ZBA-NEXT:    li a1, 0
+; RV32ZBA-NEXT:  .LBB69_2: # %IfNoOverflow
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: uaddo.i64.constant_setcc_on_overflow_flag:

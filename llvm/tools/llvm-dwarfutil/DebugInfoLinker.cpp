@@ -70,8 +70,8 @@ public:
   // should be renamed into has valid address ranges
   bool hasValidRelocs() override { return !DWARFAddressRanges.empty(); }
 
-  bool isLiveSubprogram(const DWARFDie &DIE,
-                        CompileUnit::DIEInfo &Info) override {
+  std::optional<int64_t>
+  getSubprogramRelocAdjustment(const DWARFDie &DIE) override {
     assert((DIE.getTag() == dwarf::DW_TAG_subprogram ||
             DIE.getTag() == dwarf::DW_TAG_label) &&
            "Wrong type of input die");
@@ -80,53 +80,44 @@ public:
             dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc))) {
       if (!isDeadAddress(*LowPC, DIE.getDwarfUnit()->getVersion(),
                          Opts.Tombstone,
-                         DIE.getDwarfUnit()->getAddressByteSize())) {
-        Info.AddrAdjust = 0;
-        Info.InDebugMap = true;
-        return true;
-      }
+                         DIE.getDwarfUnit()->getAddressByteSize()))
+        // Relocation value for the linked binary is 0.
+        return 0;
     }
 
-    return false;
+    return std::nullopt;
   }
 
-  bool isLiveVariable(const DWARFDie &DIE,
-                      CompileUnit::DIEInfo &Info) override {
-    assert((DIE.getTag() == dwarf::DW_TAG_variable ||
-            DIE.getTag() == dwarf::DW_TAG_constant) &&
-           "Wrong type of input die");
-
-    if (Expected<DWARFLocationExpressionsVector> Loc =
-            DIE.getLocations(dwarf::DW_AT_location)) {
-      DWARFUnit *U = DIE.getDwarfUnit();
-      for (const auto &Entry : *Loc) {
-        DataExtractor Data(toStringRef(Entry.Expr),
-                           U->getContext().isLittleEndian(), 0);
-        DWARFExpression Expression(Data, U->getAddressByteSize(),
-                                   U->getFormParams().Format);
-        bool HasLiveAddresses =
-            any_of(Expression, [&](const DWARFExpression::Operation &Op) {
-              // TODO: add handling of dwarf::DW_OP_addrx
-              return !Op.isError() &&
-                     (Op.getCode() == dwarf::DW_OP_addr &&
-                      !isDeadAddress(Op.getRawOperand(0), U->getVersion(),
-                                     Opts.Tombstone,
-                                     DIE.getDwarfUnit()->getAddressByteSize()));
-            });
-
-        if (HasLiveAddresses) {
-          Info.AddrAdjust = 0;
-          Info.InDebugMap = true;
-          return true;
-        }
+  std::optional<int64_t> getExprOpAddressRelocAdjustment(
+      DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
+      uint64_t EndOffset) override {
+    switch (Op.getCode()) {
+    default: {
+      assert(false && "Specified operation does not have address operand");
+    } break;
+    case dwarf::DW_OP_const4u:
+    case dwarf::DW_OP_const8u:
+    case dwarf::DW_OP_const4s:
+    case dwarf::DW_OP_const8s:
+    case dwarf::DW_OP_addr: {
+      if (!isDeadAddress(Op.getRawOperand(0), U.getVersion(), Opts.Tombstone,
+                         U.getAddressByteSize()))
+        // Relocation value for the linked binary is 0.
+        return 0;
+    } break;
+    case dwarf::DW_OP_constx:
+    case dwarf::DW_OP_addrx: {
+      if (std::optional<object::SectionedAddress> Address =
+              U.getAddrOffsetSectionItem(Op.getRawOperand(0))) {
+        if (!isDeadAddress(Address->Address, U.getVersion(), Opts.Tombstone,
+                           U.getAddressByteSize()))
+          // Relocation value for the linked binary is 0.
+          return 0;
       }
-    } else {
-      // FIXME: missing DW_AT_location is OK here, but other errors should be
-      // reported to the user.
-      consumeError(Loc.takeError());
+    } break;
     }
 
-    return false;
+    return std::nullopt;
   }
 
   bool applyValidRelocs(MutableArrayRef<char>, uint64_t, bool) override {

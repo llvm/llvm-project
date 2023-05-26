@@ -21,6 +21,10 @@
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -DSIZE=6 -o %t2.o
 # RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck %s -DOFFSET=0x00000006 -DFILE=%t2.o --check-prefix=TRUNCATED
 
+## Check that invalid metadata can be handled.
+# RUN: yaml2obj --docnum=1 %s -DBITS=32 -DMETADATA=0xF000002 -o %t3.o
+# RUN: llvm-readobj %t3.o --bb-addr-map 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=INVALIDMD
+
 # CHECK:      BBAddrMap [
 # CHECK-NEXT:   Function {
 # CHECK-NEXT:     At: [[ADDR]]
@@ -35,6 +39,7 @@
 # CHECK-NEXT:         HasTailCall: Yes
 # CHECK-NEXT:         IsEHPad: No
 # CHECK-NEXT:         CanFallThrough: No
+# CHECK-NEXT:         HasIndirectBranch: No
 # CHECK-NEXT:       }
 # CHECK-NEXT:       {
 # CHECK-NEXT:         ID: 2
@@ -44,6 +49,7 @@
 # CHECK-NEXT:         HasTailCall: No
 # CHECK-NEXT:         IsEHPad: Yes
 # CHECK-NEXT:         CanFallThrough: No
+# CHECK-NEXT:         HasIndirectBranch: Yes
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
@@ -59,6 +65,7 @@
 # CHECK-NEXT:         HasTailCall: No
 # CHECK-NEXT:         IsEHPad: No
 # CHECK-NEXT:         CanFallThrough: Yes
+# CHECK-NEXT:         HasIndirectBranch: No
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
@@ -83,6 +90,7 @@
 # TRUNCATED-NEXT:         HasTailCall: Yes
 # TRUNCATED-NEXT:         IsEHPad: No
 # TRUNCATED-NEXT:         CanFallThrough: Yes
+# TRUNCATED-NEXT:         HasIndirectBranch: Yes
 # TRUNCATED-NEXT:       }
 # TRUNCATED-NEXT:       {
 # TRUNCATED-NEXT:         ID: 7
@@ -92,10 +100,14 @@
 # TRUNCATED-NEXT:         HasTailCall: Yes
 # TRUNCATED-NEXT:         IsEHPad: Yes
 # TRUNCATED-NEXT:         CanFallThrough: Yes
+# TRUNCATED-NEXT:         HasIndirectBranch: No
 # TRUNCATED-NEXT:       }
 # TRUNCATED-NEXT:     ]
 # TRUNCATED-NEXT:   }
 # TRUNCATED-NEXT: ]
+
+# INVALIDMD:      BBAddrMap [
+# INVALIDMD-NEXT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 3: invalid encoding for BBEntry::Metadata: 0xf000002
 
 --- !ELF
 FileHeader:
@@ -120,11 +132,11 @@ Sections:
           - ID:            0
             AddressOffset: 0x0
             Size:          0x1
-            Metadata:      0xF0000002
+            Metadata:      [[METADATA=0x2]]
           - ID:            2
             AddressOffset: 0x3
             Size:          0x4
-            Metadata:      0x5
+            Metadata:      0x15
       - Version: 2
         Address: 0x22222
         BBEntries:
@@ -145,7 +157,7 @@ Sections:
           - ID:            6
             AddressOffset: 0x9
             Size:          0xa
-            Metadata:      0xb
+            Metadata:      0x1b
           - ID:            7
             AddressOffset: 0xc
             Size:          0xd
@@ -185,6 +197,7 @@ Symbols:
 # V0-NEXT:         HasTailCall:
 # V0-NEXT:         IsEHPad:
 # V0-NEXT:         CanFallThrough:
+# V0-NEXT:         HasIndirectBranch:
 # V0-NEXT:       }
 # V0-NEXT:       {
 # V0-NEXT:         ID: 1
@@ -194,6 +207,7 @@ Symbols:
 # V0-NEXT:         HasTailCall:
 # V0-NEXT:         IsEHPad:
 # V0-NEXT:         CanFallThrough:
+# V0-NEXT:         HasIndirectBranch:
 # V0-NEXT:       }
 # V0-NEXT:     ]
 # V0-NEXT:   }
@@ -215,6 +229,7 @@ Symbols:
 # V1-NEXT:         HasTailCall:
 # V1-NEXT:         IsEHPad:
 # V1-NEXT:         CanFallThrough:
+# V1-NEXT:         HasIndirectBranch:
 # V1-NEXT:       }
 # V1-NEXT:       {
 # V1-NEXT:         ID: 1
@@ -224,6 +239,7 @@ Symbols:
 # V1-NEXT:         HasTailCall:
 # V1-NEXT:         IsEHPad:
 # V1-NEXT:         CanFallThrough:
+# V1-NEXT:         HasIndirectBranch:
 # V1-NEXT:       }
 # V1-NEXT:     ]
 # V1-NEXT:   }

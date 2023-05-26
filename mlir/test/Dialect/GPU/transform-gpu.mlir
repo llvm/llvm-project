@@ -31,9 +31,9 @@ func.func @saxpy2dblock(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_forall_to_blocks %funcop grid_dims = [12, 9, 1]
+^bb1(%arg0: !transform.any_op):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.gpu.map_forall_to_blocks %funcop grid_dims = [12, 9, 1] : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -85,9 +85,9 @@ func.func @saxpy2d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !g
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [12, 9, 1]
+^bb1(%arg0: !transform.any_op):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [12, 9, 1] : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -124,10 +124,10 @@ func.func @saxpy4d(%x: !type4d, %y: !type4d, %alpha : f32) -> !type4d {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  %gpuLaunch = transform.gpu.map_forall_to_blocks %funcop { generate_gpu_launch }
-  transform.gpu.map_nested_forall_to_threads %gpuLaunch block_dims = [32, 4, 1]
+^bb1(%arg0: !transform.any_op):
+  %funcop = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %gpuLaunch = transform.gpu.map_forall_to_blocks %funcop { generate_gpu_launch } : (!transform.any_op) -> !transform.any_op
+  transform.gpu.map_nested_forall_to_threads %gpuLaunch block_dims = [32, 4, 1] : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -158,9 +158,9 @@ func.func @saxpy2d_no_barrier(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [12, 9, 1] sync_after_distribute = false
+^bb1(%arg0: !transform.any_op):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [12, 9, 1] sync_after_distribute = false : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -190,9 +190,9 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 1, 1]
+^bb1(%arg0: !transform.any_op):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 1, 1] : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -226,9 +226,9 @@ func.func @saxpy3d_fold_id_z(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %s
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [12, 9, 1] sync_after_distribute = false
+^bb1(%arg0: !transform.any_op):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [12, 9, 1] sync_after_distribute = false : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -302,8 +302,8 @@ func.func @map_multi_level(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %str
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg0: !transform.any_op):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
   transform.gpu.map_nested_forall_to_threads %funcop
-    block_dims = [12, 11, 1] warp_dims = [3, 2, 1]
+    block_dims = [12, 11, 1] warp_dims = [3, 2, 1] : (!transform.any_op) -> !transform.any_op
 }

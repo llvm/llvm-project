@@ -59,7 +59,7 @@ private:
 // Defines Speculator Concept,
 class Speculator {
 public:
-  using TargetFAddr = JITTargetAddress;
+  using TargetFAddr = ExecutorAddr;
   using FunctionCandidatesMap = DenseMap<SymbolStringPtr, SymbolNameSet>;
   using StubAddrLikelies = DenseMap<TargetFAddr, SymbolNameSet>;
 
@@ -70,7 +70,7 @@ private:
     GlobalSpecMap.insert({ImplAddr, std::move(likelySymbols)});
   }
 
-  void launchCompile(JITTargetAddress FAddr) {
+  void launchCompile(ExecutorAddr FAddr) {
     SymbolNameSet CandidateSet;
     // Copy CandidateSet is necessary, to avoid unsynchronized access to
     // the datastructure.
@@ -144,8 +144,8 @@ public:
       auto OnReadyFixUp = [Likely, Target,
                            this](Expected<SymbolMap> ReadySymbol) {
         if (ReadySymbol) {
-          auto RAddr = (*ReadySymbol)[Target].getAddress();
-          registerSymbolsWithAddr(RAddr, std::move(Likely));
+          auto RDef = (*ReadySymbol)[Target];
+          registerSymbolsWithAddr(RDef.getAddress(), std::move(Likely));
         } else
           this->getES().reportError(ReadySymbol.takeError());
       };

@@ -447,7 +447,7 @@ static bool threadSafetyCheckIsSmartPointer(Sema &S, const RecordType* RT) {
   if (!CXXRecord)
     return false;
 
-  for (auto BaseSpecifier : CXXRecord->bases()) {
+  for (const auto &BaseSpecifier : CXXRecord->bases()) {
     if (!foundStarOperator)
       foundStarOperator = IsOverloadedOperatorPresent(
           BaseSpecifier.getType()->getAsRecordDecl(), OO_Star);
@@ -2775,7 +2775,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         return V;
       };
       AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
-          ND, AL.getRange(), NewII, true /*Implicit*/,
+          ND, AL, NewII, true /*Implicit*/,
           MinMacCatalystVersion(Introduced.Version),
           MinMacCatalystVersion(Deprecated.Version),
           MinMacCatalystVersion(Obsoleted.Version), IsUnavailable, Str,
@@ -2817,7 +2817,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
             return V ? *V : VersionTuple();
           };
           AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
-              ND, AL.getRange(), NewII, true /*Implicit*/,
+              ND, AL, NewII, true /*Implicit*/,
               VersionOrEmptyVersion(NewIntroduced),
               VersionOrEmptyVersion(NewDeprecated),
               VersionOrEmptyVersion(NewObsoleted), /*IsUnavailable=*/false, Str,
@@ -3759,7 +3759,7 @@ static void handleEnumExtensibilityAttr(Sema &S, Decl *D,
 /// Handle __attribute__((format_arg((idx)))) attribute based on
 /// http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html
 static void handleFormatArgAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  Expr *IdxExpr = AL.getArgAsExpr(0);
+  const Expr *IdxExpr = AL.getArgAsExpr(0);
   ParamIdx Idx;
   if (!checkFunctionOrMethodParameterIndex(S, D, AL, 1, IdxExpr, Idx))
     return;
@@ -4333,6 +4333,27 @@ void Sema::AddAlignValueAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E) {
 }
 
 static void handleAlignedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (AL.hasParsedType()) {
+    const ParsedType &TypeArg = AL.getTypeArg();
+    TypeSourceInfo *TInfo;
+    (void)S.GetTypeFromParser(
+        ParsedType::getFromOpaquePtr(TypeArg.getAsOpaquePtr()), &TInfo);
+    if (AL.isPackExpansion() &&
+        !TInfo->getType()->containsUnexpandedParameterPack()) {
+      S.Diag(AL.getEllipsisLoc(),
+             diag::err_pack_expansion_without_parameter_packs);
+      return;
+    }
+
+    if (!AL.isPackExpansion() &&
+        S.DiagnoseUnexpandedParameterPack(TInfo->getTypeLoc().getBeginLoc(),
+                                          TInfo, Sema::UPPC_Expression))
+      return;
+
+    S.AddAlignedAttr(D, AL, TInfo, AL.isPackExpansion());
+    return;
+  }
+
   // check the attribute arguments.
   if (AL.getNumArgs() > 1) {
     S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
@@ -4357,53 +4378,61 @@ static void handleAlignedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   S.AddAlignedAttr(D, AL, E, AL.isPackExpansion());
 }
 
+/// Perform checking of type validity
+///
+/// C++11 [dcl.align]p1:
+///   An alignment-specifier may be applied to a variable or to a class
+///   data member, but it shall not be applied to a bit-field, a function
+///   parameter, the formal parameter of a catch clause, or a variable
+///   declared with the register storage class specifier. An
+///   alignment-specifier may also be applied to the declaration of a class
+///   or enumeration type.
+/// CWG 2354:
+///   CWG agreed to remove permission for alignas to be applied to
+///   enumerations.
+/// C11 6.7.5/2:
+///   An alignment attribute shall not be specified in a declaration of
+///   a typedef, or a bit-field, or a function, or a parameter, or an
+///   object declared with the register storage-class specifier.
+static bool validateAlignasAppliedType(Sema &S, Decl *D,
+                                       const AlignedAttr &Attr,
+                                       SourceLocation AttrLoc) {
+  int DiagKind = -1;
+  if (isa<ParmVarDecl>(D)) {
+    DiagKind = 0;
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (VD->getStorageClass() == SC_Register)
+      DiagKind = 1;
+    if (VD->isExceptionVariable())
+      DiagKind = 2;
+  } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
+    if (FD->isBitField())
+      DiagKind = 3;
+  } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
+    if (ED->getLangOpts().CPlusPlus)
+      DiagKind = 4;
+  } else if (!isa<TagDecl>(D)) {
+    return S.Diag(AttrLoc, diag::err_attribute_wrong_decl_type)
+           << &Attr
+           << (Attr.isC11() ? ExpectedVariableOrField
+                            : ExpectedVariableFieldOrTag);
+  }
+  if (DiagKind != -1) {
+    return S.Diag(AttrLoc, diag::err_alignas_attribute_wrong_decl_type)
+           << &Attr << DiagKind;
+  }
+  return false;
+}
+
 void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
                           bool IsPackExpansion) {
   AlignedAttr TmpAttr(Context, CI, true, E);
   SourceLocation AttrLoc = CI.getLoc();
 
   // C++11 alignas(...) and C11 _Alignas(...) have additional requirements.
-  if (TmpAttr.isAlignas()) {
-    // C++11 [dcl.align]p1:
-    //   An alignment-specifier may be applied to a variable or to a class
-    //   data member, but it shall not be applied to a bit-field, a function
-    //   parameter, the formal parameter of a catch clause, or a variable
-    //   declared with the register storage class specifier. An
-    //   alignment-specifier may also be applied to the declaration of a class
-    //   or enumeration type.
-    // CWG 2354:
-    //   CWG agreed to remove permission for alignas to be applied to
-    //   enumerations.
-    // C11 6.7.5/2:
-    //   An alignment attribute shall not be specified in a declaration of
-    //   a typedef, or a bit-field, or a function, or a parameter, or an
-    //   object declared with the register storage-class specifier.
-    int DiagKind = -1;
-    if (isa<ParmVarDecl>(D)) {
-      DiagKind = 0;
-    } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->getStorageClass() == SC_Register)
-        DiagKind = 1;
-      if (VD->isExceptionVariable())
-        DiagKind = 2;
-    } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
-      if (FD->isBitField())
-        DiagKind = 3;
-    } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
-      if (ED->getLangOpts().CPlusPlus)
-        DiagKind = 4;
-    } else if (!isa<TagDecl>(D)) {
-      Diag(AttrLoc, diag::err_attribute_wrong_decl_type) << &TmpAttr
-        << (TmpAttr.isC11() ? ExpectedVariableOrField
-                            : ExpectedVariableFieldOrTag);
-      return;
-    }
-    if (DiagKind != -1) {
-      Diag(AttrLoc, diag::err_alignas_attribute_wrong_decl_type)
-        << &TmpAttr << DiagKind;
-      return;
-    }
-  }
+  if (TmpAttr.isAlignas() &&
+      validateAlignasAppliedType(*this, D, TmpAttr, AttrLoc))
+    return;
 
   if (E->isValueDependent()) {
     // We can't support a dependent alignment on a non-dependent type,
@@ -4480,15 +4509,56 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
 
   AlignedAttr *AA = ::new (Context) AlignedAttr(Context, CI, true, ICE.get());
   AA->setPackExpansion(IsPackExpansion);
+  AA->setCachedAlignmentValue(
+      static_cast<unsigned>(AlignVal * Context.getCharWidth()));
   D->addAttr(AA);
 }
 
 void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI,
                           TypeSourceInfo *TS, bool IsPackExpansion) {
-  // FIXME: Cache the number on the AL object if non-dependent?
-  // FIXME: Perform checking of type validity
+  AlignedAttr TmpAttr(Context, CI, false, TS);
+  SourceLocation AttrLoc = CI.getLoc();
+
+  // C++11 alignas(...) and C11 _Alignas(...) have additional requirements.
+  if (TmpAttr.isAlignas() &&
+      validateAlignasAppliedType(*this, D, TmpAttr, AttrLoc))
+    return;
+
+  if (TS->getType()->isDependentType()) {
+    // We can't support a dependent alignment on a non-dependent type,
+    // because we have no way to model that a type is "type-dependent"
+    // but not dependent in any other way.
+    if (const auto *TND = dyn_cast<TypedefNameDecl>(D)) {
+      if (!TND->getUnderlyingType()->isDependentType()) {
+        Diag(AttrLoc, diag::err_alignment_dependent_typedef_name)
+            << TS->getTypeLoc().getSourceRange();
+        return;
+      }
+    }
+
+    AlignedAttr *AA = ::new (Context) AlignedAttr(Context, CI, false, TS);
+    AA->setPackExpansion(IsPackExpansion);
+    D->addAttr(AA);
+    return;
+  }
+
+  const auto *VD = dyn_cast<VarDecl>(D);
+  unsigned AlignVal = TmpAttr.getAlignment(Context);
+  // On AIX, an aligned attribute can not decrease the alignment when applied
+  // to a variable declaration with vector type.
+  if (VD && Context.getTargetInfo().getTriple().isOSAIX()) {
+    const Type *Ty = VD->getType().getTypePtr();
+    if (Ty->isVectorType() &&
+        Context.toCharUnitsFromBits(AlignVal).getQuantity() < 16) {
+      Diag(VD->getLocation(), diag::warn_aligned_attr_underaligned)
+          << VD->getType() << 16;
+      return;
+    }
+  }
+
   AlignedAttr *AA = ::new (Context) AlignedAttr(Context, CI, false, TS);
   AA->setPackExpansion(IsPackExpansion);
+  AA->setCachedAlignmentValue(AlignVal);
   D->addAttr(AA);
 }
 
@@ -4970,7 +5040,10 @@ static void handleGlobalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (FD->isInlineSpecified() && !S.getLangOpts().CUDAIsDevice)
     S.Diag(FD->getBeginLoc(), diag::warn_kern_is_inline) << FD;
 
-  D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+  if (AL.getKind() == ParsedAttr::AT_NVPTXKernel)
+    D->addAttr(::new (S.Context) NVPTXKernelAttr(S.Context, AL));
+  else
+    D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
   // In host compilation the kernel is emitted as a stub function, which is
   // a helper function for launching the kernel. The instructions in the helper
   // function has nothing to do with the source code of the kernel. Do not emit
@@ -8588,13 +8661,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   // Ignore C++11 attributes on declarator chunks: they appertain to the type
   // instead.
-  // FIXME: We currently check the attribute syntax directly instead of using
-  // isCXX11Attribute(), which currently erroneously classifies the C11
-  // `_Alignas` attribute as a C++11 attribute. `_Alignas` can appear on the
-  // `DeclSpec`, so we need to let it through here to make sure it is processed
-  // appropriately. Once the behavior of isCXX11Attribute() is fixed, we can
-  // go back to using that here.
-  if (AL.getSyntax() == ParsedAttr::AS_CXX11 && !Options.IncludeCXX11Attributes)
+  if (AL.isCXX11Attribute() && !Options.IncludeCXX11Attributes)
     return;
 
   // Unknown attributes are automatically warned on. Target-specific attributes
@@ -8851,6 +8918,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_CalledOnce:
     handleCalledOnceAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_NVPTXKernel:
   case ParsedAttr::AT_CUDAGlobal:
     handleGlobalAttr(S, D, AL);
     break;
@@ -9554,8 +9622,7 @@ void Sema::DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, const WeakInfo &W) {
     NamedDecl *NewD = DeclClonePragmaWeak(ND, W.getAlias(), W.getLocation());
     NewD->addAttr(
         AliasAttr::CreateImplicit(Context, NDId->getName(), W.getLocation()));
-    NewD->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation(),
-                                           AttributeCommonInfo::AS_Pragma));
+    NewD->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation()));
     WeakTopLevelDecl.push_back(NewD);
     // FIXME: "hideous" code from Sema::LazilyCreateBuiltin
     // to insert Decl at TU scope, sorry.
@@ -9566,8 +9633,7 @@ void Sema::DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, const WeakInfo &W) {
     PushOnScopeChains(NewD, S);
     CurContext = SavedContext;
   } else { // just add weak to existing
-    ND->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation(),
-                                         AttributeCommonInfo::AS_Pragma));
+    ND->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation()));
   }
 }
 

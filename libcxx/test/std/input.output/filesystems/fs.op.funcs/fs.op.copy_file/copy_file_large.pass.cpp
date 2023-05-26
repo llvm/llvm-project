@@ -33,9 +33,9 @@ using namespace fs;
 // be acceptable on all systems.
 static void large_file() {
   using namespace fs;
-  constexpr uintmax_t sendfile_size_limit = 2147479552ull;
-  constexpr uintmax_t additional_size = 1024;
-  constexpr uintmax_t test_file_size = sendfile_size_limit + additional_size;
+  constexpr std::uintmax_t sendfile_size_limit = 2147479552ull;
+  constexpr std::uintmax_t additional_size = 1024;
+  constexpr std::uintmax_t test_file_size = sendfile_size_limit + additional_size;
   static_assert(test_file_size > sendfile_size_limit, "");
 
   scoped_test_env env;

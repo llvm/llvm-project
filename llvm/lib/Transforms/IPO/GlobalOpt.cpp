@@ -53,8 +53,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -237,19 +235,8 @@ CleanupPointerRootUsers(GlobalVariable *GV,
           Dead.push_back(std::make_pair(I, MTI));
       }
     } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U)) {
-      if (CE->use_empty()) {
-        CE->destroyConstant();
-        Changed = true;
-      } else if (isa<GEPOperator>(CE))
+      if (isa<GEPOperator>(CE))
         append_range(Worklist, CE->users());
-    } else if (Constant *C = dyn_cast<Constant>(U)) {
-      if (isSafeToDestroyConstant(C)) {
-        C->destroyConstant();
-        // This could have invalidated UI, start over from scratch.
-        Dead.clear();
-        CleanupPointerRootUsers(GV, GetTLI);
-        return true;
-      }
     }
   }
 
@@ -271,6 +258,7 @@ CleanupPointerRootUsers(GlobalVariable *GV,
     }
   }
 
+  GV->removeDeadConstantUsers();
   return Changed;
 }
 
@@ -677,6 +665,9 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
       }
     } else if (const BitCastInst *CI = dyn_cast<BitCastInst>(U)) {
       if (!AllUsesOfValueWillTrapIfNull(CI, PHIs)) return false;
+    } else if (const AddrSpaceCastInst *CI = dyn_cast<AddrSpaceCastInst>(U)) {
+      if (!AllUsesOfValueWillTrapIfNull(CI, PHIs))
+        return false;
     } else if (const GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U)) {
       if (!AllUsesOfValueWillTrapIfNull(GEPI, PHIs)) return false;
     } else if (const PHINode *PN = dyn_cast<PHINode>(U)) {
@@ -857,7 +848,8 @@ static bool OptimizeAwayTrappingUsesOfLoads(
       assert((isa<PHINode>(GlobalUser) || isa<SelectInst>(GlobalUser) ||
               isa<ConstantExpr>(GlobalUser) || isa<CmpInst>(GlobalUser) ||
               isa<BitCastInst>(GlobalUser) ||
-              isa<GetElementPtrInst>(GlobalUser)) &&
+              isa<GetElementPtrInst>(GlobalUser) ||
+              isa<AddrSpaceCastInst>(GlobalUser)) &&
              "Only expect load and stores!");
     }
   }
@@ -1157,9 +1149,6 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
           nullptr /* F */,
           GV->getInitializer()->getType()->getPointerAddressSpace())) {
     if (Constant *SOVC = dyn_cast<Constant>(StoredOnceVal)) {
-      if (GV->getInitializer()->getType() != SOVC->getType())
-        SOVC = ConstantExpr::getBitCast(SOVC, GV->getInitializer()->getType());
-
       // Optimize away any trapping uses of the loaded value.
       if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL, GetTLI))
         return true;
@@ -2125,15 +2114,22 @@ static void setUsedInitializer(GlobalVariable &V,
     return;
   }
 
+  // Get address space of pointers in the array of pointers.
+  const Type *UsedArrayType = V.getValueType();
+  const auto *VAT = cast<ArrayType>(UsedArrayType);
+  const auto *VEPT = cast<PointerType>(VAT->getArrayElementType());
+
   // Type of pointer to the array of pointers.
-  PointerType *Int8PtrTy = Type::getInt8PtrTy(V.getContext(), 0);
+  PointerType *Int8PtrTy =
+      Type::getInt8PtrTy(V.getContext(), VEPT->getAddressSpace());
 
   SmallVector<Constant *, 8> UsedArray;
   for (GlobalValue *GV : Init) {
-    Constant *Cast
-      = ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, Int8PtrTy);
+    Constant *Cast =
+        ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, Int8PtrTy);
     UsedArray.push_back(Cast);
   }
+
   // Sort to get deterministic order.
   array_pod_sort(UsedArray.begin(), UsedArray.end(), compareNames);
   ArrayType *ATy = ArrayType::get(Int8PtrTy, UsedArray.size());
@@ -2224,22 +2220,11 @@ static bool hasUseOtherThanLLVMUsed(GlobalAlias &GA, const LLVMUsed &U) {
   return !U.usedCount(&GA) && !U.compilerUsedCount(&GA);
 }
 
-static bool hasMoreThanOneUseOtherThanLLVMUsed(GlobalValue &V,
-                                               const LLVMUsed &U) {
-  unsigned N = 2;
-  assert((!U.usedCount(&V) || !U.compilerUsedCount(&V)) &&
-         "We should have removed the duplicated "
-         "element from llvm.compiler.used");
-  if (U.usedCount(&V) || U.compilerUsedCount(&V))
-    ++N;
-  return V.hasNUsesOrMore(N);
-}
-
-static bool mayHaveOtherReferences(GlobalAlias &GA, const LLVMUsed &U) {
-  if (!GA.hasLocalLinkage())
+static bool mayHaveOtherReferences(GlobalValue &GV, const LLVMUsed &U) {
+  if (!GV.hasLocalLinkage())
     return true;
 
-  return U.usedCount(&GA) || U.compilerUsedCount(&GA);
+  return U.usedCount(&GV) || U.compilerUsedCount(&GV);
 }
 
 static bool hasUsesToReplace(GlobalAlias &GA, const LLVMUsed &U,
@@ -2253,21 +2238,16 @@ static bool hasUsesToReplace(GlobalAlias &GA, const LLVMUsed &U,
   if (!mayHaveOtherReferences(GA, U))
     return Ret;
 
-  // If the aliasee has internal linkage, give it the name and linkage
-  // of the alias, and delete the alias.  This turns:
+  // If the aliasee has internal linkage and no other references (e.g.,
+  // @llvm.used, @llvm.compiler.used), give it the name and linkage of the
+  // alias, and delete the alias. This turns:
   //   define internal ... @f(...)
   //   @a = alias ... @f
   // into:
   //   define ... @a(...)
   Constant *Aliasee = GA.getAliasee();
   GlobalValue *Target = cast<GlobalValue>(Aliasee->stripPointerCasts());
-  if (!Target->hasLocalLinkage())
-    return Ret;
-
-  // Do not perform the transform if multiple aliases potentially target the
-  // aliasee. This check also ensures that it is safe to replace the section
-  // and other attributes of the aliasee with those of the alias.
-  if (hasMoreThanOneUseOtherThanLLVMUsed(*Target, U))
+  if (mayHaveOtherReferences(*Target, U))
     return Ret;
 
   RenameTarget = true;

@@ -60,19 +60,17 @@ const char AsmRewritePrecedence [] = {
   2  // AOK_IntelExpr
 };
 
-// Represnt the various parts which makes up an intel expression,
+// Represent the various parts which make up an intel expression,
 // used for emitting compound intel expressions
 struct IntelExpr {
-  bool NeedBracs;
-  int64_t Imm;
+  bool NeedBracs = false;
+  int64_t Imm = 0;
   StringRef BaseReg;
   StringRef IndexReg;
   StringRef OffsetName;
-  unsigned Scale;
+  unsigned Scale = 1;
 
-  IntelExpr()
-      : NeedBracs(false), Imm(0), BaseReg(StringRef()), IndexReg(StringRef()),
-        OffsetName(StringRef()), Scale(1) {}
+  IntelExpr() = default;
   // [BaseReg + IndexReg * ScaleExpression + OFFSET name + ImmediateExpression]
   IntelExpr(StringRef baseReg, StringRef indexReg, unsigned scale,
             StringRef offsetName, int64_t imm, bool needBracs)

@@ -42,6 +42,8 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
+#include <memory>
+
 namespace mlir {
 class DLTIDialect;
 class RewritePatternSet;
@@ -53,6 +55,36 @@ class RewritePatternSet;
 
 #include "TestOpInterfaces.h.inc"
 #include "TestOpsDialect.h.inc"
+
+namespace test {
+// Define some classes to exercises the Properties feature.
+
+struct PropertiesWithCustomPrint {
+  /// A shared_ptr to a const object is safe: it is equivalent to a value-based
+  /// member. Here the label will be deallocated when the last operation
+  /// refering to it is destroyed. However there is no pool-allocation: this is
+  /// offloaded to the client.
+  std::shared_ptr<const std::string> label;
+  int value;
+  bool operator==(const PropertiesWithCustomPrint &rhs) const {
+    return value == rhs.value && *label == *rhs.label;
+  }
+};
+class MyPropStruct {
+public:
+  std::string content;
+  // These three methods are invoked through the  `MyStructProperty` wrapper
+  // defined in TestOps.td
+  mlir::Attribute asAttribute(mlir::MLIRContext *ctx) const;
+  static mlir::LogicalResult setFromAttr(MyPropStruct &prop,
+                                         mlir::Attribute attr,
+                                         mlir::InFlightDiagnostic *diag);
+  llvm::hash_code hash() const;
+  bool operator==(const MyPropStruct &rhs) const {
+    return content == rhs.content;
+  }
+};
+} // namespace test
 
 #define GET_OP_CLASSES
 #include "TestOps.h.inc"

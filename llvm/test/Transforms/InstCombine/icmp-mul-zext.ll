@@ -13,17 +13,17 @@ define i32 @sterix(i32, i8, i64) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], [[SH_PROM]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[SHR]] to i64
 ; CHECK-NEXT:    [[MUL3:%.*]] = mul nuw nsw i64 [[CONV]], [[CONV2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[MUL3]], 4294967296
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i64 [[MUL3]], 4294967296
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[MUL3]], [[TMP2]]
 ; CHECK-NEXT:    [[CONV4:%.*]] = trunc i64 [[AND]] to i32
 ; CHECK-NEXT:    [[TOBOOL7_NOT:%.*]] = icmp eq i32 [[CONV4]], 0
-; CHECK-NEXT:    [[PHI_CAST:%.*]] = zext i1 [[TOBOOL7_NOT]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL7_NOT]] to i32
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[PHI_CAST]], [[LOR_RHS]] ]
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    [[CONV8:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[TMP3]], [[LOR_RHS]] ]
+; CHECK-NEXT:    ret i32 [[CONV8]]
 ;
 entry:
   %conv = zext i32 %0 to i64
@@ -131,10 +131,10 @@ define i1 @PR46561(i1 %a, i1 %x, i1 %y, i8 %z) {
 ; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 0
-; CHECK-NEXT:    [[PHI_CMP:%.*]] = xor i1 [[TMP1]], [[MULBOOL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], [[MULBOOL]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[PHI_CMP]], [[COND_TRUE]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[TMP2]], [[COND_TRUE]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[P]]
 ;
 entry:

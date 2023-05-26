@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H
 
 #include "TypeTraits.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <optional>
 
@@ -46,6 +47,23 @@ AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isReferenceToConst) {
 AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isPointerToConst) {
   using namespace ast_matchers;
   return pointerType(pointee(qualType(isConstQualified())));
+}
+
+AST_MATCHER(Expr, hasUnevaluatedContext) {
+  if (isa<CXXNoexceptExpr>(Node) || isa<RequiresExpr>(Node))
+    return true;
+  if (const auto *UnaryExpr = dyn_cast<UnaryExprOrTypeTraitExpr>(&Node)) {
+    switch (UnaryExpr->getKind()) {
+    case UETT_SizeOf:
+    case UETT_AlignOf:
+      return true;
+    default:
+      return false;
+    }
+  }
+  if (const auto *TypeIDExpr = dyn_cast<CXXTypeidExpr>(&Node))
+    return !TypeIDExpr->isPotentiallyEvaluated();
+  return false;
 }
 
 // A matcher implementation that matches a list of type name regular expressions

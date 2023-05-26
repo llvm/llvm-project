@@ -79,26 +79,48 @@ bool isTainted(ProgramStateRef State, SymbolRef Sym,
 bool isTainted(ProgramStateRef State, const MemRegion *Reg,
                TaintTagType Kind = TaintTagGeneric);
 
+/// Returns the tainted Symbols for a given Statement and state.
+std::vector<SymbolRef> getTaintedSymbols(ProgramStateRef State, const Stmt *S,
+                                         const LocationContext *LCtx,
+                                         TaintTagType Kind = TaintTagGeneric);
+
+/// Returns the tainted Symbols for a given SVal and state.
+std::vector<SymbolRef> getTaintedSymbols(ProgramStateRef State, SVal V,
+                                         TaintTagType Kind = TaintTagGeneric);
+
+/// Returns the tainted Symbols for a SymbolRef and state.
+std::vector<SymbolRef> getTaintedSymbols(ProgramStateRef State, SymbolRef Sym,
+                                         TaintTagType Kind = TaintTagGeneric);
+
+/// Returns the tainted (index, super/sub region, symbolic region) symbols
+/// for a given memory region.
+std::vector<SymbolRef> getTaintedSymbols(ProgramStateRef State,
+                                         const MemRegion *Reg,
+                                         TaintTagType Kind = TaintTagGeneric);
+
+std::vector<SymbolRef> getTaintedSymbolsImpl(ProgramStateRef State,
+                                             const Stmt *S,
+                                             const LocationContext *LCtx,
+                                             TaintTagType Kind,
+                                             bool returnFirstOnly);
+
+std::vector<SymbolRef> getTaintedSymbolsImpl(ProgramStateRef State, SVal V,
+                                             TaintTagType Kind,
+                                             bool returnFirstOnly);
+
+std::vector<SymbolRef> getTaintedSymbolsImpl(ProgramStateRef State,
+                                             SymbolRef Sym, TaintTagType Kind,
+                                             bool returnFirstOnly);
+
+std::vector<SymbolRef> getTaintedSymbolsImpl(ProgramStateRef State,
+                                             const MemRegion *Reg,
+                                             TaintTagType Kind,
+                                             bool returnFirstOnly);
+
 void printTaint(ProgramStateRef State, raw_ostream &Out, const char *nl = "\n",
                 const char *sep = "");
 
 LLVM_DUMP_METHOD void dumpTaint(ProgramStateRef State);
-
-/// The bug visitor prints a diagnostic message at the location where a given
-/// variable was tainted.
-class TaintBugVisitor final : public BugReporterVisitor {
-private:
-  const SVal V;
-
-public:
-  TaintBugVisitor(const SVal V) : V(V) {}
-  void Profile(llvm::FoldingSetNodeID &ID) const override { ID.Add(V); }
-
-  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
-                                   BugReporterContext &BRC,
-                                   PathSensitiveBugReport &BR) override;
-};
-
 } // namespace taint
 } // namespace ento
 } // namespace clang

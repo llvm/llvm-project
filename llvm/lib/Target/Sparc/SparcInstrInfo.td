@@ -72,7 +72,7 @@ def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 // V8, or when it is V9 but the V8 deprecated instructions are efficient enough
 // to use when appropriate.  In either of these cases, the instruction selector
 // will pick deprecated instructions.
-def UseDeprecatedInsts : Predicate<"Subtarget->useDeprecatedV8Instructions()">;
+def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 //===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
@@ -224,6 +224,8 @@ def SDTSPcmpfcc :
 SDTypeProfile<0, 2, [SDTCisFP<0>, SDTCisSameAs<0, 1>]>;
 def SDTSPbrcc :
 SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisVT<1, i32>]>;
+def SDTSPbrreg :
+SDTypeProfile<0, 3, [SDTCisVT<0, OtherVT>, SDTCisVT<1, i32>, SDTCisVT<2, i64>]>;
 def SDTSPselectcc :
 SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisVT<3, i32>]>;
 def SDTSPselectreg :
@@ -253,6 +255,7 @@ def SPbpicc : SDNode<"SPISD::BPICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbpxcc : SDNode<"SPISD::BPXCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbrfcc : SDNode<"SPISD::BRFCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbrfccv9 : SDNode<"SPISD::BRFCC_V9", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbrreg : SDNode<"SPISD::BR_REG", SDTSPbrreg, [SDNPHasChain, SDNPInGlue]>;
 
 def SPhi    : SDNode<"SPISD::Hi", SDTIntUnaryOp>;
 def SPlo    : SDNode<"SPISD::Lo", SDTIntUnaryOp>;
@@ -288,7 +291,7 @@ def tailcall      : SDNode<"SPISD::TAIL_CALL", SDT_SPCall,
                             SDNPVariadic]>;
 
 def SDT_SPRet     : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
-def retflag       : SDNode<"SPISD::RET_FLAG", SDT_SPRet,
+def retglue       : SDNode<"SPISD::RET_GLUE", SDT_SPRet,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def flushw        : SDNode<"SPISD::FLUSHW", SDTNone,
@@ -1034,7 +1037,7 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
     def RETL: F3_2<2, 0b111000,
                    (outs), (ins i32imm:$simm13),
                    "jmp %o7+$simm13",
-                   [(retflag simm13:$simm13)],
+                   [(retglue simm13:$simm13)],
                    IIC_jmp_or_call>;
 
   let rd = 0, rs1 = 31 in

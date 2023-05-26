@@ -53,6 +53,7 @@
 #include <future>
 #include <memory>
 #include <optional>
+#include <tuple>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -88,6 +89,14 @@ static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
   if (ret.second.empty())
     error(arg->getSpelling() + " expects 'old;new' format, but got " + s);
   return ret;
+}
+
+// Parse options of the form "old;new[;extra]".
+static std::tuple<StringRef, StringRef, StringRef>
+getOldNewOptionsExtra(opt::InputArgList &args, unsigned id) {
+  auto [oldDir, second] = getOldNewOptions(args, id);
+  auto [newDir, extraDir] = second.split(';');
+  return {oldDir, newDir, extraDir};
 }
 
 // Drop directory components and replace extension with
@@ -221,7 +230,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
       ctx.symtab.addFile(make<DLLFile>(ctx, mbref));
       break;
     }
-    if (filename.endswith_insensitive(".dll")) {
+    if (filename.ends_with_insensitive(".dll")) {
       error(filename + ": bad file type. Did you specify a DLL instead of an "
                        "import library?");
       break;
@@ -436,9 +445,12 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_editandcontinue:
     case OPT_guardsym:
     case OPT_throwingnew:
+    case OPT_inferasanlibs:
+    case OPT_inferasanlibs_no:
       break;
     default:
-      error(arg->getSpelling() + " is not allowed in .drectve");
+      error(arg->getSpelling() + " is not allowed in .drectve (" +
+            toString(file) + ")");
     }
   }
 }
@@ -491,7 +503,7 @@ std::optional<StringRef> LinkerDriver::findFile(StringRef filename) {
       return std::nullopt;
   }
 
-  if (path.endswith_insensitive(".lib"))
+  if (path.ends_with_insensitive(".lib"))
     visitedLibs.insert(std::string(sys::path::filename(path).lower()));
   return path;
 }
@@ -1884,8 +1896,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
                              args.hasArg(OPT_thinlto_index_only_arg);
   config->thinLTOIndexOnlyArg =
       args.getLastArgValue(OPT_thinlto_index_only_arg);
-  config->thinLTOPrefixReplace =
-      getOldNewOptions(args, OPT_thinlto_prefix_replace);
+  std::tie(config->thinLTOPrefixReplaceOld, config->thinLTOPrefixReplaceNew,
+           config->thinLTOPrefixReplaceNativeObject) =
+      getOldNewOptionsExtra(args, OPT_thinlto_prefix_replace);
   config->thinLTOObjectSuffixReplace =
       getOldNewOptions(args, OPT_thinlto_object_suffix_replace);
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path);
@@ -1921,6 +1934,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->stdcallFixup =
       args.hasFlag(OPT_stdcall_fixup, OPT_stdcall_fixup_no, config->mingw);
   config->warnStdcallFixup = !args.hasArg(OPT_stdcall_fixup);
+
+  if (args.hasFlag(OPT_inferasanlibs, OPT_inferasanlibs_no, false))
+    warn("ignoring '/inferasanlibs', this flag is not supported");
 
   // Don't warn about long section names, such as .debug_info, for mingw or
   // when -debug:dwarf is requested.

@@ -22,6 +22,7 @@ int memcmp(const void *lhs, const void *rhs, size_t count);
 void *memcpy(void *__restrict, const void *__restrict, size_t);
 void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
+int atexit(void (*func)(void));
 
 } // namespace __llvm_libc
 
@@ -44,6 +45,9 @@ void *memset(void *ptr, int value, size_t count) {
   return __llvm_libc::memset(ptr, value, count);
 }
 
+// This is needed if the test was compiled with '-fno-use-cxa-atexit'.
+int atexit(void (*func)(void)) { return __llvm_libc::atexit(func); }
+
 } // extern "C"
 
 // Integration tests cannot use the SCUDO standalone allocator as SCUDO pulls
@@ -53,7 +57,8 @@ void *memset(void *ptr, int value, size_t count) {
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
 
-static uint8_t memory[16384];
+static constexpr uint64_t MEMORY_SIZE = 16384;
+static uint8_t memory[MEMORY_SIZE];
 static uint8_t *ptr = memory;
 
 extern "C" {
@@ -61,7 +66,7 @@ extern "C" {
 void *malloc(size_t s) {
   void *mem = ptr;
   ptr += s;
-  return mem;
+  return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
 
 void free(void *) {}

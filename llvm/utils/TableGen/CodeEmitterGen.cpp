@@ -56,8 +56,8 @@ private:
   void emitInstructionBaseValues(
       raw_ostream &o, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
       CodeGenTarget &Target, int HwMode = -1);
-  unsigned BitWidth;
-  bool UseAPInt;
+  unsigned BitWidth = 0u;
+  bool UseAPInt = false;
 };
 
 // If the VarBitInit at position 'bit' matches the specified variable then

@@ -346,8 +346,8 @@ define i64 @llround_f32(float %a) nounwind {
 ;
 ; RV64IFD-LP64-LABEL: llround_f32:
 ; RV64IFD-LP64:       # %bb.0:
-; RV64IFD-LP64-NEXT:    fmv.w.x ft0, a0
-; RV64IFD-LP64-NEXT:    fcvt.l.s a0, ft0, rmm
+; RV64IFD-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64IFD-LP64-NEXT:    fcvt.l.s a0, fa5, rmm
 ; RV64IFD-LP64-NEXT:    ret
 ;
 ; RV64I-LP64-LABEL: llround_f32:
@@ -500,8 +500,8 @@ define i64 @llround_f64(double %a) nounwind {
 ;
 ; RV64IFD-LP64-LABEL: llround_f64:
 ; RV64IFD-LP64:       # %bb.0:
-; RV64IFD-LP64-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-LP64-NEXT:    fcvt.l.d a0, ft0, rmm
+; RV64IFD-LP64-NEXT:    fmv.d.x fa5, a0
+; RV64IFD-LP64-NEXT:    fcvt.l.d a0, fa5, rmm
 ; RV64IFD-LP64-NEXT:    ret
 ;
 ; RV64I-LP64-LABEL: llround_f64:

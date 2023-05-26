@@ -6,9 +6,9 @@
 
 define i64 @test(i64 %X, i1 %Cond ) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[QUOTIENT1:%.*]] = lshr i64 [[X:%.*]], 4
-; CHECK-NEXT:    [[QUOTIENT2:%.*]] = lshr i64 [[X]], 3
-; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i64 [[QUOTIENT1]], [[QUOTIENT2]]
+; CHECK-NEXT:    [[QUOTIENT11:%.*]] = lshr i64 [[X:%.*]], 4
+; CHECK-NEXT:    [[QUOTIENT22:%.*]] = lshr i64 [[X]], 3
+; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i64 [[QUOTIENT11]], [[QUOTIENT22]]
 ; CHECK-NEXT:    ret i64 [[SUM]]
 ;
   %divisor1 = select i1 %Cond, i64 16, i64 8

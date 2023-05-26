@@ -518,6 +518,8 @@ func.func @scf_while_iter_arg_result_mismatch(%arg0: tensor<5xi1>,
                                               %arg2: index) {
   scf.while (%arg3 = %arg1) : (tensor<5xi1>) -> () {
     %0 = tensor.extract %arg0[%arg2] : tensor<5xi1>
+    %1 = tensor.extract %arg3[%arg2] : tensor<5xi1>
+    "dummy.use"(%1) : (i1) -> ()
     scf.condition(%0)
   } do {
     %0 = "dummy.some_op"() : () -> index

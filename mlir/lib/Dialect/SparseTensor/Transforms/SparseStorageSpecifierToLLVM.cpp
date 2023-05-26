@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
-#include "SparseTensorStorageLayout.h"
 
+#include "mlir/Conversion/LLVMCommon/StructBuilder.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
+
 #include <optional>
 
 using namespace mlir;
@@ -111,9 +113,9 @@ Value SpecifierStructBuilder::getInitValue(OpBuilder &builder, Location loc,
   Value metaData = builder.create<LLVM::UndefOp>(loc, structType);
   SpecifierStructBuilder md(metaData);
   if (!source) {
-    auto memSizeArrayType = structType.cast<LLVM::LLVMStructType>()
-                                .getBody()[kMemSizePosInSpecifier]
-                                .cast<LLVM::LLVMArrayType>();
+    auto memSizeArrayType =
+        cast<LLVM::LLVMArrayType>(cast<LLVM::LLVMStructType>(structType)
+                                      .getBody()[kMemSizePosInSpecifier]);
 
     Value zero = constantZero(builder, loc, memSizeArrayType.getElementType());
     // Fill memSizes array with zero.
@@ -262,7 +264,8 @@ public:
       std::optional<unsigned> lvl;
       if (op.getLevel())
         lvl = (*op.getLevel());
-      unsigned idx = layout.getMemRefFieldIndex(op.getSpecifierKind(), lvl);
+      unsigned idx =
+          layout.getMemRefFieldIndex(toFieldKind(op.getSpecifierKind()), lvl);
       Value v = Base::onMemSize(rewriter, op, spec, idx);
       rewriter.replaceOp(op, v);
       return success();

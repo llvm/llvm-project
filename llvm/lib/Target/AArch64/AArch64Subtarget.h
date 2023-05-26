@@ -128,6 +128,7 @@ protected:
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
+  TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
@@ -386,9 +387,20 @@ public:
     return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
   }
 
+  bool useSVEForFixedLengthVectors(EVT VT) const {
+    if (!useSVEForFixedLengthVectors() || !VT.isFixedLengthVector())
+      return false;
+    return VT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock ||
+           forceStreamingCompatibleSVE();
+  }
+
   bool forceStreamingCompatibleSVE() const;
 
   unsigned getVScaleForTuning() const { return VScaleForTuning; }
+
+  TailFoldingOpts getSVETailFoldingDefaultOpts() const {
+    return DefaultSVETFOpts;
+  }
 
   const char* getChkStkName() const {
     if (isWindowsArm64EC())

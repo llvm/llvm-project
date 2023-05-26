@@ -9,18 +9,15 @@
 define dso_local signext i32 @test1(ptr %b) local_unnamed_addr  {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movslq a(%rip), %rax
 ; CHECK-NEXT:    cmpq %rdi, %rax
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %if.then
+; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    callq callVoid@PLT
 ; CHECK-NEXT:    movq %rbx, %rdi

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
@@ -45,7 +46,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -156,16 +156,16 @@ private:
   unsigned CurCycle = 0;
 
   /// MinAvailableCycle - Cycle of the soonest available instruction.
-  unsigned MinAvailableCycle;
+  unsigned MinAvailableCycle = ~0u;
 
   /// IssueCount - Count instructions issued in this cycle
   /// Currently valid only for bottom-up scheduling.
-  unsigned IssueCount;
+  unsigned IssueCount = 0u;
 
   /// LiveRegDefs - A set of physical registers and their definition
   /// that are "live". These nodes must be scheduled before any other nodes that
   /// modifies the registers can be scheduled.
-  unsigned NumLiveRegs;
+  unsigned NumLiveRegs = 0u;
   std::unique_ptr<SUnit*[]> LiveRegDefs;
   std::unique_ptr<SUnit*[]> LiveRegGens;
 
@@ -1744,12 +1744,12 @@ protected:
   bool SrcOrder;
 
   // SUnits - The SUnits for the current graph.
-  std::vector<SUnit> *SUnits;
+  std::vector<SUnit> *SUnits = nullptr;
 
   MachineFunction &MF;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  const TargetLowering *TLI;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetLowering *TLI = nullptr;
   ScheduleDAGRRList *scheduleDAG = nullptr;
 
   // SethiUllmanNumbers - The SethiUllman number for each node.

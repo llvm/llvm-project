@@ -865,3 +865,124 @@ define i32 @v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <32 x i8> %d) {
   %res = bitcast <32 x i1> %y to i32
   ret i32 %res
 }
+
+; PR61683 - ignore upper undef elements
+define i8 @v4i32_concat_undef(<4 x i32> %vec) {
+; SSE2-SSSE3-LABEL: v4i32_concat_undef:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-SSSE3-NEXT:    movmskps %xmm1, %eax
+; SSE2-SSSE3-NEXT:    xorl $15, %eax
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX12-LABEL: v4i32_concat_undef:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX12-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX12-NEXT:    vmovmskps %xmm0, %eax
+; AVX12-NEXT:    xorl $15, %eax
+; AVX12-NEXT:    # kill: def $al killed $al killed $eax
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: v4i32_concat_undef:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v4i32_concat_undef:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vptestmd %xmm0, %xmm0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+  %tobool = icmp ne <4 x i32> %vec, zeroinitializer
+  %insertvec = shufflevector <4 x i1> %tobool, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %res = bitcast <8 x i1> %insertvec to i8
+  ret i8 %res
+}
+
+define i8 @v2i64_concat_undef(<2 x i64> %vec) {
+; SSE2-SSSE3-LABEL: v2i64_concat_undef:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
+; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    movmskpd %xmm0, %eax
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX12-LABEL: v2i64_concat_undef:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX12-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; AVX12-NEXT:    vmovmskpd %xmm0, %eax
+; AVX12-NEXT:    # kill: def $al killed $al killed $eax
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: v2i64_concat_undef:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vptestnmq %xmm0, %xmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v2i64_concat_undef:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vptestnmq %xmm0, %xmm0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+  %tobool = icmp eq <2 x i64> %vec, zeroinitializer
+  %insertvec = shufflevector <2 x i1> %tobool, <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %res = bitcast <8 x i1> %insertvec to i8
+  ret i8 %res
+}
+
+define i8 @v4f64_concat_undef(<4 x double> %vec) {
+; SSE2-SSSE3-LABEL: v4f64_concat_undef:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    xorpd %xmm2, %xmm2
+; SSE2-SSSE3-NEXT:    xorpd %xmm3, %xmm3
+; SSE2-SSSE3-NEXT:    cmpltpd %xmm1, %xmm3
+; SSE2-SSSE3-NEXT:    cmpltpd %xmm0, %xmm2
+; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
+; SSE2-SSSE3-NEXT:    movmskps %xmm2, %eax
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX12-LABEL: v4f64_concat_undef:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX12-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
+; AVX12-NEXT:    vmovmskpd %ymm0, %eax
+; AVX12-NEXT:    # kill: def $al killed $al killed $eax
+; AVX12-NEXT:    vzeroupper
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: v4f64_concat_undef:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vcmpltpd %ymm0, %ymm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: v4f64_concat_undef:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vcmpltpd %ymm0, %ymm1, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+  %tobool = fcmp ogt <4 x double> %vec, zeroinitializer
+  %insertvec = shufflevector <4 x i1> %tobool, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %res = bitcast <8 x i1> %insertvec to i8
+  ret i8 %res
+}

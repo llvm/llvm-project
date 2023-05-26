@@ -126,17 +126,17 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sync
 ; CHECK-NEXT:    li 6, 0
-; CHECK-NEXT:    lwz 7, 0(3)
+; CHECK-NEXT:    lwz 5, 0(3)
 ; CHECK-NEXT:    b .LBB2_2
 ; CHECK-NEXT:  .LBB2_1: # %atomicrmw.start
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    cmplw 5, 7
-; CHECK-NEXT:    mr 7, 5
 ; CHECK-NEXT:    beq 0, .LBB2_7
 ; CHECK-NEXT:  .LBB2_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB2_5 Depth 2
-; CHECK-NEXT:    addi 5, 7, 1
+; CHECK-NEXT:    mr 7, 5
+; CHECK-NEXT:    addi 5, 5, 1
 ; CHECK-NEXT:    cmplw 7, 4
 ; CHECK-NEXT:    bc 12, 0, .LBB2_4
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
@@ -169,18 +169,18 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    ld 7, 0(3)
+; CHECK-NEXT:    ld 5, 0(3)
 ; CHECK-NEXT:    li 6, 0
 ; CHECK-NEXT:    b .LBB3_2
 ; CHECK-NEXT:  .LBB3_1: # %atomicrmw.start
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    cmpld 5, 7
-; CHECK-NEXT:    mr 7, 5
 ; CHECK-NEXT:    beq 0, .LBB3_7
 ; CHECK-NEXT:  .LBB3_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB3_5 Depth 2
-; CHECK-NEXT:    addi 5, 7, 1
+; CHECK-NEXT:    mr 7, 5
+; CHECK-NEXT:    addi 5, 5, 1
 ; CHECK-NEXT:    cmpld 7, 4
 ; CHECK-NEXT:    bc 12, 0, .LBB3_4
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
@@ -334,19 +334,19 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    lwz 6, 0(3)
+; CHECK-NEXT:    lwz 5, 0(3)
 ; CHECK-NEXT:    b .LBB6_2
 ; CHECK-NEXT:  .LBB6_1: # %atomicrmw.start
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    cmplw 5, 6
-; CHECK-NEXT:    mr 6, 5
 ; CHECK-NEXT:    beq 0, .LBB6_7
 ; CHECK-NEXT:  .LBB6_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB6_5 Depth 2
+; CHECK-NEXT:    mr 6, 5
 ; CHECK-NEXT:    cmpwi 6, 0
 ; CHECK-NEXT:    cmplw 1, 6, 4
-; CHECK-NEXT:    addi 5, 6, -1
+; CHECK-NEXT:    addi 5, 5, -1
 ; CHECK-NEXT:    cror 20, 2, 5
 ; CHECK-NEXT:    bc 12, 20, .LBB6_4
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
@@ -379,19 +379,18 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    ld 6, 0(3)
+; CHECK-NEXT:    ld 5, 0(3)
 ; CHECK-NEXT:    b .LBB7_2
 ; CHECK-NEXT:  .LBB7_1: # %atomicrmw.start
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    cmpld 5, 6
-; CHECK-NEXT:    mr 6, 5
 ; CHECK-NEXT:    beq 0, .LBB7_7
 ; CHECK-NEXT:  .LBB7_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB7_5 Depth 2
-; CHECK-NEXT:    cmpdi 6, 0
+; CHECK-NEXT:    mr. 6, 5
 ; CHECK-NEXT:    cmpld 1, 6, 4
-; CHECK-NEXT:    addi 5, 6, -1
+; CHECK-NEXT:    addi 5, 5, -1
 ; CHECK-NEXT:    cror 20, 2, 5
 ; CHECK-NEXT:    bc 12, 20, .LBB7_4
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start

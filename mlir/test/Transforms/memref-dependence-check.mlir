@@ -636,7 +636,7 @@ func.func @mod_deps() {
   affine.for %i0 = 0 to 10 {
     %a0 = affine.apply affine_map<(d0) -> (d0 mod 2)> (%i0)
     // Results are conservative here since we currently don't have a way to
-    // represent strided sets in FlatAffineConstraints.
+    // represent strided sets in FlatAffineValueConstraints.
     %v0 = affine.load %m[%a0] : memref<100xf32>
     // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
     // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}

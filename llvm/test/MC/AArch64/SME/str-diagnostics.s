@@ -51,3 +51,10 @@ str za[w12, #0], [x0, #0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: str za[w12, #0], [x0, #0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// ------------------------------------------------------------------------- //
+// Mismatch between offset and immediate
+str     za[w14, 6], [x10, #5, mul vl]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: unpredictable instruction, immediate and offset mismatch.
+// CHECK-NEXT: str     za[w14, 6], [x10, #5, mul vl]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

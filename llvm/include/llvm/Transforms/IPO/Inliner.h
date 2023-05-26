@@ -10,7 +10,6 @@
 #define LLVM_TRANSFORMS_IPO_INLINER_H
 
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -18,10 +17,6 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-
-class AssumptionCacheTracker;
-class CallGraph;
-class ProfileSummaryInfo;
 
 /// The inliner pass for the new pass manager.
 ///

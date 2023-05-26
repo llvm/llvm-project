@@ -152,9 +152,13 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasPkFmacF16Inst = false;
+  bool HasAtomicDsPkAdd16Insts = false;
+  bool HasAtomicFlatPkAdd16Insts = false;
   bool HasAtomicFaddRtnInsts = false;
   bool HasAtomicFaddNoRtnInsts = false;
-  bool HasAtomicPkFaddNoRtnInsts = false;
+  bool HasAtomicBufferGlobalPkAddF16NoRtnInsts = false;
+  bool HasAtomicBufferGlobalPkAddF16Insts = false;
+  bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
   bool SupportsSRAMECC = false;
 
@@ -202,6 +206,7 @@ protected:
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
+  bool HasForceStoreSC0SC1 = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -758,6 +763,10 @@ public:
     return HasPkFmacF16Inst;
   }
 
+  bool hasAtomicDsPkAdd16Insts() const { return HasAtomicDsPkAdd16Insts; }
+
+  bool hasAtomicFlatPkAdd16Insts() const { return HasAtomicFlatPkAdd16Insts; }
+
   bool hasAtomicFaddInsts() const {
     return HasAtomicFaddRtnInsts || HasAtomicFaddNoRtnInsts;
   }
@@ -766,7 +775,17 @@ public:
 
   bool hasAtomicFaddNoRtnInsts() const { return HasAtomicFaddNoRtnInsts; }
 
-  bool hasAtomicPkFaddNoRtnInsts() const { return HasAtomicPkFaddNoRtnInsts; }
+  bool hasAtomicBufferGlobalPkAddF16NoRtnInsts() const {
+    return HasAtomicBufferGlobalPkAddF16NoRtnInsts;
+  }
+
+  bool hasAtomicBufferGlobalPkAddF16Insts() const {
+    return HasAtomicBufferGlobalPkAddF16Insts;
+  }
+
+  bool hasAtomicGlobalPkAddBF16Inst() const {
+    return HasAtomicGlobalPkAddBF16Inst;
+  }
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
 
@@ -1079,6 +1098,8 @@ public:
   }
 
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
+
+  bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() >= GFX11; }
 

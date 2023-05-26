@@ -172,9 +172,8 @@ raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags) {
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const JITEvaluatedSymbol &Sym) {
-  return OS << format("0x%016" PRIx64, Sym.getAddress()) << " "
-            << Sym.getFlags();
+raw_ostream &operator<<(raw_ostream &OS, const ExecutorSymbolDef &Sym) {
+  return OS << Sym.getAddress() << " " << Sym.getFlags();
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap::value_type &KV) {

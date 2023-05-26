@@ -15,7 +15,7 @@
 #ifndef BOLT_CORE_BINARY_LOOP_H
 #define BOLT_CORE_BINARY_LOOP_H
 
-#include "llvm/Analysis/LoopInfoImpl.h"
+#include "llvm/Support/GenericLoopInfoImpl.h"
 
 namespace llvm {
 namespace bolt {

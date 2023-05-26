@@ -10,5 +10,7 @@ add_mlir_library(MLIROptLib
   MLIRObservers
   MLIRPass
   MLIRParser
+  MLIRPluginsLib
   MLIRSupport
+  MLIRIRDL
   )

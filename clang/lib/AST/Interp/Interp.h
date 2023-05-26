@@ -16,6 +16,7 @@
 #include "Boolean.h"
 #include "Floating.h"
 #include "Function.h"
+#include "FunctionPointer.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -412,12 +413,32 @@ bool Inv(InterpState &S, CodePtr OpPC) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Neg(InterpState &S, CodePtr OpPC) {
-  const T &Val = S.Stk.pop<T>();
+  const T &Value = S.Stk.pop<T>();
   T Result;
-  T::neg(Val, &Result);
 
+  if (!T::neg(Value, &Result)) {
+    S.Stk.push<T>(Result);
+    return true;
+  }
+
+  assert(isIntegralType(Name) &&
+         "don't expect other types to fail at constexpr negation");
   S.Stk.push<T>(Result);
-  return true;
+
+  APSInt NegatedValue = -Value.toAPSInt(Value.bitWidth() + 1);
+  const Expr *E = S.Current->getExpr(OpPC);
+  QualType Type = E->getType();
+
+  if (S.checkingForUndefinedBehavior()) {
+    SmallString<32> Trunc;
+    NegatedValue.trunc(Result.bitWidth()).toString(Trunc, 10);
+    auto Loc = E->getExprLoc();
+    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    return true;
+  }
+
+  S.CCEDiag(E, diag::note_constexpr_overflow) << NegatedValue << Type;
+  return S.noteUndefinedBehavior();
 }
 
 enum class PushVal : bool {
@@ -435,7 +456,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   T Result;
 
   if constexpr (DoPush == PushVal::Yes)
-    S.Stk.push<T>(Result);
+    S.Stk.push<T>(Value);
 
   if constexpr (Op == IncDecOp::Inc) {
     if (!T::increment(Value, &Result)) {
@@ -519,6 +540,50 @@ bool DecPop(InterpState &S, CodePtr OpPC) {
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
 }
 
+template <IncDecOp Op, PushVal DoPush>
+bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                       llvm::RoundingMode RM) {
+  Floating Value = Ptr.deref<Floating>();
+  Floating Result;
+
+  if constexpr (DoPush == PushVal::Yes)
+    S.Stk.push<Floating>(Value);
+
+  llvm::APFloat::opStatus Status;
+  if constexpr (Op == IncDecOp::Inc)
+    Status = Floating::increment(Value, RM, &Result);
+  else
+    Status = Floating::decrement(Value, RM, &Result);
+
+  Ptr.deref<Floating>() = Result;
+
+  return CheckFloatResult(S, OpPC, Status);
+}
+
+inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, RM);
+}
+
+inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, RM);
+}
+
+inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, RM);
+}
+
+inline bool DecfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, RM);
+}
+
 /// 1) Pops the value from the stack.
 /// 2) Pushes the bitwise complemented value on the stack (~V).
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -551,6 +616,29 @@ bool CmpHelper(InterpState &S, CodePtr OpPC, CompareFn Fn) {
 template <typename T>
 bool CmpHelperEQ(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   return CmpHelper<T>(S, OpPC, Fn);
+}
+
+/// Function pointers cannot be compared in an ordered way.
+template <>
+inline bool CmpHelper<FunctionPointer>(InterpState &S, CodePtr OpPC,
+                                       CompareFn Fn) {
+  const auto &RHS = S.Stk.pop<FunctionPointer>();
+  const auto &LHS = S.Stk.pop<FunctionPointer>();
+
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
+      << LHS.toDiagnosticString(S.getCtx())
+      << RHS.toDiagnosticString(S.getCtx());
+  return false;
+}
+
+template <>
+inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
+                                         CompareFn Fn) {
+  const auto &RHS = S.Stk.pop<FunctionPointer>();
+  const auto &LHS = S.Stk.pop<FunctionPointer>();
+  S.Stk.push<Boolean>(Boolean::from(Fn(LHS.compare(RHS))));
+  return true;
 }
 
 template <>
@@ -700,6 +788,9 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+/// 1) Pops the value from the stack.
+/// 2) Writes the value to the local variable with the
+///    given offset.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool SetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   S.Current->setLocal<T>(I, S.Stk.pop<T>());
@@ -1485,26 +1576,29 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   return NarrowPtr(S, OpPC);
 }
 
-inline bool CheckGlobalCtor(InterpState &S, CodePtr &PC) {
+inline bool CheckGlobalCtor(InterpState &S, CodePtr OpPC) {
   const Pointer &Obj = S.Stk.peek<Pointer>();
-  return CheckCtorCall(S, PC, Obj);
+  return CheckCtorCall(S, OpPC, Obj);
 }
 
-inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
-  Pointer ThisPtr;
+inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {
   if (Func->hasThisPointer()) {
-    ThisPtr = NewFrame->getThis();
-    if (!CheckInvoke(S, PC, ThisPtr))
+    size_t ThisOffset =
+        Func->getArgSize() + (Func->hasRVO() ? primSize(PT_Ptr) : 0);
+
+    const Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
+
+    if (!CheckInvoke(S, OpPC, ThisPtr))
       return false;
 
     if (S.checkingPotentialConstantExpression())
       return false;
   }
 
-  if (!CheckCallable(S, PC, Func))
+  if (!CheckCallable(S, OpPC, Func))
     return false;
 
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
@@ -1536,6 +1630,22 @@ inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
   }
   S.Current = FrameBefore;
   return false;
+}
+
+inline bool CallPtr(InterpState &S, CodePtr OpPC) {
+  const FunctionPointer &FuncPtr = S.Stk.pop<FunctionPointer>();
+
+  const Function *F = FuncPtr.getFunction();
+  if (!F || !F->isConstexpr())
+    return false;
+
+  return Call(S, OpPC, F);
+}
+
+inline bool GetFnPtr(InterpState &S, CodePtr &PC, const Function *Func) {
+  assert(Func);
+  S.Stk.push<FunctionPointer>(Func);
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

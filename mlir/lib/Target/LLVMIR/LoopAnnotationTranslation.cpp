@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopAnnotationTranslation.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -32,6 +33,7 @@ struct LoopAnnotationConversion {
   void convertBoolNode(StringRef name, BoolAttr attr, bool negated = false);
   void convertI32Node(StringRef name, IntegerAttr attr);
   void convertFollowupNode(StringRef name, LoopAnnotationAttr attr);
+  void convertLocation(FusedLoc attr);
 
   /// Conversion functions for each for each loop annotation sub-attribute.
   void convertLoopOptions(LoopVectorizeAttr options);
@@ -186,11 +188,32 @@ void LoopAnnotationConversion::convertLoopOptions(LoopUnswitchAttr options) {
               options.getPartialDisable());
 }
 
-llvm::MDNode *LoopAnnotationConversion::convert() {
+void LoopAnnotationConversion::convertLocation(FusedLoc location) {
+  auto localScopeAttr =
+      dyn_cast_or_null<DILocalScopeAttr>(location.getMetadata());
+  if (!localScopeAttr)
+    return;
+  auto *localScope = dyn_cast<llvm::DILocalScope>(
+      loopAnnotationTranslation.moduleTranslation.translateDebugInfo(
+          localScopeAttr));
+  if (!localScope)
+    return;
+  llvm::Metadata *loc =
+      loopAnnotationTranslation.moduleTranslation.translateLoc(location,
+                                                               localScope);
+  metadataNodes.push_back(loc);
+}
 
+llvm::MDNode *LoopAnnotationConversion::convert() {
   // Reserve operand 0 for loop id self reference.
   auto dummy = llvm::MDNode::getTemporary(ctx, std::nullopt);
   metadataNodes.push_back(dummy.get());
+
+  if (FusedLoc startLoc = attr.getStartLoc())
+    convertLocation(startLoc);
+
+  if (FusedLoc endLoc = attr.getEndLoc())
+    convertLocation(endLoc);
 
   addUnitNode("llvm.loop.disable_nonforced", attr.getDisableNonforced());
   addUnitNode("llvm.loop.mustprogress", attr.getMustProgress());

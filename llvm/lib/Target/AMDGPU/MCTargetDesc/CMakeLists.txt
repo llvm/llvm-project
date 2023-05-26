@@ -13,16 +13,17 @@ add_llvm_component_library(LLVMAMDGPUDesc
   SIMCCodeEmitter.cpp
 
   LINK_COMPONENTS
-  Core
-  MC
   AMDGPUInfo
   AMDGPUUtils
-  Support
   BinaryFormat
+  CodeGenTypes
+  Core
+  MC
+  Support
   TargetParser
 
   ADD_TO_COMPONENT
   AMDGPU
-)
+  )
 
 add_dependencies(LLVMAMDGPUDesc LLVMAMDGPUUtils)

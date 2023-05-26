@@ -89,56 +89,56 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
-; CHECK-NEXT:    Size: 57
+; CHECK-NEXT:    Size: 56
 ; CHECK-NEXT:    Offset: 725
 ; CHECK-NEXT:    Name: .debug_line
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 91
-; CHECK-NEXT:    Offset: 800
+; CHECK-NEXT:    Offset: 799
 ; CHECK-NEXT:    Name: linking
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 9
-; CHECK-NEXT:    Offset: 905
+; CHECK-NEXT:    Offset: 904
 ; CHECK-NEXT:    Name: reloc.DATA
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 61
-; CHECK-NEXT:    Offset: 931
+; CHECK-NEXT:    Offset: 930
 ; CHECK-NEXT:    Name: reloc..debug_info
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 18
-; CHECK-NEXT:    Offset: 1016
+; CHECK-NEXT:    Offset: 1015
 ; CHECK-NEXT:    Name: reloc..debug_aranges
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 1061
+; CHECK-NEXT:    Offset: 1060
 ; CHECK-NEXT:    Name: reloc..debug_pubnames
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 1095
+; CHECK-NEXT:    Offset: 1094
 ; CHECK-NEXT:    Name: reloc..debug_pubtypes
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 6
-; CHECK-NEXT:    Offset: 1129
+; CHECK-NEXT:    Offset: 1128
 ; CHECK-NEXT:    Name: reloc..debug_line
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
 ; CHECK-NEXT:    Size: 77
-; CHECK-NEXT:    Offset: 1159
+; CHECK-NEXT:    Offset: 1158
 ; CHECK-NEXT:    Name: producers
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
@@ -176,7 +176,7 @@
 ; CHECK-NEXT:    0x6 R_WASM_SECTION_OFFSET_I32 .debug_info 0
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section (14) .debug_line {
-; CHECK-NEXT:    0x2B R_WASM_FUNCTION_OFFSET_I32 f2 0
+; CHECK-NEXT:    0x2E R_WASM_FUNCTION_OFFSET_I32 f2 1
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
 ; CHECK-NEXT:Symbols [

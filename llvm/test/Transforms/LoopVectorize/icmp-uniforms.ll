@@ -39,6 +39,7 @@ for.end:
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
+; CHECK-NEXT: Live-in ir<14> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -59,7 +60,7 @@ for.end:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
+; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:      REPLICATE store ir<%s>, ir<%gep>
 ; CHECK-NEXT:    Successor(s): pred.store.continue
 ; CHECK-EMPTY:

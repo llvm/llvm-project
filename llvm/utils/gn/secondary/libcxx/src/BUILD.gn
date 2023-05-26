@@ -120,7 +120,6 @@ cxx_sources = [
   "condition_variable.cpp",
   "condition_variable_destructor.cpp",
   "exception.cpp",
-  "format.cpp",
   "functional.cpp",
   "future.cpp",
   "hash.cpp",
@@ -175,7 +174,6 @@ cxx_sources = [
   "system_error.cpp",
   "thread.cpp",
   "typeinfo.cpp",
-  "utility.cpp",
   "valarray.cpp",
   "variant.cpp",
   "vector.cpp",
@@ -187,9 +185,6 @@ if (target_os == "win") {
     "support/win32/support.cpp",
     "support/win32/thread_win32.cpp",
   ]
-}
-if (target_os == "solaris") {
-  cxx_sources += [ "support/solaris/xlocale.cpp" ]
 }
 if (target_os == "zos") {
   cxx_sources += [

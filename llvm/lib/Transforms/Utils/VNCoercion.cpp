@@ -226,91 +226,6 @@ int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
                                         DL);
 }
 
-/// Looks at a memory location for a load (specified by MemLocBase, Offs, and
-/// Size) and compares it against a load.
-///
-/// If the specified load could be safely widened to a larger integer load
-/// that is 1) still efficient, 2) safe for the target, and 3) would provide
-/// the specified memory location value, then this function returns the size
-/// in bytes of the load width to use.  If not, this returns zero.
-static unsigned getLoadLoadClobberFullWidthSize(const Value *MemLocBase,
-                                                int64_t MemLocOffs,
-                                                unsigned MemLocSize,
-                                                const LoadInst *LI) {
-  // We can only extend simple integer loads.
-  if (!isa<IntegerType>(LI->getType()) || !LI->isSimple())
-    return 0;
-
-  // Load widening is hostile to ThreadSanitizer: it may cause false positives
-  // or make the reports more cryptic (access sizes are wrong).
-  if (LI->getParent()->getParent()->hasFnAttribute(Attribute::SanitizeThread))
-    return 0;
-
-  const DataLayout &DL = LI->getModule()->getDataLayout();
-
-  // Get the base of this load.
-  int64_t LIOffs = 0;
-  const Value *LIBase =
-      GetPointerBaseWithConstantOffset(LI->getPointerOperand(), LIOffs, DL);
-
-  // If the two pointers are not based on the same pointer, we can't tell that
-  // they are related.
-  if (LIBase != MemLocBase)
-    return 0;
-
-  // Okay, the two values are based on the same pointer, but returned as
-  // no-alias.  This happens when we have things like two byte loads at "P+1"
-  // and "P+3".  Check to see if increasing the size of the "LI" load up to its
-  // alignment (or the largest native integer type) will allow us to load all
-  // the bits required by MemLoc.
-
-  // If MemLoc is before LI, then no widening of LI will help us out.
-  if (MemLocOffs < LIOffs)
-    return 0;
-
-  // Get the alignment of the load in bytes.  We assume that it is safe to load
-  // any legal integer up to this size without a problem.  For example, if we're
-  // looking at an i8 load on x86-32 that is known 1024 byte aligned, we can
-  // widen it up to an i32 load.  If it is known 2-byte aligned, we can widen it
-  // to i16.
-  unsigned LoadAlign = LI->getAlign().value();
-
-  int64_t MemLocEnd = MemLocOffs + MemLocSize;
-
-  // If no amount of rounding up will let MemLoc fit into LI, then bail out.
-  if (LIOffs + LoadAlign < MemLocEnd)
-    return 0;
-
-  // This is the size of the load to try.  Start with the next larger power of
-  // two.
-  unsigned NewLoadByteSize = LI->getType()->getPrimitiveSizeInBits() / 8U;
-  NewLoadByteSize = NextPowerOf2(NewLoadByteSize);
-
-  while (true) {
-    // If this load size is bigger than our known alignment or would not fit
-    // into a native integer register, then we fail.
-    if (NewLoadByteSize > LoadAlign ||
-        !DL.fitsInLegalInteger(NewLoadByteSize * 8))
-      return 0;
-
-    if (LIOffs + NewLoadByteSize > MemLocEnd &&
-        (LI->getParent()->getParent()->hasFnAttribute(
-             Attribute::SanitizeAddress) ||
-         LI->getParent()->getParent()->hasFnAttribute(
-             Attribute::SanitizeHWAddress)))
-      // We will be reading past the location accessed by the original program.
-      // While this is safe in a regular build, Address Safety analysis tools
-      // may start reporting false warnings. So, don't do widening.
-      return 0;
-
-    // If a load of this width would include all of MemLoc, then we succeed.
-    if (LIOffs + NewLoadByteSize >= MemLocEnd)
-      return NewLoadByteSize;
-
-    NewLoadByteSize <<= 1;
-  }
-}
-
 /// This function is called when we have a
 /// memdep query of a load that ends up being clobbered by another load.  See if
 /// the other load can feed into the second load.
@@ -325,28 +240,7 @@ int analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr, LoadInst *DepLI,
 
   Value *DepPtr = DepLI->getPointerOperand();
   uint64_t DepSize = DL.getTypeSizeInBits(DepLI->getType()).getFixedValue();
-  int R = analyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr, DepSize, DL);
-  if (R != -1)
-    return R;
-
-  // If we have a load/load clobber an DepLI can be widened to cover this load,
-  // then we should widen it!
-  int64_t LoadOffs = 0;
-  const Value *LoadBase =
-      GetPointerBaseWithConstantOffset(LoadPtr, LoadOffs, DL);
-  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
-
-  unsigned Size =
-      getLoadLoadClobberFullWidthSize(LoadBase, LoadOffs, LoadSize, DepLI);
-  if (Size == 0)
-    return -1;
-
-  // Check non-obvious conditions enforced by MDA which we rely on for being
-  // able to materialize this potentially available value
-  assert(DepLI->isSimple() && "Cannot widen volatile/atomic load!");
-  assert(DepLI->getType()->isIntegerTy() && "Can't widen non-integer load");
-
-  return analyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr, Size * 8, DL);
+  return analyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr, DepSize, DL);
 }
 
 int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
@@ -438,81 +332,27 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
   return SrcVal;
 }
 
-/// This function is called when we have a memdep query of a load that ends up
-/// being a clobbering store.  This means that the store provides bits used by
-/// the load but the pointers don't must-alias.  Check this case to see if
-/// there is anything more we can do before we give up.
-Value *getStoreValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
-                            Instruction *InsertPt, const DataLayout &DL) {
+Value *getValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
+                       Instruction *InsertPt, const DataLayout &DL) {
 
+#ifndef NDEBUG
+  unsigned SrcValSize = DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
+  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
+  assert(Offset + LoadSize <= SrcValSize);
+#endif
   IRBuilder<> Builder(InsertPt);
   SrcVal = getStoreValueForLoadHelper(SrcVal, Offset, LoadTy, Builder, DL);
   return coerceAvailableValueToLoadType(SrcVal, LoadTy, Builder, DL);
 }
 
-Constant *getConstantStoreValueForLoad(Constant *SrcVal, unsigned Offset,
-                                       Type *LoadTy, const DataLayout &DL) {
+Constant *getConstantValueForLoad(Constant *SrcVal, unsigned Offset,
+                                  Type *LoadTy, const DataLayout &DL) {
+#ifndef NDEBUG
+  unsigned SrcValSize = DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
+  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
+  assert(Offset + LoadSize <= SrcValSize);
+#endif
   return ConstantFoldLoadFromConst(SrcVal, LoadTy, APInt(32, Offset), DL);
-}
-
-/// This function is called when we have a memdep query of a load that ends up
-/// being a clobbering load.  This means that the load *may* provide bits used
-/// by the load but we can't be sure because the pointers don't must-alias.
-/// Check this case to see if there is anything more we can do before we give
-/// up.
-Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
-                           Instruction *InsertPt, const DataLayout &DL) {
-  // If Offset+LoadTy exceeds the size of SrcVal, then we must be wanting to
-  // widen SrcVal out to a larger load.
-  unsigned SrcValStoreSize =
-      DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
-  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
-  if (Offset + LoadSize > SrcValStoreSize) {
-    assert(SrcVal->isSimple() && "Cannot widen volatile/atomic load!");
-    assert(SrcVal->getType()->isIntegerTy() && "Can't widen non-integer load");
-    // If we have a load/load clobber an DepLI can be widened to cover this
-    // load, then we should widen it to the next power of 2 size big enough!
-    unsigned NewLoadSize = llvm::bit_ceil(Offset + LoadSize);
-
-    Value *PtrVal = SrcVal->getPointerOperand();
-    // Insert the new load after the old load.  This ensures that subsequent
-    // memdep queries will find the new load.  We can't easily remove the old
-    // load completely because it is already in the value numbering table.
-    IRBuilder<> Builder(SrcVal->getParent(), ++BasicBlock::iterator(SrcVal));
-    Type *DestTy = IntegerType::get(LoadTy->getContext(), NewLoadSize * 8);
-    Type *DestPTy =
-        PointerType::get(DestTy, PtrVal->getType()->getPointerAddressSpace());
-    Builder.SetCurrentDebugLocation(SrcVal->getDebugLoc());
-    PtrVal = Builder.CreateBitCast(PtrVal, DestPTy);
-    LoadInst *NewLoad = Builder.CreateLoad(DestTy, PtrVal);
-    NewLoad->takeName(SrcVal);
-    NewLoad->setAlignment(SrcVal->getAlign());
-
-    LLVM_DEBUG(dbgs() << "GVN WIDENED LOAD: " << *SrcVal << "\n");
-    LLVM_DEBUG(dbgs() << "TO: " << *NewLoad << "\n");
-
-    // Replace uses of the original load with the wider load.  On a big endian
-    // system, we need to shift down to get the relevant bits.
-    Value *RV = NewLoad;
-    if (DL.isBigEndian())
-      RV = Builder.CreateLShr(RV, (NewLoadSize - SrcValStoreSize) * 8);
-    RV = Builder.CreateTrunc(RV, SrcVal->getType());
-    SrcVal->replaceAllUsesWith(RV);
-
-    SrcVal = NewLoad;
-  }
-
-  return getStoreValueForLoad(SrcVal, Offset, LoadTy, InsertPt, DL);
-}
-
-Constant *getConstantLoadValueForLoad(Constant *SrcVal, unsigned Offset,
-                                      Type *LoadTy, const DataLayout &DL) {
-  unsigned SrcValStoreSize =
-      DL.getTypeStoreSize(SrcVal->getType()).getFixedValue();
-  unsigned LoadSize = DL.getTypeStoreSize(LoadTy).getFixedValue();
-  if (Offset + LoadSize > SrcValStoreSize)
-    return nullptr;
-  return getConstantStoreValueForLoad(SrcVal, Offset, LoadTy, DL);
 }
 
 /// This function is called when we have a

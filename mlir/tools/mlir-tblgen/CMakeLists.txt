@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  CodeGenTypes
   Demangle
   Support
   TableGen
@@ -9,6 +10,7 @@ add_tablegen(mlir-tblgen MLIR
   EXPORT MLIR
   AttrOrTypeDefGen.cpp
   AttrOrTypeFormatGen.cpp
+  BytecodeDialectGen.cpp
   DialectGen.cpp
   DirectiveCommonGen.cpp
   EnumsGen.cpp

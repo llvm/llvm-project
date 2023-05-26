@@ -54,7 +54,28 @@ StringRef loongarch::getLoongArchABI(const Driver &D, const ArgList &Args,
   }
 
   // Choose a default based on the triple.
-  return IsLA32 ? "ilp32d" : "lp64d";
+  // Honor the explicit ABI modifier suffix in triple's environment part if
+  // present, falling back to {ILP32,LP64}D otherwise.
+  switch (Triple.getEnvironment()) {
+  case llvm::Triple::GNUSF:
+    return IsLA32 ? "ilp32s" : "lp64s";
+  case llvm::Triple::GNUF32:
+    return IsLA32 ? "ilp32f" : "lp64f";
+  case llvm::Triple::GNUF64:
+    // This was originally permitted (and indeed the canonical way) to
+    // represent the {ILP32,LP64}D ABIs, but in Feb 2023 Loongson decided to
+    // drop the explicit suffix in favor of unmarked `-gnu` for the
+    // "general-purpose" ABIs, among other non-technical reasons.
+    //
+    // The spec change did not mention whether existing usages of "gnuf64"
+    // shall remain valid or not, so we are going to continue recognizing it
+    // for some time, until it is clear that everyone else has migrated away
+    // from it.
+    [[fallthrough]];
+  case llvm::Triple::GNU:
+  default:
+    return IsLA32 ? "ilp32d" : "lp64d";
+  }
 }
 
 void loongarch::getLoongArchTargetFeatures(const Driver &D,

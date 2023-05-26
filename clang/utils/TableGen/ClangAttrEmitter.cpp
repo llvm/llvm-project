@@ -508,6 +508,16 @@ namespace {
       OS << "    assert(!is" << getLowerName() << "Expr);\n";
       OS << "    return " << getLowerName() << "Type;\n";
       OS << "  }";
+
+      OS << "  std::optional<unsigned> getCached" << getUpperName()
+         << "Value() const {\n";
+      OS << "    return " << getLowerName() << "Cache;\n";
+      OS << "  }";
+
+      OS << "  void setCached" << getUpperName()
+         << "Value(unsigned AlignVal) {\n";
+      OS << "    " << getLowerName() << "Cache = AlignVal;\n";
+      OS << "  }";
     }
 
     void writeAccessorDefinitions(raw_ostream &OS) const override {
@@ -529,21 +539,6 @@ namespace {
          << "Expr->containsErrors();\n";
       OS << "  return " << getLowerName()
          << "Type->getType()->containsErrors();\n";
-      OS << "}\n";
-
-      // FIXME: Do not do the calculation here
-      // FIXME: Handle types correctly
-      // A null pointer means maximum alignment
-      OS << "unsigned " << getAttrName() << "Attr::get" << getUpperName()
-         << "(ASTContext &Ctx) const {\n";
-      OS << "  assert(!is" << getUpperName() << "Dependent());\n";
-      OS << "  if (is" << getLowerName() << "Expr)\n";
-      OS << "    return " << getLowerName() << "Expr ? " << getLowerName()
-         << "Expr->EvaluateKnownConstInt(Ctx).getZExtValue()"
-         << " * Ctx.getCharWidth() : "
-         << "Ctx.getTargetDefaultAlignForAttributeAligned();\n";
-      OS << "  else\n";
-      OS << "    return 0; // FIXME\n";
       OS << "}\n";
     }
 
@@ -601,7 +596,8 @@ namespace {
       OS << "union {\n";
       OS << "Expr *" << getLowerName() << "Expr;\n";
       OS << "TypeSourceInfo *" << getLowerName() << "Type;\n";
-      OS << "};";
+      OS << "};\n";
+      OS << "std::optional<unsigned> " << getLowerName() << "Cache;\n";
     }
 
     void writePCHReadArgs(raw_ostream &OS) const override {
@@ -628,14 +624,21 @@ namespace {
     }
 
     std::string getIsOmitted() const override {
-      return "!is" + getLowerName().str() + "Expr || !" + getLowerName().str()
-             + "Expr";
+      return "!((is" + getLowerName().str() + "Expr && " +
+             getLowerName().str() + "Expr) || (!is" + getLowerName().str() +
+             "Expr && " + getLowerName().str() + "Type))";
     }
 
     void writeValue(raw_ostream &OS) const override {
       OS << "\";\n";
-      OS << "    " << getLowerName()
+      OS << "    if (is" << getLowerName() << "Expr && " << getLowerName()
+         << "Expr)";
+      OS << "      " << getLowerName()
          << "Expr->printPretty(OS, nullptr, Policy);\n";
+      OS << "    if (!is" << getLowerName() << "Expr && " << getLowerName()
+         << "Type)";
+      OS << "      " << getLowerName()
+         << "Type->getType().print(OS, Policy);\n";
       OS << "    OS << \"";
     }
 
@@ -2378,6 +2381,16 @@ static void emitClangAttrAcceptsExprPack(RecordKeeper &Records,
   OS << "#endif // CLANG_ATTR_ACCEPTS_EXPR_PACK\n\n";
 }
 
+static void emitFormInitializer(raw_ostream &OS,
+                                const FlattenedSpelling &Spelling,
+                                StringRef SpellingIndex) {
+  bool IsAlignas =
+      (Spelling.variety() == "Keyword" && Spelling.name() == "alignas");
+  OS << "{AttributeCommonInfo::AS_" << Spelling.variety() << ", "
+     << SpellingIndex << ", " << (IsAlignas ? "true" : "false")
+     << " /*IsAlignas*/}";
+}
+
 static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
                            bool Header) {
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr");
@@ -2531,8 +2544,6 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         DelayedArgs->writeCtorParameters(OS);
       }
       OS << ", const AttributeCommonInfo &CommonInfo";
-      if (Header && Implicit)
-        OS << " = {SourceRange{}}";
       OS << ")";
       if (Header) {
         OS << ";\n";
@@ -2542,6 +2553,7 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       OS << " {\n";
       OS << "  auto *A = new (Ctx) " << R.getName();
       OS << "Attr(Ctx, CommonInfo";
+
       if (!DelayedArgsOnly) {
         for (auto const &ai : Args) {
           if (ai->isFake() && !emitFake)
@@ -2592,11 +2604,13 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         OS << ", ";
         DelayedArgs->writeCtorParameters(OS);
       }
-      OS << ", SourceRange Range, AttributeCommonInfo::Syntax Syntax";
-      if (!ElideSpelling) {
-        OS << ", " << R.getName() << "Attr::Spelling S";
+      OS << ", SourceRange Range";
+      if (Header)
+        OS << " = {}";
+      if (Spellings.size() > 1) {
+        OS << ", Spelling S";
         if (Header)
-          OS << " = static_cast<Spelling>(SpellingNotCalculated)";
+          OS << " = " << SemanticToSyntacticMap[0];
       }
       OS << ")";
       if (Header) {
@@ -2612,9 +2626,31 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
       else
         OS << "NoSemaHandlerAttribute";
 
-      OS << ", Syntax";
-      if (!ElideSpelling)
-        OS << ", S";
+      if (Spellings.size() == 0) {
+        OS << ", AttributeCommonInfo::Form::Implicit()";
+      } else if (Spellings.size() == 1) {
+        OS << ", ";
+        emitFormInitializer(OS, Spellings[0], "0");
+      } else {
+        OS << ", (\n";
+        std::set<std::string> Uniques;
+        unsigned Idx = 0;
+        for (auto I = Spellings.begin(), E = Spellings.end(); I != E;
+             ++I, ++Idx) {
+          const FlattenedSpelling &S = *I;
+          const auto &Name = SemanticToSyntacticMap[Idx];
+          if (Uniques.insert(Name).second) {
+            OS << "    S == " << Name << " ? AttributeCommonInfo::Form";
+            emitFormInitializer(OS, S, Name);
+            OS << " :\n";
+          }
+        }
+        OS << "    (llvm_unreachable(\"Unknown attribute spelling!\"), "
+           << " AttributeCommonInfo::Form";
+        emitFormInitializer(OS, Spellings[0], "0");
+        OS << "))";
+      }
+
       OS << ");\n";
       OS << "  return Create";
       if (Implicit)
@@ -3444,6 +3480,10 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "case AttributeCommonInfo::Syntax::AS_ContextSensitiveKeyword:\n";
   OS << "  llvm_unreachable(\"hasAttribute not supported for keyword\");\n";
   OS << "  return 0;\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_Implicit:\n";
+  OS << "  llvm_unreachable (\"hasAttribute not supported for "
+        "AS_Implicit\");\n";
+  OS << "  return 0;\n";
 
   OS << "}\n";
 }
@@ -4222,7 +4262,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
   // Generate all of the custom appertainsTo functions that the attributes
   // will be using.
-  for (auto I : Attrs) {
+  for (const auto &I : Attrs) {
     const Record &Attr = *I.second;
     if (Attr.isValueUnset("Subjects"))
       continue;

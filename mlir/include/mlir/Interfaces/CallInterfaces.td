@@ -41,6 +41,15 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
       "::mlir::CallInterfaceCallable", "getCallableForCallee"
     >,
     InterfaceMethod<[{
+        Sets the callee of this call-like operation. A `callee` is either a
+        reference to a symbol, via SymbolRefAttr, or a reference to a defined
+        SSA value. The type of the `callee` is expected to be the same as the
+        return type of `getCallableForCallee`, e.g., `callee` should be
+        SymbolRefAttr for `func.call`.
+      }],
+      "void", "setCalleeFromCallable", (ins "::mlir::CallInterfaceCallable":$callee)
+    >,
+    InterfaceMethod<[{
         Returns the operands within this call that are used as arguments to the
         callee.
       }],
@@ -84,6 +93,18 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
       }],
       "::llvm::ArrayRef<::mlir::Type>", "getCallableResults"
     >,
+    InterfaceMethod<[{
+        Returns the argument attributes for all callable region arguments or
+        null if there are none.
+      }],
+      "::mlir::ArrayAttr", "getCallableArgAttrs"
+    >,
+    InterfaceMethod<[{
+        Returns the result attributes for all callable region results or null
+        if there are none.
+      }],
+      "::mlir::ArrayAttr", "getCallableResAttrs"
+    >
   ];
 }
 

@@ -633,7 +633,7 @@ public:
         }
 
 #ifndef _LIBCPP_CXX03_LANG
-    set(set&& __s, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI set(set&& __s, const allocator_type& __a);
 
     _LIBCPP_INLINE_VISIBILITY
     set(initializer_list<value_type> __il, const value_compare& __comp = value_compare())
@@ -931,7 +931,7 @@ public:
 template<class _InputIterator,
          class _Compare = less<__iter_value_type<_InputIterator>>,
          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
          class = enable_if_t<__is_allocator<_Allocator>::value, void>,
          class = enable_if_t<!__is_allocator<_Compare>::value, void>>
 set(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
@@ -945,7 +945,7 @@ set(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator())
   -> set<_Key, _Compare, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
 set(_InputIterator, _InputIterator, _Allocator)
   -> set<__iter_value_type<_InputIterator>,
@@ -1158,7 +1158,7 @@ public:
         _NOEXCEPT_(is_nothrow_move_constructible<__base>::value)
         : __tree_(_VSTD::move(__s.__tree_)) {}
 
-    multiset(multiset&& __s, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s, const allocator_type& __a);
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     explicit multiset(const allocator_type& __a)
@@ -1467,7 +1467,7 @@ public:
 template<class _InputIterator,
          class _Compare = less<__iter_value_type<_InputIterator>>,
          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
          class = enable_if_t<__is_allocator<_Allocator>::value, void>,
          class = enable_if_t<!__is_allocator<_Compare>::value, void>>
 multiset(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
@@ -1481,7 +1481,7 @@ multiset(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator(
   -> multiset<_Key, _Compare, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
-         class = enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value, void>,
+         class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
 multiset(_InputIterator, _InputIterator, _Allocator)
   -> multiset<__iter_value_type<_InputIterator>,
@@ -1598,6 +1598,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>
+#  include <cstdlib>
 #  include <functional>
 #  include <iterator>
 #  include <type_traits>

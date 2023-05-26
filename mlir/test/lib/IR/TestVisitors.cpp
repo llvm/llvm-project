@@ -92,6 +92,19 @@ static void testPureCallbacks(Operation *op) {
                  << "\n";
     funcOp->walk<WalkOrder::PostOrder,
                  ForwardDominanceIterator</*NoGraphRegions=*/true>>(regionPure);
+
+    llvm::outs() << "Op reverse dominance post-order visits"
+                 << "\n";
+    funcOp->walk<WalkOrder::PostOrder,
+                 ReverseDominanceIterator</*NoGraphRegions=*/true>>(opPure);
+    llvm::outs() << "Block reverse dominance post-order visits"
+                 << "\n";
+    funcOp->walk<WalkOrder::PostOrder,
+                 ReverseDominanceIterator</*NoGraphRegions=*/true>>(blockPure);
+    llvm::outs() << "Region reverse dominance post-order visits"
+                 << "\n";
+    funcOp->walk<WalkOrder::PostOrder,
+                 ReverseDominanceIterator</*NoGraphRegions=*/true>>(regionPure);
   });
 }
 

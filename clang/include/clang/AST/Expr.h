@@ -135,8 +135,8 @@ protected:
   void setDependence(ExprDependence Deps) {
     ExprBits.Dependent = static_cast<unsigned>(Deps);
   }
-  friend class ASTImporter; // Sets dependence dircetly.
-  friend class ASTStmtReader; // Sets dependence dircetly.
+  friend class ASTImporter;   // Sets dependence directly.
+  friend class ASTStmtReader; // Sets dependence directly.
 
 public:
   QualType getType() const { return TR; }
@@ -171,7 +171,7 @@ public:
   }
 
   /// Determines whether the type of this expression depends on
-  ///   - a template paramter (C++ [temp.dep.expr], which means that its type
+  ///   - a template parameter (C++ [temp.dep.expr], which means that its type
   ///     could change from one template instantiation to the next)
   ///   - or an error
   ///
@@ -593,12 +593,12 @@ public:
   struct EvalStatus {
     /// Whether the evaluated expression has side effects.
     /// For example, (f() && 0) can be folded, but it still has side effects.
-    bool HasSideEffects;
+    bool HasSideEffects = false;
 
     /// Whether the evaluation hit undefined behavior.
     /// For example, 1.0 / 0.0 can be folded to Inf, but has undefined behavior.
     /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
-    bool HasUndefinedBehavior;
+    bool HasUndefinedBehavior = false;
 
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
@@ -607,10 +607,9 @@ public:
     /// foldable. If the expression is foldable, but not a constant expression,
     /// the notes will describes why it isn't a constant expression. If the
     /// expression *is* a constant expression, no notes will be produced.
-    SmallVectorImpl<PartialDiagnosticAt> *Diag;
+    SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
 
-    EvalStatus()
-        : HasSideEffects(false), HasUndefinedBehavior(false), Diag(nullptr) {}
+    EvalStatus() = default;
 
     // hasSideEffects - Return true if the evaluated expression has
     // side effects.
@@ -820,7 +819,7 @@ public:
   /// member expression.
   static QualType findBoundMemberType(const Expr *expr);
 
-  /// Skip past any invisble AST nodes which might surround this
+  /// Skip past any invisible AST nodes which might surround this
   /// statement, such as ExprWithCleanups or ImplicitCastExpr nodes,
   /// but also injected CXXMemberExpr and CXXConstructExpr which represent
   /// implicit conversions.
@@ -924,7 +923,7 @@ public:
     return const_cast<Expr *>(this)->IgnoreParenLValueCasts();
   }
 
-  /// Skip past any parenthese and casts which do not change the value
+  /// Skip past any parentheses and casts which do not change the value
   /// (including ptr->int casts of the same size) until reaching a fixed point.
   /// Skips:
   /// * What IgnoreParens() skips
@@ -1993,7 +1992,7 @@ public:
 
 private:
   PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
-                 StringLiteral *SL);
+                 bool IsTransparent, StringLiteral *SL);
 
   explicit PredefinedExpr(EmptyShell Empty, bool HasFunctionName);
 
@@ -2008,8 +2007,12 @@ private:
 
 public:
   /// Create a PredefinedExpr.
+  ///
+  /// If IsTransparent, the PredefinedExpr is transparently handled as a
+  /// StringLiteral.
   static PredefinedExpr *Create(const ASTContext &Ctx, SourceLocation L,
-                                QualType FNTy, IdentKind IK, StringLiteral *SL);
+                                QualType FNTy, IdentKind IK, bool IsTransparent,
+                                StringLiteral *SL);
 
   /// Create an empty PredefinedExpr.
   static PredefinedExpr *CreateEmpty(const ASTContext &Ctx,
@@ -2018,6 +2021,8 @@ public:
   IdentKind getIdentKind() const {
     return static_cast<IdentKind>(PredefinedExprBits.Kind);
   }
+
+  bool isTransparent() const { return PredefinedExprBits.IsTransparent; }
 
   SourceLocation getLocation() const { return PredefinedExprBits.Loc; }
   void setLocation(SourceLocation L) { PredefinedExprBits.Loc = L; }
@@ -2234,14 +2239,14 @@ public:
   bool canOverflow() const { return UnaryOperatorBits.CanOverflow; }
   void setCanOverflow(bool C) { UnaryOperatorBits.CanOverflow = C; }
 
-  // Get the FP contractability status of this operator. Only meaningful for
-  // operations on floating point types.
+  /// Get the FP contractability status of this operator. Only meaningful for
+  /// operations on floating point types.
   bool isFPContractableWithinStatement(const LangOptions &LO) const {
     return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
   }
 
-  // Get the FENV_ACCESS status of this operator. Only meaningful for
-  // operations on floating point types.
+  /// Get the FENV_ACCESS status of this operator. Only meaningful for
+  /// operations on floating point types.
   bool isFEnvAccessOn(const LangOptions &LO) const {
     return getFPFeaturesInEffect(LO).getAllowFEnvAccess();
   }
@@ -2326,8 +2331,8 @@ protected:
   void setStoredFPFeatures(FPOptionsOverride F) { getTrailingFPFeatures() = F; }
 
 public:
-  // Get the FP features status of this operator. Only meaningful for
-  // operations on floating point types.
+  /// Get the FP features status of this operator. Only meaningful for
+  /// operations on floating point types.
   FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
     if (UnaryOperatorBits.HasFPFeatures)
       return getStoredFPFeatures().applyOverrides(LO);
@@ -2815,7 +2820,7 @@ class CallExpr : public Expr {
   /// The number of arguments in the call expression.
   unsigned NumArgs;
 
-  /// The location of the right parenthese. This has a different meaning for
+  /// The location of the right parentheses. This has a different meaning for
   /// the derived classes of CallExpr.
   SourceLocation RParenLoc;
 
@@ -3083,8 +3088,8 @@ public:
     *getTrailingFPFeatures() = F;
   }
 
-  // Get the FP features status of this operator. Only meaningful for
-  // operations on floating point types.
+  /// Get the FP features status of this operator. Only meaningful for
+  /// operations on floating point types.
   FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
     if (hasStoredFPFeatures())
       return getStoredFPFeatures().applyOverrides(LO);
@@ -3574,8 +3579,8 @@ public:
     return *getTrailingFPFeatures();
   }
 
-  // Get the FP features status of this operation. Only meaningful for
-  // operations on floating point types.
+  /// Get the FP features status of this operation. Only meaningful for
+  /// operations on floating point types.
   FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
     if (hasStoredFPFeatures())
       return getStoredFPFeatures().applyOverrides(LO);
@@ -3972,11 +3977,12 @@ public:
     return isShiftAssignOp(getOpcode());
   }
 
-  // Return true if a binary operator using the specified opcode and operands
-  // would match the 'p = (i8*)nullptr + n' idiom for casting a pointer-sized
-  // integer to a pointer.
+  /// Return true if a binary operator using the specified opcode and operands
+  /// would match the 'p = (i8*)nullptr + n' idiom for casting a pointer-sized
+  /// integer to a pointer.
   static bool isNullPointerArithmeticExtension(ASTContext &Ctx, Opcode Opc,
-                                               Expr *LHS, Expr *RHS);
+                                               const Expr *LHS,
+                                               const Expr *RHS);
 
   static bool classof(const Stmt *S) {
     return S->getStmtClass() >= firstBinaryOperatorConstant &&
@@ -4007,8 +4013,8 @@ public:
     *getTrailingFPFeatures() = F;
   }
 
-  // Get the FP features status of this operator. Only meaningful for
-  // operations on floating point types.
+  /// Get the FP features status of this operator. Only meaningful for
+  /// operations on floating point types.
   FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
     if (BinaryOperatorBits.HasFPFeatures)
       return getStoredFPFeatures().applyOverrides(LO);
@@ -4022,14 +4028,14 @@ public:
     return FPOptionsOverride();
   }
 
-  // Get the FP contractability status of this operator. Only meaningful for
-  // operations on floating point types.
+  /// Get the FP contractability status of this operator. Only meaningful for
+  /// operations on floating point types.
   bool isFPContractableWithinStatement(const LangOptions &LO) const {
     return getFPFeaturesInEffect(LO).allowFPContractWithinStatement();
   }
 
-  // Get the FENV_ACCESS status of this operator. Only meaningful for
-  // operations on floating point types.
+  /// Get the FENV_ACCESS status of this operator. Only meaningful for
+  /// operations on floating point types.
   bool isFEnvAccessOn(const LangOptions &LO) const {
     return getFPFeaturesInEffect(LO).getAllowFEnvAccess();
   }
@@ -4125,17 +4131,17 @@ protected:
     : Expr(SC, Empty) { }
 
 public:
-  // getCond - Return the expression representing the condition for
-  //   the ?: operator.
+  /// getCond - Return the expression representing the condition for
+  ///   the ?: operator.
   Expr *getCond() const;
 
-  // getTrueExpr - Return the subexpression representing the value of
-  //   the expression if the condition evaluates to true.
+  /// getTrueExpr - Return the subexpression representing the value of
+  ///   the expression if the condition evaluates to true.
   Expr *getTrueExpr() const;
 
-  // getFalseExpr - Return the subexpression representing the value of
-  //   the expression if the condition evaluates to false.  This is
-  //   the same as getRHS.
+  /// getFalseExpr - Return the subexpression representing the value of
+  ///   the expression if the condition evaluates to false.  This is
+  ///   the same as getRHS.
   Expr *getFalseExpr() const;
 
   SourceLocation getQuestionLoc() const { return QuestionLoc; }
@@ -4170,17 +4176,17 @@ public:
   explicit ConditionalOperator(EmptyShell Empty)
     : AbstractConditionalOperator(ConditionalOperatorClass, Empty) { }
 
-  // getCond - Return the expression representing the condition for
-  //   the ?: operator.
+  /// getCond - Return the expression representing the condition for
+  ///   the ?: operator.
   Expr *getCond() const { return cast<Expr>(SubExprs[COND]); }
 
-  // getTrueExpr - Return the subexpression representing the value of
-  //   the expression if the condition evaluates to true.
+  /// getTrueExpr - Return the subexpression representing the value of
+  ///   the expression if the condition evaluates to true.
   Expr *getTrueExpr() const { return cast<Expr>(SubExprs[LHS]); }
 
-  // getFalseExpr - Return the subexpression representing the value of
-  //   the expression if the condition evaluates to false.  This is
-  //   the same as getRHS.
+  /// getFalseExpr - Return the subexpression representing the value of
+  ///   the expression if the condition evaluates to false.  This is
+  ///   the same as getRHS.
   Expr *getFalseExpr() const { return cast<Expr>(SubExprs[RHS]); }
 
   Expr *getLHS() const { return cast<Expr>(SubExprs[LHS]); }
@@ -4685,14 +4691,22 @@ public:
 };
 
 /// Represents a function call to one of __builtin_LINE(), __builtin_COLUMN(),
-/// __builtin_FUNCTION(), __builtin_FILE(), __builtin_FILE_NAME(),
-/// or __builtin_source_location().
+/// __builtin_FUNCTION(), __builtin_FUNCSIG(), __builtin_FILE(),
+/// __builtin_FILE_NAME() or __builtin_source_location().
 class SourceLocExpr final : public Expr {
   SourceLocation BuiltinLoc, RParenLoc;
   DeclContext *ParentContext;
 
 public:
-  enum IdentKind { Function, File, FileName, Line, Column, SourceLocStruct };
+  enum IdentKind {
+    Function,
+    FuncSig,
+    File,
+    FileName,
+    Line,
+    Column,
+    SourceLocStruct
+  };
 
   SourceLocExpr(const ASTContext &Ctx, IdentKind Type, QualType ResultTy,
                 SourceLocation BLoc, SourceLocation RParenLoc,
@@ -4718,6 +4732,7 @@ public:
     case File:
     case FileName:
     case Function:
+    case FuncSig:
     case SourceLocStruct:
       return false;
     case Line:
@@ -4903,6 +4918,13 @@ public:
   /// has been set.
   bool hasArrayFiller() const { return getArrayFiller(); }
 
+  /// Determine whether this initializer list contains a designated initializer.
+  bool hasDesignatedInit() const {
+    return std::any_of(begin(), end(), [](const Stmt *S) {
+      return isa<DesignatedInitExpr>(S);
+    });
+  }
+
   /// If this initializes a union, specifies which field in the
   /// union to initialize.
   ///
@@ -4931,8 +4953,8 @@ public:
     return LBraceLoc.isValid() && RBraceLoc.isValid();
   }
 
-  // Is this an initializer for an array of characters, initialized by a string
-  // literal or an @encode?
+  /// Is this an initializer for an array of characters, initialized by a string
+  /// literal or an @encode?
   bool isStringLiteralInit() const;
 
   /// Is this a transparent initializer list (that is, an InitListExpr that is
@@ -5071,37 +5093,6 @@ private:
       NumDesignators(0), NumSubExprs(NumSubExprs), Designators(nullptr) { }
 
 public:
-  /// A field designator, e.g., ".x".
-  struct FieldDesignator {
-    /// Refers to the field that is being initialized. The low bit
-    /// of this field determines whether this is actually a pointer
-    /// to an IdentifierInfo (if 1) or a FieldDecl (if 0). When
-    /// initially constructed, a field designator will store an
-    /// IdentifierInfo*. After semantic analysis has resolved that
-    /// name, the field designator will instead store a FieldDecl*.
-    uintptr_t NameOrField;
-
-    /// The location of the '.' in the designated initializer.
-    SourceLocation DotLoc;
-
-    /// The location of the field name in the designated initializer.
-    SourceLocation FieldLoc;
-  };
-
-  /// An array or GNU array-range designator, e.g., "[9]" or "[10..15]".
-  struct ArrayOrRangeDesignator {
-    /// Location of the first index expression within the designated
-    /// initializer expression's list of subexpressions.
-    unsigned Index;
-    /// The location of the '[' starting the array range designator.
-    SourceLocation LBracketLoc;
-    /// The location of the ellipsis separating the start and end
-    /// indices. Only valid for GNU array-range designators.
-    SourceLocation EllipsisLoc;
-    /// The location of the ']' terminating the array range designator.
-    SourceLocation RBracketLoc;
-  };
-
   /// Represents a single C99 designator.
   ///
   /// @todo This class is infuriatingly similar to clang::Designator,
@@ -5109,118 +5100,177 @@ public:
   /// keep us from reusing it. Try harder, later, to rectify these
   /// differences.
   class Designator {
+    /// A field designator, e.g., ".x".
+    struct FieldDesignatorInfo {
+      /// Refers to the field that is being initialized. The low bit
+      /// of this field determines whether this is actually a pointer
+      /// to an IdentifierInfo (if 1) or a FieldDecl (if 0). When
+      /// initially constructed, a field designator will store an
+      /// IdentifierInfo*. After semantic analysis has resolved that
+      /// name, the field designator will instead store a FieldDecl*.
+      uintptr_t NameOrField;
+
+      /// The location of the '.' in the designated initializer.
+      SourceLocation DotLoc;
+
+      /// The location of the field name in the designated initializer.
+      SourceLocation FieldLoc;
+
+      FieldDesignatorInfo(const IdentifierInfo *II, SourceLocation DotLoc,
+                          SourceLocation FieldLoc)
+          : NameOrField(reinterpret_cast<uintptr_t>(II) | 0x1), DotLoc(DotLoc),
+            FieldLoc(FieldLoc) {}
+    };
+
+    /// An array or GNU array-range designator, e.g., "[9]" or "[10...15]".
+    struct ArrayOrRangeDesignatorInfo {
+      /// Location of the first index expression within the designated
+      /// initializer expression's list of subexpressions.
+      unsigned Index;
+
+      /// The location of the '[' starting the array range designator.
+      SourceLocation LBracketLoc;
+
+      /// The location of the ellipsis separating the start and end
+      /// indices. Only valid for GNU array-range designators.
+      SourceLocation EllipsisLoc;
+
+      /// The location of the ']' terminating the array range designator.
+      SourceLocation RBracketLoc;
+
+      ArrayOrRangeDesignatorInfo(unsigned Index, SourceLocation LBracketLoc,
+                                 SourceLocation RBracketLoc)
+          : Index(Index), LBracketLoc(LBracketLoc), RBracketLoc(RBracketLoc) {}
+
+      ArrayOrRangeDesignatorInfo(unsigned Index,
+                                 SourceLocation LBracketLoc,
+                                 SourceLocation EllipsisLoc,
+                                 SourceLocation RBracketLoc)
+          : Index(Index), LBracketLoc(LBracketLoc), EllipsisLoc(EllipsisLoc),
+            RBracketLoc(RBracketLoc) {}
+    };
+
     /// The kind of designator this describes.
-    enum {
+    enum DesignatorKind {
       FieldDesignator,
       ArrayDesignator,
       ArrayRangeDesignator
-    } Kind;
+    };
+
+    DesignatorKind Kind;
 
     union {
       /// A field designator, e.g., ".x".
-      struct FieldDesignator Field;
+      struct FieldDesignatorInfo FieldInfo;
+
       /// An array or GNU array-range designator, e.g., "[9]" or "[10..15]".
-      struct ArrayOrRangeDesignator ArrayOrRange;
+      struct ArrayOrRangeDesignatorInfo ArrayOrRangeInfo;
     };
-    friend class DesignatedInitExpr;
+
+    Designator(DesignatorKind Kind) : Kind(Kind) {}
 
   public:
     Designator() {}
-
-    /// Initializes a field designator.
-    Designator(const IdentifierInfo *FieldName, SourceLocation DotLoc,
-               SourceLocation FieldLoc)
-      : Kind(FieldDesignator) {
-      new (&Field) DesignatedInitExpr::FieldDesignator;
-      Field.NameOrField = reinterpret_cast<uintptr_t>(FieldName) | 0x01;
-      Field.DotLoc = DotLoc;
-      Field.FieldLoc = FieldLoc;
-    }
-
-    /// Initializes an array designator.
-    Designator(unsigned Index, SourceLocation LBracketLoc,
-               SourceLocation RBracketLoc)
-      : Kind(ArrayDesignator) {
-      new (&ArrayOrRange) DesignatedInitExpr::ArrayOrRangeDesignator;
-      ArrayOrRange.Index = Index;
-      ArrayOrRange.LBracketLoc = LBracketLoc;
-      ArrayOrRange.EllipsisLoc = SourceLocation();
-      ArrayOrRange.RBracketLoc = RBracketLoc;
-    }
-
-    /// Initializes a GNU array-range designator.
-    Designator(unsigned Index, SourceLocation LBracketLoc,
-               SourceLocation EllipsisLoc, SourceLocation RBracketLoc)
-      : Kind(ArrayRangeDesignator) {
-      new (&ArrayOrRange) DesignatedInitExpr::ArrayOrRangeDesignator;
-      ArrayOrRange.Index = Index;
-      ArrayOrRange.LBracketLoc = LBracketLoc;
-      ArrayOrRange.EllipsisLoc = EllipsisLoc;
-      ArrayOrRange.RBracketLoc = RBracketLoc;
-    }
 
     bool isFieldDesignator() const { return Kind == FieldDesignator; }
     bool isArrayDesignator() const { return Kind == ArrayDesignator; }
     bool isArrayRangeDesignator() const { return Kind == ArrayRangeDesignator; }
 
-    IdentifierInfo *getFieldName() const;
+    //===------------------------------------------------------------------===//
+    // FieldDesignatorInfo
 
-    FieldDecl *getField() const {
-      assert(Kind == FieldDesignator && "Only valid on a field designator");
-      if (Field.NameOrField & 0x01)
-        return nullptr;
-      else
-        return reinterpret_cast<FieldDecl *>(Field.NameOrField);
+    /// Creates a field designator.
+    static Designator CreateFieldDesignator(const IdentifierInfo *FieldName,
+                                            SourceLocation DotLoc,
+                                            SourceLocation FieldLoc) {
+      Designator D(FieldDesignator);
+      new (&D.FieldInfo) FieldDesignatorInfo(FieldName, DotLoc, FieldLoc);
+      return D;
     }
 
-    void setField(FieldDecl *FD) {
-      assert(Kind == FieldDesignator && "Only valid on a field designator");
-      Field.NameOrField = reinterpret_cast<uintptr_t>(FD);
+    const IdentifierInfo *getFieldName() const;
+
+    FieldDecl *getFieldDecl() const {
+      assert(isFieldDesignator() && "Only valid on a field designator");
+      if (FieldInfo.NameOrField & 0x01)
+        return nullptr;
+      return reinterpret_cast<FieldDecl *>(FieldInfo.NameOrField);
+    }
+
+    void setFieldDecl(FieldDecl *FD) {
+      assert(isFieldDesignator() && "Only valid on a field designator");
+      FieldInfo.NameOrField = reinterpret_cast<uintptr_t>(FD);
     }
 
     SourceLocation getDotLoc() const {
-      assert(Kind == FieldDesignator && "Only valid on a field designator");
-      return Field.DotLoc;
+      assert(isFieldDesignator() && "Only valid on a field designator");
+      return FieldInfo.DotLoc;
     }
 
     SourceLocation getFieldLoc() const {
-      assert(Kind == FieldDesignator && "Only valid on a field designator");
-      return Field.FieldLoc;
+      assert(isFieldDesignator() && "Only valid on a field designator");
+      return FieldInfo.FieldLoc;
+    }
+
+    //===------------------------------------------------------------------===//
+    // ArrayOrRangeDesignator
+
+    /// Creates an array designator.
+    static Designator CreateArrayDesignator(unsigned Index,
+                                            SourceLocation LBracketLoc,
+                                            SourceLocation RBracketLoc) {
+      Designator D(ArrayDesignator);
+      new (&D.ArrayOrRangeInfo) ArrayOrRangeDesignatorInfo(Index, LBracketLoc,
+                                                           RBracketLoc);
+      return D;
+    }
+
+    /// Creates a GNU array-range designator.
+    static Designator CreateArrayRangeDesignator(unsigned Index,
+                                                 SourceLocation LBracketLoc,
+                                                 SourceLocation EllipsisLoc,
+                                                 SourceLocation RBracketLoc) {
+      Designator D(ArrayRangeDesignator);
+      new (&D.ArrayOrRangeInfo) ArrayOrRangeDesignatorInfo(Index, LBracketLoc,
+                                                           EllipsisLoc,
+                                                           RBracketLoc);
+      return D;
+    }
+
+    unsigned getArrayIndex() const {
+      assert((isArrayDesignator() || isArrayRangeDesignator()) &&
+             "Only valid on an array or array-range designator");
+      return ArrayOrRangeInfo.Index;
     }
 
     SourceLocation getLBracketLoc() const {
-      assert((Kind == ArrayDesignator || Kind == ArrayRangeDesignator) &&
+      assert((isArrayDesignator() || isArrayRangeDesignator()) &&
              "Only valid on an array or array-range designator");
-      return ArrayOrRange.LBracketLoc;
-    }
-
-    SourceLocation getRBracketLoc() const {
-      assert((Kind == ArrayDesignator || Kind == ArrayRangeDesignator) &&
-             "Only valid on an array or array-range designator");
-      return ArrayOrRange.RBracketLoc;
+      return ArrayOrRangeInfo.LBracketLoc;
     }
 
     SourceLocation getEllipsisLoc() const {
-      assert(Kind == ArrayRangeDesignator &&
+      assert(isArrayRangeDesignator() &&
              "Only valid on an array-range designator");
-      return ArrayOrRange.EllipsisLoc;
+      return ArrayOrRangeInfo.EllipsisLoc;
     }
 
-    unsigned getFirstExprIndex() const {
-      assert((Kind == ArrayDesignator || Kind == ArrayRangeDesignator) &&
+    SourceLocation getRBracketLoc() const {
+      assert((isArrayDesignator() || isArrayRangeDesignator()) &&
              "Only valid on an array or array-range designator");
-      return ArrayOrRange.Index;
+      return ArrayOrRangeInfo.RBracketLoc;
     }
 
     SourceLocation getBeginLoc() const LLVM_READONLY {
-      if (Kind == FieldDesignator)
-        return getDotLoc().isInvalid()? getFieldLoc() : getDotLoc();
-      else
-        return getLBracketLoc();
+      if (isFieldDesignator())
+        return getDotLoc().isInvalid() ? getFieldLoc() : getDotLoc();
+      return getLBracketLoc();
     }
+
     SourceLocation getEndLoc() const LLVM_READONLY {
-      return Kind == FieldDesignator ? getFieldLoc() : getRBracketLoc();
+      return isFieldDesignator() ? getFieldLoc() : getRBracketLoc();
     }
+
     SourceRange getSourceRange() const LLVM_READONLY {
       return SourceRange(getBeginLoc(), getEndLoc());
     }

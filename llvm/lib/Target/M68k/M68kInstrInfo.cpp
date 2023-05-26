@@ -781,7 +781,7 @@ unsigned M68kInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
     return GlobalBaseReg;
 
   // Create the register. The code to initialize it is inserted later,
-  // by the CGBR pass (below).
+  // by the M68kGlobalBaseReg pass (below).
   //
   // NOTE
   // Normally M68k uses A5 register as global base pointer but this will
@@ -813,11 +813,16 @@ M68kInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   return ArrayRef(TargetFlags);
 }
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "m68k-create-global-base-reg"
+
+#define PASS_NAME "M68k PIC Global Base Reg Initialization"
+
 namespace {
-/// Create Global Base Reg pass. This initializes the PIC global base register
-struct CGBR : public MachineFunctionPass {
+/// This initializes the PIC global base register
+struct M68kGlobalBaseReg : public MachineFunctionPass {
   static char ID;
-  CGBR() : MachineFunctionPass(ID) {}
+  M68kGlobalBaseReg() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const M68kSubtarget &STI = MF.getSubtarget<M68kSubtarget>();
@@ -842,16 +847,16 @@ struct CGBR : public MachineFunctionPass {
     return true;
   }
 
-  StringRef getPassName() const override {
-    return "M68k PIC Global Base Reg Initialization";
-  }
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
+char M68kGlobalBaseReg::ID = 0;
 } // namespace
 
-char CGBR::ID = 0;
-FunctionPass *llvm::createM68kGlobalBaseRegPass() { return new CGBR(); }
+INITIALIZE_PASS(M68kGlobalBaseReg, DEBUG_TYPE, PASS_NAME, false, false)
+
+FunctionPass *llvm::createM68kGlobalBaseRegPass() {
+  return new M68kGlobalBaseReg();
+}

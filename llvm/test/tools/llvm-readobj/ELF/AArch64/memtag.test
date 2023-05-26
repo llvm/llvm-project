@@ -80,10 +80,10 @@
 # INVALID-SAME: Unknown (2)
 
 # LLVM:  0x000000007000000D AARCH64_MEMTAG_GLOBALS   0xdeadbeef
-# LLVM:  0x000000007000000F AARCH64_MEMTAG_GLOBALSSZ 1234
+# LLVM:  0x000000007000000F AARCH64_MEMTAG_GLOBALSSZ 15
 
 # GNU: 0x000000007000000d (AARCH64_MEMTAG_GLOBALS)   0xdeadbeef0
-# GNU: 0x000000007000000f (AARCH64_MEMTAG_GLOBALSSZ) 1234
+# GNU: 0x000000007000000f (AARCH64_MEMTAG_GLOBALSSZ) 15
 
 # GNU:          Displaying notes found in: .note.android.memtag
 # GNU-NEXT:     Owner    Data size	 Description
@@ -132,8 +132,8 @@
 # NOSTACK: AARCH64_MEMTAG_STACK: Disabled (0)
 # LLVM:    AARCH64_MEMTAG_GLOBALS: 0xdeadbeef0
 # GNU:     AARCH64_MEMTAG_GLOBALS: 0xdeadbeef0
-# LLVM:    AARCH64_MEMTAG_GLOBALSSZ: 1234
-# GNU:     AARCH64_MEMTAG_GLOBALSSZ: 1234
+# LLVM:    AARCH64_MEMTAG_GLOBALSSZ: 15
+# GNU:     AARCH64_MEMTAG_GLOBALSSZ: 15
 
 # LLVM-OK: Memtag Android Note
 # GNU-OK:  Memtag Android Note
@@ -145,6 +145,71 @@
 # NOHEAP:  Heap: Disabled
 # STACK:   Stack: Enabled
 # NOSTACK: Stack: Disabled
+
+## Below is the maths for calculating the hand-written `.memtag.globals.dynamic` section contents.
+## This is based on the AArch64 MemtagABI:
+## https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#83encoding-of-sht_aarch64_memtag_globals_dynamic
+## You may find the following python one-liner helpful to encode your own values:
+##     `binascii.hexlify(leb128.u.encode(value_to_encode))`
+## Remember that a granule is 16 bytes.
+##   1. Tagged region of 16 bytes at 0xdead0000
+##      - Distance from the end of the last tagged region: 0xdead0000 bytes, 0xdead000 granules
+##      - Size: 0x10 bytes, 0x1 granules
+##      - Value to encode: (0xdead000 << 3) + 0x1 = 0x6f568001
+##      - ULEB-encoded value: 0x81 0x80 0xda 0xfa 0x06
+##   2. Tagged region of 32 bytes at 0xdead0010
+##      - Distance from the end of the last tagged region: 0x0 bytes, 0x0 granules
+##      - Size: 0x20 bytes, 0x2 granules
+##      - Value to encode: (0 << 3) + 0x2 == 0x2
+##      - ULEB-encoded value: 0x2
+##   3. Tagged region of 64 bytes at 0xdead0100
+##      - Distance: 0xdead0100 - 0xdead0010 - 32 = 0xd0 bytes, 0xd granules
+##      - Size: 0x40 bytes, 0x4 granules.
+##      - Value to encode: (0xd << 3) + 0x4 = 0x6c
+##      - ULEB-encoded value: 0x6c
+##   4. Tagged region of 0x1000 bytes at 0xdeadf000
+##      - Distance: 0xdeadf000 - 0xdead0100 - 64 = 0xeec0 bytes, 0xeec granules
+##      - Size: 0x1000 bytes, 0x100 granules.
+##        (note: size of 0x100 granules exceeds the 3-bit size allowance in value to encode, so the
+##         size needs to go to its own value, minus one).
+##      - 1st value to encode (distance only): (0xeec << 3) == 0x7760
+##      - 1st ULEB-encoded value: 0xe0 0xee 0x01
+##      - 2nd value to encode (size only): 0x100 - 1
+##      - 2nd ULEB-encoded value: 0xff 0x01
+##   5. Tagged region of 16 bytes at 0xdeae0000
+##      - Distance: 0xdeae000 - 0xdeadf000 - 0x1000 = 0x0 bytes, 0x0 granules (regions are adjacent)
+##      - Size: 0x10 bytes, 0x1 granules
+##      - Value to encode: (0x0 << 3) + 0x1
+##      - ULEB-encoded value: 0x01
+##   6. Tagged region of 16 bytes at 0xdeae0010
+##      - Distance: 0x0 (regions are adjacent)
+##      - Size: 0x10 bytes, 0x1 granules
+##      - Value to encode: (0x0 << 3) + 0x1
+##      - ULEB-encoded value: 0x01
+##   6. Tagged region of 16 bytes at 0xdeae0020
+##      - Distance: 0x0 (regions are adjacent)
+##      - Size: 0x10 bytes, 0x1 granules
+##      - Value to encode: (0x0 << 3) + 0x1
+##      - ULEB-encoded value: 0x01
+
+# LLVM-OK:      Memtag Global Descriptors: [
+# LLVM-OK-NEXT:    0xDEAD0000: 0x10
+# LLVM-OK-NEXT:    0xDEAD0010: 0x20
+# LLVM-OK-NEXT:    0xDEAD0100: 0x40
+# LLVM-OK-NEXT:    0xDEADF000: 0x1000
+# LLVM-OK-NEXT:    0xDEAE0000: 0x10
+# LLVM-OK-NEXT:    0xDEAE0010: 0x10
+# LLVM-OK-NEXT:    0xDEAE0020: 0x10
+# LLVM-OK-NEXT: ]
+# GNU-OK:       Memtag Global Descriptors:
+# GNU-OK-NEXT:     0xdead0000: 0x10
+# GNU-OK-NEXT:     0xdead0010: 0x20
+# GNU-OK-NEXT:     0xdead0100: 0x40
+# GNU-OK-NEXT:     0xdeadf000: 0x1000
+# GNU-OK-NEXT:     0xdeae0000: 0x10
+# GNU-OK-NEXT:     0xdeae0010: 0x10
+# GNU-OK-NEXT:     0xdeae0020: 0x10
+# GNU-OK-NOT:   {{.}}
 
 #########################################
 ## --docnum=1 (default)
@@ -175,16 +240,24 @@ Sections:
       - Tag:   DT_AARCH64_MEMTAG_GLOBALS
         Value: 0xdeadbeef0
       - Tag:   DT_AARCH64_MEMTAG_GLOBALSSZ
-        Value: 1234
+        Value: 15
       - Tag:   DT_INIT_ARRAY
         Value: 0x1000
+  - Name:            .memtag.globals.dynamic
+    Type:            SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0xdeadbeef0
+    AddressAlign:    0x4
+    Content:         8180DAFA06026CE0EE01ff01010101
+
+#########################################
+## Ensure the header is printed, even if there's no relevant dynamic entries,
+## and that nothing else is printed.
+#########################################
 
 # RUN: yaml2obj --docnum=2 %s -o %t
 # RUN: llvm-readelf --memtag %t | FileCheck %s --check-prefixes=MISSING-GNU
 # RUN: llvm-readobj --memtag %t | FileCheck %s --check-prefixes=MISSING-LLVM
-
-## Ensure the header is printed, even if there's no relevant dynamic entries,
-## and that nothing else is printed.
 
 # MISSING-GNU-NOT:  {{.}}
 # MISSING-GNU:      Memtag Dynamic Entries:
@@ -218,3 +291,109 @@ Sections:
     Entries:
       - Tag:   DT_INIT_ARRAY
         Value: 0x1000
+
+#########################################
+## Ensure that we fail if DT_AARCH64_MEMTAG_GLOBALSSZ doesn't match the actual
+## section size.
+#########################################
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=0x1337 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=12345678901234567890
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH
+
+# SIZE-MISMATCH:      warning: {{.*}} mismatch between DT_AARCH64_MEMTAG_GLOBALSSZ (0x1337) and
+# SIZE-MISMATCH-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section size (0xa)
+
+#########################################
+## Ensure that GLOBALSSZ tag is stored in a 64-bit integer even on 32-bit machines.
+#########################################
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=0x100000001 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=11
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH2
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=SIZE-MISMATCH2
+
+# SIZE-MISMATCH2:      warning: {{.*}} mismatch between DT_AARCH64_MEMTAG_GLOBALSSZ (0x100000001) and
+# SIZE-MISMATCH2-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section size (0x1)
+
+#########################################
+## Ensure that we fail if DT_AARCH64_MEMTAG_GLOBALS doesn't agree with the address of the section.
+#########################################
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALS=0xdeadbeef123 \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=10 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=00000000000000000000
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-SECTION
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-SECTION
+
+# BAD-SECTION:      warning: {{.*}} SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section was unexpectedly at
+# BAD-SECTION-SAME: 0xdeadbeef, when DT_AARCH64_MEMTAG_GLOBALS says it should be at 0xdeadbeef123
+
+#########################################
+## Ensure that we fail if the ULEB-encoded globals stream can't be decoded.
+#########################################
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=3 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=808080
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-STREAM1
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-STREAM1
+
+# BAD-STREAM1:      warning: {{.*}} error decoding distance uleb, 3 byte(s) into
+# BAD-STREAM1-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=2 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=0080
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-STREAM2
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=BAD-STREAM2
+
+# BAD-STREAM2:      warning: {{.*}} error decoding size-only uleb, 1 byte(s) into
+# BAD-STREAM2-SAME: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+
+# RUN: yaml2obj --docnum=3 %s -o %t \
+# RUN:   -D SH_OFFSET=0xffff \
+# RUN:   -D DT_AARCH64_MEMTAG_GLOBALSSZ=10 \
+# RUN:   -D GLOBALS_SECTION_CONTENTS=00000000000000000000
+# RUN: llvm-readelf --memtag %t 2>&1 | FileCheck %s --check-prefixes=UNREADABLE-SECTION
+# RUN: llvm-readobj --memtag %t 2>&1 | FileCheck %s --check-prefixes=UNREADABLE-SECTION
+
+# UNREADABLE-SECTION:      couldn't get SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section contents: section
+# UNREADABLE-SECTION-SAME: [index 2] has a sh_offset (0xffff) + sh_size (0xa) that is greater than
+# UNREADABLE-SECTION-SAME: the file size
+
+#########################################
+## --docnum=3
+#########################################
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_AARCH64_MEMTAG_MODE
+        Value: 0
+      - Tag:   DT_AARCH64_MEMTAG_HEAP
+        Value: 0
+      - Tag:   DT_AARCH64_MEMTAG_STACK
+        Value: 0
+      - Tag:   DT_AARCH64_MEMTAG_GLOBALS
+        Value: [[DT_AARCH64_MEMTAG_GLOBALS=0xdeadbeef]]
+      - Tag:   DT_AARCH64_MEMTAG_GLOBALSSZ
+        Value: [[DT_AARCH64_MEMTAG_GLOBALSSZ]]
+  - Name:         .memtag.globals.dynamic
+    Type:         SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+    Flags:        [ SHF_ALLOC ]
+    Address:      0xdeadbeef
+    AddressAlign: 0x4
+    Content:      [[GLOBALS_SECTION_CONTENTS]]
+    ShOffset:     [[SH_OFFSET=<none>]]

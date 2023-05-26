@@ -24,20 +24,24 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.bcmp
     libc.src.string.bcopy
     libc.src.string.bzero
+    libc.src.string.index
     libc.src.string.memccpy
     libc.src.string.memchr
     libc.src.string.memcmp
     libc.src.string.memcpy
+    libc.src.string.memmem
     libc.src.string.memmove
     libc.src.string.mempcpy
     libc.src.string.memrchr
     libc.src.string.memset
+    libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
     libc.src.string.strcasecmp
     libc.src.string.strcasestr
     libc.src.string.strcat
     libc.src.string.strchr
+    libc.src.string.strchrnul
     libc.src.string.strcmp
     libc.src.string.strcpy
     libc.src.string.strcspn
@@ -51,6 +55,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strnlen
     libc.src.string.strpbrk
     libc.src.string.strrchr
+    libc.src.string.strsep
     libc.src.string.strspn
     libc.src.string.strstr
     libc.src.string.strtok

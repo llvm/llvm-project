@@ -29,10 +29,10 @@ using namespace llvm;
 struct Status {
   // Mask is a bitmask where a '1' indicates the corresponding Mode bit has a
   // known value
-  unsigned Mask;
-  unsigned Mode;
+  unsigned Mask = 0;
+  unsigned Mode = 0;
 
-  Status() : Mask(0), Mode(0){};
+  Status() = default;
 
   Status(unsigned NewMask, unsigned NewMode) : Mask(NewMask), Mode(NewMode) {
     Mode &= Mask;
@@ -96,13 +96,13 @@ public:
 
   // In Phase 1 we record the first instruction that has a mode requirement,
   // which is used in Phase 3 if we need to insert a mode change.
-  MachineInstr *FirstInsertionPoint;
+  MachineInstr *FirstInsertionPoint = nullptr;
 
   // A flag to indicate whether an Exit value has been set (we can't tell by
   // examining the Exit value itself as all values may be valid results).
-  bool ExitSet;
+  bool ExitSet = false;
 
-  BlockData() : FirstInsertionPoint(nullptr), ExitSet(false){};
+  BlockData() = default;
 };
 
 namespace {

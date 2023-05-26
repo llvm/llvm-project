@@ -91,14 +91,15 @@ static std::optional<StringRef> findLibrary(StringRef name) {
 
   auto doFind = [&] {
     if (config->searchDylibsFirst) {
-      if (std::optional<StringRef> path = findPathCombination(
-              "lib" + name, config->librarySearchPaths, {".tbd", ".dylib"}))
+      if (std::optional<StringRef> path =
+              findPathCombination("lib" + name, config->librarySearchPaths,
+                                  {".tbd", ".dylib", ".so"}))
         return path;
       return findPathCombination("lib" + name, config->librarySearchPaths,
                                  {".a"});
     }
     return findPathCombination("lib" + name, config->librarySearchPaths,
-                               {".tbd", ".dylib", ".a"});
+                               {".tbd", ".dylib", ".so", ".a"});
   };
 
   std::optional<StringRef> path = doFind();
@@ -596,8 +597,8 @@ static void replaceCommonSymbols() {
     replaceSymbol<Defined>(
         sym, sym->getName(), common->getFile(), isec, /*value=*/0, common->size,
         /*isWeakDef=*/false, /*isExternal=*/true, common->privateExtern,
-        /*includeInSymtab=*/true, /*isThumb=*/false,
-        /*isReferencedDynamically=*/false, /*noDeadStrip=*/false);
+        /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
+        /*noDeadStrip=*/false);
   }
 }
 
@@ -752,8 +753,6 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
     return createARM64TargetInfo();
   case CPU_TYPE_ARM64_32:
     return createARM64_32TargetInfo();
-  case CPU_TYPE_ARM:
-    return createARMTargetInfo(cpuSubtype);
   default:
     error("missing or unsupported -arch " + archName);
     return nullptr;
@@ -866,6 +865,14 @@ static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
   if (ret.second.empty())
     error(arg->getSpelling() + " expects 'old;new' format, but got " + s);
   return ret;
+}
+
+// Parse options of the form "old;new[;extra]".
+static std::tuple<StringRef, StringRef, StringRef>
+getOldNewOptionsExtra(opt::InputArgList &args, unsigned id) {
+  auto [oldDir, second] = getOldNewOptions(args, id);
+  auto [newDir, extraDir] = second.split(';');
+  return {oldDir, newDir, extraDir};
 }
 
 static void parseClangOption(StringRef opt, const Twine &msg) {
@@ -1331,8 +1338,7 @@ static void handleExplicitExports() {
   if (config->hasExplicitExports) {
     parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
       if (auto *defined = dyn_cast<Defined>(sym)) {
-        StringRef symbolName = defined->getName();
-        if (config->exportedSymbols.match(symbolName)) {
+        if (config->exportedSymbols.match(sym->getName())) {
           if (defined->privateExtern) {
             if (defined->weakDefCanBeHidden) {
               // weak_def_can_be_hidden symbols behave similarly to
@@ -1348,6 +1354,8 @@ static void handleExplicitExports() {
         } else {
           defined->privateExtern = true;
         }
+      } else if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+        dysym->shouldReexport = config->exportedSymbols.match(sym->getName());
       }
     });
   } else if (!config->unexportedSymbols.empty()) {
@@ -1577,8 +1585,9 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
   config->thinLTOObjectSuffixReplace =
       getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
-  config->thinLTOPrefixReplace =
-      getOldNewOptions(args, OPT_thinlto_prefix_replace_eq);
+  std::tie(config->thinLTOPrefixReplaceOld, config->thinLTOPrefixReplaceNew,
+           config->thinLTOPrefixReplaceNativeObject) =
+      getOldNewOptionsExtra(args, OPT_thinlto_prefix_replace_eq);
   if (config->thinLTOEmitIndexFiles && !config->thinLTOIndexOnly) {
     if (args.hasArg(OPT_thinlto_object_suffix_replace_eq))
       error("--thinlto-object-suffix-replace is not supported with "
@@ -1586,6 +1595,11 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     else if (args.hasArg(OPT_thinlto_prefix_replace_eq))
       error("--thinlto-prefix-replace is not supported with "
             "--thinlto-emit-index-files");
+  }
+  if (!config->thinLTOPrefixReplaceNativeObject.empty() &&
+      config->thinLTOIndexOnlyArg.empty()) {
+    error("--thinlto-prefix-replace=old_dir;new_dir;obj_dir must be used with "
+          "--thinlto-index-only=");
   }
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
@@ -1629,9 +1643,10 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
         std::make_pair(arg->getValue(0), arg->getValue(1)));
   }
 
-  // FIXME: Add a commandline flag for this too.
   if (const char *zero = getenv("ZERO_AR_DATE"))
     config->zeroModTime = strcmp(zero, "0") != 0;
+  if (args.getLastArg(OPT_reproducible))
+    config->zeroModTime = true;
 
   std::array<PlatformType, 3> encryptablePlatforms{
       PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS};
@@ -1919,6 +1934,9 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     if (config->deadStrip)
       markLive();
+
+    if (args.hasArg(OPT_check_category_conflicts))
+      objc::checkCategories();
 
     // ICF assumes that all literals have been folded already, so we must run
     // foldIdenticalLiterals before foldIdenticalSections.

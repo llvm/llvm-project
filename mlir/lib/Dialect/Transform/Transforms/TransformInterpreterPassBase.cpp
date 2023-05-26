@@ -12,12 +12,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/Transforms/TransformInterpreterPassBase.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -157,9 +161,17 @@ static llvm::raw_ostream &
 printReproCall(llvm::raw_ostream &os, StringRef rootOpName, StringRef passName,
                const Pass::Option<std::string> &debugPayloadRootTag,
                const Pass::Option<std::string> &debugTransformRootTag,
+               const Pass::Option<std::string> &transformLibraryFileName,
                StringRef binaryName) {
+  std::string transformLibraryOption = "";
+  if (!transformLibraryFileName.empty()) {
+    transformLibraryOption =
+        llvm::formatv(" {0}={1}", transformLibraryFileName.getArgStr(),
+                      transformLibraryFileName.getValue())
+            .str();
+  }
   os << llvm::formatv(
-      "{6} --pass-pipeline=\"{0}({1}{{{2}={3} {4}={5}})\"", rootOpName,
+      "{7} --pass-pipeline=\"{0}({1}{{{2}={3} {4}={5}{6}})\"", rootOpName,
       passName, debugPayloadRootTag.getArgStr(),
       debugPayloadRootTag.empty()
           ? StringRef(kTransformDialectTagPayloadRootValue)
@@ -168,7 +180,7 @@ printReproCall(llvm::raw_ostream &os, StringRef rootOpName, StringRef passName,
       debugTransformRootTag.empty()
           ? StringRef(kTransformDialectTagTransformContainerValue)
           : debugTransformRootTag,
-      binaryName);
+      transformLibraryOption, binaryName);
   return os;
 }
 
@@ -184,11 +196,12 @@ llvm::raw_ostream &printModuleForRepro(llvm::raw_ostream &os, Operation *root,
 
 /// Saves the payload and the transform IR into a temporary file and reports
 /// the file name to `os`.
-void saveReproToTempFile(llvm::raw_ostream &os, Operation *target,
-                         Operation *transform, StringRef passName,
-                         const Pass::Option<std::string> &debugPayloadRootTag,
-                         const Pass::Option<std::string> &debugTransformRootTag,
-                         StringRef binaryName) {
+void saveReproToTempFile(
+    llvm::raw_ostream &os, Operation *target, Operation *transform,
+    StringRef passName, const Pass::Option<std::string> &debugPayloadRootTag,
+    const Pass::Option<std::string> &debugTransformRootTag,
+    const Pass::Option<std::string> &transformLibraryFileName,
+    StringRef binaryName) {
   using llvm::sys::fs::TempFile;
   Operation *root = getRootOperation(target);
 
@@ -213,7 +226,8 @@ void saveReproToTempFile(llvm::raw_ostream &os, Operation *target,
 
   os << "=== Transform Interpreter Repro ===\n";
   printReproCall(os, root->getName().getStringRef(), passName,
-                 debugPayloadRootTag, debugTransformRootTag, binaryName)
+                 debugPayloadRootTag, debugTransformRootTag,
+                 transformLibraryFileName, binaryName)
       << " " << filename << "\n";
   os << "===================================\n";
 }
@@ -224,6 +238,7 @@ static void performOptionalDebugActions(
     Operation *target, Operation *transform, StringRef passName,
     const Pass::Option<std::string> &debugPayloadRootTag,
     const Pass::Option<std::string> &debugTransformRootTag,
+    const Pass::Option<std::string> &transformLibraryFileName,
     StringRef binaryName) {
   MLIRContext *context = target->getContext();
 
@@ -266,7 +281,8 @@ static void performOptionalDebugActions(
     llvm::dbgs() << "=== Transform Interpreter Repro ===\n";
     printReproCall(llvm::dbgs() << "cat <<EOF | ",
                    root->getName().getStringRef(), passName,
-                   debugPayloadRootTag, debugTransformRootTag, binaryName)
+                   debugPayloadRootTag, debugTransformRootTag,
+                   transformLibraryFileName, binaryName)
         << "\n";
     printModuleForRepro(llvm::dbgs(), root, transform);
     llvm::dbgs() << "\nEOF\n";
@@ -275,16 +291,93 @@ static void performOptionalDebugActions(
   (void)root;
   DEBUG_WITH_TYPE(DEBUG_TYPE_DUMP_FILE, {
     saveReproToTempFile(llvm::dbgs(), target, transform, passName,
-                        debugPayloadRootTag, debugTransformRootTag, binaryName);
+                        debugPayloadRootTag, debugTransformRootTag,
+                        transformLibraryFileName, binaryName);
   });
+}
+
+/// Replaces external symbols in `block` with their (non-external) definitions
+/// from the given module.
+static LogicalResult defineDeclaredSymbols(Block &block, ModuleOp definitions) {
+  MLIRContext &ctx = *definitions->getContext();
+  auto consumedName =
+      StringAttr::get(&ctx, transform::TransformDialect::kArgConsumedAttrName);
+  auto readOnlyName =
+      StringAttr::get(&ctx, transform::TransformDialect::kArgReadOnlyAttrName);
+
+  for (Operation &op : llvm::make_early_inc_range(block)) {
+    LLVM_DEBUG(DBGS() << op << "\n");
+    auto symbol = dyn_cast<SymbolOpInterface>(op);
+    if (!symbol)
+      continue;
+    if (symbol->getNumRegions() == 1 && !symbol->getRegion(0).empty())
+      continue;
+
+    LLVM_DEBUG(DBGS() << "looking for definition of symbol "
+                      << symbol.getNameAttr() << ":");
+    SymbolTable symbolTable(definitions);
+    Operation *externalSymbol = symbolTable.lookup(symbol.getNameAttr());
+    if (!externalSymbol || externalSymbol->getNumRegions() != 1 ||
+        externalSymbol->getRegion(0).empty()) {
+      LLVM_DEBUG(llvm::dbgs() << "not found\n");
+      continue;
+    }
+
+    auto symbolFunc = dyn_cast<FunctionOpInterface>(op);
+    auto externalSymbolFunc = dyn_cast<FunctionOpInterface>(externalSymbol);
+    if (!symbolFunc || !externalSymbolFunc) {
+      LLVM_DEBUG(llvm::dbgs() << "cannot compare types\n");
+      continue;
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "found @" << externalSymbol << "\n");
+    if (symbolFunc.getFunctionType() != externalSymbolFunc.getFunctionType()) {
+      return symbolFunc.emitError()
+             << "external definition has a mismatching signature ("
+             << externalSymbolFunc.getFunctionType() << ")";
+    }
+
+    for (unsigned i = 0, e = symbolFunc.getNumArguments(); i < e; ++i) {
+      bool isExternalConsumed =
+          externalSymbolFunc.getArgAttr(i, consumedName) != nullptr;
+      bool isExternalReadonly =
+          externalSymbolFunc.getArgAttr(i, readOnlyName) != nullptr;
+      bool isConsumed = symbolFunc.getArgAttr(i, consumedName) != nullptr;
+      bool isReadonly = symbolFunc.getArgAttr(i, readOnlyName) != nullptr;
+      if (!isExternalConsumed && !isExternalReadonly) {
+        if (isConsumed)
+          externalSymbolFunc.setArgAttr(i, consumedName, UnitAttr::get(&ctx));
+        else if (isReadonly)
+          externalSymbolFunc.setArgAttr(i, readOnlyName, UnitAttr::get(&ctx));
+        continue;
+      }
+
+      if ((isExternalConsumed && !isConsumed) ||
+          (isExternalReadonly && !isReadonly)) {
+        return symbolFunc.emitError()
+               << "external definition has mismatching consumption annotations "
+                  "for argument #"
+               << i;
+      }
+    }
+
+    OpBuilder builder(&op);
+    builder.setInsertionPoint(&op);
+    builder.clone(*externalSymbol);
+    symbol->erase();
+  }
+
+  return success();
 }
 
 LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
     Operation *target, StringRef passName,
     const std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
+    const std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
     const RaggedArray<MappedValue> &extraMappings,
     const TransformOptions &options,
     const Pass::Option<std::string> &transformFileName,
+    const Pass::Option<std::string> &transformLibraryFileName,
     const Pass::Option<std::string> &debugPayloadRootTag,
     const Pass::Option<std::string> &debugTransformRootTag,
     StringRef binaryName) {
@@ -328,13 +421,31 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
 
   // Step 3
   // ------
+  // Copy external defintions for symbols if provided. Be aware of potential
+  // concurrent execution (normally, the error shouldn't be triggered unless the
+  // transform IR modifies itself in a pass, which is also forbidden elsewhere).
+  if (!sharedTransform && libraryModule && *libraryModule) {
+    if (!target->isProperAncestor(transformRoot)) {
+      InFlightDiagnostic diag =
+          transformRoot->emitError()
+          << "cannot inject transform definitions next to pass anchor op";
+      diag.attachNote(target->getLoc()) << "pass anchor op";
+      return diag;
+    }
+    if (failed(defineDeclaredSymbols(*transformRoot->getBlock(),
+                                     libraryModule->get())))
+      return failure();
+  }
+
+  // Step 4
+  // ------
   // Optionally perform debug actions requested by the user to dump IR and a
   // repro to stderr and/or a file.
   performOptionalDebugActions(target, transformRoot, passName,
                               debugPayloadRootTag, debugTransformRootTag,
-                              binaryName);
+                              transformLibraryFileName, binaryName);
 
-  // Step 4
+  // Step 5
   // ------
   // Apply the transform to the IR
   return applyTransforms(payloadRoot, cast<TransformOpInterface>(transformRoot),
@@ -343,11 +454,33 @@ LogicalResult transform::detail::interpreterBaseRunOnOperationImpl(
 
 LogicalResult transform::detail::interpreterBaseInitializeImpl(
     MLIRContext *context, StringRef transformFileName,
-    std::shared_ptr<OwningOpRef<ModuleOp>> &module) {
+    StringRef transformLibraryFileName,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &module,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule) {
   OwningOpRef<ModuleOp> parsed;
   if (failed(parseTransformModuleFromFile(context, transformFileName, parsed)))
     return failure();
+  if (parsed && failed(mlir::verify(*parsed)))
+    return failure();
+
+  OwningOpRef<ModuleOp> parsedLibrary;
+  if (failed(parseTransformModuleFromFile(context, transformLibraryFileName,
+                                          parsedLibrary)))
+    return failure();
+  if (parsedLibrary && failed(mlir::verify(*parsedLibrary)))
+    return failure();
 
   module = std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsed));
+  if (!parsedLibrary || !*parsedLibrary)
+    return success();
+
+  if (module && *module) {
+    if (failed(defineDeclaredSymbols(*module->get().getBody(),
+                                     parsedLibrary.get())))
+      return failure();
+  } else {
+    libraryModule =
+        std::make_shared<OwningOpRef<ModuleOp>>(std::move(parsedLibrary));
+  }
   return success();
 }

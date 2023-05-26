@@ -1,37 +1,38 @@
-// RUN: mlir-opt %s --canonicalize --post-sparsification-rewrite="enable-runtime-library=false" --sparse-tensor-codegen -cse | FileCheck %s
+// RUN: mlir-opt %s --canonicalize --post-sparsification-rewrite="enable-runtime-library=false" --sparse-tensor-codegen -cse --canonicalize | FileCheck %s
 
 #COO = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed-nu", "singleton"],
+  lvlTypes = ["compressed-nu", "singleton"],
   crdWidth=32
 }>
 
 // CHECK-LABEL:   func.func @sparse_pack(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<6xf64>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<6x2xi32>) -> (memref<?xindex>, memref<?xi32>, memref<?xf64>,
-// CHECK:           %[[VAL_2:.*]] = arith.constant dense<[0, 6]> : tensor<2xindex>
-// CHECK:           %[[VAL_3:.*]] = bufferization.to_memref %[[VAL_2]] : memref<2xindex>
-// CHECK:           %[[VAL_4:.*]] = memref.cast %[[VAL_3]] : memref<2xindex> to memref<?xindex>
-// CHECK:           %[[VAL_5:.*]] = bufferization.to_memref %[[VAL_1]] : memref<6x2xi32>
-// CHECK:           %[[VAL_6:.*]] = memref.collapse_shape %[[VAL_5]] {{\[\[}}0, 1]] : memref<6x2xi32> into memref<12xi32>
-// CHECK:           %[[VAL_7:.*]] = memref.cast %[[VAL_6]] : memref<12xi32> to memref<?xi32>
-// CHECK:           %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_0]] : memref<6xf64>
-// CHECK:           %[[VAL_9:.*]] = memref.cast %[[VAL_8]] : memref<6xf64> to memref<?xf64>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.storage_specifier.init :
-// CHECK:           %[[VAL_11:.*]] = arith.constant 6 : index
-// CHECK:           %[[VAL_12:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_14:.*]] = sparse_tensor.storage_specifier.set %[[VAL_10]]  lvl_sz at 0 with %[[VAL_12]]
-// CHECK:           %[[VAL_15:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_17:.*]] = sparse_tensor.storage_specifier.set %[[VAL_14]]  pos_mem_sz at 0 with %[[VAL_15]]
-// CHECK:           %[[VAL_19:.*]] = sparse_tensor.storage_specifier.set %[[VAL_17]]  crd_mem_sz at 0 with %[[VAL_11]]
-// CHECK:           %[[VAL_20:.*]] = sparse_tensor.storage_specifier.set %[[VAL_19]]  lvl_sz at 1 with %[[VAL_12]]
-// CHECK:           %[[VAL_21:.*]] = sparse_tensor.storage_specifier.set %[[VAL_20]]  crd_mem_sz at 1 with %[[VAL_11]]
-// CHECK:           %[[VAL_22:.*]] = sparse_tensor.storage_specifier.set %[[VAL_21]]  val_mem_sz with %[[VAL_11]]
-// CHECK:           return %[[VAL_4]], %[[VAL_7]], %[[VAL_9]], %[[VAL_22]] : memref<?xindex>, memref<?xi32>, memref<?xf64>,
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<2xindex>,
+// CHECK-SAME:      %[[VAL_2:.*]]: tensor<6x2xi32>)
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 100 : index
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_1]] : memref<2xindex>
+// CHECK-DAG:       %[[VAL_7:.*]] = memref.cast %[[VAL_6]] : memref<2xindex> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_2]] : memref<6x2xi32>
+// CHECK-DAG:       %[[VAL_9:.*]] = memref.collapse_shape %[[VAL_8]] {{\[\[}}0, 1]] : memref<6x2xi32> into memref<12xi32>
+// CHECK-DAG:       %[[VAL_10:.*]] = memref.cast %[[VAL_9]] : memref<12xi32> to memref<?xi32>
+// CHECK-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_0]] : memref<6xf64>
+// CHECK-DAG:       %[[VAL_12:.*]] = memref.cast %[[VAL_11]] : memref<6xf64> to memref<?xf64>
+// CHECK:           %[[VAL_13:.*]] = sparse_tensor.storage_specifier.init
+// CHECK:           %[[VAL_14:.*]] = sparse_tensor.storage_specifier.set %[[VAL_13]]  lvl_sz at 0 with %[[VAL_4]]
+// CHECK:           %[[VAL_15:.*]] = sparse_tensor.storage_specifier.set %[[VAL_14]]  pos_mem_sz at 0 with %[[VAL_3]]
+// CHECK:           %[[VAL_16:.*]] = tensor.extract %[[VAL_1]]{{\[}}%[[VAL_5]]] : tensor<2xindex>
+// CHECK:           %[[VAL_17:.*]] = arith.muli %[[VAL_16]], %[[VAL_3]] : index
+// CHECK:           %[[VAL_18:.*]] = sparse_tensor.storage_specifier.set %[[VAL_15]]  crd_mem_sz at 0 with %[[VAL_17]]
+// CHECK:           %[[VAL_19:.*]] = sparse_tensor.storage_specifier.set %[[VAL_18]]  lvl_sz at 1 with %[[VAL_4]]
+// CHECK:           %[[VAL_20:.*]] = sparse_tensor.storage_specifier.set %[[VAL_19]]  val_mem_sz with %[[VAL_16]]
+// CHECK:           return %[[VAL_7]], %[[VAL_10]], %[[VAL_12]], %[[VAL_20]]
 // CHECK:         }
-func.func @sparse_pack(%values: tensor<6xf64>, %coordinates: tensor<6x2xi32>)
+func.func @sparse_pack(%values: tensor<6xf64>, %pos:tensor<2xindex>, %coordinates: tensor<6x2xi32>)
                     -> tensor<100x100xf64, #COO> {
-  %0 = sparse_tensor.pack %values, %coordinates
-     : tensor<6xf64>, tensor<6x2xi32> to tensor<100x100xf64, #COO>
+  %0 = sparse_tensor.pack %values, %pos, %coordinates
+     : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32> to tensor<100x100xf64, #COO>
   return %0 : tensor<100x100xf64, #COO>
 }
 
@@ -39,36 +40,38 @@ func.func @sparse_pack(%values: tensor<6xf64>, %coordinates: tensor<6x2xi32>)
 // CHECK-SAME:      %[[VAL_0:.*]]: memref<?xindex>,
 // CHECK-SAME:      %[[VAL_1:.*]]: memref<?xi32>,
 // CHECK-SAME:      %[[VAL_2:.*]]: memref<?xf64>,
-// CHECK-SAME:      %[[VAL_3:.*]]: !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_4:.*]] = arith.constant 6 : index
-// CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_6:.*]] = memref.dim %[[VAL_2]], %[[VAL_5]] : memref<?xf64>
-// CHECK:           %[[VAL_7:.*]] = arith.cmpi ugt, %[[VAL_4]], %[[VAL_6]] : index
-// CHECK:           %[[VAL_8:.*]] = scf.if %[[VAL_7]] -> (memref<6xf64>) {
-// CHECK:             %[[VAL_9:.*]] = memref.realloc %[[VAL_2]] : memref<?xf64> to memref<6xf64>
-// CHECK:             scf.yield %[[VAL_9]] : memref<6xf64>
-// CHECK:           } else {
-// CHECK:             %[[VAL_10:.*]] = memref.subview %[[VAL_2]][0] [6] [1] : memref<?xf64> to memref<6xf64>
-// CHECK:             scf.yield %[[VAL_10]] : memref<6xf64>
-// CHECK:           }
-// CHECK:           %[[VAL_11:.*]] = arith.constant 12 : index
-// CHECK:           %[[VAL_12:.*]] = memref.dim %[[VAL_1]], %[[VAL_5]] : memref<?xi32>
-// CHECK:           %[[VAL_13:.*]] = arith.cmpi ugt, %[[VAL_11]], %[[VAL_12]] : index
-// CHECK:           %[[VAL_14:.*]] = scf.if %[[VAL_13]] -> (memref<12xi32>) {
-// CHECK:             %[[VAL_15:.*]] = memref.realloc %[[VAL_1]] : memref<?xi32> to memref<12xi32>
-// CHECK:             scf.yield %[[VAL_15]] : memref<12xi32>
-// CHECK:           } else {
-// CHECK:             %[[VAL_16:.*]] = memref.subview %[[VAL_1]][0] [12] [1] : memref<?xi32> to memref<12xi32>
-// CHECK:             scf.yield %[[VAL_16]] : memref<12xi32>
-// CHECK:           }
-// CHECK:           %[[VAL_17:.*]] = memref.expand_shape %[[VAL_18:.*]] {{\[\[}}0, 1]] : memref<12xi32> into memref<6x2xi32>
-// CHECK:           %[[VAL_19:.*]] = bufferization.to_tensor %[[VAL_20:.*]] : memref<6xf64>
-// CHECK:           %[[VAL_21:.*]] = bufferization.to_tensor %[[VAL_17]] : memref<6x2xi32>
-// CHECK:           %[[VAL_22:.*]] = sparse_tensor.storage_specifier
-// CHECK:           return %[[VAL_19]], %[[VAL_21]], %[[VAL_22]] : tensor<6xf64>, tensor<6x2xi32>, index
+// CHECK-SAME:      %[[VAL_3:.*]]: !sparse_tensor.storage_specifier<#sparse_tensor.encoding<{ lvlTypes = [ "compressed", "singleton" ] }>>,
+// CHECK-SAME:      %[[VAL_4:.*]]: tensor<6xf64>,
+// CHECK-SAME:      %[[VAL_5:.*]]: tensor<2xindex>,
+// CHECK-SAME:      %[[VAL_6:.*]]: tensor<6x2xi32>) -> (tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>) {
+// CHECK:           %[[VAL_7:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  pos_mem_sz at 0
+// CHECK:           %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_5]] : memref<2xindex>
+// CHECK:           %[[VAL_9:.*]] = memref.subview %[[VAL_8]][0] {{\[}}%[[VAL_7]]] [1] : memref<2xindex> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = memref.subview %[[VAL_0]][0] {{\[}}%[[VAL_7]]] [1] : memref<?xindex> to memref<?xindex>
+// CHECK:           memref.copy %[[VAL_10]], %[[VAL_9]] : memref<?xindex> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  crd_mem_sz at 0
+// CHECK:           %[[VAL_12:.*]] = bufferization.to_memref %[[VAL_6]] : memref<6x2xi32>
+// CHECK:           %[[VAL_13:.*]] = memref.collapse_shape %[[VAL_12]] {{\[\[}}0, 1]] : memref<6x2xi32> into memref<12xi32>
+// CHECK:           %[[VAL_14:.*]] = memref.subview %[[VAL_13]][0] {{\[}}%[[VAL_11]]] [1] : memref<12xi32> to memref<?xi32>
+// CHECK:           %[[VAL_15:.*]] = memref.subview %[[VAL_1]][0] {{\[}}%[[VAL_11]]] [1] : memref<?xi32> to memref<?xi32>
+// CHECK:           memref.copy %[[VAL_15]], %[[VAL_14]] : memref<?xi32> to memref<?xi32>
+// CHECK:           %[[VAL_16:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  val_mem_sz
+// CHECK:           %[[VAL_17:.*]] = bufferization.to_memref %[[VAL_4]] : memref<6xf64>
+// CHECK:           %[[VAL_18:.*]] = memref.subview %[[VAL_17]][0] {{\[}}%[[VAL_16]]] [1] : memref<6xf64> to memref<?xf64>
+// CHECK:           %[[VAL_19:.*]] = memref.subview %[[VAL_2]][0] {{\[}}%[[VAL_16]]] [1] : memref<?xf64> to memref<?xf64>
+// CHECK:           memref.copy %[[VAL_19]], %[[VAL_18]] : memref<?xf64> to memref<?xf64>
+// CHECK:           %[[VAL_20:.*]] = bufferization.to_tensor %[[VAL_17]] : memref<6xf64>
+// CHECK:           %[[VAL_21:.*]] = bufferization.to_tensor %[[VAL_8]] : memref<2xindex>
+// CHECK:           %[[VAL_22:.*]] = bufferization.to_tensor %[[VAL_12]] : memref<6x2xi32>
+// CHECK:           return %[[VAL_20]], %[[VAL_21]], %[[VAL_22]] : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>
 // CHECK:         }
-func.func @sparse_unpack(%sp: tensor<100x100xf64, #COO>) -> (tensor<6xf64>, tensor<6x2xi32>, index) {
-  %d, %i, %nnz = sparse_tensor.unpack %sp : tensor<100x100xf64, #COO>
-                                         to tensor<6xf64>, tensor<6x2xi32>, index
-  return %d, %i, %nnz : tensor<6xf64>, tensor<6x2xi32>, index
+func.func @sparse_unpack(%sp : tensor<100x100xf64, #COO>,
+                         %od : tensor<6xf64>,
+                         %op : tensor<2xindex>,
+                         %oi : tensor<6x2xi32>)
+                       -> (tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>) {
+  %rd, %rp, %ri = sparse_tensor.unpack %sp : tensor<100x100xf64, #COO>
+                  outs(%od, %op, %oi : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>)
+                  -> tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>
+  return %rd, %rp, %ri : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>
 }

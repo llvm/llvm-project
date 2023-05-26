@@ -102,21 +102,24 @@ class StdLibraryFunctionsChecker
   /// Special argument number for specifying the return value.
   static const ArgNo Ret;
 
-  using DescString = SmallString<96>;
-
-  /// Returns the string representation of an argument index.
+  /// Get a string representation of an argument index.
   /// E.g.: (1) -> '1st arg', (2) - > '2nd arg'
-  static SmallString<8> getArgDesc(ArgNo);
-  /// Append textual description of a numeric range [RMin,RMax] to the string
+  static void printArgDesc(ArgNo, llvm::raw_ostream &Out);
+  /// Print value X of the argument in form " (which is X)",
+  /// if the value is a fixed known value, otherwise print nothing.
+  /// This is used as simple explanation of values if possible.
+  static void printArgValueInfo(ArgNo ArgN, ProgramStateRef State,
+                                const CallEvent &Call, llvm::raw_ostream &Out);
+  /// Append textual description of a numeric range [RMin,RMax] to
   /// \p Out.
   static void appendInsideRangeDesc(llvm::APSInt RMin, llvm::APSInt RMax,
                                     QualType ArgT, BasicValueFactory &BVF,
-                                    DescString &Out);
-  /// Append textual description of a numeric range out of [RMin,RMax] to the
-  /// string \p Out.
+                                    llvm::raw_ostream &Out);
+  /// Append textual description of a numeric range out of [RMin,RMax] to
+  /// \p Out.
   static void appendOutOfRangeDesc(llvm::APSInt RMin, llvm::APSInt RMax,
                                    QualType ArgT, BasicValueFactory &BVF,
-                                   DescString &Out);
+                                   llvm::raw_ostream &Out);
 
   class ValueConstraint;
 
@@ -152,26 +155,55 @@ class StdLibraryFunctionsChecker
 
     /// Represents that in which context do we require a description of the
     /// constraint.
-    enum class DescriptionKind {
-      /// The constraint is violated.
+    enum DescriptionKind {
+      /// Describe a constraint that was violated.
+      /// Description should start with something like "should be".
       Violation,
-      /// We assume that the constraint is satisfied.
+      /// Describe a constraint that was assumed to be true.
       /// This can be used when a precondition is satisfied, or when a summary
       /// case is applied.
+      /// Description should start with something like "is".
       Assumption
     };
 
     /// Give a description that explains the constraint to the user. Used when
     /// a bug is reported or when the constraint is applied and displayed as a
-    /// note.
-    virtual std::string describe(DescriptionKind DK, const CallEvent &Call,
-                                 ProgramStateRef State,
-                                 const Summary &Summary) const {
+    /// note. The description should not mention the argument (getArgNo).
+    /// See StdLibraryFunctionsChecker::reportBug about how this function is
+    /// used (this function is used not only there).
+    virtual void describe(DescriptionKind DK, const CallEvent &Call,
+                          ProgramStateRef State, const Summary &Summary,
+                          llvm::raw_ostream &Out) const {
       // There are some descendant classes that are not used as argument
       // constraints, e.g. ComparisonConstraint. In that case we can safely
       // ignore the implementation of this function.
       llvm_unreachable(
           "Description not implemented for summary case constraints");
+    }
+
+    /// Give a description that explains the actual argument value (where the
+    /// current ValueConstraint applies to) to the user. This function should be
+    /// called only when the current constraint is satisfied by the argument.
+    /// It should produce a more precise description than the constraint itself.
+    /// The actual value of the argument and the program state can be used to
+    /// make the description more precise. In the most simple case, if the
+    /// argument has a fixed known value this value can be printed into \p Out,
+    /// this is done by default.
+    /// The function should return true if a description was printed to \p Out,
+    /// otherwise false.
+    /// See StdLibraryFunctionsChecker::reportBug about how this function is
+    /// used.
+    virtual bool describeArgumentValue(const CallEvent &Call,
+                                       ProgramStateRef State,
+                                       const Summary &Summary,
+                                       llvm::raw_ostream &Out) const {
+      if (auto N = getArgSVal(Call, getArgNo()).getAs<NonLoc>()) {
+        if (const llvm::APSInt *Int = N->getAsInteger()) {
+          Out << *Int;
+          return true;
+        }
+      }
+      return false;
     }
 
     /// Return those arguments that should be tracked when we report a bug about
@@ -254,9 +286,13 @@ class StdLibraryFunctionsChecker
                           const Summary &Summary,
                           CheckerContext &C) const override;
 
-    std::string describe(DescriptionKind DK, const CallEvent &Call,
-                         ProgramStateRef State,
-                         const Summary &Summary) const override;
+    void describe(DescriptionKind DK, const CallEvent &Call,
+                  ProgramStateRef State, const Summary &Summary,
+                  llvm::raw_ostream &Out) const override;
+
+    bool describeArgumentValue(const CallEvent &Call, ProgramStateRef State,
+                               const Summary &Summary,
+                               llvm::raw_ostream &Out) const override;
 
     ValueConstraintPtr negate() const override {
       RangeConstraint Tmp(*this);
@@ -342,9 +378,13 @@ class StdLibraryFunctionsChecker
                           const Summary &Summary,
                           CheckerContext &C) const override;
 
-    std::string describe(DescriptionKind DK, const CallEvent &Call,
-                         ProgramStateRef State,
-                         const Summary &Summary) const override;
+    void describe(DescriptionKind DK, const CallEvent &Call,
+                  ProgramStateRef State, const Summary &Summary,
+                  llvm::raw_ostream &Out) const override;
+
+    bool describeArgumentValue(const CallEvent &Call, ProgramStateRef State,
+                               const Summary &Summary,
+                               llvm::raw_ostream &Out) const override;
 
     ValueConstraintPtr negate() const override {
       NotNullConstraint Tmp(*this);
@@ -396,9 +436,13 @@ class StdLibraryFunctionsChecker
                           const Summary &Summary,
                           CheckerContext &C) const override;
 
-    std::string describe(DescriptionKind DK, const CallEvent &Call,
-                         ProgramStateRef State,
-                         const Summary &Summary) const override;
+    void describe(DescriptionKind DK, const CallEvent &Call,
+                  ProgramStateRef State, const Summary &Summary,
+                  llvm::raw_ostream &Out) const override;
+
+    bool describeArgumentValue(const CallEvent &Call, ProgramStateRef State,
+                               const Summary &Summary,
+                               llvm::raw_ostream &Out) const override;
 
     std::vector<ArgNo> getArgsToTrack() const override {
       std::vector<ArgNo> Result{ArgN};
@@ -773,8 +817,20 @@ private:
       return;
     assert(Call.getDecl() &&
            "Function found in summary must have a declaration available");
-    std::string Msg = VC->describe(ValueConstraint::DescriptionKind::Violation,
-                                   Call, C.getState(), Summary);
+    SmallString<256> Msg;
+    llvm::raw_svector_ostream MsgOs(Msg);
+
+    MsgOs << "The ";
+    printArgDesc(VC->getArgNo(), MsgOs);
+    MsgOs << " to '" << getFunctionName(Call) << "' ";
+    bool ValuesPrinted =
+        NegatedVC->describeArgumentValue(Call, N->getState(), Summary, MsgOs);
+    if (ValuesPrinted)
+      MsgOs << " but ";
+    else
+      MsgOs << "is out of the accepted range; It ";
+    VC->describe(ValueConstraint::Violation, Call, C.getState(), Summary,
+                 MsgOs);
     Msg[0] = toupper(Msg[0]);
     if (!BT_InvalidArg)
       BT_InvalidArg = std::make_unique<BugType>(
@@ -816,55 +872,47 @@ static BasicValueFactory &getBVF(ProgramStateRef State) {
 
 } // end of anonymous namespace
 
-SmallString<8>
-StdLibraryFunctionsChecker::getArgDesc(StdLibraryFunctionsChecker::ArgNo ArgN) {
-  SmallString<8> Result;
-  Result += std::to_string(ArgN + 1);
-  Result += llvm::getOrdinalSuffix(ArgN + 1);
-  Result += " argument";
-  return Result;
+void StdLibraryFunctionsChecker::printArgDesc(
+    StdLibraryFunctionsChecker::ArgNo ArgN, llvm::raw_ostream &Out) {
+  Out << std::to_string(ArgN + 1);
+  Out << llvm::getOrdinalSuffix(ArgN + 1);
+  Out << " argument";
+}
+
+void StdLibraryFunctionsChecker::printArgValueInfo(ArgNo ArgN,
+                                                   ProgramStateRef State,
+                                                   const CallEvent &Call,
+                                                   llvm::raw_ostream &Out) {
+  if (const llvm::APSInt *Val =
+          State->getStateManager().getSValBuilder().getKnownValue(
+              State, getArgSVal(Call, ArgN)))
+    Out << " (which is " << *Val << ")";
 }
 
 void StdLibraryFunctionsChecker::appendInsideRangeDesc(llvm::APSInt RMin,
                                                        llvm::APSInt RMax,
                                                        QualType ArgT,
                                                        BasicValueFactory &BVF,
-                                                       DescString &Out) {
+                                                       llvm::raw_ostream &Out) {
   if (RMin.isZero() && RMax.isZero())
-    Out.append("zero");
+    Out << "zero";
   else if (RMin == RMax)
-    RMin.toString(Out);
+    Out << RMin;
   else if (RMin == BVF.getMinValue(ArgT)) {
     if (RMax == -1)
-      Out.append("< 0");
-    else {
-      Out.append("<= ");
-      RMax.toString(Out);
-    }
+      Out << "< 0";
+    else
+      Out << "<= " << RMax;
   } else if (RMax == BVF.getMaxValue(ArgT)) {
     if (RMin.isOne())
-      Out.append("> 0");
-    else {
-      Out.append(">= ");
-      RMin.toString(Out);
-    }
+      Out << "> 0";
+    else
+      Out << ">= " << RMin;
   } else if (RMin.isNegative() == RMax.isNegative() &&
              RMin.getLimitedValue() == RMax.getLimitedValue() - 1) {
-    RMin.toString(Out);
-    Out.append(" or ");
-    RMax.toString(Out);
-  } else if (RMin.isNegative() == RMax.isNegative() &&
-             RMin.getLimitedValue() == RMax.getLimitedValue() - 2) {
-    RMin.toString(Out);
-    Out.append(", ");
-    (RMin + 1).toString(Out, 10, RMin.isSigned());
-    Out.append(" or ");
-    RMax.toString(Out);
+    Out << RMin << " or " << RMax;
   } else {
-    Out.append("between ");
-    RMin.toString(Out);
-    Out.append(" and ");
-    RMax.toString(Out);
+    Out << "between " << RMin << " and " << RMax;
   }
 }
 
@@ -872,37 +920,26 @@ void StdLibraryFunctionsChecker::appendOutOfRangeDesc(llvm::APSInt RMin,
                                                       llvm::APSInt RMax,
                                                       QualType ArgT,
                                                       BasicValueFactory &BVF,
-                                                      DescString &Out) {
+                                                      llvm::raw_ostream &Out) {
   if (RMin.isZero() && RMax.isZero())
-    Out.append("nonzero");
+    Out << "nonzero";
   else if (RMin == RMax) {
-    Out.append("not equal to ");
-    RMin.toString(Out);
+    Out << "not equal to " << RMin;
   } else if (RMin == BVF.getMinValue(ArgT)) {
     if (RMax == -1)
-      Out.append(">= 0");
-    else {
-      Out.append("> ");
-      RMax.toString(Out);
-    }
+      Out << ">= 0";
+    else
+      Out << "> " << RMax;
   } else if (RMax == BVF.getMaxValue(ArgT)) {
     if (RMin.isOne())
-      Out.append("<= 0");
-    else {
-      Out.append("< ");
-      RMin.toString(Out);
-    }
+      Out << "<= 0";
+    else
+      Out << "< " << RMin;
   } else if (RMin.isNegative() == RMax.isNegative() &&
              RMin.getLimitedValue() == RMax.getLimitedValue() - 1) {
-    Out.append("not ");
-    RMin.toString(Out);
-    Out.append(" and not ");
-    RMax.toString(Out);
+    Out << "not " << RMin << " and not " << RMax;
   } else {
-    Out.append("not between ");
-    RMin.toString(Out);
-    Out.append(" and ");
-    RMax.toString(Out);
+    Out << "not between " << RMin << " and " << RMax;
   }
 }
 
@@ -981,42 +1018,77 @@ ProgramStateRef StdLibraryFunctionsChecker::RangeConstraint::apply(
   return State;
 }
 
-std::string StdLibraryFunctionsChecker::RangeConstraint::describe(
+void StdLibraryFunctionsChecker::RangeConstraint::describe(
     DescriptionKind DK, const CallEvent &Call, ProgramStateRef State,
-    const Summary &Summary) const {
+    const Summary &Summary, llvm::raw_ostream &Out) const {
 
   BasicValueFactory &BVF = getBVF(State);
   QualType T = Summary.getArgType(getArgNo());
-  DescString Result;
-  const auto Violation = ValueConstraint::DescriptionKind::Violation;
 
-  Result += "the ";
-  Result += getArgDesc(ArgN);
-  Result += " to '";
-  Result += getFunctionName(Call);
-  Result += DK == Violation ? "' should be " : "' is ";
+  Out << ((DK == Violation) ? "should be " : "is ");
   if (!Description.empty()) {
-    Result += Description;
+    Out << Description;
   } else {
     unsigned I = Ranges.size();
     if (Kind == WithinRange) {
       for (const std::pair<RangeInt, RangeInt> &R : Ranges) {
         appendInsideRangeDesc(BVF.getValue(R.first, T),
-                              BVF.getValue(R.second, T), T, BVF, Result);
+                              BVF.getValue(R.second, T), T, BVF, Out);
         if (--I > 0)
-          Result += " or ";
+          Out << " or ";
       }
     } else {
       for (const std::pair<RangeInt, RangeInt> &R : Ranges) {
         appendOutOfRangeDesc(BVF.getValue(R.first, T),
-                             BVF.getValue(R.second, T), T, BVF, Result);
+                             BVF.getValue(R.second, T), T, BVF, Out);
         if (--I > 0)
-          Result += " and ";
+          Out << " and ";
       }
     }
   }
+}
 
-  return Result.c_str();
+bool StdLibraryFunctionsChecker::RangeConstraint::describeArgumentValue(
+    const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
+    llvm::raw_ostream &Out) const {
+  unsigned int NRanges = 0;
+  bool HaveAllRanges = true;
+
+  ProgramStateManager &Mgr = State->getStateManager();
+  BasicValueFactory &BVF = Mgr.getSValBuilder().getBasicValueFactory();
+  ConstraintManager &CM = Mgr.getConstraintManager();
+  SVal V = getArgSVal(Call, getArgNo());
+
+  if (auto N = V.getAs<NonLoc>()) {
+    if (const llvm::APSInt *Int = N->getAsInteger()) {
+      Out << "is ";
+      Out << *Int;
+      return true;
+    }
+    QualType T = Summary.getArgType(getArgNo());
+    SmallString<128> MoreInfo;
+    llvm::raw_svector_ostream MoreInfoOs(MoreInfo);
+    auto ApplyF = [&](const llvm::APSInt &Min, const llvm::APSInt &Max) {
+      if (CM.assumeInclusiveRange(State, *N, Min, Max, true)) {
+        if (NRanges > 0)
+          MoreInfoOs << " or ";
+        appendInsideRangeDesc(Min, Max, T, BVF, MoreInfoOs);
+        ++NRanges;
+      } else {
+        HaveAllRanges = false;
+      }
+      return true;
+    };
+
+    applyOnRange(Kind, BVF, T, ApplyF);
+    assert(NRanges > 0);
+    if (!HaveAllRanges || NRanges == 1) {
+      Out << "is ";
+      Out << MoreInfo;
+      return true;
+    }
+  }
+  return false;
 }
 
 ProgramStateRef StdLibraryFunctionsChecker::ComparisonConstraint::apply(
@@ -1055,17 +1127,23 @@ ProgramStateRef StdLibraryFunctionsChecker::NotNullConstraint::apply(
   return State->assume(L, CannotBeNull);
 }
 
-std::string StdLibraryFunctionsChecker::NotNullConstraint::describe(
+void StdLibraryFunctionsChecker::NotNullConstraint::describe(
     DescriptionKind DK, const CallEvent &Call, ProgramStateRef State,
-    const Summary &Summary) const {
-  SmallString<48> Result;
-  const auto Violation = ValueConstraint::DescriptionKind::Violation;
-  Result += "the ";
-  Result += getArgDesc(ArgN);
-  Result += " to '";
-  Result += getFunctionName(Call);
-  Result += DK == Violation ? "' should not be NULL" : "' is not NULL";
-  return Result.c_str();
+    const Summary &Summary, llvm::raw_ostream &Out) const {
+  assert(CannotBeNull &&
+         "Describe should not be used when the value must be NULL");
+  if (DK == Violation)
+    Out << "should not be NULL";
+  else
+    Out << "is not NULL";
+}
+
+bool StdLibraryFunctionsChecker::NotNullConstraint::describeArgumentValue(
+    const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
+    llvm::raw_ostream &Out) const {
+  assert(!CannotBeNull && "This function is used when the value is NULL");
+  Out << "is NULL";
+  return true;
 }
 
 ProgramStateRef StdLibraryFunctionsChecker::BufferSizeConstraint::apply(
@@ -1110,28 +1188,37 @@ ProgramStateRef StdLibraryFunctionsChecker::BufferSizeConstraint::apply(
   llvm_unreachable("Size argument or the dynamic size is Undefined");
 }
 
-std::string StdLibraryFunctionsChecker::BufferSizeConstraint::describe(
+void StdLibraryFunctionsChecker::BufferSizeConstraint::describe(
     DescriptionKind DK, const CallEvent &Call, ProgramStateRef State,
-    const Summary &Summary) const {
-  SmallString<96> Result;
-  const auto Violation = ValueConstraint::DescriptionKind::Violation;
-  Result += "the size of the ";
-  Result += getArgDesc(ArgN);
-  Result += " to '";
-  Result += getFunctionName(Call);
-  Result += DK == Violation ? "' should be " : "' is ";
-  Result += "equal to or greater than ";
+    const Summary &Summary, llvm::raw_ostream &Out) const {
+  Out << ((DK == Violation) ? "should be " : "is ");
+  Out << "a buffer with size equal to or greater than ";
   if (ConcreteSize) {
-    ConcreteSize->toString(Result);
+    Out << *ConcreteSize;
   } else if (SizeArgN) {
-    Result += "the value of the ";
-    Result += getArgDesc(*SizeArgN);
+    Out << "the value of the ";
+    printArgDesc(*SizeArgN, Out);
+    printArgValueInfo(*SizeArgN, State, Call, Out);
     if (SizeMultiplierArgN) {
-      Result += " times the ";
-      Result += getArgDesc(*SizeMultiplierArgN);
+      Out << " times the ";
+      printArgDesc(*SizeMultiplierArgN, Out);
+      printArgValueInfo(*SizeMultiplierArgN, State, Call, Out);
     }
   }
-  return Result.c_str();
+}
+
+bool StdLibraryFunctionsChecker::BufferSizeConstraint::describeArgumentValue(
+    const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
+    llvm::raw_ostream &Out) const {
+  SVal BufV = getArgSVal(Call, getArgNo());
+  SVal BufDynSize = getDynamicExtentWithOffset(State, BufV);
+  if (const llvm::APSInt *Val =
+          State->getStateManager().getSValBuilder().getKnownValue(State,
+                                                                  BufDynSize)) {
+    Out << "is a buffer with size " << *Val;
+    return true;
+  }
+  return false;
 }
 
 void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
@@ -1164,10 +1251,15 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
     assert(SuccessSt);
     NewState = SuccessSt;
     if (NewState != State) {
-      SmallString<64> Msg;
-      Msg += "Assuming ";
-      Msg += Constraint->describe(ValueConstraint::DescriptionKind::Assumption,
-                                  Call, NewState, Summary);
+      SmallString<128> Msg;
+      llvm::raw_svector_ostream Os(Msg);
+      Os << "Assuming that the ";
+      printArgDesc(Constraint->getArgNo(), Os);
+      Os << " to '";
+      Os << getFunctionName(Call);
+      Os << "' ";
+      Constraint->describe(ValueConstraint::Assumption, Call, NewState, Summary,
+                           Os);
       const auto ArgSVal = Call.getArgSVal(Constraint->getArgNo());
       NewNode = C.addTransition(
           NewState, NewNode,
@@ -1335,6 +1427,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   SValBuilder &SVB = C.getSValBuilder();
   BasicValueFactory &BVF = SVB.getBasicValueFactory();
   const ASTContext &ACtx = BVF.getContext();
+  Preprocessor &PP = C.getPreprocessor();
 
   // Helper class to lookup a type by its name.
   class LookupType {
@@ -1470,14 +1563,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const RangeInt UCharRangeMax =
       std::min(BVF.getMaxValue(ACtx.UnsignedCharTy).getLimitedValue(), IntMax);
 
-  // The platform dependent value of EOF.
-  // Try our best to parse this from the Preprocessor, otherwise fallback to -1.
-  const auto EOFv = [&C]() -> RangeInt {
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("EOF", C.getPreprocessor()))
-      return *OptInt;
-    return -1;
-  }();
+  // Get platform dependent values of some macros.
+  // Try our best to parse this from the Preprocessor, otherwise fallback to a
+  // default value (what is found in a library header).
+  const auto EOFv = tryExpandAsInteger("EOF", PP).value_or(-1);
+  const auto AT_FDCWDv = tryExpandAsInteger("AT_FDCWD", PP).value_or(-100);
 
   // Auxiliary class to aid adding summaries to the summary map.
   struct AddToFunctionSummaryMap {
@@ -1922,6 +2012,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, IntMax))};
     const auto &ReturnsValidFileDescriptor = ReturnsNonnegative;
 
+    auto ValidFileDescriptorOrAtFdcwd = [&](ArgNo ArgN) {
+      return std::make_shared<RangeConstraint>(
+          ArgN, WithinRange, Range({AT_FDCWDv, AT_FDCWDv}, {0, IntMax}),
+          "a valid file descriptor or AT_FDCWD");
+    };
+
     // FILE *fopen(const char *restrict pathname, const char *restrict mode);
     addToFunctionSummaryMap(
         "fopen",
@@ -2073,6 +2169,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // int dup(int fildes);
@@ -2150,7 +2247,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
             .ArgConstraint(NotNull(ArgNo(0)))
-            .ArgConstraint(ArgumentCondition(1, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
 
     // int lockf(int fd, int cmd, off_t len);
@@ -2261,6 +2358,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     std::optional<QualType> Dev_tTy = lookupTy("dev_t");
@@ -2282,6 +2380,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // int chmod(const char *path, mode_t mode);
@@ -2300,7 +2399,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // int fchmod(int fildes, mode_t mode);
@@ -2324,7 +2423,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // int chown(const char *path, uid_t owner, gid_t group);
@@ -2389,9 +2488,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
-            .ArgConstraint(ArgumentCondition(2, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(2)))
             .ArgConstraint(NotNull(ArgNo(3))));
 
     // int unlink(const char *pathname);
@@ -2409,7 +2508,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     std::optional<QualType> StructStatTy = lookupTy("stat");
@@ -2458,7 +2557,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
 
@@ -2633,7 +2732,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                    ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
                   ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(2),
@@ -2650,7 +2749,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(2)))
             .ArgConstraint(NotNull(ArgNo(3))));
 
     // char *realpath(const char *restrict file_name,
@@ -3471,6 +3572,27 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   ErrnoIrrelevant, "Function returns 0")
             .Case({ReturnValueCondition(WithinRange, SingleValue(1))},
                   ErrnoIrrelevant, "Function returns 1"));
+    addToFunctionSummaryMap(
+        "__test_case_range_1_2__4_6",
+        Signature(ArgTypes{IntTy}, RetType{IntTy}),
+        Summary(EvalCallAsPure)
+            .Case({ArgumentCondition(0U, WithinRange,
+                                     IntRangeVector{{IntMin, 0}, {3, 3}}),
+                   ReturnValueCondition(WithinRange, SingleValue(1))},
+                  ErrnoIrrelevant)
+            .Case({ArgumentCondition(0U, WithinRange,
+                                     IntRangeVector{{3, 3}, {7, IntMax}}),
+                   ReturnValueCondition(WithinRange, SingleValue(2))},
+                  ErrnoIrrelevant)
+            .Case({ArgumentCondition(0U, WithinRange,
+                                     IntRangeVector{{IntMin, 0}, {7, IntMax}}),
+                   ReturnValueCondition(WithinRange, SingleValue(3))},
+                  ErrnoIrrelevant)
+            .Case({ArgumentCondition(
+                       0U, WithinRange,
+                       IntRangeVector{{IntMin, 0}, {3, 3}, {7, IntMax}}),
+                   ReturnValueCondition(WithinRange, SingleValue(4))},
+                  ErrnoIrrelevant));
   }
 
   SummariesInitialized = true;

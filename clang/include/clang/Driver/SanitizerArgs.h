@@ -42,6 +42,7 @@ class SanitizerArgs {
   bool CfiCanonicalJumpTables = false;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
+  bool StableABI = false;
   bool AsanUseAfterScope = true;
   bool AsanPoisonCustomArrayCookie = false;
   bool AsanGlobalsDeadStripping = false;
@@ -117,6 +118,10 @@ public:
   const std::string &getMemtagMode() const {
     assert(!MemtagMode.empty());
     return MemtagMode;
+  }
+
+  bool hasShadowCallStack() const {
+    return Sanitizers.has(SanitizerKind::ShadowCallStack);
   }
 
   bool requiresPIE() const;

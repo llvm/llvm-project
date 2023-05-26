@@ -288,3 +288,32 @@ llvm.metadata @metadata {
 // CHECK-DAG: ![[PIPELINE_DISABLE_NODE:[0-9]+]] = !{!"llvm.loop.pipeline.disable", i1 true}
 // CHECK-DAG: ![[II_NODE:[0-9]+]] = !{!"llvm.loop.pipeline.initiationinterval", i32 2}
 // CHECK-DAG: ![[ACCESS_GROUPS_NODE:[0-9]+]] = !{![[GROUP_NODE1]], ![[GROUP_NODE2]]}
+
+// -----
+
+#di_file = #llvm.di_file<"metadata-loop.ll" in "/">
+
+#loc1 = loc("loop-metadata.mlir":42:4)
+#loc2 = loc("loop-metadata.mlir":52:4)
+
+#di_compile_unit = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
+#di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "loop_locs", file = #di_file, subprogramFlags = Definition>
+
+#start_loc_fused = loc(fused<#di_subprogram>[#loc1])
+#end_loc_fused= loc(fused<#di_subprogram>[#loc2])
+
+#loopMD = #llvm.loop_annotation<disableNonforced = false,
+        startLoc = #start_loc_fused,
+        endLoc = #end_loc_fused>
+
+// CHECK-LABEL: @loop_annotation_with_locs
+llvm.func @loop_annotation_with_locs() {
+// CHECK: br {{.*}} !llvm.loop ![[LOOP_NODE:[0-9]+]]
+  llvm.br ^bb1 {loop_annotation = #loopMD}
+^bb1:
+  llvm.return
+}
+
+// CHECK: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], ![[START_LOC:.*]], ![[END_LOC:.*]]}
+// CHECK: ![[START_LOC]] = !DILocation(line: 42, column: 4, scope:
+// CHECK: ![[END_LOC]] = !DILocation(line: 52, column: 4, scope:

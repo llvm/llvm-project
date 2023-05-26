@@ -31,6 +31,10 @@ protected:
 
   virtual FormatStyle getDefaultStyle() const { return getLLVMStyle(); }
 
+  virtual std::string messUp(llvm::StringRef Code) const {
+    return test::messUp(Code);
+  }
+
   std::string format(llvm::StringRef Code,
                      const std::optional<FormatStyle> &Style = {},
                      StatusCheck CheckComplete = SC_ExpectComplete,
@@ -105,8 +109,7 @@ protected:
   void _verifyIncompleteFormat(const char *File, int Line, llvm::StringRef Code,
                                const std::optional<FormatStyle> &Style = {}) {
     testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
-    EXPECT_EQ(Code.str(),
-              format(test::messUp(Code), Style, SC_ExpectIncomplete));
+    EXPECT_EQ(Code.str(), format(messUp(Code), Style, SC_ExpectIncomplete));
   }
 
   void

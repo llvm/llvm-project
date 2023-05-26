@@ -12,7 +12,7 @@
 TEST(LlvmLibcIsCntrl, DefaultLocale) {
   // Loops through all characters, verifying that control characters
   // return a non-zero integer, all others return zero.
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     if ((0 <= ch && ch <= 0x1f /*US*/) || ch == 0x7f /*DEL*/)
       EXPECT_NE(__llvm_libc::iscntrl(ch), 0);
     else

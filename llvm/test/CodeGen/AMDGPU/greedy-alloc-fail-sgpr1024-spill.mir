@@ -74,14 +74,14 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = COPY $exec, implicit-def $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.4, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_1024 = COPY renamable $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75
   ; CHECK-NEXT:   renamable $sgpr6 = S_LSHL_B32 renamable $sgpr67, 1, implicit-def dead $scc
@@ -89,7 +89,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5, $sgpr66_sgpr67:0x000000000000000F, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = S_OR_SAVEEXEC_B64 renamable $sgpr4_sgpr5, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr68 = COPY renamable $sgpr44
@@ -121,7 +121,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF, $sgpr6_sgpr7, $sgpr66_sgpr67:0x0000000000000003
+  ; CHECK-NEXT:   liveins: $sgpr6_sgpr7, $sgpr66_sgpr67:0x0000000000000003, $sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75:0x000003FFFFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr6_sgpr7, implicit-def $scc
   ; CHECK-NEXT:   dead renamable $sgpr4 = S_LSHL_B32 killed renamable $sgpr66, 1, implicit-def dead $scc

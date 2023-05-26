@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/ThreadPool.h"
 #include "gtest/gtest.h"
 #include <array>
 #include <random>
@@ -91,5 +92,87 @@ TEST(Parallel, ForEachError) {
   std::string errText = toString(std::move(e));
   EXPECT_EQ(errText, std::string("asdf\nasdf\nasdf"));
 }
+
+TEST(Parallel, TaskGroupSequentialFor) {
+  size_t Count = 0;
+  {
+    parallel::TaskGroup tg;
+    for (size_t Idx = 0; Idx < 500; Idx++)
+      tg.spawn([&Count, Idx]() { EXPECT_EQ(Count++, Idx); }, true);
+  }
+  EXPECT_EQ(Count, 500ul);
+}
+
+#if LLVM_ENABLE_THREADS
+TEST(Parallel, NestedTaskGroup) {
+  // This test checks:
+  // 1. Root TaskGroup is in Parallel mode.
+  // 2. Nested TaskGroup is not in Parallel mode.
+  parallel::TaskGroup tg;
+
+  tg.spawn([&]() {
+    EXPECT_TRUE(tg.isParallel() || (parallel::strategy.ThreadsRequested == 1));
+  });
+
+  tg.spawn([&]() {
+    parallel::TaskGroup nestedTG;
+    EXPECT_FALSE(nestedTG.isParallel());
+
+    nestedTG.spawn([&]() {
+      // Check that root TaskGroup is in Parallel mode.
+      EXPECT_TRUE(tg.isParallel() ||
+                  (parallel::strategy.ThreadsRequested == 1));
+
+      // Check that nested TaskGroup is not in Parallel mode.
+      EXPECT_FALSE(nestedTG.isParallel());
+    });
+  });
+}
+
+TEST(Parallel, ParallelNestedTaskGroup) {
+  // This test checks that it is possible to have several TaskGroups
+  // run from different threads in Parallel mode.
+  std::atomic<size_t> Count{0};
+
+  {
+    std::function<void()> Fn = [&]() {
+      parallel::TaskGroup tg;
+
+      tg.spawn([&]() {
+        // Check that root TaskGroup is in Parallel mode.
+        EXPECT_TRUE(tg.isParallel() ||
+                    (parallel::strategy.ThreadsRequested == 1));
+
+        // Check that nested TaskGroup is not in Parallel mode.
+        parallel::TaskGroup nestedTG;
+        EXPECT_FALSE(nestedTG.isParallel());
+        ++Count;
+
+        nestedTG.spawn([&]() {
+          // Check that root TaskGroup is in Parallel mode.
+          EXPECT_TRUE(tg.isParallel() ||
+                      (parallel::strategy.ThreadsRequested == 1));
+
+          // Check that nested TaskGroup is not in Parallel mode.
+          EXPECT_FALSE(nestedTG.isParallel());
+          ++Count;
+        });
+      });
+    };
+
+    ThreadPool Pool;
+
+    Pool.async(Fn);
+    Pool.async(Fn);
+    Pool.async(Fn);
+    Pool.async(Fn);
+    Pool.async(Fn);
+    Pool.async(Fn);
+
+    Pool.wait();
+  }
+  EXPECT_EQ(Count, 12ul);
+}
+#endif
 
 #endif

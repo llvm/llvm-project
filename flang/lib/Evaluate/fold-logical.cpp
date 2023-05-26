@@ -187,6 +187,10 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         if (auto contiguous{IsContiguous(*expr, context)}) {
           return Expr<T>{*contiguous};
         }
+      } else if (auto *assumedType{args[0]->GetAssumedTypeDummy()}) {
+        if (auto contiguous{IsContiguous(*assumedType, context)}) {
+          return Expr<T>{*contiguous};
+        }
       }
     }
   } else if (name == "lge" || name == "lgt" || name == "lle" || name == "llt") {

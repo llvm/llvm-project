@@ -105,7 +105,7 @@ Built Module Interface file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A ``Built Module Interface file`` stands for the precompiled result of an importable module unit.
-It is also called the acronym ``BMI`` genrally.
+It is also called the acronym ``BMI`` generally.
 
 Global module fragment
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -331,7 +331,7 @@ How to specify the dependent BMIs
 
 There are 3 methods to specify the dependent BMIs:
 
-* (1) ``-fprebuilt-module-path=<path/to/direcotry>``.
+* (1) ``-fprebuilt-module-path=<path/to/directory>``.
 * (2) ``-fmodule-file=<path/to/BMI>`` (Deprecated).
 * (3) ``-fmodule-file=<module-name>=<path/to/BMI>``.
 
@@ -351,7 +351,7 @@ for the module specified by ``<module-name>`` when necessary. The main differenc
 with ``-fprebuilt-module-path``. The option ``-fmodule-file=<path/to/BMI>`` for named modules is deprecated
 and is planning to be removed in future versions.
 
-In case all ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>`` and
+In case all ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<path/to/BMI>`` and
 ``-fmodule-file=<module-name>=<path/to/BMI>`` exist, the ``-fmodule-file=<path/to/BMI>`` option
 takes highest precedence and ``-fmodule-file=<module-name>=<path/to/BMI>`` will take the second
 highest precedence.
@@ -366,7 +366,7 @@ the primary module interface unit.
   A module-declaration that contains neither an export-keyword nor a module-partition implicitly
   imports the primary module interface unit of the module as if by a module-import-declaration.
 
-All of the 3 options ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>``
+All of the 3 options ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<path/to/BMI>``
 and ``-fmodule-file=<module-name>=<path/to/BMI>`` may occur multiple times.
 For example, the command line to compile ``M.cppm`` in
 the above example could be rewritten into:
@@ -434,7 +434,7 @@ The following example is not allowed:
 .. code-block:: console
 
   $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
-  $ clang++ -std=c++2b Use.cpp -fprebuilt-module-path=.
+  $ clang++ -std=c++23 Use.cpp -fprebuilt-module-path=.
 
 The compiler would reject the example due to the inconsistent language options.
 Not all options are language options.
@@ -460,109 +460,6 @@ Note that **currently** the compiler doesn't consider inconsistent macro definit
 
 Currently Clang would accept the above example. But it may produce surprising results if the
 debugging code depends on consistent use of ``NDEBUG`` also in other translation units.
-
-Source content consistency
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-When the compiler reads a BMI, the compiler will check the consistency of the corresponding
-source files. For example:
-
-.. code-block:: c++
-
-  // M.cppm
-  export module M;
-  export template <class T>
-  T foo(T t) {
-    return t;
-  }
-
-  // Use.cpp
-  import M;
-  void bar() {
-    foo(5);
-  }
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
-  $ rm M.cppm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M=M.pcm
-
-The compiler would reject the example since the compiler failed to find the source file to check the consistency.
-So the following example would be rejected too.
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
-  $ echo "int i=0;" >> M.cppm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M=M.pcm
-
-The compiler would reject it too since the compiler detected the file was changed.
-
-But it is OK to move the BMI as long as the source files remain:
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
-  $ mkdir -p tmp
-  $ mv M.pcm tmp/M.pcm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M=tmp/M.pcm
-
-The above example would be accepted.
-
-If the user doesn't want to follow the consistency requirement due to some reasons (e.g., distributing BMI),
-the user could try to use ``-Xclang -fmodules-embed-all-files`` when producing BMI. For example:
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 M.cppm --precompile -Xclang -fmodules-embed-all-files -o M.pcm
-  $ rm M.cppm
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=M=M.pcm
-
-Now the compiler would accept the above example.
-Important note: Xclang options are intended to be used by compiler internally and its semantics
-are not guaranteed to be preserved in future versions.
-
-Also the compiler will record the path to the header files included in the global module fragment and compare the
-headers when imported. For example,
-
-.. code-block:: c++
-
-  // foo.h
-  #include <iostream>
-  void Hello() {
-    std::cout << "Hello World.\n";
-  }
-
-  // foo.cppm
-  module;
-  #include "foo.h"
-  export module foo;
-  export using ::Hello;
-
-  // Use.cpp
-  import foo;
-  int main() {
-    Hello();
-  }
-
-Then it is problematic if we remove ``foo.h`` before import `foo` module.
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 foo.cppm --precompile  -o foo.pcm
-  $ mv foo.h foo.orig.h
-  # The following one is rejected
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo=foo.pcm -c
-
-The above case will rejected. And we're still able to workaround it by ``-Xclang -fmodules-embed-all-files`` option:
-
-.. code-block:: console
-
-  $ clang++ -std=c++20 foo.cppm --precompile  -Xclang -fmodules-embed-all-files -o foo.pcm
-  $ mv foo.h foo.orig.h
-  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo=foo.pcm -c -o Use.o
-  $ clang++ Use.o foo.pcm
 
 ABI Impacts
 -----------
@@ -611,7 +508,7 @@ The following describes issues in the current implementation of modules.
 Please see https://github.com/llvm/llvm-project/labels/clang%3Amodules for more issues
 or file a new issue if you don't find an existing one.
 If you're going to create a new issue for standard C++ modules,
-please start the title with ``[C++20] [Modules]`` (or ``[C++2b] [Modules]``, etc)
+please start the title with ``[C++20] [Modules]`` (or ``[C++23] [Modules]``, etc)
 and add the label ``clang:modules`` (if you have permissions for that).
 
 For higher level support for proposals, you could visit https://clang.llvm.org/cxx_status.html.
@@ -660,26 +557,6 @@ the orders matter here in the case.
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/61465
 
-Ambiguous deduction guide
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Currently, when we call deduction guides in global module fragment,
-we may get incorrect diagnosing message like: `ambiguous deduction`.
-
-So if we're using deduction guide from global module fragment, we probably need to write:
-
-.. code-block:: c++
-
-  std::lock_guard<std::mutex> lk(mutex);
-
-instead of
-
-.. code-block:: c++
-
-  std::lock_guard lk(mutex);
-
-This is tracked in: https://github.com/llvm/llvm-project/issues/56916
-
 Ignored PreferredName Attribute
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -726,6 +603,13 @@ Header Units
 
 How to build projects using header unit
 ---------------------------------------
+
+.. warning::
+
+   The user interfaces of header units is highly experimental. There are still
+   many unanswered question about how tools should interact with header units.
+   The user interfaces described here may change after we have progress on how
+   tools should support for header units.
 
 Quick Start
 ~~~~~~~~~~~
@@ -907,7 +791,7 @@ Discover Dependencies
 =====================
 
 Prior to modules, all the translation units can be compiled parallelly.
-But it is not true for the module units. The presense of module units requires
+But it is not true for the module units. The presence of module units requires
 us to compile the translation units in a (topological) order.
 
 The clang-scan-deps scanner implemented
@@ -1127,10 +1011,10 @@ Then clang-scan-deps will extract the necessary information from the options.
 Note that we need to specify the path to the compiler executable instead of saying
 ``clang++`` simply.
 
-The users may want the scanner to get the tranditional dependency information for headers.
+The users may want the scanner to get the transitional dependency information for headers.
 Otherwise, the users have to scan twice for the project, once for headers and once for modules.
 To address the requirement, clang-scan-deps will recognize the specified preprocessor options
-in the given command line and generate the corresponding dependency informaiton. For example,
+in the given command line and generate the corresponding dependency information. For example,
 
 .. code-block:: console
 
@@ -1150,7 +1034,7 @@ We will get:
     ...
 
 When clang-scan-deps detects ``-MF`` option, clang-scan-deps will try to write the
-dependency informaiton for headers to the file specified by ``-MF``.
+dependency information for headers to the file specified by ``-MF``.
 
 Possible Questions
 ==================

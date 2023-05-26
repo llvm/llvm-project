@@ -89,8 +89,6 @@ public:
   }
 
 private:
-  using ELF64LEPhdrTy = object::ELF64LEFile::Elf_Phdr;
-
   /// Populate array of binary functions and other objects of interest
   /// from meta data in the file.
   void discoverFileObjects();

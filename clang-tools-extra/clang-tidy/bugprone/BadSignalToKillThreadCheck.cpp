@@ -18,8 +18,8 @@ namespace clang::tidy::bugprone {
 
 void BadSignalToKillThreadCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      callExpr(allOf(callee(functionDecl(hasName("::pthread_kill"))),
-                     argumentCountIs(2)),
+      callExpr(callee(functionDecl(hasName("::pthread_kill"))),
+               argumentCountIs(2),
                hasArgument(1, integerLiteral().bind("integer-literal")))
           .bind("thread-kill"),
       this);

@@ -28,9 +28,13 @@ void convert(const BinaryFunction &BF,
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
+  // Prepare function and block hashes
+  BF.computeHash(/*UseDFS=*/true);
+  BF.computeBlockHashes();
+
   YamlBF.Name = BF.getPrintName();
   YamlBF.Id = BF.getFunctionNumber();
-  YamlBF.Hash = BF.computeHash(/*UseDFS=*/true);
+  YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
 
@@ -38,6 +42,7 @@ void convert(const BinaryFunction &BF,
     yaml::bolt::BinaryBasicBlockProfile YamlBB;
     YamlBB.Index = BB->getLayoutIndex();
     YamlBB.NumInstructions = BB->getNumNonPseudos();
+    YamlBB.Hash = BB->getHash();
 
     if (!LBRProfile) {
       YamlBB.EventCount = BB->getKnownExecutionCount();
@@ -112,11 +117,15 @@ void convert(const BinaryFunction &BF,
     // Include landing pads with non-zero execution count.
     if (YamlBB.CallSites.empty() && !BB->isEntryPoint() &&
         !(BB->isLandingPad() && BB->getKnownExecutionCount() != 0)) {
+      // Include blocks having successors or predecessors with positive counts.
       uint64_t SuccessorExecCount = 0;
       for (const BinaryBasicBlock::BinaryBranchInfo &BranchInfo :
            BB->branch_info())
         SuccessorExecCount += BranchInfo.Count;
-      if (!SuccessorExecCount)
+      uint64_t PredecessorExecCount = 0;
+      for (auto Pred : BB->predecessors())
+        PredecessorExecCount += Pred->getBranchInfo(*BB).Count;
+      if (!SuccessorExecCount && !PredecessorExecCount)
         continue;
     }
 

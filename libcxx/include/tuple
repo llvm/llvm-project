@@ -206,10 +206,17 @@ template <class... Types>
 #include <__compare/synth_three_way.h>
 #include <__config>
 #include <__functional/invoke.h>
-#include <__functional/unwrap_ref.h>
 #include <__fwd/array.h>
+#include <__fwd/tuple.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
+#include <__tuple/make_tuple_types.h>
+#include <__tuple/sfinae_helpers.h>
+#include <__tuple/tuple_element.h>
+#include <__tuple/tuple_indices.h>
+#include <__tuple/tuple_like_ext.h>
+#include <__tuple/tuple_size.h>
+#include <__tuple/tuple_types.h>
 #include <__type_traits/apply_cv.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
@@ -244,6 +251,7 @@ template <class... Types>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
+#include <__type_traits/unwrap_ref.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
@@ -295,7 +303,7 @@ class __tuple_leaf
     _Hp __value_;
 
     template <class _Tp>
-    static constexpr bool __can_bind_reference() {
+    static _LIBCPP_HIDE_FROM_ABI constexpr bool __can_bind_reference() {
 #if __has_keyword(__reference_binds_to_temporary)
       return !__reference_binds_to_temporary(_Hp, _Tp);
 #else
@@ -367,8 +375,8 @@ public:
         {static_assert(!is_reference<_Hp>::value,
            "Attempted to uses-allocator construct a reference element in a tuple");}
 
-    __tuple_leaf(const __tuple_leaf& __t) = default;
-    __tuple_leaf(__tuple_leaf&& __t) = default;
+    _LIBCPP_HIDE_FROM_ABI __tuple_leaf(const __tuple_leaf& __t) = default;
+    _LIBCPP_HIDE_FROM_ABI __tuple_leaf(__tuple_leaf&& __t) = default;
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
     int swap(__tuple_leaf& __t) _NOEXCEPT_(__is_nothrow_swappable<__tuple_leaf>::value)
@@ -1308,8 +1316,7 @@ template <>
 class _LIBCPP_TEMPLATE_VIS tuple<>
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY constexpr
-        tuple() _NOEXCEPT = default;
+    constexpr tuple() _NOEXCEPT = default;
     template <class _Alloc>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
         tuple(allocator_arg_t, const _Alloc&) _NOEXCEPT {}
@@ -1712,17 +1719,15 @@ template <class ..._Types, size_t ..._I0, class _Tuple0>
 struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>, _Tuple0>
 {
     typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
-    typedef tuple<_Types..., typename __apply_cv<_Tuple0,
-                          typename tuple_element<_I0, _T0>::type>::type&&...> type;
+    typedef tuple<_Types..., __apply_cv_t<_Tuple0, typename tuple_element<_I0, _T0>::type>&&...> type;
 };
 
 template <class ..._Types, size_t ..._I0, class _Tuple0, class _Tuple1, class ..._Tuples>
 struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>,
                                   _Tuple0, _Tuple1, _Tuples...>
     : public __tuple_cat_return_ref_imp<
-         tuple<_Types..., typename __apply_cv<_Tuple0,
-               typename tuple_element<_I0,
-                  __libcpp_remove_reference_t<_Tuple0> >::type>::type&&...>,
+         tuple<_Types..., __apply_cv_t<_Tuple0,
+                                       typename tuple_element<_I0, __libcpp_remove_reference_t<_Tuple0>>::type>&&...>,
          typename __make_tuple_indices<tuple_size<__libcpp_remove_reference_t<_Tuple1> >::value>::type,
          _Tuple1, _Tuples...>
 {
@@ -1762,13 +1767,9 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
         (void)__t; // avoid unused parameter warning on GCC when _I0 is empty
         typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
         typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple1> _T1;
-        return __tuple_cat<
-            tuple<_Types...,
-                  typename __apply_cv<_Tuple0, typename tuple_element<
-                                                   _J0, _T0>::type>::type&&...>,
-            typename __make_tuple_indices<sizeof...(_Types) +
-                                          tuple_size<_T0>::value>::type,
-            typename __make_tuple_indices<tuple_size<_T1>::value>::type>()(
+        return __tuple_cat<tuple<_Types..., __apply_cv_t<_Tuple0, typename tuple_element<_J0, _T0>::type>&&...>,
+                           typename __make_tuple_indices<sizeof...(_Types) + tuple_size<_T0>::value>::type,
+                           typename __make_tuple_indices<tuple_size<_T1>::value>::type>()(
             _VSTD::forward_as_tuple(
                 _VSTD::forward<_Types>(_VSTD::get<_I0>(__t))...,
                 _VSTD::get<_J0>(_VSTD::forward<_Tuple0>(__t0))...),

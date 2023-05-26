@@ -19,7 +19,9 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/ODSSupport.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -41,6 +43,36 @@
 
 using namespace mlir;
 using namespace test;
+
+Attribute MyPropStruct::asAttribute(MLIRContext *ctx) const {
+  return StringAttr::get(ctx, content);
+}
+LogicalResult MyPropStruct::setFromAttr(MyPropStruct &prop, Attribute attr,
+                                        InFlightDiagnostic *diag) {
+  StringAttr strAttr = dyn_cast<StringAttr>(attr);
+  if (!strAttr) {
+    if (diag)
+      *diag << "Expect StringAttr but got " << attr;
+    return failure();
+  }
+  prop.content = strAttr.getValue();
+  return success();
+}
+llvm::hash_code MyPropStruct::hash() const {
+  return hash_value(StringRef(content));
+}
+
+static LogicalResult setPropertiesFromAttribute(PropertiesWithCustomPrint &prop,
+                                                Attribute attr,
+                                                InFlightDiagnostic *diagnostic);
+static DictionaryAttr
+getPropertiesAsAttribute(MLIRContext *ctx,
+                         const PropertiesWithCustomPrint &prop);
+static llvm::hash_code computeHash(const PropertiesWithCustomPrint &prop);
+static void customPrintProperties(OpAsmPrinter &p,
+                                  const PropertiesWithCustomPrint &prop);
+static ParseResult customParseProperties(OpAsmParser &parser,
+                                         PropertiesWithCustomPrint &prop);
 
 void test::registerTestDialect(DialectRegistry &registry) {
   registry.insert<TestDialect>();
@@ -96,8 +128,7 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       writer.writeVarInt(concreteAttr.getV1());
       return success();
     }
-    writer.writeAttribute(attr);
-    return success();
+    return failure();
   }
 
   Attribute readAttribute(DialectBytecodeReader &reader,
@@ -190,7 +221,7 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
-    StringAttr strAttr = attr.dyn_cast<StringAttr>();
+    StringAttr strAttr = dyn_cast<StringAttr>(attr);
     if (!strAttr)
       return AliasResult::NoAlias;
 
@@ -215,16 +246,16 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   }
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
-    if (auto tupleType = type.dyn_cast<TupleType>()) {
+    if (auto tupleType = dyn_cast<TupleType>(type)) {
       if (tupleType.size() > 0 &&
           llvm::all_of(tupleType.getTypes(), [](Type elemType) {
-            return elemType.isa<SimpleAType>();
+            return isa<SimpleAType>(elemType);
           })) {
         os << "test_tuple";
         return AliasResult::FinalAlias;
       }
     }
-    if (auto intType = type.dyn_cast<TestIntegerType>()) {
+    if (auto intType = dyn_cast<TestIntegerType>(type)) {
       if (intType.getSignedness() ==
               TestIntegerType::SignednessSemantics::Unsigned &&
           intType.getWidth() == 8) {
@@ -232,7 +263,7 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
         return AliasResult::FinalAlias;
       }
     }
-    if (auto recType = type.dyn_cast<TestRecursiveType>()) {
+    if (auto recType = dyn_cast<TestRecursiveType>(type)) {
       if (recType.getName() == "type_to_alias") {
         // We only make alias for a specific recursive type.
         os << "testrec";
@@ -352,6 +383,23 @@ struct TestInlinerInterface : public DialectInlinerInterface {
           input.getType().isSignlessInteger(32)))
       return nullptr;
     return builder.create<TestCastOp>(conversionLoc, resultType, input);
+  }
+
+  Value handleArgument(OpBuilder &builder, Operation *call, Operation *callable,
+                       Value argument,
+                       DictionaryAttr argumentAttrs) const final {
+    if (!argumentAttrs.contains("test.handle_argument"))
+      return argument;
+    return builder.create<TestTypeChangerOp>(call->getLoc(), argument.getType(),
+                                             argument);
+  }
+
+  Value handleResult(OpBuilder &builder, Operation *call, Operation *callable,
+                     Value result, DictionaryAttr resultAttrs) const final {
+    if (!resultAttrs.contains("test.handle_result"))
+      return result;
+    return builder.create<TestTypeChangerOp>(call->getLoc(), result.getType(),
+                                             result);
   }
 
   void processInlinedCallBlocks(
@@ -496,7 +544,7 @@ Operation *TestDialect::materializeConstant(OpBuilder &builder, Attribute value,
 ::mlir::LogicalResult FormatInferType2Op::inferReturnTypes(
     ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-    ::mlir::RegionRange regions,
+    OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
   inferredReturnTypes.assign({::mlir::IntegerType::get(context, 16)});
   return ::mlir::success();
@@ -648,6 +696,29 @@ LogicalResult TestCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError() << "'" << fnAttr.getValue()
                          << "' does not reference a valid function";
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConversionFuncOp
+//===----------------------------------------------------------------------===//
+
+ParseResult ConversionFuncOp::parse(OpAsmParser &parser,
+                                    OperationState &result) {
+  auto buildFuncType =
+      [](Builder &builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
+         function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(argTypes, results); };
+
+  return function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false,
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
+}
+
+void ConversionFuncOp::print(OpAsmPrinter &p) {
+  function_interface_impl::printFunctionOp(
+      p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
+      getArgAttrsAttrName(), getResAttrsAttrName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1159,7 +1230,7 @@ void PolyForOp::getAsmBlockArgumentNames(Region &region,
   auto args = getRegion().front().getArguments();
   auto e = std::min(arrayAttr.size(), args.size());
   for (unsigned i = 0; i < e; ++i) {
-    if (auto strAttr = arrayAttr[i].dyn_cast<StringAttr>())
+    if (auto strAttr = dyn_cast<StringAttr>(arrayAttr[i]))
       setNameFn(args[i], strAttr.getValue());
   }
 }
@@ -1181,7 +1252,7 @@ static ParseResult parseOptionalLoc(OpAsmParser &p, Attribute &loc) {
 }
 
 static void printOptionalLoc(OpAsmPrinter &p, Operation *op, Attribute loc) {
-  p.printOptionalLocationSpecifier(loc.cast<LocationAttr>());
+  p.printOptionalLocationSpecifier(cast<LocationAttr>(loc));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1223,7 +1294,7 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
-  if (adaptor.getOp() && !(*this)->hasAttr("attr")) {
+  if (adaptor.getOp() && !(*this)->getAttr("attr")) {
     // The folder adds "attr" if not present.
     (*this)->setAttr("attr", adaptor.getOp());
     return getResult();
@@ -1256,7 +1327,7 @@ OpFoldResult TestOpFoldWithFoldAdaptor::fold(FoldAdaptor adaptor) {
 
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -1271,16 +1342,17 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
 // refineReturnType, currently only refineReturnType can be omitted.
 LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   returnTypes.clear();
   return OpWithRefineTypeInterfaceOp::refineReturnTypes(
-      context, location, operands, attributes, regions, returnTypes);
+      context, location, operands, attributes, properties, regions,
+      returnTypes);
 }
 
 LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -1299,11 +1371,12 @@ LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     MLIRContext *context, std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes,
+    OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Create return type consisting of the last element of the first operand.
   auto operandType = operands.front().getType();
-  auto sval = operandType.dyn_cast<ShapedType>();
+  auto sval = dyn_cast<ShapedType>(operandType);
   if (!sval) {
     return emitOptionalError(location, "only shaped type operands allowed");
   }
@@ -1311,7 +1384,7 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
   auto type = IntegerType::get(context, 17);
 
   Attribute encoding;
-  if (auto rankedTy = sval.dyn_cast<RankedTensorType>())
+  if (auto rankedTy = dyn_cast<RankedTensorType>(sval))
     encoding = rankedTy.getEncoding();
   inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type, encoding));
   return success();
@@ -1331,7 +1404,7 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
   Location loc = getLoc();
   shapes.reserve(operands.size());
   for (Value operand : llvm::reverse(operands)) {
-    auto rank = operand.getType().cast<RankedTensorType>().getRank();
+    auto rank = cast<RankedTensorType>(operand.getType()).getRank();
     auto currShape = llvm::to_vector<4>(
         llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
@@ -1348,7 +1421,7 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
   Location loc = getLoc();
   shapes.reserve(getNumOperands());
   for (Value operand : llvm::reverse(getOperands())) {
-    auto tensorType = operand.getType().cast<RankedTensorType>();
+    auto tensorType = cast<RankedTensorType>(operand.getType());
     auto currShape = llvm::to_vector<4>(llvm::map_range(
         llvm::seq<int64_t>(0, tensorType.getRank()),
         [&](int64_t dim) -> OpFoldResult {
@@ -1398,12 +1471,12 @@ void SideEffectOp::getEffects(
   // If there is one, it is an array of dictionary attributes that hold
   // information on the effects of this operation.
   for (Attribute element : effectsAttr) {
-    DictionaryAttr effectElement = element.cast<DictionaryAttr>();
+    DictionaryAttr effectElement = cast<DictionaryAttr>(element);
 
     // Get the specific memory effect.
     MemoryEffects::Effect *effect =
         StringSwitch<MemoryEffects::Effect *>(
-            effectElement.get("effect").cast<StringAttr>().getValue())
+            cast<StringAttr>(effectElement.get("effect")).getValue())
             .Case("allocate", MemoryEffects::Allocate::get())
             .Case("free", MemoryEffects::Free::get())
             .Case("read", MemoryEffects::Read::get())
@@ -1418,7 +1491,7 @@ void SideEffectOp::getEffects(
     if (effectElement.get("on_result"))
       effects.emplace_back(effect, getResult(), resource);
     else if (Attribute ref = effectElement.get("on_reference"))
-      effects.emplace_back(effect, ref.cast<SymbolRefAttr>(), resource);
+      effects.emplace_back(effect, cast<SymbolRefAttr>(ref), resource);
     else
       effects.emplace_back(effect, resource);
   }
@@ -1483,7 +1556,7 @@ void StringAttrPrettyNameOp::print(OpAsmPrinter &p) {
     llvm::raw_svector_ostream tmpStream(resultNameStr);
     p.printOperand(getResult(i), tmpStream);
 
-    auto expectedName = getNames()[i].dyn_cast<StringAttr>();
+    auto expectedName = dyn_cast<StringAttr>(getNames()[i]);
     if (!expectedName ||
         tmpStream.str().drop_front() != expectedName.getValue()) {
       namesDisagree = true;
@@ -1503,7 +1576,7 @@ void StringAttrPrettyNameOp::getAsmResultNames(
 
   auto value = getNames();
   for (size_t i = 0, e = value.size(); i != e; ++i)
-    if (auto str = value[i].dyn_cast<StringAttr>())
+    if (auto str = dyn_cast<StringAttr>(value[i]))
       if (!str.getValue().empty())
         setNameFn(getResult(i), str.getValue());
 }
@@ -1512,7 +1585,7 @@ void CustomResultsNameOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   ArrayAttr value = getNames();
   for (size_t i = 0, e = value.size(); i != e; ++i)
-    if (auto str = value[i].dyn_cast<StringAttr>())
+    if (auto str = dyn_cast<StringAttr>(value[i]))
       if (!str.getValue().empty())
         setNameFn(getResult(i), str.getValue());
 }
@@ -1754,6 +1827,59 @@ OpFoldResult ManualCppOpWithFold::fold(ArrayRef<Attribute> attributes) {
   if (!attributes.empty())
     return attributes.front();
   return nullptr;
+}
+
+static LogicalResult
+setPropertiesFromAttribute(PropertiesWithCustomPrint &prop, Attribute attr,
+                           InFlightDiagnostic *diagnostic) {
+  DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
+  if (!dict) {
+    if (diagnostic)
+      *diagnostic << "expected DictionaryAttr to set TestProperties";
+    return failure();
+  }
+  auto label = dict.getAs<mlir::StringAttr>("label");
+  if (!label) {
+    if (diagnostic)
+      *diagnostic << "expected StringAttr for key `label`";
+    return failure();
+  }
+  auto valueAttr = dict.getAs<IntegerAttr>("value");
+  if (!valueAttr) {
+    if (diagnostic)
+      *diagnostic << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+
+  prop.label = std::make_shared<std::string>(label.getValue());
+  prop.value = valueAttr.getValue().getSExtValue();
+  return success();
+}
+static DictionaryAttr
+getPropertiesAsAttribute(MLIRContext *ctx,
+                         const PropertiesWithCustomPrint &prop) {
+  SmallVector<NamedAttribute> attrs;
+  Builder b{ctx};
+  attrs.push_back(b.getNamedAttr("label", b.getStringAttr(*prop.label)));
+  attrs.push_back(b.getNamedAttr("value", b.getI32IntegerAttr(prop.value)));
+  return b.getDictionaryAttr(attrs);
+}
+static llvm::hash_code computeHash(const PropertiesWithCustomPrint &prop) {
+  return llvm::hash_combine(prop.value, StringRef(*prop.label));
+}
+static void customPrintProperties(OpAsmPrinter &p,
+                                  const PropertiesWithCustomPrint &prop) {
+  p.printKeywordOrString(*prop.label);
+  p << " is " << prop.value;
+}
+static ParseResult customParseProperties(OpAsmParser &parser,
+                                         PropertiesWithCustomPrint &prop) {
+  std::string label;
+  if (parser.parseKeywordOrString(&label) || parser.parseKeyword("is") ||
+      parser.parseInteger(prop.value))
+    return failure();
+  prop.label = std::make_shared<std::string>(std::move(label));
+  return success();
 }
 
 #include "TestOpEnums.cpp.inc"

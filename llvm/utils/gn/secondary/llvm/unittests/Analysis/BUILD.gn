@@ -24,7 +24,6 @@ unittest("AnalysisTests") {
     "CaptureTrackingTest.cpp",
     "ConstraintSystemTest.cpp",
     "DDGTest.cpp",
-    "DivergenceAnalysisTest.cpp",
     "DomTreeUpdaterTest.cpp",
     "FunctionPropertiesAnalysisTest.cpp",
     "GlobalsModRefTest.cpp",

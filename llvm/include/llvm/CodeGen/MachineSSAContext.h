@@ -36,7 +36,7 @@ inline auto instrs(const MachineBasicBlock &BB) { return BB.instrs(); }
 
 template <> class GenericSSAContext<MachineFunction> {
   const MachineRegisterInfo *RegInfo = nullptr;
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
 
 public:
   using BlockT = MachineBasicBlock;

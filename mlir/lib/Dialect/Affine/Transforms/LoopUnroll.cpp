@@ -25,13 +25,16 @@
 #include <optional>
 
 namespace mlir {
+namespace affine {
 #define GEN_PASS_DEF_AFFINELOOPUNROLL
 #include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
 } // namespace mlir
 
 #define DEBUG_TYPE "affine-loop-unroll"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 
@@ -42,7 +45,7 @@ namespace {
 /// full unroll threshold was specified, in which case, fully unrolls all loops
 /// with trip count less than the specified threshold. The latter is for testing
 /// purposes, especially for testing outer loop unrolling.
-struct LoopUnroll : public impl::AffineLoopUnrollBase<LoopUnroll> {
+struct LoopUnroll : public affine::impl::AffineLoopUnrollBase<LoopUnroll> {
   // Callback to obtain unroll factors; if this has a callable target, takes
   // precedence over command-line argument or passed argument.
   const std::function<unsigned(AffineForOp)> getUnrollFactor;
@@ -142,7 +145,7 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
                             cleanUpUnroll);
 }
 
-std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLoopUnrollPass(
+std::unique_ptr<OperationPass<func::FuncOp>> mlir::affine::createLoopUnrollPass(
     int unrollFactor, bool unrollUpToFactor, bool unrollFull,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(

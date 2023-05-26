@@ -40,6 +40,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef RVV_TYPE
+#define RVV_TYPE(Name, Id, SingletonId)
+#endif
+
 #ifndef RVV_VECTOR_TYPE
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned, IsFP)\
   RVV_TYPE(Name, Id, SingletonId)
@@ -139,6 +143,10 @@ RVV_PREDICATE_TYPE("__rvv_bool8_t",  RvvBool8,  RvvBool8Ty,  8)
 RVV_PREDICATE_TYPE("__rvv_bool16_t", RvvBool16, RvvBool16Ty, 4)
 RVV_PREDICATE_TYPE("__rvv_bool32_t", RvvBool32, RvvBool32Ty, 2)
 RVV_PREDICATE_TYPE("__rvv_bool64_t", RvvBool64, RvvBool64Ty, 1)
+
+//===- Tuple vector types -------------------------------------------------===//
+
+RVV_VECTOR_TYPE_INT("__rvv_int32m1x2_t", RvvInt32m1x2, RvvInt32m1x2Ty, 2,  32, 2, true)
 
 #undef RVV_VECTOR_TYPE_FLOAT
 #undef RVV_VECTOR_TYPE_INT

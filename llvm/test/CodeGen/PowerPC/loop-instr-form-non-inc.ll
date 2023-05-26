@@ -11,13 +11,18 @@ define dso_local void @test_no_inc(i32 signext %a) local_unnamed_addr nounwind a
 ; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:    andc 4, 3, 4
 ; CHECK-NEXT:    addi 5, 4, 1
+; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_1: # %for.cond
+; CHECK-NEXT:  .LBB0_1: # %for.cond.cleanup
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    add 8, 3, 6
 ; CHECK-NEXT:    stb 7, 0(5)
 ; CHECK-NEXT:    add 5, 5, 4
-; CHECK-NEXT:    iselgt 6, 8, 6
+; CHECK-NEXT:  .LBB0_2: # %for.cond
+; CHECK-NEXT:    #
+; CHECK-NEXT:    bc 4, 1, .LBB0_1
+; CHECK-NEXT:  # %bb.3: # %for.body.preheader
+; CHECK-NEXT:    #
+; CHECK-NEXT:    add 6, 3, 6
 ; CHECK-NEXT:    b .LBB0_1
 entry:
   %cmp10 = icmp sgt i32 %a, 0

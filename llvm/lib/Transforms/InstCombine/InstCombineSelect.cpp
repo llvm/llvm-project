@@ -1238,8 +1238,8 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
   return nullptr;
 }
 
-static bool replaceInInstruction(Value *V, Value *Old, Value *New,
-                                 InstCombiner &IC, unsigned Depth = 0) {
+bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
+                                            unsigned Depth) {
   // Conservatively limit replacement to two instructions upwards.
   if (Depth == 2)
     return false;
@@ -1251,10 +1251,11 @@ static bool replaceInInstruction(Value *V, Value *Old, Value *New,
   bool Changed = false;
   for (Use &U : I->operands()) {
     if (U == Old) {
-      IC.replaceUse(U, New);
+      replaceUse(U, New);
+      Worklist.add(I);
       Changed = true;
     } else {
-      Changed |= replaceInInstruction(U, Old, New, IC, Depth + 1);
+      Changed |= replaceInInstruction(U, Old, New, Depth + 1);
     }
   }
   return Changed;
@@ -1310,7 +1311,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // FIXME: Support vectors.
     if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()) &&
         !Cmp.getType()->isVectorTy())
-      if (replaceInInstruction(TrueVal, CmpLHS, CmpRHS, *this))
+      if (replaceInInstruction(TrueVal, CmpLHS, CmpRHS))
         return &Sel;
   }
   if (TrueVal != CmpRHS &&
@@ -2496,7 +2497,7 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
   // in the case of a shuffle with no undefined mask elements.
   ArrayRef<int> Mask;
   if (match(TVal, m_OneUse(m_Shuffle(m_Value(X), m_Value(Y), m_Mask(Mask)))) &&
-      !is_contained(Mask, UndefMaskElem) &&
+      !is_contained(Mask, PoisonMaskElem) &&
       cast<ShuffleVectorInst>(TVal)->isSelect()) {
     if (X == FVal) {
       // select Cond, (shuf_sel X, Y), X --> shuf_sel X, (select Cond, Y, X)
@@ -2510,7 +2511,7 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
     }
   }
   if (match(FVal, m_OneUse(m_Shuffle(m_Value(X), m_Value(Y), m_Mask(Mask)))) &&
-      !is_contained(Mask, UndefMaskElem) &&
+      !is_contained(Mask, PoisonMaskElem) &&
       cast<ShuffleVectorInst>(FVal)->isSelect()) {
     if (X == TVal) {
       // select Cond, X, (shuf_sel X, Y) --> shuf_sel X, (select Cond, X, Y)
@@ -2923,20 +2924,31 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   auto *Zero = ConstantInt::getFalse(SelType);
   Value *A, *B, *C, *D;
 
+  auto dropPoisonGeneratingFlagsAndMetadata =
+      [](ArrayRef<Instruction *> Insts) {
+        for (auto *I : Insts)
+          I->dropPoisonGeneratingFlagsAndMetadata();
+      };
   // Folding select to and/or i1 isn't poison safe in general. impliesPoison
   // checks whether folding it does not convert a well-defined value into
   // poison.
   if (match(TrueVal, m_One())) {
-    if (impliesPoison(FalseVal, CondVal)) {
-      // Change: A = select B, true, C --> A = or B, C
-      return BinaryOperator::CreateOr(CondVal, FalseVal);
-    }
-
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
       if (auto *RHS = dyn_cast<FCmpInst>(FalseVal))
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false,
                                         /*IsSelectLogical*/ true))
           return replaceInstUsesWith(SI, V);
+
+    // Some patterns can be matched by both of the above and following
+    // combinations. Because we need to drop poison generating
+    // flags and metadatas for the following combination, it has less priority
+    // than the above combination.
+    SmallVector<Instruction *> IgnoredInsts;
+    if (impliesPoisonIgnoreFlagsOrMetadata(FalseVal, CondVal, IgnoredInsts)) {
+      dropPoisonGeneratingFlagsAndMetadata(IgnoredInsts);
+      // Change: A = select B, true, C --> A = or B, C
+      return BinaryOperator::CreateOr(CondVal, FalseVal);
+    }
 
     // (A && B) || (C && B) --> (A || C) && B
     if (match(CondVal, m_LogicalAnd(m_Value(A), m_Value(B))) &&
@@ -2968,16 +2980,22 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   }
 
   if (match(FalseVal, m_Zero())) {
-    if (impliesPoison(TrueVal, CondVal)) {
-      // Change: A = select B, C, false --> A = and B, C
-      return BinaryOperator::CreateAnd(CondVal, TrueVal);
-    }
-
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
       if (auto *RHS = dyn_cast<FCmpInst>(TrueVal))
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true,
                                         /*IsSelectLogical*/ true))
           return replaceInstUsesWith(SI, V);
+
+    // Some patterns can be matched by both of the above and following
+    // combinations. Because we need to drop poison generating
+    // flags and metadatas for the following combination, it has less priority
+    // than the above combination.
+    SmallVector<Instruction *> IgnoredInsts;
+    if (impliesPoisonIgnoreFlagsOrMetadata(TrueVal, CondVal, IgnoredInsts)) {
+      dropPoisonGeneratingFlagsAndMetadata(IgnoredInsts);
+      // Change: A = select B, C, false --> A = and B, C
+      return BinaryOperator::CreateAnd(CondVal, TrueVal);
+    }
 
     // (A || B) && (C || B) --> (A && C) || B
     if (match(CondVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
@@ -3161,6 +3179,134 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   }
 
   return nullptr;
+}
+
+// Return true if we can safely remove the select instruction for std::bit_ceil
+// pattern.
+static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
+                                        const APInt *Cond1, Value *CtlzOp,
+                                        unsigned BitWidth) {
+  // The challenge in recognizing std::bit_ceil(X) is that the operand is used
+  // for the CTLZ proper and select condition, each possibly with some
+  // operation like add and sub.
+  //
+  // Our aim is to make sure that -ctlz & (BitWidth - 1) == 0 even when the
+  // select instruction would select 1, which allows us to get rid of the select
+  // instruction.
+  //
+  // To see if we can do so, we do some symbolic execution with ConstantRange.
+  // Specifically, we compute the range of values that Cond0 could take when
+  // Cond == false.  Then we successively transform the range until we obtain
+  // the range of values that CtlzOp could take.
+  //
+  // Conceptually, we follow the def-use chain backward from Cond0 while
+  // transforming the range for Cond0 until we meet the common ancestor of Cond0
+  // and CtlzOp.  Then we follow the def-use chain forward until we obtain the
+  // range for CtlzOp.  That said, we only follow at most one ancestor from
+  // Cond0.  Likewise, we only follow at most one ancestor from CtrlOp.
+
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(
+      CmpInst::getInversePredicate(Pred), *Cond1);
+
+  // Match the operation that's used to compute CtlzOp from CommonAncestor.  If
+  // CtlzOp == CommonAncestor, return true as no operation is needed.  If a
+  // match is found, execute the operation on CR, update CR, and return true.
+  // Otherwise, return false.
+  auto MatchForward = [&](Value *CommonAncestor) {
+    const APInt *C = nullptr;
+    if (CtlzOp == CommonAncestor)
+      return true;
+    if (match(CtlzOp, m_Add(m_Specific(CommonAncestor), m_APInt(C)))) {
+      CR = CR.add(*C);
+      return true;
+    }
+    if (match(CtlzOp, m_Sub(m_APInt(C), m_Specific(CommonAncestor)))) {
+      CR = ConstantRange(*C).sub(CR);
+      return true;
+    }
+    if (match(CtlzOp, m_Not(m_Specific(CommonAncestor)))) {
+      CR = CR.binaryNot();
+      return true;
+    }
+    return false;
+  };
+
+  const APInt *C = nullptr;
+  Value *CommonAncestor;
+  if (MatchForward(Cond0)) {
+    // Cond0 is either CtlzOp or CtlzOp's parent.  CR has been updated.
+  } else if (match(Cond0, m_Add(m_Value(CommonAncestor), m_APInt(C)))) {
+    CR = CR.sub(*C);
+    if (!MatchForward(CommonAncestor))
+      return false;
+    // Cond0's parent is either CtlzOp or CtlzOp's parent.  CR has been updated.
+  } else {
+    return false;
+  }
+
+  // Return true if all the values in the range are either 0 or negative (if
+  // treated as signed).  We do so by evaluating:
+  //
+  //   CR - 1 u>= (1 << BitWidth) - 1.
+  APInt IntMax = APInt::getSignMask(BitWidth) - 1;
+  CR = CR.sub(APInt(BitWidth, 1));
+  return CR.icmp(ICmpInst::ICMP_UGE, IntMax);
+}
+
+// Transform the std::bit_ceil(X) pattern like:
+//
+//   %dec = add i32 %x, -1
+//   %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+//   %sub = sub i32 32, %ctlz
+//   %shl = shl i32 1, %sub
+//   %ugt = icmp ugt i32 %x, 1
+//   %sel = select i1 %ugt, i32 %shl, i32 1
+//
+// into:
+//
+//   %dec = add i32 %x, -1
+//   %ctlz = tail call i32 @llvm.ctlz.i32(i32 %dec, i1 false)
+//   %neg = sub i32 0, %ctlz
+//   %masked = and i32 %ctlz, 31
+//   %shl = shl i32 1, %sub
+//
+// Note that the select is optimized away while the shift count is masked with
+// 31.  We handle some variations of the input operand like std::bit_ceil(X +
+// 1).
+static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
+  Type *SelType = SI.getType();
+  unsigned BitWidth = SelType->getScalarSizeInBits();
+
+  Value *FalseVal = SI.getFalseValue();
+  Value *TrueVal = SI.getTrueValue();
+  ICmpInst::Predicate Pred;
+  const APInt *Cond1;
+  Value *Cond0, *Ctlz, *CtlzOp;
+  if (!match(SI.getCondition(), m_ICmp(Pred, m_Value(Cond0), m_APInt(Cond1))))
+    return nullptr;
+
+  if (match(TrueVal, m_One())) {
+    std::swap(FalseVal, TrueVal);
+    Pred = CmpInst::getInversePredicate(Pred);
+  }
+
+  if (!match(FalseVal, m_One()) ||
+      !match(TrueVal,
+             m_OneUse(m_Shl(m_One(), m_OneUse(m_Sub(m_SpecificInt(BitWidth),
+                                                    m_Value(Ctlz)))))) ||
+      !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Zero())) ||
+      !isSafeToRemoveBitCeilSelect(Pred, Cond0, Cond1, CtlzOp, BitWidth))
+    return nullptr;
+
+  // Build 1 << (-CTLZ & (BitWidth-1)).  The negation likely corresponds to a
+  // single hardware instruction as opposed to BitWidth - CTLZ, where BitWidth
+  // is an integer constant.  Masking with BitWidth-1 comes free on some
+  // hardware as part of the shift instruction.
+  Value *Neg = Builder.CreateNeg(Ctlz);
+  Value *Masked =
+      Builder.CreateAnd(Neg, ConstantInt::get(SelType, BitWidth - 1));
+  return BinaryOperator::Create(Instruction::Shl, ConstantInt::get(SelType, 1),
+                                Masked);
 }
 
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
@@ -3589,6 +3735,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   //   (~x) & y  -->  ~(x | (~y))
   if (sinkNotIntoOtherHandOfLogicalOp(SI))
     return &SI;
+
+  if (Instruction *I = foldBitCeil(SI, Builder))
+    return I;
 
   return nullptr;
 }

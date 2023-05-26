@@ -243,7 +243,7 @@ public:
                                     std::forward_iterator_tag, MCPhysReg> {
     MCRegisterInfo::DiffListIterator Iter;
     /// Current value as MCPhysReg, so we can return a reference to it.
-    MCPhysReg Val;
+    MCPhysReg Val = 0;
 
   protected:
     mc_difflist_iterator(MCRegisterInfo::DiffListIterator Iter) : Iter(Iter) {}
@@ -657,10 +657,7 @@ public:
 // Definition for isSuperRegister. Put it down here since it needs the
 // iterator defined above in addition to the MCRegisterInfo class itself.
 inline bool MCRegisterInfo::isSuperRegister(MCRegister RegA, MCRegister RegB) const{
-  for (MCSuperRegIterator I(RegA, this); I.isValid(); ++I)
-    if (*I == RegB)
-      return true;
-  return false;
+  return is_contained(superregs(RegA), RegB);
 }
 
 //===----------------------------------------------------------------------===//

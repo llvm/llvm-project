@@ -223,6 +223,9 @@ public:
   }
 
   static bool neg(Integral A, Integral *R) {
+    if (Signed && A.isMin())
+      return true;
+
     *R = -A;
     return false;
   }

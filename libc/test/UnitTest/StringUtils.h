@@ -9,24 +9,26 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_SIMPLE_STRING_CONV_H
 #define LLVM_LIBC_UTILS_UNITTEST_SIMPLE_STRING_CONV_H
 
+#include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
-
-#include <string>
 
 namespace __llvm_libc {
 
 // Return the first N hex digits of an integer as a string in upper case.
 template <typename T>
-cpp::enable_if_t<cpp::is_integral_v<T>, std::string>
-int_to_hex(T X, size_t Length = sizeof(T) * 2) {
-  std::string s(Length, '0');
+cpp::enable_if_t<cpp::is_integral_v<T>, cpp::string>
+int_to_hex(T value, size_t length = sizeof(T) * 2) {
+  cpp::string s(length, '0');
 
-  for (auto it = s.rbegin(), end = s.rend(); it != end; ++it, X >>= 4) {
-    unsigned char Mod = static_cast<unsigned char>(X) & 15;
-    *it = (Mod < 10 ? '0' + Mod : 'a' + Mod - 10);
+  constexpr char HEXADECIMALS[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                                     '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  for (size_t i = 0; i < length; i += 2, value >>= 8) {
+    unsigned char mod = static_cast<unsigned char>(value) & 0xFF;
+    s[length - i] = HEXADECIMALS[mod & 0x0F];
+    s[length - (i + 1)] = HEXADECIMALS[mod & 0x0F];
   }
 
-  return s;
+  return "0x" + s;
 }
 
 } // namespace __llvm_libc

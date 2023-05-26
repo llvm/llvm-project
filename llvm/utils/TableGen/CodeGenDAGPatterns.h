@@ -17,12 +17,16 @@
 #include "CodeGenIntrinsics.h"
 #include "CodeGenTarget.h"
 #include "SDNodeProperties.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <array>
 #include <functional>
@@ -32,7 +36,6 @@
 
 namespace llvm {
 
-class Record;
 class Init;
 class ListInit;
 class DagInit;
@@ -42,7 +45,7 @@ class TreePatternNode;
 class CodeGenDAGPatterns;
 
 /// Shared pointer for TreePatternNode.
-using TreePatternNodePtr = std::shared_ptr<TreePatternNode>;
+using TreePatternNodePtr = IntrusiveRefCntPtr<TreePatternNode>;
 
 /// This represents a set of MVTs. Since the underlying type for the MVT
 /// is uint8_t, there are at most 256 values. To reduce the number of memory
@@ -191,7 +194,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T);
 
 struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   using SetType = MachineValueTypeSet;
-  SmallVector<unsigned, 16> AddrSpaces;
+  unsigned AddrSpace = std::numeric_limits<unsigned>::max();
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
@@ -211,21 +214,16 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isMachineValueType() const {
-    return isDefaultOnly() && Map.begin()->second.size() == 1;
+    return isSimple() && getSimple().size() == 1;
   }
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   MVT getMachineValueType() const {
     assert(isMachineValueType());
-    return *Map.begin()->second.begin();
+    return *getSimple().begin();
   }
 
   bool isPossible() const;
-
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
-  bool isDefaultOnly() const {
-    return Map.size() == 1 && Map.begin()->first == DefaultMode;
-  }
 
   bool isPointer() const {
     return getValueTypeByHwMode().isPointer();
@@ -259,7 +257,7 @@ private:
 raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T);
 
 struct TypeInfer {
-  TypeInfer(TreePattern &T) : TP(T), ForceMode(0) {}
+  TypeInfer(TreePattern &T) : TP(T) {}
 
   bool isConcrete(const TypeSetByHwMode &VTS, bool AllowEmpty) const {
     return VTS.isValueTypeByHwMode(AllowEmpty);
@@ -338,11 +336,7 @@ struct TypeInfer {
 
   struct ValidateOnExit {
     ValidateOnExit(TypeSetByHwMode &T, TypeInfer &TI) : Infer(TI), VTS(T) {}
-  #ifndef NDEBUG
     ~ValidateOnExit();
-  #else
-    ~ValidateOnExit() {}  // Empty destructor with NDEBUG.
-  #endif
     TypeInfer &Infer;
     TypeSetByHwMode &VTS;
   };
@@ -359,8 +353,6 @@ struct TypeInfer {
   };
 
   TreePattern &TP;
-  unsigned ForceMode;     // Mode to use when set.
-  bool CodeGen = false;   // Set during generation of matcher code.
   bool Validate = true;   // Indicate whether to validate types.
 
 private:
@@ -632,22 +624,22 @@ struct TreePredicateCall {
   }
 };
 
-class TreePatternNode {
+class TreePatternNode : public RefCountedBase<TreePatternNode> {
+  /// Number of results for this node.
+  unsigned NumResults;
+
   /// The type of each node result.  Before and during type inference, each
   /// result may be a set of possible types.  After (successful) type inference,
   /// each is a single concrete type.
-  std::vector<TypeSetByHwMode> Types;
+  std::unique_ptr<TypeSetByHwMode[]> Types;
 
   /// The index of each result in results of the pattern.
-  std::vector<unsigned> ResultPerm;
+  std::unique_ptr<unsigned[]> ResultPerm;
 
-  /// Operator - The Record for the operator if this is an interior node (not
-  /// a leaf).
-  Record *Operator;
-
-  /// Val - The init value (e.g. the "GPRC" record, or "7") for a leaf.
-  ///
-  Init *Val;
+  /// OperatorOrVal - The Record for the operator if this is an interior node
+  /// (not a leaf) or the init value (e.g. the "GPRC" record, or "7") for a
+  /// leaf.
+  PointerUnion<Record *, Init *> OperatorOrVal;
 
   /// Name - The name given to this node with the :$foo notation.
   ///
@@ -661,7 +653,7 @@ class TreePatternNode {
 
   /// TransformFn - The transformation function to execute on this node before
   /// it can be substituted into the resulting instruction on a pattern match.
-  Record *TransformFn;
+  Record *TransformFn = nullptr;
 
   std::vector<TreePatternNodePtr> Children;
 
@@ -671,18 +663,16 @@ class TreePatternNode {
 
 public:
   TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> Ch,
-                  unsigned NumResults)
-      : Operator(Op), Val(nullptr), TransformFn(nullptr),
+                  unsigned numResults)
+      : NumResults(numResults), Types(new TypeSetByHwMode[numResults]),
+        ResultPerm(new unsigned[numResults]), OperatorOrVal(Op),
         Children(std::move(Ch)) {
-    Types.resize(NumResults);
-    ResultPerm.resize(NumResults);
-    std::iota(ResultPerm.begin(), ResultPerm.end(), 0);
+    std::iota(ResultPerm.get(), ResultPerm.get() + numResults, 0);
   }
-  TreePatternNode(Init *val, unsigned NumResults)    // leaf ctor
-    : Operator(nullptr), Val(val), TransformFn(nullptr) {
-    Types.resize(NumResults);
-    ResultPerm.resize(NumResults);
-    std::iota(ResultPerm.begin(), ResultPerm.end(), 0);
+  TreePatternNode(Init *val, unsigned numResults) // leaf ctor
+      : NumResults(numResults), Types(new TypeSetByHwMode[numResults]),
+        ResultPerm(new unsigned[numResults]), OperatorOrVal(val) {
+    std::iota(ResultPerm.get(), ResultPerm.get() + numResults, 0);
   }
 
   bool hasName() const { return !Name.empty(); }
@@ -699,14 +689,19 @@ public:
     NamesAsPredicateArg.push_back(N);
   }
 
-  bool isLeaf() const { return Val != nullptr; }
+  bool isLeaf() const { return isa<Init *>(OperatorOrVal); }
 
   // Type accessors.
-  unsigned getNumTypes() const { return Types.size(); }
+  unsigned getNumTypes() const { return NumResults; }
   ValueTypeByHwMode getType(unsigned ResNo) const {
     return Types[ResNo].getValueTypeByHwMode();
   }
-  const std::vector<TypeSetByHwMode> &getExtTypes() const { return Types; }
+  ArrayRef<TypeSetByHwMode> getExtTypes() const {
+    return ArrayRef(Types.get(), NumResults);
+  }
+  MutableArrayRef<TypeSetByHwMode> getExtTypes() {
+    return MutableArrayRef(Types.get(), NumResults);
+  }
   const TypeSetByHwMode &getExtType(unsigned ResNo) const {
     return Types[ResNo];
   }
@@ -723,16 +718,27 @@ public:
     return Types[ResNo].empty();
   }
 
-  unsigned getNumResults() const { return ResultPerm.size(); }
   unsigned getResultIndex(unsigned ResNo) const { return ResultPerm[ResNo]; }
   void setResultIndex(unsigned ResNo, unsigned RI) { ResultPerm[ResNo] = RI; }
 
-  Init *getLeafValue() const { assert(isLeaf()); return Val; }
-  Record *getOperator() const { assert(!isLeaf()); return Operator; }
+  Init *getLeafValue() const {
+    assert(isLeaf());
+    return cast<Init *>(OperatorOrVal);
+  }
+  Record *getOperator() const {
+    assert(!isLeaf());
+    return cast<Record *>(OperatorOrVal);
+  }
 
   unsigned getNumChildren() const { return Children.size(); }
-  TreePatternNode *getChild(unsigned N) const { return Children[N].get(); }
+  const TreePatternNode *getChild(unsigned N) const {
+    return Children[N].get();
+  }
+  TreePatternNode *getChild(unsigned N) { return Children[N].get(); }
   const TreePatternNodePtr &getChildShared(unsigned N) const {
+    return Children[N];
+  }
+  TreePatternNodePtr &getChildSharedPtr(unsigned N) {
     return Children[N];
   }
   void setChild(unsigned i, TreePatternNodePtr N) { Children[i] = N; }
@@ -825,11 +831,10 @@ public:   // Higher level manipulation routines.
   void
   SubstituteFormalArguments(std::map<std::string, TreePatternNodePtr> &ArgMap);
 
-  /// InlinePatternFragments - If this pattern refers to any pattern
+  /// InlinePatternFragments - If \p T pattern refers to any pattern
   /// fragments, return the set of inlined versions (this can be more than
   /// one if a PatFrags record has multiple alternatives).
-  void InlinePatternFragments(TreePatternNodePtr T,
-                              TreePattern &TP,
+  void InlinePatternFragments(TreePattern &TP,
                               std::vector<TreePatternNodePtr> &OutAlternatives);
 
   /// ApplyTypeConstraints - Apply all of the type constraints relevant to
@@ -866,7 +871,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const TreePatternNode &TPN) {
   TPN.print(OS);
   return OS;
 }
-
 
 /// TreePattern - Represent a pattern, used for instructions, pattern
 /// fragments, etc.
@@ -957,10 +961,10 @@ public:
   /// PatFrags references.  This may increase the number of trees in the
   /// pattern if a PatFrags has multiple alternatives.
   void InlinePatternFragments() {
-    std::vector<TreePatternNodePtr> Copy = Trees;
-    Trees.clear();
-    for (unsigned i = 0, e = Copy.size(); i != e; ++i)
-      Copy[i]->InlinePatternFragments(Copy[i], *this, Trees);
+    std::vector<TreePatternNodePtr> Copy;
+    Trees.swap(Copy);
+    for (const TreePatternNodePtr &C : Copy)
+      C->InlinePatternFragments(*this, Trees);
   }
 
   /// InferAllTypes - Infer/propagate as many types throughout the expression
@@ -1030,13 +1034,14 @@ class DAGInstruction {
   TreePatternNodePtr ResultPattern;
 
 public:
-  DAGInstruction(const std::vector<Record*> &results,
-                 const std::vector<Record*> &operands,
-                 const std::vector<Record*> &impresults,
+  DAGInstruction(std::vector<Record *> &&results,
+                 std::vector<Record *> &&operands,
+                 std::vector<Record *> &&impresults,
                  TreePatternNodePtr srcpattern = nullptr,
                  TreePatternNodePtr resultpattern = nullptr)
-    : Results(results), Operands(operands), ImpResults(impresults),
-      SrcPattern(srcpattern), ResultPattern(resultpattern) {}
+      : Results(std::move(results)), Operands(std::move(operands)),
+        ImpResults(std::move(impresults)), SrcPattern(srcpattern),
+        ResultPattern(resultpattern) {}
 
   unsigned getNumResults() const { return Results.size(); }
   unsigned getNumOperands() const { return Operands.size(); }
@@ -1073,17 +1078,16 @@ class PatternToMatch {
   std::string      HwModeFeatures;
   int              AddedComplexity; // Add to matching pattern complexity.
   unsigned         ID;          // Unique ID for the record.
-  unsigned         ForceMode;   // Force this mode in type inference when set.
 
 public:
   PatternToMatch(Record *srcrecord, ListInit *preds, TreePatternNodePtr src,
                  TreePatternNodePtr dst, std::vector<Record *> dstregs,
-                 int complexity, unsigned uid, unsigned setmode = 0,
+                 int complexity, unsigned uid,
                  const Twine &hwmodefeatures = "")
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
         DstPattern(dst), Dstregs(std::move(dstregs)),
         HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity),
-        ID(uid), ForceMode(setmode) {}
+        ID(uid) {}
 
   Record          *getSrcRecord()  const { return SrcRecord; }
   ListInit        *getPredicates() const { return Predicates; }
@@ -1095,7 +1099,6 @@ public:
   StringRef   getHwModeFeatures() const { return HwModeFeatures; }
   int         getAddedComplexity() const { return AddedComplexity; }
   unsigned getID() const { return ID; }
-  unsigned getForceMode() const { return ForceMode; }
 
   std::string getPredicateCheck() const;
   void getPredicateRecords(SmallVectorImpl<Record *> &PredicateRecs) const;

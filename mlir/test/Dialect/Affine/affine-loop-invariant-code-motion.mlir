@@ -846,3 +846,25 @@ func.func @affine_invariant_use_after_dma(%arg0: memref<10485760xi32>, %arg1: me
 // CHECK: %[[scalar_mem:.*]] = memref.alloc() : memref<1xi32, 2>
 // CHECK: affine.dma_start %arg1[%[[zero]]], %alloc_0[%[[zero]]], %alloc[%[[zero]]], %c1
 // CHECK: affine.load %[[scalar_mem]][0]
+
+// -----
+
+// CHECK-LABEL: func @affine_prefetch_invariant
+func.func @affine_prefetch_invariant() {
+  %0 = memref.alloc() : memref<10x10xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.for %i1 = 0 to 10 {
+      %1 = affine.load %0[%i0, %i1] : memref<10x10xf32>
+      affine.prefetch %0[%i0, %i0], write, locality<0>, data : memref<10x10xf32>
+    }
+  }
+
+  // CHECK:      memref.alloc() : memref<10x10xf32>
+  // CHECK-NEXT: affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:   affine.prefetch
+  // CHECK-NEXT:   affine.for %{{.*}} = 0 to 10 {
+  // CHECK-NEXT:     %{{.*}}  = affine.load %{{.*}}[%{{.*}}  : memref<10x10xf32>
+  // CHECK-NEXT:   }
+  // CHECK-NEXT: }
+  return
+}

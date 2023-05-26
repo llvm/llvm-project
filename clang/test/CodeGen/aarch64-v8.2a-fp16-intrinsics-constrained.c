@@ -290,8 +290,7 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 }
 
 // COMMON-LABEL: test_vfmsh_f16
-// UNCONSTRAINED:  [[SUB:%.*]] = fsub half 0xH8000, %b
-// CONSTRAINED:    [[SUB:%.*]] = call half @llvm.experimental.constrained.fsub.f16(half 0xH8000, half %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// COMMONIR:  [[SUB:%.*]] = fneg half %b
 // UNCONSTRAINED:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half %c, half %a)
 // CONSTRAINED:    [[ADD:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[SUB]], half %c, half %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // COMMONIR:       ret half [[ADD]]

@@ -438,6 +438,7 @@ KEYWORD(__builtin_offsetof          , KEYALL)
 KEYWORD(__builtin_FILE              , KEYALL)
 KEYWORD(__builtin_FILE_NAME         , KEYALL)
 KEYWORD(__builtin_FUNCTION          , KEYALL)
+KEYWORD(__builtin_FUNCSIG           , KEYMS)
 KEYWORD(__builtin_LINE              , KEYALL)
 KEYWORD(__builtin_COLUMN            , KEYALL)
 KEYWORD(__builtin_source_location   , KEYCXX)
@@ -519,6 +520,7 @@ TYPE_TRAIT_1(__has_unique_object_representations,
 
 // Clang-only C++ Type Traits
 TYPE_TRAIT_1(__is_trivially_relocatable, IsTriviallyRelocatable, KEYCXX)
+TYPE_TRAIT_1(__is_trivially_equality_comparable, IsTriviallyEqualityComparable, KEYCXX)
 TYPE_TRAIT_1(__is_bounded_array, IsBoundedArray, KEYCXX)
 TYPE_TRAIT_1(__is_unbounded_array, IsUnboundedArray, KEYCXX)
 TYPE_TRAIT_1(__is_nullptr, IsNullPointer, KEYCXX)
@@ -940,6 +942,9 @@ ANNOTATION(module_end)
 // Annotation for a header_name token that has been looked up and transformed
 // into the name of a header unit.
 ANNOTATION(header_unit)
+
+// Annotation for end of input in clang-repl.
+ANNOTATION(repl_input_end)
 
 #undef PRAGMA_ANNOTATION
 #undef ANNOTATION

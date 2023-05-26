@@ -21,8 +21,6 @@ define void @masked_store_v2f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov v0.h[0], v2.h[0]
 ; CHECK-NEXT:    mov w8, v2.s[1]
 ; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    shl v0.4h, v0.4h, #15
-; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
 ; CHECK-NEXT:    ret

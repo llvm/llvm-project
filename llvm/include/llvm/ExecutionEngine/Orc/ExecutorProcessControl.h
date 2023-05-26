@@ -218,6 +218,33 @@ public:
     return *MemMgr;
   }
 
+  /// Returns the bootstrap map.
+  const StringMap<std::vector<char>> &getBootstrapMap() const {
+    return BootstrapMap;
+  }
+
+  /// Look up and SPS-deserialize a bootstrap map value.
+  ///
+  ///
+  template <typename T, typename SPSTagT>
+  Error getBootstrapMapValue(StringRef Key, std::optional<T> &Val) const {
+    Val = std::nullopt;
+
+    auto I = BootstrapMap.find(Key);
+    if (I == BootstrapMap.end())
+      return Error::success();
+
+    T Tmp;
+    shared::SPSInputBuffer IB(I->second.data(), I->second.size());
+    if (!shared::SPSArgList<SPSTagT>::deserialize(IB, Tmp))
+      return make_error<StringError>("Could not deserialize value for key " +
+                                         Key,
+                                     inconvertibleErrorCode());
+
+    Val = std::move(Tmp);
+    return Error::success();
+  }
+
   /// Returns the bootstrap symbol map.
   const StringMap<ExecutorAddr> &getBootstrapSymbolsMap() const {
     return BootstrapSymbols;
@@ -372,6 +399,7 @@ protected:
   JITDispatchInfo JDI;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
+  StringMap<std::vector<char>> BootstrapMap;
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 

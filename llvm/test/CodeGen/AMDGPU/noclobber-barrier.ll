@@ -543,8 +543,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}no_alias_atomic_rmw_then_clobber:
-; CGN: global_store_dword
-; CGN: global_store_dword
+; GCN: global_store_dword
+; GCN: global_store_dword
 ; GCN: ds_add_u32
 ; GCN: global_load_dword
 ; GCN: global_store_dword
@@ -574,7 +574,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}no_alias_atomic_rmw_then_no_alias_store:
-; CGN: global_store_dword
+; GCN: global_store_dword
 ; GCN: ds_add_u32
 ; GCN: s_load_dword s
 ; GCN-NOT: global_load_dword

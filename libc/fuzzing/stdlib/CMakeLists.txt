@@ -18,6 +18,7 @@ add_libc_fuzzer(
 
 add_libc_fuzzer(
   strtofloat_fuzz
+  NEED_MPFR
   SRCS
     strtofloat_fuzz.cpp
   DEPENDS

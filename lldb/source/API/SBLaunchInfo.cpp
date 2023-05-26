@@ -17,6 +17,7 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Utility/Listener.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 
 using namespace lldb;
@@ -147,7 +148,8 @@ uint32_t SBLaunchInfo::GetNumArguments() {
 const char *SBLaunchInfo::GetArgumentAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
-  return m_opaque_sp->GetArguments().GetArgumentAtIndex(idx);
+  return ConstString(m_opaque_sp->GetArguments().GetArgumentAtIndex(idx))
+      .GetCString();
 }
 
 void SBLaunchInfo::SetArguments(const char **argv, bool append) {
@@ -175,7 +177,7 @@ const char *SBLaunchInfo::GetEnvironmentEntryAtIndex(uint32_t idx) {
 
   if (idx > GetNumEnvironmentEntries())
     return nullptr;
-  return m_opaque_sp->GetEnvp()[idx];
+  return ConstString(m_opaque_sp->GetEnvp()[idx]).GetCString();
 }
 
 void SBLaunchInfo::SetEnvironmentEntries(const char **envp, bool append) {
@@ -232,7 +234,7 @@ void SBLaunchInfo::SetLaunchFlags(uint32_t flags) {
 const char *SBLaunchInfo::GetProcessPluginName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetProcessPluginName();
+  return ConstString(m_opaque_sp->GetProcessPluginName()).GetCString();
 }
 
 void SBLaunchInfo::SetProcessPluginName(const char *plugin_name) {
@@ -314,7 +316,7 @@ void SBLaunchInfo::SetLaunchEventData(const char *data) {
 const char *SBLaunchInfo::GetLaunchEventData() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetLaunchEventData();
+  return ConstString(m_opaque_sp->GetLaunchEventData()).GetCString();
 }
 
 void SBLaunchInfo::SetDetachOnError(bool enable) {
@@ -386,4 +388,25 @@ void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
   llvm::StringRef class_name = metadata_sp ? metadata_sp->GetClassName() : "";
   metadata_sp = std::make_shared<ScriptedMetadata>(class_name, dict_sp);
   m_opaque_sp->SetScriptedMetadata(metadata_sp);
+}
+
+SBListener SBLaunchInfo::GetShadowListener() {
+  LLDB_INSTRUMENT_VA(this);
+
+  lldb::ListenerSP shadow_sp = m_opaque_sp->GetShadowListener();
+  if (!shadow_sp)
+    return SBListener();
+  return SBListener(shadow_sp);
+}
+
+void SBLaunchInfo::SetShadowListener(SBListener &listener) {
+  LLDB_INSTRUMENT_VA(this, listener);
+
+  ListenerSP listener_sp = listener.GetSP();
+  if (listener_sp && listener.IsValid())
+    listener_sp->SetShadow(true);
+  else
+    listener_sp = nullptr;
+
+  m_opaque_sp->SetShadowListener(listener_sp);
 }

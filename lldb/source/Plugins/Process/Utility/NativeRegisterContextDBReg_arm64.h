@@ -55,7 +55,14 @@ public:
   enum DREGType { eDREGTypeWATCH = 0, eDREGTypeBREAK };
 
 protected:
-  // Debug register info for hardware breakpoints and watchpoints management.
+  /// Debug register info for hardware breakpoints and watchpoints management.
+  /// Watchpoints: For a user requested size 4 at addr 0x1004, where BAS
+  /// watchpoints are at doubleword (8-byte) alignment.
+  ///   \a real_addr is 0x1004
+  ///   \a address is 0x1000
+  ///   size is 8
+  ///   If a one-byte write to 0x1006 is the most recent watchpoint trap,
+  ///   \a hit_addr is 0x1006
   struct DREG {
     lldb::addr_t address;  // Breakpoint/watchpoint address value.
     lldb::addr_t hit_addr; // Address at which last watchpoint trigger exception

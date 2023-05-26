@@ -24,6 +24,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <set>
 #include <string>

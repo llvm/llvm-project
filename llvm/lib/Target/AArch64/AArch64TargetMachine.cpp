@@ -215,7 +215,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64ConditionOptimizerPass(*PR);
   initializeAArch64DeadRegisterDefinitionsPass(*PR);
   initializeAArch64ExpandPseudoPass(*PR);
-  initializeAArch64KCFIPass(*PR);
   initializeAArch64LoadStoreOptPass(*PR);
   initializeAArch64MIPeepholeOptPass(*PR);
   initializeAArch64SIMDInstrOptPass(*PR);
@@ -230,6 +229,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeFalkorHWPFFixPass(*PR);
   initializeFalkorMarkStridedAccessesLegacyPass(*PR);
   initializeLDTLSCleanupPass(*PR);
+  initializeKCFIPass(*PR);
   initializeSMEABIPass(*PR);
   initializeSVEIntrinsicOptsPass(*PR);
   initializeAArch64SpeculationHardeningPass(*PR);
@@ -510,7 +510,6 @@ public:
   bool addLegalizeMachineIR() override;
   void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
-  void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
   void addMachineSSAOptimization() override;
   bool addILPOpts() override;
@@ -672,10 +671,12 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (getOptLevel() == CodeGenOpt::None)
+  if (getOptLevel() == CodeGenOpt::None) {
     addPass(createAArch64O0PreLegalizerCombiner());
-  else {
+    addPass(new Localizer());
+  } else {
     addPass(createAArch64PreLegalizerCombiner());
+    addPass(new Localizer());
     if (EnableGISelLoadStoreOptPreLegal)
       addPass(new LoadStoreOpt());
   }
@@ -699,10 +700,6 @@ void AArch64PassConfig::addPreRegBankSelect() {
 bool AArch64PassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
   return false;
-}
-
-void AArch64PassConfig::addPreGlobalInstructionSelect() {
-  addPass(new Localizer());
 }
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
@@ -775,7 +772,7 @@ void AArch64PassConfig::addPreSched2() {
       addPass(createAArch64LoadStoreOptimizationPass());
   }
   // Emit KCFI checks for indirect calls.
-  addPass(createAArch64KCFIPass());
+  addPass(createKCFIPass());
 
   // The AArch64SpeculationHardeningPass destroys dominator tree and natural
   // loop info, which is needed for the FalkorHWPFFixPass and also later on.

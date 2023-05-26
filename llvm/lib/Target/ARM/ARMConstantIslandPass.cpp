@@ -2119,8 +2119,7 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
       break;
     }
 
-    for (unsigned K = 0, E = I->getNumOperands(); K != E; ++K) {
-      const MachineOperand &MO = I->getOperand(K);
+    for (const MachineOperand &MO : I->operands()) {
       if (!MO.isReg() || !MO.getReg())
         continue;
       if (MO.isDef() && MO.getReg() == BaseReg)
@@ -2138,8 +2137,7 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
   // Check the add really is removable, and that nothing else in the block
   // clobbers BaseReg.
   for (++I; &*I != JumpMI; ++I) {
-    for (unsigned K = 0, E = I->getNumOperands(); K != E; ++K) {
-      const MachineOperand &MO = I->getOperand(K);
+    for (const MachineOperand &MO : I->operands()) {
       if (!MO.isReg() || !MO.getReg())
         continue;
       if (MO.isDef() && MO.getReg() == BaseReg)
@@ -2198,8 +2196,7 @@ static void RemoveDeadAddBetweenLEAAndJT(MachineInstr *LEAMI,
   // Ensure EntryReg is not clobbered or used.
   MachineBasicBlock::iterator J(RemovableAdd);
   for (++J; &*J != JumpMI; ++J) {
-    for (unsigned K = 0, E = J->getNumOperands(); K != E; ++K) {
-      const MachineOperand &MO = J->getOperand(K);
+    for (const MachineOperand &MO : J->operands()) {
       if (!MO.isReg() || !MO.getReg())
         continue;
       if (MO.isDef() && MO.getReg() == EntryReg)

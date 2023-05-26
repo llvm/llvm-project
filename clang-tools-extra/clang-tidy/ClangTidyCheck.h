@@ -407,7 +407,6 @@ public:
 
 private:
   void run(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  StringRef getID() const override { return CheckName; }
   std::string CheckName;
   ClangTidyContext *Context;
 
@@ -422,6 +421,7 @@ protected:
   bool areDiagsSelfContained() const {
     return Context->areDiagsSelfContained();
   }
+  StringRef getID() const override { return CheckName; }
 };
 
 /// Read a named option from the ``Context`` and parse it as a bool.

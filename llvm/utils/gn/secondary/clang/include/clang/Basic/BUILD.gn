@@ -163,3 +163,18 @@ clang_tablegen("riscv_vector_builtin_sema") {
   args = [ "-gen-riscv-vector-builtin-sema" ]
   td_file = "riscv_vector.td"
 }
+
+clang_tablegen("riscv_sifive_vector_builtins") {
+  args = [ "-gen-riscv-sifive-vector-builtins" ]
+  td_file = "riscv_sifive_vector.td"
+}
+
+clang_tablegen("riscv_sifive_vector_builtin_cg") {
+  args = [ "-gen-riscv-sifive-vector-builtin-codegen" ]
+  td_file = "riscv_sifive_vector.td"
+}
+
+clang_tablegen("riscv_sifive_vector_builtin_sema") {
+  args = [ "-gen-riscv-sifive-vector-builtin-sema" ]
+  td_file = "riscv_sifive_vector.td"
+}

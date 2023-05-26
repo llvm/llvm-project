@@ -862,6 +862,8 @@ td_library(
         "//mlir:include/mlir/Bindings/Python/Attributes.td",
     ],
     deps = [
+        "//mlir:CallInterfacesTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
         "//mlir:OpBaseTdFiles",
         "//mlir:TransformDialectTdFiles",
     ],
@@ -925,13 +927,35 @@ gentbl_filegroup(
     ],
 )
 
+gentbl_filegroup(
+    name = "PDLTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=transform_pdl_extension",
+            ],
+            "mlir/dialects/_transform_pdl_extension_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/TransformPDLExtensionOps.td",
+    deps = [
+        ":TransformOpsPyTdFiles",
+        "//mlir:TransformPDLExtensionTdFiles",
+    ],
+)
+
 filegroup(
     name = "TransformOpsPyFiles",
     srcs = [
         "mlir/dialects/_loop_transform_ops_ext.py",
         "mlir/dialects/_structured_transform_ops_ext.py",
         "mlir/dialects/_transform_ops_ext.py",
+        "mlir/dialects/_transform_pdl_extension_ops_ext.py",
         ":LoopTransformOpsPyGen",
+        ":PDLTransformOpsPyGen",
         ":StructuredTransformOpsPyGen",
         ":TransformOpsPyGen",
     ],

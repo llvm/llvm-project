@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++98 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -std=c++11 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++98 %s -Wuninitialized
@@ -11,6 +14,9 @@
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++98 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -std=c++11 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_null_allocator;
@@ -145,7 +151,7 @@ T tmain(T argc) {
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
-#pragma omp target teams distribute parallel for reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp target teams distribute parallel for reduction(- : da) // expected-error 2 {{const-qualified variable cannot be reduction}} omp52-warning 3 {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   for (int j=0; j<100; j++) foo();
@@ -232,7 +238,7 @@ int main(int argc, char **argv) {
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
-#pragma omp target teams distribute parallel for reduction(- : da, z) // expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp target teams distribute parallel for reduction(- : da, z) // expected-error {{const-qualified variable cannot be reduction}} omp52-warning {{minus(-) operator for reductions is deprecated; use + or user defined reduction instead}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   for (int j=0; j<100; j++) foo();

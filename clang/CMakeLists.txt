@@ -61,7 +61,7 @@ if(CLANG_BUILT_STANDALONE)
   option(LLVM_INSTALL_TOOLCHAIN_ONLY
     "Only include toolchain files in the 'install' target." OFF)
 
-  option(LLVM_FORCE_USE_OLD_HOST_TOOLCHAIN
+  option(LLVM_FORCE_USE_OLD_TOOLCHAIN
     "Set to ON to force using an old, unsupported host toolchain." OFF)
   option(CLANG_ENABLE_BOOTSTRAP "Generate the clang bootstrap target" OFF)
   option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
@@ -613,6 +613,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
       # variable, and have LLVM's CMake append the envar to the archiver calls.
       set(LTO_LIBRARY -DDARWIN_LTO_LIBRARY=${LLVM_SHLIB_OUTPUT_INTDIR}/libLTO.dylib
         -DDYLD_LIBRARY_PATH=${LLVM_LIBRARY_OUTPUT_INTDIR})
+    elseif(MSVC)
+      add_dependencies(clang-bootstrap-deps llvm-lib)
+      set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-lib)
     elseif(NOT WIN32)
       add_dependencies(clang-bootstrap-deps llvm-ar llvm-ranlib)
       if(NOT BOOTSTRAP_LLVM_ENABLE_LLD AND LLVM_BINUTILS_INCDIR)
@@ -657,8 +660,6 @@ if (CLANG_ENABLE_BOOTSTRAP)
     LLVM_VERSION_SUFFIX
     LLVM_BINUTILS_INCDIR
     CLANG_REPOSITORY_STRING
-    CMAKE_C_COMPILER_LAUNCHER
-    CMAKE_CXX_COMPILER_LAUNCHER
     CMAKE_MAKE_PROGRAM
     CMAKE_OSX_ARCHITECTURES
     CMAKE_BUILD_TYPE
@@ -857,9 +858,8 @@ endif()
 
 if (CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
   set(CLANG_PATH ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
-  set(CLANGXX_PATH ${CLANG_PATH}++)
   set(CLANG_INSTRUMENTED ${CLANG_PATH}-bolt.inst)
-  set(CLANGXX_INSTRUMENTED ${CLANGXX_PATH}-bolt.inst)
+  set(BOLT_FDATA ${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/prof.fdata)
 
   # Instrument clang with BOLT
   add_custom_target(clang-instrumented
@@ -869,70 +869,8 @@ if (CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
     DEPENDS clang llvm-bolt
     COMMAND llvm-bolt ${CLANG_PATH} -o ${CLANG_INSTRUMENTED}
       -instrument --instrumentation-file-append-pid
-      --instrumentation-file=${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
+      --instrumentation-file=${BOLT_FDATA}
     COMMENT "Instrumenting clang binary with BOLT"
-    VERBATIM
-  )
-
-  # Make a symlink from clang-bolt.inst to clang++-bolt.inst
-  add_custom_target(clang++-instrumented
-    DEPENDS ${CLANGXX_INSTRUMENTED}
-  )
-  add_custom_command(OUTPUT ${CLANGXX_INSTRUMENTED}
-    DEPENDS clang-instrumented
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-      ${CLANG_INSTRUMENTED}
-      ${CLANGXX_INSTRUMENTED}
-    COMMENT "Creating symlink from BOLT instrumented clang to clang++"
-    VERBATIM
-  )
-
-  # Build specified targets with instrumented Clang to collect the profile
-  set(STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt-instrumented-clang-stamps/)
-  set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt-instrumented-clang-bins/)
-  set(build_configuration "$<CONFIG>")
-  include(ExternalProject)
-  ExternalProject_Add(bolt-instrumentation-profile
-    DEPENDS clang++-instrumented
-    PREFIX bolt-instrumentation-profile
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}
-    STAMP_DIR ${STAMP_DIR}
-    BINARY_DIR ${BINARY_DIR}
-    EXCLUDE_FROM_ALL 1
-    CMAKE_ARGS
-                ${CLANG_BOLT_INSTRUMENT_EXTRA_CMAKE_FLAGS}
-                # We shouldn't need to set this here, but INSTALL_DIR doesn't
-                # seem to work, so instead I'm passing this through
-                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-                -DCMAKE_C_COMPILER=${CLANG_INSTRUMENTED}
-                -DCMAKE_CXX_COMPILER=${CLANGXX_INSTRUMENTED}
-                -DCMAKE_ASM_COMPILER=${CLANG_INSTRUMENTED}
-                -DCMAKE_ASM_COMPILER_ID=Clang
-                -DCMAKE_BUILD_TYPE=Release
-                -DLLVM_ENABLE_PROJECTS=${CLANG_BOLT_INSTRUMENT_PROJECTS}
-                -DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}
-    BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR}
-                                   --config ${build_configuration}
-                                   --target ${CLANG_BOLT_INSTRUMENT_TARGETS}
-    INSTALL_COMMAND ""
-    STEP_TARGETS configure build
-    USES_TERMINAL_CONFIGURE 1
-    USES_TERMINAL_BUILD 1
-    USES_TERMINAL_INSTALL 1
-  )
-
-  # Merge profiles into one using merge-fdata
-  add_custom_target(clang-bolt-profile
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
-  )
-  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
-    DEPENDS merge-fdata bolt-instrumentation-profile-build
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND ${Python3_EXECUTABLE}
-      ${CMAKE_CURRENT_SOURCE_DIR}/utils/perf-training/perf-helper.py merge-fdata
-      $<TARGET_FILE:merge-fdata> ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
-      ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Preparing BOLT profile"
     VERBATIM
   )
 
@@ -945,7 +883,7 @@ if (CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
     DEPENDS clang-bolt-profile
     COMMAND llvm-bolt ${CLANG_PATH}
       -o ${CLANG_OPTIMIZED}
-      -data ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
+      -data ${BOLT_FDATA}
       -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions
       -split-all-cold -split-eh -dyno-stats -icf=1 -use-gnu-stack
     COMMAND ${CMAKE_COMMAND} -E rename ${CLANG_OPTIMIZED} $<TARGET_FILE:clang>

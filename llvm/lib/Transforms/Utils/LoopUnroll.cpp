@@ -516,7 +516,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       !EnableFSDiscriminator)
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
-        if (!isa<DbgInfoIntrinsic>(&I))
+        if (!I.isDebugOrPseudoInst())
           if (const DILocation *DIL = I.getDebugLoc()) {
             auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(ULO.Count);
             if (NewDIL)
@@ -876,7 +876,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         while (FixLCSSALoop->getParentLoop() != LatchLoop)
           FixLCSSALoop = FixLCSSALoop->getParentLoop();
 
-      formLCSSARecursively(*FixLCSSALoop, *DT, LI, SE);
+      formLCSSARecursively(*FixLCSSALoop, *DT, LI);
     } else if (PreserveLCSSA) {
       assert(OuterL->isLCSSAForm(*DT) &&
              "Loops should be in LCSSA form after loop-unroll.");

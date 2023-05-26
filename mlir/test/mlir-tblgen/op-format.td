@@ -64,7 +64,7 @@ def OptionalGroupA : TestFormat_Op<[{
 // CHECK-NEXT: result.addAttribute("a", parser.getBuilder().getUnitAttr())
 // CHECK: parser.parseKeyword("bar")
 // CHECK-LABEL: OptionalGroupB::print
-// CHECK: if (!(*this)->getAttr("a"))
+// CHECK: if (!getAAttr())
 // CHECK-NEXT: odsPrinter << ' ' << "foo"
 // CHECK-NEXT: else
 // CHECK-NEXT: odsPrinter << ' ' << "bar"
@@ -74,7 +74,8 @@ def OptionalGroupB : TestFormat_Op<[{
 
 // Optional group anchored on a default-valued attribute:
 // CHECK-LABEL: OptionalGroupC::parse
-//       CHECK: if ((*this)->getAttr("a") != ::mlir::OpBuilder((*this)->getContext()).getStringAttr("default")) {
+
+//       CHECK: if (getAAttr() && getAAttr() != ::mlir::OpBuilder((*this)->getContext()).getStringAttr("default")) {
 //  CHECK-NEXT:   odsPrinter << ' ';
 //  CHECK-NEXT:   odsPrinter.printAttributeWithoutType(getAAttr());
 //  CHECK-NEXT: }

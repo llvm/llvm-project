@@ -261,43 +261,43 @@ if [ -z "$NumJobs" ]; then
 fi
 
 # Projects list
-projects="llvm clang"
+projects="llvm;clang"
 if [ $do_clang_tools = "yes" ]; then
-  projects="$projects clang-tools-extra"
+  projects="${projects:+$projects;}clang-tools-extra"
 fi
 runtimes=""
 if [ $do_rt = "yes" ]; then
-  runtimes="$runtimes compiler-rt"
+  runtimes="${runtimes:+$runtimes;}compiler-rt"
 fi
 if [ $do_libs = "yes" ]; then
-  runtimes="$runtimes libcxx"
+  runtimes="${runtimes:+$runtimes;}libcxx"
   if [ $do_libcxxabi = "yes" ]; then
-    runtimes="$runtimes libcxxabi"
+    runtimes="${runtimes:+$runtimes;}libcxxabi"
   fi
   if [ $do_libunwind = "yes" ]; then
-    runtimes="$runtimes libunwind"
+    runtimes="${runtimes:+$runtimes;}libunwind"
   fi
 fi
 if [ $do_openmp = "yes" ]; then
-  projects="$projects openmp"
+  projects="${projects:+$projects;}openmp"
 fi
 if [ $do_bolt = "yes" ]; then
-  projects="$projects bolt"
+  projects="${projects:+$projects;}bolt"
 fi
 if [ $do_lld = "yes" ]; then
-  projects="$projects lld"
+  projects="${projects:+$projects;}lld"
 fi
 if [ $do_lldb = "yes" ]; then
-  projects="$projects lldb"
+  projects="${projects:+$projects;}lldb"
 fi
 if [ $do_polly = "yes" ]; then
-  projects="$projects polly"
+  projects="${projects:+$projects;}polly"
 fi
 if [ $do_mlir = "yes" ]; then
-  projects="$projects mlir"
+  projects="${projects:+$projects;}mlir"
 fi
 if [ $do_flang = "yes" ]; then
-  projects="$projects flang"
+  projects="${projects:+$projects;}flang"
 fi
 
 # Go to the build directory (may be different from CWD)
@@ -404,17 +404,23 @@ function configure_llvmCore() {
             ;;
     esac
 
-    if [ "$Phase" -eq "3" ]; then
-      project_list=${projects// /;}
-      # Leading spaces will result in ";<runtime name>". This causes a CMake
-      # error because the empty string before the first ';' is treated as an
-      # unknown runtime name.
-      runtimes=$(echo $runtimes | sed -e 's/^\s*//')
-      runtime_list=${runtimes// /;}
-    else
+    # During the first two phases, there is no need to build any of the projects
+    # except clang, since these phases are only meant to produce a bootstrapped
+    # clang compiler, capable of building the third phase.
+    if [ "$Phase" -lt "3" ]; then
       project_list="clang"
-      runtime_list=""
+    else
+      project_list="$projects"
     fi
+    # During the first phase, there is no need to build any of the runtimes,
+    # since this phase is only meant to get a clang compiler, capable of
+    # building itself and any selected runtimes in the second phase.
+    if [ "$Phase" -lt "2" ]; then
+      runtime_list=""
+    else
+      runtime_list="$runtimes"
+    fi
+
     echo "# Using C compiler: $c_compiler"
     echo "# Using C++ compiler: $cxx_compiler"
 

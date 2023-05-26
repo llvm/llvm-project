@@ -6,6 +6,7 @@
 !CHECK: func @_QPlastprivate_character(%[[ARG1:.*]]: !fir.boxchar<1>{{.*}}) {
 !CHECK-DAG: %[[ARG1_UNBOX:.*]]:2 = fir.unboxchar
 !CHECK-DAG: %[[FIVE:.*]] = arith.constant 5 : index
+!CHECK-DAG: %[[ARG1_REF:.*]] = fir.convert %[[ARG1_UNBOX]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,5>>
 
 !CHECK: omp.parallel {
 !CHECK-DAG: %[[ARG1_PVT:.*]] = fir.alloca !fir.char<1,5> {bindc_name = "arg1", 
@@ -24,10 +25,10 @@
 
 ! Testing last iteration check
 !CHECK-NEXT: %[[IV_CMP:.*]] = arith.cmpi eq, %[[INDX_WS]]
-!CHECK: scf.if %[[IV_CMP]] {
+!CHECK: fir.if %[[IV_CMP]] {
 
 ! Testing lastprivate val update
-!CHECK-DAG: %[[CVT:.*]] = fir.convert %[[ARG1_UNBOX]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+!CHECK-DAG: %[[CVT:.*]] = fir.convert %[[ARG1_REF]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 !CHECK-DAG: %[[CVT1:.*]] = fir.convert %[[ARG1_PVT]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 !CHECK-DAG: fir.call @llvm.memmove.p0.p0.i64(%[[CVT]], %[[CVT1]]{{.*}})
 !CHECK-DAG: } 
@@ -52,7 +53,7 @@ end subroutine
 
 ! Testing last iteration check
 !CHECK-DAG: %[[IV_CMP:.*]] = arith.cmpi eq, %[[INDX_WS]]
-!CHECK-DAG: scf.if %[[IV_CMP]] {
+!CHECK-DAG: fir.if %[[IV_CMP]] {
 
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE]] : !fir.ref<i32>
@@ -81,7 +82,7 @@ end subroutine
 
 ! Testing last iteration check
 !CHECK: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
-!CHECK-NEXT: scf.if %[[IV_CMP1]] {
+!CHECK-NEXT: fir.if %[[IV_CMP1]] {
 ! Testing lastprivate val update
 !CHECK-DAG: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1]] : !fir.ref<i32>
 !CHECK-DAG: fir.store %[[CLONE_LD1]] to %[[ARG1]] : !fir.ref<i32>
@@ -112,7 +113,7 @@ end subroutine
 
 !Testing last iteration check
 !CHECK: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
-!CHECK-NEXT: scf.if %[[IV_CMP1]] {
+!CHECK-NEXT: fir.if %[[IV_CMP1]] {
 !Testing lastprivate val update
 !CHECK-DAG: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2]] : !fir.ref<i32>
 !CHECK-DAG: fir.store %[[CLONE_LD2]] to %[[ARG2]] : !fir.ref<i32>
@@ -148,7 +149,7 @@ end subroutine
 
 ! Testing last iteration check
 !CHECK: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
-!CHECK-NEXT: scf.if %[[IV_CMP1]] {
+!CHECK-NEXT: fir.if %[[IV_CMP1]] {
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE2]] : !fir.ref<i32>
 !CHECK-NEXT: fir.store %[[CLONE_LD]] to %[[ARG2]] : !fir.ref<i32>
@@ -179,7 +180,7 @@ end subroutine
 !CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
 ! Testing last iteration check
 !CHECK: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
-!CHECK-NEXT: scf.if %[[IV_CMP1]] {
+!CHECK-NEXT: fir.if %[[IV_CMP1]] {
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE1]] : !fir.ref<i32>
 !CHECK-NEXT: fir.store %[[CLONE_LD]] to %[[ARG1]] : !fir.ref<i32>

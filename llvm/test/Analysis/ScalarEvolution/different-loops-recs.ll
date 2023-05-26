@@ -94,7 +94,7 @@ define void @test_01(i32 %a, i32 %b) {
 ; CHECK:       %s3 = add i32 %is1, %phi5
 ; CHECK-NEXT:  -->  {{{{}}(59 + (2 * %a) + %b),+,6}<%loop1>,+,2}<nw><%loop2>
 ; CHECK:       %s4 = add i32 %phi2, %is2
-; CHECK-NEXT:  -->  {{{{}}(159 + (2 * %b)),+,2}<%loop1>,+,6}<%loop2>
+; CHECK-NEXT:  -->  {{{{}}(159 + (2 * %b)),+,2}<nw><%loop1>,+,6}<%loop2>
 ; CHECK:       %s5 = add i32 %is1, %is2
 ; CHECK-NEXT:  -->  {{{{}}(165 + (2 * %a) + (2 * %b)),+,6}<%loop1>,+,6}<%loop2>
 ; CHECK:       %s6 = add i32 %is2, %is1
@@ -271,9 +271,11 @@ define void @test_04() {
 ; CHECK:       %tmp4 = add nuw nsw i64 %tmp, 1
 ; CHECK-NEXT:  -->  {3,+,1}<nuw><%loop1>
 ; CHECK:       %tmp7 = phi i64 [ %tmp15, %loop2 ], [ 2, %loop1 ]
-; CHECK-NEXT:  -->  {2,+,1}<nuw><nsw><%loop2>
+; CHECK-NEXT:  -->  {2,+,1}<nuw><nsw><%loop2> U: [2,9223372036854775807) S: [2,9223372036854775807)
+; CHECK:       %tmp9 = sext i8 %tmp8 to i64
+; CHECK-NEXT:  -->  (sext i8 %tmp8 to i64) U: [-128,128) S: [-128,128)
 ; CHECK:       %tmp10 = sub i64 %tmp9, %tmp7
-; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i64) + {-2,+,-1}<nw><%loop2>)
+; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i64) + {-2,+,-1}<nsw><%loop2>) U: [9223372036854775682,126) S: [9223372036854775682,126)
 ; CHECK:       %tmp11 = add i64 %tmp10, undef
 ; CHECK-NEXT:  -->  ((sext i8 %tmp8 to i64) + {(-2 + undef),+,-1}<nw><%loop2>)
 ; CHECK:       %tmp13 = trunc i64 %tmp11 to i32

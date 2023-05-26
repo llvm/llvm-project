@@ -154,10 +154,6 @@ if (LLVM_ENABLE_MODULES)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 endif()
 
-if (NOT TARGET pstl::ParallelSTL)
-  message(STATUS "Could not find ParallelSTL, libc++abi will not attempt to use it but the build may fail if the libc++ in use needs it to be available.")
-endif()
-
 include(WarningFlags)
 
 # Build the shared library.
@@ -208,9 +204,6 @@ if (LIBCXXABI_ENABLE_SHARED)
   target_link_libraries(cxxabi_shared
     PUBLIC cxxabi_shared_objects
     PRIVATE ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
-  if (TARGET pstl::ParallelSTL)
-    target_link_libraries(cxxabi_shared PUBLIC pstl::ParallelSTL)
-  endif()
 
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
   if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
@@ -294,9 +287,6 @@ if (LIBCXXABI_ENABLE_STATIC)
   target_link_libraries(cxxabi_static
     PUBLIC cxxabi_static_objects
     PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
-  if (TARGET pstl::ParallelSTL)
-    target_link_libraries(cxxabi_static PUBLIC pstl::ParallelSTL)
-  endif()
 
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
   if (LIBCXXABI_INSTALL_STATIC_LIBRARY)

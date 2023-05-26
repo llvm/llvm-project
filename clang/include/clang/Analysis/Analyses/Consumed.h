@@ -155,6 +155,10 @@ namespace consumed {
     ConsumedStateMap(const ConsumedStateMap &Other)
         : Reachable(Other.Reachable), From(Other.From), VarMap(Other.VarMap) {}
 
+    // The copy assignment operator is defined as deleted pending further
+    // motivation.
+    ConsumedStateMap &operator=(const ConsumedStateMap &) = delete;
+
     /// Warn if any of the parameters being tracked are not in the state
     /// they were declared to be in upon return from a function.
     void checkParamsForReturnTypestate(SourceLocation BlameLoc,
@@ -258,7 +262,7 @@ namespace consumed {
     /// Check a function's CFG for consumed violations.
     ///
     /// We traverse the blocks in the CFG, keeping track of the state of each
-    /// value who's type has uniquness annotations.  If methods are invoked in
+    /// value who's type has uniqueness annotations.  If methods are invoked in
     /// the wrong state a warning is issued.  Each block in the CFG is traversed
     /// exactly once.
     void run(AnalysisDeclContext &AC);

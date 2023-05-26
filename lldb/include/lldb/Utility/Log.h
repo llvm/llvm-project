@@ -265,7 +265,7 @@ private:
 
   void WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
                    llvm::StringRef function);
-  void WriteMessage(const std::string &message);
+  void WriteMessage(llvm::StringRef message);
 
   void Format(llvm::StringRef file, llvm::StringRef function,
               const llvm::formatv_object_base &payload);
@@ -369,5 +369,3 @@ template <typename Cat> Log *GetLog(Cat mask) {
   } while (0)
 
 #endif // LLDB_UTILITY_LOG_H
-
-// TODO: Remove this and fix includes everywhere.

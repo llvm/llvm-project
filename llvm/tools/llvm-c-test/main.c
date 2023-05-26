@@ -68,10 +68,6 @@ static void print_usage(void) {
 }
 
 int main(int argc, char **argv) {
-  LLVMPassRegistryRef pr = LLVMGetGlobalPassRegistry();
-
-  LLVMInitializeCore(pr);
-
   if (argc == 2 && !strcmp(argv[1], "--lazy-new-module-dump")) {
     return llvm_module_dump(true, true);
   } else if (argc == 2 && !strcmp(argv[1], "--new-module-dump")) {

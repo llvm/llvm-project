@@ -29,7 +29,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -43,8 +45,8 @@ using ::testing::Matcher;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
 
-Matcher<const Diag &> withFix(::testing::Matcher<Fix> FixMatcher) {
-  return Field(&Diag::Fixes, ElementsAre(FixMatcher));
+Matcher<const Diag &> withFix(std::vector<::testing::Matcher<Fix>> FixMatcheres) {
+  return Field(&Diag::Fixes, testing::UnorderedElementsAreArray(FixMatcheres));
 }
 
 MATCHER_P2(Diag, Range, Message,
@@ -58,6 +60,8 @@ MATCHER_P3(Fix, Range, Replacement, Message,
   return arg.Message == Message && arg.Edits.size() == 1 &&
          arg.Edits[0].range == Range && arg.Edits[0].newText == Replacement;
 }
+MATCHER_P(FixMessage, Message, "") { return arg.Message == Message; }
+
 
 std::string guard(llvm::StringRef Code) {
   return "#pragma once\n" + Code.str();
@@ -177,27 +181,39 @@ TEST(IncludeCleaner, GenerateMissingHeaderDiags) {
   WithContextValue Ctx(Config::Key, std::move(Cfg));
   Annotations MainFile(R"cpp(
 #include "a.h"
+#include "all.h"
 $insert_b[[]]#include "baz.h"
 #include "dir/c.h"
-$insert_d[[]]#include "fuzz.h"
+$insert_d[[]]$insert_foo[[]]#include "fuzz.h"
 #include "header.h"
 $insert_foobar[[]]#include <e.h>
 $insert_f[[]]$insert_vector[[]]
 
-    void foo() {
-      $b[[b]]();
+#define DEF(X) const Foo *X;
+#define BAZ(X) const X x
 
-      ns::$bar[[Bar]] bar;
-      bar.d();
-      $f[[f]](); 
+  void foo() {
+    $b[[b]]();
 
-      // this should not be diagnosed, because it's ignored in the config
-      buzz(); 
+    ns::$bar[[Bar]] bar;
+    bar.d();
+    $f[[f]]();
 
-      $foobar[[foobar]]();
+    // this should not be diagnosed, because it's ignored in the config
+    buzz();
 
-      std::$vector[[vector]] v;
-    })cpp");
+    $foobar[[foobar]]();
+
+    std::$vector[[vector]] v;
+
+    int var = $FOO[[FOO]];
+
+    $DEF[[DEF]](a);
+
+    $BAR[[BAR]](b);
+
+    BAZ($Foo[[Foo]]);
+})cpp");
 
   TestTU TU;
   TU.Filename = "foo.cpp";
@@ -224,6 +240,13 @@ $insert_f[[]]$insert_vector[[]]
   namespace std { class vector {}; }
   )cpp");
 
+  TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
+  TU.AdditionalFiles["foo.h"] = guard(R"cpp(
+    #define BAR(x) Foo *x
+    #define FOO 1
+    struct Foo{};
+  )cpp");
+
   TU.Code = MainFile.code();
   ParsedAST AST = TU.build();
 
@@ -234,26 +257,51 @@ $insert_f[[]]$insert_vector[[]]
       UnorderedElementsAre(
           AllOf(Diag(MainFile.range("b"),
                      "No header providing \"b\" is directly included"),
-                withFix(Fix(MainFile.range("insert_b"), "#include \"b.h\"\n",
-                            "#include \"b.h\""))),
+                withFix({Fix(MainFile.range("insert_b"), "#include \"b.h\"\n",
+                             "#include \"b.h\""),
+                         FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("bar"),
                      "No header providing \"ns::Bar\" is directly included"),
-                withFix(Fix(MainFile.range("insert_d"),
-                            "#include \"dir/d.h\"\n", "#include \"dir/d.h\""))),
+                withFix({Fix(MainFile.range("insert_d"),
+                             "#include \"dir/d.h\"\n", "#include \"dir/d.h\""),
+                         FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("f"),
                      "No header providing \"f\" is directly included"),
-                withFix(Fix(MainFile.range("insert_f"), "#include <f.h>\n",
-                            "#include <f.h>"))),
+                withFix({Fix(MainFile.range("insert_f"), "#include <f.h>\n",
+                             "#include <f.h>"),
+                         FixMessage("add all missing includes")})),
           AllOf(
               Diag(MainFile.range("foobar"),
                    "No header providing \"foobar\" is directly included"),
-              withFix(Fix(MainFile.range("insert_foobar"),
-                          "#include \"public.h\"\n", "#include \"public.h\""))),
+              withFix({Fix(MainFile.range("insert_foobar"),
+                           "#include \"public.h\"\n", "#include \"public.h\""),
+                       FixMessage("add all missing includes")})),
           AllOf(
               Diag(MainFile.range("vector"),
                    "No header providing \"std::vector\" is directly included"),
-              withFix(Fix(MainFile.range("insert_vector"),
-                          "#include <vector>\n", "#include <vector>")))));
+              withFix({Fix(MainFile.range("insert_vector"),
+                           "#include <vector>\n", "#include <vector>"),
+                       FixMessage("add all missing includes"),})),
+          AllOf(Diag(MainFile.range("FOO"),
+                     "No header providing \"FOO\" is directly included"),
+                withFix({Fix(MainFile.range("insert_foo"),
+                             "#include \"foo.h\"\n", "#include \"foo.h\""),
+                         FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("DEF"),
+                     "No header providing \"Foo\" is directly included"),
+                withFix({Fix(MainFile.range("insert_foo"),
+                             "#include \"foo.h\"\n", "#include \"foo.h\""),
+                         FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("BAR"),
+                     "No header providing \"BAR\" is directly included"),
+                withFix({Fix(MainFile.range("insert_foo"),
+                             "#include \"foo.h\"\n", "#include \"foo.h\""),
+                         FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("Foo"),
+                     "No header providing \"Foo\" is directly included"),
+                withFix({Fix(MainFile.range("insert_foo"),
+                             "#include \"foo.h\"\n", "#include \"foo.h\""),
+                         FixMessage("add all missing includes")}))));
 }
 
 TEST(IncludeCleaner, IWYUPragmas) {
@@ -328,6 +376,205 @@ TEST(IncludeCleaner, NoDiagsForObjC) {
   ParsedAST AST = TU.build();
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
 }
+
+TEST(IncludeCleaner, UmbrellaUsesPrivate) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "private.h"
+    )cpp";
+  TU.AdditionalFiles["private.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "public.h"
+    void foo() {}
+  )cpp");
+  TU.Filename = "public.h";
+  Config Cfg;
+  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
+  WithContextValue Ctx(Config::Key, std::move(Cfg));
+  ParsedAST AST = TU.build();
+  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+}
+
+TEST(IncludeCleaner, MacroExpandedThroughIncludes) {
+  Annotations MainFile(R"cpp(
+  #include "all.h"
+  #define FOO(X) const Foo *X
+  void foo() {
+  #include [["expander.inc"]]
+  }
+)cpp");
+
+  TestTU TU;
+  TU.AdditionalFiles["expander.inc"] = guard("FOO(f1);FOO(f2);");
+  TU.AdditionalFiles["foo.h"] = guard("struct Foo {};");
+  TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
+
+  TU.Code = MainFile.code();
+  ParsedAST AST = TU.build();
+
+  auto Findings = computeIncludeCleanerFindings(AST).MissingIncludes;
+  EXPECT_THAT(Findings, testing::SizeIs(1));
+  auto RefRange = Findings.front().SymRefRange;
+  auto &SM = AST.getSourceManager();
+  EXPECT_EQ(RefRange.file(), SM.getMainFileID());
+  // FIXME: Point at the spelling location, rather than the include.
+  EXPECT_EQ(halfOpenToRange(SM, RefRange.toCharRange(SM)), MainFile.range());
+}
+
+TEST(IncludeCleaner, MissingIncludesAreUnique) {
+  Annotations MainFile(R"cpp(
+    #include "all.h"
+    FOO([[Foo]]);
+  )cpp");
+
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = guard("struct Foo {};");
+  TU.AdditionalFiles["all.h"] = guard(R"cpp(
+    #include "foo.h"
+    #define FOO(X) X y; X z
+  )cpp");
+
+  TU.Code = MainFile.code();
+  ParsedAST AST = TU.build();
+
+  auto Findings = computeIncludeCleanerFindings(AST).MissingIncludes;
+  EXPECT_THAT(Findings, testing::SizeIs(1));
+  auto RefRange = Findings.front().SymRefRange;
+  auto &SM = AST.getSourceManager();
+  EXPECT_EQ(RefRange.file(), SM.getMainFileID());
+  EXPECT_EQ(halfOpenToRange(SM, RefRange.toCharRange(SM)), MainFile.range());
+}
+
+TEST(IncludeCleaner, NoCrash) {
+  TestTU TU;
+  Annotations MainCode(R"cpp(
+    #include "all.h"
+    void test() {
+      [[1s]];
+    }
+    )cpp");
+  TU.Code = MainCode.code();
+  TU.AdditionalFiles["foo.h"] =
+      guard("int operator\"\"s(unsigned long long) { return 0; }");
+  TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
+  ParsedAST AST = TU.build();
+  const auto &MissingIncludes =
+      computeIncludeCleanerFindings(AST).MissingIncludes;
+  EXPECT_THAT(MissingIncludes, testing::SizeIs(1));
+  auto &SM = AST.getSourceManager();
+  EXPECT_EQ(
+      halfOpenToRange(SM, MissingIncludes.front().SymRefRange.toCharRange(SM)),
+      MainCode.range());
+}
+
+TEST(IncludeCleaner, FirstMatchedProvider) {
+  struct {
+    const char *Code;
+    const std::vector<include_cleaner::Header> Providers;
+    const std::optional<include_cleaner::Header> ExpectedProvider;
+  } Cases[] = {
+      {R"cpp(
+        #include "bar.h"
+        #include "foo.h"
+      )cpp",
+       {include_cleaner::Header{"bar.h"}, include_cleaner::Header{"foo.h"}},
+       include_cleaner::Header{"bar.h"}},
+      {R"cpp(
+        #include "bar.h"
+        #include "foo.h"
+      )cpp",
+       {include_cleaner::Header{"foo.h"}, include_cleaner::Header{"bar.h"}},
+       include_cleaner::Header{"foo.h"}},
+      {"#include \"bar.h\"",
+       {include_cleaner::Header{"bar.h"}},
+       include_cleaner::Header{"bar.h"}},
+      {"#include \"bar.h\"", {include_cleaner::Header{"foo.h"}}, std::nullopt},
+      {"#include \"bar.h\"", {}, std::nullopt}};
+  for (const auto &Case : Cases) {
+    Annotations Code{Case.Code};
+    SCOPED_TRACE(Code.code());
+
+    TestTU TU;
+    TU.Code = Code.code();
+    TU.AdditionalFiles["bar.h"] = "";
+    TU.AdditionalFiles["foo.h"] = "";
+
+    auto AST = TU.build();
+    std::optional<include_cleaner::Header> MatchedProvider =
+        firstMatchedProvider(
+            convertIncludes(AST.getSourceManager(),
+                            AST.getIncludeStructure().MainFileIncludes),
+            Case.Providers);
+    EXPECT_EQ(MatchedProvider, Case.ExpectedProvider);
+  }
+}
+
+TEST(IncludeCleaner, BatchFix) {
+  Config Cfg;
+  Cfg.Diagnostics.MissingIncludes = Config::IncludesPolicy::Strict;
+  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
+  WithContextValue Ctx(Config::Key, std::move(Cfg));
+
+  TestTU TU;
+  TU.Filename = "main.cpp";
+  TU.AdditionalFiles["foo.h"] = guard("class Foo;");
+  TU.AdditionalFiles["bar.h"] = guard("class Bar;");
+  TU.AdditionalFiles["all.h"] = guard(R"cpp(
+    #include "foo.h"
+    #include "bar.h"
+  )cpp");
+
+  TU.Code = R"cpp(
+  #include "all.h"
+
+  Foo* foo;
+  )cpp";
+  auto AST = TU.build();
+  EXPECT_THAT(
+      issueIncludeCleanerDiagnostics(AST, TU.Code),
+      UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
+                                    FixMessage("fix all includes")}),
+                           withFix({FixMessage("remove #include directive"),
+                                    FixMessage("fix all includes")})));
+
+  TU.Code = R"cpp(
+  #include "all.h"
+  #include "bar.h"
+
+  Foo* foo;
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(
+      issueIncludeCleanerDiagnostics(AST, TU.Code),
+      UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
+                                    FixMessage("fix all includes")}),
+                           withFix({FixMessage("remove #include directive"),
+                                    FixMessage("remove all unused includes"),
+                                    FixMessage("fix all includes")}),
+                           withFix({FixMessage("remove #include directive"),
+                                   FixMessage("remove all unused includes"),
+                                    FixMessage("fix all includes")})));
+
+  TU.Code = R"cpp(
+  #include "all.h"
+
+  Foo* foo;
+  Bar* bar;
+  )cpp";
+  AST = TU.build();
+  EXPECT_THAT(
+      issueIncludeCleanerDiagnostics(AST, TU.Code),
+      UnorderedElementsAre(withFix({FixMessage("#include \"foo.h\""),
+                                    FixMessage("add all missing includes"),
+                                    FixMessage("fix all includes")}),
+                           withFix({FixMessage("#include \"bar.h\""),
+                                    FixMessage("add all missing includes"),
+                                    FixMessage("fix all includes")}),
+                           withFix({FixMessage("remove #include directive"),
+                                    FixMessage("fix all includes")})));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

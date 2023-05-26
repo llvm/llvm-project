@@ -23,9 +23,9 @@
 
 namespace __interception {
 bool InterceptFunction(const char *name, uptr *ptr_to_real, uptr func,
-                       uptr wrapper);
+                       uptr trampoline);
 bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
-                       uptr func, uptr wrapper);
+                       uptr func, uptr trampoline);
 }  // namespace __interception
 
 #define INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func) \
@@ -33,7 +33,7 @@ bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
       #func,                                      \
       (::__interception::uptr *) & REAL(func),    \
       (::__interception::uptr) & (func),          \
-      (::__interception::uptr) & WRAP(func))
+      (::__interception::uptr) & TRAMPOLINE(func))
 
 // dlvsym is a GNU extension supported by some other platforms.
 #if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD
@@ -42,7 +42,7 @@ bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
       #func, symver,                                          \
       (::__interception::uptr *) & REAL(func),                \
       (::__interception::uptr) & (func),                      \
-      (::__interception::uptr) & WRAP(func))
+      (::__interception::uptr) & TRAMPOLINE(func))
 #else
 #define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver) \
   INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)

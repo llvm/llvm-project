@@ -16,6 +16,9 @@ set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR} CACHE PATH "Path to LLVM source
 set(LLVM_MAIN_INCLUDE_DIR ${LLVM_MAIN_INCLUDE_DIR} CACHE PATH "Path to llvm/include")
 set(LLVM_BINARY_DIR ${LLVM_BINARY_DIR} CACHE PATH "Path to LLVM build tree")
 
+set(LLDB_TEST_LIBCXX_ROOT_DIR "${LLVM_BINARY_DIR}" CACHE PATH
+    "The build root for libcxx. Used in standalone builds to point the API tests to a custom build of libcxx.")
+
 set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")
 
 set(lit_file_name "llvm-lit")

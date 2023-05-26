@@ -47,25 +47,28 @@ void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 static AliasResult getAliasResult(unsigned AS1, unsigned AS2) {
-  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 7, "Addr space out of range");
+  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 8, "Addr space out of range");
 
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
     return AliasResult::MayAlias;
 
 #define ASMay AliasResult::MayAlias
 #define ASNo AliasResult::NoAlias
-  // This array is indexed by address space value enum elements 0 ... to 7
-  static const AliasResult ASAliasRules[8][8] = {
-    /*                    Flat    Global Region Group  Constant Private Const32 Buf Fat Ptr */
-    /* Flat     */        {ASMay, ASMay, ASNo,  ASMay, ASMay,   ASMay,  ASMay,  ASMay},
-    /* Global   */        {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay},
-    /* Region   */        {ASNo,  ASNo,  ASMay, ASNo,  ASNo,    ASNo,   ASNo,   ASNo},
-    /* Group    */        {ASMay, ASNo,  ASNo,  ASMay, ASNo,    ASNo,   ASNo,   ASNo},
-    /* Constant */        {ASMay, ASMay, ASNo,  ASNo,  ASNo,    ASNo,   ASMay,  ASMay},
-    /* Private  */        {ASMay, ASNo,  ASNo,  ASNo,  ASNo,    ASMay,  ASNo,   ASNo},
-    /* Constant 32-bit */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASNo,   ASMay},
-    /* Buffer Fat Ptr  */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay}
+  // This array is indexed by address space value enum elements 0 ... to 8
+  // clang-format off
+  static const AliasResult ASAliasRules[9][9] = {
+    /*                    Flat    Global Region Group  Constant Private Const32 BufFatPtr BufRsrc */
+    /* Flat     */        {ASMay, ASMay, ASNo,  ASMay, ASMay,   ASMay,  ASMay,  ASMay,    ASMay},
+    /* Global   */        {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay,    ASMay},
+    /* Region   */        {ASNo,  ASNo,  ASMay, ASNo,  ASNo,    ASNo,   ASNo,   ASNo,     ASNo},
+    /* Group    */        {ASMay, ASNo,  ASNo,  ASMay, ASNo,    ASNo,   ASNo,   ASNo,     ASNo},
+    /* Constant */        {ASMay, ASMay, ASNo,  ASNo,  ASNo,    ASNo,   ASMay,  ASMay,    ASMay},
+    /* Private  */        {ASMay, ASNo,  ASNo,  ASNo,  ASNo,    ASMay,  ASNo,   ASNo,     ASNo},
+    /* Constant 32-bit */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASNo,   ASMay,    ASMay},
+    /* Buffer Fat Ptr  */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay,    ASMay},
+    /* Buffer Resource */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay,    ASMay},
   };
+  // clang-format on
 #undef ASMay
 #undef ASNo
 

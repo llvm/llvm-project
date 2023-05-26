@@ -94,7 +94,7 @@ public:
 #else
     typedef _Iter iterator_type;
     typedef _If<
-        __is_cpp17_random_access_iterator<_Iter>::value,
+        __has_random_access_iterator_category<_Iter>::value,
         random_access_iterator_tag,
         typename iterator_traits<_Iter>::iterator_category
     > iterator_category;

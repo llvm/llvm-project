@@ -168,7 +168,7 @@ public:
   /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
   virtual std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 uint64_t GotPltSectionVA, const Triple &TargetTriple) const {
+                 const Triple &TargetTriple) const {
     return {};
   }
 };

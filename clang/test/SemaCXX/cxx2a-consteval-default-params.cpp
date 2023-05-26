@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2b %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++23 %s
 
 consteval int undefined();  // expected-note 4 {{declared here}}
 
@@ -78,4 +78,17 @@ namespace ShouldNotCrash {
         F<int> f = x;
     };
     void f(A a = A()) { }
+}
+
+namespace GH62224 {
+  consteval int fwd();
+  template <int i = fwd()>
+  struct C {
+    consteval C(int = fwd()) { }
+    consteval int get() { return i; }
+  };
+
+  consteval int fwd() { return 42; }
+  C<> Val; // No error since fwd is defined already.
+  static_assert(Val.get() == 42);
 }

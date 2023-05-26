@@ -2857,7 +2857,7 @@ void EnqueueVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
   for (const DesignatedInitExpr::Designator &D :
        llvm::reverse(E->designators())) {
     if (D.isFieldDesignator()) {
-      if (FieldDecl *Field = D.getField())
+      if (const FieldDecl *Field = D.getFieldDecl())
         AddMemberRef(Field, D.getFieldLoc());
       continue;
     }
@@ -3796,14 +3796,15 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
 
   CIndexer *CXXIdx = static_cast<CIndexer *>(CIdx);
   FileSystemOptions FileSystemOpts;
+  auto HSOpts = std::make_shared<HeaderSearchOptions>();
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ast_filename, CXXIdx->getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, Diags, FileSystemOpts, /*UseDebugInfo=*/false,
-      CXXIdx->getOnlyLocalDecls(), CaptureDiagsKind::All,
-      /*AllowASTWithCompilerErrors=*/true,
+      ASTUnit::LoadEverything, Diags, FileSystemOpts, HSOpts,
+      /*UseDebugInfo=*/false, CXXIdx->getOnlyLocalDecls(),
+      CaptureDiagsKind::All, /*AllowASTWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/true);
   *out_TU = MakeCXTranslationUnit(CXXIdx, std::move(AU));
   return *out_TU ? CXError_Success : CXError_Failure;
@@ -3964,7 +3965,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
       TUKind, CacheCodeCompletionResults, IncludeBriefCommentsInCodeCompletion,
       /*AllowPCHWithCompilerErrors=*/true, SkipFunctionBodies, SingleFileParse,
       /*UserFilesAreVolatile=*/true, ForSerialization, RetainExcludedCB,
-      CXXIdx->getPCHContainerOperations()->getRawReader().getFormat(),
+      CXXIdx->getPCHContainerOperations()->getRawReader().getFormats().front(),
       &ErrUnit));
 
   // Early failures in LoadFromCommandLine may return with ErrUnit unset.

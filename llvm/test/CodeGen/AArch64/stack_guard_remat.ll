@@ -1,14 +1,16 @@
-; RUN: llc < %s -mtriple=arm64-apple-ios -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=DARWIN
-; RUN: llc < %s -mtriple=arm64-apple-ios -relocation-model=static -no-integrated-as | FileCheck %s -check-prefix=DARWIN
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=PIC-LINUX
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -relocation-model=static -code-model=large -no-integrated-as | FileCheck %s -check-prefix=STATIC-LARGE
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -relocation-model=static -code-model=small -no-integrated-as | FileCheck %s -check-prefix=STATIC-SMALL
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: cat a.ll pic.ll > b.ll
+; RUN: llc < b.ll -mtriple=arm64-apple-ios -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=DARWIN
+; RUN: llc < b.ll -mtriple=arm64-apple-ios -relocation-model=static -no-integrated-as | FileCheck %s -check-prefix=DARWIN
+; RUN: llc < b.ll -mtriple=aarch64-linux-gnu -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=PIC-LINUX
+; RUN: llc < a.ll -mtriple=aarch64-linux-gnu -relocation-model=static -code-model=large -no-integrated-as | FileCheck %s -check-prefix=STATIC-LARGE
+; RUN: llc < a.ll -mtriple=aarch64-linux-gnu -relocation-model=static -code-model=small -no-integrated-as | FileCheck %s -check-prefix=STATIC-SMALL
 
-; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-apple-ios -relocation-model=pic -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=DARWIN,FALLBACK
-; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-apple-ios -relocation-model=static -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=DARWIN,FALLBACK
-; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=aarch64-linux-gnu -relocation-model=pic -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=PIC-LINUX,FALLBACK
-; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=aarch64-linux-gnu -relocation-model=static -code-model=large -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=STATIC-LARGE,FALLBACK
-; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=aarch64-linux-gnu -relocation-model=static -code-model=small -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=STATIC-SMALL,FALLBACK
+; RUN: llc < b.ll -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-apple-ios -relocation-model=pic -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=DARWIN,FALLBACK
+; RUN: llc < b.ll -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-apple-ios -relocation-model=static -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=DARWIN,FALLBACK
+; RUN: llc < b.ll -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=aarch64-linux-gnu -relocation-model=pic -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=PIC-LINUX,FALLBACK
+; RUN: llc < a.ll -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=aarch64-linux-gnu -relocation-model=static -code-model=large -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=STATIC-LARGE,FALLBACK
+; RUN: llc < a.ll -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=aarch64-linux-gnu -relocation-model=static -code-model=small -no-integrated-as 2>&1 | FileCheck %s -check-prefixes=STATIC-SMALL,FALLBACK
 
 ; DARWIN: foo2
 ; DARWIN: adrp [[R0:x[0-9]+]], ___stack_chk_guard@GOTPAGE
@@ -33,6 +35,7 @@
 
 ; FALLBACK-NOT: remark:{{.*}}llvm.lifetime.end
 ; FALLBACK-NOT: remark:{{.*}}llvm.lifetime.start
+;--- a.ll
 define i32 @test_stack_guard_remat() #0 {
 entry:
   %a1 = alloca [256 x i32], align 4
@@ -52,3 +55,7 @@ declare void @foo3(ptr)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 attributes #0 = { nounwind sspstrong "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+;--- pic.ll
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"PIC Level", i32 2}

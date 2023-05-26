@@ -222,7 +222,7 @@ protected:
     } else if (Tp->isFloatingPointTy()) {
       if (getRandom() & 1)
         return ConstantFP::getAllOnesValue(Tp);
-      return ConstantFP::getNullValue(Tp);
+      return ConstantFP::getZero(Tp);
     }
     return UndefValue::get(Tp);
   }
@@ -244,7 +244,7 @@ protected:
     } else if (Tp->isFloatingPointTy()) {
       if (getRandom() & 1)
         return ConstantFP::getAllOnesValue(Tp);
-      return ConstantFP::getNullValue(Tp);
+      return ConstantFP::getZero(Tp);
     } else if (auto *VTp = dyn_cast<FixedVectorType>(Tp)) {
       std::vector<Constant*> TempValues;
       TempValues.reserve(VTp->getNumElements());
@@ -442,7 +442,7 @@ struct ConstModifier: public Modifier {
       APFloat RandomFloat(Ty->getFltSemantics(), RandomInt);
 
       if (getRandom() & 1)
-        return PT->push_back(ConstantFP::getNullValue(Ty));
+        return PT->push_back(ConstantFP::getZero(Ty));
       return PT->push_back(ConstantFP::get(Ty->getContext(), RandomFloat));
     }
 

@@ -163,6 +163,28 @@ def Builtin_Float8E4M3FNUZ : Builtin_FloatType<"Float8E4M3FNUZ"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Float8E4M3B11FNUZType
+
+def Builtin_Float8E4M3B11FNUZ : Builtin_FloatType<"Float8E4M3B11FNUZ"> {
+  let summary = "8-bit floating point with 3 bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it follows
+    similar conventions, with the exception that there are no infinity values,
+    no negative zero, and only one NaN representation. This type has the
+    following characteristics:
+
+      * bit encoding: S1E4M3
+      * exponent bias: 11
+      * infinities: Not supported
+      * NaNs: Supported with sign bit set to 1, exponent bits and mantissa bits set to all 0s
+      * denormals when exponent is 0
+
+    Related to: https://dl.acm.org/doi/10.5555/3454287.3454728
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BFloat16Type
 
 def Builtin_BFloat16 : Builtin_FloatType<"BFloat16"> {
@@ -607,7 +629,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
       "unsigned":$memorySpaceInd)>
   ];
   let extraClassDeclaration = [{
-    using ShapedType::Trait<MemRefType>::clone;
+    using BaseMemRefType::clone;
     using ShapedType::Trait<MemRefType>::getElementTypeBitWidth;
     using ShapedType::Trait<MemRefType>::getRank;
     using ShapedType::Trait<MemRefType>::getNumElements;
@@ -772,7 +794,7 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
     }]>
   ];
   let extraClassDeclaration = [{
-    using ShapedType::Trait<RankedTensorType>::clone;
+    using TensorType::clone;
     using ShapedType::Trait<RankedTensorType>::getElementTypeBitWidth;
     using ShapedType::Trait<RankedTensorType>::getRank;
     using ShapedType::Trait<RankedTensorType>::getNumElements;
@@ -785,6 +807,12 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
     /// This is a builder type that keeps local references to arguments.
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
+
+    /// Return a clone of this type with the given new element type and the same
+    /// shape as this type.
+    RankedTensorType clone(::mlir::Type elementType) {
+      return ::llvm::cast<RankedTensorType>(cloneWith(getShape(), elementType));
+    }
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
@@ -909,7 +937,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
     }]>
   ];
   let extraClassDeclaration = [{
-    using ShapedType::Trait<UnrankedMemRefType>::clone;
+    using BaseMemRefType::clone;
     using ShapedType::Trait<UnrankedMemRefType>::getElementTypeBitWidth;
     using ShapedType::Trait<UnrankedMemRefType>::getRank;
     using ShapedType::Trait<UnrankedMemRefType>::getNumElements;
@@ -924,6 +952,12 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
     /// [deprecated] Returns the memory space in old raw integer representation.
     /// New `Attribute getMemorySpace()` method should be used instead.
     unsigned getMemorySpaceAsInt() const;
+
+    /// Return a clone of this type with the given new element type and the same
+    /// shape as this type.
+    MemRefType clone(::mlir::Type elementType) {
+      return ::llvm::cast<MemRefType>(cloneWith(getShape(), elementType));
+    }
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
@@ -962,7 +996,7 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
     }]>
   ];
   let extraClassDeclaration = [{
-    using ShapedType::Trait<UnrankedTensorType>::clone;
+    using TensorType::clone;
     using ShapedType::Trait<UnrankedTensorType>::getElementTypeBitWidth;
     using ShapedType::Trait<UnrankedTensorType>::getRank;
     using ShapedType::Trait<UnrankedTensorType>::getNumElements;
@@ -1020,7 +1054,7 @@ def Builtin_Vector : Builtin_Type<"Vector", [ShapedTypeInterface], "Type"> {
     // A 1D scalable-length vector that contains a multiple of 4 f32 elements.
     vector<[4]xf32>
 
-    // A 2D scalable-length vector that contains a multiple of 2x8 i8 elements.
+    // A 2D scalable-length vector that contains a multiple of 2x8 f32 elements.
     vector<[2x8]xf32>
 
     // A 2D mixed fixed/scalable vector that contains 4 scalable vectors of 4 f32 elements.
@@ -1050,7 +1084,7 @@ def Builtin_Vector : Builtin_Type<"Vector", [ShapedTypeInterface], "Type"> {
     /// type. In particular, vectors can consist of integer, index, or float
     /// primitives.
     static bool isValidElementType(Type t) {
-      return t.isa<IntegerType, IndexType, FloatType>();
+      return ::llvm::isa<IntegerType, IndexType, FloatType>(t);
     }
 
     /// Returns true if the vector contains scalable dimensions.
@@ -1067,7 +1101,7 @@ def Builtin_Vector : Builtin_Type<"Vector", [ShapedTypeInterface], "Type"> {
     bool hasRank() const { return true; }
 
     /// Clone this vector type with the given shape and element type. If the
-    /// provided shape is `None`, the current shape of the type is used.
+    /// provided shape is `std::nullopt`, the current shape of the type is used.
     VectorType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                          Type elementType) const;
   }];

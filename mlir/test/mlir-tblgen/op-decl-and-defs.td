@@ -126,7 +126,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // DEFS-LABEL: NS::AOp definitions
 
-// DEFS: AOpGenericAdaptorBase::AOpGenericAdaptorBase(::mlir::DictionaryAttr attrs, ::mlir::RegionRange regions) : odsAttrs(attrs), odsRegions(regions)
+// DEFS: AOpGenericAdaptorBase::AOpGenericAdaptorBase(::mlir::DictionaryAttr attrs, const ::mlir::EmptyProperties &properties, ::mlir::RegionRange regions) : odsAttrs(attrs), odsRegions(regions)
 // DEFS: ::mlir::RegionRange AOpGenericAdaptorBase::getSomeRegions()
 // DEFS-NEXT: return odsRegions.drop_front(1);
 // DEFS: ::mlir::RegionRange AOpGenericAdaptorBase::getRegions()

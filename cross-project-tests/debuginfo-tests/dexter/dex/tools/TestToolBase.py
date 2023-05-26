@@ -34,39 +34,45 @@ class TestToolBase(ToolBase):
         add_heuristic_tool_arguments(parser)
 
         parser.add_argument(
-            'test_path',
+            "test_path",
             type=str,
-            metavar='<test-path>',
-            nargs='?',
-            default=os.path.abspath(
-                os.path.join(get_root_directory(), '..', 'tests')),
-            help='directory containing test(s)')
+            metavar="<test-path>",
+            nargs="?",
+            default=os.path.abspath(os.path.join(get_root_directory(), "..", "tests")),
+            help="directory containing test(s)",
+        )
 
         parser.add_argument(
-            '--results-directory',
+            "--results-directory",
             type=str,
-            metavar='<directory>',
+            metavar="<directory>",
             default=None,
-            help='directory to save results (default: none)')
+            help="directory to save results (default: none)",
+        )
 
     def handle_options(self, defaults):
         options = self.context.options
 
         if not options.builder and (options.cflags or options.ldflags):
             self.context.logger.warning(
-                '--cflags and --ldflags will be ignored when not using --builder',
-                enable_prefix=True)
+                "--cflags and --ldflags will be ignored when not using --builder",
+                enable_prefix=True,
+            )
 
         if options.vs_solution:
             options.vs_solution = os.path.abspath(options.vs_solution)
             if not os.path.isfile(options.vs_solution):
-                raise Error('<d>could not find VS solution file</> <r>"{}"</>'
-                            .format(options.vs_solution))
+                raise Error(
+                    '<d>could not find VS solution file</> <r>"{}"</>'.format(
+                        options.vs_solution
+                    )
+                )
         elif options.binary:
             options.binary = os.path.abspath(options.binary)
             if not os.path.isfile(options.binary):
-                raise Error('<d>could not find binary file</> <r>"{}"</>'
-                            .format(options.binary))
+                raise Error(
+                    '<d>could not find binary file</> <r>"{}"</>'.format(options.binary)
+                )
         else:
             try:
                 self.build_script = handle_builder_tool_options(self.context)
@@ -80,10 +86,12 @@ class TestToolBase(ToolBase):
 
         options.test_path = os.path.abspath(options.test_path)
         options.test_path = os.path.normcase(options.test_path)
-        if not os.path.isfile(options.test_path) and not os.path.isdir(options.test_path):
+        if not os.path.isfile(options.test_path) and not os.path.isdir(
+            options.test_path
+        ):
             raise Error(
-                '<d>could not find test path</> <r>"{}"</>'.format(
-                    options.test_path))
+                '<d>could not find test path</> <r>"{}"</>'.format(options.test_path)
+            )
 
         if options.results_directory:
             options.results_directory = os.path.abspath(options.results_directory)
@@ -92,14 +100,17 @@ class TestToolBase(ToolBase):
                     os.makedirs(options.results_directory, exist_ok=True)
                 except OSError as e:
                     raise Error(
-                        '<d>could not create directory</> <r>"{}"</> <y>({})</>'.
-                        format(options.results_directory, e.strerror))
+                        '<d>could not create directory</> <r>"{}"</> <y>({})</>'.format(
+                            options.results_directory, e.strerror
+                        )
+                    )
 
     def go(self) -> ReturnCode:  # noqa
         options = self.context.options
 
         options.executable = os.path.join(
-            self.context.working_directory.path, 'tmp.exe')
+            self.context.working_directory.path, "tmp.exe"
+        )
 
         # Test files contain dexter commands.
         options.test_files = []
@@ -107,21 +118,20 @@ class TestToolBase(ToolBase):
         # contains dexter commands.
         options.source_files = []
         if os.path.isdir(options.test_path):
-            subdirs = sorted([
-                r for r, _, f in os.walk(options.test_path)
-                if 'test.cfg' in f
-            ])
+            subdirs = sorted(
+                [r for r, _, f in os.walk(options.test_path) if "test.cfg" in f]
+            )
 
             for subdir in subdirs:
                 for f in os.listdir(subdir):
                     # TODO: read file extensions from the test.cfg file instead so
                     # that this isn't just limited to C and C++.
                     file_path = os.path.normcase(os.path.join(subdir, f))
-                    if f.endswith('.cpp'):
+                    if f.endswith(".cpp"):
                         options.source_files.append(file_path)
-                    elif f.endswith('.c'):
+                    elif f.endswith(".c"):
                         options.source_files.append(file_path)
-                    elif f.endswith('.dex'):
+                    elif f.endswith(".dex"):
                         options.test_files.append(file_path)
                 # Source files can contain dexter commands too.
                 options.test_files = options.test_files + options.source_files
@@ -130,7 +140,7 @@ class TestToolBase(ToolBase):
         else:
             # We're dealing with a direct file path to a test file. If the file is non
             # .dex, then it must be a source file.
-            if not options.test_path.endswith('.dex'):
+            if not options.test_path.endswith(".dex"):
                 options.source_files = [options.test_path]
             options.test_files = [options.test_path]
             self._run_test(self._get_test_name(options.test_path))
@@ -139,7 +149,7 @@ class TestToolBase(ToolBase):
 
     @staticmethod
     def _is_current_directory(test_directory):
-        return test_directory == '.'
+        return test_directory == "."
 
     def _get_test_name(self, test_path):
         """Get the test name from either the test file, or the sub directory
@@ -147,8 +157,7 @@ class TestToolBase(ToolBase):
         """
         # test names are distinguished by their relative path from the
         # specified test path.
-        test_name = os.path.relpath(test_path,
-                                    self.context.options.test_path)
+        test_name = os.path.relpath(test_path, self.context.options.test_path)
         if self._is_current_directory(test_name):
             test_name = os.path.basename(test_path)
         return test_name

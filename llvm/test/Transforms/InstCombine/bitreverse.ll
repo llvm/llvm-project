@@ -3,9 +3,13 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32"
 
+declare i16 @llvm.bitreverse.i16(i16)
 declare i32 @llvm.bitreverse.i32(i32)
+declare i64 @llvm.bitreverse.i64(i64)
 declare <2 x i8> @llvm.bitreverse.v2i8(<2 x i8>)
+declare <2 x i32> @llvm.bitreverse.v2i32(<2 x i32>)
 declare void @use_i32(i32)
+declare void @use_i64(i64)
 
 ;pairwise reverse
 ;template <typename T>
@@ -286,7 +290,7 @@ define i4 @shuf_bitcast_twice_4bits(i4 %x) {
 ; CHECK-NEXT:    ret i4 [[CAST2]]
 ;
   %cast1 = bitcast i4 %x to <4 x i1>
-  %bitreverse = shufflevector <4 x i1> %cast1, <4 x i1> undef, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
+  %bitreverse = shufflevector <4 x i1> %cast1, <4 x i1> undef, <4 x i32> <i32 poison, i32 2, i32 1, i32 0>
   %cast2 = bitcast <4 x i1> %bitreverse to i4
   ret i4 %cast2
 }
@@ -367,4 +371,140 @@ define i64 @PR59897(i1 %X1_2) {
   %X0_3x2x4x0 = lshr i32 %X8_4x2x3x0, 31
   %X0_3x2x5x0 = zext i32 %X0_3x2x4x0 to i64
   ret i64 %X0_3x2x5x0
+}
+
+; Issue#62236
+; Fold: BITREVERSE( OP( BITREVERSE(x), y ) ) -> OP( x, BITREVERSE(y) )
+
+define i16 @rev_xor_lhs_rev16(i16 %a, i16 %b) #0 {
+; CHECK-LABEL: @rev_xor_lhs_rev16(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[B:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i16 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i16 [[TMP2]]
+;
+  %1 = tail call i16 @llvm.bitreverse.i16(i16 %a)
+  %2 = xor i16 %1, %b
+  %3 = tail call i16 @llvm.bitreverse.i16(i16 %2)
+  ret i16 %3
+}
+
+define i32 @rev_and_rhs_rev32(i32 %a, i32 %b) #0 {
+; CHECK-LABEL: @rev_and_rhs_rev32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %1 = tail call i32 @llvm.bitreverse.i32(i32 %b)
+  %2 = and i32 %a, %1
+  %3 = tail call i32 @llvm.bitreverse.i32(i32 %2)
+  ret i32 %3
+}
+
+define i32 @rev_or_rhs_rev32(i32 %a, i32 %b) #0 {
+; CHECK-LABEL: @rev_or_rhs_rev32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %1 = tail call i32 @llvm.bitreverse.i32(i32 %b)
+  %2 = or i32 %a, %1
+  %3 = tail call i32 @llvm.bitreverse.i32(i32 %2)
+  ret i32 %3
+}
+
+define i64 @rev_or_rhs_rev64(i64 %a, i64 %b) #0 {
+; CHECK-LABEL: @rev_or_rhs_rev64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %1 = tail call i64 @llvm.bitreverse.i64(i64 %b)
+  %2 = or i64 %a, %1
+  %3 = tail call i64 @llvm.bitreverse.i64(i64 %2)
+  ret i64 %3
+}
+
+define i64 @rev_xor_rhs_rev64(i64 %a, i64 %b) #0 {
+; CHECK-LABEL: @rev_xor_rhs_rev64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %1 = tail call i64 @llvm.bitreverse.i64(i64 %b)
+  %2 = xor i64 %a, %1
+  %3 = tail call i64 @llvm.bitreverse.i64(i64 %2)
+  ret i64 %3
+}
+
+define <2 x i32> @rev_xor_rhs_i32vec(<2 x i32> %a, <2 x i32> %b) #0 {
+; CHECK-LABEL: @rev_xor_rhs_i32vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+;
+  %1 = tail call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %b)
+  %2 = xor <2 x i32> %a, %1
+  %3 = tail call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %2)
+  ret <2 x i32> %3
+}
+
+define i64 @rev_and_rhs_rev64_multiuse1(i64 %a, i64 %b) #0 {
+; CHECK-LABEL: @rev_and_rhs_rev64_multiuse1(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret i64 [[TMP4]]
+;
+  %1 = tail call i64 @llvm.bitreverse.i64(i64 %b)
+  %2 = and i64 %a, %1
+  %3 = tail call i64 @llvm.bitreverse.i64(i64 %2)
+  %4 = mul i64 %2, %3 ;increase use of logical op
+  ret i64 %4
+}
+
+define i64 @rev_and_rhs_rev64_multiuse2(i64 %a, i64 %b) #0 {
+; CHECK-LABEL: @rev_and_rhs_rev64_multiuse2(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    ret i64 [[TMP4]]
+;
+  %1 = tail call i64 @llvm.bitreverse.i64(i64 %b)
+  %2 = and i64 %a, %1
+  %3 = tail call i64 @llvm.bitreverse.i64(i64 %2)
+  %4 = mul i64 %1, %3 ;increase use of inner bitreverse
+  ret i64 %4
+}
+
+define i64 @rev_all_operand64(i64 %a, i64 %b) #0 {
+; CHECK-LABEL: @rev_all_operand64(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %1 = tail call i64 @llvm.bitreverse.i64(i64 %a)
+  %2 = tail call i64 @llvm.bitreverse.i64(i64 %b)
+  %3 = and i64 %1, %2
+  %4 = tail call i64 @llvm.bitreverse.i64(i64 %3)
+  ret i64 %4
+}
+
+define i64 @rev_all_operand64_multiuse_both(i64 %a, i64 %b) #0 {
+; CHECK-LABEL: @rev_all_operand64_multiuse_both(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.bitreverse.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[A]], [[B]]
+; CHECK-NEXT:    call void @use_i64(i64 [[TMP1]])
+; CHECK-NEXT:    call void @use_i64(i64 [[TMP2]])
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %1 = tail call i64 @llvm.bitreverse.i64(i64 %a)
+  %2 = tail call i64 @llvm.bitreverse.i64(i64 %b)
+  %3 = and i64 %1, %2
+  %4 = tail call i64 @llvm.bitreverse.i64(i64 %3)
+
+  call void @use_i64(i64 %1)
+  call void @use_i64(i64 %2)
+  ret i64 %4
 }

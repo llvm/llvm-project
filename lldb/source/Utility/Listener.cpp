@@ -35,7 +35,7 @@ public:
 
 Listener::Listener(const char *name)
     : m_name(name), m_broadcasters(), m_broadcasters_mutex(), m_events(),
-      m_events_mutex() {
+      m_events_mutex(), m_is_shadow() {
   Log *log = GetLog(LLDBLog::Object);
   if (log != nullptr)
     LLDB_LOGF(log, "%p Listener::Listener('%s')", static_cast<void *>(this),
@@ -302,7 +302,8 @@ bool Listener::FindNextEventInternal(
       // to return it so it should be okay to get the next event off the queue
       // here - and it might be useful to do that in the "DoOnRemoval".
       lock.unlock();
-      event_sp->DoOnRemoval();
+      if (!m_is_shadow)
+        event_sp->DoOnRemoval();
     }
     return true;
   }

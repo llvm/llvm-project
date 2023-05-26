@@ -10,7 +10,7 @@
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/AMDGPU/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Pass/Pass.h"
@@ -48,7 +48,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Location loc = gpuOp.getLoc();
     Value memref = adaptor.getMemref();
     Value unconvertedMemref = gpuOp.getMemref();
-    MemRefType memrefType = unconvertedMemref.getType().cast<MemRefType>();
+    MemRefType memrefType = cast<MemRefType>(unconvertedMemref.getType());
 
     if (chipset.majorVersion < 9)
       return gpuOp.emitOpError("Raw buffer ops require GCN or higher");
@@ -62,6 +62,14 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     else
       wantedDataType = gpuOp.getODSResults(0)[0].getType();
 
+    Value atomicCmpData = Value();
+    // Operand index 1 of a load is the indices, trying to read them can crash.
+    if (storeData) {
+      Value maybeCmpData = adaptor.getODSOperands(1)[0];
+      if (maybeCmpData != memref)
+        atomicCmpData = maybeCmpData;
+    }
+
     Type llvmWantedDataType = this->typeConverter->convertType(wantedDataType);
 
     Type i32 = rewriter.getI32Type();
@@ -73,9 +81,17 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // If we want to load a vector<NxT> with total size <= 32
     // bits, use a scalar load and bitcast it. Similarly, if bitsize(T) < 32
     // and the total load size is >= 32, use a vector load of N / (bitsize(T) /
-    // 32) x i32 and bitcast.
+    // 32) x i32 and bitcast. Also, the CAS intrinsic requires integer operands,
+    // so bitcast any floats to integers.
     Type llvmBufferValType = llvmWantedDataType;
-    if (auto dataVector = wantedDataType.dyn_cast<VectorType>()) {
+    if (atomicCmpData) {
+      if (isa<VectorType>(wantedDataType))
+        return gpuOp.emitOpError("vector compare-and-swap does not exist");
+      if (auto floatType = dyn_cast<FloatType>(wantedDataType))
+        llvmBufferValType = this->getTypeConverter()->convertType(
+            rewriter.getIntegerType(floatType.getWidth()));
+    }
+    if (auto dataVector = dyn_cast<VectorType>(wantedDataType)) {
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
       uint32_t totalBits = elemBits * dataVector.getNumElements();
       if (totalBits > maxVectorOpWidth)
@@ -106,6 +122,16 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
         args.push_back(castForStore);
       } else {
         args.push_back(storeData);
+      }
+    }
+
+    if (atomicCmpData) {
+      if (llvmBufferValType != llvmWantedDataType) {
+        Value castForCmp = rewriter.create<LLVM::BitcastOp>(
+            loc, llvmBufferValType, atomicCmpData);
+        args.push_back(castForCmp);
+      } else {
+        args.push_back(atomicCmpData);
       }
     }
 
@@ -286,7 +312,7 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
 static Value mfmaConcatIfNeeded(ConversionPatternRewriter &rewriter,
                                 Location loc, Value input) {
   Type inputType = input.getType();
-  if (auto vectorType = inputType.dyn_cast<VectorType>()) {
+  if (auto vectorType = dyn_cast<VectorType>(inputType)) {
     if (!vectorType.getElementType().isInteger(8))
       return input;
     int64_t numBytes = vectorType.getNumElements();
@@ -316,10 +342,10 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   uint32_t m = mfma.getM(), n = mfma.getN(), k = mfma.getK(),
            b = mfma.getBlocks();
   Type sourceElem = mfma.getSourceA().getType();
-  if (auto sourceType = sourceElem.dyn_cast<VectorType>())
+  if (auto sourceType = dyn_cast<VectorType>(sourceElem))
     sourceElem = sourceType.getElementType();
   Type destElem = mfma.getDestC().getType();
-  if (auto destType = destElem.dyn_cast<VectorType>())
+  if (auto destType = dyn_cast<VectorType>(destElem))
     destElem = destType.getElementType();
 
   if (sourceElem.isF32() && destElem.isF32()) {
@@ -380,7 +406,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
       return ROCDL::mfma_f32_16x16x8bf16::getOperationName();
   }
 
-  if (sourceElem.isa<IntegerType>() && destElem.isInteger(32)) {
+  if (isa<IntegerType>(sourceElem) && destElem.isInteger(32)) {
     if (m == 32 && n == 32 && k == 4 && b == 2)
       return ROCDL::mfma_i32_32x32x4i8::getOperationName();
     if (m == 16 && n == 16 && k == 4 && b == 4)
@@ -409,7 +435,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
     // Known to be correct because there are no scalar f8 instructions and
     // because a length mismatch will have been caught by the verifier.
     Type sourceBElem =
-        mfma.getSourceB().getType().cast<VectorType>().getElementType();
+        cast<VectorType>(mfma.getSourceB().getType()).getElementType();
     if (m == 16 && n == 16 && k == 32 && b == 1) {
       if (sourceBElem.isFloat8E5M2FNUZ())
         return ROCDL::mfma_f32_16x16x32_bf8_bf8::getOperationName();
@@ -427,7 +453,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   if (sourceElem.isFloat8E4M3FNUZ() && destElem.isF32() &&
       chipset.minorVersion >= 0x40) {
     Type sourceBElem =
-        mfma.getSourceB().getType().cast<VectorType>().getElementType();
+        cast<VectorType>(mfma.getSourceB().getType()).getElementType();
     if (m == 16 && n == 16 && k == 32 && b == 1) {
       if (sourceBElem.isFloat8E5M2FNUZ())
         return ROCDL::mfma_f32_16x16x32_fp8_bf8::getOperationName();
@@ -529,6 +555,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
       RawBufferOpLowering<RawBufferAtomicFmaxOp, ROCDL::RawBufferAtomicFMaxOp>,
       RawBufferOpLowering<RawBufferAtomicSmaxOp, ROCDL::RawBufferAtomicSMaxOp>,
       RawBufferOpLowering<RawBufferAtomicUminOp, ROCDL::RawBufferAtomicUMinOp>,
+      RawBufferOpLowering<RawBufferAtomicCmpswapOp,
+                          ROCDL::RawBufferAtomicCmpSwap>,
       MFMAOpLowering>(converter, chipset);
 }
 

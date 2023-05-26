@@ -157,26 +157,13 @@ define <16 x i8> @narrow_unsigned_v16i8(<8 x i16> %low, <8 x i16> %high) {
 ; CHECK-SAME: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <16 x i8> @llvm.wasm.shuffle(
-  <16 x i8>, <16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32,
-  i32, i32, i32, i32, i32)
+  <16 x i8>, <16 x i8>, i32 immarg, i32 immarg, i32 immarg, i32 immarg,
+  i32 immarg, i32 immarg, i32 immarg, i32 immarg, i32 immarg, i32 immarg,
+  i32 immarg, i32 immarg, i32 immarg, i32 immarg, i32 immarg, i32 immarg)
 define <16 x i8> @shuffle_v16i8(<16 x i8> %x, <16 x i8> %y) {
   %res = call <16 x i8> @llvm.wasm.shuffle(<16 x i8> %x, <16 x i8> %y,
       i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 35)
-  ret <16 x i8> %res
-}
-
-; CHECK-LABEL: shuffle_undef_v16i8:
-; NO-CHECK-NOT: i8x16
-; CHECK-NEXT: .functype shuffle_undef_v16i8 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
-; CHECK-SAME: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-define <16 x i8> @shuffle_undef_v16i8(<16 x i8> %x, <16 x i8> %y) {
-  %res = call <16 x i8> @llvm.wasm.shuffle(<16 x i8> %x, <16 x i8> %y,
-      i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-      i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
-      i32 undef, i32 undef, i32 undef, i32 2)
   ret <16 x i8> %res
 }
 

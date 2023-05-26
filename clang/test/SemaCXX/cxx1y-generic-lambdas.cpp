@@ -259,7 +259,7 @@ int test() {
 {
   int i = 10; //expected-note 3{{declared here}}
   auto L = [](auto a) {
-    return [](auto b) { //expected-note 3{{begins here}} expected-note 6 {{capture 'i' by}} expected-note 6 {{default capture by}}
+    return [](auto b) { //expected-note 3{{begins here}} expected-note 6 {{capture 'i' by}} expected-note 6 {{default capture by}} expected-note {{while substituting into a lambda}}
       i = b;  //expected-error 3{{cannot be implicitly captured}}
       return b;
     };

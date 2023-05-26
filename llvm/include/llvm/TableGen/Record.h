@@ -142,8 +142,6 @@ public:
   std::string getAsString() const override;
 
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
-
-  bool typeIsA(const RecTy *RHS) const override;
 };
 
 /// 'int' - Represent an integer value of no particular size
@@ -316,7 +314,6 @@ protected:
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
-    IK_VarListElementInit,
     IK_VarBitInit,
     IK_VarDefInit,
     IK_LastTypedInit,
@@ -386,14 +383,6 @@ public:
     return nullptr;
   }
 
-  /// This function is used to implement the list slice
-  /// selection operator.  Given a value, it selects the specified list
-  /// elements, returning them as a new \p Init of type \p list. If it
-  /// is not legal to use the slice operator, null is returned.
-  virtual Init *convertInitListSlice(ArrayRef<unsigned> Elements) const {
-    return nullptr;
-  }
-
   /// This function is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named
   /// field if they are of type record.
@@ -445,7 +434,6 @@ public:
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
-  Init *convertInitListSlice(ArrayRef<unsigned> Elements) const override;
 
   /// This method is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named field if
@@ -726,8 +714,6 @@ public:
 
   Record *getElementAsRecord(unsigned i) const;
 
-  Init *convertInitListSlice(ArrayRef<unsigned> Elements) const override;
-
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   /// This method is used by classes that refer to other
@@ -859,6 +845,10 @@ public:
     LISTCONCAT,
     LISTSPLAT,
     LISTREMOVE,
+    LISTELEM,
+    LISTSLICE,
+    RANGE,
+    RANGEC,
     STRCONCAT,
     INTERLEAVE,
     CONCAT,
@@ -1238,39 +1228,6 @@ public:
     assert(B < 1 && "Bit index out of range!");
     return const_cast<VarBitInit*>(this);
   }
-};
-
-/// List[4] - Represent access to one element of a var or
-/// field.
-class VarListElementInit : public TypedInit {
-  TypedInit *TI;
-  unsigned Element;
-
-  VarListElementInit(TypedInit *T, unsigned E)
-      : TypedInit(IK_VarListElementInit,
-                  cast<ListRecTy>(T->getType())->getElementType()),
-        TI(T), Element(E) {
-    assert(T->getType() && isa<ListRecTy>(T->getType()) &&
-           "Illegal VarBitInit expression!");
-  }
-
-public:
-  VarListElementInit(const VarListElementInit &) = delete;
-  VarListElementInit &operator=(const VarListElementInit &) = delete;
-
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_VarListElementInit;
-  }
-
-  static VarListElementInit *get(TypedInit *T, unsigned E);
-
-  TypedInit *getVariable() const { return TI; }
-  unsigned getElementNum() const { return Element; }
-
-  std::string getAsString() const override;
-  Init *resolveReferences(Resolver &R) const override;
-
-  Init *getBit(unsigned Bit) const override;
 };
 
 /// AL - Represent a reference to a 'def' in the description

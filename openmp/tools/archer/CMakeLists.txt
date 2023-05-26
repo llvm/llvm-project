@@ -6,9 +6,9 @@
 # //
 # //===----------------------------------------------------------------------===//
   
-  
+set(LIBOMP_ARCHER_SUPPORT TRUE CACHE BOOL "Build libomp with archer support")
 
-if(LIBOMP_OMPT_SUPPORT)
+if(LIBOMP_OMPT_SUPPORT AND LIBOMP_ARCHER_SUPPORT)
   include_directories(${LIBOMP_INCLUDE_DIR})
 
   add_library(archer SHARED ompt-tsan.cpp)

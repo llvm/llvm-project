@@ -94,26 +94,6 @@ static size_t RoundUp(size_t size, size_t align) {
 }
 
 /*
- * Write binary id length and then its data, because binary id does not
- * have a fixed length.
- */
-static int WriteOneBinaryId(ProfDataWriter *Writer, uint64_t BinaryIdLen,
-                            const uint8_t *BinaryIdData,
-                            uint64_t BinaryIdPadding) {
-  ProfDataIOVec BinaryIdIOVec[] = {
-      {&BinaryIdLen, sizeof(uint64_t), 1, 0},
-      {BinaryIdData, sizeof(uint8_t), BinaryIdLen, 0},
-      {NULL, sizeof(uint8_t), BinaryIdPadding, 1},
-  };
-  if (Writer->Write(Writer, BinaryIdIOVec,
-                    sizeof(BinaryIdIOVec) / sizeof(*BinaryIdIOVec)))
-    return -1;
-
-  /* Successfully wrote binary id, report success. */
-  return 0;
-}
-
-/*
  * Look for the note that has the name "GNU\0" and type NT_GNU_BUILD_ID
  * that contains build id. If build id exists, write binary id.
  *
@@ -135,8 +115,9 @@ static int WriteBinaryIdForNote(ProfDataWriter *Writer,
     const uint8_t *BinaryIdData =
         (const uint8_t *)(NoteName + RoundUp(Note->n_namesz, 4));
     uint8_t BinaryIdPadding = __llvm_profile_get_num_padding_bytes(BinaryIdLen);
-    if (Writer != NULL && WriteOneBinaryId(Writer, BinaryIdLen, BinaryIdData,
-                                           BinaryIdPadding) == -1)
+    if (Writer != NULL &&
+        lprofWriteOneBinaryId(Writer, BinaryIdLen, BinaryIdData,
+                              BinaryIdPadding) == -1)
       return -1;
 
     BinaryIdSize = sizeof(BinaryIdLen) + BinaryIdLen + BinaryIdPadding;
@@ -220,7 +201,7 @@ COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
 
   return TotalBinaryIdsSize;
 }
-#else /* !NT_GNU_BUILD_ID */
+#elif !defined(_AIX) /* !NT_GNU_BUILD_ID */
 /*
  * Fallback implementation for targets that don't support the GNU
  * extensions NT_GNU_BUILD_ID and __ehdr_start.

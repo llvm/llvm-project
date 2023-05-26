@@ -46,10 +46,10 @@ public:
     SymbolCollector::Options Opts;
     Opts.CountReferences = true;
     Opts.FileFilter = [&](const SourceManager &SM, FileID FID) {
-      const auto *F = SM.getFileEntryForID(FID);
+      const auto F = SM.getFileEntryRefForID(FID);
       if (!F)
         return false; // Skip invalid files.
-      auto AbsPath = getCanonicalPath(F, SM);
+      auto AbsPath = getCanonicalPath(*F, SM);
       if (!AbsPath)
         return false; // Skip files without absolute path.
       std::lock_guard<std::mutex> Lock(FilesMu);

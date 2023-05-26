@@ -108,7 +108,7 @@ unsigned AsmPrinter::GetSizeOfEncodedValue(unsigned Encoding) const {
   default:
     llvm_unreachable("Invalid encoded value.");
   case dwarf::DW_EH_PE_absptr:
-    return MF->getDataLayout().getPointerSize();
+    return MAI->getCodePointerSize();
   case dwarf::DW_EH_PE_udata2:
     return 2;
   case dwarf::DW_EH_PE_udata4:

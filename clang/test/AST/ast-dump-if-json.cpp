@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux -std=c++2b -ast-dump=json %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -std=c++23 -ast-dump=json %s | FileCheck %s
 
 void func(int val) {
   if (val)

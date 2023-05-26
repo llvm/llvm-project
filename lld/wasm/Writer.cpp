@@ -247,7 +247,7 @@ computeHash(llvm::MutableArrayRef<uint8_t> hashBuf,
 
 static void makeUUID(unsigned version, llvm::ArrayRef<uint8_t> fileHash,
                      llvm::MutableArrayRef<uint8_t> output) {
-  assert(version == 4 || version == 5 && "Unknown UUID version");
+  assert((version == 4 || version == 5) && "Unknown UUID version");
   assert(output.size() == 16 && "Wrong size for UUID output");
   if (version == 5) {
     // Build a valid v5 UUID from a hardcoded (randomly-generated) namespace
@@ -744,7 +744,7 @@ static bool shouldImport(Symbol *sym) {
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
     return true;
 
-  return sym->importName.has_value();
+  return sym->isImported();
 }
 
 void Writer::calculateImports() {
@@ -1709,7 +1709,7 @@ void Writer::run() {
       sym->forceExport = true;
   }
 
-  // Delay reporting error about explicit exports until after
+  // Delay reporting errors about explicit exports until after
   // addStartStopSymbols which can create optional symbols.
   for (auto &name : config->requiredExports) {
     Symbol *sym = symtab->find(name);

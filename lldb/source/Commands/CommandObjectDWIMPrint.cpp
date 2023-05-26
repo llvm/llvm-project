@@ -10,6 +10,7 @@
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
+#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -61,19 +62,22 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
   OptionsWithRaw args{command};
   StringRef expr = args.GetRawPart();
 
-  if (args.HasArgs()) {
-    if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group,
-                               m_exe_ctx))
-      return false;
-  } else if (command.empty()) {
+  if (expr.empty()) {
     result.AppendErrorWithFormatv("'{0}' takes a variable or expression",
                                   m_cmd_name);
     return false;
   }
 
+  if (args.HasArgs()) {
+    if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group,
+                               m_exe_ctx))
+      return false;
+  }
+
   // If the user has not specified, default to disabling persistent results.
   if (m_expr_options.suppress_persistent_result == eLazyBoolCalculate)
     m_expr_options.suppress_persistent_result = eLazyBoolYes;
+  bool suppress_result = m_expr_options.ShouldSuppressResult(m_varobj_options);
 
   auto verbosity = GetDebugger().GetDWIMPrintVerbosity();
 
@@ -81,18 +85,23 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
   // Fallback to the dummy target, which can allow for expression evaluation.
   Target &target = target_ptr ? *target_ptr : GetDummyTarget();
 
-  const EvaluateExpressionOptions eval_options =
+  EvaluateExpressionOptions eval_options =
       m_expr_options.GetEvaluateExpressionOptions(target, m_varobj_options);
+  // This command manually removes the result variable, make sure expression
+  // evaluation doesn't do it first.
+  eval_options.SetSuppressPersistentResult(false);
 
   DumpValueObjectOptions dump_options = m_varobj_options.GetAsDumpOptions(
       m_expr_options.m_verbosity, m_format_options.GetFormat());
-  dump_options.SetHideName(eval_options.GetSuppressPersistentResult());
+  dump_options.SetHideRootName(suppress_result);
+
+  StackFrame *frame = m_exe_ctx.GetFramePtr();
 
   // First, try `expr` as the name of a frame variable.
-  if (StackFrame *frame = m_exe_ctx.GetFramePtr()) {
+  if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
     if (valobj_sp && valobj_sp->GetError().Success()) {
-      if (!eval_options.GetSuppressPersistentResult()) {
+      if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())
           valobj_sp = persisted_valobj;
       }
@@ -127,6 +136,16 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
       }
 
       valobj_sp->Dump(result.GetOutputStream(), dump_options);
+
+      if (suppress_result)
+        if (auto result_var_sp =
+                target.GetPersistentVariable(valobj_sp->GetName())) {
+          auto language = valobj_sp->GetPreferredDisplayLanguage();
+          if (auto *persistent_state =
+                  target.GetPersistentExpressionStateForLanguage(language))
+            persistent_state->RemovePersistentVariable(result_var_sp);
+        }
+
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     } else {

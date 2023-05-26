@@ -424,18 +424,10 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
   if (I->isEHPad())
     return false;
 
-  // We don't want debug info removed by anything this general, unless
-  // debug info is empty.
-  if (DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
-    if (DDI->getAddress())
-      return false;
-    return true;
-  }
-  if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(I)) {
-    if (DVI->hasArgList() || DVI->getValue(0))
-      return false;
-    return true;
-  }
+  // We don't want debug info removed by anything this general.
+  if (isa<DbgVariableIntrinsic>(I))
+    return false;
+
   if (DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
     if (DLI->getLabel())
       return false;
@@ -555,7 +547,7 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructionsPermissive(
     std::function<void(Value *)> AboutToDeleteCallback) {
   unsigned S = 0, E = DeadInsts.size(), Alive = 0;
   for (; S != E; ++S) {
-    auto *I = dyn_cast<Instruction>(DeadInsts[S]);
+    auto *I = dyn_cast_or_null<Instruction>(DeadInsts[S]);
     if (!I || !isInstructionTriviallyDead(I)) {
       DeadInsts[S] = nullptr;
       ++Alive;
@@ -1231,12 +1223,10 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   // If the unconditional branch we replaced contains llvm.loop metadata, we
   // add the metadata to the branch instructions in the predecessors.
-  unsigned LoopMDKind = BB->getContext().getMDKindID("llvm.loop");
-  Instruction *TI = BB->getTerminator();
-  if (TI)
-    if (MDNode *LoopMD = TI->getMetadata(LoopMDKind))
+  if (Instruction *TI = BB->getTerminator())
+    if (MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
       for (BasicBlock *Pred : predecessors(BB))
-        Pred->getTerminator()->setMetadata(LoopMDKind, LoopMD);
+        Pred->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopMD);
 
   // Everything that jumped to BB now goes to Succ.
   BB->replaceAllUsesWith(Succ);
@@ -1948,7 +1938,7 @@ Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
     Opcodes.insert(Opcodes.begin(), {dwarf::DW_OP_LLVM_arg, 0});
     CurrentLocOps = 1;
   }
-  for (auto Offset : VariableOffsets) {
+  for (const auto &Offset : VariableOffsets) {
     AdditionalValues.push_back(Offset.first);
     assert(Offset.second.isStrictlyPositive() &&
            "Expected strictly positive multiplier for offset.");
@@ -1990,6 +1980,18 @@ uint64_t getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
   }
 }
 
+static void handleSSAValueOperands(uint64_t CurrentLocOps,
+                                   SmallVectorImpl<uint64_t> &Opcodes,
+                                   SmallVectorImpl<Value *> &AdditionalValues,
+                                   Instruction *I) {
+  if (!CurrentLocOps) {
+    Opcodes.append({dwarf::DW_OP_LLVM_arg, 0});
+    CurrentLocOps = 1;
+  }
+  Opcodes.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps});
+  AdditionalValues.push_back(I->getOperand(1));
+}
+
 Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
                              SmallVectorImpl<uint64_t> &Opcodes,
                              SmallVectorImpl<Value *> &AdditionalValues) {
@@ -2012,12 +2014,7 @@ Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
     }
     Opcodes.append({dwarf::DW_OP_constu, Val});
   } else {
-    if (!CurrentLocOps) {
-      Opcodes.append({dwarf::DW_OP_LLVM_arg, 0});
-      CurrentLocOps = 1;
-    }
-    Opcodes.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps});
-    AdditionalValues.push_back(BI->getOperand(1));
+    handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, BI);
   }
 
   // Add salvaged binary operator to expression stack, if it has a valid
@@ -2027,6 +2024,60 @@ Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
     return nullptr;
   Opcodes.push_back(DwarfBinOp);
   return BI->getOperand(0);
+}
+
+uint64_t getDwarfOpForIcmpPred(CmpInst::Predicate Pred) {
+  // The signedness of the operation is implicit in the typed stack, signed and
+  // unsigned instructions map to the same DWARF opcode.
+  switch (Pred) {
+  case CmpInst::ICMP_EQ:
+    return dwarf::DW_OP_eq;
+  case CmpInst::ICMP_NE:
+    return dwarf::DW_OP_ne;
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_SGT:
+    return dwarf::DW_OP_gt;
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_SGE:
+    return dwarf::DW_OP_ge;
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_SLT:
+    return dwarf::DW_OP_lt;
+  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_SLE:
+    return dwarf::DW_OP_le;
+  default:
+    return 0;
+  }
+}
+
+Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
+                              SmallVectorImpl<uint64_t> &Opcodes,
+                              SmallVectorImpl<Value *> &AdditionalValues) {
+  // Handle icmp operations with constant integer operands as a special case.
+  auto *ConstInt = dyn_cast<ConstantInt>(Icmp->getOperand(1));
+  // Values wider than 64 bits cannot be represented within a DIExpression.
+  if (ConstInt && ConstInt->getBitWidth() > 64)
+    return nullptr;
+  // Push any Constant Int operand onto the expression stack.
+  if (ConstInt) {
+    if (Icmp->isSigned())
+      Opcodes.push_back(dwarf::DW_OP_consts);
+    else
+      Opcodes.push_back(dwarf::DW_OP_constu);
+    uint64_t Val = ConstInt->getSExtValue();
+    Opcodes.push_back(Val);
+  } else {
+    handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, Icmp);
+  }
+
+  // Add salvaged binary operator to expression stack, if it has a valid
+  // representation in a DIExpression.
+  uint64_t DwarfIcmpOp = getDwarfOpForIcmpPred(Icmp->getPredicate());
+  if (!DwarfIcmpOp)
+    return nullptr;
+  Opcodes.push_back(DwarfIcmpOp);
+  return Icmp->getOperand(0);
 }
 
 Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
@@ -2068,6 +2119,8 @@ Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
     return getSalvageOpsForGEP(GEP, DL, CurrentLocOps, Ops, AdditionalValues);
   if (auto *BI = dyn_cast<BinaryOperator>(&I))
     return getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues);
+  if (auto *IC = dyn_cast<ICmpInst>(&I))
+    return getSalvageOpsForIcmpOp(IC, CurrentLocOps, Ops, AdditionalValues);
 
   // *Not* to do: we should not attempt to salvage load instructions,
   // because the validity and lifetime of a dbg.value containing
@@ -2675,39 +2728,35 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
                        intersectAccessGroups(K, J));
         break;
       case LLVMContext::MD_range:
-
-        // If K does move, use most generic range. Otherwise keep the range of
-        // K.
-        if (DoesKMove)
-          // FIXME: If K does move, we should drop the range info and nonnull.
-          //        Currently this function is used with DoesKMove in passes
-          //        doing hoisting/sinking and the current behavior of using the
-          //        most generic range is correct in those cases.
+        if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
           K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
         break;
       case LLVMContext::MD_fpmath:
         K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
         break;
       case LLVMContext::MD_invariant_load:
-        // Only set the !invariant.load if it is present in both instructions.
-        K->setMetadata(Kind, JMD);
+        // If K moves, only set the !invariant.load if it is present in both
+        // instructions.
+        if (DoesKMove)
+          K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_nonnull:
-        // If K does move, keep nonull if it is present in both instructions.
-        if (DoesKMove)
+        if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
           K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_invariant_group:
         // Preserve !invariant.group in K.
         break;
       case LLVMContext::MD_align:
-        K->setMetadata(Kind,
-          MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+        if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
+          K->setMetadata(
+              Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
       case LLVMContext::MD_dereferenceable:
       case LLVMContext::MD_dereferenceable_or_null:
-        K->setMetadata(Kind,
-          MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+        if (DoesKMove)
+          K->setMetadata(Kind,
+            MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
@@ -2720,6 +2769,10 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_nontemporal:
         // Preserve !nontemporal if it is present on both instructions.
         K->setMetadata(Kind, JMD);
+        break;
+      case LLVMContext::MD_prof:
+        if (DoesKMove)
+          K->setMetadata(Kind, MDNode::getMergedProfMetadata(KMD, JMD, K, J));
         break;
     }
   }
@@ -2736,15 +2789,22 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
 
 void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                                  bool KDominatesJ) {
-  unsigned KnownIDs[] = {
-      LLVMContext::MD_tbaa,            LLVMContext::MD_alias_scope,
-      LLVMContext::MD_noalias,         LLVMContext::MD_range,
-      LLVMContext::MD_invariant_load,  LLVMContext::MD_nonnull,
-      LLVMContext::MD_invariant_group, LLVMContext::MD_align,
-      LLVMContext::MD_dereferenceable,
-      LLVMContext::MD_dereferenceable_or_null,
-      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index,
-      LLVMContext::MD_nontemporal,     LLVMContext::MD_noundef};
+  unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
+                         LLVMContext::MD_alias_scope,
+                         LLVMContext::MD_noalias,
+                         LLVMContext::MD_range,
+                         LLVMContext::MD_fpmath,
+                         LLVMContext::MD_invariant_load,
+                         LLVMContext::MD_nonnull,
+                         LLVMContext::MD_invariant_group,
+                         LLVMContext::MD_align,
+                         LLVMContext::MD_dereferenceable,
+                         LLVMContext::MD_dereferenceable_or_null,
+                         LLVMContext::MD_access_group,
+                         LLVMContext::MD_preserve_access_index,
+                         LLVMContext::MD_prof,
+                         LLVMContext::MD_nontemporal,
+                         LLVMContext::MD_noundef};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
@@ -2823,14 +2883,7 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   // In general, GVN unifies expressions over different control-flow
   // regions, and so we need a conservative combination of the noalias
   // scopes.
-  static const unsigned KnownIDs[] = {
-      LLVMContext::MD_tbaa,            LLVMContext::MD_alias_scope,
-      LLVMContext::MD_noalias,         LLVMContext::MD_range,
-      LLVMContext::MD_fpmath,          LLVMContext::MD_invariant_load,
-      LLVMContext::MD_invariant_group, LLVMContext::MD_nonnull,
-      LLVMContext::MD_access_group,    LLVMContext::MD_preserve_access_index,
-      LLVMContext::MD_noundef,         LLVMContext::MD_nontemporal};
-  combineMetadata(ReplInst, I, KnownIDs, false);
+  combineMetadataForCSE(ReplInst, I, false);
 }
 
 template <typename RootType, typename DominatesFn>
@@ -2955,7 +3008,8 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
     return;
 
   unsigned BitWidth = DL.getPointerTypeSizeInBits(NewTy);
-  if (!getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
+  if (BitWidth == OldLI.getType()->getScalarSizeInBits() &&
+      !getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
     MDNode *NN = MDNode::get(OldLI.getContext(), std::nullopt);
     NewLI.setMetadata(LLVMContext::MD_nonnull, NN);
   }
@@ -2994,7 +3048,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
 
   for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
     Instruction *I = &*II;
-    I->dropUndefImplyingAttrsAndUnknownMetadata();
+    I->dropUBImplyingAttrsAndMetadata();
     if (I->isUsedByMetadata())
       dropDebugUsers(*I);
     if (I->isDebugOrPseudoInst()) {

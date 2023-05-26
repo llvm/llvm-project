@@ -48,7 +48,8 @@ enum Fixups {
 
   /// Not a true fixup, but ties a symbol to a call to __tls_get_addr for the
   /// TLS general and local dynamic models, or inserts the thread-pointer
-  /// register number.
+  /// register number. It can also be used to tie the ref symbol to prevent it
+  /// from being garbage collected on AIX.
   fixup_ppc_nofixup,
 
   /// A 16-bit fixup corresponding to lo16(_foo) with implied 3 zero bits for

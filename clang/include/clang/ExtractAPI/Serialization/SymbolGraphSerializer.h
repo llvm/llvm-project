@@ -67,7 +67,7 @@ public:
   ///
   /// \returns an optional JSON Object representing the payload that libclang
   /// expects for providing symbol information for a single symbol. If this is
-  /// not a known symbol returns \c None.
+  /// not a known symbol returns \c std::nullopt.
   static std::optional<Object> serializeSingleSymbolSGF(StringRef USR,
                                                         const APISet &API);
 

@@ -160,7 +160,7 @@ namespace Variadic {
     consume([]() noexcept(sizeof(T) == 4) {} ...);
   }
   template<bool ...B> void j() {
-    consume([](void (*p)() noexcept(B)) {
+    consume([](void (*p)() noexcept(B)) { // expected-note {{substituting into a lambda}}
       void (*q)() noexcept = p; // expected-error {{not superset of source}}
     } ...);
   }

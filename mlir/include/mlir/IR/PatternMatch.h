@@ -429,6 +429,38 @@ public:
     static bool classof(const OpBuilder::Listener *base);
   };
 
+  /// A listener that forwards all notifications to another listener. This
+  /// struct can be used as a base to create listener chains, so that multiple
+  /// listeners can be notified of IR changes.
+  struct ForwardingListener : public RewriterBase::Listener {
+    ForwardingListener(Listener *listener) : listener(listener) {}
+
+    void notifyOperationInserted(Operation *op) override {
+      listener->notifyOperationInserted(op);
+    }
+    void notifyBlockCreated(Block *block) override {
+      listener->notifyBlockCreated(block);
+    }
+    void notifyOperationModified(Operation *op) override {
+      listener->notifyOperationModified(op);
+    }
+    void notifyOperationReplaced(Operation *op,
+                                 ValueRange replacement) override {
+      listener->notifyOperationReplaced(op, replacement);
+    }
+    void notifyOperationRemoved(Operation *op) override {
+      listener->notifyOperationRemoved(op);
+    }
+    LogicalResult notifyMatchFailure(
+        Location loc,
+        function_ref<void(Diagnostic &)> reasonCallback) override {
+      return listener->notifyMatchFailure(loc, reasonCallback);
+    }
+
+  private:
+    Listener *listener;
+  };
+
   /// Move the blocks that belong to "region" before the given position in
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
@@ -624,7 +656,9 @@ public:
 
 protected:
   /// Initialize the builder.
-  explicit RewriterBase(MLIRContext *ctx) : OpBuilder(ctx) {}
+  explicit RewriterBase(MLIRContext *ctx,
+                        OpBuilder::Listener *listener = nullptr)
+      : OpBuilder(ctx, listener) {}
   explicit RewriterBase(const OpBuilder &otherBuilder)
       : OpBuilder(otherBuilder) {}
   virtual ~RewriterBase();
@@ -648,7 +682,8 @@ private:
 /// such as a `PatternRewriter`, is not available.
 class IRRewriter : public RewriterBase {
 public:
-  explicit IRRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
+  explicit IRRewriter(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
+      : RewriterBase(ctx, listener) {}
   explicit IRRewriter(const OpBuilder &builder) : RewriterBase(builder) {}
 };
 

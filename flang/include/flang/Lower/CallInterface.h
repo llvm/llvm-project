@@ -159,12 +159,19 @@ public:
     bool mayBeModifiedByCall() const;
     /// Can the argument be read by the callee?
     bool mayBeReadByCall() const;
+    /// Does the argument have the specified IgnoreTKR flag?
+    bool testTKR(Fortran::common::IgnoreTKR flag) const;
     /// Is the argument INTENT(OUT)
     bool isIntentOut() const;
     /// Does the argument have the CONTIGUOUS attribute or have explicit shape?
     bool mustBeMadeContiguous() const;
     /// Does the dummy argument have the VALUE attribute?
     bool hasValueAttribute() const;
+    /// Does the dummy argument have the ALLOCATABLE attribute?
+    bool hasAllocatableAttribute() const;
+    /// May the dummy argument require INTENT(OUT) finalization
+    /// on entry to the invoked procedure? Provides conservative answer.
+    bool mayRequireIntentoutFinalization() const;
     /// How entity is passed by.
     PassEntityBy passBy;
     /// What is the entity (SymbolRef for callee/ActualArgument* for caller)

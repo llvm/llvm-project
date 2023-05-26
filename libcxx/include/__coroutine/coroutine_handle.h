@@ -33,7 +33,6 @@ template <>
 struct _LIBCPP_TEMPLATE_VIS coroutine_handle<void> {
 public:
     // [coroutine.handle.con], construct/reset
-    _LIBCPP_HIDE_FROM_ABI
     constexpr coroutine_handle() noexcept = default;
 
     _LIBCPP_HIDE_FROM_ABI
@@ -86,7 +85,7 @@ public:
     }
 
 private:
-    bool __is_suspended() const {
+    _LIBCPP_HIDE_FROM_ABI bool __is_suspended() const {
         // FIXME actually implement a check for if the coro is suspended.
         return __handle_ != nullptr;
     }
@@ -108,7 +107,6 @@ template <class _Promise>
 struct _LIBCPP_TEMPLATE_VIS coroutine_handle {
 public:
     // [coroutine.handle.con], construct/reset
-    _LIBCPP_HIDE_FROM_ABI
     constexpr coroutine_handle() noexcept = default;
 
     _LIBCPP_HIDE_FROM_ABI
@@ -182,7 +180,7 @@ public:
     }
 
 private:
-    bool __is_suspended() const {
+    _LIBCPP_HIDE_FROM_ABI bool __is_suspended() const {
         // FIXME actually implement a check for if the coro is suspended.
         return __handle_ != nullptr;
     }

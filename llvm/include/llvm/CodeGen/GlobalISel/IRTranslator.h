@@ -41,6 +41,8 @@ class CallLowering;
 class Constant;
 class ConstrainedFPIntrinsic;
 class DataLayout;
+class DbgDeclareInst;
+class DbgValueInst;
 class Instruction;
 class MachineBasicBlock;
 class MachineFunction;
@@ -67,7 +69,7 @@ public:
 
 private:
   /// Interface used to lower the everything related to calls.
-  const CallLowering *CLI;
+  const CallLowering *CLI = nullptr;
 
   /// This class contains the mapping between the Values to vreg related data.
   class ValueToVRegInfo {
@@ -243,6 +245,20 @@ private:
 
   bool translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                MachineIRBuilder &MIRBuilder);
+
+  /// Returns the single livein physical register Arg was lowered to, if
+  /// possible.
+  std::optional<MCRegister> getArgPhysReg(Argument &Arg);
+
+  /// If DebugInst targets an Argument and its expression is an EntryValue,
+  /// lower it as an entry in the MF debug table.
+  bool translateIfEntryValueArgument(const DbgDeclareInst &DebugInst);
+
+  /// If DebugInst targets an Argument and its expression is an EntryValue,
+  /// lower as a DBG_VALUE targeting the corresponding livein register for that
+  /// Argument.
+  bool translateIfEntryValueArgument(const DbgValueInst &DebugInst,
+                                     MachineIRBuilder &MIRBuilder);
 
   bool translateInlineAsm(const CallBase &CB, MachineIRBuilder &MIRBuilder);
 
@@ -553,24 +569,24 @@ private:
   std::unique_ptr<MachineIRBuilder> EntryBuilder;
 
   // The MachineFunction currently being translated.
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
 
   /// MachineRegisterInfo used to create virtual registers.
   MachineRegisterInfo *MRI = nullptr;
 
-  const DataLayout *DL;
+  const DataLayout *DL = nullptr;
 
   /// Current target configuration. Controls how the pass handles errors.
-  const TargetPassConfig *TPC;
+  const TargetPassConfig *TPC = nullptr;
 
   CodeGenOpt::Level OptLevel;
 
   /// Current optimization remark emitter. Used to report failures.
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
-  AAResults *AA;
-  AssumptionCache *AC;
-  const TargetLibraryInfo *LibInfo;
+  AAResults *AA = nullptr;
+  AssumptionCache *AC = nullptr;
+  const TargetLibraryInfo *LibInfo = nullptr;
   FunctionLoweringInfo FuncInfo;
 
   // True when either the Target Machine specifies no optimizations or the

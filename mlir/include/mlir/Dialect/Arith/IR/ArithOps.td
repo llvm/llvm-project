@@ -178,15 +178,15 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
   // splitting the Standard dialect.
   let results = (outs /*SignlessIntegerOrFloatLike*/AnyType:$result);
 
-  let builders = [
-    OpBuilder<(ins "Attribute":$value, "Type":$type),
-    [{ build($_builder, $_state, type, value); }]>,
-  ];
-
   let extraClassDeclaration = [{
     /// Whether the constant op can be constructed with a particular value and
     /// type.
     static bool isBuildableWith(Attribute value, Type type);
+
+    /// Build the constant op with `value` and `type` if possible, otherwise
+    /// returns null.
+    static ConstantOp materialize(OpBuilder &builder, Attribute value,
+                                  Type type, Location loc);
   }];
 
   let hasFolder = 1;

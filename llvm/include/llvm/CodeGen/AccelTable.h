@@ -161,8 +161,8 @@ protected:
   StringEntries Entries;
 
   HashFn *Hash;
-  uint32_t BucketCount;
-  uint32_t UniqueHashCount;
+  uint32_t BucketCount = 0;
+  uint32_t UniqueHashCount = 0;
 
   HashList Hashes;
   BucketList Buckets;

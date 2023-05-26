@@ -66,7 +66,7 @@ namespace test3 {
 
   struct AlmostInputIterator {
     using value_type = char;
-    using difference_type = ptrdiff_t;
+    using difference_type = std::ptrdiff_t;
     using iterator_concept = int;
 
     constexpr const char& operator*() const;

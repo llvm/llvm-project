@@ -144,8 +144,8 @@ INITIALIZE_PASS(HexagonGenMux, "hexagon-gen-mux",
   "Hexagon generate mux instructions", false, false)
 
 void HexagonGenMux::getSubRegs(unsigned Reg, BitVector &SRs) const {
-  for (MCSubRegIterator I(Reg, HRI); I.isValid(); ++I)
-    SRs[*I] = true;
+  for (MCPhysReg I : HRI->subregs(Reg))
+    SRs[I] = true;
 }
 
 void HexagonGenMux::expandReg(unsigned Reg, BitVector &Set) const {
@@ -348,9 +348,9 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 
   LivePhysRegs LPR(*HRI);
   LPR.addLiveOuts(B);
-  auto IsLive = [&LPR,this] (unsigned Reg) -> bool {
-    for (MCSubRegIterator S(Reg, HRI, true); S.isValid(); ++S)
-      if (LPR.contains(*S))
+  auto IsLive = [&LPR, this](unsigned Reg) -> bool {
+    for (MCPhysReg S : HRI->subregs_inclusive(Reg))
+      if (LPR.contains(S))
         return true;
     return false;
   };

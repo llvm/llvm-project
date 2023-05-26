@@ -25,7 +25,7 @@ enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   Wrapper,
   CALL,
-  RET_FLAG,
+  RET_GLUE,
   LOAD_PARAM,
   DeclareParam,
   DeclareScalarParam,

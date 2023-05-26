@@ -1977,6 +1977,38 @@ res_vd = vec_xl_be(sll, ad);
 // CHECK: load <2 x double>, ptr %{{[0-9]+}}, align 1
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(ptr %{{[0-9]+}})
 
+res_vsc = vec_xl_be(sll, asc);
+// CHECK: load <16 x i8>, ptr %{{.+}}, align 1
+// CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(ptr %{{[0-9]+}})
+// CHECK-LE: shufflevector <16 x i8> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
+
+res_vuc = vec_xl_be(sll, auc);
+// CHECK: load <16 x i8>, ptr %{{.+}}, align 1
+// CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(ptr %{{[0-9]+}})
+// CHECK-LE: shufflevector <16 x i8> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
+
+res_vss = vec_xl_be(sll, ass);
+// CHECK: load <8 x i16>, ptr %{{.+}}, align 1
+// CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(ptr %{{[0-9]+}})
+// CHECK-LE: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+
+res_vus = vec_xl_be(sll, aus);
+// CHECK: load <8 x i16>, ptr %{{.+}}, align 1
+// CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(ptr %{{[0-9]+}})
+// CHECK-LE: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+
+res_vsi = vec_xl_be(sll, asi);
+// CHECK: load <4 x i32>, ptr %{{.+}}, align 1
+// CHECK-LE: call <4 x i32> @llvm.ppc.vsx.lxvw4x.be(ptr %{{[0-9]+}})
+
+res_vui = vec_xl_be(sll, aui);
+// CHECK: load <4 x i32>, ptr %{{.+}}, align 1
+// CHECK-LE: call <4 x i32> @llvm.ppc.vsx.lxvw4x.be(ptr %{{[0-9]+}})
+
+res_vf = vec_xl_be(sll, af);
+// CHECK: load <4 x float>, ptr %{{.+}}, align 1
+// CHECK-LE: call <4 x i32> @llvm.ppc.vsx.lxvw4x.be(ptr %{{[0-9]+}})
+
 res_vsll = vec_xlds(sll, asll);
 // CHECK: load i64
 // CHECK: insertelement <2 x i64>
@@ -2060,6 +2092,38 @@ vec_xst_be(vull, sll, aull);
 vec_xst_be(vd, sll, ad);
 // CHECK: store <2 x double> %{{[0-9]+}}, ptr %{{[0-9]+}}, align 1
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, ptr %{{[0-9]+}})
+
+vec_xst_be(vsc, sll, asc);
+// CHECK: store <16 x i8> %{{[0-9]+}}, ptr %{{.+}}, align 1
+// CHECK-LE: shufflevector <16 x i8> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
+// CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, ptr %{{[0-9]+}})
+
+vec_xst_be(vuc, sll, auc);
+// CHECK: store <16 x i8> %{{[0-9]+}}, ptr %{{.+}}, align 1
+// CHECK-LE: shufflevector <16 x i8> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
+// CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, ptr %{{[0-9]+}})
+
+vec_xst_be(vss, sll, ass);
+// CHECK: store <8 x i16> %{{[0-9]+}}, ptr %{{.+}}, align 1
+// CHECK-LE: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+// CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, ptr %{{[0-9]+}})
+
+vec_xst_be(vus, sll, aus);
+// CHECK: store <8 x i16> %{{[0-9]+}}, ptr %{{.+}}, align 1
+// CHECK-LE: shufflevector <8 x i16> %{{[0-9]+}}, <8 x i16> %{{[0-9]+}}, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+// CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, ptr %{{[0-9]+}})
+
+vec_xst_be(vsi, sll, asi);
+// CHECK: store <4 x i32> %{{[0-9]+}}, ptr %{{.+}}, align 1
+// CHECK-LE: call void @llvm.ppc.vsx.stxvw4x.be(<4 x i32> %{{[0-9]+}}, ptr %{{[0-9]+}})
+
+vec_xst_be(vui, sll, aui);
+// CHECK: store <4 x i32> %{{[0-9]+}}, ptr %{{.+}}, align 1
+// CHECK-LE: call void @llvm.ppc.vsx.stxvw4x.be(<4 x i32> %{{[0-9]+}}, ptr %{{[0-9]+}})
+
+vec_xst_be(vf, sll, af);
+// CHECK: store <4 x float> %{{[0-9]+}}, ptr %{{.+}}, align 1
+// CHECK-LE: call void @llvm.ppc.vsx.stxvw4x.be(<4 x i32> %{{[0-9]+}}, ptr %{{[0-9]+}})
 
   res_vf = vec_neg(vf);
 // CHECK: fneg <4 x float> {{%[0-9]+}}

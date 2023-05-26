@@ -127,7 +127,7 @@ body:             |
     liveins: $agpr31, $vgpr0_vgpr1_vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr24_agpr25
 
     ; GCN-LABEL: name: partial_spill_v128_restore_to_a128_1_of_4
-    ; GCN: liveins: $agpr30, $agpr31, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr24_agpr25, $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN: liveins: $agpr30, $agpr31, $agpr24_agpr25, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $vgpr0_vgpr1_vgpr2, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s96) into %stack.0, align 4, addrspace 5)
@@ -152,7 +152,7 @@ body:             |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr24_agpr25
 
     ; GCN-LABEL: name: partial_spill_v128_restore_to_a128_2_of_4
-    ; GCN: liveins: $agpr30, $agpr31, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr24_agpr25, $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN: liveins: $agpr30, $agpr31, $agpr24_agpr25, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr2, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3

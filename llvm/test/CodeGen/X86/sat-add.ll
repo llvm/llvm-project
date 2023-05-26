@@ -750,14 +750,12 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_notval(<2 x i64> %x) {
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [42,42]
 ; SSE2-NEXT:    paddq %xmm0, %xmm1
 ; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE2-NEXT:    pand %xmm3, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: unsigned_sat_constant_v2i64_using_cmp_notval:
@@ -765,14 +763,12 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_notval(<2 x i64> %x) {
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [42,42]
 ; SSE41-NEXT:    paddq %xmm0, %xmm1
 ; SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE41-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,0,2,2]
-; SSE41-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE41-NEXT:    pand %xmm3, %xmm2
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,2,2]
+; SSE41-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE41-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
-; SSE41-NEXT:    por %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: unsigned_sat_constant_v2i64_using_cmp_notval:
@@ -1124,11 +1120,11 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_cmp_notval(<4 x i32> %x, <4 
 ;
 ; AVX512-LABEL: unsigned_sat_variable_v4i32_using_cmp_notval:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpnleud %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm3, %xmm2 {%k1}
+; AVX512-NEXT:    vmovdqa %xmm1, %xmm3
+; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm3
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpleud %xmm3, %xmm0, %k1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %noty = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -1347,11 +1343,11 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_notval(<2 x i64> %x, <2 
 ;
 ; AVX512-LABEL: unsigned_sat_variable_v2i64_using_cmp_notval:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k1
-; AVX512-NEXT:    vmovdqa64 %xmm3, %xmm2 {%k1}
+; AVX512-NEXT:    vmovdqa %xmm1, %xmm3
+; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm3
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpleuq %xmm3, %xmm0, %k1
+; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX512-NEXT:    retq
   %noty = xor <2 x i64> %y, <i64 -1, i64 -1>

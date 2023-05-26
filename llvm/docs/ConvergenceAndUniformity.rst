@@ -51,7 +51,7 @@ subgroups):
 This document presents a definition of convergence that is reasonable
 for real targets and is compatible with the currently implicit
 semantics of convergent operations in LLVM IR. This is accompanied by
-a *uniformity analysis* that extends the existing divergence analysis
+a *uniformity analysis* that extends previous work on divergence analysis
 [DivergenceSPMD]_ to cover irreducible control-flow.
 
 .. [DivergenceSPMD] Julian Rosemann, Simon Moll, and Sebastian

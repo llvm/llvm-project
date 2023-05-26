@@ -791,7 +791,6 @@ void CodeViewDebug::emitObjName() {
     // Don't emit the filename if we're writing to stdout or to /dev/null.
     PathRef = {};
   } else {
-    llvm::sys::path::remove_dots(PathStore, /*remove_dot_dot=*/true);
     PathRef = PathStore;
   }
 
@@ -1161,7 +1160,14 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Function section index");
     OS.emitCOFFSectionIndex(Fn);
     OS.AddComment("Flags");
-    OS.emitInt8(0);
+    ProcSymFlags ProcFlags = ProcSymFlags::HasOptimizedDebugInfo;
+    if (FI.HasFramePointer)
+      ProcFlags |= ProcSymFlags::HasFP;
+    if (GV->hasFnAttribute(Attribute::NoReturn))
+      ProcFlags |= ProcSymFlags::IsNoReturn;
+    if (GV->hasFnAttribute(Attribute::NoInline))
+      ProcFlags |= ProcSymFlags::IsNoInline;
+    OS.emitInt8(static_cast<uint8_t>(ProcFlags));
     // Emit the function display name as a null-terminated string.
     OS.AddComment("Function name");
     // Truncate the name so we won't overflow the record length field.
@@ -1265,7 +1271,8 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
   const TargetFrameLowering *TFI = TSI.getFrameLowering();
   const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
 
-  for (const MachineFunction::VariableDbgInfo &VI : MF.getVariableDbgInfo()) {
+  for (const MachineFunction::VariableDbgInfo &VI :
+       MF.getInStackSlotVariableDbgInfo()) {
     if (!VI.Var)
       continue;
     assert(VI.Var->isValidLocationForIntrinsic(VI.Loc) &&
@@ -1293,7 +1300,8 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
 
     // Get the frame register used and the offset.
     Register FrameReg;
-    StackOffset FrameOffset = TFI->getFrameIndexReference(*Asm->MF, VI.Slot, FrameReg);
+    StackOffset FrameOffset =
+        TFI->getFrameIndexReference(*Asm->MF, VI.getStackSlot(), FrameReg);
     uint16_t CVReg = TRI->getCodeViewRegNum(FrameReg);
 
     assert(!FrameOffset.getScalable() &&
@@ -1479,6 +1487,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
       CurFn->EncodedLocalFramePtrReg = EncodedFramePtrReg::StackPtr;
       CurFn->EncodedParamFramePtrReg = EncodedFramePtrReg::StackPtr;
     } else {
+      CurFn->HasFramePointer = true;
       // If there is an FP, parameters are always relative to it.
       CurFn->EncodedParamFramePtrReg = EncodedFramePtrReg::FramePtr;
       if (CurFn->HasStackRealignment) {
@@ -1720,12 +1729,13 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
     // Otherwise, if it has an upperboud, use (upperbound - lowerbound + 1),
     // where lowerbound is from the LowerBound field of the Subrange,
     // or the language default lowerbound if that field is unspecified.
-    if (auto *CI = Subrange->getCount().dyn_cast<ConstantInt *>())
+    if (auto *CI = dyn_cast_if_present<ConstantInt *>(Subrange->getCount()))
       Count = CI->getSExtValue();
-    else if (auto *UI = Subrange->getUpperBound().dyn_cast<ConstantInt *>()) {
+    else if (auto *UI = dyn_cast_if_present<ConstantInt *>(
+                 Subrange->getUpperBound())) {
       // Fortran uses 1 as the default lowerbound; other languages use 0.
       int64_t Lowerbound = (moduleIsInFortran()) ? 1 : 0;
-      auto *LI = Subrange->getLowerBound().dyn_cast<ConstantInt *>();
+      auto *LI = dyn_cast_if_present<ConstantInt *>(Subrange->getLowerBound());
       Lowerbound = (LI) ? LI->getSExtValue() : Lowerbound;
       Count = UI->getSExtValue() - Lowerbound + 1;
     }
@@ -3284,7 +3294,7 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
   // Second, emit each global that is in a comdat into its own .debug$S
   // section along with its own symbol substream.
   for (const CVGlobalVariable &CVGV : ComdatVariables) {
-    const GlobalVariable *GV = CVGV.GVInfo.get<const GlobalVariable *>();
+    const GlobalVariable *GV = cast<const GlobalVariable *>(CVGV.GVInfo);
     MCSymbol *GVSym = Asm->getSymbol(GV);
     OS.AddComment("Symbol subsection for " +
                   Twine(GlobalValue::dropLLVMManglingEscape(GV->getName())));
@@ -3393,7 +3403,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
           : getFullyQualifiedName(Scope, DIGV->getName());
 
   if (const GlobalVariable *GV =
-          CVGV.GVInfo.dyn_cast<const GlobalVariable *>()) {
+          dyn_cast_if_present<const GlobalVariable *>(CVGV.GVInfo)) {
     // DataSym record, see SymbolRecord.h for more info. Thread local data
     // happens to have the same format as global data.
     MCSymbol *GVSym = Asm->getSymbol(GV);
@@ -3420,7 +3430,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     emitNullTerminatedSymbolName(OS, QualifiedName, LengthOfDataRecord);
     endSymbolRecord(DataEnd);
   } else {
-    const DIExpression *DIE = CVGV.GVInfo.get<const DIExpression *>();
+    const DIExpression *DIE = cast<const DIExpression *>(CVGV.GVInfo);
     assert(DIE->isConstant() &&
            "Global constant variables must contain a constant expression.");
 

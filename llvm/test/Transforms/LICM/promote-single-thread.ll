@@ -7,44 +7,26 @@
 
 declare void @capture(ptr)
 
-; In single-thread mode both loads and stores can be promoted. In multi-thread
-; mode only loads can be promoted, as a different thread might write to the
-; global.
+; Even in single-thread mode, can only perform load-only promotion for globals,
+; because we might not have provenance to write to the global. See
+; promote_global_noalias for an example of the issue.
 define void @promote_global(i1 %c, i1 %c2) {
-; MT-LABEL: @promote_global(
-; MT-NEXT:  entry:
-; MT-NEXT:    [[G_PROMOTED:%.*]] = load i32, ptr @g, align 4
-; MT-NEXT:    br label [[LOOP:%.*]]
-; MT:       loop:
-; MT-NEXT:    [[V_INC2:%.*]] = phi i32 [ [[V_INC1:%.*]], [[LATCH:%.*]] ], [ [[G_PROMOTED]], [[ENTRY:%.*]] ]
-; MT-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[LATCH]]
-; MT:       if:
-; MT-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC2]], 1
-; MT-NEXT:    store i32 [[V_INC]], ptr @g, align 4
-; MT-NEXT:    br label [[LATCH]]
-; MT:       latch:
-; MT-NEXT:    [[V_INC1]] = phi i32 [ [[V_INC]], [[IF]] ], [ [[V_INC2]], [[LOOP]] ]
-; MT-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[LOOP]]
-; MT:       exit:
-; MT-NEXT:    ret void
-;
-; ST-LABEL: @promote_global(
-; ST-NEXT:  entry:
-; ST-NEXT:    [[G_PROMOTED:%.*]] = load i32, ptr @g, align 4
-; ST-NEXT:    br label [[LOOP:%.*]]
-; ST:       loop:
-; ST-NEXT:    [[V_INC2:%.*]] = phi i32 [ [[V_INC1:%.*]], [[LATCH:%.*]] ], [ [[G_PROMOTED]], [[ENTRY:%.*]] ]
-; ST-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[LATCH]]
-; ST:       if:
-; ST-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC2]], 1
-; ST-NEXT:    br label [[LATCH]]
-; ST:       latch:
-; ST-NEXT:    [[V_INC1]] = phi i32 [ [[V_INC]], [[IF]] ], [ [[V_INC2]], [[LOOP]] ]
-; ST-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[LOOP]]
-; ST:       exit:
-; ST-NEXT:    [[V_INC1_LCSSA:%.*]] = phi i32 [ [[V_INC1]], [[LATCH]] ]
-; ST-NEXT:    store i32 [[V_INC1_LCSSA]], ptr @g, align 4
-; ST-NEXT:    ret void
+; CHECK-LABEL: @promote_global(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[G_PROMOTED:%.*]] = load i32, ptr @g, align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[V_INC2:%.*]] = phi i32 [ [[V_INC1:%.*]], [[LATCH:%.*]] ], [ [[G_PROMOTED]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[LATCH]]
+; CHECK:       if:
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC2]], 1
+; CHECK-NEXT:    store i32 [[V_INC]], ptr @g, align 4
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[V_INC1]] = phi i32 [ [[V_INC]], [[IF]] ], [ [[V_INC2]], [[LOOP]] ]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -105,48 +87,26 @@ exit:
 ; if %c is false and %ptr == @g, then this should store 42 to the pointer.
 ; However, if we perform load+store promotion, then we would instead store the
 ; original value of the global.
-; FIXME: This is a miscompile.
 define void @promote_global_noalias(i1 %c, i1 %c2, ptr noalias %ptr) {
-; MT-LABEL: @promote_global_noalias(
-; MT-NEXT:  entry:
-; MT-NEXT:    [[G_PROMOTED:%.*]] = load i32, ptr @g, align 4
-; MT-NEXT:    br label [[LOOP:%.*]]
-; MT:       loop:
-; MT-NEXT:    [[V_INC2:%.*]] = phi i32 [ [[V_INC1:%.*]], [[LATCH:%.*]] ], [ [[G_PROMOTED]], [[ENTRY:%.*]] ]
-; MT-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
-; MT:       if:
-; MT-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC2]], 1
-; MT-NEXT:    store i32 [[V_INC]], ptr @g, align 4
-; MT-NEXT:    br label [[LATCH]]
-; MT:       else:
-; MT-NEXT:    store i32 42, ptr [[PTR:%.*]], align 4
-; MT-NEXT:    br label [[LATCH]]
-; MT:       latch:
-; MT-NEXT:    [[V_INC1]] = phi i32 [ [[V_INC2]], [[ELSE]] ], [ [[V_INC]], [[IF]] ]
-; MT-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[LOOP]]
-; MT:       exit:
-; MT-NEXT:    ret void
-;
-; ST-LABEL: @promote_global_noalias(
-; ST-NEXT:  entry:
-; ST-NEXT:    [[G_PROMOTED:%.*]] = load i32, ptr @g, align 4
-; ST-NEXT:    br label [[LOOP:%.*]]
-; ST:       loop:
-; ST-NEXT:    [[V_INC2:%.*]] = phi i32 [ [[V_INC1:%.*]], [[LATCH:%.*]] ], [ [[G_PROMOTED]], [[ENTRY:%.*]] ]
-; ST-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
-; ST:       if:
-; ST-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC2]], 1
-; ST-NEXT:    br label [[LATCH]]
-; ST:       else:
-; ST-NEXT:    store i32 42, ptr [[PTR:%.*]], align 4
-; ST-NEXT:    br label [[LATCH]]
-; ST:       latch:
-; ST-NEXT:    [[V_INC1]] = phi i32 [ [[V_INC2]], [[ELSE]] ], [ [[V_INC]], [[IF]] ]
-; ST-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[LOOP]]
-; ST:       exit:
-; ST-NEXT:    [[V_INC1_LCSSA:%.*]] = phi i32 [ [[V_INC1]], [[LATCH]] ]
-; ST-NEXT:    store i32 [[V_INC1_LCSSA]], ptr @g, align 4
-; ST-NEXT:    ret void
+; CHECK-LABEL: @promote_global_noalias(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[G_PROMOTED:%.*]] = load i32, ptr @g, align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[V_INC2:%.*]] = phi i32 [ [[V_INC1:%.*]], [[LATCH:%.*]] ], [ [[G_PROMOTED]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC2]], 1
+; CHECK-NEXT:    store i32 [[V_INC]], ptr @g, align 4
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       else:
+; CHECK-NEXT:    store i32 42, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[V_INC1]] = phi i32 [ [[V_INC2]], [[ELSE]] ], [ [[V_INC]], [[IF]] ]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop

@@ -182,6 +182,7 @@ LIBC_INLINE size_t complementary_span(const char *src, const char *segment) {
 // is found is then stored within 'context' for subsequent calls. Subsequent
 // calls will use 'context' when a nullptr is passed in for 'src'. Once the null
 // terminating character is reached, returns a nullptr.
+template <bool SkipDelim = true>
 LIBC_INLINE char *string_token(char *__restrict src,
                                const char *__restrict delimiter_string,
                                char **__restrict saveptr) {
@@ -193,8 +194,9 @@ LIBC_INLINE char *string_token(char *__restrict src,
   for (; *delimiter_string != '\0'; ++delimiter_string)
     delimiter_set.set(*delimiter_string);
 
-  for (; *src != '\0' && delimiter_set.test(*src); ++src)
-    ;
+  if constexpr (SkipDelim)
+    for (; *src != '\0' && delimiter_set.test(*src); ++src)
+      ;
   if (*src == '\0') {
     *saveptr = src;
     return nullptr;
@@ -220,6 +222,25 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   inline_memcpy(dst, src, n);
   inline_bzero(dst + n, size - n);
   return len;
+}
+
+template <bool ReturnNull = true>
+constexpr static char *strchr_implementation(const char *src, int c) {
+  char ch = static_cast<char>(c);
+  for (; *src && *src != ch; ++src)
+    ;
+  char *ret = ReturnNull ? nullptr : const_cast<char *>(src);
+  return *src == ch ? const_cast<char *>(src) : ret;
+}
+
+constexpr static char *strrchr_implementation(const char *src, int c) {
+  char ch = static_cast<char>(c);
+  char *last_occurrence = nullptr;
+  for (; *src; ++src) {
+    if (*src == ch)
+      last_occurrence = const_cast<char *>(src);
+  }
+  return last_occurrence;
 }
 
 } // namespace internal

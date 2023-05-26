@@ -40,8 +40,9 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
   if (LIBC_UNLIKELY(x_abs <= 0x3dcc'0000U)) {
     // |x| <= 2^-26
     if (LIBC_UNLIKELY(x_abs <= 0x3280'0000U)) {
-      return LIBC_UNLIKELY(x_abs == 0) ? x
-                                       : (x + 0x1.5555555555555p-2 * x * x * x);
+      return static_cast<float>(LIBC_UNLIKELY(x_abs == 0)
+                                    ? x
+                                    : (x + 0x1.5555555555555p-2 * x * x * x));
     }
 
     double xdbl = x;
@@ -50,10 +51,10 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
     double pe = fputil::polyeval(x2, 0.0, 0x1.5555555555555p-2,
                                  0x1.999999999999ap-3, 0x1.2492492492492p-3,
                                  0x1.c71c71c71c71cp-4, 0x1.745d1745d1746p-4);
-    return fputil::multiply_add(xdbl, pe, xdbl);
+    return static_cast<float>(fputil::multiply_add(xdbl, pe, xdbl));
   }
   double xdbl = x;
-  return 0.5 * log_eval((xdbl + 1.0) / (xdbl - 1.0));
+  return static_cast<float>(0.5 * log_eval((xdbl + 1.0) / (xdbl - 1.0)));
 }
 
 } // namespace __llvm_libc

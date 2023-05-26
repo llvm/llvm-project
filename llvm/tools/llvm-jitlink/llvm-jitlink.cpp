@@ -175,10 +175,11 @@ static cl::opt<bool> ShowAddrs(
     cl::desc("Print registered symbol, section, got and stub addresses"),
     cl::init(false), cl::cat(JITLinkCategory));
 
-static cl::opt<bool> ShowLinkGraph(
-    "show-graph",
-    cl::desc("Print the link graph after fixups have been applied"),
-    cl::init(false), cl::cat(JITLinkCategory));
+static cl::opt<std::string> ShowLinkGraphs(
+    "show-graphs",
+    cl::desc("Takes a posix regex and prints the link graphs of all files "
+             "matching that regex after fixups have been applied"),
+    cl::Optional, cl::cat(JITLinkCategory));
 
 static cl::opt<bool> ShowSizes(
     "show-sizes",
@@ -553,12 +554,12 @@ Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
 
   uint64_t Units = 1024;
 
-  if (SizeString.endswith_insensitive("kb"))
+  if (SizeString.ends_with_insensitive("kb"))
     SizeString = SizeString.drop_back(2).rtrim();
-  else if (SizeString.endswith_insensitive("mb")) {
+  else if (SizeString.ends_with_insensitive("mb")) {
     Units = 1024 * 1024;
     SizeString = SizeString.drop_back(2).rtrim();
-  } else if (SizeString.endswith_insensitive("gb")) {
+  } else if (SizeString.ends_with_insensitive("gb")) {
     Units = 1024 * 1024 * 1024;
     SizeString = SizeString.drop_back(2).rtrim();
   }
@@ -887,12 +888,13 @@ public:
                       const SymbolLookupSet &LookupSet) override {
     SymbolMap PhonySymbols;
     for (auto &KV : LookupSet)
-      PhonySymbols[KV.first] = JITEvaluatedSymbol(0, JITSymbolFlags::Exported);
+      PhonySymbols[KV.first] = {ExecutorAddr(), JITSymbolFlags::Exported};
     return JD.define(absoluteSymbols(std::move(PhonySymbols)));
   }
 };
 
-Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
+Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
+                                                   SubtargetFeatures Features) {
 
   std::unique_ptr<ExecutorProcessControl> EPC;
   if (OutOfProcessExecutor.getNumOccurrences()) {
@@ -922,6 +924,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
   std::unique_ptr<Session> S(new Session(std::move(EPC), Err));
   if (Err)
     return std::move(Err);
+  S->Features = std::move(Features);
   return std::move(S);
 }
 
@@ -975,7 +978,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     auto &TestResultJD = ES.createBareJITDylib("<TestResultJD>");
     ExitOnErr(TestResultJD.define(absoluteSymbols(
         {{ES.intern("llvm_jitlink_setTestResultOverride"),
-          {pointerToJITTargetAddress(llvm_jitlink_setTestResultOverride),
+          {ExecutorAddr::fromPtr(llvm_jitlink_setTestResultOverride),
            JITSymbolFlags::Exported}}})));
     MainJD->addToLinkOrder(TestResultJD);
   }
@@ -1007,7 +1010,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     }
   } else if (TT.isOSBinFormatCOFF() && !OrcRuntime.empty()) {
     auto LoadDynLibrary = [&, this](JITDylib &JD, StringRef DLLName) -> Error {
-      if (!DLLName.endswith_insensitive(".dll"))
+      if (!DLLName.ends_with_insensitive(".dll"))
         return make_error<StringError>("DLLName not ending with .dll",
                                        inconvertibleErrorCode());
       return loadAndLinkDynamicLibrary(JD, DLLName);
@@ -1026,7 +1029,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
           ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
     if (DebuggerSupport)
       ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES))));
+          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
   }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
@@ -1062,6 +1065,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   // external.
   for (auto &DefName : HarnessDefinitions)
     HarnessExternals.erase(DefName.getKey());
+
+  if (!ShowLinkGraphs.empty())
+    ShowGraphsRegex = Regex(ShowLinkGraphs);
 }
 
 void Session::dumpSessionInfo(raw_ostream &OS) {
@@ -1086,10 +1092,14 @@ void Session::modifyPassConfig(const Triple &TT,
                                      inconvertibleErrorCode());
     });
 
-  if (ShowLinkGraph)
-    PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
-      outs() << "Link graph \"" << G.getName() << "\" post-fixup:\n";
-      G.dump(outs());
+  if (ShowGraphsRegex)
+    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
+      // Print graph if ShowLinkGraphs is specified-but-empty, or if
+      // it contains the given graph.
+      if (ShowGraphsRegex->match(G.getName())) {
+        outs() << "Link graph \"" << G.getName() << "\" post-fixup:\n";
+        G.dump(outs());
+      }
       return Error::success();
     });
 
@@ -1215,8 +1225,8 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 
 } // end namespace llvm
 
-static Triple getFirstFileTriple() {
-  static Triple FirstTT = []() {
+static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
+  static std::pair<Triple, SubtargetFeatures> FirstTTAndFeatures = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
     for (auto InputFile : InputFiles) {
       auto ObjBuffer = ExitOnErr(getFile(InputFile));
@@ -1233,16 +1243,19 @@ static Triple getFirstFileTriple() {
           TT.setObjectFormat(Triple::COFF);
           TT.setOS(Triple::OSType::Win32);
         }
-        return TT;
+        SubtargetFeatures Features;
+        if (auto ObjFeatures = Obj->getFeatures())
+          Features = std::move(*ObjFeatures);
+        return std::make_pair(TT, Features);
       }
       default:
         break;
       }
     }
-    return Triple();
+    return std::make_pair(Triple(), SubtargetFeatures());
   }();
 
-  return FirstTT;
+  return FirstTTAndFeatures;
 }
 
 static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
@@ -1393,7 +1406,7 @@ static Error addAbsoluteSymbols(Session &S,
                                          "\" in absolute symbol definition \"" +
                                          AbsDefStmt + "\"",
                                      inconvertibleErrorCode());
-    JITEvaluatedSymbol AbsDef(Addr, JITSymbolFlags::Exported);
+    ExecutorSymbolDef AbsDef(ExecutorAddr(Addr), JITSymbolFlags::Exported);
     if (auto Err = JD.define(absoluteSymbols({{S.ES.intern(Name), AbsDef}})))
       return Err;
 
@@ -1640,7 +1653,7 @@ static Error addLibraries(Session &S,
     for (auto FileName : (*G)->getImportedDynamicLibraries()) {
       LibraryLoad NewLL;
       auto FileNameRef = StringRef(FileName);
-      if (!FileNameRef.endswith_insensitive(".dll"))
+      if (!FileNameRef.ends_with_insensitive(".dll"))
         return make_error<StringError>(
             "COFF Imported library not ending with dll extension?",
             inconvertibleErrorCode());
@@ -1800,7 +1813,9 @@ struct TargetInfo {
 };
 } // anonymous namespace
 
-static TargetInfo getTargetInfo(const Triple &TT) {
+static TargetInfo
+getTargetInfo(const Triple &TT,
+              const SubtargetFeatures &TF = SubtargetFeatures()) {
   auto TripleName = TT.str();
   std::string ErrorStr;
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
@@ -1810,7 +1825,7 @@ static TargetInfo getTargetInfo(const Triple &TT) {
                                       inconvertibleErrorCode()));
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+      TheTarget->createMCSubtargetInfo(TripleName, "", TF.getString()));
   if (!STI)
     ExitOnErr(
         make_error<StringError>("Unable to create subtarget for " + TripleName,
@@ -1871,7 +1886,7 @@ static Error runChecks(Session &S) {
 
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
-  auto TI = getTargetInfo(S.ES.getTargetTriple());
+  auto TI = getTargetInfo(S.ES.getTargetTriple(), S.Features);
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
     return S.isSymbolRegistered(Symbol);
@@ -1932,19 +1947,19 @@ static void dumpSessionStats(Session &S) {
            << "\n";
 }
 
-static Expected<JITEvaluatedSymbol> getMainEntryPoint(Session &S) {
+static Expected<ExecutorSymbolDef> getMainEntryPoint(Session &S) {
   return S.ES.lookup(S.JDSearchOrder, S.ES.intern(EntryPointName));
 }
 
-static Expected<JITEvaluatedSymbol> getOrcRuntimeEntryPoint(Session &S) {
+static Expected<ExecutorSymbolDef> getOrcRuntimeEntryPoint(Session &S) {
   std::string RuntimeEntryPoint = "__orc_rt_run_program_wrapper";
   if (S.ES.getTargetTriple().getObjectFormat() == Triple::MachO)
     RuntimeEntryPoint = '_' + RuntimeEntryPoint;
   return S.ES.lookup(S.JDSearchOrder, S.ES.intern(RuntimeEntryPoint));
 }
 
-static Expected<JITEvaluatedSymbol> getEntryPoint(Session &S) {
-  JITEvaluatedSymbol EntryPoint;
+static Expected<ExecutorSymbolDef> getEntryPoint(Session &S) {
+  ExecutorSymbolDef EntryPoint;
 
   // Find the entry-point function unconditionally, since we want to force
   // it to be materialized to collect stats.
@@ -2018,9 +2033,10 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<JITLinkTimers> Timers =
       ShowTimes ? std::make_unique<JITLinkTimers>() : nullptr;
 
-  ExitOnErr(sanitizeArguments(getFirstFileTriple(), argv[0]));
+  auto [TT, Features] = getFirstFileTripleAndFeatures();
+  ExitOnErr(sanitizeArguments(TT, argv[0]));
 
-  auto S = ExitOnErr(Session::Create(getFirstFileTriple()));
+  auto S = ExitOnErr(Session::Create(std::move(TT), std::move(Features)));
 
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
@@ -2033,9 +2049,9 @@ int main(int argc, char *argv[]) {
   if (ShowInitialExecutionSessionState)
     S->ES.dump(outs());
 
-  Expected<JITEvaluatedSymbol> EntryPoint(nullptr);
+  Expected<ExecutorSymbolDef> EntryPoint((ExecutorSymbolDef()));
   {
-    ExpectedAsOutParameter<JITEvaluatedSymbol> _(&EntryPoint);
+    ExpectedAsOutParameter<ExecutorSymbolDef> _(&EntryPoint);
     TimeRegion TR(Timers ? &Timers->LinkTimer : nullptr);
     EntryPoint = getEntryPoint(*S);
   }

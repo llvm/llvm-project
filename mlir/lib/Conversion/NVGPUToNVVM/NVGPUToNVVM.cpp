@@ -28,7 +28,7 @@ using namespace mlir;
 /// `gpu.mma.sync` operation.
 static Type inferIntrinsicResultType(Type vectorResultType) {
   MLIRContext *ctx = vectorResultType.getContext();
-  auto a = vectorResultType.cast<LLVM::LLVMArrayType>();
+  auto a = cast<LLVM::LLVMArrayType>(vectorResultType);
   auto f16x2Ty = LLVM::getFixedVectorType(Float16Type::get(ctx), 2);
   auto i32Ty = IntegerType::get(ctx, 32);
   auto i32x2Ty = LLVM::getFixedVectorType(i32Ty, 2);
@@ -69,8 +69,8 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
                                     Type resultType, Value intrinsicResult,
                                     RewriterBase &rewriter) {
   MLIRContext *ctx = rewriter.getContext();
-  auto structType = intrinsicResultType.dyn_cast<LLVM::LLVMStructType>();
-  auto arrayType = resultType.dyn_cast<LLVM::LLVMArrayType>();
+  auto structType = dyn_cast<LLVM::LLVMStructType>(intrinsicResultType);
+  auto arrayType = dyn_cast<LLVM::LLVMArrayType>(resultType);
   Type i32Ty = rewriter.getI32Type();
   Type f32Ty = rewriter.getF32Type();
   Type f64Ty = rewriter.getF64Type();
@@ -153,7 +153,7 @@ static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
   Type i8x4Ty = LLVM::getFixedVectorType(i8Ty, 4);
   Type i4x8Ty = LLVM::getFixedVectorType(i4Ty, 8);
   Type f32x1Ty = LLVM::getFixedVectorType(f32Ty, 1);
-  auto arrayTy = operand.getType().cast<LLVM::LLVMArrayType>();
+  auto arrayTy = cast<LLVM::LLVMArrayType>(operand.getType());
 
   for (unsigned i = 0, e = arrayTy.getNumElements(); i < e; ++i) {
     Value toUse = rewriter.create<LLVM::ExtractValueOp>(loc, operand, i);
@@ -172,7 +172,7 @@ static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
     // For some element types (i32, f32, f64), we need to unpack the inner
     // vector/array type as well because the intrinsic expects individual
     // scalars to be provided.
-    VectorType innerArrayTy = arrayTy.getElementType().dyn_cast<VectorType>();
+    VectorType innerArrayTy = dyn_cast<VectorType>(arrayTy.getElementType());
     if (innerArrayTy && (innerArrayTy.getElementType() == i32Ty ||
                          innerArrayTy.getElementType() == f64Ty ||
                          innerArrayTy.getElementType() == f32Ty)) {
@@ -207,7 +207,7 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
     // of shape (NumRegisters, VectorRegister) where VectorRegister is the
     // vector type of the result and always 32 bits long. We bitcast the result
     // of the NVVM::LdMatrix to this vector type.
-    auto vectorResultType = op->getResultTypes()[0].dyn_cast<VectorType>();
+    auto vectorResultType = dyn_cast<VectorType>(op->getResultTypes()[0]);
     if (!vectorResultType) {
       return failure();
     }
@@ -224,7 +224,7 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
       ldMatrixResultType = rewriter.getI32Type();
     }
 
-    auto srcMemrefType = op.getSrcMemref().getType().cast<MemRefType>();
+    auto srcMemrefType = cast<MemRefType>(op.getSrcMemref().getType());
     Value srcPtr =
         getStridedElementPtr(loc, srcMemrefType, adaptor.getSrcMemref(),
                              adaptor.getIndices(), rewriter);
@@ -307,7 +307,7 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
 
     // TODO: add an attribute to the op to customize this behavior.
     std::optional<NVVM::MMAIntOverflow> overflow(std::nullopt);
-    if (aType.getElementType().isa<IntegerType>())
+    if (isa<IntegerType>(aType.getElementType()))
       overflow = NVVM::MMAIntOverflow::satfinite;
 
     SmallVector<Value> matA =
@@ -367,7 +367,9 @@ static void emitCpAsyncOpZfillAsm(Location loc, Value dstPtr, Value srcPtr,
                                   ConversionPatternRewriter &rewriter) {
   auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
                                                   LLVM::AsmDialect::AD_ATT);
-  const char *asmStr = "cp.async.cg.shared.global [$0], [$1], $2, $3;\n";
+
+  const char *cpAsyncCgStr = "cp.async.cg.shared.global [$0], [$1], $2, $3;\n";
+  const char *cpAsyncCaStr = "cp.async.ca.shared.global [$0], [$1], $2, $3;\n";
   const char *asmConstraints = "r,l,n,r";
 
   Value c3I32 = rewriter.create<LLVM::ConstantOp>(
@@ -381,6 +383,19 @@ static void emitCpAsyncOpZfillAsm(Location loc, Value dstPtr, Value srcPtr,
       loc, rewriter.create<LLVM::MulOp>(loc, bitwidth, srcElementsI32), c3I32);
 
   SmallVector<Value> asmVals{dstPtr, srcPtr, dstBytes, srcBytes};
+
+  // Pick the right asm string based on the dstBytes which is a compile-time
+  // constant.
+  auto dstByteConstOp =
+      dyn_cast<mlir::LLVM::ConstantOp>(dstBytes.getDefiningOp());
+  auto dstByteAttr = dyn_cast<mlir::IntegerAttr>(dstByteConstOp.getValue());
+  int64_t dstByteVal = dstByteAttr.getValue().getSExtValue();
+
+  assert((dstByteVal == 4 || dstByteVal == 8 || dstByteVal == 16) &&
+          "cp.async byte copy size must be 4, 8 or 16");
+  // Cache global (.cg) for 16 dst bytes, Cache all (.ca) for sizes other than
+  // 16 dst bytes.
+  const char *asmStr = (dstByteVal == 16) ? cpAsyncCgStr : cpAsyncCaStr;
 
   rewriter.create<LLVM::InlineAsmOp>(
       loc, LLVM::LLVMVoidType::get(rewriter.getContext()),
@@ -522,7 +537,7 @@ struct NVGPUMmaSparseSyncLowering
 
     // TODO: add an attribute to the op to customize this behavior.
     std::optional<NVVM::MMAIntOverflow> overflow(std::nullopt);
-    if (aType.getElementType().isa<IntegerType>())
+    if (isa<IntegerType>(aType.getElementType()))
       overflow = NVVM::MMAIntOverflow::satfinite;
 
     SmallVector<Value> matA =
@@ -570,7 +585,7 @@ struct NVGPUAsyncCopyLowering
   matchAndRewrite(nvgpu::DeviceAsyncCopyOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto dstMemrefType = op.getDst().getType().cast<MemRefType>();
+    auto dstMemrefType = cast<MemRefType>(op.getDst().getType());
     Value dstPtr = getStridedElementPtr(loc, dstMemrefType, adaptor.getDst(),
                                         adaptor.getDstIndices(), rewriter);
     auto i8Ty = IntegerType::get(op.getContext(), 8);
@@ -584,7 +599,7 @@ struct NVGPUAsyncCopyLowering
     if (!getTypeConverter()->useOpaquePointers())
       dstPtr = rewriter.create<LLVM::BitcastOp>(loc, dstPointerType, dstPtr);
 
-    auto srcMemrefType = op.getSrc().getType().cast<MemRefType>();
+    auto srcMemrefType = cast<MemRefType>(op.getSrc().getType());
     FailureOr<unsigned> srcAddressSpace =
         getTypeConverter()->getMemRefAddressSpace(srcMemrefType);
     if (failed(srcAddressSpace))

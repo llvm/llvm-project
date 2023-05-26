@@ -58,7 +58,7 @@ class RABasic : public MachineFunctionPass,
                 public RegAllocBase,
                 private LiveRangeEdit::Delegate {
   // context
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
 
   // state
   std::unique_ptr<Spiller> SpillerInstance;

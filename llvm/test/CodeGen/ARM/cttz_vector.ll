@@ -65,14 +65,13 @@ define void @test_v4i8(ptr %p) {
 ; CHECK-LABEL: test_v4i8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r0:32]
-; CHECK-NEXT:    vmov.i16 d19, #0x1
 ; CHECK-NEXT:    vmovl.u8 q8, d16
 ; CHECK-NEXT:    vorr.i16 d16, #0x100
 ; CHECK-NEXT:    vneg.s16 d18, d16
 ; CHECK-NEXT:    vand d16, d16, d18
-; CHECK-NEXT:    vsub.i16 d16, d16, d19
-; CHECK-NEXT:    vcnt.8 d16, d16
-; CHECK-NEXT:    vpaddl.u8 d16, d16
+; CHECK-NEXT:    vmov.i16 d17, #0xf
+; CHECK-NEXT:    vclz.i16 d16, d16
+; CHECK-NEXT:    vsub.i16 d16, d17, d16
 ; CHECK-NEXT:    vuzp.8 d16, d17
 ; CHECK-NEXT:    vst1.32 {d16[0]}, [r0:32]
 ; CHECK-NEXT:    bx lr

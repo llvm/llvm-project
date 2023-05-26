@@ -28,11 +28,17 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
+#include <__memory/allocate_at_least.h>
+#include <__memory/allocator_traits.h>
+#include <__memory/construct_at.h>
+#include <__memory/ranges_construct_at.h>
+#include <__memory/uninitialized_algorithms.h>
 #include <__type_traits/add_pointer.h>
+#include <__type_traits/conditional.h>
+#include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <cstddef>
 #include <string_view>
-#include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -511,8 +517,13 @@ public:
 // context and the format arguments need to be retargeted to the new context.
 // This retargeting is done by a basic_format_context specialized for the
 // __iterator of this container.
+//
+// This class uses its own buffer management, since using vector
+// would lead to a circular include with formatter for vector<bool>.
 template <__fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __retarget_buffer {
+  using _Alloc = allocator<_CharT>;
+
 public:
   using value_type = _CharT;
 
@@ -536,31 +547,89 @@ public:
     __retarget_buffer* __buffer_;
   };
 
-  _LIBCPP_HIDE_FROM_ABI explicit __retarget_buffer(size_t __size_hint) { __buffer_.reserve(__size_hint); }
+  __retarget_buffer(const __retarget_buffer&)            = delete;
+  __retarget_buffer& operator=(const __retarget_buffer&) = delete;
+
+  _LIBCPP_HIDE_FROM_ABI explicit __retarget_buffer(size_t __size_hint) {
+    auto __result = std::__allocate_at_least(__alloc_, __size_hint ? __size_hint : 256 / sizeof(_CharT));
+    __ptr_        = __result.ptr;
+    __capacity_   = __result.count;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI ~__retarget_buffer() {
+    ranges::destroy_n(__ptr_, __size_);
+    allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, __capacity_);
+  }
 
   _LIBCPP_HIDE_FROM_ABI __iterator __make_output_iterator() { return __iterator{*this}; }
 
-  _LIBCPP_HIDE_FROM_ABI void push_back(_CharT __c) { __buffer_.push_back(__c); }
+  _LIBCPP_HIDE_FROM_ABI void push_back(_CharT __c) {
+    std::construct_at(__ptr_ + __size_, __c);
+    ++__size_;
+
+    if (__size_ == __capacity_)
+      __grow_buffer();
+  }
 
   template <__fmt_char_type _InCharT>
   _LIBCPP_HIDE_FROM_ABI void __copy(basic_string_view<_InCharT> __str) {
-    __buffer_.insert(__buffer_.end(), __str.begin(), __str.end());
+    size_t __n = __str.size();
+    if (__size_ + __n >= __capacity_)
+      // Push_back requires the buffer to have room for at least one character.
+      __grow_buffer(__size_ + __n + 1);
+
+    std::uninitialized_copy_n(__str.data(), __n, __ptr_ + __size_);
+    __size_ += __n;
   }
 
   template <__fmt_char_type _InCharT, class _UnaryOperation>
   _LIBCPP_HIDE_FROM_ABI void __transform(const _InCharT* __first, const _InCharT* __last, _UnaryOperation __operation) {
     _LIBCPP_ASSERT(__first <= __last, "not a valid range");
-    std::transform(__first, __last, std::back_inserter(__buffer_), std::move(__operation));
+
+    size_t __n = static_cast<size_t>(__last - __first);
+    if (__size_ + __n >= __capacity_)
+      // Push_back requires the buffer to have room for at least one character.
+      __grow_buffer(__size_ + __n + 1);
+
+    std::uninitialized_default_construct_n(__ptr_ + __size_, __n);
+    std::transform(__first, __last, __ptr_ + __size_, std::move(__operation));
+    __size_ += __n;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __fill(size_t __n, _CharT __value) { __buffer_.insert(__buffer_.end(), __n, __value); }
+  _LIBCPP_HIDE_FROM_ABI void __fill(size_t __n, _CharT __value) {
+    if (__size_ + __n >= __capacity_)
+      // Push_back requires the buffer to have room for at least one character.
+      __grow_buffer(__size_ + __n + 1);
 
-  _LIBCPP_HIDE_FROM_ABI basic_string_view<_CharT> __view() { return {__buffer_.data(), __buffer_.size()}; }
+    std::uninitialized_fill_n(__ptr_ + __size_, __n, __value);
+    __size_ += __n;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI basic_string_view<_CharT> __view() { return {__ptr_, __size_}; }
 
 private:
-  // Use vector instead of string to avoid adding zeros after every append
-  // operation. The buffer is exposed as a string_view and not as a c-string.
-  vector<_CharT> __buffer_;
+  _LIBCPP_HIDE_FROM_ABI void __grow_buffer() { __grow_buffer(__capacity_ * 1.6); }
+
+  _LIBCPP_HIDE_FROM_ABI void __grow_buffer(size_t __capacity) {
+    _LIBCPP_ASSERT(__capacity > __capacity_, "the buffer must grow");
+    auto __result = std::__allocate_at_least(__alloc_, __capacity);
+    auto __guard  = std::__make_exception_guard([&] {
+      allocator_traits<_Alloc>::deallocate(__alloc_, __result.ptr, __result.count);
+    });
+    // This shouldn't throw, but just to be safe. Not that at -O1 this
+    // guard is optimized away so there is no runtime overhead.
+    std::uninitialized_move_n(__ptr_, __size_, __result.ptr);
+    __guard.__complete();
+    ranges::destroy_n(__ptr_, __size_);
+    allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, __capacity_);
+
+    __ptr_      = __result.ptr;
+    __capacity_ = __result.count;
+  }
+  _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
+  _CharT* __ptr_;
+  size_t __capacity_;
+  size_t __size_{0};
 };
 
 } // namespace __format

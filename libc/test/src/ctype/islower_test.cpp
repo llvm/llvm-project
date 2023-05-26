@@ -12,7 +12,7 @@
 TEST(LlvmLibcIsLower, DefaultLocale) {
   // Loops through all characters, verifying that lowercase letters
   // return a non-zero integer and everything else returns zero.
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     if ('a' <= ch && ch <= 'z')
       EXPECT_NE(__llvm_libc::islower(ch), 0);
     else

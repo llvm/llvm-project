@@ -3,7 +3,7 @@
 // RUN: %run %t
 //
 // REQUIRES: cxxabi
-// UNSUPPORTED: target={{.*windows-msvc.*}}
+// UNSUPPORTED: target={{.*windows.*}}
 
 struct X {
   virtual ~X() {}

@@ -28,8 +28,8 @@ int __tag4 * __tag5 * __tag6 *foo1(struct t __tag1 * __tag2 * __tag3 *a1) {
 int g1 = _Generic((int *)0, int __tag1 *: 0);
 int g2 = _Generic((int __tag1 *)0, int *: 0);
 int g3 = _Generic(0,
-                  int __tag1 * : 0, // expected-note {{compatible type 'int  btf_type_tag(tag1)*' (aka 'int *') specified here}}
-                  int * : 0, // expected-error {{type 'int *' in generic association compatible with previously specified type 'int  btf_type_tag(tag1)*' (aka 'int *')}}
+                  int __tag1 * : 0, // expected-note {{compatible type 'int  __attribute__((btf_type_tag("tag1")))*' (aka 'int *') specified here}}
+                  int * : 0, // expected-error {{type 'int *' in generic association compatible with previously specified type 'int  __attribute__((btf_type_tag("tag1")))*' (aka 'int *')}}
                   default : 0);
 
 // The btf_type_tag attribute will be ignored during overloadable type matching

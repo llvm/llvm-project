@@ -436,6 +436,16 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OmpClause::UseDevicePtr &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpUseDevicePtr);
+    return false;
+  }
+
+  bool Pre(const parser::OmpClause::UseDeviceAddr &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpUseDeviceAddr);
+    return false;
+  }
+
   void Post(const parser::Name &);
 
   // Keep track of labels in the statements that causes jumps to target labels
@@ -462,6 +472,28 @@ public:
   void Post(const parser::EndLabel &endLabel) { CheckSourceLabel(endLabel.v); }
   void Post(const parser::EorLabel &eorLabel) { CheckSourceLabel(eorLabel.v); }
 
+  void Post(const parser::OmpMapClause &x) {
+    const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
+    for (const auto &ompObj : ompObjList.v) {
+      common::visit(
+          common::visitors{
+              [&](const parser::Designator &designator) {
+                if (const auto *name{GetDesignatorNameIfDataRef(designator)}) {
+                  if (name->symbol &&
+                      semantics::IsAssumedSizeArray(*name->symbol)) {
+                    context_.Say(designator.source,
+                        "Assumed-size whole arrays may not appear on the %s "
+                        "clause"_err_en_US,
+                        "MAP");
+                  }
+                }
+              },
+              [&](const auto &name) {},
+          },
+          ompObj.u);
+    }
+  }
+
   const parser::OmpClause *associatedClause{nullptr};
   void SetAssociatedClause(const parser::OmpClause &c) {
     associatedClause = &c;
@@ -484,7 +516,8 @@ private:
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpLinear,
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
       Symbol::Flag::OmpReduction, Symbol::Flag::OmpCriticalLock,
-      Symbol::Flag::OmpCopyIn};
+      Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpUseDevicePtr,
+      Symbol::Flag::OmpUseDeviceAddr};
 
   static constexpr Symbol::Flags ompFlagsRequireMark{
       Symbol::Flag::OmpThreadprivate};
@@ -564,7 +597,11 @@ const parser::Name *DirectiveAttributeVisitor<T>::GetLoopIndex(
     const parser::DoConstruct &x) {
   using Bounds = parser::LoopControl::Bounds;
   if (x.GetLoopControl()) {
-    return &std::get<Bounds>(x.GetLoopControl()->u).name.thing;
+    if (const Bounds * b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
+      return &b->name.thing;
+    } else {
+      return nullptr;
+    }
   } else {
     context_
         .Say(std::get<parser::Statement<parser::NonLabelDoStmt>>(x.t).source,
@@ -1664,7 +1701,8 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   }
                 }
                 if (ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective &&
-                    IsAllocatable(*symbol)) {
+                    IsAllocatable(*symbol) &&
+                    !IsNestedInDirective(llvm::omp::Directive::OMPD_allocate)) {
                   context_.Say(designator.source,
                       "List items specified in the ALLOCATE directive must not "
                       "have the ALLOCATABLE attribute unless the directive is "

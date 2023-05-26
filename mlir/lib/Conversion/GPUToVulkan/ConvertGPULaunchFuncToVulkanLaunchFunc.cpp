@@ -61,7 +61,7 @@ private:
 
   /// Checks where the given type is supported by Vulkan runtime.
   bool isSupportedType(Type type) {
-    if (auto memRefType = type.dyn_cast_or_null<MemRefType>()) {
+    if (auto memRefType = dyn_cast_or_null<MemRefType>(type)) {
       auto elementType = memRefType.getElementType();
       return memRefType.hasRank() &&
              (memRefType.getRank() >= 1 && memRefType.getRank() <= 3) &&
@@ -197,7 +197,7 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
     // The below cast always succeeds as it has already been verified in
     // 'declareVulkanLaunchFunc' that these are MemRefs with compatible element
     // types.
-    elementTypes.push_back(type.cast<MemRefType>().getElementType());
+    elementTypes.push_back(cast<MemRefType>(type).getElementType());
   }
   vulkanLaunchCallOp->setAttr(kSPIRVElementTypesAttrName,
                               builder.getTypeArrayAttr(elementTypes));

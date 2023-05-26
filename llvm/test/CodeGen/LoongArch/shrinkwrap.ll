@@ -60,11 +60,10 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; NOSHRINKW-NEXT:    b .LBB1_1
 ; NOSHRINKW-NEXT:  .LBB1_1: # %if.then
 ; NOSHRINKW-NEXT:    ld.d $a0, $fp, -24 # 8-byte Folded Reload
-; NOSHRINKW-NEXT:    addi.w $a1, $zero, -16
-; NOSHRINKW-NEXT:    lu32i.d $a1, 1
 ; NOSHRINKW-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; NOSHRINKW-NEXT:    addi.d $a0, $a0, 15
-; NOSHRINKW-NEXT:    and $a1, $a0, $a1
+; NOSHRINKW-NEXT:    bstrpick.d $a0, $a0, 32, 4
+; NOSHRINKW-NEXT:    slli.d $a1, $a0, 4
 ; NOSHRINKW-NEXT:    move $a0, $sp
 ; NOSHRINKW-NEXT:    sub.d $a0, $a0, $a1
 ; NOSHRINKW-NEXT:    move $sp, $a0
@@ -87,10 +86,9 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; SHRINKW-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; SHRINKW-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; SHRINKW-NEXT:    addi.d $fp, $sp, 16
-; SHRINKW-NEXT:    addi.w $a1, $zero, -16
-; SHRINKW-NEXT:    lu32i.d $a1, 1
 ; SHRINKW-NEXT:    addi.d $a0, $a0, 15
-; SHRINKW-NEXT:    and $a0, $a0, $a1
+; SHRINKW-NEXT:    bstrpick.d $a0, $a0, 32, 4
+; SHRINKW-NEXT:    slli.d $a0, $a0, 4
 ; SHRINKW-NEXT:    sub.d $a0, $sp, $a0
 ; SHRINKW-NEXT:    move $sp, $a0
 ; SHRINKW-NEXT:    bl %plt(notdead)

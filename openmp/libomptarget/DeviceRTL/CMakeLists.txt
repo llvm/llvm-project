@@ -70,7 +70,8 @@ set(LIBOMPTARGET_DEVICE_ARCHITECTURES "all" CACHE STRING
 
 if(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "all")
   set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${all_gpu_architectures})
-elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto")
+elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto" OR
+       LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "native")
   if(NOT LIBOMPTARGET_NVPTX_ARCH AND NOT LIBOMPTARGET_AMDGPU_ARCH)
     libomptarget_error_say(
       "Could not find 'amdgpu-arch' and 'nvptx-arch' tools required for 'auto'")
@@ -80,6 +81,7 @@ elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto")
   set(LIBOMPTARGET_DEVICE_ARCHITECTURES
       "${LIBOMPTARGET_NVPTX_DETECTED_ARCH_LIST};${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST}")
 endif()
+list(REMOVE_DUPLICATES LIBOMPTARGET_DEVICE_ARCHITECTURES)
 
 set(include_files
   ${include_directory}/Configuration.h
@@ -266,6 +268,24 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${output_name})
   set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${output_name})
+
+  if (CMAKE_EXPORT_COMPILE_COMMANDS)
+    set(ide_target_name omptarget-ide-${target_name}-${target_cpu})
+    add_library(${ide_target_name} STATIC EXCLUDE_FROM_ALL ${src_files})
+    target_compile_options(${ide_target_name} PRIVATE
+      -fopenmp --offload-arch=${target_cpu} -fopenmp-cuda-mode
+      -mllvm -openmp-opt-disable
+      -foffload-lto -fvisibility=hidden --offload-device-only
+      -nocudalib -nogpulib -nostdinc -Wno-unknown-cuda-version
+    )
+    target_compile_definitions(${ide_target_name} PRIVATE SHARED_SCRATCHPAD_SIZE=512)
+    target_include_directories(${ide_target_name} PRIVATE
+      ${include_directory}
+      ${devicertl_base_directory}/../include
+      ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
+    )
+    install(TARGETS ${ide_target_name} EXCLUDE_FROM_ALL)
+  endif()
 endfunction()
 
 # Generate a Bitcode library for all the gpu architectures the user requested.

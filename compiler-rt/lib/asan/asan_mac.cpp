@@ -160,7 +160,7 @@ void asan_dispatch_call_block_and_release(void *block) {
   VReport(2,
           "asan_dispatch_call_block_and_release(): "
           "context: %p, pthread_self: %p\n",
-          block, pthread_self());
+          block, (void*)pthread_self());
   asan_register_worker_thread(context->parent_tid, &stack);
   // Call the original dispatcher for the block.
   context->func(context->block);
@@ -193,7 +193,7 @@ asan_block_context_t *alloc_asan_context(void *ctxt, dispatch_function_t func,
     asan_block_context_t *asan_ctxt = alloc_asan_context(ctxt, func, &stack); \
     if (Verbosity() >= 2) {                                     \
       Report(#dispatch_x_f "(): context: %p, pthread_self: %p\n",             \
-             asan_ctxt, pthread_self());                                      \
+             (void*)asan_ctxt, (void*)pthread_self());                        \
       PRINT_CURRENT_STACK();                                                  \
     }                                                                         \
     return REAL(dispatch_x_f)(dq, (void*)asan_ctxt,                           \
@@ -210,7 +210,7 @@ INTERCEPTOR(void, dispatch_after_f, dispatch_time_t when,
   GET_STACK_TRACE_THREAD;
   asan_block_context_t *asan_ctxt = alloc_asan_context(ctxt, func, &stack);
   if (Verbosity() >= 2) {
-    Report("dispatch_after_f: %p\n", asan_ctxt);
+    Report("dispatch_after_f: %p\n", (void*)asan_ctxt);
     PRINT_CURRENT_STACK();
   }
   return REAL(dispatch_after_f)(when, dq, (void*)asan_ctxt,
@@ -224,7 +224,7 @@ INTERCEPTOR(void, dispatch_group_async_f, dispatch_group_t group,
   asan_block_context_t *asan_ctxt = alloc_asan_context(ctxt, func, &stack);
   if (Verbosity() >= 2) {
     Report("dispatch_group_async_f(): context: %p, pthread_self: %p\n",
-           asan_ctxt, pthread_self());
+           (void*)asan_ctxt, (void*)pthread_self());
     PRINT_CURRENT_STACK();
   }
   REAL(dispatch_group_async_f)(group, dq, (void*)asan_ctxt,

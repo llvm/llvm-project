@@ -10,7 +10,7 @@
 
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.15|11.0}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
 
 // <filesystem>
 
@@ -31,8 +31,8 @@ static void signature_test()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
-    ASSERT_SAME_TYPE(decltype(file_size(p)), uintmax_t);
-    ASSERT_SAME_TYPE(decltype(file_size(p, ec)), uintmax_t);
+    ASSERT_SAME_TYPE(decltype(file_size(p)), std::uintmax_t);
+    ASSERT_SAME_TYPE(decltype(file_size(p, ec)), std::uintmax_t);
     ASSERT_NOT_NOEXCEPT(file_size(p));
     ASSERT_NOEXCEPT(file_size(p, ec));
 }
@@ -75,7 +75,7 @@ static void file_size_error_cases()
       {static_env.BadSymlink, std::errc::no_such_file_or_directory},
       {static_env.DNE, std::errc::no_such_file_or_directory},
       {"", std::errc::no_such_file_or_directory}};
-    const uintmax_t expect = static_cast<uintmax_t>(-1);
+    const std::uintmax_t expect = static_cast<std::uintmax_t>(-1);
     for (auto& TC : TestCases) {
       std::error_code ec = GetTestEC();
       assert(file_size(TC.p, ec) == expect);

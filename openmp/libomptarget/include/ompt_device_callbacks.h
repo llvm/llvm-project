@@ -49,6 +49,20 @@ public:
 #undef OmptBindCallback
   }
 
+  /// Used to find a callback given its name
+  ompt_interface_fn_t lookupCallback(const char *InterfaceFunctionName) {
+#define OmptLookup(Name, Type, Code)                                           \
+  if (strcmp(InterfaceFunctionName, #Name) == 0)                               \
+    return (ompt_interface_fn_t)Name##_fn;
+
+    FOREACH_OMPT_TARGET_CALLBACK(OmptLookup);
+#undef OmptLookup
+    return (ompt_interface_fn_t) nullptr;
+  }
+
+  /// Wrapper function to find a callback given its name
+  static ompt_interface_fn_t doLookup(const char *InterfaceFunctionName);
+
 private:
   /// Set to true if callbacks for this library have been initialized
   bool Enabled;
@@ -61,8 +75,6 @@ private:
 
 /// Device callbacks object for the library that performs the instantiation
 extern OmptDeviceCallbacksTy OmptDeviceCallbacks;
-
-#undef DEBUG_PREFIX
 
 #endif // OMPT_SUPPORT
 

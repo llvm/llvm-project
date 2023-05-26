@@ -24,6 +24,7 @@ include "mlir/IR/OpBase.td"
 def ArmNeon_Dialect : Dialect {
   let name = "arm_neon";
   let cppNamespace = "::mlir::arm_neon";
+  let usePropertiesForAttributes = 1;
 
 
   // Note: this does not need to depend on LLVMDialect as long as functions in
@@ -69,7 +70,7 @@ def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
        AllTypesMatch<["a", "b"]>,
        TypesMatchWith<
          "res has same vector shape and element bitwidth scaled by 2 as a",
-         "a", "res", "$_self.cast<VectorType>().scaleElementBitwidth(2)">
+         "a", "res", "::llvm::cast<VectorType>($_self).scaleElementBitwidth(2)">
     ]> {
   let summary = "smull roundscale op";
   let description = [{
@@ -99,7 +100,7 @@ def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
       AllTypesMatch<["a", "res"]>,
       TypesMatchWith<"res has the same number of elements as operand b",
                      "b", "res",
-                     "VectorType::get({$_self.cast<VectorType>().getShape()[0] / 4},"
+                     "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] / 4},"
                      "IntegerType::get($_self.getContext(), 32))">]> {
   let summary = "sdot op";
   let description = [{
@@ -132,19 +133,19 @@ def Sdot2dOp : ArmNeon_2dOp<"sdot", [
       AllTypesMatch<["a", "res"]>,
       PredOpTrait<
         "operand `a` should be 1-dimensional",
-        CPred<"getA().getType().cast<VectorType>().getShape().size() == 1">
+        CPred<"::llvm::cast<VectorType>(getA().getType()).getShape().size() == 1">
       >,
       PredOpTrait<
         "operand `b` should be 2-dimensional",
-        CPred<"getB().getType().cast<VectorType>().getShape().size() == 2">
+        CPred<"::llvm::cast<VectorType>(getB().getType()).getShape().size() == 2">
       >,
       PredOpTrait<
         "operand `b` should have 4 columns",
-        CPred<"getB().getType().cast<VectorType>().getShape()[1] == 4">
+        CPred<"::llvm::cast<VectorType>(getB().getType()).getShape()[1] == 4">
       >,
       PredOpTrait<
         "operand `b` should have as many rows as the size of operand `a`",
-        CPred<"getB().getType().cast<VectorType>().getShape()[0] == getA().getType().cast<VectorType>().getShape()[0]">
+        CPred<"::llvm::cast<VectorType>(getB().getType()).getShape()[0] == ::llvm::cast<VectorType>(getA().getType()).getShape()[0]">
       >,
       ]
   > {

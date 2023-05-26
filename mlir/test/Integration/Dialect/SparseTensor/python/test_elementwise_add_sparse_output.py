@@ -20,7 +20,7 @@ from tools import sparse_compiler
 # handle sparse tensor outputs.
 _KERNEL_STR = """
 #DCSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ]
+  lvlTypes = [ "compressed", "compressed" ]
 }>
 
 #trait_add_elt = {
@@ -57,49 +57,52 @@ func.func @main(%ad: tensor<3x4xf64>, %bd: tensor<3x4xf64>) -> tensor<3x4xf64, #
 
 
 def _run_test(support_lib, kernel):
-  """Compiles, runs and checks results."""
-  compiler = sparse_compiler.SparseCompiler(
-      options='', opt_level=2, shared_libs=[support_lib])
-  module = ir.Module.parse(kernel)
-  engine = compiler.compile_and_jit(module)
+    """Compiles, runs and checks results."""
+    compiler = sparse_compiler.SparseCompiler(
+        options="", opt_level=2, shared_libs=[support_lib]
+    )
+    module = ir.Module.parse(kernel)
+    engine = compiler.compile_and_jit(module)
 
-  # Set up numpy inputs and buffer for output.
-  a = np.array(
-      [[1.1, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 6.6, 0.0]],
-      np.float64)
-  b = np.array(
-      [[1.1, 0.0, 0.0, 2.8], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
-      np.float64)
+    # Set up numpy inputs and buffer for output.
+    a = np.array(
+        [[1.1, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 6.6, 0.0]], np.float64
+    )
+    b = np.array(
+        [[1.1, 0.0, 0.0, 2.8], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]], np.float64
+    )
 
-  mem_a = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(a)))
-  mem_b = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(b)))
+    mem_a = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(a)))
+    mem_b = ctypes.pointer(ctypes.pointer(rt.get_ranked_memref_descriptor(b)))
 
-  # The sparse tensor output is a pointer to pointer of char.
-  out = ctypes.c_char(0)
-  mem_out = ctypes.pointer(ctypes.pointer(out))
+    # The sparse tensor output is a pointer to pointer of char.
+    out = ctypes.c_char(0)
+    mem_out = ctypes.pointer(ctypes.pointer(out))
 
-  # Invoke the kernel.
-  engine.invoke('main', mem_a, mem_b, mem_out)
+    # Invoke the kernel.
+    engine.invoke("main", mem_a, mem_b, mem_out)
 
-  # Retrieve and check the result.
-  rank, nse, shape, values, indices = test_tools.sparse_tensor_to_coo_tensor(
-      support_lib, mem_out[0], np.float64)
+    # Retrieve and check the result.
+    rank, nse, shape, values, indices = test_tools.sparse_tensor_to_coo_tensor(
+        support_lib, mem_out[0], np.float64
+    )
 
-  # CHECK: PASSED
-  if np.allclose(values, [2.2, 2.8, 6.6]) and np.allclose(
-      indices, [[0, 0], [0, 3], [2, 2]]):
-    print('PASSED')
-  else:
-    quit('FAILURE')
+    # CHECK: PASSED
+    if np.allclose(values, [2.2, 2.8, 6.6]) and np.allclose(
+        indices, [[0, 0], [0, 3], [2, 2]]
+    ):
+        print("PASSED")
+    else:
+        quit("FAILURE")
 
 
 def test_elementwise_add():
-  # Obtain path to runtime support library.
-  support_lib = os.getenv('SUPPORT_LIB')
-  assert support_lib is not None, 'SUPPORT_LIB is undefined'
-  assert os.path.exists(support_lib), f'{support_lib} does not exist'
-  with ir.Context() as ctx, ir.Location.unknown():
-    _run_test(support_lib, _KERNEL_STR)
+    # Obtain path to runtime support library.
+    support_lib = os.getenv("SUPPORT_LIB")
+    assert support_lib is not None, "SUPPORT_LIB is undefined"
+    assert os.path.exists(support_lib), f"{support_lib} does not exist"
+    with ir.Context() as ctx, ir.Location.unknown():
+        _run_test(support_lib, _KERNEL_STR)
 
 
 test_elementwise_add()

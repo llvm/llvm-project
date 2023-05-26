@@ -83,7 +83,8 @@ static DecodeStatus decodeDirectBrTarget(MCInst &Inst, unsigned Imm,
 template <std::size_t N>
 static DecodeStatus decodeRegisterClass(MCInst &Inst, uint64_t RegNo,
                                         const MCPhysReg (&Regs)[N]) {
-  assert(RegNo < N && "Invalid register number");
+  if (RegNo >= N)
+    return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createReg(Regs[RegNo]));
   return MCDisassembler::Success;
 }
@@ -110,6 +111,14 @@ static DecodeStatus DecodeF8RCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
   return decodeRegisterClass(Inst, RegNo, FRegs);
+}
+
+static DecodeStatus DecodeFpRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo > 30 || (RegNo & 1))
+    return MCDisassembler::Fail;
+  return decodeRegisterClass(Inst, RegNo >> 1, FpRegs);
 }
 
 static DecodeStatus DecodeVFRCRegisterClass(MCInst &Inst, uint64_t RegNo,
@@ -340,7 +349,8 @@ static DecodeStatus decodeCRBitMOperand(MCInst &Inst, uint64_t Imm,
   // The cr bit encoding is 0x80 >> cr_reg_num.
 
   unsigned Zeros = llvm::countr_zero(Imm);
-  assert(Zeros < 8 && "Invalid CR bit value");
+  if (Zeros >= 8)
+    return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createReg(CRRegs[7 - Zeros]));
   return MCDisassembler::Success;

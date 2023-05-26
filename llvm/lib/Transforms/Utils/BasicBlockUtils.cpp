@@ -600,8 +600,8 @@ bool llvm::IsBlockFollowedByDeoptOrUnreachable(const BasicBlock *BB) {
   unsigned Depth = 0;
   while (BB && Depth++ < MaxDeoptOrUnreachableSuccessorCheckDepth &&
          VisitedBlocks.insert(BB).second) {
-    if (BB->getTerminatingDeoptimizeCall() ||
-        isa<UnreachableInst>(BB->getTerminator()))
+    if (isa<UnreachableInst>(BB->getTerminator()) ||
+        BB->getTerminatingDeoptimizeCall())
       return true;
     BB = BB->getUniqueSuccessor();
   }
@@ -1471,11 +1471,12 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
   return cast<ReturnInst>(NewRet);
 }
 
-static Instruction *
-SplitBlockAndInsertIfThenImpl(Value *Cond, Instruction *SplitBefore,
-                              bool Unreachable, MDNode *BranchWeights,
-                              DomTreeUpdater *DTU, DominatorTree *DT,
-                              LoopInfo *LI, BasicBlock *ThenBlock) {
+Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
+                                             Instruction *SplitBefore,
+                                             bool Unreachable,
+                                             MDNode *BranchWeights,
+                                             DomTreeUpdater *DTU, LoopInfo *LI,
+                                             BasicBlock *ThenBlock) {
   SmallVector<DominatorTree::UpdateType, 8> Updates;
   BasicBlock *Head = SplitBefore->getParent();
   BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
@@ -1514,21 +1515,6 @@ SplitBlockAndInsertIfThenImpl(Value *Cond, Instruction *SplitBefore,
 
   if (DTU)
     DTU->applyUpdates(Updates);
-  else if (DT) {
-    if (DomTreeNode *OldNode = DT->getNode(Head)) {
-      std::vector<DomTreeNode *> Children(OldNode->begin(), OldNode->end());
-
-      DomTreeNode *NewNode = DT->addNewBlock(Tail, Head);
-      for (DomTreeNode *Child : Children)
-        DT->changeImmediateDominator(Child, NewNode);
-
-      // Head dominates ThenBlock.
-      if (CreateThenBlock)
-        DT->addNewBlock(ThenBlock, Head);
-      else
-        DT->changeImmediateDominator(ThenBlock, Head);
-    }
-  }
 
   if (LI) {
     if (Loop *L = LI->getLoopFor(Head)) {
@@ -1538,27 +1524,6 @@ SplitBlockAndInsertIfThenImpl(Value *Cond, Instruction *SplitBefore,
   }
 
   return CheckTerm;
-}
-
-Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
-                                             Instruction *SplitBefore,
-                                             bool Unreachable,
-                                             MDNode *BranchWeights,
-                                             DominatorTree *DT, LoopInfo *LI,
-                                             BasicBlock *ThenBlock) {
-  return SplitBlockAndInsertIfThenImpl(Cond, SplitBefore, Unreachable,
-                                       BranchWeights,
-                                       /*DTU=*/nullptr, DT, LI, ThenBlock);
-}
-Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
-                                             Instruction *SplitBefore,
-                                             bool Unreachable,
-                                             MDNode *BranchWeights,
-                                             DomTreeUpdater *DTU, LoopInfo *LI,
-                                             BasicBlock *ThenBlock) {
-  return SplitBlockAndInsertIfThenImpl(Cond, SplitBefore, Unreachable,
-                                       BranchWeights, DTU, /*DT=*/nullptr, LI,
-                                       ThenBlock);
 }
 
 void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
@@ -1648,6 +1613,27 @@ void llvm::SplitBlockAndInsertForEachLane(ElementCount EC,
   for (unsigned Idx = 0; Idx < Num; ++Idx) {
     IRB.SetInsertPoint(InsertBefore);
     Func(IRB, ConstantInt::get(IndexTy, Idx));
+  }
+}
+
+void llvm::SplitBlockAndInsertForEachLane(
+    Value *EVL, Instruction *InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func) {
+
+  IRBuilder<> IRB(InsertBefore);
+  Type *Ty = EVL->getType();
+
+  if (!isa<ConstantInt>(EVL)) {
+    auto [BodyIP, Index] = SplitBlockAndInsertSimpleForLoop(EVL, InsertBefore);
+    IRB.SetInsertPoint(BodyIP);
+    Func(IRB, Index);
+    return;
+  }
+
+  unsigned Num = cast<ConstantInt>(EVL)->getZExtValue();
+  for (unsigned Idx = 0; Idx < Num; ++Idx) {
+    IRB.SetInsertPoint(InsertBefore);
+    Func(IRB, ConstantInt::get(Ty, Idx));
   }
 }
 
@@ -2048,4 +2034,18 @@ BasicBlock *llvm::CreateControlFlowHub(
   }
 
   return FirstGuardBlock;
+}
+
+void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
+  Value *NewCond = PBI->getCondition();
+  // If this is a "cmp" instruction, only used for branching (and nowhere
+  // else), then we can simply invert the predicate.
+  if (NewCond->hasOneUse() && isa<CmpInst>(NewCond)) {
+    CmpInst *CI = cast<CmpInst>(NewCond);
+    CI->setPredicate(CI->getInversePredicate());
+  } else
+    NewCond = Builder.CreateNot(NewCond, NewCond->getName() + ".not");
+
+  PBI->setCondition(NewCond);
+  PBI->swapSuccessors();
 }

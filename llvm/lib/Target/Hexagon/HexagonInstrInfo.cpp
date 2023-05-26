@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -48,7 +49,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -2220,13 +2220,13 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
         return true;
 
       if (RegA.isPhysical())
-        for (MCSubRegIterator SubRegs(RegA, &HRI); SubRegs.isValid(); ++SubRegs)
-          if (RegB == *SubRegs)
+        for (MCPhysReg SubReg : HRI.subregs(RegA))
+          if (RegB == SubReg)
             return true;
 
       if (RegB.isPhysical())
-        for (MCSubRegIterator SubRegs(RegB, &HRI); SubRegs.isValid(); ++SubRegs)
-          if (RegA == *SubRegs)
+        for (MCPhysReg SubReg : HRI.subregs(RegB))
+          if (RegA == SubReg)
             return true;
     }
 
@@ -4304,8 +4304,8 @@ int HexagonInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
 
   if (DefMO.isReg() && DefMO.getReg().isPhysical()) {
     if (DefMO.isImplicit()) {
-      for (MCSuperRegIterator SR(DefMO.getReg(), &HRI); SR.isValid(); ++SR) {
-        int Idx = DefMI.findRegisterDefOperandIdx(*SR, false, false, &HRI);
+      for (MCPhysReg SR : HRI.superregs(DefMO.getReg())) {
+        int Idx = DefMI.findRegisterDefOperandIdx(SR, false, false, &HRI);
         if (Idx != -1) {
           DefIdx = Idx;
           break;
@@ -4315,8 +4315,8 @@ int HexagonInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
 
     const MachineOperand &UseMO = UseMI.getOperand(UseIdx);
     if (UseMO.isImplicit()) {
-      for (MCSuperRegIterator SR(UseMO.getReg(), &HRI); SR.isValid(); ++SR) {
-        int Idx = UseMI.findRegisterUseOperandIdx(*SR, false, &HRI);
+      for (MCPhysReg SR : HRI.superregs(UseMO.getReg())) {
+        int Idx = UseMI.findRegisterUseOperandIdx(SR, false, &HRI);
         if (Idx != -1) {
           UseIdx = Idx;
           break;

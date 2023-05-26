@@ -1004,25 +1004,28 @@ end:
 define i32 @stack_realign(i32 %a, i32 %b, ptr %ptr1, ptr %ptr2) {
 ; ENABLE-LABEL: stack_realign:
 ; ENABLE:       ; %bb.0:
+; ENABLE-NEXT:    lsl w8, w0, w1
+; ENABLE-NEXT:    lsl w9, w1, w0
+; ENABLE-NEXT:    cmp w0, w1
+; ENABLE-NEXT:    b.ge LBB13_2
+; ENABLE-NEXT:  ; %bb.1: ; %true
 ; ENABLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; ENABLE-NEXT:    .cfi_def_cfa_offset 16
 ; ENABLE-NEXT:    mov x29, sp
 ; ENABLE-NEXT:    .cfi_def_cfa w29, 16
 ; ENABLE-NEXT:    .cfi_offset w30, -8
 ; ENABLE-NEXT:    .cfi_offset w29, -16
-; ENABLE-NEXT:    sub x9, sp, #16
-; ENABLE-NEXT:    and sp, x9, #0xffffffffffffffe0
-; ENABLE-NEXT:    lsl w8, w0, w1
-; ENABLE-NEXT:    lsl w9, w1, w0
-; ENABLE-NEXT:    cmp w0, w1
-; ENABLE-NEXT:    b.ge LBB13_2
-; ENABLE-NEXT:  ; %bb.1: ; %true
+; ENABLE-NEXT:    sub x1, sp, #16
+; ENABLE-NEXT:    and sp, x1, #0xffffffffffffffe0
 ; ENABLE-NEXT:    str w0, [sp]
-; ENABLE-NEXT:  LBB13_2: ; %false
-; ENABLE-NEXT:    str w8, [x2]
-; ENABLE-NEXT:    str w9, [x3]
 ; ENABLE-NEXT:    mov sp, x29
 ; ENABLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; ENABLE-NEXT:  LBB13_2: ; %false
+; ENABLE-NEXT:    .cfi_def_cfa wsp, 0
+; ENABLE-NEXT:    .cfi_same_value w30
+; ENABLE-NEXT:    .cfi_same_value w29
+; ENABLE-NEXT:    str w8, [x2]
+; ENABLE-NEXT:    str w9, [x3]
 ; ENABLE-NEXT:    ret
 ;
 ; DISABLE-LABEL: stack_realign:

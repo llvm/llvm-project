@@ -197,7 +197,7 @@ findMetadata(const ELFObjectFile<ELF64LE> &ELFObj) {
       if (Note.getType() == NT_AMDGPU_METADATA && Note.getName() != "AMDGPU")
         return Failure;
 
-      ArrayRef<uint8_t> Desc = Note.getDesc();
+      ArrayRef<uint8_t> Desc = Note.getDesc(Phdr.p_align);
       return {Desc.data(), Desc.data() + Desc.size()};
     }
 

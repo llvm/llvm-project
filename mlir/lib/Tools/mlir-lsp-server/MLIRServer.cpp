@@ -58,7 +58,7 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
                    StringRef uriScheme, const lsp::URIForFile *uri = nullptr) {
   std::optional<lsp::Location> location;
   loc->walk([&](Location nestedLoc) {
-    FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
+    FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
     if (!fileLoc)
       return WalkResult::advance();
 
@@ -91,7 +91,7 @@ static void collectLocationsFromLoc(Location loc,
                                     const lsp::URIForFile &uri) {
   SetVector<Location> visitedLocs;
   loc->walk([&](Location nestedLoc) {
-    FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
+    FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
     if (!fileLoc || !visitedLocs.insert(nestedLoc))
       return WalkResult::advance();
 
@@ -885,7 +885,8 @@ MLIRDocument::convertToBytecode() {
 
     std::string rawBytecodeBuffer;
     llvm::raw_string_ostream os(rawBytecodeBuffer);
-    writeBytecodeToFile(&parsedIR.front(), os, writerConfig);
+    // No desired bytecode version set, so no need to check for error.
+    (void)writeBytecodeToFile(&parsedIR.front(), os, writerConfig);
     result.output = llvm::encodeBase64(rawBytecodeBuffer);
   }
   return result;
@@ -1321,13 +1322,13 @@ lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
     // Extract the top-level op so that aliases get printed.
     // FIXME: We should be able to enable aliases without having to do this!
     OwningOpRef<Operation *> topOp = &parsedBlock.front();
-    (*topOp)->remove();
+    topOp->remove();
 
     AsmState state(*topOp, OpPrintingFlags().enableDebugInfo().assumeVerified(),
                    /*locationMap=*/nullptr, &fallbackResourceMap);
 
     llvm::raw_string_ostream os(result.output);
-    (*topOp)->print(os, state);
+    topOp->print(os, state);
   }
   return std::move(result);
 }

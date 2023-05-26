@@ -580,7 +580,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   CGBuilderTy &Builder = CGF.Builder;
 
   const FunctionProtoType *FPT =
-    MPT->getPointeeType()->getAs<FunctionProtoType>();
+      MPT->getPointeeType()->castAs<FunctionProtoType>();
   auto *RD =
       cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
 
@@ -2189,7 +2189,7 @@ Address ItaniumCXXABI::InitializeArrayCookie(CodeGenFunction &CGF,
       (expr->getOperatorNew()->isReplaceableGlobalAllocationFunction() ||
        CGM.getCodeGenOpts().SanitizeAddressPoisonCustomArrayCookie)) {
     // The store to the CookiePtr does not need to be instrumented.
-    CGM.getSanitizerMetadata()->disableSanitizerForInstruction(SI);
+    SI->setNoSanitizeMetadata();
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(CGM.VoidTy, NumElementsPtr.getType(), false);
     llvm::FunctionCallee F =
@@ -4689,6 +4689,7 @@ static llvm::FunctionCallee getClangCallTerminateFn(CodeGenModule &CGM) {
       cast<llvm::Function>(fnRef.getCallee()->stripPointerCasts());
   if (fn->empty()) {
     CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, fn, /*IsThunk=*/false);
+    CGM.SetLLVMFunctionAttributesForDefinition(nullptr, fn);
     fn->setDoesNotThrow();
     fn->setDoesNotReturn();
 

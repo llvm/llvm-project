@@ -664,7 +664,7 @@ Value *PolynomialMultiplyRecognize::getCountIV(BasicBlock *BB) {
       continue;
 
     if (auto *T = dyn_cast<ConstantInt>(IncV))
-      if (T->getZExtValue() == 1)
+      if (T->isOne())
         return PN;
   }
   return nullptr;

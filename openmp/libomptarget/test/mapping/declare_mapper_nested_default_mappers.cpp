@@ -1,8 +1,5 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
-// Wrong results on amdgpu
-// XFAIL: amdgcn-amd-amdhsa
-
 #include <cstdio>
 #include <cstdlib>
 
@@ -45,17 +42,23 @@ int main() {
          spp[0][0].f.b[1], spp[0][0].f.b == &x[0] ? 1 : 0);
   // CHECK: 111 222 777 20.00000 1
 
+  int spp00fa = -1, spp00fca = -1, spp00fb_r = -1;
   __intptr_t p = reinterpret_cast<__intptr_t>(&x[0]);
-#pragma omp target map(tofrom : spp[0][0]) firstprivate(p)
+#pragma omp target map(tofrom: spp[0][0]) firstprivate(p)                           \
+                   map(from: spp00fa, spp00fca, spp00fb_r)
   {
-    printf("%d %d %d\n", spp[0][0].f.a, spp[0][0].f.c.a,
-           spp[0][0].f.b == reinterpret_cast<void *>(p) ? 1 : 0);
-    // CHECK: 222 777 0
+    spp00fa = spp[0][0].f.a;
+    spp00fca = spp[0][0].f.c.a;
+    spp00fb_r = spp[0][0].f.b == reinterpret_cast<void *>(p) ? 1 : 0;
+    printf("%d %d %d\n", spp00fa, spp00fca, spp00fb_r);
+    // XCHECK: 222 777 0
     spp[0][0].e = 333;
     spp[0][0].f.a = 444;
     spp[0][0].f.c.a = 555;
     spp[0][0].f.b[1] = 40;
   }
+  printf("%d %d %d\n", spp00fa, spp00fca, spp00fb_r);
+  // CHECK: 222 777 0
   printf("%d %d %d %4.5f %d\n", spp[0][0].e, spp[0][0].f.a, spp[0][0].f.c.a,
          spp[0][0].f.b[1], spp[0][0].f.b == &x[0] ? 1 : 0);
   // CHECK: 333 222 777 40.00000 1

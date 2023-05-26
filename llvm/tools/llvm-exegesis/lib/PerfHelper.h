@@ -37,6 +37,9 @@ void pfmTerminate();
 // NOTE: pfm_initialize() must be called before creating PerfEvent objects.
 class PerfEvent {
 public:
+  // Dummy event that does not require access to counters (for tests).
+  static const char *const DummyEventString;
+
   // http://perfmon2.sourceforge.net/manv4/libpfm.html
   // Events are expressed as strings. e.g. "INSTRUCTION_RETIRED"
   explicit PerfEvent(StringRef PfmEventString);
@@ -63,6 +66,9 @@ protected:
   std::string EventString;
   std::string FullQualifiedEventString;
   perf_event_attr *Attr;
+
+private:
+  void initRealEvent(StringRef PfmEventString);
 };
 
 // Uses a valid PerfEvent to configure the Kernel so we can measure the
@@ -102,6 +108,10 @@ protected:
 #ifdef HAVE_LIBPFM
   int FileDescriptor = -1;
 #endif
+  bool IsDummyEvent;
+
+private:
+  void initRealEvent(const PerfEvent &E);
 };
 
 } // namespace pfm

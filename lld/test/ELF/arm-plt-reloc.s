@@ -306,3 +306,60 @@ _start:
 // DSORELMIX-NEXT:     0x800202C R_ARM_JUMP_SLOT func1
 // DSORELMIX-NEXT:     0x8002030 R_ARM_JUMP_SLOT func2
 // DSORELMIX-NEXT:     0x8002034 R_ARM_JUMP_SLOT func3
+
+// RUN: llvm-mc -filetype=obj -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %p/Inputs/arm-plt-reloc.s -o %t1
+// RUN: llvm-mc -filetype=obj -triple=armv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %s -o %t2
+// RUN: ld.lld %t1 %t2 -o %t
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
+// RUN: ld.lld -shared %t1 %t2 -o %t3
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DSO %s
+// RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
+
+// RUN: ld.lld --hash-style=sysv --script %t2.script -shared %t1 %t2 -o %t5
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t5 | FileCheck --check-prefix=CHECKLONG-EB %s
+// RUN: llvm-readobj -S -r %t5 | FileCheck --check-prefix=DSORELLONG %s
+
+// CHECKLONG-EB: Disassembly of section .text:
+// CHECKLONG-EB-EMPTY:
+// CHECKLONG-EB-NEXT: <func1>:
+// CHECKLONG-EB-NEXT:     1000:       bx      lr
+// CHECKLONG-EB: <func2>:
+// CHECKLONG-EB-NEXT:     1004:       bx      lr
+// CHECKLONG-EB: <func3>:
+// CHECKLONG-EB-NEXT:     1008:       bx      lr
+// CHECKLONG-EB: <_start>:
+// CHECKLONG-EB-NEXT:     100c:       b       0x2020
+// CHECKLONG-EB-NEXT:     1010:       bl      0x2030
+// CHECKLONG-EB-NEXT:     1014:       beq     0x2040
+// CHECKLONG-EB-EMPTY:
+// CHECKLONG-EB-NEXT: Disassembly of section .plt:
+// CHECKLONG-EB-EMPTY:
+// CHECKLONG-EB-NEXT: <$a>:
+// CHECKLONG-EB-NEXT:     2000:       str     lr, [sp, #-4]!
+// CHECKLONG-EB-NEXT:     2004:       ldr     lr, [pc, #4]
+// CHECKLONG-EB-NEXT:     2008:       add     lr, pc, lr
+// CHECKLONG-EB-NEXT:     200c:       ldr     pc, [lr, #8]!
+// CHECKLONG-EB: <$d>:
+// CHECKLONG-EB-NEXT:     2010:	      11 10 f0 f0     .word   0x1110f0f0
+// CHECKLONG-EB-NEXT:     2014:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECKLONG-EB-NEXT:     2018:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECKLONG-EB-NEXT:     201c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECKLONG-EB: <$a>:
+// CHECKLONG-EB-NEXT:     2020:       ldr     r12, [pc, #4]
+// CHECKLONG-EB-NEXT:     2024:       add     r12, r12, pc
+// CHECKLONG-EB-NEXT:     2028:       ldr     pc, [r12]
+// CHECKLONG-EB: <$d>:
+// CHECKLONG-EB-NEXT:     202c:       11 10 f0 e0     .word   0x1110f0e0
+// CHECKLONG-EB: <$a>:
+// CHECKLONG-EB-NEXT:     2030:       ldr     r12, [pc, #4]
+// CHECKLONG-EB-NEXT:     2034:       add     r12, r12, pc
+// CHECKLONG-EB-NEXT:     2038:       ldr     pc, [r12]
+// CHECKLONG-EB: <$d>:
+// CHECKLONG-EB-NEXT:     203c:       11 10 f0 d4     .word 0x1110f0d4
+// CHECKLONG-EB: <$a>:
+// CHECKLONG-EB-NEXT:     2040:       ldr     r12, [pc, #4]
+// CHECKLONG-EB-NEXT:     2044:       add     r12, r12, pc
+// CHECKLONG-EB-NEXT:     2048:       ldr     pc, [r12]
+// CHECKLONG-EB: <$d>:
+// CHECKLONG-EB-NEXT:     204c:       11 10 f0 c8     .word   0x1110f0c8
+

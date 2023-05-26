@@ -1206,7 +1206,12 @@ public:
     this->destroy_range(this->begin(), this->end());
   }
 
-  explicit SmallVector(size_t Size, const T &Value = T())
+  explicit SmallVector(size_t Size)
+    : SmallVectorImpl<T>(N) {
+    this->resize(Size);
+  }
+
+  SmallVector(size_t Size, const T &Value)
     : SmallVectorImpl<T>(N) {
     this->assign(Size, Value);
   }

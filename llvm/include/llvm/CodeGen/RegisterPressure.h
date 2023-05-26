@@ -272,7 +272,7 @@ private:
 
   using RegSet = SparseSet<IndexMaskPair>;
   RegSet Regs;
-  unsigned NumRegUnits;
+  unsigned NumRegUnits = 0u;
 
   unsigned getSparseIndexFromReg(Register Reg) const {
     if (Reg.isVirtual())

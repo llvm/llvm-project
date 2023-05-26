@@ -132,6 +132,14 @@ private:
   bool withKeyword;
 };
 
+/// This class represents the `prop-dict` directive. This directive represents
+/// the properties of the operation, expressed as a directionary.
+class PropDictDirective
+    : public DirectiveElementBase<DirectiveElement::PropDict> {
+public:
+  explicit PropDictDirective() = default;
+};
+
 /// This class represents the `functional-type` directive. This directive takes
 /// two arguments and formats them, respectively, as the inputs and results of a
 /// FunctionType.
@@ -257,11 +265,11 @@ struct OperationFormat {
 
     /// Get the variable this type is resolved to, or nullptr.
     const NamedTypeConstraint *getVariable() const {
-      return resolver.dyn_cast<const NamedTypeConstraint *>();
+      return llvm::dyn_cast_if_present<const NamedTypeConstraint *>(resolver);
     }
     /// Get the attribute this type is resolved to, or nullptr.
     const NamedAttribute *getAttribute() const {
-      return resolver.dyn_cast<const NamedAttribute *>();
+      return llvm::dyn_cast_if_present<const NamedAttribute *>(resolver);
     }
     /// Get the transformer for the type of the variable, or std::nullopt.
     std::optional<StringRef> getVarTransformer() const {
@@ -294,8 +302,9 @@ struct OperationFormat {
   };
 
   OperationFormat(const Operator &op)
-
-  {
+      : useProperties(op.getDialect().usePropertiesForAttributes() &&
+                      !op.getAttributes().empty()),
+        opCppClassName(op.getCppClassName()) {
     operandTypes.resize(op.getNumOperands(), TypeResolution());
     resultTypes.resize(op.getNumResults(), TypeResolution());
 
@@ -351,6 +360,12 @@ struct OperationFormat {
   /// A flag indicating if this operation has the SingleBlock trait.
   bool hasSingleBlockTrait;
 
+  /// Indicate whether attribute are stored in properties.
+  bool useProperties;
+
+  /// The Operation class name
+  StringRef opCppClassName;
+
   /// A map of buildable types to indices.
   llvm::MapVector<StringRef, int, llvm::StringMap<int>> buildableTypes;
 
@@ -389,8 +404,7 @@ static bool shouldFormatSymbolNameAttr(const NamedAttribute *attr) {
 /// {0}: The name of the attribute.
 /// {1}: The type for the attribute.
 const char *const attrParserCode = R"(
-  if (parser.parseCustomAttributeWithFallback({0}Attr, {1}, "{0}",
-          result.attributes)) {{
+  if (parser.parseCustomAttributeWithFallback({0}Attr, {1})) {{
     return ::mlir::failure();
   }
 )";
@@ -400,30 +414,29 @@ const char *const attrParserCode = R"(
 /// {0}: The name of the attribute.
 /// {1}: The type for the attribute.
 const char *const genericAttrParserCode = R"(
-  if (parser.parseAttribute({0}Attr, {1}, "{0}", result.attributes))
+  if (parser.parseAttribute({0}Attr, {1}))
     return ::mlir::failure();
 )";
 
 const char *const optionalAttrParserCode = R"(
-  {
-    ::mlir::OptionalParseResult parseResult =
-      parser.parseOptionalAttribute({0}Attr, {1}, "{0}", result.attributes);
-    if (parseResult.has_value() && failed(*parseResult))
-      return ::mlir::failure();
-  }
+  ::mlir::OptionalParseResult parseResult{0}Attr =
+    parser.parseOptionalAttribute({0}Attr, {1});
+  if (parseResult{0}Attr.has_value() && failed(*parseResult{0}Attr))
+    return ::mlir::failure();
+  if (parseResult{0}Attr.has_value() && succeeded(*parseResult{0}Attr))
 )";
 
 /// The code snippet used to generate a parser call for a symbol name attribute.
 ///
 /// {0}: The name of the attribute.
 const char *const symbolNameAttrParserCode = R"(
-  if (parser.parseSymbolName({0}Attr, "{0}", result.attributes))
+  if (parser.parseSymbolName({0}Attr))
     return ::mlir::failure();
 )";
 const char *const optionalSymbolNameAttrParserCode = R"(
   // Parsing an optional symbol name doesn't fail, so no need to check the
   // result.
-  (void)parser.parseOptionalSymbolName({0}Attr, "{0}", result.attributes);
+  (void)parser.parseOptionalSymbolName({0}Attr);
 )";
 
 /// The code snippet used to generate a parser call for an enum attribute.
@@ -434,6 +447,7 @@ const char *const optionalSymbolNameAttrParserCode = R"(
 /// {3}: The constant builder call to create an attribute of the enum type.
 /// {4}: The set of allowed enum keywords.
 /// {5}: The error message on failure when the enum isn't present.
+/// {6}: The attribute assignment expression
 const char *const enumAttrParserCode = R"(
   {
     ::llvm::StringRef attrStr;
@@ -460,7 +474,7 @@ const char *const enumAttrParserCode = R"(
                << "{0} attribute specification: \"" << attrStr << '"';;
 
       {0}Attr = {3};
-      result.addAttribute("{0}", {0}Attr);
+      {6}
     }
   }
 )";
@@ -572,6 +586,7 @@ const char *const inferReturnTypesParserCode = R"(
   if (::mlir::failed({0}::inferReturnTypes(parser.getContext(),
       result.location, result.operands,
       result.attributes.getDictionary(parser.getContext()),
+      result.getRawProperties(),
       result.regions, inferredReturnTypes)))
     return ::mlir::failure();
   result.addTypes(inferredReturnTypes);
@@ -930,7 +945,9 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
 }
 
 /// Generate the parser for a custom directive.
-static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body) {
+static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
+                                     bool useProperties,
+                                     StringRef opCppClassName) {
   body << "  {\n";
 
   // Preprocess the directive variables.
@@ -1003,9 +1020,15 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body) {
       const NamedAttribute *var = attr->getVar();
       if (var->attr.isOptional() || var->attr.hasDefaultValue())
         body << llvm::formatv("    if ({0}Attr)\n  ", var->name);
+      if (useProperties) {
+        body << formatv(
+            "    result.getOrAddProperties<{1}::Properties>().{0} = {0}Attr;\n",
+            var->name, opCppClassName);
+      } else {
+        body << llvm::formatv("    result.addAttribute(\"{0}\", {0}Attr);\n",
+                              var->name);
+      }
 
-      body << llvm::formatv("    result.addAttribute(\"{0}\", {0}Attr);\n",
-                            var->name);
     } else if (auto *operand = dyn_cast<OperandVariable>(param)) {
       const NamedTypeConstraint *var = operand->getVar();
       if (var->isOptional()) {
@@ -1041,7 +1064,8 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body) {
 
 /// Generate the parser for a enum attribute.
 static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
-                              FmtContext &attrTypeCtx, bool parseAsOptional) {
+                              FmtContext &attrTypeCtx, bool parseAsOptional,
+                              bool useProperties, StringRef opCppClassName) {
   Attribute baseAttr = var->attr.getBaseAttr();
   const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
   std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
@@ -1076,46 +1100,68 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
     });
     errorMessageOS << "]\");";
   }
+  std::string attrAssignment;
+  if (useProperties) {
+    attrAssignment =
+        formatv("  "
+                "result.getOrAddProperties<{1}::Properties>().{0} = {0}Attr;",
+                var->name, opCppClassName);
+  } else {
+    attrAssignment =
+        formatv("result.addAttribute(\"{0}\", {0}Attr);", var->name);
+  }
 
   body << formatv(enumAttrParserCode, var->name, enumAttr.getCppNamespace(),
                   enumAttr.getStringToSymbolFnName(), attrBuilderStr,
-                  validCaseKeywordsStr, errorMessage);
+                  validCaseKeywordsStr, errorMessage, attrAssignment);
 }
 
 // Generate the parser for an attribute.
 static void genAttrParser(AttributeVariable *attr, MethodBody &body,
-                          FmtContext &attrTypeCtx, bool parseAsOptional) {
+                          FmtContext &attrTypeCtx, bool parseAsOptional,
+                          bool useProperties, StringRef opCppClassName) {
   const NamedAttribute *var = attr->getVar();
 
   // Check to see if we can parse this as an enum attribute.
   if (canFormatEnumAttr(var))
-    return genEnumAttrParser(var, body, attrTypeCtx, parseAsOptional);
+    return genEnumAttrParser(var, body, attrTypeCtx, parseAsOptional,
+                             useProperties, opCppClassName);
 
   // Check to see if we should parse this as a symbol name attribute.
   if (shouldFormatSymbolNameAttr(var)) {
     body << formatv(parseAsOptional ? optionalSymbolNameAttrParserCode
                                     : symbolNameAttrParserCode,
                     var->name);
-    return;
-  }
+  } else {
 
-  // If this attribute has a buildable type, use that when parsing the
-  // attribute.
-  std::string attrTypeStr;
-  if (std::optional<StringRef> typeBuilder = attr->getTypeBuilder()) {
-    llvm::raw_string_ostream os(attrTypeStr);
-    os << tgfmt(*typeBuilder, &attrTypeCtx);
-  } else {
-    attrTypeStr = "::mlir::Type{}";
+    // If this attribute has a buildable type, use that when parsing the
+    // attribute.
+    std::string attrTypeStr;
+    if (std::optional<StringRef> typeBuilder = attr->getTypeBuilder()) {
+      llvm::raw_string_ostream os(attrTypeStr);
+      os << tgfmt(*typeBuilder, &attrTypeCtx);
+    } else {
+      attrTypeStr = "::mlir::Type{}";
+    }
+    if (parseAsOptional) {
+      body << formatv(optionalAttrParserCode, var->name, attrTypeStr);
+    } else {
+      if (attr->shouldBeQualified() ||
+          var->attr.getStorageType() == "::mlir::Attribute")
+        body << formatv(genericAttrParserCode, var->name, attrTypeStr);
+      else
+        body << formatv(attrParserCode, var->name, attrTypeStr);
+    }
   }
-  if (parseAsOptional) {
-    body << formatv(optionalAttrParserCode, var->name, attrTypeStr);
+  if (useProperties) {
+    body << formatv(
+        "  if ({0}Attr) result.getOrAddProperties<{1}::Properties>().{0} = "
+        "{0}Attr;\n",
+        var->name, opCppClassName);
   } else {
-    if (attr->shouldBeQualified() ||
-        var->attr.getStorageType() == "::mlir::Attribute")
-      body << formatv(genericAttrParserCode, var->name, attrTypeStr);
-    else
-      body << formatv(attrParserCode, var->name, attrTypeStr);
+    body << formatv(
+        "  if ({0}Attr) result.attributes.append(\"{0}\", {0}Attr);\n",
+        var->name);
   }
 }
 
@@ -1170,8 +1216,15 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
 
         if (!thenGroup == optional->isInverted()) {
           // Add the anchor unit attribute to the operation state.
-          body << "    result.addAttribute(\"" << anchorAttr->getVar()->name
-               << "\", parser.getBuilder().getUnitAttr());\n";
+          if (useProperties) {
+            body << formatv(
+                "    result.getOrAddProperties<{1}::Properties>().{0} = "
+                "parser.getBuilder().getUnitAttr();",
+                anchorAttr->getVar()->name, opCppClassName);
+          } else {
+            body << "    result.addAttribute(\"" << anchorAttr->getVar()->name
+                 << "\", parser.getBuilder().getUnitAttr());\n";
+          }
         }
       }
 
@@ -1190,7 +1243,8 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     // parsing of the rest of the elements.
     FormatElement *firstElement = thenElements.front();
     if (auto *attrVar = dyn_cast<AttributeVariable>(firstElement)) {
-      genAttrParser(attrVar, body, attrTypeCtx, /*parseAsOptional=*/true);
+      genAttrParser(attrVar, body, attrTypeCtx, /*parseAsOptional=*/true,
+                    useProperties, opCppClassName);
       body << "  if (" << attrVar->getVar()->name << "Attr) {\n";
     } else if (auto *literal = dyn_cast<LiteralElement>(firstElement)) {
       body << "  if (::mlir::succeeded(parser.parseOptional";
@@ -1248,8 +1302,15 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << formatv(oilistParserCode, lelementName);
       if (AttributeVariable *unitAttrElem =
               oilist->getUnitAttrParsingElement(pelement)) {
-        body << "  result.addAttribute(\"" << unitAttrElem->getVar()->name
-             << "\", UnitAttr::get(parser.getContext()));\n";
+        if (useProperties) {
+          body << formatv(
+              "    result.getOrAddProperties<{1}::Properties>().{0} = "
+              "parser.getBuilder().getUnitAttr();",
+              unitAttrElem->getVar()->name, opCppClassName);
+        } else {
+          body << "  result.addAttribute(\"" << unitAttrElem->getVar()->name
+               << "\", UnitAttr::get(parser.getContext()));\n";
+        }
       } else {
         for (FormatElement *el : pelement)
           genElementParser(el, body, attrTypeCtx);
@@ -1275,7 +1336,8 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
   } else if (auto *attr = dyn_cast<AttributeVariable>(element)) {
     bool parseAsOptional =
         (genCtx == GenContext::Normal && attr->getVar()->attr.isOptional());
-    genAttrParser(attr, body, attrTypeCtx, parseAsOptional);
+    genAttrParser(attr, body, attrTypeCtx, parseAsOptional, useProperties,
+                  opCppClassName);
 
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
@@ -1311,13 +1373,27 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
 
     /// Directives.
   } else if (auto *attrDict = dyn_cast<AttrDictDirective>(element)) {
-    body << "  if (parser.parseOptionalAttrDict"
-         << (attrDict->isWithKeyword() ? "WithKeyword" : "")
-         << "(result.attributes))\n"
+    body.indent() << "{\n";
+    body.indent() << "auto loc = parser.getCurrentLocation();(void)loc;\n"
+                  << "if (parser.parseOptionalAttrDict"
+                  << (attrDict->isWithKeyword() ? "WithKeyword" : "")
+                  << "(result.attributes))\n"
+                  << "  return ::mlir::failure();\n";
+    if (useProperties) {
+      body << "if (failed(verifyInherentAttrs(result.name, result.attributes, "
+              "[&]() {\n"
+           << "    return parser.emitError(loc) << \"'\" << "
+              "result.name.getStringRef() << \"' op \";\n"
+           << "  })))\n"
+           << "  return ::mlir::failure();\n";
+    }
+    body.unindent() << "}\n";
+    body.unindent();
+  } else if (auto *attrDict = dyn_cast<PropDictDirective>(element)) {
+    body << "  if (parseProperties(parser, result))\n"
          << "    return ::mlir::failure();\n";
   } else if (auto *customDir = dyn_cast<CustomDirective>(element)) {
-    genCustomDirectiveParser(customDir, body);
-
+    genCustomDirectiveParser(customDir, body, useProperties, opCppClassName);
   } else if (isa<OperandsDirective>(element)) {
     body << "  ::llvm::SMLoc allOperandLoc = parser.getCurrentLocation();\n"
          << "  if (parser.parseOperandList(allOperands))\n"
@@ -1571,8 +1647,16 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
                                                          MethodBody &body) {
   if (!allOperands) {
     if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-      body << "  result.addAttribute(\"operand_segment_sizes\", "
-           << "parser.getBuilder().getDenseI32ArrayAttr({";
+      if (op.getDialect().usePropertiesForAttributes()) {
+        body << formatv("  "
+                        "result.getOrAddProperties<{0}::Properties>().operand_"
+                        "segment_sizes = "
+                        "(parser.getBuilder().getDenseI32ArrayAttr({{",
+                        op.getCppClassName());
+      } else {
+        body << "  result.addAttribute(\"operand_segment_sizes\", "
+             << "parser.getBuilder().getDenseI32ArrayAttr({";
+      }
       auto interleaveFn = [&](const NamedTypeConstraint &operand) {
         // If the operand is variadic emit the parsed size.
         if (operand.isVariableLength())
@@ -1586,18 +1670,36 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
     for (const NamedTypeConstraint &operand : op.getOperands()) {
       if (!operand.isVariadicOfVariadic())
         continue;
-      body << llvm::formatv(
-          "  result.addAttribute(\"{0}\", "
-          "parser.getBuilder().getDenseI32ArrayAttr({1}OperandGroupSizes));\n",
-          operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
-          operand.name);
+      if (op.getDialect().usePropertiesForAttributes()) {
+        body << llvm::formatv(
+            "  result.getOrAddProperties<{0}::Properties>().{1} = "
+            "parser.getBuilder().getDenseI32ArrayAttr({2}OperandGroupSizes);\n",
+            op.getCppClassName(),
+            operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
+            operand.name);
+      } else {
+        body << llvm::formatv(
+            "  result.addAttribute(\"{0}\", "
+            "parser.getBuilder().getDenseI32ArrayAttr({1}OperandGroupSizes));"
+            "\n",
+            operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
+            operand.name);
+      }
     }
   }
 
   if (!allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
-    body << "  result.addAttribute(\"result_segment_sizes\", "
-         << "parser.getBuilder().getDenseI32ArrayAttr({";
+    if (op.getDialect().usePropertiesForAttributes()) {
+      body << formatv(
+          "  "
+          "result.getOrAddProperties<{0}::Properties>().result_segment_sizes = "
+          "(parser.getBuilder().getDenseI32ArrayAttr({{",
+          op.getCppClassName());
+    } else {
+      body << "  result.addAttribute(\"result_segment_sizes\", "
+           << "parser.getBuilder().getDenseI32ArrayAttr({";
+    }
     auto interleaveFn = [&](const NamedTypeConstraint &result) {
       // If the result is variadic emit the parsed size.
       if (result.isVariableLength())
@@ -1640,6 +1742,14 @@ const char *enumAttrBeginPrinterCode = R"(
     auto caseValue = {0}();
     auto caseValueStr = {1}(caseValue);
 )";
+
+/// Generate the printer for the 'prop-dict' directive.
+static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
+                               MethodBody &body) {
+  body << "  _odsPrinter << \" \";\n"
+       << "  printProperties(this->getContext(), _odsPrinter, "
+          "getProperties());\n";
+}
 
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
@@ -1898,7 +2008,7 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
       })
       .Case<AttributeVariable>([&](AttributeVariable *element) {
         Attribute attr = element->getVar()->attr;
-        body << "(*this)->getAttr(\"" << element->getVar()->name << "\")";
+        body << op.getGetterName(element->getVar()->name) << "Attr()";
         if (attr.isOptional())
           return; // done
         if (attr.hasDefaultValue()) {
@@ -1906,7 +2016,8 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
           // default value.
           FmtContext fctx;
           fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
-          body << " != "
+          body << " && " << op.getGetterName(element->getVar()->name)
+               << "Attr() != "
                << tgfmt(attr.getConstBuilderTemplate(), &fctx,
                         attr.getDefaultValue());
           return;
@@ -2063,6 +2174,13 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     return;
   }
 
+  // Emit the attribute dictionary.
+  if (auto *propDict = dyn_cast<PropDictDirective>(element)) {
+    genPropDictPrinter(*this, op, body);
+    lastWasPunctuation = false;
+    return;
+  }
+
   // Optionally insert a space before the next element. The AttrDict printer
   // already adds a space as necessary.
   if (shouldEmitSpace || !lastWasPunctuation)
@@ -2165,7 +2283,8 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       body << "  {\n"
            << "    auto type = " << op.getGetterName(var->name)
            << "().getType();\n"
-           << "    if (auto validType = type.dyn_cast<" << cppClass << ">())\n"
+           << "    if (auto validType = ::llvm::dyn_cast<" << cppClass
+           << ">(type))\n"
            << "      _odsPrinter.printStrippedAttrOrType(validType);\n"
            << "   else\n"
            << "     _odsPrinter << type;\n"
@@ -2300,6 +2419,7 @@ private:
   ConstArgument findSeenArg(StringRef name);
 
   /// Parse the various different directives.
+  FailureOr<FormatElement *> parsePropDictDirective(SMLoc loc, Context context);
   FailureOr<FormatElement *> parseAttrDictDirective(SMLoc loc, Context context,
                                                     bool withKeyword);
   FailureOr<FormatElement *> parseFunctionalTypeDirective(SMLoc loc,
@@ -2329,6 +2449,7 @@ private:
   // The following are various bits of format state used for verification
   // during parsing.
   bool hasAttrDict = false;
+  bool hasPropDict = false;
   bool hasAllRegions = false, hasAllSuccessors = false;
   bool canInferResultTypes = false;
   llvm::SmallBitVector seenOperandTypes, seenResultTypes;
@@ -2873,6 +2994,8 @@ FailureOr<FormatElement *>
 OpFormatParser::parseDirectiveImpl(SMLoc loc, FormatToken::Kind kind,
                                    Context ctx) {
   switch (kind) {
+  case FormatToken::kw_prop_dict:
+    return parsePropDictDirective(loc, ctx);
   case FormatToken::kw_attr_dict:
     return parseAttrDictDirective(loc, ctx,
                                   /*withKeyword=*/false);
@@ -2923,6 +3046,23 @@ OpFormatParser::parseAttrDictDirective(SMLoc loc, Context context,
   }
 
   return create<AttrDictDirective>(withKeyword);
+}
+
+FailureOr<FormatElement *>
+OpFormatParser::parsePropDictDirective(SMLoc loc, Context context) {
+  if (context == TypeDirectiveContext)
+    return emitError(loc, "'prop-dict' directive can only be used as a "
+                          "top-level directive");
+
+  if (context == RefDirectiveContext)
+    llvm::report_fatal_error("'ref' of 'prop-dict' unsupported");
+  // Otherwise, this is a top-level context.
+
+  if (hasPropDict)
+    return emitError(loc, "'prop-dict' directive has already been seen");
+  hasPropDict = true;
+
+  return create<PropDictDirective>();
 }
 
 LogicalResult OpFormatParser::verifyCustomDirectiveArguments(

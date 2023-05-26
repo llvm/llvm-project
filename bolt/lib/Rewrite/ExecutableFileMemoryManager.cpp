@@ -27,6 +27,12 @@ uint8_t *ExecutableFileMemoryManager::allocateSection(
   uint8_t *Ret = static_cast<uint8_t *>(llvm::allocate_buffer(Size, Alignment));
   AllocatedSections.push_back(AllocInfo{Ret, Size, Alignment});
 
+  // A Size of 1 might mean an empty section for which RuntimeDyld decided to
+  // allocate 1 byte. In this case, the allocation will never be initialized
+  // causing non-deterministic output section contents.
+  if (Size == 1)
+    *Ret = 0;
+
   // Register a debug section as a note section.
   if (!ObjectsLoaded && RewriteInstance::isDebugSection(SectionName)) {
     BinarySection &Section =

@@ -140,8 +140,8 @@ define i32 @uaddo_wrong_pred2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @uaddo_wrong_pred2(
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i32 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[NOTY]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 [[Z:%.*]]
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp ugt i32 [[NOTY]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C_NOT]], i32 [[A]], i32 [[Z:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %noty = xor i32 %y, -1

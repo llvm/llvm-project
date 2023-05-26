@@ -64,7 +64,7 @@ class MarshallingInfo {
 public:
   static constexpr const char *MacroName = "OPTION_WITH_MARSHALLING";
   const Record &R;
-  bool ShouldAlwaysEmit;
+  bool ShouldAlwaysEmit = false;
   StringRef MacroPrefix;
   StringRef KeyPath;
   StringRef DefaultValue;

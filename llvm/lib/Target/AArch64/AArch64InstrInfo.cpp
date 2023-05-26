@@ -126,6 +126,12 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (NumBytes == 0)
       NumBytes = 4;
     break;
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+    // An XRay sled can be 4 bytes of alignment plus a 32-byte block.
+    NumBytes = 36;
+    break;
+
   case AArch64::SPACE:
     NumBytes = MI.getOperand(1).getImm();
     break;
@@ -1692,17 +1698,34 @@ static bool isSUBSRegImm(unsigned Opcode) {
 ///        MI and CmpInstr
 ///        or if MI opcode is not the S form there must be neither defs of flags
 ///        nor uses of flags between MI and CmpInstr.
-/// - and  C/V flags are not used after CmpInstr
+/// - and, if C/V flags are not used after CmpInstr
+///        or if N flag is used but MI produces poison value if signed overflow
+///        occurs.
 static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
                                        const TargetRegisterInfo &TRI) {
+  // NOTE this assertion guarantees that MI.getOpcode() is add or subtraction
+  // that may or may not set flags.
   assert(sForm(MI) != AArch64::INSTRUCTION_LIST_END);
 
   const unsigned CmpOpcode = CmpInstr.getOpcode();
   if (!isADDSRegImm(CmpOpcode) && !isSUBSRegImm(CmpOpcode))
     return false;
 
+  assert((CmpInstr.getOperand(2).isImm() &&
+          CmpInstr.getOperand(2).getImm() == 0) &&
+         "Caller guarantees that CmpInstr compares with constant 0");
+
   std::optional<UsedNZCV> NZVCUsed = examineCFlagsUse(MI, CmpInstr, TRI);
-  if (!NZVCUsed || NZVCUsed->C || NZVCUsed->V)
+  if (!NZVCUsed || NZVCUsed->C)
+    return false;
+
+  // CmpInstr is either 'ADDS %vreg, 0' or 'SUBS %vreg, 0', and MI is either
+  // '%vreg = add ...' or '%vreg = sub ...'.
+  // Condition flag V is used to indicate signed overflow.
+  // 1) MI and CmpInstr set N and V to the same value.
+  // 2) If MI is add/sub with no-signed-wrap, it produces a poison value when
+  //    signed overflow occurs, so CmpInstr could still be simplified away.
+  if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap))
     return false;
 
   AccessKind AccessToCheck = AK_Write;
@@ -5386,6 +5409,39 @@ static bool getFMULPatterns(MachineInstr &Root,
   return Found;
 }
 
+static bool getFNEGPatterns(MachineInstr &Root,
+                            SmallVectorImpl<MachineCombinerPattern> &Patterns) {
+  unsigned Opc = Root.getOpcode();
+  MachineBasicBlock &MBB = *Root.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  auto Match = [&](unsigned Opcode, MachineCombinerPattern Pattern) -> bool {
+    MachineOperand &MO = Root.getOperand(1);
+    MachineInstr *MI = MRI.getUniqueVRegDef(MO.getReg());
+    if (MI != nullptr && MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()) &&
+        (MI->getOpcode() == Opcode) &&
+        Root.getFlag(MachineInstr::MIFlag::FmContract) &&
+        Root.getFlag(MachineInstr::MIFlag::FmNsz) &&
+        MI->getFlag(MachineInstr::MIFlag::FmContract) &&
+        MI->getFlag(MachineInstr::MIFlag::FmNsz)) {
+      Patterns.push_back(Pattern);
+      return true;
+    }
+    return false;
+  };
+
+  switch (Opc) {
+  default:
+    break;
+  case AArch64::FNEGDr:
+    return Match(AArch64::FMADDDrrr, MachineCombinerPattern::FNMADD);
+  case AArch64::FNEGSr:
+    return Match(AArch64::FMADDSrrr, MachineCombinerPattern::FNMADD);
+  }
+
+  return false;
+}
+
 /// Return true when a code sequence can improve throughput. It
 /// should be called only for instructions in loops.
 /// \param Pattern - combiner pattern
@@ -5555,6 +5611,8 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
     return true;
   if (getFMAPatterns(Root, Patterns))
     return true;
+  if (getFNEGPatterns(Root, Patterns))
+    return true;
 
   // Other patterns
   if (getMiscPatterns(Root, Patterns))
@@ -5643,6 +5701,47 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   // Insert the MADD (MADD, FMA, FMS, FMLA, FMSL)
   InsInstrs.push_back(MIB);
   return MUL;
+}
+
+static MachineInstr *
+genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
+               const TargetInstrInfo *TII, MachineInstr &Root,
+               SmallVectorImpl<MachineInstr *> &InsInstrs) {
+  MachineInstr *MAD = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+
+  unsigned Opc = 0;
+  const TargetRegisterClass *RC = MRI.getRegClass(MAD->getOperand(0).getReg());
+  if (AArch64::FPR32RegClass.hasSubClassEq(RC))
+    Opc = AArch64::FNMADDSrrr;
+  else if (AArch64::FPR64RegClass.hasSubClassEq(RC))
+    Opc = AArch64::FNMADDDrrr;
+  else
+    return nullptr;
+
+  Register ResultReg = Root.getOperand(0).getReg();
+  Register SrcReg0 = MAD->getOperand(1).getReg();
+  Register SrcReg1 = MAD->getOperand(2).getReg();
+  Register SrcReg2 = MAD->getOperand(3).getReg();
+  bool Src0IsKill = MAD->getOperand(1).isKill();
+  bool Src1IsKill = MAD->getOperand(2).isKill();
+  bool Src2IsKill = MAD->getOperand(3).isKill();
+  if (ResultReg.isVirtual())
+    MRI.constrainRegClass(ResultReg, RC);
+  if (SrcReg0.isVirtual())
+    MRI.constrainRegClass(SrcReg0, RC);
+  if (SrcReg1.isVirtual())
+    MRI.constrainRegClass(SrcReg1, RC);
+  if (SrcReg2.isVirtual())
+    MRI.constrainRegClass(SrcReg2, RC);
+
+  MachineInstrBuilder MIB =
+      BuildMI(MF, MIMetadata(Root), TII->get(Opc), ResultReg)
+          .addReg(SrcReg0, getKillRegState(Src0IsKill))
+          .addReg(SrcReg1, getKillRegState(Src1IsKill))
+          .addReg(SrcReg2, getKillRegState(Src2IsKill));
+  InsInstrs.push_back(MIB);
+
+  return MAD;
 }
 
 /// Fold (FMUL x (DUP y lane)) into (FMUL_indexed x y lane)
@@ -6777,6 +6876,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
                        &AArch64::FPR128_loRegClass, MRI);
     break;
   }
+  case MachineCombinerPattern::FNMADD: {
+    MUL = genFNegatedMAD(MF, MRI, TII, Root, InsInstrs);
+    break;
+  }
+
   } // end switch (Pattern)
   // Record MUL and ADD/SUB for deletion
   if (MUL)
@@ -7677,7 +7781,6 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
     LRAvailableEverywhere &= LRU.available(AArch64::LR);
     RangeBegin = MI.getIterator();
     ++RangeLen;
-    continue;
   }
   // Above loop misses the last (or only) range. If we are still safe, then
   // let's save the range.

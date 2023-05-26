@@ -37,24 +37,23 @@ public:
             actual.tm_isdst == expected.tm_isdst);
   }
 
-  void describeValue(const char *label, ::tm value,
-                     __llvm_libc::testutils::StreamWrapper &stream) {
-    stream << label;
-    stream << " sec: " << value.tm_sec;
-    stream << " min: " << value.tm_min;
-    stream << " hour: " << value.tm_hour;
-    stream << " mday: " << value.tm_mday;
-    stream << " mon: " << value.tm_mon;
-    stream << " year: " << value.tm_year;
-    stream << " wday: " << value.tm_wday;
-    stream << " yday: " << value.tm_yday;
-    stream << " isdst: " << value.tm_isdst;
-    stream << '\n';
+  void describeValue(const char *label, ::tm value) {
+    __llvm_libc::testing::tlog << label;
+    __llvm_libc::testing::tlog << " sec: " << value.tm_sec;
+    __llvm_libc::testing::tlog << " min: " << value.tm_min;
+    __llvm_libc::testing::tlog << " hour: " << value.tm_hour;
+    __llvm_libc::testing::tlog << " mday: " << value.tm_mday;
+    __llvm_libc::testing::tlog << " mon: " << value.tm_mon;
+    __llvm_libc::testing::tlog << " year: " << value.tm_year;
+    __llvm_libc::testing::tlog << " wday: " << value.tm_wday;
+    __llvm_libc::testing::tlog << " yday: " << value.tm_yday;
+    __llvm_libc::testing::tlog << " isdst: " << value.tm_isdst;
+    __llvm_libc::testing::tlog << '\n';
   }
 
-  void explainError(__llvm_libc::testutils::StreamWrapper &stream) override {
-    describeValue("Expected tm_struct value: ", expected, stream);
-    describeValue("  Actual tm_struct value: ", actual, stream);
+  void explainError() override {
+    describeValue("Expected tm_struct value: ", expected);
+    describeValue("  Actual tm_struct value: ", actual);
   }
 };
 

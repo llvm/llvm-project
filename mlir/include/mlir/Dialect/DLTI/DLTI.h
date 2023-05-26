@@ -101,6 +101,9 @@ public:
   /// Returns the alloca memory space identifier.
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;
 
+  /// Returns the stack alignment identifier.
+  StringAttr getStackAlignmentIdentifier(MLIRContext *context) const;
+
   /// Parses an instance of this attribute.
   static DataLayoutSpecAttr parse(AsmParser &parser);
 

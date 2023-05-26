@@ -78,7 +78,6 @@ define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 define i1 @test4() nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movsbl g_3(%rip), %edx
 ; CHECK-NEXT:    movzbl %dl, %ecx
 ; CHECK-NEXT:    shrl $7, %ecx
@@ -91,6 +90,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:  # %bb.1: # %bb.i.i.i
 ; CHECK-NEXT:    movzbl g_100(%rip), %ecx
 ; CHECK-NEXT:  .LBB3_2: # %func_4.exit.i
+; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    setne %bl
@@ -213,10 +213,10 @@ define i64 @test8(i64 %0, i64 %1, i64 %2) {
 define i32 @smin(i32 %x) {
 ; CHECK-LABEL: smin:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovsl %edi, %eax
+; CHECK-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NEXT:    retq
   %not_x = xor i32 %x, -1
   %1 = icmp slt i32 %not_x, -1

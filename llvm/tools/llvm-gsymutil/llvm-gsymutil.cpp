@@ -14,9 +14,12 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -52,85 +55,132 @@ using namespace object;
 /// Command line options.
 /// @{
 
-namespace {
-using namespace cl;
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  OPT_##ID,
+#include "Opts.inc"
+#undef OPTION
+};
 
-OptionCategory GeneralOptions("Options");
-OptionCategory ConversionOptions("Conversion Options");
-OptionCategory LookupOptions("Lookup Options");
+#define PREFIX(NAME, VALUE)                                                    \
+  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
+  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
+      NAME##_init, std::size(NAME##_init) - 1);
+#include "Opts.inc"
+#undef PREFIX
 
-static opt<bool> Help("h", desc("Alias for -help"), Hidden,
-                      cat(GeneralOptions));
+const opt::OptTable::Info InfoTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {                                                                            \
+      PREFIX,      NAME,      HELPTEXT,                                        \
+      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
+      PARAM,       FLAGS,     OPT_##GROUP,                                     \
+      OPT_##ALIAS, ALIASARGS, VALUES},
+#include "Opts.inc"
+#undef OPTION
+};
 
-static opt<bool> Verbose("verbose",
-                         desc("Enable verbose logging and encoding details."),
-                         cat(GeneralOptions));
+class GSYMUtilOptTable : public llvm::opt::GenericOptTable {
+public:
+  GSYMUtilOptTable() : GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
+};
 
-static list<std::string> InputFilenames(Positional, desc("<input GSYM files>"),
-                                        cat(GeneralOptions));
+static bool Verbose;
+static std::vector<std::string> InputFilenames;
+static std::string ConvertFilename;
+static std::vector<std::string> ArchFilters;
+static std::string OutputFilename;
+static bool Verify;
+static unsigned NumThreads;
+static uint64_t SegmentSize;
+static bool Quiet;
+static std::vector<uint64_t> LookupAddresses;
+static bool LookupAddressesFromStdin;
 
-static opt<std::string>
-    ConvertFilename("convert", cl::init(""),
-                    cl::desc("Convert the specified file to the GSYM format.\n"
-                             "Supported files include ELF and mach-o files "
-                             "that will have their debug info (DWARF) and "
-                             "symbol table converted."),
-                    cl::value_desc("path"), cat(ConversionOptions));
+static void parseArgs(int argc, char **argv) {
+  GSYMUtilOptTable Tbl;
+  llvm::StringRef ToolName = argv[0];
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver{A};
+  llvm::opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        llvm::errs() << Msg << '\n';
+        std::exit(1);
+      });
+  if (Args.hasArg(OPT_help)) {
+    const char *Overview =
+        "A tool for dumping, searching and creating GSYM files.\n\n"
+        "Specify one or more GSYM paths as arguments to dump all of the "
+        "information in each GSYM file.\n"
+        "Specify a single GSYM file along with one or more --lookup options to "
+        "lookup addresses within that GSYM file.\n"
+        "Use the --convert option to specify a file with option --out-file "
+        "option to convert to GSYM format.\n";
 
-static list<std::string>
-    ArchFilters("arch",
-                desc("Process debug information for the specified CPU "
-                     "architecture only.\nArchitectures may be specified by "
-                     "name or by number.\nThis option can be specified "
-                     "multiple times, once for each desired architecture."),
-                cl::value_desc("arch"), cat(ConversionOptions));
+    Tbl.printHelp(llvm::outs(), "llvm-gsymutil [options] <input GSYM files>",
+                  Overview);
+    std::exit(0);
+  }
+  if (Args.hasArg(OPT_version)) {
+    llvm::outs() << ToolName << '\n';
+    cl::PrintVersionMessage();
+    std::exit(0);
+  }
 
-static opt<std::string>
-    OutputFilename("out-file", cl::init(""),
-                   cl::desc("Specify the path where the converted GSYM file "
-                            "will be saved.\nWhen not specified, a '.gsym' "
-                            "extension will be appended to the file name "
-                            "specified in the --convert option."),
-                   cl::value_desc("path"), cat(ConversionOptions));
-static alias OutputFilenameAlias("o", desc("Alias for -out-file."),
-                                 aliasopt(OutputFilename),
-                                 cat(ConversionOptions));
+  Verbose = Args.hasArg(OPT_verbose);
 
-static opt<bool> Verify("verify",
-                        desc("Verify the generated GSYM file against the "
-                             "information in the file that was converted."),
-                        cat(ConversionOptions));
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_INPUT))
+    InputFilenames.emplace_back(A->getValue());
 
-static opt<unsigned>
-    NumThreads("num-threads",
-               desc("Specify the maximum number (n) of simultaneous threads "
-                    "to use when converting files to GSYM.\nDefaults to the "
-                    "number of cores on the current machine."),
-               cl::value_desc("n"), cat(ConversionOptions));
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_convert_EQ))
+    ConvertFilename = A->getValue();
 
-static opt<uint64_t>
-    SegmentSize("segment-size",
-               desc("Specify the size in bytes of the size the final GSYM file "
-                    "should be segmented into. This allows GSYM files to be "
-                    "split across multiple files."),
-               cl::value_desc("s"), cat(ConversionOptions));
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_arch_EQ))
+    ArchFilters.emplace_back(A->getValue());
 
-static opt<bool>
-    Quiet("quiet", desc("Do not output warnings about the debug information"),
-          cat(ConversionOptions));
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_out_file_EQ))
+    OutputFilename = A->getValue();
 
-static list<uint64_t> LookupAddresses("address",
-                                      desc("Lookup an address in a GSYM file"),
-                                      cl::value_desc("addr"),
-                                      cat(LookupOptions));
+  Verify = Args.hasArg(OPT_verify);
 
-static opt<bool> LookupAddressesFromStdin(
-    "addresses-from-stdin",
-    desc("Lookup addresses in a GSYM file that are read from stdin\nEach input "
-         "line is expected to be of the following format: <addr> <gsym-path>"),
-    cat(LookupOptions));
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_num_threads_EQ)) {
+    StringRef S{A->getValue()};
+    if (!llvm::to_integer(S, NumThreads, 0)) {
+      llvm::errs() << ToolName << ": for the --num-threads option: '" << S
+                   << "' value invalid for uint argument!\n";
+      std::exit(1);
+    }
+  }
 
-} // namespace
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_segment_size_EQ)) {
+    StringRef S{A->getValue()};
+    if (!llvm::to_integer(S, SegmentSize, 0)) {
+      llvm::errs() << ToolName << ": for the --segment-size option: '" << S
+                   << "' value invalid for uint argument!\n";
+      std::exit(1);
+    }
+  }
+
+  Quiet = Args.hasArg(OPT_quiet);
+
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_address_EQ)) {
+    StringRef S{A->getValue()};
+    if (!llvm::to_integer(S, LookupAddresses.emplace_back(), 0)) {
+      llvm::errs() << ToolName << ": for the --segment-size option: '" << S
+                   << "' value invalid for uint argument!\n";
+      std::exit(1);
+    }
+  }
+
+  LookupAddressesFromStdin = Args.hasArg(OPT_addresses_from_stdin);
+}
+
 /// @}
 //===----------------------------------------------------------------------===//
 
@@ -443,7 +493,7 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
     OS << "\n";
 }
 
-int main(int argc, char const *argv[]) {
+int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
@@ -451,21 +501,7 @@ int main(int argc, char const *argv[]) {
 
   llvm::InitializeAllTargets();
 
-  const char *Overview =
-      "A tool for dumping, searching and creating GSYM files.\n\n"
-      "Specify one or more GSYM paths as arguments to dump all of the "
-      "information in each GSYM file.\n"
-      "Specify a single GSYM file along with one or more --lookup options to "
-      "lookup addresses within that GSYM file.\n"
-      "Use the --convert option to specify a file with option --out-file "
-      "option to convert to GSYM format.\n";
-  HideUnrelatedOptions({&GeneralOptions, &ConversionOptions, &LookupOptions});
-  cl::ParseCommandLineOptions(argc, argv, Overview);
-
-  if (Help) {
-    PrintHelpMessage(/*Hidden =*/false, /*Categorized =*/true);
-    return 0;
-  }
+  parseArgs(argc, argv);
 
   raw_ostream &OS = outs();
 

@@ -173,7 +173,7 @@ that this function is provided by the static or shared library, so it is only av
 to a platform where the compiled library is sufficiently recent. On older platforms, the program will
 terminate in an unspecified unsuccessful manner, but the quality of diagnostics won't be great.
 However, users can also override that mechanism at two different levels. First, the mechanism can be
-overriden at compile-time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
+overridden at compile-time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
 When that macro is defined, it will be called with a format string as the first argument, followed by
 a series of arguments to format using printf-style formatting. Compile-time customization may be
 interesting to get precise control over code generation, however it is also inconvenient to use in
@@ -517,3 +517,38 @@ The exposition only type ``basic-format-string`` and its typedefs
 ``format-string`` and ``wformat-string`` became ``basic_format_string``,
 ``format_string``, and ``wformat_string`` in C++23. Libc++ makes these types
 available in C++20 as an extension.
+
+For padding Unicode strings the ``format`` library relies on the Unicode
+Standard. Libc++ retroactively updates the Unicode Standard in older C++
+versions. This allows the library to have better estimates for newly introduced
+Unicode code points, without requiring the user to use the latest C++ version
+in their code base.
+=======
+Turning off ASan annotation in containers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``__asan_annotate_container_with_allocator`` is a customization point to allow users to disable
+`Address Sanitizer annotations for containers <https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow>`_ for specific allocators. This may be necessary for allocators that access allocated memory.
+This customization point exists only when ``_LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS`` Feature Test Macro is defined.
+
+For allocators not running destructors, it is also possible to `bulk-unpoison memory <https://github.com/google/sanitizers/wiki/AddressSanitizerManualPoisoning>`_ instead of disabling annotations altogether.
+
+The struct may be specialized for user-defined allocators. It is a `Cpp17UnaryTypeTrait <http://eel.is/c++draft/type.traits#meta.rqmts>`_ with a base characteristic of ``true_type`` if the container is allowed to use annotations and ``false_type`` otherwise.
+
+The annotations for a ``user_allocator`` can be disabled like this:
+
+.. code-block:: cpp
+
+  #ifdef _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS
+  template <class T>
+  struct std::__asan_annotate_container_with_allocator<user_allocator<T>> : std::false_type {};
+  #endif
+
+Why may I want to turn it off?
+------------------------------
+
+There are a few reasons why you may want to turn off annotations for an allocator.
+Unpoisoning may not be an option, if (for example) you are not maintaining the allocator.
+
+* You are using allocator, which does not call destructor during deallocation.
+* You are aware that memory allocated with an allocator may be accessed, even when unused by container.

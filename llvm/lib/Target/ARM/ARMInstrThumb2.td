@@ -2807,10 +2807,10 @@ def t2RRX : T2sTwoReg<(outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
 }
 
 let isCodeGenOnly = 1, Defs = [CPSR] in {
-def t2MOVsrl_flag : T2TwoRegShiftImm<
+def t2MOVsrl_glue : T2TwoRegShiftImm<
                         (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
                         "lsrs", ".w\t$Rd, $Rm, #1",
-                        [(set rGPR:$Rd, (ARMsrl_flag rGPR:$Rm))]>,
+                        [(set rGPR:$Rd, (ARMsrl_glue rGPR:$Rm))]>,
                         Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
@@ -2822,10 +2822,10 @@ def t2MOVsrl_flag : T2TwoRegShiftImm<
   let Inst{14-12} = 0b000;
   let Inst{7-6} = 0b01;
 }
-def t2MOVsra_flag : T2TwoRegShiftImm<
+def t2MOVsra_glue : T2TwoRegShiftImm<
                         (outs rGPR:$Rd), (ins rGPR:$Rm), IIC_iMOVsi,
                         "asrs", ".w\t$Rd, $Rm, #1",
-                        [(set rGPR:$Rd, (ARMsra_flag rGPR:$Rm))]>,
+                        [(set rGPR:$Rd, (ARMsra_glue rGPR:$Rm))]>,
                         Sched<[WriteALU]> {
   let Inst{31-27} = 0b11101;
   let Inst{26-25} = 0b01;
@@ -4274,7 +4274,7 @@ def t2RFEIA  : T2RFE<0b111010011001,
 let isReturn = 1, isBarrier = 1, isTerminator = 1, Defs = [PC] in
 def t2SUBS_PC_LR : T2I <(outs), (ins imm0_255:$imm), NoItinerary,
                         "subs", "\tpc, lr, $imm",
-                        [(ARMintretflag imm0_255:$imm)]>,
+                        [(ARMintretglue imm0_255:$imm)]>,
                    Requires<[IsThumb2,IsNotMClass]> {
   let Inst{31-8} = 0b111100111101111010001111;
 

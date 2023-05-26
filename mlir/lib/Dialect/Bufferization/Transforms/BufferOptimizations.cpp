@@ -43,7 +43,7 @@ static bool isKnownControlFlowInterface(Operation *op) {
 /// exceed the stack space.
 static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
                                 unsigned maxRankOfAllocatedMemRef) {
-  auto type = alloc.getType().dyn_cast<ShapedType>();
+  auto type = dyn_cast<ShapedType>(alloc.getType());
   if (!type || !alloc.getDefiningOp<memref::AllocOp>())
     return false;
   if (!type.hasStaticShape()) {
@@ -355,7 +355,7 @@ public:
       OpBuilder builder(startOperation);
       Operation *allocOp = alloc.getDefiningOp();
       Operation *alloca = builder.create<memref::AllocaOp>(
-          alloc.getLoc(), alloc.getType().cast<MemRefType>(),
+          alloc.getLoc(), cast<MemRefType>(alloc.getType()),
           allocOp->getOperands(), allocOp->getAttrs());
 
       // Replace the original alloc by a newly created alloca.

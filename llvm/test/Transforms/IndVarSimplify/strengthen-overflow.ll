@@ -297,5 +297,41 @@ for.end:
   ret void
 }
 
+define void @test_infer_nsw(ptr %p) {
+; CHECK-LABEL: @test_infer_nsw(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 poison
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD:%.*]], [[BB2:%.*]] ], [ 0, [[BB:%.*]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[FREEZE]], [[PHI]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp sgt i32 [[SUB]], 1
+; CHECK-NEXT:    br i1 [[ICMP]], label [[BB2]], label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i16 1, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[ADD]] = add nuw i32 [[PHI]], 2
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret void
+;
+bb:
+  %freeze = freeze i32 poison
+  br label %bb1
+
+bb1:                                              ; preds = %bb2, %bb
+  %phi = phi i32 [ %add, %bb2 ], [ 0, %bb ]
+  %sub = sub i32 %freeze, %phi
+  %icmp = icmp sgt i32 %sub, 1
+  br i1 %icmp, label %bb2, label %bb3
+
+bb2:                                              ; preds = %bb1
+  store i16 1, ptr %p, align 2
+  %add = add nuw i32 %phi, 2
+  br label %bb1
+
+bb3:                                              ; preds = %bb1
+  ret void
+}
+
 !0 = !{i32 0, i32 2}
 !1 = !{i32 0, i32 42}

@@ -13,7 +13,7 @@
 TEST(LlvmLibcIsDigit, DefaultLocale) {
   // Loops through all characters, verifying that numbers return a
   // non-zero integer and everything else returns zero.
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     if ('0' <= ch && ch <= '9')
       EXPECT_NE(__llvm_libc::isdigit(ch), 0);
     else

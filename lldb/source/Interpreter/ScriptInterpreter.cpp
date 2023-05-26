@@ -80,6 +80,11 @@ ScriptInterpreter::GetDataExtractorFromSBData(const lldb::SBData &data) const {
   return data.m_opaque_sp;
 }
 
+lldb::BreakpointSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpoint(
+    const lldb::SBBreakpoint &breakpoint) const {
+  return breakpoint.m_opaque_wp.lock();
+}
+
 lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
     const lldb::SBAttachInfo &attach_info) const {
   return attach_info.m_opaque_sp;

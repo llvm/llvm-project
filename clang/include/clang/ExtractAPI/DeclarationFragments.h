@@ -99,6 +99,25 @@ public:
 
   const std::vector<Fragment> &getFragments() const { return Fragments; }
 
+  // Add a new Fragment to the beginning of the Fragments.
+  DeclarationFragments &appendFront(StringRef Spelling, FragmentKind Kind,
+                                    StringRef PreciseIdentifier = "",
+                                    const Decl *Declaration = nullptr) {
+    Fragments.emplace(Fragments.begin(), Spelling, Kind, PreciseIdentifier,
+                      Declaration);
+    return *this;
+  }
+
+  DeclarationFragments &appendFront(DeclarationFragments &&Other) {
+    Fragments.insert(Fragments.begin(),
+                     std::make_move_iterator(Other.Fragments.begin()),
+                     std::make_move_iterator(Other.Fragments.end()));
+    Other.Fragments.clear();
+    return *this;
+  }
+
+  void removeLast() { Fragments.pop_back(); }
+
   /// Append a new Fragment to the end of the Fragments.
   ///
   /// \returns a reference to the DeclarationFragments object itself after

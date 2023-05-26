@@ -14,7 +14,8 @@ using enum E; // expected-error {{unknown type name E}}
 }
 }
 
-namespace dr2628 { // dr2628: no, this was reverted for the 16.x release
+namespace dr2628 { // dr2628: no open
+                   // this was reverted for the 16.x release
                    // due to regressions, see the issue for more details:
                    // https://github.com/llvm/llvm-project/issues/60777
 
@@ -33,6 +34,22 @@ void f() {
   // FIXME-expected-note@#DR2628_CTOR {{marked deleted here}}
 }
 
+}
+
+namespace dr2631 { // dr2631: 16
+  constexpr int g();
+  consteval int f() {
+    return g();
+  }
+  int k(int x = f()) {
+    return x;
+  }
+  constexpr int g() {
+    return 42;
+  }
+  int test() {
+    return k();
+  }
 }
 
 namespace dr2635 { // dr2635: 16
@@ -108,20 +125,4 @@ void f() {
     brachiosaur -= neck;                // OK
     brachiosaur |= neck;                // OK
 }
-}
-
-namespace dr2631 { // dr2631: 16
-  constexpr int g();
-  consteval int f() {
-    return g();
-  }
-  int k(int x = f()) {
-    return x;
-  }
-  constexpr int g() {
-    return 42;
-  }
-  int test() {
-    return k();
-  }
 }

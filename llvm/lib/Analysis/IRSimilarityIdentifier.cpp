@@ -732,7 +732,7 @@ bool IRSimilarityCandidate::compareAssignmentMapping(
     for (unsigned OtherVal : ValueMappingIt->second) {
       if (OtherVal == InstValB)
         continue;
-      if (ValueNumberMappingA.find(OtherVal) == ValueNumberMappingA.end())
+      if (!ValueNumberMappingA.contains(OtherVal))
         continue;
       if (!ValueNumberMappingA[OtherVal].contains(InstValA))
         continue;

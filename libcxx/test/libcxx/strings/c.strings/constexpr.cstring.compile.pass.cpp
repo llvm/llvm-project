@@ -14,13 +14,21 @@
 
 #include <__string/constexpr_c_functions.h>
 
+constexpr unsigned char Banand[] = "Banand";
+constexpr unsigned char Banane[] = "Banane";
+constexpr unsigned char Bananf[] = "Bananf";
+
 static_assert(std::__constexpr_strlen("Banane") == 6, "");
-static_assert(std::__constexpr_memcmp("Banane", "Banand", 6) == 1, "");
-static_assert(std::__constexpr_memcmp("Banane", "Banane", 6) == 0, "");
-static_assert(std::__constexpr_memcmp("Banane", "Bananf", 6) == -1, "");
+static_assert(std::__constexpr_memcmp(Banane, Banand, 6) == 1, "");
+static_assert(std::__constexpr_memcmp(Banane, Banane, 6) == 0, "");
+static_assert(std::__constexpr_memcmp(Banane, Bananf, 6) == -1, "");
+
+static_assert(!std::__constexpr_memcmp_equal(Banane, Banand, 6), "");
+static_assert(std::__constexpr_memcmp_equal(Banane, Banane, 6), "");
+
 
 constexpr bool test_constexpr_wmemchr() {
   const char str[] = "Banane";
-  return std::__constexpr_char_memchr(str, 'n', 6) == str + 2;
+  return std::__constexpr_memchr(str, 'n', 6) == str + 2;
 }
 static_assert(test_constexpr_wmemchr(), "");

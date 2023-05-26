@@ -187,8 +187,8 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
   response.PutStringAsRawHex8(host_triple.getTriple());
   response.Printf(";ptrsize:%u;", host_arch.GetAddressByteSize());
 
-  const char *distribution_id = host_arch.GetDistributionId().AsCString();
-  if (distribution_id) {
+  llvm::StringRef distribution_id = HostInfo::GetDistributionId();
+  if (!distribution_id.empty()) {
     response.PutCString("distribution_id:");
     response.PutStringAsRawHex8(distribution_id);
     response.PutCString(";");

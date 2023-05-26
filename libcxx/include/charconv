@@ -80,10 +80,9 @@ namespace std {
 #include <__charconv/traits.h>
 #include <__config>
 #include <__debug>
-#include <__errc>
+#include <__system_error/errc.h>
 #include <cmath> // for log2f
 #include <cstdint>
-#include <cstdlib>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -96,6 +95,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>
+#  include <cstdlib>
 #  include <cstring>
 #  include <iosfwd>
 #  include <type_traits>

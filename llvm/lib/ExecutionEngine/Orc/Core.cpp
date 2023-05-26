@@ -167,15 +167,16 @@ AsynchronousSymbolQuery::AsynchronousSymbolQuery(
   OutstandingSymbolsCount = Symbols.size();
 
   for (auto &KV : Symbols)
-    ResolvedSymbols[KV.first] = nullptr;
+    ResolvedSymbols[KV.first] = ExecutorSymbolDef();
 }
 
 void AsynchronousSymbolQuery::notifySymbolMetRequiredState(
-    const SymbolStringPtr &Name, JITEvaluatedSymbol Sym) {
+    const SymbolStringPtr &Name, ExecutorSymbolDef Sym) {
   auto I = ResolvedSymbols.find(Name);
   assert(I != ResolvedSymbols.end() &&
          "Resolving symbol outside the requested set");
-  assert(I->second.getAddress() == 0 && "Redundantly resolving symbol Name");
+  assert(I->second == ExecutorSymbolDef() &&
+         "Redundantly resolving symbol Name");
 
   // If this is a materialization-side-effects-only symbol then drop it,
   // otherwise update its map entry with its resolved address.
@@ -447,8 +448,8 @@ void ReExportsMaterializationUnit::materialize(
           if (KV.second.AliasFlags.hasMaterializationSideEffectsOnly())
             continue;
 
-          ResolutionMap[KV.first] = JITEvaluatedSymbol(
-              (*Result)[KV.second.Aliasee].getAddress(), KV.second.AliasFlags);
+          ResolutionMap[KV.first] = {(*Result)[KV.second.Aliasee].getAddress(),
+                                     KV.second.AliasFlags};
         }
         if (auto Err = QueryInfo->R->notifyResolved(ResolutionMap)) {
           ES.reportError(std::move(Err));
@@ -945,7 +946,7 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
 
         struct WorklistEntry {
           SymbolTable::iterator SymI;
-          JITEvaluatedSymbol ResolvedSym;
+          ExecutorSymbolDef ResolvedSym;
         };
 
         SymbolNameSet SymbolsInErrorState;
@@ -977,8 +978,7 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
                        (SymI->second.getFlags() & ~JITSymbolFlags::Common) &&
                    "Resolved flags should match the declared flags");
 
-            Worklist.push_back(
-                {SymI, JITEvaluatedSymbol(KV.second.getAddress(), Flags)});
+            Worklist.push_back({SymI, {KV.second.getAddress(), Flags}});
           }
         }
 
@@ -1000,7 +1000,7 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
 
           // Resolved symbols can not be weak: discard the weak flag.
           JITSymbolFlags ResolvedFlags = ResolvedSym.getFlags();
-          SymI->second.setAddress(ExecutorAddr(ResolvedSym.getAddress()));
+          SymI->second.setAddress(ResolvedSym.getAddress());
           SymI->second.setFlags(ResolvedFlags);
           SymI->second.setState(SymbolState::Resolved);
 
@@ -1329,6 +1329,18 @@ void JITDylib::setLinkOrder(JITDylibSearchOrder NewLinkOrder,
   });
 }
 
+void JITDylib::addToLinkOrder(const JITDylibSearchOrder &NewLinks) {
+  ES.runSessionLocked([&]() {
+    for (auto &KV : NewLinks) {
+      // Skip elements of NewLinks that are already in the link order.
+      if (llvm::find(LinkOrder, KV) != LinkOrder.end())
+        continue;
+
+      LinkOrder.push_back(std::move(KV));
+    }
+  });
+}
+
 void JITDylib::addToLinkOrder(JITDylib &JD, JITDylibLookupFlags JDLookupFlags) {
   ES.runSessionLocked([&]() { LinkOrder.push_back({&JD, JDLookupFlags}); });
 }
@@ -1438,16 +1450,23 @@ void JITDylib::dump(raw_ostream &OS) {
     OS << "Link order: " << LinkOrder << "\n"
        << "Symbol table:\n";
 
-    for (auto &KV : Symbols) {
+    // Sort symbols so we get a deterministic order and can check them in tests.
+    std::vector<std::pair<SymbolStringPtr, SymbolTableEntry *>> SymbolsSorted;
+    for (auto &KV : Symbols)
+      SymbolsSorted.emplace_back(KV.first, &KV.second);
+    std::sort(SymbolsSorted.begin(), SymbolsSorted.end(),
+              [](const auto &L, const auto &R) { return *L.first < *R.first; });
+
+    for (auto &KV : SymbolsSorted) {
       OS << "    \"" << *KV.first << "\": ";
-      if (auto Addr = KV.second.getAddress())
+      if (auto Addr = KV.second->getAddress())
         OS << Addr;
       else
         OS << "<not resolved> ";
 
-      OS << " " << KV.second.getFlags() << " " << KV.second.getState();
+      OS << " " << KV.second->getFlags() << " " << KV.second->getState();
 
-      if (KV.second.hasMaterializerAttached()) {
+      if (KV.second->hasMaterializerAttached()) {
         OS << " (Materializer ";
         auto I = UnmaterializedInfos.find(KV.first);
         assert(I != UnmaterializedInfos.end() &&
@@ -2157,7 +2176,7 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
 #endif
 }
 
-Expected<JITEvaluatedSymbol>
+Expected<ExecutorSymbolDef>
 ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
                          SymbolStringPtr Name, SymbolState RequiredState) {
   SymbolLookupSet Names({Name});
@@ -2171,13 +2190,13 @@ ExecutionSession::lookup(const JITDylibSearchOrder &SearchOrder,
     return ResultMap.takeError();
 }
 
-Expected<JITEvaluatedSymbol>
+Expected<ExecutorSymbolDef>
 ExecutionSession::lookup(ArrayRef<JITDylib *> SearchOrder, SymbolStringPtr Name,
                          SymbolState RequiredState) {
   return lookup(makeJITDylibSearchOrder(SearchOrder), Name, RequiredState);
 }
 
-Expected<JITEvaluatedSymbol>
+Expected<ExecutorSymbolDef>
 ExecutionSession::lookup(ArrayRef<JITDylib *> SearchOrder, StringRef Name,
                          SymbolState RequiredState) {
   return lookup(SearchOrder, intern(Name), RequiredState);
@@ -2214,9 +2233,9 @@ Error ExecutionSession::registerJITDispatchHandlers(
   return Error::success();
 }
 
-void ExecutionSession::runJITDispatchHandler(
-    SendResultFunction SendResult, JITTargetAddress HandlerFnTagAddr,
-    ArrayRef<char> ArgBuffer) {
+void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
+                                             ExecutorAddr HandlerFnTagAddr,
+                                             ArrayRef<char> ArgBuffer) {
 
   std::shared_ptr<JITDispatchHandlerFunction> F;
   {

@@ -117,13 +117,13 @@ void AssertSideEffectCheck::check(const MatchFinder::MatchResult &Result) {
   StringRef AssertMacroName;
   while (Loc.isValid() && Loc.isMacroID()) {
     StringRef MacroName = Lexer::getImmediateMacroName(Loc, SM, LangOpts);
+    Loc = SM.getImmediateMacroCallerLoc(Loc);
 
     // Check if this macro is an assert.
     if (llvm::is_contained(AssertMacros, MacroName)) {
       AssertMacroName = MacroName;
       break;
     }
-    Loc = SM.getImmediateMacroCallerLoc(Loc);
   }
   if (AssertMacroName.empty())
     return;

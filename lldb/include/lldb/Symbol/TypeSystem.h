@@ -77,6 +77,7 @@ class TypeSystem : public PluginInterface,
                    public std::enable_shared_from_this<TypeSystem> {
 public:
   // Constructors and Destructors
+  TypeSystem();
   ~TypeSystem() override;
 
   // LLVM RTTI support

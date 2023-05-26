@@ -26,6 +26,7 @@ class DynamicLibrary;
 namespace lldb_private {
 class Platform;
 class ExecutionContext;
+class RegisterFlags;
 
 typedef llvm::sys::DynamicLibrary (*LoadPluginCallbackType)(
     const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Status &error);
@@ -62,6 +63,8 @@ struct RegisterInfo {
   /// this register changes. For example, the invalidate list for eax would be
   /// rax ax, ah, and al.
   uint32_t *invalidate_regs;
+  /// If not nullptr, a type defined by XML descriptions.
+  const RegisterFlags *flags_type;
 
   llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
     return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);

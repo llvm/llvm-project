@@ -22,9 +22,11 @@ program test_event_post
   !______ invalid event-variable ____________________________
 
   ! event-variable must be event_type
+  !ERROR: The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV
   event post(non_event)
 
   ! event-variable must be a coarray
+  !ERROR: The event-variable must be a coarray
   event post(non_coarray)
 
   !ERROR: Must be a scalar value, but is a rank-1 array
@@ -48,18 +50,50 @@ program test_event_post
 
   !______ invalid sync-stat-lists: redundant sync-stat-list ____________
 
-  ! No specifier shall appear more than once in a given sync-stat-list
+  !ERROR: The stat-variable in a sync-stat-list may not be repeated
   event post(concert, stat=sync_status, stat=superfluous_stat)
 
-  ! No specifier shall appear more than once in a given sync-stat-list
+  !ERROR: The stat-variable in a sync-stat-list may not be repeated
+  event post(concert, errmsg=error_message, stat=sync_status, stat=superfluous_stat)
+
+  !ERROR: The stat-variable in a sync-stat-list may not be repeated
+  event post(concert, stat=sync_status, errmsg=error_message, stat=superfluous_stat)
+
+  !ERROR: The stat-variable in a sync-stat-list may not be repeated
+  event post(concert, stat=sync_status, stat=superfluous_stat, errmsg=error_message)
+
+  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
   event post(concert, errmsg=error_message, errmsg=superfluous_errmsg)
 
-  !______ invalid sync-stat-lists: coindexed stat-variable ____________
+  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  event post(concert, stat=sync_status, errmsg=error_message, errmsg=superfluous_errmsg)
 
-  ! Check constraint C1173 from the Fortran 2018 standard
+  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  event post(concert, errmsg=error_message, stat=sync_status, errmsg=superfluous_errmsg)
+
+  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  event post(concert, errmsg=error_message, errmsg=superfluous_errmsg, stat=sync_status)
+
+  !______ invalid sync-stat-lists: coindexed stat-variable - C1173____________
+
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
   event post(concert, stat=co_indexed_integer[1])
 
-  ! Check constraint C1173 from the Fortran 2018 standard
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
   event post(concert, errmsg=co_indexed_character[1])
+
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
+  event post(concert, stat=co_indexed_integer[1], errmsg=error_message)
+
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
+  event post(concert, stat=sync_status, errmsg=co_indexed_character[1])
+
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
+  event post(concert, stat=co_indexed_integer[1], errmsg=co_indexed_character[1])
+
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
+  event post(concert, errmsg=co_indexed_character[1], stat=co_indexed_integer[1])
 
 end program test_event_post

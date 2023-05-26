@@ -100,8 +100,6 @@ protected:
     /// The amount to slide all segments by if there is a global
     /// slide.
     lldb::addr_t slide = 0;
-    /// Modification date for this dylib.
-    lldb::addr_t mod_date = 0;
     /// Resolved path for this dylib.
     lldb_private::FileSpec file_spec;
     /// UUID for this dylib if it has one, else all zeros.
@@ -128,7 +126,6 @@ protected:
       if (!load_cmd_data_only) {
         address = LLDB_INVALID_ADDRESS;
         slide = 0;
-        mod_date = 0;
         file_spec.Clear();
         ::memset(&header, 0, sizeof(header));
       }
@@ -142,8 +139,7 @@ protected:
 
     bool operator==(const ImageInfo &rhs) const {
       return address == rhs.address && slide == rhs.slide &&
-             mod_date == rhs.mod_date && file_spec == rhs.file_spec &&
-             uuid == rhs.uuid &&
+             file_spec == rhs.file_spec && uuid == rhs.uuid &&
              memcmp(&header, &rhs.header, sizeof(header)) == 0 &&
              segments == rhs.segments && os_type == rhs.os_type &&
              os_env == rhs.os_env;

@@ -1374,9 +1374,8 @@ PRE_SYSCALL(io_setup)(long nr_reqs, void **ctx) {
 }
 
 POST_SYSCALL(io_setup)(long res, long nr_reqs, void **ctx) {
-  if (res >= 0) {
-    if (ctx)
-      POST_WRITE(ctx, sizeof(*ctx));
+  if (res >= 0 && ctx) {
+    POST_WRITE(ctx, sizeof(*ctx));
     // (*ctx) is actually a pointer to a kernel mapped page, and there are
     // people out there who are crazy enough to peek into that page's 32-byte
     // header.

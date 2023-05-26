@@ -220,7 +220,7 @@ public:
   static SubCommand &getTopLevel();
 
   // Get the special subcommand that can be used to put an option into all
-  // subcomands.
+  // subcommands.
   static SubCommand &getAll();
 
   void reset();
@@ -503,10 +503,10 @@ struct callback_traits<R (C::*)(Args...) const> {
   using result_type = R;
   using arg_type = std::tuple_element_t<0, std::tuple<Args...>>;
   static_assert(sizeof...(Args) == 1, "callback function must have one and only one parameter");
-  static_assert(std::is_same<result_type, void>::value,
+  static_assert(std::is_same_v<result_type, void>,
                 "callback return type must be void");
-  static_assert(std::is_lvalue_reference<arg_type>::value &&
-                    std::is_const<std::remove_reference_t<arg_type>>::value,
+  static_assert(std::is_lvalue_reference_v<arg_type> &&
+                    std::is_const_v<std::remove_reference_t<arg_type>>,
                 "callback arg_type must be a const lvalue reference");
 };
 } // namespace detail
@@ -613,7 +613,7 @@ protected:
 // Top-level option class.
 template <class DataType>
 struct OptionValue final
-    : OptionValueBase<DataType, std::is_class<DataType>::value> {
+    : OptionValueBase<DataType, std::is_class_v<DataType>> {
   OptionValue() = default;
 
   OptionValue(const DataType &V) { this->setValue(V); }
@@ -1407,9 +1407,9 @@ public:
 //
 template <class DataType, bool ExternalStorage = false,
           class ParserClass = parser<DataType>>
-class opt : public Option,
-            public opt_storage<DataType, ExternalStorage,
-                               std::is_class<DataType>::value> {
+class opt
+    : public Option,
+      public opt_storage<DataType, ExternalStorage, std::is_class_v<DataType>> {
   ParserClass Parser;
 
   bool handleOccurrence(unsigned pos, StringRef ArgName,
@@ -1448,8 +1448,7 @@ class opt : public Option,
     }
   }
 
-  template <class T,
-            class = std::enable_if_t<std::is_assignable<T &, T>::value>>
+  template <class T, class = std::enable_if_t<std::is_assignable_v<T &, T>>>
   void setDefaultImpl() {
     const OptionValue<DataType> &V = this->getDefault();
     if (V.hasValue())
@@ -1458,8 +1457,7 @@ class opt : public Option,
       this->setValue(T());
   }
 
-  template <class T,
-            class = std::enable_if_t<!std::is_assignable<T &, T>::value>>
+  template <class T, class = std::enable_if_t<!std::is_assignable_v<T &, T>>>
   void setDefaultImpl(...) {}
 
   void setDefault() override { setDefaultImpl<DataType>(); }

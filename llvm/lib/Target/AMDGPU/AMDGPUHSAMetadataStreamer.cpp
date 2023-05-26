@@ -418,9 +418,7 @@ void MetadataStreamerYamlV2::emitHiddenKernelArgs(const Function &Func,
   }
 
   if (HiddenArgNumBytes >= 48) {
-    if (!Func.hasFnAttribute("amdgpu-no-completion-action") &&
-        // FIXME: Hack for runtime bug if we fail to optimize this out
-        Func.hasFnAttribute("calls-enqueue-kernel")) {
+    if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenCompletionAction);
     } else {
       emitKernelArg(DL, Int8PtrTy, Align(8), ValueKind::HiddenNone);
@@ -854,9 +852,7 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
   }
 
   if (HiddenArgNumBytes >= 48) {
-    if (!Func.hasFnAttribute("amdgpu-no-completion-action") &&
-        // FIXME: Hack for runtime bug if we fail to optimize this out
-        Func.hasFnAttribute("calls-enqueue-kernel")) {
+    if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_completion_action", Offset,
                     Args);
     } else {
@@ -1082,9 +1078,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     Offset += 8; // Skipped.
   }
 
-  if (!Func.hasFnAttribute("amdgpu-no-completion-action") &&
-      // FIXME: Hack for runtime bug
-      Func.hasFnAttribute("calls-enqueue-kernel")) {
+  if (!Func.hasFnAttribute("amdgpu-no-completion-action")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_completion_action", Offset,
                   Args);
   } else {

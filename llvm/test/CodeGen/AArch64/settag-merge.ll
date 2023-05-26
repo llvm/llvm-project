@@ -56,8 +56,8 @@ entry:
 ; CHECK-LABEL: stg128_128_128_128:
 ; CHECK: mov     x8, #512
 ; CHECK: st2g    sp, [sp], #32
-; CHECK: sub     x8, x8, #32
-; CHECK: cbnz    x8,
+; CHECK: subs    x8, x8, #32
+; CHECK: b.ne
 ; CHECK: ret
   %a = alloca i8, i32 128, align 16
   %b = alloca i8, i32 128, align 16
@@ -75,8 +75,8 @@ entry:
 ; CHECK-LABEL: stg16_512_16:
 ; CHECK: mov     x8, #544
 ; CHECK: st2g    sp, [sp], #32
-; CHECK: sub     x8, x8, #32
-; CHECK: cbnz    x8,
+; CHECK: subs    x8, x8, #32
+; CHECK: b.ne
 ; CHECK: ret
   %a = alloca i8, i32 16, align 16
   %b = alloca i8, i32 512, align 16
@@ -92,8 +92,8 @@ entry:
 ; CHECK-LABEL: stg512_512_512:
 ; CHECK: mov     x8, #1536
 ; CHECK: st2g    sp, [sp], #32
-; CHECK: sub     x8, x8, #32
-; CHECK: cbnz    x8,
+; CHECK: subs    x8, x8, #32
+; CHECK: b.ne
 ; CHECK: ret
   %a = alloca i8, i32 512, align 16
   %b = alloca i8, i32 512, align 16
@@ -136,9 +136,9 @@ entry:
 ; CHECK: tbz   w0, #0, [[LABEL:.LBB.*]]
 ; CHECK: add   x9, sp, #
 ; CHECK: mov   x8, #256
-; CHECK: sub   x8, x8, #32
+; CHECK: subs  x8, x8, #32
 ; CHECK: st2g  x9, [x9], #32
-; CHECK: cbnz  x8,
+; CHECK: b.ne
 ; CHECK: [[LABEL]]:
 ; CHECK: stg     sp, [sp, #
 ; CHECK: st2g    sp, [sp], #
@@ -164,9 +164,9 @@ entry:
 ; CHECK: tbz   w0, #0, [[LABEL:.LBB.*]]
 ; CHECK: add   x9, sp, #
 ; CHECK: mov   x8, #1024
-; CHECK: sub   x8, x8, #32
+; CHECK: subs  x8, x8, #32
 ; CHECK: st2g  x9, [x9], #32
-; CHECK: cbnz  x8,
+; CHECK: b.ne
 ; CHECK: [[LABEL]]:
 ; CHECK: stg     sp, [sp, #
 ; CHECK: st2g    sp, [sp], #
@@ -192,13 +192,13 @@ entry:
 ; CHECK-LABEL: stg128_128_gap_128_128:
 ; CHECK: mov     x9, sp
 ; CHECK: mov     x8, #256
-; CHECK: sub     x8, x8, #32
+; CHECK: subs    x8, x8, #32
 ; CHECK: st2g    x9, [x9], #32
-; CHECK: cbnz    x8,
+; CHECK: b.ne
 ; CHECK: mov     x8, #256
 ; CHECK: st2g    sp, [sp], #32
-; CHECK: sub     x8, x8, #32
-; CHECK: cbnz    x8,
+; CHECK: subs    x8, x8, #32
+; CHECK: b.ne
 ; CHECK: ret
   %a = alloca i8, i32 128, align 16
   %a2 = alloca i8, i32 128, align 16

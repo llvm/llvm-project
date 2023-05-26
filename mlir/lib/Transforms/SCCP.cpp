@@ -51,9 +51,9 @@ static LogicalResult replaceWithConstant(DataFlowSolver &solver,
 
   // Attempt to materialize a constant for the given value.
   Dialect *dialect = latticeValue.getConstantDialect();
-  Value constant = folder.getOrCreateConstant(builder, dialect,
-                                              latticeValue.getConstantValue(),
-                                              value.getType(), value.getLoc());
+  Value constant = folder.getOrCreateConstant(
+      builder.getInsertionBlock(), dialect, latticeValue.getConstantValue(),
+      value.getType(), value.getLoc());
   if (!constant)
     return failure();
 

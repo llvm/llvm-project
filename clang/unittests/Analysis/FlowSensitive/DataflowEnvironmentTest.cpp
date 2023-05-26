@@ -124,7 +124,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsFun) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Fun);
-  EXPECT_THAT(Env.getValue(*Var, SkipPast::None), NotNull());
+  EXPECT_THAT(Env.getValue(*Var), NotNull());
 }
 
 // Tests that fields mentioned only in default member initializers are included
@@ -218,8 +218,8 @@ TEST_F(EnvironmentTest, InitGlobalVarsFieldFun) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Fun);
-  const auto *GlobalLoc = cast<AggregateStorageLocation>(
-      Env.getStorageLocation(*GlobalDecl, SkipPast::None));
+  const auto *GlobalLoc =
+      cast<AggregateStorageLocation>(Env.getStorageLocation(*GlobalDecl));
   const auto *GlobalVal = cast<StructValue>(Env.getValue(*GlobalLoc));
   const auto *BarVal = GlobalVal->getChild(*BarDecl);
   ASSERT_THAT(BarVal, NotNull());
@@ -255,7 +255,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsConstructor) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Ctor);
-  EXPECT_THAT(Env.getValue(*Var, SkipPast::None), NotNull());
+  EXPECT_THAT(Env.getValue(*Var), NotNull());
 }
 
 } // namespace

@@ -1,4 +1,4 @@
-//===-- RISCVRegisterInfo.cpp - RISCV Register Information ------*- C++ -*-===//
+//===-- RISCVRegisterInfo.cpp - RISC-V Register Information -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the RISCV implementation of the TargetRegisterInfo class.
+// This file contains the RISC-V implementation of the TargetRegisterInfo class.
 //
 //===----------------------------------------------------------------------===//
 

@@ -131,7 +131,7 @@ subroutine lastprivate()
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
-!CHECK: scf.if %[[true]] {
+!CHECK: fir.if %[[true]] {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
 !CHECK: }
@@ -168,7 +168,7 @@ subroutine lastprivate()
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
-!CHECK: scf.if %true {
+!CHECK: fir.if %true {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
 !CHECK: }
@@ -205,7 +205,7 @@ subroutine lastprivate()
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
-!CHECK: scf.if %true {
+!CHECK: fir.if %true {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
 !CHECK: omp.barrier
@@ -217,4 +217,26 @@ subroutine lastprivate()
 !CHECK: omp.terminator
 !CHECK: }
     !$omp end sections nowait
+
+!CHECK: omp.sections {
+!CHECK: omp.section {
+!CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
+!CHECK: cf.br ^bb1
+!CHECK: ^bb1:  // pred: ^bb0
+!CHECK: %[[INNER_PRIVATE_X:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[const:.*]] = arith.constant 1 : i32
+!CHECK: %[[result:.*]] = arith.addi %[[INNER_PRIVATE_X]], %[[const]] : i32
+!CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: %[[loaded_value:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
+!CHECK: fir.store %[[loaded_value]] to %[[X]] : !fir.ref<i32>
+!CHECK: omp.terminator
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
+
+    !$omp sections lastprivate(x)
+        !$omp section
+                goto 30
+        30  x = x + 1
+    !$omp end sections
 end subroutine

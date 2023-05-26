@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -41,7 +42,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -2696,6 +2696,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if ((Tmp1 = TLI.expandABS(Node, DAG)))
       Results.push_back(Tmp1);
     break;
+  case ISD::ABDS:
+  case ISD::ABDU:
+    if ((Tmp1 = TLI.expandABD(Node, DAG)))
+      Results.push_back(Tmp1);
+    break;
   case ISD::CTPOP:
     if ((Tmp1 = TLI.expandCTPOP(Node, DAG)))
       Results.push_back(Tmp1);
@@ -3477,13 +3482,13 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // if we were allowed to generate libcalls to division functions of illegal
     // type. But we cannot do that.
     llvm_unreachable("Cannot expand DIVFIX!");
-  case ISD::ADDCARRY:
-  case ISD::SUBCARRY: {
+  case ISD::UADDO_CARRY:
+  case ISD::USUBO_CARRY: {
     SDValue LHS = Node->getOperand(0);
     SDValue RHS = Node->getOperand(1);
     SDValue Carry = Node->getOperand(2);
 
-    bool IsAdd = Node->getOpcode() == ISD::ADDCARRY;
+    bool IsAdd = Node->getOpcode() == ISD::UADDO_CARRY;
 
     // Initial add of the 2 operands.
     unsigned Op = IsAdd ? ISD::ADD : ISD::SUB;
@@ -3628,9 +3633,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     } else {
       // We test only the i1 bit.  Skip the AND if UNDEF or another AND.
       if (Tmp2.isUndef() ||
-          (Tmp2.getOpcode() == ISD::AND &&
-           isa<ConstantSDNode>(Tmp2.getOperand(1)) &&
-           cast<ConstantSDNode>(Tmp2.getOperand(1))->getZExtValue() == 1))
+          (Tmp2.getOpcode() == ISD::AND && isOneConstant(Tmp2.getOperand(1))))
         Tmp3 = Tmp2;
       else
         Tmp3 = DAG.getNode(ISD::AND, dl, Tmp2.getValueType(), Tmp2,

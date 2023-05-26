@@ -177,7 +177,9 @@ struct Config {
   StringRef zCetReport = "none";
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
-  std::pair<llvm::StringRef, llvm::StringRef> thinLTOPrefixReplace;
+  llvm::StringRef thinLTOPrefixReplaceOld;
+  llvm::StringRef thinLTOPrefixReplaceNew;
+  llvm::StringRef thinLTOPrefixReplaceNativeObject;
   std::string rpath;
   llvm::SmallVector<VersionDefinition, 0> versionDefinitions;
   llvm::SmallVector<llvm::StringRef, 0> auxiliaryList;
@@ -250,7 +252,9 @@ struct Config {
   bool pie;
   bool printGcSections;
   bool printIcfSections;
+  bool printMemoryUsage;
   bool relax;
+  bool relaxGP;
   bool relocatable;
   bool relrGlibc = false;
   bool relrPackDynRelocs = false;
@@ -404,6 +408,12 @@ struct Config {
   bool androidMemtagStack;
 
   unsigned threadCount;
+
+  // If an input file equals a key, remap it to the value.
+  llvm::DenseMap<llvm::StringRef, llvm::StringRef> remapInputs;
+  // If an input file matches a wildcard pattern, remap it to the value.
+  llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::StringRef>, 0>
+      remapInputsWildcards;
 };
 struct ConfigWrapper {
   Config c;

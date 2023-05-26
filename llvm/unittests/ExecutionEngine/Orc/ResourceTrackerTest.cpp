@@ -298,7 +298,7 @@ TEST_F(ResourceTrackerStandardTest,
         EXPECT_EQ(RR.size(), 0U) << "Expected no resources recorded yet";
       });
 
-  auto MakeMU = [&](SymbolStringPtr Name, JITEvaluatedSymbol Sym) {
+  auto MakeMU = [&](SymbolStringPtr Name, ExecutorSymbolDef Sym) {
     return std::make_unique<SimpleMaterializationUnit>(
         SymbolFlagsMap({{Name, Sym.getFlags()}}),
         [=, &SRM](std::unique_ptr<MaterializationResponsibility> R) {
@@ -348,7 +348,7 @@ TEST_F(ResourceTrackerStandardTest,
         SRM.transferResources(JD, DstKey, SrcKey);
       });
 
-  auto MakeMU = [&](SymbolStringPtr Name, JITEvaluatedSymbol Sym) {
+  auto MakeMU = [&](SymbolStringPtr Name, ExecutorSymbolDef Sym) {
     return std::make_unique<SimpleMaterializationUnit>(
         SymbolFlagsMap({{Name, Sym.getFlags()}}),
         [=, &SRM](std::unique_ptr<MaterializationResponsibility> R) {

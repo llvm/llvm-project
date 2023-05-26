@@ -42,8 +42,9 @@ DependencyScanningWorkerFilesystem::readFile(StringRef Filename) {
 }
 
 EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
-    const CachedFileSystemEntry &Entry, StringRef Filename, PathPolicy Policy) {
-  if (Entry.isError() || Entry.isDirectory() || !Policy.ScanFile)
+    const CachedFileSystemEntry &Entry, StringRef Filename, bool Disable) {
+  if (Entry.isError() || Entry.isDirectory() || Disable ||
+      !shouldScanForDirectives(Filename))
     return EntryRef(Filename, Entry);
 
   CachedFileContents *Contents = Entry.getCachedContents();
@@ -158,22 +159,39 @@ DependencyScanningFilesystemSharedCache::CacheShard::
   return *EntriesByFilename.insert({Filename, &Entry}).first->getValue();
 }
 
-PathPolicy clang::tooling::dependencies::getPolicy(StringRef Filename) {
+/// Whitelist file extensions that should be minimized, treating no extension as
+/// a source file that should be minimized.
+///
+/// This is kinda hacky, it would be better if we knew what kind of file Clang
+/// was expecting instead.
+static bool shouldScanForDirectivesBasedOnExtension(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
-    return PathPolicy::cache(ScanFile::Yes, CacheStatFailure::No);
-  // clang-format off
-  return llvm::StringSwitch<PathPolicy>(Ext)
-      .CasesLower(".c", ".cc", ".cpp", ".c++", ".cxx", PathPolicy::cache(ScanFile::Yes))
-      .CasesLower(".h", ".hh", ".hpp", ".h++", ".hxx", PathPolicy::cache(ScanFile::Yes))
-      .CasesLower(".m", ".mm",                         PathPolicy::cache(ScanFile::Yes))
-      .CasesLower(".i", ".ii", ".mi", ".mmi",          PathPolicy::cache(ScanFile::Yes))
-      .CasesLower(".def", ".inc",                      PathPolicy::cache(ScanFile::Yes))
-      .CasesLower(".modulemap", ".map",      PathPolicy::cache(ScanFile::No))
-      .CasesLower(".framework", ".apinotes", PathPolicy::cache(ScanFile::No))
-      .CasesLower(".yaml", ".json", ".hmap", PathPolicy::cache(ScanFile::No))
-      .Default(PathPolicy::fallThrough());
-  // clang-format on
+    return true; // C++ standard library
+  return llvm::StringSwitch<bool>(Ext)
+      .CasesLower(".c", ".cc", ".cpp", ".c++", ".cxx", true)
+      .CasesLower(".h", ".hh", ".hpp", ".h++", ".hxx", true)
+      .CasesLower(".m", ".mm", true)
+      .CasesLower(".i", ".ii", ".mi", ".mmi", true)
+      .CasesLower(".def", ".inc", true)
+      .Default(false);
+}
+
+static bool shouldCacheStatFailures(StringRef Filename) {
+  StringRef Ext = llvm::sys::path::extension(Filename);
+  if (Ext.empty())
+    return false; // This may be the module cache directory.
+  // Only cache stat failures on files that are not expected to change during
+  // the build.
+  StringRef FName = llvm::sys::path::filename(Filename);
+  if (FName == "module.modulemap" || FName == "module.map")
+    return true;
+  return shouldScanForDirectivesBasedOnExtension(Filename);
+}
+
+bool DependencyScanningWorkerFilesystem::shouldScanForDirectives(
+    StringRef Filename) {
+  return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
 const CachedFileSystemEntry &
@@ -197,11 +215,10 @@ DependencyScanningWorkerFilesystem::findEntryByFilenameWithWriteThrough(
 }
 
 llvm::ErrorOr<const CachedFileSystemEntry &>
-DependencyScanningWorkerFilesystem::computeAndStoreResult(StringRef Filename,
-                                                          PathPolicy Policy) {
+DependencyScanningWorkerFilesystem::computeAndStoreResult(StringRef Filename) {
   llvm::ErrorOr<llvm::vfs::Status> Stat = getUnderlyingFS().status(Filename);
   if (!Stat) {
-    if (!Policy.CacheStatFailure)
+    if (!shouldCacheStatFailures(Filename))
       return Stat.getError();
     const auto &Entry =
         getOrEmplaceSharedEntryForFilename(Filename, Stat.getError());
@@ -227,13 +244,16 @@ DependencyScanningWorkerFilesystem::computeAndStoreResult(StringRef Filename,
 
 llvm::ErrorOr<EntryRef>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
-    StringRef Filename, PathPolicy Policy) {
+    StringRef Filename, bool DisableDirectivesScanning) {
   if (const auto *Entry = findEntryByFilenameWithWriteThrough(Filename))
-    return scanForDirectivesIfNecessary(*Entry, Filename, Policy).unwrapError();
-  auto MaybeEntry = computeAndStoreResult(Filename, Policy);
+    return scanForDirectivesIfNecessary(*Entry, Filename,
+                                        DisableDirectivesScanning)
+        .unwrapError();
+  auto MaybeEntry = computeAndStoreResult(Filename);
   if (!MaybeEntry)
     return MaybeEntry.getError();
-  return scanForDirectivesIfNecessary(*MaybeEntry, Filename, Policy)
+  return scanForDirectivesIfNecessary(*MaybeEntry, Filename,
+                                      DisableDirectivesScanning)
       .unwrapError();
 }
 
@@ -241,11 +261,11 @@ llvm::ErrorOr<llvm::vfs::Status>
 DependencyScanningWorkerFilesystem::status(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
-  PathPolicy Policy = getPolicy(Filename);
-  if (!Policy.Enable)
+
+  if (Filename.endswith(".pcm"))
     return getUnderlyingFS().status(Path);
 
-  llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename, Policy);
+  llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
   return Result->getStatus();
@@ -301,11 +321,11 @@ llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
 DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
-  PathPolicy Policy = getPolicy(Filename);
-  if (!Policy.Enable)
+
+  if (Filename.endswith(".pcm"))
     return getUnderlyingFS().openFileForRead(Path);
 
-  llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename, Policy);
+  llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
   return DepScanFile::create(Result.get());

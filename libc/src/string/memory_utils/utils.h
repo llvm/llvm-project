@@ -12,8 +12,9 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"          //LIBC_INLINE
-#include "src/__support/macros/config.h"              // LIBC_HAS_BUILTIN
+#include "src/__support/endian.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t
@@ -38,20 +39,20 @@ static constexpr bool is_power2(size_t value) {
 }
 
 // Compile time version of log2 that handles 0.
-static constexpr size_t log2(size_t value) {
-  return (value == 0 || value == 1) ? 0 : 1 + log2(value / 2);
+static constexpr size_t log2s(size_t value) {
+  return (value == 0 || value == 1) ? 0 : 1 + log2s(value / 2);
 }
 
 // Returns the first power of two preceding value or value if it is already a
 // power of two (or 0 when value is 0).
 static constexpr size_t le_power2(size_t value) {
-  return value == 0 ? value : 1ULL << log2(value);
+  return value == 0 ? value : 1ULL << log2s(value);
 }
 
 // Returns the first power of two following value or value if it is already a
 // power of two (or 0 when value is 0).
 static constexpr size_t ge_power2(size_t value) {
-  return is_power2_or_zero(value) ? value : 1ULL << (log2(value) + 1);
+  return is_power2_or_zero(value) ? value : 1ULL << (log2s(value) + 1);
 }
 
 // Returns the number of bytes to substract from ptr to get to the previous
@@ -97,8 +98,15 @@ LIBC_INLINE void memcpy_inline(void *__restrict dst,
 #ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
   __builtin_memcpy_inline(dst, src, Size);
 #else
+// In memory functions `memcpy_inline` is instantiated several times with
+// different value of the Size parameter. This doesn't play well with GCC's
+// Value Range Analysis that wrongly detects out of bounds accesses. We disable
+// the 'array-bounds' warning for the purpose of this function.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
   for (size_t i = 0; i < Size; ++i)
     static_cast<char *>(dst)[i] = static_cast<const char *>(src)[i];
+#pragma GCC diagnostic pop
 #endif
 }
 
@@ -132,6 +140,7 @@ template <typename T> struct StrictIntegralType {
 
   // Helper to get the zero value.
   LIBC_INLINE static constexpr StrictIntegralType ZERO() { return {T(0)}; }
+  LIBC_INLINE static constexpr StrictIntegralType NONZERO() { return {T(1)}; }
 
 private:
   T value;
@@ -151,6 +160,81 @@ template <typename T> LIBC_INLINE T load(CPtr ptr) {
 // Stores a value of type T in memory (possibly unaligned).
 template <typename T> LIBC_INLINE void store(Ptr ptr, T value) {
   memcpy_inline<sizeof(T)>(ptr, &value);
+}
+
+// On architectures that do not allow for unaligned access we perform several
+// aligned accesses and recombine them through shifts and logicals operations.
+// For instance, if we know that the pointer is 2-byte aligned we can decompose
+// a 64-bit operation into four 16-bit operations.
+
+// Loads a 'ValueType' by decomposing it into several loads that are assumed to
+// be aligned.
+// e.g. load_aligned<uint32_t, uint16_t, uint16_t>(ptr);
+template <typename ValueType, typename T, typename... TS>
+ValueType load_aligned(CPtr src) {
+  static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
+  const ValueType value = load<T>(assume_aligned<sizeof(T)>(src));
+  if constexpr (sizeof...(TS) > 0) {
+    constexpr size_t shift = sizeof(T) * 8;
+    const ValueType next = load_aligned<ValueType, TS...>(src + sizeof(T));
+    if constexpr (Endian::IS_LITTLE)
+      return value | (next << shift);
+    else if constexpr (Endian::IS_BIG)
+      return (value << shift) | next;
+    else
+      deferred_static_assert("Invalid endianness");
+  } else {
+    return value;
+  }
+}
+
+// Alias for loading a 'uint32_t'.
+template <typename T, typename... TS>
+auto load32_aligned(CPtr src, size_t offset) {
+  static_assert((sizeof(T) + ... + sizeof(TS)) == sizeof(uint32_t));
+  return load_aligned<uint32_t, T, TS...>(src + offset);
+}
+
+// Alias for loading a 'uint64_t'.
+template <typename T, typename... TS>
+auto load64_aligned(CPtr src, size_t offset) {
+  static_assert((sizeof(T) + ... + sizeof(TS)) == sizeof(uint64_t));
+  return load_aligned<uint64_t, T, TS...>(src + offset);
+}
+
+// Stores a 'ValueType' by decomposing it into several stores that are assumed
+// to be aligned.
+// e.g. store_aligned<uint32_t, uint16_t, uint16_t>(value, ptr);
+template <typename ValueType, typename T, typename... TS>
+void store_aligned(ValueType value, Ptr dst) {
+  static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
+  constexpr size_t shift = sizeof(T) * 8;
+  if constexpr (Endian::IS_LITTLE) {
+    store<T>(assume_aligned<sizeof(T)>(dst), value & ~T(0));
+    if constexpr (sizeof...(TS) > 0)
+      store_aligned<ValueType, TS...>(value >> shift, dst + sizeof(T));
+  } else if constexpr (Endian::IS_BIG) {
+    constexpr size_t OFFSET = (0 + ... + sizeof(TS));
+    store<T>(assume_aligned<sizeof(T)>(dst + OFFSET), value & ~T(0));
+    if constexpr (sizeof...(TS) > 0)
+      store_aligned<ValueType, TS...>(value >> shift, dst);
+  } else {
+    deferred_static_assert("Invalid endianness");
+  }
+}
+
+// Alias for storing a 'uint32_t'.
+template <typename T, typename... TS>
+void store32_aligned(uint32_t value, Ptr dst, size_t offset) {
+  static_assert((sizeof(T) + ... + sizeof(TS)) == sizeof(uint32_t));
+  store_aligned<uint32_t, T, TS...>(value, dst + offset);
+}
+
+// Alias for storing a 'uint64_t'.
+template <typename T, typename... TS>
+void store64_aligned(uint64_t value, Ptr dst, size_t offset) {
+  static_assert((sizeof(T) + ... + sizeof(TS)) == sizeof(uint64_t));
+  store_aligned<uint64_t, T, TS...>(value, dst + offset);
 }
 
 // Advances the pointers p1 and p2 by offset bytes and decrease count by the

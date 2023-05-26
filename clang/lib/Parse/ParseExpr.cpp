@@ -20,12 +20,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/Parse/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -791,6 +792,7 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 /// [GNU]   '__builtin_FILE' '(' ')'
 /// [CLANG] '__builtin_FILE_NAME' '(' ')'
 /// [GNU]   '__builtin_FUNCTION' '(' ')'
+/// [MS]    '__builtin_FUNCSIG' '(' ')'
 /// [GNU]   '__builtin_LINE' '(' ')'
 /// [CLANG] '__builtin_COLUMN' '(' ')'
 /// [GNU]   '__builtin_source_location' '(' ')'
@@ -1320,6 +1322,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw___builtin_FILE:
   case tok::kw___builtin_FILE_NAME:
   case tok::kw___builtin_FUNCTION:
+  case tok::kw___builtin_FUNCSIG:
   case tok::kw___builtin_LINE:
   case tok::kw___builtin_source_location:
     if (NotPrimaryExpression)
@@ -1870,7 +1873,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 ///         primary-expression
 ///         postfix-expression '[' expression ']'
 ///         postfix-expression '[' braced-init-list ']'
-///         postfix-expression '[' expression-list [opt] ']'  [C++2b 12.4.5]
+///         postfix-expression '[' expression-list [opt] ']'  [C++23 12.4.5]
 ///         postfix-expression '(' argument-expression-list[opt] ')'
 ///         postfix-expression '.' identifier
 ///         postfix-expression '->' identifier
@@ -1945,10 +1948,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
       // We try to parse a list of indexes in all language mode first
       // and, in we find 0 or one index, we try to parse an OpenMP array
-      // section. This allow us to support C++2b multi dimensional subscript and
+      // section. This allow us to support C++23 multi dimensional subscript and
       // OpenMp sections in the same language mode.
       if (!getLangOpts().OpenMP || Tok.isNot(tok::colon)) {
-        if (!getLangOpts().CPlusPlus2b) {
+        if (!getLangOpts().CPlusPlus23) {
           ExprResult Idx;
           if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
             Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
@@ -2546,6 +2549,7 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
 /// [GNU]   '__builtin_FILE' '(' ')'
 /// [CLANG] '__builtin_FILE_NAME' '(' ')'
 /// [GNU]   '__builtin_FUNCTION' '(' ')'
+/// [MS]    '__builtin_FUNCSIG' '(' ')'
 /// [GNU]   '__builtin_LINE' '(' ')'
 /// [CLANG] '__builtin_COLUMN' '(' ')'
 /// [GNU]   '__builtin_source_location' '(' ')'
@@ -2782,6 +2786,7 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
   case tok::kw___builtin_FILE:
   case tok::kw___builtin_FILE_NAME:
   case tok::kw___builtin_FUNCTION:
+  case tok::kw___builtin_FUNCSIG:
   case tok::kw___builtin_LINE:
   case tok::kw___builtin_source_location: {
     // Attempt to consume the r-paren.
@@ -2798,6 +2803,8 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
         return SourceLocExpr::FileName;
       case tok::kw___builtin_FUNCTION:
         return SourceLocExpr::Function;
+      case tok::kw___builtin_FUNCSIG:
+        return SourceLocExpr::FuncSig;
       case tok::kw___builtin_LINE:
         return SourceLocExpr::Line;
       case tok::kw___builtin_COLUMN:

@@ -169,8 +169,14 @@ struct FuchsiaConfig {
   static const bool MaySupportMemoryTagging = false;
 
   typedef SizeClassAllocator64<FuchsiaConfig> Primary;
+// Support 39-bit VMA for riscv-64
+#if SCUDO_RISCV64
+  static const uptr PrimaryRegionSizeLog = 28U;
+  static const uptr PrimaryGroupSizeLog = 19U;
+#else
   static const uptr PrimaryRegionSizeLog = 30U;
   static const uptr PrimaryGroupSizeLog = 21U;
+#endif
   typedef u32 PrimaryCompactPtrT;
   static const bool PrimaryEnableRandomOffset = true;
   static const uptr PrimaryMapSizeIncrement = 1UL << 18;

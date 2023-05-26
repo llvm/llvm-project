@@ -111,7 +111,7 @@ protected:
     llvm::Triple HostTriple(Opts.HostTriple);
     if (!HostTriple.isSPIR() && !HostTriple.isSPIRV() &&
         HostTriple.getArch() != llvm::Triple::UnknownArch) {
-      HostTarget.reset(AllocateTarget(llvm::Triple(Opts.HostTriple), Opts));
+      HostTarget = AllocateTarget(llvm::Triple(Opts.HostTriple), Opts);
 
       // Copy properties from host target.
       BoolWidth = HostTarget->getBoolWidth();
@@ -164,7 +164,7 @@ public:
     return std::nullopt;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override {
     return std::nullopt;

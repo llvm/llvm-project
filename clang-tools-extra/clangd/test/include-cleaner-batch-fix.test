@@ -1,0 +1,493 @@
+# We specify a custom path in XDG_CONFIG_HOME, which only works on some systems.
+# UNSUPPORTED: system-windows
+# UNSUPPORTED: system-darwin
+
+# RUN: rm -rf %t
+# RUN: mkdir -p %t/clangd
+# RUN: cp -r %S/Inputs/include-cleaner %t/include
+# Create a config file enabling include-cleaner features.
+# RUN: echo $'Diagnostics:\n  UnusedIncludes: Strict\n  MissingIncludes: Strict' >> %t/clangd/config.yaml
+
+# RUN: env XDG_CONFIG_HOME=%t clangd -lit-test -enable-config --resource-dir=%t < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"workspace":{"workspaceEdit":{"documentChanges":true, "changeAnnotationSupport":{"groupsOnLabel":true}}}},"trace":"off"}}
+---
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didOpen",
+  "params": {
+    "textDocument": {
+      "uri": "test:///simple.cpp",
+      "languageId": "cpp",
+      "text": "#include \"all1.h\"\n#include \"all2.h\"\n Foo* foo; Bar* bar;"
+    }
+  }
+}
+# First, the diagnostic from the config file.
+#      CHECK:  "method": "textDocument/publishDiagnostics",
+# CHECK-NEXT:  "params": {
+# CHECK-NEXT:    "diagnostics": [],
+
+# Then, diagnostic from the main cpp file.
+#      CHECK:  "method": "textDocument/publishDiagnostics",
+# CHECK-NEXT:  "params": {
+# CHECK-NEXT:     "diagnostics": [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         "code": "missing-includes",
+# CHECK-NEXT:         "codeDescription": {
+# CHECK-NEXT:           "href": "https://clangd.llvm.org/guides/include-cleaner"
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "message": "No header providing \"Foo\" is directly included (fixes available)",
+# CHECK-NEXT:         "range": {
+# CHECK-NEXT:           "end": {
+# CHECK-NEXT:             "character": 4,
+# CHECK-NEXT:             "line": 2
+# CHECK-NEXT:           },
+# CHECK-NEXT:           "start": {
+# CHECK-NEXT:             "character": 1,
+# CHECK-NEXT:             "line": 2
+# CHECK-NEXT:           }
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "severity": 3,
+# CHECK-NEXT:         "source": "clangd"
+# CHECK-NEXT:       },
+# CHECK-NEXT:       {
+# CHECK-NEXT:         "code": "missing-includes",
+# CHECK-NEXT:         "codeDescription": {
+# CHECK-NEXT:           "href": "https://clangd.llvm.org/guides/include-cleaner"
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "message": "No header providing \"Bar\" is directly included (fixes available)",
+# CHECK-NEXT:         "range": {
+# CHECK-NEXT:           "end": {
+# CHECK-NEXT:             "character": 14,
+# CHECK-NEXT:             "line": 2
+# CHECK-NEXT:           },
+# CHECK-NEXT:           "start": {
+# CHECK-NEXT:             "character": 11,
+# CHECK-NEXT:             "line": 2
+# CHECK-NEXT:           }
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "severity": 3,
+# CHECK-NEXT:         "source": "clangd"
+# CHECK-NEXT:       },
+# CHECK-NEXT:       {
+# CHECK-NEXT:         "code": "unused-includes",
+# CHECK-NEXT:         "codeDescription": {
+# CHECK-NEXT:           "href": "https://clangd.llvm.org/guides/include-cleaner"
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "message": "Included header all1.h is not used directly (fixes available)",
+# CHECK-NEXT:         "range": {
+# CHECK-NEXT:           "end": {
+# CHECK-NEXT:             "character": 17,
+# CHECK-NEXT:             "line": 0
+# CHECK-NEXT:           },
+# CHECK-NEXT:           "start": {
+# CHECK-NEXT:             "character": 0,
+# CHECK-NEXT:             "line": 0
+# CHECK-NEXT:           }
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "severity": 2,
+# CHECK-NEXT:         "source": "clangd",
+# CHECK-NEXT:         "tags": [
+# CHECK-NEXT:           1
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       },
+# CHECK-NEXT:       {
+# CHECK-NEXT:         "code": "unused-includes",
+# CHECK-NEXT:         "codeDescription": {
+# CHECK-NEXT:           "href": "https://clangd.llvm.org/guides/include-cleaner"
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "message": "Included header all2.h is not used directly (fixes available)",
+# CHECK-NEXT:         "range": {
+# CHECK-NEXT:           "end": {
+# CHECK-NEXT:             "character": 17,
+# CHECK-NEXT:             "line": 1
+# CHECK-NEXT:           },
+# CHECK-NEXT:           "start": {
+# CHECK-NEXT:             "character": 0,
+# CHECK-NEXT:             "line": 1
+# CHECK-NEXT:           }
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "severity": 2,
+# CHECK-NEXT:         "source": "clangd",
+# CHECK-NEXT:         "tags": [
+# CHECK-NEXT:           1
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ],
+# CHECK-NEXT:     "uri": "file://{{.*}}/simple.cpp",
+# CHECK-NEXT:     "version": 0
+# CHECK-NEXT:   }
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///simple.cpp"},"range":{"start":{"line":2,"character":1},"end":{"line":2,"character":4}},"context":{"diagnostics":[{"range":{"start": {"line": 2, "character": 1}, "end": {"line": 2, "character": 4}},"severity":3,"message":"No header providing \"Foo\" is directly included (fixes available)", "code": "missing-includes", "source": "clangd"}]}}}
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "arguments": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "documentChanges": [
+# CHECK-NEXT:            {
+# CHECK-NEXT:              "edits": [
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                }
+# CHECK-NEXT:              ],
+# CHECK-NEXT:              "textDocument": {
+# CHECK-NEXT:                "uri": "file://{{.*}}/simple.cpp",
+# CHECK-NEXT:                "version": 0
+# CHECK-NEXT:              }
+# CHECK-NEXT:            }
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "title": "Apply fix: #include {{.*}}foo.h{{.*}}"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "arguments": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "changeAnnotations": {
+# CHECK-NEXT:            "AddAllMissingIncludes0": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "AddAllMissingIncludes1": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "documentChanges": [
+# CHECK-NEXT:            {
+# CHECK-NEXT:              "edits": [
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes0",
+# CHECK-NEXT:                  "newText": "#include {{.*}}bar.h{{.*}}",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                },
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes1",
+# CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                }
+# CHECK-NEXT:              ],
+# CHECK-NEXT:              "textDocument": {
+# CHECK-NEXT:                "uri": "file://{{.*}}/simple.cpp",
+# CHECK-NEXT:                "version": 0
+# CHECK-NEXT:              }
+# CHECK-NEXT:            }
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "title": "Apply fix: add all missing includes"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "arguments": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "changeAnnotations": {
+# CHECK-NEXT:            "AddAllMissingIncludes0": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "AddAllMissingIncludes1": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "RemoveAllUnusedIncludes0": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "RemoveAllUnusedIncludes1": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "documentChanges": [
+# CHECK-NEXT:            {
+# CHECK-NEXT:              "edits": [
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes0",
+# CHECK-NEXT:                  "newText": "",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 1
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 0
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                },
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes1",
+# CHECK-NEXT:                  "newText": "",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 1
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                },
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes0",
+# CHECK-NEXT:                  "newText": "#include {{.*}}bar.h{{.*}}",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                },
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes1",
+# CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                }
+# CHECK-NEXT:              ],
+# CHECK-NEXT:              "textDocument": {
+# CHECK-NEXT:                "uri": "file://{{.*}}/simple.cpp",
+# CHECK-NEXT:                "version": 0
+# CHECK-NEXT:              }
+# CHECK-NEXT:            }
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "title": "Apply fix: fix all includes"
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+---
+{"jsonrpc":"2.0","id":3,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///simple.cpp"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":17}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 17}},"severity":2,"message":"Included header all1.h is not used directly (fixes available)", "code": "unused-includes", "source": "clangd"}]}}}
+#      CHECK:  "id": 3,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "arguments": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "documentChanges": [
+# CHECK-NEXT:            {
+# CHECK-NEXT:              "edits": [
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "newText": "",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 1
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 0
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                }
+# CHECK-NEXT:              ],
+# CHECK-NEXT:              "textDocument": {
+# CHECK-NEXT:                "uri": "file://{{.*}}/simple.cpp",
+# CHECK-NEXT:                "version": 0
+# CHECK-NEXT:              }
+# CHECK-NEXT:            }
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "title": "Apply fix: remove #include directive"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "arguments": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "changeAnnotations": {
+# CHECK-NEXT:            "RemoveAllUnusedIncludes0": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "RemoveAllUnusedIncludes1": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "documentChanges": [
+# CHECK-NEXT:            {
+# CHECK-NEXT:              "edits": [
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes0",
+# CHECK-NEXT:                  "newText": "",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 1
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 0
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                },
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes1",
+# CHECK-NEXT:                  "newText": "",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 1
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                }
+# CHECK-NEXT:              ],
+# CHECK-NEXT:              "textDocument": {
+# CHECK-NEXT:                "uri": "file://{{.*}}/simple.cpp",
+# CHECK-NEXT:                "version": 0
+# CHECK-NEXT:              }
+# CHECK-NEXT:            }
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "title": "Apply fix: remove all unused includes"
+# CHECK-NEXT:    },
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "arguments": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "changeAnnotations": {
+# CHECK-NEXT:            "AddAllMissingIncludes0": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "AddAllMissingIncludes1": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "RemoveAllUnusedIncludes0": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "RemoveAllUnusedIncludes1": {
+# CHECK-NEXT:              "label": "",
+# CHECK-NEXT:              "needsConfirmation": true
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "documentChanges": [
+# CHECK-NEXT:            {
+# CHECK-NEXT:              "edits": [
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes0",
+# CHECK-NEXT:                  "newText": "",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 1
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 0
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                },
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes1",
+# CHECK-NEXT:                  "newText": "",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 1
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                },
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes0",
+# CHECK-NEXT:                  "newText": "#include {{.*}}bar.h{{.*}}",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                },
+# CHECK-NEXT:                {
+# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes1",
+# CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
+# CHECK-NEXT:                  "range": {
+# CHECK-NEXT:                    "end": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    },
+# CHECK-NEXT:                    "start": {
+# CHECK-NEXT:                      "character": 0,
+# CHECK-NEXT:                      "line": 2
+# CHECK-NEXT:                    }
+# CHECK-NEXT:                  }
+# CHECK-NEXT:                }
+# CHECK-NEXT:              ],
+# CHECK-NEXT:              "textDocument": {
+# CHECK-NEXT:                "uri": "file://{{.*}}/simple.cpp",
+# CHECK-NEXT:                "version": 0
+# CHECK-NEXT:              }
+# CHECK-NEXT:            }
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "title": "Apply fix: fix all includes"
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+---
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

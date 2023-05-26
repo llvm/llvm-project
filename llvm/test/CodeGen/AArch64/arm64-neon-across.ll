@@ -1,4 +1,5 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu -mattr=+neon | FileCheck %s
+; RUN: llc < %s -global-isel=1 -verify-machineinstrs -mtriple=arm64-none-linux-gnu -mattr=+neon | FileCheck %s
 
 declare float @llvm.aarch64.neon.fminnmv.f32.v4f32(<4 x float>)
 

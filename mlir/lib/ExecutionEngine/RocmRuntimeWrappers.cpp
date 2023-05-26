@@ -152,6 +152,22 @@ mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
   mgpuMemHostRegister(ptr, sizeBytes);
 }
 
+// Allows to unregister byte array with the ROCM runtime. Helpful until we have
+// transfer functions implemented.
+extern "C" void mgpuMemHostUnregister(void *ptr) {
+  HIP_REPORT_IF_ERROR(hipHostUnregister(ptr));
+}
+
+// Allows to unregister a MemRef with the ROCm runtime. Helpful until we have
+// transfer functions implemented.
+extern "C" void
+mgpuMemHostUnregisterMemRef(int64_t rank,
+                            StridedMemRefType<char, 1> *descriptor,
+                            int64_t elementSizeBytes) {
+  auto ptr = descriptor->data + descriptor->offset * elementSizeBytes;
+  mgpuMemHostUnregister(ptr);
+}
+
 template <typename T>
 void mgpuMemGetDevicePointer(T *hostPtr, T **devicePtr) {
   HIP_REPORT_IF_ERROR(hipSetDevice(0));

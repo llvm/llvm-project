@@ -1208,14 +1208,23 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_v8i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorl $32767, %eax # imm = 0x7FFF
-; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v8i16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorl $32767, %eax # imm = 0x7FFF
+; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v8i16:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    xorl $32767, %eax # imm = 0x7FFF
+; AVX512VL-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512VL-NEXT:    retq
   %1 = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %a0)
   ret i16 %1
 }
@@ -1269,17 +1278,29 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_v16i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorl $32767, %eax # imm = 0x7FFF
-; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v16i16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512BW-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorl $32767, %eax # imm = 0x7FFF
+; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v16i16:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    xorl $32767, %eax # imm = 0x7FFF
+; AVX512VL-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %1 = call i16 @llvm.vector.reduce.smax.v16i16(<16 x i16> %a0)
   ret i16 %1
 }
@@ -1341,19 +1362,33 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_v32i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorl $32767, %eax # imm = 0x7FFF
-; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v32i16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512BW-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512BW-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorl $32767, %eax # imm = 0x7FFF
+; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v32i16:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512VL-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    xorl $32767, %eax # imm = 0x7FFF
+; AVX512VL-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %1 = call i16 @llvm.vector.reduce.smax.v32i16(<32 x i16> %a0)
   ret i16 %1
 }
@@ -1431,20 +1466,35 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_v64i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmaxsw %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorl $32767, %eax # imm = 0x7FFF
-; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v64i16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpmaxsw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512BW-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512BW-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorl $32767, %eax # imm = 0x7FFF
+; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v64i16:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmaxsw %zmm1, %zmm0, %zmm0
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512VL-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    xorl $32767, %eax # imm = 0x7FFF
+; AVX512VL-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %1 = call i16 @llvm.vector.reduce.smax.v64i16(<64 x i16> %a0)
   ret i16 %1
 }
@@ -1675,16 +1725,27 @@ define i8 @test_v16i8(<16 x i8> %a0) {
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_v16i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
-; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorb $127, %al
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v16i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorb $127, %al
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v16i8:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    xorb $127, %al
+; AVX512VL-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512VL-NEXT:    retq
   %1 = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> %a0)
   ret i8 %1
 }
@@ -1768,19 +1829,33 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_v32i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
-; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorb $127, %al
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v32i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512BW-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorb $127, %al
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v32i8:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    xorb $127, %al
+; AVX512VL-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %1 = call i8 @llvm.vector.reduce.smax.v32i8(<32 x i8> %a0)
   ret i8 %1
 }
@@ -1880,21 +1955,37 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_v64i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
-; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorb $127, %al
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v64i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512BW-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512BW-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorb $127, %al
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v64i8:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512VL-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    xorb $127, %al
+; AVX512VL-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %1 = call i8 @llvm.vector.reduce.smax.v64i8(<64 x i8> %a0)
   ret i8 %1
 }
@@ -2026,22 +2117,39 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_v128i8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmaxsb %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
-; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    xorb $127, %al
-; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512BW-LABEL: test_v128i8:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpmaxsb %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512BW-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512BW-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorb $127, %al
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: test_v128i8:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmaxsb %zmm1, %zmm0, %zmm0
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512VL-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
+; AVX512VL-NEXT:    xorb $127, %al
+; AVX512VL-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %1 = call i8 @llvm.vector.reduce.smax.v128i8(<128 x i8> %a0)
   ret i8 %1
 }

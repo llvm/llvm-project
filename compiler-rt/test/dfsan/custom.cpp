@@ -1,3 +1,6 @@
+// https://github.com/llvm/llvm-project/issues/60678
+// XFAIL: glibc-2.37
+
 // RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
@@ -375,6 +378,34 @@ void test_strlen() {
 #else
   ASSERT_LABEL(rv, i_label);
   ASSERT_EQ_ORIGIN(rv, str1[3]);
+#endif
+}
+
+void test_strnlen() {
+  char str1[] = "str1";
+  dfsan_set_label(i_label, &str1[3], 1);
+
+  int maxlen = 4;
+  dfsan_set_label(j_label, &maxlen, sizeof(maxlen));
+
+  int rv = strnlen(str1, maxlen);
+  assert(rv == 4);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
+#endif
+
+  maxlen = 2;
+  dfsan_set_label(j_label, &maxlen, sizeof(maxlen));
+  rv = strnlen(str1, maxlen);
+  assert(rv == 2);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, j_label);
+  ASSERT_EQ_ORIGIN(rv, maxlen);
 #endif
 }
 
@@ -1627,6 +1658,51 @@ void test_strpbrk() {
 #endif
 }
 
+void test_strsep() {
+  char *s = strdup("Hello world/");
+  char *delim = strdup(" /");
+
+  char *p_s = s;
+  char *base = s;
+  char *p_delim = delim;
+
+  // taint delim bytes
+  dfsan_set_label(i_label, p_delim, strlen(p_delim));
+  // taint delim pointer
+  dfsan_set_label(j_label, &p_delim, sizeof(p_delim));
+  // taint the string data bytes
+  dfsan_set_label(k_label, s, 5);
+  // taint the string pointer
+  dfsan_set_label(m_label, &p_s, sizeof(p_s));
+
+  char *rv = strsep(&p_s, p_delim);
+  assert(rv == &base[0]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_LABEL(rv, m_label);
+  ASSERT_READ_LABEL(rv, strlen(rv), k_label);
+#else
+  ASSERT_LABEL(rv, dfsan_union(dfsan_union(i_label, j_label),
+                               dfsan_union(k_label, m_label)));
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, p_s);
+#endif
+
+  // taint the remaining string's pointer
+  char **pp_s = &p_s;
+  char **pp_s_base = pp_s;
+  dfsan_set_label(n_label, pp_s, sizeof(pp_s));
+
+  rv = strsep(pp_s, p_delim);
+
+  assert(rv == &base[6]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_LABEL(rv, n_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, *pp_s);
+#else
+  ASSERT_LABEL(rv, dfsan_union(dfsan_union(i_label, j_label), n_label));
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, *pp_s);
+#endif
+}
+
 void test_memchr() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -2037,10 +2113,12 @@ int main(void) {
   test_strcpy();
   test_strdup();
   test_strlen();
+  test_strnlen();
   test_strncasecmp();
   test_strncmp();
   test_strncpy();
   test_strpbrk();
+  test_strsep();
   test_strrchr();
   test_strstr();
   test_strtod();

@@ -385,6 +385,20 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx941``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
+                                                    - tgsplit           flat
+                                                    - xnack             scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
+     ``gfx942``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
+                                                    - tgsplit           flat
+                                                    - xnack             scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5700
@@ -675,6 +689,8 @@ supported for the ``amdgcn`` target.
      Private                           5               private     scratch          32      0xFFFFFFFF
      Constant 32-bit                   6               *TODO*                               0x00000000
      Buffer Fat Pointer (experimental) 7               *TODO*
+     Buffer Resource (experimental)    8               *TODO*
+     Streamout Registers               128             N/A         GS_REGS
      ================================= =============== =========== ================ ======= ============================
 
 **Generic**
@@ -782,6 +798,33 @@ supported for the ``amdgcn`` target.
   *pointer*), allowing normal LLVM load/store/atomic operations to be used to
   model the buffer descriptors used heavily in graphics workloads targeting
   the backend.
+
+  The buffer descriptor used to construct a buffer fat pointer must be *raw*:
+  the stride must be 0, the "add tid" flag bust be 0, the swizzle enable bits
+  must be off, and the extent must be measured in bytes. (On subtargets where
+  bounds checking may be disabled, buffer fat pointers may choose to enable
+  it or not).
+
+**Buffer Resource**
+  The buffer resource is an experimental address space that is currently unsupported
+  in the backend. It exposes a non-integral pointer that will represent a 128-bit
+  buffer descriptor resource.
+
+  Since, in general, a buffer resource supports complex addressing modes that cannot
+  be easily represented in LLVM (such as implicit swizzled access to structured
+  buffers), it is **illegal** to perform non-trivial address computations, such as
+  ``getelementptr`` operations, on buffer resources. They may be passed to
+  AMDGPU buffer intrinsics, and they may be converted to and from ``i128``.
+
+  Casting a buffer resource to a buffer fat pointer is permitted and adds an offset
+  of 0.
+
+**Streamout Registers**
+  Dedicated registers used by the GS NGG Streamout Instructions. The register
+  file is modelled as a memory in a distinct address space because it is indexed
+  by an address-like offset in place of named registers, and because register
+  accesses affect LGKMcnt. This is an internal address space used only by the
+  compiler. Do not use this address space for IR pointers.
 
 .. _amdgpu-memory-scopes:
 
@@ -1213,14 +1256,14 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_XNACK_V4``               0x300 XNACK selection mask for
                                                         ``EF_AMDGPU_FEATURE_XNACK_*_V4``
                                                         values.
-     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000 XNACK unsuppored.
+     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000 XNACK unsupported.
      ``EF_AMDGPU_FEATURE_XNACK_ANY_V4``           0x100 XNACK can have any value.
      ``EF_AMDGPU_FEATURE_XNACK_OFF_V4``           0x200 XNACK disabled.
      ``EF_AMDGPU_FEATURE_XNACK_ON_V4``            0x300 XNACK enabled.
      ``EF_AMDGPU_FEATURE_SRAMECC_V4``             0xc00 SRAMECC selection mask for
                                                         ``EF_AMDGPU_FEATURE_SRAMECC_*_V4``
                                                         values.
-     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC unsuppored.
+     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC unsupported.
      ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400 SRAMECC can have any value.
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800 SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00 SRAMECC enabled.
@@ -1292,6 +1335,11 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1036``    0x045      ``gfx1036``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1101``    0x046      ``gfx1101``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1102``    0x047      ``gfx1102``
+     *reserved*                           0x048      Reserved.
+     *reserved*                           0x049      Reserved.
+     *reserved*                           0x04a      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX941``     0x04b      ``gfx941``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX942``     0x04c      ``gfx942``
      ==================================== ========== =============================
 
 Sections

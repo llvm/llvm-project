@@ -397,14 +397,17 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // 1: For ELF when requested.
   // 2: For XCOFF64: the AIX assembler will fill in debug section lengths
   //    according to the DWARF64 format for 64-bit assembly, so we must use
-  //    DWARF64 in the compiler too for 64-bit mode.
+  //    DWARF64 in the compiler for 64-bit mode on non-integrated-as mode.
+  bool IsXcoff = TT.isOSBinFormatXCOFF();
+  bool UseIntegratedAs = Asm->OutStreamer->isIntegratedAssemblerRequired();
   Dwarf64 &=
-      ((Asm->TM.Options.MCOptions.Dwarf64 || MMI->getModule()->isDwarf64()) &&
-       TT.isOSBinFormatELF()) ||
-      TT.isOSBinFormatXCOFF();
+      ((TT.isOSBinFormatELF() || (IsXcoff && UseIntegratedAs)) &&
+       (Asm->TM.Options.MCOptions.Dwarf64 || MMI->getModule()->isDwarf64())) ||
+      (IsXcoff && !UseIntegratedAs);
 
-  if (!Dwarf64 && TT.isArch64Bit() && TT.isOSBinFormatXCOFF())
-    report_fatal_error("XCOFF requires DWARF64 for 64-bit mode!");
+  if (!Dwarf64 && TT.isArch64Bit() && IsXcoff && !UseIntegratedAs)
+    report_fatal_error(
+        "XCOFF requires DWARF64 for 64-bit mode on non-integrated-as mode!");
 
   UseRangesSection = !NoDwarfRangesSection && !TT.isNVPTX();
 
@@ -452,14 +455,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 
   // Split DWARF would benefit object size significantly by trading reductions
   // in address pool usage for slightly increased range list encodings.
-  if (DwarfVersion >= 5) {
+  if (DwarfVersion >= 5)
     MinimizeAddr = MinimizeAddrInV5Option;
-    // FIXME: In the future, enable this by default for Split DWARF where the
-    // tradeoff is more pronounced due to being able to offload the range
-    // lists to the dwo file and shrink object files/reduce relocations there.
-    if (MinimizeAddr == MinimizeAddrInV5::Default)
-      MinimizeAddr = MinimizeAddrInV5::Disabled;
-  }
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
   Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64
@@ -1050,11 +1047,11 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   if (!SDK.empty())
     NewCU.addString(Die, dwarf::DW_AT_APPLE_sdk, SDK);
 
-  // Add DW_str_offsets_base to the unit DIE, except for split units.
-  if (useSegmentedStringOffsetsTable() && !useSplitDwarf())
-    NewCU.addStringOffsetsStart();
-
   if (!useSplitDwarf()) {
+    // Add DW_str_offsets_base to the unit DIE, except for split units.
+    if (useSegmentedStringOffsetsTable())
+      NewCU.addStringOffsetsStart();
+
     NewCU.initStmtList();
 
     // If we're using split dwarf the compilation dir is going to be in the
@@ -1377,11 +1374,10 @@ void DwarfDebug::finalizeModuleInfo() {
       if (U.hasRangeLists())
         U.addRnglistsBase();
 
-      if (!DebugLocs.getLists().empty()) {
-        if (!useSplitDwarf())
-          U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_loclists_base,
-                            DebugLocs.getSym(),
-                            TLOF.getDwarfLoclistsSection()->getBeginSymbol());
+      if (!DebugLocs.getLists().empty() && !useSplitDwarf()) {
+        U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_loclists_base,
+                          DebugLocs.getSym(),
+                          TLOF.getDwarfLoclistsSection()->getBeginSymbol());
       }
     }
 
@@ -1556,13 +1552,24 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
     auto RegVar = std::make_unique<DbgVariable>(
                     cast<DILocalVariable>(Var.first), Var.second);
-    RegVar->initializeMMI(VI.Expr, VI.Slot);
+    if (VI.inStackSlot())
+      RegVar->initializeMMI(VI.Expr, VI.getStackSlot());
+    else {
+      MachineLocation MLoc(VI.getEntryValueRegister(), /*IsIndirect*/ true);
+      auto LocEntry = DbgValueLocEntry(MLoc);
+      RegVar->initializeDbgValue(DbgValueLoc(VI.Expr, LocEntry));
+    }
     LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
                       << "\n");
 
-    if (DbgVariable *DbgVar = MFVars.lookup(Var))
-      DbgVar->addMMIEntry(*RegVar);
-    else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
+    if (DbgVariable *DbgVar = MFVars.lookup(Var)) {
+      if (DbgVar->getValueLoc())
+        LLVM_DEBUG(dbgs() << "Dropping repeated entry value debug info for "
+                             "variable "
+                          << VI.Var->getName() << "\n");
+      else
+        DbgVar->addMMIEntry(*RegVar);
+    } else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
       MFVars.insert({Var, RegVar.get()});
       ConcreteEntities.push_back(std::move(RegVar));
     }
@@ -2046,7 +2053,10 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
-  if (DL == PrevInstLoc) {
+  bool PrevInstInSameSection =
+      (!PrevInstBB ||
+       PrevInstBB->getSectionIDNum() == MI->getParent()->getSectionIDNum());
+  if (DL == PrevInstLoc && PrevInstInSameSection) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
       return;
@@ -2114,25 +2124,35 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrevInstLoc = DL;
 }
 
-static DebugLoc findPrologueEndLoc(const MachineFunction *MF) {
+static std::pair<DebugLoc, bool> findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
   // the beginning of the function body.
   DebugLoc LineZeroLoc;
+  const Function &F = MF->getFunction();
+
+  // Some instructions may be inserted into prologue after this function. Must
+  // keep prologue for these cases.
+  bool IsEmptyPrologue =
+      !(F.hasPrologueData() || F.getMetadata(LLVMContext::MD_func_sanitize));
   for (const auto &MBB : *MF) {
     for (const auto &MI : MBB) {
-      if (!MI.isMetaInstruction() && !MI.getFlag(MachineInstr::FrameSetup) &&
-          MI.getDebugLoc()) {
-        // Scan forward to try to find a non-zero line number. The prologue_end
-        // marks the first breakpoint in the function after the frame setup, and
-        // a compiler-generated line 0 location is not a meaningful breakpoint.
-        // If none is found, return the first location after the frame setup.
-        if (MI.getDebugLoc().getLine())
-          return MI.getDebugLoc();
-        LineZeroLoc = MI.getDebugLoc();
+      if (!MI.isMetaInstruction()) {
+        if (!MI.getFlag(MachineInstr::FrameSetup) && MI.getDebugLoc()) {
+          // Scan forward to try to find a non-zero line number. The
+          // prologue_end marks the first breakpoint in the function after the
+          // frame setup, and a compiler-generated line 0 location is not a
+          // meaningful breakpoint. If none is found, return the first
+          // location after the frame setup.
+          if (MI.getDebugLoc().getLine())
+            return std::make_pair(MI.getDebugLoc(), IsEmptyPrologue);
+
+          LineZeroLoc = MI.getDebugLoc();
+        }
+        IsEmptyPrologue = false;
       }
     }
   }
-  return LineZeroLoc;
+  return std::make_pair(LineZeroLoc, IsEmptyPrologue);
 }
 
 /// Register a source line with debug info. Returns the  unique label that was
@@ -2159,8 +2179,16 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
 
 DebugLoc DwarfDebug::emitInitialLocDirective(const MachineFunction &MF,
                                              unsigned CUID) {
+  std::pair<DebugLoc, bool> PrologEnd = findPrologueEndLoc(&MF);
+  DebugLoc PrologEndLoc = PrologEnd.first;
+  bool IsEmptyPrologue = PrologEnd.second;
+
   // Get beginning of function.
-  if (DebugLoc PrologEndLoc = findPrologueEndLoc(&MF)) {
+  if (PrologEndLoc) {
+    // If the prolog is empty, no need to generate scope line for the proc.
+    if (IsEmptyPrologue)
+      return PrologEndLoc;
+
     // Ensure the compile unit is created if the function is called before
     // beginFunction().
     (void)getOrCreateDwarfCompileUnit(
@@ -3585,4 +3613,14 @@ DwarfDebug::getMD5AsBytes(const DIFile *File) const {
   MD5::MD5Result CKMem;
   std::copy(ChecksumString.begin(), ChecksumString.end(), CKMem.data());
   return CKMem;
+}
+
+bool DwarfDebug::alwaysUseRanges(const DwarfCompileUnit &CU) const {
+  if (MinimizeAddr == MinimizeAddrInV5::Ranges)
+    return true;
+  if (MinimizeAddr != MinimizeAddrInV5::Default)
+    return false;
+  if (useSplitDwarf())
+    return true;
+  return false;
 }

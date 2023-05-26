@@ -1354,7 +1354,7 @@ define <2 x i8> @cttz_pow2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @cttz_pow2(
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i8> <i8 1, i8 1>, [[X:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i8> [[S]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[D]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[D]], i1 true), !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = shl <2 x i8> <i8 1, i8 1>, %x

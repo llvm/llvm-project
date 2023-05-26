@@ -28,6 +28,23 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   if (!to_conv.has_conv)
     return writer->write(to_conv.raw_string);
 
+#ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
+  // TODO(michaelrj): Undo this once decimal long double support is done.
+  if (to_conv.length_modifier == LengthModifier::L) {
+    switch (to_conv.conv_name) {
+    case 'f':
+    case 'F':
+    case 'e':
+    case 'E':
+    case 'g':
+    case 'G':
+      return convert_float_hex_exp(writer, to_conv);
+    default:
+      break;
+    }
+  }
+#endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
+
   switch (to_conv.conv_name) {
   case '%':
     return writer->write("%");

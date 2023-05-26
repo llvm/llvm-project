@@ -41,8 +41,8 @@ public:
 
   virtual ~EventData();
 
-  virtual ConstString GetFlavor() const = 0;
-  
+  virtual llvm::StringRef GetFlavor() const = 0;
+
   virtual Log *GetLogChannel() { return nullptr; }
   
   virtual void Dump(Stream *s) const;
@@ -69,7 +69,7 @@ public:
   ~EventDataBytes() override;
 
   // Member functions
-  ConstString GetFlavor() const override;
+  llvm::StringRef GetFlavor() const override;
 
   void Dump(Stream *s) const override;
 
@@ -90,7 +90,7 @@ public:
 
   static size_t GetByteSizeFromEvent(const Event *event_ptr);
 
-  static ConstString GetFlavorString();
+  static llvm::StringRef GetFlavorString();
 
 private:
   std::string m_bytes;
@@ -105,12 +105,9 @@ public:
 
   ~EventDataReceipt() override = default;
 
-  static ConstString GetFlavorString() {
-    static ConstString g_flavor("Process::ProcessEventData");
-    return g_flavor;
-  }
+  static llvm::StringRef GetFlavorString();
 
-  ConstString GetFlavor() const override { return GetFlavorString(); }
+  llvm::StringRef GetFlavor() const override { return GetFlavorString(); }
 
   bool WaitForEventReceived(const Timeout<std::micro> &timeout = std::nullopt) {
     return m_predicate.WaitForValueEqualTo(true, timeout);
@@ -139,7 +136,7 @@ public:
   ~EventDataStructuredData() override;
 
   // Member functions
-  ConstString GetFlavor() const override;
+  llvm::StringRef GetFlavor() const override;
 
   void Dump(Stream *s) const override;
 
@@ -166,7 +163,7 @@ public:
   static lldb::StructuredDataPluginSP
   GetPluginFromEvent(const Event *event_ptr);
 
-  static ConstString GetFlavorString();
+  static llvm::StringRef GetFlavorString();
 
 private:
   lldb::ProcessSP m_process_sp;

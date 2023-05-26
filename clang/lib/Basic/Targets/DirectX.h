@@ -77,7 +77,7 @@ public:
     return std::nullopt;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override {
     return std::nullopt;

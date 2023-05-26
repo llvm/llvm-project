@@ -1883,7 +1883,7 @@ void SIScheduleDAGMI::schedule()
   LLVM_DEBUG(dbgs() << "Preparing Scheduling\n");
 
   buildDAGWithRegPressure();
-  postprocessDAG();
+  postProcessDAG();
 
   LLVM_DEBUG(dump());
   if (PrintDAGs)

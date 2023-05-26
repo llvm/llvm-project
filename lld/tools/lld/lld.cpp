@@ -136,7 +136,7 @@ static Flavor parseFlavor(std::vector<const char *> &v) {
 
   // Deduct the flavor from argv[0].
   StringRef arg0 = path::filename(v[0]);
-  if (arg0.endswith_insensitive(".exe"))
+  if (arg0.ends_with_insensitive(".exe"))
     arg0 = arg0.drop_back(4);
   return parseProgname(arg0);
 }

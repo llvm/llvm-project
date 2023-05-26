@@ -169,12 +169,30 @@ Region *FuncOp::getCallableRegion() { return &getBody(); }
 /// executed.
 ArrayRef<Type> FuncOp::getCallableResults() { return getType().getResults(); }
 
+/// Returns the argument attributes for all callable region arguments or
+/// null if there are none.
+ArrayAttr FuncOp::getCallableArgAttrs() {
+  return getArgAttrs().value_or(nullptr);
+}
+
+/// Returns the result attributes for all callable region results or
+/// null if there are none.
+ArrayAttr FuncOp::getCallableResAttrs() {
+  return getResAttrs().value_or(nullptr);
+}
+
 // ....
 
 /// Return the callee of the generic call operation, this is required by the
 /// call interface.
 CallInterfaceCallable GenericCallOp::getCallableForCallee() {
   return getAttrOfType<SymbolRefAttr>("callee");
+}
+
+/// Set the callee for the generic call operation, this is required by the call
+/// interface.
+void GenericCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
 }
 
 /// Get the argument operands to the called function, this is required by the

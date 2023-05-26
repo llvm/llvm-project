@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{11.0|12.0}}
+// XFAIL: availability-pmr-missing
 
 // <memory_resource>
 
@@ -26,20 +25,38 @@
 
 int constructed = 0;
 
+template <int>
 struct default_constructible {
   default_constructible() : x(42) { ++constructed; }
   int x = 0;
 };
 
 int main(int, char**) {
-  // pair<default_constructible, default_constructible> as T()
+  // pair<default_constructible, default_constructible>
   {
-    typedef default_constructible T;
+    typedef default_constructible<0> T;
     typedef std::pair<T, T> P;
     typedef std::pmr::polymorphic_allocator<void> A;
     alignas(P) char buffer[sizeof(P)];
     P* ptr = reinterpret_cast<P*>(buffer);
     A a;
+    constructed = 0;
+    a.construct(ptr);
+    assert(constructed == 2);
+    assert(ptr->first.x == 42);
+    assert(ptr->second.x == 42);
+  }
+
+  // pair<default_constructible<0>, default_constructible<1>>
+  {
+    typedef default_constructible<0> T;
+    typedef default_constructible<1> U;
+    typedef std::pair<T, U> P;
+    typedef std::pmr::polymorphic_allocator<void> A;
+    alignas(P) char buffer[sizeof(P)];
+    P* ptr = reinterpret_cast<P*>(buffer);
+    A a;
+    constructed = 0;
     a.construct(ptr);
     assert(constructed == 2);
     assert(ptr->first.x == 42);

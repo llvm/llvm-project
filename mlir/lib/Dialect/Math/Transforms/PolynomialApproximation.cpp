@@ -40,7 +40,7 @@ using namespace mlir::vector;
 // Returns vector shape if the type is a vector. Returns an empty shape if it is
 // not a vector.
 static ArrayRef<int64_t> vectorShape(Type type) {
-  auto vectorType = type.dyn_cast<VectorType>();
+  auto vectorType = dyn_cast<VectorType>(type);
   return vectorType ? vectorType.getShape() : ArrayRef<int64_t>();
 }
 
@@ -54,14 +54,14 @@ static ArrayRef<int64_t> vectorShape(Value value) {
 
 // Broadcasts scalar type into vector type (iff shape is non-scalar).
 static Type broadcast(Type type, ArrayRef<int64_t> shape) {
-  assert(!type.isa<VectorType>() && "must be scalar type");
+  assert(!isa<VectorType>(type) && "must be scalar type");
   return !shape.empty() ? VectorType::get(shape, type) : type;
 }
 
 // Broadcasts scalar value into vector (iff shape is non-scalar).
 static Value broadcast(ImplicitLocOpBuilder &builder, Value value,
                        ArrayRef<int64_t> shape) {
-  assert(!value.getType().isa<VectorType>() && "must be scalar value");
+  assert(!isa<VectorType>(value.getType()) && "must be scalar value");
   auto type = broadcast(value.getType(), shape);
   return !shape.empty() ? builder.create<BroadcastOp>(type, value) : value;
 }
@@ -92,7 +92,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
   assert(!operands.empty() && "operands must be not empty");
   assert(vectorWidth > 0 && "vector width must be larger than 0");
 
-  VectorType inputType = operands[0].getType().cast<VectorType>();
+  VectorType inputType = cast<VectorType>(operands[0].getType());
   ArrayRef<int64_t> inputShape = inputType.getShape();
 
   // If input shape matches target vector width, we can just call the
@@ -118,7 +118,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
     for (unsigned i = 0; i < operands.size(); ++i) {
       auto operand = operands[i];
-      auto eltType = operand.getType().cast<VectorType>().getElementType();
+      auto eltType = cast<VectorType>(operand.getType()).getElementType();
       auto expandedType = VectorType::get(expandedShape, eltType);
       expandedOperands[i] =
           builder.create<vector::ShapeCastOp>(expandedType, operand);
@@ -145,7 +145,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
   }
 
   // Stitch results together into one large vector.
-  Type resultEltType = results[0].getType().cast<VectorType>().getElementType();
+  Type resultEltType = cast<VectorType>(results[0].getType()).getElementType();
   Type resultExpandedType = VectorType::get(expandedShape, resultEltType);
   Value result = builder.create<arith::ConstantOp>(
       resultExpandedType, builder.getZeroAttr(resultExpandedType));
@@ -318,9 +318,9 @@ LogicalResult insertCasts(Operation *op, PatternRewriter &rewriter) {
 
   // Create F32 equivalent type.
   Type newType;
-  if (auto shaped = origType.dyn_cast<ShapedType>()) {
+  if (auto shaped = dyn_cast<ShapedType>(origType)) {
     newType = shaped.clone(rewriter.getF32Type());
-  } else if (origType.isa<FloatType>()) {
+  } else if (isa<FloatType>(origType)) {
     newType = rewriter.getF32Type();
   } else {
     return rewriter.notifyMatchFailure(op,
@@ -331,7 +331,8 @@ LogicalResult insertCasts(Operation *op, PatternRewriter &rewriter) {
   SmallVector<Value> operands;
   for (auto operand : op->getOperands())
     operands.push_back(rewriter.create<arith::ExtFOp>(loc, newType, operand));
-  auto result = rewriter.create<math::Atan2Op>(loc, newType, operands);
+  auto result =
+      rewriter.create<T>(loc, TypeRange{newType}, operands, op->getAttrs());
   rewriter.replaceOpWithNewOp<arith::TruncFOp>(op, origType, result);
   return success();
 }
@@ -1244,7 +1245,7 @@ CbrtApproximation::matchAndRewrite(math::CbrtOp op,
   floatTy = broadcast(floatTy, shape);
   intTy = broadcast(intTy, shape);
 
-  auto bconst = [&](Attribute attr) -> Value {
+  auto bconst = [&](TypedAttr attr) -> Value {
     Value value = b.create<arith::ConstantOp>(attr);
     return broadcast(b, value, shape);
   };
@@ -1381,13 +1382,24 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
 void mlir::populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options) {
+  // Patterns for leveraging existing f32 lowerings on other data types.
+  patterns
+      .add<ReuseF32Expansion<math::AtanOp>, ReuseF32Expansion<math::Atan2Op>,
+           ReuseF32Expansion<math::TanhOp>, ReuseF32Expansion<math::LogOp>,
+           ReuseF32Expansion<math::Log2Op>, ReuseF32Expansion<math::Log1pOp>,
+           ReuseF32Expansion<math::ErfOp>, ReuseF32Expansion<math::ExpOp>,
+           ReuseF32Expansion<math::ExpM1Op>, ReuseF32Expansion<math::CbrtOp>,
+           ReuseF32Expansion<math::SinOp>, ReuseF32Expansion<math::CosOp>>(
+          patterns.getContext());
+
   patterns.add<AtanApproximation, Atan2Approximation, TanhApproximation,
                LogApproximation, Log2Approximation, Log1pApproximation,
                ErfPolynomialApproximation, ExpApproximation, ExpM1Approximation,
-               CbrtApproximation, ReuseF32Expansion<math::Atan2Op>,
-               SinAndCosApproximation<true, math::SinOp>,
+               CbrtApproximation, SinAndCosApproximation<true, math::SinOp>,
                SinAndCosApproximation<false, math::CosOp>>(
       patterns.getContext());
-  if (options.enableAvx2)
-    patterns.add<RsqrtApproximation>(patterns.getContext());
+  if (options.enableAvx2) {
+    patterns.add<RsqrtApproximation, ReuseF32Expansion<math::RsqrtOp>>(
+        patterns.getContext());
+  }
 }

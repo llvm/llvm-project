@@ -11,8 +11,8 @@
 
 #include <cstdint>
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 

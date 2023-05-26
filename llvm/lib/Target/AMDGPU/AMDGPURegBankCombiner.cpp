@@ -271,14 +271,11 @@ bool AMDGPURegBankCombinerHelper::matchFPMinMaxToClamp(MachineInstr &MI,
 // min(min(0.0, 1.0), NaN) = min(0.0, NaN) = 0.0
 bool AMDGPURegBankCombinerHelper::matchFPMed3ToClamp(MachineInstr &MI,
                                                      Register &Reg) {
-  if (MI.getIntrinsicID() != Intrinsic::amdgcn_fmed3)
-    return false;
-
   // In llvm-ir, clamp is often represented as an intrinsic call to
   // @llvm.amdgcn.fmed3.f32(%Val, 0.0, 1.0). Check for other operand orders.
-  MachineInstr *Src0 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
-  MachineInstr *Src1 = getDefIgnoringCopies(MI.getOperand(3).getReg(), MRI);
-  MachineInstr *Src2 = getDefIgnoringCopies(MI.getOperand(4).getReg(), MRI);
+  MachineInstr *Src0 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  MachineInstr *Src1 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+  MachineInstr *Src2 = getDefIgnoringCopies(MI.getOperand(3).getReg(), MRI);
 
   if (isFCst(Src0) && !isFCst(Src1))
     std::swap(Src0, Src1);

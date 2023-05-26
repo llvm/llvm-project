@@ -703,3 +703,216 @@ define signext i32 @add_i32_minus_0x80000800_sext(i32 %x) {
   %add = add i32 %x, -2147485696
   ret i32 %add
 }
+
+define signext i32 @add_i32_4080(i32 %x) {
+; LA32-LABEL: add_i32_4080:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a0, $a0, 2047
+; LA32-NEXT:    addi.w $a0, $a0, 2033
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i32_4080:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.w $a0, $a0, 2047
+; LA64-NEXT:    addi.w $a0, $a0, 2033
+; LA64-NEXT:    ret
+  %add = add i32 %x, 4080
+  ret i32 %add
+}
+
+define signext i32 @add_i32_minus_4080(i32 %x) {
+; LA32-LABEL: add_i32_minus_4080:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a0, $a0, -2048
+; LA32-NEXT:    addi.w $a0, $a0, -2032
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i32_minus_4080:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.w $a0, $a0, -2048
+; LA64-NEXT:    addi.w $a0, $a0, -2032
+; LA64-NEXT:    ret
+  %add = add i32 %x, -4080
+  ret i32 %add
+}
+
+define signext i32 @add_i32_2048(i32 %x) {
+; LA32-LABEL: add_i32_2048:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a0, $a0, 2047
+; LA32-NEXT:    addi.w $a0, $a0, 1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i32_2048:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.w $a0, $a0, 2047
+; LA64-NEXT:    addi.w $a0, $a0, 1
+; LA64-NEXT:    ret
+  %add = add i32 %x, 2048
+  ret i32 %add
+}
+
+define signext i32 @add_i32_4094(i32 %x) {
+; LA32-LABEL: add_i32_4094:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a0, $a0, 2047
+; LA32-NEXT:    addi.w $a0, $a0, 2047
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i32_4094:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.w $a0, $a0, 2047
+; LA64-NEXT:    addi.w $a0, $a0, 2047
+; LA64-NEXT:    ret
+  %add = add i32 %x, 4094
+  ret i32 %add
+}
+
+define signext i32 @add_i32_minus_2049(i32 %x) {
+; LA32-LABEL: add_i32_minus_2049:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a0, $a0, -2048
+; LA32-NEXT:    addi.w $a0, $a0, -1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i32_minus_2049:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.w $a0, $a0, -2048
+; LA64-NEXT:    addi.w $a0, $a0, -1
+; LA64-NEXT:    ret
+  %add = add i32 %x, -2049
+  ret i32 %add
+}
+
+define signext i32 @add_i32_minus_4096(i32 %x) {
+; LA32-LABEL: add_i32_minus_4096:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a0, $a0, -2048
+; LA32-NEXT:    addi.w $a0, $a0, -2048
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i32_minus_4096:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.w $a0, $a0, -2048
+; LA64-NEXT:    addi.w $a0, $a0, -2048
+; LA64-NEXT:    ret
+  %add = add i32 %x, -4096
+  ret i32 %add
+}
+
+define i64 @add_i64_4080(i64 %x) {
+; LA32-LABEL: add_i64_4080:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a2, $a0, 2047
+; LA32-NEXT:    addi.w $a2, $a2, 2033
+; LA32-NEXT:    sltu $a0, $a2, $a0
+; LA32-NEXT:    add.w $a1, $a1, $a0
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i64_4080:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $a0, $a0, 2047
+; LA64-NEXT:    addi.d $a0, $a0, 2033
+; LA64-NEXT:    ret
+  %add = add i64 %x, 4080
+  ret i64 %add
+}
+
+define i64 @add_i64_minus_4080(i64 %x) {
+; LA32-LABEL: add_i64_minus_4080:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a2, $a0, -2048
+; LA32-NEXT:    addi.w $a2, $a2, -2032
+; LA32-NEXT:    sltu $a0, $a2, $a0
+; LA32-NEXT:    add.w $a0, $a1, $a0
+; LA32-NEXT:    addi.w $a1, $a0, -1
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i64_minus_4080:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $a0, $a0, -2048
+; LA64-NEXT:    addi.d $a0, $a0, -2032
+; LA64-NEXT:    ret
+  %add = add i64 %x, -4080
+  ret i64 %add
+}
+
+define i64 @add_i64_2048(i64 %x) {
+; LA32-LABEL: add_i64_2048:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a2, $a0, 2047
+; LA32-NEXT:    addi.w $a2, $a2, 1
+; LA32-NEXT:    sltu $a0, $a2, $a0
+; LA32-NEXT:    add.w $a1, $a1, $a0
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i64_2048:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $a0, $a0, 2047
+; LA64-NEXT:    addi.d $a0, $a0, 1
+; LA64-NEXT:    ret
+  %add = add i64 %x, 2048
+  ret i64 %add
+}
+
+define i64 @add_i64_4094(i64 %x) {
+; LA32-LABEL: add_i64_4094:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a2, $a0, 2047
+; LA32-NEXT:    addi.w $a2, $a2, 2047
+; LA32-NEXT:    sltu $a0, $a2, $a0
+; LA32-NEXT:    add.w $a1, $a1, $a0
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i64_4094:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $a0, $a0, 2047
+; LA64-NEXT:    addi.d $a0, $a0, 2047
+; LA64-NEXT:    ret
+  %add = add i64 %x, 4094
+  ret i64 %add
+}
+
+define i64 @add_i64_minus_2049(i64 %x) {
+; LA32-LABEL: add_i64_minus_2049:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a2, $a0, -2048
+; LA32-NEXT:    addi.w $a2, $a2, -1
+; LA32-NEXT:    sltu $a0, $a2, $a0
+; LA32-NEXT:    add.w $a0, $a1, $a0
+; LA32-NEXT:    addi.w $a1, $a0, -1
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i64_minus_2049:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $a0, $a0, -2048
+; LA64-NEXT:    addi.d $a0, $a0, -1
+; LA64-NEXT:    ret
+  %add = add i64 %x, -2049
+  ret i64 %add
+}
+
+define i64 @add_i64_minus_4096(i64 %x) {
+; LA32-LABEL: add_i64_minus_4096:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a2, $a0, -2048
+; LA32-NEXT:    addi.w $a2, $a2, -2048
+; LA32-NEXT:    sltu $a0, $a2, $a0
+; LA32-NEXT:    add.w $a0, $a1, $a0
+; LA32-NEXT:    addi.w $a1, $a0, -1
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: add_i64_minus_4096:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $a0, $a0, -2048
+; LA64-NEXT:    addi.d $a0, $a0, -2048
+; LA64-NEXT:    ret
+  %add = add i64 %x, -4096
+  ret i64 %add
+}

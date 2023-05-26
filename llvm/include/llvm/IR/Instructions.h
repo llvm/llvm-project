@@ -2002,7 +2002,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertElementInst, Value)
 //                           ShuffleVectorInst Class
 //===----------------------------------------------------------------------===//
 
-constexpr int UndefMaskElem = -1;
+constexpr int PoisonMaskElem = -1;
 
 /// This instruction constructs a fixed permutation of two
 /// input vectors.
@@ -2010,7 +2010,7 @@ constexpr int UndefMaskElem = -1;
 /// For each element of the result vector, the shuffle mask selects an element
 /// from one of the input vectors to copy to the result. Non-negative elements
 /// in the mask represent an index into the concatenated pair of input vectors.
-/// UndefMaskElem (-1) specifies that the result element is undefined.
+/// PoisonMaskElem (-1) specifies that the result element is poison.
 ///
 /// For scalable vectors, all the elements of the mask must be 0 or -1. This
 /// requirement may be relaxed in the future.
@@ -2068,16 +2068,16 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   /// Return the shuffle mask value of this instruction for the given element
-  /// index. Return UndefMaskElem if the element is undef.
+  /// index. Return PoisonMaskElem if the element is undef.
   int getMaskValue(unsigned Elt) const { return ShuffleMask[Elt]; }
 
   /// Convert the input shuffle mask operand to a vector of integers. Undefined
-  /// elements of the mask are returned as UndefMaskElem.
+  /// elements of the mask are returned as PoisonMaskElem.
   static void getShuffleMask(const Constant *Mask,
                              SmallVectorImpl<int> &Result);
 
   /// Return the mask for this instruction as a vector of integers. Undefined
-  /// elements of the mask are returned as UndefMaskElem.
+  /// elements of the mask are returned as PoisonMaskElem.
   void getShuffleMask(SmallVectorImpl<int> &Result) const {
     Result.assign(ShuffleMask.begin(), ShuffleMask.end());
   }

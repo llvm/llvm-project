@@ -22,7 +22,7 @@ define i32 @unhandled_value(i32 %arg1) {
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: blockaddress is not implemented in the LLVM dialect
+; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_constant, %bb1) since blockaddress(...) is unsupported
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unhandled instruction: ret ptr blockaddress(@unhandled_constant, %bb1)
 define ptr @unhandled_constant() {
@@ -34,7 +34,7 @@ bb1:
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: blockaddress is not implemented in the LLVM dialect
+; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_global, %bb1) since blockaddress(...) is unsupported
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unhandled global variable: @private = private global ptr blockaddress(@unhandled_global, %bb1)
 @private = private global ptr blockaddress(@unhandled_global, %bb1)
@@ -310,6 +310,23 @@ end:
 ; // -----
 
 ; CHECK:      import-failure.ll
+; CHECK-SAME: warning: could not lookup access group
+define void @unused_access_group(ptr %arg) {
+entry:
+  %0 = load i32, ptr %arg, !llvm.access.group !0
+  br label %end, !llvm.loop !1
+end:
+  ret void
+}
+
+!0 = distinct !{}
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.parallel_accesses", !0, !3}
+!3 = distinct !{}
+
+; // -----
+
+; CHECK:      import-failure.ll
 ; CHECK-SAME: warning: expected function_entry_count to be attached to a function
 ; CHECK:      warning: unhandled metadata: !0 = !{!"function_entry_count", i64 42}
 define void @cond_br(i1 %arg) {
@@ -322,3 +339,30 @@ bb2:
 }
 
 !0 = !{!"function_entry_count", i64 42}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: dropped instruction: call void @llvm.experimental.noalias.scope.decl(metadata !0)
+define void @unused_scope() {
+  call void @llvm.experimental.noalias.scope.decl(metadata !0)
+  ret void
+}
+
+declare void @llvm.experimental.noalias.scope.decl(metadata)
+
+!0 = !{!1}
+!1 = !{!1, !2}
+!2 = distinct !{!2, !"The domain"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: error: cannot translate data layout: i8:8:8:8
+target datalayout = "e-i8:8:8:8"
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: unhandled data layout token: ni:42
+target datalayout = "e-ni:42-i64:64"

@@ -12,13 +12,12 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::transform;
 
 //===----------------------------------------------------------------------===//
@@ -74,8 +73,7 @@ SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
   for (const auto &it : llvm::zip_equal(getBoundedValues(), getLowerBounds(),
                                         getUpperBounds())) {
     Value handle = std::get<0>(it);
-    ArrayRef<Operation *> boundedValueOps = state.getPayloadOps(handle);
-    for (Operation *op : boundedValueOps) {
+    for (Operation *op : state.getPayloadOps(handle)) {
       if (op->getNumResults() != 1 || !op->getResult(0).getType().isIndex()) {
         auto diag =
             emitDefiniteFailure()
@@ -97,16 +95,14 @@ SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
     unsigned pos;
     if (!cstr.findVar(std::get<0>(it), &pos))
       pos = cstr.appendSymbolVar(std::get<0>(it));
-    cstr.addBound(FlatAffineValueConstraints::BoundType::LB, pos,
-                  std::get<1>(it));
+    cstr.addBound(presburger::BoundType::LB, pos, std::get<1>(it));
     // Note: addBound bounds are inclusive, but specified UB is exclusive.
-    cstr.addBound(FlatAffineValueConstraints::BoundType::UB, pos,
-                  std::get<2>(it) - 1);
+    cstr.addBound(presburger::BoundType::UB, pos, std::get<2>(it) - 1);
   }
 
   // Transform all targets.
-  ArrayRef<Operation *> targets = state.getPayloadOps(getTarget());
-  for (Operation *target : targets) {
+  SmallVector<Operation *> targets;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
     if (!isa<AffineMinOp, AffineMaxOp>(target)) {
       auto diag = emitDefiniteFailure()
                   << "target must be affine.min or affine.max";
@@ -119,6 +115,7 @@ SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
       diag.attachNote(target->getLoc()) << "target/constrained op";
       return diag;
     }
+    targets.push_back(target);
   }
   SmallVector<Operation *> transformed;
   RewritePatternSet patterns(getContext());

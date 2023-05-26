@@ -119,7 +119,7 @@ namespace PackInTypeConstraint {
     []() -> C<T> auto{ return T(); }(); // expected-error {{expression contains unexpanded parameter pack 'T'}}
   }
   template<typename ...T> void g5() {
-    ([]() -> C<T> auto{ // expected-error-re {{deduced type {{.*}} does not satisfy}}
+    ([]() -> C<T> auto{ // expected-error-re {{deduced type {{.*}} does not satisfy}} expected-note {{while substituting into a lambda}}
      return T();
      }(), ...);
   }
@@ -792,3 +792,125 @@ int foo() {
     return b;
 }
 } // namespace GH48182
+
+namespace GH61777 {
+template<class T> concept C = sizeof(T) == 4; // #61777_C
+template<class T, class U> concept C2 = sizeof(T) == sizeof(U); //#61777_C2
+
+template<class T>
+struct Parent {
+  template<class, C auto> struct TakesUnary { static const int i = 0 ; }; // #UNARY
+  template<class, C2<T> auto> struct TakesBinary { static const int i = 0 ; }; //#BINARY
+};
+
+static_assert(Parent<void>::TakesUnary<int, 0>::i == 0);
+// expected-error@+3{{constraints not satisfied for class template 'TakesUnary'}}
+// expected-note@#UNARY{{because 'decltype(0ULL)' (aka 'unsigned long long') does not satisfy 'C'}}
+// expected-note@#61777_C{{because 'sizeof(unsigned long long) == 4' (8 == 4) evaluated to false}}
+static_assert(Parent<void>::TakesUnary<int, 0uLL>::i == 0);
+
+static_assert(Parent<int>::TakesBinary<int, 0>::i == 0);
+// expected-error@+3{{constraints not satisfied for class template 'TakesBinary'}}
+// expected-note@#BINARY{{because 'C2<decltype(0ULL), int>' evaluated to false}}
+// expected-note@#61777_C2{{because 'sizeof(unsigned long long) == sizeof(int)' (8 == 4) evaluated to false}}
+static_assert(Parent<int>::TakesBinary<int, 0ULL>::i == 0);
+}
+
+namespace TemplateInsideNonTemplateClass {
+template<typename T, typename U> concept C = true;
+
+template<typename T> auto L = []<C<T> U>() {};
+
+struct Q {
+  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const;
+};
+
+template <class T>
+concept C1 = false;
+
+struct Foo {
+  template <typename>
+  struct Bar {};
+
+  template <typename T>
+    requires(C1<T>)
+  struct Bar<T>;
+};
+
+Foo::Bar<int> BarInstance;
+} // namespace TemplateInsideNonTemplateClass
+
+namespace GH61959 {
+template <typename T0>
+concept C = (sizeof(T0) >= 4);
+
+template<typename...>
+struct Orig { };
+
+template<typename T>
+struct Orig<T> {
+  template<typename> requires C<T>
+  void f() { }
+
+  template<typename> requires true
+  void f() { }
+};
+
+template <typename...> struct Mod {};
+
+template <typename T1, typename T2>
+struct Mod<T1, T2> {
+  template <typename> requires C<T1>
+  constexpr static int f() { return 1; }
+
+  template <typename> requires C<T2>
+  constexpr static int f() { return 2; }
+};
+
+static_assert(Mod<int, char>::f<double>() == 1);
+static_assert(Mod<char, int>::f<double>() == 2);
+
+template<typename T>
+struct Outer {
+  template<typename ...>
+  struct Inner {};
+
+  template<typename U>
+  struct Inner<U> {
+    template<typename V>
+    void foo()  requires C<U> && C<T> && C<V>{}
+    template<typename V>
+    void foo()  requires true{}
+  };
+};
+
+void bar() {
+  Outer<int>::Inner<float> I;
+  I.foo<char>();
+}
+} // namespace GH61959
+
+
+namespace TemplateInsideTemplateInsideTemplate {
+template<typename T>
+concept C1 = false;
+
+template <unsigned I0>
+struct W0 {
+  template <unsigned I1>
+  struct W1 {
+    template <typename T>
+    struct F {
+      enum { value = 1 };
+    };
+
+    template <typename T>
+      requires C1<T>
+    struct F<T> {
+      enum { value = 2 };
+    };
+  };
+};
+
+static_assert(W0<0>::W1<1>::F<int>::value == 1);
+} // TemplateInsideTemplateInsideTemplate

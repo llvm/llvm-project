@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50  -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -verify -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -include-pch %t %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -verify -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -include-pch %t %s -emit-llvm -o - | FileCheck %s
 
 #ifndef HEADER
 #define HEADER
@@ -19,9 +21,27 @@ typedef enum omp_allocator_handle_t {
   KMP_ALLOCATOR_MAX_HANDLE = __UINTPTR_MAX__
 } omp_allocator_handle_t;
 
+typedef enum omp_alloctrait_key_t { omp_atk_sync_hint = 1,
+                                    omp_atk_alignment = 2,
+                                    omp_atk_access = 3,
+                                    omp_atk_pool_size = 4,
+                                    omp_atk_fallback = 5,
+                                    omp_atk_fb_data = 6,
+                                    omp_atk_pinned = 7,
+                                    omp_atk_partition = 8
+} omp_alloctrait_key_t;
+
+typedef struct omp_alloctrait_t {
+  omp_alloctrait_key_t key;
+  __UINTPTR_TYPE__ value;
+} omp_alloctrait_t;
+
+
 // CHECK: define {{.*}}[[FIE:@.+]]()
 void fie(void) {
   int x;
+  omp_allocator_handle_t my_allocator;
+  omp_alloctrait_t traits[10];
   #pragma omp target uses_allocators(omp_null_allocator) allocate(omp_null_allocator: x) firstprivate(x)
   {}
   #pragma omp target uses_allocators(omp_default_mem_alloc) allocate(omp_default_mem_alloc: x) firstprivate(x)
@@ -39,6 +59,8 @@ void fie(void) {
   #pragma omp target uses_allocators(omp_pteam_mem_alloc) allocate(omp_pteam_mem_alloc: x) firstprivate(x)
   {}
   #pragma omp target uses_allocators(omp_thread_mem_alloc) allocate(omp_thread_mem_alloc: x) firstprivate(x) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target' directive}}
+  {}
+#pragma omp target uses_allocators(omp_null_allocator, omp_thread_mem_alloc, my_allocator(traits))
   {}
 }
 
@@ -106,3 +128,16 @@ void fie(void) {
 // CHECK-NEXT: %[[#R1:]] = load i32, ptr %x.addr, align 4
 // CHECK-NEXT: store i32 %[[#R1]], ptr %.x..void.addr, align 4
 // CHECK-NEXT: call void @__kmpc_free(i32 %[[#R0]], ptr %.x..void.addr, ptr inttoptr (i64 8 to ptr))
+
+// CHECK: [[TRAITS_ADDR_REF:%.+]] = alloca ptr,
+// CHECK: [[MY_ALLOCATOR_ADDR:%.+]] = alloca i64,
+// CHECK: [[TRAITS_ADDR:%.+]] = load ptr, ptr [[TRAITS_ADDR_REF]],
+// CHECK: [[TRAITS:%.+]] = load ptr, ptr [[TRAITS_ADDR]],
+// CHECK: [[ALLOCATOR:%.+]] = call ptr @__kmpc_init_allocator(i32 %{{.+}}, ptr null, i32 10, ptr [[TRAITS]])
+// CHECK: [[CONV:%.+]] = ptrtoint ptr [[ALLOCATOR]] to i64
+// CHECK: store i64 [[CONV]], ptr [[MY_ALLOCATOR_ADDR]],
+
+// Destroy allocator upon exit from the region.
+// CHECK: [[ALLOCATOR:%.+]] = load i64, ptr [[MY_ALLOCATOR_ADDR]],
+// CHECK: [[CONV:%.+]] = inttoptr i64 [[ALLOCATOR]] to ptr
+// CHECK: call void @__kmpc_destroy_allocator(i32 %{{.+}}, ptr [[CONV]])

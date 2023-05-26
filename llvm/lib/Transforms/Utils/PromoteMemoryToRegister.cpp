@@ -132,9 +132,9 @@ public:
     // unnecessary function-local metadata. Remember that we've seen a
     // dbg.assign for each variable fragment for the untracked store handling
     // (after this loop).
-    SmallSet<DebugVariable, 2> VarHasDbgAssignForStore;
+    SmallSet<DebugVariableAggregate, 2> VarHasDbgAssignForStore;
     for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(ToDelete)) {
-      VarHasDbgAssignForStore.insert(DebugVariable(DAI));
+      VarHasDbgAssignForStore.insert(DebugVariableAggregate(DAI));
       DbgAssignsToDelete->insert(DAI);
       DIB.insertDbgValueIntrinsic(DAI->getValue(), DAI->getVariable(),
                                   DAI->getExpression(), DAI->getDebugLoc(),
@@ -150,7 +150,7 @@ public:
     // size) or one that is trackable but has had its DIAssignID attachment
     // dropped accidentally.
     for (auto *DAI : DbgAssigns) {
-      if (VarHasDbgAssignForStore.contains(DebugVariable(DAI)))
+      if (VarHasDbgAssignForStore.contains(DebugVariableAggregate(DAI)))
         continue;
       ConvertDebugDeclareToDebugValue(DAI, ToDelete, DIB);
     }

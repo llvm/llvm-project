@@ -916,3 +916,79 @@ exit:
   %r2 = select <4 x i1> %b2, <4 x half> <half 0xH3900, half 0xH3900, half 0xH3900, half 0xH3900>, <4 x half> <half 0xH3D00, half 0xH3D00, half 0xH3D00, half 0xH3D00>
   ret <4 x half> %r2
 }
+
+define <8 x i16> @large_vector(ptr addrspace(3) %p, i32 %idxp) {
+; SI-LABEL: large_vector:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
+; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; SI-NEXT:    v_add_i32_e32 v1, vcc, 4, v0
+; SI-NEXT:    v_add_i32_e32 v3, vcc, 8, v0
+; SI-NEXT:    v_add_i32_e32 v5, vcc, 12, v0
+; SI-NEXT:    s_mov_b32 m0, -1
+; SI-NEXT:    ds_read_b32 v0, v0
+; SI-NEXT:    ds_read_b32 v2, v1
+; SI-NEXT:    ds_read_b32 v4, v3
+; SI-NEXT:    ds_read_b32 v6, v5
+; SI-NEXT:    s_waitcnt lgkmcnt(3)
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    s_waitcnt lgkmcnt(2)
+; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-NEXT:    s_waitcnt lgkmcnt(1)
+; SI-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: large_vector:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshl_add_u32 v2, v1, 5, v0
+; GFX9-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
+; GFX9-NEXT:    ds_read2_b32 v[2:3], v2 offset0:2 offset1:3
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %idx = shl i32 %idxp, 4
+
+  %i.0 = or i32 %idx, 0
+  %p.0 = getelementptr half, ptr addrspace(3) %p, i32 %i.0
+  %x.0 = load i16, ptr addrspace(3) %p.0, align 4
+  %v0p = insertelement <8 x i16> poison, i16 %x.0, i32 0
+  %i.1 = or i32 %idx, 1
+  %p.1 = getelementptr half, ptr addrspace(3) %p, i32 %i.1
+  %x.1 = load i16, ptr addrspace(3) %p.1, align 2
+  %v0 = insertelement <8 x i16> %v0p, i16 %x.1, i32 1
+
+  %i.2 = or i32 %idx, 2
+  %p.2 = getelementptr half, ptr addrspace(3) %p, i32 %i.2
+  %x.2 = load i16, ptr addrspace(3) %p.2, align 4
+  %v1p = insertelement <8 x i16> poison, i16 %x.2, i32 0
+  %i.3 = or i32 %idx, 3
+  %p.3 = getelementptr half, ptr addrspace(3) %p, i32 %i.3
+  %x.3 = load i16, ptr addrspace(3) %p.3, align 2
+  %v1 = insertelement <8 x i16> %v1p, i16 %x.3, i32 1
+
+  %i.4 = or i32 %idx, 4
+  %p.4 = getelementptr half, ptr addrspace(3) %p, i32 %i.4
+  %x.4 = load i16, ptr addrspace(3) %p.4, align 4
+  %v2p = insertelement <8 x i16> poison, i16 %x.4, i32 0
+  %i.5 = or i32 %idx, 5
+  %p.5 = getelementptr half, ptr addrspace(3) %p, i32 %i.5
+  %x.5 = load i16, ptr addrspace(3) %p.5, align 2
+  %v2 = insertelement <8 x i16> %v2p, i16 %x.5, i32 1
+
+  %i.6 = or i32 %idx, 6
+  %p.6 = getelementptr half, ptr addrspace(3) %p, i32 %i.6
+  %x.6 = load i16, ptr addrspace(3) %p.6, align 4
+  %v3p = insertelement <8 x i16> poison, i16 %x.6, i32 0
+  %i.7 = or i32 %idx, 7
+  %p.7 = getelementptr half, ptr addrspace(3) %p, i32 %i.7
+  %x.7 = load i16, ptr addrspace(3) %p.7, align 2
+  %v3 = insertelement <8 x i16> %v3p, i16 %x.7, i32 1
+
+  %z.1 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef>
+  %z.2 = shufflevector <8 x i16> %z.1, <8 x i16> %v2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 undef, i32 undef>
+  %z.3 = shufflevector <8 x i16> %z.2, <8 x i16> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+  ret <8 x i16> %z.3
+}

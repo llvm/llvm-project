@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Config.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
@@ -89,7 +90,8 @@ void checkHighlightings(llvm::StringRef Code,
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, std::string(File.second)});
   auto AST = TU.build();
-  auto Actual = getSemanticHighlightings(AST);
+  auto Actual =
+      getSemanticHighlightings(AST, /*IncludeInactiveRegionTokens=*/true);
   for (auto &Token : Actual)
     Token.Modifiers &= ModifierMask;
 
@@ -399,7 +401,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       #define $Macro_decl[[MACRO_CONCAT]](X, V, T) T foo##X = V
       #define $Macro_decl[[DEF_VAR]](X, V) int X = V
       #define $Macro_decl[[DEF_VAR_T]](T, X, V) T X = V
-      #define $Macro_decl[[DEF_VAR_REV]](V, X) DEF_VAR(X, V)
+      #define $Macro_decl[[DEF_VAR_REV]](V, X) $Macro[[DEF_VAR]](X, V)
       #define $Macro_decl[[CPY]](X) X
       #define $Macro_decl[[DEF_VAR_TYPE]](X, Y) X Y
       #define $Macro_decl[[SOME_NAME]] variable
@@ -431,7 +433,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
     )cpp",
       R"cpp(
       #define $Macro_decl[[fail]](expr) expr
-      #define $Macro_decl[[assert]](COND) if (!(COND)) { fail("assertion failed" #COND); }
+      #define $Macro_decl[[assert]](COND) if (!(COND)) { $Macro[[fail]]("assertion failed" #COND); }
       // Preamble ends.
       int $Variable_def[[x]];
       int $Variable_def[[y]];
@@ -1258,6 +1260,17 @@ o]] [[bar]])cpp";
   EXPECT_EQ(Toks[3].deltaLine, 0u);
   EXPECT_EQ(Toks[3].deltaStart, 2u);
   EXPECT_EQ(Toks[3].length, 3u);
+}
+
+TEST(SemanticHighlighting, WithHighlightingFilter) {
+  llvm::StringRef AnnotatedCode = R"cpp(
+int *$Variable[[x]] = new int;
+)cpp";
+  Config Cfg;
+  Cfg.SemanticTokens.DisabledKinds = {"Operator"};
+  Cfg.SemanticTokens.DisabledModifiers = {"Declaration", "Definition"};
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  checkHighlightings(AnnotatedCode, {}, ~ScopeModifierMask);
 }
 } // namespace
 } // namespace clangd

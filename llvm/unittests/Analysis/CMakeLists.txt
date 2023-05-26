@@ -22,7 +22,6 @@ set(ANALYSIS_TEST_SOURCES
   CGSCCPassManagerTest.cpp
   ConstraintSystemTest.cpp
   DDGTest.cpp
-  DivergenceAnalysisTest.cpp
   DomTreeUpdaterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
@@ -64,6 +63,8 @@ endif()
 add_llvm_unittest_with_input_files(AnalysisTests
   ${ANALYSIS_TEST_SOURCES}
   )
+
+add_dependencies(AnalysisTests intrinsics_gen)
 
 target_link_libraries(AnalysisTests PRIVATE LLVMTestingSupport)
 

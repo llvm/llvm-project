@@ -16,10 +16,12 @@
 
 // void lock();
 
-#include <mutex>
-#include <thread>
-#include <cstdlib>
 #include <cassert>
+#include <chrono>
+#include <cstdlib>
+#include <mutex>
+#include <system_error>
+#include <thread>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

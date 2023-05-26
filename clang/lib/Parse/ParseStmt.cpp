@@ -19,6 +19,7 @@
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
@@ -543,9 +544,22 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
     return ParseCaseStatement(StmtCtx, /*MissingCase=*/true, Expr);
   }
 
-  // Otherwise, eat the semicolon.
-  ExpectAndConsumeSemi(diag::err_expected_semi_after_expr);
-  return handleExprStmt(Expr, StmtCtx);
+  Token *CurTok = nullptr;
+  // If the semicolon is missing at the end of REPL input, consider if
+  // we want to do value printing. Note this is only enabled in C++ mode
+  // since part of the implementation requires C++ language features.
+  // Note we shouldn't eat the token since the callback needs it.
+  if (Tok.is(tok::annot_repl_input_end) && Actions.getLangOpts().CPlusPlus)
+    CurTok = &Tok;
+  else
+    // Otherwise, eat the semicolon.
+    ExpectAndConsumeSemi(diag::err_expected_semi_after_expr);
+
+  StmtResult R = handleExprStmt(Expr, StmtCtx);
+  if (CurTok && !R.isInvalid())
+    CurTok->setAnnotationValue(R.get());
+
+  return R;
 }
 
 /// ParseSEHTryBlockCommon
@@ -1052,7 +1066,7 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
 
 void Parser::DiagnoseLabelAtEndOfCompoundStatement() {
   if (getLangOpts().CPlusPlus) {
-    Diag(Tok, getLangOpts().CPlusPlus2b
+    Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_label_end_of_compound_statement
                   : diag::ext_cxx_label_end_of_compound_statement);
   } else {
@@ -1456,7 +1470,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     }
 
     if (Tok.is(tok::kw_consteval)) {
-      Diag(Tok, getLangOpts().CPlusPlus2b ? diag::warn_cxx20_compat_consteval_if
+      Diag(Tok, getLangOpts().CPlusPlus23 ? diag::warn_cxx20_compat_consteval_if
                                           : diag::ext_consteval_if);
       IsConsteval = true;
       ConstevalLoc = ConsumeToken();
@@ -1928,7 +1942,7 @@ bool Parser::isForRangeIdentifier() {
 /// [C++] for-init-statement:
 /// [C++]   expression-statement
 /// [C++]   simple-declaration
-/// [C++2b] alias-declaration
+/// [C++23] alias-declaration
 ///
 /// [C++0x] for-range-declaration:
 /// [C++0x]   attribute-specifier-seq[opt] type-specifier-seq declarator
@@ -2411,7 +2425,7 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
                             ArgsUnion(Hint.ValueExpr)};
     TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
                      Hint.PragmaNameLoc->Loc, ArgHints, 4,
-                     ParsedAttr::AS_Pragma);
+                     ParsedAttr::Form::Pragma());
   }
 
   // Get the next statement.

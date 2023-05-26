@@ -202,7 +202,8 @@ ArmInsertedThunks SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
   const ARMSubtarget *ST = &MF.getSubtarget<ARMSubtarget>();
   for (auto T : SLSBLRThunks)
     if (ST->isThumb() == T.isThumb)
-      createThunkFunction(MMI, T.Name, ComdatThunks);
+      createThunkFunction(MMI, T.Name, ComdatThunks,
+                          T.isThumb ? "+thumb-mode" : "");
   return ST->isThumb() ? ThumbThunk : ArmThunk;
 }
 

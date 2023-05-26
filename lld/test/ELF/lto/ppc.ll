@@ -27,7 +27,7 @@
 ; LE64: Machine: EM_PPC64
 
 ;--- 32le.ll
-target datalayout = "e-m:e-p:32:32-i64:64-n32"
+target datalayout = "e-m:e-p:32:32-Fn32-i64:64-n32"
 target triple = "powerpcle-pc-freebsd"
 
 define void @_start() {
@@ -35,7 +35,7 @@ define void @_start() {
 }
 
 ;--- 32be.ll
-target datalayout = "E-m:e-p:32:32-i64:64-n32"
+target datalayout = "E-m:e-p:32:32-Fn32-i64:64-n32"
 target triple = "powerpc-unknown-linux-gnu"
 
 define void @_start() {
@@ -43,7 +43,7 @@ define void @_start() {
 }
 
 ;--- 64.ll
-target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+target datalayout = "e-m:e-Fn32-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 define void @_start() {

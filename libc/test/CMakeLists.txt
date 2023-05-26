@@ -1,19 +1,21 @@
 add_custom_target(check-libc)
 add_custom_target(libc-unit-tests)
-add_dependencies(check-libc libc-unit-tests)
+add_custom_target(libc-hermetic-tests)
+add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
 
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  add_subdirectory(UnitTest)
-endif()
+add_subdirectory(UnitTest)
 
 add_header_library(
   errno_setter_matcher
   HDRS
     ErrnoSetterMatcher.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.StringUtil.error_to_string
     libc.src.errno.errno
 )
 
@@ -23,10 +25,8 @@ if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND
   return()
 endif()
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  add_subdirectory(src)
-  add_subdirectory(utils)
-endif()
+add_subdirectory(src)
+add_subdirectory(utils)
 
 if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
   add_subdirectory(IntegrationTest)

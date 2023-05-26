@@ -241,8 +241,10 @@ def warn_module_config_macro_undef : Warning<
 def note_module_def_undef_here : Note<
   "macro was %select{defined|#undef'd}0 here">;
 def remark_module_build : Remark<"building module '%0' as '%1'">,
+  ShowInSystemHeader,
   InGroup<ModuleBuild>;
 def remark_module_build_done : Remark<"finished building module '%0'">,
+  ShowInSystemHeader,
   InGroup<ModuleBuild>;
 def remark_module_lock : Remark<"locking '%0' to build module '%1'">,
   InGroup<ModuleLock>;

@@ -717,7 +717,7 @@ public:
   ArrayRef<uint8_t> getDyldInfoLazyBindOpcodes() const;
   ArrayRef<uint8_t> getDyldInfoExportsTrie() const;
 
-  /// If the optional is None, no header was found, but the object was
+  /// If the optional is std::nullopt, no header was found, but the object was
   /// well-formed.
   Expected<std::optional<MachO::dyld_chained_fixups_header>>
   getChainedFixupsHeader() const;

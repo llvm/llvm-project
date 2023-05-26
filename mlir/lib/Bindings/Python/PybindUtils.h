@@ -19,13 +19,6 @@
 namespace mlir {
 namespace python {
 
-// Sets a python error, ready to be thrown to return control back to the
-// python runtime.
-// Correct usage:
-//   throw SetPyError(PyExc_ValueError, "Foobar'd");
-pybind11::error_already_set SetPyError(PyObject *excClass,
-                                       const llvm::Twine &message);
-
 /// CRTP template for special wrapper types that are allowed to be passed in as
 /// 'None' function arguments and can be resolved by some global mechanic if
 /// so. Such types will raise an error if this global resolution fails, and

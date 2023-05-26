@@ -36,8 +36,7 @@ std::string llvm::demangle(const std::string &MangledName) {
   if (S[0] == '_' && nonMicrosoftDemangle(S + 1, Result))
     return Result;
 
-  if (char *Demangled =
-          microsoftDemangle(S, nullptr, nullptr, nullptr, nullptr)) {
+  if (char *Demangled = microsoftDemangle(S, nullptr, nullptr)) {
     Result = Demangled;
     std::free(Demangled);
     return Result;
@@ -49,7 +48,7 @@ std::string llvm::demangle(const std::string &MangledName) {
 bool llvm::nonMicrosoftDemangle(const char *MangledName, std::string &Result) {
   char *Demangled = nullptr;
   if (isItaniumEncoding(MangledName))
-    Demangled = itaniumDemangle(MangledName, nullptr, nullptr, nullptr);
+    Demangled = itaniumDemangle(MangledName);
   else if (isRustEncoding(MangledName))
     Demangled = rustDemangle(MangledName);
   else if (isDLangEncoding(MangledName))

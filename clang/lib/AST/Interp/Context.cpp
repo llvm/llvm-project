@@ -78,9 +78,11 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 std::optional<PrimType> Context::classify(QualType T) const {
-  if (T->isReferenceType() || T->isPointerType()) {
+  if (T->isFunctionPointerType() || T->isFunctionReferenceType())
+    return PT_FnPtr;
+
+  if (T->isReferenceType() || T->isPointerType())
     return PT_Ptr;
-  }
 
   if (T->isBooleanType())
     return PT_Bool;
@@ -129,6 +131,12 @@ std::optional<PrimType> Context::classify(QualType T) const {
 
 unsigned Context::getCharBit() const {
   return Ctx.getTargetInfo().getCharWidth();
+}
+
+/// Simple wrapper around getFloatTypeSemantics() to make code a
+/// little shorter.
+const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
+  return Ctx.getFloatTypeSemantics(T);
 }
 
 bool Context::Run(State &Parent, Function *Func, APValue &Result) {

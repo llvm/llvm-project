@@ -1,3 +1,6 @@
+//
+// NOTE: this test requires gpu-sm80
+//
 // RUN: mlir-opt \
 // RUN: --pass-pipeline="builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-nvgpu-to-nvvm,affine-expand-index-ops,lower-affine,convert-arith-to-llvm),convert-vector-to-llvm,canonicalize,cse,gpu.module(gpu-to-cubin{chip=sm_80 features=+ptx71}))" \
 // RUN: %s \
@@ -5,7 +8,7 @@
 // RUN:            --convert-arith-to-llvm --gpu-to-llvm --reconcile-unrealized-casts \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
-// RUN:   --shared-libs=%mlir_runner_utils \
+// RUN:   --shared-libs=%mlir_c_runner_utils \
 // RUN:   --e main --entry-point-result=void \
 // RUN: | FileCheck %s
 
@@ -339,7 +342,7 @@ module attributes {gpu.container_module} {
       vector.print %pb0 : vector<32xf16>
     }
 
-    // Maps the provided host buffer into the device address space.
+    // Maps the provided host buffers into the device address space.
     // Writes from the host are guaranteed to be visible to device
     // kernels that are launched afterwards. Writes from the device
     // are guaranteed to be visible on the host after synchronizing
@@ -364,6 +367,12 @@ module attributes {gpu.container_module} {
                  %m : memref<16x2xi16>,
                  %b : memref<8x32xf16>,
                  %c : memref<16x8xf16>)
+
+    // Unmaps the host buffers.
+    gpu.host_unregister %cast_a : memref<*xf16>
+    gpu.host_unregister %cast_m : memref<*xi16>
+    gpu.host_unregister %cast_b : memref<*xf16>
+    gpu.host_unregister %cast_c : memref<*xf16>
 
     //
     // Verify computed matrix C.

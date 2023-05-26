@@ -104,7 +104,8 @@ extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,
   unwrap(jit)->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
     symbolMap[interner(unwrap(name))] =
-        llvm::JITEvaluatedSymbol::fromPointer(sym);
+        { llvm::orc::ExecutorAddr::fromPtr(sym),
+          llvm::JITSymbolFlags::Exported };
     return symbolMap;
   });
 }

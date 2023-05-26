@@ -110,6 +110,8 @@ extern template std::optional<bool> IsContiguous(
     const ComplexPart &, FoldingContext &);
 extern template std::optional<bool> IsContiguous(
     const CoarrayRef &, FoldingContext &);
+extern template std::optional<bool> IsContiguous(
+    const Symbol &, FoldingContext &);
 template <typename A>
 bool IsSimplyContiguous(const A &x, FoldingContext &context) {
   return IsContiguous(x, context).value_or(false);

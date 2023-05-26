@@ -565,7 +565,7 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
     // reserved input we needed. Also for PAL, make sure we don't clobber
     // the GIT pointer passed in SGPR0 or SGPR8.
     if (!MRI.isPhysRegUsed(Reg) && MRI.isAllocatable(Reg) &&
-        !TRI->isSubRegisterEq(Reg, GITPtrLoReg)) {
+        (!GITPtrLoReg || !TRI->isSubRegisterEq(Reg, GITPtrLoReg))) {
       MRI.replaceRegWith(ScratchRsrcReg, Reg);
       MFI->setScratchRSrcReg(Reg);
       return Reg;
@@ -1350,6 +1350,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
             TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
           if (FuncInfo->allocateVGPRSpillToAGPR(MF, FI,
                                                 TRI->isAGPR(MRI, VReg))) {
+            assert(RS != nullptr);
             // FIXME: change to enterBasicBlockEnd()
             RS->enterBasicBlock(MBB);
             TRI->eliminateFrameIndex(MI, 0, FIOp, RS);

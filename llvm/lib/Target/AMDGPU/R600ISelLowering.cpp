@@ -953,10 +953,8 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   unsigned SrcAS = ASC->getSrcAddressSpace();
   unsigned DestAS = ASC->getDestAddressSpace();
 
-  if (auto *ConstSrc = dyn_cast<ConstantSDNode>(Op.getOperand(0))) {
-    if (SrcAS == AMDGPUAS::FLAT_ADDRESS && ConstSrc->isZero())
-      return DAG.getConstant(TM.getNullPointerValue(DestAS), SL, VT);
-  }
+  if (isNullConstant(Op.getOperand(0)) && SrcAS == AMDGPUAS::FLAT_ADDRESS)
+    return DAG.getConstant(TM.getNullPointerValue(DestAS), SL, VT);
 
   return Op;
 }

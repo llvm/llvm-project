@@ -13,7 +13,7 @@ declare <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double>, <2 x double>, i8 immarg
 
 define double @elts_addsub_v2f64(<2 x double> %0, <2 x double> %1) {
 ; CHECK-LABEL: @elts_addsub_v2f64(
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP0:%.*]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
 ; CHECK-NEXT:    ret double [[TMP5]]
@@ -181,7 +181,7 @@ define double @PR48476_fsub(<2 x double> %x) {
 define double @PR48476_fadd_fsub(<2 x double> %x) {
 ; CHECK-LABEL: @PR48476_fadd_fsub(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[X:%.*]], <double poison, double 0.000000e+00>
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> undef, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[S]], [[X]]
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
 ; CHECK-NEXT:    ret double [[VECEXT]]

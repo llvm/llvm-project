@@ -25,7 +25,7 @@ static inline int is_punctuation_character(int c) {
 TEST(LlvmLibcIsPunct, DefaultLocale) {
   // Loops through all characters, verifying that punctuation characters
   // return a non-zero integer, and everything else returns zero.
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     if (is_punctuation_character(ch))
       EXPECT_NE(__llvm_libc::ispunct(ch), 0);
     else

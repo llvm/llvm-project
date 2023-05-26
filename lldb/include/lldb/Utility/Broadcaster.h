@@ -112,103 +112,6 @@ private:
   listener_collection m_listeners;
 
   mutable std::recursive_mutex m_manager_mutex;
-
-  // A couple of comparator classes for find_if:
-
-  class BroadcasterClassMatches {
-  public:
-    BroadcasterClassMatches(const ConstString &broadcaster_class)
-        : m_broadcaster_class(broadcaster_class) {}
-
-    ~BroadcasterClassMatches() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      return (input.first.GetBroadcasterClass() == m_broadcaster_class);
-    }
-
-  private:
-    ConstString m_broadcaster_class;
-  };
-
-  class BroadcastEventSpecMatches {
-  public:
-    BroadcastEventSpecMatches(const BroadcastEventSpec &broadcaster_spec)
-        : m_broadcaster_spec(broadcaster_spec) {}
-
-    ~BroadcastEventSpecMatches() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      return (input.first.IsContainedIn(m_broadcaster_spec));
-    }
-
-  private:
-    BroadcastEventSpec m_broadcaster_spec;
-  };
-
-  class ListenerMatchesAndSharedBits {
-  public:
-    explicit ListenerMatchesAndSharedBits(
-        const BroadcastEventSpec &broadcaster_spec,
-        const lldb::ListenerSP &listener_sp)
-        : m_broadcaster_spec(broadcaster_spec), m_listener_sp(listener_sp) {}
-
-    ~ListenerMatchesAndSharedBits() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      return (input.first.GetBroadcasterClass() ==
-                  m_broadcaster_spec.GetBroadcasterClass() &&
-              (input.first.GetEventBits() &
-               m_broadcaster_spec.GetEventBits()) != 0 &&
-              input.second == m_listener_sp);
-    }
-
-  private:
-    BroadcastEventSpec m_broadcaster_spec;
-    const lldb::ListenerSP m_listener_sp;
-  };
-
-  class ListenerMatches {
-  public:
-    explicit ListenerMatches(const lldb::ListenerSP &in_listener_sp)
-        : m_listener_sp(in_listener_sp) {}
-
-    ~ListenerMatches() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      if (input.second == m_listener_sp)
-        return true;
-
-      return false;
-    }
-
-  private:
-    const lldb::ListenerSP m_listener_sp;
-  };
-
-  class ListenerMatchesPointer {
-  public:
-    ListenerMatchesPointer(const Listener *in_listener)
-        : m_listener(in_listener) {}
-
-    ~ListenerMatchesPointer() = default;
-
-    bool operator()(const event_listener_key &input) const {
-      if (input.second.get() == m_listener)
-        return true;
-
-      return false;
-    }
-
-    bool operator()(const lldb::ListenerSP &input) const {
-      if (input.get() == m_listener)
-        return true;
-
-      return false;
-    }
-
-  private:
-    const Listener *m_listener;
-  };
 };
 
 /// \class Broadcaster Broadcaster.h "lldb/Utility/Broadcaster.h" An event
@@ -406,6 +309,10 @@ public:
 
   lldb::BroadcasterManagerSP GetManager();
 
+  virtual void SetShadowListener(lldb::ListenerSP listener_sp) {
+    m_broadcaster_sp->m_shadow_listener = listener_sp;
+  }
+
 protected:
   /// BroadcasterImpl contains the actual Broadcaster implementation.  The
   /// Broadcaster makes a BroadcasterImpl which lives as long as it does.  The
@@ -512,6 +419,10 @@ protected:
     /// At some point we may want to have a stack or Listener collections, but
     /// for now this is just for private hijacking.
     std::vector<uint32_t> m_hijacking_masks;
+
+    /// A optional listener that all private events get also broadcasted to,
+    /// on top the hijacked / default listeners.
+    lldb::ListenerSP m_shadow_listener = nullptr;
 
   private:
     BroadcasterImpl(const BroadcasterImpl &) = delete;

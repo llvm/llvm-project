@@ -22,10 +22,12 @@
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
 #include <type_traits>
@@ -44,9 +46,6 @@ enum class SkipPast {
   None,
   /// An optional reference should be skipped past.
   Reference,
-  /// An optional reference should be skipped past, then an optional pointer
-  /// should be skipped past.
-  ReferenceThenPointer,
 };
 
 /// Indicates the result of a tentative comparison.
@@ -177,10 +176,6 @@ public:
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
-  const DataflowAnalysisContext::Options &getAnalysisOptions() {
-    return DACtx->getOptions();
-  }
-
   /// Creates and returns an environment to use for an inline analysis  of the
   /// callee. Uses the storage location from each argument in the `Call` as the
   /// storage location for the corresponding parameter in the callee.
@@ -197,7 +192,8 @@ public:
 
   /// Moves gathered information back into `this` from a `CalleeEnv` created via
   /// `pushCall`.
-  void popCall(const Environment &CalleeEnv);
+  void popCall(const CallExpr *Call, const Environment &CalleeEnv);
+  void popCall(const CXXConstructExpr *Call, const Environment &CalleeEnv);
 
   /// Returns true if and only if the environment is equivalent to `Other`, i.e
   /// the two environments:
@@ -259,33 +255,120 @@ public:
   ///
   /// Requirements:
   ///
-  ///  `D` must not be assigned a storage location in the environment.
+  ///  `D` must not already have a storage location in the environment.
+  ///
+  ///  If `D` has reference type, `Loc` must refer directly to the referenced
+  ///  object (if any), not to a `ReferenceValue`, and it is not permitted to
+  ///  later change `Loc` to refer to a `ReferenceValue.`
   void setStorageLocation(const ValueDecl &D, StorageLocation &Loc);
 
-  /// Returns the storage location assigned to `D` in the environment, applying
-  /// the `SP` policy for skipping past indirections, or null if `D` isn't
-  /// assigned a storage location in the environment.
-  StorageLocation *getStorageLocation(const ValueDecl &D, SkipPast SP) const;
+  /// Returns the storage location assigned to `D` in the environment, or null
+  /// if `D` isn't assigned a storage location in the environment.
+  ///
+  /// Note that if `D` has reference type, the storage location that is returned
+  /// refers directly to the referenced object, not a `ReferenceValue`.
+  StorageLocation *getStorageLocation(const ValueDecl &D) const;
 
   /// Assigns `Loc` as the storage location of `E` in the environment.
+  ///
+  /// This function is deprecated; prefer `setStorageLocationStrict()`.
+  /// For details, see https://discourse.llvm.org/t/70086.
   ///
   /// Requirements:
   ///
   ///  `E` must not be assigned a storage location in the environment.
   void setStorageLocation(const Expr &E, StorageLocation &Loc);
 
+  /// Assigns `Loc` as the storage location of the glvalue `E` in the
+  /// environment.
+  ///
+  /// This function is the preferred alternative to
+  /// `setStorageLocation(const Expr &, StorageLocation &)`. Once the migration
+  /// to strict handling of value categories is complete (see
+  /// https://discourse.llvm.org/t/70086), `setStorageLocation()` will be
+  /// removed and this function will be renamed to `setStorageLocation()`.
+  ///
+  /// Requirements:
+  ///
+  ///  `E` must not be assigned a storage location in the environment.
+  ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
+  void setStorageLocationStrict(const Expr &E, StorageLocation &Loc);
+
   /// Returns the storage location assigned to `E` in the environment, applying
   /// the `SP` policy for skipping past indirections, or null if `E` isn't
   /// assigned a storage location in the environment.
+  ///
+  /// This function is deprecated; prefer `getStorageLocationStrict()`.
+  /// For details, see https://discourse.llvm.org/t/70086.
   StorageLocation *getStorageLocation(const Expr &E, SkipPast SP) const;
+
+  /// Returns the storage location assigned to the glvalue `E` in the
+  /// environment, or null if `E` isn't assigned a storage location in the
+  /// environment.
+  ///
+  /// If the storage location for `E` is associated with a
+  /// `ReferenceValue RefVal`, returns `RefVal.getReferentLoc()` instead.
+  ///
+  /// This function is the preferred alternative to
+  /// `getStorageLocation(const Expr &, SkipPast)`. Once the migration
+  /// to strict handling of value categories is complete (see
+  /// https://discourse.llvm.org/t/70086), `getStorageLocation()` will be
+  /// removed and this function will be renamed to `getStorageLocation()`.
+  ///
+  /// Requirements:
+  ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
+  StorageLocation *getStorageLocationStrict(const Expr &E) const;
 
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
   StorageLocation *getThisPointeeStorageLocation() const;
 
-  /// Returns the storage location of the return value or null, if unset.
-  StorageLocation *getReturnStorageLocation() const;
+  /// Returns the return value of the current function. This can be null if:
+  /// - The function has a void return type
+  /// - No return value could be determined for the function, for example
+  ///   because it calls a function without a body.
+  ///
+  /// Requirements:
+  ///  The current function must have a non-reference return type.
+  Value *getReturnValue() const {
+    assert(getCurrentFunc() != nullptr &&
+           !getCurrentFunc()->getReturnType()->isReferenceType());
+    return ReturnVal;
+  }
+
+  /// Returns the storage location for the reference returned by the current
+  /// function. This can be null if function doesn't return a single consistent
+  /// reference.
+  ///
+  /// Requirements:
+  ///  The current function must have a reference return type.
+  StorageLocation *getReturnStorageLocation() const {
+    assert(getCurrentFunc() != nullptr &&
+           getCurrentFunc()->getReturnType()->isReferenceType());
+    return ReturnLoc;
+  }
+
+  /// Sets the return value of the current function.
+  ///
+  /// Requirements:
+  ///  The current function must have a non-reference return type.
+  void setReturnValue(Value *Val) {
+    assert(getCurrentFunc() != nullptr &&
+           !getCurrentFunc()->getReturnType()->isReferenceType());
+    ReturnVal = Val;
+  }
+
+  /// Sets the storage location for the reference returned by the current
+  /// function.
+  ///
+  /// Requirements:
+  ///  The current function must have a reference return type.
+  void setReturnStorageLocation(StorageLocation *Loc) {
+    assert(getCurrentFunc() != nullptr &&
+           getCurrentFunc()->getReturnType()->isReferenceType());
+    ReturnLoc = Loc;
+  }
 
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
@@ -304,56 +387,81 @@ public:
   /// Assigns `Val` as the value of `Loc` in the environment.
   void setValue(const StorageLocation &Loc, Value &Val);
 
+  /// Assigns `Val` as the value of the prvalue `E` in the environment.
+  ///
+  /// If `E` is not yet associated with a storage location, associates it with
+  /// a newly created storage location. In any case, associates the storage
+  /// location of `E` with `Val`.
+  ///
+  /// Once the migration to strict handling of value categories is complete
+  /// (see https://discourse.llvm.org/t/70086), this function will be renamed to
+  /// `setValue()`. At this point, prvalue expressions will be associated
+  /// directly with `Value`s, and the legacy behavior of associating prvalue
+  /// expressions with storage locations (as described above) will be
+  /// eliminated.
+  ///
+  /// Requirements:
+  ///
+  ///  `E` must be a prvalue
+  ///  `Val` must not be a `ReferenceValue`
+  void setValueStrict(const Expr &E, Value &Val);
+
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
   Value *getValue(const StorageLocation &Loc) const;
 
   /// Equivalent to `getValue(getStorageLocation(D, SP), SkipPast::None)` if `D`
   /// is assigned a storage location in the environment, otherwise returns null.
-  Value *getValue(const ValueDecl &D, SkipPast SP) const;
+  Value *getValue(const ValueDecl &D) const;
 
   /// Equivalent to `getValue(getStorageLocation(E, SP), SkipPast::None)` if `E`
   /// is assigned a storage location in the environment, otherwise returns null.
+  ///
+  /// This function is deprecated; prefer `getValueStrict()`. For details, see
+  /// https://discourse.llvm.org/t/70086.
   Value *getValue(const Expr &E, SkipPast SP) const;
 
-  /// Transfers ownership of `Loc` to the analysis context and returns a
-  /// reference to it.
+  /// Returns the `Value` assigned to the prvalue `E` in the environment, or
+  /// null if `E` isn't assigned a value in the environment.
+  ///
+  /// This function is the preferred alternative to
+  /// `getValue(const Expr &, SkipPast)`. Once the migration to strict handling
+  /// of value categories is complete (see https://discourse.llvm.org/t/70086),
+  /// `getValue()` will be removed and this function will be renamed to
+  /// `getValue()`.
   ///
   /// Requirements:
   ///
-  ///  `Loc` must not be null.
-  template <typename T>
-  std::enable_if_t<std::is_base_of<StorageLocation, T>::value, T &>
-  takeOwnership(std::unique_ptr<T> Loc) {
-    return DACtx->takeOwnership(std::move(Loc));
-  }
+  ///  `E` must be a prvalue
+  Value *getValueStrict(const Expr &E) const;
 
-  /// Transfers ownership of `Val` to the analysis context and returns a
-  /// reference to it.
+  // FIXME: should we deprecate the following & call arena().create() directly?
+
+  /// Creates a `T` (some subclass of `Value`), forwarding `args` to the
+  /// constructor, and returns a reference to it.
   ///
-  /// Requirements:
-  ///
-  ///  `Val` must not be null.
-  template <typename T>
+  /// The analysis context takes ownership of the created object. The object
+  /// will be destroyed when the analysis context is destroyed.
+  template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<Value, T>::value, T &>
-  takeOwnership(std::unique_ptr<T> Val) {
-    return DACtx->takeOwnership(std::move(Val));
+  create(Args &&...args) {
+    return DACtx->arena().create<T>(std::forward<Args>(args)...);
   }
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`
   AtomicBoolValue &getBoolLiteralValue(bool Value) const {
-    return DACtx->getBoolLiteralValue(Value);
+    return DACtx->arena().makeLiteral(Value);
   }
 
   /// Returns an atomic boolean value.
   BoolValue &makeAtomicBoolValue() const {
-    return DACtx->createAtomicBoolValue();
+    return DACtx->arena().create<AtomicBoolValue>();
   }
 
   /// Returns a unique instance of boolean Top.
   BoolValue &makeTopBoolValue() const {
-    return DACtx->createTopBoolValue();
+    return DACtx->arena().create<TopBoolValue>();
   }
 
   /// Returns a boolean value that represents the conjunction of `LHS` and
@@ -361,7 +469,7 @@ public:
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
   BoolValue &makeAnd(BoolValue &LHS, BoolValue &RHS) const {
-    return DACtx->getOrCreateConjunction(LHS, RHS);
+    return DACtx->arena().makeAnd(LHS, RHS);
   }
 
   /// Returns a boolean value that represents the disjunction of `LHS` and
@@ -369,13 +477,13 @@ public:
   /// order, will return the same result. If the given boolean values represent
   /// the same value, the result will be the value itself.
   BoolValue &makeOr(BoolValue &LHS, BoolValue &RHS) const {
-    return DACtx->getOrCreateDisjunction(LHS, RHS);
+    return DACtx->arena().makeOr(LHS, RHS);
   }
 
   /// Returns a boolean value that represents the negation of `Val`. Subsequent
   /// calls with the same argument will return the same result.
   BoolValue &makeNot(BoolValue &Val) const {
-    return DACtx->getOrCreateNegation(Val);
+    return DACtx->arena().makeNot(Val);
   }
 
   /// Returns a boolean value represents `LHS` => `RHS`. Subsequent calls with
@@ -383,7 +491,7 @@ public:
   /// values represent the same value, the result will be a value that
   /// represents the true boolean literal.
   BoolValue &makeImplication(BoolValue &LHS, BoolValue &RHS) const {
-    return DACtx->getOrCreateImplication(LHS, RHS);
+    return DACtx->arena().makeImplies(LHS, RHS);
   }
 
   /// Returns a boolean value represents `LHS` <=> `RHS`. Subsequent calls with
@@ -391,21 +499,11 @@ public:
   /// result. If the given boolean values represent the same value, the result
   /// will be a value that represents the true boolean literal.
   BoolValue &makeIff(BoolValue &LHS, BoolValue &RHS) const {
-    return DACtx->getOrCreateIff(LHS, RHS);
+    return DACtx->arena().makeEquals(LHS, RHS);
   }
 
   /// Returns the token that identifies the flow condition of the environment.
   AtomicBoolValue &getFlowConditionToken() const { return *FlowConditionToken; }
-
-  /// Builds and returns the logical formula defining the flow condition
-  /// identified by `Token`. If a value in the formula is present as a key in
-  /// `Substitutions`, it will be substituted with the value it maps to.
-  BoolValue &buildAndSubstituteFlowCondition(
-      AtomicBoolValue &Token,
-      llvm::DenseMap<AtomicBoolValue *, BoolValue *> Substitutions) {
-    return DACtx->buildAndSubstituteFlowCondition(Token,
-                                                  std::move(Substitutions));
-  }
 
   /// Adds `Val` to the set of clauses that constitute the flow condition.
   void addToFlowCondition(BoolValue &Val);
@@ -418,16 +516,19 @@ public:
   /// returns null.
   const DeclContext *getDeclCtx() const { return CallStack.back(); }
 
+  /// Returns the function currently being analyzed, or null if the code being
+  /// analyzed isn't part of a function.
+  const FunctionDecl *getCurrentFunc() const {
+    return dyn_cast<FunctionDecl>(getDeclCtx());
+  }
+
   /// Returns whether this `Environment` can be extended to analyze the given
   /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
   /// given `MaxDepth`.
   bool canDescend(unsigned MaxDepth, const DeclContext *Callee) const;
 
-  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
-  /// returns null.
-  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F) {
-    return DACtx->getControlFlowContext(F);
-  }
+  /// Returns the `DataflowAnalysisContext` used by the environment.
+  DataflowAnalysisContext &getDataflowAnalysisContext() const { return *DACtx; }
 
   LLVM_DUMP_METHOD void dump() const;
   LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
@@ -457,22 +558,25 @@ private:
   void pushCallInternal(const FunctionDecl *FuncDecl,
                         ArrayRef<const Expr *> Args);
 
-  /// Assigns storage locations and values to all variables in `Vars`.
-  void initVars(llvm::DenseSet<const VarDecl *> Vars);
+  /// Assigns storage locations and values to all global variables, fields
+  /// and functions referenced in `FuncDecl`. `FuncDecl` must have a body.
+  void initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl);
 
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 
-
-  // FIXME: move the fields `CallStack`, `ReturnLoc` and `ThisPointeeLoc` into a
-  // separate call-context object, shared between environments in the same call.
+  // FIXME: move the fields `CallStack`, `ReturnVal`, `ReturnLoc` and
+  // `ThisPointeeLoc` into a separate call-context object, shared between
+  // environments in the same call.
   // https://github.com/llvm/llvm-project/issues/59005
 
   // `DeclContext` of the block being analysed if provided.
   std::vector<const DeclContext *> CallStack;
 
-  // In a properly initialized `Environment`, `ReturnLoc` should only be null if
-  // its `DeclContext` could not be cast to a `FunctionDecl`.
+  // Value returned by the function (if it has non-reference return type).
+  Value *ReturnVal = nullptr;
+  // Storage location of the reference returned by the function (if it has
+  // reference return type).
   StorageLocation *ReturnLoc = nullptr;
   // The storage location of the `this` pointee. Should only be null if the
   // function being analyzed is only a function and not a method.
@@ -495,6 +599,19 @@ private:
 
   AtomicBoolValue *FlowConditionToken;
 };
+
+/// Returns the storage location for the implicit object of a
+/// `CXXMemberCallExpr`, or null if none is defined in the environment.
+/// Dereferences the pointer if the member call expression was written using
+/// `->`.
+AggregateStorageLocation *
+getImplicitObjectLocation(const CXXMemberCallExpr &MCE, const Environment &Env);
+
+/// Returns the storage location for the base object of a `MemberExpr`, or null
+/// if none is defined in the environment. Dereferences the pointer if the
+/// member expression was written using `->`.
+AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
+                                                const Environment &Env);
 
 } // namespace dataflow
 } // namespace clang

@@ -193,8 +193,13 @@ Expected<std::unique_ptr<IFSStub>> ifs::readIFSFromBuffer(StringRef Buf) {
         "IFS version " + Stub->IfsVersion.getAsString() + " is unsupported.",
         std::make_error_code(std::errc::invalid_argument));
   if (Stub->Target.ArchString) {
-    Stub->Target.Arch =
+    uint16_t eMachine =
         ELF::convertArchNameToEMachine(*Stub->Target.ArchString);
+    if (eMachine == ELF::EM_NONE)
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "IFS arch '" + *Stub->Target.ArchString + "' is unsupported");
+    Stub->Target.Arch = eMachine;
   }
   return std::move(Stub);
 }

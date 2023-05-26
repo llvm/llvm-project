@@ -49,7 +49,7 @@ define void @test(ptr nocapture %t2) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <4 x i32> [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 undef, i32 3>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 poison, i32 3>
 ; CHECK-NEXT:    [[T71:%.*]] = insertelement <8 x i32> [[TMP11]], i32 [[T34]], i32 6
 ; CHECK-NEXT:    [[T76:%.*]] = shl <8 x i32> [[T71]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    store <8 x i32> [[T76]], ptr [[T2]], align 4

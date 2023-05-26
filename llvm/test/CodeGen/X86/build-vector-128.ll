@@ -556,30 +556,26 @@ define void @pr60168_buildvector_of_zeros_and_undef(<2 x i32> %x, ptr %out) {
 ; SSE2-32-LABEL: pr60168_buildvector_of_zeros_and_undef:
 ; SSE2-32:       # %bb.0:
 ; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-32-NEXT:    movd %eax, %xmm1
-; SSE2-32-NEXT:    xorps %xmm2, %xmm2
-; SSE2-32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,0]
 ; SSE2-32-NEXT:    paddd %xmm0, %xmm0
-; SSE2-32-NEXT:    psubd %xmm0, %xmm2
-; SSE2-32-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-32-NEXT:    pxor %xmm1, %xmm1
+; SSE2-32-NEXT:    psubd %xmm0, %xmm1
+; SSE2-32-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-32-NEXT:    psrad $31, %xmm0
-; SSE2-32-NEXT:    pxor %xmm0, %xmm2
-; SSE2-32-NEXT:    psubd %xmm0, %xmm2
-; SSE2-32-NEXT:    movq %xmm2, (%eax)
+; SSE2-32-NEXT:    pxor %xmm0, %xmm1
+; SSE2-32-NEXT:    psubd %xmm0, %xmm1
+; SSE2-32-NEXT:    movq %xmm1, (%eax)
 ; SSE2-32-NEXT:    retl
 ;
 ; SSE2-64-LABEL: pr60168_buildvector_of_zeros_and_undef:
 ; SSE2-64:       # %bb.0:
-; SSE2-64-NEXT:    movd %eax, %xmm1
-; SSE2-64-NEXT:    xorps %xmm2, %xmm2
-; SSE2-64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,0]
 ; SSE2-64-NEXT:    paddd %xmm0, %xmm0
-; SSE2-64-NEXT:    psubd %xmm0, %xmm2
-; SSE2-64-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-64-NEXT:    pxor %xmm1, %xmm1
+; SSE2-64-NEXT:    psubd %xmm0, %xmm1
+; SSE2-64-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-64-NEXT:    psrad $31, %xmm0
-; SSE2-64-NEXT:    pxor %xmm0, %xmm2
-; SSE2-64-NEXT:    psubd %xmm0, %xmm2
-; SSE2-64-NEXT:    movq %xmm2, (%rdi)
+; SSE2-64-NEXT:    pxor %xmm0, %xmm1
+; SSE2-64-NEXT:    psubd %xmm0, %xmm1
+; SSE2-64-NEXT:    movq %xmm1, (%rdi)
 ; SSE2-64-NEXT:    retq
 ;
 ; SSE41-32-LABEL: pr60168_buildvector_of_zeros_and_undef:

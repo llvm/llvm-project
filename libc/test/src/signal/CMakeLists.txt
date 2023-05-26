@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_signal_unittests)
+add_custom_target(libc_signal_unittests)
 
 add_libc_unittest(
   raise_test

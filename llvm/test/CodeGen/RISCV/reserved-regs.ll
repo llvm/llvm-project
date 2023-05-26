@@ -57,9 +57,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+reserve-x31 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X31
 ; RUN: llc -mtriple=riscv64 -mattr=+reserve-x31 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X31
 
-; RUN: llc -mtriple=riscv64-fuchsia -verify-machineinstrs < %s | FileCheck %s -check-prefix=X18
-; RUN: llc -mtriple=riscv64-linux-android -verify-machineinstrs < %s | FileCheck %s -check-prefix=X18
-
 ; This program is free to use all registers, but needs a stack pointer for
 ; spill values, so do not test for reserving the stack pointer.
 

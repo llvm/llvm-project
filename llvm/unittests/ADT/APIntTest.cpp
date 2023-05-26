@@ -1388,6 +1388,9 @@ TEST(APIntTest, toString) {
   APInt(8, 255, isSigned).toString(S, 10, isSigned, true);
   EXPECT_EQ(std::string(S), "255");
   S.clear();
+  APInt(8, 255, isSigned).toString(S, 16, isSigned, true, /*UpperCase=*/false);
+  EXPECT_EQ(std::string(S), "0xff");
+  S.clear();
   APInt(8, 255, isSigned).toString(S, 16, isSigned, true);
   EXPECT_EQ(std::string(S), "0xFF");
   S.clear();

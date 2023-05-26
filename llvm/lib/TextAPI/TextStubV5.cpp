@@ -293,8 +293,10 @@ Expected<TargetList> getTargetsSection(const Object *Section) {
     if (!TargetOrErr)
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Target));
     TargetOrErr->MinDeployment = Version;
-
-    IFTargets.push_back(*TargetOrErr);
+    // Convert to LLVM::Triple to accurately compute minOS + platform + arch
+    // pairing.
+    IFTargets.push_back(
+        MachO::Target(Triple(getTargetTripleName(*TargetOrErr))));
   }
   return std::move(IFTargets);
 }

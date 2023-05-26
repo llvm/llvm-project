@@ -12,9 +12,6 @@
 // GCC does not support the -fexperimental-library flag
 // UNSUPPORTED: gcc
 
-// Clang does not support the -fexperimental-library flag before LLVM 15.0
-// UNSUPPORTED: clang-14
-
 // AppleClang does not support the -fexperimental-library flag yet
 // UNSUPPORTED: apple-clang-14.0
 
@@ -26,6 +23,6 @@
 
 #include <version>
 
-#ifdef _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
-#   error "-fexperimental-library should enable <format>"
+#ifdef _LIBCPP_HAS_NO_INCOMPLETE_PSTL
+#  error "-fexperimental-library should enable the PSTL"
 #endif

@@ -252,12 +252,17 @@ static llvm::Error AddPtraceScopeNote(llvm::Error original_error) {
   }
 }
 
-// Public Static Methods
+NativeProcessLinux::Manager::Manager(MainLoop &mainloop)
+    : NativeProcessProtocol::Manager(mainloop) {
+  Status status;
+  m_sigchld_handle = mainloop.RegisterSignal(
+      SIGCHLD, [this](MainLoopBase &) { SigchldHandler(); }, status);
+  assert(m_sigchld_handle && status.Success());
+}
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
-                                    NativeDelegate &native_delegate,
-                                    MainLoop &mainloop) const {
+NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
+                                    NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
 
   MaybeLogLaunchInfo(launch_info);
@@ -298,13 +303,12 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
 
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      *arch_or, mainloop, {pid}));
+      *arch_or, *this, {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessLinux::Factory::Attach(
-    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
-    MainLoop &mainloop) const {
+NativeProcessLinux::Manager::Attach(
+    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
@@ -317,12 +321,12 @@ NativeProcessLinux::Factory::Attach(
   if (!arch_or)
     return arch_or.takeError();
 
-  return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
-      pid, -1, native_delegate, *arch_or, mainloop, tids));
+  return std::unique_ptr<NativeProcessLinux>(
+      new NativeProcessLinux(pid, -1, native_delegate, *arch_or, *this, tids));
 }
 
 NativeProcessLinux::Extension
-NativeProcessLinux::Factory::GetSupportedExtensions() const {
+NativeProcessLinux::Manager::GetSupportedExtensions() const {
   NativeProcessLinux::Extension supported =
       Extension::multiprocess | Extension::fork | Extension::vfork |
       Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
@@ -337,23 +341,98 @@ NativeProcessLinux::Factory::GetSupportedExtensions() const {
   return supported;
 }
 
+static std::optional<std::pair<lldb::pid_t, WaitStatus>> WaitPid() {
+  Log *log = GetLog(POSIXLog::Process);
+
+  int status;
+  ::pid_t wait_pid = llvm::sys::RetryAfterSignal(
+      -1, ::waitpid, -1, &status, __WALL | __WNOTHREAD | WNOHANG);
+
+  if (wait_pid == 0)
+    return std::nullopt;
+
+  if (wait_pid == -1) {
+    Status error(errno, eErrorTypePOSIX);
+    LLDB_LOG(log, "waitpid(-1, &status, _) failed: {1}", error);
+    return std::nullopt;
+  }
+
+  WaitStatus wait_status = WaitStatus::Decode(status);
+
+  LLDB_LOG(log, "waitpid(-1, &status, _) = {0}, status = {1}", wait_pid,
+           wait_status);
+  return std::make_pair(wait_pid, wait_status);
+}
+
+void NativeProcessLinux::Manager::SigchldHandler() {
+  Log *log = GetLog(POSIXLog::Process);
+  while (true) {
+    auto wait_result = WaitPid();
+    if (!wait_result)
+      return;
+    lldb::pid_t pid = wait_result->first;
+    WaitStatus status = wait_result->second;
+
+    // Ask each process whether it wants to handle the event. Each event should
+    // be handled by exactly one process, but thread creation events require
+    // special handling.
+    // Thread creation consists of two events (one on the parent and one on the
+    // child thread) and they can arrive in any order nondeterministically. The
+    // parent event carries the information about the child thread, but not
+    // vice-versa. This means that if the child event arrives first, it may not
+    // be handled by any process (because it doesn't know the thread belongs to
+    // it).
+    bool handled = llvm::any_of(m_processes, [&](NativeProcessLinux *process) {
+      return process->TryHandleWaitStatus(pid, status);
+    });
+    if (!handled) {
+      if (status.type == WaitStatus::Stop && status.status == SIGSTOP) {
+        // Store the thread creation event for later collection.
+        m_unowned_threads.insert(pid);
+      } else {
+        LLDB_LOG(log, "Ignoring waitpid event {0} for pid {1}", status, pid);
+      }
+    }
+  }
+}
+
+void NativeProcessLinux::Manager::CollectThread(::pid_t tid) {
+  Log *log = GetLog(POSIXLog::Process);
+
+  if (m_unowned_threads.erase(tid))
+    return; // We've encountered this thread already.
+
+  // The TID is not tracked yet, let's wait for it to appear.
+  int status = -1;
+  LLDB_LOG(log,
+           "received clone event for tid {0}. tid not tracked yet, "
+           "waiting for it to appear...",
+           tid);
+  ::pid_t wait_pid =
+      llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, &status, __WALL);
+
+  // It's theoretically possible to get other events if the entire process was
+  // SIGKILLed before we got a chance to check this. In that case, we'll just
+  // clean everything up when we get the process exit event.
+
+  LLDB_LOG(log,
+           "waitpid({0}, &status, __WALL) => {1} (errno: {2}, status = {3})",
+           tid, wait_pid, errno, WaitStatus::Decode(status));
+}
+
 // Public Instance Methods
 
 NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
                                        NativeDelegate &delegate,
-                                       const ArchSpec &arch, MainLoop &mainloop,
+                                       const ArchSpec &arch, Manager &manager,
                                        llvm::ArrayRef<::pid_t> tids)
-    : NativeProcessELF(pid, terminal_fd, delegate), m_arch(arch),
-      m_main_loop(mainloop), m_intel_pt_collector(*this) {
+    : NativeProcessELF(pid, terminal_fd, delegate), m_manager(manager),
+      m_arch(arch), m_intel_pt_collector(*this) {
+  manager.AddProcess(*this);
   if (m_terminal_fd != -1) {
     Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
     assert(status.Success());
   }
-
-  Status status;
-  m_sigchld_handle = mainloop.RegisterSignal(
-      SIGCHLD, [this](MainLoopBase &) { SigchldHandler(); }, status);
-  assert(m_sigchld_handle && status.Success());
 
   for (const auto &tid : tids) {
     NativeThreadLinux &thread = AddThread(tid, /*resume*/ false);
@@ -363,9 +442,6 @@ NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
   // Let our process instance know the thread has stopped.
   SetCurrentThreadID(tids[0]);
   SetState(StateType::eStateStopped, false);
-
-  // Proccess any signals we received before installing our handler
-  SigchldHandler();
 }
 
 llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
@@ -464,7 +540,21 @@ Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {
   return PtraceWrapper(PTRACE_SETOPTIONS, pid, nullptr, (void *)ptrace_opts);
 }
 
-// Handles all waitpid events from the inferior process.
+bool NativeProcessLinux::TryHandleWaitStatus(lldb::pid_t pid,
+                                             WaitStatus status) {
+  if (pid == GetID() &&
+      (status.type == WaitStatus::Exit || status.type == WaitStatus::Signal)) {
+    // The process exited.  We're done monitoring.  Report to delegate.
+    SetExitStatus(status, true);
+    return true;
+  }
+  if (NativeThreadLinux *thread = GetThreadByID(pid)) {
+    MonitorCallback(*thread, status);
+    return true;
+  }
+  return false;
+}
+
 void NativeProcessLinux::MonitorCallback(NativeThreadLinux &thread,
                                          WaitStatus status) {
   Log *log = GetLog(LLDBLog::Process);
@@ -530,27 +620,6 @@ void NativeProcessLinux::MonitorCallback(NativeThreadLinux &thread,
                thread.GetID(), info_err, status, is_main_thread);
     }
   }
-}
-
-void NativeProcessLinux::WaitForCloneNotification(::pid_t pid) {
-  Log *log = GetLog(POSIXLog::Process);
-
-  // The PID is not tracked yet, let's wait for it to appear.
-  int status = -1;
-  LLDB_LOG(log,
-           "received clone event for pid {0}. pid not tracked yet, "
-           "waiting for it to appear...",
-           pid);
-  ::pid_t wait_pid =
-      llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &status, __WALL);
-
-  // It's theoretically possible to get other events if the entire process was
-  // SIGKILLed before we got a chance to check this. In that case, we'll just
-  // clean everything up when we get the process exit event.
-
-  LLDB_LOG(log,
-           "waitpid({0}, &status, __WALL) => {1} (errno: {2}, status = {3})",
-           pid, wait_pid, errno, WaitStatus::Decode(status));
 }
 
 void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
@@ -875,7 +944,7 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
   LLDB_LOG(log, "parent_tid={0}, child_pid={1}, event={2}", parent.GetID(),
            child_pid, event);
 
-  WaitForCloneNotification(child_pid);
+  m_manager.CollectThread(child_pid);
 
   switch (event) {
   case PTRACE_EVENT_CLONE: {
@@ -902,7 +971,7 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
     bool is_vfork = event == PTRACE_EVENT_VFORK;
     std::unique_ptr<NativeProcessLinux> child_process{new NativeProcessLinux(
         static_cast<::pid_t>(child_pid), m_terminal_fd, m_delegate, m_arch,
-        m_main_loop, {static_cast<::pid_t>(child_pid)})};
+        m_manager, {static_cast<::pid_t>(child_pid)})};
     if (!is_vfork)
       child_process->m_software_breakpoints = m_software_breakpoints;
 
@@ -1015,9 +1084,6 @@ Status NativeProcessLinux::Halt() {
 
 Status NativeProcessLinux::Detach() {
   Status error;
-
-  // Stop monitoring the inferior.
-  m_sigchld_handle.reset();
 
   // Tell ptrace to detach from the process.
   if (GetID() == LLDB_INVALID_PROCESS_ID)
@@ -1910,67 +1976,6 @@ void NativeProcessLinux::ThreadWasCreated(NativeThreadLinux &thread) {
     // We will need to wait for this new thread to stop as well before firing
     // the notification.
     thread.RequestStop();
-  }
-}
-
-static std::optional<WaitStatus> HandlePid(::pid_t pid) {
-  Log *log = GetLog(POSIXLog::Process);
-
-  int status;
-  ::pid_t wait_pid = llvm::sys::RetryAfterSignal(
-      -1, ::waitpid, pid, &status, __WALL | __WNOTHREAD | WNOHANG);
-
-  if (wait_pid == 0)
-    return std::nullopt;
-
-  if (wait_pid == -1) {
-    Status error(errno, eErrorTypePOSIX);
-    LLDB_LOG(log, "waitpid({0}, &status, _) failed: {1}", pid,
-             error);
-    return std::nullopt;
-  }
-
-  assert(wait_pid == pid);
-
-  WaitStatus wait_status = WaitStatus::Decode(status);
-
-  LLDB_LOG(log, "waitpid({0})  got status = {1}", pid, wait_status);
-  return wait_status;
-}
-
-void NativeProcessLinux::SigchldHandler() {
-  Log *log = GetLog(POSIXLog::Process);
-
-  // Threads can appear or disappear as a result of event processing, so gather
-  // the events upfront.
-  llvm::DenseMap<lldb::tid_t, WaitStatus> tid_events;
-  bool checked_main_thread = false;
-  for (const auto &thread_up : m_threads) {
-    if (thread_up->GetID() == GetID())
-      checked_main_thread = true;
-
-    if (std::optional<WaitStatus> status = HandlePid(thread_up->GetID()))
-      tid_events.try_emplace(thread_up->GetID(), *status);
-  }
-  // Check the main thread even when we're not tracking it as process exit
-  // events are reported that way.
-  if (!checked_main_thread) {
-    if (std::optional<WaitStatus> status = HandlePid(GetID()))
-      tid_events.try_emplace(GetID(), *status);
-  }
-
-  for (auto &KV : tid_events) {
-    LLDB_LOG(log, "processing {0}({1}) ...", KV.first, KV.second);
-    if (KV.first == GetID() && (KV.second.type == WaitStatus::Exit ||
-                                KV.second.type == WaitStatus::Signal)) {
-
-      // The process exited.  We're done monitoring.  Report to delegate.
-      SetExitStatus(KV.second, true);
-      return;
-    }
-    NativeThreadLinux *thread = GetThreadByID(KV.first);
-    assert(thread && "Why did this thread disappear?");
-    MonitorCallback(*thread, KV.second);
   }
 }
 

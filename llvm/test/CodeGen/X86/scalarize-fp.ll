@@ -434,7 +434,7 @@ define <2 x double> @fadd_splat_splat_nonzero_v2f64(<2 x double> %vx, <2 x doubl
 ; AVX-LABEL: fadd_splat_splat_nonzero_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,1]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,1]
 ; AVX-NEXT:    retq
   %splatx = shufflevector <2 x double> %vx, <2 x double> undef, <2 x i32> <i32 1, i32 1>
   %splaty = shufflevector <2 x double> %vy, <2 x double> undef, <2 x i32> <i32 1, i32 1>
@@ -455,7 +455,7 @@ define <2 x double> @fadd_splat_splat_mismatch_v2f64(<2 x double> %vx, <2 x doub
 ; AVX-LABEL: fadd_splat_splat_mismatch_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,1]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,1]
 ; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %splatx = shufflevector <2 x double> %vx, <2 x double> undef, <2 x i32> <i32 0, i32 0>

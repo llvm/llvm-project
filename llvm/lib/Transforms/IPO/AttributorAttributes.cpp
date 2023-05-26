@@ -1124,8 +1124,7 @@ struct AAPointerInfoImpl
     // outlive a GPU kernel. This is true for shared, constant, and local
     // globals on AMD and NVIDIA GPUs.
     auto HasKernelLifetime = [&](Value *V, Module &M) {
-      Triple T(M.getTargetTriple());
-      if (!(T.isAMDGPU() || T.isNVPTX()))
+      if (!AA::isGPU(M))
         return false;
       switch (AA::GPUAddressSpace(V->getType()->getPointerAddressSpace())) {
       case AA::GPUAddressSpace::Shared:
@@ -1700,6 +1699,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
             return false;
         } else {
           auto PredIt = pred_begin(IntrBB);
+          if (PredIt == pred_end(IntrBB))
+            return false;
           if ((*PredIt) != BB)
             return false;
           if (++PredIt != pred_end(IntrBB))
@@ -1979,7 +1980,7 @@ struct AANoUnwindImpl : AANoUnwind {
         (unsigned)Instruction::CatchSwitch, (unsigned)Instruction::Resume};
 
     auto CheckForNoUnwind = [&](Instruction &I) {
-      if (!I.mayThrow())
+      if (!I.mayThrow(/* IncludePhaseOneUnwind */ true))
         return true;
 
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
@@ -3580,9 +3581,10 @@ struct CachedReachabilityAA : public BaseTy {
     if (!InUpdate)
       QueryCache.erase(&RQI);
 
-    // Insert a plain RQI (w/o exclusion set) if that makes sense.
-    if (RQI.ExclusionSet &&
-        (!UsedExclusionSet || Result == RQITy::Reachable::Yes)) {
+    // Insert a plain RQI (w/o exclusion set) if that makes sense. Two options:
+    // 1) If it is reachable, it doesn't matter if we have an exclusion set for this query.
+    // 2) We did not use the exclusion set, potentially because there is none.
+    if (Result == RQITy::Reachable::Yes || !UsedExclusionSet) {
       RQITy PlainRQI(RQI.From, RQI.To);
       if (!QueryCache.count(&PlainRQI)) {
         RQITy *RQIPtr = new (A.Allocator) RQITy(RQI.From, RQI.To);
@@ -3592,9 +3594,8 @@ struct CachedReachabilityAA : public BaseTy {
       }
     }
 
-    // Check if we need to insert a new permanent RQI.
-    if (!InUpdate && (UsedExclusionSet ||
-                      (Result == RQITy::Reachable::Yes && RQI.ExclusionSet))) {
+    // Check if we need to insert a new permanent RQI with the exclusion set.
+    if (!InUpdate && Result != RQITy::Reachable::Yes && UsedExclusionSet) {
       assert((!RQI.ExclusionSet || !RQI.ExclusionSet->empty()) &&
              "Did not expect empty set!");
       RQITy *RQIPtr = new (A.Allocator)
@@ -7178,7 +7179,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     }
 
     std::optional<APInt> Size = getSize(A, *this, AI);
-    if (MaxHeapToStackSize != -1) {
+    if (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared &&
+        MaxHeapToStackSize != -1) {
       if (!Size || Size->ugt(MaxHeapToStackSize)) {
         LLVM_DEBUG({
           if (!Size)
@@ -7238,7 +7240,8 @@ struct AAPrivatizablePtrImpl : public AAPrivatizablePtr {
   }
 
   /// Identify the type we can chose for a private copy of the underlying
-  /// argument. None means it is not clear yet, nullptr means there is none.
+  /// argument. std::nullopt means it is not clear yet, nullptr means there is
+  /// none.
   virtual std::optional<Type *> identifyPrivatizableType(Attributor &A) = 0;
 
   /// Return a privatizable type that encloses both T0 and T1.
@@ -8658,7 +8661,8 @@ protected:
   /// Determine the underlying locations kinds for \p Ptr, e.g., globals or
   /// arguments, and update the state and access map accordingly.
   void categorizePtrValue(Attributor &A, const Instruction &I, const Value &Ptr,
-                          AAMemoryLocation::StateType &State, bool &Changed);
+                          AAMemoryLocation::StateType &State, bool &Changed,
+                          unsigned AccessAS = 0);
 
   /// Used to allocate access sets.
   BumpPtrAllocator &Allocator;
@@ -8666,14 +8670,24 @@ protected:
 
 void AAMemoryLocationImpl::categorizePtrValue(
     Attributor &A, const Instruction &I, const Value &Ptr,
-    AAMemoryLocation::StateType &State, bool &Changed) {
+    AAMemoryLocation::StateType &State, bool &Changed, unsigned AccessAS) {
   LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Categorize pointer locations for "
                     << Ptr << " ["
                     << getMemoryLocationsAsStr(State.getAssumed()) << "]\n");
 
   auto Pred = [&](Value &Obj) {
+    unsigned ObjectAS = Obj.getType()->getPointerAddressSpace();
     // TODO: recognize the TBAA used for constant accesses.
     MemoryLocationsKind MLK = NO_LOCATIONS;
+
+    // Filter accesses to constant (GPU) memory if we have an AS at the access
+    // site or the object is known to actually have the associated AS.
+    if ((AccessAS == (unsigned)AA::GPUAddressSpace::Constant ||
+         (ObjectAS == (unsigned)AA::GPUAddressSpace::Constant &&
+          isIdentifiedObject(&Obj))) &&
+        AA::isGPU(*I.getModule()))
+      return true;
+
     if (isa<UndefValue>(&Obj))
       return true;
     if (isa<Argument>(&Obj)) {
@@ -8697,8 +8711,8 @@ void AAMemoryLocationImpl::categorizePtrValue(
       else
         MLK = NO_GLOBAL_EXTERNAL_MEM;
     } else if (isa<ConstantPointerNull>(&Obj) &&
-               !NullPointerIsDefined(getAssociatedFunction(),
-                                     Ptr.getType()->getPointerAddressSpace())) {
+               (!NullPointerIsDefined(getAssociatedFunction(), AccessAS) ||
+                !NullPointerIsDefined(getAssociatedFunction(), ObjectAS))) {
       return true;
     } else if (isa<AllocaInst>(&Obj)) {
       MLK = NO_LOCAL_MEM;
@@ -8836,7 +8850,8 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Categorize memory access with pointer: "
                << I << " [" << *Ptr << "]\n");
-    categorizePtrValue(A, I, *Ptr, AccessedLocs, Changed);
+    categorizePtrValue(A, I, *Ptr, AccessedLocs, Changed,
+                       Ptr->getType()->getPointerAddressSpace());
     return AccessedLocs.getAssumed();
   }
 
@@ -11199,11 +11214,10 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
     auto *AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
-    OptimizationRemarkEmitter *ORE = nullptr;
 
     const DataLayout &DL = I.getModule()->getDataLayout();
     SimplifyQuery Q(DL, TLI, DT, AC, &I);
-    Value *NewV = simplifyInstructionWithOperands(&I, NewOps, Q, ORE);
+    Value *NewV = simplifyInstructionWithOperands(&I, NewOps, Q);
     if (!NewV || NewV == &I)
       return false;
 

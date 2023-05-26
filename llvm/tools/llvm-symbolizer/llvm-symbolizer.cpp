@@ -36,6 +36,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdio>
@@ -83,6 +84,16 @@ public:
 };
 } // namespace
 
+static std::string ToolName;
+
+static void printError(const ErrorInfoBase &EI, StringRef Path) {
+  WithColor::error(errs(), ToolName);
+  if (!EI.isA<FileError>())
+    errs() << "'" << Path << "': ";
+  EI.log(errs());
+  errs() << '\n';
+}
+
 template <typename T>
 static void print(const Request &Request, Expected<T> &ResOrErr,
                   DIPrinter &Printer) {
@@ -96,8 +107,7 @@ static void print(const Request &Request, Expected<T> &ResOrErr,
   bool PrintEmpty = true;
   handleAllErrors(std::move(ResOrErr.takeError()),
                   [&](const ErrorInfoBase &EI) {
-                    PrintEmpty = Printer.printError(
-                        Request, EI, "LLVMSymbolizer: error reading file: ");
+                    PrintEmpty = Printer.printError(Request, EI);
                   });
 
   if (PrintEmpty)
@@ -123,15 +133,6 @@ static void enableDebuginfod(LLVMSymbolizer &Symbolizer,
       Args.getAllArgValues(OPT_debug_file_directory_EQ)));
   // The HTTPClient must be initialized for use by the debuginfod client.
   HTTPClient::initialize();
-}
-
-static object::BuildID parseBuildID(StringRef Str) {
-  std::string Bytes;
-  if (!tryGetFromHex(Str, Bytes))
-    return {};
-  ArrayRef<uint8_t> BuildID(reinterpret_cast<const uint8_t *>(Bytes.data()),
-                            Bytes.size());
-  return object::BuildID(BuildID.begin(), BuildID.end());
 }
 
 static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
@@ -218,17 +219,18 @@ void executeCommand(StringRef ModuleName, const T &ModuleSpec, Command Cmd,
   uint64_t AdjustedOffset = Offset - AdjustVMA;
   object::SectionedAddress Address = {AdjustedOffset,
                                       object::SectionedAddress::UndefSection};
+  Request SymRequest = {ModuleName, Offset};
   if (Cmd == Command::Data) {
     Expected<DIGlobal> ResOrErr = Symbolizer.symbolizeData(ModuleSpec, Address);
-    print({ModuleName, Offset}, ResOrErr, Printer);
+    print(SymRequest, ResOrErr, Printer);
   } else if (Cmd == Command::Frame) {
     Expected<std::vector<DILocal>> ResOrErr =
         Symbolizer.symbolizeFrame(ModuleSpec, Address);
-    print({ModuleName, Offset}, ResOrErr, Printer);
+    print(SymRequest, ResOrErr, Printer);
   } else if (ShouldInline) {
     Expected<DIInliningInfo> ResOrErr =
         Symbolizer.symbolizeInlinedCode(ModuleSpec, Address);
-    print({ModuleName, Offset}, ResOrErr, Printer);
+    print(SymRequest, ResOrErr, Printer);
   } else if (Style == OutputStyle::GNU) {
     // With PrintFunctions == FunctionNameKind::LinkageName (default)
     // and UseSymbolTable == true (also default), Symbolizer.symbolizeCode()
@@ -243,11 +245,11 @@ void executeCommand(StringRef ModuleName, const T &ModuleSpec, Command Cmd,
             ? Expected<DILineInfo>(ResOrErr.takeError())
             : ((ResOrErr->getNumberOfFrames() == 0) ? DILineInfo()
                                                     : ResOrErr->getFrame(0));
-    print({ModuleName, Offset}, Res0OrErr, Printer);
+    print(SymRequest, Res0OrErr, Printer);
   } else {
     Expected<DILineInfo> ResOrErr =
         Symbolizer.symbolizeCode(ModuleSpec, Address);
-    print({ModuleName, Offset}, ResOrErr, Printer);
+    print(SymRequest, ResOrErr, Printer);
   }
   Symbolizer.pruneCache();
 }
@@ -386,7 +388,8 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
 
-  bool IsAddr2Line = sys::path::stem(argv[0]).contains("addr2line");
+  ToolName = argv[0];
+  bool IsAddr2Line = sys::path::stem(ToolName).contains("addr2line");
   BumpPtrAllocator A;
   StringSaver Saver(A);
   SymbolizerOptTable Tbl;
@@ -469,11 +472,11 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<DIPrinter> Printer;
   if (Style == OutputStyle::GNU)
-    Printer = std::make_unique<GNUPrinter>(outs(), errs(), Config);
+    Printer = std::make_unique<GNUPrinter>(outs(), printError, Config);
   else if (Style == OutputStyle::JSON)
     Printer = std::make_unique<JSONPrinter>(outs(), Config);
   else
-    Printer = std::make_unique<LLVMPrinter>(outs(), errs(), Config);
+    Printer = std::make_unique<LLVMPrinter>(outs(), printError, Config);
 
   std::vector<std::string> InputAddresses = Args.getAllArgValues(OPT_INPUT);
   if (InputAddresses.empty()) {

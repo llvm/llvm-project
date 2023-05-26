@@ -258,8 +258,14 @@ namespace Diagnostics {
   constexpr bool invert(bool b) {
     return !b;
   }
-  static_assert(invert(true) == invert(false), ""); // expected-error {{failed}} \
+
+  static_assert(invert(true) || invert(true), ""); // expected-error {{static assertion failed due to requirement 'invert(true) || invert(true)'}}
+  static_assert(invert(true) == invert(false), ""); // expected-error {{static assertion failed due to requirement 'invert(true) == invert(false)'}} \
                                                     // expected-note {{evaluates to 'false == true'}}
+  static_assert(true && false, ""); // expected-error {{static assertion failed due to requirement 'true && false'}}
+  static_assert(invert(true) || invert(true) || false, ""); // expected-error {{static assertion failed due to requirement 'invert(true) || invert(true) || false'}}
+  static_assert((true && invert(true)) || false, ""); // expected-error {{static assertion failed due to requirement '(true && invert(true)) || false'}}
+  static_assert(true && invert(false) && invert(true), ""); // expected-error {{static assertion failed due to requirement 'invert(true)'}}
 
   /// No notes here since we compare a bool expression with a bool literal.
   static_assert(invert(true) == true, ""); // expected-error {{failed}}
@@ -281,5 +287,28 @@ namespace Diagnostics {
   static_assert(CHECK_4(a) && A_IS_B, ""); // expected-error {{failed}} \
                                            // expected-note {{evaluates to '4 == 5'}}
 
+  static_assert(
+    false, // expected-error {{static assertion failed}}
+    ""
+  );
+
+  static_assert(
+    true && false, // expected-error {{static assertion failed due to requirement 'true && false'}}
+    ""
+  );
+
+  static_assert(
+    // with a comment here
+    true && false, // expected-error {{static assertion failed due to requirement 'true && false'}}
+    ""
+  );
+
+  static_assert(
+    // with a comment here
+    (true && // expected-error {{static assertion failed due to requirement '(true && false) || false'}}
+    false)
+    || false,
+    ""
+  );
 
 }

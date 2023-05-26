@@ -79,9 +79,9 @@ void HexagonMCChecker::initReg(MCInst const &MCI, unsigned R, unsigned &PredReg,
   } else
     // Note register use.  Super-registers are not tracked directly,
     // but their components.
-    for (MCRegAliasIterator SRI(R, &RI, !MCSubRegIterator(R, &RI).isValid());
-         SRI.isValid(); ++SRI)
-      if (!MCSubRegIterator(*SRI, &RI).isValid())
+    for (MCRegAliasIterator SRI(R, &RI, RI.subregs(R).empty()); SRI.isValid();
+         ++SRI)
+      if (RI.subregs(*SRI).empty())
         // Skip super-registers used indirectly.
         Uses.insert(*SRI);
 
@@ -145,9 +145,9 @@ void HexagonMCChecker::init(MCInst const &MCI) {
 
     // Note register definitions, direct ones as well as indirect side-effects.
     // Super-registers are not tracked directly, but their components.
-    for (MCRegAliasIterator SRI(R, &RI, !MCSubRegIterator(R, &RI).isValid());
-         SRI.isValid(); ++SRI) {
-      if (MCSubRegIterator(*SRI, &RI).isValid())
+    for (MCRegAliasIterator SRI(R, &RI, RI.subregs(R).empty()); SRI.isValid();
+         ++SRI) {
+      if (!RI.subregs(*SRI).empty())
         // Skip super-registers defined indirectly.
         continue;
 

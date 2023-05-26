@@ -12,6 +12,7 @@
 #include "Protocol.h"
 #include "support/Context.h"
 #include "support/Logger.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -512,12 +513,9 @@ std::vector<TextEdit> replacementsToEdits(llvm::StringRef Code,
   return Edits;
 }
 
-std::optional<std::string> getCanonicalPath(const FileEntry *F,
+std::optional<std::string> getCanonicalPath(const FileEntryRef F,
                                             const SourceManager &SourceMgr) {
-  if (!F)
-    return std::nullopt;
-
-  llvm::SmallString<128> FilePath = F->getName();
+  llvm::SmallString<128> FilePath = F.getName();
   if (!llvm::sys::path::is_absolute(FilePath)) {
     if (auto EC =
             SourceMgr.getFileManager().getVirtualFileSystem().makeAbsolute(

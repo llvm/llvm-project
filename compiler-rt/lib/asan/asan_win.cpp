@@ -159,6 +159,8 @@ INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
 namespace __asan {
 
 void InitializePlatformInterceptors() {
+  __interception::SetErrorReportCallback(Report);
+
   // The interceptors were not designed to be removable, so we have to keep this
   // module alive for the life of the process.
   HMODULE pinned;
@@ -194,9 +196,12 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
 }
 
 void FlushUnneededASanShadowMemory(uptr p, uptr size) {
+  // Only asan on 64-bit Windows supports committing shadow memory on demand.
+#if SANITIZER_WINDOWS64
   // Since asan's mapping is compacting, the shadow chunk may be
   // not page-aligned, so we only flush the page-aligned portion.
   ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
+#endif
 }
 
 // ---------------------- TSD ---------------- {{{

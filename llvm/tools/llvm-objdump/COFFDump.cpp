@@ -545,11 +545,17 @@ static void printExportTable(const COFFObjectFile *Obj) {
   outs() << " Ordinal base: " << OrdinalBase << "\n";
   outs() << " Ordinal      RVA  Name\n";
   for (; I != E; I = ++I) {
-    uint32_t Ordinal;
-    if (I->getOrdinal(Ordinal))
-      return;
     uint32_t RVA;
     if (I->getExportRVA(RVA))
+      return;
+    StringRef Name;
+    if (I->getSymbolName(Name))
+      continue;
+    if (!RVA && Name.empty())
+      continue;
+
+    uint32_t Ordinal;
+    if (I->getOrdinal(Ordinal))
       return;
     bool IsForwarder;
     if (I->isForwarder(IsForwarder))
@@ -559,14 +565,11 @@ static void printExportTable(const COFFObjectFile *Obj) {
       // Export table entries can be used to re-export symbols that
       // this COFF file is imported from some DLLs. This is rare.
       // In most cases IsForwarder is false.
-      outs() << format("    % 4d         ", Ordinal);
+      outs() << format("   %5d         ", Ordinal);
     } else {
-      outs() << format("    % 4d %# 8x", Ordinal, RVA);
+      outs() << format("   %5d %# 8x", Ordinal, RVA);
     }
 
-    StringRef Name;
-    if (I->getSymbolName(Name))
-      continue;
     if (!Name.empty())
       outs() << "  " << Name;
     if (IsForwarder) {
@@ -849,8 +852,7 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile &coff) {
            << Name;
     if (Demangle && Name.startswith("?")) {
       int Status = -1;
-      char *DemangledSymbol =
-          microsoftDemangle(Name.data(), nullptr, nullptr, nullptr, &Status);
+      char *DemangledSymbol = microsoftDemangle(Name.data(), nullptr, &Status);
 
       if (Status == 0 && DemangledSymbol) {
         outs() << " (" << StringRef(DemangledSymbol) << ")";

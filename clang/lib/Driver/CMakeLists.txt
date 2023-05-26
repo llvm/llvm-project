@@ -95,7 +95,6 @@ add_clang_library(clangDriver
 
   DEPENDS
   ClangDriverOptions
-  RISCVTargetParserTableGen
 
   LINK_LIBS
   clangBasic

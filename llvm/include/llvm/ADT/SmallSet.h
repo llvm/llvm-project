@@ -149,7 +149,9 @@ class SmallSet {
   static_assert(N <= 32, "N should be small");
 
 public:
+  using key_type = T;
   using size_type = size_t;
+  using value_type = T;
   using const_iterator = SmallSetIterator<T, N, C>;
 
   SmallSet() = default;

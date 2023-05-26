@@ -11,7 +11,6 @@
 #include "flang/Common/template.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/semantics.h"
-#include <cctype>
 #include <cstdarg>
 #include <type_traits>
 
@@ -926,7 +925,7 @@ parser::CharBlock SkipLabel(const parser::CharBlock &position) {
     std::size_t i{1l};
     for (; (i < maxPosition) && parser::IsDecimalDigit(position[i]); ++i) {
     }
-    for (; (i < maxPosition) && std::isspace(position[i]); ++i) {
+    for (; (i < maxPosition) && parser::IsWhiteSpace(position[i]); ++i) {
     }
     return parser::CharBlock{position.begin() + i, position.end()};
   }
@@ -962,8 +961,7 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
                        TargetStatementEnum::CompatibleDo)) ||
         (doTarget.isExecutableConstructEndStmt &&
             ParentScope(scopes, doTarget.proxyForScope) == scope)) {
-      if (context.warnOnNonstandardUsage() ||
-          context.ShouldWarn(
+      if (context.ShouldWarn(
               common::LanguageFeature::OldLabelDoEndStatements)) {
         context
             .Say(position,

@@ -276,6 +276,10 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool ReturnsVoid = true;
 
   std::optional<SIArgumentInfo> ArgInfo;
+
+  unsigned PSInputAddr = 0;
+  unsigned PSInputEnable = 0;
+
   SIMode Mode;
   std::optional<FrameIndex> ScavengeFI;
   StringValue VGPRForAGPRCopy;
@@ -312,6 +316,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("bytesInStackArgArea", MFI.BytesInStackArgArea, 0u);
     YamlIO.mapOptional("returnsVoid", MFI.ReturnsVoid, true);
     YamlIO.mapOptional("argumentInfo", MFI.ArgInfo);
+    YamlIO.mapOptional("psInputAddr", MFI.PSInputAddr, 0u);
+    YamlIO.mapOptional("psInputEnable", MFI.PSInputEnable, 0u);
     YamlIO.mapOptional("mode", MFI.Mode, SIMode());
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
@@ -693,7 +699,8 @@ public:
 
   // Add system SGPRs.
   Register addWorkGroupIDX(bool HasArchitectedSGPRs) {
-    Register Reg = HasArchitectedSGPRs ? AMDGPU::TTMP9 : getNextSystemSGPR();
+    Register Reg =
+        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP9 : getNextSystemSGPR();
     ArgInfo.WorkGroupIDX = ArgDescriptor::createRegister(Reg);
     if (!HasArchitectedSGPRs)
       NumSystemSGPRs += 1;
@@ -702,7 +709,8 @@ public:
   }
 
   Register addWorkGroupIDY(bool HasArchitectedSGPRs) {
-    Register Reg = HasArchitectedSGPRs ? AMDGPU::TTMP7 : getNextSystemSGPR();
+    Register Reg =
+        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP7 : getNextSystemSGPR();
     unsigned Mask = HasArchitectedSGPRs && hasWorkGroupIDZ() ? 0xffff : ~0u;
     ArgInfo.WorkGroupIDY = ArgDescriptor::createRegister(Reg, Mask);
     if (!HasArchitectedSGPRs)
@@ -712,7 +720,8 @@ public:
   }
 
   Register addWorkGroupIDZ(bool HasArchitectedSGPRs) {
-    Register Reg = HasArchitectedSGPRs ? AMDGPU::TTMP7 : getNextSystemSGPR();
+    Register Reg =
+        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP7 : getNextSystemSGPR();
     unsigned Mask = HasArchitectedSGPRs ? 0xffff << 16 : ~0u;
     ArgInfo.WorkGroupIDZ = ArgDescriptor::createRegister(Reg, Mask);
     if (!HasArchitectedSGPRs)

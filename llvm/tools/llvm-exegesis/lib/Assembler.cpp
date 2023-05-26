@@ -21,6 +21,8 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Alignment.h"
@@ -81,9 +83,8 @@ MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionName,
       FunctionType::get(ReturnType, {MemParamType}, false);
   Function *const F = Function::Create(
       FunctionType, GlobalValue::InternalLinkage, FunctionName, Module);
-  // Making sure we can create a MachineFunction out of this Function even if it
-  // contains no IR.
-  F->setIsMaterializable(true);
+  BasicBlock *BB = BasicBlock::Create(Module->getContext(), "", F);
+  new UnreachableInst(Module->getContext(), BB);
   return MMI->getOrCreateMachineFunction(*F);
 }
 
@@ -132,8 +133,8 @@ void BasicBlockFiller::addReturn(const DebugLoc &DL) {
 
     FunctionLoweringInfo FuncInfo;
     FuncInfo.CanLowerReturn = true;
-    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {},
-                                                     FuncInfo);
+    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {}, FuncInfo,
+                                                     0);
   }
 }
 
@@ -164,10 +165,9 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
   // TODO: This only works for targets implementing LLVMTargetMachine.
   const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine &>(TM);
-  std::unique_ptr<MachineModuleInfoWrapperPass> MMIWP =
-      std::make_unique<MachineModuleInfoWrapperPass>(&LLVMTM);
+  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&LLVMTM);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
-      FunctionID, Module.get(), &MMIWP.get()->getMMI());
+      FunctionID, Module.get(), &MMIWP->getMMI());
   // Saving reserved registers for client.
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }

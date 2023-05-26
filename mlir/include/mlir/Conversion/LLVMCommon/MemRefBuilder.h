@@ -89,6 +89,14 @@ public:
   /// Returns the (LLVM) pointer type this descriptor contains.
   LLVM::LLVMPointerType getElementPtrType();
 
+  /// Builds IR for getting the start address of the buffer represented
+  /// by this memref:
+  /// `memref.alignedPtr + memref.offset * sizeof(type.getElementType())`.
+  /// \note there is no setter for this one since it is derived from alignedPtr
+  /// and offset.
+  Value bufferPtr(OpBuilder &builder, Location loc,
+                  LLVMTypeConverter &converter, MemRefType type);
+
   /// Builds IR populating a MemRef descriptor structure from a list of
   /// individual values composing that descriptor, in the following order:
   /// - allocated pointer;

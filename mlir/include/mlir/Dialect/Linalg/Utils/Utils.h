@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_LINALG_UTILS_UTILS_H
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Utils/IndexingUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "llvm/ADT/StringSet.h"
@@ -17,15 +18,56 @@
 
 namespace mlir {
 class AffineExpr;
-class AffineForOp;
 class AffineMap;
 class PatternRewriter;
+
+namespace affine {
+class AffineForOp;
+} // namespace affine
 
 namespace tensor {
 class ExtractSliceOp;
 } // namespace tensor
 
 namespace linalg {
+
+//===----------------------------------------------------------------------===//
+// Utilities for inferring various semantics properties of Linalg ops.
+//===----------------------------------------------------------------------===//
+
+/// Possible dimension candidates that define a matmul embedded in the indexing
+/// maps of a LinalgOp.
+struct EmbeddedMatmulDimsCandidates {
+  DenseSet<int64_t> mPos, nPos, kPos;
+};
+
+/// Given a `linalgOp` and one of its `opOperand`, returns the positions of the
+/// iterators of type `iter` that index the `opOperand` as a permutation.
+/// This is useful to infer various subcomputations on a given `linalgOp`.
+/// This is performed by looking up each result in the matching indexing map and
+/// determining whether:
+///   - It is a single AffineDimExpr.
+///   - It is the only result involving this AffineDimExpr.
+DenseSet<int64_t> findPermutationsIndexingOperand(LinalgOp linalgOp,
+                                                  OpOperand *opOperand,
+                                                  utils::IteratorType iter);
+
+/// Return true if `linalgOp` contains an embedded matmul subcomputation in its
+/// most minor dimensions.
+bool containsMostMinorMatmul(linalg::LinalgOp linalgOp);
+
+/// Find 2 parallel (m and n) and 1 reduction (k) dimension candidates that form
+/// a matmul subcomputation within `linalgOp`. These dimensions are such that:
+///   1. The m dimension is involved in an outer-product along LHS
+///      (i.e. it is a permutation on RES and LHS and does not appear in RHS).
+///   2. The n dimension is involved in an outer-product along RHS
+///      (i.e. it is a permutation on RES and RHS and does not appear in LHS).
+///   3. The k dimension appears as a permutation on LHS and RHS.
+///   4. m, n and k appear only once in any given indexing.
+/// This allows detecting that some matmul is embedded within `linalgOp` with
+/// some orthogonal heuristic.
+FailureOr<EmbeddedMatmulDimsCandidates>
+inferMatmulDims(linalg::LinalgOp linalgOp);
 
 //===----------------------------------------------------------------------===//
 // General utilities
@@ -46,60 +88,12 @@ bool isParallelIterator(utils::IteratorType iteratorType);
 /// Check if iterator type  has "reduction" semantics.
 bool isReductionIterator(utils::IteratorType iteratorType);
 
-/// Helper function that creates a memref::DimOp or tensor::DimOp depending on
-/// the type of `source`.
-Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
-OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value source,
-                               int64_t dim);
-
-/// Given an operation, retrieves the value of each dynamic dimension through
-/// constructing the necessary DimOp operators.
-SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
-
-/// Computes an upper bound for the result `value` of an index computation.
-/// Translates AffineMinOps and AffineApplyOps along the use-def chains of the
-/// index computation to affine constraints and projects out intermediate
-/// values. The method sets `boundMap` to an affine map that given
-/// `boundOperands` evaluates to an upper bound for the index computation.
-///
-/// If constantRequired is true, only returns the constant bounds (potentially
-/// over-approximating) and fails when not possible.
-///
-/// Example:
-/// ```
-/// %dim0 = dim %tensor, %c0
-/// %dim1 = dim %tensor, %c1
-/// %0 = affine.min affine.map<(d0) -> (40, d0)> (%dim0)
-/// %1 = affine.apply affine.map<(d0, d1) -> (d0 + d1)> (%0, %dim1)
-/// ```
-/// getUpperBoundForIndex(%1, boundMap, boundOperands)
-/// set the output parameters to:
-/// - boundMap = affine.map<(d0) -> (d0 + 40)>
-/// - boundOperands = [%dim1]
-void getUpperBoundForIndex(Value value, AffineMap &boundMap,
-                           SmallVectorImpl<Value> &boundOperands,
-                           bool constantRequired = false);
-
-/// Returns a constant upper bound for the result `value` of an index
-/// computation. Calls `getUpperBoundForIndex` and returns a constant upper
-/// bound if the result of `boundMap` is a constant expression and failure
-/// otherwise.
-///
-/// Example:
-/// ```
-/// %0 = affine.min affine.map<(d0) -> (40, d0)> (%d0)
-/// %1 = affine.apply affine.map<(d0) -> (d0 + 2)> (%0)
-/// ```
-/// getConstantUpperBoundForIndex(%1) returns 42
-/// (boundsMap = affine.map<() -> (42)>)
-FailureOr<int64_t> getConstantUpperBoundForIndex(Value value);
-
 /// Create a tensor::PadOp that pads `source` to the size of the statically
 /// sized `type` whose static sizes are assumed to be greater than the dynamic
-/// `source` size. The padding introduces trailing `pad` values until the target
-/// size is met. If `source` is defined by one or more LinalgOps that have been
-/// padded with the same value and sizes, return their padded result instead of
-/// creating a tensor::PadOp.
+/// `source` size. The padding introduces trailing `pad` values until the
+/// target size is met. If `source` is defined by one or more LinalgOps that
+/// have been padded with the same value and sizes, return their padded result
+/// instead of creating a tensor::PadOp.
 ///
 /// Example:
 /// ```
@@ -116,8 +110,8 @@ FailureOr<int64_t> getConstantUpperBoundForIndex(Value value);
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value pad, bool nofold);
 
-/// Returns a GenericOp that transposes `inputTensor` into `outputTensor` using
-/// `transposeVector` to permute the `inputTensor` dimensions.
+/// Returns a GenericOp that transposes `inputTensor` into `outputTensor`
+/// using `transposeVector` to permute the `inputTensor` dimensions.
 GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
                           Value outputTensor,
                           ArrayRef<int64_t> transposeVector);
@@ -127,18 +121,18 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
 /// or vectorize.
 GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
 
-/// Get the reassociation maps to fold the result of a extract_slice (or source
-/// of a insert_slice) operation with given offsets, and sizes to its
+/// Get the reassociation maps to fold the result of a extract_slice (or
+/// source of a insert_slice) operation with given offsets, and sizes to its
 /// rank-reduced version. This is only done for the cases where the size is 1
-/// and offset is 0. Strictly speaking the offset 0 is not required in general,
-/// but non-zero offsets are not handled by SPIR-V backend at this point (and
-/// potentially cannot be handled).
+/// and offset is 0. Strictly speaking the offset 0 is not required in
+/// general, but non-zero offsets are not handled by SPIR-V backend at this
+/// point (and potentially cannot be handled).
 std::optional<SmallVector<ReassociationIndices>>
 getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 
 /// Return the identity numeric value associated to the give op. Return
 /// std::nullopt if there is no known neutral element.
-std::optional<Attribute> getNeutralElement(Operation *op);
+std::optional<TypedAttr> getNeutralElement(Operation *op);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
@@ -151,8 +145,9 @@ enum class LinalgTilingLoopType {
   ParallelLoops = 2
 };
 
-/// Computes tile offsets, given a list of loop `ivs` and `tileSizes`. In case a
-/// tile size is zero (i.e., no tiling), the corresponding offset is also zero.
+/// Computes tile offsets, given a list of loop `ivs` and `tileSizes`. In case
+/// a tile size is zero (i.e., no tiling), the corresponding offset is also
+/// zero.
 SmallVector<OpFoldResult> computeTileOffsets(OpBuilder &b, Location loc,
                                              ArrayRef<OpFoldResult> ivs,
                                              ArrayRef<OpFoldResult> tileSizes);
@@ -166,15 +161,16 @@ SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
                                            ArrayRef<OpFoldResult> sizeBounds);
 
 /// Returns the list of tensor output types produced when the given structured
-/// operation `op` is applied to the given `operands`. Note that `operands` are
-/// not necessarily the actual operands of `op`.
+/// operation `op` is applied to the given `operands`. Note that `operands`
+/// are not necessarily the actual operands of `op`.
 SmallVector<Type> getTensorOutputTypes(LinalgOp op, ValueRange operands);
 
 /// Creates `insert_slice` ops that insert `results` back into larger tensors
-/// they were originally extracted from with `extract_slice` before being passed
-/// as `operands` to the given structured operation `op` or its clone. Note that
-/// `operands` are not necessarily the actual operands of `op`, the operation
-/// serves only as metadata container for operand types and positions.
+/// they were originally extracted from with `extract_slice` before being
+/// passed as `operands` to the given structured operation `op` or its clone.
+/// Note that `operands` are not necessarily the actual operands of `op`, the
+/// operation serves only as metadata container for operand types and
+/// positions.
 SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
                                     LinalgOp op, ValueRange operands,
                                     ValueRange results);
@@ -187,8 +183,8 @@ struct SliceParameters {
 };
 
 /// Computes SliceParameters for a single `valueToTile` assuming that its user
-/// is being tiled with the given loop bounds `lbs` and `ubs` and the tile sizes
-/// `tileSizes`.
+/// is being tiled with the given loop bounds `lbs` and `ubs` and the tile
+/// sizes `tileSizes`.
 ///
 /// `omitPartialTileCheck` controls whether to omit the partial/boundary tile
 /// condition check in cases where we statically know that it is unnecessary.
@@ -219,8 +215,8 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
 /// Creates an extract_slice/subview op for a single `valueToTile` with
 /// `builder`. This new operation extracts a tile of `valueToTile`, starting
 /// at offsets `lbs` and with sizes `subShapeSizes`. `omitPartialTileCheck`
-/// controls whether to omit the partial/boundary tile condition check in cases
-/// where we statically know that it is unnecessary.
+/// controls whether to omit the partial/boundary tile condition check in
+/// cases where we statically know that it is unnecessary.
 Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
                      ArrayRef<OpFoldResult> tileSizes, AffineMap map,
                      ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
@@ -232,8 +228,8 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
 /// nest for tiling with the given induction variables `ivs` and tile sizes
 /// `tileSizes`. `sizeBounds` are the iteration space bounds for *all* the
 /// implicit loops in `linalgOp`. `omitPartialTileCheck` controls whether to
-/// omit the partial/boundary tile condition check in cases where we statically
-/// know that it is unnecessary.
+/// omit the partial/boundary tile condition check in cases where we
+/// statically know that it is unnecessary.
 ///
 /// Note that a constant zero in `tileSizes` means no tiling at that implicit
 /// loop. The number of non-zero values in `tileSizes` should be equal to the
@@ -254,8 +250,9 @@ void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
                    ArrayRef<OpFoldResult> offests);
 
 /// A struct containing the Linalg producer before and after fusion.
-/// When operating on tensors, `fusedProducer` may feed into a `tensor.cast` op
-/// before the consumer Linalg op, until enough canonicalizations have applied.
+/// When operating on tensors, `fusedProducer` may feed into a `tensor.cast`
+/// op before the consumer Linalg op, until enough canonicalizations have
+/// applied.
 struct FusionInfo {
   LinalgOp originalProducer;
   LinalgOp fusedProducer;
@@ -268,6 +265,7 @@ struct FusionInfo {
 /// transformation).
 FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                            OpOperand &consumerOpOperand);
+
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
@@ -285,19 +283,23 @@ FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
 /// Scheme used to distribute loops to processors.
 enum class DistributionMethod {
   /// Cyclic distribution where no assumption is made about the dynamic
-  /// relationship between number of processors and number of iterations of the
+  /// relationship between number of processors and number of iterations of
+  /// the
   /// distributed loop. Distributes the following loop
   ///
   /// scf.parallel (%iv) = (%lb) to (%ub) step (%step)
   ///
   /// to
   ///
-  /// scf.parallel(%iv)= (%lb + %procId * %step) to (%ub) step (%step * %nprocs)
+  /// scf.parallel(%iv)= (%lb + %procId * %step) to (%ub) step (%step *
+  /// %nprocs)
   Cyclic = 0,
 
   /// Cyclic distribution where the number of processors can be assumed to be
-  /// more than or equal to the number of iterations of the distributed loop. In
-  /// such cases, a simple in-bounds check is enough (instead of materializing a
+  /// more than or equal to the number of iterations of the distributed loop.
+  /// In
+  /// such cases, a simple in-bounds check is enough (instead of materializing
+  /// a
   /// loop). Distributes the following loop
   ///
   /// scf.parallel (%iv) = (%lb) to (%ub) step (%step)
@@ -312,7 +314,8 @@ enum class DistributionMethod {
   CyclicNumProcsGeNumIters = 1,
 
   /// Cyclic distribution where the number of processors can be assumed to be
-  ///  equal to the number of iterations of the distributed loop. In such cases,
+  ///  equal to the number of iterations of the distributed loop. In such
+  ///  cases,
   ///  no bounds check is needed. Distributes the following loop
   ///
   /// scf.parallel (%iv) = (%lb) to (%ub) step (%step)
@@ -339,16 +342,17 @@ using ProcInfoCallBackFn = std::function<SmallVector<ProcInfo>(
 /// Options that allow distribution of loops generated in Linalg transforms to
 /// processors while generating the loops.
 struct LinalgLoopDistributionOptions {
-  /// Callback function that returns the Values for processor ID (`procId`), and
-  /// number of processors (`nprocs`) used to execute the parallel loops. The
-  /// number of `{procId, nprocs}` pairs returned must be equal to the number of
-  /// `parallelLoopRanges` passed into the callback. The `parallelLoopRanges`
-  /// are ranges of the outer parallel loops of the operation that
-  /// do have non-zero tile sizes specified.
+  /// Callback function that returns the Values for processor ID (`procId`),
+  /// and number of processors (`nprocs`) used to execute the parallel loops.
+  /// The number of `{procId, nprocs}` pairs returned must be equal to the
+  /// number of `parallelLoopRanges` passed into the callback. The
+  /// `parallelLoopRanges` are ranges of the outer parallel loops of the
+  /// operation that do have non-zero tile sizes specified.
   ProcInfoCallBackFn procInfo;
 };
 
-/// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.
+/// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and
+/// `step`.
 void updateBoundsForCyclicDistribution(OpBuilder &builder, Location loc,
                                        Value procId, Value nprocs, Value &lb,
                                        Value &ub, Value &step);
@@ -356,65 +360,6 @@ void updateBoundsForCyclicDistribution(OpBuilder &builder, Location loc,
 //===----------------------------------------------------------------------===//
 // Fusion on tensor utilities
 //===----------------------------------------------------------------------===//
-
-/// A struct to manage the tile loop nest specific information.
-class TileLoopNest {
-public:
-  TileLoopNest(LinalgOp rootOp) : rootOp(rootOp) {}
-
-  /// Tile the root operation using the given `tileSizes` and `tileInterchange`,
-  /// and `tileDistribution`.
-  LogicalResult
-  tileRootOp(OpBuilder &b, ArrayRef<int64_t> tileSizes,
-             ArrayRef<int64_t> tileInterchange,
-             std::optional<LinalgLoopDistributionOptions> tileDistribution);
-
-  /// Fuse the producer of `consumerOpOperand` into the tile loop nest. Returns
-  /// the fused producer or fails if fusion is not possible.
-  FailureOr<LinalgOp> fuseProducer(OpBuilder &b, OpOperand *consumerOpOperand);
-
-  /// Returns the replacement results for the original untiled root operation.
-  ValueRange getRootOpReplacementResults();
-
-  /// Returns the tiled root operation.
-  LinalgOp getRootOp() { return rootOp; }
-
-  /// Returns the tiled root operation and the fused producers.
-  SmallVector<LinalgOp> getAllTiledAndFusedOps();
-
-  /// Returns the loop ops generated from tiling.
-  ArrayRef<scf::ForOp> getLoopOps() { return tileLoopOps; }
-
-  /// Returns true if the tile loop nest has no tile loops.
-  bool isEmpty();
-
-private:
-  /// Returns true if the tile loop nest invariants are satisfied:
-  /// - The `rootOp` has been tiled at least once.
-  /// - The number of tile loop operations and dimensions match.
-  /// - The innermost tile loop is the parent of `tiledOp`.
-  /// - The tile loops are directly nested.
-  // TODO: relax to support additional control flow, e.g., IfOp.
-  bool isValid();
-
-  /// Searches the block arguments tied to a block argument `bbArg` of the
-  /// innermost tile loop. Returns the block argument from outermost to
-  /// innermost or an empty vector if none are found.
-  SmallVector<BlockArgument> getTiedBBArgs(BlockArgument bbArg);
-
-  /// Returns the iteration argument of the outermost tile loop mapped to a
-  /// block argument `bbArg` of the innermost tile loop.
-  OpOperand *getTiedIterArg(BlockArgument bbArg);
-
-  /// Returns true if `bbArg` has other used than `sliceOp` and its
-  /// dependencies. Only if there are no other uses, the producer output
-  /// iteration argument may reused to pass the producer result after fusion.
-  bool hasOtherUses(BlockArgument bbArg, tensor::ExtractSliceOp sliceOp);
-
-  LinalgOp rootOp;
-  SmallVector<scf::ForOp> tileLoopOps;
-  DenseMap<Operation *, SmallVector<int64_t>> tiledRootAndFusedOpsLoops;
-};
 
 //===----------------------------------------------------------------------===//
 // Generic op region utilities
@@ -426,8 +371,8 @@ struct RegionMatcher {
     IAdd,
   };
 
-  /// Matches the given linalg op if its body is performing binary operation on
-  /// int or float scalar values and returns the binary op kind.
+  /// Matches the given linalg op if its body is performing binary operation
+  /// on int or float scalar values and returns the binary op kind.
   ///
   /// The linalg op's region is expected to be
   /// ```
@@ -445,9 +390,10 @@ struct RegionMatcher {
 //===----------------------------------------------------------------------===//
 
 /// Utility class used to generate nested loops with ranges described by
-/// `loopRanges` and loop type described by the `iteratorTypes`. `bodyBuilderFn`
-/// is used to generate the body of the innermost loop. It is passed a range
-/// of loop induction variables and a range of operand values to use.
+/// `loopRanges` and loop type described by the `iteratorTypes`.
+/// `bodyBuilderFn` is used to generate the body of the innermost loop. It is
+/// passed a range of loop induction variables and a range of operand values
+/// to use.
 template <typename LoopTy>
 struct GenerateLoopNest {
   static void doit(OpBuilder &b, Location loc, ArrayRef<Range> loopRanges,

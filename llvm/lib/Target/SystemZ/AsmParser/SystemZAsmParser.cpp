@@ -379,7 +379,6 @@ public:
   bool isU2Imm() const { return isImm(0, 3); }
   bool isU3Imm() const { return isImm(0, 7); }
   bool isU4Imm() const { return isImm(0, 15); }
-  bool isU6Imm() const { return isImm(0, 63); }
   bool isU8Imm() const { return isImm(0, 255); }
   bool isS8Imm() const { return isImm(-128, 127); }
   bool isU12Imm() const { return isImm(0, 4095); }

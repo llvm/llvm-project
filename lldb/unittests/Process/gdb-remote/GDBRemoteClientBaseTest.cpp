@@ -9,7 +9,7 @@
 
 #include "GDBRemoteTestUtils.h"
 
-#include "Plugins/Platform/Linux/LinuxSignals.h"
+#include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteClientBase.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
 #include "lldb/Utility/GDBRemote.h"

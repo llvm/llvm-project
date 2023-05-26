@@ -69,7 +69,7 @@ private:
   /// LiveRegDefs - A set of physical registers and their definition
   /// that are "live". These nodes must be scheduled before any other nodes that
   /// modifies the registers can be scheduled.
-  unsigned NumLiveRegs;
+  unsigned NumLiveRegs = 0u;
   std::vector<SUnit*> LiveRegDefs;
   std::vector<unsigned> LiveRegCycles;
 

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -fsyntax-only -std=c99 -pedantic -verify=expected,ext -Wundef -DTRIGRAPHS=1
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -pedantic -verify=expected,ext -Wundef -fno-trigraphs
-// RUN: %clang_cc1 %s -fsyntax-only -x c++ -std=c++2b -pedantic -ftrigraphs -DTRIGRAPHS=1 -verify=expected,cxx2b -Wundef -Wpre-c++2b-compat
+// RUN: %clang_cc1 %s -fsyntax-only -x c++ -std=c++23 -pedantic -ftrigraphs -DTRIGRAPHS=1 -verify=expected,cxx23 -Wundef -Wpre-c++23-compat
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -pedantic -verify=expected,ext -Wundef -ftrigraphs -DTRIGRAPHS=1
 // RUN: not %clang_cc1 %s -fsyntax-only -std=c99 -pedantic -Wundef 2>&1 | FileCheck -strict-whitespace %s
 
@@ -18,7 +18,7 @@
 #error "This should never happen"
 #endif
 
-#if a\u{FD}() // ext-warning {{extension}} cxx2b-warning {{before C++2b}}
+#if a\u{FD}() // ext-warning {{extension}} cxx23-warning {{before C++23}}
 #error "This should never happen"
 #endif
 
@@ -34,12 +34,12 @@
 #define \U10000000      // expected-error {{macro name must be an identifier}}
 #define \u0061          // expected-error {{character 'a' cannot be specified by a universal character name}} expected-error {{macro name must be an identifier}}
 #define \u{fffe}        // expected-error {{macro name must be an identifier}} \
-                        // ext-warning {{extension}} cxx2b-warning {{before C++2b}}
+                        // ext-warning {{extension}} cxx23-warning {{before C++23}}
 #define \N{ALERT}       // expected-error {{universal character name refers to a control character}} \
                    // expected-error {{macro name must be an identifier}} \
-                   // ext-warning {{extension}} cxx2b-warning {{before C++2b}}
+                   // ext-warning {{extension}} cxx23-warning {{before C++23}}
 #define \N{WASTEBASKET} // expected-error {{macro name must be an identifier}} \
-                        // ext-warning {{extension}} cxx2b-warning {{before C++2b}}
+                        // ext-warning {{extension}} cxx23-warning {{before C++23}}
 #define a\u0024
 
 #if \u0110 // expected-warning {{is not defined, evaluates to 0}}
@@ -141,10 +141,10 @@ int CONCAT(\N{GREEK
 
 int \N{\
 LATIN CAPITAL LETTER A WITH GRAVE};
-//ext-warning@-2 {{extension}} cxx2b-warning@-2 {{before C++2b}}
+//ext-warning@-2 {{extension}} cxx23-warning@-2 {{before C++23}}
 
 #ifdef TRIGRAPHS
-int \N??<GREEK CAPITAL LETTER ALPHA??> = 0; // cxx2b-warning {{before C++2b}} \
+int \N??<GREEK CAPITAL LETTER ALPHA??> = 0; // cxx23-warning {{before C++23}} \
                                             //ext-warning {{extension}}\
                                             // expected-warning 2{{trigraph converted}}
 

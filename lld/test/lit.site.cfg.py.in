@@ -15,6 +15,7 @@ config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.lld_obj_root = "@LLD_BINARY_DIR@"
 config.lld_libs_dir = lit_config.substitute("@CURRENT_LIBS_DIR@")
 config.lld_tools_dir = lit_config.substitute("@CURRENT_TOOLS_DIR@")
+config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@

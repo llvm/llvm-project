@@ -339,9 +339,9 @@ public:
 };
 
 class MachineCopyPropagation : public MachineFunctionPass {
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
-  const MachineRegisterInfo *MRI;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const MachineRegisterInfo *MRI = nullptr;
 
   // Return true if this is a copy instruction and false otherwise.
   bool UseCopyInstr;
@@ -393,7 +393,7 @@ private:
 
   CopyTracker Tracker;
 
-  bool Changed;
+  bool Changed = false;
 };
 
 } // end anonymous namespace
@@ -643,15 +643,19 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     const MachineOperand &CopySrc = *CopyOperands->Source;
     Register CopySrcReg = CopySrc.getReg();
 
-    // When the use is a subregister of the COPY destination,
-    // record the subreg index.
-    unsigned SubregIdx = 0;
-
-    // This can only occur when we are dealing with physical registers.
+    Register ForwardedReg = CopySrcReg;
+    // MI might use a sub-register of the Copy destination, in which case the
+    // forwarded register is the matching sub-register of the Copy source.
     if (MOUse.getReg() != CopyDstReg) {
-      SubregIdx = TRI->getSubRegIndex(CopyDstReg, MOUse.getReg());
-      if (!SubregIdx)
+      unsigned SubRegIdx = TRI->getSubRegIndex(CopyDstReg, MOUse.getReg());
+      assert(SubRegIdx &&
+             "MI source is not a sub-register of Copy destination");
+      ForwardedReg = TRI->getSubReg(CopySrcReg, SubRegIdx);
+      if (!ForwardedReg) {
+        LLVM_DEBUG(dbgs() << "MCP: Copy source does not have sub-register "
+                          << TRI->getSubRegIndexName(SubRegIdx) << '\n');
         continue;
+      }
     }
 
     // Don't forward COPYs of reserved regs unless they are constant.
@@ -681,13 +685,10 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     }
 
     LLVM_DEBUG(dbgs() << "MCP: Replacing " << printReg(MOUse.getReg(), TRI)
-                      << "\n     with " << printReg(CopySrcReg, TRI)
+                      << "\n     with " << printReg(ForwardedReg, TRI)
                       << "\n     in " << MI << "     from " << *Copy);
 
-    if (SubregIdx)
-      MOUse.setReg(TRI->getSubReg(CopySrcReg, SubregIdx));
-    else
-      MOUse.setReg(CopySrcReg);
+    MOUse.setReg(ForwardedReg);
 
     if (!CopySrc.isRenamable())
       MOUse.setIsRenamable(false);
@@ -899,16 +900,11 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
   Tracker.clear();
 }
 
-static bool isBackwardPropagatableCopy(MachineInstr &MI,
+static bool isBackwardPropagatableCopy(const DestSourcePair &CopyOperands,
                                        const MachineRegisterInfo &MRI,
-                                       const TargetInstrInfo &TII,
-                                       bool UseCopyInstr) {
-  std::optional<DestSourcePair> CopyOperands =
-      isCopyInstr(MI, TII, UseCopyInstr);
-  assert(CopyOperands && "MI is expected to be a COPY");
-
-  Register Def = CopyOperands->Destination->getReg();
-  Register Src = CopyOperands->Source->getReg();
+                                       const TargetInstrInfo &TII) {
+  Register Def = CopyOperands.Destination->getReg();
+  Register Src = CopyOperands.Source->getReg();
 
   if (!Def || !Src)
     return false;
@@ -916,7 +912,7 @@ static bool isBackwardPropagatableCopy(MachineInstr &MI,
   if (MRI.isReserved(Def) || MRI.isReserved(Src))
     return false;
 
-  return CopyOperands->Source->isRenamable() && CopyOperands->Source->isKill();
+  return CopyOperands.Source->isRenamable() && CopyOperands.Source->isKill();
 }
 
 void MachineCopyPropagation::propagateDefs(MachineInstr &MI) {
@@ -991,14 +987,13 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
       Register SrcReg = CopyOperands->Source->getReg();
 
       if (!TRI->regsOverlap(DefReg, SrcReg)) {
-        MCRegister Def = DefReg.asMCReg();
-        MCRegister Src = SrcReg.asMCReg();
-
         // Unlike forward cp, we don't invoke propagateDefs here,
         // just let forward cp do COPY-to-COPY propagation.
-        if (isBackwardPropagatableCopy(MI, *MRI, *TII, UseCopyInstr)) {
-          Tracker.invalidateRegister(Src, *TRI, *TII, UseCopyInstr);
-          Tracker.invalidateRegister(Def, *TRI, *TII, UseCopyInstr);
+        if (isBackwardPropagatableCopy(*CopyOperands, *MRI, *TII)) {
+          Tracker.invalidateRegister(SrcReg.asMCReg(), *TRI, *TII,
+                                     UseCopyInstr);
+          Tracker.invalidateRegister(DefReg.asMCReg(), *TRI, *TII,
+                                     UseCopyInstr);
           Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
           continue;
         }

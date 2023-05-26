@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <bitset>
 #include <optional>
 
@@ -3644,7 +3645,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorContext::FunctionalCast:
       if (isa<DeducedTemplateSpecializationType>(Deduced))
         break;
-      if (SemaRef.getLangOpts().CPlusPlus2b && IsCXXAutoType &&
+      if (SemaRef.getLangOpts().CPlusPlus23 && IsCXXAutoType &&
           !Auto->isDecltypeAuto())
         break; // auto(x)
       [[fallthrough]];
@@ -4553,7 +4554,7 @@ static bool hasOuterPointerLikeChunk(const Declarator &D, unsigned endIndex) {
   return false;
 }
 
-static bool IsNoDerefableChunk(DeclaratorChunk Chunk) {
+static bool IsNoDerefableChunk(const DeclaratorChunk &Chunk) {
   return (Chunk.Kind == DeclaratorChunk::Pointer ||
           Chunk.Kind == DeclaratorChunk::Array);
 }
@@ -4893,12 +4894,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
     // If we're supposed to infer nullability, do so now.
     if (inferNullability && !inferNullabilityInnerOnlyComplete) {
-      ParsedAttr::Syntax syntax = inferNullabilityCS
-                                      ? ParsedAttr::AS_ContextSensitiveKeyword
-                                      : ParsedAttr::AS_Keyword;
+      ParsedAttr::Form form =
+          inferNullabilityCS ? ParsedAttr::Form::ContextSensitiveKeyword()
+                             : ParsedAttr::Form::Keyword(false /*IsAlignAs*/);
       ParsedAttr *nullabilityAttr = Pool.create(
           S.getNullabilityKeyword(*inferNullability), SourceRange(pointerLoc),
-          nullptr, SourceLocation(), nullptr, 0, syntax);
+          nullptr, SourceLocation(), nullptr, 0, form);
 
       attrs.addAtEnd(nullabilityAttr);
 
@@ -4979,6 +4980,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // Walk the DeclTypeInfo, building the recursive type as we go.
   // DeclTypeInfos are ordered from the identifier out, which is
   // opposite of what we want :).
+
+  // Track if the produced type matches the structure of the declarator.
+  // This is used later to decide if we can fill `TypeLoc` from
+  // `DeclaratorChunk`s. E.g. it must be false if Clang recovers from
+  // an error by replacing the type with `int`.
+  bool AreDeclaratorChunksValid = true;
   for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
     unsigned chunkIndex = e - i - 1;
     state.setCurrentChunkIndex(chunkIndex);
@@ -5070,6 +5077,19 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       DeclaratorChunk::ArrayTypeInfo &ATI = DeclType.Arr;
       Expr *ArraySize = static_cast<Expr*>(ATI.NumElts);
       ArrayType::ArraySizeModifier ASM;
+
+      // Microsoft property fields can have multiple sizeless array chunks
+      // (i.e. int x[][][]). Skip all of these except one to avoid creating
+      // bad incomplete array types.
+      if (chunkIndex != 0 && !ArraySize &&
+          D.getDeclSpec().getAttributes().hasMSPropertyAttr()) {
+        // This is a sizeless chunk. If the next is also, skip this one.
+        DeclaratorChunk &NextDeclType = D.getTypeObject(chunkIndex - 1);
+        if (NextDeclType.Kind == DeclaratorChunk::Array &&
+            !NextDeclType.Arr.NumElts)
+          break;
+      }
+
       if (ATI.isStar)
         ASM = ArrayType::Star;
       else if (ATI.hasStatic)
@@ -5111,17 +5131,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           D.setInvalidType(true);
         }
       }
-      const AutoType *AT = T->getContainedAutoType();
-      // Allow arrays of auto if we are a generic lambda parameter.
-      // i.e. [](auto (&array)[5]) { return array[0]; }; OK
-      if (AT && D.getContext() != DeclaratorContext::LambdaExprParameter) {
-        // We've already diagnosed this for decltype(auto).
-        if (!AT->isDecltypeAuto())
-          S.Diag(DeclType.Loc, diag::err_illegal_decl_array_of_auto)
-              << getPrintableNameForEntity(Name) << T;
-        T = QualType();
-        break;
-      }
 
       // Array parameters can be marked nullable as well, although it's not
       // necessary if they're marked 'static'.
@@ -5159,6 +5168,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                        : diag::err_deduced_return_type);
             T = Context.IntTy;
             D.setInvalidType(true);
+            AreDeclaratorChunksValid = false;
           } else {
             S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
                    diag::warn_cxx11_compat_deduced_return_type);
@@ -5169,6 +5179,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             S.Diag(D.getBeginLoc(), diag::err_trailing_return_in_parens)
                 << T << D.getSourceRange();
             D.setInvalidType(true);
+            // FIXME: recover and fill decls in `TypeLoc`s.
+            AreDeclaratorChunksValid = false;
           } else if (D.getName().getKind() ==
                      UnqualifiedIdKind::IK_DeductionGuideName) {
             if (T != Context.DependentTy) {
@@ -5176,6 +5188,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                      diag::err_deduction_guide_with_complex_decl)
                   << D.getSourceRange();
               D.setInvalidType(true);
+              // FIXME: recover and fill decls in `TypeLoc`s.
+              AreDeclaratorChunksValid = false;
             }
           } else if (D.getContext() != DeclaratorContext::LambdaExpr &&
                      (T.hasQualifiers() || !isa<AutoType>(T) ||
@@ -5186,6 +5200,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                    diag::err_trailing_return_without_auto)
                 << T << D.getDeclSpec().getSourceRange();
             D.setInvalidType(true);
+            // FIXME: recover and fill decls in `TypeLoc`s.
+            AreDeclaratorChunksValid = false;
           }
           T = S.GetTypeFromParser(FTI.getTrailingReturnType(), &TInfo);
           if (T.isNull()) {
@@ -5226,6 +5242,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         S.Diag(DeclType.Loc, diagID) << T->isFunctionType() << T;
         T = Context.IntTy;
         D.setInvalidType(true);
+        AreDeclaratorChunksValid = false;
       }
 
       // Do not allow returning half FP value.
@@ -5292,6 +5309,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           ObjCObjectPointerTypeLoc TLoc = TLB.push<ObjCObjectPointerTypeLoc>(T);
           TLoc.setStarLoc(FixitLoc);
           TInfo = TLB.getTypeSourceInfo(Context, T);
+        } else {
+          AreDeclaratorChunksValid = false;
         }
 
         D.setInvalidType(true);
@@ -5412,6 +5431,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           T = (!LangOpts.requiresStrictPrototypes() && !LangOpts.OpenCL)
                   ? Context.getFunctionNoProtoType(T, EI)
                   : Context.IntTy;
+          AreDeclaratorChunksValid = false;
           break;
         }
 
@@ -5646,9 +5666,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (!ClsType.isNull())
         T = S.BuildMemberPointerType(T, ClsType, DeclType.Loc,
                                      D.getIdentifier());
+      else
+        AreDeclaratorChunksValid = false;
+
       if (T.isNull()) {
         T = Context.IntTy;
         D.setInvalidType(true);
+        AreDeclaratorChunksValid = false;
       } else if (DeclType.Mem.TypeQuals) {
         T = S.BuildQualifiedType(T, DeclType.Loc, DeclType.Mem.TypeQuals);
       }
@@ -5666,6 +5690,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     if (T.isNull()) {
       D.setInvalidType(true);
       T = Context.IntTy;
+      AreDeclaratorChunksValid = false;
     }
 
     // See if there are any attributes on this declarator chunk.
@@ -5924,9 +5949,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   }
 
   assert(!T.isNull() && "T must not be null at the end of this function");
-  if (D.isInvalidType())
+  if (!AreDeclaratorChunksValid)
     return Context.getTrivialTypeSourceInfo(T);
-
   return GetTypeSourceInfoForDeclarator(state, T, TInfo);
 }
 
@@ -5991,7 +6015,7 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
   ParsedAttr *attr = D.getAttributePool().create(
       &S.Context.Idents.get("objc_ownership"), SourceLocation(),
       /*scope*/ nullptr, SourceLocation(),
-      /*args*/ &Args, 1, ParsedAttr::AS_GNU);
+      /*args*/ &Args, 1, ParsedAttr::Form::GNU());
   chunk.getAttrs().addAtEnd(attr);
   // TODO: mark whether we did this inference?
 }
@@ -6523,6 +6547,12 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
   }
 
   for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
+    // Microsoft property fields can have multiple sizeless array chunks
+    // (i.e. int x[][][]). Don't create more than one level of incomplete array.
+    if (CurrTL.getTypeLocClass() == TypeLoc::IncompleteArray && e != 1 &&
+        D.getDeclSpec().getAttributes().hasMSPropertyAttr())
+      continue;
+
     // An AtomicTypeLoc might be produced by an atomic qualifier in this
     // declarator chunk.
     if (AtomicTypeLoc ATL = CurrTL.getAs<AtomicTypeLoc>()) {
@@ -8256,6 +8286,68 @@ static void HandleArmMveStrictPolymorphismAttr(TypeProcessingState &State,
                               CurType, CurType);
 }
 
+/// HandleRISCVRVVVectorBitsTypeAttr - The "riscv_rvv_vector_bits" attribute is
+/// used to create fixed-length versions of sizeless RVV types such as
+/// vint8m1_t_t.
+static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
+                                             ParsedAttr &Attr, Sema &S) {
+  // Target must have vector extension.
+  if (!S.Context.getTargetInfo().hasFeature("zve32x")) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
+        << Attr << "'zve32x'";
+    Attr.setInvalid();
+    return;
+  }
+
+  auto VScale = S.Context.getTargetInfo().getVScaleRange(S.getLangOpts());
+  if (!VScale || !VScale->first || VScale->first != VScale->second) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
+        << Attr;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Check the attribute arguments.
+  if (Attr.getNumArgs() != 1) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << Attr << 1;
+    Attr.setInvalid();
+    return;
+  }
+
+  // The vector size must be an integer constant expression.
+  llvm::APSInt RVVVectorSizeInBits(32);
+  if (!verifyValidIntegerConstantExpr(S, Attr, RVVVectorSizeInBits))
+    return;
+
+  // Attribute can only be attached to a single RVV vector type.
+  if (!CurType->isRVVVLSBuiltinType()) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_invalid_rvv_type)
+        << Attr << CurType;
+    Attr.setInvalid();
+    return;
+  }
+
+  unsigned VecSize = static_cast<unsigned>(RVVVectorSizeInBits.getZExtValue());
+
+  ASTContext::BuiltinVectorTypeInfo Info =
+      S.Context.getBuiltinVectorTypeInfo(CurType->getAs<BuiltinType>());
+  unsigned EltSize = S.Context.getTypeSize(Info.ElementType);
+  unsigned MinElts = Info.EC.getKnownMinValue();
+
+  // The attribute vector size must match -mrvv-vector-bits.
+  if (VecSize != VScale->first * MinElts * EltSize) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
+        << VecSize << VScale->first * llvm::RISCV::RVVBitsPerBlock;
+    Attr.setInvalid();
+    return;
+  }
+
+  VectorType::VectorKind VecKind = VectorType::RVVFixedLengthDataVector;
+  VecSize /= EltSize;
+  CurType = S.Context.getVectorType(Info.ElementType, VecSize, VecKind);
+}
+
 /// Handle OpenCL Access Qualifier Attribute.
 static void HandleOpenCLAccessAttr(QualType &CurType, const ParsedAttr &Attr,
                                    Sema &S) {
@@ -8502,6 +8594,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       attr.setUsedAsTypeAttr();
       break;
     }
+    case ParsedAttr::AT_RISCVRVVVectorBits:
+      HandleRISCVRVVVectorBitsTypeAttr(type, attr, state.getSema());
+      attr.setUsedAsTypeAttr();
+      break;
     case ParsedAttr::AT_OpenCLAccess:
       HandleOpenCLAccessAttr(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
@@ -8941,8 +9037,7 @@ static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
                           ? S.ImplicitMSInheritanceAttrLoc
                           : RD->getSourceRange();
     RD->addAttr(MSInheritanceAttr::CreateImplicit(
-        S.getASTContext(), BestCase, Loc, AttributeCommonInfo::AS_Microsoft,
-        MSInheritanceAttr::Spelling(IM)));
+        S.getASTContext(), BestCase, Loc, MSInheritanceAttr::Spelling(IM)));
     S.Consumer.AssignInheritanceModel(RD);
   }
 }

@@ -2235,7 +2235,7 @@ define <4 x float> @combine_undef_input_test9(<4 x float> %a) {
 ;
 ; AVX-LABEL: combine_undef_input_test9:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,1]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,1]
 ; AVX-NEXT:    retq
   %1 = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 5, i32 5>
   %2 = shufflevector <4 x float> %1, <4 x float> %a, <4 x i32> <i32 6, i32 7, i32 0, i32 1>
@@ -2423,7 +2423,7 @@ define <4 x float> @combine_undef_input_test19(<4 x float> %a) {
 ;
 ; AVX-LABEL: combine_undef_input_test19:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,1]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,1]
 ; AVX-NEXT:    retq
   %1 = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 5, i32 5>
   %2 = shufflevector <4 x float> %a, <4 x float> %1, <4 x i32> <i32 2, i32 3, i32 4, i32 5>

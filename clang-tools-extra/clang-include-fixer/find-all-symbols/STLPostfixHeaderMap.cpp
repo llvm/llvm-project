@@ -267,6 +267,7 @@ const HeaderMapCollector::RegexHeaderMap *getSTLPostfixHeaderMap() {
       {"unordered_set$", "<unordered_set>"},
       {"utility$", "<utility>"},
       {"valarray$", "<valarray>"},
+      {"variant$", "<variant>"},
       {"vector$", "<vector>"},
       {"include/complex.h$", "<complex.h>"},
       {"include/ctype.h$", "<cctype>"},

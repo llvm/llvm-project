@@ -96,8 +96,8 @@ bool WordIsPoisoned(uptr addr);
 //// --------------------------------------------------------------------------
 
 // Wrappers for ThreadRegistry access.
-void LockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
-void UnlockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+void LockThreads() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+void UnlockThreads() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
 // If called from the main thread, updates the main thread's TID in the thread
 // registry. We need this to handle processes that fork() without a subsequent
 // exec(), which invalidates the recorded TID. To update it, we must call
@@ -154,19 +154,19 @@ class LsanMetadata {
 void ForEachChunk(ForEachChunkCallback callback, void *arg);
 
 // Helper for __lsan_ignore_object().
-IgnoreObjectResult IgnoreObjectLocked(const void *p);
+IgnoreObjectResult IgnoreObject(const void *p);
 
 // The rest of the LSan interface which is implemented by library.
 
 struct ScopedStopTheWorldLock {
   ScopedStopTheWorldLock() {
-    LockThreadRegistry();
+    LockThreads();
     LockAllocator();
   }
 
   ~ScopedStopTheWorldLock() {
     UnlockAllocator();
-    UnlockThreadRegistry();
+    UnlockThreads();
   }
 
   ScopedStopTheWorldLock &operator=(const ScopedStopTheWorldLock &) = delete;

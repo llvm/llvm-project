@@ -109,52 +109,52 @@ enum PPElifDiag {
   PED_Elifndef
 };
 
+static bool isFeatureTestMacro(StringRef MacroName) {
+  // list from:
+  // * https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
+  // * https://docs.microsoft.com/en-us/cpp/c-runtime-library/security-features-in-the-crt?view=msvc-160
+  // * man 7 feature_test_macros
+  // The list must be sorted for correct binary search.
+  static constexpr StringRef ReservedMacro[] = {
+      "_ATFILE_SOURCE",
+      "_BSD_SOURCE",
+      "_CRT_NONSTDC_NO_WARNINGS",
+      "_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES",
+      "_CRT_SECURE_NO_WARNINGS",
+      "_FILE_OFFSET_BITS",
+      "_FORTIFY_SOURCE",
+      "_GLIBCXX_ASSERTIONS",
+      "_GLIBCXX_CONCEPT_CHECKS",
+      "_GLIBCXX_DEBUG",
+      "_GLIBCXX_DEBUG_PEDANTIC",
+      "_GLIBCXX_PARALLEL",
+      "_GLIBCXX_PARALLEL_ASSERTIONS",
+      "_GLIBCXX_SANITIZE_VECTOR",
+      "_GLIBCXX_USE_CXX11_ABI",
+      "_GLIBCXX_USE_DEPRECATED",
+      "_GNU_SOURCE",
+      "_ISOC11_SOURCE",
+      "_ISOC95_SOURCE",
+      "_ISOC99_SOURCE",
+      "_LARGEFILE64_SOURCE",
+      "_POSIX_C_SOURCE",
+      "_REENTRANT",
+      "_SVID_SOURCE",
+      "_THREAD_SAFE",
+      "_XOPEN_SOURCE",
+      "_XOPEN_SOURCE_EXTENDED",
+      "__STDCPP_WANT_MATH_SPEC_FUNCS__",
+      "__STDC_FORMAT_MACROS",
+  };
+  return std::binary_search(std::begin(ReservedMacro), std::end(ReservedMacro),
+                            MacroName);
+}
+
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  if (isReservedInAllContexts(II->isReserved(Lang))) {
-    // list from:
-    // - https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
-    // - https://docs.microsoft.com/en-us/cpp/c-runtime-library/security-features-in-the-crt?view=msvc-160
-    // - man 7 feature_test_macros
-    // The list must be sorted for correct binary search.
-    static constexpr StringRef ReservedMacro[] = {
-        "_ATFILE_SOURCE",
-        "_BSD_SOURCE",
-        "_CRT_NONSTDC_NO_WARNINGS",
-        "_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES",
-        "_CRT_SECURE_NO_WARNINGS",
-        "_FILE_OFFSET_BITS",
-        "_FORTIFY_SOURCE",
-        "_GLIBCXX_ASSERTIONS",
-        "_GLIBCXX_CONCEPT_CHECKS",
-        "_GLIBCXX_DEBUG",
-        "_GLIBCXX_DEBUG_PEDANTIC",
-        "_GLIBCXX_PARALLEL",
-        "_GLIBCXX_PARALLEL_ASSERTIONS",
-        "_GLIBCXX_SANITIZE_VECTOR",
-        "_GLIBCXX_USE_CXX11_ABI",
-        "_GLIBCXX_USE_DEPRECATED",
-        "_GNU_SOURCE",
-        "_ISOC11_SOURCE",
-        "_ISOC95_SOURCE",
-        "_ISOC99_SOURCE",
-        "_LARGEFILE64_SOURCE",
-        "_POSIX_C_SOURCE",
-        "_REENTRANT",
-        "_SVID_SOURCE",
-        "_THREAD_SAFE",
-        "_XOPEN_SOURCE",
-        "_XOPEN_SOURCE_EXTENDED",
-        "__STDCPP_WANT_MATH_SPEC_FUNCS__",
-        "__STDC_FORMAT_MACROS",
-    };
-    if (std::binary_search(std::begin(ReservedMacro), std::end(ReservedMacro),
-                           II->getName()))
-      return MD_NoWarn;
-
-    return MD_ReservedMacro;
-  }
   StringRef Text = II->getName();
+  if (isReservedInAllContexts(II->isReserved(Lang)))
+    return isFeatureTestMacro(Text) ? MD_NoWarn : MD_ReservedMacro;
   if (II->isKeyword(Lang))
     return MD_KeywordDef;
   if (Lang.CPlusPlus11 && (Text.equals("override") || Text.equals("final")))
@@ -319,15 +319,6 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
     return Diag(MacroNameTok, diag::err_defined_macro_name);
   }
 
-  if (isDefineUndef == MU_Undef) {
-    auto *MI = getMacroInfo(II);
-    if (MI && MI->isBuiltinMacro()) {
-      // Warn if undefining "__LINE__" and other builtins, per C99 6.10.8/4
-      // and C++ [cpp.predefined]p4], but allow it as an extension.
-      Diag(MacroNameTok, diag::ext_pp_undef_builtin_macro);
-    }
-  }
-
   // If defining/undefining reserved identifier or a keyword, we need to issue
   // a warning.
   SourceLocation MacroNameLoc = MacroNameTok.getLocation();
@@ -434,7 +425,7 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   std::vector<StringRef> Candidates = {
       "if", "ifdef", "ifndef", "elif", "else", "endif"
   };
-  if (LangOpts.C2x || LangOpts.CPlusPlus2b)
+  if (LangOpts.C2x || LangOpts.CPlusPlus23)
     Candidates.insert(Candidates.end(), {"elifdef", "elifndef"});
 
   if (std::optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
@@ -745,12 +736,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
         if (!CondInfo.WasSkipping)
           SkippingRangeState.endLexPass(Hashptr);
 
-        // Warn if using `#elifdef` & `#elifndef` in not C2x & C++2b mode even
+        // Warn if using `#elifdef` & `#elifndef` in not C2x & C++23 mode even
         // if this branch is in a skipping block.
         unsigned DiagID;
         if (LangOpts.CPlusPlus)
-          DiagID = LangOpts.CPlusPlus2b ? diag::warn_cxx2b_compat_pp_directive
-                                        : diag::ext_cxx2b_pp_directive;
+          DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
+                                        : diag::ext_cxx23_pp_directive;
         else
           DiagID = LangOpts.C2x ? diag::warn_c2x_compat_pp_directive
                                 : diag::ext_c2x_pp_directive;
@@ -1177,6 +1168,10 @@ void Preprocessor::HandleDirective(Token &Result) {
 
   switch (Result.getKind()) {
   case tok::eod:
+    // Ignore the null directive with regards to the multiple-include
+    // optimization, i.e. allow the null directive to appear outside of the
+    // include guard and still enable the multiple-include optimization.
+    CurPPLexer->MIOpt.SetReadToken(ReadAnyTokensBeforeDirective);
     return;   // null directive.
   case tok::code_completion:
     setCodeCompletionReached();
@@ -1252,10 +1247,10 @@ void Preprocessor::HandleDirective(Token &Result) {
 
     case tok::pp_warning:
       if (LangOpts.CPlusPlus)
-        Diag(Result, LangOpts.CPlusPlus2b
-                         ? diag::warn_cxx2b_compat_warning_directive
+        Diag(Result, LangOpts.CPlusPlus23
+                         ? diag::warn_cxx23_compat_warning_directive
                          : diag::ext_pp_warning_directive)
-            << /*C++2b*/ 1;
+            << /*C++23*/ 1;
       else
         Diag(Result, LangOpts.C2x ? diag::warn_c2x_compat_warning_directive
                                   : diag::ext_pp_warning_directive)
@@ -2643,7 +2638,7 @@ bool Preprocessor::ReadMacroParameterList(MacroInfo *MI, Token &Tok) {
   SmallVector<IdentifierInfo*, 32> Parameters;
 
   while (true) {
-    LexUnexpandedToken(Tok);
+    LexUnexpandedNonComment(Tok);
     switch (Tok.getKind()) {
     case tok::r_paren:
       // Found the end of the parameter list.
@@ -2664,7 +2659,7 @@ bool Preprocessor::ReadMacroParameterList(MacroInfo *MI, Token &Tok) {
       }
 
       // Lex the token after the identifier.
-      LexUnexpandedToken(Tok);
+      LexUnexpandedNonComment(Tok);
       if (Tok.isNot(tok::r_paren)) {
         Diag(Tok, diag::err_pp_missing_rparen_in_macro_def);
         return true;
@@ -2698,7 +2693,7 @@ bool Preprocessor::ReadMacroParameterList(MacroInfo *MI, Token &Tok) {
       Parameters.push_back(II);
 
       // Lex the token after the identifier.
-      LexUnexpandedToken(Tok);
+      LexUnexpandedNonComment(Tok);
 
       switch (Tok.getKind()) {
       default:          // #define X(A B
@@ -2714,7 +2709,7 @@ bool Preprocessor::ReadMacroParameterList(MacroInfo *MI, Token &Tok) {
         Diag(Tok, diag::ext_named_variadic_macro);
 
         // Lex the token after the identifier.
-        LexUnexpandedToken(Tok);
+        LexUnexpandedNonComment(Tok);
         if (Tok.isNot(tok::r_paren)) {
           Diag(Tok, diag::err_pp_missing_rparen_in_macro_def);
           return true;
@@ -3008,6 +3003,12 @@ MacroInfo *Preprocessor::ReadOptionalMacroParameterListAndBody(
   MI->setTokens(Tokens, BP);
   return MI;
 }
+
+static bool isObjCProtectedMacro(const IdentifierInfo *II) {
+  return II->isStr("__strong") || II->isStr("__weak") ||
+         II->isStr("__unsafe_unretained") || II->isStr("__autoreleasing");
+}
+
 /// HandleDefineDirective - Implements \#define.  This consumes the entire macro
 /// line then lets the caller lex the next real token.
 void Preprocessor::HandleDefineDirective(
@@ -3079,15 +3080,9 @@ void Preprocessor::HandleDefineDirective(
     // In Objective-C, ignore attempts to directly redefine the builtin
     // definitions of the ownership qualifiers.  It's still possible to
     // #undef them.
-    auto isObjCProtectedMacro = [](const IdentifierInfo *II) -> bool {
-      return II->isStr("__strong") ||
-             II->isStr("__weak") ||
-             II->isStr("__unsafe_unretained") ||
-             II->isStr("__autoreleasing");
-    };
-   if (getLangOpts().ObjC &&
-        SourceMgr.getFileID(OtherMI->getDefinitionLoc())
-          == getPredefinesFileID() &&
+    if (getLangOpts().ObjC &&
+        SourceMgr.getFileID(OtherMI->getDefinitionLoc()) ==
+            getPredefinesFileID() &&
         isObjCProtectedMacro(MacroNameTok.getIdentifierInfo())) {
       // Warn if it changes the tokens.
       if ((!getDiagnostics().getSuppressSystemWarnings() ||
@@ -3111,7 +3106,9 @@ void Preprocessor::HandleDefineDirective(
 
       // Warn if defining "__LINE__" and other builtins, per C99 6.10.8/4 and
       // C++ [cpp.predefined]p4, but allow it as an extension.
-      if (OtherMI->isBuiltinMacro())
+      if (OtherMI->isBuiltinMacro() ||
+          (SourceMgr.isWrittenInBuiltinFile(OtherMI->getDefinitionLoc()) &&
+           !isFeatureTestMacro(MacroNameTok.getIdentifierInfo()->getName())))
         Diag(MacroNameTok, diag::ext_pp_redef_builtin_macro);
       // Macros must be identical.  This means all tokens and whitespace
       // separation must be the same.  C99 6.10.3p2.
@@ -3190,6 +3187,14 @@ void Preprocessor::HandleUndefDirective() {
   if (const MacroInfo *MI = MD.getMacroInfo()) {
     if (!MI->isUsed() && MI->isWarnIfUnused())
       Diag(MI->getDefinitionLoc(), diag::pp_macro_not_used);
+
+    // Warn if undefining "__LINE__" and other builtins, per C99 6.10.8/4 and
+    // C++ [cpp.predefined]p4, but allow it as an extension. Don't warn if this
+    // is an Objective-C builtin macro though.
+    if ((MI->isBuiltinMacro() ||
+         SourceMgr.isWrittenInBuiltinFile(MI->getDefinitionLoc())) &&
+        !(getLangOpts().ObjC && isObjCProtectedMacro(II)))
+      Diag(MacroNameTok, diag::ext_pp_undef_builtin_macro);
 
     if (MI->isWarnIfUnused())
       WarnUnusedMacroLocs.erase(MI->getDefinitionLoc());
@@ -3419,14 +3424,14 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
                                                  : PED_Elifndef;
   ++NumElse;
 
-  // Warn if using `#elifdef` & `#elifndef` in not C2x & C++2b mode.
+  // Warn if using `#elifdef` & `#elifndef` in not C2x & C++23 mode.
   switch (DirKind) {
   case PED_Elifdef:
   case PED_Elifndef:
     unsigned DiagID;
     if (LangOpts.CPlusPlus)
-      DiagID = LangOpts.CPlusPlus2b ? diag::warn_cxx2b_compat_pp_directive
-                                    : diag::ext_cxx2b_pp_directive;
+      DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
+                                    : diag::ext_cxx23_pp_directive;
     else
       DiagID = LangOpts.C2x ? diag::warn_c2x_compat_pp_directive
                             : diag::ext_c2x_pp_directive;

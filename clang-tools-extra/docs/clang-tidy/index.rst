@@ -211,6 +211,8 @@ An overview of all the command-line options:
                                      format to stderr. When this option is passed,
                                      these per-TU profiles are instead stored as JSON.
     --system-headers               - Display the errors from system headers.
+                                     This option overrides the 'SystemHeaders' option
+                                     in .clang-tidy file, if any.
     --use-color                    - Use colors in diagnostics. If not set, colors
                                      will be used if the terminal connected to
                                      standard output supports colors.
@@ -259,7 +261,9 @@ An overview of all the command-line options:
                                    options. Example:
                                      CheckOptions:
                                        some-check.SomeOption: 'some value'
-    Checks                       - Same as '--checks'.
+    Checks                       - Same as '--checks'. Additionally, the list of
+                                   globs can be specified as a list instead of a
+                                   string.
     ExtraArgs                    - Same as '--extra-args'.
     ExtraArgsBefore              - Same as '--extra-args-before'.
     FormatStyle                  - Same as '--format-style'.

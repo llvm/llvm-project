@@ -1,17 +1,20 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
+import contextlib
+import io
 import lit
 import lit.formats
 import os
 import pipes
 import re
 import shutil
+
 
 def _getTempPaths(test):
     """
@@ -22,14 +25,77 @@ def _getTempPaths(test):
     """
     tmpDir, _ = lit.TestRunner.getTempPaths(test)
     _, testName = os.path.split(test.getExecPath())
-    tmpDir = os.path.join(tmpDir, testName + '.dir')
-    tmpBase = os.path.join(tmpDir, 't')
+    tmpDir = os.path.join(tmpDir, testName + ".dir")
+    tmpBase = os.path.join(tmpDir, "t")
     return tmpDir, tmpBase
+
 
 def _checkBaseSubstitutions(substitutions):
     substitutions = [s for (s, _) in substitutions]
-    for s in ['%{cxx}', '%{compile_flags}', '%{link_flags}', '%{flags}', '%{exec}']:
+    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{flags}", "%{exec}"]:
         assert s in substitutions, "Required substitution {} was not provided".format(s)
+
+def _parseLitOutput(fullOutput):
+    """
+    Parse output of a Lit ShTest to extract the actual output of the contained commands.
+
+    This takes output of the form
+
+        $ ":" "RUN: at line 11"
+        $ "echo" "OUTPUT1"
+        # command output:
+        OUTPUT1
+
+        $ ":" "RUN: at line 12"
+        $ "echo" "OUTPUT2"
+        # command output:
+        OUTPUT2
+
+    and returns a string containing
+
+        OUTPUT1
+        OUTPUT2
+
+    as-if the commands had been run directly. This is a workaround for the fact
+    that Lit doesn't let us execute ShTest and retrieve the raw output without
+    injecting additional Lit output around it.
+    """
+    parsed = ''
+    for output in re.split('[$]\s*":"\s*"RUN: at line \d+"', fullOutput):
+        if output: # skip blank lines
+            commandOutput = re.search("# command output:\n(.+)\n$", output, flags=re.DOTALL)
+            if commandOutput:
+                parsed += commandOutput.group(1)
+    return parsed
+
+def _executeScriptInternal(test, litConfig, commands):
+    """
+    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
+
+    TODO: This really should be easier to access from Lit itself
+    """
+    parsedCommands = parseScript(test, preamble=commands)
+
+    _, tmpBase = _getTempPaths(test)
+    execDir = os.path.dirname(test.getExecPath())
+    res = lit.TestRunner.executeScriptInternal(
+        test, litConfig, tmpBase, parsedCommands, execDir
+    )
+    if isinstance(res, lit.Test.Result):  # Handle failure to parse the Lit test
+        res = ("", res.output, 127, None)
+    (out, err, exitCode, timeoutInfo) = res
+
+    # TODO: As a temporary workaround until https://reviews.llvm.org/D81892 lands, manually
+    #       split any stderr output that is included in stdout. It shouldn't be there, but
+    #       the Lit internal shell conflates stderr and stdout.
+    conflatedErrorOutput = re.search("(# command stderr:.+$)", out, flags=re.DOTALL)
+    if conflatedErrorOutput:
+        conflatedErrorOutput = conflatedErrorOutput.group(0)
+        out = out[: -len(conflatedErrorOutput)]
+        err += conflatedErrorOutput
+
+    return (out, err, exitCode, timeoutInfo, parsedCommands)
+
 
 def parseScript(test, preamble):
     """
@@ -52,32 +118,41 @@ def parseScript(test, preamble):
 
     # Check base substitutions and add the %{build} and %{run} convenience substitutions
     _checkBaseSubstitutions(substitutions)
-    substitutions.append(('%{build}', '%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe'))
-    substitutions.append(('%{run}', '%{exec} %t.exe'))
+    substitutions.append(
+        ("%{build}", "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe")
+    )
+    substitutions.append(("%{run}", "%{exec} %t.exe"))
 
     # Parse the test file, including custom directives
     additionalCompileFlags = []
     fileDependencies = []
     parsers = [
-        lit.TestRunner.IntegratedTestKeywordParser('FILE_DEPENDENCIES:',
-                                                   lit.TestRunner.ParserKind.LIST,
-                                                   initial_value=fileDependencies),
-        lit.TestRunner.IntegratedTestKeywordParser('ADDITIONAL_COMPILE_FLAGS:',
-                                                   lit.TestRunner.ParserKind.LIST,
-                                                   initial_value=additionalCompileFlags)
+        lit.TestRunner.IntegratedTestKeywordParser(
+            "FILE_DEPENDENCIES:",
+            lit.TestRunner.ParserKind.LIST,
+            initial_value=fileDependencies,
+        ),
+        lit.TestRunner.IntegratedTestKeywordParser(
+            "ADDITIONAL_COMPILE_FLAGS:",
+            lit.TestRunner.ParserKind.LIST,
+            initial_value=additionalCompileFlags,
+        ),
     ]
 
     # Add conditional parsers for ADDITIONAL_COMPILE_FLAGS. This should be replaced by first
     # class support for conditional keywords in Lit, which would allow evaluating arbitrary
     # Lit boolean expressions instead.
     for feature in test.config.available_features:
-        parser = lit.TestRunner.IntegratedTestKeywordParser('ADDITIONAL_COMPILE_FLAGS({}):'.format(feature),
-                                                            lit.TestRunner.ParserKind.LIST,
-                                                            initial_value=additionalCompileFlags)
+        parser = lit.TestRunner.IntegratedTestKeywordParser(
+            "ADDITIONAL_COMPILE_FLAGS({}):".format(feature),
+            lit.TestRunner.ParserKind.LIST,
+            initial_value=additionalCompileFlags,
+        )
         parsers.append(parser)
 
-    scriptInTest = lit.TestRunner.parseIntegratedTestScript(test, additional_parsers=parsers,
-                                                            require_script=not preamble)
+    scriptInTest = lit.TestRunner.parseIntegratedTestScript(
+        test, additional_parsers=parsers, require_script=not preamble
+    )
     if isinstance(scriptInTest, lit.Test.Result):
         return scriptInTest
 
@@ -87,17 +162,22 @@ def parseScript(test, preamble):
     # that file to the execution directory. Execute the copy from %S to allow
     # relative paths from the test directory.
     for dep in fileDependencies:
-        script += ['%dbg(SETUP) cd %S && cp {} %T'.format(dep)]
+        script += ["%dbg(SETUP) cd %S && cp {} %T".format(dep)]
     script += preamble
     script += scriptInTest
 
     # Add compile flags specified with ADDITIONAL_COMPILE_FLAGS.
-    substitutions = [(s, x + ' ' + ' '.join(additionalCompileFlags)) if s == '%{compile_flags}'
-                            else (s, x) for (s, x) in substitutions]
+    substitutions = [
+        (s, x + " " + " ".join(additionalCompileFlags))
+        if s == "%{compile_flags}"
+        else (s, x)
+        for (s, x) in substitutions
+    ]
 
     # Perform substitutions in the script itself.
-    script = lit.TestRunner.applySubstitutions(script, substitutions,
-                                               recursion_limit=test.config.recursiveExpansionLimit)
+    script = lit.TestRunner.applySubstitutions(
+        script, substitutions, recursion_limit=test.config.recursiveExpansionLimit
+    )
 
     return script
 
@@ -123,6 +203,16 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
     FOO.link.fail.cpp       - Compiles successfully, but fails to link
 
     FOO.sh.<anything>       - A builtin Lit Shell test
+
+    FOO.gen.<anything>      - A .sh test that generates one or more Lit tests on the
+                              fly. Executing this test must generate one or more files
+                              as expected by LLVM split-file, and each generated file
+                              leads to a separate Lit test that runs that file as
+                              defined by the test format. This can be used to generate
+                              multiple Lit tests from a single source file, which is
+                              useful for testing repetitive properties in the library.
+                              Be careful not to abuse this since this is not a replacement
+                              for usual code reuse techniques.
 
     FOO.verify.cpp          - Compiles with clang-verify. This type of test is
                               automatically marked as UNSUPPORTED if the compiler
@@ -187,80 +277,105 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             Equivalent to `%{exec} %t.exe`. This is intended to be used
             in conjunction with the %{build} substitution.
     """
+
     def getTestsInDirectory(self, testSuite, pathInSuite, litConfig, localConfig):
-        SUPPORTED_SUFFIXES = ['[.]pass[.]cpp$', '[.]pass[.]mm$',
-                              '[.]compile[.]pass[.]cpp$', '[.]compile[.]pass[.]mm$',
-                              '[.]compile[.]fail[.]cpp$',
-                              '[.]link[.]pass[.]cpp$', '[.]link[.]pass[.]mm$',
-                              '[.]link[.]fail[.]cpp$',
-                              '[.]sh[.][^.]+$',
-                              '[.]verify[.]cpp$',
-                              '[.]fail[.]cpp$']
+        SUPPORTED_SUFFIXES = [
+            "[.]pass[.]cpp$",
+            "[.]pass[.]mm$",
+            "[.]compile[.]pass[.]cpp$",
+            "[.]compile[.]pass[.]mm$",
+            "[.]compile[.]fail[.]cpp$",
+            "[.]link[.]pass[.]cpp$",
+            "[.]link[.]pass[.]mm$",
+            "[.]link[.]fail[.]cpp$",
+            "[.]sh[.][^.]+$",
+            "[.]gen[.][^.]+$",
+            "[.]verify[.]cpp$",
+            "[.]fail[.]cpp$",
+        ]
         sourcePath = testSuite.getSourcePath(pathInSuite)
         for filename in os.listdir(sourcePath):
             # Ignore dot files and excluded tests.
-            if filename.startswith('.') or filename in localConfig.excludes:
+            if filename.startswith(".") or filename in localConfig.excludes:
                 continue
 
             filepath = os.path.join(sourcePath, filename)
             if not os.path.isdir(filepath):
                 if any([re.search(ext, filename) for ext in SUPPORTED_SUFFIXES]):
-                    yield lit.Test.Test(testSuite, pathInSuite + (filename,), localConfig)
+                    # If this is a generated test, run the generation step and add
+                    # as many Lit tests as necessary.
+                    if re.search('[.]gen[.][^.]+$', filename):
+                        for test in self._generateGenTest(testSuite, pathInSuite + (filename,), litConfig, localConfig):
+                            yield test
+                    else:
+                        yield lit.Test.Test(testSuite, pathInSuite + (filename,), localConfig)
 
     def execute(self, test, litConfig):
-        VERIFY_FLAGS = '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'
-        supportsVerify = 'verify-support' in test.config.available_features
+        VERIFY_FLAGS = (
+            "-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0"
+        )
+        supportsVerify = "verify-support" in test.config.available_features
         filename = test.path_in_suite[-1]
 
-        if re.search('[.]sh[.][^.]+$', filename):
-            steps = [ ] # The steps are already in the script
+        if re.search("[.]sh[.][^.]+$", filename):
+            steps = []  # The steps are already in the script
             return self._executeShTest(test, litConfig, steps)
-        elif filename.endswith('.compile.pass.cpp') or filename.endswith('.compile.pass.mm'):
+        elif filename.endswith(".compile.pass.cpp") or filename.endswith(
+            ".compile.pass.mm"
+        ):
             steps = [
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
             ]
             return self._executeShTest(test, litConfig, steps)
-        elif filename.endswith('.compile.fail.cpp'):
+        elif filename.endswith(".compile.fail.cpp"):
             steps = [
                 "%dbg(COMPILED WITH) ! %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
             ]
             return self._executeShTest(test, litConfig, steps)
-        elif filename.endswith('.link.pass.cpp') or filename.endswith('.link.pass.mm'):
+        elif filename.endswith(".link.pass.cpp") or filename.endswith(".link.pass.mm"):
             steps = [
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps)
-        elif filename.endswith('.link.fail.cpp'):
+        elif filename.endswith(".link.fail.cpp"):
             steps = [
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -c -o %t.o",
-                "%dbg(LINKED WITH) ! %{cxx} %t.o %{flags} %{link_flags} -o %t.exe"
+                "%dbg(LINKED WITH) ! %{cxx} %t.o %{flags} %{link_flags} -o %t.exe",
             ]
             return self._executeShTest(test, litConfig, steps)
-        elif filename.endswith('.verify.cpp'):
+        elif filename.endswith(".verify.cpp"):
             if not supportsVerify:
-                return lit.Test.Result(lit.Test.UNSUPPORTED,
-                    "Test {} requires support for Clang-verify, which isn't supported by the compiler".format(test.getFullName()))
+                return lit.Test.Result(
+                    lit.Test.UNSUPPORTED,
+                    "Test {} requires support for Clang-verify, which isn't supported by the compiler".format(
+                        test.getFullName()
+                    ),
+                )
             steps = [
                 # Note: Use -Wno-error to make sure all diagnostics are not treated as errors,
                 #       which doesn't make sense for clang-verify tests.
-                "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(VERIFY_FLAGS)
+                "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(
+                    VERIFY_FLAGS
+                )
             ]
             return self._executeShTest(test, litConfig, steps)
         # Make sure to check these ones last, since they will match other
         # suffixes above too.
-        elif filename.endswith('.pass.cpp') or filename.endswith('.pass.mm'):
+        elif filename.endswith(".pass.cpp") or filename.endswith(".pass.mm"):
             steps = [
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
-                "%dbg(EXECUTED AS) %{exec} %t.exe"
+                "%dbg(EXECUTED AS) %{exec} %t.exe",
             ]
             return self._executeShTest(test, litConfig, steps)
         # This is like a .verify.cpp test when clang-verify is supported,
         # otherwise it's like a .compile.fail.cpp test. This is only provided
         # for backwards compatibility with the test suite.
-        elif filename.endswith('.fail.cpp'):
+        elif filename.endswith(".fail.cpp"):
             if supportsVerify:
                 steps = [
-                    "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(VERIFY_FLAGS)
+                    "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(
+                        VERIFY_FLAGS
+                    )
                 ]
             else:
                 steps = [
@@ -268,19 +383,64 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
                 ]
             return self._executeShTest(test, litConfig, steps)
         else:
-            return lit.Test.Result(lit.Test.UNRESOLVED, "Unknown test suffix for '{}'".format(filename))
+            return lit.Test.Result(
+                lit.Test.UNRESOLVED, "Unknown test suffix for '{}'".format(filename)
+            )
 
     def _executeShTest(self, test, litConfig, steps):
         if test.config.unsupported:
-            return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test is unsupported')
+            return lit.Test.Result(lit.Test.UNSUPPORTED, "Test is unsupported")
 
         script = parseScript(test, steps)
         if isinstance(script, lit.Test.Result):
             return script
 
         if litConfig.noExecute:
-            return lit.Test.Result(lit.Test.XFAIL if test.isExpectedToFail() else lit.Test.PASS)
+            return lit.Test.Result(
+                lit.Test.XFAIL if test.isExpectedToFail() else lit.Test.PASS
+            )
         else:
             _, tmpBase = _getTempPaths(test)
             useExternalSh = False
-            return lit.TestRunner._runShTest(test, litConfig, useExternalSh, script, tmpBase)
+            return lit.TestRunner._runShTest(
+                test, litConfig, useExternalSh, script, tmpBase
+            )
+
+    def _generateGenTest(self, testSuite, pathInSuite, litConfig, localConfig):
+        generator = lit.Test.Test(testSuite, pathInSuite, localConfig)
+
+        # Make sure we have a directory to execute the generator test in
+        generatorExecDir = os.path.dirname(testSuite.getExecPath(pathInSuite))
+        os.makedirs(generatorExecDir, exist_ok=True)
+
+        # Run the generator test
+        steps = [] # Steps must already be in the script
+        (out, err, exitCode, _, _) = _executeScriptInternal(generator, litConfig, steps)
+        if exitCode != 0:
+            raise RuntimeError(f"Error while trying to generate gen test\nstdout:\n{out}\n\nstderr:\n{err}")
+
+        # Split the generated output into multiple files and generate one test for each file
+        parsed = _parseLitOutput(out)
+        for (subfile, content) in self._splitFile(parsed):
+            generatedFile = testSuite.getExecPath(pathInSuite + (subfile, ))
+            os.makedirs(os.path.dirname(generatedFile), exist_ok=True)
+            with open(generatedFile, 'w') as f:
+                f.write(content)
+            yield lit.Test.Test(testSuite, (generatedFile,), localConfig)
+
+    def _splitFile(self, input):
+        DELIM = r'^(//|#)---(.+)'
+        lines = input.splitlines()
+        currentFile = None
+        thisFileContent = []
+        for line in lines:
+            match = re.match(DELIM, line)
+            if match:
+                if currentFile is not None:
+                    yield (currentFile, '\n'.join(thisFileContent))
+                currentFile = match.group(2).strip()
+                thisFileContent = []
+            assert currentFile is not None, f"Some input to split-file doesn't belong to any file, input was:\n{input}"
+            thisFileContent.append(line)
+        if currentFile is not None:
+            yield (currentFile, '\n'.join(thisFileContent))

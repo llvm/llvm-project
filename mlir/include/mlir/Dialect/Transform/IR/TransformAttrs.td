@@ -20,4 +20,17 @@ def FailurePropagationMode : I32EnumAttr<
   let cppNamespace = "::mlir::transform";
 }
 
+def MatchCmpIPredicateAttr : I32EnumAttr<
+    "MatchCmpIPredicate", "",
+    [
+      I32EnumAttrCase<"eq", 0>,
+      I32EnumAttrCase<"ne", 1>,
+      I32EnumAttrCase<"lt", 2>,
+      I32EnumAttrCase<"le", 3>,
+      I32EnumAttrCase<"gt", 4>,
+      I32EnumAttrCase<"ge", 5>,
+    ]> {
+  let cppNamespace = "::mlir::transform";
+}
+
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMATTRS

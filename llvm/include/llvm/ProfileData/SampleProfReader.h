@@ -170,7 +170,7 @@
 //            Number of samples to get to the desrired percentile.
 //
 // NAME TABLE
-//    SIZE (uint32_t)
+//    SIZE (uint64_t)
 //        Number of entries in the name table.
 //    NAMES
 //        A NUL-separated list of SIZE strings.
@@ -182,7 +182,7 @@
 //        NOTE: This field should only be present for top-level functions
 //              (i.e., not inlined into any caller). Inlined function calls
 //              have no prologue, so they don't need this.
-//    NAME_IDX (uint32_t)
+//    NAME_IDX (uint64_t)
 //        Index into the name table indicating the function name.
 //    SAMPLES (uint64_t)
 //        Total number of samples collected in this function.
@@ -204,7 +204,7 @@
 //            represent all the actual functions called at runtime.
 //          CALL_TARGETS
 //            A list of NUM_CALLS entries for each called function:
-//               NAME_IDX (uint32_t)
+//               NAME_IDX (uint64_t)
 //                  Index into the name table with the callee name.
 //               SAMPLES (uint64_t)
 //                  Number of samples collected at the call site.
@@ -483,6 +483,9 @@ public:
   /// Whether input profile contains ShouldBeInlined contexts.
   bool profileIsPreInlined() const { return ProfileIsPreInlined; }
 
+  /// Whether input profile is flow-sensitive.
+  bool profileIsFS() const { return ProfileIsFS; }
+
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
     return nullptr;
   };
@@ -493,7 +496,11 @@ public:
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
   /// Return whether names in the profile are all MD5 numbers.
-  virtual bool useMD5() { return false; }
+  bool useMD5() const { return ProfileIsMD5; }
+
+  /// Force the profile to use MD5 in Sample contexts, even if function names
+  /// are present.
+  virtual void setProfileUseMD5() { ProfileIsMD5 = true; }
 
   /// Don't read profile without context if the flag is set. This is only meaningful
   /// for ExtBinary format.
@@ -563,6 +570,10 @@ protected:
   /// Zero out the discriminator bits higher than bit MaskedBitFrom (0 based).
   /// The default is to keep all the bits.
   uint32_t MaskedBitFrom = 31;
+
+  /// Whether the profile uses MD5 for Sample Contexts and function names. This
+  /// can be one-way overriden by the user to force use MD5.
+  bool ProfileIsMD5 = false;
 };
 
 class SampleProfileReaderText : public SampleProfileReader {
@@ -578,6 +589,9 @@ public:
 
   /// Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
+
+  /// Text format sample profile does not support MD5 for now.
+  void setProfileUseMD5() override {}
 
 private:
   /// CSNameTable is used to save full context vectors. This serves as an
@@ -623,10 +637,7 @@ protected:
   ErrorOr<StringRef> readString();
 
   /// Read the string index and check whether it overflows the table.
-  template <typename T> inline ErrorOr<uint32_t> readStringIndex(T &Table);
-
-  /// Return true if we've reached the end of file.
-  bool at_eof() const { return Data >= End; }
+  template <typename T> inline ErrorOr<size_t> readStringIndex(T &Table);
 
   /// Read the next function profile instance.
   std::error_code readFuncProfile(const uint8_t *Start);
@@ -641,7 +652,17 @@ protected:
   std::error_code readSummary();
 
   /// Read the whole name table.
-  virtual std::error_code readNameTable();
+  std::error_code readNameTable();
+
+  /// Read a string indirectly via the name table.
+  ErrorOr<StringRef> readStringFromTable();
+
+  /// Read a context indirectly via the CSNameTable.
+  ErrorOr<SampleContextFrames> readContextFromTable();
+
+  /// Read a context indirectly via the CSNameTable if the profile has context,
+  /// otherwise same as readStringFromTable.
+  ErrorOr<SampleContext> readSampleContextFromTable();
 
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
@@ -652,9 +673,21 @@ protected:
   /// Function name table.
   std::vector<StringRef> NameTable;
 
-  /// Read a string indirectly via the name table.
-  virtual ErrorOr<StringRef> readStringFromTable();
-  virtual ErrorOr<SampleContext> readSampleContextFromTable();
+  /// If MD5 is used in NameTable section, the section saves uint64_t data.
+  /// The uint64_t data has to be converted to a string and then the string
+  /// will be used to initialize StringRef in NameTable.
+  /// Note NameTable contains StringRef so it needs another buffer to own
+  /// the string data. MD5StringBuf serves as the string buffer that is
+  /// referenced by NameTable (vector of StringRef). We make sure
+  /// the lifetime of MD5StringBuf is not shorter than that of NameTable.
+  std::vector<std::string> MD5StringBuf;
+
+  /// The starting address of NameTable containing fixed length MD5.
+  const uint8_t *MD5NameMemStart = nullptr;
+
+  /// CSNameTable is used to save full context vectors. It is the backing buffer
+  /// for SampleContextFrames.
+  std::vector<SampleContextFrameVector> CSNameTable;
 
 private:
   std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
@@ -704,7 +737,7 @@ private:
 
 protected:
   std::vector<SecHdrTableEntry> SecHdrTable;
-  std::error_code readSecHdrTableEntry(uint32_t Idx);
+  std::error_code readSecHdrTableEntry(uint64_t Idx);
   std::error_code readSecHdrTable();
 
   std::error_code readFuncMetadata(bool ProfileHasAttribute);
@@ -712,8 +745,7 @@ protected:
                                    FunctionSamples *FProfile);
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
-  std::error_code readMD5NameTable();
-  std::error_code readNameTableSec(bool IsMD5);
+  std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5);
   std::error_code readCSNameTableSec();
   std::error_code readProfileSymbolList();
 
@@ -723,47 +755,28 @@ protected:
                                          const SecHdrTableEntry &Entry);
   // placeholder for subclasses to dispatch their own section readers.
   virtual std::error_code readCustomSection(const SecHdrTableEntry &Entry) = 0;
-  ErrorOr<StringRef> readStringFromTable() override;
-  ErrorOr<SampleContext> readSampleContextFromTable() override;
-  ErrorOr<SampleContextFrames> readContextFromTable();
+
+  /// Determine which container readFuncOffsetTable() should populate, the list
+  /// FuncOffsetList or the map FuncOffsetTable.
+  bool useFuncOffsetList() const;
 
   std::unique_ptr<ProfileSymbolList> ProfSymList;
 
   /// The table mapping from function context to the offset of its
   /// FunctionSample towards file start.
+  /// At most one of FuncOffsetTable and FuncOffsetList is populated.
   DenseMap<SampleContext, uint64_t> FuncOffsetTable;
 
-  /// Function offset mapping ordered by contexts.
-  std::unique_ptr<std::vector<std::pair<SampleContext, uint64_t>>>
-      OrderedFuncOffsets;
+  /// The list version of FuncOffsetTable. This is used if every entry is
+  /// being accessed.
+  std::vector<std::pair<SampleContext, uint64_t>> FuncOffsetList;
 
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
 
-  /// Use fixed length MD5 instead of ULEB128 encoding so NameTable doesn't
-  /// need to be read in up front and can be directly accessed using index.
-  bool FixedLengthMD5 = false;
-  /// The starting address of NameTable containing fixed length MD5.
-  const uint8_t *MD5NameMemStart = nullptr;
-
-  /// If MD5 is used in NameTable section, the section saves uint64_t data.
-  /// The uint64_t data has to be converted to a string and then the string
-  /// will be used to initialize StringRef in NameTable.
-  /// Note NameTable contains StringRef so it needs another buffer to own
-  /// the string data. MD5StringBuf serves as the string buffer that is
-  /// referenced by NameTable (vector of StringRef). We make sure
-  /// the lifetime of MD5StringBuf is not shorter than that of NameTable.
-  std::unique_ptr<std::vector<std::string>> MD5StringBuf;
-
-  /// CSNameTable is used to save full context vectors. This serves as an
-  /// underlying immutable buffer for all clients.
-  std::unique_ptr<const std::vector<SampleContextFrameVector>> CSNameTable;
-
   /// If SkipFlatProf is true, skip the sections with
   /// SecFlagFlat flag.
   bool SkipFlatProf = false;
-
-  bool FuncOffsetsOrdered = false;
 
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
@@ -782,9 +795,6 @@ public:
   /// Collect functions with definitions in Module M. Return true if
   /// the reader has been given a module.
   bool collectFuncsFromModule() override;
-
-  /// Return whether names in the profile are all MD5 numbers.
-  bool useMD5() override { return MD5StringBuf.get(); }
 
   std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);
@@ -809,41 +819,6 @@ public:
 
   /// \brief Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
-};
-
-class SampleProfileReaderCompactBinary : public SampleProfileReaderBinary {
-private:
-  /// Function name table.
-  std::vector<std::string> NameTable;
-  /// The table mapping from function name to the offset of its FunctionSample
-  /// towards file start.
-  DenseMap<StringRef, uint64_t> FuncOffsetTable;
-  /// The set containing the functions to use when compiling a module.
-  DenseSet<StringRef> FuncsToUse;
-  std::error_code verifySPMagic(uint64_t Magic) override;
-  std::error_code readNameTable() override;
-  /// Read a string indirectly via the name table.
-  ErrorOr<StringRef> readStringFromTable() override;
-  std::error_code readHeader() override;
-  std::error_code readFuncOffsetTable();
-
-public:
-  SampleProfileReaderCompactBinary(std::unique_ptr<MemoryBuffer> B,
-                                   LLVMContext &C)
-      : SampleProfileReaderBinary(std::move(B), C, SPF_Compact_Binary) {}
-
-  /// \brief Return true if \p Buffer is in the format supported by this class.
-  static bool hasFormat(const MemoryBuffer &Buffer);
-
-  /// Read samples only for functions to use.
-  std::error_code readImpl() override;
-
-  /// Collect functions with definitions in Module M. Return true if
-  /// the reader has been given a module.
-  bool collectFuncsFromModule() override;
-
-  /// Return whether names in the profile are all MD5 numbers.
-  bool useMD5() override { return true; }
 };
 
 using InlineCallStack = SmallVector<FunctionSamples *, 10>;

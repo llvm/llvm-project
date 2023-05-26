@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
@@ -664,6 +665,15 @@ void MachineBasicBlock::moveAfter(MachineBasicBlock *NewBefore) {
   getParent()->splice(++NewBefore->getIterator(), getIterator());
 }
 
+static int findJumpTableIndex(const MachineBasicBlock &MBB) {
+  MachineBasicBlock::const_iterator TerminatorI = MBB.getFirstTerminator();
+  if (TerminatorI == MBB.end())
+    return -1;
+  const MachineInstr &Terminator = *TerminatorI;
+  const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
+  return TII->getJumpTableIndex(Terminator);
+}
+
 void MachineBasicBlock::updateTerminator(
     MachineBasicBlock *PreviousLayoutSuccessor) {
   LLVM_DEBUG(dbgs() << "Updating terminators on " << printMBBReference(*this)
@@ -975,8 +985,8 @@ MachineBasicBlock *MachineBasicBlock::getFallThrough(bool JumpToFallThrough) {
 
   // If there is some explicit branch to the fallthrough block, it can obviously
   // reach, even though the branch should get folded to fall through implicitly.
-  if (!JumpToFallThrough && (MachineFunction::iterator(TBB) == Fallthrough ||
-                           MachineFunction::iterator(FBB) == Fallthrough))
+  if (JumpToFallThrough && (MachineFunction::iterator(TBB) == Fallthrough ||
+                            MachineFunction::iterator(FBB) == Fallthrough))
     return &*Fallthrough;
 
   // If it's an unconditional branch to some block not the fall through, it
@@ -1033,6 +1043,50 @@ MachineBasicBlock *MachineBasicBlock::splitAt(MachineInstr &MI,
   return SplitBB;
 }
 
+// Returns `true` if there are possibly other users of the jump table at
+// `JumpTableIndex` except for the ones in `IgnoreMBB`.
+static bool jumpTableHasOtherUses(const MachineFunction &MF,
+                                  const MachineBasicBlock &IgnoreMBB,
+                                  int JumpTableIndex) {
+  assert(JumpTableIndex >= 0 && "need valid index");
+  const MachineJumpTableInfo &MJTI = *MF.getJumpTableInfo();
+  const MachineJumpTableEntry &MJTE = MJTI.getJumpTables()[JumpTableIndex];
+  // Take any basic block from the table; every user of the jump table must
+  // show up in the predecessor list.
+  const MachineBasicBlock *MBB = nullptr;
+  for (MachineBasicBlock *B : MJTE.MBBs) {
+    if (B != nullptr) {
+      MBB = B;
+      break;
+    }
+  }
+  if (MBB == nullptr)
+    return true; // can't rule out other users if there isn't any block.
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  SmallVector<MachineOperand, 4> Cond;
+  for (MachineBasicBlock *Pred : MBB->predecessors()) {
+    if (Pred == &IgnoreMBB)
+      continue;
+    MachineBasicBlock *DummyT = nullptr;
+    MachineBasicBlock *DummyF = nullptr;
+    Cond.clear();
+    if (!TII.analyzeBranch(*Pred, DummyT, DummyF, Cond,
+                           /*AllowModify=*/false)) {
+      // analyzable direct jump
+      continue;
+    }
+    int PredJTI = findJumpTableIndex(*Pred);
+    if (PredJTI >= 0) {
+      if (PredJTI == JumpTableIndex)
+        return true;
+      continue;
+    }
+    // Be conservative for unanalyzable jumps.
+    return true;
+  }
+  return false;
+}
+
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     MachineBasicBlock *Succ, Pass &P,
     std::vector<SparseBitVector<>> *LiveInSets) {
@@ -1044,6 +1098,16 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   DebugLoc DL;  // FIXME: this is nowhere
 
   MachineBasicBlock *NMBB = MF->CreateMachineBasicBlock();
+
+  // Is there an indirect jump with jump table?
+  bool ChangedIndirectJump = false;
+  int JTI = findJumpTableIndex(*this);
+  if (JTI >= 0) {
+    MachineJumpTableInfo &MJTI = *MF->getJumpTableInfo();
+    MJTI.ReplaceMBBInJumpTable(JTI, Succ, NMBB);
+    ChangedIndirectJump = true;
+  }
+
   MF->insert(std::next(MachineFunction::iterator(this)), NMBB);
   LLVM_DEBUG(dbgs() << "Splitting critical edge: " << printMBBReference(*this)
                     << " -- " << printMBBReference(*NMBB) << " -- "
@@ -1109,7 +1173,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   // as the fallthrough successor
   if (Succ == PrevFallthrough)
     PrevFallthrough = NMBB;
-  updateTerminator(PrevFallthrough);
+
+  if (!ChangedIndirectJump)
+    updateTerminator(PrevFallthrough);
 
   if (Indexes) {
     SmallVector<MachineInstr*, 4> NewTerminators;
@@ -1284,8 +1350,13 @@ bool MachineBasicBlock::canSplitCriticalEdge(
   if (MF->getTarget().requiresStructuredCFG())
     return false;
 
+  // Do we have an Indirect jump with a jumptable that we can rewrite?
+  int JTI = findJumpTableIndex(*this);
+  if (JTI >= 0 && !jumpTableHasOtherUses(*MF, *this, JTI))
+    return true;
+
   // We may need to update this's terminator, but we can't do that if
-  // analyzeBranch fails. If this uses a jump table, we won't touch it.
+  // analyzeBranch fails.
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
@@ -1391,7 +1462,7 @@ void MachineBasicBlock::replacePhiUsesWith(MachineBasicBlock *Old,
     }
 }
 
-/// Find the next valid DebugLoc starting at MBBI, skipping any DBG_VALUE
+/// Find the next valid DebugLoc starting at MBBI, skipping any debug
 /// instructions.  Return UnknownLoc if there is none.
 DebugLoc
 MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
@@ -1403,6 +1474,8 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
 }
 
 DebugLoc MachineBasicBlock::rfindDebugLoc(reverse_instr_iterator MBBI) {
+  if (MBBI == instr_rend())
+    return findDebugLoc(instr_begin());
   // Skip debug declarations, we don't want a DebugLoc from them.
   MBBI = skipDebugInstructionsBackward(MBBI, instr_rbegin());
   if (!MBBI->isDebugInstr())
@@ -1410,13 +1483,15 @@ DebugLoc MachineBasicBlock::rfindDebugLoc(reverse_instr_iterator MBBI) {
   return {};
 }
 
-/// Find the previous valid DebugLoc preceding MBBI, skipping and DBG_VALUE
+/// Find the previous valid DebugLoc preceding MBBI, skipping any debug
 /// instructions.  Return UnknownLoc if there is none.
 DebugLoc MachineBasicBlock::findPrevDebugLoc(instr_iterator MBBI) {
-  if (MBBI == instr_begin()) return {};
+  if (MBBI == instr_begin())
+    return {};
   // Skip debug instructions, we don't want a DebugLoc from them.
   MBBI = prev_nodbg(MBBI, instr_begin());
-  if (!MBBI->isDebugInstr()) return MBBI->getDebugLoc();
+  if (!MBBI->isDebugInstr())
+    return MBBI->getDebugLoc();
   return {};
 }
 

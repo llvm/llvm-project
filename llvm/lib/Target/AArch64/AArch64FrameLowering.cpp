@@ -2541,8 +2541,8 @@ static void computeCalleeSaveRegisterPairs(
   // MachO's compact unwind format relies on all registers being stored in
   // pairs.
   assert((!produceCompactUnwindFrame(MF) || CC == CallingConv::PreserveMost ||
-          CC == CallingConv::CXX_FAST_TLS || CC == CallingConv::Win64 ||
-          (Count & 1) == 0) &&
+          CC == CallingConv::PreserveAll || CC == CallingConv::CXX_FAST_TLS ||
+          CC == CallingConv::Win64 || (Count & 1) == 0) &&
          "Odd number of callee-saved regs to spill!");
   int ByteOffset = AFI->getCalleeSavedStackSize();
   int StackFillDir = -1;
@@ -2628,7 +2628,8 @@ static void computeCalleeSaveRegisterPairs(
     // MachO's compact unwind format relies on all registers being stored in
     // adjacent register pairs.
     assert((!produceCompactUnwindFrame(MF) || CC == CallingConv::PreserveMost ||
-            CC == CallingConv::CXX_FAST_TLS || CC == CallingConv::Win64 ||
+            CC == CallingConv::PreserveAll || CC == CallingConv::CXX_FAST_TLS ||
+            CC == CallingConv::Win64 ||
             (RPI.isPaired() &&
              ((RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP) ||
               RPI.Reg1 + 1 == RPI.Reg2))) &&
@@ -3394,7 +3395,8 @@ class TagStoreEdit {
   Register FrameReg;
   StackOffset FrameRegOffset;
   int64_t Size;
-  // If not None, move FrameReg to (FrameReg + FrameRegUpdate) at the end.
+  // If not std::nullopt, move FrameReg to (FrameReg + FrameRegUpdate) at the
+  // end.
   std::optional<int64_t> FrameRegUpdate;
   // MIFlags for any FrameReg updating instructions.
   unsigned FrameRegUpdateFlags;

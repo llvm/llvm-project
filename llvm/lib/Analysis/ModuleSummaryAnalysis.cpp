@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
@@ -80,6 +79,8 @@ static cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
 static cl::opt<std::string> ModuleSummaryDotFile(
     "module-summary-dot-file", cl::Hidden, cl::value_desc("filename"),
     cl::desc("File to emit dot graph of new summary into"));
+
+extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
@@ -283,6 +284,10 @@ static void computeFunctionSummary(
   std::vector<CallsiteInfo> Callsites;
   std::vector<AllocInfo> Allocs;
 
+#ifndef NDEBUG
+  DenseSet<const CallBase *> CallsThatMayHaveMemprofSummary;
+#endif
+
   bool HasInlineAsmMaybeReferencingInternal = false;
   bool HasIndirBranchToBlockAddress = false;
   bool HasUnknownCall = false;
@@ -426,6 +431,10 @@ static void computeFunctionSummary(
               .updateHotness(getHotness(Candidate.Count, PSI));
       }
 
+      // Summarize memprof related metadata. This is only needed for ThinLTO.
+      if (!IsThinLTO)
+        continue;
+
       // TODO: Skip indirect calls for now. Need to handle these better, likely
       // by creating multiple Callsites, one per target, then speculatively
       // devirtualize while applying clone info in the ThinLTO backends. This
@@ -435,6 +444,14 @@ static void computeFunctionSummary(
       // summaries to instructions.
       if (!CalledFunction)
         continue;
+
+      // Ensure we keep this analysis in sync with the handling in the ThinLTO
+      // backend (see MemProfContextDisambiguation::applyImport). Save this call
+      // so that we can skip it in checking the reverse case later.
+      assert(mayHaveMemprofSummary(CB));
+#ifndef NDEBUG
+      CallsThatMayHaveMemprofSummary.insert(CB);
+#endif
 
       // Compute the list of stack ids first (so we can trim them from the stack
       // ids on any MIBs).
@@ -478,7 +495,9 @@ static void computeFunctionSummary(
       }
     }
   }
-  Index.addBlockCount(F.size());
+
+  if (PSI->hasPartialSampleProfile() && ScalePartialSampleProfileWorkingSetSize)
+    Index.addBlockCount(F.size());
 
   std::vector<ValueInfo> Refs;
   if (IsThinLTO) {
@@ -543,6 +562,25 @@ static void computeFunctionSummary(
             ? CalleeInfo::HotnessType::Cold
             : CalleeInfo::HotnessType::Critical);
 
+#ifndef NDEBUG
+  // Make sure that all calls we decided could not have memprof summaries get a
+  // false value for mayHaveMemprofSummary, to ensure that this handling remains
+  // in sync with the ThinLTO backend handling.
+  if (IsThinLTO) {
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB)
+          continue;
+        // We already checked these above.
+        if (CallsThatMayHaveMemprofSummary.count(CB))
+          continue;
+        assert(!mayHaveMemprofSummary(CB));
+      }
+    }
+  }
+#endif
+
   bool NonRenamableLocal = isNonRenamableLocal(F);
   bool NotEligibleForImport = NonRenamableLocal ||
                               HasInlineAsmMaybeReferencingInternal ||
@@ -581,8 +619,7 @@ static void computeFunctionSummary(
 /// within the initializer.
 static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
                              const Module &M, ModuleSummaryIndex &Index,
-                             VTableFuncList &VTableFuncs,
-                             const GlobalVariable &OrigGV) {
+                             VTableFuncList &VTableFuncs) {
   // First check if this is a function pointer.
   if (I->getType()->isPointerTy()) {
     auto C = I->stripPointerCasts();
@@ -610,7 +647,7 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
       auto Offset = SL->getElementOffset(EI.index());
       unsigned Op = SL->getElementContainingOffset(Offset);
       findFuncPointers(cast<Constant>(I->getOperand(Op)),
-                       StartingOffset + Offset, M, Index, VTableFuncs, OrigGV);
+                       StartingOffset + Offset, M, Index, VTableFuncs);
     }
   } else if (auto *C = dyn_cast<ConstantArray>(I)) {
     ArrayType *ATy = C->getType();
@@ -618,34 +655,7 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
     uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i) {
       findFuncPointers(cast<Constant>(I->getOperand(i)),
-                       StartingOffset + i * EltSize, M, Index, VTableFuncs,
-                       OrigGV);
-    }
-  } else if (const auto *CE = dyn_cast<ConstantExpr>(I)) {
-    // For relative vtables, the next sub-component should be a trunc.
-    if (CE->getOpcode() != Instruction::Trunc ||
-        !(CE = dyn_cast<ConstantExpr>(CE->getOperand(0))))
-      return;
-
-    // If this constant can be reduced to the offset between a function and a
-    // global, then we know this is a valid virtual function if the RHS is the
-    // original vtable we're scanning through.
-    if (CE->getOpcode() == Instruction::Sub) {
-      GlobalValue *LHS, *RHS;
-      APSInt LHSOffset, RHSOffset;
-      if (IsConstantOffsetFromGlobal(CE->getOperand(0), LHS, LHSOffset, DL) &&
-          IsConstantOffsetFromGlobal(CE->getOperand(1), RHS, RHSOffset, DL) &&
-          RHS == &OrigGV &&
-
-          // For relative vtables, this component should point to the callable
-          // function without any offsets.
-          LHSOffset == 0 &&
-
-          // Also, the RHS should always point to somewhere within the vtable.
-          RHSOffset <=
-              static_cast<uint64_t>(DL.getTypeAllocSize(OrigGV.getInitializer()->getType()))) {
-        findFuncPointers(LHS, StartingOffset, M, Index, VTableFuncs, OrigGV);
-      }
+                       StartingOffset + i * EltSize, M, Index, VTableFuncs);
     }
   }
 }
@@ -658,7 +668,7 @@ static void computeVTableFuncs(ModuleSummaryIndex &Index,
     return;
 
   findFuncPointers(V.getInitializer(), /*StartingOffset=*/0, M, Index,
-                   VTableFuncs, V);
+                   VTableFuncs);
 
 #ifndef NDEBUG
   // Validate that the VTableFuncs list is ordered by offset.
@@ -1067,3 +1077,36 @@ ImmutablePass *llvm::createImmutableModuleSummaryIndexWrapperPass(
 
 INITIALIZE_PASS(ImmutableModuleSummaryIndexWrapperPass, "module-summary-info",
                 "Module summary info", false, true)
+
+bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
+  if (!CB)
+    return false;
+  if (CB->isDebugOrPseudoInst())
+    return false;
+  auto *CI = dyn_cast<CallInst>(CB);
+  auto *CalledValue = CB->getCalledOperand();
+  auto *CalledFunction = CB->getCalledFunction();
+  if (CalledValue && !CalledFunction) {
+    CalledValue = CalledValue->stripPointerCasts();
+    // Stripping pointer casts can reveal a called function.
+    CalledFunction = dyn_cast<Function>(CalledValue);
+  }
+  // Check if this is an alias to a function. If so, get the
+  // called aliasee for the checks below.
+  if (auto *GA = dyn_cast<GlobalAlias>(CalledValue)) {
+    assert(!CalledFunction &&
+           "Expected null called function in callsite for alias");
+    CalledFunction = dyn_cast<Function>(GA->getAliaseeObject());
+  }
+  // Check if this is a direct call to a known function or a known
+  // intrinsic, or an indirect call with profile data.
+  if (CalledFunction) {
+    if (CI && CalledFunction->isIntrinsic())
+      return false;
+  } else {
+    // TODO: For now skip indirect calls. See comments in
+    // computeFunctionSummary for what is needed to handle this.
+    return false;
+  }
+  return true;
+}

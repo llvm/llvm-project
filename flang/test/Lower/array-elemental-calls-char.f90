@@ -105,31 +105,34 @@ subroutine foo2(i, j, c)
   i = elem2(c, j)
 end subroutine
 
-! CHECK-LABEL: func @_QMchar_elemPfoo2b(
-! CHECK-SAME: %[[VAL_67:[^:]+]]: !fir.ref<!fir.array<10xi32>>{{.*}}, %[[VAL_64:[^:]+]]: !fir.ref<!fir.array<10xi32>>{{.*}}, %[[VAL_56:.*]]: !fir.boxchar<1>{{.*}}) {
+! CHECK-LABEL:   func.func @_QMchar_elemPfoo2b(
+! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<!fir.array<10xi32>>{{.*}}, %[[VAL_2:.*]]: !fir.boxchar<1>{{.*}}) {
 subroutine foo2b(i, j, c)
   integer :: i(10), j(10)
   character(10) :: c
-! CHECK-DAG:   %[[VAL_52:.*]] = arith.constant 10 : index
-! CHECK-DAG:   %[[VAL_53:.*]] = arith.constant 0 : index
-! CHECK-DAG:   %[[VAL_54:.*]] = arith.constant 1 : index
-! CHECK:   %[[VAL_55:.*]]:2 = fir.unboxchar %[[VAL_56]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:   %[[VAL_57:.*]] = fir.shape %[[VAL_52]] : (index) -> !fir.shape<1>
-! CHECK:   br ^bb1(%[[VAL_53]], %[[VAL_52]] : index, index)
-! CHECK: ^bb1(%[[VAL_58:.*]]: index, %[[VAL_59:.*]]: index):
-! CHECK:   %[[VAL_60:.*]] = arith.cmpi sgt, %[[VAL_59]], %[[VAL_53]] : index
-! CHECK:   cond_br %[[VAL_60]], ^bb2, ^bb3
-! CHECK: ^bb2:
-! CHECK:   %[[VAL_61:.*]] = fir.emboxchar %[[VAL_55]]#0, %[[VAL_52]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:   %[[VAL_62:.*]] = arith.addi %[[VAL_58]], %[[VAL_54]] : index
-! CHECK:   %[[VAL_63:.*]] = fir.array_coor %[[VAL_64]](%[[VAL_57]]) %[[VAL_62]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-! CHECK:   %[[VAL_65:.*]] = fir.call @_QPelem2(%[[VAL_61]], %[[VAL_63]]) {{.*}}: (!fir.boxchar<1>, !fir.ref<i32>) -> i32
-! CHECK:   %[[VAL_66:.*]] = fir.array_coor %[[VAL_67]](%[[VAL_57]]) %[[VAL_62]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-! CHECK:   fir.store %[[VAL_65]] to %[[VAL_66]] : !fir.ref<i32>
-! CHECK:   %[[VAL_68:.*]] = arith.subi %[[VAL_59]], %[[VAL_54]] : index
-! CHECK:   br ^bb1(%[[VAL_62]], %[[VAL_68]] : index, index)
-! CHECK: ^bb3:
-! CHECK:   return
+! CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 10 : index
+! CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
+! CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[VAL_2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
+! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
+! CHECK:           cf.br ^bb1(%[[VAL_4]], %[[VAL_3]] : index, index)
+! CHECK:         ^bb1(%[[VAL_9:.*]]: index, %[[VAL_10:.*]]: index):
+! CHECK:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_4]] : index
+! CHECK:           cf.cond_br %[[VAL_11]], ^bb2, ^bb3
+! CHECK:         ^bb2:
+! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
+! CHECK:           %[[VAL_13:.*]] = fir.emboxchar %[[VAL_12]], %[[VAL_3]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_9]], %[[VAL_5]] : index
+! CHECK:           %[[VAL_15:.*]] = fir.array_coor %[[VAL_1]](%[[VAL_8]]) %[[VAL_14]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+! CHECK:           %[[VAL_16:.*]] = fir.call @_QPelem2(%[[VAL_13]], %[[VAL_15]]) fastmath<contract> : (!fir.boxchar<1>, !fir.ref<i32>) -> i32
+! CHECK:           %[[VAL_17:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_8]]) %[[VAL_14]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+! CHECK:           fir.store %[[VAL_16]] to %[[VAL_17]] : !fir.ref<i32>
+! CHECK:           %[[VAL_18:.*]] = arith.subi %[[VAL_10]], %[[VAL_5]] : index
+! CHECK:           cf.br ^bb1(%[[VAL_14]], %[[VAL_18]] : index, index)
+! CHECK:         ^bb3:
+! CHECK:           return
+! CHECK:         }
   i = elem2(c, j)
 end subroutine
 

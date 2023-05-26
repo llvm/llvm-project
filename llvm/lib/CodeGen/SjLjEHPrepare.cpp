@@ -38,21 +38,21 @@ STATISTIC(NumSpilled, "Number of registers live across unwind edges");
 
 namespace {
 class SjLjEHPrepare : public FunctionPass {
-  IntegerType *DataTy;
-  Type *doubleUnderDataTy;
-  Type *doubleUnderJBufTy;
-  Type *FunctionContextTy;
+  IntegerType *DataTy = nullptr;
+  Type *doubleUnderDataTy = nullptr;
+  Type *doubleUnderJBufTy = nullptr;
+  Type *FunctionContextTy = nullptr;
   FunctionCallee RegisterFn;
   FunctionCallee UnregisterFn;
-  Function *BuiltinSetupDispatchFn;
-  Function *FrameAddrFn;
-  Function *StackAddrFn;
-  Function *StackRestoreFn;
-  Function *LSDAAddrFn;
-  Function *CallSiteFn;
-  Function *FuncCtxFn;
-  AllocaInst *FuncCtx;
-  const TargetMachine *TM;
+  Function *BuiltinSetupDispatchFn = nullptr;
+  Function *FrameAddrFn = nullptr;
+  Function *StackAddrFn = nullptr;
+  Function *StackRestoreFn = nullptr;
+  Function *LSDAAddrFn = nullptr;
+  Function *CallSiteFn = nullptr;
+  Function *FuncCtxFn = nullptr;
+  AllocaInst *FuncCtx = nullptr;
+  const TargetMachine *TM = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid

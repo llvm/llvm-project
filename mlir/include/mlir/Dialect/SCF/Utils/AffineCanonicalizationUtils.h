@@ -18,15 +18,17 @@
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
-class AffineApplyOp;
 class AffineMap;
-class FlatAffineValueConstraints;
 struct LogicalResult;
 class Operation;
 class OpFoldResult;
 class RewriterBase;
 class Value;
 class ValueRange;
+
+namespace affine {
+class FlatAffineValueConstraints;
+} // namespace affine
 
 namespace scf {
 class IfOp;
@@ -45,7 +47,7 @@ LogicalResult matchForLikeLoop(Value iv, OpFoldResult &lb, OpFoldResult &ub,
 
 /// Populate the given constraint set with induction variable constraints of a
 /// "for" loop with the given range and step.
-LogicalResult addLoopRangeConstraints(FlatAffineValueConstraints &cstr,
+LogicalResult addLoopRangeConstraints(affine::FlatAffineValueConstraints &cstr,
                                       Value iv, OpFoldResult lb,
                                       OpFoldResult ub, OpFoldResult step);
 

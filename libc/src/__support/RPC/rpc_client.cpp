@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_CLIENT_H
-#define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_CLIENT_H
-
 #include "rpc.h"
 
 namespace __llvm_libc {
@@ -23,5 +20,3 @@ extern "C" [[gnu::visibility("protected")]] const bool __llvm_libc_rpc = false;
 
 } // namespace rpc
 } // namespace __llvm_libc
-
-#endif

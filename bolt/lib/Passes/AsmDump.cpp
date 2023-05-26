@@ -55,34 +55,6 @@ void dumpCFI(const BinaryFunction &BF, const MCInst &Instr, AsmPrinter &MAP) {
   }
 }
 
-void dumpJumpTableFdata(raw_ostream &OS, const BinaryFunction &BF,
-                        const MCInst &Instr, const std::string &BranchLabel) {
-  StringRef FunctionName = BF.getOneName();
-  const JumpTable *JT = BF.getJumpTable(Instr);
-  for (uint32_t i = 0; i < JT->Entries.size(); ++i) {
-    StringRef TargetName = JT->Entries[i]->getName();
-    const uint64_t Mispreds = JT->Counts[i].Mispreds;
-    const uint64_t Count = JT->Counts[i].Count;
-    OS << "# FDATA: 1 " << FunctionName << " #" << BranchLabel << "# "
-       << "1 " << FunctionName << " #" << TargetName << "# " << Mispreds << " "
-       << Count << '\n';
-  }
-}
-
-void dumpTailCallFdata(raw_ostream &OS, const BinaryFunction &BF,
-                       const MCInst &Instr, const std::string &BranchLabel) {
-  const BinaryContext &BC = BF.getBinaryContext();
-  StringRef FunctionName = BF.getOneName();
-  auto CallFreq = BC.MIB->getAnnotationWithDefault<uint64_t>(Instr, "Count");
-  const MCSymbol *Target = BC.MIB->getTargetSymbol(Instr);
-  const BinaryFunction *TargetBF = BC.getFunctionForSymbol(Target);
-  if (!TargetBF)
-    return;
-  OS << "# FDATA: 1 " << FunctionName << " #" << BranchLabel << "# "
-     << "1 " << TargetBF->getPrintName() << " 0 "
-     << "0 " << CallFreq << '\n';
-}
-
 void dumpTargetFunctionStub(raw_ostream &OS, const BinaryContext &BC,
                             const MCSymbol *CalleeSymb,
                             const BinarySection *&LastCS) {
@@ -230,12 +202,6 @@ void dumpFunction(const BinaryFunction &BF) {
 
       BC.InstPrinter->printInst(&Instr, 0, "", *BC.STI, OS);
       OS << '\n';
-
-      // Dump profile data in FDATA format (as parsed by link_fdata).
-      if (BC.MIB->getJumpTable(Instr))
-        dumpJumpTableFdata(OS, BF, Instr, BranchLabel);
-      else if (BC.MIB->isTailCall(Instr))
-        dumpTailCallFdata(OS, BF, Instr, BranchLabel);
     }
 
     // Dump profile data in FDATA format (as parsed by link_fdata).

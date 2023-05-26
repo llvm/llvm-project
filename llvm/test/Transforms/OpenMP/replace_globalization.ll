@@ -135,8 +135,8 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: @[[FOO_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[BAR_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[BAZ_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
-; CHECK: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [16 x i8] undef, align 4
-; CHECK: @[[Y_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 4
+; CHECK: @[[X_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [16 x i8] poison, align 4
+; CHECK: @[[Y_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] poison, align 4
 ;.
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {

@@ -42,7 +42,6 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <llvm/CodeGen/SelectionDAGNodes.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/BuiltinTypes.h>

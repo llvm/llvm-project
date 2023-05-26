@@ -53,6 +53,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/RegisterFlags.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
@@ -74,7 +75,7 @@
 
 #include "GDBRemoteRegisterContext.h"
 #include "GDBRemoteRegisterFallback.h"
-#include "Plugins/Platform/gdb-server/GDBRemoteSignals.h"
+#include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 #include "ProcessGDBRemote.h"
@@ -84,6 +85,7 @@
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
@@ -140,30 +142,29 @@ public:
 
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyPacketTimeout;
-    return m_collection_sp->GetPropertyAtIndexAsUInt64(
-        nullptr, idx, g_processgdbremote_properties[idx].default_uint_value);
+    return GetPropertyAtIndexAs<uint64_t>(
+        idx, g_processgdbremote_properties[idx].default_uint_value);
   }
 
   bool SetPacketTimeout(uint64_t timeout) {
     const uint32_t idx = ePropertyPacketTimeout;
-    return m_collection_sp->SetPropertyAtIndexAsUInt64(nullptr, idx, timeout);
+    return SetPropertyAtIndex(idx, timeout);
   }
 
   FileSpec GetTargetDefinitionFile() const {
     const uint32_t idx = ePropertyTargetDefinitionFile;
-    return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+    return GetPropertyAtIndexAs<FileSpec>(idx, {});
   }
 
   bool GetUseSVR4() const {
     const uint32_t idx = ePropertyUseSVR4;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        nullptr, idx,
-        g_processgdbremote_properties[idx].default_uint_value != 0);
+    return GetPropertyAtIndexAs<bool>(
+        idx, g_processgdbremote_properties[idx].default_uint_value != 0);
   }
 
   bool GetUseGPacketForReading() const {
     const uint32_t idx = ePropertyUseGPacketForReading;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, true);
+    return GetPropertyAtIndexAs<bool>(idx, true);
   }
 };
 
@@ -341,7 +342,7 @@ bool ProcessGDBRemote::ParsePythonTargetDefinition(
           target_definition_sp->GetValueForKey("breakpoint-pc-offset");
       if (breakpoint_pc_offset_value) {
         if (auto breakpoint_pc_int_value =
-                breakpoint_pc_offset_value->GetAsInteger())
+                breakpoint_pc_offset_value->GetAsSignedInteger())
           m_breakpoint_pc_offset = breakpoint_pc_int_value->GetValue();
       }
 
@@ -967,13 +968,15 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
     MapSupportedStructuredDataPlugins(*supported_packets);
 
   // If connected to LLDB ("native-signals+"), use signal defs for
-  // the remote platform (assuming it's available).  If connected to GDB, just
-  // use the standard set.
-  auto platform_sp = GetTarget().GetPlatform();
-  if (!platform_sp || !m_gdb_comm.UsesNativeSignals())
+  // the remote platform.  If connected to GDB, just use the standard set.
+  if (!m_gdb_comm.UsesNativeSignals()) {
     SetUnixSignals(std::make_shared<GDBRemoteSignals>());
-  else {
-    SetUnixSignals(platform_sp->GetUnixSignals());
+  } else {
+    PlatformSP platform_sp = GetTarget().GetPlatform();
+    if (platform_sp && platform_sp->IsConnected())
+      SetUnixSignals(platform_sp->GetUnixSignals());
+    else
+      SetUnixSignals(UnixSignals::Create(GetTarget().GetArchitecture()));
   }
 }
 
@@ -1747,33 +1750,60 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
         } else if (reason == "trap") {
           // Let the trap just use the standard signal stop reason below...
         } else if (reason == "watchpoint") {
+          // We will have between 1 and 3 fields in the description.
+          //
+          // \a wp_addr which is the original start address that
+          // lldb requested be watched, or an address that the
+          // hardware reported.  This address should be within the
+          // range of a currently active watchpoint region - lldb
+          // should be able to find a watchpoint with this address.
+          //
+          // \a wp_index is the hardware watchpoint register number.
+          //
+          // \a wp_hit_addr is the actual address reported by the hardware,
+          // which may be outside the range of a region we are watching.
+          //
+          // On MIPS, we may get a false watchpoint exception where an
+          // access to the same 8 byte granule as a watchpoint will trigger,
+          // even if the access was not within the range of the watched
+          // region. When we get a \a wp_hit_addr outside the range of any
+          // set watchpoint, continue execution without making it visible to
+          // the user.
+          //
+          // On ARM, a related issue where a large access that starts
+          // before the watched region (and extends into the watched
+          // region) may report a hit address before the watched region.
+          // lldb will not find the "nearest" watchpoint to
+          // disable/step/re-enable it, so one of the valid watchpoint
+          // addresses should be provided as \a wp_addr.
           StringExtractor desc_extractor(description.c_str());
           addr_t wp_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
           uint32_t wp_index = desc_extractor.GetU32(LLDB_INVALID_INDEX32);
           addr_t wp_hit_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
           watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
-          if (wp_addr != LLDB_INVALID_ADDRESS) {
-            WatchpointSP wp_sp;
+          bool silently_continue = false;
+          WatchpointSP wp_sp;
+          if (wp_hit_addr != LLDB_INVALID_ADDRESS) {
+            wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_hit_addr);
+            // On MIPS, \a wp_hit_addr outside the range of a watched
+            // region means we should silently continue, it is a false hit.
             ArchSpec::Core core = GetTarget().GetArchitecture().GetCore();
-            if ((core >= ArchSpec::kCore_mips_first &&
-                 core <= ArchSpec::kCore_mips_last) ||
-                (core >= ArchSpec::eCore_arm_generic &&
-                 core <= ArchSpec::eCore_arm_aarch64))
-              wp_sp =
-                  GetTarget().GetWatchpointList().FindByAddress(wp_hit_addr);
-            if (!wp_sp)
-              wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
-            if (wp_sp) {
-              wp_sp->SetHardwareIndex(wp_index);
-              watch_id = wp_sp->GetID();
-            }
+            if (!wp_sp && core >= ArchSpec::kCore_mips_first &&
+                core <= ArchSpec::kCore_mips_last)
+              silently_continue = true;
+          }
+          if (!wp_sp && wp_addr != LLDB_INVALID_ADDRESS)
+            wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
+          if (wp_sp) {
+            wp_sp->SetHardwareIndex(wp_index);
+            watch_id = wp_sp->GetID();
           }
           if (watch_id == LLDB_INVALID_WATCH_ID) {
             Log *log(GetLog(GDBRLog::Watchpoints));
             LLDB_LOGF(log, "failed to find watchpoint");
           }
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithWatchpointID(
-              *thread_sp, watch_id, wp_hit_addr));
+              *thread_sp, watch_id, silently_continue));
           handled = true;
         } else if (reason == "exception") {
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithException(
@@ -1937,23 +1967,24 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                            StructuredData::Object *object) -> bool {
     if (key == g_key_tid) {
       // thread in big endian hex
-      tid = object->GetIntegerValue(LLDB_INVALID_THREAD_ID);
+      tid = object->GetUnsignedIntegerValue(LLDB_INVALID_THREAD_ID);
     } else if (key == g_key_metype) {
       // exception type in big endian hex
-      exc_type = object->GetIntegerValue(0);
+      exc_type = object->GetUnsignedIntegerValue(0);
     } else if (key == g_key_medata) {
       // exception data in big endian hex
       StructuredData::Array *array = object->GetAsArray();
       if (array) {
         array->ForEach([&exc_data](StructuredData::Object *object) -> bool {
-          exc_data.push_back(object->GetIntegerValue());
+          exc_data.push_back(object->GetUnsignedIntegerValue());
           return true; // Keep iterating through all array items
         });
       }
     } else if (key == g_key_name) {
       thread_name = std::string(object->GetStringValue());
     } else if (key == g_key_qaddr) {
-      thread_dispatch_qaddr = object->GetIntegerValue(LLDB_INVALID_ADDRESS);
+      thread_dispatch_qaddr =
+          object->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
     } else if (key == g_key_queue_name) {
       queue_vars_valid = true;
       queue_name = std::string(object->GetStringValue());
@@ -1967,11 +1998,11 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
         queue_kind = eQueueKindConcurrent;
       }
     } else if (key == g_key_queue_serial_number) {
-      queue_serial_number = object->GetIntegerValue(0);
+      queue_serial_number = object->GetUnsignedIntegerValue(0);
       if (queue_serial_number != 0)
         queue_vars_valid = true;
     } else if (key == g_key_dispatch_queue_t) {
-      dispatch_queue_t = object->GetIntegerValue(0);
+      dispatch_queue_t = object->GetUnsignedIntegerValue(0);
       if (dispatch_queue_t != 0 && dispatch_queue_t != LLDB_INVALID_ADDRESS)
         queue_vars_valid = true;
     } else if (key == g_key_associated_with_dispatch_queue) {
@@ -2032,7 +2063,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
       }
 
     } else if (key == g_key_signal)
-      signo = object->GetIntegerValue(LLDB_INVALID_SIGNAL_NUMBER);
+      signo = object->GetUnsignedIntegerValue(LLDB_INVALID_SIGNAL_NUMBER);
     return true; // Keep iterating through all dictionary key/value pairs
   });
 
@@ -2200,6 +2231,9 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (wp_sp)
           wp_index = wp_sp->GetHardwareIndex();
 
+        // Rewrite gdb standard watch/rwatch/awatch to
+        // "reason:watchpoint" + "description:ADDR",
+        // which is parsed in SetThreadStopInfo.
         reason = "watchpoint";
         StreamString ostr;
         ostr.Printf("%" PRIu64 " %" PRIu32, wp_addr, wp_index);
@@ -2224,6 +2258,13 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         StreamString ostr;
         ostr.Printf("%" PRIu64 " %" PRIu64, pid_tid->first, pid_tid->second);
         description = std::string(ostr.GetString());
+      } else if (key.compare("addressing_bits") == 0) {
+        uint64_t addressing_bits;
+        if (!value.getAsInteger(0, addressing_bits)) {
+          addr_t address_mask = ~((1ULL << addressing_bits) - 1);
+          SetCodeAddressMask(address_mask);
+          SetDataAddressMask(address_mask);
+        }
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))
@@ -3366,8 +3407,7 @@ void ProcessGDBRemote::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForProcessPlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
-        ConstString("Properties for the gdb-remote process plug-in."),
-        is_global_setting);
+        "Properties for the gdb-remote process plug-in.", is_global_setting);
   }
 }
 
@@ -3747,8 +3787,7 @@ ProcessGDBRemote::GetExtendedInfoForThread(lldb::tid_t tid) {
           response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
         if (!response.Empty()) {
-          object_sp =
-              StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          object_sp = StructuredData::ParseJSON(response.GetStringRef());
         }
       }
     }
@@ -3780,10 +3819,8 @@ StructuredData::ObjectSP ProcessGDBRemote::GetLoadedDynamicLibrariesInfos(
   StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
   StructuredData::ArraySP addresses(new StructuredData::Array);
 
-  for (auto addr : load_addresses) {
-    StructuredData::ObjectSP addr_sp(new StructuredData::Integer(addr));
-    addresses->AddItem(addr_sp);
-  }
+  for (auto addr : load_addresses)
+    addresses->AddIntegerItem(addr);
 
   args_dict->GetAsDictionary()->AddItem("solib_addresses", addresses);
 
@@ -3819,8 +3856,7 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos_sender(
           response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
         if (!response.Empty()) {
-          object_sp =
-              StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          object_sp = StructuredData::ParseJSON(response.GetStringRef());
         }
       }
     }
@@ -3842,8 +3878,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetDynamicLoaderProcessState() {
           response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
         if (!response.Empty()) {
-          object_sp =
-              StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          object_sp = StructuredData::ParseJSON(response.GetStringRef());
         }
       }
     }
@@ -3875,8 +3910,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
           response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
         if (!response.Empty()) {
-          object_sp =
-              StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          object_sp = StructuredData::ParseJSON(response.GetStringRef());
         }
       }
     }
@@ -4027,15 +4061,212 @@ struct GdbServerTargetInfo {
   RegisterSetMap reg_set_map;
 };
 
-bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
-                    std::vector<DynamicRegisterInfo::Register> &registers) {
+static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
+                                                          unsigned size) {
+  Log *log(GetLog(GDBRLog::Process));
+  const unsigned max_start_bit = size * 8 - 1;
+
+  // Process the fields of this set of flags.
+  std::vector<RegisterFlags::Field> fields;
+  flags_node.ForEachChildElementWithName("field", [&fields, max_start_bit,
+                                                   &log](const XMLNode
+                                                             &field_node) {
+    std::optional<llvm::StringRef> name;
+    std::optional<unsigned> start;
+    std::optional<unsigned> end;
+
+    field_node.ForEachAttribute([&name, &start, &end, max_start_bit,
+                                 &log](const llvm::StringRef &attr_name,
+                                       const llvm::StringRef &attr_value) {
+      // Note that XML in general requires that each of these attributes only
+      // appears once, so we don't have to handle that here.
+      if (attr_name == "name") {
+        LLDB_LOG(log,
+                 "ProcessGDBRemote::ParseFlags Found field node name \"{0}\"",
+                 attr_value.data());
+        name = attr_value;
+      } else if (attr_name == "start") {
+        unsigned parsed_start = 0;
+        if (llvm::to_integer(attr_value, parsed_start)) {
+          if (parsed_start > max_start_bit) {
+            LLDB_LOG(
+                log,
+                "ProcessGDBRemote::ParseFlags Invalid start {0} in field node, "
+                "cannot be > {1}",
+                parsed_start, max_start_bit);
+          } else
+            start = parsed_start;
+        } else {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseFlags Invalid start \"{0}\" in "
+                   "field node",
+                   attr_value.data());
+        }
+      } else if (attr_name == "end") {
+        unsigned parsed_end = 0;
+        if (llvm::to_integer(attr_value, parsed_end))
+          if (parsed_end > max_start_bit) {
+            LLDB_LOG(
+                log,
+                "ProcessGDBRemote::ParseFlags Invalid end {0} in field node, "
+                "cannot be > {1}",
+                parsed_end, max_start_bit);
+          } else
+            end = parsed_end;
+        else {
+          LLDB_LOG(
+              log,
+              "ProcessGDBRemote::ParseFlags Invalid end \"{0}\" in field node",
+              attr_value.data());
+        }
+      } else if (attr_name == "type") {
+        // Type is a known attribute but we do not currently use it and it is
+        // not required.
+      } else {
+        LLDB_LOG(log,
+                 "ProcessGDBRemote::ParseFlags Ignoring unknown attribute "
+                 "\"{0}\" in field node",
+                 attr_name.data());
+      }
+
+      return true; // Walk all attributes of the field.
+    });
+
+    if (name && start && end) {
+      if (*start > *end) {
+        LLDB_LOG(log,
+                 "ProcessGDBRemote::ParseFlags Start {0} > end {1} in field "
+                 "\"{2}\", ignoring",
+                 *start, *end, name->data());
+      } else {
+        fields.push_back(RegisterFlags::Field(name->str(), *start, *end));
+      }
+    }
+
+    return true; // Iterate all "field" nodes.
+  });
+  return fields;
+}
+
+void ParseFlags(
+    XMLNode feature_node,
+    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types) {
+  Log *log(GetLog(GDBRLog::Process));
+
+  feature_node.ForEachChildElementWithName(
+      "flags",
+      [&log, &registers_flags_types](const XMLNode &flags_node) -> bool {
+        LLDB_LOG(log, "ProcessGDBRemote::ParseFlags Found flags node \"{0}\"",
+                 flags_node.GetAttributeValue("id").c_str());
+
+        std::optional<llvm::StringRef> id;
+        std::optional<unsigned> size;
+        flags_node.ForEachAttribute(
+            [&id, &size, &log](const llvm::StringRef &name,
+                               const llvm::StringRef &value) {
+              if (name == "id") {
+                id = value;
+              } else if (name == "size") {
+                unsigned parsed_size = 0;
+                if (llvm::to_integer(value, parsed_size))
+                  size = parsed_size;
+                else {
+                  LLDB_LOG(log,
+                           "ProcessGDBRemote::ParseFlags Invalid size \"{0}\" "
+                           "in flags node",
+                           value.data());
+                }
+              } else {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseFlags Ignoring unknown "
+                         "attribute \"{0}\" in flags node",
+                         name.data());
+              }
+              return true; // Walk all attributes.
+            });
+
+        if (id && size) {
+          // Process the fields of this set of flags.
+          std::vector<RegisterFlags::Field> fields =
+              ParseFlagsFields(flags_node, *size);
+          if (fields.size()) {
+            // Sort so that the fields with the MSBs are first.
+            std::sort(fields.rbegin(), fields.rend());
+            std::vector<RegisterFlags::Field>::const_iterator overlap =
+                std::adjacent_find(fields.begin(), fields.end(),
+                                   [](const RegisterFlags::Field &lhs,
+                                      const RegisterFlags::Field &rhs) {
+                                     return lhs.Overlaps(rhs);
+                                   });
+
+            // If no fields overlap, use them.
+            if (overlap == fields.end()) {
+              if (registers_flags_types.contains(*id)) {
+                // In theory you could define some flag set, use it with a
+                // register then redefine it. We do not know if anyone does
+                // that, or what they would expect to happen in that case.
+                //
+                // LLDB chooses to take the first definition and ignore the rest
+                // as waiting until everything has been processed is more
+                // expensive and difficult. This means that pointers to flag
+                // sets in the register info remain valid if later the flag set
+                // is redefined. If we allowed redefinitions, LLDB would crash
+                // when you tried to print a register that used the original
+                // definition.
+                LLDB_LOG(
+                    log,
+                    "ProcessGDBRemote::ParseFlags Definition of flags "
+                    "\"{0}\" shadows "
+                    "previous definition, using original definition instead.",
+                    id->data());
+              } else {
+                registers_flags_types.insert_or_assign(
+                    *id, std::make_unique<RegisterFlags>(id->str(), *size,
+                                                         std::move(fields)));
+              }
+            } else {
+              // If any fields overlap, ignore the whole set of flags.
+              std::vector<RegisterFlags::Field>::const_iterator next =
+                  std::next(overlap);
+              LLDB_LOG(
+                  log,
+                  "ProcessGDBRemote::ParseFlags Ignoring flags because fields "
+                  "{0} (start: {1} end: {2}) and {3} (start: {4} end: {5}) "
+                  "overlap.",
+                  overlap->GetName().c_str(), overlap->GetStart(),
+                  overlap->GetEnd(), next->GetName().c_str(), next->GetStart(),
+                  next->GetEnd());
+            }
+          } else {
+            LLDB_LOG(
+                log,
+                "ProcessGDBRemote::ParseFlags Ignoring definition of flags "
+                "\"{0}\" because it contains no fields.",
+                id->data());
+          }
+        }
+
+        return true; // Keep iterating through all "flags" elements.
+      });
+}
+
+bool ParseRegisters(
+    XMLNode feature_node, GdbServerTargetInfo &target_info,
+    std::vector<DynamicRegisterInfo::Register> &registers,
+    llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types) {
   if (!feature_node)
     return false;
 
   Log *log(GetLog(GDBRLog::Process));
 
+  ParseFlags(feature_node, registers_flags_types);
+  for (const auto &flags : registers_flags_types)
+    flags.second->log(log);
+
   feature_node.ForEachChildElementWithName(
-      "reg", [&target_info, &registers, log](const XMLNode &reg_node) -> bool {
+      "reg",
+      [&target_info, &registers, &registers_flags_types,
+       log](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
         std::string gdb_type;
         DynamicRegisterInfo::Register reg_info;
@@ -4111,29 +4342,51 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
           return true; // Keep iterating through all attributes
         });
 
-        if (!gdb_type.empty() && !(encoding_set || format_set)) {
-          if (llvm::StringRef(gdb_type).startswith("int")) {
-            reg_info.format = eFormatHex;
-            reg_info.encoding = eEncodingUint;
-          } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
-            reg_info.format = eFormatAddressInfo;
-            reg_info.encoding = eEncodingUint;
-          } else if (gdb_type == "float") {
-            reg_info.format = eFormatFloat;
-            reg_info.encoding = eEncodingIEEE754;
-          } else if (gdb_type == "aarch64v" ||
-                     llvm::StringRef(gdb_type).startswith("vec") ||
-                     gdb_type == "i387_ext" || gdb_type == "uint128") {
-            // lldb doesn't handle 128-bit uints correctly (for ymm*h), so treat
-            // them as vector (similarly to xmm/ymm)
-            reg_info.format = eFormatVectorOfUInt8;
-            reg_info.encoding = eEncodingVector;
-          } else {
-            LLDB_LOGF(
-                log,
-                "ProcessGDBRemote::ParseRegisters Could not determine lldb"
-                "format and encoding for gdb type %s",
-                gdb_type.c_str());
+        if (!gdb_type.empty()) {
+          // gdb_type could reference some flags type defined in XML.
+          llvm::StringMap<std::unique_ptr<RegisterFlags>>::iterator it =
+              registers_flags_types.find(gdb_type);
+          if (it != registers_flags_types.end()) {
+            auto flags_type = it->second.get();
+            if (reg_info.byte_size == flags_type->GetSize())
+              reg_info.flags_type = flags_type;
+            else
+              LLDB_LOGF(log,
+                        "ProcessGDBRemote::ParseRegisters Size of register "
+                        "flags %s (%d bytes) for "
+                        "register %s does not match the register size (%d "
+                        "bytes). Ignoring this set of flags.",
+                        flags_type->GetID().c_str(), flags_type->GetSize(),
+                        reg_info.name.AsCString(), reg_info.byte_size);
+          }
+
+          // There's a slim chance that the gdb_type name is both a flags type
+          // and a simple type. Just in case, look for that too (setting both
+          // does no harm).
+          if (!gdb_type.empty() && !(encoding_set || format_set)) {
+            if (llvm::StringRef(gdb_type).startswith("int")) {
+              reg_info.format = eFormatHex;
+              reg_info.encoding = eEncodingUint;
+            } else if (gdb_type == "data_ptr" || gdb_type == "code_ptr") {
+              reg_info.format = eFormatAddressInfo;
+              reg_info.encoding = eEncodingUint;
+            } else if (gdb_type == "float") {
+              reg_info.format = eFormatFloat;
+              reg_info.encoding = eEncodingIEEE754;
+            } else if (gdb_type == "aarch64v" ||
+                       llvm::StringRef(gdb_type).startswith("vec") ||
+                       gdb_type == "i387_ext" || gdb_type == "uint128") {
+              // lldb doesn't handle 128-bit uints correctly (for ymm*h), so
+              // treat them as vector (similarly to xmm/ymm)
+              reg_info.format = eFormatVectorOfUInt8;
+              reg_info.encoding = eEncodingVector;
+            } else {
+              LLDB_LOGF(
+                  log,
+                  "ProcessGDBRemote::ParseRegisters Could not determine lldb"
+                  "format and encoding for gdb type %s",
+                  gdb_type.c_str());
+            }
           }
         }
 
@@ -4265,8 +4518,8 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
 
     if (arch_to_use.IsValid()) {
       for (auto &feature_node : feature_nodes) {
-        ParseRegisters(feature_node, target_info,
-                       registers);
+        ParseRegisters(feature_node, target_info, registers,
+                       m_registers_flags_types);
       }
 
       for (const auto &include : target_info.includes) {
@@ -4331,6 +4584,13 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   if (!m_gdb_comm.GetQXferFeaturesReadSupported())
     return false;
 
+  // This holds register flags information for the whole of target.xml.
+  // target.xml may include further documents that
+  // GetGDBServerRegisterInfoXMLAndProcess will recurse to fetch and process.
+  // That's why we clear the cache here, and not in
+  // GetGDBServerRegisterInfoXMLAndProcess. To prevent it being cleared on every
+  // include read.
+  m_registers_flags_types.clear();
   std::vector<DynamicRegisterInfo::Register> registers;
   if (GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, "target.xml",
                                             registers))
@@ -4838,8 +5098,7 @@ ParseStructuredDataPacket(llvm::StringRef packet) {
   }
 
   // This is an asynchronous JSON packet, destined for a StructuredDataPlugin.
-  StructuredData::ObjectSP json_sp =
-      StructuredData::ParseJSON(std::string(packet));
+  StructuredData::ObjectSP json_sp = StructuredData::ParseJSON(packet);
   if (log) {
     if (json_sp) {
       StreamString json_str;

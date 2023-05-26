@@ -210,10 +210,8 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_branch .LBB4_3
 ; GCN-NEXT:  .LBB4_2:
-; GCN-NEXT:    s_mov_b32 s4, 0
-; GCN-NEXT:    s_mov_b32 s5, s4
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:  .LBB4_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
@@ -263,10 +261,8 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_branch .LBB5_3
 ; GCN-NEXT:  .LBB5_2:
-; GCN-NEXT:    s_mov_b32 s4, 0
-; GCN-NEXT:    s_mov_b32 s5, s4
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:  .LBB5_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off

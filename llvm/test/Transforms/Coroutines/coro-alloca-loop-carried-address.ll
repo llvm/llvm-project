@@ -7,7 +7,6 @@
 define void @foo() presplitcoroutine {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STACKVAR0:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @foo.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 40)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])

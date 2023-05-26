@@ -71,7 +71,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     return SDValue();
 
   uint64_t SizeVal = ConstantSize->getZExtValue();
-  SDValue InFlag;
+  SDValue InGlue;
   EVT AVT;
   SDValue Count;
   unsigned BytesLeft = 0;
@@ -110,25 +110,25 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     }
 
     Chain = DAG.getCopyToReg(Chain, dl, ValReg, DAG.getConstant(Val, dl, AVT),
-                             InFlag);
-    InFlag = Chain.getValue(1);
+                             InGlue);
+    InGlue = Chain.getValue(1);
   } else {
     AVT = MVT::i8;
     Count  = DAG.getIntPtrConstant(SizeVal, dl);
-    Chain  = DAG.getCopyToReg(Chain, dl, X86::AL, Val, InFlag);
-    InFlag = Chain.getValue(1);
+    Chain  = DAG.getCopyToReg(Chain, dl, X86::AL, Val, InGlue);
+    InGlue = Chain.getValue(1);
   }
 
   bool Use64BitRegs = Subtarget.isTarget64BitLP64();
   Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RCX : X86::ECX,
-                           Count, InFlag);
-  InFlag = Chain.getValue(1);
+                           Count, InGlue);
+  InGlue = Chain.getValue(1);
   Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RDI : X86::EDI,
-                           Dst, InFlag);
-  InFlag = Chain.getValue(1);
+                           Dst, InGlue);
+  InGlue = Chain.getValue(1);
 
   SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDValue Ops[] = { Chain, DAG.getValueType(AVT), InFlag };
+  SDValue Ops[] = { Chain, DAG.getValueType(AVT), InGlue };
   Chain = DAG.getNode(X86ISD::REP_STOS, dl, Tys, Ops);
 
   if (BytesLeft) {
@@ -159,16 +159,16 @@ static SDValue emitRepmovs(const X86Subtarget &Subtarget, SelectionDAG &DAG,
   const unsigned DI = Use64BitRegs ? X86::RDI : X86::EDI;
   const unsigned SI = Use64BitRegs ? X86::RSI : X86::ESI;
 
-  SDValue InFlag;
-  Chain = DAG.getCopyToReg(Chain, dl, CX, Size, InFlag);
-  InFlag = Chain.getValue(1);
-  Chain = DAG.getCopyToReg(Chain, dl, DI, Dst, InFlag);
-  InFlag = Chain.getValue(1);
-  Chain = DAG.getCopyToReg(Chain, dl, SI, Src, InFlag);
-  InFlag = Chain.getValue(1);
+  SDValue InGlue;
+  Chain = DAG.getCopyToReg(Chain, dl, CX, Size, InGlue);
+  InGlue = Chain.getValue(1);
+  Chain = DAG.getCopyToReg(Chain, dl, DI, Dst, InGlue);
+  InGlue = Chain.getValue(1);
+  Chain = DAG.getCopyToReg(Chain, dl, SI, Src, InGlue);
+  InGlue = Chain.getValue(1);
 
   SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
-  SDValue Ops[] = {Chain, DAG.getValueType(AVT), InFlag};
+  SDValue Ops[] = {Chain, DAG.getValueType(AVT), InGlue};
   return DAG.getNode(X86ISD::REP_MOVS, dl, Tys, Ops);
 }
 

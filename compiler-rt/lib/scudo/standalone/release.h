@@ -11,10 +11,41 @@
 
 #include "common.h"
 #include "list.h"
+#include "mem_map.h"
 #include "mutex.h"
 #include "thread_annotations.h"
 
 namespace scudo {
+
+template <typename MemMapT> class RegionReleaseRecorder {
+public:
+  RegionReleaseRecorder(MemMapT *RegionMemMap, uptr Base, uptr Offset = 0)
+      : RegionMemMap(RegionMemMap), Base(Base), Offset(Offset) {}
+
+  uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
+
+  uptr getReleasedBytes() const { return ReleasedBytes; }
+
+  uptr getBase() const { return Base; }
+
+  // Releases [From, To) range of pages back to OS. Note that `From` and `To`
+  // are offseted from `Base` + Offset.
+  void releasePageRangeToOS(uptr From, uptr To) {
+    const uptr Size = To - From;
+    RegionMemMap->releasePagesToOS(getBase() + Offset + From, Size);
+    ReleasedRangesCount++;
+    ReleasedBytes += Size;
+  }
+
+private:
+  uptr ReleasedRangesCount = 0;
+  uptr ReleasedBytes = 0;
+  MemMapT *RegionMemMap = nullptr;
+  uptr Base = 0;
+  // The release offset from Base. This is used when we know a given range after
+  // Base will not be released.
+  uptr Offset = 0;
+};
 
 class ReleaseRecorder {
 public:
@@ -204,7 +235,6 @@ public:
         PackingRatioLog;
     BufferSize = SizePerRegion * sizeof(*Buffer) * Regions;
     Buffer = Buffers.getBuffer(BufferSize);
-    DCHECK_NE(Buffer, nullptr);
   }
 
   bool isAllocated() const { return !!Buffer; }
@@ -392,25 +422,27 @@ struct PageReleaseContext {
     return PageMap.isAllocated();
   }
 
-  void ensurePageMapAllocated() {
+  bool ensurePageMapAllocated() {
     if (PageMap.isAllocated())
-      return;
+      return true;
     PageMap.reset(NumberOfRegions, PagesCount, FullPagesBlockCountMax);
-    DCHECK(PageMap.isAllocated());
+    // TODO: Log some message when we fail on PageMap allocation.
+    return PageMap.isAllocated();
   }
 
   // Mark all the blocks in the given range [From, to). Instead of visiting all
   // the blocks, we will just mark the page as all counted. Note the `From` and
   // `To` has to be page aligned but with one exception, if `To` is equal to the
   // RegionSize, it's not necessary to be aligned with page size.
-  void markRangeAsAllCounted(uptr From, uptr To, uptr Base,
+  bool markRangeAsAllCounted(uptr From, uptr To, uptr Base,
                              const uptr RegionIndex, const uptr RegionSize) {
     DCHECK_LT(From, To);
     DCHECK_LE(To, Base + RegionSize);
     DCHECK_EQ(From % PageSize, 0U);
     DCHECK_LE(To - From, RegionSize);
 
-    ensurePageMapAllocated();
+    if (!ensurePageMapAllocated())
+      return false;
 
     uptr FromInRegion = From - Base;
     uptr ToInRegion = To - Base;
@@ -418,7 +450,7 @@ struct PageReleaseContext {
 
     // The straddling block sits across entire range.
     if (FirstBlockInRange >= ToInRegion)
-      return;
+      return true;
 
     // First block may not sit at the first pape in the range, move
     // `FromInRegion` to the first block page.
@@ -449,8 +481,9 @@ struct PageReleaseContext {
     }
 
     uptr LastBlockInRange = roundDownSlow(ToInRegion - 1, BlockSize);
-    if (LastBlockInRange < FromInRegion)
-      return;
+
+    // Note that LastBlockInRange may be smaller than `FromInRegion` at this
+    // point because it may contain only one block in the range.
 
     // When the last block sits across `To`, we can't just mark the pages
     // occupied by the last block as all counted. Instead, we increment the
@@ -484,14 +517,17 @@ struct PageReleaseContext {
       PageMap.setAsAllCountedRange(RegionIndex, getPageIndex(FromInRegion),
                                    getPageIndex(ToInRegion - 1));
     }
+
+    return true;
   }
 
   template <class TransferBatchT, typename DecompactPtrT>
-  void markFreeBlocksInRegion(const IntrusiveList<TransferBatchT> &FreeList,
+  bool markFreeBlocksInRegion(const IntrusiveList<TransferBatchT> &FreeList,
                               DecompactPtrT DecompactPtr, const uptr Base,
                               const uptr RegionIndex, const uptr RegionSize,
                               bool MayContainLastBlockInRegion) {
-    ensurePageMapAllocated();
+    if (!ensurePageMapAllocated())
+      return false;
 
     if (MayContainLastBlockInRegion) {
       const uptr LastBlockInRegion =
@@ -509,13 +545,18 @@ struct PageReleaseContext {
       //   last block
       const uptr RoundedRegionSize = roundUp(RegionSize, PageSize);
       const uptr TrailingBlockBase = LastBlockInRegion + BlockSize;
-      // Only the last page touched by the last block needs to mark the trailing
-      // blocks. If the difference between `RoundedRegionSize` and
+      // If the difference between `RoundedRegionSize` and
       // `TrailingBlockBase` is larger than a page, that implies the reported
       // `RegionSize` may not be accurate.
       DCHECK_LT(RoundedRegionSize - TrailingBlockBase, PageSize);
+
+      // Only the last page touched by the last block needs to mark the trailing
+      // blocks. Note that if the last "pretend" block straddles the boundary,
+      // we still have to count it in so that the logic of counting the number
+      // of blocks on a page is consistent.
       uptr NumTrailingBlocks =
-          roundUpSlow(RoundedRegionSize - TrailingBlockBase, BlockSize) /
+          (roundUpSlow(RoundedRegionSize - TrailingBlockBase, BlockSize) +
+           BlockSize - 1) /
           BlockSize;
       if (NumTrailingBlocks > 0) {
         PageMap.incN(RegionIndex, getPageIndex(TrailingBlockBase),
@@ -545,6 +586,8 @@ struct PageReleaseContext {
         }
       }
     }
+
+    return true;
   }
 
   uptr getPageIndex(uptr P) { return (P >> PageSizeLog) - ReleasePageOffset; }

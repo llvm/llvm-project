@@ -2164,8 +2164,8 @@ void ShuffleVectorInst::commute() {
   SmallVector<int, 16> NewMask(NumMaskElts);
   for (int i = 0; i != NumMaskElts; ++i) {
     int MaskElt = getMaskValue(i);
-    if (MaskElt == UndefMaskElem) {
-      NewMask[i] = UndefMaskElem;
+    if (MaskElt == PoisonMaskElem) {
+      NewMask[i] = PoisonMaskElem;
       continue;
     }
     assert(MaskElt >= 0 && MaskElt < 2 * NumOpElts && "Out-of-range mask");
@@ -2186,11 +2186,11 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   int V1Size =
       cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
   for (int Elem : Mask)
-    if (Elem != UndefMaskElem && Elem >= V1Size * 2)
+    if (Elem != PoisonMaskElem && Elem >= V1Size * 2)
       return false;
 
   if (isa<ScalableVectorType>(V1->getType()))
-    if ((Mask[0] != 0 && Mask[0] != UndefMaskElem) || !all_equal(Mask))
+    if ((Mask[0] != 0 && Mask[0] != PoisonMaskElem) || !all_equal(Mask))
       return false;
 
   return true;
@@ -2289,7 +2289,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
   }
   SmallVector<Constant *, 16> MaskConst;
   for (int Elem : Mask) {
-    if (Elem == UndefMaskElem)
+    if (Elem == PoisonMaskElem)
       MaskConst.push_back(UndefValue::get(Int32Ty));
     else
       MaskConst.push_back(ConstantInt::get(Int32Ty, Elem));
@@ -2627,7 +2627,7 @@ static bool isReplicationMaskWithParams(ArrayRef<int> Mask,
            "Run out of mask?");
     Mask = Mask.drop_front(ReplicationFactor);
     if (!all_of(CurrSubMask, [CurrElt](int MaskElt) {
-          return MaskElt == UndefMaskElem || MaskElt == CurrElt;
+          return MaskElt == PoisonMaskElem || MaskElt == CurrElt;
         }))
       return false;
   }
@@ -2639,7 +2639,7 @@ static bool isReplicationMaskWithParams(ArrayRef<int> Mask,
 bool ShuffleVectorInst::isReplicationMask(ArrayRef<int> Mask,
                                           int &ReplicationFactor, int &VF) {
   // undef-less case is trivial.
-  if (!llvm::is_contained(Mask, UndefMaskElem)) {
+  if (!llvm::is_contained(Mask, PoisonMaskElem)) {
     ReplicationFactor =
         Mask.take_while([](int MaskElt) { return MaskElt == 0; }).size();
     if (ReplicationFactor == 0 || Mask.size() % ReplicationFactor != 0)
@@ -2657,7 +2657,7 @@ bool ShuffleVectorInst::isReplicationMask(ArrayRef<int> Mask,
   // Before doing that, let's perform basic correctness checking first.
   int Largest = -1;
   for (int MaskElt : Mask) {
-    if (MaskElt == UndefMaskElem)
+    if (MaskElt == PoisonMaskElem)
       continue;
     // Elements must be in non-decreasing order.
     if (MaskElt < Largest)
@@ -2703,11 +2703,11 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
     return false;
   for (unsigned K = 0, Sz = Mask.size(); K < Sz; K += VF) {
     ArrayRef<int> SubMask = Mask.slice(K, VF);
-    if (all_of(SubMask, [](int Idx) { return Idx == UndefMaskElem; }))
+    if (all_of(SubMask, [](int Idx) { return Idx == PoisonMaskElem; }))
       continue;
     SmallBitVector Used(VF, false);
     for_each(SubMask, [&Used, VF](int Idx) {
-      if (Idx != UndefMaskElem && Idx < VF)
+      if (Idx != PoisonMaskElem && Idx < VF)
         Used.set(Idx);
     });
     if (!Used.all())
@@ -3073,42 +3073,42 @@ BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
                                           Instruction *InsertBefore) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
   return new BinaryOperator(Instruction::Sub,
-                            zero, Op,
+                            Zero, Op,
                             Op->getType(), Name, InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
                                           BasicBlock *InsertAtEnd) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
   return new BinaryOperator(Instruction::Sub,
-                            zero, Op,
+                            Zero, Op,
                             Op->getType(), Name, InsertAtEnd);
 }
 
 BinaryOperator *BinaryOperator::CreateNSWNeg(Value *Op, const Twine &Name,
                                              Instruction *InsertBefore) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
-  return BinaryOperator::CreateNSWSub(zero, Op, Name, InsertBefore);
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
+  return BinaryOperator::CreateNSWSub(Zero, Op, Name, InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNSWNeg(Value *Op, const Twine &Name,
                                              BasicBlock *InsertAtEnd) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
-  return BinaryOperator::CreateNSWSub(zero, Op, Name, InsertAtEnd);
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
+  return BinaryOperator::CreateNSWSub(Zero, Op, Name, InsertAtEnd);
 }
 
 BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
                                              Instruction *InsertBefore) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
-  return BinaryOperator::CreateNUWSub(zero, Op, Name, InsertBefore);
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
+  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
                                              BasicBlock *InsertAtEnd) {
-  Value *zero = ConstantFP::getZeroValueForNegation(Op->getType());
-  return BinaryOperator::CreateNUWSub(zero, Op, Name, InsertAtEnd);
+  Value *Zero = ConstantInt::get(Op->getType(), 0);
+  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertAtEnd);
 }
 
 BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
@@ -3165,23 +3165,6 @@ bool CastInst::isIntegerCast() const {
       return getOperand(0)->getType()->isIntegerTy() &&
         getType()->isIntegerTy();
   }
-}
-
-bool CastInst::isLosslessCast() const {
-  // Only BitCast can be lossless, exit fast if we're not BitCast
-  if (getOpcode() != Instruction::BitCast)
-    return false;
-
-  // Identity cast is always lossless
-  Type *SrcTy = getOperand(0)->getType();
-  Type *DstTy = getType();
-  if (SrcTy == DstTy)
-    return true;
-
-  // Pointer to pointer is always lossless.
-  if (SrcTy->isPointerTy())
-    return DstTy->isPointerTy();
-  return false;  // Other types have no identity values
 }
 
 /// This function determines if the CastInst does not require any bits to be

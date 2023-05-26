@@ -133,7 +133,7 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
   std::map<const llvm::StringRef, bool> OrderedMap;
   for (const auto &F : Features)
     OrderedMap[F.first()] = F.second;
-  for (auto F : OrderedMap)
+  for (const auto &F : OrderedMap)
     TargetID = TargetID + ':' + F.first.str() + (F.second ? "+" : "-");
   return TargetID;
 }

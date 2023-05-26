@@ -552,7 +552,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
 
   // Make sure to use the raw module format.
   CInvok->getHeaderSearchOpts().ModuleFormat = std::string(
-      CXXIdx->getPCHContainerOperations()->getRawReader().getFormat());
+      CXXIdx->getPCHContainerOperations()->getRawReader().getFormats().front());
 
   auto Unit = ASTUnit::create(CInvok, Diags, CaptureDiagnostics,
                               /*UserFilesAreVolatile=*/true);

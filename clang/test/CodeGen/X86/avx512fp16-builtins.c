@@ -325,19 +325,26 @@ __m256h test_mm512_castph512_ph256(__m512h __a) {
 
 __m256h test_mm256_castph128_ph256(__m128h __a) {
   // CHECK-LABEL: test_mm256_castph128_ph256
-  // CHECK: shufflevector <8 x half> %{{.*}}, <8 x half> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[A:%.*]] = freeze <8 x half> poison 
+  // CHECK: shufflevector <8 x half> %{{.*}}, <8 x half> [[A]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   return _mm256_castph128_ph256(__a);
 }
 
 __m512h test_mm512_castph128_ph512(__m128h __a) {
   // CHECK-LABEL: test_mm512_castph128_ph512
-  // CHECK: shufflevector <8 x half> %{{.*}}, <8 x half> %{{.*}}, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[B:%.*]] = freeze <16 x half> poison
+  // CHECK: store <16 x half> [[B]], ptr [[BA:%.*]]
+  // CHECK: [[A:%.*]] = freeze <8 x half> poison
+  // CHECK: [[SV:%.*]] = shufflevector <8 x half> %{{.*}}, <8 x half> [[A]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: [[C:%.*]] = load <16 x half>, ptr [[BA]]
+  // CHECK: shufflevector <16 x half> [[SV]], <16 x half> [[C]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   return _mm512_castph128_ph512(__a);
 }
 
 __m512h test_mm512_castph256_ph512(__m256h __a) {
   // CHECK-LABEL: test_mm512_castph256_ph512
-  // CHECK: shufflevector <16 x half> %{{.*}}, <16 x half> %{{.*}}, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  // CHECK: [[A:%.*]] = freeze <16 x half> poison 
+  // CHECK: shufflevector <16 x half> %{{.*}}, <16 x half> [[A]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   return _mm512_castph256_ph512(__a);
 }
 

@@ -122,8 +122,13 @@ public:
   void forgetMapping(Region &region);
 
   /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
-  /// LLVM dialect alias scope operation
+  /// LLVM dialect alias scope operation.
   llvm::MDNode *getAliasScope(Operation *op, SymbolRefAttr aliasScopeRef) const;
+
+  /// Returns the LLVM metadata corresponding to an array of symbol references
+  /// to mlir LLVM dialect alias scope operations.
+  llvm::MDNode *getAliasScopes(Operation *op,
+                               ArrayRef<SymbolRefAttr> aliasScopeRefs) const;
 
   // Sets LLVM metadata for memory operations that are in a parallel loop.
   void setAccessGroupsMetadata(AccessGroupOpInterface op,
@@ -157,16 +162,13 @@ public:
 
   /// Returns the OpenMP IR builder associated with the LLVM IR module being
   /// constructed.
-  llvm::OpenMPIRBuilder *getOpenMPBuilder() {
-    if (!ompBuilder) {
-      ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
-      ompBuilder->initialize();
-    }
-    return ompBuilder.get();
-  }
+  llvm::OpenMPIRBuilder *getOpenMPBuilder();
+
+  /// Returns the LLVM module in which the IR is being constructed.
+  llvm::Module *getLLVMModule() { return llvmModule.get(); }
 
   /// Translates the given location.
-  const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
+  llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 
   /// Translates the given LLVM debug info metadata.
   llvm::Metadata *translateDebugInfo(LLVM::DINodeAttr attr);

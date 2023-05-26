@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -19,6 +20,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -1308,6 +1310,9 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     simpleInitializer = true;
   }
 
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return mlir::failure();
+
   if (succeeded(parser.parseOptionalKeyword("constant"))) {
     // if "constant" keyword then mark this as a constant, not a variable
     result.addAttribute("constant", builder.getUnitAttr());
@@ -1342,6 +1347,7 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
   p.printAttributeWithoutType(getSymrefAttr());
   if (auto val = getValueOrNull())
     p << '(' << val << ')';
+  p.printOptionalAttrDict((*this)->getAttrs(), (*this).getAttributeNames());
   if (getOperation()->getAttr(fir::GlobalOp::getConstantAttrNameStr()))
     p << " constant";
   if (getOperation()->getAttr(getTargetAttrName()))
@@ -2243,14 +2249,6 @@ static mlir::Type getBoxScalarEleTy(mlir::Type boxTy) {
   return eleTy;
 }
 
-/// Get the rank from a !fir.box type
-static unsigned getBoxRank(mlir::Type boxTy) {
-  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy);
-  if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
-    return seqTy.getDimension();
-  return 0;
-}
-
 /// Test if \p t1 and \p t2 are compatible character types (if they can
 /// represent the same type at runtime).
 static bool areCompatibleCharacterTypes(mlir::Type t1, mlir::Type t2) {
@@ -2270,9 +2268,9 @@ mlir::LogicalResult fir::ReboxOp::verify() {
   auto outBoxTy = getType();
   if (fir::isa_unknown_size_box(outBoxTy))
     return emitOpError("result type must not have unknown rank or type");
-  auto inputRank = getBoxRank(inputBoxTy);
+  auto inputRank = fir::getBoxRank(inputBoxTy);
   auto inputEleTy = getBoxScalarEleTy(inputBoxTy);
-  auto outRank = getBoxRank(outBoxTy);
+  auto outRank = fir::getBoxRank(outBoxTy);
   auto outEleTy = getBoxScalarEleTy(outBoxTy);
 
   if (auto sliceVal = getSlice()) {
@@ -2327,6 +2325,8 @@ mlir::LogicalResult fir::ReboxOp::verify() {
         inputEleTy.isa<fir::RecordType>() || outEleTy.isa<mlir::NoneType>() ||
         (inputEleTy.isa<mlir::NoneType>() && outEleTy.isa<fir::RecordType>()) ||
         (getSlice() && inputEleTy.isa<fir::CharacterType>()) ||
+        (getSlice() && fir::isa_complex(inputEleTy) &&
+         outEleTy.isa<mlir::FloatType>()) ||
         areCompatibleCharacterTypes(inputEleTy, outEleTy);
     if (!typeCanMismatch)
       return emitOpError(
@@ -3750,6 +3750,17 @@ mlir::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
+}
+
+//===----------------------------------------------------------------------===//
+// FIROpsDialect
+//===----------------------------------------------------------------------===//
+
+void fir::FIROpsDialect::registerOpExternalInterfaces() {
+  // Attach default declare target interfaces to operations which can be marked
+  // as declare target.
+  fir::GlobalOp::attachInterface<
+      mlir::omp::DeclareTargetDefaultModel<fir::GlobalOp>>(*getContext());
 }
 
 // Tablegen operators

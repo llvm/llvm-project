@@ -91,7 +91,7 @@ unsigned countLeadingZeros(T Val) {
 /// Create a bitmask with the N right-most bits set to 1, and all other
 /// bits set to 0.  Only unsigned types are allowed.
 template <typename T> T maskTrailingOnes(unsigned N) {
-  static_assert(std::is_unsigned<T>::value, "Invalid type!");
+  static_assert(std::is_unsigned_v<T>, "Invalid type!");
   const unsigned Bits = CHAR_BIT * sizeof(T);
   assert(N <= Bits && "Invalid bit index");
   return N == 0 ? 0 : (T(-1) >> (Bits - N));
@@ -571,7 +571,7 @@ inline int64_t SignExtend64(uint64_t X, unsigned B) {
 /// Subtract two unsigned integers, X and Y, of type T and return the absolute
 /// value of the result.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, T> AbsoluteDifference(T X, T Y) {
+std::enable_if_t<std::is_unsigned_v<T>, T> AbsoluteDifference(T X, T Y) {
   return X > Y ? (X - Y) : (Y - X);
 }
 
@@ -579,7 +579,7 @@ std::enable_if_t<std::is_unsigned<T>::value, T> AbsoluteDifference(T X, T Y) {
 /// maximum representable value of T on overflow.  ResultOverflowed indicates if
 /// the result is larger than the maximum representable value of type T.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, T>
+std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingAdd(T X, T Y, bool *ResultOverflowed = nullptr) {
   bool Dummy;
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
@@ -608,7 +608,7 @@ std::enable_if_t<std::is_unsigned_v<T>, T> SaturatingAdd(T X, T Y, T Z,
 /// maximum representable value of T on overflow.  ResultOverflowed indicates if
 /// the result is larger than the maximum representable value of type T.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, T>
+std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
   bool Dummy;
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
@@ -654,7 +654,7 @@ SaturatingMultiply(T X, T Y, bool *ResultOverflowed = nullptr) {
 /// overflow. ResultOverflowed indicates if the result is larger than the
 /// maximum representable value of type T.
 template <typename T>
-std::enable_if_t<std::is_unsigned<T>::value, T>
+std::enable_if_t<std::is_unsigned_v<T>, T>
 SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
   bool Dummy;
   bool &Overflowed = ResultOverflowed ? *ResultOverflowed : Dummy;
@@ -673,7 +673,7 @@ extern const float huge_valf;
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, T> AddOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(X, Y, &Result);
 #else
@@ -699,7 +699,7 @@ std::enable_if_t<std::is_signed<T>::value, T> AddOverflow(T X, T Y, T &Result) {
 /// Subtract two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow ocurred.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, T> SubOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_sub_overflow)
   return __builtin_sub_overflow(X, Y, &Result);
 #else
@@ -725,7 +725,7 @@ std::enable_if_t<std::is_signed<T>::value, T> SubOverflow(T X, T Y, T &Result) {
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow ocurred.
 template <typename T>
-std::enable_if_t<std::is_signed<T>::value, T> MulOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
   // Perform the unsigned multiplication on absolute values.
   using U = std::make_unsigned_t<T>;
   const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);

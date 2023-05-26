@@ -1618,6 +1618,9 @@ llvm.func @callFreezeOp(%x : i32) {
   %1 = llvm.mlir.undef : i32
   // CHECK: freeze i32 undef
   %2 = llvm.freeze %1 : i32
+  %3 = llvm.mlir.poison : i32
+  // CHECK: freeze i32 poison
+  %4 = llvm.freeze %3 : i32
   llvm.return
 }
 
@@ -2016,38 +2019,41 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
 
 // -----
 
-module {
-  llvm.func @aliasScope(%arg1 : !llvm.ptr) {
-      %0 = llvm.mlir.constant(0 : i32) : i32
-      llvm.store %0, %arg1 {alias_scopes = [@metadata::@scope1], noalias_scopes = [@metadata::@scope2, @metadata::@scope3]} : i32, !llvm.ptr
-      %1 = llvm.load %arg1 {alias_scopes = [@metadata::@scope2], noalias_scopes = [@metadata::@scope1, @metadata::@scope3]} : !llvm.ptr -> i32
-      %2 = llvm.atomicrmw add %arg1, %0 monotonic {alias_scopes = [@metadata::@scope3], noalias_scopes = [@metadata::@scope1, @metadata::@scope2]} : !llvm.ptr, i32
-      %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic {alias_scopes = [@metadata::@scope3]} : !llvm.ptr, i32
-      %4 = llvm.mlir.constant(0 : i1) : i1
-      %5 = llvm.mlir.constant(42 : i8) : i8
-      "llvm.intr.memcpy"(%arg1, %arg1, %0, %4) {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
-      "llvm.intr.memset"(%arg1, %5, %0, %4) {noalias_scopes = [@metadata::@scope3]} : (!llvm.ptr, i8, i32, i1) -> ()
-      llvm.return
-  }
-
-  llvm.metadata @metadata {
-    llvm.alias_scope_domain @domain {description = "The domain"}
-    llvm.alias_scope @scope1 {domain = @domain, description = "The first scope"}
-    llvm.alias_scope @scope2 {domain = @domain}
-    llvm.alias_scope @scope3 {domain = @domain}
-  }
+// CHECK-LABEL: aliasScope
+llvm.func @aliasScope(%arg1 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  // CHECK:  call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPES1:[0-9]+]])
+  llvm.intr.experimental.noalias.scope.decl @metadata::@scope1
+  // CHECK:  store {{.*}}, !alias.scope ![[SCOPES1]], !noalias ![[SCOPES23:[0-9]+]]
+  llvm.store %0, %arg1 {alias_scopes = [@metadata::@scope1], noalias_scopes = [@metadata::@scope2, @metadata::@scope3]} : i32, !llvm.ptr
+  // CHECK:  load {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]], !noalias ![[SCOPES13:[0-9]+]]
+  %1 = llvm.load %arg1 {alias_scopes = [@metadata::@scope2], noalias_scopes = [@metadata::@scope1, @metadata::@scope3]} : !llvm.ptr -> i32
+  // CHECK:  atomicrmw {{.*}}, !alias.scope ![[SCOPES3:[0-9]+]], !noalias ![[SCOPES12:[0-9]+]]
+  %2 = llvm.atomicrmw add %arg1, %0 monotonic {alias_scopes = [@metadata::@scope3], noalias_scopes = [@metadata::@scope1, @metadata::@scope2]} : !llvm.ptr, i32
+  // CHECK:  cmpxchg {{.*}}, !alias.scope ![[SCOPES3]]
+  %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic {alias_scopes = [@metadata::@scope3]} : !llvm.ptr, i32
+  %4 = llvm.mlir.constant(0 : i1) : i1
+  %5 = llvm.mlir.constant(42 : i8) : i8
+  // CHECK:  llvm.memcpy{{.*}}, !alias.scope ![[SCOPES3]]
+  "llvm.intr.memcpy"(%arg1, %arg1, %0, %4) {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  // CHECK:  llvm.memset{{.*}}, !noalias ![[SCOPES3]]
+  "llvm.intr.memset"(%arg1, %5, %0, %4) {noalias_scopes = [@metadata::@scope3]} : (!llvm.ptr, i8, i32, i1) -> ()
+  llvm.return
 }
 
-// Function
-// CHECK-LABEL: aliasScope
-// CHECK:  store {{.*}}, !alias.scope ![[SCOPES1:[0-9]+]], !noalias ![[SCOPES23:[0-9]+]]
-// CHECK:  load {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]], !noalias ![[SCOPES13:[0-9]+]]
-// CHECK:  atomicrmw {{.*}}, !alias.scope ![[SCOPES3:[0-9]+]], !noalias ![[SCOPES12:[0-9]+]]
-// CHECK:  cmpxchg {{.*}}, !alias.scope ![[SCOPES3]]
-// CHECK:  llvm.memcpy{{.*}}, !alias.scope ![[SCOPES3]]
-// CHECK:  llvm.memset{{.*}}, !noalias ![[SCOPES3]]
+llvm.metadata @metadata {
+  llvm.alias_scope_domain @domain {description = "The domain"}
+  llvm.alias_scope @scope1 {domain = @domain, description = "The first scope"}
+  llvm.alias_scope @scope2 {domain = @domain}
+  llvm.alias_scope @scope3 {domain = @domain}
+}
 
-// Metadata
+// Check the intrinsic declarations.
+// CHECK-DAG: declare void @llvm.experimental.noalias.scope.decl(metadata)
+// CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
+
+// Check the translated metadata.
 // CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], !"The domain"}
 // CHECK-DAG: ![[SCOPE1:[0-9]+]] = distinct !{![[SCOPE1]], ![[DOMAIN]], !"The first scope"}
 // CHECK-DAG: ![[SCOPE2:[0-9]+]] = distinct !{![[SCOPE2]], ![[DOMAIN]]}
@@ -2058,7 +2064,6 @@ module {
 // CHECK-DAG: ![[SCOPES12]] = !{![[SCOPE1]], ![[SCOPE2]]}
 // CHECK-DAG: ![[SCOPES13]] = !{![[SCOPE1]], ![[SCOPE3]]}
 // CHECK-DAG: ![[SCOPES23]] = !{![[SCOPE2]], ![[SCOPE3]]}
-
 
 // -----
 
@@ -2204,3 +2209,31 @@ llvm.func @readwrite_func() attributes {
   memory = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite>}
 
 // CHECK: attributes #[[ATTR]] = { memory(readwrite) }
+
+// -----
+
+//
+// arm_streaming attribute.
+//
+
+// CHECK-LABEL: @streaming_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @streaming_func() attributes {arm_streaming} {
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_enabled" }
+
+// -----
+
+//
+// arm_locally_streaming attribute.
+//
+
+// CHECK-LABEL: @locally_streaming_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_body" }

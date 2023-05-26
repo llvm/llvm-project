@@ -110,3 +110,50 @@ class C4 {
   }
   int foo_;
 };
+
+// llvm#59705
+namespace std
+{
+  template <typename T>
+  constexpr T&& forward(T& type) noexcept {
+    return static_cast<T&&>(type);
+  }
+
+  template <typename T>
+  constexpr T&& forward(T&& type) noexcept {
+    return static_cast<T&&>(type);
+  }
+}
+
+void std_forward_copy(absl::optional<int> opt) {
+  std::forward<absl::optional<int>>(opt).value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional
+}
+
+void std_forward_copy_safe(absl::optional<int> opt) {
+  if (!opt) return;
+
+  std::forward<absl::optional<int>>(opt).value();
+}
+
+void std_forward_copy(absl::optional<int>& opt) {
+  std::forward<absl::optional<int>>(opt).value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional
+}
+
+void std_forward_lvalue_ref_safe(absl::optional<int>& opt) {
+  if (!opt) return;
+
+  std::forward<absl::optional<int>>(opt).value();
+}
+
+void std_forward_copy(absl::optional<int>&& opt) {
+  std::forward<absl::optional<int>>(opt).value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional
+}
+
+void std_forward_rvalue_ref_safe(absl::optional<int>&& opt) {
+  if (!opt) return;
+
+  std::forward<absl::optional<int>>(opt).value();
+}

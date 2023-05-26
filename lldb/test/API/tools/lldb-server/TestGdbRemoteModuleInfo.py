@@ -1,4 +1,3 @@
-
 import json
 import gdbremote_testcase
 import lldbgdbserverutils
@@ -9,7 +8,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestGdbRemoteModuleInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
-
     @add_test_categories(["llgs"])
     def test_module_info(self):
         self.build()
@@ -19,14 +17,27 @@ class TestGdbRemoteModuleInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         context = self.expect_gdbremote_sequence()
         info = self.parse_process_info_response(context)
 
-        self.test_sequence.add_log_lines([
-            'read packet: $jModulesInfo:%s]#00' % json.dumps(
-                [{"file":lldbutil.append_to_process_working_directory(self, "a.out"),
-                  "triple":seven.unhexlify(info["triple"])}]),
-            {"direction": "send",
-             "regex": r'^\$\[{(.*)}\]\]#[0-9A-Fa-f]{2}',
-             "capture": {1: "spec"}},
-        ], True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $jModulesInfo:%s]#00"
+                % json.dumps(
+                    [
+                        {
+                            "file": lldbutil.append_to_process_working_directory(
+                                self, "a.out"
+                            ),
+                            "triple": seven.unhexlify(info["triple"]),
+                        }
+                    ]
+                ),
+                {
+                    "direction": "send",
+                    "regex": r"^\$\[{(.*)}\]\]#[0-9A-Fa-f]{2}",
+                    "capture": {1: "spec"},
+                },
+            ],
+            True,
+        )
 
         context = self.expect_gdbremote_sequence()
         spec = context.get("spec")

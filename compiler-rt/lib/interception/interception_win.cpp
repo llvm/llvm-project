@@ -141,8 +141,29 @@ static const int kBranchLength =
     FIRST_32_SECOND_64(kJumpInstructionLength, kIndirectJumpInstructionLength);
 static const int kDirectBranchLength = kBranchLength + kAddressLength;
 
+#  if defined(_MSC_VER)
+#    define INTERCEPTION_FORMAT(f, a)
+#  else
+#    define INTERCEPTION_FORMAT(f, a) __attribute__((format(printf, f, a)))
+#  endif
+
+static void (*ErrorReportCallback)(const char *format, ...)
+    INTERCEPTION_FORMAT(1, 2);
+
+void SetErrorReportCallback(void (*callback)(const char *format, ...)) {
+  ErrorReportCallback = callback;
+}
+
+#  define ReportError(...)                \
+    do {                                  \
+      if (ErrorReportCallback)            \
+        ErrorReportCallback(__VA_ARGS__); \
+    } while (0)
+
 static void InterceptionFailed() {
-  // Do we have a good way to abort with an error message here?
+  ReportError("interception_win: failed due to an unrecoverable error.\n");
+  // This acts like an abort when no debugger is attached. According to an old
+  // comment, calling abort() leads to an infinite recursion in CheckFailed.
   __debugbreak();
 }
 
@@ -249,8 +270,13 @@ static void WritePadding(uptr from, uptr size) {
 }
 
 static void WriteJumpInstruction(uptr from, uptr target) {
-  if (!DistanceIsWithin2Gig(from + kJumpInstructionLength, target))
+  if (!DistanceIsWithin2Gig(from + kJumpInstructionLength, target)) {
+    ReportError(
+        "interception_win: cannot write jmp further than 2GB away, from %p to "
+        "%p.\n",
+        (void *)from, (void *)target);
     InterceptionFailed();
+  }
   ptrdiff_t offset = target - from - kJumpInstructionLength;
   *(u8*)from = 0xE9;
   *(u32*)(from + 1) = offset;
@@ -274,6 +300,10 @@ static void WriteIndirectJumpInstruction(uptr from, uptr indirect_target) {
   int offset = indirect_target - from - kIndirectJumpInstructionLength;
   if (!DistanceIsWithin2Gig(from + kIndirectJumpInstructionLength,
                             indirect_target)) {
+    ReportError(
+        "interception_win: cannot write indirect jmp with target further than "
+        "2GB away, from %p to %p.\n",
+        (void *)from, (void *)indirect_target);
     InterceptionFailed();
   }
   *(u16*)from = 0x25FF;
@@ -492,6 +522,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xFF8B:  // 8B FF : mov edi, edi
     case 0xEC8B:  // 8B EC : mov ebp, esp
     case 0xc889:  // 89 C8 : mov eax, ecx
+    case 0xE589:  // 89 E5 : mov ebp, esp
     case 0xC18B:  // 8B C1 : mov eax, ecx
     case 0xC033:  // 33 C0 : xor eax, eax
     case 0xC933:  // 33 C9 : xor ecx, ecx
@@ -641,6 +672,8 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x24448B:  // 8B 44 24 XX : mov eax, dword ptr [esp + XX]
     case 0x244C8B:  // 8B 4C 24 XX : mov ecx, dword ptr [esp + XX]
     case 0x24548B:  // 8B 54 24 XX : mov edx, dword ptr [esp + XX]
+    case 0x245C8B:  // 8B 5C 24 XX : mov ebx, dword ptr [esp + XX]
+    case 0x246C8B:  // 8B 6C 24 XX : mov ebp, dword ptr [esp + XX]
     case 0x24748B:  // 8B 74 24 XX : mov esi, dword ptr [esp + XX]
     case 0x247C8B:  // 8B 7C 24 XX : mov edi, dword ptr [esp + XX]
       return 4;
@@ -652,12 +685,20 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   }
 #endif
 
-  // Unknown instruction!
-  // FIXME: Unknown instruction failures might happen when we add a new
-  // interceptor or a new compiler version. In either case, they should result
-  // in visible and readable error messages. However, merely calling abort()
-  // leads to an infinite recursion in CheckFailed.
-  InterceptionFailed();
+  // Unknown instruction! This might happen when we add a new interceptor, use
+  // a new compiler version, or if Windows changed how some functions are
+  // compiled. In either case, we print the address and 8 bytes of instructions
+  // to notify the user about the error and to help identify the unknown
+  // instruction. Don't treat this as a fatal error, though we can break the
+  // debugger if one has been attached.
+  u8 *bytes = (u8 *)address;
+  ReportError(
+      "interception_win: unhandled instruction at %p: %02x %02x %02x %02x %02x "
+      "%02x %02x %02x\n",
+      (void *)address, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4],
+      bytes[5], bytes[6], bytes[7]);
+  if (::IsDebuggerPresent())
+    __debugbreak();
   return 0;
 }
 
@@ -678,6 +719,8 @@ static bool CopyInstructions(uptr to, uptr from, size_t size) {
   while (cursor != size) {
     size_t rel_offset = 0;
     size_t instruction_size = GetInstructionSize(from + cursor, &rel_offset);
+    if (!instruction_size)
+      return false;
     _memcpy((void*)(to + cursor), (void*)(from + cursor),
             (size_t)instruction_size);
     if (rel_offset) {
@@ -895,6 +938,10 @@ static void **InterestingDLLsAvailable() {
       "msvcr120.dll",      // VS2013
       "vcruntime140.dll",  // VS2015
       "ucrtbase.dll",      // Universal CRT
+#if (defined(__MINGW32__) && defined(__i386__))
+      "libc++.dll",        // libc++
+      "libunwind.dll",     // libunwind
+#endif
       // NTDLL should go last as it exports some functions that we should
       // override in the CRT [presumably only used internally].
       "ntdll.dll", NULL};

@@ -574,6 +574,7 @@ output format of the diagnostics that it generates.
                [float != double],
                [...]>>>
 
+
 .. _cl_diag_warning_groups:
 
 Individual Warning Groups
@@ -810,7 +811,7 @@ compilations steps.
 
   The report file specified in the option is locked for write, so this option
   can be used to collect statistics in parallel builds. The report file is not
-  cleared, new data is appended to it, thus making posible to accumulate build
+  cleared, new data is appended to it, thus making possible to accumulate build
   statistics.
 
   You can also use environment variables to control the process statistics reporting.
@@ -1687,7 +1688,7 @@ floating point semantic models: precise (the default), strict, and fast.
    Details:
 
    * ``precise`` Disables optimizations that are not value-safe on floating-point data, although FP contraction (FMA) is enabled (``-ffp-contract=on``).  This is the default behavior.
-   * ``strict`` Enables ``-frounding-math`` and ``-ffp-exception-behavior=strict``, and disables contractions (FMA).  All of the ``-ffast-math`` enablements are disabled. Enables ``STDC FENV_ACCESS``: by default ``FENV_ACCESS`` is disabled. This option setting behaves as though ``#pragma STDC FENV_ACESS ON`` appeared at the top of the source file.
+   * ``strict`` Enables ``-frounding-math`` and ``-ffp-exception-behavior=strict``, and disables contractions (FMA).  All of the ``-ffast-math`` enablements are disabled. Enables ``STDC FENV_ACCESS``: by default ``FENV_ACCESS`` is disabled. This option setting behaves as though ``#pragma STDC FENV_ACCESS ON`` appeared at the top of the source file.
    * ``fast`` Behaves identically to specifying both ``-ffast-math`` and ``ffp-contract=fast``
 
    Note: If your command line specifies multiple instances
@@ -1786,6 +1787,48 @@ floating point semantic models: precise (the default), strict, and fast.
      alias for ``standard``.
    * ``16`` - Forces ``_Float16`` operations to be emitted without using excess
      precision arithmetic.
+
+.. _floating-point-environment:
+
+Accessing the floating point environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Many targets allow floating point operations to be configured to control things
+such as how inexact results should be rounded and how exceptional conditions
+should be handled. This configuration is called the floating point environment.
+C and C++ restrict access to the floating point environment by default, and the
+compiler is allowed to assume that all operations are performed in the default
+environment. When code is compiled in this default mode, operations that depend
+on the environment (such as floating-point arithmetic and `FLT_ROUNDS`) may have
+undefined behavior if the dynamic environment is not the default environment; for
+example, `FLT_ROUNDS` may or may not simply return its default value for the target
+instead of reading the dynamic environment, and floating-point operations may be
+optimized as if the dynamic environment were the default.  Similarly, it is undefined
+behavior to change the floating point environment in this default mode, for example
+by calling the `fesetround` function.
+C provides two pragmas to allow code to dynamically modify the floating point environment:
+
+- ``#pragma STDC FENV_ACCESS ON`` allows dynamic changes to the entire floating
+  point environment.
+
+- ``#pragma STDC FENV_ROUND FE_DYNAMIC`` allows dynamic changes to just the floating
+  point rounding mode.  This may be more optimizable than ``FENV_ACCESS ON`` because
+  the compiler can still ignore the possibility of floating-point exceptions by default.
+
+Both of these can be used either at the start of a block scope, in which case
+they cover all code in that scope (unless they're turned off in a child scope),
+or at the top level in a file, in which case they cover all subsequent function
+bodies until they're turned off.  Note that it is undefined behavior to enter
+code that is *not* covered by one of these pragmas from code that *is* covered
+by one of these pragmas unless the floating point environment has been restored
+to its default state.  See the C standard for more information about these pragmas.
+
+The command line option ``-frounding-math`` behaves as if the translation unit
+began with ``#pragma STDC FENV_ROUND FE_DYNAMIC``. The command line option
+``-ffp-model=strict`` behaves as if the translation unit began with ``#pragma STDC FENV_ACCESS ON``.
+
+Code that just wants to use a specific rounding mode for specific floating point
+operations can avoid most of the hazards of the dynamic floating point environment
+by using ``#pragma STDC FENV_ROUND`` with a value other than ``FE_DYNAMIC``.
 
 .. _crtfastmath.o:
 
@@ -3221,13 +3264,13 @@ definitions until the end of a translation unit. This flag is enabled by
 default for Windows targets.
 
 For compatibility with existing code that compiles with MSVC, clang defines the
-``_MSC_VER`` and ``_MSC_FULL_VER`` macros. These default to the values of 1800
-and 180000000 respectively, making clang look like an early release of Visual
-C++ 2013. The ``-fms-compatibility-version=`` flag overrides these values.  It
-accepts a dotted version tuple, such as 19.00.23506. Changing the MSVC
-compatibility version makes clang behave more like that version of MSVC. For
-example, ``-fms-compatibility-version=19`` will enable C++14 features and define
-``char16_t`` and ``char32_t`` as builtin types.
+``_MSC_VER`` and ``_MSC_FULL_VER`` macros. When on Windows, these default to
+either the same value as the currently installed version of cl.exe, or ``1920``
+and ``192000000`` (respectively). The ``-fms-compatibility-version=`` flag
+overrides these values.  It accepts a dotted version tuple, such as 19.00.23506.
+Changing the MSVC compatibility version makes clang behave more like that
+version of MSVC. For example, ``-fms-compatibility-version=19`` will enable
+C++14 features and define ``char16_t`` and ``char32_t`` as builtin types.
 
 .. _cxx:
 
@@ -3251,8 +3294,7 @@ Controlling implementation limits
 
 .. option:: -fconstexpr-depth=N
 
-  Sets the limit for recursive constexpr function invocations to N.  The
-  default is 512.
+  Sets the limit for constexpr function invocations to N. The default is 512.
 
 .. option:: -fconstexpr-steps=N
 
@@ -3912,7 +3954,7 @@ mapping of default visibility to an explicit shared object export
 * ``-mdefault-visibility-export-mapping=none``: no additional export
   information is created for entities with default visibility.
 * ``-mdefault-visibility-export-mapping=explicit``: mark entities for export
-  if they have explict (e.g. via an attribute) default visibility from the
+  if they have explicit (e.g. via an attribute) default visibility from the
   source, including RTTI.
 * ``-mdefault-visibility-export-mapping=all``: set XCOFF exported visibility
   for all entities with default visibility from any source. This gives a
@@ -4487,3 +4529,126 @@ If the user is using the static CRT (``/MT``), then different runtimes are used
 to produce DLLs and EXEs. To link a DLL, pass
 ``clang_rt.asan_dll_thunk-x86_64.lib``. To link an EXE, pass
 ``-wholearchive:clang_rt.asan-x86_64.lib``.
+
+Windows System Headers and Library Lookup
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+clang-cl uses a set of different approaches to locate the right system libraries
+to link against when building code.  The Windows environment uses libraries from
+three distinct sources:
+
+1. Windows SDK
+2. UCRT (Universal C Runtime)
+3. Visual C++ Tools (VCRuntime)
+
+The Windows SDK provides the import libraries and headers required to build
+programs against the Windows system packages.  Underlying the Windows SDK is the
+UCRT, the universal C runtime.
+
+This difference is best illustrated by the various headers that one would find
+in the different categories.  The WinSDK would contain headers such as
+`WinSock2.h` which is part of the Windows API surface, providing the Windows
+socketing interfaces for networking.  UCRT provides the C library headers,
+including e.g. `stdio.h`.  Finally, the Visual C++ tools provides the underlying
+Visual C++ Runtime headers such as `stdint.h` or `crtdefs.h`.
+
+There are various controls that allow the user control over where clang-cl will
+locate these headers.  The default behaviour for the Windows SDK and UCRT is as
+follows:
+
+1. Consult the command line.
+
+    Anything the user specifies is always given precedence.  The following
+    extensions are part of the clang-cl toolset:
+
+    - `/winsysroot:`
+
+    The `/winsysroot:` is used as an equivalent to `-sysroot` on Unix
+    environments.  It allows the control of an alternate location to be treated
+    as a system root.  When specified, it will be used as the root where the
+    `Windows Kits` is located.
+
+    - `/winsdkversion:`
+    - `/winsdkdir:`
+
+    If `/winsysroot:` is not specified, the `/winsdkdir:` argument is consulted
+    as a location to identify where the Windows SDK is located.  Contrary to
+    `/winsysroot:`, `/winsdkdir:` is expected to be the complete path rather
+    than a root to locate `Windows Kits`.
+
+    The `/winsdkversion:` flag allows the user to specify a version identifier
+    for the SDK to prefer.  When this is specified, no additional validation is
+    performed and this version is preferred.  If the version is not specified,
+    the highest detected version number will be used.
+
+2. Consult the environment.
+
+    TODO: This is not yet implemented.
+
+    This will consult the environment variables:
+
+    - `WindowsSdkDir`
+    - `UCRTVersion`
+
+3. Fallback to the registry.
+
+    If no arguments are used to indicate where the SDK is present, and the
+    compiler is running on Windows, the registry is consulted to locate the
+    installation.
+
+The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
+
+1. Consult the command line.
+
+    - `/winsysroot:`
+
+    The `/winsysroot:` is used as an equivalent to `-sysroot` on Unix
+    environments.  It allows the control of an alternate location to be treated
+    as a system root.  When specified, it will be used as the root where the
+    `VC` directory is located.
+
+    - `/vctoolsdir:`
+    - `/vctoolsversion:`
+
+    If `/winsysroot:` is not specified, the `/vctoolsdir:` argument is consulted
+    as a location to identify where the Visual C++ Tools are located.  If
+    `/vctoolsversion:` is specified, that version is preferred, otherwise, the
+    highest version detected is used.
+
+2. Consult the environment.
+
+    - `/external:[VARIABLE]`
+
+      This specifies a user identified environment variable which is treated as
+      a path delimiter (`;`) separated list of paths to map into `-imsvc`
+      arguments which are treated as `-isystem`.
+
+    - `INCLUDE` and `EXTERNAL_INCLUDE`
+
+      The path delimiter (`;`) separated list of paths will be mapped to
+      `-imsvc` arguments which are treated as `-isystem`.
+
+    - `LIB` (indirectly)
+
+      The linker `link.exe` or `lld-link.exe` will honour the environment
+      variable `LIB` which is a path delimiter (`;`) set of paths to consult for
+      the import libraries to use when linking the final target.
+
+    The following environment variables will be consulted and used to form paths
+    to validate and load content from as appropriate:
+
+      - `VCToolsInstallDir`
+      - `VCINSTALLDIR`
+      - `Path`
+
+3. Consult `ISetupConfiguration` [Windows Only]
+
+    Assuming that the toolchain is built with `USE_MSVC_SETUP_API` defined and
+    is running on Windows, the Visual Studio COM interface `ISetupConfiguration`
+    will be used to locate the installation of the MSVC toolset.
+
+4. Fallback to the registry [DEPRECATED]
+
+    The registry information is used to help locate the installation as a final
+    fallback.  This is only possible for pre-VS2017 installations and is
+    considered deprecated.

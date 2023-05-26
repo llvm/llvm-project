@@ -320,7 +320,7 @@ public:
   /// @{
   /// Passes are required to drop metadata they don't understand. This is a
   /// convenience method for passes to do so.
-  /// dropUndefImplyingAttrsAndUnknownMetadata should be used instead of
+  /// dropUBImplyingAttrsAndUnknownMetadata should be used instead of
   /// this API if the Instruction being modified is a call.
   void dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs);
   void dropUnknownNonDebugMetadata() {
@@ -339,12 +339,19 @@ public:
   /// If this instruction already has !annotation metadata, append \p Annotation
   /// to the existing node.
   void addAnnotationMetadata(StringRef Annotation);
-
+  /// Adds an !annotation metadata node with an array of \p Annotations
+  /// as a tuple to this instruction. If this instruction already has
+  /// !annotation metadata, append the tuple to
+  /// the existing node.
+  void addAnnotationMetadata(SmallVector<StringRef> Annotations);
   /// Returns the AA metadata for this instruction.
   AAMDNodes getAAMetadata() const;
 
   /// Sets the AA metadata on this instruction from the AAMDNodes structure.
   void setAAMetadata(const AAMDNodes &N);
+
+  /// Sets the nosanitize metadata on this instruction.
+  void setNoSanitizeMetadata();
 
   /// Retrieve total raw weight values of a branch.
   /// Returns true on success with profile total weights filled in.
@@ -401,11 +408,15 @@ public:
   }
 
   /// This function drops non-debug unknown metadata (through
-  /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and 
+  /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and
   /// return attributes that can cause undefined behaviour. Both of these should
   /// be done by passes which move instructions in IR.
-  void
-  dropUndefImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
+  void dropUBImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
+
+  /// Drop any attributes or metadata that can cause immediate undefined
+  /// behavior. Retain other attributes/metadata on a best-effort basis.
+  /// This should be used when speculating instructions.
+  void dropUBImplyingAttrsAndMetadata();
 
   /// Determine whether the exact flag is set.
   bool isExact() const LLVM_READONLY;
@@ -513,7 +524,7 @@ public:
   ///     applications, thus the N-way merging should be in code path.
   /// The DebugLoc attached to this instruction will be overwritten by the
   /// merged DebugLoc.
-  void applyMergedLocation(const DILocation *LocA, const DILocation *LocB);
+  void applyMergedLocation(DILocation *LocA, DILocation *LocB);
 
   /// Updates the debug location given that the instruction has been hoisted
   /// from a block to a predecessor of that block.
@@ -637,7 +648,11 @@ public:
   bool isVolatile() const LLVM_READONLY;
 
   /// Return true if this instruction may throw an exception.
-  bool mayThrow() const LLVM_READONLY;
+  ///
+  /// If IncludePhaseOneUnwind is set, this will also include cases where
+  /// phase one unwinding may unwind past this frame due to skipping of
+  /// cleanup landingpads.
+  bool mayThrow(bool IncludePhaseOneUnwind = false) const LLVM_READONLY;
 
   /// Return true if this instruction behaves like a memory fence: it can load
   /// or store to memory location without being given a memory location.
@@ -763,6 +778,17 @@ public:
   /// the current one.
   /// Determine if one instruction is the same operation as another.
   bool isSameOperationAs(const Instruction *I, unsigned flags = 0) const LLVM_READONLY;
+
+  /// This function determines if the speficied instruction has the same
+  /// "special" characteristics as the current one. This means that opcode
+  /// specific details are the same. As a common example, if we are comparing
+  /// loads, then hasSameSpecialState would compare the alignments (among
+  /// other things).
+  /// @returns true if the specific instruction has the same opcde specific
+  /// characteristics as the current one. Determine if one instruction has the
+  /// same state as another.
+  bool hasSameSpecialState(const Instruction *I2,
+                           bool IgnoreAlignment = false) const LLVM_READONLY;
 
   /// Return true if there are any uses of this instruction in blocks other than
   /// the specified block. Note that PHI nodes are considered to evaluate their

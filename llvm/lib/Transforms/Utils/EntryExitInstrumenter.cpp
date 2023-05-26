@@ -15,10 +15,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
 
@@ -83,6 +80,13 @@ static void insertCall(Function &CurFn, StringRef Func,
 }
 
 static bool runOnFunction(Function &F, bool PostInlining) {
+  // The asm in a naked function may reasonably expect the argument registers
+  // and the return address register (if present) to be live. An inserted
+  // function call will clobber these registers. Simply skip naked functions for
+  // all targets.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return false;
+
   StringRef EntryAttr = PostInlining ? "instrument-function-entry-inlined"
                                      : "instrument-function-entry";
 

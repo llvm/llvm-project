@@ -327,6 +327,8 @@ public:
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
 
+  int getJumpTableIndex(const MachineInstr &MI) const override;
+
   std::optional<ExtAddrMode>
   getAddrModeFromMemoryOp(const MachineInstr &MemI,
                           const TargetRegisterInfo *TRI) const override;
@@ -601,6 +603,34 @@ protected:
   /// registers as machine operands.
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
+
+  /// Return true when there is potentially a faster code sequence for an
+  /// instruction chain ending in \p Root. All potential patterns are listed in
+  /// the \p Pattern vector. Pattern should be sorted in priority order since
+  /// the pattern evaluator stops checking as soon as it finds a faster
+  /// sequence.
+  bool
+  getMachineCombinerPatterns(MachineInstr &Root,
+                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
+                             bool DoRegPressureReduce) const override;
+
+  /// When getMachineCombinerPatterns() finds potential patterns,
+  /// this function generates the instructions that could replace the
+  /// original code sequence.
+  void genAlternativeCodeSequence(
+      MachineInstr &Root, MachineCombinerPattern Pattern,
+      SmallVectorImpl<MachineInstr *> &InsInstrs,
+      SmallVectorImpl<MachineInstr *> &DelInstrs,
+      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
+
+  /// When calculate the latency of the root instruction, accumulate the
+  /// latency of the sequence to the root latency.
+  /// \param Root - Instruction that could be combined with one of its operands
+  /// For X86 instruction (vpmaddwd + vpmaddwd) -> vpdpwssd, the vpmaddwd
+  /// is not in the critical path, so the root latency only include vpmaddwd.
+  bool accumulateInstrSeqToRootLatency(MachineInstr &Root) const override {
+    return false;
+  }
 
 private:
   /// This is a helper for convertToThreeAddress for 8 and 16-bit instructions.

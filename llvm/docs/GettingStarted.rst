@@ -583,7 +583,7 @@ Local LLVM Configuration
 Once checked out repository, the LLVM suite source code must be configured
 before being built. This process uses CMake.  Unlinke the normal ``configure``
 script, CMake generates the build files in whatever format you request as well
-as various ``*.inc`` files, and ``llvm/include/Config/config.h``.
+as various ``*.inc`` files, and ``llvm/include/llvm/Config/config.h.cmake``.
 
 Variables are passed to ``cmake`` on the command line using the format
 ``-D<variable name>=<value>``. The following variables are some common options
@@ -683,7 +683,7 @@ invocation:
 
    .. code-block:: console
 
-     % cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=<type> -DCMAKE_BUILD_TYPE=type SRC_ROOT
+     % cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=<type> SRC_ROOT
 
 Between runs, CMake preserves the values set for all options. CMake has the
 following build types defined:

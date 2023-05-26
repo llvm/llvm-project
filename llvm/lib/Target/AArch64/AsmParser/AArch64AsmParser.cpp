@@ -3486,7 +3486,7 @@ AArch64AsmParser::tryParseMatrixRegister(OperandVector &Operands) {
 
   StringRef Name = Tok.getString();
 
-  if (Name.equals_insensitive("za") || Name.startswith_insensitive("za.")) {
+  if (Name.equals_insensitive("za") || Name.starts_with_insensitive("za.")) {
     Lex(); // eat "za[.(b|h|s|d)]"
     unsigned ElementWidth = 0;
     auto DotPosition = Name.find('.');
@@ -3868,7 +3868,7 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
   SMLoc S = Tok.getLoc();
 
   if (Mnemonic == "tlbip") {
-    bool HasnXSQualifier = Op.endswith_insensitive("nXS");
+    bool HasnXSQualifier = Op.ends_with_insensitive("nXS");
     if (HasnXSQualifier) {
       Op = Op.drop_back(3);
     }
@@ -4463,7 +4463,7 @@ AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
     if (RegTok.isNot(AsmToken::Identifier) ||
         ParseRes == MatchOperand_ParseFail ||
         (ParseRes == MatchOperand_NoMatch && NoMatchIsError &&
-         !RegTok.getString().startswith_insensitive("za"))) {
+         !RegTok.getString().starts_with_insensitive("za"))) {
       Error(Loc, "vector register expected");
       return MatchOperand_ParseFail;
     }
@@ -5303,6 +5303,14 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
       return Error(Loc[1], "unpredictable LDP instruction, writeback base "
                            "is also a destination");
     [[fallthrough]];
+  }
+  case AArch64::LDR_ZA:
+  case AArch64::STR_ZA: {
+    if (Inst.getOperand(2).isImm() && Inst.getOperand(4).isImm() &&
+        Inst.getOperand(2).getImm() != Inst.getOperand(4).getImm())
+      return Error(Loc[1],
+                   "unpredictable instruction, immediate and offset mismatch.");
+    break;
   }
   case AArch64::LDPDi:
   case AArch64::LDPQi:
@@ -6902,7 +6910,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   for (auto Name : RequestedExtensions) {
     bool EnableFeature = true;
 
-    if (Name.startswith_insensitive("no")) {
+    if (Name.starts_with_insensitive("no")) {
       EnableFeature = false;
       Name = Name.substr(2);
     }
@@ -6936,7 +6944,7 @@ bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
     return true;
 
   bool EnableFeature = true;
-  if (Name.startswith_insensitive("no")) {
+  if (Name.starts_with_insensitive("no")) {
     EnableFeature = false;
     Name = Name.substr(2);
   }
@@ -6998,7 +7006,7 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
 
     bool EnableFeature = true;
 
-    if (Name.startswith_insensitive("no")) {
+    if (Name.starts_with_insensitive("no")) {
       EnableFeature = false;
       Name = Name.substr(2);
     }
@@ -7642,9 +7650,10 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       return Match_Success;
     return Match_InvalidOperand;
 
-    // If the kind is a token for a literal immediate, check if our asm
-    // operand matches. This is for InstAliases which have a fixed-value
-    // immediate in the syntax.
+    // If the kind is a token for a literal immediate, check if our asm operand
+    // matches. This is for InstAliases which have a fixed-value immediate in
+    // the asm string, such as hints which are parsed into a specific
+    // instruction definition.
 #define MATCH_HASH(N)                                                          \
   case MCK__HASH_##N:                                                          \
     return MatchesOpImmediate(N);
@@ -7654,10 +7663,20 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     MATCH_HASH(3)
     MATCH_HASH(4)
     MATCH_HASH(6)
+    MATCH_HASH(7)
     MATCH_HASH(8)
+    MATCH_HASH(10)
     MATCH_HASH(12)
+    MATCH_HASH(14)
     MATCH_HASH(16)
     MATCH_HASH(24)
+    MATCH_HASH(25)
+    MATCH_HASH(26)
+    MATCH_HASH(27)
+    MATCH_HASH(28)
+    MATCH_HASH(29)
+    MATCH_HASH(30)
+    MATCH_HASH(31)
     MATCH_HASH(32)
     MATCH_HASH(40)
     MATCH_HASH(48)

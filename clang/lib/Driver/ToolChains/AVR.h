@@ -36,6 +36,8 @@ public:
   std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
                             FileType Type) const override;
 
+  bool HasNativeLLVMSupport() const override { return true; }
+
 protected:
   Tool *buildLinker() const override;
 

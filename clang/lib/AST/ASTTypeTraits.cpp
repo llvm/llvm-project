@@ -56,8 +56,21 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "ObjCProtocolLoc"},
 };
 
+bool ASTNodeKind::isBaseOf(ASTNodeKind Other) const {
+  return isBaseOf(KindId, Other.KindId);
+}
+
 bool ASTNodeKind::isBaseOf(ASTNodeKind Other, unsigned *Distance) const {
   return isBaseOf(KindId, Other.KindId, Distance);
+}
+
+bool ASTNodeKind::isBaseOf(NodeKindId Base, NodeKindId Derived) {
+  if (Base == NKI_None || Derived == NKI_None)
+    return false;
+  while (Derived != Base && Derived != NKI_None) {
+    Derived = AllKindInfo[Derived].ParentId;
+  }
+  return Derived == Base;
 }
 
 bool ASTNodeKind::isBaseOf(NodeKindId Base, NodeKindId Derived,
@@ -96,7 +109,7 @@ ASTNodeKind ASTNodeKind::getMostDerivedType(ASTNodeKind Kind1,
 ASTNodeKind ASTNodeKind::getMostDerivedCommonAncestor(ASTNodeKind Kind1,
                                                       ASTNodeKind Kind2) {
   NodeKindId Parent = Kind1.KindId;
-  while (!isBaseOf(Parent, Kind2.KindId, nullptr) && Parent != NKI_None) {
+  while (!isBaseOf(Parent, Kind2.KindId) && Parent != NKI_None) {
     Parent = AllKindInfo[Parent].ParentId;
   }
   return ASTNodeKind(Parent);

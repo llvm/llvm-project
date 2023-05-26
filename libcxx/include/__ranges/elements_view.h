@@ -26,9 +26,9 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
-#include <__tuple_dir/tuple_element.h>
-#include <__tuple_dir/tuple_like.h>
-#include <__tuple_dir/tuple_size.h>
+#include <__tuple/tuple_element.h>
+#include <__tuple/tuple_like.h>
+#include <__tuple/tuple_size.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/maybe_const.h>
 #include <__type_traits/remove_cv.h>

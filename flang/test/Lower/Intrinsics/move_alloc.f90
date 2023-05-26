@@ -1,5 +1,5 @@
-  ! RUN: bbc -emit-fir %s -o - | FileCheck  %s
-  ! RUN: flang-new -fc1 -emit-fir %s -o - | FileCheck %s
+  ! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck  %s
+  ! RUN: flang-new -fc1 -mllvm --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: to_from_only
 subroutine to_from_only

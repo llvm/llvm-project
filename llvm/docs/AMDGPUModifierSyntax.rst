@@ -1406,9 +1406,11 @@ invalid lanes is disabled.
 
                                              Accessing data from an invalid lane will
                                              return zero.
+
+    bound_ctrl:0 (GFX11+)                    Disables data sharing with invalid lanes.
     ======================================== ================================================
 
-.. WARNING:: For historical reasons, *bound_ctrl:0* has the same meaning as *bound_ctrl:1*.
+.. WARNING:: For historical reasons, *bound_ctrl:0* has the same meaning as *bound_ctrl:1* for older architectures.
 
 .. _amdgpu_synid_fi16:
 

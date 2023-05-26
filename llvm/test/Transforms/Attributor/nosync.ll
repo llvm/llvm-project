@@ -436,7 +436,7 @@ define float @cos_test2(float %x) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@cos_test2
 ; CHECK-SAME: (float [[X:%.*]]) #[[ATTR15]] {
-; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) #[[ATTR20]]
+; CHECK-NEXT:    [[C:%.*]] = call nofpclass(inf) float @llvm.cos.f32(float [[X]]) #[[ATTR20]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = call float @llvm.cos(float %x)

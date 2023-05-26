@@ -203,6 +203,7 @@ public:
   ///
   iterator findIndex(unsigned Idx) {
     assert(Idx < Universe && "Key out of range");
+    assert(Sparse != nullptr && "Invalid sparse type");
     const unsigned Stride = std::numeric_limits<SparseT>::max() + 1u;
     for (unsigned i = Sparse[Idx], e = size(); i < e; i += Stride) {
       const unsigned FoundIdx = ValIndexOf(Dense[i]);

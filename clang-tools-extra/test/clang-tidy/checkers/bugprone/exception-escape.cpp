@@ -32,11 +32,6 @@ void throwing_noexcept() noexcept {
   throw 1;
 }
 
-void throwing_throw_nothing() throw() {
-    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throwing_throw_nothing' which should not throw exceptions
-  throw 1;
-}
-
 void throw_and_catch() noexcept {
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_and_catch' which should not throw exceptions
   try {
@@ -557,7 +552,9 @@ void implicit_int_thrower() {
   throw 1;
 }
 
-void explicit_int_thrower() throw(int);
+void explicit_int_thrower() noexcept(false) {
+  throw 1;
+}
 
 void indirect_implicit() noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_implicit' which should not throw exceptions
@@ -655,7 +652,6 @@ int directly_recursive(int n) noexcept {
 }
 
 int indirectly_recursive(int n) noexcept;
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'indirectly_recursive' which should not throw exceptions
 
 int recursion_helper(int n) {
   indirectly_recursive(n);
@@ -675,15 +671,6 @@ struct super_throws {
 struct sub_throws : super_throws {
   sub_throws() noexcept : super_throws() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'sub_throws' which should not throw exceptions
-};
-
-struct super_throws_again {
-  super_throws_again() throw(int);
-};
-
-struct sub_throws_again : super_throws_again {
-  sub_throws_again() noexcept : super_throws_again() {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'sub_throws_again' which should not throw exceptions
 };
 
 struct init_member_throws {

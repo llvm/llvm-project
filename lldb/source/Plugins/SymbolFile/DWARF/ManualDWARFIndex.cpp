@@ -223,60 +223,58 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
       continue;
     }
 
-    DWARFAttributes attributes;
     const char *name = nullptr;
     const char *mangled_cstr = nullptr;
     bool is_declaration = false;
-    // bool is_artificial = false;
     bool has_address = false;
     bool has_location_or_const_value = false;
     bool is_global_or_static_variable = false;
 
     DWARFFormValue specification_die_form;
-    const size_t num_attributes = die.GetAttributes(&unit, attributes);
-    if (num_attributes > 0) {
-      for (uint32_t i = 0; i < num_attributes; ++i) {
-        dw_attr_t attr = attributes.AttributeAtIndex(i);
-        DWARFFormValue form_value;
-        switch (attr) {
-        case DW_AT_name:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            name = form_value.AsCString();
-          break;
+    DWARFAttributes attributes = die.GetAttributes(&unit);
+    for (size_t i = 0; i < attributes.Size(); ++i) {
+      dw_attr_t attr = attributes.AttributeAtIndex(i);
+      DWARFFormValue form_value;
+      switch (attr) {
+      default:
+        break;
+      case DW_AT_name:
+        if (attributes.ExtractFormValueAtIndex(i, form_value))
+          name = form_value.AsCString();
+        break;
 
-        case DW_AT_declaration:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            is_declaration = form_value.Unsigned() != 0;
-          break;
+      case DW_AT_declaration:
+        if (attributes.ExtractFormValueAtIndex(i, form_value))
+          is_declaration = form_value.Unsigned() != 0;
+        break;
 
-        case DW_AT_MIPS_linkage_name:
-        case DW_AT_linkage_name:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            mangled_cstr = form_value.AsCString();
-          break;
+      case DW_AT_MIPS_linkage_name:
+      case DW_AT_linkage_name:
+        if (attributes.ExtractFormValueAtIndex(i, form_value))
+          mangled_cstr = form_value.AsCString();
+        break;
 
-        case DW_AT_low_pc:
-        case DW_AT_high_pc:
-        case DW_AT_ranges:
-          has_address = true;
-          break;
+      case DW_AT_low_pc:
+      case DW_AT_high_pc:
+      case DW_AT_ranges:
+        has_address = true;
+        break;
 
-        case DW_AT_entry_pc:
-          has_address = true;
-          break;
+      case DW_AT_entry_pc:
+        has_address = true;
+        break;
 
-        case DW_AT_location:
-        case DW_AT_const_value:
-          has_location_or_const_value = true;
-          is_global_or_static_variable = die.IsGlobalOrStaticScopeVariable();
+      case DW_AT_location:
+      case DW_AT_const_value:
+        has_location_or_const_value = true;
+        is_global_or_static_variable = die.IsGlobalOrStaticScopeVariable();
 
-          break;
+        break;
 
-        case DW_AT_specification:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            specification_die_form = form_value;
-          break;
-        }
+      case DW_AT_specification:
+        if (attributes.ExtractFormValueAtIndex(i, form_value))
+          specification_die_form = form_value;
+        break;
       }
     }
 
@@ -289,15 +287,16 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           bool is_objc_method = false;
           if (cu_language == eLanguageTypeObjC ||
               cu_language == eLanguageTypeObjC_plus_plus) {
-            ObjCLanguage::MethodName objc_method(name, true);
-            if (objc_method.IsValid(true)) {
+            std::optional<const ObjCLanguage::MethodName> objc_method =
+                ObjCLanguage::MethodName::Create(name, true);
+            if (objc_method) {
               is_objc_method = true;
               ConstString class_name_with_category(
-                  objc_method.GetClassNameWithCategory());
-              ConstString objc_selector_name(objc_method.GetSelector());
+                  objc_method->GetClassNameWithCategory());
+              ConstString objc_selector_name(objc_method->GetSelector());
               ConstString objc_fullname_no_category_name(
-                  objc_method.GetFullNameWithoutCategory(true));
-              ConstString class_name_no_category(objc_method.GetClassName());
+                  objc_method->GetFullNameWithoutCategory().c_str());
+              ConstString class_name_no_category(objc_method->GetClassName());
               set.function_fullnames.Insert(ConstString(name), ref);
               if (class_name_with_category)
                 set.objc_class_selectors.Insert(class_name_with_category, ref);

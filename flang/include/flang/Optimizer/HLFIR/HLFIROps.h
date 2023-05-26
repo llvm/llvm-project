@@ -11,6 +11,7 @@
 
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
@@ -19,6 +20,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "flang/Optimizer/HLFIR/HLFIROpInterfaces.h.inc"
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.h.inc"
 

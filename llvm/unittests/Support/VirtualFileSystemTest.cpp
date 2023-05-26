@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -524,6 +525,33 @@ TEST(VirtualFileSystemTest, MultipleWorkingDirs) {
   CIt.increment(EC); // Because likely to read through this path.
   ASSERT_FALSE(EC);
   ASSERT_EQ(CIt, vfs::directory_iterator());
+}
+
+TEST(VirtualFileSystemTest, PhysicalFileSystemWorkingDirFailure) {
+  TempDir D2("d2", /*Unique*/ true);
+  SmallString<128> WD, PrevWD;
+  ASSERT_EQ(sys::fs::current_path(PrevWD), std::error_code());
+  ASSERT_EQ(sys::fs::createUniqueDirectory("d1", WD), std::error_code());
+  ASSERT_EQ(sys::fs::set_current_path(WD), std::error_code());
+  auto Restore =
+      llvm::make_scope_exit([&] { sys::fs::set_current_path(PrevWD); });
+
+  // Delete the working directory to create an error.
+  if (sys::fs::remove_directories(WD, /*IgnoreErrors=*/false))
+    // Some platforms (e.g. Solaris) disallow removal of the working directory.
+    GTEST_SKIP() << "test requires deletion of working directory";
+
+  // Verify that we still get two separate working directories.
+  auto FS1 = vfs::createPhysicalFileSystem();
+  auto FS2 = vfs::createPhysicalFileSystem();
+  ASSERT_EQ(FS1->getCurrentWorkingDirectory().getError(),
+            errc::no_such_file_or_directory);
+  ASSERT_EQ(FS1->setCurrentWorkingDirectory(D2.path()), std::error_code());
+  ASSERT_EQ(FS1->getCurrentWorkingDirectory().get(), D2.path());
+  EXPECT_EQ(FS2->getCurrentWorkingDirectory().getError(),
+            errc::no_such_file_or_directory);
+  SmallString<128> WD2;
+  EXPECT_EQ(sys::fs::current_path(WD2), errc::no_such_file_or_directory);
 }
 
 TEST(VirtualFileSystemTest, BrokenSymlinkRealFSIteration) {

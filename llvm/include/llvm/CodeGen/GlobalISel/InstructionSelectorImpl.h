@@ -1029,6 +1029,22 @@ bool InstructionSelector::executeMatchTable(
                              << RenderOpID << ")\n");
       break;
     }
+    case GIR_ComplexSubOperandSubRegRenderer: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t RendererID = MatchTable[CurrentIdx++];
+      int64_t RenderOpID = MatchTable[CurrentIdx++];
+      int64_t SubRegIdx = MatchTable[CurrentIdx++];
+      MachineInstrBuilder &MI = OutMIs[InsnID];
+      assert(MI && "Attempted to add to undefined instruction");
+      State.Renderers[RendererID][RenderOpID](MI);
+      MI->getOperand(MI->getNumOperands() - 1).setSubReg(SubRegIdx);
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIR_ComplexSubOperandSubRegRenderer(OutMIs["
+                             << InsnID << "], " << RendererID << ", "
+                             << RenderOpID << ", " << SubRegIdx << ")\n");
+      break;
+    }
 
     case GIR_CopyConstantAsSImm: {
       int64_t NewInsnID = MatchTable[CurrentIdx++];

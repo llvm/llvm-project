@@ -295,8 +295,6 @@ else:
   ret i1 1
 }
 
-; TODO: Even though %cnt is not known signed positive %cmp can be simplified
-; because %add.ptr uses it zero-extended.
 define i1 @cnt_not_known_positive_sgt_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-LABEL: @cnt_not_known_positive_sgt_against_base_with_zext(
 ; CHECK-NEXT:  entry:
@@ -305,7 +303,7 @@ define i1 @cnt_not_known_positive_sgt_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[EXT]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
-; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -326,8 +324,6 @@ else:
   ret i1 1
 }
 
-; TODO: Even though %cnt is not known signed positive %cmp can be simplified
-; because %add.ptr uses it zero-extended.
 define i1 @cnt_not_known_positive_sge_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-LABEL: @cnt_not_known_positive_sge_against_base_with_zext(
 ; CHECK-NEXT:  entry:
@@ -336,7 +332,7 @@ define i1 @cnt_not_known_positive_sge_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[EXT]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
-; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -453,7 +449,6 @@ else:
   ret i1 1
 }
 
-; TODO: Even though %cnt is not known signed positive %cmp can be simplified
 ; because %add.ptr uses it zero-extended.
 define i1 @cnt_not_known_positive_from_branch_check_against_base_struct_ugt_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-LABEL: @cnt_not_known_positive_from_branch_check_against_base_struct_ugt_with_zext(
@@ -464,7 +459,7 @@ define i1 @cnt_not_known_positive_from_branch_check_against_base_struct_ugt_with
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[GEP_EXT:%.*]] = getelementptr inbounds [[T:%.*]], ptr [[P:%.*]], i64 0, i32 1, i64 [[EXT]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ugt ptr [[GEP_EXT]], [[P]]
-; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE]]
+; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -585,7 +580,7 @@ define i1 @sgt_known_pos(i8 %idx) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[IDX]], 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i8 [[IDX]], 1
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[IDX]], 3
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
@@ -599,6 +594,119 @@ entry:
   %c.1 = icmp ugt i8 %idx, 3
   %res.2 = xor i1 %res.1, %c.1
   ret i1 %res.2
+}
+
+define i1 @sgt_to_ugt(i8 %a) {
+; CHECK-LABEL: @sgt_to_ugt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[A]], 2
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %cmp = icmp sgt i8 %a, 2
+  call void @llvm.assume(i1 %cmp)
+  %t.1 = icmp ugt i8 %a, 2
+  ret i1 %t.1
+}
+
+define i1 @sgt_to_ugt_less(i8 %a) {
+; CHECK-LABEL: @sgt_to_ugt_less(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[A]], 1
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %cmp = icmp sgt i8 %a, 2
+  call void @llvm.assume(i1 %cmp)
+  %t.1 = icmp ugt i8 %a, 1
+  ret i1 %t.1
+}
+
+define i1 @sgt_to_ugt_var(i8 %a, i8 %b) {
+; CHECK-LABEL: @sgt_to_ugt_var(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sgt i8 [[B]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_2]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %cmp = icmp sgt i8 %a, %b
+  %cmp.2 = icmp sgt i8 %b, 0
+  call void @llvm.assume(i1 %cmp)
+  call void @llvm.assume(i1 %cmp.2)
+  %t.1 = icmp ugt i8 %a, %b
+  ret i1 %t.1
+}
+
+define i1 @sgt_to_ugt_no_range_info(i8 %a, i8 %b) {
+; CHECK-LABEL: @sgt_to_ugt_no_range_info(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[C_1]]
+;
+entry:
+  %cmp = icmp sgt i8 %a, %b
+  call void @llvm.assume(i1 %cmp)
+  %c.1 = icmp ugt i8 %a, %b
+  ret i1 %c.1
+}
+
+define i1 @sgt_to_ugt_neg(i8 %a) {
+; CHECK-LABEL: @sgt_to_ugt_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[A]], -1
+; CHECK-NEXT:    ret i1 [[C_1]]
+;
+entry:
+  %cmp = icmp sgt i8 %a, -1
+  call void @llvm.assume(i1 %cmp)
+  %c.1 = icmp ugt i8 %a, -1
+  ret i1 %c.1
+}
+
+define i1 @sgt_to_ugt_neg2(i8 %a) {
+; CHECK-LABEL: @sgt_to_ugt_neg2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], -2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[A]], -2
+; CHECK-NEXT:    ret i1 [[C_1]]
+;
+entry:
+  %cmp = icmp sgt i8 %a, -2
+  call void @llvm.assume(i1 %cmp)
+  %c.1 = icmp ugt i8 %a, -2
+  ret i1 %c.1
+}
+
+define i1 @sgt_to_ugt_var_neg(i8 %a, i8 %b) {
+; CHECK-LABEL: @sgt_to_ugt_var_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sgt i8 [[B]], -2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_2]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[C_1]]
+;
+entry:
+  %cmp = icmp sgt i8 %a, %b
+  %cmp.2 = icmp sgt i8 %b, -2
+  call void @llvm.assume(i1 %cmp)
+  call void @llvm.assume(i1 %cmp.2)
+  %c.1 = icmp ugt i8 %a, %b
+  ret i1 %c.1
 }
 
 define i1 @slt_first_op_known_pos(i8 %idx) {

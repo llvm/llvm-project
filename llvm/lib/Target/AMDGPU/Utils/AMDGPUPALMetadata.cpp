@@ -811,6 +811,38 @@ msgpack::MapDocNode AMDGPUPALMetadata::getShaderFunction(StringRef Name) {
   return Functions[Name].getMap(/*Convert=*/true);
 }
 
+msgpack::DocNode &AMDGPUPALMetadata::refComputeRegisters() {
+  auto &N =
+      MsgPackDoc.getRoot()
+          .getMap(/*Convert=*/true)[MsgPackDoc.getNode("amdpal.pipelines")]
+          .getArray(/*Convert=*/true)[0]
+          .getMap(/*Convert=*/true)[MsgPackDoc.getNode(".compute_registers")];
+  N.getMap(/*Convert=*/true);
+  return N;
+}
+
+msgpack::MapDocNode AMDGPUPALMetadata::getComputeRegisters() {
+  if (ComputeRegisters.isEmpty())
+    ComputeRegisters = refComputeRegisters();
+  return ComputeRegisters.getMap();
+}
+
+msgpack::DocNode &AMDGPUPALMetadata::refGraphicsRegisters() {
+  auto &N =
+      MsgPackDoc.getRoot()
+          .getMap(/*Convert=*/true)[MsgPackDoc.getNode("amdpal.pipelines")]
+          .getArray(/*Convert=*/true)[0]
+          .getMap(/*Convert=*/true)[MsgPackDoc.getNode(".graphics_registers")];
+  N.getMap(/*Convert=*/true);
+  return N;
+}
+
+msgpack::MapDocNode AMDGPUPALMetadata::getGraphicsRegisters() {
+  if (GraphicsRegisters.isEmpty())
+    GraphicsRegisters = refGraphicsRegisters();
+  return GraphicsRegisters.getMap();
+}
+
 // Return the PAL metadata hardware shader stage name.
 static const char *getStageName(CallingConv::ID CC) {
   switch (CC) {
@@ -833,15 +865,21 @@ static const char *getStageName(CallingConv::ID CC) {
   }
 }
 
+msgpack::DocNode &AMDGPUPALMetadata::refHwStage() {
+  auto &N =
+      MsgPackDoc.getRoot()
+          .getMap(/*Convert=*/true)[MsgPackDoc.getNode("amdpal.pipelines")]
+          .getArray(/*Convert=*/true)[0]
+          .getMap(/*Convert=*/true)[MsgPackDoc.getNode(".hardware_stages")];
+  N.getMap(/*Convert=*/true);
+  return N;
+}
+
 // Get (create if necessary) the .hardware_stages entry for the given calling
 // convention.
 msgpack::MapDocNode AMDGPUPALMetadata::getHwStage(unsigned CC) {
   if (HwStages.isEmpty())
-    HwStages = MsgPackDoc.getRoot()
-                   .getMap(/*Convert=*/true)["amdpal.pipelines"]
-                   .getArray(/*Convert=*/true)[0]
-                   .getMap(/*Convert=*/true)[".hardware_stages"]
-                   .getMap(/*Convert=*/true);
+    HwStages = refHwStage();
   return HwStages.getMap()[getStageName(CC)].getMap(/*Convert=*/true);
 }
 
@@ -873,4 +911,79 @@ void AMDGPUPALMetadata::reset() {
   MsgPackDoc.clear();
   Registers = MsgPackDoc.getEmptyNode();
   HwStages = MsgPackDoc.getEmptyNode();
+}
+
+unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {
+  assert(idx < 2 &&
+         "illegal index to PAL version - should be 0 (major) or 1 (minor)");
+  if (!VersionChecked) {
+    if (Version.isEmpty()) {
+      auto &M = MsgPackDoc.getRoot().getMap(/*Convert=*/true);
+      auto I = M.find(MsgPackDoc.getNode("amdpal.version"));
+      if (I != M.end())
+        Version = I->second;
+    }
+    VersionChecked = true;
+  }
+  if (Version.isEmpty())
+    // Default to 2.6 if there's no version info
+    return idx ? 6 : 2;
+  return Version.getArray()[idx].getUInt();
+}
+
+unsigned AMDGPUPALMetadata::getPALMajorVersion() { return getPALVersion(0); }
+
+unsigned AMDGPUPALMetadata::getPALMinorVersion() { return getPALVersion(1); }
+
+// Set the field in a given .hardware_stages entry
+void AMDGPUPALMetadata::setHwStage(unsigned CC, StringRef field, unsigned Val) {
+  getHwStage(CC)[field] = Val;
+}
+
+void AMDGPUPALMetadata::setHwStage(unsigned CC, StringRef field, bool Val) {
+  getHwStage(CC)[field] = Val;
+}
+
+void AMDGPUPALMetadata::setComputeRegisters(StringRef field, unsigned Val) {
+  getComputeRegisters()[field] = Val;
+}
+
+void AMDGPUPALMetadata::setComputeRegisters(StringRef field, bool Val) {
+  getComputeRegisters()[field] = Val;
+}
+
+msgpack::DocNode *AMDGPUPALMetadata::refComputeRegister(StringRef field) {
+  auto M = getComputeRegisters();
+  auto I = M.find(field);
+  return I == M.end() ? nullptr : &I->second;
+}
+
+bool AMDGPUPALMetadata::checkComputeRegisters(StringRef field, unsigned Val) {
+  if (auto N = refComputeRegister(field))
+    return N->getUInt() == Val;
+  return false;
+}
+
+bool AMDGPUPALMetadata::checkComputeRegisters(StringRef field, bool Val) {
+  if (auto N = refComputeRegister(field))
+    return N->getBool() == Val;
+  return false;
+}
+
+void AMDGPUPALMetadata::setGraphicsRegisters(StringRef field, unsigned Val) {
+  getGraphicsRegisters()[field] = Val;
+}
+
+void AMDGPUPALMetadata::setGraphicsRegisters(StringRef field, bool Val) {
+  getGraphicsRegisters()[field] = Val;
+}
+
+void AMDGPUPALMetadata::setGraphicsRegisters(StringRef field1, StringRef field2,
+                                             unsigned Val) {
+  getGraphicsRegisters()[field1].getMap(true)[field2] = Val;
+}
+
+void AMDGPUPALMetadata::setGraphicsRegisters(StringRef field1, StringRef field2,
+                                             bool Val) {
+  getGraphicsRegisters()[field1].getMap(true)[field2] = Val;
 }

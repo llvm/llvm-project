@@ -66,7 +66,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     return b.notifyMatchFailure(op, "Cannot match the reduction pattern");
 
   Operation *reductionOp = combinerOps[0];
-  std::optional<Attribute> identity = getNeutralElement(reductionOp);
+  std::optional<TypedAttr> identity = getNeutralElement(reductionOp);
   if (!identity.has_value())
     return b.notifyMatchFailure(op, "Unknown identity value for the reduction");
 
@@ -113,7 +113,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     }
     Type newType = RankedTensorType::get(
         newShape,
-        operand->get().getType().cast<RankedTensorType>().getElementType());
+        cast<RankedTensorType>(operand->get().getType()).getElementType());
     Value newInput = b.create<tensor::ExpandShapeOp>(
         loc, newType, operand->get(), reassociation);
     newInputs.push_back(newInput);
@@ -272,9 +272,9 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   if (!matchReduction(op.getRegionOutputArgs(), 0, combinerOps))
     return b.notifyMatchFailure(op, "cannot match a reduction pattern");
 
-  SmallVector<Attribute> neutralElements;
+  SmallVector<TypedAttr> neutralElements;
   for (Operation *reductionOp : combinerOps) {
-    std::optional<Attribute> neutralElement = getNeutralElement(reductionOp);
+    std::optional<TypedAttr> neutralElement = getNeutralElement(reductionOp);
     if (!neutralElement.has_value())
       return b.notifyMatchFailure(op, "cannot find neutral element.");
     neutralElements.push_back(*neutralElement);
@@ -309,7 +309,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   fillOps.reserve(op.getNumDpsInits());
   for (auto it : llvm::zip(op.getDpsInitOperands(), neutralElements)) {
     Value rankedTensor = std::get<0>(it)->get();
-    auto t = rankedTensor.getType().cast<RankedTensorType>();
+    auto t = cast<RankedTensorType>(rankedTensor.getType());
     RankedTensorType newT = RankedTensorType::Builder(t).insertDim(
         reductionDimSize / splitFactor, insertSplitDimension);
     SmallVector<Value> dims =
@@ -383,7 +383,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
                            combinerOps)) {
     Value reindexedOutput = std::get<0>(it);
     Value originalOutput = std::get<1>(it)->get();
-    auto originalOutputType = originalOutput.getType().cast<RankedTensorType>();
+    auto originalOutputType = cast<RankedTensorType>(originalOutput.getType());
     Operation *combinerOp = std::get<2>(it);
 
     AffineMap map = b.getMultiDimIdentityMap(originalOutputType.getRank() + 1);

@@ -892,7 +892,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           Res = MCValue::get(L->isEqualTo(R) ? -1 : 0);
           return true;
         case MCBinaryExpr::NE:
-          Res = MCValue::get(R->isEqualTo(R) ? 0 : -1);
+          Res = MCValue::get(L->isEqualTo(R) ? 0 : -1);
           return true;
         default:
           break;

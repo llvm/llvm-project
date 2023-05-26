@@ -35,9 +35,9 @@ class SparseTensor_Attr<string name,
 def DimensionAttr :
     TypedAttrBase<
       Index, "IntegerAttr",
-      And<[CPred<"$_self.isa<::mlir::IntegerAttr>()">,
-           CPred<"$_self.cast<::mlir::IntegerAttr>().getType()"
-                 ".isa<::mlir::IndexType>()">]>,
+      And<[CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
+           CPred<"::llvm::isa<::mlir::IndexType>("
+                     "::llvm::cast<::mlir::IntegerAttr>($_self).getType())">]>,
       "dimension attribute"> {
   let returnType = [{::mlir::sparse_tensor::Dimension}];
   let convertFromStorage = [{$_self.getValue().getZExtValue()}];
@@ -46,9 +46,9 @@ def DimensionAttr :
 def LevelAttr :
     TypedAttrBase<
       Index, "IntegerAttr",
-      And<[CPred<"$_self.isa<::mlir::IntegerAttr>()">,
-           CPred<"$_self.cast<::mlir::IntegerAttr>().getType()"
-                 ".isa<::mlir::IndexType>()">]>,
+      And<[CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
+           CPred<"::llvm::isa<::mlir::IndexType>("
+                     "::llvm::cast<::mlir::IntegerAttr>($_self).getType())">]>,
       "level attribute"> {
   let returnType = [{::mlir::sparse_tensor::Level}];
   let convertFromStorage = [{$_self.getValue().getZExtValue()}];
@@ -144,11 +144,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       properties, and split up how the level-format and properties are
       specified rather than using this suffix mechanism.
 
-      TODO: This field is called "dimLevelType" for historical reasons,
-      even though the types are per-level rather than per-dimension.
-      (This will be corrected in an upcoming change that completely
-      overhauls the syntax of this attribute.)
-
     - An optional permutation which maps (higher-ordering)-coordinates
       to level-coordinates; defaulting to the identity permutation.
       For example, given a 2-d tensor with the default higher-ordering,
@@ -213,19 +208,19 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     ```mlir
     // Sparse vector.
     #SparseVector = #sparse_tensor.encoding<{
-      dimLevelType = [ "compressed" ]
+      lvlTypes = [ "compressed" ]
     }>
     ... tensor<?xf32, #SparseVector> ...
 
     // Sorted Coordinate Scheme.
     #SortedCOO = #sparse_tensor.encoding<{
-      dimLevelType = [ "compressed-nu", "singleton" ]
+      lvlTypes = [ "compressed-nu", "singleton" ]
     }>
     ... tensor<?x?xf64, #SortedCOO> ...
 
     // Doubly compressed sparse column storage with specific bitwidths.
     #DCSC = #sparse_tensor.encoding<{
-      dimLevelType = [ "compressed", "compressed" ],
+      lvlTypes = [ "compressed", "compressed" ],
       dimOrdering = affine_map<(i, j) -> (j, i)>,
       posWidth = 32,
       crdWidth = 8
@@ -234,7 +229,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     // Block sparse row storage (2x3 blocks).
     #BCSR = #sparse_tensor.encoding<{
-      dimLevelType = [ "compressed", "compressed", "dense", "dense" ],
+      lvlTypes = [ "compressed", "compressed", "dense", "dense" ],
       dimOrdering  = affine_map<(ii, jj, i, j) -> (ii, jj, i, j)>,
       higherOrdering = affine_map<(i, j) -> (i floordiv 2, j floordiv 3, i mod 2, j mod 3)>
     }>
@@ -242,7 +237,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     // ELL storage (4 jagged diagonals, i.e., at most 4 nonzeros per row).
     #ELL = #sparse_tensor.encoding<{
-      dimLevelType = [ "dense", "dense", "compressed" ],
+      lvlTypes = [ "dense", "dense", "compressed" ],
       dimOrdering  = affine_map<(ii, i, j) -> (ii, i, j)>,
       higherOrdering = affine_map<(i, j)[c] -> (c * 4 * i, i, j)>
     }>
@@ -251,7 +246,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // CSR slice (offset = 0, size = 4, stride = 1 on the first dimension;
     // offset = 0, size = 8, and a dynamic stride on the second dimension).
     #CSR_SLICE = #sparse_tensor.encoding<{
-      dimLevelType = [ "dense", "compressed" ],
+      lvlTypes = [ "dense", "compressed" ],
       slice = [ (0, 4, 1), (0, 8, ?) ]
     }>
     ... tensor<?x?xf64, #CSC_SLICE> ...
@@ -266,7 +261,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     ArrayRefParameter<
       "::mlir::sparse_tensor::DimLevelType",
       "level-types"
-      >: $dimLevelType,
+      >: $lvlTypes,
     // A permutation from (higher-ordering)-coordinates to level-coordinates.
     "AffineMap":$dimOrdering,
     // A mapping from dimension-coordinates to (higher-ordering)-coordinates.
@@ -283,12 +278,12 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   );
 
   let builders = [
-    AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$dimLevelType,
+    AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$lvlTypes,
                      "AffineMap":$dimOrdering,
                      "AffineMap":$higherOrdering,
                      "unsigned":$posWidth,
                      "unsigned":$crdWidth), [{
-      return $_get($_ctxt, dimLevelType,
+      return $_get($_ctxt, lvlTypes,
                          dimOrdering,
                          higherOrdering,
                          posWidth,
@@ -298,11 +293,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   ];
 
   let extraClassDeclaration = [{
-    /// Returns the type for position storage based on posWidth
-    Type getPosType() const;
-
-    /// Returns the type for coordinate storage based on crdWidth
-    Type getCrdType() const;
+    //
+    // Factory methods.
+    //
 
     /// Constructs a new encoding with the dimOrdering and higherOrdering
     /// reset to the default/identity.
@@ -312,18 +305,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// reset to the default.
     SparseTensorEncodingAttr withoutBitWidths() const;
 
-    /// Returns true if every level is dense.  Also returns true for
-    /// the null encoding (since dense-tensors are always all-dense).
-    bool isAllDense() const;
-
-    /// Returns true if every level is ordered.  Also returns true for
-    /// the null encoding (since dense-tensors are always all-ordered).
-    bool isAllOrdered() const;
-
-    /// Returns true if the encoding has an identity dimension ordering.
-    /// Also returns true for the null encoding (since dense-tensors
-    /// always have the identity ordering).
-    bool hasIdDimOrdering() const;
+    //
+    // lvlTypes methods.
+    //
 
     /// Returns the number of storage levels.  Asserts that the encoding
     /// is non-null (since there is no fixed result that's valid for
@@ -337,13 +321,49 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     bool isDenseLvl(::mlir::sparse_tensor::Level l) const { return isDenseDLT(getLvlType(l)); }
     bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedDLT(getLvlType(l)); }
+    bool isCompressedWithHiLvl(::mlir::sparse_tensor::Level l) const { return isCompressedWithHiDLT(getLvlType(l)); }
     bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonDLT(getLvlType(l)); }
     bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedDLT(getLvlType(l)); }
     bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueDLT(getLvlType(l)); }
 
-    bool isSlice() const {
-      return !getDimSlices().empty();
-    }
+    /// Returns true if every level is dense.  Also returns true for
+    /// the null encoding (since dense-tensors are always all-dense).
+    bool isAllDense() const;
+
+    /// Returns true if every level is ordered.  Also returns true for
+    /// the null encoding (since dense-tensors are always all-ordered).
+    bool isAllOrdered() const;
+
+    //
+    // dimOrdering/higherOrdering methods.
+    //
+
+    /// Returns true if the encoding has an identity dimension ordering.
+    /// Also returns true for the null encoding (since dense-tensors
+    /// always have the identity ordering).
+    bool hasIdDimOrdering() const;
+
+    //
+    // posWidth/crdWidth methods.
+    //
+
+    /// Returns the type for position storage based on posWidth.
+    /// Asserts that the encoding is non-null (since there's nowhere
+    /// to get the `MLIRContext` from).
+    Type getPosType() const;
+
+    /// Returns the type for coordinate storage based on crdWidth.
+    /// Asserts that the encoding is non-null (since there's nowhere
+    /// to get the `MLIRContext` from).
+    Type getCrdType() const;
+
+    //
+    // dimSlices methods.
+    //
+
+    bool isSlice() const;
+
+    ::mlir::sparse_tensor::SparseTensorDimSliceAttr getDimSlice(::mlir::sparse_tensor::Dimension dim) const;
 
     std::optional<uint64_t> getStaticDimSliceOffset(::mlir::sparse_tensor::Dimension dim) const;
     std::optional<uint64_t> getStaticDimSliceSize(::mlir::sparse_tensor::Dimension dim) const;

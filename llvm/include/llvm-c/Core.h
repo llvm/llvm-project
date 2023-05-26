@@ -474,8 +474,6 @@ typedef unsigned LLVMAttributeIndex;
  * @}
  */
 
-void LLVMInitializeCore(LLVMPassRegistryRef R);
-
 /** Deallocate and destroy all ManagedStatic variables.
     @see llvm::llvm_shutdown
     @see ManagedStatic */
@@ -4095,8 +4093,8 @@ int LLVMGetUndefMaskElem(void);
  * Get the mask value at position Elt in the mask of a ShuffleVector
  * instruction.
  *
- * \Returns the result of \c LLVMGetUndefMaskElem() if the mask value is undef
- * at that position.
+ * \Returns the result of \c LLVMGetUndefMaskElem() if the mask value is
+ * poison at that position.
  */
 int LLVMGetMaskValue(LLVMValueRef ShuffleVectorInst, unsigned Elt);
 
@@ -4157,21 +4155,6 @@ LLVMMemoryBufferRef LLVMCreateMemoryBufferWithMemoryRangeCopy(const char *InputD
 const char *LLVMGetBufferStart(LLVMMemoryBufferRef MemBuf);
 size_t LLVMGetBufferSize(LLVMMemoryBufferRef MemBuf);
 void LLVMDisposeMemoryBuffer(LLVMMemoryBufferRef MemBuf);
-
-/**
- * @}
- */
-
-/**
- * @defgroup LLVMCCorePassRegistry Pass Registry
- * @ingroup LLVMCCore
- *
- * @{
- */
-
-/** Return the global pass registry, for use with initialization functions.
-    @see llvm::PassRegistry::getPassRegistry */
-LLVMPassRegistryRef LLVMGetGlobalPassRegistry(void);
 
 /**
  * @}

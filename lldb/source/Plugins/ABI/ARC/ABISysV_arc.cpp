@@ -46,7 +46,7 @@
     DEFINE_REG_NAME(dwarf_num), DEFINE_REG_NAME_STR(str_name),                \
     0, 0, eEncodingInvalid, eFormatDefault,                                   \
     { dwarf_num, dwarf_num, generic_num, LLDB_INVALID_REGNUM, dwarf_num },    \
-    nullptr, nullptr                                                          \
+    nullptr, nullptr, nullptr,                                                \
   }
 
 #define DEFINE_REGISTER_STUB(dwarf_num, str_name) \

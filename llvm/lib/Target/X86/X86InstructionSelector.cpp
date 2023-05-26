@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -40,7 +41,6 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -247,9 +247,9 @@ bool X86InstructionSelector::selectDebugInstr(MachineInstr &I,
     LLT Ty = MRI.getType(Reg);
     const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
     const TargetRegisterClass *RC =
-        RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+        dyn_cast_if_present<const TargetRegisterClass *>(RegClassOrBank);
     if (!RC) {
-      const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
       RC = getRegClass(Ty, RB);
       if (!RC) {
         LLVM_DEBUG(
@@ -838,11 +838,11 @@ bool X86InstructionSelector::selectZext(MachineInstr &I,
   if (DstTy == LLT::scalar(8))
     AndOpc = X86::AND8ri;
   else if (DstTy == LLT::scalar(16))
-    AndOpc = X86::AND16ri8;
+    AndOpc = X86::AND16ri;
   else if (DstTy == LLT::scalar(32))
-    AndOpc = X86::AND32ri8;
+    AndOpc = X86::AND32ri;
   else if (DstTy == LLT::scalar(64))
-    AndOpc = X86::AND64ri8;
+    AndOpc = X86::AND64ri32;
   else
     return false;
 

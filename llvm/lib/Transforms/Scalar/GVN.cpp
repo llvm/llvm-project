@@ -461,28 +461,34 @@ void GVNPass::ValueTable::add(Value *V, uint32_t num) {
 }
 
 uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
-  if (AA->doesNotAccessMemory(C) &&
-      // FIXME: Currently the calls which may access the thread id may
-      // be considered as not accessing the memory. But this is
-      // problematic for coroutines, since coroutines may resume in a
-      // different thread. So we disable the optimization here for the
-      // correctness. However, it may block many other correct
-      // optimizations. Revert this one when we detect the memory
-      // accessing kind more precisely.
-      !C->getFunction()->isPresplitCoroutine()) {
+  // FIXME: Currently the calls which may access the thread id may
+  // be considered as not accessing the memory. But this is
+  // problematic for coroutines, since coroutines may resume in a
+  // different thread. So we disable the optimization here for the
+  // correctness. However, it may block many other correct
+  // optimizations. Revert this one when we detect the memory
+  // accessing kind more precisely.
+  if (C->getFunction()->isPresplitCoroutine()) {
+    valueNumbering[C] = nextValueNumber;
+    return nextValueNumber++;
+  }
+
+  // Do not combine convergent calls since they implicitly depend on the set of
+  // threads that is currently executing, and they might be in different basic
+  // blocks.
+  if (C->isConvergent()) {
+    valueNumbering[C] = nextValueNumber;
+    return nextValueNumber++;
+  }
+
+  if (AA->doesNotAccessMemory(C)) {
     Expression exp = createExpr(C);
     uint32_t e = assignExpNewValueNum(exp).first;
     valueNumbering[C] = e;
     return e;
-  } else if (MD && AA->onlyReadsMemory(C) &&
-             // FIXME: Currently the calls which may access the thread id may
-             // be considered as not accessing the memory. But this is
-             // problematic for coroutines, since coroutines may resume in a
-             // different thread. So we disable the optimization here for the
-             // correctness. However, it may block many other correct
-             // optimizations. Revert this one when we detect the memory
-             // accessing kind more precisely.
-             !C->getFunction()->isPresplitCoroutine()) {
+  }
+
+  if (MD && AA->onlyReadsMemory(C)) {
     Expression exp = createExpr(C);
     auto ValNum = assignExpNewValueNum(exp);
     if (ValNum.second) {
@@ -572,10 +578,10 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
     uint32_t v = lookupOrAdd(cdep);
     valueNumbering[C] = v;
     return v;
-  } else {
-    valueNumbering[C] = nextValueNumber;
-    return nextValueNumber++;
   }
+
+  valueNumbering[C] = nextValueNumber;
+  return nextValueNumber++;
 }
 
 /// Returns true if a value number exists for the specified value.
@@ -986,7 +992,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
   if (isSimpleValue()) {
     Res = getSimpleValue();
     if (Res->getType() != LoadTy) {
-      Res = getStoreValueForLoad(Res, Offset, LoadTy, InsertPt, DL);
+      Res = getValueForLoad(Res, Offset, LoadTy, InsertPt, DL);
 
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL VAL:\nOffset: " << Offset
                         << "  " << *getSimpleValue() << '\n'
@@ -997,14 +1003,23 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     LoadInst *CoercedLoad = getCoercedLoadValue();
     if (CoercedLoad->getType() == LoadTy && Offset == 0) {
       Res = CoercedLoad;
+      combineMetadataForCSE(CoercedLoad, Load, false);
     } else {
-      Res = getLoadValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt, DL);
-      // We would like to use gvn.markInstructionForDeletion here, but we can't
-      // because the load is already memoized into the leader map table that GVN
-      // tracks.  It is potentially possible to remove the load from the table,
-      // but then there all of the operations based on it would need to be
-      // rehashed.  Just leave the dead load around.
-      gvn.getMemDep().removeInstruction(CoercedLoad);
+      Res = getValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt, DL);
+      // We are adding a new user for this load, for which the original
+      // metadata may not hold. Additionally, the new load may have a different
+      // size and type, so their metadata cannot be combined in any
+      // straightforward way.
+      // Drop all metadata that is not known to cause immediate UB on violation,
+      // unless the load has !noundef, in which case all metadata violations
+      // will be promoted to UB.
+      // TODO: We can combine noalias/alias.scope metadata here, because it is
+      // independent of the load type.
+      if (!CoercedLoad->hasMetadata(LLVMContext::MD_noundef))
+        CoercedLoad->dropUnknownNonDebugMetadata(
+            {LLVMContext::MD_dereferenceable,
+             LLVMContext::MD_dereferenceable_or_null,
+             LLVMContext::MD_invariant_load, LLVMContext::MD_invariant_group});
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL LOAD:\nOffset: " << Offset
                         << "  " << *getCoercedLoadValue() << '\n'
                         << *Res << '\n'
@@ -1374,6 +1389,7 @@ void GVNPass::eliminatePartiallyRedundantLoad(
 
   // Perform PHI construction.
   Value *V = ConstructSSAForLoadSet(Load, ValuesPerBlock, *this);
+  // ConstructSSAForLoadSet is responsible for combining metadata.
   Load->replaceAllUsesWith(V);
   if (isa<PHINode>(V))
     V->takeName(Load);
@@ -1773,6 +1789,7 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
 
     // Perform PHI construction.
     Value *V = ConstructSSAForLoadSet(Load, ValuesPerBlock, *this);
+    // ConstructSSAForLoadSet is responsible for combining metadata.
     Load->replaceAllUsesWith(V);
 
     if (isa<PHINode>(V))
@@ -1908,10 +1925,14 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
         MSSAU->insertDef(cast<MemoryDef>(NewDef), /*RenameUses=*/false);
       }
     }
-    if (isAssumeWithEmptyBundle(*IntrinsicI))
+    if (isAssumeWithEmptyBundle(*IntrinsicI)) {
       markInstructionForDeletion(IntrinsicI);
+      return true;
+    }
     return false;
-  } else if (isa<Constant>(V)) {
+  }
+
+  if (isa<Constant>(V)) {
     // If it's not false, and constant, it must evaluate to true. This means our
     // assume is assume(true), and thus, pointless, and we don't want to do
     // anything more here.
@@ -2044,8 +2065,8 @@ bool GVNPass::processLoad(LoadInst *L) {
 
   Value *AvailableValue = AV->MaterializeAdjustedValue(L, L, *this);
 
-  // Replace the load!
-  patchAndReplaceAllUsesWith(L, AvailableValue);
+  // MaterializeAdjustedValue is responsible for combining metadata.
+  L->replaceAllUsesWith(AvailableValue);
   markInstructionForDeletion(L);
   if (MSSAU)
     MSSAU->removeMemoryAccess(L);
@@ -2544,7 +2565,9 @@ bool GVNPass::processInstruction(Instruction *I) {
     // Failure, just remember this instance for future use.
     addToLeaderTable(Num, I, I->getParent());
     return false;
-  } else if (Repl == I) {
+  }
+
+  if (Repl == I) {
     // If I was the result of a shortcut PRE, it might already be in the table
     // and the best replacement for itself. Nothing to do.
     return false;
@@ -2765,9 +2788,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
   if (auto *CallB = dyn_cast<CallBase>(CurInst)) {
     // We don't currently value number ANY inline asm calls.
     if (CallB->isInlineAsm())
-      return false;
-    // Don't do PRE on convergent calls.
-    if (CallB->isConvergent())
       return false;
   }
 

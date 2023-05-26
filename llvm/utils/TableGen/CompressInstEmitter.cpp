@@ -904,4 +904,4 @@ void CompressInstEmitter::run(raw_ostream &o) {
 }
 
 static TableGen::Emitter::OptClass<CompressInstEmitter>
-    X("gen-compress-inst-emitter", "Generate RISCV compressed instructions.");
+    X("gen-compress-inst-emitter", "Generate compressed instructions.");

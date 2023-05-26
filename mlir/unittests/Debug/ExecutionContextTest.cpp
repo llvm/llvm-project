@@ -29,7 +29,7 @@ struct ThirdAction : public ActionImpl<ThirdAction> {
 };
 
 // Simple action that does nothing.
-void noOp() { return; }
+void noOp() {}
 
 /// This test executes a stack of nested action and check that the backtrace is
 /// as expect.

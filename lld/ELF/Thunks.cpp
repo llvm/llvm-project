@@ -44,21 +44,45 @@ using namespace lld::elf;
 
 namespace {
 
-// AArch64 long range Thunks
-class AArch64ABSLongThunk final : public Thunk {
+// Base class for AArch64 thunks.
+//
+// An AArch64 thunk may be either short or long. A short thunk is simply a
+// branch (B) instruction, and it may be used to call AArch64 functions when the
+// distance from the thunk to the target is less than 128MB. Long thunks can
+// branch to any virtual address and they are implemented in the derived
+// classes. This class tries to create a short thunk if the target is in range,
+// otherwise it creates a long thunk.
+class AArch64Thunk : public Thunk {
 public:
-  AArch64ABSLongThunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
-  uint32_t size() override { return 16; }
+  AArch64Thunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
+  bool getMayUseShortThunk();
   void writeTo(uint8_t *buf) override;
-  void addSymbols(ThunkSection &isec) override;
+
+private:
+  bool mayUseShortThunk = true;
+  virtual void writeLong(uint8_t *buf) = 0;
 };
 
-class AArch64ADRPThunk final : public Thunk {
+// AArch64 long range Thunks.
+class AArch64ABSLongThunk final : public AArch64Thunk {
 public:
-  AArch64ADRPThunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
-  uint32_t size() override { return 12; }
-  void writeTo(uint8_t *buf) override;
+  AArch64ABSLongThunk(Symbol &dest, int64_t addend)
+      : AArch64Thunk(dest, addend) {}
+  uint32_t size() override { return getMayUseShortThunk() ? 4 : 16; }
   void addSymbols(ThunkSection &isec) override;
+
+private:
+  void writeLong(uint8_t *buf) override;
+};
+
+class AArch64ADRPThunk final : public AArch64Thunk {
+public:
+  AArch64ADRPThunk(Symbol &dest, int64_t addend) : AArch64Thunk(dest, addend) {}
+  uint32_t size() override { return getMayUseShortThunk() ? 4 : 12; }
+  void addSymbols(ThunkSection &isec) override;
+
+private:
+  void writeLong(uint8_t *buf) override;
 };
 
 // Base class for ARM thunks.
@@ -268,6 +292,16 @@ public:
   void addSymbols(ThunkSection &isec) override;
 };
 
+// The AVR devices need thunks for R_AVR_LO8_LDI_GS/R_AVR_HI8_LDI_GS
+// when their destination is out of range [0, 0x1ffff].
+class AVRThunk : public Thunk {
+public:
+  AVRThunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
+  uint32_t size() override { return 4; }
+  void writeTo(uint8_t *buf) override;
+  void addSymbols(ThunkSection &isec) override;
+};
+
 // MIPS LA25 thunk
 class MipsThunk final : public Thunk {
 public:
@@ -461,14 +495,34 @@ void Thunk::setOffset(uint64_t newOffset) {
   offset = newOffset;
 }
 
-// AArch64 long range Thunks
-
+// AArch64 Thunk base class.
 static uint64_t getAArch64ThunkDestVA(const Symbol &s, int64_t a) {
   uint64_t v = s.isInPlt() ? s.getPltVA() : s.getVA(a);
   return v;
 }
 
-void AArch64ABSLongThunk::writeTo(uint8_t *buf) {
+bool AArch64Thunk::getMayUseShortThunk() {
+  if (!mayUseShortThunk)
+    return false;
+  uint64_t s = getAArch64ThunkDestVA(destination, addend);
+  uint64_t p = getThunkTargetSym()->getVA();
+  mayUseShortThunk = llvm::isInt<28>(s - p);
+  return mayUseShortThunk;
+}
+
+void AArch64Thunk::writeTo(uint8_t *buf) {
+  if (!getMayUseShortThunk()) {
+    writeLong(buf);
+    return;
+  }
+  uint64_t s = getAArch64ThunkDestVA(destination, addend);
+  uint64_t p = getThunkTargetSym()->getVA();
+  write32(buf, 0x14000000); // b S
+  target->relocateNoSym(buf, R_AARCH64_CALL26, s - p);
+}
+
+// AArch64 long range Thunks.
+void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
   const uint8_t data[] = {
     0x50, 0x00, 0x00, 0x58, //     ldr x16, L0
     0x00, 0x02, 0x1f, 0xd6, //     br  x16
@@ -484,7 +538,8 @@ void AArch64ABSLongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__AArch64AbsLongThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$x", STT_NOTYPE, 0, isec);
-  addSymbol("$d", STT_NOTYPE, 8, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 8, isec);
 }
 
 // This Thunk has a maximum range of 4Gb, this is sufficient for all programs
@@ -492,7 +547,7 @@ void AArch64ABSLongThunk::addSymbols(ThunkSection &isec) {
 // clang and gcc do not support the large code model for position independent
 // code so it is safe to use this for position independent thunks without
 // worrying about the destination being more than 4Gb away.
-void AArch64ADRPThunk::writeTo(uint8_t *buf) {
+void AArch64ADRPThunk::writeLong(uint8_t *buf) {
   const uint8_t data[] = {
       0x10, 0x00, 0x00, 0x90, // adrp x16, Dest R_AARCH64_ADR_PREL_PG_HI21(Dest)
       0x10, 0x02, 0x00, 0x91, // add  x16, x16, R_AARCH64_ADD_ABS_LO12_NC(Dest)
@@ -586,7 +641,8 @@ void ThumbThunk::writeTo(uint8_t *buf) {
   uint64_t s = getARMThunkDestVA(destination);
   uint64_t p = getThunkTargetSym()->getVA();
   int64_t offset = s - p - 4;
-  write32(buf, 0xb000f000); // b.w S
+  write16(buf + 0, 0xf000); // b.w S
+  write16(buf + 2, 0xb000);
   target->relocateNoSym(buf, R_ARM_THM_JUMP24, offset);
 }
 
@@ -844,6 +900,17 @@ void ThumbV4PILongThunk::addSymbols(ThunkSection &isec) {
   addSymbol("$t", STT_NOTYPE, 0, isec);
   addSymbol("$a", STT_NOTYPE, 4, isec);
   addSymbol("$d", STT_NOTYPE, 16, isec);
+}
+
+// Use the long jump which covers a range up to 8MiB.
+void AVRThunk::writeTo(uint8_t *buf) {
+  write32(buf, 0x940c); // jmp func
+  target->relocateNoSym(buf, R_AVR_CALL, destination.getVA());
+}
+
+void AVRThunk::addSymbols(ThunkSection &isec) {
+  addSymbol(saver().save("__AVRThunk_" + destination.getName()), STT_FUNC, 0,
+            isec);
 }
 
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
@@ -1133,7 +1200,9 @@ bool PPC64LongBranchThunk::isCompatibleWith(const InputSection &isec,
   return rel.type == R_PPC64_REL24 || rel.type == R_PPC64_REL14;
 }
 
-Thunk::Thunk(Symbol &d, int64_t a) : destination(d), addend(a), offset(0) {}
+Thunk::Thunk(Symbol &d, int64_t a) : destination(d), addend(a), offset(0) {
+  destination.thunkAccessed = true;
+}
 
 Thunk::~Thunk() = default;
 
@@ -1266,6 +1335,16 @@ static Thunk *addThunkArm(RelType reloc, Symbol &s, int64_t a) {
   fatal("unrecognized relocation type");
 }
 
+static Thunk *addThunkAVR(RelType type, Symbol &s, int64_t a) {
+  switch (type) {
+  case R_AVR_LO8_LDI_GS:
+  case R_AVR_HI8_LDI_GS:
+    return make<AVRThunk>(s, a);
+  default:
+    fatal("unrecognized relocation type " + toString(type));
+  }
+}
+
 static Thunk *addThunkMips(RelType type, Symbol &s) {
   if ((s.stOther & STO_MIPS_MICROMIPS) && isMipsR6())
     return make<MicroMipsR6Thunk>(s);
@@ -1312,20 +1391,20 @@ Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
   Symbol &s = *rel.sym;
   int64_t a = rel.addend;
 
-  if (config->emachine == EM_AARCH64)
+  switch (config->emachine) {
+  case EM_AARCH64:
     return addThunkAArch64(rel.type, s, a);
-
-  if (config->emachine == EM_ARM)
+  case EM_ARM:
     return addThunkArm(rel.type, s, a);
-
-  if (config->emachine == EM_MIPS)
+  case EM_AVR:
+    return addThunkAVR(rel.type, s, a);
+  case EM_MIPS:
     return addThunkMips(rel.type, s);
-
-  if (config->emachine == EM_PPC)
+  case EM_PPC:
     return addThunkPPC32(isec, rel, s);
-
-  if (config->emachine == EM_PPC64)
+  case EM_PPC64:
     return addThunkPPC64(rel.type, s, a);
-
-  llvm_unreachable("add Thunk only supported for ARM, Mips and PowerPC");
+  default:
+    llvm_unreachable("add Thunk only supported for ARM, AVR, Mips and PowerPC");
+  }
 }

@@ -656,6 +656,7 @@ struct AddressSanitizer {
                                                             : UseAfterReturn),
         SSGI(SSGI) {
     C = &(M.getContext());
+    DL = &M.getDataLayout();
     LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
     Int8PtrTy = Type::getInt8PtrTy(*C);
@@ -694,6 +695,13 @@ struct AddressSanitizer {
                                         TypeSize TypeStoreSize, bool IsWrite,
                                         Value *SizeArgument, bool UseCalls,
                                         uint32_t Exp);
+  void instrumentMaskedLoadOrStore(AddressSanitizer *Pass, const DataLayout &DL,
+                                   Type *IntptrTy, Value *Mask, Value *EVL,
+                                   Value *Stride, Instruction *I, Value *Addr,
+                                   MaybeAlign Alignment, unsigned Granularity,
+                                   Type *OpType, bool IsWrite,
+                                   Value *SizeArgument, bool UseCalls,
+                                   uint32_t Exp);
   Value *createSlowPathCmp(IRBuilder<> &IRB, Value *AddrLong,
                            Value *ShadowValue, uint32_t TypeStoreSize);
   Instruction *generateCrashCode(Instruction *InsertBefore, Value *Addr,
@@ -734,6 +742,7 @@ private:
   };
 
   LLVMContext *C;
+  const DataLayout *DL;
   Triple TargetTriple;
   int LongSize;
   bool CompileKernel;
@@ -1319,8 +1328,9 @@ void AddressSanitizer::getInterestingMemoryOperands(
                              XCHG->getCompareOperand()->getType(),
                              std::nullopt);
   } else if (auto CI = dyn_cast<CallInst>(I)) {
-    if (CI->getIntrinsicID() == Intrinsic::masked_load ||
-        CI->getIntrinsicID() == Intrinsic::masked_store) {
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::masked_load:
+    case Intrinsic::masked_store: {
       bool IsWrite = CI->getIntrinsicID() == Intrinsic::masked_store;
       // Masked store has an initial operand for the value.
       unsigned OpOffset = IsWrite ? 1 : 0;
@@ -1337,7 +1347,53 @@ void AddressSanitizer::getInterestingMemoryOperands(
         Alignment = Op->getMaybeAlignValue();
       Value *Mask = CI->getOperand(2 + OpOffset);
       Interesting.emplace_back(I, OpOffset, IsWrite, Ty, Alignment, Mask);
-    } else {
+      break;
+    }
+    case Intrinsic::vp_load:
+    case Intrinsic::vp_store:
+    case Intrinsic::experimental_vp_strided_load:
+    case Intrinsic::experimental_vp_strided_store: {
+      auto *VPI = cast<VPIntrinsic>(CI);
+      unsigned IID = CI->getIntrinsicID();
+      bool IsWrite = CI->getType()->isVoidTy();
+      if (IsWrite ? !ClInstrumentWrites : !ClInstrumentReads)
+        return;
+      unsigned PtrOpNo = *VPI->getMemoryPointerParamPos(IID);
+      Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
+      MaybeAlign Alignment = VPI->getOperand(PtrOpNo)->getPointerAlignment(*DL);
+      Value *Stride = nullptr;
+      if (IID == Intrinsic::experimental_vp_strided_store ||
+          IID == Intrinsic::experimental_vp_strided_load) {
+        Stride = VPI->getOperand(PtrOpNo + 1);
+        // Use the pointer alignment as the element alignment if the stride is a
+        // mutiple of the pointer alignment. Otherwise, the element alignment
+        // should be Align(1).
+        unsigned PointerAlign = Alignment.valueOrOne().value();
+        if (!isa<ConstantInt>(Stride) ||
+            cast<ConstantInt>(Stride)->getZExtValue() % PointerAlign != 0)
+          Alignment = Align(1);
+      }
+      Interesting.emplace_back(I, PtrOpNo, IsWrite, Ty, Alignment,
+                               VPI->getMaskParam(), VPI->getVectorLengthParam(),
+                               Stride);
+      break;
+    }
+    case Intrinsic::vp_gather:
+    case Intrinsic::vp_scatter: {
+      auto *VPI = cast<VPIntrinsic>(CI);
+      unsigned IID = CI->getIntrinsicID();
+      bool IsWrite = IID == Intrinsic::vp_scatter;
+      if (IsWrite ? !ClInstrumentWrites : !ClInstrumentReads)
+        return;
+      unsigned PtrOpNo = *VPI->getMemoryPointerParamPos(IID);
+      Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
+      MaybeAlign Alignment = VPI->getPointerAlignment();
+      Interesting.emplace_back(I, PtrOpNo, IsWrite, Ty, Alignment,
+                               VPI->getMaskParam(),
+                               VPI->getVectorLengthParam());
+      break;
+    }
+    default:
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
             ignoreAccess(I, CI->getArgOperand(ArgNo)))
@@ -1432,19 +1488,39 @@ static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
                                          IsWrite, nullptr, UseCalls, Exp);
 }
 
-static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
-                                        const DataLayout &DL, Type *IntptrTy,
-                                        Value *Mask, Instruction *I,
-                                        Value *Addr, MaybeAlign Alignment,
-                                        unsigned Granularity, Type *OpType,
-                                        bool IsWrite, Value *SizeArgument,
-                                        bool UseCalls, uint32_t Exp) {
+void AddressSanitizer::instrumentMaskedLoadOrStore(
+    AddressSanitizer *Pass, const DataLayout &DL, Type *IntptrTy, Value *Mask,
+    Value *EVL, Value *Stride, Instruction *I, Value *Addr,
+    MaybeAlign Alignment, unsigned Granularity, Type *OpType, bool IsWrite,
+    Value *SizeArgument, bool UseCalls, uint32_t Exp) {
   auto *VTy = cast<VectorType>(OpType);
-
   TypeSize ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   auto Zero = ConstantInt::get(IntptrTy, 0);
 
-  SplitBlockAndInsertForEachLane(VTy->getElementCount(), IntptrTy, I,
+  IRBuilder IB(I);
+  Instruction *LoopInsertBefore = I;
+  if (EVL) {
+    // The end argument of SplitBlockAndInsertForLane is assumed bigger
+    // than zero, so we should check whether EVL is zero here.
+    Type *EVLType = EVL->getType();
+    Value *IsEVLZero = IB.CreateICmpNE(EVL, ConstantInt::get(EVLType, 0));
+    LoopInsertBefore = SplitBlockAndInsertIfThen(IsEVLZero, I, false);
+    IB.SetInsertPoint(LoopInsertBefore);
+    // Cast EVL to IntptrTy.
+    EVL = IB.CreateZExtOrTrunc(EVL, IntptrTy);
+    // To avoid undefined behavior for extracting with out of range index, use
+    // the minimum of evl and element count as trip count.
+    Value *EC = IB.CreateElementCount(IntptrTy, VTy->getElementCount());
+    EVL = IB.CreateBinaryIntrinsic(Intrinsic::umin, EVL, EC);
+  } else {
+    EVL = IB.CreateElementCount(IntptrTy, VTy->getElementCount());
+  }
+
+  // Cast Stride to IntptrTy.
+  if (Stride)
+    Stride = IB.CreateZExtOrTrunc(Stride, IntptrTy);
+
+  SplitBlockAndInsertForEachLane(EVL, LoopInsertBefore,
                                  [&](IRBuilderBase &IRB, Value *Index) {
     Value *MaskElem = IRB.CreateExtractElement(Mask, Index);
     if (auto *MaskElemC = dyn_cast<ConstantInt>(MaskElem)) {
@@ -1454,14 +1530,27 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
       // Unconditional check
     } else {
       // Conditional check
-      Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, &*IRB.GetInsertPoint(), false);
+      Instruction *ThenTerm = SplitBlockAndInsertIfThen(
+          MaskElem, &*IRB.GetInsertPoint(), false);
       IRB.SetInsertPoint(ThenTerm);
     }
 
-    Value *InstrumentedAddress = IRB.CreateGEP(VTy, Addr, {Zero, Index});
-    doInstrumentAddress(Pass, I, &*IRB.GetInsertPoint(), InstrumentedAddress, Alignment,
-                        Granularity, ElemTypeSize, IsWrite, SizeArgument,
-                        UseCalls, Exp);
+    Value *InstrumentedAddress;
+    if (isa<VectorType>(Addr->getType())) {
+      assert(
+          cast<VectorType>(Addr->getType())->getElementType()->isPointerTy() &&
+          "Expected vector of pointer.");
+      InstrumentedAddress = IRB.CreateExtractElement(Addr, Index);
+    } else if (Stride) {
+      Index = IRB.CreateMul(Index, Stride);
+      Addr = IRB.CreateBitCast(Addr, Type::getInt8PtrTy(*C));
+      InstrumentedAddress = IRB.CreateGEP(Type::getInt8Ty(*C), Addr, {Index});
+    } else {
+      InstrumentedAddress = IRB.CreateGEP(VTy, Addr, {Zero, Index});
+    }
+    doInstrumentAddress(Pass, I, &*IRB.GetInsertPoint(),
+                        InstrumentedAddress, Alignment, Granularity,
+                        ElemTypeSize, IsWrite, SizeArgument, UseCalls, Exp);
   });
 }
 
@@ -1510,9 +1599,10 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
 
   unsigned Granularity = 1 << Mapping.Scale;
   if (O.MaybeMask) {
-    instrumentMaskedLoadOrStore(this, DL, IntptrTy, O.MaybeMask, O.getInsn(),
-                                Addr, O.Alignment, Granularity, O.OpType,
-                                O.IsWrite, nullptr, UseCalls, Exp);
+    instrumentMaskedLoadOrStore(this, DL, IntptrTy, O.MaybeMask, O.MaybeEVL,
+                                O.MaybeStride, O.getInsn(), Addr, O.Alignment,
+                                Granularity, O.OpType, O.IsWrite, nullptr,
+                                UseCalls, Exp);
   } else {
     doInstrumentAddress(this, O.getInsn(), O.getInsn(), Addr, O.Alignment,
                         Granularity, O.TypeStoreSize, O.IsWrite, nullptr, UseCalls,

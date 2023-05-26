@@ -130,8 +130,8 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
     // Otherwise, we dynamically compute the bound for
     // each iteration of the outer loop.
     newBounds.push_back(
-        b.create<AffineMinOp>(op.getLoc(), b.getIndexType(), minMap,
-                              ValueRange{newStep, upperBound, iv}));
+        b.create<affine::AffineMinOp>(op.getLoc(), b.getIndexType(), minMap,
+                                      ValueRange{newStep, upperBound, iv}));
   }
   auto innerLoop = b.create<ParallelOp>(
       op.getLoc(), SmallVector<Value, 2>(newBounds.size(), zero), newBounds,

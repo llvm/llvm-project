@@ -44,6 +44,7 @@ static_library("MCTargetDesc") {
   deps = [
     ":SystemZGenAsmWriter",
     ":SystemZGenMCCodeEmitter",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target/SystemZ/TargetInfo",

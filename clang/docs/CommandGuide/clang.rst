@@ -193,13 +193,21 @@ Language Selection and Mode Options
 
    ISO C++ 2020 with amendments and GNU extensions
 
-  | ``c++2b``
+  | ``c++23``
 
-   Working draft for ISO C++ 2023
+   ISO C++ 2023 with amendments
 
-  | ``gnu++2b``
+  | ``gnu++23``
 
-   Working draft for ISO C++ 2023 with GNU extensions
+   ISO C++ 2023 with amendments and GNU extensions
+
+  | ``c++2c``
+
+   Working draft for C++2c
+
+  | ``gnu++2c``
+
+   Working draft for C++2c with GNU extensions
 
  The default C++ language standard is ``gnu++17``.
 
@@ -293,7 +301,8 @@ Language Selection and Mode Options
 
 .. option:: -fmsc-version=
 
- Set _MSC_VER. Defaults to 1300 on Windows. Not set otherwise.
+ Set ``_MSC_VER``. When on Windows, this defaults to either the same value as
+ the currently installed version of cl.exe, or ``1920``. Not set otherwise.
 
 .. option:: -fborland-extensions
 

@@ -18,6 +18,7 @@
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
+#include <stdint.h> // uintptr_t
 
 static constexpr unsigned int NUM_THREADS = 5;
 static __llvm_libc::cpp::Atomic<unsigned int> thread_count;
@@ -27,7 +28,7 @@ static void pthread_once_func() { ++call_count; }
 
 static void *func(void *) {
   static pthread_once_t flag = PTHREAD_ONCE_INIT;
-  __llvm_libc::pthread_once(&flag, pthread_once_func);
+  ASSERT_EQ(__llvm_libc::pthread_once(&flag, pthread_once_func), 0);
 
   thread_count.fetch_add(1);
 

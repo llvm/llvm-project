@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(int, unlink, (const char *path)) {
 #elif defined(SYS_unlinkat)
   long ret = __llvm_libc::syscall_impl(SYS_unlinkat, AT_FDCWD, path, 0);
 #else
-#error "Unlink syscalls not available."
+#error "unlink and unlinkat syscalls not available."
 #endif
 
   if (ret < 0) {

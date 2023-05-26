@@ -81,8 +81,8 @@ public:
   bool IsEnabled(common::LanguageFeature feature) const {
     return languageFeatures_.IsEnabled(feature);
   }
-  bool ShouldWarn(common::LanguageFeature feature) const {
-    return languageFeatures_.ShouldWarn(feature);
+  template <typename A> bool ShouldWarn(A x) const {
+    return languageFeatures_.ShouldWarn(x);
   }
   const std::optional<parser::CharBlock> &location() const { return location_; }
   const std::vector<std::string> &searchDirectories() const {
@@ -93,7 +93,6 @@ public:
   }
   const std::string &moduleDirectory() const { return moduleDirectory_; }
   const std::string &moduleFileSuffix() const { return moduleFileSuffix_; }
-  bool warnOnNonstandardUsage() const { return warnOnNonstandardUsage_; }
   bool warningsAreErrors() const { return warningsAreErrors_; }
   bool debugModuleWriter() const { return debugModuleWriter_; }
   const evaluate::IntrinsicProcTable &intrinsics() const { return intrinsics_; }
@@ -216,7 +215,9 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
+  void UsePPCFortranBuiltinTypesModule();
   void UsePPCFortranBuiltinsModule();
+  Scope *GetPPCBuiltinTypesScope() { return ppcBuiltinTypesScope_; }
   const Scope *GetPPCBuiltinsScope() const { return ppcBuiltinsScope_; }
 
   // Saves a module file's parse tree so that it remains available
@@ -279,6 +280,7 @@ private:
   UnorderedSymbolSet errorSymbols_;
   std::set<std::string> tempNames_;
   const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
+  Scope *ppcBuiltinTypesScope_{nullptr}; // module __Fortran_PPC_types
   const Scope *ppcBuiltinsScope_{nullptr}; // module __Fortran_PPC_intrinsics
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;

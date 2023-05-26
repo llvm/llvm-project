@@ -76,7 +76,7 @@ void e(void) __attribute__((availability(tvos, unavailable)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {
@@ -150,7 +150,7 @@ void e(void) __attribute__((availability(tvos, unavailable)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {
@@ -234,7 +234,7 @@ void e(void) __attribute__((availability(tvos, unavailable)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {
@@ -334,7 +334,7 @@ void e(void) __attribute__((availability(tvos, unavailable)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {
@@ -416,7 +416,7 @@ void e(void) __attribute__((availability(tvos, unavailable)));
         },
         {
           "kind": "text",
-          "spelling": "()"
+          "spelling": "();"
         }
       ],
       "functionSignature": {

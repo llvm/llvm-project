@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidConstParamsInDecls.h"
+#include "AvoidUnconditionalPreprocessorIfCheck.h"
 #include "BracesAroundStatementsCheck.h"
 #include "ConstReturnTypeCheck.h"
 #include "ContainerContainsCheck.h"
@@ -32,6 +33,7 @@
 #include "MisplacedArrayIndexCheck.h"
 #include "NamedParameterCheck.h"
 #include "NonConstParameterCheck.h"
+#include "OperatorsRepresentationCheck.h"
 #include "QualifiedAutoCheck.h"
 #include "RedundantAccessSpecifiersCheck.h"
 #include "RedundantControlFlowCheck.h"
@@ -60,6 +62,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidConstParamsInDecls>(
         "readability-avoid-const-params-in-decls");
+    CheckFactories.registerCheck<AvoidUnconditionalPreprocessorIfCheck>(
+        "readability-avoid-unconditional-preprocessor-if");
     CheckFactories.registerCheck<BracesAroundStatementsCheck>(
         "readability-braces-around-statements");
     CheckFactories.registerCheck<ConstReturnTypeCheck>(
@@ -100,6 +104,8 @@ public:
         "readability-misleading-indentation");
     CheckFactories.registerCheck<MisplacedArrayIndexCheck>(
         "readability-misplaced-array-index");
+    CheckFactories.registerCheck<OperatorsRepresentationCheck>(
+        "readability-operators-representation");
     CheckFactories.registerCheck<QualifiedAutoCheck>(
         "readability-qualified-auto");
     CheckFactories.registerCheck<RedundantAccessSpecifiersCheck>(

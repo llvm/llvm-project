@@ -1,4 +1,4 @@
-//===-- RISCV.h - Top-level interface for RISCV -----------------*- C++ -*-===//
+//===-- RISCV.h - Top-level interface for RISC-V ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,11 +47,8 @@ void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
 FunctionPass *createRISCVGatherScatterLoweringPass();
 void initializeRISCVGatherScatterLoweringPass(PassRegistry &);
 
-FunctionPass *createRISCVSExtWRemovalPass();
-void initializeRISCVSExtWRemovalPass(PassRegistry &);
-
-FunctionPass *createRISCVStripWSuffixPass();
-void initializeRISCVStripWSuffixPass(PassRegistry &);
+FunctionPass *createRISCVOptWInstrsPass();
+void initializeRISCVOptWInstrsPass(PassRegistry &);
 
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);

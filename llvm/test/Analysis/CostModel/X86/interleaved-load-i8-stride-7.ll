@@ -15,14 +15,14 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i8, ptr %in0, align 1
-; SSE2:  LV: Found an estimated cost of 56 for VF 2 For instruction: %v0 = load i8, ptr %in0, align 1
+; SSE2:  LV: Found an estimated cost of 57 for VF 2 For instruction: %v0 = load i8, ptr %in0, align 1
 ; SSE2:  LV: Found an estimated cost of 110 for VF 4 For instruction: %v0 = load i8, ptr %in0, align 1
 ; SSE2:  LV: Found an estimated cost of 217 for VF 8 For instruction: %v0 = load i8, ptr %in0, align 1
 ; SSE2:  LV: Found an estimated cost of 441 for VF 16 For instruction: %v0 = load i8, ptr %in0, align 1
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i8, ptr %in0, align 1
-; AVX1:  LV: Found an estimated cost of 33 for VF 2 For instruction: %v0 = load i8, ptr %in0, align 1
+; AVX1:  LV: Found an estimated cost of 34 for VF 2 For instruction: %v0 = load i8, ptr %in0, align 1
 ; AVX1:  LV: Found an estimated cost of 62 for VF 4 For instruction: %v0 = load i8, ptr %in0, align 1
 ; AVX1:  LV: Found an estimated cost of 118 for VF 8 For instruction: %v0 = load i8, ptr %in0, align 1
 ; AVX1:  LV: Found an estimated cost of 231 for VF 16 For instruction: %v0 = load i8, ptr %in0, align 1
@@ -38,7 +38,7 @@ define void @test() {
 ;
 ; AVX512DQ-LABEL: 'test'
 ; AVX512DQ:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i8, ptr %in0, align 1
-; AVX512DQ:  LV: Found an estimated cost of 33 for VF 2 For instruction: %v0 = load i8, ptr %in0, align 1
+; AVX512DQ:  LV: Found an estimated cost of 34 for VF 2 For instruction: %v0 = load i8, ptr %in0, align 1
 ; AVX512DQ:  LV: Found an estimated cost of 62 for VF 4 For instruction: %v0 = load i8, ptr %in0, align 1
 ; AVX512DQ:  LV: Found an estimated cost of 120 for VF 8 For instruction: %v0 = load i8, ptr %in0, align 1
 ; AVX512DQ:  LV: Found an estimated cost of 233 for VF 16 For instruction: %v0 = load i8, ptr %in0, align 1

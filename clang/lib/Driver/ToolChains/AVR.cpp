@@ -506,6 +506,12 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     D.Diag(diag::warn_drv_avr_linker_section_addresses_not_implemented) << CPU;
   }
 
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+                  D.getLTOMode() == LTOK_Thin);
+  }
+
   // If the family name is known, we can link with the device-specific libgcc.
   // Without it, libgcc will simply not be linked. This matches avr-gcc
   // behavior.

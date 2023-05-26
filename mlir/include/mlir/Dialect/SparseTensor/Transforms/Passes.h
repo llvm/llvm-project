@@ -49,12 +49,17 @@ enum class SparseParallelizationStrategy {
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
-  SparsificationOptions(SparseParallelizationStrategy p, bool idxReduc)
-      : parallelizationStrategy(p), enableIndexReduction(idxReduc) {}
+  SparsificationOptions(SparseParallelizationStrategy p, bool idxReduc,
+                        bool gpuLibgen, bool enableRT)
+      : parallelizationStrategy(p), enableIndexReduction(idxReduc),
+        enableGPULibgen(gpuLibgen), enableRuntimeLibrary(enableRT) {}
   SparsificationOptions()
-      : SparsificationOptions(SparseParallelizationStrategy::kNone, false) {}
+      : SparsificationOptions(SparseParallelizationStrategy::kNone, false,
+                              false, true) {}
   SparseParallelizationStrategy parallelizationStrategy;
   bool enableIndexReduction;
+  bool enableGPULibgen;
+  bool enableRuntimeLibrary;
 };
 
 /// Sets up sparsification rewriting rules with the given options.
@@ -132,11 +137,13 @@ public:
 /// Sets up sparse tensor conversion rules.
 void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
                                          RewritePatternSet &patterns,
+                                         bool createSparseDeallocs,
                                          bool enableBufferInitialization);
 
 std::unique_ptr<Pass> createSparseTensorCodegenPass();
 std::unique_ptr<Pass>
-createSparseTensorCodegenPass(bool enableBufferInitialization);
+createSparseTensorCodegenPass(bool createSparseDeallocs,
+                              bool enableBufferInitialization);
 
 //===----------------------------------------------------------------------===//
 // The PreSparsificationRewriting pass.
@@ -180,8 +187,9 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     const bufferization::OneShotBufferizationOptions &bufferizationOptions,
     const SparsificationOptions &sparsificationOptions,
     const SparseTensorConversionOptions &sparseTensorConversionOptions,
-    bool enableRuntimeLibrary, bool enableBufferInitialization,
-    unsigned vectorLength, bool enableVLAVectorization, bool enableSIMDIndex32);
+    bool createSparseDeallocs, bool enableRuntimeLibrary,
+    bool enableBufferInitialization, unsigned vectorLength,
+    bool enableVLAVectorization, bool enableSIMDIndex32);
 
 void populateSparseBufferRewriting(RewritePatternSet &patterns,
                                    bool enableBufferInitialization);
@@ -199,6 +207,15 @@ std::unique_ptr<Pass> createSparseVectorizationPass();
 std::unique_ptr<Pass> createSparseVectorizationPass(unsigned vectorLength,
                                                     bool enableVLAVectorization,
                                                     bool enableSIMDIndex32);
+
+void populateSparseGPUCodegenPatterns(RewritePatternSet &patterns,
+                                      unsigned numThreads);
+
+void populateSparseGPULibgenPatterns(RewritePatternSet &patterns,
+                                     bool enableRT);
+
+std::unique_ptr<Pass> createSparseGPUCodegenPass();
+std::unique_ptr<Pass> createSparseGPUCodegenPass(unsigned numThreads);
 
 //===----------------------------------------------------------------------===//
 // Registration.

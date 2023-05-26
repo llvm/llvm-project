@@ -393,6 +393,13 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     }
   }
 
+  if (Args.hasArg(options::OPT_mkernel) ||
+      Args.hasArg(options::OPT_fapple_kext) ||
+      Args.hasArg(options::OPT_ffreestanding)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-disable-atexit-based-global-dtor-lowering");
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_prebind);
   Args.AddLastArg(CmdArgs, options::OPT_noprebind);
   Args.AddLastArg(CmdArgs, options::OPT_nofixprebinding);
@@ -2475,17 +2482,6 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
     switch (arch) {
     default: break;
 
-    case llvm::Triple::ppc:
-    case llvm::Triple::ppc64:
-      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
-                                                "4.2.1",
-                                                "powerpc-apple-darwin10",
-                                                arch == llvm::Triple::ppc64 ? "ppc64" : "");
-      IsBaseFound |= AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
-                                                "4.0.0", "powerpc-apple-darwin10",
-                                                 arch == llvm::Triple::ppc64 ? "ppc64" : "");
-      break;
-
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
@@ -2945,8 +2941,10 @@ ToolChain::UnwindTableLevel MachO::getDefaultUnwindTableLevel(const ArgList &Arg
       (GetExceptionModel(Args) != llvm::ExceptionHandling::SjLj &&
        Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
                     true)))
-    return getArch() == llvm::Triple::aarch64 ? UnwindTableLevel::Synchronous
-                                              : UnwindTableLevel::Asynchronous;
+    return (getArch() == llvm::Triple::aarch64 ||
+            getArch() == llvm::Triple::aarch64_32)
+               ? UnwindTableLevel::Synchronous
+               : UnwindTableLevel::Asynchronous;
 
   return UnwindTableLevel::None;
 }
@@ -3273,7 +3271,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
-  Res |= SanitizerKind::Function;
   Res |= SanitizerKind::ObjCCast;
 
   // Prior to 10.9, macOS shipped a version of the C++ standard library without

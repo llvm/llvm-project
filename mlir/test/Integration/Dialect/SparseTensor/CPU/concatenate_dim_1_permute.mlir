@@ -18,7 +18,7 @@
 // Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
 // REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli \
+// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
 // REDEFINE:   --entry-function=entry_lli \
 // REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
 // REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
@@ -26,26 +26,26 @@
 // REDEFINE: FileCheck %s
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
-#MAT_C_C = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
-#MAT_D_C = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
-#MAT_C_D = #sparse_tensor.encoding<{dimLevelType = ["compressed", "dense"]}>
+#MAT_C_C = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#MAT_D_C = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#MAT_C_D = #sparse_tensor.encoding<{lvlTypes = ["compressed", "dense"]}>
 #MAT_D_D = #sparse_tensor.encoding<{
-  dimLevelType = ["dense", "dense"],
+  lvlTypes = ["dense", "dense"],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
 #MAT_C_C_P = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ],
+  lvlTypes = [ "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
 #MAT_C_D_P = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "dense" ],
+  lvlTypes = [ "compressed", "dense" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
 #MAT_D_C_P = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
+  lvlTypes = [ "dense", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 

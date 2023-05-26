@@ -7,6 +7,9 @@ lldb. As such it is important that they not suffer from the binary
 incompatibilities that C++ is so susceptible to. We've established a few rules
 to ensure that this happens.
 
+Extending the SB API
+--------------------
+
 The classes in the SB API's are all called SB<SomeName>, where SomeName is in
 CamelCase starting with an upper case letter. The method names are all
 CamelCase with initial capital letter as well.
@@ -45,14 +48,38 @@ classes to report whether the object is empty or not.
 
 Another piece of the SB API infrastructure is the Python (or other script
 interpreter) customization. SWIG allows you to add property access, iterators
-and documentation to classes, but to do that you have to use a Swig interface
-file in place of the .h file. Those files have a different format than a
-straight C++ header file. These files are called SB<ClassName>.i, and live in
-"scripts/interface". They are constructed by starting with the associated .h
-file, and adding documentation and the Python decorations, etc. We do this in a
-decidedly low-tech way, by maintaining the two files in parallel. That
-simplifies the build process, but it does mean that if you add a method to the
-C++ API's for an SB class, you have to copy the interface to the .i file.
+and documentation to classes. We place the property accessors and iterators in
+a file dedicated to extensions to existing SB classes at
+"bindings/interface/SB<ClassName>Extensions.i". The documentation is similarly
+located at "bindings/interface/SB<ClassName>Docstrings.i". These two files, in
+addition to the actual header SB<ClassName>.h, forms the interface that lldb
+exposes to users through the scripting languages.
+
+There are some situations where you may want to add functionality to the SB API
+only for use in C++. To prevent SWIG from generating bindings to these
+functions, you can use a C macro guard, like so:
+
+::
+
+  #ifndef SWIG
+  int GetResourceCPPOnly() const;
+  #endif
+
+In this case, ``GetResourceCPPOnly`` will not be generated for Python or other
+scripting languages. If you wanted to add a resource specifically only for the
+SWIG case, you can invert the condition and use ``#ifdef SWIG`` instead. When
+building the LLDB framework for macOS, the headers are processed with
+``unifdef`` prior to being copied into the framework bundle to remove macros
+involving SWIG.
+
+Lifetime
+--------
+Many SB API methods will return strings in the form of ``const char *`` values.
+Once created, these strings are guaranteed to live until the end of the
+debugging session. LLDB owns these strings, clients should not attempt to free
+them. Doing so may cause LLDB to crash.
+Note that this only affects the C++ API as scripting languages usually
+will usually create native string types from the ``const char *`` value.
 
 API Instrumentation
 -------------------

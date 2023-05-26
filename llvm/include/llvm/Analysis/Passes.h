@@ -48,13 +48,6 @@ namespace llvm {
 
   //===--------------------------------------------------------------------===//
   //
-  // createLegacyDivergenceAnalysisPass - This pass determines which branches in a GPU
-  // program are divergent.
-  //
-  FunctionPass *createLegacyDivergenceAnalysisPass();
-
-  //===--------------------------------------------------------------------===//
-  //
   // Minor pass prototypes, allowing us to expose them through bugpoint and
   // analyze.
   FunctionPass *createInstCountPass();

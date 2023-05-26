@@ -191,7 +191,7 @@ cc_library(
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
-        "@bazel_tools//src/conditions:windows": glob([
+        "@platforms//os:windows": glob([
             "lib/Support/Windows/*.h",
             "lib/Support/Windows/*.inc",
         ]),
@@ -200,9 +200,9 @@ cc_library(
             "lib/Support/Unix/*.inc",
         ]),
     }) + [
-        "lib/Support/BLAKE3/blake3_impl.h",
         "lib/Support/BLAKE3/blake3.c",
         "lib/Support/BLAKE3/blake3_dispatch.c",
+        "lib/Support/BLAKE3/blake3_impl.h",
         "lib/Support/BLAKE3/blake3_portable.c",
         "lib/Support/BLAKE3/llvm_blake3_prefix.h",
     ] + select({
@@ -210,10 +210,10 @@ cc_library(
             "lib/Support/BLAKE3/blake3_neon.c",
         ],
         "@platforms//cpu:x86_64": [
-            "lib/Support/BLAKE3/blake3_sse2_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_sse41_x86-64_unix.S",
             "lib/Support/BLAKE3/blake3_avx2_x86-64_unix.S",
             "lib/Support/BLAKE3/blake3_avx512_x86-64_unix.S",
+            "lib/Support/BLAKE3/blake3_sse2_x86-64_unix.S",
+            "lib/Support/BLAKE3/blake3_sse41_x86-64_unix.S",
         ],
         "//conditions:default": [
         ],
@@ -255,8 +255,8 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:freebsd": [
+        "@platforms//os:windows": [],
+        "@platforms//os:freebsd": [
             "-pthread",
             "-lexecinfo",
             "-ldl",
@@ -274,15 +274,14 @@ cc_library(
     deps = [
         ":config",
         ":Demangle",
-        # We unconditionally depend on the custom LLVM terminfo wrapper. This
-        # will be an empty library unless terminfo is enabled, in which case it
-        # will both provide the necessary dependencies and configuration
-        # defines.
-        "@llvm_terminfo//:terminfo",
         # We unconditionally depend on the custom LLVM zlib wrapper. This will
         # be an empty library unless zlib is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
         "@llvm_zlib//:zlib",
+        # We unconditionally depend on the custom LLVM zstd wrapper. This will
+        # be an empty library unless zstd is enabled, in which case it will
+        # both provide the necessary dependencies and configuration defines.
+        "@llvm_zstd//:zstd",
     ],
 )
 
@@ -353,9 +352,9 @@ cc_library(
             "include/llvm/LinkAllPasses.h",
         ],
     ) + [
-        "include/llvm/IR/Value.def",
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
+        "include/llvm/IR/Value.def",
     ],
     copts = llvm_copts,
 )
@@ -568,34 +567,24 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "tblgen",
-    alwayslink = True,
-    srcs = glob([
-        "utils/TableGen/*.cpp",
-        "utils/TableGen/*.inc",
-        "utils/TableGen/GlobalISel/*.cpp",
+cc_binary(
+    name = "llvm-min-tblgen",
+    srcs = [
+        "utils/TableGen/Attributes.cpp",
+        "utils/TableGen/CodeGenIntrinsics.cpp",
+        "utils/TableGen/DirectiveEmitter.cpp",
+        "utils/TableGen/IntrinsicEmitter.cpp",
+        "utils/TableGen/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/SDNodeProperties.cpp",
+        "utils/TableGen/TableGen.cpp",
+        "utils/TableGen/VTEmitter.cpp",
 
-        # Some tablegen sources include headers from MC, so these have to be
-        # listed here. MC uses headers produced by tablegen, so it cannot be a
-        # regular dependency.
-        "include/llvm/MC/*.h",
-
-        # We have to include these headers here as well as in the `hdrs` below
-        # to allow the `.cpp` files to use file-relative-inclusion to find
-        # them, even though consumers of this library use inclusion relative to
-        # `utils/TableGen` with the `strip_includes_prefix` of this library.
-        # This mixture appears to be incompatible with header modules.
-        "utils/TableGen/*.h",
-        "utils/TableGen/GlobalISel/*.h",
-    ]),
-    hdrs = glob([
-        "utils/TableGen/*.h",
-        "utils/TableGen/GlobalISel/*.h",
-    ]),
+        "utils/TableGen/CodeGenIntrinsics.h",
+        "utils/TableGen/SDNodeProperties.h",
+        "utils/TableGen/SequenceToOffsetTable.h",
+    ],
     copts = llvm_copts,
-    features = ["-header_modules"],
-    strip_include_prefix = "utils/TableGen",
+    stamp = 0,
     deps = [
         ":Support",
         ":TableGen",
@@ -603,19 +592,65 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "TableGenGlobalISel",
+    srcs = glob([
+        "utils/TableGen/GlobalISel/*.cpp",
+    ]) + [
+        "utils/TableGen/CodeGenInstruction.h",
+    ],
+    hdrs = glob([
+        # We have to include these headers here as well as in the `hdrs` below
+        # to allow the `.cpp` files to use file-relative-inclusion to find
+        # them, even though consumers of this library use inclusion relative to
+        # `utils/TableGen` with the `strip_includes_prefix` of this library.
+        # This mixture appears to be incompatible with header modules.
+        "utils/TableGen/GlobalISel/*.h",
+    ]),
+    copts = llvm_copts,
+    features = ["-header_modules"],
+    strip_include_prefix = "utils/TableGen",
+    deps = [
+        ":CodeGenTypes",
+        ":Support",
+        ":TableGen",
+        ":config",
+    ],
+)
+
+cc_library(
+    name = "llvm-tblgen-headers",
+    textual_hdrs = glob(["utils/TableGen/*.def"]),
+)
+
 cc_binary(
     name = "llvm-tblgen",
+    srcs = glob([
+        "utils/TableGen/*.cpp",
+        "utils/TableGen/*.inc",
+        "utils/TableGen/*.h",
+
+        # Some tablegen sources include headers from MC, so these have to be
+        # listed here. MC uses headers produced by tablegen, so it cannot be a
+        # regular dependency.
+        "include/llvm/MC/*.h",
+    ]),
     copts = llvm_copts,
     stamp = 0,
     deps = [
-        ":tblgen",
+        ":CodeGenTypes",
+        ":Support",
+        ":TableGen",
+        ":TableGenGlobalISel",
+        ":config",
+        ":llvm-tblgen-headers",
     ],
 )
 
 gentbl(
     name = "intrinsic_enums_gen",
     tbl_outs = [("-gen-intrinsic-enums", "include/llvm/IR/IntrinsicEnums.inc")],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
     td_srcs = glob([
         "include/llvm/CodeGen/*.td",
@@ -626,12 +661,22 @@ gentbl(
 gentbl(
     name = "intrinsics_impl_gen",
     tbl_outs = [("-gen-intrinsic-impl", "include/llvm/IR/IntrinsicImpl.inc")],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
     td_srcs = glob([
         "include/llvm/CodeGen/*.td",
         "include/llvm/IR/Intrinsics*.td",
     ]),
+)
+
+gentbl(
+    name = "vt_gen",
+    tbl_outs = [("-gen-vt", "include/llvm/CodeGen/GenVT.inc")],
+    tblgen = ":llvm-min-tblgen",
+    td_file = "include/llvm/CodeGen/ValueTypes.td",
+    td_srcs = [
+        "include/llvm/CodeGen/ValueTypes.td",
+    ],
 )
 
 # Note that the intrinsics are not currently set up so they can be pruned for
@@ -714,7 +759,7 @@ llvm_target_intrinsics_list = [
             "-gen-intrinsic-enums -intrinsic-prefix=" + target["intrinsic_prefix"],
             "include/llvm/IR/Intrinsics" + target["name"] + ".h",
         )],
-        tblgen = ":llvm-tblgen",
+        tblgen = ":llvm-min-tblgen",
         td_file = "include/llvm/IR/Intrinsics.td",
         td_srcs = glob([
             "include/llvm/CodeGen/*.td",
@@ -726,7 +771,7 @@ llvm_target_intrinsics_list = [
 gentbl(
     name = "attributes_gen",
     tbl_outs = [("-gen-attrs", "include/llvm/IR/Attributes.inc")],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Attributes.td",
     td_srcs = ["include/llvm/IR/Attributes.td"],
 )
@@ -1025,7 +1070,6 @@ cc_library(
         ],
     ) + [
         "include/llvm-c/Analysis.h",
-        "include/llvm-c/Initialization.h",
     ],
     copts = llvm_copts,
     textual_hdrs = glob([
@@ -1096,7 +1140,7 @@ cc_library(
 gentbl(
     name = "RISCVTargetParserDefGen",
     tbl_outs = [("-gen-riscv-target-def", "include/llvm/TargetParser/RISCVTargetParserDef.inc")],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "lib/Target/RISCV/RISCV.td",
     td_srcs = [
         ":common_target_td_sources",
@@ -1111,7 +1155,7 @@ cc_library(
         "lib/TargetParser/*.cpp",
         "lib/TargetParser/*.h",
     ]) + select({
-        "@bazel_tools//src/conditions:windows": glob([
+        "@platforms//os:windows": glob([
             "lib/TargetParser/Windows/*.h",
             "lib/TargetParser/Windows/*.inc",
         ]),
@@ -1205,7 +1249,6 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
-        ":InstCombineTableGen",
         ":Support",
         ":Target",
         ":TransformUtils",
@@ -1322,6 +1365,20 @@ cc_library(
 )
 
 cc_library(
+    name = "FrontendDebug",
+    srcs = glob([
+        "lib/Frontend/Debug/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/Frontend/Debug/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "FrontendHLSL",
     srcs = glob([
         "lib/Frontend/HLSL/*.cpp",
@@ -1350,7 +1407,7 @@ gentbl(
     tbl_outs = [
         ("--gen-directive-decl", "include/llvm/Frontend/OpenMP/OMP.h.inc"),
     ],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenMP/OMP.td",
     td_srcs = [":omp_td_files"],
 )
@@ -1361,7 +1418,7 @@ gentbl(
     tbl_outs = [
         ("--gen-directive-impl", "include/llvm/Frontend/OpenMP/OMP.inc"),
     ],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenMP/OMP.td",
     td_srcs = [":omp_td_files"],
 )
@@ -1385,6 +1442,7 @@ cc_library(
     ]),
     deps = [
         ":Analysis",
+        ":BitReader",
         ":Core",
         ":MC",
         ":Scalar",
@@ -1409,7 +1467,7 @@ gentbl(
     tbl_outs = [
         ("--gen-directive-decl", "include/llvm/Frontend/OpenACC/ACC.h.inc"),
     ],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenACC/ACC.td",
     td_srcs = [":acc_td_files"],
 )
@@ -1420,7 +1478,7 @@ gentbl(
     tbl_outs = [
         ("--gen-directive-impl", "include/llvm/Frontend/OpenACC/ACC.inc"),
     ],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenACC/ACC.td",
     td_srcs = [":acc_td_files"],
 )
@@ -1616,6 +1674,22 @@ cc_library(
 )
 
 cc_library(
+    name = "CodeGenTypes",
+    srcs = [
+        "lib/CodeGen/LowLevelType.cpp",
+    ],
+    hdrs = [
+        "include/llvm/CodeGen/LowLevelType.h",
+        "include/llvm/CodeGen/MachineValueType.h",
+    ],
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+        ":vt_gen",
+    ],
+)
+
+cc_library(
     name = "CodeGen",
     srcs = glob(
         [
@@ -1623,6 +1697,9 @@ cc_library(
             "lib/CodeGen/**/*.h",
             "lib/CodeGen/SelectionDAG/*.cpp",
             "lib/CodeGen/SelectionDAG/*.h",
+        ],
+        exclude = [
+            "lib/CodeGen/LowLevelType.cpp",
         ],
     ),
     hdrs = [
@@ -1644,6 +1721,7 @@ cc_library(
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",
+        ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
@@ -1652,6 +1730,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":MCParser",
+        ":Object",
         ":ProfileData",
         ":Remarks",
         ":Scalar",
@@ -1661,6 +1740,7 @@ cc_library(
         ":TransformUtils",
         ":asm_printer_defs",
         ":config",
+        ":vt_gen",
     ],
 )
 
@@ -1750,6 +1830,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-searchable-tables", "lib/Target/AMDGPU/AMDGPUGenSearchableTables.inc"),
         ],
         "tbl_deps": [
+            ":InstCombineTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -1991,6 +2072,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-global-isel", "lib/Target/X86/X86GenGlobalISel.inc"),
             ("-gen-callingconv", "lib/Target/X86/X86GenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
+            ("-gen-x86-fold-tables -asmwriternum=1", "lib/Target/X86/X86GenFoldTables.inc"),
             ("-gen-x86-EVEX2VEX-tables", "lib/Target/X86/X86GenEVEX2VEXTables.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
             ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
@@ -2077,7 +2159,7 @@ gentbl(
         # MSVC isn't happy with long string literals, while other compilers
         # which support them get significant compile time improvements with
         # them enabled. Ideally this flag would only be enabled on Windows via
-        # a select() on `@bazel_tools//src/conditions:windows,`, but that would
+        # a select() on `@platforms//os:windows,`, but that would
         # require refactoring gentbl from a macro into a rule.
         # TODO(#92): Refactor gentbl to support this use
         tblgen_args = "--long-string-literals=0",
@@ -2146,6 +2228,7 @@ gentbl(
             # distinction between these two.
             "lib/Target/" + target["name"] + "/*.def",
             "lib/Target/" + target["name"] + "/*.inc",
+            "lib/Target/" + target["name"] + "/MCTargetDesc/*.def",
         ]),
         copts = llvm_copts,
         features = [
@@ -2159,6 +2242,7 @@ gentbl(
             # Depending on `:CodeGen` headers in this library is almost
             # certainly a layering problem in numerous targets.
             ":CodeGen",
+            ":CodeGenTypes",
             ":DebugInfoCodeView",
             ":MC",
             ":MCDisassembler",
@@ -2191,6 +2275,7 @@ gentbl(
             ":BinaryFormat",
             ":CFGuard",
             ":CodeGen",
+            ":CodeGenTypes",
             ":Core",
             ":IPO",
             ":MC",
@@ -2216,6 +2301,7 @@ gentbl(
         copts = llvm_copts,
         deps = [
             ":BinaryFormat",
+            ":CodeGenTypes",
             ":MC",
             ":MCParser",
             ":Support",
@@ -2261,7 +2347,7 @@ gentbl(
         copts = llvm_copts,
         features = ["-layering_check"],
         deps = [
-            ":CodeGen",
+            ":CodeGenTypes",
             ":Core",
             ":MC",
             ":MCDisassembler",
@@ -2283,6 +2369,7 @@ gentbl(
         copts = llvm_copts,
         features = ["-layering_check"],
         deps = [
+            ":CodeGenTypes",
             ":MC",
             ":MCA",
             ":MCParser",
@@ -2402,6 +2489,7 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":CodeGen",
+        ":CodeGenTypes",
         ":Core",
         ":IPO",
         ":IRPrinter",
@@ -2552,9 +2640,10 @@ cc_library(
     ],
     copts = llvm_copts,
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:freebsd": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:android": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:freebsd": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-lrt",
         ],
@@ -2617,9 +2706,10 @@ cc_library(
     ]),
     copts = llvm_copts,
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:freebsd": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:android": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:freebsd": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-lrt",
         ],
@@ -2652,6 +2742,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":CodeGen",
+        ":CodeGenTypes",
         ":DebugInfoDWARF",
         ":MC",
         ":Support",
@@ -2878,6 +2969,7 @@ cc_library(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":CodeGen",
+        ":CodeGenTypes",
         ":Core",
         ":ExecutionEngine",
         ":MC",
@@ -2929,6 +3021,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":BinaryFormat",
         ":CodeGen",
+        ":CodeGenTypes",
         ":DWARFLinker",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -2960,6 +3053,7 @@ cc_binary(
         ":AsmParser",
         ":BitReader",
         ":CodeGen",
+        ":CodeGenTypes",
         ":Core",
         ":IRPrinter",
         ":IRReader",
@@ -2982,8 +3076,8 @@ cc_binary(
     # ll scripts rely on symbols from dependent
     # libraries being resolvable.
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-Wl,--undefined=_ZTIi",
             "-Wl,--export-dynamic-symbol=_ZTIi",
@@ -3349,6 +3443,7 @@ cc_binary(
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
+        ":CodeGenTypes",
         ":DWARFLinker",
         ":DebugInfoDWARF",
         ":DwarfutilOptionsTableGen",
@@ -3389,6 +3484,7 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":CodeGenTypes",
         ":Exegesis",
         ":MC",
         ":MCParser",
@@ -3420,12 +3516,33 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "GSYMUtilOptionsTableGen",
+    strip_include_prefix = "tools/llvm-gsymutil",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-gsymutil/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-gsymutil/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
+expand_template(
+    name = "gsymutil_main",
+    out = "llvm-gsymutil-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "llvm_gsymutil",
+    },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
+)
+
 cc_binary(
     name = "llvm-gsymutil",
     srcs = glob([
         "tools/llvm-gsymutil/*.cpp",
         "tools/llvm-gsymutil/*.h",
-    ]),
+    ]) + ["llvm-gsymutil-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -3433,8 +3550,10 @@ cc_binary(
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":DebugInfoGSYM",
+        ":GSYMUtilOptionsTableGen",
         ":MC",
         ":Object",
+        ":Option",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -3491,8 +3610,8 @@ cc_binary(
     copts = llvm_copts,
     # Make symbols from the standard library dynamically resolvable.
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-Wl,--undefined=_ZTIi",
             "-Wl,--export-dynamic-symbol=_ZTIi",
@@ -4153,6 +4272,7 @@ cc_binary(
         ":Support",
         ":TargetParser",
         ":WindresTableGen",
+        ":config",
         ":llvm-rc-defs-lib",
     ],
 )
@@ -4228,6 +4348,7 @@ cc_binary(
         ":BitReader",
         ":BitWriter",
         ":CodeGen",
+        ":CodeGenTypes",
         ":Core",
         ":IPO",
         ":IRReader",
@@ -4440,8 +4561,8 @@ cc_binary(
     ]),
     copts = llvm_copts,
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:macos": [],
         "//conditions:default": ["-Wl,--export-dynamic"],
     }),
     stamp = 0,
@@ -4670,8 +4791,8 @@ cc_binary(
     # isn't even used in the main binary, so we also need to force it
     # to be included.
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-rdynamic",
             "-u_ZTIi",

@@ -320,6 +320,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
+    case tok::annot_repl_input_end:
       // Stop before we change submodules. They generally indicate a "good"
       // place to pick up parsing again (except in the special case where
       // we're trying to skip to EOF).
@@ -614,11 +615,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
                                Sema::ModuleImportState &ImportState) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
 
-  // Skip over the EOF token, flagging end of previous input for incremental
-  // processing
-  if (PP.isIncrementalProcessingEnabled() && Tok.is(tok::eof))
-    ConsumeToken();
-
   Result = nullptr;
   switch (Tok.getKind()) {
   case tok::annot_pragma_unused:
@@ -697,6 +693,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     return false;
 
   case tok::eof:
+  case tok::annot_repl_input_end:
     // Check whether -fmax-tokens= was reached.
     if (PP.getMaxTokens() != 0 && PP.getTokenCount() > PP.getMaxTokens()) {
       PP.Diag(Tok.getLocation(), diag::warn_max_tokens_total)
@@ -1883,31 +1880,25 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
       return ANK_TemplateName;
     }
     [[fallthrough]];
+  case Sema::NC_Concept:
   case Sema::NC_VarTemplate:
   case Sema::NC_FunctionTemplate:
   case Sema::NC_UndeclaredTemplate: {
-    // We have a type, variable or function template followed by '<'.
-    ConsumeToken();
-    UnqualifiedId Id;
-    Id.setIdentifier(Name, NameLoc);
-    if (AnnotateTemplateIdToken(
-            TemplateTy::make(Classification.getTemplateName()),
-            Classification.getTemplateNameKind(), SS, SourceLocation(), Id))
-      return ANK_Error;
-    return ANK_Success;
-  }
-  case Sema::NC_Concept: {
-    UnqualifiedId Id;
-    Id.setIdentifier(Name, NameLoc);
+    bool IsConceptName = Classification.getKind() == Sema::NC_Concept;
+    // We have a template name followed by '<'. Consume the identifier token so
+    // we reach the '<' and annotate it.
     if (Next.is(tok::less))
-      // We have a concept name followed by '<'. Consume the identifier token so
-      // we reach the '<' and annotate it.
       ConsumeToken();
+    UnqualifiedId Id;
+    Id.setIdentifier(Name, NameLoc);
     if (AnnotateTemplateIdToken(
             TemplateTy::make(Classification.getTemplateName()),
             Classification.getTemplateNameKind(), SS, SourceLocation(), Id,
-            /*AllowTypeAnnotation=*/false, /*TypeConstraint=*/true))
+            /*AllowTypeAnnotation=*/!IsConceptName,
+            /*TypeConstraint=*/IsConceptName))
       return ANK_Error;
+    if (SS.isNotEmpty())
+      AnnotateScopeToken(SS, !WasScopeAnnotation);
     return ANK_Success;
   }
   }
@@ -1956,7 +1947,7 @@ bool Parser::TryAnnotateTypeOrScopeToken(
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
-          Tok.is(tok::kw___super)) &&
+          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto)) &&
          "Cannot be a type or scope token!");
 
   if (Tok.is(tok::kw_typename)) {

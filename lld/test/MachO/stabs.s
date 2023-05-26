@@ -42,6 +42,11 @@
 # RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
 # RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
 # RUN:       -D#TEST_TIME=0 -D#FOO_TIME=0
+# RUN: env ZERO_AR_DATE=0 %lld -lSystem -reproducible %t/test.o %t/foo.o \
+# RUN:     %t/no-debug.o -o %t/test
+# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
+# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
+# RUN:       -D#TEST_TIME=0 -D#FOO_TIME=0
 
 ## Check that we emit absolute paths to the object files in our OSO entries
 ## even if our inputs are relative paths.

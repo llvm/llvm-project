@@ -7,56 +7,72 @@
 // CHECK: call void asm sideeffect "", "{$r0}"(i32 undef)
 void test_r0() {
     register int a asm ("$r0");
+    register int b asm ("r0");
     asm ("" :: "r" (a));
+    asm ("" :: "r" (b));
 }
 
 // CHECK-LABEL: @test_r12
 // CHECK: call void asm sideeffect "", "{$r12}"(i32 undef)
 void test_r12() {
     register int a asm ("$r12");
+    register int b asm ("r12");
     asm ("" :: "r" (a));
+    asm ("" :: "r" (b));
 }
 
 // CHECK-LABEL: @test_r31
 // CHECK: call void asm sideeffect "", "{$r31}"(i32 undef)
 void test_r31() {
     register int a asm ("$r31");
+    register int b asm ("r31");
     asm ("" :: "r" (a));
+    asm ("" :: "r" (b));
 }
 
 // CHECK-LABEL: @test_zero
 // CHECK: call void asm sideeffect "", "{$r0}"(i32 undef)
 void test_zero() {
     register int a asm ("$zero");
+    register int b asm ("zero");
     asm ("" :: "r" (a));
+    asm ("" :: "r" (b));
 }
 
 // CHECK-LABEL: @test_a0
 // CHECK: call void asm sideeffect "", "{$r4}"(i32 undef)
 void test_a0() {
     register int a asm ("$a0");
+    register int b asm ("a0");
     asm ("" :: "r" (a));
+    asm ("" :: "r" (b));
 }
 
 // CHECK-LABEL: @test_t1
 // CHECK: call void asm sideeffect "", "{$r13}"(i32 undef)
 void test_t1() {
     register int a asm ("$t1");
+    register int b asm ("t1");
     asm ("" :: "r" (a));
+    asm ("" :: "r" (b));
 }
 
 // CHECK-LABEL: @test_fp
 // CHECK: call void asm sideeffect "", "{$r22}"(i32 undef)
 void test_fp() {
     register int a asm ("$fp");
+    register int b asm ("fp");
     asm ("" :: "r" (a));
+    asm ("" :: "r" (b));
 }
 
 // CHECK-LABEL: @test_s2
 // CHECK: call void asm sideeffect "", "{$r25}"(i32 undef)
 void test_s2() {
     register int a asm ("$s2");
+    register int b asm ("s2");
     asm ("" :: "r" (a));
+    asm ("" :: "r" (b));
 }
 
 // CHECK-LABEL: @test_f0
@@ -99,4 +115,12 @@ void test_ft1() {
 void test_fs2() {
     register float a asm ("$fs2");
     asm ("" :: "f" (a));
+}
+
+// CHECK-LABEL: @test_fcc
+// CHECK: call void asm sideeffect "", "~{$fcc0}"()
+// CHECK: call void asm sideeffect "", "~{$fcc7}"()
+void test_fcc() {
+    asm ("" ::: "$fcc0");
+    asm ("" ::: "$fcc7");
 }

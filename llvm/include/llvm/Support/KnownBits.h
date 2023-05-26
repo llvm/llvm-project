@@ -293,9 +293,30 @@ public:
     return KnownBits(~C, C);
   }
 
+  /// Returns KnownBits information that is known to be true for both this and
+  /// RHS.
+  ///
+  /// When an operation is known to return one of its operands, this can be used
+  /// to combine information about the known bits of the operands to get the
+  /// information that must be true about the result.
+  KnownBits intersectWith(const KnownBits &RHS) const {
+    return KnownBits(Zero & RHS.Zero, One & RHS.One);
+  }
+
+  /// Returns KnownBits information that is known to be true for either this or
+  /// RHS or both.
+  ///
+  /// This can be used to combine different sources of information about the
+  /// known bits of a single value, e.g. information about the low bits and the
+  /// high bits of the result of a multiplication.
+  KnownBits unionWith(const KnownBits &RHS) const {
+    return KnownBits(Zero | RHS.Zero, One | RHS.One);
+  }
+
   /// Compute known bits common to LHS and RHS.
+  LLVM_DEPRECATED("use intersectWith instead", "intersectWith")
   static KnownBits commonBits(const KnownBits &LHS, const KnownBits &RHS) {
-    return KnownBits(LHS.Zero & RHS.Zero, LHS.One & RHS.One);
+    return LHS.intersectWith(RHS);
   }
 
   /// Return true if LHS and RHS have no common bits set.
@@ -311,6 +332,18 @@ public:
   static KnownBits computeForAddSub(bool Add, bool NSW, const KnownBits &LHS,
                                     KnownBits RHS);
 
+  /// Compute knownbits resulting from llvm.sadd.sat(LHS, RHS)
+  static KnownBits sadd_sat(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute knownbits resulting from llvm.uadd.sat(LHS, RHS)
+  static KnownBits uadd_sat(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute knownbits resulting from llvm.ssub.sat(LHS, RHS)
+  static KnownBits ssub_sat(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute knownbits resulting from llvm.usub.sat(LHS, RHS)
+  static KnownBits usub_sat(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Compute known bits resulting from multiplying LHS and RHS.
   static KnownBits mul(const KnownBits &LHS, const KnownBits &RHS,
                        bool NoUndefSelfMultiply = false);
@@ -321,8 +354,13 @@ public:
   /// Compute known bits from zero-extended multiply-hi.
   static KnownBits mulhu(const KnownBits &LHS, const KnownBits &RHS);
 
+  /// Compute known bits for sdiv(LHS, RHS).
+  static KnownBits sdiv(const KnownBits &LHS, const KnownBits &RHS,
+                        bool Exact = false);
+
   /// Compute known bits for udiv(LHS, RHS).
-  static KnownBits udiv(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits udiv(const KnownBits &LHS, const KnownBits &RHS,
+                        bool Exact = false);
 
   /// Compute known bits for urem(LHS, RHS).
   static KnownBits urem(const KnownBits &LHS, const KnownBits &RHS);
@@ -344,7 +382,8 @@ public:
 
   /// Compute known bits for shl(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
-  static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS,
+                       bool NUW = false, bool NSW = false);
 
   /// Compute known bits for lshr(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
@@ -420,6 +459,11 @@ public:
 
   void print(raw_ostream &OS) const;
   void dump() const;
+
+private:
+  // Internal helper for getting the initial KnownBits for an `srem` or `urem`
+  // operation with the low-bits set.
+  static KnownBits remGetLowBits(const KnownBits &LHS, const KnownBits &RHS);
 };
 
 inline KnownBits operator&(KnownBits LHS, const KnownBits &RHS) {
@@ -450,6 +494,11 @@ inline KnownBits operator^(KnownBits LHS, const KnownBits &RHS) {
 inline KnownBits operator^(const KnownBits &LHS, KnownBits &&RHS) {
   RHS ^= LHS;
   return std::move(RHS);
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, const KnownBits &Known) {
+  Known.print(OS);
+  return OS;
 }
 
 } // end namespace llvm

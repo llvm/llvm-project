@@ -35,6 +35,7 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_f8E4M3FN:
   case Token::kw_f8E5M2FNUZ:
   case Token::kw_f8E4M3FNUZ:
+  case Token::kw_f8E4M3B11FNUZ:
   case Token::kw_bf16:
   case Token::kw_f16:
   case Token::kw_f32:
@@ -128,7 +129,7 @@ Type Parser::parseComplexType() {
   if (!elementType ||
       parseToken(Token::greater, "expected '>' in complex type"))
     return nullptr;
-  if (!elementType.isa<FloatType>() && !elementType.isa<IntegerType>())
+  if (!isa<FloatType>(elementType) && !isa<IntegerType>(elementType))
     return emitError(elementTypeLoc, "invalid element type for complex"),
            nullptr;
 
@@ -206,8 +207,8 @@ Type Parser::parseMemRefType() {
     if (!attr)
       return failure();
 
-    if (attr.isa<MemRefLayoutAttrInterface>()) {
-      layout = attr.cast<MemRefLayoutAttrInterface>();
+    if (isa<MemRefLayoutAttrInterface>(attr)) {
+      layout = cast<MemRefLayoutAttrInterface>(attr);
     } else if (memorySpace) {
       return emitError("multiple memory spaces specified in memref type");
     } else {
@@ -303,6 +304,9 @@ Type Parser::parseNonFunctionType() {
   case Token::kw_f8E4M3FNUZ:
     consumeToken(Token::kw_f8E4M3FNUZ);
     return builder.getFloat8E4M3FNUZType();
+  case Token::kw_f8E4M3B11FNUZ:
+    consumeToken(Token::kw_f8E4M3B11FNUZ);
+    return builder.getFloat8E4M3B11FNUZType();
   case Token::kw_bf16:
     consumeToken(Token::kw_bf16);
     return builder.getBF16Type();
@@ -379,7 +383,7 @@ Type Parser::parseTensorType() {
   Attribute encoding;
   if (consumeIf(Token::comma)) {
     encoding = parseAttribute();
-    if (auto v = encoding.dyn_cast_or_null<VerifiableTensorEncoding>()) {
+    if (auto v = dyn_cast_or_null<VerifiableTensorEncoding>(encoding)) {
       if (failed(v.verifyEncoding(dimensions, elementType,
                                   [&] { return emitError(); })))
         return nullptr;

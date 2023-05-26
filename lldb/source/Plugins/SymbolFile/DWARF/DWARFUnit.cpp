@@ -371,11 +371,10 @@ std::optional<uint64_t> DWARFUnit::GetDWOId() {
 
 // m_die_array_mutex must be already held as read/write.
 void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
-  DWARFAttributes attributes;
-  size_t num_attributes = cu_die.GetAttributes(this, attributes);
+  DWARFAttributes attributes = cu_die.GetAttributes(this);
 
   // Extract DW_AT_addr_base first, as other attributes may need it.
-  for (size_t i = 0; i < num_attributes; ++i) {
+  for (size_t i = 0; i < attributes.Size(); ++i) {
     if (attributes.AttributeAtIndex(i) != DW_AT_addr_base)
       continue;
     DWARFFormValue form_value;
@@ -385,12 +384,14 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     }
   }
 
-  for (size_t i = 0; i < num_attributes; ++i) {
+  for (size_t i = 0; i < attributes.Size(); ++i) {
     dw_attr_t attr = attributes.AttributeAtIndex(i);
     DWARFFormValue form_value;
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
+    default:
+      break;
     case DW_AT_loclists_base:
       SetLoclistsBase(form_value.Unsigned());
       break;
@@ -940,7 +941,8 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
 
   bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);
   bool version_OK = SymbolFileDWARF::SupportedVersion(header.m_version);
-  bool addr_size_OK = (header.m_addr_size == 4) || (header.m_addr_size == 8);
+  bool addr_size_OK = (header.m_addr_size == 2) || (header.m_addr_size == 4) ||
+                      (header.m_addr_size == 8);
   bool type_offset_OK =
       !header.IsTypeUnit() || (header.m_type_offset <= header.GetLength());
 
@@ -1031,9 +1033,7 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
     if (!debug_ranges)
       return llvm::make_error<llvm::object::GenericBinaryError>(
           "No debug_ranges section");
-    DWARFRangeList ranges;
-    debug_ranges->FindRanges(this, offset, ranges);
-    return ranges;
+    return debug_ranges->FindRanges(this, offset);
   }
 
   if (!GetRnglistTable())

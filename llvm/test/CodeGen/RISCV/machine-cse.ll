@@ -84,21 +84,21 @@ declare half @llvm.fma.f16(half, half, half)
 define void @commute_fmadd_f16(half %x, half %y, half %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fmadd_f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fmadd.h ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fmadd.h fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB2_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:  .LBB2_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fmadd_f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmadd.h ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fmadd.h fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB2_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:  .LBB2_2: # %falseblock
 ; RV64-NEXT:    ret
   %a = call half @llvm.fma.f16(half %x, half %y, half %z)
@@ -119,21 +119,21 @@ declare float @llvm.fma.f32(float, float, float)
 define void @commute_fmadd_f32(float %x, float %y, float %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fmadd_f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fmadd.s ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fmadd.s fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB3_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:  .LBB3_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fmadd_f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmadd.s ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fmadd.s fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB3_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:  .LBB3_2: # %falseblock
 ; RV64-NEXT:    ret
   %a = call float @llvm.fma.f32(float %x, float %y, float %z)
@@ -154,21 +154,21 @@ declare double @llvm.fma.f64(double, double, double)
 define void @commute_fmadd_f64(double %x, double %y, double %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fmadd_f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fmadd.d ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fmadd.d fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB4_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:  .LBB4_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fmadd_f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmadd.d ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fmadd.d fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB4_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:  .LBB4_2: # %falseblock
 ; RV64-NEXT:    ret
   %a = call double @llvm.fma.f64(double %x, double %y, double %z)
@@ -187,21 +187,21 @@ falseblock:
 define void @commute_fmsub_f16(half %x, half %y, half %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fmsub_f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fmsub.h ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fmsub.h fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB5_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:  .LBB5_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fmsub_f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmsub.h ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fmsub.h fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB5_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:  .LBB5_2: # %falseblock
 ; RV64-NEXT:    ret
   %negz = fneg half %z
@@ -222,21 +222,21 @@ falseblock:
 define void @commute_fmsub_f32(float %x, float %y, float %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fmsub_f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fmsub.s ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fmsub.s fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB6_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:  .LBB6_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fmsub_f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmsub.s ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fmsub.s fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB6_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:  .LBB6_2: # %falseblock
 ; RV64-NEXT:    ret
   %negz = fneg float %z
@@ -257,21 +257,21 @@ falseblock:
 define void @commute_fmsub_f64(double %x, double %y, double %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fmsub_f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fmsub.d ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fmsub.d fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB7_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:  .LBB7_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fmsub_f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fmsub.d ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fmsub.d fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB7_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:  .LBB7_2: # %falseblock
 ; RV64-NEXT:    ret
   %negz = fneg double %z
@@ -292,21 +292,21 @@ falseblock:
 define void @commute_fnmadd_f16(half %x, half %y, half %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fnmadd_f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fnmadd.h ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fnmadd.h fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB8_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:  .LBB8_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fnmadd_f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fnmadd.h ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fnmadd.h fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB8_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:  .LBB8_2: # %falseblock
 ; RV64-NEXT:    ret
   %negx = fneg half %x
@@ -329,21 +329,21 @@ falseblock:
 define void @commute_fnmadd_f32(float %x, float %y, float %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fnmadd_f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fnmadd.s ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fnmadd.s fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB9_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:  .LBB9_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fnmadd_f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fnmadd.s ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fnmadd.s fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB9_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:  .LBB9_2: # %falseblock
 ; RV64-NEXT:    ret
   %negx = fneg float %x
@@ -366,21 +366,21 @@ falseblock:
 define void @commute_fnmadd_f64(double %x, double %y, double %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fnmadd_f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fnmadd.d ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fnmadd.d fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB10_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:  .LBB10_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fnmadd_f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fnmadd.d ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fnmadd.d fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB10_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:  .LBB10_2: # %falseblock
 ; RV64-NEXT:    ret
   %negx = fneg double %x
@@ -403,21 +403,21 @@ falseblock:
 define void @commute_fnmsub_f16(half %x, half %y, half %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fnmsub_f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fnmsub.h ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fnmsub.h fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB11_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:  .LBB11_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fnmsub_f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fnmsub.h ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fnmsub.h fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB11_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:  .LBB11_2: # %falseblock
 ; RV64-NEXT:    ret
   %negx = fneg half %x
@@ -438,21 +438,21 @@ falseblock:
 define void @commute_fnmsub_f32(float %x, float %y, float %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fnmsub_f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fnmsub.s ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fnmsub.s fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB12_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:  .LBB12_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fnmsub_f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fnmsub.s ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fnmsub.s fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB12_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:  .LBB12_2: # %falseblock
 ; RV64-NEXT:    ret
   %negx = fneg float %x
@@ -473,21 +473,21 @@ falseblock:
 define void @commute_fnmsub_f64(double %x, double %y, double %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fnmsub_f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fnmsub.d ft0, fa0, fa1, fa2
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fnmsub.d fa5, fa0, fa1, fa2
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB13_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:  .LBB13_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fnmsub_f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fnmsub.d ft0, fa0, fa1, fa2
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fnmsub.d fa5, fa0, fa1, fa2
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB13_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:  .LBB13_2: # %falseblock
 ; RV64-NEXT:    ret
   %negx = fneg double %x
@@ -508,21 +508,21 @@ falseblock:
 define void @commute_fadd_f16(half %x, half %y, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fadd_f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fadd.h ft0, fa0, fa1
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fadd.h fa5, fa0, fa1
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB14_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsh ft0, 0(a0)
+; RV32-NEXT:    fsh fa5, 0(a0)
 ; RV32-NEXT:  .LBB14_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fadd_f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fadd.h ft0, fa0, fa1
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fadd.h fa5, fa0, fa1
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB14_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsh ft0, 0(a0)
+; RV64-NEXT:    fsh fa5, 0(a0)
 ; RV64-NEXT:  .LBB14_2: # %falseblock
 ; RV64-NEXT:    ret
   %a = fadd half %x, %y
@@ -541,21 +541,21 @@ falseblock:
 define void @commute_fadd_f32(float %x, float %y, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fadd_f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fadd.s ft0, fa0, fa1
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fadd.s fa5, fa0, fa1
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB15_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsw ft0, 0(a0)
+; RV32-NEXT:    fsw fa5, 0(a0)
 ; RV32-NEXT:  .LBB15_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fadd_f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fadd.s ft0, fa0, fa1
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fadd.s fa5, fa0, fa1
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB15_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsw ft0, 0(a0)
+; RV64-NEXT:    fsw fa5, 0(a0)
 ; RV64-NEXT:  .LBB15_2: # %falseblock
 ; RV64-NEXT:    ret
   %a = fadd float %x, %y
@@ -574,21 +574,21 @@ falseblock:
 define void @commute_fadd_f64(double %x, double %y, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fadd_f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    fadd.d ft0, fa0, fa1
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fadd.d fa5, fa0, fa1
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:    beqz a2, .LBB16_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    fsd ft0, 0(a0)
+; RV32-NEXT:    fsd fa5, 0(a0)
 ; RV32-NEXT:  .LBB16_2: # %falseblock
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: commute_fadd_f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    fadd.d ft0, fa0, fa1
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fadd.d fa5, fa0, fa1
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:    beqz a2, .LBB16_2
 ; RV64-NEXT:  # %bb.1: # %trueblock
-; RV64-NEXT:    fsd ft0, 0(a0)
+; RV64-NEXT:    fsd fa5, 0(a0)
 ; RV64-NEXT:  .LBB16_2: # %falseblock
 ; RV64-NEXT:    ret
   %a = fadd double %x, %y

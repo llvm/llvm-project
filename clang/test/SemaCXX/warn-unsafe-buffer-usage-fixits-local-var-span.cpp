@@ -1,6 +1,10 @@
-// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
+// RUN:            -fsafe-buffer-usage-suggestions \
+// RUN:            -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 typedef int * Int_ptr_t;
 typedef int Int_t;
+
+#define DEFINE_PTR(X) int* ptr = (X);
 
 void local_array_subscript_simple() {
   int tmp;
@@ -130,6 +134,38 @@ void explict_cast() {
   tmp = (int) s[5];
 }
 
+void null_init() {
+#define NULL 0
+  int tmp;
+  int * my_null = 0;
+  int * p = 0;
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
+  int * g = NULL; // cannot handle fix-its involving macros for now
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
+  int * f = nullptr;
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> f"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{^3}}
+
+  // In case of value dependencies, we give up
+  int * q = my_null;
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> q"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:20}:", <# placeholder #>}"
+  int * r = my_null + 0;
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> r"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", <# placeholder #>}"
+
+  tmp = p[5]; // `p[5]` will cause crash after `p` being transformed to be a `std::span`
+  tmp = q[5]; // Similar for the rests.
+  tmp = r[5];
+  tmp = g[5];
+  tmp = f[5];
+#undef NULL
+}
+
+
 void unsupported_multi_decl(int * x) {
   int * p = x, * q = new int[10];
   // CHECK-NOT: fix-it:"{{.*}}":[[@LINE-1]]
@@ -189,4 +225,29 @@ void unsupported_subscript_negative(int i, unsigned j, unsigned long k) {
 
   tmp = r[j] + r[k]; // both `j` and `k` are unsigned so they must be non-negative
   tmp = r[(unsigned int)-1]; // a cast-to-unsigned-expression is also non-negative
+}
+
+void all_vars_in_macro() {
+  int* local;
+  DEFINE_PTR(local)
+  ptr[1] = 0;
+}
+
+void few_vars_in_macro() {
+  int* local;
+  DEFINE_PTR(local)
+  ptr[1] = 0;
+  int tmp;
+  ptr[2] = 30;
+  auto p = new int[10];
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  tmp = p[5];
+  int val = *p;
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:13-[[@LINE-1]]:14}:""
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"[0]"
+  val = *p + 30;
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:9-[[@LINE-1]]:10}:""
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:11}:"[0]"
 }

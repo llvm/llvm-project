@@ -361,7 +361,7 @@ OPTIONS
  Provides local directories to search for objects corresponding to binary IDs in
  the profile (as with debuginfod). Defaults to system build ID directories.
 
-.. option:: -check-binary-id
+.. option:: -check-binary-ids
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
@@ -447,7 +447,7 @@ OPTIONS
  Provides a directory to search for objects corresponding to binary IDs in the
  profile.
 
-.. option:: -check-binary-id
+.. option:: -check-binary-ids
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
@@ -539,7 +539,7 @@ OPTIONS
  Provides a directory to search for objects corresponding to binary IDs in the
  profile.
 
-.. option:: -check-binary-id
+.. option:: -check-binary-ids
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.

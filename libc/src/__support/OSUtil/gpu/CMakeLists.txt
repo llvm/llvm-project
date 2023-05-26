@@ -8,5 +8,7 @@ add_object_library(
     io.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.CPP.string_view
     libc.src.__support.RPC.rpc_client
+    libc.src.string.memory_utils.memcpy_implementation
 )

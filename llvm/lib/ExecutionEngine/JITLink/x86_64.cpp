@@ -28,6 +28,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Pointer32Signed";
   case Pointer16:
     return "Pointer16";
+  case Pointer8:
+    return "Pointer8";
   case Delta64:
     return "Delta64";
   case Delta32:

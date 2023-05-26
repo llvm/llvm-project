@@ -43,8 +43,8 @@ int main(int, char**)
 {
     test_alignment_of<int&, 4>();
     test_alignment_of<Class, 1>();
-    test_alignment_of<int*, sizeof(intptr_t)>();
-    test_alignment_of<const int*, sizeof(intptr_t)>();
+    test_alignment_of<int*, sizeof(std::intptr_t)>();
+    test_alignment_of<const int*, sizeof(std::intptr_t)>();
     test_alignment_of<char[3], 1>();
     test_alignment_of<int, 4>();
     test_alignment_of<double, TEST_ALIGNOF(double)>();

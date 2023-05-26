@@ -1,6 +1,6 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -passes=amdgpu-promote-alloca < %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 ; CHECK-LABEL: @lds_promoted_alloca_select_invalid_pointer_operand(
 ; CHECK: %alloca = alloca i32
@@ -77,13 +77,13 @@ define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %
   ret void
 }
 
-define amdgpu_kernel void @lds_promoted_alloca_select_input_phi(i32 %a, i32 %b, i32 %c) #0 {
+define amdgpu_kernel void @lds_promoted_alloca_select_input_phi(i32 %a, i32 %b, i32 %c, i1 %c0) #0 {
 entry:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
   %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %b
   store i32 0, ptr addrspace(5) %ptr0
-  br i1 undef, label %bb1, label %bb2
+  br i1 %c0, label %bb1, label %bb2
 
 bb1:
   %ptr2 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %c

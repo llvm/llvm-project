@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Bytecode/BytecodeWriter.h"
-#include "../Encoding.h"
 #include "IRNumbering.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
+#include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/MapVector.h"
@@ -26,6 +26,10 @@ using namespace mlir::bytecode::detail;
 
 struct BytecodeWriterConfig::Impl {
   Impl(StringRef producer) : producer(producer) {}
+
+  /// Version to use when writing.
+  /// Note: This only differs from kVersion if a specific version is set.
+  int64_t bytecodeVersion = bytecode::kVersion;
 
   /// The producer of the bytecode.
   StringRef producer;
@@ -46,6 +50,12 @@ BytecodeWriterConfig::~BytecodeWriterConfig() = default;
 void BytecodeWriterConfig::attachResourcePrinter(
     std::unique_ptr<AsmResourcePrinter> printer) {
   impl->externalResourcePrinters.emplace_back(std::move(printer));
+}
+
+void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {
+  // Clamp to current version.
+  impl->bytecodeVersion =
+      std::min<int64_t>(bytecodeVersion, bytecode::kVersion);
 }
 
 //===----------------------------------------------------------------------===//
@@ -295,7 +305,8 @@ private:
 
 class DialectWriter : public DialectBytecodeWriter {
 public:
-  DialectWriter(EncodingEmitter &emitter, IRNumberingState &numberingState,
+  DialectWriter(int64_t bytecodeVersion, EncodingEmitter &emitter,
+                IRNumberingState &numberingState,
                 StringSectionBuilder &stringSection)
       : emitter(emitter), numberingState(numberingState),
         stringSection(stringSection) {}
@@ -362,7 +373,10 @@ public:
         reinterpret_cast<const uint8_t *>(blob.data()), blob.size()));
   }
 
+  int64_t getBytecodeVersion() const override { return bytecodeVersion; }
+
 private:
+  int64_t bytecodeVersion;
   EncodingEmitter &emitter;
   IRNumberingState &numberingState;
   StringSectionBuilder &stringSection;
@@ -421,11 +435,11 @@ void EncodingEmitter::emitMultiByteVarInt(uint64_t value) {
 namespace {
 class BytecodeWriter {
 public:
-  BytecodeWriter(Operation *op) : numberingState(op) {}
+  BytecodeWriter(Operation *op, const BytecodeWriterConfig::Impl &config)
+      : numberingState(op), config(config) {}
 
   /// Write the bytecode for the given root operation.
-  void write(Operation *rootOp, raw_ostream &os,
-             const BytecodeWriterConfig::Impl &config);
+  void write(Operation *rootOp, raw_ostream &os);
 
 private:
   //===--------------------------------------------------------------------===//
@@ -449,13 +463,18 @@ private:
   //===--------------------------------------------------------------------===//
   // Resources
 
-  void writeResourceSection(Operation *op, EncodingEmitter &emitter,
-                            const BytecodeWriterConfig::Impl &config);
+  void writeResourceSection(Operation *op, EncodingEmitter &emitter);
 
   //===--------------------------------------------------------------------===//
   // Strings
 
   void writeStringSection(EncodingEmitter &emitter);
+
+  //===--------------------------------------------------------------------===//
+  // Helpers
+
+  void writeUseListOrders(EncodingEmitter &emitter, uint8_t &opEncodingMask,
+                          ValueRange range);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -465,11 +484,13 @@ private:
 
   /// The IR numbering state generated for the root operation.
   IRNumberingState numberingState;
+
+  /// Configuration dictating bytecode emission.
+  const BytecodeWriterConfig::Impl &config;
 };
 } // namespace
 
-void BytecodeWriter::write(Operation *rootOp, raw_ostream &os,
-                           const BytecodeWriterConfig::Impl &config) {
+void BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
   EncodingEmitter emitter;
 
   // Emit the bytecode file header. This is how we identify the output as a
@@ -477,7 +498,7 @@ void BytecodeWriter::write(Operation *rootOp, raw_ostream &os,
   emitter.emitString("ML\xefR");
 
   // Emit the bytecode version.
-  emitter.emitVarInt(bytecode::kVersion);
+  emitter.emitVarInt(config.bytecodeVersion);
 
   // Emit the producer.
   emitter.emitNulTerminatedString(config.producer);
@@ -492,7 +513,7 @@ void BytecodeWriter::write(Operation *rootOp, raw_ostream &os,
   writeIRSection(emitter, rootOp);
 
   // Emit the resources section.
-  writeResourceSection(rootOp, emitter, config);
+  writeResourceSection(rootOp, emitter);
 
   // Emit the string section.
   writeStringSection(emitter);
@@ -540,12 +561,17 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
     // Write the string section and get the ID.
     size_t nameID = stringSection.insert(dialect.name);
 
+    if (config.bytecodeVersion == 0) {
+      dialectEmitter.emitVarInt(nameID);
+      continue;
+    }
+
     // Try writing the version to the versionEmitter.
     EncodingEmitter versionEmitter;
     if (dialect.interface) {
       // The writer used when emitting using a custom bytecode encoding.
-      DialectWriter versionWriter(versionEmitter, numberingState,
-                                  stringSection);
+      DialectWriter versionWriter(config.bytecodeVersion, versionEmitter,
+                                  numberingState, stringSection);
       dialect.interface->writeVersion(versionWriter);
     }
 
@@ -558,6 +584,9 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
       dialectEmitter.emitSection(bytecode::Section::kDialectVersions,
                                  std::move(versionEmitter));
   }
+
+  if (config.bytecodeVersion > 3)
+    dialectEmitter.emitVarInt(size(numberingState.getOpNames()));
 
   // Emit the referenced operation names grouped by dialect.
   auto emitOpName = [&](OpNameNumbering &name) {
@@ -586,8 +615,8 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
     bool hasCustomEncoding = false;
     if (const BytecodeDialectInterface *interface = entry.dialect->interface) {
       // The writer used when emitting using a custom bytecode encoding.
-      DialectWriter dialectWriter(attrTypeEmitter, numberingState,
-                                  stringSection);
+      DialectWriter dialectWriter(config.bytecodeVersion, attrTypeEmitter,
+                                  numberingState, stringSection);
 
       if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>, Type>) {
         // TODO: We don't currently support custom encoded mutable types.
@@ -644,8 +673,24 @@ void BytecodeWriter::writeBlock(EncodingEmitter &emitter, Block *block) {
   if (hasArgs) {
     emitter.emitVarInt(args.size());
     for (BlockArgument arg : args) {
-      emitter.emitVarInt(numberingState.getNumber(arg.getType()));
-      emitter.emitVarInt(numberingState.getNumber(arg.getLoc()));
+      Location argLoc = arg.getLoc();
+      if (config.bytecodeVersion > 3) {
+        emitter.emitVarIntWithFlag(numberingState.getNumber(arg.getType()),
+                                   !isa<UnknownLoc>(argLoc));
+        if (!isa<UnknownLoc>(argLoc))
+          emitter.emitVarInt(numberingState.getNumber(argLoc));
+      } else {
+        emitter.emitVarInt(numberingState.getNumber(arg.getType()));
+        emitter.emitVarInt(numberingState.getNumber(argLoc));
+      }
+    }
+    if (config.bytecodeVersion > 2) {
+      uint64_t maskOffset = emitter.size();
+      uint8_t encodingMask = 0;
+      emitter.emitByte(0);
+      writeUseListOrders(emitter, encodingMask, args);
+      if (encodingMask)
+        emitter.patchByte(maskOffset, encodingMask);
     }
   }
 
@@ -698,6 +743,11 @@ void BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
       emitter.emitVarInt(numberingState.getNumber(successor));
   }
 
+  // Emit the use-list orders to bytecode, so we can reconstruct the same order
+  // at parsing.
+  if (config.bytecodeVersion > 2)
+    writeUseListOrders(emitter, opEncodingMask, ValueRange(op->getResults()));
+
   // Check for regions.
   unsigned numRegions = op->getNumRegions();
   if (numRegions)
@@ -714,8 +764,106 @@ void BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
     bool isIsolatedFromAbove = op->hasTrait<OpTrait::IsIsolatedFromAbove>();
     emitter.emitVarIntWithFlag(numRegions, isIsolatedFromAbove);
 
-    for (Region &region : op->getRegions())
-      writeRegion(emitter, &region);
+    for (Region &region : op->getRegions()) {
+      // If the region is not isolated from above, or we are emitting bytecode
+      // targeting version <2, we don't use a section.
+      if (!isIsolatedFromAbove || config.bytecodeVersion < 2) {
+        writeRegion(emitter, &region);
+        continue;
+      }
+
+      EncodingEmitter regionEmitter;
+      writeRegion(regionEmitter, &region);
+      emitter.emitSection(bytecode::Section::kIR, std::move(regionEmitter));
+    }
+  }
+}
+
+void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
+                                        uint8_t &opEncodingMask,
+                                        ValueRange range) {
+  // Loop over the results and store the use-list order per result index.
+  DenseMap<unsigned, llvm::SmallVector<unsigned>> map;
+  for (auto item : llvm::enumerate(range)) {
+    auto value = item.value();
+    // No need to store a custom use-list order if the result does not have
+    // multiple uses.
+    if (value.use_empty() || value.hasOneUse())
+      continue;
+
+    // For each result, assemble the list of pairs (use-list-index,
+    // global-value-index). While doing so, detect if the global-value-index is
+    // already ordered with respect to the use-list-index.
+    bool alreadyOrdered = true;
+    auto &firstUse = *value.use_begin();
+    uint64_t prevID = bytecode::getUseID(
+        firstUse, numberingState.getNumber(firstUse.getOwner()));
+    llvm::SmallVector<std::pair<unsigned, uint64_t>> useListPairs(
+        {{0, prevID}});
+
+    for (auto use : llvm::drop_begin(llvm::enumerate(value.getUses()))) {
+      uint64_t currentID = bytecode::getUseID(
+          use.value(), numberingState.getNumber(use.value().getOwner()));
+      // The use-list order achieved when building the IR at parsing always
+      // pushes new uses on front. Hence, if the order by unique ID is
+      // monotonically decreasing, a roundtrip to bytecode preserves such order.
+      alreadyOrdered &= (prevID > currentID);
+      useListPairs.push_back({use.index(), currentID});
+      prevID = currentID;
+    }
+
+    // Do not emit if the order is already sorted.
+    if (alreadyOrdered)
+      continue;
+
+    // Sort the use indices by the unique ID indices in descending order.
+    std::sort(
+        useListPairs.begin(), useListPairs.end(),
+        [](auto elem1, auto elem2) { return elem1.second > elem2.second; });
+
+    map.try_emplace(item.index(), llvm::map_range(useListPairs, [](auto elem) {
+                      return elem.first;
+                    }));
+  }
+
+  if (map.empty())
+    return;
+
+  opEncodingMask |= bytecode::OpEncodingMask::kHasUseListOrders;
+  // Emit the number of results that have a custom use-list order if the number
+  // of results is greater than one.
+  if (range.size() != 1)
+    emitter.emitVarInt(map.size());
+
+  for (const auto &item : map) {
+    auto resultIdx = item.getFirst();
+    auto useListOrder = item.getSecond();
+
+    // Compute the number of uses that are actually shuffled. If those are less
+    // than half of the total uses, encoding the index pair `(src, dst)` is more
+    // space efficient.
+    size_t shuffledElements =
+        llvm::count_if(llvm::enumerate(useListOrder),
+                       [](auto item) { return item.index() != item.value(); });
+    bool indexPairEncoding = shuffledElements < (useListOrder.size() / 2);
+
+    // For single result, we don't need to store the result index.
+    if (range.size() != 1)
+      emitter.emitVarInt(resultIdx);
+
+    if (indexPairEncoding) {
+      emitter.emitVarIntWithFlag(shuffledElements * 2, indexPairEncoding);
+      for (auto pair : llvm::enumerate(useListOrder)) {
+        if (pair.index() != pair.value()) {
+          emitter.emitVarInt(pair.value());
+          emitter.emitVarInt(pair.index());
+        }
+      }
+    } else {
+      emitter.emitVarIntWithFlag(useListOrder.size(), indexPairEncoding);
+      for (const auto &index : useListOrder)
+        emitter.emitVarInt(index);
+    }
   }
 }
 
@@ -787,9 +935,8 @@ private:
 };
 } // namespace
 
-void BytecodeWriter::writeResourceSection(
-    Operation *op, EncodingEmitter &emitter,
-    const BytecodeWriterConfig::Impl &config) {
+void BytecodeWriter::writeResourceSection(Operation *op,
+                                          EncodingEmitter &emitter) {
   EncodingEmitter resourceEmitter;
   EncodingEmitter resourceOffsetEmitter;
   uint64_t prevOffset = 0;
@@ -868,8 +1015,10 @@ void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
 // Entry Points
 //===----------------------------------------------------------------------===//
 
-void mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
-                               const BytecodeWriterConfig &config) {
-  BytecodeWriter writer(op);
-  writer.write(op, os, config.getImpl());
+LogicalResult mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
+                                        const BytecodeWriterConfig &config) {
+  BytecodeWriter writer(op, config.getImpl());
+  writer.write(op, os);
+  // Currently there is no failure case.
+  return success();
 }

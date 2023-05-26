@@ -102,6 +102,11 @@ TEST_F(ModuleWithFunctionTest, CallInst) {
   Call->addRetAttr(Attribute::get(Call->getContext(), "test-str-attr"));
   EXPECT_TRUE(Call->hasRetAttr("test-str-attr"));
   EXPECT_FALSE(Call->hasRetAttr("not-on-call"));
+
+  Call->addFnAttr(Attribute::get(Call->getContext(), "test-str-fn-attr"));
+  ASSERT_TRUE(Call->hasFnAttr("test-str-fn-attr"));
+  Call->removeFnAttr("test-str-fn-attr");
+  EXPECT_FALSE(Call->hasFnAttr("test-str-fn-attr"));
 }
 
 TEST_F(ModuleWithFunctionTest, InvokeInst) {

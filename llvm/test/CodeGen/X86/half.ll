@@ -954,11 +954,10 @@ define half @PR40273(half) #0 {
   ret half %3
 }
 
-define dso_local void @brcond(half %0) {
+define void @brcond(half %0) #0 {
 ; CHECK-LIBCALL-LABEL: brcond:
 ; CHECK-LIBCALL:       # %bb.0: # %entry
 ; CHECK-LIBCALL-NEXT:    pushq %rax
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-LIBCALL-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-LIBCALL-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-LIBCALL-NEXT:    ucomiss %xmm1, %xmm0
@@ -968,7 +967,6 @@ define dso_local void @brcond(half %0) {
 ; CHECK-LIBCALL-NEXT:    jne .LBB18_2
 ; CHECK-LIBCALL-NEXT:  # %bb.1: # %if.then
 ; CHECK-LIBCALL-NEXT:    popq %rax
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-LIBCALL-NEXT:    retq
 ; CHECK-LIBCALL-NEXT:  .LBB18_2: # %if.end
 ;
@@ -991,7 +989,6 @@ define dso_local void @brcond(half %0) {
 ; CHECK-I686-LABEL: brcond:
 ; CHECK-I686:       # %bb.0: # %entry
 ; CHECK-I686-NEXT:    subl $12, %esp
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
@@ -1006,7 +1003,6 @@ define dso_local void @brcond(half %0) {
 ; CHECK-I686-NEXT:    jne .LBB18_2
 ; CHECK-I686-NEXT:  # %bb.1: # %if.then
 ; CHECK-I686-NEXT:    addl $12, %esp
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-I686-NEXT:    retl
 ; CHECK-I686-NEXT:  .LBB18_2: # %if.end
 entry:
@@ -1020,16 +1016,14 @@ if.end:                                           ; preds = %entry
   unreachable
 }
 
-define half @test_sqrt(half %0) {
+define half @test_sqrt(half %0) #0 {
 ; CHECK-LIBCALL-LABEL: test_sqrt:
 ; CHECK-LIBCALL:       # %bb.0: # %entry
 ; CHECK-LIBCALL-NEXT:    pushq %rax
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-LIBCALL-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-LIBCALL-NEXT:    sqrtss %xmm0, %xmm0
 ; CHECK-LIBCALL-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-LIBCALL-NEXT:    popq %rax
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-LIBCALL-NEXT:    retq
 ;
 ; BWON-F16C-LABEL: test_sqrt:
@@ -1047,7 +1041,6 @@ define half @test_sqrt(half %0) {
 ; CHECK-I686-LABEL: test_sqrt:
 ; CHECK-I686:       # %bb.0: # %entry
 ; CHECK-I686-NEXT:    subl $12, %esp
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
@@ -1058,7 +1051,6 @@ define half @test_sqrt(half %0) {
 ; CHECK-I686-NEXT:    movss %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    addl $12, %esp
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-I686-NEXT:    retl
 entry:
   %1 = call half @llvm.sqrt.f16(half %0)
@@ -1067,7 +1059,7 @@ entry:
 
 declare half @llvm.sqrt.f16(half)
 
-define void @main.158() local_unnamed_addr #0 {
+define void @main.158() #0 {
 ; CHECK-LIBCALL-LABEL: main.158:
 ; CHECK-LIBCALL:       # %bb.0: # %entry
 ; CHECK-LIBCALL-NEXT:    pushq %rax
@@ -1143,23 +1135,14 @@ entry:
   ret void
 }
 
-define void @main.45() local_unnamed_addr {
+define void @main.45() #0 {
 ; CHECK-LIBCALL-LABEL: main.45:
 ; CHECK-LIBCALL:       # %bb.0: # %entry
 ; CHECK-LIBCALL-NEXT:    pushq %rbp
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-LIBCALL-NEXT:    pushq %r15
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-LIBCALL-NEXT:    pushq %r14
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LIBCALL-NEXT:    pushq %rbx
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-LIBCALL-NEXT:    pushq %rax
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-LIBCALL-NEXT:    .cfi_offset %rbx, -40
-; CHECK-LIBCALL-NEXT:    .cfi_offset %r14, -32
-; CHECK-LIBCALL-NEXT:    .cfi_offset %r15, -24
-; CHECK-LIBCALL-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-LIBCALL-NEXT:    pinsrw $0, (%rax), %xmm0
 ; CHECK-LIBCALL-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-LIBCALL-NEXT:    movd %eax, %xmm1
@@ -1183,15 +1166,10 @@ define void @main.45() local_unnamed_addr {
 ; CHECK-LIBCALL-NEXT:    movw %r15w, (%rax)
 ; CHECK-LIBCALL-NEXT:    movw %bp, (%rax)
 ; CHECK-LIBCALL-NEXT:    addq $8, %rsp
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-LIBCALL-NEXT:    popq %rbx
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LIBCALL-NEXT:    popq %r14
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-LIBCALL-NEXT:    popq %r15
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-LIBCALL-NEXT:    popq %rbp
-; CHECK-LIBCALL-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-LIBCALL-NEXT:    retq
 ;
 ; BWON-F16C-LABEL: main.45:
@@ -1213,13 +1191,8 @@ define void @main.45() local_unnamed_addr {
 ; CHECK-I686-LABEL: main.45:
 ; CHECK-I686:       # %bb.0: # %entry
 ; CHECK-I686-NEXT:    pushl %edi
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-I686-NEXT:    pushl %esi
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-I686-NEXT:    subl $20, %esp
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-I686-NEXT:    .cfi_offset %esi, -12
-; CHECK-I686-NEXT:    .cfi_offset %edi, -8
 ; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movd %eax, %xmm0
@@ -1238,11 +1211,8 @@ define void @main.45() local_unnamed_addr {
 ; CHECK-I686-NEXT:    movw %di, (%eax)
 ; CHECK-I686-NEXT:    movw %si, (%eax)
 ; CHECK-I686-NEXT:    addl $20, %esp
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-I686-NEXT:    popl %esi
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-I686-NEXT:    popl %edi
-; CHECK-I686-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-I686-NEXT:    retl
 entry:
   %0 = load half, ptr undef, align 8
@@ -1360,22 +1330,17 @@ declare half @llvm.minnum.f16(half, half)
 define half @pr61271(half %0, half %1) #0 {
 ; CHECK-LIBCALL-LABEL: pr61271:
 ; CHECK-LIBCALL:       # %bb.0:
-; CHECK-LIBCALL-NEXT:    subq $40, %rsp
+; CHECK-LIBCALL-NEXT:    pushq %rax
 ; CHECK-LIBCALL-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-LIBCALL-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-LIBCALL-NEXT:    callq __extendhfsf2@PLT
-; CHECK-LIBCALL-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-LIBCALL-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
 ; CHECK-LIBCALL-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-LIBCALL-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-LIBCALL-NEXT:    callq __extendhfsf2@PLT
-; CHECK-LIBCALL-NEXT:    movaps %xmm0, %xmm1
-; CHECK-LIBCALL-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; CHECK-LIBCALL-NEXT:    cmpltss %xmm2, %xmm1
-; CHECK-LIBCALL-NEXT:    andps %xmm1, %xmm0
-; CHECK-LIBCALL-NEXT:    andnps %xmm2, %xmm1
-; CHECK-LIBCALL-NEXT:    orps %xmm1, %xmm0
+; CHECK-LIBCALL-NEXT:    minss (%rsp), %xmm0 # 4-byte Folded Reload
 ; CHECK-LIBCALL-NEXT:    callq __truncsfhf2@PLT
-; CHECK-LIBCALL-NEXT:    addq $40, %rsp
+; CHECK-LIBCALL-NEXT:    popq %rax
 ; CHECK-LIBCALL-NEXT:    retq
 ;
 ; BWON-F16C-LABEL: pr61271:
@@ -1388,8 +1353,7 @@ define half @pr61271(half %0, half %1) #0 {
 ; BWON-F16C-NEXT:    movzwl %ax, %eax
 ; BWON-F16C-NEXT:    vmovd %eax, %xmm1
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; BWON-F16C-NEXT:    vcmpltss %xmm0, %xmm1, %xmm2
-; BWON-F16C-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vminss %xmm0, %xmm1, %xmm0
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vmovd %xmm0, %eax
 ; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -1411,13 +1375,8 @@ define half @pr61271(half %0, half %1) #0 {
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-I686-NEXT:    movaps %xmm1, %xmm2
-; CHECK-I686-NEXT:    cmpltss %xmm0, %xmm2
-; CHECK-I686-NEXT:    andps %xmm2, %xmm1
-; CHECK-I686-NEXT:    andnps %xmm0, %xmm2
-; CHECK-I686-NEXT:    orps %xmm1, %xmm2
-; CHECK-I686-NEXT:    movss %xmm2, (%esp)
+; CHECK-I686-NEXT:    minss {{[0-9]+}}(%esp), %xmm0
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    addl $44, %esp
 ; CHECK-I686-NEXT:    retl
@@ -1708,12 +1667,12 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; BWON-F16C-NEXT:  .LBB26_6:
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm2
 ; BWON-F16C-NEXT:    vmovd %xmm2, %edx
-; BWON-F16C-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; BWON-F16C-NEXT:    vpextrw $0, %xmm2, %esi
 ; BWON-F16C-NEXT:    movzwl %si, %esi
 ; BWON-F16C-NEXT:    vmovd %esi, %xmm2
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
+; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
 ; BWON-F16C-NEXT:    vpextrw $0, %xmm3, %esi
 ; BWON-F16C-NEXT:    movzwl %si, %esi
 ; BWON-F16C-NEXT:    vmovd %esi, %xmm3

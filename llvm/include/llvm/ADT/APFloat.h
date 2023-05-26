@@ -161,9 +161,9 @@ struct APFloatBase {
     // 8-bit floating point number mostly following IEEE-754 conventions
     // and bit layout S1E5M2 described in https://arxiv.org/abs/2206.02915,
     // with expanded range and with no infinity or signed zero.
-    // NaN is represnted as negative zero. (FN -> Finite, UZ -> unsigned zero).
+    // NaN is represented as negative zero. (FN -> Finite, UZ -> unsigned zero).
     // This format's exponent bias is 16, instead of the 15 (2 ** (5 - 1) - 1)
-    //  that IEEE precedent would imply.
+    // that IEEE precedent would imply.
     S_Float8E5M2FNUZ,
     // 8-bit floating point number mostly following IEEE-754 conventions with
     // bit layout S1E4M3 as described in https://arxiv.org/abs/2209.05433.
@@ -173,10 +173,17 @@ struct APFloatBase {
     // 8-bit floating point number mostly following IEEE-754 conventions
     // and bit layout S1E4M3 described in https://arxiv.org/abs/2206.02915,
     // with expanded range and with no infinity or signed zero.
-    // NaN is represnted as negative zero. (FN -> Finite, UZ -> unsigned zero).
+    // NaN is represented as negative zero. (FN -> Finite, UZ -> unsigned zero).
     // This format's exponent bias is 8, instead of the 7 (2 ** (4 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E4M3FNUZ,
+    // 8-bit floating point number mostly following IEEE-754 conventions
+    // and bit layout S1E4M3 with expanded range and with no infinity or signed
+    // zero.
+    // NaN is represented as negative zero. (FN -> Finite, UZ -> unsigned zero).
+    // This format's exponent bias is 11, instead of the 7 (2 ** (4 - 1) - 1)
+    // that IEEE precedent would imply.
+    S_Float8E4M3B11FNUZ,
 
     S_x87DoubleExtended,
     S_MaxSemantics = S_x87DoubleExtended,
@@ -195,6 +202,7 @@ struct APFloatBase {
   static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
+  static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
   static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
@@ -264,6 +272,11 @@ struct APFloatBase {
   static ExponentType semanticsMaxExponent(const fltSemantics &);
   static unsigned int semanticsSizeInBits(const fltSemantics &);
   static unsigned int semanticsIntSizeInBits(const fltSemantics&, bool);
+
+  // Returns true if any number described by \p Src can be precisely represented
+  // by a normal (not subnormal) value in \p Dst.
+  static bool isRepresentableAsNormalIn(const fltSemantics &Src,
+                                        const fltSemantics &Dst);
 
   /// Returns the size of the floating point number (in bits) in the given
   /// semantics.
@@ -579,6 +592,7 @@ private:
 
   /// @}
 
+  template <const fltSemantics &S> APInt convertIEEEFloatToAPInt() const;
   APInt convertHalfAPFloatToAPInt() const;
   APInt convertBFloatAPFloatToAPInt() const;
   APInt convertFloatAPFloatToAPInt() const;
@@ -590,7 +604,9 @@ private:
   APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
+  template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
   void initFromHalfAPInt(const APInt &api);
   void initFromBFloatAPInt(const APInt &api);
   void initFromFloatAPInt(const APInt &api);
@@ -602,6 +618,7 @@ private:
   void initFromFloat8E5M2FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3FNAPInt(const APInt &api);
   void initFromFloat8E4M3FNUZAPInt(const APInt &api);
+  void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);
@@ -662,21 +679,14 @@ public:
   DoubleAPFloat(DoubleAPFloat &&RHS);
 
   DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
-
-  DoubleAPFloat &operator=(DoubleAPFloat &&RHS) {
-    if (this != &RHS) {
-      this->~DoubleAPFloat();
-      new (this) DoubleAPFloat(std::move(RHS));
-    }
-    return *this;
-  }
+  inline DoubleAPFloat &operator=(DoubleAPFloat &&RHS);
 
   bool needsCleanup() const { return Floats != nullptr; }
 
-  APFloat &getFirst() { return Floats[0]; }
-  const APFloat &getFirst() const { return Floats[0]; }
-  APFloat &getSecond() { return Floats[1]; }
-  const APFloat &getSecond() const { return Floats[1]; }
+  inline APFloat &getFirst();
+  inline const APFloat &getFirst() const;
+  inline APFloat &getSecond();
+  inline const APFloat &getSecond() const;
 
   opStatus add(const DoubleAPFloat &RHS, roundingMode RM);
   opStatus subtract(const DoubleAPFloat &RHS, roundingMode RM);
@@ -1390,6 +1400,27 @@ inline APFloat maximum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+// We want the following functions to be available in the header for inlining.
+// We cannot define them inline in the class definition of `DoubleAPFloat`
+// because doing so would instantiate `std::unique_ptr<APFloat[]>` before
+// `APFloat` is defined, and that would be undefined behavior.
+namespace detail {
+
+DoubleAPFloat &DoubleAPFloat::operator=(DoubleAPFloat &&RHS) {
+  if (this != &RHS) {
+    this->~DoubleAPFloat();
+    new (this) DoubleAPFloat(std::move(RHS));
+  }
+  return *this;
+}
+
+APFloat &DoubleAPFloat::getFirst() { return Floats[0]; }
+const APFloat &DoubleAPFloat::getFirst() const { return Floats[0]; }
+APFloat &DoubleAPFloat::getSecond() { return Floats[1]; }
+const APFloat &DoubleAPFloat::getSecond() const { return Floats[1]; }
+
+} // namespace detail
 
 } // namespace llvm
 

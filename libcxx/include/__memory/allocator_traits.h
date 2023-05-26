@@ -401,6 +401,25 @@ struct __is_cpp17_copy_insertable<_Alloc, __enable_if_t<
     : __is_cpp17_move_insertable<_Alloc>
 { };
 
+// ASan choices
+#ifndef _LIBCPP_HAS_NO_ASAN
+#   define _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS 1
+#endif
+
+#ifdef _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS
+template <class _Alloc>
+struct __asan_annotate_container_with_allocator
+#   if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1600
+      : true_type {};
+#   else
+      // TODO(LLVM-18): Remove the special-casing
+      : false_type {};
+#   endif
+
+template <class _Tp>
+struct __asan_annotate_container_with_allocator<allocator<_Tp> > : true_type {};
+#endif
+
 #undef _LIBCPP_ALLOCATOR_TRAITS_HAS_XXX
 
 _LIBCPP_END_NAMESPACE_STD

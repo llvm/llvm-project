@@ -25,7 +25,7 @@ TEST_P(BacktraceGuardedPoolAllocatorDeathTest, NeverAllocated) {
   // in the posix crash handler.
   char *volatile NeverAllocatedPtr = static_cast<char *>(Ptr) + 0x3000;
   if (!Recoverable) {
-    ASSERT_DEATH(*NeverAllocatedPtr = 0, DeathNeedle);
+    EXPECT_DEATH(*NeverAllocatedPtr = 0, DeathNeedle);
     return;
   }
 

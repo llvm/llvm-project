@@ -33,9 +33,9 @@ LogicalResult AbstractDenseDataFlowAnalysis::initialize(Operation *top) {
 }
 
 LogicalResult AbstractDenseDataFlowAnalysis::visit(ProgramPoint point) {
-  if (auto *op = point.dyn_cast<Operation *>())
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(point))
     processOperation(op);
-  else if (auto *block = point.dyn_cast<Block *>())
+  else if (auto *block = llvm::dyn_cast_if_present<Block *>(point))
     visitBlock(block);
   else
     return failure();

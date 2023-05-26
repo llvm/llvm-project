@@ -32,7 +32,7 @@ private:
    chrono::month __m_;
    chrono::day   __d_;
 public:
-    _LIBCPP_HIDE_FROM_ABI month_day() = default;
+    month_day() = default;
     _LIBCPP_HIDE_FROM_ABI constexpr month_day(const chrono::month& __mval, const chrono::day& __dval) noexcept
         : __m_{__mval}, __d_{__dval} {}
     _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m_; }

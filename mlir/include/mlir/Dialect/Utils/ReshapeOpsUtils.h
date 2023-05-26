@@ -92,9 +92,8 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   if (reshapeSrcOp && reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
     return reshapeSrcOp.getSrc();
   // Reshape of a constant can be replaced with a new constant.
-  if (auto elements = operands.front().dyn_cast_or_null<DenseElementsAttr>()) {
-    return elements.reshape(
-        reshapeOp.getResult().getType().template cast<ShapedType>());
+  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front())) {
+    return elements.reshape(cast<ShapedType>(reshapeOp.getResult().getType()));
   }
   return nullptr;
 }
@@ -475,7 +474,7 @@ struct CollapseShapeRankReducingSliceSimplificationInfo {
   /// The shape of the output of the rank-reducing slice.
   RankedTensorType sliceResultType;
   /// The reassociation indices for the new collapse shape op, if required. If
-  /// `None`, the slice should replace the collapse shape op.
+  /// `std::nullopt`, the slice should replace the collapse shape op.
   std::optional<SmallVector<ReassociationIndices>> newReassociationIndices;
 };
 
@@ -520,6 +519,20 @@ getSimplifyCollapseShapeWithRankReducingSliceInfo(
     RankedTensorType sourceType,
     ArrayRef<ReassociationIndices> reassociationIndices);
 
+struct PackingMetadata {
+  SmallVector<int64_t> insertPositions;
+  SmallVector<int64_t> outerPositions;
+  SmallVector<ReassociationIndices> reassociations;
+};
+
+/// Given a vector of `positions` indices representing desired packing insertion
+/// points into a target vector (i.e. pack/unpack.inner_dim_pos), compute the
+/// final positions in the target shape as well as the reshape reassociations.
+// Note: This should not be called with a large positions array (or the
+// implementation needs to be updated to use an N.log N sort instead of
+// repeated N^2 counts).
+PackingMetadata computePackingMetadata(int64_t packedRank,
+                                       ArrayRef<int64_t> innerDimPos);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H

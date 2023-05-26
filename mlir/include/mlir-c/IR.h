@@ -48,6 +48,7 @@ extern "C" {
   };                                                                           \
   typedef struct name name
 
+DEFINE_C_API_STRUCT(MlirBytecodeWriterConfig, void);
 DEFINE_C_API_STRUCT(MlirContext, void);
 DEFINE_C_API_STRUCT(MlirDialect, void);
 DEFINE_C_API_STRUCT(MlirDialectRegistry, void);
@@ -409,6 +410,24 @@ MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags);
 
 //===----------------------------------------------------------------------===//
+// Bytecode printing flags API.
+//===----------------------------------------------------------------------===//
+
+/// Creates new printing flags with defaults, intended for customization.
+/// Must be freed with a call to mlirBytecodeWriterConfigDestroy().
+MLIR_CAPI_EXPORTED MlirBytecodeWriterConfig
+mlirBytecodeWriterConfigCreate(void);
+
+/// Destroys printing flags created with mlirBytecodeWriterConfigCreate.
+MLIR_CAPI_EXPORTED void
+mlirBytecodeWriterConfigDestroy(MlirBytecodeWriterConfig config);
+
+/// Sets the version to emit in the writer config.
+MLIR_CAPI_EXPORTED void
+mlirBytecodeWriterConfigDesiredEmitVersion(MlirBytecodeWriterConfig flags,
+                                           int64_t version);
+
+//===----------------------------------------------------------------------===//
 // Operation API.
 //===----------------------------------------------------------------------===//
 
@@ -546,10 +565,16 @@ MLIR_CAPI_EXPORTED void mlirOperationPrintWithFlags(MlirOperation op,
                                                     MlirStringCallback callback,
                                                     void *userData);
 
-/// Same as mlirOperationPrint but writing the bytecode format out.
+/// Same as mlirOperationPrint but writing the bytecode format.
 MLIR_CAPI_EXPORTED void mlirOperationWriteBytecode(MlirOperation op,
                                                    MlirStringCallback callback,
                                                    void *userData);
+
+/// Same as mlirOperationWriteBytecode but with writer config and returns
+/// failure only if desired bytecode could not be honored.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirOperationWriteBytecodeWithConfig(
+    MlirOperation op, MlirBytecodeWriterConfig config,
+    MlirStringCallback callback, void *userData);
 
 /// Prints an operation to stderr.
 MLIR_CAPI_EXPORTED void mlirOperationDump(MlirOperation op);
@@ -751,9 +776,21 @@ MLIR_CAPI_EXPORTED void mlirValueDump(MlirValue value);
 MLIR_CAPI_EXPORTED void
 mlirValuePrint(MlirValue value, MlirStringCallback callback, void *userData);
 
+/// Prints a value as an operand (i.e., the ValueID).
+MLIR_CAPI_EXPORTED void mlirValuePrintAsOperand(MlirValue value,
+                                                MlirOpPrintingFlags flags,
+                                                MlirStringCallback callback,
+                                                void *userData);
+
 /// Returns an op operand representing the first use of the value, or a null op
 /// operand if there are no uses.
 MLIR_CAPI_EXPORTED MlirOpOperand mlirValueGetFirstUse(MlirValue value);
+
+/// Replace all uses of 'of' value with the 'with' value, updating anything in
+/// the IR that uses 'of' to use the other value instead.  When this returns
+/// there are zero uses of 'of'.
+MLIR_CAPI_EXPORTED void mlirValueReplaceAllUsesOfWith(MlirValue of,
+                                                      MlirValue with);
 
 //===----------------------------------------------------------------------===//
 // OpOperand API.
@@ -787,6 +824,9 @@ MLIR_CAPI_EXPORTED MlirContext mlirTypeGetContext(MlirType type);
 
 /// Gets the type ID of the type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirTypeGetTypeID(MlirType type);
+
+/// Gets the dialect a type belongs to.
+MLIR_CAPI_EXPORTED MlirDialect mlirTypeGetDialect(MlirType type);
 
 /// Checks whether a type is null.
 static inline bool mlirTypeIsNull(MlirType type) { return !type.ptr; }

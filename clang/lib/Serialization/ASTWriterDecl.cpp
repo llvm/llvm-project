@@ -278,7 +278,7 @@ void ASTDeclWriter::Visit(Decl *D) {
   // Source locations require array (variable-length) abbreviations.  The
   // abbreviation infrastructure requires that arrays are encoded last, so
   // we handle it here in the case of those classes derived from DeclaratorDecl
-  if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D)) {
+  if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
     if (auto *TInfo = DD->getTypeSourceInfo())
       Record.AddTypeLoc(TInfo->getTypeLoc());
   }
@@ -286,16 +286,38 @@ void ASTDeclWriter::Visit(Decl *D) {
   // Handle FunctionDecl's body here and write it after all other Stmts/Exprs
   // have been written. We want it last because we will not read it back when
   // retrieving it from the AST, we'll just lazily set the offset.
-  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     Record.push_back(FD->doesThisDeclarationHaveABody());
     if (FD->doesThisDeclarationHaveABody())
       Record.AddFunctionDefinition(FD);
   }
 
+  // Similar to FunctionDecls, handle VarDecl's initializer here and write it
+  // after all other Stmts/Exprs. We will not read the initializer until after
+  // we have finished recursive deserialization, because it can recursively
+  // refer back to the variable.
+  if (auto *VD = dyn_cast<VarDecl>(D)) {
+    Record.AddVarDeclInit(VD);
+  }
+
+  // And similarly for FieldDecls. We already serialized whether there is a
+  // default member initializer.
+  if (auto *FD = dyn_cast<FieldDecl>(D)) {
+    if (FD->hasInClassInitializer()) {
+      if (Expr *Init = FD->getInClassInitializer()) {
+        Record.push_back(1);
+        Record.AddStmt(Init);
+      } else {
+        Record.push_back(0);
+        // Initializer has not been instantiated yet.
+      }
+    }
+  }
+
   // If this declaration is also a DeclContext, write blocks for the
   // declarations that lexically stored inside its context and those
   // declarations that are visible from its context.
-  if (DeclContext *DC = dyn_cast<DeclContext>(D))
+  if (auto *DC = dyn_cast<DeclContext>(D))
     VisitDeclContext(DC);
 }
 
@@ -959,14 +981,11 @@ void ASTDeclWriter::VisitFieldDecl(FieldDecl *D) {
   VisitDeclaratorDecl(D);
   Record.push_back(D->isMutable());
 
-  FieldDecl::InitStorageKind ISK = D->InitStorage.getInt();
-  Record.push_back(ISK);
-  if (ISK == FieldDecl::ISK_CapturedVLAType)
+  Record.push_back((D->StorageKind << 1) | D->BitField);
+  if (D->StorageKind == FieldDecl::ISK_CapturedVLAType)
     Record.AddTypeRef(QualType(D->getCapturedVLAType(), 0));
-  else if (ISK)
-    Record.AddStmt(D->getInClassInitializer());
-
-  Record.AddStmt(D->getBitWidth());
+  else if (D->BitField)
+    Record.AddStmt(D->getBitWidth());
 
   if (!D->getDeclName())
     Record.AddDeclRef(Context.getInstantiatedFromUnnamedFieldDecl(D));
@@ -1037,6 +1056,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   Record.push_back(D->getTSCSpec());
   Record.push_back(D->getInitStyle());
   Record.push_back(D->isARCPseudoStrong());
+  bool HasDeducedType = false;
   if (!isa<ParmVarDecl>(D)) {
     Record.push_back(D->isThisDeclarationADemotedDefinition());
     Record.push_back(D->isExceptionVariable());
@@ -1053,36 +1073,34 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     else
       Record.push_back(0);
     Record.push_back(D->isEscapingByref());
+    HasDeducedType = D->getType()->getContainedDeducedType();
+    Record.push_back(HasDeducedType);
   }
   Record.push_back(D->getLinkageInternal());
 
-  Record.AddVarDeclInit(D);
-
-  if (D->hasAttr<BlocksAttr>() && D->getType()->getAsCXXRecordDecl()) {
+  if (D->hasAttr<BlocksAttr>()) {
     BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
     Record.AddStmt(Init.getCopyExpr());
     if (Init.getCopyExpr())
       Record.push_back(Init.canThrow());
   }
 
-  if (D->getStorageDuration() == SD_Static) {
-    bool ModulesCodegen = false;
-    if (Writer.WritingModule &&
-        !D->getDescribedVarTemplate()) {
-      // When building a C++20 module interface unit or a partition unit, a
-      // strong definition in the module interface is provided by the
-      // compilation of that unit, not by its users. (Inline variables are still
-      // emitted in module users.)
-      ModulesCodegen =
-          (Writer.WritingModule->isInterfaceOrPartition() ||
-           (D->hasAttr<DLLExportAttr>() &&
-            Writer.Context->getLangOpts().BuildingPCHWithObjectFile)) &&
-           Writer.Context->GetGVALinkageForVariable(D) >= GVA_StrongExternal;
-    }
-    Record.push_back(ModulesCodegen);
-    if (ModulesCodegen)
-      Writer.ModularCodegenDecls.push_back(Writer.GetDeclRef(D));
+  bool ModulesCodegen = false;
+  if (Writer.WritingModule && D->getStorageDuration() == SD_Static &&
+      !D->getDescribedVarTemplate()) {
+    // When building a C++20 module interface unit or a partition unit, a
+    // strong definition in the module interface is provided by the
+    // compilation of that unit, not by its users. (Inline variables are still
+    // emitted in module users.)
+    ModulesCodegen =
+        (Writer.WritingModule->isInterfaceOrPartition() ||
+         (D->hasAttr<DLLExportAttr>() &&
+          Writer.Context->getLangOpts().BuildingPCHWithObjectFile)) &&
+         Writer.Context->GetGVALinkageForVariable(D) >= GVA_StrongExternal;
   }
+  Record.push_back(ModulesCodegen);
+  if (ModulesCodegen)
+    Writer.ModularCodegenDecls.push_back(Writer.GetDeclRef(D));
 
   enum {
     VarNotTemplate = 0, VarTemplate, StaticDataMemberSpecialization
@@ -1118,8 +1136,9 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       !D->isConstexpr() &&
       !D->isInitCapture() &&
       !D->isPreviousDeclInSameBlockScope() &&
-      !(D->hasAttr<BlocksAttr>() && D->getType()->getAsCXXRecordDecl()) &&
+      !D->hasAttr<BlocksAttr>() &&
       !D->isEscapingByref() &&
+      !HasDeducedType &&
       D->getStorageDuration() != SD_Static &&
       !D->getMemberSpecializationInfo())
     AbbrevToUse = Writer.getDeclVarAbbrev();
@@ -1413,7 +1432,10 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   VisitRecordDecl(D);
 
   enum {
-    CXXRecNotTemplate = 0, CXXRecTemplate, CXXRecMemberSpecialization
+    CXXRecNotTemplate = 0,
+    CXXRecTemplate,
+    CXXRecMemberSpecialization,
+    CXXLambda
   };
   if (ClassTemplateDecl *TemplD = D->getDescribedClassTemplate()) {
     Record.push_back(CXXRecTemplate);
@@ -1424,6 +1446,15 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     Record.AddDeclRef(MSInfo->getInstantiatedFrom());
     Record.push_back(MSInfo->getTemplateSpecializationKind());
     Record.AddSourceLocation(MSInfo->getPointOfInstantiation());
+  } else if (D->isLambda()) {
+    // For a lambda, we need some information early for merging.
+    Record.push_back(CXXLambda);
+    if (auto *Context = D->getLambdaContextDecl()) {
+      Record.AddDeclRef(Context);
+      Record.push_back(D->getLambdaIndexInContext());
+    } else {
+      Record.push_back(0);
+    }
   } else {
     Record.push_back(CXXRecNotTemplate);
   }
@@ -2024,7 +2055,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TSIType
   // FieldDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isMutable
-  Abv->Add(BitCodeAbbrevOp(0));                       // InitStyle
+  Abv->Add(BitCodeAbbrevOp(0));                       // StorageKind
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
@@ -2301,6 +2332,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // isPrevDeclInSameScope
   Abv->Add(BitCodeAbbrevOp(0));                         // ImplicitParamKind
   Abv->Add(BitCodeAbbrevOp(0));                         // EscapingByref
+  Abv->Add(BitCodeAbbrevOp(0));                         // HasDeducedType
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // HasConstant*
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // VarKind (local enum)
@@ -2472,8 +2504,15 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
   // Named modules have different semantics than header modules. Every named
   // module units owns a translation unit. So the importer of named modules
   // doesn't need to deserilize everything ahead of time.
-  if (WritingModule && WritingModule->isModulePurview())
+  if (WritingModule && WritingModule->isModulePurview()) {
+    // The PragmaCommentDecl and PragmaDetectMismatchDecl are MSVC's extension.
+    // And the behavior of MSVC for such cases will leak this to the module
+    // users. Given pragma is not a standard thing, the compiler has the space
+    // to do their own decision. Let's follow MSVC here.
+    if (isa<PragmaCommentDecl, PragmaDetectMismatchDecl>(D))
+      return true;
     return false;
+  }
 
   // An ObjCMethodDecl is never considered as "required" because its
   // implementation container always is.

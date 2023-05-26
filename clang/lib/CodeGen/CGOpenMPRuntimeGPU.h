@@ -142,13 +142,6 @@ private:
                             const Expr *IfCond);
 
 protected:
-  /// Get the function name of an outlined region.
-  //  The name can be customized depending on the target.
-  //
-  StringRef getOutlinedHelperName() const override {
-    return "__omp_outlined__";
-  }
-
   /// Check if the default location must be constant.
   /// Constant for NVPTX for better optimization.
   bool isDefaultLocationConstant() const override { return true; }
@@ -197,31 +190,31 @@ public:
   //  directive.
   /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
   /// kmp_int32 BoundID, struct context_vars*).
+  /// \param CGF Reference to current CodeGenFunction.
   /// \param D OpenMP directive.
   /// \param ThreadIDVar Variable for thread id in the current OpenMP region.
   /// \param InnermostKind Kind of innermost directive (for simple directives it
   /// is a directive itself, for combined - its innermost directive).
   /// \param CodeGen Code generation sequence for the \a D directive.
-  llvm::Function *
-  emitParallelOutlinedFunction(const OMPExecutableDirective &D,
-                               const VarDecl *ThreadIDVar,
-                               OpenMPDirectiveKind InnermostKind,
-                               const RegionCodeGenTy &CodeGen) override;
+  llvm::Function *emitParallelOutlinedFunction(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
+      const RegionCodeGenTy &CodeGen) override;
 
   /// Emits inlined function for the specified OpenMP teams
   //  directive.
   /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
   /// kmp_int32 BoundID, struct context_vars*).
+  /// \param CGF Reference to current CodeGenFunction.
   /// \param D OpenMP directive.
   /// \param ThreadIDVar Variable for thread id in the current OpenMP region.
   /// \param InnermostKind Kind of innermost directive (for simple directives it
   /// is a directive itself, for combined - its innermost directive).
   /// \param CodeGen Code generation sequence for the \a D directive.
-  llvm::Function *
-  emitTeamsOutlinedFunction(const OMPExecutableDirective &D,
-                            const VarDecl *ThreadIDVar,
-                            OpenMPDirectiveKind InnermostKind,
-                            const RegionCodeGenTy &CodeGen) override;
+  llvm::Function *emitTeamsOutlinedFunction(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
+      const RegionCodeGenTy &CodeGen) override;
 
   /// Emits code for teams call of the \a OutlinedFn with
   /// variables captured in a record which address is stored in \a

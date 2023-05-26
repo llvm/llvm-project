@@ -51,6 +51,7 @@ public:
       : rtp(rtp), enc(getSparseTensorEncoding(rtp)),
         lvlRank(enc ? enc.getLvlRank() : getDimRank()),
         dim2lvl(enc.hasIdDimOrdering() ? AffineMap() : enc.getDimOrdering()) {
+    assert(rtp && "got null RankedTensorType");
     assert((!isIdentity() || getDimRank() == lvlRank) && "Rank mismatch");
   }
 

@@ -13,9 +13,8 @@
 #include "src/unistd/read.h"
 #include "src/unistd/unlink.h"
 #include "src/unistd/write.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
 TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
   constexpr int DUPFD = 0xD0;

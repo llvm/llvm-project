@@ -36,14 +36,13 @@ private:
   std::string OSSuffix;
   std::string IncludeSuffix;
   flags_list Flags;
-  int Priority;
 
 public:
   /// GCCSuffix, OSSuffix & IncludeSuffix will be appended directly to the
   /// sysroot string so they must either be empty or begin with a '/' character.
   /// This is enforced with an assert in the constructor.
   Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
-           StringRef IncludeSuffix = {}, int Priority = 0,
+           StringRef IncludeSuffix = {},
            const flags_list &Flags = flags_list());
 
   /// Get the detected GCC installation path suffix for the multi-arch
@@ -61,10 +60,6 @@ public:
   /// Get the flags that indicate or contraindicate this multilib's use
   /// All elements begin with either '+' or '-'
   const flags_list &flags() const { return Flags; }
-
-  /// Returns the multilib priority. When more than one multilib matches flags,
-  /// the one with the highest priority is selected, with 0 being the default.
-  int priority() const { return Priority; }
 
   LLVM_DUMP_METHOD void dump() const;
   /// print summary of the Multilib
@@ -108,6 +103,9 @@ public:
   const_iterator begin() const { return Multilibs.begin(); }
   const_iterator end() const { return Multilibs.end(); }
 
+  /// Select compatible variants
+  multilib_list select(const Multilib::flags_list &Flags) const;
+
   /// Pick the best multilib in the set, \returns false if none are compatible
   bool select(const Multilib::flags_list &Flags, Multilib &M) const;
 
@@ -129,13 +127,6 @@ public:
   }
 
   const IncludeDirsFunc &filePathsCallback() const { return FilePathsCallback; }
-
-private:
-  /// Apply the filter to Multilibs and return the subset that remains
-  static multilib_list filterCopy(FilterCallback F, const multilib_list &Ms);
-
-  /// Apply the filter to the multilib_list, removing those that don't match
-  static void filterInPlace(FilterCallback F, multilib_list &Ms);
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const MultilibSet &MS);

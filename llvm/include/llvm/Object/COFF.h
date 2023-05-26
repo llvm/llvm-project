@@ -1259,7 +1259,7 @@ private:
   BinaryByteStream BBS;
 
   SectionRef Section;
-  const COFFObjectFile *Obj;
+  const COFFObjectFile *Obj = nullptr;
 
   std::vector<const coff_relocation *> Relocs;
 

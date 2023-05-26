@@ -31,6 +31,11 @@ def ArithBufferize : Pass<"arith-bufferize", "ModuleOp"> {
 def ArithExpandOps : Pass<"arith-expand"> {
   let summary = "Legalize Arith ops to be convertible to LLVM.";
   let constructor = "mlir::arith::createArithExpandOpsPass()";
+  let dependentDialects = ["vector::VectorDialect"];
+  let options = [
+    Option<"includeBf16", "include-bf16", "bool", /*default=*/"false",
+           "Enable the BF16 expansion patterns">,
+  ];
 }
 
 def ArithUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
@@ -77,5 +82,19 @@ def ArithEmulateWideInt : Pass<"arith-emulate-wide-int"> {
   ];
   let dependentDialects = ["vector::VectorDialect"];
 }
+
+def ArithIntNarrowing : Pass<"arith-int-narrowing"> {
+  let summary = "Reduce integer operation bitwidth";
+  let description = [{
+    Reduce bitwidths of integer types used in arith operations. This pass
+    prefers the narrowest available integer bitwidths that are guaranteed to
+    produce the same results.
+  }];
+  let dependentDialects = ["vector::VectorDialect"];
+  let options = [
+    ListOption<"bitwidthsSupported", "int-bitwidths-supported", "unsigned",
+               "Integer bitwidths supported">,
+  ];
+ }
 
 #endif // MLIR_DIALECT_ARITH_TRANSFORMS_PASSES

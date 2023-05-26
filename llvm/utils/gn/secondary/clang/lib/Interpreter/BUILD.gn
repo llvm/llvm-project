@@ -26,5 +26,7 @@ static_library("Interpreter") {
     "IncrementalExecutor.cpp",
     "IncrementalParser.cpp",
     "Interpreter.cpp",
+    "InterpreterUtils.cpp",
+    "Value.cpp",
   ]
 }

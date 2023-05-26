@@ -36,7 +36,7 @@
    '("%[-]?[0-9]+" . font-lock-variable-name-face)
    ;; Types
    `(,(regexp-opt
-       '("void" "i1" "i8" "i16" "i32" "i64" "i128" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128" "x86_mmx" "x86_amx"
+       '("void" "i1" "i8" "i16" "i32" "i64" "i128" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128" "x86_mmx" "x86_amx" "ptr"
          "type" "label" "opaque" "token") 'symbols) . font-lock-type-face)
    ;; Integer literals
    '("\\b[-]?[0-9]+\\b" . font-lock-preprocessor-face)

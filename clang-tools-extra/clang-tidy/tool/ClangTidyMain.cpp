@@ -52,7 +52,9 @@ Configuration files:
                                  options. Example:
                                    CheckOptions:
                                      some-check.SomeOption: 'some value'
-  Checks                       - Same as '--checks'.
+  Checks                       - Same as '--checks'. Additionally, the list of
+                                 globs can be specified as a list instead of a
+                                 string.
   ExtraArgs                    - Same as '--extra-args'.
   ExtraArgsBefore              - Same as '--extra-args-before'.
   FormatStyle                  - Same as '--format-style'.
@@ -132,10 +134,13 @@ option in .clang-tidy file, if any.
                                          cl::init(""),
                                          cl::cat(ClangTidyCategory));
 
-static cl::opt<bool>
-    SystemHeaders("system-headers",
-                  desc("Display the errors from system headers."),
-                  cl::init(false), cl::cat(ClangTidyCategory));
+static cl::opt<bool> SystemHeaders("system-headers", desc(R"(
+Display the errors from system headers.
+This option overrides the 'SystemHeaders' option
+in .clang-tidy file, if any.
+)"),
+                                   cl::init(false), cl::cat(ClangTidyCategory));
+
 static cl::opt<std::string> LineFilter("line-filter", desc(R"(
 List of files with line ranges to filter the
 warnings. Can be used together with

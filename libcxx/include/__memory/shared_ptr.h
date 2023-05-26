@@ -49,7 +49,6 @@
 #include <__utility/swap.h>
 #include <__verbose_abort>
 #include <cstddef>
-#include <cstdlib> // abort
 #include <iosfwd>
 #include <new>
 #include <stdexcept>
@@ -125,8 +124,8 @@ class _LIBCPP_EXCEPTION_ABI bad_weak_ptr
     : public std::exception
 {
 public:
-    bad_weak_ptr() _NOEXCEPT = default;
-    bad_weak_ptr(const bad_weak_ptr&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_weak_ptr() _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_weak_ptr(const bad_weak_ptr&) _NOEXCEPT = default;
     ~bad_weak_ptr() _NOEXCEPT override;
     const char* what() const  _NOEXCEPT override;
 };
@@ -236,12 +235,12 @@ public:
         :  __data_(__compressed_pair<_Tp, _Dp>(__p, _VSTD::move(__d)), _VSTD::move(__a)) {}
 
 #ifndef _LIBCPP_HAS_NO_RTTI
-    const void* __get_deleter(const type_info&) const _NOEXCEPT override;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const void* __get_deleter(const type_info&) const _NOEXCEPT override;
 #endif
 
 private:
-    void __on_zero_shared() _NOEXCEPT override;
-    void __on_zero_shared_weak() _NOEXCEPT override;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override;
 };
 
 #ifndef _LIBCPP_HAS_NO_RTTI
@@ -311,7 +310,7 @@ struct __shared_ptr_emplace
     _Tp* __get_elem() _NOEXCEPT { return __storage_.__get_elem(); }
 
 private:
-    void __on_zero_shared() _NOEXCEPT override {
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
 #if _LIBCPP_STD_VER >= 20
         if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
             __get_elem()->~_Tp();
@@ -325,7 +324,7 @@ private:
 #endif
     }
 
-    void __on_zero_shared_weak() _NOEXCEPT override {
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
         using _ControlBlockAlloc = typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type;
         using _ControlBlockPointer = typename allocator_traits<_ControlBlockAlloc>::pointer;
         _ControlBlockAlloc __tmp(*__get_alloc());
@@ -352,13 +351,13 @@ private:
         _LIBCPP_HIDE_FROM_ABI ~_Storage() {
             __get_alloc()->~_Alloc();
         }
-        _Alloc* __get_alloc() _NOEXCEPT {
+        _LIBCPP_HIDE_FROM_ABI _Alloc* __get_alloc() _NOEXCEPT {
             _CompressedPair *__as_pair = reinterpret_cast<_CompressedPair*>(__blob_);
             typename _CompressedPair::_Base1* __first = _CompressedPair::__get_first_base(__as_pair);
             _Alloc *__alloc = reinterpret_cast<_Alloc*>(__first);
             return __alloc;
         }
-        _LIBCPP_NO_CFI _Tp* __get_elem() _NOEXCEPT {
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _Tp* __get_elem() _NOEXCEPT {
             _CompressedPair *__as_pair = reinterpret_cast<_CompressedPair*>(__blob_);
             typename _CompressedPair::_Base2* __second = _CompressedPair::__get_second_base(__as_pair);
             _Tp *__elem = reinterpret_cast<_Tp*>(__second);
@@ -510,7 +509,7 @@ public:
 #endif
         >::value
     > >
-    explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
+    _LIBCPP_HIDE_FROM_ABI explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
         unique_ptr<_Yp> __hold(__p);
         typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
         typedef __shared_ptr_pointer<_Yp*, __shared_ptr_default_delete<_Tp, _Yp>, _AllocT> _CntrlBlk;
@@ -1100,7 +1099,7 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count
     ~__unbounded_array_control_block() override { } // can't be `= default` because of the sometimes-non-trivial union member __data_
 
 private:
-    void __on_zero_shared() _NOEXCEPT override {
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
 #if _LIBCPP_STD_VER >= 20
         if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
             std::__reverse_destroy(__data_, __data_ + __count_);
@@ -1114,7 +1113,7 @@ private:
 #endif
     }
 
-    void __on_zero_shared_weak() _NOEXCEPT override {
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
         using _AlignedStorage = __sp_aligned_storage<alignof(__unbounded_array_control_block)>;
         using _StorageAlloc = __allocator_traits_rebind_t<_Alloc, _AlignedStorage>;
         using _PointerTraits = pointer_traits<typename allocator_traits<_StorageAlloc>::pointer>;
@@ -1186,7 +1185,7 @@ struct __bounded_array_control_block<_Tp[_Count], _Alloc>
     ~__bounded_array_control_block() override { } // can't be `= default` because of the sometimes-non-trivial union member __data_
 
 private:
-    void __on_zero_shared() _NOEXCEPT override {
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
 #if _LIBCPP_STD_VER >= 20
         if constexpr (is_same_v<typename _Alloc::value_type, __for_overwrite_tag>) {
             std::__reverse_destroy(__data_, __data_ + _Count);
@@ -1200,7 +1199,7 @@ private:
 #endif
     }
 
-    void __on_zero_shared_weak() _NOEXCEPT override {
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
         using _ControlBlockAlloc = __allocator_traits_rebind_t<_Alloc, __bounded_array_control_block>;
         using _PointerTraits = pointer_traits<typename allocator_traits<_ControlBlockAlloc>::pointer>;
 
@@ -1590,7 +1589,7 @@ public:
     template<class _Yp> _LIBCPP_INLINE_VISIBILITY weak_ptr(weak_ptr<_Yp>&& __r,
                    typename enable_if<__compatible_with<_Yp, _Tp>::value, __nat*>::type = 0)
                          _NOEXCEPT;
-    ~weak_ptr();
+    _LIBCPP_HIDE_FROM_ABI ~weak_ptr();
 
     _LIBCPP_INLINE_VISIBILITY
     weak_ptr& operator=(weak_ptr const& __r) _NOEXCEPT;
@@ -1634,7 +1633,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool expired() const _NOEXCEPT
         {return __cntrl_ == nullptr || __cntrl_->use_count() == 0;}
-    shared_ptr<_Tp> lock() const _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> lock() const _NOEXCEPT;
     template<class _Up>
         _LIBCPP_INLINE_VISIBILITY
         bool owner_before(const shared_ptr<_Up>& __r) const _NOEXCEPT

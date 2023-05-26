@@ -156,18 +156,14 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   IRBuilder<> IRB(&LI);
   IRB.SetCurrentDebugLocation(LI.getDebugLoc());
 
-  unsigned AS = LI.getPointerAddressSpace();
-  unsigned LdBits = DL->getTypeStoreSize(LI.getType()) * 8;
+  unsigned LdBits = DL->getTypeStoreSizeInBits(LI.getType());
   auto IntNTy = Type::getIntNTy(LI.getContext(), LdBits);
 
-  PointerType *Int32PtrTy = Type::getInt32PtrTy(LI.getContext(), AS);
-  PointerType *Int8PtrTy = Type::getInt8PtrTy(LI.getContext(), AS);
-  auto *NewPtr = IRB.CreateBitCast(
-      IRB.CreateConstGEP1_64(
-          IRB.getInt8Ty(),
-          IRB.CreatePointerBitCastOrAddrSpaceCast(Base, Int8PtrTy),
-          Offset - Adjust),
-      Int32PtrTy);
+  auto *NewPtr = IRB.CreateConstGEP1_64(
+      IRB.getInt8Ty(),
+      IRB.CreateAddrSpaceCast(Base, LI.getPointerOperand()->getType()),
+      Offset - Adjust);
+
   LoadInst *NewLd = IRB.CreateAlignedLoad(IRB.getInt32Ty(), NewPtr, Align(4));
   NewLd->copyMetadata(LI);
   NewLd->setMetadata(LLVMContext::MD_range, nullptr);

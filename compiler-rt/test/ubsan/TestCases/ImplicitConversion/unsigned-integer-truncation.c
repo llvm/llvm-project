@@ -7,14 +7,14 @@
 // RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV6 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V6,CHECK
 // RUN: %clang   -x c   -fsanitize=implicit-unsigned-integer-truncation %s -DV7 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V7,CHECK
 
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV0 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V0,CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV1 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V1,CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV2 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V2,CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV3 -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV4 -o %t && %run %t 2>&1 | FileCheck %s
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV5 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V5,CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV6 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V6,CHECK
-// RUN: %clang   -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV7 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V7,CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV0 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V0,CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV1 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V1,CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV2 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V2,CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV3 -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV4 -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV5 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V5,CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV6 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V6,CHECK
+// RUN: %clangxx -x c++ -fsanitize=implicit-unsigned-integer-truncation %s -DV7 -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-V7,CHECK
 
 #include <stdint.h>
 #include <stdio.h>

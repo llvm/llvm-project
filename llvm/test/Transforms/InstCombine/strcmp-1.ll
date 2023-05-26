@@ -22,14 +22,14 @@ define i32 @test1(ptr %str2) {
 ; NOBCMP-LABEL: @test1(
 ; NOBCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR2:%.*]], align 1
 ; NOBCMP-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; NOBCMP-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
-; NOBCMP-NEXT:    ret i32 [[TMP2]]
+; NOBCMP-NEXT:    [[TEMP1:%.*]] = sub nsw i32 0, [[TMP1]]
+; NOBCMP-NEXT:    ret i32 [[TEMP1]]
 ;
 ; BCMP-LABEL: @test1(
 ; BCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR2:%.*]], align 1
 ; BCMP-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; BCMP-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
-; BCMP-NEXT:    ret i32 [[TMP2]]
+; BCMP-NEXT:    [[TEMP1:%.*]] = sub nsw i32 0, [[TMP1]]
+; BCMP-NEXT:    ret i32 [[TEMP1]]
 ;
   %temp1 = call i32 @strcmp(ptr @null, ptr %str2)
   ret i32 %temp1
@@ -44,13 +44,13 @@ define i32 @test2(ptr %str1) {
 ; CHECK: ret i32 %1
 ; NOBCMP-LABEL: @test2(
 ; NOBCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR1:%.*]], align 1
-; NOBCMP-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; NOBCMP-NEXT:    ret i32 [[TMP1]]
+; NOBCMP-NEXT:    [[TEMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
+; NOBCMP-NEXT:    ret i32 [[TEMP1]]
 ;
 ; BCMP-LABEL: @test2(
 ; BCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR1:%.*]], align 1
-; BCMP-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; BCMP-NEXT:    ret i32 [[TMP1]]
+; BCMP-NEXT:    [[TEMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
+; BCMP-NEXT:    ret i32 [[TEMP1]]
 ;
   %temp1 = call i32 @strcmp(ptr %str1, ptr @null)
   ret i32 %temp1

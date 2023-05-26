@@ -51,7 +51,7 @@ checkHasDynamicBatchDims(PatternRewriter &rewriter, Op op,
   SmallVector<ShapedType> dynTypes;
   SmallVector<Value> dynamicDims;
   for (const Value &param : params) {
-    auto paramTy = param.getType().cast<ShapedType>();
+    auto paramTy = cast<ShapedType>(param.getType());
     if (!paramTy.hasStaticShape())
       dynTypes.push_back(paramTy);
   }
@@ -71,6 +71,13 @@ checkHasDynamicBatchDims(PatternRewriter &rewriter, Op op,
       rewriter.create<tensor::DimOp>(op->getLoc(), params[0], 0));
   return dynamicDims;
 }
+
+/// Common code to create the reshape op where necessary to make the rank of two
+/// values equal. input1 and input2 will be updated when the rank has
+/// changed. The caller is expected to use these to rewrite the original
+/// operator with the RESHAPE now in the graph.
+LogicalResult EqualizeRanks(PatternRewriter &rewriter, Location loc,
+                            Value &input1, Value &input2);
 
 } // namespace tosa
 } // namespace mlir

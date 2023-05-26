@@ -116,7 +116,7 @@ static cl::opt<unsigned> LargeIntervalFreqThreshold(
     cl::desc("For a large interval, if it is coalesed with other live "
              "intervals many times more than the threshold, stop its "
              "coalescing to control the compile time. "),
-    cl::init(100));
+    cl::init(256));
 
 namespace {
 
@@ -152,12 +152,6 @@ namespace {
     /// identification of whether coalescing may change location validity.
     using DbgValueLoc = std::pair<SlotIndex, MachineInstr*>;
     DenseMap<Register, std::vector<DbgValueLoc>> DbgVRegToValues;
-
-    /// VRegs may be repeatedly coalesced, and have many DBG_VALUEs attached.
-    /// To avoid repeatedly merging sets of DbgValueLocs, instead record
-    /// which vregs have been coalesced, and where to. This map is from
-    /// vreg => {set of vregs merged in}.
-    DenseMap<Register, SmallVector<Register, 4>> DbgMergedVRegNums;
 
     /// A LaneMask to remember on which subregister live ranges we need to call
     /// shrinkToUses() later.
@@ -2202,6 +2196,7 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     //   ...
     //   use %physreg_x
     CopyMI = MRI->getVRegDef(SrcReg);
+    deleteInstr(CopyMI);
   } else {
     // VReg is copied into physreg:
     //   %y = def
@@ -2246,14 +2241,14 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
                       << printReg(DstReg, TRI) << " at " << CopyRegIdx << "\n");
 
     LIS->removePhysRegDefAt(DstReg.asMCReg(), CopyRegIdx);
+    deleteInstr(CopyMI);
+
     // Create a new dead def at the new def location.
     for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI) {
       LiveRange &LR = LIS->getRegUnit(*UI);
       LR.createDeadDef(DestRegIdx, LIS->getVNInfoAllocator());
     }
   }
-
-  deleteInstr(CopyMI);
 
   // We don't track kills for reserved registers.
   MRI->clearKillFlags(CP.getSrcReg());
@@ -2786,12 +2781,21 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     //
     // When it happens, treat that IMPLICIT_DEF as a normal value, and don't try
     // to erase the IMPLICIT_DEF instruction.
-    if (DefMI &&
-        DefMI->getParent() != Indexes->getMBBFromIndex(V.OtherVNI->def)) {
+    MachineBasicBlock *OtherMBB = Indexes->getMBBFromIndex(V.OtherVNI->def);
+    if (DefMI && DefMI->getParent() != OtherMBB) {
       LLVM_DEBUG(dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
                  << " extends into "
                  << printMBBReference(*DefMI->getParent())
                  << ", keeping it.\n");
+      OtherV.ErasableImplicitDef = false;
+    } else if (OtherMBB->hasEHPadSuccessor()) {
+      // If OtherV is defined in a basic block that has EH pad successors then
+      // we get the same problem not just if OtherV is live beyond its basic
+      // block, but beyond the last call instruction in its basic block. Handle
+      // this case conservatively.
+      LLVM_DEBUG(
+          dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
+                 << " may be live into EH pad successors, keeping it.\n");
       OtherV.ErasableImplicitDef = false;
     } else {
       // We deferred clearing these lanes in case we needed to save them
@@ -3759,18 +3763,9 @@ void RegisterCoalescer::checkMergingChangesDbgValues(CoalescerPair &CP,
     checkMergingChangesDbgValuesImpl(Reg, LHS, RHS, RHSVals);
   };
 
-  // Scan for potentially unsound DBG_VALUEs: examine first the register number
-  // Reg, and then any other vregs that may have been merged into  it.
-  auto PerformScan = [this](Register Reg, std::function<void(Register)> Func) {
-    Func(Reg);
-    if (DbgMergedVRegNums.count(Reg))
-      for (Register X : DbgMergedVRegNums[Reg])
-        Func(X);
-  };
-
   // Scan for unsound updates of both the source and destination register.
-  PerformScan(CP.getSrcReg(), ScanForSrcReg);
-  PerformScan(CP.getDstReg(), ScanForDstReg);
+  ScanForSrcReg(CP.getSrcReg());
+  ScanForDstReg(CP.getDstReg());
 }
 
 void RegisterCoalescer::checkMergingChangesDbgValuesImpl(Register Reg,
@@ -4151,7 +4146,6 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
     MF->verify(this, "Before register coalescing");
 
   DbgVRegToValues.clear();
-  DbgMergedVRegNums.clear();
   buildVRegToDbgValueMap(fn);
 
   RegClassInfo.runOnMachineFunction(fn);

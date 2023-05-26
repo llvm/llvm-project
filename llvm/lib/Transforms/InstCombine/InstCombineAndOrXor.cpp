@@ -1402,9 +1402,8 @@ Instruction *InstCombinerImpl::foldLogicOfIsFPClass(BinaryOperator &BO,
   bool IsRHSClass =
       match(Op1, m_OneUse(m_Intrinsic<Intrinsic::is_fpclass>(
                      m_Value(ClassVal1), m_ConstantInt(ClassMask1))));
-  if (((IsLHSClass && IsRHSClass) ||
-       ((!IsLHSClass && matchIsFPClassLikeFCmp(Op0, ClassVal0, ClassMask0)) ||
-        (!IsRHSClass && matchIsFPClassLikeFCmp(Op1, ClassVal1, ClassMask1)))) &&
+  if ((((IsLHSClass || matchIsFPClassLikeFCmp(Op0, ClassVal0, ClassMask0)) &&
+        (IsRHSClass || matchIsFPClassLikeFCmp(Op1, ClassVal1, ClassMask1)))) &&
       ClassVal0 == ClassVal1) {
     unsigned NewClassMask;
     switch (BO.getOpcode()) {
@@ -1421,10 +1420,24 @@ Instruction *InstCombinerImpl::foldLogicOfIsFPClass(BinaryOperator &BO,
       llvm_unreachable("not a binary logic operator");
     }
 
-    auto *II = IsLHSClass ? cast<IntrinsicInst>(Op0) : cast<IntrinsicInst>(Op1);
-    II->setArgOperand(
-        1, ConstantInt::get(II->getArgOperand(1)->getType(), NewClassMask));
-    return replaceInstUsesWith(BO, II);
+    if (IsLHSClass) {
+      auto *II = cast<IntrinsicInst>(Op0);
+      II->setArgOperand(
+          1, ConstantInt::get(II->getArgOperand(1)->getType(), NewClassMask));
+      return replaceInstUsesWith(BO, II);
+    }
+
+    if (IsRHSClass) {
+      auto *II = cast<IntrinsicInst>(Op1);
+      II->setArgOperand(
+          1, ConstantInt::get(II->getArgOperand(1)->getType(), NewClassMask));
+      return replaceInstUsesWith(BO, II);
+    }
+
+    CallInst *NewClass =
+        Builder.CreateIntrinsic(Intrinsic::is_fpclass, {ClassVal0->getType()},
+                                {ClassVal0, Builder.getInt32(NewClassMask)});
+    return replaceInstUsesWith(BO, NewClass);
   }
 
   return nullptr;
@@ -1996,8 +2009,10 @@ static Instruction *canonicalizeLogicFirst(BinaryOperator &I,
     llvm_unreachable("Unexpected BinaryOp!");
   }
 
+  auto *Add = cast<BinaryOperator>(Op0);
   Value *NewBinOp = Builder.CreateBinOp(OpC, X, ConstantInt::get(Ty, *C));
-  return BinaryOperator::CreateAdd(NewBinOp, ConstantInt::get(Ty, *C2));
+  return BinaryOperator::CreateWithCopiedFlags(Instruction::Add, NewBinOp,
+                                               ConstantInt::get(Ty, *C2), Add);
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches

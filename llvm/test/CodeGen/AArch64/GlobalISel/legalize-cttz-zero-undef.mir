@@ -16,8 +16,7 @@ body:             |
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[OR]]
     ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTLZ]](s32)
-    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[CTLZ]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     ; CHECK-CSSC-LABEL: name: s8
     ; CHECK-CSSC: liveins: $w0
@@ -26,8 +25,7 @@ body:             |
     ; CHECK-CSSC-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
     ; CHECK-CSSC-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
     ; CHECK-CSSC-NEXT: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[OR]](s32)
-    ; CHECK-CSSC-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTTZ]](s32)
-    ; CHECK-CSSC-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-CSSC-NEXT: $w0 = COPY [[CTTZ]](s32)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $w0
     %val:_(s8) = G_IMPLICIT_DEF
     %cttz:_(s8) = G_CTTZ_ZERO_UNDEF %val(s8)
@@ -50,8 +48,7 @@ body:             |
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(s32) = G_BITREVERSE [[OR]]
     ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[BITREVERSE]](s32)
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTLZ]](s32)
-    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[CTLZ]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     ; CHECK-CSSC-LABEL: name: s16
     ; CHECK-CSSC: liveins: $w0
@@ -60,8 +57,7 @@ body:             |
     ; CHECK-CSSC-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
     ; CHECK-CSSC-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[DEF]], [[C]]
     ; CHECK-CSSC-NEXT: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[OR]](s32)
-    ; CHECK-CSSC-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[CTTZ]](s32)
-    ; CHECK-CSSC-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-CSSC-NEXT: $w0 = COPY [[CTTZ]](s32)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $w0
     %val:_(s16) = G_IMPLICIT_DEF
     %cttz:_(s16) = G_CTTZ_ZERO_UNDEF %val(s16)

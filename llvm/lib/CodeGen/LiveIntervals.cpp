@@ -280,9 +280,7 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, unsigned Unit) {
   bool IsReserved = false;
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     bool IsRootReserved = true;
-    for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
-         Super.isValid(); ++Super) {
-      MCRegister Reg = *Super;
+    for (MCPhysReg Reg : TRI->superregs_inclusive(*Root)) {
       if (!MRI->reg_empty(Reg))
         LICalc->createDeadDefs(LR, Reg);
       // A register unit is considered reserved if all its roots and all their
@@ -299,9 +297,7 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, unsigned Unit) {
   // Ignore uses of reserved registers. We only track defs of those.
   if (!IsReserved) {
     for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
-      for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
-           Super.isValid(); ++Super) {
-        MCRegister Reg = *Super;
+      for (MCPhysReg Reg : TRI->superregs_inclusive(*Root)) {
         if (!MRI->reg_empty(Reg))
           LICalc->extendToUses(LR, Reg);
       }

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PlatformRemoteGDBServer.h"
-#include "GDBRemoteSignals.h"
 #include "lldb/Host/Config.h"
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -32,6 +31,7 @@
 #include "lldb/Utility/UriParser.h"
 #include "llvm/Support/FormatAdapters.h"
 
+#include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
 #include <optional>
 
@@ -423,6 +423,7 @@ PlatformRemoteGDBServer::DebugProcess(ProcessLaunchInfo &launch_info,
 
         if (process_sp) {
           process_sp->HijackProcessEvents(launch_info.GetHijackListener());
+          process_sp->SetShadowListener(launch_info.GetShadowListener());
 
           error = process_sp->ConnectRemote(connect_url.c_str());
           // Retry the connect remote one time...
@@ -515,6 +516,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
               ListenerSP listener_sp = attach_info.GetHijackListener();
               if (listener_sp)
                 process_sp->HijackProcessEvents(listener_sp);
+              process_sp->SetShadowListener(attach_info.GetShadowListener());
               error = process_sp->Attach(attach_info);
             }
 
@@ -680,12 +682,16 @@ void PlatformRemoteGDBServer::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
 
-UnixSignalsSP PlatformRemoteGDBServer::GetRemoteUnixSignals() {
+const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
   if (!IsConnected())
-    return UnixSignalsSP();
+    return Platform::GetRemoteUnixSignals();
 
   if (m_remote_signals_sp)
     return m_remote_signals_sp;
+
+  // If packet not implemented or JSON failed to parse, we'll guess the signal
+  // set based on the remote architecture.
+  m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
 
   StringExtractorGDBRemote response;
   auto result =
@@ -695,8 +701,7 @@ UnixSignalsSP PlatformRemoteGDBServer::GetRemoteUnixSignals() {
       response.GetResponseType() != response.eResponse)
     return m_remote_signals_sp;
 
-  auto object_sp =
-      StructuredData::ParseJSON(std::string(response.GetStringRef()));
+  auto object_sp = StructuredData::ParseJSON(response.GetStringRef());
   if (!object_sp || !object_sp->IsValid())
     return m_remote_signals_sp;
 
@@ -716,7 +721,7 @@ UnixSignalsSP PlatformRemoteGDBServer::GetRemoteUnixSignals() {
           return false;
 
         // Signal number and signal name are required.
-        int signo;
+        uint64_t signo;
         if (!dict->GetValueForKeyAsInteger("signo", signo))
           return false;
 

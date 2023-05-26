@@ -14,6 +14,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -337,7 +338,13 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
         Type.replace(Pos, Kw.size(), "");
       }
     }
-    TypeName = Type.erase(0, Type.find_first_not_of(" "));
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
+
+    // Remove template parameters
+    const size_t Pos = Type.find('<');
+    if (Pos != std::string::npos) {
+      TypeName = Type.erase(Pos, Type.size() - Pos);
+    }
 
     // Replace spaces with single space.
     for (size_t Pos = 0; (Pos = Type.find("  ", Pos)) != std::string::npos;
@@ -364,19 +371,21 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
     for (auto Kw : TailsOfMultiWordType) {
       size_t Pos = Type.rfind(Kw.data());
       if (Pos != std::string::npos) {
-        Type = Type.substr(0, Pos + Kw.size());
+        const size_t PtrCount = getAsteriskCount(Type, ND);
+        Type = Type.substr(0, Pos + Kw.size() + PtrCount);
         RedundantRemoved = true;
         break;
       }
     }
-    TypeName = Type.erase(0, Type.find_first_not_of(" "));
+
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
     if (!RedundantRemoved) {
-      std::size_t FoundSpace = Type.find(" ");
+      std::size_t FoundSpace = Type.find(' ');
       if (FoundSpace != std::string::npos)
         Type = Type.substr(0, FoundSpace);
     }
 
-    TypeName = Type.erase(0, Type.find_first_not_of(" "));
+    TypeName = Type.erase(0, Type.find_first_not_of(' '));
 
     QualType QT = VD->getType();
     if (!QT.isNull() && QT->isArrayType())
@@ -388,7 +397,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
 
 IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
                                              ClangTidyContext *Context)
-    : RenamerClangTidyCheck(Name, Context), Context(Context), CheckName(Name),
+    : RenamerClangTidyCheck(Name, Context), Context(Context),
       GetConfigPerFile(Options.get("GetConfigPerFile", true)),
       IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)) {
 
@@ -578,22 +587,14 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
       if (PrefixStr.empty())
         PrefixStr = HNOption.DerivedType.lookup("Array");
     } else if (QT->isReferenceType()) {
-      size_t Pos = ModifiedTypeName.find_last_of("&");
+      size_t Pos = ModifiedTypeName.find_last_of('&');
       if (Pos != std::string::npos)
         ModifiedTypeName = ModifiedTypeName.substr(0, Pos);
     }
   }
 
   // Pointers
-  size_t PtrCount = [&](std::string TypeName) -> size_t {
-    size_t Pos = TypeName.find('*');
-    size_t Count = 0;
-    for (; Pos < TypeName.length(); Pos++, Count++) {
-      if ('*' != TypeName[Pos])
-        break;
-    }
-    return Count;
-  }(ModifiedTypeName);
+  size_t PtrCount = getAsteriskCount(ModifiedTypeName);
   if (PtrCount > 0) {
     ModifiedTypeName = [&](std::string Str, StringRef From, StringRef To) {
       size_t StartPos = 0;
@@ -653,7 +654,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
   std::string Name = ED->getName().str();
   if (std::string::npos != Name.find("enum")) {
     Name = Name.substr(strlen("enum"), Name.length() - strlen("enum"));
-    Name = Name.erase(0, Name.find_first_not_of(" "));
+    Name = Name.erase(0, Name.find_first_not_of(' '));
   }
 
   static llvm::Regex Splitter(
@@ -689,6 +690,28 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
     Initial += tolower(Word[0]);
 
   return Initial;
+}
+
+size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
+    const std::string &TypeName) const {
+  size_t Pos = TypeName.find('*');
+  size_t Count = 0;
+  for (; Pos < TypeName.length(); Pos++, Count++) {
+    if ('*' != TypeName[Pos])
+      break;
+  }
+  return Count;
+}
+
+size_t IdentifierNamingCheck::HungarianNotation::getAsteriskCount(
+    const std::string &TypeName, const NamedDecl *ND) const {
+  size_t PtrCount = 0;
+  if (const auto *TD = dyn_cast<ValueDecl>(ND)) {
+    QualType QT = TD->getType();
+    if (QT->isPointerType())
+      PtrCount = getAsteriskCount(TypeName);
+  }
+  return PtrCount;
 }
 
 void IdentifierNamingCheck::HungarianNotation::loadDefaultConfig(
@@ -1439,6 +1462,7 @@ IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
   if (Iter != NamingStylesCache.end())
     return Iter->getValue();
 
+  llvm::StringRef CheckName = getID();
   ClangTidyOptions Options = Context->getOptionsForFile(FileName);
   if (Options.Checks && GlobList(*Options.Checks).contains(CheckName)) {
     auto It = NamingStylesCache.try_emplace(

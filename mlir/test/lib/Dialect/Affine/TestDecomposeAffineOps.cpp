@@ -21,6 +21,7 @@
 #define PASS_NAME "test-decompose-affine-ops"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 

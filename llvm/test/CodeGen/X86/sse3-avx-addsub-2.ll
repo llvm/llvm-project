@@ -276,16 +276,16 @@ define <4 x float> @test11(<4 x float> %A, <4 x float> %B) {
 ;
 ; AVX1-LABEL: test11:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: test11:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX512-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vbroadcastss %xmm0, %xmm0
 ; AVX512-NEXT:    retq
@@ -373,8 +373,8 @@ define <4 x float> @test14(<4 x float> %A, <4 x float> %B) {
 ; AVX-LABEL: test14:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1],xmm0[0],xmm2[3]
 ; AVX-NEXT:    retq
@@ -462,8 +462,8 @@ define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vsubss %xmm2, %xmm0, %xmm3
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
 ; AVX-NEXT:    vsubss %xmm5, %xmm4, %xmm4
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vaddss %xmm2, %xmm5, %xmm2

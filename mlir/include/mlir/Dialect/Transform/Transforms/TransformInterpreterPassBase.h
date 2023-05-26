@@ -31,18 +31,22 @@ class Region;
 namespace transform {
 namespace detail {
 /// Template-free implementation of TransformInterpreterPassBase::initialize.
-LogicalResult
-interpreterBaseInitializeImpl(MLIRContext *context, StringRef transformFileName,
-                              std::shared_ptr<OwningOpRef<ModuleOp>> &module);
+LogicalResult interpreterBaseInitializeImpl(
+    MLIRContext *context, StringRef transformFileName,
+    StringRef transformLibraryFileName,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &module,
+    std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule);
 
 /// Template-free implementation of
 /// TransformInterpreterPassBase::runOnOperation.
 LogicalResult interpreterBaseRunOnOperationImpl(
     Operation *target, StringRef passName,
     const std::shared_ptr<OwningOpRef<ModuleOp>> &sharedTransformModule,
+    const std::shared_ptr<OwningOpRef<ModuleOp>> &libraryModule,
     const RaggedArray<MappedValue> &extraMappings,
     const TransformOptions &options,
     const Pass::Option<std::string> &transformFileName,
+    const Pass::Option<std::string> &transformLibraryFileName,
     const Pass::Option<std::string> &debugPayloadRootTag,
     const Pass::Option<std::string> &debugTransformRootTag,
     StringRef binaryName);
@@ -56,6 +60,9 @@ LogicalResult interpreterBaseRunOnOperationImpl(
 ///     transform script. If empty, `debugTransformRootTag` is considered or the
 ///     pass root operation must contain a single top-level transform op that
 ///     will be interpreted.
+///   - transformLibraryFileName: if non-empty, the name of the file containing
+///     definitions of external symbols referenced in the transform script.
+///     These definitions will be used to replace declarations.
 ///   - debugPayloadRootTag: if non-empty, the value of the attribute named
 ///     `kTransformDialectTagAttrName` indicating the single op that is
 ///     considered the payload root of the transform interpreter; otherwise, the
@@ -106,13 +113,17 @@ public:
     REQUIRE_PASS_OPTION(transformFileName);
     REQUIRE_PASS_OPTION(debugPayloadRootTag);
     REQUIRE_PASS_OPTION(debugTransformRootTag);
+    REQUIRE_PASS_OPTION(transformLibraryFileName);
 
 #undef REQUIRE_PASS_OPTION
 
     StringRef transformFileName =
         static_cast<Concrete *>(this)->transformFileName;
-    return detail::interpreterBaseInitializeImpl(context, transformFileName,
-                                                 sharedTransformModule);
+    StringRef transformLibraryFileName =
+        static_cast<Concrete *>(this)->transformLibraryFileName;
+    return detail::interpreterBaseInitializeImpl(
+        context, transformFileName, transformLibraryFileName,
+        sharedTransformModule, transformLibraryModule);
   }
 
   /// Hook for passes to run additional logic in the pass before the
@@ -132,9 +143,10 @@ public:
     if (failed(pass->runBeforeInterpreter(op)) ||
         failed(detail::interpreterBaseRunOnOperationImpl(
             op, pass->getArgument(), sharedTransformModule,
+            transformLibraryModule,
             /*extraMappings=*/{}, options, pass->transformFileName,
-            pass->debugPayloadRootTag, pass->debugTransformRootTag,
-            binaryName)) ||
+            pass->transformLibraryFileName, pass->debugPayloadRootTag,
+            pass->debugTransformRootTag, binaryName)) ||
         failed(pass->runAfterInterpreter(op))) {
       return pass->signalPassFailure();
     }
@@ -150,12 +162,24 @@ protected:
     return sharedTransformModule;
   }
 
+  /// Returns a read-only reference to the transform library module.
+  const std::shared_ptr<OwningOpRef<ModuleOp>> &
+  getTransformLibraryModule() const {
+    return transformLibraryModule;
+  }
+
 private:
   /// The separate transform module to be used for transformations, shared
   /// across multiple instances of the pass if it is applied in parallel to
   /// avoid potentially expensive cloning. MUST NOT be modified after the pass
   /// has been initialized.
   std::shared_ptr<OwningOpRef<ModuleOp>> sharedTransformModule = nullptr;
+
+  /// The transform module containing symbol definitions that become available
+  /// in the transform scripts. Similar to dynamic linking for binaries. This is
+  /// shared across multiple instances of the pass and therefore MUST NOT be
+  /// modified after the pass has been initialized.
+  std::shared_ptr<OwningOpRef<ModuleOp>> transformLibraryModule = nullptr;
 };
 
 } // namespace transform

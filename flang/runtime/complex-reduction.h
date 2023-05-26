@@ -27,7 +27,7 @@ typedef _Lcomplex long_double_Complex_t;
 #else
 typedef float _Complex float_Complex_t;
 typedef double _Complex double_Complex_t;
-typedef long double long_double_Complex_t;
+typedef long double _Complex long_double_Complex_t;
 #endif
 
 #define REDUCTION_ARGS \

@@ -18,7 +18,9 @@ import subprocess
 
 llvm_dis = sys.argv[1]
 filecheck = sys.argv[2]
-filecheck_args = [filecheck, ]
+filecheck_args = [
+    filecheck,
+]
 filecheck_args.extend(sys.argv[3:-1])
 bitcode_file = sys.argv[-1]
 ir_file = bitcode_file + ".ll"
@@ -36,7 +38,7 @@ if disassemble.returncode != 0:
     print(disassemble.stdout)
     sys.exit(1)
 
-check=None
+check = None
 with open(ir_file, "r") as ir:
     check = subprocess.Popen(filecheck_args, stdin=ir, stdout=sys.stdout)
 check.communicate()

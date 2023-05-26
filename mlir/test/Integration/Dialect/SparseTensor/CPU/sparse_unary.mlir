@@ -18,7 +18,7 @@
 // Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
 // REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-buffer-initialization=true reassociate-fp-reductions=true enable-index-optimizations=true enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli \
+// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
 // REDEFINE:   --entry-function=entry_lli \
 // REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
 // REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
@@ -26,8 +26,8 @@
 // REDEFINE: FileCheck %s
 // RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
-#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
-#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
 
 //
 // Traits for tensor operations.

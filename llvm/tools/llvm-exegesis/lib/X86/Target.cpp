@@ -21,6 +21,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -31,7 +32,7 @@
 #include <immintrin.h>
 #include <intrin.h>
 #endif
-#if defined(__x86_64__) && defined(_MSC_VER)
+#if defined(_MSC_VER) && defined(_M_X64)
 #include <float.h> // For _clearfp in ~X86SavedState().
 #endif
 
@@ -625,39 +626,35 @@ namespace {
 class X86SavedState : public ExegesisTarget::SavedState {
 public:
   X86SavedState() {
-#ifdef __x86_64__
-# if defined(_MSC_VER)
+#if defined(_MSC_VER) && defined(_M_X64)
     _fxsave64(FPState);
     Eflags = __readeflags();
-# elif defined(__GNUC__)
+#elif defined(__GNUC__) && defined(__x86_64__)
     __builtin_ia32_fxsave64(FPState);
     Eflags = __builtin_ia32_readeflags_u64();
-# endif
 #else
-    llvm_unreachable("X86 exegesis running on non-X86 target");
+    report_fatal_error("X86 exegesis running on unsupported target");
 #endif
   }
 
   ~X86SavedState() {
     // Restoring the X87 state does not flush pending exceptions, make sure
     // these exceptions are flushed now.
-#ifdef __x86_64__
-# if defined(_MSC_VER)
+#if defined(_MSC_VER) && defined(_M_X64)
     _clearfp();
     _fxrstor64(FPState);
     __writeeflags(Eflags);
-# elif defined(__GNUC__)
+#elif defined(__GNUC__) && defined(__x86_64__)
     asm volatile("fwait");
     __builtin_ia32_fxrstor64(FPState);
     __builtin_ia32_writeeflags_u64(Eflags);
-# endif
 #else
-    llvm_unreachable("X86 exegesis running on non-X86 target");
+    report_fatal_error("X86 exegesis running on unsupported target");
 #endif
   }
 
 private:
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(_M_X64)
   alignas(16) char FPState[512];
   uint64_t Eflags;
 #endif
@@ -767,7 +764,7 @@ private:
       // If the kernel supports it, the hardware still may not have it.
       return X86LbrCounter::checkLbrSupport();
 #else
-    llvm_unreachable("Running X86 exegesis on non-X86 target");
+    report_fatal_error("Running X86 exegesis on unsupported target");
 #endif
 #endif
     return llvm::make_error<llvm::StringError>(

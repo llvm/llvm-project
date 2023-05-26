@@ -1283,12 +1283,10 @@ define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-NEXT:    ; implicit-def: $sgpr4
 ; GCN-NEXT:    ; implicit-def: $sgpr4
-; GCN-NEXT:    ; kill: def $vgpr3 killed $vgpr3 killed $exec
 ; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GCN-NEXT:    v_mov_b32_e32 v1, v3
 ; GCN-NEXT:    ; implicit-def: $sgpr4
 ; GCN-NEXT:    ; implicit-def: $sgpr4
-; GCN-NEXT:    ; kill: def $vgpr5 killed $vgpr5 killed $exec
 ; GCN-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GCN-NEXT:    v_mov_b32_e32 v3, v5
 ; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5

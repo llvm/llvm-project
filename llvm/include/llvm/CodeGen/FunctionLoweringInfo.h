@@ -35,6 +35,7 @@ namespace llvm {
 class Argument;
 class BasicBlock;
 class BranchProbabilityInfo;
+class DbgDeclareInst;
 class Function;
 class Instruction;
 class MachineFunction;
@@ -186,6 +187,10 @@ public:
   /// selector registers are copied into these virtual registers by
   /// SelectionDAGISel::PrepareEHLandingPad().
   unsigned ExceptionPointerVirtReg, ExceptionSelectorVirtReg;
+
+  /// Collection of dbg.declare instructions handled after argument
+  /// lowering and before ISel proper.
+  SmallPtrSet<const DbgDeclareInst *, 8> PreprocessedDbgDeclares;
 
   /// set - Initialize this FunctionLoweringInfo with the given Function
   /// and its associated MachineFunction.

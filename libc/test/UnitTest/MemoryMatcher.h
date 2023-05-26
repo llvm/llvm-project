@@ -56,7 +56,7 @@ public:
 
   bool match(MemoryView actualValue);
 
-  void explainError(testutils::StreamWrapper &stream) override;
+  void explainError() override;
 };
 
 } // namespace __llvm_libc::memory::testing

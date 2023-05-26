@@ -44,7 +44,7 @@ public:
   move_sentinel& operator=(const move_sentinel<_S2>& __s)
     { __last_ = __s.base(); return *this; }
 
-  constexpr _Sent base() const { return __last_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr _Sent base() const { return __last_; }
 
 private:
     _Sent __last_ = _Sent();

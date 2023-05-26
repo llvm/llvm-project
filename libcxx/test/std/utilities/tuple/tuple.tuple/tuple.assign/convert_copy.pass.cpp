@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Triggers a Clang assertion: llvm.org/PR45879
-// UNSUPPORTED: clang-14, clang-15
+// UNSUPPORTED: clang-15
 
 // <tuple>
 

@@ -2340,6 +2340,29 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
 // -----
 
+llvm.func @par_task_(%arg0: !llvm.ptr<i32> {fir.bindc_name = "a"}) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  omp.task   {
+    omp.parallel   {
+      llvm.store %0, %arg0 : !llvm.ptr<i32>
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: @par_task_
+// CHECK: %[[TASK_ALLOC:.*]] = call ptr @__kmpc_omp_task_alloc({{.*}}ptr @par_task_..omp_par.wrapper)
+// CHECK: call i32 @__kmpc_omp_task({{.*}}, ptr %[[TASK_ALLOC]])
+// CHECK-LABEL: define internal void @par_task_..omp_par
+// CHECK: %[[ARG_ALLOC:.*]] = alloca { ptr }, align 8
+// CHECK: call void ({{.*}}) @__kmpc_fork_call({{.*}}, ptr @par_task_..omp_par..omp_par, ptr %[[ARG_ALLOC]])
+// CHECK: define internal void @par_task_..omp_par..omp_par
+// CHECK: define i32 @par_task_..omp_par.wrapper
+// CHECK: call void @par_task_..omp_par
+// -----
+
 llvm.func @foo() -> ()
 
 llvm.func @omp_taskgroup(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
@@ -2454,3 +2477,69 @@ llvm.func @omp_opaque_pointers(%arg0 : !llvm.ptr, %arg1: !llvm.ptr, %expr: i32) 
   }
   llvm.return
 }
+
+// -----
+
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 1
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 1
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 1
+// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
+// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 1
+module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubscription = true, 
+                                          assume_threads_oversubscription = true, assume_no_thread_state = true, 
+                                          assume_no_nested_parallelism = true>} {}
+// -----
+
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+module attributes {omp.flags = #omp.flags<>} {}
+
+// -----
+
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
+module attributes {omp.flags = #omp.flags<openmp_device_version = 51>} {}
+
+// -----
+
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+module attributes {omp.version = #omp.version<version = 50>, omp.flags = #omp.flags<>} {}
+
+// -----
+
+// CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// CHECK-NOT: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+module attributes {omp.version = #omp.version<version = 51>} {}
+
+// -----
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+module attributes {omp.flags = #omp.flags<debug_kind = 0, assume_teams_oversubscription = false, 
+                                          assume_threads_oversubscription = false, assume_no_thread_state = false, 
+                                          assume_no_nested_parallelism = false>} {}
+
+// -----
+
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 1
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
+// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true>} {}

@@ -11,46 +11,66 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define void @wrap_mul4(ptr nocapture %Out, ptr nocapture readonly %A, ptr nocapture readonly %B) {
 ; CHECK-LABEL: @wrap_mul4(
 ; CHECK-NEXT:    [[TEMP:%.*]] = load double, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TEMP1:%.*]] = load double, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[MUL_I:%.*]] = fmul double [[TEMP]], [[TEMP1]]
 ; CHECK-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr inbounds [2 x double], ptr [[A]], i64 0, i64 1
 ; CHECK-NEXT:    [[TEMP2:%.*]] = load double, ptr [[ARRAYIDX5_I]], align 8
-; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B]], i64 1, i64 0
+; CHECK-NEXT:    [[TEMP3:%.*]] = load double, ptr [[ARRAYIDX7_I]], align 8
+; CHECK-NEXT:    [[MUL8_I:%.*]] = fmul double [[TEMP2]], [[TEMP3]]
+; CHECK-NEXT:    [[ADD_I:%.*]] = fadd double [[MUL_I]], [[MUL8_I]]
+; CHECK-NEXT:    [[ARRAYIDX13_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B]], i64 0, i64 1
+; CHECK-NEXT:    [[TEMP4:%.*]] = load double, ptr [[ARRAYIDX13_I]], align 8
+; CHECK-NEXT:    [[MUL14_I:%.*]] = fmul double [[TEMP]], [[TEMP4]]
+; CHECK-NEXT:    [[ARRAYIDX18_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B]], i64 1, i64 1
+; CHECK-NEXT:    [[TEMP5:%.*]] = load double, ptr [[ARRAYIDX18_I]], align 8
+; CHECK-NEXT:    [[MUL19_I:%.*]] = fmul double [[TEMP2]], [[TEMP5]]
+; CHECK-NEXT:    [[ADD20_I:%.*]] = fadd double [[MUL14_I]], [[MUL19_I]]
 ; CHECK-NEXT:    [[ARRAYIDX25_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B]], i64 0, i64 2
+; CHECK-NEXT:    [[TEMP6:%.*]] = load double, ptr [[ARRAYIDX25_I]], align 8
+; CHECK-NEXT:    [[MUL26_I:%.*]] = fmul double [[TEMP]], [[TEMP6]]
 ; CHECK-NEXT:    [[ARRAYIDX30_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B]], i64 1, i64 2
+; CHECK-NEXT:    [[TEMP7:%.*]] = load double, ptr [[ARRAYIDX30_I]], align 8
+; CHECK-NEXT:    [[MUL31_I:%.*]] = fmul double [[TEMP2]], [[TEMP7]]
+; CHECK-NEXT:    [[ADD32_I:%.*]] = fadd double [[MUL26_I]], [[MUL31_I]]
+; CHECK-NEXT:    [[ARRAYIDX37_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B]], i64 0, i64 3
+; CHECK-NEXT:    [[TEMP8:%.*]] = load double, ptr [[ARRAYIDX37_I]], align 8
+; CHECK-NEXT:    [[MUL38_I:%.*]] = fmul double [[TEMP]], [[TEMP8]]
+; CHECK-NEXT:    [[ARRAYIDX42_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B]], i64 1, i64 3
+; CHECK-NEXT:    [[TEMP9:%.*]] = load double, ptr [[ARRAYIDX42_I]], align 8
+; CHECK-NEXT:    [[MUL43_I:%.*]] = fmul double [[TEMP2]], [[TEMP9]]
+; CHECK-NEXT:    [[ADD44_I:%.*]] = fadd double [[MUL38_I]], [[MUL43_I]]
 ; CHECK-NEXT:    [[ARRAYIDX47_I:%.*]] = getelementptr inbounds [2 x double], ptr [[A]], i64 1, i64 0
 ; CHECK-NEXT:    [[TEMP10:%.*]] = load double, ptr [[ARRAYIDX47_I]], align 8
+; CHECK-NEXT:    [[MUL50_I:%.*]] = fmul double [[TEMP1]], [[TEMP10]]
 ; CHECK-NEXT:    [[ARRAYIDX52_I:%.*]] = getelementptr inbounds [2 x double], ptr [[A]], i64 1, i64 1
 ; CHECK-NEXT:    [[TEMP11:%.*]] = load double, ptr [[ARRAYIDX52_I]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TEMP]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[SHUFFLE]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[ARRAYIDX7_I]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[TEMP2]], i32 0
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[SHUFFLE1]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4:%.*]] = getelementptr inbounds double, ptr [[OUT:%.*]], i64 2
-; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x double>, ptr [[ARRAYIDX25_I]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x double> [[SHUFFLE]], [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load <2 x double>, ptr [[ARRAYIDX30_I]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = fmul <2 x double> [[SHUFFLE1]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> [[TMP13]], [[TMP16]]
-; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[OUT]], align 8
-; CHECK-NEXT:    store <2 x double> [[TMP17]], ptr [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4]], align 8
+; CHECK-NEXT:    [[MUL55_I:%.*]] = fmul double [[TEMP3]], [[TEMP11]]
+; CHECK-NEXT:    [[ADD56_I:%.*]] = fadd double [[MUL50_I]], [[MUL55_I]]
+; CHECK-NEXT:    [[MUL62_I:%.*]] = fmul double [[TEMP4]], [[TEMP10]]
+; CHECK-NEXT:    [[MUL67_I:%.*]] = fmul double [[TEMP5]], [[TEMP11]]
+; CHECK-NEXT:    [[ADD68_I:%.*]] = fadd double [[MUL62_I]], [[MUL67_I]]
+; CHECK-NEXT:    [[MUL74_I:%.*]] = fmul double [[TEMP6]], [[TEMP10]]
+; CHECK-NEXT:    [[MUL79_I:%.*]] = fmul double [[TEMP7]], [[TEMP11]]
+; CHECK-NEXT:    [[ADD80_I:%.*]] = fadd double [[MUL74_I]], [[MUL79_I]]
+; CHECK-NEXT:    [[MUL86_I:%.*]] = fmul double [[TEMP8]], [[TEMP10]]
+; CHECK-NEXT:    [[MUL91_I:%.*]] = fmul double [[TEMP9]], [[TEMP11]]
+; CHECK-NEXT:    [[ADD92_I:%.*]] = fadd double [[MUL86_I]], [[MUL91_I]]
+; CHECK-NEXT:    store double [[ADD_I]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[RES_I_SROA_4_0_OUT2_I_SROA_IDX2:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 1
+; CHECK-NEXT:    store double [[ADD20_I]], ptr [[RES_I_SROA_4_0_OUT2_I_SROA_IDX2]], align 8
+; CHECK-NEXT:    [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 2
+; CHECK-NEXT:    store double [[ADD32_I]], ptr [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4]], align 8
+; CHECK-NEXT:    [[RES_I_SROA_6_0_OUT2_I_SROA_IDX6:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store double [[ADD44_I]], ptr [[RES_I_SROA_6_0_OUT2_I_SROA_IDX6]], align 8
 ; CHECK-NEXT:    [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 4
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> poison, double [[TEMP10]], i32 0
-; CHECK-NEXT:    [[SHUFFLE4:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[TMP2]], [[SHUFFLE4]]
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x double> poison, double [[TEMP11]], i32 0
-; CHECK-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <2 x double> [[TMP21]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = fmul <2 x double> [[TMP6]], [[SHUFFLE5]]
-; CHECK-NEXT:    [[TMP23:%.*]] = fadd <2 x double> [[TMP20]], [[TMP22]]
-; CHECK-NEXT:    store <2 x double> [[TMP23]], ptr [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8]], align 8
+; CHECK-NEXT:    store double [[ADD56_I]], ptr [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8]], align 8
+; CHECK-NEXT:    [[RES_I_SROA_8_0_OUT2_I_SROA_IDX10:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 5
+; CHECK-NEXT:    store double [[ADD68_I]], ptr [[RES_I_SROA_8_0_OUT2_I_SROA_IDX10]], align 8
 ; CHECK-NEXT:    [[RES_I_SROA_9_0_OUT2_I_SROA_IDX12:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 6
-; CHECK-NEXT:    [[TMP25:%.*]] = fmul <2 x double> [[TMP12]], [[SHUFFLE4]]
-; CHECK-NEXT:    [[TMP26:%.*]] = fmul <2 x double> [[TMP15]], [[SHUFFLE5]]
-; CHECK-NEXT:    [[TMP27:%.*]] = fadd <2 x double> [[TMP25]], [[TMP26]]
-; CHECK-NEXT:    store <2 x double> [[TMP27]], ptr [[RES_I_SROA_9_0_OUT2_I_SROA_IDX12]], align 8
+; CHECK-NEXT:    store double [[ADD80_I]], ptr [[RES_I_SROA_9_0_OUT2_I_SROA_IDX12]], align 8
+; CHECK-NEXT:    [[RES_I_SROA_10_0_OUT2_I_SROA_IDX14:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 7
+; CHECK-NEXT:    store double [[ADD92_I]], ptr [[RES_I_SROA_10_0_OUT2_I_SROA_IDX14]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %temp = load double, ptr %A, align 8

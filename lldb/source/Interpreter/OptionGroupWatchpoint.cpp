@@ -10,6 +10,7 @@
 
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Target/Language.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
@@ -62,7 +63,17 @@ static constexpr OptionDefinition g_option_table[] = {
      "Specify the type of watching to perform."},
     {LLDB_OPT_SET_1, false, "size", 's', OptionParser::eRequiredArgument,
      nullptr, OptionEnumValues(g_watch_size), 0, eArgTypeByteSize,
-     "Number of bytes to use to watch a region."}};
+     "Number of bytes to use to watch a region."},
+    {LLDB_OPT_SET_2,
+     false,
+     "language",
+     'l',
+     OptionParser::eRequiredArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeLanguage,
+     "Language of expression to run"}};
 
 bool OptionGroupWatchpoint::IsWatchSizeSupported(uint32_t watch_size) {
   for (const auto& size : g_watch_size) {
@@ -81,6 +92,18 @@ OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
   Status error;
   const int short_option = g_option_table[option_idx].short_option;
   switch (short_option) {
+  case 'l': {
+    language_type = Language::GetLanguageTypeFromString(option_arg);
+    if (language_type == eLanguageTypeUnknown) {
+      StreamString sstr;
+      sstr.Printf("Unknown language type: '%s' for expression. List of "
+                  "supported languages:\n",
+                  option_arg.str().c_str());
+      Language::PrintSupportedLanguagesForExpressions(sstr, " ", "\n");
+      error.SetErrorString(sstr.GetString());
+    }
+    break;
+  }
   case 'w': {
     WatchType tmp_watch_type;
     tmp_watch_type = (WatchType)OptionArgParser::ToOptionEnum(
@@ -108,6 +131,7 @@ void OptionGroupWatchpoint::OptionParsingStarting(
   watch_type_specified = false;
   watch_type = eWatchInvalid;
   watch_size = 0;
+  language_type = eLanguageTypeUnknown;
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupWatchpoint::GetDefinitions() {

@@ -81,6 +81,8 @@
 
 // RUN: %clang -target arm64-apple-ios10 -funwind-tables -### -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-APPLE-UNWIND %s
+// RUN: %clang -target arm64_32-apple-watchos8 -funwind-tables -### -S %s -arch arm64 2>&1 | \
+// RUN: FileCheck -check-prefix=ARM64-APPLE-UNWIND %s
 // ARM64-APPLE-UNWIND: -funwind-tables=1
 
 // RUN: %clang -target arm64-apple-ios10 -### -ffreestanding -S %s -arch arm64 2>&1 | \
@@ -392,24 +394,6 @@
 // MIPSR6EL: "-target-cpu" "mips32r6"
 // MIPSR6EL: "-mfloat-abi" "hard"
 
-// RUN: %clang -target mipsel-linux-android -### -S %s 2>&1 | \
-// RUN: FileCheck -check-prefix=MIPSEL-ANDROID %s
-// MIPSEL-ANDROID: clang
-// MIPSEL-ANDROID: "-cc1"
-// MIPSEL-ANDROID: "-target-cpu" "mips32"
-// MIPSEL-ANDROID: "-target-feature" "+fpxx"
-// MIPSEL-ANDROID: "-target-feature" "+nooddspreg"
-// MIPSEL-ANDROID: "-mfloat-abi" "hard"
-
-// RUN: %clang -target mipsel-linux-android -### -S %s -mcpu=mips32r6 2>&1 | \
-// RUN: FileCheck -check-prefix=MIPSEL-ANDROID-R6 %s
-// MIPSEL-ANDROID-R6: clang
-// MIPSEL-ANDROID-R6: "-cc1"
-// MIPSEL-ANDROID-R6: "-target-cpu" "mips32r6"
-// MIPSEL-ANDROID-R6: "-target-feature" "+fp64"
-// MIPSEL-ANDROID-R6: "-target-feature" "+nooddspreg"
-// MIPSEL-ANDROID-R6: "-mfloat-abi" "hard"
-
 // RUN: %clang -target mips64-linux-gnu -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=MIPS64 %s
 // MIPS64: clang
@@ -501,10 +485,3 @@
 // MIPSN32R6EL: "-target-cpu" "mips64r6"
 // MIPSN32R6EL: "-target-abi" "n32"
 // MIPSN32R6EL: "-mfloat-abi" "hard"
-
-// RUN: %clang -target mips64el-linux-android -### -S %s 2>&1 | \
-// RUN: FileCheck -check-prefix=MIPS64EL-ANDROID %s
-// MIPS64EL-ANDROID: clang
-// MIPS64EL-ANDROID: "-cc1"
-// MIPS64EL-ANDROID: "-target-cpu" "mips64r6"
-// MIPS64EL-ANDROID: "-mfloat-abi" "hard"

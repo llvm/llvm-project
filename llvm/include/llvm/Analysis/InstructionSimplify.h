@@ -50,7 +50,6 @@ class Function;
 class Instruction;
 struct LoopStandardAnalysisResults;
 class MDNode;
-class OptimizationRemarkEmitter;
 class Pass;
 template <class T, unsigned n> class SmallSetVector;
 class TargetLibraryInfo;
@@ -302,8 +301,9 @@ Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS, FastMathFlags FMF,
                      const SimplifyQuery &Q);
 
-/// Given a callsite, fold the result or return null.
-Value *simplifyCall(CallBase *Call, const SimplifyQuery &Q);
+/// Given a callsite, callee, and arguments, fold the result or return null.
+Value *simplifyCall(CallBase *Call, Value *Callee, ArrayRef<Value *> Args,
+                    const SimplifyQuery &Q);
 
 /// Given a constrained FP intrinsic call, tries to compute its simplified
 /// version. Returns a simplified result or null.
@@ -324,20 +324,19 @@ Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp, const SimplifyQuery &Q);
 
 /// See if we can compute a simplified version of this instruction. If not,
 /// return null.
-Value *simplifyInstruction(Instruction *I, const SimplifyQuery &Q,
-                           OptimizationRemarkEmitter *ORE = nullptr);
+Value *simplifyInstruction(Instruction *I, const SimplifyQuery &Q);
 
 /// Like \p simplifyInstruction but the operands of \p I are replaced with
 /// \p NewOps. Returns a simplified value, or null if none was found.
 Value *
 simplifyInstructionWithOperands(Instruction *I, ArrayRef<Value *> NewOps,
-                                const SimplifyQuery &Q,
-                                OptimizationRemarkEmitter *ORE = nullptr);
+                                const SimplifyQuery &Q);
 
 /// See if V simplifies when its operand Op is replaced with RepOp. If not,
 /// return null.
 /// AllowRefinement specifies whether the simplification can be a refinement
 /// (e.g. 0 instead of poison), or whether it needs to be strictly identical.
+/// Op and RepOp can be assumed to not be poison when determining refinement.
 Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                               const SimplifyQuery &Q, bool AllowRefinement);
 

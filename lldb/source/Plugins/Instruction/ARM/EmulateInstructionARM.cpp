@@ -18,7 +18,6 @@
 #include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
@@ -14353,9 +14352,9 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
     return false;
   }
 
-  static ConstString opcode_key("opcode");
-  static ConstString before_key("before_state");
-  static ConstString after_key("after_state");
+  static constexpr llvm::StringLiteral opcode_key("opcode");
+  static constexpr llvm::StringLiteral before_key("before_state");
+  static constexpr llvm::StringLiteral after_key("after_state");
 
   OptionValueSP value_sp = test_data->GetValueForKey(opcode_key);
 
@@ -14365,7 +14364,7 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
     out_stream->Printf("TestEmulation: Error reading opcode from test file.\n");
     return false;
   }
-  test_opcode = value_sp->GetUInt64Value();
+  test_opcode = value_sp->GetValueAs<uint64_t>().value_or(0);
 
   if (arch.GetTriple().getArch() == llvm::Triple::thumb ||
       arch.IsAlwaysThumbInstructions()) {

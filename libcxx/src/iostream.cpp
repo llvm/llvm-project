@@ -7,9 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include <__locale>
-#include <__std_stream>
+#include "std_stream.h"
 #include <new>
 #include <string>
+
+#ifdef _LIBCPP_MSVCRT_LIKE
+#  include <__locale_dir/locale_base_api/locale_guard.h>
+#endif
 
 #define _str(s) #s
 #define str(s) _str(s)

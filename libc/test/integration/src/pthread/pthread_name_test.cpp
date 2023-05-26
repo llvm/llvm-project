@@ -21,6 +21,7 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include <stdint.h> // uintptr_t
 
 using string_view = __llvm_libc::cpp::string_view;
 

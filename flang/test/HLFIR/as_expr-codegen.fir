@@ -54,20 +54,20 @@ func.func @shape_from_type(%arg0 : !fir.ref<!fir.array<10x20xi32>>) {
 // CHECK:    %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_6]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x20xi32>>, i1>, !fir.heap<!fir.array<10x20xi32>>) -> tuple<!fir.heap<!fir.array<10x20xi32>>, i1>
 
 
-func.func @shape_from_box(%arg0 : !fir.class<!fir.array<10x?xi32>>) {
-  %expr = hlfir.as_expr %arg0 : (!fir.class<!fir.array<10x?xi32>>) -> !hlfir.expr<10x?xi32>
+func.func @shape_from_box(%arg0 : !fir.box<!fir.array<10x?xi32>>) {
+  %expr = hlfir.as_expr %arg0 : (!fir.box<!fir.array<10x?xi32>>) -> !hlfir.expr<10x?xi32>
   return
 }
 // CHECK-LABEL:   func.func @shape_from_box(
-// CHECK-SAME:    %[[VAL_0:.*]]: !fir.class<!fir.array<10x?xi32>>) {
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<10x?xi32>>) {
 // CHECK:    %[[VAL_1:.*]] = arith.constant 10 : index
 // CHECK:    %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK:    %[[VAL_3:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_2]] : (!fir.class<!fir.array<10x?xi32>>, index) -> (index, index, index)
+// CHECK:    %[[VAL_3:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_2]] : (!fir.box<!fir.array<10x?xi32>>, index) -> (index, index, index)
 // CHECK:    %[[VAL_4:.*]] = fir.shape %[[VAL_1]], %[[VAL_3]]#1 : (index, index) -> !fir.shape<2>
 // CHECK:    %[[VAL_5:.*]] = fir.allocmem !fir.array<10x?xi32>, %[[VAL_3]]#1 {bindc_name = ".tmp", uniq_name = ""}
 // CHECK:    %[[VAL_6:.*]] = arith.constant true
 // CHECK:    %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_4]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10x?xi32>>, !fir.shape<2>) -> (!fir.box<!fir.array<10x?xi32>>, !fir.heap<!fir.array<10x?xi32>>)
-// CHECK:    hlfir.assign %[[VAL_0]] to %[[VAL_7]]#0 : !fir.class<!fir.array<10x?xi32>>, !fir.box<!fir.array<10x?xi32>>
+// CHECK:    hlfir.assign %[[VAL_0]] to %[[VAL_7]]#0 : !fir.box<!fir.array<10x?xi32>>, !fir.box<!fir.array<10x?xi32>>
 // CHECK:    %[[VAL_8:.*]] = fir.undefined tuple<!fir.box<!fir.array<10x?xi32>>, i1>
 // CHECK:    %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_6]], [1 : index] : (tuple<!fir.box<!fir.array<10x?xi32>>, i1>, i1) -> tuple<!fir.box<!fir.array<10x?xi32>>, i1>
 // CHECK:    %[[VAL_10:.*]] = fir.insert_value %[[VAL_9]], %[[VAL_7]]#0, [0 : index] : (tuple<!fir.box<!fir.array<10x?xi32>>, i1>, !fir.box<!fir.array<10x?xi32>>) -> tuple<!fir.box<!fir.array<10x?xi32>>, i1>

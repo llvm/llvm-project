@@ -3348,8 +3348,8 @@ std::optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
   }
 
   if (Delimited && PP) {
-    Diag(SlashLoc, PP->getLangOpts().CPlusPlus2b
-                       ? diag::warn_cxx2b_delimited_escape_sequence
+    Diag(SlashLoc, PP->getLangOpts().CPlusPlus23
+                       ? diag::warn_cxx23_delimited_escape_sequence
                        : diag::ext_delimited_escape_sequence)
         << /*delimited*/ 0 << (PP->getLangOpts().CPlusPlus ? 1 : 0);
   }
@@ -3436,8 +3436,8 @@ std::optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
   }
 
   if (Diagnose && Match)
-    Diag(SlashLoc, PP->getLangOpts().CPlusPlus2b
-                       ? diag::warn_cxx2b_delimited_escape_sequence
+    Diag(SlashLoc, PP->getLangOpts().CPlusPlus23
+                       ? diag::warn_cxx23_delimited_escape_sequence
                        : diag::ext_delimited_escape_sequence)
         << /*named*/ 1 << (PP->getLangOpts().CPlusPlus ? 1 : 0);
 
@@ -4361,11 +4361,9 @@ HandleDirective:
   FormTokenWithChars(Result, CurPtr, tok::hash);
   PP->HandleDirective(Result);
 
-  if (PP->hadModuleLoaderFatalFailure()) {
+  if (PP->hadModuleLoaderFatalFailure())
     // With a fatal failure in the module loader, we abort parsing.
-    assert(Result.is(tok::eof) && "Preprocessor did not set tok:eof");
     return true;
-  }
 
   // We parsed the directive; lex a token with the new state.
   return false;
@@ -4482,6 +4480,7 @@ bool Lexer::LexDependencyDirectiveTokenWhileSkipping(Token &Result) {
     case pp_pragma_push_macro:
     case pp_pragma_pop_macro:
     case pp_pragma_include_alias:
+    case pp_pragma_system_header:
     case pp_include_next:
     case decl_at_import:
     case cxx_module_decl:

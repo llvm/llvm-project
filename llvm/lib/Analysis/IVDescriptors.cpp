@@ -927,9 +927,8 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   return false;
 }
 
-bool RecurrenceDescriptor::isFixedOrderRecurrence(
-    PHINode *Phi, Loop *TheLoop,
-    MapVector<Instruction *, Instruction *> &SinkAfter, DominatorTree *DT) {
+bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+                                                  DominatorTree *DT) {
 
   // Ensure the phi node is in the loop header and has two incoming values.
   if (Phi->getParent() != TheLoop->getHeader() ||
@@ -965,8 +964,7 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(
     Previous = dyn_cast<Instruction>(PrevPhi->getIncomingValueForBlock(Latch));
   }
 
-  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous) ||
-      SinkAfter.count(Previous)) // Cannot rely on dominance due to motion.
+  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous))
     return false;
 
   // Ensure every user of the phi node (recursively) is dominated by the
@@ -975,27 +973,16 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(
   // loop.
   // TODO: Consider extending this sinking to handle memory instructions.
 
-  // We optimistically assume we can sink all users after Previous. Keep a set
-  // of instructions to sink after Previous ordered by dominance in the common
-  // basic block. It will be applied to SinkAfter if all users can be sunk.
-  auto CompareByComesBefore = [](const Instruction *A, const Instruction *B) {
-    return A->comesBefore(B);
-  };
-  std::set<Instruction *, decltype(CompareByComesBefore)> InstrsToSink(
-      CompareByComesBefore);
-
+  SmallPtrSet<Value *, 8> Seen;
   BasicBlock *PhiBB = Phi->getParent();
   SmallVector<Instruction *, 8> WorkList;
   auto TryToPushSinkCandidate = [&](Instruction *SinkCandidate) {
-    // Already sunk SinkCandidate.
-    if (SinkCandidate->getParent() == PhiBB &&
-        InstrsToSink.find(SinkCandidate) != InstrsToSink.end())
-      return true;
-
     // Cyclic dependence.
     if (Previous == SinkCandidate)
       return false;
 
+    if (!Seen.insert(SinkCandidate).second)
+      return true;
     if (DT->dominates(Previous,
                       SinkCandidate)) // We already are good w/o sinking.
       return true;
@@ -1005,55 +992,12 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(
         SinkCandidate->mayReadFromMemory() || SinkCandidate->isTerminator())
       return false;
 
-    // Avoid sinking an instruction multiple times (if multiple operands are
-    // fixed order recurrences) by sinking once - after the latest 'previous'
-    // instruction.
-    auto It = SinkAfter.find(SinkCandidate);
-    if (It != SinkAfter.end()) {
-      auto *OtherPrev = It->second;
-      // Find the earliest entry in the 'sink-after' chain. The last entry in
-      // the chain is the original 'Previous' for a recurrence handled earlier.
-      auto EarlierIt = SinkAfter.find(OtherPrev);
-      while (EarlierIt != SinkAfter.end()) {
-        Instruction *EarlierInst = EarlierIt->second;
-        EarlierIt = SinkAfter.find(EarlierInst);
-        // Bail out if order has not been preserved.
-        if (EarlierIt != SinkAfter.end() &&
-            !DT->dominates(EarlierInst, OtherPrev))
-          return false;
-        OtherPrev = EarlierInst;
-      }
-      // Bail out if order has not been preserved.
-      if (OtherPrev != It->second && !DT->dominates(It->second, OtherPrev))
-        return false;
-
-      // SinkCandidate is already being sunk after an instruction after
-      // Previous. Nothing left to do.
-      if (DT->dominates(Previous, OtherPrev) || Previous == OtherPrev)
-        return true;
-
-      // If there are other instructions to be sunk after SinkCandidate, remove
-      // and re-insert SinkCandidate can break those instructions. Bail out for
-      // simplicity.
-      if (any_of(SinkAfter,
-          [SinkCandidate](const std::pair<Instruction *, Instruction *> &P) {
-            return P.second == SinkCandidate;
-          }))
-        return false;
-
-      // Otherwise, Previous comes after OtherPrev and SinkCandidate needs to be
-      // re-sunk to Previous, instead of sinking to OtherPrev. Remove
-      // SinkCandidate from SinkAfter to ensure it's insert position is updated.
-      SinkAfter.erase(SinkCandidate);
-    }
-
     // If we reach a PHI node that is not dominated by Previous, we reached a
     // header PHI. No need for sinking.
     if (isa<PHINode>(SinkCandidate))
       return true;
 
     // Sink User tentatively and check its users
-    InstrsToSink.insert(SinkCandidate);
     WorkList.push_back(SinkCandidate);
     return true;
   };
@@ -1068,11 +1012,6 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(
     }
   }
 
-  // We can sink all users of Phi. Update the mapping.
-  for (Instruction *I : InstrsToSink) {
-    SinkAfter[I] = Previous;
-    Previous = I;
-  }
   return true;
 }
 
@@ -1288,8 +1227,6 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
   assert((!getConstIntStepValue() || !getConstIntStepValue()->isZero()) &&
          "Step value is zero");
 
-  assert((IK != IK_PtrInduction || getConstIntStepValue()) &&
-         "Step value should be constant for pointer induction");
   assert((IK == IK_FpInduction || Step->getType()->isIntegerTy()) &&
          "StepValue is not an integer");
 
@@ -1547,6 +1484,12 @@ bool InductionDescriptor::isInductionPHI(
     return false;
   }
 
+  // This function assumes that InductionPhi is called only on Phi nodes
+  // present inside loop headers. Check for the same, and throw an assert if
+  // the current Phi is not present inside the loop header.
+  assert(Phi->getParent() == AR->getLoop()->getHeader()
+    && "Invalid Phi node, not present in loop header");
+
   Value *StartValue =
       Phi->getIncomingValueForBlock(AR->getLoop()->getLoopPreheader());
 
@@ -1570,15 +1513,25 @@ bool InductionDescriptor::isInductionPHI(
   }
 
   assert(PhiTy->isPointerTy() && "The PHI must be a pointer");
+  PointerType *PtrTy = cast<PointerType>(PhiTy);
+
+  // Always use i8 element type for opaque pointer inductions.
+  // This allows induction variables w/non-constant steps.
+  if (PtrTy->isOpaque()) {
+    D = InductionDescriptor(StartValue, IK_PtrInduction, Step,
+                            /* BinOp */ nullptr,
+                            Type::getInt8Ty(PtrTy->getContext()));
+    return true;
+  }
+
   // Pointer induction should be a constant.
+  // TODO: This could be generalized, but should probably just
+  // be dropped instead once the migration to opaque ptrs is
+  // complete.
   if (!ConstStep)
     return false;
 
-  // Always use i8 element type for opaque pointer inductions.
-  PointerType *PtrTy = cast<PointerType>(PhiTy);
-  Type *ElementType = PtrTy->isOpaque()
-                          ? Type::getInt8Ty(PtrTy->getContext())
-                          : PtrTy->getNonOpaquePointerElementType();
+  Type *ElementType = PtrTy->getNonOpaquePointerElementType();
   if (!ElementType->isSized())
     return false;
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++2b -Wall -Wshadow %s
+// RUN: %clang_cc1 -verify -std=c++23 -Wall -Wshadow %s
 
 void f() {
 

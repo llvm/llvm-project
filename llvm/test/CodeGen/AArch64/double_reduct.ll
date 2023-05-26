@@ -131,9 +131,9 @@ define i32 @and_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.and.i32.v8i32(<8 x i32> %a)
   %r2 = call i32 @llvm.vector.reduce.and.i32.v4i32(<4 x i32> %b)
@@ -148,9 +148,9 @@ define i32 @or_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.or.i32.v8i32(<8 x i32> %a)
   %r2 = call i32 @llvm.vector.reduce.or.i32.v4i32(<4 x i32> %b)
@@ -165,9 +165,9 @@ define i32 @xor_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    eor v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    eor w0, w9, w8
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    eor w0, w8, w9
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.xor.i32.v8i32(<8 x i32> %a)
   %r2 = call i32 @llvm.vector.reduce.xor.i32.v4i32(<4 x i32> %b)

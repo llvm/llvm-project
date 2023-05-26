@@ -645,8 +645,7 @@ exit:
 
 
 ; GCN-LABEL: {{^}}smrd_uniform_loop2:
-; (this test differs from smrd_uniform_loop by the more complex structure of phis,
-; which used to confuse the DivergenceAnalysis after structurization)
+; (this test differs from smrd_uniform_loop by the more complex structure of phis)
 ;
 ; TODO: we should keep the loop counter in an SGPR and use an S_BUFFER_LOAD
 ;

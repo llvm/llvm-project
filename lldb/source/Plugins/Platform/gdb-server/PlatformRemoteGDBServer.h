@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 
+#include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "lldb/Target/Platform.h"
 
@@ -145,18 +146,13 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
-  lldb::UnixSignalsSP GetRemoteUnixSignals() override;
+  const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
 
   size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
                                    lldb_private::Status &error) override;
 
   virtual size_t
   GetPendingGdbServerList(std::vector<std::string> &connection_urls);
-
-  lldb::UnixSignalsSP CreateUnixSignals() override {
-    // PlatformRemoteGDBServer should defer to other platforms.
-    return lldb::UnixSignalsSP();
-  }
 
 protected:
   std::unique_ptr<process_gdb_remote::GDBRemoteCommunicationClient>

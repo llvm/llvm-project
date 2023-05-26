@@ -20,7 +20,7 @@ entry:
 ; SIOptimizeExecMaskingPreRA (somehow related to undef argument).
 
 ; GCN-LABEL: {{^}}only_undef_dbg_value:
-; NOOPT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef] undef
+; NOOPT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- undef
 ; NOOPT-NEXT: s_endpgm
 
 ; OPT: s_endpgm

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: availability-verbose_abort-missing
+
 // Make sure that we still support _LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED for folks
 // who customize the verbose termination function at link-time in back-deployment environments.
 

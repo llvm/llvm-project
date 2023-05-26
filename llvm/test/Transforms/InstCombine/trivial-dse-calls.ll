@@ -126,8 +126,8 @@ define i32 @test_neg_captured_by_call() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A2:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    call void @f2(ptr nonnull writeonly [[A]], ptr nonnull [[A2]]) #[[ATTR3]]
-; CHECK-NEXT:    [[A_COPY_CAST1:%.*]] = load ptr, ptr [[A2]], align 8
-; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[A_COPY_CAST1]], align 4
+; CHECK-NEXT:    [[A_COPY_CAST:%.*]] = load ptr, ptr [[A2]], align 8
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[A_COPY_CAST]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %a = alloca i32, align 4

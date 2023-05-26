@@ -37,7 +37,7 @@ define dso_local void @j() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x float> [[TMP12]], i32 1
 ; CHECK-NEXT:    store float [[TMP16]], ptr @f, align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> <float poison, float -1.000000e+00, float poison, float -1.000000e+00>, float [[CONV19]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x float> [[TMP17]], <4 x float> [[TMP18]], <4 x i32> <i32 0, i32 1, i32 5, i32 3>
 ; CHECK-NEXT:    [[TMP20:%.*]] = fsub <4 x float> [[TMP12]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = fadd <4 x float> [[TMP12]], [[TMP19]]

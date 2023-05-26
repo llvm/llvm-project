@@ -19,6 +19,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -2483,8 +2484,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 ///         simd' | 'teams distribute parallel for simd' | 'teams distribute
 ///         parallel for' | 'target teams' | 'target teams distribute' | 'target
 ///         teams distribute parallel for' | 'target teams distribute parallel
-///         for simd' | 'target teams distribute simd' | 'masked' {clause}
-///         annot_pragma_openmp_end
+///         for simd' | 'target teams distribute simd' | 'masked' |
+///         'parallel masked' {clause} annot_pragma_openmp_end
 ///
 StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     ParsedStmtContext StmtCtx, bool ReadDirectiveWithinMetadirective) {
@@ -3102,8 +3103,13 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
     return nullptr;
   SmallVector<Sema::UsesAllocatorsData, 4> Data;
   do {
+    CXXScopeSpec SS;
+    Token Replacement;
     ExprResult Allocator =
-        getLangOpts().CPlusPlus ? ParseCXXIdExpression() : ParseExpression();
+        getLangOpts().CPlusPlus
+            ? ParseCXXIdExpression()
+            : tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false,
+                                      Replacement);
     if (Allocator.isInvalid()) {
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);

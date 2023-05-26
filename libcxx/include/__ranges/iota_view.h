@@ -281,7 +281,8 @@ namespace ranges {
     public:
       _LIBCPP_HIDE_FROM_ABI
       __sentinel() = default;
-      constexpr explicit __sentinel(_BoundSentinel __bound_sentinel) : __bound_sentinel_(std::move(__bound_sentinel)) {}
+      _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(_BoundSentinel __bound_sentinel)
+          : __bound_sentinel_(std::move(__bound_sentinel)) {}
 
       _LIBCPP_HIDE_FROM_ABI
       friend constexpr bool operator==(const __iterator& __x, const __sentinel& __y) {
@@ -314,7 +315,7 @@ namespace ranges {
     constexpr explicit iota_view(_Start __value) : __value_(std::move(__value)) { }
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr iota_view(type_identity_t<_Start> __value, type_identity_t<_BoundSentinel> __bound_sentinel)
+    constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 iota_view(type_identity_t<_Start> __value, type_identity_t<_BoundSentinel> __bound_sentinel)
         : __value_(std::move(__value)), __bound_sentinel_(std::move(__bound_sentinel)) {
       // Validate the precondition if possible.
       if constexpr (totally_ordered_with<_Start, _BoundSentinel>) {
@@ -324,18 +325,18 @@ namespace ranges {
     }
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr iota_view(__iterator __first, __iterator __last)
+    constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 iota_view(__iterator __first, __iterator __last)
       requires same_as<_Start, _BoundSentinel>
     : iota_view(std::move(__first.__value_), std::move(__last.__value_)) {}
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr iota_view(__iterator __first, _BoundSentinel __last)
+    constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 iota_view(__iterator __first, _BoundSentinel __last)
       requires same_as<_BoundSentinel, unreachable_sentinel_t>
     : iota_view(std::move(__first.__value_), std::move(__last)) {}
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr iota_view(__iterator __first, __sentinel __last)
-      requires(!same_as<_Start, _BoundSentinel> && !same_as<_Start, unreachable_sentinel_t>)
+    constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 iota_view(__iterator __first, __sentinel __last)
+      requires(!same_as<_Start, _BoundSentinel> && !same_as<_BoundSentinel, unreachable_sentinel_t>)
     : iota_view(std::move(__first.__value_), std::move(__last.__bound_sentinel_)) {}
 
     _LIBCPP_HIDE_FROM_ABI

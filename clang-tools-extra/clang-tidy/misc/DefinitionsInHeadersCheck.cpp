@@ -90,13 +90,11 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
   // Internal linkage variable definitions are ignored for now:
   //   const int a = 1;
   //   static int b = 1;
+  //   namespace { int c = 1; }
   //
   // Although these might also cause ODR violations, we can be less certain and
   // should try to keep the false-positive rate down.
-  //
-  // FIXME: Should declarations in anonymous namespaces get the same treatment
-  // as static / const declarations?
-  if (!ND->hasExternalFormalLinkage() && !ND->isInAnonymousNamespace())
+  if (!ND->hasExternalFormalLinkage() || ND->isInAnonymousNamespace())
     return;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {

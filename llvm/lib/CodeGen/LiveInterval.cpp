@@ -445,7 +445,7 @@ bool LiveRange::overlaps(const LiveRange &Other, const CoalescerPair &CP,
 
   while (true) {
     // J has just been advanced to satisfy:
-    assert(J->end >= I->start);
+    assert(J->end > I->start);
     // Check for an overlap.
     if (J->start < I->end) {
       // I and J are overlapping. Find the later start.
@@ -460,11 +460,11 @@ bool LiveRange::overlaps(const LiveRange &Other, const CoalescerPair &CP,
       std::swap(I, J);
       std::swap(IE, JE);
     }
-    // Advance J until J->end >= I->start.
+    // Advance J until J->end > I->start.
     do
       if (++J == JE)
         return false;
-    while (J->end < I->start);
+    while (J->end <= I->start);
   }
 }
 

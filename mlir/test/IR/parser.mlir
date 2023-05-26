@@ -1437,3 +1437,4 @@ test.dialect_custom_format_fallback custom_format_fallback
 // Check that an op with an optional result parses f80 as type.
 // CHECK: test.format_optional_result_d_op : f80
 test.format_optional_result_d_op : f80
+

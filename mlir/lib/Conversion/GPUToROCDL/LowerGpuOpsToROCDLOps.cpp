@@ -54,7 +54,7 @@ using namespace mlir;
 static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
   bool canBeBare = true;
   for (Type type : func.getArgumentTypes())
-    if (auto memrefTy = type.dyn_cast<BaseMemRefType>())
+    if (auto memrefTy = dyn_cast<BaseMemRefType>(type))
       canBeBare &= LLVMTypeConverter::canConvertToBarePtr(memrefTy);
   return canBeBare;
 }
@@ -166,9 +166,8 @@ struct LowerGpuOpsToROCDLOpsPass
     // Manually rewrite known block size attributes so the LLVMIR translation
     // infrastructure can pick them up.
     m.walk([ctx](LLVM::LLVMFuncOp op) {
-      if (auto blockSizes =
-              op->removeAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName())
-                  .dyn_cast_or_null<DenseI32ArrayAttr>()) {
+      if (auto blockSizes = dyn_cast_or_null<DenseI32ArrayAttr>(
+              op->removeAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName()))) {
         op->setAttr(ROCDL::ROCDLDialect::getReqdWorkGroupSizeAttrName(),
                     blockSizes);
         // Also set up the rocdl.flat_work_group_size attribute to prevent
@@ -281,6 +280,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
                                    "__ocml_tanh_f64");
   populateOpPatterns<math::TanOp>(converter, patterns, "__ocml_tan_f32",
                                   "__ocml_tan_f64");
+  populateOpPatterns<math::ErfOp>(converter, patterns, "__ocml_erf_f32",
+                                  "__ocml_erf_f64");
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

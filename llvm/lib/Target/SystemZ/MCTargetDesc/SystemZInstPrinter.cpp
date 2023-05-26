@@ -116,11 +116,6 @@ void SystemZInstPrinter::printU4ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<4>(MI, OpNum, O);
 }
 
-void SystemZInstPrinter::printU6ImmOperand(const MCInst *MI, int OpNum,
-                                           raw_ostream &O) {
-  printUImmOperand<6>(MI, OpNum, O);
-}
-
 void SystemZInstPrinter::printS8ImmOperand(const MCInst *MI, int OpNum,
                                            raw_ostream &O) {
   printSImmOperand<8>(MI, OpNum, O);

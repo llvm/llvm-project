@@ -31,7 +31,7 @@ pid_t fork() {
 #elif defined(SYS_clone)
   return __llvm_libc::syscall_impl(SYS_clone, SIGCHLD, 0);
 #else
-#error "SYS_fork or SYS_clone not available."
+#error "fork or clone syscalls not available."
 #endif
 }
 
@@ -58,7 +58,7 @@ bool dup2(int fd, int newfd) {
 #elif defined(SYS_dup3)
   long ret = __llvm_libc::syscall_impl(SYS_dup3, fd, newfd, 0);
 #else
-#error "SYS_dup2 and SYS_dup3 not available for the target."
+#error "dup2 and dup3 syscalls not available."
 #endif
   return ret < 0 ? false : true;
 }

@@ -672,6 +672,11 @@ public:
   SymbolVisitor(const SymbolVisitor &) = default;
   SymbolVisitor(SymbolVisitor &&) {}
 
+  // The copy and move assignment operator is defined as deleted pending further
+  // motivation.
+  SymbolVisitor &operator=(const SymbolVisitor &) = delete;
+  SymbolVisitor &operator=(SymbolVisitor &&) = delete;
+
   /// A visitor method invoked by ProgramStateManager::scanReachableSymbols.
   ///
   /// The method returns \c true if symbols should continue be scanned and \c

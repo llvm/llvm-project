@@ -728,65 +728,40 @@ define void @avg_v32i8_2(ptr %a, ptr %b) nounwind {
 define void @avg_v64i8_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v64i8_2:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa (%rsi), %xmm0
-; SSE2-NEXT:    movdqa 16(%rsi), %xmm1
-; SSE2-NEXT:    movdqa 32(%rsi), %xmm2
-; SSE2-NEXT:    movdqa 48(%rsi), %xmm3
-; SSE2-NEXT:    pavgb %xmm0, %xmm0
-; SSE2-NEXT:    pavgb %xmm1, %xmm1
-; SSE2-NEXT:    pavgb %xmm2, %xmm2
-; SSE2-NEXT:    pavgb %xmm3, %xmm3
-; SSE2-NEXT:    movdqu %xmm3, (%rax)
-; SSE2-NEXT:    movdqu %xmm2, (%rax)
-; SSE2-NEXT:    movdqu %xmm1, (%rax)
-; SSE2-NEXT:    movdqu %xmm0, (%rax)
+; SSE2-NEXT:    movaps (%rsi), %xmm0
+; SSE2-NEXT:    movaps 16(%rsi), %xmm1
+; SSE2-NEXT:    movaps 32(%rsi), %xmm2
+; SSE2-NEXT:    movaps 48(%rsi), %xmm3
+; SSE2-NEXT:    movups %xmm3, (%rax)
+; SSE2-NEXT:    movups %xmm2, (%rax)
+; SSE2-NEXT:    movups %xmm1, (%rax)
+; SSE2-NEXT:    movups %xmm0, (%rax)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: avg_v64i8_2:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rsi), %xmm0
-; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm1
-; AVX1-NEXT:    vmovdqa 32(%rsi), %xmm2
-; AVX1-NEXT:    vmovdqa 48(%rsi), %xmm3
-; AVX1-NEXT:    vpavgb %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpavgb %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpavgb %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpavgb %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vmovdqu %xmm3, (%rax)
-; AVX1-NEXT:    vmovdqu %xmm2, (%rax)
-; AVX1-NEXT:    vmovdqu %xmm1, (%rax)
-; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
+; AVX1-NEXT:    vmovaps (%rsi), %ymm0
+; AVX1-NEXT:    vmovaps 32(%rsi), %ymm1
+; AVX1-NEXT:    vmovups %ymm1, (%rax)
+; AVX1-NEXT:    vmovups %ymm0, (%rax)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: avg_v64i8_2:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX2-NEXT:    vmovdqa 32(%rsi), %ymm1
-; AVX2-NEXT:    vpavgb %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpavgb %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vmovdqu %ymm1, (%rax)
-; AVX2-NEXT:    vmovdqu %ymm0, (%rax)
+; AVX2-NEXT:    vmovaps (%rsi), %ymm0
+; AVX2-NEXT:    vmovaps 32(%rsi), %ymm1
+; AVX2-NEXT:    vmovups %ymm1, (%rax)
+; AVX2-NEXT:    vmovups %ymm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: avg_v64i8_2:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX512F-NEXT:    vmovdqa 32(%rsi), %ymm1
-; AVX512F-NEXT:    vpavgb %ymm0, %ymm0, %ymm0
-; AVX512F-NEXT:    vpavgb %ymm1, %ymm1, %ymm1
-; AVX512F-NEXT:    vmovdqu %ymm1, (%rax)
-; AVX512F-NEXT:    vmovdqu %ymm0, (%rax)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: avg_v64i8_2:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa64 (%rsi), %zmm0
-; AVX512BW-NEXT:    vpavgb %zmm0, %zmm0, %zmm0
-; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rax)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: avg_v64i8_2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovaps (%rsi), %zmm0
+; AVX512-NEXT:    vmovups %zmm0, (%rax)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %1 = load <64 x i8>, ptr %a
   %2 = load <64 x i8>, ptr %b
   %3 = zext <64 x i8> %1 to <64 x i32>

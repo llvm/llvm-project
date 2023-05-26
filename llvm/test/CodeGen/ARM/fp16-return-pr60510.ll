@@ -23,7 +23,7 @@ declare dso_local float @other(float) nounwind
 declare dso_local void @fp16_sink(half) nounwind
 declare dso_local void @bf16_sink(bfloat) nounwind
 
-declare dso_local bfloat @fp16_inner() nounwind
+declare dso_local half @fp16_inner() nounwind
 declare dso_local bfloat @bf_inner() nounwind
 
 define half @fp16_out_call_oneuse(float %arg) nounwind {

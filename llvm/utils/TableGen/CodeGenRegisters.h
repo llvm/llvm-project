@@ -150,14 +150,15 @@ namespace llvm {
   };
 
   /// CodeGenRegister - Represents a register definition.
-  struct CodeGenRegister {
+  class CodeGenRegister {
+  public:
     Record *TheDef;
     unsigned EnumValue;
     std::vector<int64_t> CostPerUse;
-    bool CoveredBySubRegs;
-    bool HasDisjunctSubRegs;
-    bool Artificial;
-    bool Constant;
+    bool CoveredBySubRegs = true;
+    bool HasDisjunctSubRegs = false;
+    bool Artificial = true;
+    bool Constant = false;
 
     // Map SubRegIndex -> Register.
     typedef std::map<CodeGenSubRegIndex *, CodeGenRegister *,

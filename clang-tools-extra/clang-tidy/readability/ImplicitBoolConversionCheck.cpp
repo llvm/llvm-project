@@ -262,7 +262,10 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
       expr(anyOf(allOf(isMacroExpansion(), unless(isNULLMacroExpansion())),
                  has(ignoringImplicit(
                      memberExpr(hasDeclaration(fieldDecl(hasBitWidth(1)))))),
-                 hasParent(explicitCastExpr())));
+                 hasParent(explicitCastExpr()),
+                 expr(hasType(qualType().bind("type")),
+                      hasParent(initListExpr(hasParent(explicitCastExpr(
+                          hasType(qualType(equalsBoundNode("type"))))))))));
   auto ImplicitCastFromBool = implicitCastExpr(
       anyOf(hasCastKind(CK_IntegralCast), hasCastKind(CK_IntegralToFloating),
             // Prior to C++11 cast from bool literal to pointer was allowed.
@@ -290,7 +293,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                    unless(ExceptionCases), unless(has(BoolXor)),
                    // Retrieve also parent statement, to check if we need
                    // additional parens in replacement.
-                   anyOf(hasParent(stmt().bind("parentStmt")), anything()),
+                   optionally(hasParent(stmt().bind("parentStmt"))),
                    unless(isInTemplateInstantiation()),
                    unless(hasAncestor(functionTemplateDecl())))
                    .bind("implicitCastToBool")),

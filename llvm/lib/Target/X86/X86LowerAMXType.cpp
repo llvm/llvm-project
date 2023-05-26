@@ -129,6 +129,8 @@ static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   }
   // a * b + c
   // The shape depends on which operand.
+  case Intrinsic::x86_tcmmimfp16ps_internal:
+  case Intrinsic::x86_tcmmrlfp16ps_internal:
   case Intrinsic::x86_tdpbssd_internal:
   case Intrinsic::x86_tdpbsud_internal:
   case Intrinsic::x86_tdpbusd_internal:
@@ -486,7 +488,7 @@ static void replaceWithTileLoad(Use &U, Value *Ptr, bool IsPHI = false) {
   // Get tile shape.
   IntrinsicInst *II = nullptr;
   if (IsPHI) {
-    Value *PhiOp = dyn_cast<PHINode>(V)->getIncomingValue(0);
+    Value *PhiOp = cast<PHINode>(V)->getIncomingValue(0);
     II = cast<IntrinsicInst>(PhiOp);
   } else {
     II = cast<IntrinsicInst>(V);
@@ -525,7 +527,7 @@ public:
                             SmallVector<Instruction *, 2> &Incomings);
   void replacePhiDefWithLoad(Instruction *PHI, Value *StorePtr);
   bool volatileTileData();
-  void volatileTilePHI(PHINode *Inst);
+  void volatileTilePHI(PHINode *PHI);
   void volatileTileNonPHI(Instruction *I);
 };
 

@@ -294,8 +294,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
 
   /// Print information about the device.
-  Error printInfoImpl() override {
-    printf("    This is a generic-elf-64bit device\n");
+  Error obtainInfoImpl(InfoQueueTy &Info) override {
+    Info.add("Device Type", "Generic-elf-64bit");
     return Plugin::success();
   }
 

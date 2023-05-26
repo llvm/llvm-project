@@ -18,6 +18,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 
 namespace llvm {
+class AssumptionCache;
 class StringRef;
 class Value;
 class CallInst;
@@ -102,6 +103,7 @@ private:
   FortifiedLibCallSimplifier FortifiedSimplifier;
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
+  AssumptionCache *AC;
   OptimizationRemarkEmitter &ORE;
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
@@ -134,9 +136,9 @@ private:
 
 public:
   LibCallSimplifier(
-      const DataLayout &DL, const TargetLibraryInfo *TLI,
-      OptimizationRemarkEmitter &ORE,
-      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+      const DataLayout &DL, const TargetLibraryInfo *TLI, AssumptionCache *AC,
+      OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+      ProfileSummaryInfo *PSI,
       function_ref<void(Instruction *, Value *)> Replacer =
           &replaceAllUsesWithDefault,
       function_ref<void(Instruction *)> Eraser = &eraseFromParentDefault);
@@ -181,6 +183,7 @@ private:
   Value *optimizeMemMove(CallInst *CI, IRBuilderBase &B);
   Value *optimizeMemSet(CallInst *CI, IRBuilderBase &B);
   Value *optimizeRealloc(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeNew(CallInst *CI, IRBuilderBase &B, LibFunc &Func);
   Value *optimizeWcslen(CallInst *CI, IRBuilderBase &B);
   Value *optimizeBCopy(CallInst *CI, IRBuilderBase &B);
 
