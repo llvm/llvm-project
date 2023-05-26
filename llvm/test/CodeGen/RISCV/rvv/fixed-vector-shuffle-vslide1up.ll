@@ -26,7 +26,7 @@ define <4 x i8> @vslide1up_4xi8(<4 x i8> %v, i8 %b) {
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV32-NEXT:    vmv.s.x v9, a0
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vslideup.vi v9, v8, 3
+; RV32-NEXT:    vslideup.vi v9, v8, 1
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
 ;
@@ -34,11 +34,33 @@ define <4 x i8> @vslide1up_4xi8(<4 x i8> %v, i8 %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.x v9, a0
-; RV64-NEXT:    vslideup.vi v9, v8, 3
+; RV64-NEXT:    vslideup.vi v9, v8, 1
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
   %vb = insertelement <4 x i8> poison, i8 %b, i64 0
-  %v1 = shufflevector <4 x i8> %v, <4 x i8> %vb, <4 x i32> <i32 4, i32 5, i32 6, i32 0>
+  %v1 = shufflevector <4 x i8> %v, <4 x i8> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
+  ret <4 x i8> %v1
+}
+
+define <4 x i8> @vslide1up_4xi8_swapped(<4 x i8> %v, i8 %b) {
+; RV32-LABEL: vslide1up_4xi8_swapped:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vmv.s.x v9, a0
+; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV32-NEXT:    vslideup.vi v9, v8, 1
+; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vslide1up_4xi8_swapped:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV64-NEXT:    vmv.v.x v9, a0
+; RV64-NEXT:    vslideup.vi v9, v8, 1
+; RV64-NEXT:    vmv1r.v v8, v9
+; RV64-NEXT:    ret
+  %vb = insertelement <4 x i8> poison, i8 %b, i64 0
+  %v1 = shufflevector <4 x i8> %vb, <4 x i8> %v, <4 x i32> <i32 0, i32 4, i32 5, i32 6>
   ret <4 x i8> %v1
 }
 
@@ -74,7 +96,7 @@ define <4 x i16> @vslide1up_4xi16(<4 x i16> %v, i16 %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.x v9, a0
-; RV32-NEXT:    vslideup.vi v9, v8, 3
+; RV32-NEXT:    vslideup.vi v9, v8, 1
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
 ;
@@ -83,11 +105,11 @@ define <4 x i16> @vslide1up_4xi16(<4 x i16> %v, i16 %b) {
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
 ; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NEXT:    vslideup.vi v9, v8, 3
+; RV64-NEXT:    vslideup.vi v9, v8, 1
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
   %vb = insertelement <4 x i16> poison, i16 %b, i64 0
-  %v1 = shufflevector <4 x i16> %v, <4 x i16> %vb, <4 x i32> <i32 4, i32 5, i32 6, i32 0>
+  %v1 = shufflevector <4 x i16> %v, <4 x i16> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
   ret <4 x i16> %v1
 }
 
@@ -123,11 +145,11 @@ define <4 x i32> @vslide1up_4xi32(<4 x i32> %v, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vslideup.vi v9, v8, 3
+; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x i32> poison, i32 %b, i64 0
-  %v1 = shufflevector <4 x i32> %v, <4 x i32> %vb, <4 x i32> <i32 4, i32 5, i32 6, i32 0>
+  %v1 = shufflevector <4 x i32> %v, <4 x i32> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
   ret <4 x i32> %v1
 }
 
@@ -168,7 +190,7 @@ define <4 x i64> @vslide1up_4xi64(<4 x i64> %v, i64 %b) {
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
-; RV32-NEXT:    vslideup.vi v10, v8, 3
+; RV32-NEXT:    vslideup.vi v10, v8, 1
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -177,11 +199,11 @@ define <4 x i64> @vslide1up_4xi64(<4 x i64> %v, i64 %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vmv.v.x v10, a0
-; RV64-NEXT:    vslideup.vi v10, v8, 3
+; RV64-NEXT:    vslideup.vi v10, v8, 1
 ; RV64-NEXT:    vmv.v.v v8, v10
 ; RV64-NEXT:    ret
   %vb = insertelement <4 x i64> poison, i64 %b, i64 0
-  %v1 = shufflevector <4 x i64> %v, <4 x i64> %vb, <4 x i32> <i32 4, i32 5, i32 6, i32 0>
+  %v1 = shufflevector <4 x i64> %v, <4 x i64> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
   ret <4 x i64> %v1
 }
 
@@ -206,11 +228,11 @@ define <4 x half> @vslide1up_4xf16(<4 x half> %v, half %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vslideup.vi v9, v8, 3
+; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x half> poison, half %b, i64 0
-  %v1 = shufflevector <4 x half> %v, <4 x half> %vb, <4 x i32> <i32 4, i32 5, i32 6, i32 0>
+  %v1 = shufflevector <4 x half> %v, <4 x half> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
   ret <4 x half> %v1
 }
 
@@ -235,11 +257,11 @@ define <4 x float> @vslide1up_4xf32(<4 x float> %v, float %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
-; CHECK-NEXT:    vslideup.vi v9, v8, 3
+; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x float> poison, float %b, i64 0
-  %v1 = shufflevector <4 x float> %v, <4 x float> %vb, <4 x i32> <i32 4, i32 5, i32 6, i32 0>
+  %v1 = shufflevector <4 x float> %v, <4 x float> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
   ret <4 x float> %v1
 }
 
@@ -295,4 +317,21 @@ define <4 x i8> @vslide1up_4xi8_inverted(<4 x i8> %v, i8 %b) {
   %v1 = shufflevector <4 x i8> %v, <4 x i8> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 2>
   %v2 = insertelement <4 x i8> %v1, i8 %b, i64 0
   ret <4 x i8> %v2
+}
+
+
+; The length of the shift is less than the suffix
+define <4 x i32> @vslide1up_4xi32_neg1(<4 x i32> %v, i32 %b) {
+; CHECK-LABEL: vslide1up_4xi32_neg1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %vb = insertelement <4 x i32> poison, i32 %b, i64 0
+  %vb2 = insertelement <4 x i32> %vb, i32 %b, i64 3
+  %v1 = shufflevector <4 x i32> %v, <4 x i32> %vb2, <4 x i32> <i32 4, i32 0, i32 1, i32 7>
+  ret <4 x i32> %v1
 }
