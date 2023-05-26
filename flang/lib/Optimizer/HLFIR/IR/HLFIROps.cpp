@@ -1309,19 +1309,20 @@ mlir::LogicalResult hlfir::ElseWhereOp::verify() {
 mlir::LogicalResult
 hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
                                    mlir::PatternRewriter &rewriter) {
+  for (mlir::Operation *user : indexOp->getResult(0).getUsers())
+    if (!mlir::isa<fir::LoadOp>(user))
+      return mlir::failure();
+
   auto insertPt = rewriter.saveInsertionPoint();
   for (mlir::Operation *user : indexOp->getResult(0).getUsers())
-    if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(user)) {
+    if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(user)) {
       rewriter.setInsertionPoint(loadOp);
       rewriter.replaceOpWithNewOp<fir::ConvertOp>(
           user, loadOp.getResult().getType(), indexOp.getIndex());
     }
   rewriter.restoreInsertionPoint(insertPt);
-  if (indexOp.use_empty()) {
-    rewriter.eraseOp(indexOp);
-    return mlir::success();
-  }
-  return mlir::failure();
+  rewriter.eraseOp(indexOp);
+  return mlir::success();
 }
 
 #include "flang/Optimizer/HLFIR/HLFIROpInterfaces.cpp.inc"
