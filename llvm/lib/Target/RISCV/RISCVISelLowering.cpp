@@ -12232,6 +12232,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     bool IsScalarizable =
         MemVT.isFixedLengthVector() && ISD::isNormalStore(Store) &&
+        Store->isSimple() &&
         MemVT.getVectorElementType().bitsLE(Subtarget.getXLenVT()) &&
         isPowerOf2_64(MemVT.getSizeInBits()) &&
         MemVT.getSizeInBits() <= Subtarget.getXLen();
@@ -12273,7 +12274,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     //   vle16.v    v8, (a0)
     //   vse16.v    v8, (a1)
     if (auto *L = dyn_cast<LoadSDNode>(Val);
-        L && DCI.isBeforeLegalize() && IsScalarizable &&
+        L && DCI.isBeforeLegalize() && IsScalarizable && L->isSimple() &&
         L->hasNUsesOfValue(1, 0) && L->hasNUsesOfValue(1, 1) &&
         Store->getChain() == SDValue(L, 1) && ISD::isNormalLoad(L) &&
         L->getMemoryVT() == MemVT) {
