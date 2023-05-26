@@ -227,6 +227,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_stringstream",
+    hdrs = ["src/__support/CPP/stringstream.h"],
+    deps = [
+        ":__support_cpp_span",
+        ":__support_cpp_string_view",
+        ":__support_cpp_type_traits",
+        ":__support_integer_to_string",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_string",
     hdrs = ["src/__support/CPP/string.h"],
     deps = [
@@ -801,6 +812,28 @@ libc_support_library(
     ],
     deps = [
         ":__support_osutil_syscall",
+        ":libc_root",
+    ],
+)
+
+libc_support_library(
+    name = "__support_stringutil",
+    srcs = glob(["src/__support/StringUtil/tables/**/*.h"]) + [
+        "src/__support/StringUtil/error_to_string.cpp",
+        "src/__support/StringUtil/message_mapper.h",
+        "src/__support/StringUtil/signal_to_string.cpp",
+    ],
+    hdrs = [
+        "src/__support/StringUtil/error_to_string.h",
+        "src/__support/StringUtil/signal_to_string.h",
+    ],
+    deps = [
+        ":__support_cpp_array",
+        ":__support_cpp_span",
+        ":__support_cpp_string_view",
+        ":__support_cpp_stringstream",
+        ":__support_integer_to_string",
+        ":errno",
         ":libc_root",
     ],
 )
