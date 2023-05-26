@@ -5,10 +5,9 @@ an id(). Other parts of the test running infrastructure are counting on this.
 
 from lldbsuite.test.lldbtest import TestBase
 
-class TestIdTestCase(TestBase):
 
+class TestIdTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_id_exists(self):
         self.assertIsNotNone(self.id(), "Test instance should have an id()")
-

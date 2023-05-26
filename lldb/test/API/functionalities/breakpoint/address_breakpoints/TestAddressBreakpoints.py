@@ -3,14 +3,12 @@ Test address breakpoints set with shared library of SBAddress work correctly.
 """
 
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
 class AddressBreakpointTestCase(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_address_breakpoints(self):
@@ -24,17 +22,16 @@ class AddressBreakpointTestCase(TestBase):
 
         # Now create a breakpoint on main.c by name 'c'.
         breakpoint = target.BreakpointCreateBySourceRegex(
-            "Set a breakpoint here", lldb.SBFileSpec("main.c"))
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() >= 1,
-                        VALID_BREAKPOINT)
+            "Set a breakpoint here", lldb.SBFileSpec("main.c")
+        )
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() >= 1, VALID_BREAKPOINT
+        )
 
         # Get the breakpoint location from breakpoint after we verified that,
         # indeed, it has one location.
         location = breakpoint.GetLocationAtIndex(0)
-        self.assertTrue(location and
-                        location.IsEnabled(),
-                        VALID_BREAKPOINT_LOCATION)
+        self.assertTrue(location and location.IsEnabled(), VALID_BREAKPOINT_LOCATION)
 
         # Next get the address from the location, and create an address breakpoint using
         # that address:
@@ -60,10 +57,11 @@ class AddressBreakpointTestCase(TestBase):
 
         # Did we hit our breakpoint?
         from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
+
         threads = get_threads_stopped_at_breakpoint(process, breakpoint)
         self.assertEqual(
-            len(threads), 1,
-            "There should be a thread stopped at our breakpoint")
+            len(threads), 1, "There should be a thread stopped at our breakpoint"
+        )
 
         # The hit count for the breakpoint should be 1.
         self.assertEquals(breakpoint.GetHitCount(), 1)
@@ -79,8 +77,8 @@ class AddressBreakpointTestCase(TestBase):
 
         thread = get_threads_stopped_at_breakpoint(process, breakpoint)
         self.assertEqual(
-            len(threads), 1,
-            "There should be a thread stopped at our breakpoint")
+            len(threads), 1, "There should be a thread stopped at our breakpoint"
+        )
 
         # The hit count for the breakpoint should be 1, since we reset counts
         # for each run.

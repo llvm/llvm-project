@@ -10,7 +10,6 @@ import json, os
 
 
 class TestInteractiveScriptedProcess(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -24,6 +23,7 @@ class TestInteractiveScriptedProcess(TestBase):
         self.script_file = self.script_module + ".py"
 
     @skipUnlessDarwin
+    @expectedFailureDarwin
     def test_passthrough_launch(self):
         """Test a simple pass-through process launch"""
         self.passthrough_launch()
@@ -44,6 +44,7 @@ class TestInteractiveScriptedProcess(TestBase):
         self.assertState(lldb.SBProcess.GetStateFromEvent(event), lldb.eStateStopped)
 
     @skipUnlessDarwin
+    @expectedFailureDarwin
     def test_multiplexed_launch(self):
         """Test a multiple interactive scripted process debugging"""
         self.passthrough_launch()

@@ -18885,6 +18885,95 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return MakeCpAsync(Intrinsic::nvvm_cp_async_cg_shared_global_16,
                        Intrinsic::nvvm_cp_async_cg_shared_global_16_s, *this, E,
                        16);
+  case NVPTX::BI__nvvm_read_ptx_sreg_clusterid_x:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_clusterid_x));
+  case NVPTX::BI__nvvm_read_ptx_sreg_clusterid_y:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_clusterid_y));
+  case NVPTX::BI__nvvm_read_ptx_sreg_clusterid_z:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_clusterid_z));
+  case NVPTX::BI__nvvm_read_ptx_sreg_clusterid_w:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_clusterid_w));
+  case NVPTX::BI__nvvm_read_ptx_sreg_nclusterid_x:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_nclusterid_x));
+  case NVPTX::BI__nvvm_read_ptx_sreg_nclusterid_y:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_nclusterid_y));
+  case NVPTX::BI__nvvm_read_ptx_sreg_nclusterid_z:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_nclusterid_z));
+  case NVPTX::BI__nvvm_read_ptx_sreg_nclusterid_w:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_nclusterid_w));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_ctaid_x:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_x));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_ctaid_y:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_y));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_ctaid_z:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_z));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_ctaid_w:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_w));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_nctaid_x:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_x));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_nctaid_y:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_y));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_nctaid_z:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_z));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_nctaid_w:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_w));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_ctarank:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_ctarank));
+  case NVPTX::BI__nvvm_read_ptx_sreg_cluster_nctarank:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_read_ptx_sreg_cluster_nctarank));
+  case NVPTX::BI__nvvm_is_explicit_cluster:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_is_explicit_cluster));
+  case NVPTX::BI__nvvm_isspacep_shared_cluster:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_isspacep_shared_cluster),
+        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_mapa:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_mapa),
+        {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
+  case NVPTX::BI__nvvm_mapa_shared_cluster:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_mapa_shared_cluster),
+        {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
+  case NVPTX::BI__nvvm_getctarank:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_getctarank),
+        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_getctarank_shared_cluster:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_getctarank_shared_cluster),
+        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_barrier_cluster_arrive:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cluster_arrive));
+  case NVPTX::BI__nvvm_barrier_cluster_arrive_relaxed:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cluster_arrive_relaxed));
+  case NVPTX::BI__nvvm_barrier_cluster_wait:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cluster_wait));
+  case NVPTX::BI__nvvm_fence_sc_cluster:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_fence_sc_cluster));
   default:
     return nullptr;
   }

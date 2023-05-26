@@ -9,10 +9,11 @@ from lldbsuite.test import lldbutil
 
 
 class TestPointerNumChilden(TestBase):
-
     def test_pointer_num_children(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
 
         result = self.frame().FindVariable("Ref")
         self.assertEqual(1, result.GetNumChildren())

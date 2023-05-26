@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSOR_H_
 #define MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSOR_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"

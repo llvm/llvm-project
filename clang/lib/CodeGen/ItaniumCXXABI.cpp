@@ -4689,6 +4689,7 @@ static llvm::FunctionCallee getClangCallTerminateFn(CodeGenModule &CGM) {
       cast<llvm::Function>(fnRef.getCallee()->stripPointerCasts());
   if (fn->empty()) {
     CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, fn, /*IsThunk=*/false);
+    CGM.SetLLVMFunctionAttributesForDefinition(nullptr, fn);
     fn->setDoesNotThrow();
     fn->setDoesNotReturn();
 

@@ -601,7 +601,7 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, matC);
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, bufC);
   return success();
 }
 

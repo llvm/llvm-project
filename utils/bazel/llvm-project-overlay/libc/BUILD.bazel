@@ -93,7 +93,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_attributes",
     hdrs = ["src/__support/macros/attributes.h"],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_macros_properties_architectures",
+        ":libc_root"
+    ],
 )
 
 libc_support_library(
@@ -827,6 +830,7 @@ libc_function(
     hdrs = ["src/errno/libc_errno.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
     ],
 )

@@ -64,7 +64,7 @@
 // CHECK:           %[[VAL_64:.*]] = gpu.memcpy async {{\[}}%[[VAL_63]]] %[[VAL_34]], %[[VAL_38]] : memref<?x?xf64>, memref<?x?xf64>
 // CHECK:           %[[VAL_65:.*]] = gpu.dealloc async {{\[}}%[[VAL_64]]] %[[VAL_38]] : memref<?x?xf64>
 // CHECK:           gpu.wait {{\[}}%[[VAL_65]]]
-// CHECK:           %[[VAL_66:.*]] = bufferization.to_tensor %[[VAL_38]] : memref<?x?xf64>
+// CHECK:           %[[VAL_66:.*]] = bufferization.to_tensor %[[VAL_34]] : memref<?x?xf64>
 // CHECK:           return %[[VAL_66]] : tensor<?x?xf64>
 // CHECK:         }
 func.func @matmul(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xf64>, %C_in: tensor<?x?xf64>) -> tensor<?x?xf64> {

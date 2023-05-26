@@ -10,7 +10,6 @@ import shutil
 
 
 class TestCase(TestBase):
-
     # We only emulate a fake libc++ in this test and don't use the real libc++,
     # but we still add the libc++ category so that this test is only run in
     # test configurations where libc++ is actually supposed to be tested.
@@ -34,26 +33,40 @@ class TestCase(TestBase):
         # XPASS this test.
         self.runCmd("platform select --sysroot '" + target_sysroot + "' host")
 
-        lldbutil.run_to_source_breakpoint(self,
-                                          "// Set break point at this line.",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", lldb.SBFileSpec("main.cpp")
+        )
 
         # Import the std C++ module and run an expression.
         # As we deleted the sources, LLDB should refuse the load the module
         # and just print the normal error we get from the expression.
         self.runCmd("settings set target.import-std-module true")
-        self.expect("expr v.unknown_identifier", error=True,
-                    substrs=["no member named 'unknown_identifier'"])
+        self.expect(
+            "expr v.unknown_identifier",
+            error=True,
+            substrs=["no member named 'unknown_identifier'"],
+        )
         # Check that there is no confusing error about failing to build the
         # module.
-        self.expect("expr v.unknown_identifier", error=True, matching=False,
-                    substrs=["could not build module 'std'"])
+        self.expect(
+            "expr v.unknown_identifier",
+            error=True,
+            matching=False,
+            substrs=["could not build module 'std'"],
+        )
 
         # Test the fallback mode. It should also just print the normal
         # error but not mention a failed module build.
         self.runCmd("settings set target.import-std-module fallback")
 
-        self.expect("expr v.unknown_identifier", error=True,
-                     substrs=["no member named 'unknown_identifier'"])
-        self.expect("expr v.unknown_identifier", error=True, matching=False,
-                    substrs=["could not build module 'std'"])
+        self.expect(
+            "expr v.unknown_identifier",
+            error=True,
+            substrs=["no member named 'unknown_identifier'"],
+        )
+        self.expect(
+            "expr v.unknown_identifier",
+            error=True,
+            matching=False,
+            substrs=["could not build module 'std'"],
+        )

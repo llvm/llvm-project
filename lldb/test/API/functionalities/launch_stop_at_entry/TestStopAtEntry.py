@@ -28,13 +28,13 @@ class TestStopAtEntry(TestBase):
 
     def no_debugserver(self):
         if get_debugserver_exe() is None:
-            return 'no debugserver'
+            return "no debugserver"
         return None
 
     def port_not_available(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        if s.connect_ex(('127.0.0.1', self.PORT)) == 0:
-            return '{} not available'.format(self.PORT)
+        if s.connect_ex(("127.0.0.1", self.PORT)) == 0:
+            return "{} not available".format(self.PORT)
         return None
 
     @skipUnlessDarwin
@@ -69,15 +69,25 @@ class TestStopAtEntry(TestBase):
         launch_info = target.GetLaunchInfo()
         launch_info.SetLaunchFlags(lldb.eLaunchFlagStopAtEntry)
         old_async = self.dbg.GetAsync()
-        def cleanup ():
+
+        def cleanup():
             self.dbg.SetAsync(old_async)
+
         self.addTearDownHook(cleanup)
 
         if not synchronous:
             self.dbg.SetAsync(True)
             listener = lldb.SBListener("test-process-listener")
-            mask = listener.StartListeningForEventClass(self.dbg, lldb.SBProcess.GetBroadcasterClassName(), lldb.SBProcess.eBroadcastBitStateChanged)
-            self.assertEqual(mask, lldb.SBProcess.eBroadcastBitStateChanged, "Got right mask for listener")
+            mask = listener.StartListeningForEventClass(
+                self.dbg,
+                lldb.SBProcess.GetBroadcasterClassName(),
+                lldb.SBProcess.eBroadcastBitStateChanged,
+            )
+            self.assertEqual(
+                mask,
+                lldb.SBProcess.eBroadcastBitStateChanged,
+                "Got right mask for listener",
+            )
             launch_info.SetListener(listener)
         else:
             self.dbg.SetAsync(False)
@@ -96,11 +106,15 @@ class TestStopAtEntry(TestBase):
             result = listener.WaitForEvent(30, event)
             self.assertTrue(result, "Timed out waiting for event from process")
             state = lldb.SBProcess.GetStateFromEvent(event)
-            self.assertState(state, lldb.eStateStopped, "Didn't get a stopped state after launch")
+            self.assertState(
+                state, lldb.eStateStopped, "Didn't get a stopped state after launch"
+            )
 
         # Okay, we should be stopped.  Make sure we are indeed at the
         # entry point.  I only know how to do this on darwin:
-        self.assertEqual(len(process.threads), 1, "Should only have one thread at entry")
+        self.assertEqual(
+            len(process.threads), 1, "Should only have one thread at entry"
+        )
         thread = process.threads[0]
         frame = thread.GetFrameAtIndex(0)
         stop_func = frame.name
@@ -131,32 +145,29 @@ class TestStopAtEntry(TestBase):
         else:
             # Make sure that the process has indeed exited
             state = process.GetState()
-            self.assertState(state, lldb.eStateExited);
+            self.assertState(state, lldb.eStateExited)
 
     def setup_remote_platform(self):
         return
         self.build()
 
-        exe = self.getBuildArtifact('a.out')
+        exe = self.getBuildArtifact("a.out")
         # Launch our test binary.
 
         # Attach to it with debugserver.
         debugserver = get_debugserver_exe()
-        debugserver_args = [
-            'localhost:{}'.format(self.PORT)
-        ]
+        debugserver_args = ["localhost:{}".format(self.PORT)]
         self.spawnSubprocess(debugserver, debugserver_args)
 
         # Select the platform.
-        self.expect('platform select remote-macosx', substrs=[sdk_dir])
+        self.expect("platform select remote-macosx", substrs=[sdk_dir])
 
         # Connect to debugserver
         interpreter = self.dbg.GetCommandInterpreter()
         connected = False
         for i in range(self.ATTEMPTS):
             result = lldb.SBCommandReturnObject()
-            interpreter.HandleCommand('gdb-remote {}'.format(self.PORT),
-                                      result)
+            interpreter.HandleCommand("gdb-remote {}".format(self.PORT), result)
             connected = result.Succeeded()
             if connected:
                 break
