@@ -153,6 +153,10 @@ private:
   /// values in the payload IR. Also works for reverse mappings.
   using ValueMapping = DenseMap<Value, SmallVector<Value>>;
 
+  /// Mapping between a Value in the transform IR and an error message that
+  /// should be emitted when the value is used.
+  using InvalidatedHandleMap = DenseMap<Value, std::function<void(Location)>>;
+
   /// The bidirectional mappings between transform IR values and payload IR
   /// operations, and the mapping between transform IR values and parameters.
   struct Mappings {
@@ -567,26 +571,85 @@ private:
   /// handle.
   LogicalResult replacePayloadValue(Value value, Value replacement);
 
-  /// If the operand is a handle consumed by the operation, i.e. has the "free"
-  /// memory effect associated with it, identifies other handles that are
-  /// pointing to payload IR operations nested in the operations pointed to by
-  /// the consumed handle. Marks all such handles as invalidated to trigger
-  /// errors if they are used. If `throughValue` is passed, record the fact that
-  /// an op handle was invalidated because a value handle associated with
-  /// results of the payload op or its block arguments was invalidated.
+  /// Records handle invalidation reporters into `newlyInvalidated`.
+  /// Specifically,
+  ///  - `handle` is the op operand that consumes the handle,
+  ///  - `potentialAncestors` is a list of ancestors of the payload operation
+  ///     that the consumed handle is associated with, including itself,
+  ///  - `throughValue` is the payload value the handle to which is consumed,
+  ///     when it is the case, null when the operation handle is consumed
+  ///     directly.
+  /// Iterates over all known operation and value handles and records reporters
+  /// for any potential future use of `handle` or any other handle that is
+  /// invalidated by its consumption, i.e., any handle pointing to any payload
+  /// IR entity (operation or value) associated with the same payload IR entity
+  /// as the consumed handle, or any nested payload IR entity. If
+  /// `potentialAncestors` is empty, records the reporter anyway. Does not
+  /// override existing reporters. This must remain a const method so it doesn't
+  /// inadvertently mutate `invalidatedHandles` too early.
   void recordOpHandleInvalidation(OpOperand &consumingHandle,
                                   ArrayRef<Operation *> potentialAncestors,
-                                  Value throughValue = nullptr);
-  void recordOpHandleInvalidationOne(OpOperand &handle,
-                                     ArrayRef<Operation *> potentialAncestors,
-                                     Operation *payloadOp, Value otherHandle,
-                                     Value throughValue = nullptr);
+                                  Value throughValue,
+                                  InvalidatedHandleMap &newlyInvalidated) const;
 
+  /// Records handle invalidation reporters into `newlyInvalidated`.
+  /// Specifically,
+  ///  - `consumingHandle` is the op operand that consumes the handle,
+  ///  - `potentialAncestors` is a list of ancestors of the payload operation
+  ///     that the consumed handle is associated with, including itself,
+  ///  - `payloadOp` is the operation itself,
+  ///  - `otherHandle` is another that may be associated with the affected
+  ///     payload operations
+  ///  - `throughValue` is the payload value the handle to which is consumed,
+  ///     when it is the case, null when the operation handle is consumed
+  ///     directly.
+  /// Looks at the payload opreations associated with `otherHandle` and if any
+  /// of these operations has an ancestor (or is itself) listed in
+  /// `potentialAncestors`, records the error message describing the use of the
+  /// invalidated handle. Does nothing if `otherHandle` already has a reporter
+  /// associated with it. This must remain a const method so it doesn't
+  /// inadvertently mutate `invalidatedHandles` too early.
+  void recordOpHandleInvalidationOne(
+      OpOperand &consumingHandle, ArrayRef<Operation *> potentialAncestors,
+      Operation *payloadOp, Value otherHandle, Value throughValue,
+      InvalidatedHandleMap &newlyInvalidated) const;
+
+  /// Records handle invalidation reporters into `newlyInvalidated`.
+  /// Specifically,
+  ///  - `opHandle` is the op operand that consumes the handle;
+  ///  - `potentialAncestors` is a list of ancestors of the payload operation
+  ///     that the consumed handle is associated with, including itself;
+  ///  - `payloadValue` is the value defined by the operation associated with
+  ///     the consuming handle as either op result or block argument;
+  ///  - `valueHandle` is another that may be associated with the payload value.
+  /// Looks at the payload values associated with `valueHandle` and if any of
+  /// these values is defined, as op result or block argument, by an operation
+  /// whose ancestor (or the operation itself) is listed in
+  /// `potentialAncestors`, records the error message describing the use of the
+  /// invalidated handle. Does nothing if `valueHandle` already has a reporter
+  /// associated with it. This must remain a const method so it doesn't
+  /// inadvertently mutate `invalidatedHandles` too early.
   void recordValueHandleInvalidationByOpHandleOne(
       OpOperand &opHandle, ArrayRef<Operation *> potentialAncestors,
-      Value payloadValue, Value valueHandle);
+      Value payloadValue, Value valueHandle,
+      InvalidatedHandleMap &newlyInvalidated) const;
 
-  void recordValueHandleInvalidation(OpOperand &valueHandle);
+  /// Records handle invalidation reporters into `newlyInvalidated`.
+  /// Specifically,
+  ///  - `valueHandle` is the op operand that consumes the handle,
+  ///  - `throughValue` is the payload value the handle to which is consumed,
+  ///     when it is the case, null when the operation handle is consumed
+  ///     directly.
+  /// Iterates over all known operation and value handles and records reporters
+  /// for any potential future use of `handle` or any other handle that is
+  /// invalidated by its consumption, i.e., any handle pointing to any payload
+  /// IR entity (operation or value) associated with the same payload IR entity
+  /// as the consumed handle, or any nested payload IR entity. Does not override
+  /// existing reporters. This must remain a const method so it doesn't
+  /// inadvertently mutate `invalidatedHandles` too early.
+  void
+  recordValueHandleInvalidation(OpOperand &valueHandle,
+                                InvalidatedHandleMap &newlyInvalidated) const;
 
   /// Checks that the operation does not use invalidated handles as operands.
   /// Reports errors and returns failure if it does. Otherwise, invalidates the
@@ -595,6 +658,13 @@ private:
   /// consumed handles.
   LogicalResult
   checkAndRecordHandleInvalidation(TransformOpInterface transform);
+
+  /// Implementation of the checkAndRecordHandleInvalidation. This must remain a
+  /// const method so it doesn't inadvertently mutate `invalidatedHandles` too
+  /// early.
+  LogicalResult checkAndRecordHandleInvalidationImpl(
+      transform::TransformOpInterface transform,
+      transform::TransformState::InvalidatedHandleMap &newlyInvalidated) const;
 
   /// Remove all nullptrs from op handles that were added by `replacePayloadOp`.
   void compactOpHandles();
@@ -628,7 +698,7 @@ private:
   /// describe when the handles were invalidated. Calling such a function emits
   /// a user-visible diagnostic with an additional note pointing to the given
   /// location.
-  DenseMap<Value, std::function<void(Location)>> invalidatedHandles;
+  InvalidatedHandleMap invalidatedHandles;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// A stack of nested regions that are being processed in the transform IR.
