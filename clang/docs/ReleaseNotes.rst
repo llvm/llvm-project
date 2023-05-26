@@ -256,6 +256,9 @@ Attribute Changes in Clang
   the compilation of the foreign language sources (e.g. Swift).
 - The ``__has_attribute``, ``__has_c_attribute`` and ``__has_cpp_attribute``
   preprocessor operators now return 1 also for attributes defined by plugins.
+- Improve the AST fidelity of ``alignas`` and ``_Alignas`` attribute. Before, we 
+  model ``alignas(type-id)`` as though the user wrote ``alignas(alignof(type-id))``,
+  now we directly use ``alignas(type-id)``.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -307,6 +310,10 @@ Improvements to Clang's diagnostics
   (`#62850: <https://github.com/llvm/llvm-project/issues/62850>`_).
 - Clang now warns when any predefined macro is undefined or redefined, instead
   of only some of them.
+- Clang now correctly diagnoses when the argument to ``alignas`` or ``_Alignas`` 
+  is an incomplete type.
+  (`#55175: <https://github.com/llvm/llvm-project/issues/55175>`_, and fixes an
+  incorrect mention of ``alignof`` in a diagnostic about ``alignas``).
 
 Bug Fixes in This Version
 -------------------------
