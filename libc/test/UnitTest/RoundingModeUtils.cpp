@@ -8,7 +8,7 @@
 
 #include "RoundingModeUtils.h"
 
-#include "src/__support/FPUtil/FEnvImpl.h"
+#include <fenv.h>
 
 namespace __llvm_libc {
 namespace fputil {
@@ -34,15 +34,15 @@ int get_fe_rounding(RoundingMode mode) {
 }
 
 ForceRoundingMode::ForceRoundingMode(RoundingMode mode) {
-  old_rounding_mode = get_round();
+  old_rounding_mode = fegetround();
   rounding_mode = get_fe_rounding(mode);
   if (old_rounding_mode != rounding_mode)
-    set_round(rounding_mode);
+    fesetround(rounding_mode);
 }
 
 ForceRoundingMode::~ForceRoundingMode() {
   if (old_rounding_mode != rounding_mode)
-    set_round(old_rounding_mode);
+    fesetround(old_rounding_mode);
 }
 
 } // namespace testing
