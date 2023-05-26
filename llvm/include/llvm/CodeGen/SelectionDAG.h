@@ -1066,6 +1066,9 @@ public:
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
                     bool ConstantFold = true);
 
+  SDValue getElementCount(const SDLoc &DL, EVT VT, ElementCount EC,
+                          bool ConstantFold = true);
+
   /// Return a GLOBAL_OFFSET_TABLE node. This does not have a useful SDLoc.
   SDValue getGLOBAL_OFFSET_TABLE(EVT VT) {
     return getNode(ISD::GLOBAL_OFFSET_TABLE, SDLoc(), VT);

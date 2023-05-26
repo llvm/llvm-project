@@ -5469,6 +5469,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           Call);
     break;
   }
+  case Intrinsic::experimental_get_vector_length: {
+    ConstantInt *VF = cast<ConstantInt>(Call.getArgOperand(1));
+    Check(!VF->isNegative() && !VF->isZero(),
+          "get_vector_length: VF must be positive", Call);
+    break;
+  }
   case Intrinsic::masked_load: {
     Check(Call.getType()->isVectorTy(), "masked_load: must return a vector",
           Call);
