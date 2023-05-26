@@ -602,6 +602,7 @@ cc_library(
         "//mlir:GPUDialect",
         "//mlir:GPUTransforms",
         "//mlir:IR",
+        "//mlir:IndexDialect",
         "//mlir:MemRefDialect",
         "//mlir:NVVMToLLVMIRTranslation",
         "//mlir:Pass",
