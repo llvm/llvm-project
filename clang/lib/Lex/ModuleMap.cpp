@@ -1162,7 +1162,7 @@ void ModuleMap::setUmbrellaHeaderAsWritten(
     Module *Mod, FileEntryRef UmbrellaHeader, const Twine &NameAsWritten,
     const Twine &PathRelativeToRootModuleDirectory) {
   Headers[UmbrellaHeader].push_back(KnownHeader(Mod, NormalHeader));
-  Mod->Umbrella = &UmbrellaHeader.getMapEntry();
+  Mod->Umbrella = UmbrellaHeader;
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   Mod->UmbrellaRelativeToRootModuleDirectory =
       PathRelativeToRootModuleDirectory.str();
@@ -1176,7 +1176,7 @@ void ModuleMap::setUmbrellaHeaderAsWritten(
 void ModuleMap::setUmbrellaDirAsWritten(
     Module *Mod, DirectoryEntryRef UmbrellaDir, const Twine &NameAsWritten,
     const Twine &PathRelativeToRootModuleDirectory) {
-  Mod->Umbrella = &UmbrellaDir.getMapEntry();
+  Mod->Umbrella = UmbrellaDir;
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   Mod->UmbrellaRelativeToRootModuleDirectory =
       PathRelativeToRootModuleDirectory.str();
