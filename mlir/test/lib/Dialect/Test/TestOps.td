@@ -3324,7 +3324,7 @@ def TestVersionedOpB : TEST_Op<"versionedB"> {
 def TestOpWithProperties : TEST_Op<"with_properties"> {
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins
-    IntProperty<"int64_t">:$a,
+    Property<"int64_t">:$a,
     StrAttr:$b, // Attributes can directly be used here.
     ArrayProperty<"int64_t", 4>:$array // example of an array
   );
@@ -3369,31 +3369,8 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
                          const Properties &prop);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
-    static ::mlir::LogicalResult readFromMlirBytecode(
-        ::mlir::DialectBytecodeReader &,
-        test::PropertiesWithCustomPrint &prop);
-    static void writeToMlirBytecode(
-        ::mlir::DialectBytecodeWriter &,
-        const test::PropertiesWithCustomPrint &prop);
   }];
   let extraClassDefinition = [{
-    ::mlir::LogicalResult TestOpWithNiceProperties::readFromMlirBytecode(
-        ::mlir::DialectBytecodeReader &reader,
-        test::PropertiesWithCustomPrint &prop) {
-      StringRef label;
-      uint64_t value;
-      if (failed(reader.readString(label)) || failed(reader.readVarInt(value)))
-        return failure();
-      prop.label = std::make_shared<std::string>(label.str());
-      prop.value = value;
-      return success();
-    }
-    void TestOpWithNiceProperties::writeToMlirBytecode(
-        ::mlir::DialectBytecodeWriter &writer,
-        const test::PropertiesWithCustomPrint &prop) {
-      writer.writeOwnedString(*prop.label);
-      writer.writeVarInt(prop.value);
-    }
     void TestOpWithNiceProperties::printProperties(::mlir::MLIRContext *ctx,
             ::mlir::OpAsmPrinter &p, const Properties &prop) {
       customPrintProperties(p, prop.prop);

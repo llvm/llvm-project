@@ -341,6 +341,11 @@ static cl::opt<bool> EnableMaxIlpSchedStrategy(
     cl::desc("Enable scheduling strategy to maximize ILP for a single wave."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> EnableRewritePartialRegUses(
+    "amdgpu-enable-rewrite-partial-reg-uses",
+    cl::desc("Enable rewrite partial reg uses pass"), cl::init(true),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -419,6 +424,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUResourceUsageAnalysisPass(*PR);
   initializeGCNNSAReassignPass(*PR);
   initializeGCNPreRAOptimizationsPass(*PR);
+  initializeGCNRewritePartialRegUsesPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -663,6 +669,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         }
         if (PassName == "amdgpu-atomic-optimizer") {
           PM.addPass(AMDGPUAtomicOptimizerPass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-codegenprepare") {
+          PM.addPass(AMDGPUCodeGenPreparePass(*this));
           return true;
         }
         return false;
@@ -1268,6 +1278,9 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   if (OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
+
+  if (EnableRewritePartialRegUses)
+    insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
 
   if (isPassEnabled(EnablePreRAOptimizations))
     insertPass(&RenameIndependentSubregsID, &GCNPreRAOptimizationsID);

@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zve32x -disable-O0-optnone \
 // RUN:   -emit-llvm %s -o - | opt -S -passes=mem2reg | FileCheck %s --check-prefix=AFTER_MEM2REG
 
+// This test case tests the lowering of RVV tuple types into LLVM IR.
 
 #include <riscv_vector.h>
 

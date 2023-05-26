@@ -118,7 +118,7 @@ static DiagnosedSilenceableFailure dispatchMappedValues(
     SmallVector<Operation *> operations;
     operations.reserve(values.size());
     for (transform::MappedValue value : values) {
-      if (auto *op = value.dyn_cast<Operation *>()) {
+      if (auto *op = llvm::dyn_cast_if_present<Operation *>(value)) {
         operations.push_back(op);
         continue;
       }
@@ -135,7 +135,7 @@ static DiagnosedSilenceableFailure dispatchMappedValues(
     SmallVector<Value> payloadValues;
     payloadValues.reserve(values.size());
     for (transform::MappedValue value : values) {
-      if (auto v = value.dyn_cast<Value>()) {
+      if (auto v = llvm::dyn_cast_if_present<Value>(value)) {
         payloadValues.push_back(v);
         continue;
       }
@@ -152,7 +152,7 @@ static DiagnosedSilenceableFailure dispatchMappedValues(
   SmallVector<transform::Param> parameters;
   parameters.reserve(values.size());
   for (transform::MappedValue value : values) {
-    if (auto attr = value.dyn_cast<Attribute>()) {
+    if (auto attr = llvm::dyn_cast_if_present<Attribute>(value)) {
       parameters.push_back(attr);
       continue;
     }

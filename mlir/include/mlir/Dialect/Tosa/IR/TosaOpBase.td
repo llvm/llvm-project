@@ -27,7 +27,7 @@ def Tosa_Dialect : Dialect {
     The Tensor Operator Set Architecture (TOSA) dialect.
 
     This dialect implements the TOSA standard described at
-    https://developer.mlplatform.org/w/tosa/ .
+    https://www.mlplatform.org/tosa/tosa_spec.html .
 
     Tensor Operator Set Architecture (TOSA) provides a set of whole-tensor
     operations commonly employed by Deep Neural Networks. The intent is to

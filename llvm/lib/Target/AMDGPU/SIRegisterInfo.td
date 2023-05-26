@@ -138,10 +138,14 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   // For scalar register classes.
   field bit HasSGPR = 0;
 
+  // Alignment of the first register in tuple (in 32-bit units).
+  field int RegTupleAlignUnits = 1;
+
   // These need to be kept in sync with the enum SIRCFlags.
-  let TSFlags{0} = HasVGPR;
-  let TSFlags{1} = HasAGPR;
-  let TSFlags{2} = HasSGPR;
+  let TSFlags{1-0} = RegTupleAlignUnits;
+  let TSFlags{2} = HasVGPR;
+  let TSFlags{3} = HasAGPR;
+  let TSFlags{4} = HasSGPR;
 }
 
 multiclass SIRegLoHi16 <string n, bits<16> regIdx, bit ArtificialHigh = 1,
@@ -409,7 +413,7 @@ def SGPR_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
 def SGPR_64Regs : SIRegisterTuples<getSubRegs<2>.ret, SGPR_32, 105, 2, 2, "s">;
 
 // SGPR 96-bit registers. No operations use these, but for symmetry with 96-bit VGPRs.
-def SGPR_96Regs : SIRegisterTuples<getSubRegs<3>.ret, SGPR_32, 105, 3, 3, "s">;
+def SGPR_96Regs : SIRegisterTuples<getSubRegs<3>.ret, SGPR_32, 105, 4, 3, "s">;
 
 // SGPR 128-bit registers
 def SGPR_128Regs : SIRegisterTuples<getSubRegs<4>.ret, SGPR_32, 105, 4, 4, "s">;
@@ -934,6 +938,7 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
     def _Align2 : VRegClassBase<numRegs, regTypes, (decimate regList, 2)> {
       // Give aligned class higher priority in base class resolution
       let BaseClassOrder = !sub(!mul(numRegs, 32), 1);
+      let RegTupleAlignUnits = 2;
     }
   }
 }
@@ -968,6 +973,7 @@ multiclass ARegClass<int numRegs, list<ValueType> regTypes, dag regList> {
     def _Align2 : VRegClassBase<numRegs, regTypes, (decimate regList, 2)> {
       // Give aligned class higher priority in base class resolution
       let BaseClassOrder = !sub(!mul(numRegs, 32), 1);
+      let RegTupleAlignUnits = 2;
     }
   }
 }
@@ -1036,10 +1042,12 @@ multiclass AVRegClass<int numRegs, list<ValueType> regTypes,
     // Define the regular class.
     def "" : VRegClassBase<numRegs, regTypes, (add vregList, aregList)>;
 
-    // Define 2-aligned variant
+    // Define 2-aligned variant 
     def _Align2 : VRegClassBase<numRegs, regTypes,
                                 (add (decimate vregList, 2),
-                                     (decimate aregList, 2))>;
+                                     (decimate aregList, 2))> {
+      let RegTupleAlignUnits = 2;
+    }
   }
 }
 

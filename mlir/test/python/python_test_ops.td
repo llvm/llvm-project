@@ -122,7 +122,7 @@ def InferShapedTypeComponentsOp : TestOp<"infer_shaped_type_components_op",
         ::mlir::ShapedTypeComponents>& inferredShapedTypeComponents) {
       $cppClass::Adaptor adaptor(operands, attributes, properties, regions);
       auto operandType =
-          adaptor.getOperand().getType().cast<::mlir::ShapedType>();
+          ::llvm::cast<::mlir::ShapedType>(adaptor.getOperand().getType());
       if (operandType.hasRank()) {
         inferredShapedTypeComponents.emplace_back(operandType.getShape(),
             operandType.getElementType());

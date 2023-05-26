@@ -1,6 +1,8 @@
+# REQUIRES: x86-registered-target
+
 # RUN: rm -rf %t
 # RUN: mkdir -p %t
-# RUN: llvm-mc %s -o %t/test.o -filetype=obj
+# RUN: llvm-mc --triple x86_64 %s -o %t/test.o -filetype=obj
 # RUN: cd %t
 
 # RUN: llvm-symbolizer -e test.o 0x30 | FileCheck %s

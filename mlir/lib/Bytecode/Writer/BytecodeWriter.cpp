@@ -9,22 +9,11 @@
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "IRNumbering.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Bytecode/Encoding.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <optional>
-#include <sys/types.h>
 
 #define DEBUG_TYPE "mlir-bytecode-writer"
 
@@ -67,10 +56,6 @@ void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {
   // Clamp to current version.
   impl->bytecodeVersion =
       std::min<int64_t>(bytecodeVersion, bytecode::kVersion);
-}
-
-int64_t BytecodeWriterConfig::getDesiredBytecodeVersion() const {
-  return impl->bytecodeVersion;
 }
 
 //===----------------------------------------------------------------------===//
@@ -333,14 +318,6 @@ public:
   void writeAttribute(Attribute attr) override {
     emitter.emitVarInt(numberingState.getNumber(attr));
   }
-  void writeOptionalAttribute(Attribute attr) override {
-    if (!attr) {
-      emitter.emitVarInt(0);
-      return;
-    }
-    emitter.emitVarIntWithFlag(numberingState.getNumber(attr), true);
-  }
-
   void writeType(Type type) override {
     emitter.emitVarInt(numberingState.getNumber(type));
   }
@@ -405,102 +382,6 @@ private:
   StringSectionBuilder &stringSection;
 };
 
-namespace {
-class PropertiesSectionBuilder {
-public:
-  PropertiesSectionBuilder(IRNumberingState &numberingState,
-                           StringSectionBuilder &stringSection,
-                           const BytecodeWriterConfig::Impl &config)
-      : numberingState(numberingState), stringSection(stringSection),
-        config(config) {}
-
-  /// Emit the op properties in the properties section and return the index of
-  /// the properties within the section. Return -1 if no properties was emitted.
-  std::optional<ssize_t> emit(Operation *op) {
-    EncodingEmitter propertiesEmitter;
-    if (!op->getPropertiesStorageSize())
-      return std::nullopt;
-    if (!op->isRegistered()) {
-      // Unregistered op are storing properties as an optional attribute.
-      Attribute prop = *op->getPropertiesStorage().as<Attribute *>();
-      if (!prop)
-        return std::nullopt;
-      EncodingEmitter sizeEmitter;
-      sizeEmitter.emitVarInt(numberingState.getNumber(prop));
-      scratch.clear();
-      llvm::raw_svector_ostream os(scratch);
-      sizeEmitter.writeTo(os);
-      return emit(scratch);
-    }
-
-    EncodingEmitter emitter;
-    DialectWriter propertiesWriter(config.bytecodeVersion, emitter,
-                                   numberingState, stringSection);
-    auto iface = cast<BytecodeOpInterface>(op);
-    iface.writeProperties(propertiesWriter);
-    scratch.clear();
-    llvm::raw_svector_ostream os(scratch);
-    emitter.writeTo(os);
-    return emit(scratch);
-  }
-
-  /// Write the current set of properties to the given emitter.
-  void write(EncodingEmitter &emitter) {
-    emitter.emitVarInt(propertiesStorage.size());
-    if (propertiesStorage.empty())
-      return;
-    for (const auto &storage : propertiesStorage) {
-      if (storage.empty()) {
-        emitter.emitBytes(ArrayRef<uint8_t>());
-        continue;
-      }
-      emitter.emitBytes(ArrayRef(reinterpret_cast<const uint8_t *>(&storage[0]),
-                                 storage.size()));
-    }
-  }
-
-private:
-  /// Emit raw data and returns the offset in the internal buffer.
-  /// Data are deduplicated and will be copied in the internal buffer only if
-  /// they don't exist there already.
-  ssize_t emit(ArrayRef<char> rawProperties) {
-    // Populate a scratch buffer with the properties size.
-    SmallVector<char> sizeScratch;
-    {
-      EncodingEmitter sizeEmitter;
-      sizeEmitter.emitVarInt(rawProperties.size());
-      llvm::raw_svector_ostream os(sizeScratch);
-      sizeEmitter.writeTo(os);
-    }
-    // Append a new storage to the table now.
-    size_t index = propertiesStorage.size();
-    propertiesStorage.emplace_back();
-    std::vector<char> &newStorage = propertiesStorage.back();
-    size_t propertiesSize = sizeScratch.size() + rawProperties.size();
-    newStorage.reserve(propertiesSize);
-    newStorage.insert(newStorage.end(), sizeScratch.begin(), sizeScratch.end());
-    newStorage.insert(newStorage.end(), rawProperties.begin(),
-                      rawProperties.end());
-
-    // Try to de-duplicate the new serialized properties.
-    // If the properties is a duplicate, pop it back from the storage.
-    auto inserted = propertiesUniquing.insert(
-        std::make_pair(ArrayRef<char>(newStorage), index));
-    if (!inserted.second)
-      propertiesStorage.pop_back();
-    return inserted.first->getSecond();
-  }
-
-  /// Storage for properties.
-  std::vector<std::vector<char>> propertiesStorage;
-  SmallVector<char> scratch;
-  DenseMap<ArrayRef<char>, int64_t> propertiesUniquing;
-  IRNumberingState &numberingState;
-  StringSectionBuilder &stringSection;
-  const BytecodeWriterConfig::Impl &config;
-};
-} // namespace
-
 /// A simple raw_ostream wrapper around a EncodingEmitter. This removes the need
 /// to go through an intermediate buffer when interacting with code that wants a
 /// raw_ostream.
@@ -554,12 +435,11 @@ void EncodingEmitter::emitMultiByteVarInt(uint64_t value) {
 namespace {
 class BytecodeWriter {
 public:
-  BytecodeWriter(Operation *op, const BytecodeWriterConfig &config)
-      : numberingState(op, config), config(config.getImpl()),
-        propertiesSection(numberingState, stringSection, config.getImpl()) {}
+  BytecodeWriter(Operation *op, const BytecodeWriterConfig::Impl &config)
+      : numberingState(op), config(config) {}
 
   /// Write the bytecode for the given root operation.
-  LogicalResult write(Operation *rootOp, raw_ostream &os);
+  void write(Operation *rootOp, raw_ostream &os);
 
 private:
   //===--------------------------------------------------------------------===//
@@ -575,10 +455,10 @@ private:
   //===--------------------------------------------------------------------===//
   // Operations
 
-  LogicalResult writeBlock(EncodingEmitter &emitter, Block *block);
-  LogicalResult writeOp(EncodingEmitter &emitter, Operation *op);
-  LogicalResult writeRegion(EncodingEmitter &emitter, Region *region);
-  LogicalResult writeIRSection(EncodingEmitter &emitter, Operation *op);
+  void writeBlock(EncodingEmitter &emitter, Block *block);
+  void writeOp(EncodingEmitter &emitter, Operation *op);
+  void writeRegion(EncodingEmitter &emitter, Region *region);
+  void writeIRSection(EncodingEmitter &emitter, Operation *op);
 
   //===--------------------------------------------------------------------===//
   // Resources
@@ -589,11 +469,6 @@ private:
   // Strings
 
   void writeStringSection(EncodingEmitter &emitter);
-
-  //===--------------------------------------------------------------------===//
-  // Properties
-
-  void writePropertiesSection(EncodingEmitter &emitter);
 
   //===--------------------------------------------------------------------===//
   // Helpers
@@ -612,13 +487,10 @@ private:
 
   /// Configuration dictating bytecode emission.
   const BytecodeWriterConfig::Impl &config;
-
-  /// Storage for the properties section
-  PropertiesSectionBuilder propertiesSection;
 };
 } // namespace
 
-LogicalResult BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
+void BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
   EncodingEmitter emitter;
 
   // Emit the bytecode file header. This is how we identify the output as a
@@ -638,8 +510,7 @@ LogicalResult BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
   writeAttrTypeSection(emitter);
 
   // Emit the IR section.
-  if (failed(writeIRSection(emitter, rootOp)))
-    return failure();
+  writeIRSection(emitter, rootOp);
 
   // Emit the resources section.
   writeResourceSection(rootOp, emitter);
@@ -647,13 +518,8 @@ LogicalResult BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
   // Emit the string section.
   writeStringSection(emitter);
 
-  // Emit the properties section.
-  writePropertiesSection(emitter);
-
   // Write the generated bytecode to the provided output stream.
   emitter.writeTo(os);
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -724,11 +590,7 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
 
   // Emit the referenced operation names grouped by dialect.
   auto emitOpName = [&](OpNameNumbering &name) {
-    size_t stringId = stringSection.insert(name.name.stripDialect());
-    if (config.bytecodeVersion < 4)
-      dialectEmitter.emitVarInt(stringId);
-    else
-      dialectEmitter.emitVarIntWithFlag(stringId, name.name.isRegistered());
+    dialectEmitter.emitVarInt(stringSection.insert(name.name.stripDialect()));
   };
   writeDialectGrouping(dialectEmitter, numberingState.getOpNames(), emitOpName);
 
@@ -797,8 +659,7 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
 //===----------------------------------------------------------------------===//
 // Operations
 
-LogicalResult BytecodeWriter::writeBlock(EncodingEmitter &emitter,
-                                         Block *block) {
+void BytecodeWriter::writeBlock(EncodingEmitter &emitter, Block *block) {
   ArrayRef<BlockArgument> args = block->getArguments();
   bool hasArgs = !args.empty();
 
@@ -835,12 +696,10 @@ LogicalResult BytecodeWriter::writeBlock(EncodingEmitter &emitter,
 
   // Emit the operations within the block.
   for (Operation &op : *block)
-    if (failed(writeOp(emitter, &op)))
-      return failure();
-  return success();
+    writeOp(emitter, &op);
 }
 
-LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
+void BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   emitter.emitVarInt(numberingState.getNumber(op->getName()));
 
   // Emit a mask for the operation components. We need to fill this in later
@@ -854,24 +713,10 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   emitter.emitVarInt(numberingState.getNumber(op->getLoc()));
 
   // Emit the attributes of this operation.
-  DictionaryAttr attrs = op->getDiscardableAttrDictionary();
-  // Allow deployment to version <4 by merging inherent attribute with the
-  // discardable ones. We should fail if there are any conflicts.
-  if (config.bytecodeVersion < 4)
-    attrs = op->getAttrDictionary();
+  DictionaryAttr attrs = op->getAttrDictionary();
   if (!attrs.empty()) {
     opEncodingMask |= bytecode::OpEncodingMask::kHasAttrs;
-    emitter.emitVarInt(numberingState.getNumber(attrs));
-  }
-
-  // Emit the properties of this operation, for now we still support deployment
-  // to version <4.
-  if (config.bytecodeVersion >= 4) {
-    std::optional<ssize_t> propertiesId = propertiesSection.emit(op);
-    if (propertiesId.has_value()) {
-      opEncodingMask |= bytecode::OpEncodingMask::kHasProperties;
-      emitter.emitVarInt(*propertiesId);
-    }
+    emitter.emitVarInt(numberingState.getNumber(op->getAttrDictionary()));
   }
 
   // Emit the result types of the operation.
@@ -923,18 +768,15 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
       // If the region is not isolated from above, or we are emitting bytecode
       // targeting version <2, we don't use a section.
       if (!isIsolatedFromAbove || config.bytecodeVersion < 2) {
-        if (failed(writeRegion(emitter, &region)))
-          return failure();
+        writeRegion(emitter, &region);
         continue;
       }
 
       EncodingEmitter regionEmitter;
-      if (failed(writeRegion(regionEmitter, &region)))
-        return failure();
+      writeRegion(regionEmitter, &region);
       emitter.emitSection(bytecode::Section::kIR, std::move(regionEmitter));
     }
   }
-  return success();
 }
 
 void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
@@ -1025,14 +867,11 @@ void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
   }
 }
 
-LogicalResult BytecodeWriter::writeRegion(EncodingEmitter &emitter,
-                                          Region *region) {
+void BytecodeWriter::writeRegion(EncodingEmitter &emitter, Region *region) {
   // If the region is empty, we only need to emit the number of blocks (which is
   // zero).
-  if (region->empty()) {
-    emitter.emitVarInt(/*numBlocks*/ 0);
-    return success();
-  }
+  if (region->empty())
+    return emitter.emitVarInt(/*numBlocks*/ 0);
 
   // Emit the number of blocks and values within the region.
   unsigned numBlocks, numValues;
@@ -1042,13 +881,10 @@ LogicalResult BytecodeWriter::writeRegion(EncodingEmitter &emitter,
 
   // Emit the blocks within the region.
   for (Block &block : *region)
-    if (failed(writeBlock(emitter, &block)))
-      return failure();
-  return success();
+    writeBlock(emitter, &block);
 }
 
-LogicalResult BytecodeWriter::writeIRSection(EncodingEmitter &emitter,
-                                             Operation *op) {
+void BytecodeWriter::writeIRSection(EncodingEmitter &emitter, Operation *op) {
   EncodingEmitter irEmitter;
 
   // Write the IR section the same way as a block with no arguments. Note that
@@ -1057,11 +893,9 @@ LogicalResult BytecodeWriter::writeIRSection(EncodingEmitter &emitter,
   irEmitter.emitVarIntWithFlag(/*numOps*/ 1, /*hasArgs*/ false);
 
   // Emit the operations.
-  if (failed(writeOp(irEmitter, op)))
-    return failure();
+  writeOp(irEmitter, op);
 
   emitter.emitSection(bytecode::Section::kIR, std::move(irEmitter));
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1178,21 +1012,13 @@ void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
 }
 
 //===----------------------------------------------------------------------===//
-// Properties
-
-void BytecodeWriter::writePropertiesSection(EncodingEmitter &emitter) {
-  EncodingEmitter propertiesEmitter;
-  propertiesSection.write(propertiesEmitter);
-  emitter.emitSection(bytecode::Section::kProperties,
-                      std::move(propertiesEmitter));
-}
-
-//===----------------------------------------------------------------------===//
 // Entry Points
 //===----------------------------------------------------------------------===//
 
 LogicalResult mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
                                         const BytecodeWriterConfig &config) {
-  BytecodeWriter writer(op, config);
-  return writer.write(op, os);
+  BytecodeWriter writer(op, config.getImpl());
+  writer.write(op, os);
+  // Currently there is no failure case.
+  return success();
 }

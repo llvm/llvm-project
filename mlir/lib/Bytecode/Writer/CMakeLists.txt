@@ -8,5 +8,4 @@ add_mlir_library(MLIRBytecodeWriter
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRSupport
-  MLIRBytecodeOpInterface
   )

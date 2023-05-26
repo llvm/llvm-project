@@ -12,7 +12,7 @@ compressed = pt.compressed
 
 i, j = pt.get_index_vars(2)
 A = pt.tensor([2, 3])
-S = pt.tensor(3) # S is a scalar tensor.
+S = pt.tensor(3)  # S is a scalar tensor.
 B = pt.tensor([2, 3], compressed)
 A.insert([0, 1], 10)
 A.insert([1, 2], 40)
@@ -26,11 +26,11 @@ passed += np.array_equal(values, [30.0, 120.0])
 
 # Sum all the values in A.
 S[0] = A[i, j]
-passed += (S.get_scalar_value() == 50.0)
+passed += S.get_scalar_value() == 50.0
 
 indices, values = S.get_coordinates_and_values()
-passed += (len(indices)==0)
-passed += (values == 50.0)
+passed += len(indices) == 0
+passed += values == 50.0
 
 # CHECK: Number of passed: 5
 print("Number of passed:", passed)

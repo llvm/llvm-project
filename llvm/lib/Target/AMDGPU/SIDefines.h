@@ -16,11 +16,18 @@ namespace llvm {
 
 // This needs to be kept in sync with the field bits in SIRegisterClass.
 enum SIRCFlags : uint8_t {
-  // For vector registers.
-  HasVGPR = 1 << 0,
-  HasAGPR = 1 << 1,
-  HasSGPR = 1 << 2
-}; // enum SIRCFlags
+  RegTupleAlignUnitsWidth = 2,
+  HasVGPRBit = RegTupleAlignUnitsWidth,
+  HasAGPRBit,
+  HasSGPRbit,
+
+  HasVGPR = 1 << HasVGPRBit,
+  HasAGPR = 1 << HasAGPRBit,
+  HasSGPR = 1 << HasSGPRbit,
+
+  RegTupleAlignUnitsMask = (1 << RegTupleAlignUnitsWidth) - 1,
+  RegKindMask = (HasVGPR | HasAGPR | HasSGPR)
+}; // enum SIRCFlagsr
 
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.

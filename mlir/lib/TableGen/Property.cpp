@@ -72,16 +72,6 @@ StringRef Property::getConvertFromAttributeCall() const {
   return getValueAsString(init);
 }
 
-StringRef Property::getReadFromMlirBytecodeCall() const {
-  const auto *init = def->getValueInit("readFromMlirBytecode");
-  return getValueAsString(init);
-}
-
-StringRef Property::getWriteToMlirBytecodeCall() const {
-  const auto *init = def->getValueInit("writeToMlirBytecode");
-  return getValueAsString(init);
-}
-
 StringRef Property::getHashPropertyCall() const {
   return getValueAsString(def->getValueInit("hashProperty"));
 }
