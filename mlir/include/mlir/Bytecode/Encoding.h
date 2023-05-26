@@ -29,7 +29,7 @@ enum {
   kMinSupportedVersion = 0,
 
   /// The current bytecode version.
-  kVersion = 4,
+  kVersion = 5,
 
   /// An arbitrary value used to fill alignment padding.
   kAlignmentByte = 0xCB,
