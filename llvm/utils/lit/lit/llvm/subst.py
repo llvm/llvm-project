@@ -12,7 +12,7 @@ class FindTool(object):
         self.name = name
 
     def resolve(self, config, dirs):
-        # Check for a user explicitely overriding a tool.  This allows:
+        # Check for a user explicitly overriding a tool.  This allows:
         #     llvm-lit -D llc="llc -enable-misched -verify-machineinstrs"
         command = config.lit_config.params.get(self.name)
         if command is None:
@@ -51,7 +51,7 @@ class ToolSubst(object):
 
         command: The command to substitute when the key is matched.  By default,
         this will treat `key` as a tool name and search for it.  If it is
-        a string, it is intereprted as an exact path.  If it is an instance of
+        a string, it is interpreted as an exact path.  If it is an instance of
         FindTool, the specified tool name is searched for on disk.
 
         pre: If specified, the substitution will not find matches where
