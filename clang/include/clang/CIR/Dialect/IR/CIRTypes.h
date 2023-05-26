@@ -18,16 +18,6 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
 //===----------------------------------------------------------------------===//
-// CIR Custom Parser/Printer Signatures
-//===----------------------------------------------------------------------===//
-
-mlir::ParseResult
-parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
-                  bool &isVarArg);
-void printFuncTypeArgs(mlir::AsmPrinter &p,
-                              mlir::ArrayRef<mlir::Type> params, bool isVarArg);
-
-//===----------------------------------------------------------------------===//
 // CIR Dialect Types
 //===----------------------------------------------------------------------===//
 
