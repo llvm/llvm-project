@@ -20024,19 +20024,22 @@ static bool canonicalizeShuffleMaskWithCommute(ArrayRef<int> Mask) {
   return false;
 }
 
-static bool canCombineAsMaskOperation(SDValue V1, SDValue V2,
+static bool canCombineAsMaskOperation(SDValue V,
                                       const X86Subtarget &Subtarget) {
   if (!Subtarget.hasAVX512())
     return false;
 
-  MVT VT = V1.getSimpleValueType().getScalarType();
+  if (!V.getValueType().isSimple())
+    return false;
+
+  MVT VT = V.getSimpleValueType().getScalarType();
   if ((VT == MVT::i16 || VT == MVT::i8) && !Subtarget.hasBWI())
     return false;
 
   // If vec width < 512, widen i8/i16 even with BWI as blendd/blendps/blendpd
   // are preferable to blendw/blendvb/masked-mov.
   if ((VT == MVT::i16 || VT == MVT::i8) &&
-      V1.getSimpleValueType().getSizeInBits() < 512)
+      V.getSimpleValueType().getSizeInBits() < 512)
     return false;
 
   auto HasMaskOperation = [&](SDValue V) {
@@ -20067,7 +20070,7 @@ static bool canCombineAsMaskOperation(SDValue V1, SDValue V2,
     return true;
   };
 
-  if (HasMaskOperation(V1) || HasMaskOperation(V2))
+  if (HasMaskOperation(V))
     return true;
 
   return false;
@@ -20148,7 +20151,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   // integers to handle flipping the low and high halves of AVX 256-bit vectors.
   SmallVector<int, 16> WidenedMask;
   if (VT.getScalarSizeInBits() < 64 && !Is1BitVector &&
-      !canCombineAsMaskOperation(V1, V2, Subtarget) &&
+      !canCombineAsMaskOperation(V1, Subtarget) &&
+      !canCombineAsMaskOperation(V2, Subtarget) &&
       canWidenShuffleElements(OrigMask, Zeroable, V2IsZero, WidenedMask)) {
     // Shuffle mask widening should not interfere with a broadcast opportunity
     // by obfuscating the operands with bitcasts.
@@ -46723,6 +46727,37 @@ static SDValue combineLogicBlendIntoConditionalNegate(
   return DAG.getBitcast(VT, Res);
 }
 
+static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG,
+                                  const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasAVX512())
+    return SDValue();
+  if (N->getOpcode() != ISD::VSELECT)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Cond = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+
+  if (canCombineAsMaskOperation(LHS, Subtarget))
+    return SDValue();
+
+  if (!canCombineAsMaskOperation(RHS, Subtarget))
+    return SDValue();
+
+  if (Cond.getOpcode() != ISD::SETCC || !Cond.hasOneUse())
+    return SDValue();
+
+  // Commute LHS and RHS to create opportunity to select mask instruction.
+  // (vselect M, L, R) -> (vselect ~M, R, L)
+  ISD::CondCode NewCC =
+      ISD::getSetCCInverse(cast<CondCodeSDNode>(Cond.getOperand(2))->get(),
+                           Cond.getOperand(0).getValueType());
+  Cond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), Cond.getOperand(0),
+		                        Cond.getOperand(1), NewCC);
+  return DAG.getSelect(DL, LHS.getValueType(), Cond, RHS, LHS);
+}
+
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
@@ -46735,6 +46770,13 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Try simplification again because we use this function to optimize
   // BLENDV nodes that are not handled by the generic combiner.
   if (SDValue V = DAG.simplifySelect(Cond, LHS, RHS))
+    return V;
+
+  // When avx512 is available the lhs operand of select instruction can be
+  // folded with mask instruction, while the rhs operand can't. Commute the
+  // lhs and rhs of the select instruction to create the opportunity of
+  // folding.
+  if (SDValue V = commuteSelect(N, DAG, Subtarget))
     return V;
 
   EVT VT = LHS.getValueType();

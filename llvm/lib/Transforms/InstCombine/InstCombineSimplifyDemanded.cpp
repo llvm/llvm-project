@@ -644,24 +644,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return I;
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
-      bool SignBitZero = Known.Zero.isSignBitSet();
-      bool SignBitOne = Known.One.isSignBitSet();
-      Known.Zero <<= ShiftAmt;
-      Known.One  <<= ShiftAmt;
-      // low bits known zero.
-      if (ShiftAmt)
-        Known.Zero.setLowBits(ShiftAmt);
-
-      // If this shift has "nsw" keyword, then the result is either a poison
-      // value or has the same sign bit as the first operand.
-      if (IOp->hasNoSignedWrap()) {
-        if (SignBitZero)
-          Known.Zero.setSignBit();
-        else if (SignBitOne)
-          Known.One.setSignBit();
-        if (Known.hasConflict())
-          return PoisonValue::get(VTy);
-      }
+      Known = KnownBits::shl(Known,
+                             KnownBits::makeConstant(APInt(BitWidth, ShiftAmt)),
+                             /* NUW */ IOp->hasNoUnsignedWrap(),
+                             /* NSW */ IOp->hasNoSignedWrap());
     } else {
       // This is a variable shift, so we can't shift the demand mask by a known
       // amount. But if we are not demanding high bits, then we are not
