@@ -2839,8 +2839,7 @@ auto HexagonVectorCombine::getNumSignificantBits(const Value *V,
 auto HexagonVectorCombine::getKnownBits(const Value *V,
                                         const Instruction *CtxI) const
     -> KnownBits {
-  return computeKnownBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT, /*ORE=*/nullptr,
-                          /*UseInstrInfo=*/true);
+  return computeKnownBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::isSafeToClone(const Instruction &In) const -> bool {
