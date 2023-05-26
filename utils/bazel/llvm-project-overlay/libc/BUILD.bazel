@@ -835,6 +835,7 @@ libc_support_library(
         ":__support_cpp_string_view",
         ":__support_cpp_stringstream",
         ":__support_integer_to_string",
+        ":__support_macros_attributes",
         ":errno",
         ":libc_root",
     ],
