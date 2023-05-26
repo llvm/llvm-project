@@ -58,6 +58,14 @@ public:
   // in the provided interface type and assign it to the storage.
   StringRef getConvertFromAttributeCall() const;
 
+  // Returns the method call which reads this property from
+  // bytecode and assign it to the storage.
+  StringRef getReadFromMlirBytecodeCall() const;
+
+  // Returns the method call which write this property's
+  // to the the bytecode.
+  StringRef getWriteToMlirBytecodeCall() const;
+
   // Returns the code to compute the hash for this property.
   StringRef getHashPropertyCall() const;
 

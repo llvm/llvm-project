@@ -238,6 +238,25 @@ class Property<string storageTypeParam = "", string desc = ""> {
     llvm::hash_value($_storage);
   }];
 
+  // The call expression to emit the storage type to bytecode.
+  //
+  // Format:
+  // - `$_storage` is the storage type value.
+  // - `$_writer` is a `DialectBytecodeWriter`.
+  code writeToMlirBytecode = [{
+    writeToMlirBytecode($_writer, $_storage)
+  }];
+
+  // The call expression to read the storage type from bytecode.
+  //
+  // Format:
+  // - `$_storage` is the storage type value.
+  // - `$_reader` is a `DialectBytecodeReader`.
+  code readFromMlirBytecode = [{
+    if (failed(readFromMlirBytecode($_reader, $_storage)))
+      return failure();
+  }];
+
   // Default value for the property.
   string defaultValue = ?;
 }
@@ -1155,6 +1174,20 @@ class DefaultValuedOptionalStrAttr<Attr attr, string val>
 
 //===----------------------------------------------------------------------===//
 // Primitive property kinds
+
+// Any kind of integer stored as properties.
+class IntProperty<string storageTypeParam = "", string desc = ""> :
+    Property<storageTypeParam, desc> {
+  code writeToMlirBytecode = [{
+    $_writer.writeVarInt($_storage);
+  }];
+  code readFromMlirBytecode = [{
+    uint64_t val;
+    if (failed($_reader.readVarInt(val)))
+      return ::mlir::failure();
+    $_storage = val;
+  }];
+}
 
 class ArrayProperty<string storageTypeParam = "", int n, string desc = ""> :
   Property<storageTypeParam # "[" # n # "]", desc> {
