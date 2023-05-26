@@ -1658,6 +1658,38 @@ cc_library(
 )
 
 ##---------------------------------------------------------------------------##
+# ArmSME dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_cc_library(
+    name = "ArmSMETransformsPassIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [(
+        [
+            "-gen-pass-decls",
+            "-name=ArmSME",
+        ],
+        "include/mlir/Dialect/ArmSME/Transforms/Passes.h.inc",
+    )],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSME/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "ArmSMETransforms",
+    srcs = glob(["lib/Dialect/ArmSME/Transforms/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/ArmSME/Transforms/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArmSMETransformsPassIncGen",
+        ":FuncDialect",
+        ":FuncIncGen",
+        ":Pass",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # ArmSVE dialect.
 ##---------------------------------------------------------------------------##
 
@@ -5971,6 +6003,7 @@ cc_library(
         ":TensorTransformOpsIncGen",
         ":TensorTransforms",
         ":TransformDialect",
+        ":ValueBoundsOpInterface",
         "//llvm:Support",
     ],
 )
@@ -7417,6 +7450,7 @@ cc_library(
         ":ArithTransforms",
         ":ArithValueBoundsOpInterfaceImpl",
         ":ArmNeonDialect",
+        ":ArmSMETransforms",
         ":ArmSVEDialect",
         ":ArmSVETransforms",
         ":AsyncDialect",

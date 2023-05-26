@@ -32,7 +32,7 @@
   }
   "bytecode.branch"()[^secondBlock] : () -> ()
 
-^secondBlock(%arg1: i32, %arg2: !bytecode.int, %arg3: !pdl.operation):
+^secondBlock(%arg1: i32 loc(unknown), %arg2: !bytecode.int, %arg3: !pdl.operation loc(unknown)):
   "bytecode.regions"() ({
     "bytecode.operands"(%arg1, %arg2, %arg3) : (i32, !bytecode.int, !pdl.operation) -> ()
     "bytecode.return"() : () -> ()

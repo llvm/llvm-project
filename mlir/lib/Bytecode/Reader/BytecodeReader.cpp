@@ -1603,6 +1603,14 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
     opNames.emplace_back(dialect, opName);
     return success();
   };
+  // Avoid re-allocation in bytecode version > 3 where the number of ops are
+  // known.
+  if (version > 3) {
+    uint64_t numOps;
+    if (failed(sectionReader.parseVarInt(numOps)))
+      return failure();
+    opNames.reserve(numOps);
+  }
   while (!sectionReader.empty())
     if (failed(parseDialectGrouping(sectionReader, dialects, parseOpName)))
       return failure();
@@ -2175,13 +2183,25 @@ LogicalResult BytecodeReader::Impl::parseBlockArguments(EncodingReader &reader,
   argTypes.reserve(numArgs);
   argLocs.reserve(numArgs);
 
+  Location unknownLoc = UnknownLoc::get(config.getContext());
   while (numArgs--) {
     Type argType;
-    LocationAttr argLoc;
-    if (failed(parseType(reader, argType)) ||
-        failed(parseAttribute(reader, argLoc)))
-      return failure();
-
+    LocationAttr argLoc = unknownLoc;
+    if (version > 3) {
+      // Parse the type with hasLoc flag to determine if it has type.
+      uint64_t typeIdx;
+      bool hasLoc;
+      if (failed(reader.parseVarIntWithFlag(typeIdx, hasLoc)) ||
+          !(argType = attrTypeReader.resolveType(typeIdx)))
+        return failure();
+      if (hasLoc && failed(parseAttribute(reader, argLoc)))
+        return failure();
+    } else {
+      // All args has type and location.
+      if (failed(parseType(reader, argType)) ||
+          failed(parseAttribute(reader, argLoc)))
+        return failure();
+    }
     argTypes.push_back(argType);
     argLocs.push_back(argLoc);
   }

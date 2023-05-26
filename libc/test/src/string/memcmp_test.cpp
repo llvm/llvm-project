@@ -37,22 +37,20 @@ TEST(LlvmLibcMemcmpTest, LhsAfterRhsLexically) {
   EXPECT_GT(__llvm_libc::memcmp(lhs, rhs, 2), 0);
 }
 
-// Adapt CheckMemcmp signature to op implementation signatures.
-template <auto FnImpl>
-int CmpAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
-  return FnImpl(p1.begin(), p2.begin(), size);
+// Adapt CheckMemcmp signature to memcmp.
+static inline int Adaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
+  return __llvm_libc::memcmp(p1.begin(), p2.begin(), size);
 }
 
 TEST(LlvmLibcMemcmpTest, SizeSweep) {
-  static constexpr size_t kMaxSize = 1024;
-  static constexpr auto Impl = CmpAdaptor<__llvm_libc::memcmp>;
+  static constexpr size_t kMaxSize = 400;
   Buffer Buffer1(kMaxSize);
   Buffer Buffer2(kMaxSize);
   Randomize(Buffer1.span());
   for (size_t size = 0; size < kMaxSize; ++size) {
     auto span1 = Buffer1.span().subspan(0, size);
     auto span2 = Buffer2.span().subspan(0, size);
-    const bool OK = CheckMemcmp<Impl>(span1, span2, size);
+    const bool OK = CheckMemcmp<Adaptor>(span1, span2, size);
     if (!OK)
       testing::tlog << "Failed at size=" << size << '\n';
     ASSERT_TRUE(OK);

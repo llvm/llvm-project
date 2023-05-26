@@ -840,9 +840,9 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!dwarf_ast)
     return nullptr;
 
-  DWARFRangeList ranges;
-  if (die.GetDIE()->GetAttributeAddressRanges(die.GetCU(), ranges,
-                                              /*check_hi_lo_pc=*/true) == 0)
+  DWARFRangeList ranges = die.GetDIE()->GetAttributeAddressRanges(
+      die.GetCU(), /*check_hi_lo_pc=*/true);
+  if (ranges.IsEmpty())
     return nullptr;
 
   // Union of all ranges in the function DIE (if the function is
@@ -3208,10 +3208,9 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
       DWARFDIE function_die = GetDIE(sc.function->GetID());
 
       dw_addr_t func_lo_pc = LLDB_INVALID_ADDRESS;
-      DWARFRangeList ranges;
-      if (function_die.GetDIE()->GetAttributeAddressRanges(
-              function_die.GetCU(), ranges,
-              /*check_hi_lo_pc=*/true))
+      DWARFRangeList ranges = function_die.GetDIE()->GetAttributeAddressRanges(
+          function_die.GetCU(), /*check_hi_lo_pc=*/true);
+      if (!ranges.IsEmpty())
         func_lo_pc = ranges.GetMinRangeBase(0);
       if (func_lo_pc != LLDB_INVALID_ADDRESS) {
         const size_t num_variables =
@@ -4282,4 +4281,3 @@ void SymbolFileDWARF::GetCompileOptions(
     args.insert({comp_unit, Args(flags)});
   }
 }
-
