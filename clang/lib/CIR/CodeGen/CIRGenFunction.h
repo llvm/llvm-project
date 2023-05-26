@@ -1139,7 +1139,7 @@ public:
                              clang::SourceLocation Loc);
 
   void buildScalarInit(const clang::Expr *init, mlir::Location loc,
-                       LValue lvalue);
+                       LValue lvalue, bool capturedByInit = false);
 
   LValue buildDeclRefLValue(const clang::DeclRefExpr *E);
   LValue buildBinaryOperatorLValue(const clang::BinaryOperator *E);
@@ -1462,6 +1462,16 @@ public:
 
   /// Will pop the cleanup entry on the stack and process all branch fixups.
   void PopCleanupBlock(bool FallThroughIsBranchThrough = false);
+
+  /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
+  /// it if it's the top of the stack.
+  ///
+  /// \param DominatingIP - An instruction which is known to
+  ///   dominate the current IP (if set) and which lies along
+  ///   all paths of execution between the current IP and the
+  ///   the point at which the cleanup comes into scope.
+  void DeactivateCleanupBlock(EHScopeStack::stable_iterator Cleanup,
+                              mlir::Operation *DominatingIP);
 
   typedef void Destroyer(CIRGenFunction &CGF, Address addr, QualType ty);
 

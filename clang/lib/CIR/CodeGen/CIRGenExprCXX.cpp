@@ -383,9 +383,9 @@ static mlir::Value buildCXXNewAllocSize(CIRGenFunction &CGF,
 
   if (!e->isArray()) {
     CharUnits typeSize = CGF.getContext().getTypeSizeInChars(type);
-    sizeWithoutCookie = CGF.getBuilder().create<mlir::cir::ConstantOp>(
-        CGF.getLoc(e->getSourceRange()), CGF.SizeTy,
-        mlir::IntegerAttr::get(CGF.SizeTy, typeSize.getQuantity()));
+    sizeWithoutCookie = CGF.getBuilder().getConstant(
+        CGF.getLoc(e->getSourceRange()),
+        mlir::cir::IntAttr::get(CGF.SizeTy, typeSize.getQuantity()));
     return sizeWithoutCookie;
   }
 
@@ -546,6 +546,58 @@ static void EnterNewDeleteCleanup(CIRGenFunction &CGF, const CXXNewExpr *E,
   CGF.initFullExprCleanup();
 }
 
+static void StoreAnyExprIntoOneUnit(CIRGenFunction &CGF, const Expr *Init,
+                                    QualType AllocType, Address NewPtr,
+                                    AggValueSlot::Overlap_t MayOverlap) {
+  // FIXME: Refactor with buildExprAsInit.
+  switch (CGF.getEvaluationKind(AllocType)) {
+  case TEK_Scalar:
+    CGF.buildScalarInit(Init, nullptr, CGF.makeAddrLValue(NewPtr, AllocType),
+                        false);
+    return;
+  case TEK_Complex:
+    llvm_unreachable("NYI");
+    return;
+  case TEK_Aggregate: {
+    AggValueSlot Slot = AggValueSlot::forAddr(
+        NewPtr, AllocType.getQualifiers(), AggValueSlot::IsDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        MayOverlap, AggValueSlot::IsNotZeroed,
+        AggValueSlot::IsSanitizerChecked);
+    CGF.buildAggExpr(Init, Slot);
+    return;
+  }
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
+static void buildNewInitializer(CIRGenFunction &CGF, const CXXNewExpr *E,
+                                QualType ElementType, mlir::Type ElementTy,
+                                Address NewPtr, mlir::Value NumElements,
+                                mlir::Value AllocSizeWithoutCookie) {
+  assert(!UnimplementedFeature::generateDebugInfo());
+  if (E->isArray()) {
+    llvm_unreachable("NYI");
+  } else if (const Expr *Init = E->getInitializer()) {
+    StoreAnyExprIntoOneUnit(CGF, Init, E->getAllocatedType(), NewPtr,
+                            AggValueSlot::DoesNotOverlap);
+  }
+}
+
+static CharUnits CalculateCookiePadding(CIRGenFunction &CGF,
+                                        const CXXNewExpr *E) {
+  if (!E->isArray())
+    return CharUnits::Zero();
+
+  // No cookie is required if the operator new[] being used is the
+  // reserved placement operator new[].
+  if (E->getOperatorNew()->isReservedGlobalPlacementOperator())
+    return CharUnits::Zero();
+
+  llvm_unreachable("NYI");
+  // return CGF.CGM.getCXXABI().GetArrayCookieSize(E);
+}
+
 mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
   // The element type being allocated.
   QualType allocType = getContext().getBaseElementType(E->getAllocatedType());
@@ -646,17 +698,66 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
   // If there's an operator delete, enter a cleanup to call it if an
   // exception is thrown.
   EHScopeStack::stable_iterator operatorDeleteCleanup;
-  // llvm::Instruction *cleanupDominator = nullptr;
+  [[maybe_unused]] mlir::Operation *cleanupDominator = nullptr;
   if (E->getOperatorDelete() &&
       !E->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
-    llvm_unreachable("NYI");
     EnterNewDeleteCleanup(*this, E, allocation, allocSize, allocAlign,
                           allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();
-    llvm_unreachable("NYI");
-    // cleanupDominator = Builder.CreateUnreachable();
+    // FIXME: cleanupDominator = Builder.CreateUnreachable();
   }
-  llvm_unreachable("NYI");
+
+  assert((allocSize == allocSizeWithoutCookie) ==
+         CalculateCookiePadding(*this, E).isZero());
+  if (allocSize != allocSizeWithoutCookie) {
+    llvm_unreachable("NYI");
+  }
+
+  mlir::Type elementTy = getTypes().convertTypeForMem(allocType);
+  Address result = builder.createElementBitCast(getLoc(E->getSourceRange()),
+                                                allocation, elementTy);
+
+  // Passing pointer through launder.invariant.group to avoid propagation of
+  // vptrs information which may be included in previous type.
+  // To not break LTO with different optimizations levels, we do it regardless
+  // of optimization level.
+  if (CGM.getCodeGenOpts().StrictVTablePointers &&
+      allocator->isReservedGlobalPlacementOperator())
+    llvm_unreachable("NYI");
+
+  // Emit sanitizer checks for pointer value now, so that in the case of an
+  // array it was checked only once and not at each constructor call. We may
+  // have already checked that the pointer is non-null.
+  // FIXME: If we have an array cookie and a potentially-throwing allocator,
+  // we'll null check the wrong pointer here.
+  SanitizerSet SkippedChecks;
+  SkippedChecks.set(SanitizerKind::Null, nullCheck);
+  buildTypeCheck(CIRGenFunction::TCK_ConstructorCall,
+                 E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+                 result.getPointer(), allocType, result.getAlignment(),
+                 SkippedChecks, numElements);
+
+  buildNewInitializer(*this, E, allocType, elementTy, result, numElements,
+                      allocSizeWithoutCookie);
+  auto resultPtr = result.getPointer();
+  if (E->isArray()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Deactivate the 'operator delete' cleanup if we finished
+  // initialization.
+  if (operatorDeleteCleanup.isValid()) {
+    // FIXME: enable cleanupDominator above before implementing this.
+    DeactivateCleanupBlock(operatorDeleteCleanup, cleanupDominator);
+    if (cleanupDominator)
+      cleanupDominator->erase();
+  }
+
+  if (nullCheck) {
+    llvm_unreachable("NYI");
+  }
+
+  return resultPtr;
 }
 
 RValue CIRGenFunction::buildCXXDestructorCall(GlobalDecl Dtor,
