@@ -74,10 +74,6 @@ public:
 
   /// Read a reference to the given attribute.
   virtual LogicalResult readAttribute(Attribute &result) = 0;
-  /// Read an optional reference to the given attribute. Returns success even if
-  /// the Attribute isn't present.
-  virtual LogicalResult readOptionalAttribute(Attribute &attr) = 0;
-
   template <typename T>
   LogicalResult readAttributes(SmallVectorImpl<T> &attrs) {
     return readList(attrs, [this](T &attr) { return readAttribute(attr); });
@@ -87,18 +83,6 @@ public:
     Attribute baseResult;
     if (failed(readAttribute(baseResult)))
       return failure();
-    if ((result = dyn_cast<T>(baseResult)))
-      return success();
-    return emitError() << "expected " << llvm::getTypeName<T>()
-                       << ", but got: " << baseResult;
-  }
-  template <typename T>
-  LogicalResult readOptionalAttribute(T &result) {
-    Attribute baseResult;
-    if (failed(readOptionalAttribute(baseResult)))
-      return failure();
-    if (!baseResult)
-      return success();
     if ((result = dyn_cast<T>(baseResult)))
       return success();
     return emitError() << "expected " << llvm::getTypeName<T>()
@@ -195,7 +179,6 @@ public:
 
   /// Write a reference to the given attribute.
   virtual void writeAttribute(Attribute attr) = 0;
-  virtual void writeOptionalAttribute(Attribute attr) = 0;
   template <typename T>
   void writeAttributes(ArrayRef<T> attrs) {
     writeList(attrs, [this](T attr) { writeAttribute(attr); });

@@ -13,7 +13,6 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_SPIRVOPS_H_
 #define MLIR_DIALECT_SPIRV_IR_SPIRVOPS_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOpTraits.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"

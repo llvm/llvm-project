@@ -13,7 +13,6 @@
 #ifndef MLIR_DIALECT_TOSA_IR_TOSAOPS_H
 #define MLIR_DIALECT_TOSA_IR_TOSAOPS_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"

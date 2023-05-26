@@ -13,7 +13,6 @@
 #ifndef MLIR_DIALECT_EMITC_IR_EMITC_H
 #define MLIR_DIALECT_EMITC_IR_EMITC_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"

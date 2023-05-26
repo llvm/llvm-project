@@ -46,9 +46,6 @@ public:
   /// is returned by bytecode writer entry point.
   void setDesiredBytecodeVersion(int64_t bytecodeVersion);
 
-  /// Get the set desired bytecode version to emit.
-  int64_t getDesiredBytecodeVersion() const;
-
   //===--------------------------------------------------------------------===//
   // Resources
   //===--------------------------------------------------------------------===//

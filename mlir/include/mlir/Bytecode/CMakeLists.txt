@@ -1,1 +1,0 @@
-add_mlir_interface(BytecodeOpInterface)

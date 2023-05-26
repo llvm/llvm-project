@@ -8,7 +8,6 @@
 
 #include "IRNumbering.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -25,10 +24,6 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
   NumberingDialectWriter(IRNumberingState &state) : state(state) {}
 
   void writeAttribute(Attribute attr) override { state.number(attr); }
-  void writeOptionalAttribute(Attribute attr) override {
-    if (attr)
-      state.number(attr);
-  }
   void writeType(Type type) override { state.number(type); }
   void writeResourceHandle(const AsmDialectResourceHandle &resource) override {
     state.number(resource.getDialect(), resource);
@@ -111,9 +106,7 @@ static void groupByDialectPerByte(T range) {
     value->number = idx;
 }
 
-IRNumberingState::IRNumberingState(Operation *op,
-                                   const BytecodeWriterConfig &config)
-    : config(config) {
+IRNumberingState::IRNumberingState(Operation *op) {
   // Compute a global operation ID numbering according to the pre-order walk of
   // the IR. This is used as reference to construct use-list orders.
   unsigned operationID = 0;
@@ -283,28 +276,9 @@ void IRNumberingState::number(Operation &op) {
   }
 
   // Only number the operation's dictionary if it isn't empty.
-  DictionaryAttr dictAttr = op.getDiscardableAttrDictionary();
-  if (config.getDesiredBytecodeVersion() < 4)
-    dictAttr = op.getAttrDictionary();
+  DictionaryAttr dictAttr = op.getAttrDictionary();
   if (!dictAttr.empty())
     number(dictAttr);
-
-  // Visit the operation properties (if any) to make sure referenced attributes
-  // are numbered.
-  if (config.getDesiredBytecodeVersion() >= 4 &&
-      op.getPropertiesStorageSize()) {
-    if (op.isRegistered()) {
-      // Operation that have properties *must* implement this interface.
-      auto iface = cast<BytecodeOpInterface>(op);
-      NumberingDialectWriter writer(*this);
-      iface.writeProperties(writer);
-    } else {
-      // Unregistered op are storing properties as an optional attribute.
-      Attribute prop = *op.getPropertiesStorage().as<Attribute *>();
-      if (prop)
-        number(prop);
-    }
-  }
 
   number(op.getLoc());
 }

@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATION_H_
 #define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATION_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Interfaces/CopyOpInterface.h"

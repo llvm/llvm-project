@@ -13,7 +13,6 @@
 #ifndef MLIR_DIALECT_ARMSVE_ARMSVEDIALECT_H
 #define MLIR_DIALECT_ARMSVE_ARMSVEDIALECT_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
