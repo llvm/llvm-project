@@ -154,6 +154,8 @@ if "MLIR_OPT_CHECK_IR_ROUNDTRIP" in os.environ:
             ToolSubst("mlir-opt", "mlir-opt --verify-roundtrip", unresolved="fatal"),
         ]
     )
+else:
+    tools.extend(["mlir-opt"])
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
