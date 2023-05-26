@@ -73,6 +73,23 @@ TEST_F(HostInfoTest, GetXcodeSDK) {
   // This is expected to fail.
   EXPECT_TRUE(get_sdk("CeciNestPasUnOS.sdk", true).empty());
 }
+
+TEST_F(HostInfoTest, FindSDKTool) {
+  auto find_tool = [](std::string sdk, llvm::StringRef tool,
+                      bool error = false) -> llvm::StringRef {
+    auto sdk_path_or_err =
+        HostInfo::FindSDKTool(XcodeSDK(std::move(sdk)), tool);
+    if (!error) {
+      EXPECT_TRUE((bool)sdk_path_or_err);
+      return *sdk_path_or_err;
+    }
+    EXPECT_FALSE((bool)sdk_path_or_err);
+    llvm::consumeError(sdk_path_or_err.takeError());
+    return {};
+  };
+  EXPECT_FALSE(find_tool("MacOSX.sdk", "clang").empty());
+  EXPECT_TRUE(find_tool("MacOSX.sdk", "CeciNestPasUnOutil").empty());
+}
 #endif
 
 TEST(HostInfoTestInitialization, InitTwice) {
