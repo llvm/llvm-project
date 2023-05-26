@@ -65,7 +65,6 @@ llvm_config.with_environment('PATH', config.llvm_tools_dir, append_path=True)
 
 tool_dirs = [config.mlir_tools_dir, config.llvm_tools_dir]
 tools = [
-    'mlir-opt',
     'mlir-tblgen',
     'mlir-translate',
     'mlir-lsp-server',
@@ -124,6 +123,11 @@ elif "Windows" in config.host_os:
 tools.extend([
   ToolSubst('%PYTHON', python_executable, unresolved='ignore'),
 ])
+
+if "MLIR_OPT_CHECK_IR_ROUNDTRIP" in os.environ:
+  tools.extend([
+    ToolSubst('mlir-opt', 'mlir-opt --verify-roundtrip', unresolved='fatal'),
+  ])
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
