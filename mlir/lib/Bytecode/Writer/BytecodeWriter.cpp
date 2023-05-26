@@ -652,7 +652,7 @@ LogicalResult BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
   writeStringSection(emitter);
 
   // Emit the properties section.
-  if (config.bytecodeVersion <= 5)
+  if (config.bytecodeVersion >= 5)
     writePropertiesSection(emitter);
   else if (!propertiesSection.empty())
     return rootOp->emitError(
