@@ -113,13 +113,13 @@ static const char *const attrSizedSegmentValueRangeCalcCode = R"(
 /// {0}: The code to get the attribute.
 static const char *const adapterSegmentSizeAttrInitCode = R"(
   assert({0} && "missing segment size attribute for op");
-  auto sizeAttr = {0}.cast<::mlir::DenseI32ArrayAttr>();
+  auto sizeAttr = ::llvm::cast<::mlir::DenseI32ArrayAttr>({0});
 )";
 /// The code snippet to initialize the sizes for the value range calculation.
 ///
 /// {0}: The code to get the attribute.
 static const char *const opSegmentSizeAttrInitCode = R"(
-  auto sizeAttr = {0}.cast<::mlir::DenseI32ArrayAttr>();
+  auto sizeAttr = ::llvm::cast<::mlir::DenseI32ArrayAttr>({0});
 )";
 
 /// The logic to calculate the actual value range for a declared operand
@@ -649,7 +649,7 @@ static void genNativeTraitAttrVerifier(MethodBody &body,
   // {3}: Emit error prefix.
   const char *const checkAttrSizedValueSegmentsCode = R"(
   {
-    auto sizeAttr = tblgen_{0}.cast<::mlir::DenseI32ArrayAttr>();
+    auto sizeAttr = ::llvm::cast<::mlir::DenseI32ArrayAttr>(tblgen_{0});
     auto numElements = sizeAttr.asArrayRef().size();
     if (numElements != {1})
       return {3}"'{0}' attribute for specifying {2} segments must have {1} "
@@ -1118,7 +1118,7 @@ void OpEmitter::genPropertiesSupport() {
   // TODO: properties might be optional as well.
   const char *propFromAttrFmt = R"decl(;
     {{
-      auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr, 
+      auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
                              ::mlir::InFlightDiagnostic *propDiag) {{
         {0};
       };
@@ -1213,7 +1213,7 @@ void OpEmitter::genPropertiesSupport() {
   getPropMethod << R"decl(
   if (!attrs.empty())
     return odsBuilder.getDictionaryAttr(attrs);
-  return {};    
+  return {};
 )decl";
 
   // Hashing for the property
@@ -1325,7 +1325,7 @@ void OpEmitter::genAttrGetters() {
     if (!method)
       return;
     method->body() << formatv(
-        "  return {0}.{1}<{2}>();", emitHelper.getAttr(attrName),
+        "  return ::llvm::{1}<{2}>({0});", emitHelper.getAttr(attrName),
         attr.isOptional() || attr.hasDefaultValue() ? "dyn_cast_or_null"
                                                     : "cast",
         attr.getStorageType());
@@ -2274,9 +2274,9 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
           "  for (auto attr : attributes) {\n"
           "    if (attr.getName() != attrName) continue;\n";
   if (namedAttr.attr.isTypeAttr()) {
-    resultType = "attr.getValue().cast<::mlir::TypeAttr>().getValue()";
+    resultType = "::llvm::cast<::mlir::TypeAttr>(attr.getValue()).getValue()";
   } else {
-    resultType = "attr.getValue().cast<::mlir::TypedAttr>().getType()";
+    resultType = "::llvm::cast<::mlir::TypedAttr>(attr.getValue()).getType()";
   }
 
   // Operands
@@ -2960,11 +2960,14 @@ void OpEmitter::genTypeInterfaceMethods() {
           if (op.getDialect().usePropertiesForAttributes()) {
             body << "(properties ? properties.as<Properties *>()->"
                  << attr->name
-                 << " : attributes.get(\"" + attr->name +
-                        "\").dyn_cast_or_null<::mlir::TypedAttr>());\n";
+                 << " : "
+                    "::llvm::dyn_cast_or_null<::mlir::TypedAttr>(attributes."
+                    "get(\"" +
+                        attr->name + "\")));\n";
           } else {
-            body << "attributes.get(\"" + attr->name +
-                        "\").dyn_cast_or_null<::mlir::TypedAttr>();\n";
+            body << "::llvm::dyn_cast_or_null<::mlir::TypedAttr>(attributes."
+                    "get(\"" +
+                        attr->name + "\"));\n";
           }
           body << "  if (!odsInferredTypeAttr" << inferredTypeIdx
                << ") return ::mlir::failure();\n";
@@ -3502,7 +3505,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
         const char *accessorFmt = R"decl(
     auto get{0}() {
       auto &propStorage = this->{1};
-      return propStorage.{2}<{3}>();
+      return ::llvm::{2}<{3}>(propStorage);
     }
     void set{0}(const {3} &propValue) {
       this->{1} = propValue;
@@ -3629,11 +3632,11 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     if (!useProperties)
       body << "assert(odsAttrs && \"no attributes when constructing "
               "adapter\");\n";
-    body << formatv("auto attr = {0}.{1}<{2}>();\n", emitHelper.getAttr(name),
-                    attr.hasDefaultValue() || attr.isOptional()
-                        ? "dyn_cast_or_null"
-                        : "cast",
-                    attr.getStorageType());
+    body << formatv(
+        "auto attr = ::llvm::{1}<{2}>({0});\n", emitHelper.getAttr(name),
+        attr.hasDefaultValue() || attr.isOptional() ? "dyn_cast_or_null"
+                                                    : "cast",
+        attr.getStorageType());
 
     if (attr.hasDefaultValue() && attr.isOptional()) {
       // Use the default value if attribute is not set.
