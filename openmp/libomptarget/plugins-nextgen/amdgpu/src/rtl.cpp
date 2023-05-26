@@ -697,18 +697,24 @@ private:
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
                          uint32_t ThreadLimitClause[3]) const override {
-    // Honor OMP_TEAMS_THREAD_LIMIT environment variable for BigJumpLoop kernel
-    // type.
+    assert(ThreadLimitClause[1] == 0 && ThreadLimitClause[2] == 0 &&
+           "Multi dimensional launch not supported yet.");
+
+    // Honor OMP_TEAMS_THREAD_LIMIT environment variable and
+    // num_threads/thread_limit clause for BigJumpLoop and NoLoop kernel types.
     int32_t TeamsThreadLimitEnvVar = GenericDevice.getOMPTeamsThreadLimit();
-    if (isBigJumpLoopMode() && TeamsThreadLimitEnvVar > 0)
-      return std::min(static_cast<int32_t>(ConstWGSize),
-                      TeamsThreadLimitEnvVar);
+    if (isBigJumpLoopMode() || isNoLoopMode()) {
+      if (TeamsThreadLimitEnvVar > 0)
+        return std::min(static_cast<int32_t>(ConstWGSize),
+                        TeamsThreadLimitEnvVar);
+
+      if ((ThreadLimitClause[0] > 0) && (ThreadLimitClause[0] != (uint32_t)-1))
+        return std::min(static_cast<uint32_t>(ConstWGSize),
+                        ThreadLimitClause[0]);
+    }
 
     if (isNoLoopMode() || isBigJumpLoopMode() || isXTeamReductionsMode())
       return ConstWGSize;
-
-    assert(ThreadLimitClause[1] == 0 && ThreadLimitClause[2] == 0 &&
-           "Multi dimensional launch not supported yet.");
 
     if (ThreadLimitClause[0] > 0 && isGenericMode()) {
       if (ThreadLimitClause[0] == (uint32_t)-1)

@@ -335,8 +335,7 @@ void CodeGenFunction::EmitNoLoopCode(const OMPExecutableDirective &D,
 
   // workgroup_size
   assert(CGM.isNoLoopKernel(D) && "Unexpected optimized kernel type");
-  llvm::Value *WorkGroupSize =
-      llvm::ConstantInt::get(Int32Ty, CGM.getNoLoopBlockSize(D));
+  llvm::Value *WorkGroupSize = RT.getGPUNumThreads(*this);
 
   // workgroup_id
   llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
