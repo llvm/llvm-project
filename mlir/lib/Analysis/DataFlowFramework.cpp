@@ -39,21 +39,21 @@ void ProgramPoint::print(raw_ostream &os) const {
     os << "<NULL POINT>";
     return;
   }
-  if (auto *programPoint = dyn_cast<GenericProgramPoint *>())
+  if (auto *programPoint = llvm::dyn_cast<GenericProgramPoint *>(*this))
     return programPoint->print(os);
-  if (auto *op = dyn_cast<Operation *>())
+  if (auto *op = llvm::dyn_cast<Operation *>(*this))
     return op->print(os);
-  if (auto value = dyn_cast<Value>())
+  if (auto value = llvm::dyn_cast<Value>(*this))
     return value.print(os);
   return get<Block *>()->print(os);
 }
 
 Location ProgramPoint::getLoc() const {
-  if (auto *programPoint = dyn_cast<GenericProgramPoint *>())
+  if (auto *programPoint = llvm::dyn_cast<GenericProgramPoint *>(*this))
     return programPoint->getLoc();
-  if (auto *op = dyn_cast<Operation *>())
+  if (auto *op = llvm::dyn_cast<Operation *>(*this))
     return op->getLoc();
-  if (auto value = dyn_cast<Value>())
+  if (auto value = llvm::dyn_cast<Value>(*this))
     return value.getLoc();
   return get<Block *>()->getParent()->getLoc();
 }

@@ -188,7 +188,7 @@ static Value genAllocCopy(OpBuilder &builder, Location loc, Value b,
 /// Generates a memref from tensor operation.
 static Value genTensorToMemref(PatternRewriter &rewriter, Location loc,
                                Value tensor) {
-  auto tensorType = tensor.getType().cast<ShapedType>();
+  auto tensorType = llvm::cast<ShapedType>(tensor.getType());
   auto memrefType =
       MemRefType::get(tensorType.getShape(), tensorType.getElementType());
   return rewriter.create<bufferization::ToMemrefOp>(loc, memrefType, tensor);

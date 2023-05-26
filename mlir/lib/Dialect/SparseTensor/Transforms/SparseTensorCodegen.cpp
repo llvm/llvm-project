@@ -414,7 +414,7 @@ public:
   /// TODO: better unord/not-unique; also generalize, optimize, specialize!
   SmallVector<Value> genImplementation(TypeRange retTypes, ValueRange args,
                                        OpBuilder &builder, Location loc) {
-    const SparseTensorType stt(rtp.cast<RankedTensorType>());
+    const SparseTensorType stt(llvm::cast<RankedTensorType>(rtp));
     const Level lvlRank = stt.getLvlRank();
     // Extract fields and coordinates from args.
     SmallVector<Value> fields = llvm::to_vector(args.drop_back(lvlRank + 1));
@@ -466,7 +466,7 @@ public:
     // The mangled name of the function has this format:
     //   <namePrefix>_<DLT>_<shape>_<ordering>_<eltType>_<crdWidth>_<posWidth>
     constexpr const char kInsertFuncNamePrefix[] = "_insert_";
-    const SparseTensorType stt(rtp.cast<RankedTensorType>());
+    const SparseTensorType stt(llvm::cast<RankedTensorType>(rtp));
 
     SmallString<32> nameBuffer;
     llvm::raw_svector_ostream nameOstream(nameBuffer);
@@ -541,14 +541,14 @@ static void genEndInsert(OpBuilder &builder, Location loc,
 
 static TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
                                               Value tensor) {
-  auto tTp = tensor.getType().cast<TensorType>();
+  auto tTp = llvm::cast<TensorType>(tensor.getType());
   auto mTp = MemRefType::get(tTp.getShape(), tTp.getElementType());
   return builder.create<bufferization::ToMemrefOp>(loc, mTp, tensor)
       .getResult();
 }
 
 Value genSliceToSize(OpBuilder &builder, Location loc, Value mem, Value sz) {
-  auto elemTp = mem.getType().cast<MemRefType>().getElementType();
+  auto elemTp = llvm::cast<MemRefType>(mem.getType()).getElementType();
   return builder
       .create<memref::SubViewOp>(
           loc, MemRefType::get({ShapedType::kDynamic}, elemTp), mem,

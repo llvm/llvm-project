@@ -26,14 +26,14 @@ namespace mlir {
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
 static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   // Case 1: Check for Constant integer.
-  if (auto val = ofr.dyn_cast<Value>()) {
+  if (auto val = llvm::dyn_cast_if_present<Value>(ofr)) {
     APSInt intVal;
     if (matchPattern(val, m_ConstantInt(&intVal)))
       return intVal.getSExtValue();
     return std::nullopt;
   }
   // Case 2: Check for IntegerAttr.
-  Attribute attr = ofr.dyn_cast<Attribute>();
+  Attribute attr = llvm::dyn_cast_if_present<Attribute>(ofr);
   if (auto intAttr = dyn_cast_or_null<IntegerAttr>(attr))
     return intAttr.getValue().getSExtValue();
   return std::nullopt;
@@ -99,7 +99,7 @@ AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
 }
 
 AffineExpr ValueBoundsConstraintSet::getExpr(OpFoldResult ofr) {
-  if (Value value = ofr.dyn_cast<Value>())
+  if (Value value = llvm::dyn_cast_if_present<Value>(ofr))
     return getExpr(value, /*dim=*/std::nullopt);
   auto constInt = getConstantIntValue(ofr);
   assert(constInt.has_value() && "expected Integer constant");

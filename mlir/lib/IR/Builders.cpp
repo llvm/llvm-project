@@ -483,7 +483,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
     Type expectedType = std::get<1>(it);
 
     // Normal values get pushed back directly.
-    if (auto value = std::get<0>(it).dyn_cast<Value>()) {
+    if (auto value = llvm::dyn_cast_if_present<Value>(std::get<0>(it))) {
       if (value.getType() != expectedType)
         return cleanupFailure();
 

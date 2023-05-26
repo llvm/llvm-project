@@ -595,7 +595,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
         ++opArgIdx;
         continue;
       }
-      if (auto *operand = opArg.dyn_cast<NamedTypeConstraint *>()) {
+      if (auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
         if (operand->isVariableLength()) {
           auto error = formatv("use nested DAG construct to match op {0}'s "
                                "variadic operand #{1} unsupported now",
@@ -1524,7 +1524,7 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
   int valueIndex = 0; // An index for uniquing local variable names.
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
     const auto *operand =
-        resultOp.getArg(argIndex).dyn_cast<NamedTypeConstraint *>();
+        llvm::dyn_cast_if_present<NamedTypeConstraint *>(resultOp.getArg(argIndex));
     // We do not need special handling for attributes.
     if (!operand)
       continue;
@@ -1579,7 +1579,7 @@ void PatternEmitter::supplyValuesForOpArgs(
 
     Argument opArg = resultOp.getArg(argIndex);
     // Handle the case of operand first.
-    if (auto *operand = opArg.dyn_cast<NamedTypeConstraint *>()) {
+    if (auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
       if (!operand->name.empty())
         os << "/*" << operand->name << "=*/";
       os << childNodeNames.lookup(argIndex);

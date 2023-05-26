@@ -405,7 +405,7 @@ LLVMTypeConverter::getMemRefAddressSpace(BaseMemRefType type) {
     return failure();
   if (!(*converted)) // Conversion to default is 0.
     return 0;
-  if (auto explicitSpace = converted->dyn_cast_or_null<IntegerAttr>())
+  if (auto explicitSpace = llvm::dyn_cast_if_present<IntegerAttr>(*converted))
     return explicitSpace.getInt();
   return failure();
 }
