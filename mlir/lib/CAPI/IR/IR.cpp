@@ -832,6 +832,10 @@ MlirTypeID mlirTypeGetTypeID(MlirType type) {
   return wrap(unwrap(type).getTypeID());
 }
 
+MlirDialect mlirTypeGetDialect(MlirType type) {
+  return wrap(&unwrap(type).getDialect());
+}
+
 bool mlirTypeEqual(MlirType t1, MlirType t2) {
   return unwrap(t1) == unwrap(t2);
 }
