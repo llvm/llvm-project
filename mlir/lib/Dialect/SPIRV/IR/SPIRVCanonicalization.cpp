@@ -141,19 +141,24 @@ OpFoldResult spirv::BitcastOp::fold(FoldAdaptor /*adaptor*/) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::CompositeExtractOp::fold(FoldAdaptor adaptor) {
-  if (auto insertOp =
-          getComposite().getDefiningOp<spirv::CompositeInsertOp>()) {
+  Value compositeOp = getComposite();
+
+  while (auto insertOp =
+             compositeOp.getDefiningOp<spirv::CompositeInsertOp>()) {
     if (getIndices() == insertOp.getIndices())
       return insertOp.getObject();
+    compositeOp = insertOp.getComposite();
   }
 
   if (auto constructOp =
-          getComposite().getDefiningOp<spirv::CompositeConstructOp>()) {
+          compositeOp.getDefiningOp<spirv::CompositeConstructOp>()) {
     auto type = llvm::cast<spirv::CompositeType>(constructOp.getType());
     if (getIndices().size() == 1 &&
         constructOp.getConstituents().size() == type.getNumElements()) {
-      auto i = llvm::cast<IntegerAttr>(*getIndices().begin());
-      return constructOp.getConstituents()[i.getValue().getSExtValue()];
+      auto i = getIndices().begin()->cast<IntegerAttr>();
+      if (static_cast<size_t>(i.getValue().getSExtValue()) <
+          constructOp.getConstituents().size())
+        return constructOp.getConstituents()[i.getValue().getSExtValue()];
     }
   }
 
