@@ -8,7 +8,6 @@
 #ifndef MLIR_DIALECT_MLPROGRAM_IR_MLPROGRAM_H_
 #define MLIR_DIALECT_MLPROGRAM_IR_MLPROGRAM_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgramAttributes.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgramTypes.h"
 #include "mlir/IR/Dialect.h"

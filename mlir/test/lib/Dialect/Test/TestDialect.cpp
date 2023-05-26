@@ -28,14 +28,12 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 
-#include <cstdint>
 #include <numeric>
 #include <optional>
 
@@ -62,44 +60,6 @@ LogicalResult MyPropStruct::setFromAttr(MyPropStruct &prop, Attribute attr,
 }
 llvm::hash_code MyPropStruct::hash() const {
   return hash_value(StringRef(content));
-}
-
-static LogicalResult readFromMlirBytecode(DialectBytecodeReader &reader,
-                                          MyPropStruct &prop) {
-  StringRef str;
-  if (failed(reader.readString(str)))
-    return failure();
-  prop.content = str.str();
-  return success();
-}
-
-static void writeToMlirBytecode(::mlir::DialectBytecodeWriter &writer,
-                                MyPropStruct &prop) {
-  writer.writeOwnedString(prop.content);
-}
-
-static LogicalResult readFromMlirBytecode(DialectBytecodeReader &reader,
-                                          MutableArrayRef<int64_t> prop) {
-  uint64_t size;
-  if (failed(reader.readVarInt(size)))
-    return failure();
-  if (size != prop.size())
-    return reader.emitError("array size mismach when reading properties: ")
-           << size << " vs expected " << prop.size();
-  for (auto &elt : prop) {
-    uint64_t value;
-    if (failed(reader.readVarInt(value)))
-      return failure();
-    elt = value;
-  }
-  return success();
-}
-
-static void writeToMlirBytecode(::mlir::DialectBytecodeWriter &writer,
-                                ArrayRef<int64_t> prop) {
-  writer.writeVarInt(prop.size());
-  for (auto elt : prop)
-    writer.writeVarInt(elt);
 }
 
 static LogicalResult setPropertiesFromAttribute(PropertiesWithCustomPrint &prop,
