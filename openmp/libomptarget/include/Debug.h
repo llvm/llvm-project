@@ -88,6 +88,10 @@ inline std::atomic<uint32_t> &getInfoLevelInternal() {
       if (V == 2)
         InfoLevel.store(OMP_INFOTYPE_AMD_API_TRACE |
                         /* OMP_INFOTYPE_API_TRACE */ 0xff000000);
+      if (V == 3)
+        InfoLevel.store(OMP_INFOTYPE_AMD_KERNEL_TRACE |
+			OMP_INFOTYPE_AMD_API_TRACE |
+                        /* OMP_INFOTYPE_API_TRACE */ 0xff000000);
     }
   });
 
