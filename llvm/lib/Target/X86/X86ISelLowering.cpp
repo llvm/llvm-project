@@ -20024,19 +20024,19 @@ static bool canonicalizeShuffleMaskWithCommute(ArrayRef<int> Mask) {
   return false;
 }
 
-static bool canCombineAsMaskOperation(SDValue V1, SDValue V2,
+static bool canCombineAsMaskOperation(SDValue V,
                                       const X86Subtarget &Subtarget) {
   if (!Subtarget.hasAVX512())
     return false;
 
-  MVT VT = V1.getSimpleValueType().getScalarType();
+  MVT VT = V.getSimpleValueType().getScalarType();
   if ((VT == MVT::i16 || VT == MVT::i8) && !Subtarget.hasBWI())
     return false;
 
   // If vec width < 512, widen i8/i16 even with BWI as blendd/blendps/blendpd
   // are preferable to blendw/blendvb/masked-mov.
   if ((VT == MVT::i16 || VT == MVT::i8) &&
-      V1.getSimpleValueType().getSizeInBits() < 512)
+      V.getSimpleValueType().getSizeInBits() < 512)
     return false;
 
   auto HasMaskOperation = [&](SDValue V) {
@@ -20067,7 +20067,7 @@ static bool canCombineAsMaskOperation(SDValue V1, SDValue V2,
     return true;
   };
 
-  if (HasMaskOperation(V1) || HasMaskOperation(V2))
+  if (HasMaskOperation(V))
     return true;
 
   return false;
@@ -20148,7 +20148,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   // integers to handle flipping the low and high halves of AVX 256-bit vectors.
   SmallVector<int, 16> WidenedMask;
   if (VT.getScalarSizeInBits() < 64 && !Is1BitVector &&
-      !canCombineAsMaskOperation(V1, V2, Subtarget) &&
+      !canCombineAsMaskOperation(V1, Subtarget) &&
+      !canCombineAsMaskOperation(V2, Subtarget) &&
       canWidenShuffleElements(OrigMask, Zeroable, V2IsZero, WidenedMask)) {
     // Shuffle mask widening should not interfere with a broadcast opportunity
     // by obfuscating the operands with bitcasts.
