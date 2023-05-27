@@ -101,7 +101,6 @@ import lldb
 
 
 class SimpleStep:
-
     def __init__(self, thread_plan, dict):
         self.thread_plan = thread_plan
         self.start_address = thread_plan.GetThread().GetFrameAtIndex(0).GetPC()
@@ -129,13 +128,14 @@ class SimpleStep:
     def stop_description(self, stream):
         stream.Print("Simple step completed")
 
-class StepWithPlan:
 
+class StepWithPlan:
     def __init__(self, thread_plan, dict):
         self.thread_plan = thread_plan
         self.start_address = thread_plan.GetThread().GetFrameAtIndex(0).GetPCAddress()
         self.step_thread_plan = thread_plan.QueueThreadPlanForStepOverRange(
-            self.start_address, 20)
+            self.start_address, 20
+        )
 
     def explains_stop(self, event):
         # Since all I'm doing is running a plan, I will only ever get askedthis
@@ -155,13 +155,13 @@ class StepWithPlan:
     def stop_description(self, stream):
         self.step_thread_plan.GetDescription(stream, lldb.eDescriptionLevelBrief)
 
+
 # Here's another example which does "step over" through the current function,
 # and when it stops at each line, it checks some condition (in this example the
 # value of a variable) and stops if that condition is true.
 
 
 class StepCheckingCondition:
-
     def __init__(self, thread_plan, dict):
         self.thread_plan = thread_plan
         self.start_frame = thread_plan.GetThread().GetFrameAtIndex(0)
@@ -174,7 +174,8 @@ class StepCheckingCondition:
         end_address = cur_line_entry.GetEndAddress()
         line_range = end_address.GetFileAddress() - start_address.GetFileAddress()
         self.step_thread_plan = self.thread_plan.QueueThreadPlanForStepOverRange(
-            start_address, line_range)
+            start_address, line_range
+        )
 
     def explains_stop(self, event):
         # We are stepping, so if we stop for any other reason, it isn't
@@ -217,6 +218,7 @@ class StepCheckingCondition:
     def stop_description(self, stream):
         stream.Print(f"Stepped until a == 20")
 
+
 # Here's an example that steps out of the current frame, gathers some information
 # and then continues.  The information in this case is rax.  Currently the thread
 # plans are not a safe place to call lldb command-line commands, so the information
@@ -224,11 +226,9 @@ class StepCheckingCondition:
 
 
 class FinishPrintAndContinue:
-
     def __init__(self, thread_plan, dict):
         self.thread_plan = thread_plan
-        self.step_out_thread_plan = thread_plan.QueueThreadPlanForStepOut(
-            0, True)
+        self.step_out_thread_plan = thread_plan.QueueThreadPlanForStepOut(0, True)
         self.thread = self.thread_plan.GetThread()
 
     def is_stale(self):

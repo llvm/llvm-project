@@ -64,7 +64,7 @@ static void walkIndicesAsAttr(MLIRContext *ctx, ArrayRef<int64_t> shape,
 //===----------------------------------------------------------------------===//
 
 static bool isSupportedElementType(Type type) {
-  return type.isa<MemRefType>() ||
+  return llvm::isa<MemRefType>(type) ||
          OpBuilder(type.getContext()).getZeroAttr(type);
 }
 
@@ -110,7 +110,7 @@ void memref::AllocaOp::handleBlockArgument(const MemorySlot &slot,
 SmallVector<DestructurableMemorySlot>
 memref::AllocaOp::getDestructurableSlots() {
   MemRefType memrefType = getType();
-  auto destructurable = memrefType.dyn_cast<DestructurableTypeInterface>();
+  auto destructurable = llvm::dyn_cast<DestructurableTypeInterface>(memrefType);
   if (!destructurable)
     return {};
 
@@ -134,7 +134,7 @@ memref::AllocaOp::destructure(const DestructurableMemorySlot &slot,
 
   DenseMap<Attribute, MemorySlot> slotMap;
 
-  auto memrefType = getType().cast<DestructurableTypeInterface>();
+  auto memrefType = llvm::cast<DestructurableTypeInterface>(getType());
   for (Attribute usedIndex : usedIndices) {
     Type elemType = memrefType.getTypeAtIndex(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
@@ -281,7 +281,7 @@ struct MemRefDestructurableTypeExternalModel
           MemRefDestructurableTypeExternalModel, MemRefType> {
   std::optional<DenseMap<Attribute, Type>>
   getSubelementIndexMap(Type type) const {
-    auto memrefType = type.cast<MemRefType>();
+    auto memrefType = llvm::cast<MemRefType>(type);
     constexpr int64_t maxMemrefSizeForDestructuring = 16;
     if (!memrefType.hasStaticShape() ||
         memrefType.getNumElements() > maxMemrefSizeForDestructuring ||
@@ -298,15 +298,15 @@ struct MemRefDestructurableTypeExternalModel
   }
 
   Type getTypeAtIndex(Type type, Attribute index) const {
-    auto memrefType = type.cast<MemRefType>();
-    auto coordArrAttr = index.dyn_cast<ArrayAttr>();
+    auto memrefType = llvm::cast<MemRefType>(type);
+    auto coordArrAttr = llvm::dyn_cast<ArrayAttr>(index);
     if (!coordArrAttr || coordArrAttr.size() != memrefType.getShape().size())
       return {};
 
     Type indexType = IndexType::get(memrefType.getContext());
     for (const auto &[coordAttr, dimSize] :
          llvm::zip(coordArrAttr, memrefType.getShape())) {
-      auto coord = coordAttr.dyn_cast<IntegerAttr>();
+      auto coord = llvm::dyn_cast<IntegerAttr>(coordAttr);
       if (!coord || coord.getType() != indexType || coord.getInt() < 0 ||
           coord.getInt() >= dimSize)
         return {};

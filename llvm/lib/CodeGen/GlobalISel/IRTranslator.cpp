@@ -1891,6 +1891,29 @@ std::optional<MCRegister> IRTranslator::getArgPhysReg(Argument &Arg) {
   return VRegDef->getOperand(1).getReg().asMCReg();
 }
 
+bool IRTranslator::translateIfEntryValueArgument(const DbgValueInst &DebugInst,
+                                                 MachineIRBuilder &MIRBuilder) {
+  auto *Arg = dyn_cast<Argument>(DebugInst.getValue());
+  if (!Arg)
+    return false;
+
+  const DIExpression *Expr = DebugInst.getExpression();
+  if (!Expr->isEntryValue())
+    return false;
+
+  std::optional<MCRegister> PhysReg = getArgPhysReg(*Arg);
+  if (!PhysReg) {
+    LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
+                         "couldn't find a physical register\n"
+                      << DebugInst << "\n");
+    return true;
+  }
+
+  MIRBuilder.buildDirectDbgValue(*PhysReg, DebugInst.getVariable(),
+                                 DebugInst.getExpression());
+  return true;
+}
+
 bool IRTranslator::translateIfEntryValueArgument(
     const DbgDeclareInst &DebugInst) {
   auto *Arg = dyn_cast<Argument>(DebugInst.getAddress());
@@ -2044,6 +2067,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                  ExprDerefRemoved);
       return true;
     }
+    if (translateIfEntryValueArgument(DI, MIRBuilder))
+      return true;
     for (Register Reg : getOrCreateVRegs(*V)) {
       // FIXME: This does not handle register-indirect values at offset 0. The
       // direct/indirect thing shouldn't really be handled by something as

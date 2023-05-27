@@ -124,7 +124,7 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
     interfaceBaseType = "AttributeInterface";
     valueTemplate = "ConcreteAttr";
     substVar = "_attr";
-    StringRef castCode = "(tablegen_opaque_val.cast<ConcreteAttr>())";
+    StringRef castCode = "(::llvm::cast<ConcreteAttr>(tablegen_opaque_val))";
     nonStaticMethodFmt.addSubst(substVar, castCode).withSelf(castCode);
     traitMethodFmt.addSubst(substVar,
                             "(*static_cast<const ConcreteAttr *>(this))");
@@ -155,7 +155,7 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
     interfaceBaseType = "TypeInterface";
     valueTemplate = "ConcreteType";
     substVar = "_type";
-    StringRef castCode = "(tablegen_opaque_val.cast<ConcreteType>())";
+    StringRef castCode = "(::llvm::cast<ConcreteType>(tablegen_opaque_val))";
     nonStaticMethodFmt.addSubst(substVar, castCode).withSelf(castCode);
     traitMethodFmt.addSubst(substVar,
                             "(*static_cast<const ConcreteType *>(this))");

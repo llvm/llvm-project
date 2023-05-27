@@ -7,8 +7,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestMemoryAllocSettings(TestBase):
 
+class TestMemoryAllocSettings(TestBase):
     def test(self):
         """Test changing settings for expression memory allocation."""
         self.build()
@@ -24,12 +24,15 @@ class TestMemoryAllocSettings(TestBase):
         self.runCmd("expression -- int foo; &foo")
 
         self.assertTrue(os.path.isfile(self.log_file))
-        with open(self.log_file, 'r') as f:
+        with open(self.log_file, "r") as f:
             log = f.read()
 
-        alloc0 = re.search('^.*IRMemoryMap::Malloc.+?0xdead0000.*$', log, re.MULTILINE)
+        alloc0 = re.search("^.*IRMemoryMap::Malloc.+?0xdead0000.*$", log, re.MULTILINE)
         # Malloc adds additional bytes to allocation size, hence 10007
-        alloc1 = re.search('^.*IRMemoryMap::Malloc\s*?\(10007.+?0xdead1000.*$', log, re.MULTILINE)
+        alloc1 = re.search(
+            "^.*IRMemoryMap::Malloc\s*?\(10007.+?0xdead1000.*$", log, re.MULTILINE
+        )
         self.assertTrue(alloc0, "Couldn't find an allocation at a given address.")
-        self.assertTrue(alloc1, "Couldn't find an allocation of a given size at a given address.")
-
+        self.assertTrue(
+            alloc1, "Couldn't find an allocation of a given size at a given address."
+        )

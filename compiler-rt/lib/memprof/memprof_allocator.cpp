@@ -555,6 +555,10 @@ struct Allocator {
     return user_requested_size;
   }
 
+  uptr AllocationSizeFast(uptr p) {
+    return reinterpret_cast<MemprofChunk *>(p - kChunkHeaderSize)->UsedSize();
+  }
+
   void Purge(BufferedStackTrace *stack) { allocator.ForceReleaseToOS(); }
 
   void PrintStats() { allocator.PrintStats(); }
@@ -717,6 +721,13 @@ const void *__sanitizer_get_allocated_begin(const void *p) {
 
 uptr __sanitizer_get_allocated_size(const void *p) {
   return memprof_malloc_usable_size(p, 0, 0);
+}
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = instance.AllocationSizeFast(reinterpret_cast<uptr>(p));
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
 }
 
 int __memprof_profile_dump() {

@@ -254,6 +254,16 @@ private:
   bool GlobalOpt;
 };
 
+class AMDGPUCodeGenPreparePass
+    : public PassInfoMixin<AMDGPUCodeGenPreparePass> {
+private:
+  TargetMachine &TM;
+
+public:
+  AMDGPUCodeGenPreparePass(TargetMachine &TM) : TM(TM){};
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+};
+
 FunctionPass *createAMDGPUAnnotateUniformValues();
 
 ModulePass *createAMDGPULowerKernelCallsPass();

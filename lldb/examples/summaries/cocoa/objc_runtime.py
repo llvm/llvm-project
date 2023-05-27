@@ -13,7 +13,6 @@ import lldb.formatters.Logger
 
 
 class Utilities:
-
     @staticmethod
     def read_ascii(process, pointer, max_len=128):
         logger = lldb.formatters.Logger.Logger()
@@ -36,7 +35,7 @@ class Utilities:
             return allow_NULL
         if allow_tagged and (pointer % 2) == 1:
             return 1
-        return ((pointer % pointer_size) == 0)
+        return (pointer % pointer_size) == 0
 
     # Objective-C runtime has a rule that pointers in a class_t will only have bits 0 thru 46 set
     # so if any pointer has bits 47 thru 63 high we know that this is not a
@@ -46,7 +45,7 @@ class Utilities:
         logger = lldb.formatters.Logger.Logger()
         if pointer is None:
             return 0
-        return ((pointer & 0xFFFF800000000000) == 0)
+        return (pointer & 0xFFFF800000000000) == 0
 
     @staticmethod
     def read_child_of(valobj, offset, type):
@@ -71,7 +70,8 @@ class Utilities:
         # WARNING: this means that you cannot use this runtime implementation if you need to deal
         # with class names that use anything but what is allowed here
         ok_values = dict.fromkeys(
-            "$%_.-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890")
+            "$%_.-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890"
+        )
         return all(c in ok_values for c in name)
 
     @staticmethod
@@ -80,7 +80,7 @@ class Utilities:
         # assume the only thing that has a Foundation.framework is a Mac
         # assume anything < Lion does not even exist
         try:
-            mod = target.module['Foundation']
+            mod = target.module["Foundation"]
         except:
             mod = None
         if mod is None or mod.IsValid() == 0:
@@ -88,7 +88,7 @@ class Utilities:
         ver = mod.GetVersion()
         if ver is None or ver == []:
             return None
-        return (ver[0] < 900)
+        return ver[0] < 900
 
     # a utility method that factors out code common to almost all the formatters
     # takes in an SBValue and a metrics object
@@ -99,46 +99,47 @@ class Utilities:
         logger = lldb.formatters.Logger.Logger()
         class_data = ObjCRuntime(valobj)
         if class_data.is_valid() == 0:
-            statistics.metric_hit('invalid_pointer', valobj)
-            wrapper = InvalidPointer_Description(
-                valobj.GetValueAsUnsigned(0) == 0)
+            statistics.metric_hit("invalid_pointer", valobj)
+            wrapper = InvalidPointer_Description(valobj.GetValueAsUnsigned(0) == 0)
             return class_data, wrapper
         class_data = class_data.read_class_data()
         if class_data.is_valid() == 0:
-            statistics.metric_hit('invalid_isa', valobj)
+            statistics.metric_hit("invalid_isa", valobj)
             wrapper = InvalidISA_Description()
             return class_data, wrapper
         if class_data.is_kvo():
             class_data = class_data.get_superclass()
-        if class_data.class_name() == '_NSZombie_OriginalClass':
+        if class_data.class_name() == "_NSZombie_OriginalClass":
             wrapper = ThisIsZombie_Description()
             return class_data, wrapper
         return class_data, None
 
 
 class RoT_Data:
-
     def __init__(self, rot_pointer, params):
         logger = lldb.formatters.Logger.Logger()
-        if (Utilities.is_valid_pointer(rot_pointer.GetValueAsUnsigned(),
-                                       params.pointer_size, allow_tagged=0)):
+        if Utilities.is_valid_pointer(
+            rot_pointer.GetValueAsUnsigned(), params.pointer_size, allow_tagged=0
+        ):
             self.sys_params = params
             self.valobj = rot_pointer
-            #self.flags = Utilities.read_child_of(self.valobj,0,self.sys_params.uint32_t)
-            #self.instanceStart = Utilities.read_child_of(self.valobj,4,self.sys_params.uint32_t)
+            # self.flags = Utilities.read_child_of(self.valobj,0,self.sys_params.uint32_t)
+            # self.instanceStart = Utilities.read_child_of(self.valobj,4,self.sys_params.uint32_t)
             self.instanceSize = None  # lazy fetching
             offset = 24 if self.sys_params.is_64_bit else 16
-            #self.ivarLayoutPtr = Utilities.read_child_of(self.valobj,offset,self.sys_params.addr_ptr_type)
+            # self.ivarLayoutPtr = Utilities.read_child_of(self.valobj,offset,self.sys_params.addr_ptr_type)
             self.namePointer = Utilities.read_child_of(
-                self.valobj, offset, self.sys_params.types_cache.addr_ptr_type)
+                self.valobj, offset, self.sys_params.types_cache.addr_ptr_type
+            )
             self.valid = 1  # self.check_valid()
         else:
             logger >> "Marking as invalid - rot is invalid"
             self.valid = 0
         if self.valid:
             self.name = Utilities.read_ascii(
-                self.valobj.GetTarget().GetProcess(), self.namePointer)
-            if not(Utilities.is_valid_identifier(self.name)):
+                self.valobj.GetTarget().GetProcess(), self.namePointer
+            )
+            if not (Utilities.is_valid_identifier(self.name)):
                 logger >> "Marking as invalid - name is invalid"
                 self.valid = 0
 
@@ -147,14 +148,20 @@ class RoT_Data:
         self.valid = 1
         # misaligned pointers seem to be possible for this field
         # if not(Utilities.is_valid_pointer(self.namePointer,self.sys_params.pointer_size,allow_tagged=0)):
-        #	self.valid = 0
-        #	pass
+        # 	self.valid = 0
+        # 	pass
 
     def __str__(self):
         logger = lldb.formatters.Logger.Logger()
-        return \
-            "instanceSize = " + hex(self.instance_size()) + "\n" + \
-            "namePointer = " + hex(self.namePointer) + " --> " + self.name
+        return (
+            "instanceSize = "
+            + hex(self.instance_size())
+            + "\n"
+            + "namePointer = "
+            + hex(self.namePointer)
+            + " --> "
+            + self.name
+        )
 
     def is_valid(self):
         return self.valid
@@ -165,7 +172,8 @@ class RoT_Data:
             return None
         if self.instanceSize is None:
             self.instanceSize = Utilities.read_child_of(
-                self.valobj, 8, self.sys_params.types_cache.uint32_t)
+                self.valobj, 8, self.sys_params.types_cache.uint32_t
+            )
         if align:
             unalign = self.instance_size(0)
             if self.sys_params.is_64_bit:
@@ -177,45 +185,50 @@ class RoT_Data:
 
 
 class RwT_Data:
-
     def __init__(self, rwt_pointer, params):
         logger = lldb.formatters.Logger.Logger()
-        if (Utilities.is_valid_pointer(rwt_pointer.GetValueAsUnsigned(),
-                                       params.pointer_size, allow_tagged=0)):
+        if Utilities.is_valid_pointer(
+            rwt_pointer.GetValueAsUnsigned(), params.pointer_size, allow_tagged=0
+        ):
             self.sys_params = params
             self.valobj = rwt_pointer
-            #self.flags = Utilities.read_child_of(self.valobj,0,self.sys_params.uint32_t)
-            #self.version = Utilities.read_child_of(self.valobj,4,self.sys_params.uint32_t)
+            # self.flags = Utilities.read_child_of(self.valobj,0,self.sys_params.uint32_t)
+            # self.version = Utilities.read_child_of(self.valobj,4,self.sys_params.uint32_t)
             self.roPointer = Utilities.read_child_of(
-                self.valobj, 8, self.sys_params.types_cache.addr_ptr_type)
+                self.valobj, 8, self.sys_params.types_cache.addr_ptr_type
+            )
             self.check_valid()
         else:
             logger >> "Marking as invalid - rwt is invald"
             self.valid = 0
         if self.valid:
             self.rot = self.valobj.CreateValueFromData(
-                "rot", lldb.SBData.CreateDataFromUInt64Array(
-                    self.sys_params.endianness, self.sys_params.pointer_size, [
-                        self.roPointer]), self.sys_params.types_cache.addr_ptr_type)
-#			self.rot = self.valobj.CreateValueFromAddress("rot",self.roPointer,self.sys_params.types_cache.addr_ptr_type).AddressOf()
+                "rot",
+                lldb.SBData.CreateDataFromUInt64Array(
+                    self.sys_params.endianness,
+                    self.sys_params.pointer_size,
+                    [self.roPointer],
+                ),
+                self.sys_params.types_cache.addr_ptr_type,
+            )
+            # 			self.rot = self.valobj.CreateValueFromAddress("rot",self.roPointer,self.sys_params.types_cache.addr_ptr_type).AddressOf()
             self.data = RoT_Data(self.rot, self.sys_params)
 
     # perform sanity checks on the contents of this class_rw_t
     def check_valid(self):
         logger = lldb.formatters.Logger.Logger()
         self.valid = 1
-        if not(
+        if not (
             Utilities.is_valid_pointer(
-                self.roPointer,
-                self.sys_params.pointer_size,
-                allow_tagged=0)):
+                self.roPointer, self.sys_params.pointer_size, allow_tagged=0
+            )
+        ):
             logger >> "Marking as invalid - ropointer is invalid"
             self.valid = 0
 
     def __str__(self):
         logger = lldb.formatters.Logger.Logger()
-        return \
-            "roPointer = " + hex(self.roPointer)
+        return "roPointer = " + hex(self.roPointer)
 
     def is_valid(self):
         logger = lldb.formatters.Logger.Logger()
@@ -225,11 +238,13 @@ class RwT_Data:
 
 
 class Class_Data_V2:
-
     def __init__(self, isa_pointer, params):
         logger = lldb.formatters.Logger.Logger()
-        if (isa_pointer is not None) and (Utilities.is_valid_pointer(
-                isa_pointer.GetValueAsUnsigned(), params.pointer_size, allow_tagged=0)):
+        if (isa_pointer is not None) and (
+            Utilities.is_valid_pointer(
+                isa_pointer.GetValueAsUnsigned(), params.pointer_size, allow_tagged=0
+            )
+        ):
             self.sys_params = params
             self.valobj = isa_pointer
             self.check_valid()
@@ -238,10 +253,15 @@ class Class_Data_V2:
             self.valid = 0
         if self.valid:
             self.rwt = self.valobj.CreateValueFromData(
-                "rwt", lldb.SBData.CreateDataFromUInt64Array(
-                    self.sys_params.endianness, self.sys_params.pointer_size, [
-                        self.dataPointer]), self.sys_params.types_cache.addr_ptr_type)
-#			self.rwt = self.valobj.CreateValueFromAddress("rwt",self.dataPointer,self.sys_params.types_cache.addr_ptr_type).AddressOf()
+                "rwt",
+                lldb.SBData.CreateDataFromUInt64Array(
+                    self.sys_params.endianness,
+                    self.sys_params.pointer_size,
+                    [self.dataPointer],
+                ),
+                self.sys_params.types_cache.addr_ptr_type,
+            )
+            # 			self.rwt = self.valobj.CreateValueFromAddress("rwt",self.dataPointer,self.sys_params.types_cache.addr_ptr_type).AddressOf()
             self.data = RwT_Data(self.rwt, self.sys_params)
 
     # perform sanity checks on the contents of this class_t
@@ -252,16 +272,17 @@ class Class_Data_V2:
         self.valid = 1
 
         self.isaPointer = Utilities.read_child_of(
-            self.valobj, 0, self.sys_params.types_cache.addr_ptr_type)
-        if not(
+            self.valobj, 0, self.sys_params.types_cache.addr_ptr_type
+        )
+        if not (
             Utilities.is_valid_pointer(
-                self.isaPointer,
-                self.sys_params.pointer_size,
-                allow_tagged=0)):
+                self.isaPointer, self.sys_params.pointer_size, allow_tagged=0
+            )
+        ):
             logger >> "Marking as invalid - isaPointer is invalid"
             self.valid = 0
             return
-        if not(Utilities.is_allowed_pointer(self.isaPointer)):
+        if not (Utilities.is_allowed_pointer(self.isaPointer)):
             logger >> "Marking as invalid - isaPointer is not allowed"
             self.valid = 0
             return
@@ -269,32 +290,34 @@ class Class_Data_V2:
         self.cachePointer = Utilities.read_child_of(
             self.valobj,
             2 * self.sys_params.pointer_size,
-            self.sys_params.types_cache.addr_ptr_type)
-        if not(
+            self.sys_params.types_cache.addr_ptr_type,
+        )
+        if not (
             Utilities.is_valid_pointer(
-                self.cachePointer,
-                self.sys_params.pointer_size,
-                allow_tagged=0)):
+                self.cachePointer, self.sys_params.pointer_size, allow_tagged=0
+            )
+        ):
             logger >> "Marking as invalid - cachePointer is invalid"
             self.valid = 0
             return
-        if not(Utilities.is_allowed_pointer(self.cachePointer)):
+        if not (Utilities.is_allowed_pointer(self.cachePointer)):
             logger >> "Marking as invalid - cachePointer is not allowed"
             self.valid = 0
             return
         self.dataPointer = Utilities.read_child_of(
             self.valobj,
             4 * self.sys_params.pointer_size,
-            self.sys_params.types_cache.addr_ptr_type)
-        if not(
+            self.sys_params.types_cache.addr_ptr_type,
+        )
+        if not (
             Utilities.is_valid_pointer(
-                self.dataPointer,
-                self.sys_params.pointer_size,
-                allow_tagged=0)):
+                self.dataPointer, self.sys_params.pointer_size, allow_tagged=0
+            )
+        ):
             logger >> "Marking as invalid - dataPointer is invalid"
             self.valid = 0
             return
-        if not(Utilities.is_allowed_pointer(self.dataPointer)):
+        if not (Utilities.is_allowed_pointer(self.dataPointer)):
             logger >> "Marking as invalid - dataPointer is not allowed"
             self.valid = 0
             return
@@ -302,17 +325,20 @@ class Class_Data_V2:
         self.superclassIsaPointer = Utilities.read_child_of(
             self.valobj,
             1 * self.sys_params.pointer_size,
-            self.sys_params.types_cache.addr_ptr_type)
-        if not(
+            self.sys_params.types_cache.addr_ptr_type,
+        )
+        if not (
             Utilities.is_valid_pointer(
                 self.superclassIsaPointer,
                 self.sys_params.pointer_size,
                 allow_tagged=0,
-                allow_NULL=1)):
+                allow_NULL=1,
+            )
+        ):
             logger >> "Marking as invalid - superclassIsa is invalid"
             self.valid = 0
             return
-        if not(Utilities.is_allowed_pointer(self.superclassIsaPointer)):
+        if not (Utilities.is_allowed_pointer(self.superclassIsaPointer)):
             logger >> "Marking as invalid - superclassIsa is not allowed"
             self.valid = 0
             return
@@ -335,13 +361,16 @@ class Class_Data_V2:
     def is_cftype(self):
         logger = lldb.formatters.Logger.Logger()
         if self.is_valid():
-            return self.class_name() == '__NSCFType' or self.class_name() == 'NSCFType'
+            return self.class_name() == "__NSCFType" or self.class_name() == "NSCFType"
 
     def get_superclass(self):
         logger = lldb.formatters.Logger.Logger()
         if self.is_valid():
             parent_isa_pointer = self.valobj.CreateChildAtOffset(
-                "parent_isa", self.sys_params.pointer_size, self.sys_params.addr_ptr_type)
+                "parent_isa",
+                self.sys_params.pointer_size,
+                self.sys_params.addr_ptr_type,
+            )
             return Class_Data_V2(parent_isa_pointer, self.sys_params)
         else:
             return None
@@ -361,10 +390,19 @@ class Class_Data_V2:
 
     def __str__(self):
         logger = lldb.formatters.Logger.Logger()
-        return 'isaPointer = ' + hex(self.isaPointer) + "\n" + \
-            "superclassIsaPointer = " + hex(self.superclassIsaPointer) + "\n" + \
-            "cachePointer = " + hex(self.cachePointer) + "\n" + \
-            "data = " + hex(self.dataPointer)
+        return (
+            "isaPointer = "
+            + hex(self.isaPointer)
+            + "\n"
+            + "superclassIsaPointer = "
+            + hex(self.superclassIsaPointer)
+            + "\n"
+            + "cachePointer = "
+            + hex(self.cachePointer)
+            + "\n"
+            + "data = "
+            + hex(self.dataPointer)
+        )
 
     def is_tagged(self):
         return 0
@@ -375,16 +413,19 @@ class Class_Data_V2:
             return None
         return self.rwt.rot.instance_size(align)
 
+
 # runtime v1 is much less intricate than v2 and stores relevant
 # information directly in the class_t object
 
 
 class Class_Data_V1:
-
     def __init__(self, isa_pointer, params):
         logger = lldb.formatters.Logger.Logger()
-        if (isa_pointer is not None) and (Utilities.is_valid_pointer(
-                isa_pointer.GetValueAsUnsigned(), params.pointer_size, allow_tagged=0)):
+        if (isa_pointer is not None) and (
+            Utilities.is_valid_pointer(
+                isa_pointer.GetValueAsUnsigned(), params.pointer_size, allow_tagged=0
+            )
+        ):
             self.valid = 1
             self.sys_params = params
             self.valobj = isa_pointer
@@ -394,8 +435,9 @@ class Class_Data_V1:
             self.valid = 0
         if self.valid:
             self.name = Utilities.read_ascii(
-                self.valobj.GetTarget().GetProcess(), self.namePointer)
-            if not(Utilities.is_valid_identifier(self.name)):
+                self.valobj.GetTarget().GetProcess(), self.namePointer
+            )
+            if not (Utilities.is_valid_identifier(self.name)):
                 logger >> "Marking as invalid - name is not valid"
                 self.valid = 0
 
@@ -405,12 +447,13 @@ class Class_Data_V1:
         self.valid = 1
 
         self.isaPointer = Utilities.read_child_of(
-            self.valobj, 0, self.sys_params.types_cache.addr_ptr_type)
-        if not(
+            self.valobj, 0, self.sys_params.types_cache.addr_ptr_type
+        )
+        if not (
             Utilities.is_valid_pointer(
-                self.isaPointer,
-                self.sys_params.pointer_size,
-                allow_tagged=0)):
+                self.isaPointer, self.sys_params.pointer_size, allow_tagged=0
+            )
+        ):
             logger >> "Marking as invalid - isaPointer is invalid"
             self.valid = 0
             return
@@ -418,13 +461,16 @@ class Class_Data_V1:
         self.superclassIsaPointer = Utilities.read_child_of(
             self.valobj,
             1 * self.sys_params.pointer_size,
-            self.sys_params.types_cache.addr_ptr_type)
-        if not(
+            self.sys_params.types_cache.addr_ptr_type,
+        )
+        if not (
             Utilities.is_valid_pointer(
                 self.superclassIsaPointer,
                 self.sys_params.pointer_size,
                 allow_tagged=0,
-                allow_NULL=1)):
+                allow_NULL=1,
+            )
+        ):
             logger >> "Marking as invalid - superclassIsa is invalid"
             self.valid = 0
             return
@@ -432,10 +478,11 @@ class Class_Data_V1:
         self.namePointer = Utilities.read_child_of(
             self.valobj,
             2 * self.sys_params.pointer_size,
-            self.sys_params.types_cache.addr_ptr_type)
+            self.sys_params.types_cache.addr_ptr_type,
+        )
         # if not(Utilities.is_valid_pointer(self.namePointer,self.sys_params.pointer_size,allow_tagged=0,allow_NULL=0)):
-        #	self.valid = 0
-        #	return
+        # 	self.valid = 0
+        # 	return
 
     # in general, KVO is implemented by transparently subclassing
     # however, there could be exceptions where a class does something else
@@ -455,13 +502,16 @@ class Class_Data_V1:
     def is_cftype(self):
         logger = lldb.formatters.Logger.Logger()
         if self.is_valid():
-            return self.class_name() == '__NSCFType' or self.class_name() == 'NSCFType'
+            return self.class_name() == "__NSCFType" or self.class_name() == "NSCFType"
 
     def get_superclass(self):
         logger = lldb.formatters.Logger.Logger()
         if self.is_valid():
             parent_isa_pointer = self.valobj.CreateChildAtOffset(
-                "parent_isa", self.sys_params.pointer_size, self.sys_params.addr_ptr_type)
+                "parent_isa",
+                self.sys_params.pointer_size,
+                self.sys_params.addr_ptr_type,
+            )
             return Class_Data_V1(parent_isa_pointer, self.sys_params)
         else:
             return None
@@ -478,10 +528,21 @@ class Class_Data_V1:
 
     def __str__(self):
         logger = lldb.formatters.Logger.Logger()
-        return 'isaPointer = ' + hex(self.isaPointer) + "\n" + \
-            "superclassIsaPointer = " + hex(self.superclassIsaPointer) + "\n" + \
-            "namePointer = " + hex(self.namePointer) + " --> " + self.name + \
-            "instanceSize = " + hex(self.instanceSize()) + "\n"
+        return (
+            "isaPointer = "
+            + hex(self.isaPointer)
+            + "\n"
+            + "superclassIsaPointer = "
+            + hex(self.superclassIsaPointer)
+            + "\n"
+            + "namePointer = "
+            + hex(self.namePointer)
+            + " --> "
+            + self.name
+            + "instanceSize = "
+            + hex(self.instanceSize())
+            + "\n"
+        )
 
     def is_tagged(self):
         return 0
@@ -494,7 +555,8 @@ class Class_Data_V1:
             self.instanceSize = Utilities.read_child_of(
                 self.valobj,
                 5 * self.sys_params.pointer_size,
-                self.sys_params.types_cache.addr_ptr_type)
+                self.sys_params.types_cache.addr_ptr_type,
+            )
         if align:
             unalign = self.instance_size(0)
             if self.sys_params.is_64_bit:
@@ -504,23 +566,27 @@ class Class_Data_V1:
         else:
             return self.instanceSize
 
+
 # these are the only tagged pointers values for current versions
 # of OSX - they might change in future OS releases, and no-one is
 # advised to rely on these values, or any of the bitmasking formulas
 # in TaggedClass_Data. doing otherwise is at your own risk
-TaggedClass_Values_Lion = {1: 'NSNumber',
-                           5: 'NSManagedObject',
-                           6: 'NSDate',
-                           7: 'NSDateTS'}
-TaggedClass_Values_NMOS = {0: 'NSAtom',
-                           3: 'NSNumber',
-                           4: 'NSDateTS',
-                           5: 'NSManagedObject',
-                           6: 'NSDate'}
+TaggedClass_Values_Lion = {
+    1: "NSNumber",
+    5: "NSManagedObject",
+    6: "NSDate",
+    7: "NSDateTS",
+}
+TaggedClass_Values_NMOS = {
+    0: "NSAtom",
+    3: "NSNumber",
+    4: "NSDateTS",
+    5: "NSManagedObject",
+    6: "NSDate",
+}
 
 
 class TaggedClass_Data:
-
     def __init__(self, pointer, params):
         logger = lldb.formatters.Logger.Logger()
         global TaggedClass_Values_Lion, TaggedClass_Values_NMOS
@@ -586,7 +652,6 @@ class TaggedClass_Data:
 
 
 class InvalidClass_Data:
-
     def __init__(self):
         pass
 
@@ -595,7 +660,6 @@ class InvalidClass_Data:
 
 
 class Version:
-
     def __init__(self, major, minor, release, build_string):
         self._major = major
         self._minor = minor
@@ -620,21 +684,23 @@ class Version:
     build_string = property(get_build_string, None)
 
     def __lt__(self, other):
-        if (self.major < other.major):
+        if self.major < other.major:
             return 1
-        if (self.minor < other.minor):
+        if self.minor < other.minor:
             return 1
-        if (self.release < other.release):
+        if self.release < other.release:
             return 1
         # build strings are not compared since they are heavily platform-dependent and might not always
         # be available
         return 0
 
     def __eq__(self, other):
-        return (self.major == other.major) and \
-               (self.minor == other.minor) and \
-               (self.release == other.release) and \
-               (self.build_string == other.build_string)
+        return (
+            (self.major == other.major)
+            and (self.minor == other.minor)
+            and (self.release == other.release)
+            and (self.build_string == other.build_string)
+        )
 
     # Python 2.6 doesn't have functools.total_ordering, so we have to implement
     # other comparators
@@ -655,7 +721,6 @@ isa_caches = lldb.formatters.cache.Cache()
 
 
 class SystemParameters:
-
     def __init__(self, valobj):
         logger = lldb.formatters.Logger.Logger()
         self.adjust_for_architecture(valobj)
@@ -689,12 +754,15 @@ class SystemParameters:
             self.types_cache = types_caches.get_value(self.pid)
         else:
             self.types_cache = lldb.formatters.attrib_fromdict.AttributesDictionary(
-                allow_reset=0)
-            self.types_cache.addr_type = valobj.GetType(
-            ).GetBasicType(lldb.eBasicTypeUnsignedLong)
+                allow_reset=0
+            )
+            self.types_cache.addr_type = valobj.GetType().GetBasicType(
+                lldb.eBasicTypeUnsignedLong
+            )
             self.types_cache.addr_ptr_type = self.types_cache.addr_type.GetPointerType()
-            self.types_cache.uint32_t = valobj.GetType(
-            ).GetBasicType(lldb.eBasicTypeUnsignedInt)
+            self.types_cache.uint32_t = valobj.GetType().GetBasicType(
+                lldb.eBasicTypeUnsignedInt
+            )
             types_caches.add_item(self.pid, self.types_cache)
 
         if isa_caches.look_for_key(self.pid):
@@ -706,9 +774,9 @@ class SystemParameters:
     def adjust_for_architecture(self, valobj):
         process = valobj.GetTarget().GetProcess()
         self.pointer_size = process.GetAddressByteSize()
-        self.is_64_bit = (self.pointer_size == 8)
+        self.is_64_bit = self.pointer_size == 8
         self.endianness = process.GetByteOrder()
-        self.is_little = (self.endianness == lldb.eByteOrderLittle)
+        self.is_little = self.endianness == lldb.eByteOrderLittle
         self.cfruntime_size = 16 if self.is_64_bit else 8
 
     # a simple helper function that makes it more explicit that one is calculating
@@ -717,18 +785,12 @@ class SystemParameters:
     # you can pass that in and it will be taken into account (since padding may be different between
     # 32 and 64 bit versions, you can pass padding value for both, the right
     # one will be used)
-    def calculate_offset(
-            self,
-            num_pointers=0,
-            bytes_count=0,
-            padding32=0,
-            padding64=0):
+    def calculate_offset(self, num_pointers=0, bytes_count=0, padding32=0, padding64=0):
         value = bytes_count + num_pointers * self.pointer_size
         return value + padding64 if self.is_64_bit else value + padding32
 
 
 class ObjCRuntime:
-
     # the ObjC runtime has no explicit "version" field that we can use
     # instead, we discriminate v1 from v2 by looking for the presence
     # of a well-known section only present in v1
@@ -743,7 +805,7 @@ class ObjCRuntime:
         module_objc = None
         for idx in range(num_modules):
             module = target.GetModuleAtIndex(idx)
-            if module.GetFileSpec().GetFilename() == 'libobjc.A.dylib':
+            if module.GetFileSpec().GetFilename() == "libobjc.A.dylib":
                 module_objc = module
                 break
         if module_objc is None or module_objc.IsValid() == 0:
@@ -753,7 +815,7 @@ class ObjCRuntime:
         section_objc = None
         for idx in range(num_sections):
             section = module.GetSectionAtIndex(idx)
-            if section.GetName() == '__OBJC':
+            if section.GetName() == "__OBJC":
                 section_objc = section
                 break
         if section_objc is not None and section_objc.IsValid():
@@ -780,20 +842,18 @@ class ObjCRuntime:
     def adjust_for_architecture(self):
         pass
 
-# an ObjC pointer can either be tagged or must be aligned
+    # an ObjC pointer can either be tagged or must be aligned
     def is_tagged(self):
         logger = lldb.formatters.Logger.Logger()
         if self.valobj is None:
             return 0
-        return (
+        return Utilities.is_valid_pointer(
+            self.unsigned_value, self.sys_params.pointer_size, allow_tagged=1
+        ) and not (
             Utilities.is_valid_pointer(
-                self.unsigned_value,
-                self.sys_params.pointer_size,
-                allow_tagged=1) and not(
-                Utilities.is_valid_pointer(
-                    self.unsigned_value,
-                    self.sys_params.pointer_size,
-                    allow_tagged=0)))
+                self.unsigned_value, self.sys_params.pointer_size, allow_tagged=0
+            )
+        )
 
     def is_valid(self):
         logger = lldb.formatters.Logger.Logger()
@@ -802,9 +862,8 @@ class ObjCRuntime:
         if self.valobj.IsInScope() == 0:
             return 0
         return Utilities.is_valid_pointer(
-            self.unsigned_value,
-            self.sys_params.pointer_size,
-            allow_tagged=1)
+            self.unsigned_value, self.sys_params.pointer_size, allow_tagged=1
+        )
 
     def is_nil(self):
         return self.unsigned_value == 0
@@ -815,7 +874,8 @@ class ObjCRuntime:
             logger >> "using cached isa"
             return self.isa_value
         self.isa_pointer = self.valobj.CreateChildAtOffset(
-            "cfisa", 0, self.sys_params.types_cache.addr_ptr_type)
+            "cfisa", 0, self.sys_params.types_cache.addr_ptr_type
+        )
         if self.isa_pointer is None or self.isa_pointer.IsValid() == 0:
             logger >> "invalid isa - bailing out"
             return None
@@ -837,7 +897,8 @@ class ObjCRuntime:
                 # but unless performance requires it, this seems a cleaner way
                 # to tackle the task
                 tentative_tagged = TaggedClass_Data(
-                    self.unsigned_value, self.sys_params)
+                    self.unsigned_value, self.sys_params
+                )
                 if tentative_tagged.is_valid():
                     logger >> "truly tagged"
                     return tentative_tagged
@@ -849,8 +910,7 @@ class ObjCRuntime:
                 return InvalidClass_Data()
         if self.is_valid() == 0 or self.read_isa() is None:
             return InvalidClass_Data()
-        data = self.sys_params.isa_cache.get_value(
-            self.isa_value, default=None)
+        data = self.sys_params.isa_cache.get_value(self.isa_value, default=None)
         if data is not None:
             return data
         if self.sys_params.runtime_version == 2:
@@ -860,22 +920,20 @@ class ObjCRuntime:
         if data is None:
             return InvalidClass_Data()
         if data.is_valid():
-            self.sys_params.isa_cache.add_item(
-                self.isa_value, data, ok_to_replace=1)
+            self.sys_params.isa_cache.add_item(self.isa_value, data, ok_to_replace=1)
         return data
+
 
 # these classes below can be used by the data formatters to provide a
 # consistent message that describes a given runtime-generated situation
 
 
 class SpecialSituation_Description:
-
     def message(self):
-        return ''
+        return ""
 
 
 class InvalidPointer_Description(SpecialSituation_Description):
-
     def __init__(self, nil):
         self.is_nil = nil
 
@@ -883,19 +941,17 @@ class InvalidPointer_Description(SpecialSituation_Description):
         if self.is_nil:
             return '@"<nil>"'
         else:
-            return '<invalid pointer>'
+            return "<invalid pointer>"
 
 
 class InvalidISA_Description(SpecialSituation_Description):
-
     def __init__(self):
         pass
 
     def message(self):
-        return '<not an Objective-C object>'
+        return "<not an Objective-C object>"
 
 
 class ThisIsZombie_Description(SpecialSituation_Description):
-
     def message(self):
-        return '<freed object>'
+        return "<freed object>"

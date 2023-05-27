@@ -520,7 +520,7 @@ checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
              << operandName << " operand appears more than once";
 
     mlir::Type varType = operand.getType();
-    auto symbolRef = std::get<1>(args).cast<SymbolRefAttr>();
+    auto symbolRef = llvm::cast<SymbolRefAttr>(std::get<1>(args));
     auto decl = SymbolTable::lookupNearestSymbolFrom<Op>(op, symbolRef);
     if (!decl)
       return op->emitOpError()

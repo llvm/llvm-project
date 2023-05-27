@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -201,6 +202,16 @@ void propagateShapesInRegion(Region &region) {
     return it->second;
   };
 
+  // Check whether this use case is replaceable. We define an op as
+  // being replaceable if it is used by a ReturnOp, a TosaOp, or an op with a
+  // type-inference related interface.
+  auto isReplaceableUser = [](Operation *user) -> bool {
+    return isa<func::ReturnOp>(user) ||
+           user->getDialect()->getNamespace() ==
+               TosaDialect::getDialectNamespace() ||
+           isa<InferTypeOpInterface, InferShapedTypeOpInterface>(user);
+  };
+
   for (auto &block : region) {
     for (Operation &op : block) {
       if (op.getDialect()->getNamespace() != TosaDialect::getDialectNamespace())
@@ -227,18 +238,8 @@ void propagateShapesInRegion(Region &region) {
           Value result = std::get<0>(it);
           ShapedTypeComponents predictedShape = std::get<1>(it);
 
-          // Check whether this use case is replaceable. We define an op as
-          // being replaceable if it is used by a ReturnOp or a TosaOp.
-          bool replaceable = true;
-          for (auto *user : result.getUsers()) {
-            if (isa<func::ReturnOp>(user))
-              continue;
-            if (user->getDialect()->getNamespace() ==
-                TosaDialect::getDialectNamespace())
-              continue;
-
-            replaceable = false;
-          }
+          if (!llvm::all_of(result.getUsers(), isReplaceableUser))
+            continue;
 
           // Determine the knowledge based on the output type.
           // TODO: should also query WIP type probably
@@ -255,9 +256,6 @@ void propagateShapesInRegion(Region &region) {
               inferredKnowledge.sizes.push_back(dim);
             }
           }
-
-          if (!replaceable)
-            continue;
 
           // Compute the new type based on the joined version.
           auto newKnowledge =

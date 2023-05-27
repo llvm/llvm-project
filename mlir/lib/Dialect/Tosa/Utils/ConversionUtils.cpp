@@ -103,8 +103,8 @@ computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
 
 LogicalResult mlir::tosa::EqualizeRanks(PatternRewriter &rewriter, Location loc,
                                         Value &input1, Value &input2) {
-  auto input1Ty = input1.getType().dyn_cast<RankedTensorType>();
-  auto input2Ty = input2.getType().dyn_cast<RankedTensorType>();
+  auto input1Ty = llvm::dyn_cast<RankedTensorType>(input1.getType());
+  auto input2Ty = llvm::dyn_cast<RankedTensorType>(input2.getType());
 
   if (!input1Ty || !input2Ty) {
     return failure();
@@ -126,9 +126,9 @@ LogicalResult mlir::tosa::EqualizeRanks(PatternRewriter &rewriter, Location loc,
   }
 
   ArrayRef<int64_t> higherRankShape =
-      higherTensorValue.getType().cast<RankedTensorType>().getShape();
+      llvm::cast<RankedTensorType>(higherTensorValue.getType()).getShape();
   ArrayRef<int64_t> lowerRankShape =
-      lowerTensorValue.getType().cast<RankedTensorType>().getShape();
+      llvm::cast<RankedTensorType>(lowerTensorValue.getType()).getShape();
 
   SmallVector<int64_t, 4> reshapeOutputShape;
 
@@ -136,7 +136,8 @@ LogicalResult mlir::tosa::EqualizeRanks(PatternRewriter &rewriter, Location loc,
           .failed())
     return failure();
 
-  auto reshapeInputType = lowerTensorValue.getType().cast<RankedTensorType>();
+  auto reshapeInputType =
+      llvm::cast<RankedTensorType>(lowerTensorValue.getType());
   auto reshapeOutputType = RankedTensorType::get(
       ArrayRef<int64_t>(reshapeOutputShape), reshapeInputType.getElementType());
 

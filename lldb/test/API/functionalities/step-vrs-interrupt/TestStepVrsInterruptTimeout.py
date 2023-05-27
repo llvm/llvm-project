@@ -9,12 +9,11 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestStepVrsInterruptTimeout(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_step_vrs_interrupt(self):
         """This test is to make sure that the interrupt timeout
-           doesn't cause use to flub events from a synchronous step."""
+        doesn't cause use to flub events from a synchronous step."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.cpp")
         self.sample_test()
@@ -26,9 +25,12 @@ class TestStepVrsInterruptTimeout(TestBase):
         # breakpoint, runs to it, and returns the thread, process & target.
         # It optionally takes an SBLaunchOption argument if you want to pass
         # arguments or environment variables.
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                   "Set a breakpoint here", self.main_source_file)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
         self.dbg.SetAsync(False)
         self.runCmd("settings set target.process.interrupt-timeout 1")
         thread.StepOver()
-        self.assertState(process.GetState(), lldb.eStateStopped, "Stopped like we should")
+        self.assertState(
+            process.GetState(), lldb.eStateStopped, "Stopped like we should"
+        )

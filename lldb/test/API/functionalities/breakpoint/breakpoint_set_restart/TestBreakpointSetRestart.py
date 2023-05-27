@@ -8,11 +8,10 @@ from lldbsuite.test.lldbtest import *
 
 
 class BreakpointSetRestart(TestBase):
-    BREAKPOINT_TEXT = 'Set a breakpoint here'
+    BREAKPOINT_TEXT = "Set a breakpoint here"
 
     @skipIfNetBSD
-    @skipIf(oslist=["freebsd"],
-            bugnumber="github.com/llvm/llvm-project/issues/56082")
+    @skipIf(oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56082")
     def test_breakpoint_set_restart(self):
         self.build()
 
@@ -22,8 +21,7 @@ class BreakpointSetRestart(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         self.dbg.SetAsync(True)
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         event = lldb.SBEvent()
@@ -33,18 +31,20 @@ class BreakpointSetRestart(TestBase):
                 break
 
         bp = target.BreakpointCreateBySourceRegex(
-            self.BREAKPOINT_TEXT, lldb.SBFileSpec('main.cpp'))
-        self.assertTrue(
-            bp.IsValid() and bp.GetNumLocations() == 1,
-            VALID_BREAKPOINT)
+            self.BREAKPOINT_TEXT, lldb.SBFileSpec("main.cpp")
+        )
+        self.assertTrue(bp.IsValid() and bp.GetNumLocations() == 1, VALID_BREAKPOINT)
 
         while self.dbg.GetListener().WaitForEvent(2, event):
             if lldb.SBProcess.GetStateFromEvent(
-                    event) == lldb.eStateStopped and lldb.SBProcess.GetRestartedFromEvent(event):
+                event
+            ) == lldb.eStateStopped and lldb.SBProcess.GetRestartedFromEvent(event):
                 continue
             if lldb.SBProcess.GetStateFromEvent(event) == lldb.eStateRunning:
                 continue
             self.fail(
-                "Setting a breakpoint generated an unexpected event: %s" %
-                lldb.SBDebugger.StateAsCString(
-                    lldb.SBProcess.GetStateFromEvent(event)))
+                "Setting a breakpoint generated an unexpected event: %s"
+                % lldb.SBDebugger.StateAsCString(
+                    lldb.SBProcess.GetStateFromEvent(event)
+                )
+            )

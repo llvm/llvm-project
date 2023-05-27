@@ -3,7 +3,6 @@ Test loading of a kext binary.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
