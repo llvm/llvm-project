@@ -1642,6 +1642,15 @@ def ffloat16_excess_precision_EQ : Joined<["-"], "ffloat16-excess-precision=">,
   Values<"standard,fast,none">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["FPP_Standard", "FPP_Fast", "FPP_None"]>,
   MarshallingInfoEnum<LangOpts<"Float16ExcessPrecision">, "FPP_Standard">;
+def fbfloat16_excess_precision_EQ : Joined<["-"], "fbfloat16-excess-precision=">,
+  Group<f_Group>, Flags<[CC1Option, NoDriverOption]>,
+  HelpText<"Allows control over excess precision on targets where native "
+  "support for BFloat16 precision types is not available. By default, excess "
+  "precision is used to calculate intermediate results following the "
+  "rules specified in ISO C99.">,
+  Values<"standard,fast,none">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["FPP_Standard", "FPP_Fast", "FPP_None"]>,
+  MarshallingInfoEnum<LangOpts<"BFloat16ExcessPrecision">, "FPP_Standard">;
 def : Flag<["-"], "fexpensive-optimizations">, Group<clang_ignored_gcc_optimization_f_Group>;
 def : Flag<["-"], "fno-expensive-optimizations">, Group<clang_ignored_gcc_optimization_f_Group>;
 def fextdirs_EQ : Joined<["-"], "fextdirs=">, Group<f_Group>;

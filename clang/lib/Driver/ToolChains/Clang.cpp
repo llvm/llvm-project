@@ -2774,6 +2774,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     FPContract = "on";
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
+  StringRef BFloat16ExcessPrecision = "";
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2989,6 +2990,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
           D.Diag(diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Val;
       }
+      BFloat16ExcessPrecision = Float16ExcessPrecision;
       break;
     }
     case options::OPT_ffinite_math_only:
@@ -3164,6 +3166,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!Float16ExcessPrecision.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffloat16-excess-precision=" +
                                          Float16ExcessPrecision));
+  if (!BFloat16ExcessPrecision.empty())
+    CmdArgs.push_back(Args.MakeArgString("-fbfloat16-excess-precision=" +
+                                         BFloat16ExcessPrecision));
 
   ParseMRecip(D, Args, CmdArgs);
 
