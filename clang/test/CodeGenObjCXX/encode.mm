@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -Wno-objc-root-class -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX98,CHECK-NO-TEMP-SPEC %s
-// RUN: %clang_cc1 -no-opaque-pointers -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-NO-TEMP-SPEC %s
-// RUN: %clang_cc1 -no-opaque-pointers -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -fobjc-encode-cxx-class-template-spec -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-TEMP-SPEC %s
+// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX98,CHECK-NO-TEMP-SPEC %s
+// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-NO-TEMP-SPEC %s
+// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -fobjc-encode-cxx-class-template-spec -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-TEMP-SPEC %s
 
 // CHECK: v17@0:8{vector<float, float, float>=}16
 // CHECK: {vector<float, float, float>=}
@@ -302,30 +302,30 @@ struct Outer0 {
 };
 
 // CHECK: @[[STR22:.*]] = {{.*}} [12 x i8] c"{B0<int>=i}\00"
-// CHECK: @_ZN32test_cxx_template_specialization2b0E = {{.*}} ([12 x i8], [12 x i8]* @[[STR22]], i32 0, i32 0)
+// CHECK: @_ZN32test_cxx_template_specialization2b0E = global ptr @[[STR22]]
 // CHECK-NO-TEMP-SPEC: @[[STR23:.*]] = {{.*}} [3 x i8] c"^v\00"
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = global ptr @[[STR23]]
 // CHECK-TEMP-SPEC: @[[STR23:.*]] = {{.*}} [13 x i8] c"^{B0<int>=i}\00"
-// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = {{.*}} ([13 x i8], [13 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b02E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d1E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d2E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b01E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3b02E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d0E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d1E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2d2E = global ptr @[[STR23]]
 // CHECK: @[[STR24:.*]] = {{.*}} [7 x i8] c"^^{D2}\00"
-// CHECK: @_ZN32test_cxx_template_specialization3d21E = {{.*}} ([7 x i8], [7 x i8]* @[[STR24]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s1E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK: @_ZN32test_cxx_template_specialization3d21E = global ptr @[[STR24]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s0E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2s1E = global ptr @[[STR23]]
 // CHECK: @[[STR25:.*]] = {{.*}} [12 x i8] c"^{S2=^{S1}}\00"
-// CHECK: @_ZN32test_cxx_template_specialization2s2E = {{.*}} ([12 x i8], [12 x i8]* @[[STR25]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2u0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3td0E = {{.*}} ([3 x i8], [3 x i8]* @[[STR23]], i32 0, i32 0)
+// CHECK: @_ZN32test_cxx_template_specialization2s2E = global ptr @[[STR25]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2u0E = global ptr @[[STR23]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization3td0E = global ptr @[[STR23]]
 // CHECK-NO-TEMP-SPEC: @[[STR26:.*]] = {{.*}} [6 x i8] c"[4^v]\00"
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2a0E = {{.*}} ([6 x i8], [6 x i8]* @[[STR26]], i32 0, i32 0)
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization2a0E = global ptr @[[STR26]]
 // CHECK: @[[STR27:.*]] = {{.*}} [11 x i8] c"^{Inner0=}\00"
-// CHECK: @_ZN32test_cxx_template_specialization6inner0E = {{.*}} ([11 x i8], [11 x i8]* @[[STR27]], i32 0, i32 0)
-// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = {{.*}} ([3 x i8], [3 x i8]* @.str.23, i32 0, i32 0)
+// CHECK: @_ZN32test_cxx_template_specialization6inner0E = global ptr @[[STR27]]
+// CHECK-NO-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = global ptr @.str.23
 // CHECK-TEMP-SPEC: @[[STR34:.*]] = {{.*}} [18 x i8] c"^{Inner1<float>=}\00"
-// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = {{.*}} ([18 x i8], [18 x i8]* @[[STR34]], i32 0, i32 0)
+// CHECK-TEMP-SPEC: @_ZN32test_cxx_template_specialization6inner1E = global ptr @[[STR34]]
 
 const char *b0 = @encode(B0<int>);
 const char *b01 = @encode(B0<int> *);
