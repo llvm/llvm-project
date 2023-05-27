@@ -623,24 +623,33 @@ void HWAddressSanitizer::initializeModule() {
 
 void HWAddressSanitizer::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(*C);
+  const std::string MatchAllStr = UseMatchAllCallback ? "_match_all" : "";
+  FunctionType *HwasanMemoryAccessCallbackSizedFnTy,
+      *HwasanMemoryAccessCallbackFnTy, *HWAsanMemTransferFnTy,
+      *HWAsanMemsetFnTy;
+  if (UseMatchAllCallback) {
+    HwasanMemoryAccessCallbackSizedFnTy =
+        FunctionType::get(VoidTy, {IntptrTy, IntptrTy, Int8Ty}, false);
+    HwasanMemoryAccessCallbackFnTy =
+        FunctionType::get(VoidTy, {IntptrTy, Int8Ty}, false);
+    HWAsanMemTransferFnTy = FunctionType::get(
+        Int8PtrTy, {Int8PtrTy, Int8PtrTy, IntptrTy, Int8Ty}, false);
+    HWAsanMemsetFnTy = FunctionType::get(
+        Int8PtrTy, {Int8PtrTy, Int32Ty, IntptrTy, Int8Ty}, false);
+  } else {
+    HwasanMemoryAccessCallbackSizedFnTy =
+        FunctionType::get(VoidTy, {IntptrTy, IntptrTy}, false);
+    HwasanMemoryAccessCallbackFnTy =
+        FunctionType::get(VoidTy, {IntptrTy}, false);
+    HWAsanMemTransferFnTy =
+        FunctionType::get(Int8PtrTy, {Int8PtrTy, Int8PtrTy, IntptrTy}, false);
+    HWAsanMemsetFnTy =
+        FunctionType::get(Int8PtrTy, {Int8PtrTy, Int32Ty, IntptrTy}, false);
+  }
+
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
     const std::string EndingStr = Recover ? "_noabort" : "";
-    const std::string MatchAllStr = UseMatchAllCallback ? "_match_all" : "";
-
-    FunctionType *HwasanMemoryAccessCallbackSizedFnTy,
-        *HwasanMemoryAccessCallbackFnTy;
-    if (UseMatchAllCallback) {
-      HwasanMemoryAccessCallbackSizedFnTy =
-          FunctionType::get(VoidTy, {IntptrTy, IntptrTy, Int8Ty}, false);
-      HwasanMemoryAccessCallbackFnTy =
-          FunctionType::get(VoidTy, {IntptrTy, Int8Ty}, false);
-    } else {
-      HwasanMemoryAccessCallbackSizedFnTy =
-          FunctionType::get(VoidTy, {IntptrTy, IntptrTy}, false);
-      HwasanMemoryAccessCallbackFnTy =
-          FunctionType::get(VoidTy, {IntptrTy}, false);
-    }
 
     HwasanMemoryAccessCallbackSized[AccessIsWrite] = M.getOrInsertFunction(
         ClMemoryAccessCallbackPrefix + TypeStr + "N" + MatchAllStr + EndingStr,
@@ -656,6 +665,18 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
     }
   }
 
+  const std::string MemIntrinCallbackPrefix =
+      (CompileKernel && !ClKasanMemIntrinCallbackPrefix)
+          ? std::string("")
+          : ClMemoryAccessCallbackPrefix;
+
+  HWAsanMemmove = M.getOrInsertFunction(
+      MemIntrinCallbackPrefix + "memmove" + MatchAllStr, HWAsanMemTransferFnTy);
+  HWAsanMemcpy = M.getOrInsertFunction(
+      MemIntrinCallbackPrefix + "memcpy" + MatchAllStr, HWAsanMemTransferFnTy);
+  HWAsanMemset = M.getOrInsertFunction(
+      MemIntrinCallbackPrefix + "memset" + MatchAllStr, HWAsanMemsetFnTy);
+
   HwasanTagMemoryFunc = M.getOrInsertFunction("__hwasan_tag_memory", VoidTy,
                                               Int8PtrTy, Int8Ty, IntptrTy);
   HwasanGenerateTagFunc =
@@ -666,19 +687,6 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
 
   ShadowGlobal =
       M.getOrInsertGlobal("__hwasan_shadow", ArrayType::get(Int8Ty, 0));
-
-  const std::string MemIntrinCallbackPrefix =
-      (CompileKernel && !ClKasanMemIntrinCallbackPrefix)
-          ? std::string("")
-          : ClMemoryAccessCallbackPrefix;
-  HWAsanMemmove =
-      M.getOrInsertFunction(MemIntrinCallbackPrefix + "memmove", Int8PtrTy,
-                            Int8PtrTy, Int8PtrTy, IntptrTy);
-  HWAsanMemcpy =
-      M.getOrInsertFunction(MemIntrinCallbackPrefix + "memcpy", Int8PtrTy,
-                            Int8PtrTy, Int8PtrTy, IntptrTy);
-  HWAsanMemset = M.getOrInsertFunction(MemIntrinCallbackPrefix + "memset",
-                                       Int8PtrTy, Int8PtrTy, Int32Ty, IntptrTy);
 
   HWAsanHandleVfork =
       M.getOrInsertFunction("__hwasan_handle_vfork", VoidTy, IntptrTy);
@@ -949,15 +957,35 @@ bool HWAddressSanitizer::ignoreMemIntrinsic(MemIntrinsic *MI) {
 void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI)) {
-    IRB.CreateCall(isa<MemMoveInst>(MI) ? HWAsanMemmove : HWAsanMemcpy,
-                   {IRB.CreatePointerCast(MI->getOperand(0), Int8PtrTy),
-                    IRB.CreatePointerCast(MI->getOperand(1), Int8PtrTy),
-                    IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+    if (UseMatchAllCallback) {
+      IRB.CreateCall(
+          isa<MemMoveInst>(MI) ? HWAsanMemmove : HWAsanMemcpy,
+          {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+           IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
+           IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false),
+           ConstantInt::get(Int8Ty, *MatchAllTag)});
+    } else {
+      IRB.CreateCall(
+          isa<MemMoveInst>(MI) ? HWAsanMemmove : HWAsanMemcpy,
+          {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+           IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
+           IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+    }
   } else if (isa<MemSetInst>(MI)) {
-    IRB.CreateCall(HWAsanMemset,
-                   {IRB.CreatePointerCast(MI->getOperand(0), Int8PtrTy),
-                    IRB.CreateIntCast(MI->getOperand(1), Int32Ty, false),
-                    IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+    if (UseMatchAllCallback) {
+      IRB.CreateCall(
+          HWAsanMemset,
+          {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+           IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
+           IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false),
+           ConstantInt::get(Int8Ty, *MatchAllTag)});
+    } else {
+      IRB.CreateCall(
+          HWAsanMemset,
+          {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+           IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
+           IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+    }
   }
   MI->eraseFromParent();
 }
