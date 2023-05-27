@@ -1070,21 +1070,15 @@ define <4 x float> @test_fmaximum_vector_signed_zero(<4 x float> %x) {
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_fmaximum_vector_signed_zero:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; AVX1-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_fmaximum_vector_signed_zero:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; AVX512-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: test_fmaximum_vector_signed_zero:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_vector_signed_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> <float -0., float -0., float -0., float -0.>)
@@ -1283,21 +1277,15 @@ define <4 x float> @test_fmaximum_vector_signed_zero_first(<4 x float> %x) {
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_fmaximum_vector_signed_zero_first:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; AVX1-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_fmaximum_vector_signed_zero_first:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; AVX512-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: test_fmaximum_vector_signed_zero_first:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_vector_signed_zero_first:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> <float -0., float -0., float -0., float -0.>, <4 x float> %x)
