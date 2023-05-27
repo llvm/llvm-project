@@ -410,10 +410,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   addRegisterClass(MVT::i64, &NVPTX::Int64RegsRegClass);
   addRegisterClass(MVT::f32, &NVPTX::Float32RegsRegClass);
   addRegisterClass(MVT::f64, &NVPTX::Float64RegsRegClass);
-  addRegisterClass(MVT::f16, &NVPTX::Float16RegsRegClass);
-  addRegisterClass(MVT::v2f16, &NVPTX::Float16x2RegsRegClass);
-  addRegisterClass(MVT::bf16, &NVPTX::Float16RegsRegClass);
-  addRegisterClass(MVT::v2bf16, &NVPTX::Float16x2RegsRegClass);
+  addRegisterClass(MVT::f16, &NVPTX::Int16RegsRegClass);
+  addRegisterClass(MVT::v2f16, &NVPTX::Int32RegsRegClass);
+  addRegisterClass(MVT::bf16, &NVPTX::Int16RegsRegClass);
+  addRegisterClass(MVT::v2bf16, &NVPTX::Int32RegsRegClass);
 
   // Conversion to/from FP16/FP16x2 is always legal.
   setOperationAction(ISD::SINT_TO_FP, MVT::f16, Legal);
