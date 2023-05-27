@@ -97,34 +97,32 @@ public:
           Declaration(Declaration) {}
   };
 
+  using FragmentIterator = std::vector<Fragment>::iterator;
+  using ConstFragmentIterator = std::vector<Fragment>::const_iterator;
+
   const std::vector<Fragment> &getFragments() const { return Fragments; }
 
-  size_t calculateOffset(intmax_t Index) const {
-    if (Index >= 0) {
-      size_t offset = static_cast<size_t>(Index);
-      if (offset > Fragments.size()) {
-        offset = Fragments.size();
-      }
-      return offset;
-    }
-    return Fragments.size() + static_cast<size_t>(Index);
-  }
+  FragmentIterator begin() { return Fragments.begin(); }
+
+  FragmentIterator end() { return Fragments.end(); }
+
+  ConstFragmentIterator cbegin() const { return Fragments.cbegin(); }
+
+  ConstFragmentIterator cend() const { return Fragments.cend(); }
 
   // Add a new Fragment at an arbitrary offset.
-  DeclarationFragments &insertAtIndex(intmax_t Index, StringRef Spelling,
-                                      FragmentKind Kind,
-                                      StringRef PreciseIdentifier = "",
-                                      const Decl *Declaration = nullptr) {
-    Fragments.insert(
-        Fragments.begin() + calculateOffset(Index),
-        std::move(Fragment(Spelling, Kind, PreciseIdentifier, Declaration)));
+  DeclarationFragments &insert(FragmentIterator It, StringRef Spelling,
+                               FragmentKind Kind,
+                               StringRef PreciseIdentifier = "",
+                               const Decl *Declaration = nullptr) {
+    Fragments.insert(It, std::move(Fragment(Spelling, Kind, PreciseIdentifier,
+                                            Declaration)));
     return *this;
   }
 
-  DeclarationFragments &insertAtIndex(intmax_t Index,
-                                      DeclarationFragments &&Other) {
-    Fragments.insert(Fragments.begin() + calculateOffset(Index),
-                     std::make_move_iterator(Other.Fragments.begin()),
+  DeclarationFragments &insert(FragmentIterator It,
+                               DeclarationFragments &&Other) {
+    Fragments.insert(It, std::make_move_iterator(Other.Fragments.begin()),
                      std::make_move_iterator(Other.Fragments.end()));
     Other.Fragments.clear();
     return *this;
