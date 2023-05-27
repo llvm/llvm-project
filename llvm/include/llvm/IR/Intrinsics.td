@@ -2149,6 +2149,12 @@ def int_get_active_lane_mask:
             [llvm_anyint_ty, LLVMMatchType<1>],
             [IntrNoMem, IntrNoSync, IntrWillReturn]>;
 
+def int_experimental_get_vector_length:
+  DefaultAttrsIntrinsic<[llvm_i32_ty],
+                        [llvm_anyint_ty, llvm_i32_ty, llvm_i1_ty],
+                        [IntrNoMem, IntrNoSync, IntrWillReturn,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+
 def int_experimental_vp_splice:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
             [LLVMMatchType<0>,
