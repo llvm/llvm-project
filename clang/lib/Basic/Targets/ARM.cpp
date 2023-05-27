@@ -514,6 +514,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasFloat16 = true;
   ARMCDECoprocMask = 0;
   HasBFloat16 = false;
+  HasFullBFloat16 = false;
   FPRegsDisabled = false;
 
   // This does not diagnose illegal cases like having both
@@ -596,6 +597,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+pacbti") {
       HasPAC = 1;
       HasBTI = 1;
+    } else if (Feature == "+fullbf16") {
+      HasFullBFloat16 = true;
     }
   }
 
