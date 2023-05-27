@@ -34,6 +34,8 @@ uint8_t *ExpressionVariable::GetValueBytes() {
 
 char PersistentExpressionState::ID;
 
+PersistentExpressionState::PersistentExpressionState() = default;
+
 PersistentExpressionState::~PersistentExpressionState() = default;
 
 void PersistentExpressionState::RegisterSymbol(ConstString name,
