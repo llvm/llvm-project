@@ -42,6 +42,7 @@ class Constant;
 class ConstrainedFPIntrinsic;
 class DataLayout;
 class DbgDeclareInst;
+class DbgValueInst;
 class Instruction;
 class MachineBasicBlock;
 class MachineFunction;
@@ -252,6 +253,12 @@ private:
   /// If DebugInst targets an Argument and its expression is an EntryValue,
   /// lower it as an entry in the MF debug table.
   bool translateIfEntryValueArgument(const DbgDeclareInst &DebugInst);
+
+  /// If DebugInst targets an Argument and its expression is an EntryValue,
+  /// lower as a DBG_VALUE targeting the corresponding livein register for that
+  /// Argument.
+  bool translateIfEntryValueArgument(const DbgValueInst &DebugInst,
+                                     MachineIRBuilder &MIRBuilder);
 
   bool translateInlineAsm(const CallBase &CB, MachineIRBuilder &MIRBuilder);
 
