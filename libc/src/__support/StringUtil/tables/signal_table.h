@@ -11,8 +11,8 @@
 
 #include "src/__support/StringUtil/message_mapper.h"
 
-#include "posix_signal_table.h"
-#include "stdc_signal_table.h"
+#include "posix_signals.h"
+#include "stdc_signals.h"
 
 #if defined(__linux__) || defined(__Fuchsia__)
 #define USE_LINUX_PLATFORM_SIGNALS 1
@@ -21,7 +21,7 @@
 #endif
 
 #if USE_LINUX_PLATFORM_SIGNALS
-#include "linux/signal_table.h"
+#include "linux_extension_signals.h"
 #endif
 
 namespace __llvm_libc::internal {
