@@ -9,8 +9,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED msvc, target={{.+}}-windows-gnu
 // TODO FMT It seems GCC uses too much memory in the CI and fails.
 // UNSUPPORTED: gcc-12
 

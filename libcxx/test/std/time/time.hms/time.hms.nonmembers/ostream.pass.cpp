@@ -12,9 +12,6 @@
 // TODO FMT Evaluate gcc-12 status
 // UNSUPPORTED: gcc-12
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
 // XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.fr_FR.UTF-8
