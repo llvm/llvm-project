@@ -773,15 +773,6 @@ private:
   void finishArgumentConstruction(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                                   const CallEvent &Call);
 
-  void evalLoadCommon(ExplodedNodeSet &Dst,
-                      const Expr *NodeEx,  /* Eventually will be a CFGStmt */
-                      const Expr *BoundEx,
-                      ExplodedNode *Pred,
-                      ProgramStateRef St,
-                      SVal location,
-                      const ProgramPointTag *tag,
-                      QualType LoadTy);
-
   void evalLocation(ExplodedNodeSet &Dst,
                     const Stmt *NodeEx, /* This will eventually be a CFGStmt */
                     const Stmt *BoundEx,
