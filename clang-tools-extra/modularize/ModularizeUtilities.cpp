@@ -349,14 +349,15 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   for (auto *Submodule : Mod.submodules())
     collectModuleHeaders(*Submodule);
 
-  if (const FileEntry *UmbrellaHeader = Mod.getUmbrellaHeader().Entry) {
+  if (const FileEntry *UmbrellaHeader =
+          Mod.getUmbrellaHeaderAsWritten().Entry) {
     std::string HeaderPath = getCanonicalPath(UmbrellaHeader->getName());
     // Collect umbrella header.
     HeaderFileNames.push_back(HeaderPath);
 
     // FUTURE: When needed, umbrella header header collection goes here.
-  }
-  else if (const DirectoryEntry *UmbrellaDir = Mod.getUmbrellaDir().Entry) {
+  } else if (const DirectoryEntry *UmbrellaDir =
+                 Mod.getUmbrellaDirAsWritten().Entry) {
     // If there normal headers, assume these are umbrellas and skip collection.
     if (Mod.Headers->size() == 0) {
       // Collect headers in umbrella directory.

@@ -651,18 +651,26 @@ public:
     getTopLevelModule()->ASTFile = File;
   }
 
-  /// Retrieve the directory for which this module serves as the
-  /// umbrella.
-  DirectoryName getUmbrellaDir() const;
+  /// Retrieve the umbrella directory as written.
+  DirectoryName getUmbrellaDirAsWritten() const {
+    if (const auto *ME = Umbrella.dyn_cast<const DirectoryEntry *>())
+      return DirectoryName{UmbrellaAsWritten,
+                           UmbrellaRelativeToRootModuleDirectory, ME};
+    return DirectoryName{};
+  }
 
-  /// Retrieve the header that serves as the umbrella header for this
-  /// module.
-  Header getUmbrellaHeader() const {
-    if (auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
+  /// Retrieve the umbrella header as written.
+  Header getUmbrellaHeaderAsWritten() const {
+    if (const auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
       return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
                     FileEntryRef(*ME)};
     return Header{};
   }
+
+  /// Get the effective umbrella directory for this module: either the one
+  /// explicitly written in the module map file, or the parent of the umbrella
+  /// header.
+  const DirectoryEntry *getEffectiveUmbrellaDir() const;
 
   /// Determine whether this module has an umbrella directory that is
   /// not based on an umbrella header.

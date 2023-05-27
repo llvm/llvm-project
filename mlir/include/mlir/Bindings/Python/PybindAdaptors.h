@@ -28,6 +28,7 @@
 #include "llvm/ADT/Twine.h"
 
 namespace py = pybind11;
+using namespace py::literals;
 
 // Raw CAPI type casters need to be declared before use, so always include them
 // first.
@@ -272,6 +273,7 @@ struct type_caster<MlirType> {
     return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("Type")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+        .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
         .release();
   }
 };
@@ -424,20 +426,24 @@ public:
 class mlir_type_subclass : public pure_subclass {
 public:
   using IsAFunctionTy = bool (*)(MlirType);
+  using GetTypeIDFunctionTy = MlirTypeID (*)();
 
   /// Subclasses by looking up the super-class dynamically.
   mlir_type_subclass(py::handle scope, const char *typeClassName,
-                     IsAFunctionTy isaFunction)
+                     IsAFunctionTy isaFunction,
+                     GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : mlir_type_subclass(
             scope, typeClassName, isaFunction,
-            py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir")).attr("Type")) {}
+            py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir")).attr("Type"),
+            getTypeIDFunction) {}
 
   /// Subclasses with a provided mlir.ir.Type super-class. This must
   /// be used if the subclass is being defined in the same extension module
   /// as the mlir.ir class (otherwise, it will trigger a recursive
   /// initialization).
   mlir_type_subclass(py::handle scope, const char *typeClassName,
-                     IsAFunctionTy isaFunction, const py::object &superCls)
+                     IsAFunctionTy isaFunction, const py::object &superCls,
+                     GetTypeIDFunctionTy getTypeIDFunction = nullptr)
       : pure_subclass(scope, typeClassName, superCls) {
     // Casting constructor. Note that it hard, if not impossible, to properly
     // call chain to parent `__init__` in pybind11 due to its special handling
@@ -471,6 +477,19 @@ public:
         "isinstance",
         [isaFunction](MlirType other) { return isaFunction(other); },
         py::arg("other_type"));
+    def("__repr__", [superCls, captureTypeName](py::object self) {
+      return py::repr(superCls(self))
+          .attr("replace")(superCls.attr("__name__"), captureTypeName);
+    });
+    if (getTypeIDFunction) {
+      py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+          .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
+              getTypeIDFunction(),
+              pybind11::cpp_function(
+                  [thisClass = thisClass](const py::object &mlirType) {
+                    return thisClass(mlirType);
+                  }));
+    }
   }
 };
 

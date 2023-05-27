@@ -334,10 +334,7 @@ public:
         "Create a complex type");
     c.def_property_readonly(
         "element_type",
-        [](PyComplexType &self) -> PyType {
-          MlirType t = mlirComplexTypeGetElementType(self);
-          return PyType(self.getContext(), t);
-        },
+        [](PyComplexType &self) { return mlirComplexTypeGetElementType(self); },
         "Returns element type.");
   }
 };
@@ -351,10 +348,7 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_property_readonly(
         "element_type",
-        [](PyShapedType &self) {
-          MlirType t = mlirShapedTypeGetElementType(self);
-          return PyType(self.getContext(), t);
-        },
+        [](PyShapedType &self) { return mlirShapedTypeGetElementType(self); },
         "Returns the element type of the shaped type.");
     c.def_property_readonly(
         "has_rank",
@@ -641,9 +635,8 @@ public:
         "Create a tuple type");
     c.def(
         "get_type",
-        [](PyTupleType &self, intptr_t pos) -> PyType {
-          MlirType t = mlirTupleTypeGetType(self, pos);
-          return PyType(self.getContext(), t);
+        [](PyTupleType &self, intptr_t pos) {
+          return mlirTupleTypeGetType(self, pos);
         },
         py::arg("pos"), "Returns the pos-th type in the tuple type.");
     c.def_property_readonly(
@@ -686,7 +679,7 @@ public:
           py::list types;
           for (intptr_t i = 0, e = mlirFunctionTypeGetNumInputs(self); i < e;
                ++i) {
-            types.append(PyType(contextRef, mlirFunctionTypeGetInput(t, i)));
+            types.append(mlirFunctionTypeGetInput(t, i));
           }
           return types;
         },
@@ -698,8 +691,7 @@ public:
           py::list types;
           for (intptr_t i = 0, e = mlirFunctionTypeGetNumResults(self); i < e;
                ++i) {
-            types.append(
-                PyType(contextRef, mlirFunctionTypeGetResult(self, i)));
+            types.append(mlirFunctionTypeGetResult(self, i));
           }
           return types;
         },

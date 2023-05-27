@@ -443,6 +443,9 @@ void transform::TransformState::recordOpHandleInvalidationOne(
       llvm::interleaveComma(potentialAncestors, DBGS() << "--ancestors: ",
                             [](Operation *op) { llvm::dbgs() << *op; });
       llvm::dbgs() << "\n");
+
+  Operation *owner = consumingHandle.getOwner();
+  unsigned operandNo = consumingHandle.getOperandNumber();
   for (Operation *ancestor : potentialAncestors) {
     // clang-format off
     DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
@@ -462,8 +465,6 @@ void transform::TransformState::recordOpHandleInvalidationOne(
     // deleted before the lambda gets called.
     Location ancestorLoc = ancestor->getLoc();
     Location opLoc = payloadOp->getLoc();
-    Operation *owner = consumingHandle.getOwner();
-    unsigned operandNo = consumingHandle.getOperandNumber();
     std::optional<Location> throughValueLoc =
         throughValue ? std::make_optional(throughValue.getLoc()) : std::nullopt;
     invalidatedHandles[otherHandle] = [ancestorLoc, opLoc, owner, operandNo,
@@ -551,6 +552,27 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
 void transform::TransformState::recordOpHandleInvalidation(
     OpOperand &handle, ArrayRef<Operation *> potentialAncestors,
     Value throughValue) {
+
+  if (potentialAncestors.empty()) {
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, {
+      (DBGS() << "----recording invalidation for empty handle: " << handle.get()
+              << "\n");
+    });
+
+    Operation *owner = handle.getOwner();
+    unsigned operandNo = handle.getOperandNumber();
+    invalidatedHandles[handle.get()] = [owner, operandNo](Location currentLoc) {
+      InFlightDiagnostic diag = emitError(currentLoc)
+                                << "op uses a handle associated with empty "
+                                   "payload and invalidated by a "
+                                   "previously executed transform op";
+      diag.attachNote(owner->getLoc())
+          << "invalidated by this transform op that consumes its operand #"
+          << operandNo;
+    };
+    return;
+  }
+
   // Iterate over the mapping and invalidate aliasing handles. This is quite
   // expensive and only necessary for error reporting in case of transform
   // dialect misuse with dangling handles. Iteration over the handles is based

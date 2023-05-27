@@ -95,7 +95,7 @@ getOverloadedDeclaration(CallIntrinsicOp &op, llvm::Intrinsic::ID id,
 
 /// Builder for LLVM_CallIntrinsicOp
 static LogicalResult
-convertCallLLVMIntrinsicOp(CallIntrinsicOp &op, llvm::IRBuilderBase &builder,
+convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
                            LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   llvm::Intrinsic::ID id =
@@ -114,6 +114,8 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp &op, llvm::IRBuilderBase &builder,
   } else {
     fn = llvm::Intrinsic::getDeclaration(module, id, {});
   }
+  FastmathFlagsInterface itf = op;
+  builder.setFastMathFlags(getFastmathFlags(itf));
 
   auto *inst =
       builder.CreateCall(fn, moduleTranslation.lookupValues(op.getOperands()));

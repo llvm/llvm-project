@@ -39,6 +39,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
@@ -202,14 +203,17 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
     return execution_results;
   }
-  // Since we might need to call allocate memory and maybe call code to make
-  // the caller, we need to be stopped.
+
+  // Since we might need to allocate memory, we need to be stopped to run
+  // an expression.
   if (process != nullptr && process->GetState() != lldb::eStateStopped) {
-    error.SetErrorString("Can't make a function caller while the process is " 
-                          "running");
+    error.SetErrorStringWithFormatv(
+        "unable to evaluate expression while the process is {0}: the process "
+        "must be stopped because the expression might require allocating "
+        "memory.",
+        StateAsCString(process->GetState()));
     return execution_results;
   }
-
 
   // Explicitly force the IR interpreter to evaluate the expression when the
   // there is no process that supports running the expression for us. Don't

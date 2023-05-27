@@ -627,6 +627,12 @@ DiagnosedSilenceableFailure mlir::test::TestProduceNullPayloadOp::apply(
   return DiagnosedSilenceableFailure::success();
 }
 
+DiagnosedSilenceableFailure mlir::test::TestProduceEmptyPayloadOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  results.set(cast<OpResult>(getOut()), {});
+  return DiagnosedSilenceableFailure::success();
+}
+
 void mlir::test::TestProduceNullParamOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::producesHandle(getOut(), effects);

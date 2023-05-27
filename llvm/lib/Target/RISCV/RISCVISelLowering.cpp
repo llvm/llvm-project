@@ -4382,13 +4382,12 @@ SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
   if (VT.isVector()) {
     SDValue Op0 = Op.getOperand(0);
     MVT VT0 = Op.getOperand(0).getSimpleValueType();
-    MVT DstVT = VT0.changeVectorElementTypeToInteger();
 
     if (VT.isScalableVector()) {
-      SDValue VL = DAG.getRegister(RISCV::X0, XLenVT);
-      SDValue Mask = getAllOnesMask(DstVT, VL, DL, DAG);
-      SDValue FPCLASS = DAG.getNode(RISCVISD::FCLASS_VL, DL, DstVT,
-                                    {Op0, Mask, VL}, Op->getFlags());
+      MVT DstVT = VT0.changeVectorElementTypeToInteger();
+      auto [Mask, VL] = getDefaultScalableVLOps(VT0, DL, DAG, Subtarget);
+      SDValue FPCLASS = DAG.getNode(RISCVISD::FCLASS_VL, DL, DstVT, Op0, Mask,
+                                    VL, Op->getFlags());
       SDValue AND = DAG.getNode(ISD::AND, DL, DstVT, FPCLASS,
                                 DAG.getConstant(TDCMask, DL, DstVT));
       return DAG.getSetCC(DL, VT, AND, DAG.getConstant(0, DL, DstVT),
@@ -4397,15 +4396,13 @@ SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
 
     MVT ContainerVT0 = getContainerForFixedLengthVector(VT0);
     MVT ContainerVT = getContainerForFixedLengthVector(VT);
-    MVT ContainerDstVT = getContainerForFixedLengthVector(DstVT);
-    auto [Mask, VL] =
-        getDefaultVLOps(DstVT, ContainerDstVT, DL, DAG, Subtarget);
+    MVT ContainerDstVT = ContainerVT0.changeVectorElementTypeToInteger();
+    auto [Mask, VL] = getDefaultVLOps(VT0, ContainerVT0, DL, DAG, Subtarget);
 
-    SDValue FPCLASS = DAG.getNode(
-        RISCVISD::FCLASS_VL, DL, DAG.getVTList(ContainerDstVT, MVT::Other),
-        {convertToScalableVector(ContainerVT0, Op0, DAG, Subtarget) /*Op0*/,
-         Mask, VL},
-        Op->getFlags());
+    Op0 = convertToScalableVector(ContainerVT0, Op0, DAG, Subtarget);
+
+    SDValue FPCLASS = DAG.getNode(RISCVISD::FCLASS_VL, DL, ContainerDstVT, Op0,
+                                  Mask, VL, Op->getFlags());
 
     TDCMaskV = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerDstVT,
                            DAG.getUNDEF(ContainerDstVT), TDCMaskV, VL);

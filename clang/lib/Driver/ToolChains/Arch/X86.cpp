@@ -119,6 +119,15 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
 void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args,
                                std::vector<StringRef> &Features) {
+  // Claim and report unsupported -mabi=. Note: we don't support "sysv_abi" or
+  // "ms_abi" as default function attributes.
+  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
+    StringRef DefaultAbi = Triple.isOSWindows() ? "ms" : "sysv";
+    if (A->getValue() != DefaultAbi)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.getTriple();
+  }
+
   // If -march=native, autodetect the feature list.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
     if (StringRef(A->getValue()) == "native") {

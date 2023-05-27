@@ -427,6 +427,15 @@ def TestProduceNullPayloadOp
   let cppNamespace = "::mlir::test";
 }
 
+def TestProduceEmptyPayloadOp
+  : Op<Transform_Dialect, "test_produce_empty_payload",
+      [DeclareOpInterfaceMethods<TransformOpInterface>,
+       MemoryEffectsOpInterface, FunctionalStyleTransformOpTrait]> {
+  let results = (outs TransformHandleTypeInterface:$out);
+  let assemblyFormat = "attr-dict `:` type($out)";
+  let cppNamespace = "::mlir::test";
+}
+
 def TestProduceNullParamOp
   : Op<Transform_Dialect, "test_produce_null_param",
       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,

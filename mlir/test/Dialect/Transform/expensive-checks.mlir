@@ -331,3 +331,14 @@ transform.sequence failures(propagate) {
   test_consume_operand %3 : !transform.any_value
   test_consume_operand %2 : !transform.any_op
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.test_produce_empty_payload : !transform.any_op
+  // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
+  transform.test_consume_operand %0 : !transform.any_op
+  // expected-error @below {{uses a handle associated with empty payload and invalidated by a previously executed transform op}}
+  transform.test_print_remark_at_operand %0, "remark" : !transform.any_op
+}

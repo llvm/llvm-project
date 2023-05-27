@@ -1956,6 +1956,15 @@ SDValue SelectionDAG::getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
   return getNode(ISD::VSCALE, DL, VT, getConstant(MulImm, DL, VT));
 }
 
+SDValue SelectionDAG::getElementCount(const SDLoc &DL, EVT VT, ElementCount EC,
+                                      bool ConstantFold) {
+  if (EC.isScalable())
+    return getVScale(DL, VT,
+                     APInt(VT.getSizeInBits(), EC.getKnownMinValue()));
+
+  return getConstant(EC.getKnownMinValue(), DL, VT);
+}
+
 SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT) {
   APInt One(ResVT.getScalarSizeInBits(), 1);
   return getStepVector(DL, ResVT, One);
@@ -3084,6 +3093,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known2 = computeKnownBits(RHS, DemandedRHS, Depth + 1);
       Known = Known.intersectWith(Known2);
     }
+    break;
+  }
+  case ISD::VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = Op.getConstantOperandAPInt(0);
+    Known = getVScaleRange(&F, BitWidth).multiply(Multiplier).toKnownBits();
     break;
   }
   case ISD::CONCAT_VECTORS: {
