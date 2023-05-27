@@ -98,6 +98,7 @@ write_lit_cfg("lit_shell_site_cfg") {
   input = "//lldb/test/Shell/lit.site.cfg.py.in"
   output = lldb_lit_shell_site_cfg_file
   extra_values = [
+    "CMAKE_SYSROOT=",
     "LLDB_ENABLE_LUA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_LZMA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_PYTHON=0",  # FIXME: gn arg, use in Config.h
