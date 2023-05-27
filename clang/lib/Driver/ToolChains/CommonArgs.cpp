@@ -894,7 +894,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                          /*IsLTO=*/true, PluginOptPrefix);
 }
 
-std::string tools::FindDebugInLibraryPath() {
+std::string tools::FindDebugPerfInLibraryPath(const std::string &RLib) {
   const char *DirList = ::getenv("LIBRARY_PATH");
   if (!DirList)
     return "";
@@ -905,13 +905,13 @@ std::string tools::FindDebugInLibraryPath() {
   StringRef::size_type Delim;
   while ((Delim = Dirs.find(llvm::sys::EnvPathSeparator)) != StringRef::npos) {
     if (Delim != 0) { // Leading colon.
-      if (Dirs.substr(0, Delim).endswith("lib-debug"))
+      if (Dirs.substr(0, Delim).endswith(RLib))
         return Dirs.substr(0, Delim).str();
     }
     Dirs = Dirs.substr(Delim + 1);
   }
   if (!Dirs.empty()) {
-    if (Dirs.endswith("lib-debug"))
+    if (Dirs.endswith(RLib))
       return Dirs.str();
   }
   return "";
@@ -921,9 +921,16 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
                                           const ArgList &Args,
                                           ArgStringList &CmdArgs) {
   const Driver &D = TC.getDriver();
-  std::string CandidateRPath = FindDebugInLibraryPath();
+  std::string LibSuffix = "lib";
+  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_runtimelib_EQ)) {
+    LibSuffix = A->getValue();
+    if (LibSuffix != "lib-perf" && LibSuffix != "lib-debug" && LibSuffix != "lib")
+      D.Diag(diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << LibSuffix;
+  }
+  std::string CandidateRPath = FindDebugPerfInLibraryPath(LibSuffix);
   if (CandidateRPath.empty())
-    CandidateRPath = D.Dir + "/../lib";
+    CandidateRPath = D.Dir + "/../" + LibSuffix;
 
   if (Args.hasFlag(options::OPT_fopenmp_implicit_rpath,
                    options::OPT_fno_openmp_implicit_rpath, true)) {
@@ -2371,7 +2378,7 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   for (std::string Search_Dir : DriverArgs.getAllArgValues(options::OPT_L))
     LibraryPaths.emplace_back(Search_Dir);
 
-  // Add path to lib-debug folders
+  // Add path to lib* folders
   SmallString<256> DefaultLibPath = llvm::sys::path::parent_path(D.Dir);
   llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   LibraryPaths.emplace_back(DefaultLibPath.c_str());

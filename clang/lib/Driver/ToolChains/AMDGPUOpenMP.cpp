@@ -203,11 +203,16 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   StringRef GPUArch =
       getProcessorFromTargetID(getToolChain().getTriple(), TargetID);
 
+  std::string LibSuffix = "lib";
+  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_runtimelib_EQ)) {
+    LibSuffix = A->getValue();
+  }
+
   // If device debugging turned on, add specially built bc files
-  StringRef libpath = Args.MakeArgString(C.getDriver().Dir + "/../lib");
-  std::string lib_debug_path = FindDebugInLibraryPath();
-  if (!lib_debug_path.empty())
-    libpath = lib_debug_path;
+  StringRef libpath = Args.MakeArgString(C.getDriver().Dir + "/../" + LibSuffix);
+  std::string lib_debug_perf_path = FindDebugPerfInLibraryPath(LibSuffix);
+  if (!lib_debug_perf_path.empty())
+    libpath = lib_debug_perf_path;
 
   llvm::SmallVector<std::string, 12> BCLibs;
 
