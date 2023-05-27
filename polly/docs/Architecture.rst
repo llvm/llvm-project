@@ -83,7 +83,7 @@ kernels is generally very fast and the actual optimization and cleanup passes
 are only run on functions which contain loop kernels that are worth optimizing.
 However, due to the many optimizations that LLVM runs before Polly the IR that
 reaches Polly often has additional scalar dependences that make Polly a lot less
-efficient. To force Polly to run before the vectorizer in the pass pipleline use
+efficient. To force Polly to run before the vectorizer in the pass pipeline use
 the option *-polly-position=before-vectorizer*. This position is not yet the
 default for Polly, but work is on its way to be effective even in presence of
 scalar dependences. After this work has been completed, Polly will likely use
