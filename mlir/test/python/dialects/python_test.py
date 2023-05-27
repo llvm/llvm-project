@@ -369,9 +369,9 @@ def testTensorValue():
 
             # Classes of custom types that inherit from concrete types should have
             # static_typeid
-            assert isinstance(test.TestTensorType.static_typeid, TypeID)
+            assert isinstance(test.TestIntegerRankedTensorType.static_typeid, TypeID)
             # And it should be equal to the in-tree concrete type
-            assert test.TestTensorType.static_typeid == t.type.typeid
+            assert test.TestIntegerRankedTensorType.static_typeid == t.type.typeid
 
 
 # CHECK-LABEL: TEST: inferReturnTypeComponents
@@ -424,3 +424,46 @@ def inferReturnTypeComponents():
         print("rank:", shaped_type_components.rank)
         print("element type:", shaped_type_components.element_type)
         print("shape:", shaped_type_components.shape)
+
+
+# CHECK-LABEL: TEST: testCustomTypeTypeCaster
+@run
+def testCustomTypeTypeCaster():
+    with Context() as ctx, Location.unknown():
+        test.register_python_test_dialect(ctx)
+
+        a = test.TestType.get()
+        assert a.typeid is not None
+
+        b = Type.parse("!python_test.test_type")
+        # CHECK: !python_test.test_type
+        print(b)
+        # CHECK: TestType(!python_test.test_type)
+        print(repr(b))
+
+        c = test.TestIntegerRankedTensorType.get([10, 10], 5)
+        # CHECK: tensor<10x10xi5>
+        print(c)
+        # CHECK: TestIntegerRankedTensorType(tensor<10x10xi5>)
+        print(repr(c))
+
+        # CHECK: Type caster is already registered
+        try:
+
+            def type_caster(pytype):
+                return test.TestIntegerRankedTensorType(pytype)
+
+            register_type_caster(c.typeid, type_caster)
+        except RuntimeError as e:
+            print(e)
+
+        def type_caster(pytype):
+            return test.TestIntegerRankedTensorType(pytype)
+
+        register_type_caster(c.typeid, type_caster, replace=True)
+
+        d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
+        # CHECK: tensor<10x10xi5>
+        print(d.type)
+        # CHECK: TestIntegerRankedTensorType(tensor<10x10xi5>)
+        print(repr(d.type))

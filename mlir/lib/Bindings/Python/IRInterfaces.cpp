@@ -321,11 +321,7 @@ public:
                                        py::module_local())
         .def_property_readonly(
             "element_type",
-            [](PyShapedTypeComponents &self) {
-              return PyType(PyMlirContext::forContext(
-                                mlirTypeGetContext(self.elementType)),
-                            self.elementType);
-            },
+            [](PyShapedTypeComponents &self) { return self.elementType; },
             "Returns the element type of the shaped type components.")
         .def_static(
             "get",
