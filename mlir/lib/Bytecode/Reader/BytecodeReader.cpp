@@ -1003,7 +1003,7 @@ public:
     if (sectionData.empty())
       return success();
     EncodingReader propReader(sectionData, fileLoc);
-    size_t count;
+    uint64_t count;
     if (failed(propReader.parseVarInt(count)))
       return failure();
     // Parse the raw properties buffer.
@@ -1016,7 +1016,7 @@ public:
       (void)idx;
       offsetTable.push_back(propertiesBuffers.size() - offsetsReader.size());
       ArrayRef<uint8_t> rawProperties;
-      size_t dataSize;
+      uint64_t dataSize;
       if (failed(offsetsReader.parseVarInt(dataSize)) ||
           failed(offsetsReader.parseBytes(dataSize, rawProperties)))
         return failure();
