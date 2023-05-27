@@ -18,7 +18,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include <cstdint>
 
 namespace mlir {
