@@ -1,5 +1,6 @@
 ; RUN: llc -O0 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s
 ; RUN: llc -O0 -fast-isel=false -global-isel=false -stop-after=finalize-isel %s -o - | FileCheck %s
+; RUN: llc -O0 -fast-isel -stop-after=finalize-isel %s -o - | FileCheck %s
 
 ; CHECK-NOT:  DBG_VALUE
 ; CHECK:      DBG_VALUE $x22, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
