@@ -1879,40 +1879,6 @@ bool IRTranslator::translateConstrainedFPIntrinsic(
   return true;
 }
 
-/// If V is a swift async function argument, return the ABI register associated
-/// with it.
-static std::optional<Register>
-getRegisterIfSwiftAsyncArg(const Value &V, const MachineFunction &MF) {
-  auto *Arg = dyn_cast<Argument>(&V);
-  if (!Arg || !MF.getFunction().hasParamAttribute(Arg->getArgNo(),
-                                                  Attribute::SwiftAsync))
-    return std::nullopt;
-  return std::next(MF.getRegInfo().livein_begin(), Arg->getArgNo())->first;
-}
-
-/// If V is an async swift argument (assumed to be the value argument of
-/// DebugInst), translates DebugInst into a DBG_VALUE using the ABI register
-/// associated with V and returns true. Otherwise, returns false.
-static bool translateIfSwiftAsyncArg(const Value &V,
-                                     const DbgVariableIntrinsic &DebugInst,
-                                     MachineIRBuilder &Builder,
-                                     bool IsIndirect) {
-  auto MaybeReg = getRegisterIfSwiftAsyncArg(V, Builder.getMF());
-  if (!MaybeReg)
-    return false;
-
-  // TODO: Since this is _required_ for debug info to be correct, we should
-  // consider adding the EntryValue expression here, instead of waiting until
-  // the end of the compilation pipeline, where the MIR may have changed.
-  if (IsIndirect)
-    Builder.buildIndirectDbgValue(*MaybeReg, DebugInst.getVariable(),
-                                  DebugInst.getExpression());
-  else
-    Builder.buildDirectDbgValue(*MaybeReg, DebugInst.getVariable(),
-                                DebugInst.getExpression());
-  return true;
-}
-
 std::optional<MCRegister> IRTranslator::getArgPhysReg(Argument &Arg) {
   auto VRegs = getOrCreateVRegs(Arg);
   if (VRegs.size() != 1)
@@ -2099,9 +2065,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
           DIExpression::get(AI->getContext(), ExprOperands.drop_front());
       MIRBuilder.buildFIDbgValue(getOrCreateFrameIndex(*AI), DI.getVariable(),
                                  ExprDerefRemoved);
-      return true;
-    }
-    if (translateIfSwiftAsyncArg(*V, DI, MIRBuilder, false /*IsIndirect*/)) {
       return true;
     }
     if (translateIfEntryValueArgument(DI, MIRBuilder))
