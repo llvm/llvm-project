@@ -1426,7 +1426,7 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
 
     bool MatchFound = false;
     auto ChainIter = MRU.begin();
-    for (int J = 0; J < MaxChainsToTry && ChainIter != MRU.end();
+    for (size_t J = 0; J < MaxChainsToTry && ChainIter != MRU.end();
          ++J, ++ChainIter) {
       std::optional<APInt> Offset =
           getConstantOffset(getLoadStorePointerOperand(ChainIter->first),
