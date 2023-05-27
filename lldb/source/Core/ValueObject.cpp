@@ -466,7 +466,7 @@ size_t ValueObject::GetIndexOfChildWithName(ConstString name) {
                                                    omit_empty_base_classes);
 }
 
-ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
+ValueObjectSP ValueObject::GetChildMemberWithName(llvm::StringRef name,
                                                   bool can_create) {
   // We may need to update our value if we are dynamic.
   if (IsPossibleDynamicType())
@@ -483,7 +483,7 @@ ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
 
   const size_t num_child_indexes =
       GetCompilerType().GetIndexOfChildMemberWithName(
-          name.GetCString(), omit_empty_base_classes, child_indexes);
+          name.str().data(), omit_empty_base_classes, child_indexes);
   if (num_child_indexes == 0)
     return nullptr;
 
@@ -2714,13 +2714,11 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     }
 
   } else if (HasSyntheticValue()) {
-    m_deref_valobj =
-        GetSyntheticValue()
-            ->GetChildMemberWithName(ConstString("$$dereference$$"), true)
-            .get();
+    m_deref_valobj = GetSyntheticValue()
+                         ->GetChildMemberWithName("$$dereference$$", true)
+                         .get();
   } else if (IsSynthetic()) {
-    m_deref_valobj =
-        GetChildMemberWithName(ConstString("$$dereference$$"), true).get();
+    m_deref_valobj = GetChildMemberWithName("$$dereference$$", true).get();
   }
 
   if (m_deref_valobj) {

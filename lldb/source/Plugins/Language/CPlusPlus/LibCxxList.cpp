@@ -32,19 +32,15 @@ public:
       : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
 
   ListEntry next() {
-    static ConstString g_next("__next_");
-
     if (!m_entry_sp)
       return ListEntry();
-    return ListEntry(m_entry_sp->GetChildMemberWithName(g_next, true));
+    return ListEntry(m_entry_sp->GetChildMemberWithName("__next_", true));
   }
 
   ListEntry prev() {
-    static ConstString g_prev("__prev_");
-
     if (!m_entry_sp)
       return ListEntry();
-    return ListEntry(m_entry_sp->GetChildMemberWithName(g_prev, true));
+    return ListEntry(m_entry_sp->GetChildMemberWithName("__prev_", true));
   }
 
   uint64_t value() const {
@@ -297,13 +293,13 @@ bool ForwardListFrontEnd::Update() {
     return false;
 
   ValueObjectSP impl_sp(
-      m_backend.GetChildMemberWithName(ConstString("__before_begin_"), true));
+      m_backend.GetChildMemberWithName("__before_begin_", true));
   if (!impl_sp)
     return false;
   impl_sp = GetFirstValueOfLibCXXCompressedPair(*impl_sp);
   if (!impl_sp)
     return false;
-  m_head = impl_sp->GetChildMemberWithName(ConstString("__next_"), true).get();
+  m_head = impl_sp->GetChildMemberWithName("__next_", true).get();
   return false;
 }
 
@@ -319,7 +315,7 @@ size_t ListFrontEnd::CalculateNumChildren() {
   if (!m_head || !m_tail || m_node_address == 0)
     return 0;
   ValueObjectSP size_alloc(
-      m_backend.GetChildMemberWithName(ConstString("__size_alloc_"), true));
+      m_backend.GetChildMemberWithName("__size_alloc_", true));
   if (size_alloc) {
     ValueObjectSP value = GetFirstValueOfLibCXXCompressedPair(*size_alloc);
     if (value) {
@@ -412,12 +408,11 @@ bool ListFrontEnd::Update() {
   m_node_address = backend_addr->GetValueAsUnsigned(0);
   if (!m_node_address || m_node_address == LLDB_INVALID_ADDRESS)
     return false;
-  ValueObjectSP impl_sp(
-      m_backend.GetChildMemberWithName(ConstString("__end_"), true));
+  ValueObjectSP impl_sp(m_backend.GetChildMemberWithName("__end_", true));
   if (!impl_sp)
     return false;
-  m_head = impl_sp->GetChildMemberWithName(ConstString("__next_"), true).get();
-  m_tail = impl_sp->GetChildMemberWithName(ConstString("__prev_"), true).get();
+  m_head = impl_sp->GetChildMemberWithName("__next_", true).get();
+  m_tail = impl_sp->GetChildMemberWithName("__prev_", true).get();
   return false;
 }
 

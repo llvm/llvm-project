@@ -711,12 +711,11 @@ SBValue::GetChildMemberWithName(const char *name,
   LLDB_INSTRUMENT_VA(this, name, use_dynamic_value);
 
   lldb::ValueObjectSP child_sp;
-  const ConstString str_name(name);
 
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    child_sp = value_sp->GetChildMemberWithName(str_name, true);
+    child_sp = value_sp->GetChildMemberWithName(name, true);
   }
 
   SBValue sb_value;
