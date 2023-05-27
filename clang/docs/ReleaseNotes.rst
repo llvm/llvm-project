@@ -507,6 +507,8 @@ Bug Fixes to C++ Support
   (`#114 <https://github.com/llvm/llvm-project/issues/114>`_)
 - Fix parsing of `auto(x)`, when it is surrounded by parentheses.
   (`#62494 <https://github.com/llvm/llvm-project/issues/62494>`_)
+- Fix handling of generic lambda used as template arguments.
+  (`#62611 <https://github.com/llvm/llvm-project/issues/62611>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
