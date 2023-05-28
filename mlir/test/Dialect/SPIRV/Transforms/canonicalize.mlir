@@ -187,6 +187,31 @@ func.func @extract_construct(%val1: vector<2xf32>, %val2: vector<2xf32>) -> (vec
 
 // -----
 
+ // CHECK-LABEL: fold_composite_op
+ //  CHECK-SAME: (%[[COMP:.+]]: !spirv.struct<(f32, f32)>, %[[VAL1:.+]]: f32, %[[VAL2:.+]]: f32)
+  func.func @fold_composite_op(%composite: !spirv.struct<(f32, f32)>, %val1: f32, %val2: f32) -> f32 {
+    %insert = spirv.CompositeInsert %val1, %composite[0 : i32] : f32 into !spirv.struct<(f32, f32)>
+    %1 = spirv.CompositeInsert %val2, %insert[1 : i32] : f32 into !spirv.struct<(f32, f32)>
+    %2 = spirv.CompositeExtract %1[0 : i32] : !spirv.struct<(f32, f32)>
+    // CHECK-NEXT: return  %[[VAL1]]
+    return %2 : f32
+  }
+
+// -----
+
+ // CHECK-LABEL: fold_composite_op
+ //  CHECK-SAME: (%[[VAL1:.+]]: f32, %[[VAL2:.+]]: f32, %[[VAL3:.+]]: f32)
+  func.func @fold_composite_op(%val1: f32, %val2: f32, %val3: f32) -> f32 {
+    %composite = spirv.CompositeConstruct %val1, %val1, %val1 : (f32, f32, f32) -> !spirv.struct<(f32, f32, f32)>
+    %insert = spirv.CompositeInsert %val2, %composite[1 : i32] : f32 into !spirv.struct<(f32, f32, f32)>
+    %1 = spirv.CompositeInsert %val3, %insert[2 : i32] : f32 into !spirv.struct<(f32, f32, f32)>
+    %2 = spirv.CompositeExtract %1[0 : i32] : !spirv.struct<(f32, f32, f32)>
+    // CHECK-NEXT: return  %[[VAL1]]
+    return %2 : f32
+  }
+
+// -----
+
 // Not yet implemented case
 
 // CHECK-LABEL: extract_construct
