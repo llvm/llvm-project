@@ -1422,7 +1422,7 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
   // chains.  This limits the O(n^2) behavior of this pass while also allowing
   // us to build arbitrarily long chains.
   for (Instruction *I : Instrs) {
-    constexpr size_t MaxChainsToTry = 64;
+    constexpr int MaxChainsToTry = 64;
 
     bool MatchFound = false;
     auto ChainIter = MRU.begin();
