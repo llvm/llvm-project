@@ -418,7 +418,7 @@ mgpuSDDMMBufferSize(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c,
   ALPHABETA(dw, alpha, beta)
   size_t bufferSize = 0;
   CUSPARSE_REPORT_IF_ERROR(cusparseSDDMM_bufferSize(
-      handle, modeA, modeB, &alpha, matA, matB, &beta, matC, dtp,
+      handle, modeA, modeB, alphap, matA, matB, betap, matC, dtp,
       CUSPARSE_SDDMM_ALG_DEFAULT, &bufferSize))
   return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
 }
@@ -434,7 +434,7 @@ mgpuSDDMM(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c,
   cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
   cudaDataType_t dtp = dataTp(dw);
   ALPHABETA(dw, alpha, beta)
-  CUSPARSE_REPORT_IF_ERROR(cusparseSDDMM(handle, modeA, modeB, &alpha, matA,
-                                         matB, &beta, matC, dtp,
+  CUSPARSE_REPORT_IF_ERROR(cusparseSDDMM(handle, modeA, modeB, alphap, matA,
+                                         matB, betap, matC, dtp,
                                          CUSPARSE_SDDMM_ALG_DEFAULT, buf))
 }
