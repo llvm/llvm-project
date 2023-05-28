@@ -14,7 +14,9 @@
 // XFAIL: libcpp-no-vcruntime
 // XFAIL: LIBCXX-AIX-FIXME
 
-// TODO: Investigate why this fails on Windows
+// MSVC/vcruntime falls back from the nothrow array new to the nothrow
+// scalar new, instead of falling back on the throwing array new.
+// https://developercommunity.visualstudio.com/t/vcruntime-nothrow-array-operator-new-fal/10373274
 // XFAIL: target={{.+}}-windows-msvc
 
 #include <new>
