@@ -43,6 +43,7 @@ public:
   static bool ComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
                                             FileSpec &file_spec, bool verify);
   static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options);
+  static std::vector<std::string> GetSwiftLibrarySearchPaths();
 #endif
 
 private:
