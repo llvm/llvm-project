@@ -57,10 +57,10 @@ class BitcodeAnalyzer {
   unsigned NumTopBlocks = 0;
 
   struct PerRecordStats {
-    unsigned NumInstances;
-    unsigned NumAbbrev;
-    uint64_t TotalBits;
-    PerRecordStats() : NumInstances(0), NumAbbrev(0), TotalBits(0) {}
+    unsigned NumInstances = 0;
+    unsigned NumAbbrev = 0;
+    uint64_t TotalBits = 0;
+    PerRecordStats() = default;
   };
 
   struct PerBlockIDStats {
