@@ -1636,6 +1636,12 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
         if (allocaWouldBeStaticInEntry(AI))
           continue;
 
+      // Do not force a debug loc for pseudo probes, since they do not need to
+      // be debuggable, and also they are expected to have a zero/null dwarf
+      // discriminator at this point which could be violated otherwise.
+      if (isa<PseudoProbeInst>(BI))
+        continue;
+
       BI->setDebugLoc(TheCallDL);
     }
 
