@@ -907,13 +907,6 @@ private:
   static SVal makeElementRegion(ProgramStateRef State, SVal LValue,
                                 QualType &Ty, bool &IsArray, unsigned Idx = 0);
 
-  /// For a DeclStmt or CXXInitCtorInitializer, walk backward in the current CFG
-  /// block to find the constructor expression that directly constructed into
-  /// the storage for this statement. Returns null if the constructor for this
-  /// statement created a temporary object region rather than directly
-  /// constructing into an existing region.
-  const CXXConstructExpr *findDirectConstructorForCurrentCFGElement();
-
   /// Common code that handles either a CXXConstructExpr or a
   /// CXXInheritedCtorInitExpr.
   void handleConstructor(const Expr *E, ExplodedNode *Pred,
