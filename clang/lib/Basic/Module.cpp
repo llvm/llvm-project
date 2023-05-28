@@ -269,12 +269,12 @@ bool Module::fullModuleNameIs(ArrayRef<StringRef> nameParts) const {
   return nameParts.empty();
 }
 
-const DirectoryEntry *Module::getEffectiveUmbrellaDir() const {
+OptionalDirectoryEntryRef Module::getEffectiveUmbrellaDir() const {
   if (const auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
     return FileEntryRef(*ME).getDir();
-  if (const auto *ME = Umbrella.dyn_cast<const DirectoryEntry *>())
-    return ME;
-  return nullptr;
+  if (const auto *ME = Umbrella.dyn_cast<const DirectoryEntryRef::MapEntry *>())
+    return DirectoryEntryRef(*ME);
+  return std::nullopt;
 }
 
 void Module::addTopHeader(const FileEntry *File) {

@@ -1195,9 +1195,9 @@ void ModuleMap::setUmbrellaHeaderAsWritten(
 }
 
 void ModuleMap::setUmbrellaDirAsWritten(
-    Module *Mod, const DirectoryEntry *UmbrellaDir, const Twine &NameAsWritten,
+    Module *Mod, DirectoryEntryRef UmbrellaDir, const Twine &NameAsWritten,
     const Twine &PathRelativeToRootModuleDirectory) {
-  Mod->Umbrella = UmbrellaDir;
+  Mod->Umbrella = &UmbrellaDir.getMapEntry();
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   Mod->UmbrellaRelativeToRootModuleDirectory =
       PathRelativeToRootModuleDirectory.str();
@@ -2527,16 +2527,14 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
   }
 
   // Look for this file.
-  const DirectoryEntry *Dir = nullptr;
+  OptionalDirectoryEntryRef Dir;
   if (llvm::sys::path::is_absolute(DirName)) {
-    if (auto D = SourceMgr.getFileManager().getDirectory(DirName))
-      Dir = *D;
+    Dir = SourceMgr.getFileManager().getOptionalDirectoryRef(DirName);
   } else {
     SmallString<128> PathName;
     PathName = Directory->getName();
     llvm::sys::path::append(PathName, DirName);
-    if (auto D = SourceMgr.getFileManager().getDirectory(PathName))
-      Dir = *D;
+    Dir = SourceMgr.getFileManager().getOptionalDirectoryRef(PathName);
   }
 
   if (!Dir) {
@@ -2570,7 +2568,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     return;
   }
 
-  if (Module *OwningModule = Map.UmbrellaDirs[Dir]) {
+  if (Module *OwningModule = Map.UmbrellaDirs[*Dir]) {
     Diags.Report(UmbrellaLoc, diag::err_mmap_umbrella_clash)
       << OwningModule->getFullModuleName();
     HadError = true;
@@ -2578,7 +2576,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
   }
 
   // Record this umbrella directory.
-  Map.setUmbrellaDirAsWritten(ActiveModule, Dir, DirNameAsWritten, DirName);
+  Map.setUmbrellaDirAsWritten(ActiveModule, *Dir, DirNameAsWritten, DirName);
 }
 
 /// Parse a module export declaration.

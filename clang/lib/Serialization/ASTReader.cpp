@@ -5811,7 +5811,8 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       // See comments in SUBMODULE_UMBRELLA_HEADER
       std::string Dirname = std::string(Blob);
       ResolveImportedPath(F, Dirname);
-      if (auto Umbrella = PP.getFileManager().getDirectory(Dirname)) {
+      if (auto Umbrella =
+              PP.getFileManager().getOptionalDirectoryRef(Dirname)) {
         if (!CurrentModule->getUmbrellaDirAsWritten()) {
           // FIXME: NameAsWritten
           ModMap.setUmbrellaDirAsWritten(CurrentModule, *Umbrella, Blob, "");
