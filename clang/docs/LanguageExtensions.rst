@@ -785,8 +785,8 @@ supported if the compiler can emulate arithmetic on the type by promoting
 to ``float``; see below for more information on this emulation.
 
 * ``__fp16`` is supported on all targets. The special semantics of this
-type mean that no arithmetic is ever performed directly on ``__fp16`` values;
-see below.
+  type mean that no arithmetic is ever performed directly on ``__fp16`` values;
+  see below.
 
 * ``_Float16`` is supported on the following targets:
   * 32-bit ARM (natively on some architecture versions)
@@ -810,7 +810,7 @@ which provides an 8-bit exponent and an 8-bit significand; this is the same
 exponent range as `float`, just with greatly reduced precision.
 
 ``_Float16`` and ``__bf16`` follow the usual rules for arithmetic
-floating-point types.  Most importantly, this means that arithmetic operations
+floating-point types. Most importantly, this means that arithmetic operations
 on operands of these types are formally performed in the type and produce
 values of the type. ``__fp16`` does not follow those rules: most operations
 immediately promote operands of type ``__fp16`` to ``float``, and so
@@ -834,28 +834,29 @@ the C++ standard.
 
 The use of excess precision can be independently controlled for these two
 types with the ``-ffloat16-excess-precision=`` and
-``-fbfloat16-excess-precision=`` options.  Valid values include:
-- ``none`` (meaning to perform strict operation-by-operation emulation)
-- ``standard`` (meaning that excess precision is permitted under the rules
-  described in the standard, i.e. never across explicit casts or statements)
-- ``fast`` (meaning that excess precision is permitted whenever the
+``-fbfloat16-excess-precision=`` options. Valid values include:
+
+* ``none``: meaning to perform strict operation-by-operation emulation
+* ``standard``: meaning that excess precision is permitted under the rules
+  described in the standard, i.e. never across explicit casts or statements
+* ``fast``: meaning that excess precision is permitted whenever the
   optimizer sees an opportunity to avoid truncations; currently this has no
-  effect beyond ``standard``)
+  effect beyond ``standard``
 
 The ``_Float16`` type is an interchange floating type specified in
- ISO/IEC TS 18661-3:2015 ("Floating-point extensions for C").  It will
+ISO/IEC TS 18661-3:2015 ("Floating-point extensions for C"). It will
 be supported on more targets as they define ABIs for it.
 
 The ``__bf16`` type is a non-standard extension, but it generally follows
 the rules for arithmetic interchange floating types from ISO/IEC TS
-18661-3:2015.  In previous versions of Clang, it was a storage-only type
-that forbade arithmetic operations.  It will be supported on more targets
+18661-3:2015. In previous versions of Clang, it was a storage-only type
+that forbade arithmetic operations. It will be supported on more targets
 as they define ABIs for it.
 
 The ``__fp16`` type was originally an ARM extension and is specified
 by the `ARM C Language Extensions <https://github.com/ARM-software/acle/releases>`_.
 Clang uses the ``binary16`` format from IEEE 754-2008 for ``__fp16``,
-not the ARM alternative format.  Operators that expect arithmetic operands
+not the ARM alternative format. Operators that expect arithmetic operands
 immediately promote ``__fp16`` operands to ``float``.
 
 It is recommended that portable code use ``_Float16`` instead of ``__fp16``,
@@ -871,7 +872,7 @@ A literal can be given ``_Float16`` type using the suffix ``f16``. For example,
 
 Because default argument promotion only applies to the standard floating-point
 types, ``_Float16`` values are not promoted to ``double`` when passed as variadic
-or untyped arguments.  As a consequence, some caution must be taken when using
+or untyped arguments. As a consequence, some caution must be taken when using
 certain library facilities with ``_Float16``; for example, there is no ``printf`` format
 specifier for ``_Float16``, and (unlike ``float``) it will not be implicitly promoted to
 ``double`` when passed to ``printf``, so the programmer must explicitly cast it to
