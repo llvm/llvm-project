@@ -1300,3 +1300,10 @@ endif()
 
 set(LLVM_THIRD_PARTY_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/../third-party CACHE STRING
     "Directory containing third party software used by LLVM (e.g. googletest)")
+
+if(LLVM_ENABLE_LLVM_LIBC)
+  check_library_exists(llvmlibc printf "" HAVE_LLVM_LIBC)
+  if(NOT HAVE_LLVM_LIBC)
+    message(WARNING "Unable to link against LLVM libc. LLVM will be built without linking against the LLVM libc overlay.")
+  endif()
+endif()
