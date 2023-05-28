@@ -4402,7 +4402,7 @@ SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
         getDefaultVLOps(DstVT, ContainerDstVT, DL, DAG, Subtarget);
 
     SDValue FPCLASS = DAG.getNode(
-        RISCVISD::FCLASS_VL, DL, DAG.getVTList(ContainerDstVT, MVT::Other),
+        RISCVISD::FCLASS_VL, DL, ContainerDstVT,
         {convertToScalableVector(ContainerVT0, Op0, DAG, Subtarget) /*Op0*/,
          Mask, VL},
         Op->getFlags());
