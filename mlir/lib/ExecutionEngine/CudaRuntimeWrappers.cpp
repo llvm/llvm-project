@@ -350,7 +350,7 @@ mgpuSpMVBufferSize(void *h, int32_t ma, void *a, void *x, void *y, int32_t dw,
   ALPHABETA(dw, alpha, beta)
   size_t bufferSize = 0;
   CUSPARSE_REPORT_IF_ERROR(
-      cusparseSpMV_bufferSize(handle, modeA, &alpha, matA, vecX, &beta, vecY,
+      cusparseSpMV_bufferSize(handle, modeA, alphap, matA, vecX, betap, vecY,
                               dtp, CUSPARSE_SPMV_ALG_DEFAULT, &bufferSize))
   return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
 }
@@ -366,8 +366,8 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSpMV(void *h, int32_t ma, void *a,
   cusparseDnVecDescr_t vecY = reinterpret_cast<cusparseDnVecDescr_t>(y);
   cudaDataType_t dtp = dataTp(dw);
   ALPHABETA(dw, alpha, beta)
-  CUSPARSE_REPORT_IF_ERROR(cusparseSpMV(handle, modeA, &alpha, matA, vecX,
-                                        &beta, vecY, dtp,
+  CUSPARSE_REPORT_IF_ERROR(cusparseSpMV(handle, modeA, alphap, matA, vecX,
+                                        betap, vecY, dtp,
                                         CUSPARSE_SPMV_ALG_DEFAULT, buf))
 }
 
@@ -384,7 +384,7 @@ mgpuSpMMBufferSize(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c,
   ALPHABETA(dw, alpha, beta)
   size_t bufferSize = 0;
   CUSPARSE_REPORT_IF_ERROR(cusparseSpMM_bufferSize(
-      handle, modeA, modeB, &alpha, matA, matB, &beta, matC, dtp,
+      handle, modeA, modeB, alphap, matA, matB, betap, matC, dtp,
       CUSPARSE_SPMM_ALG_DEFAULT, &bufferSize))
   return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
 }
@@ -400,7 +400,7 @@ mgpuSpMM(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c, int32_t dw,
   cusparseDnMatDescr_t matC = reinterpret_cast<cusparseDnMatDescr_t>(c);
   cudaDataType_t dtp = dataTp(dw);
   ALPHABETA(dw, alpha, beta)
-  CUSPARSE_REPORT_IF_ERROR(cusparseSpMM(handle, modeA, modeB, &alpha, matA,
-                                        matB, &beta, matC, dtp,
+  CUSPARSE_REPORT_IF_ERROR(cusparseSpMM(handle, modeA, modeB, alphap, matA,
+                                        matB, betap, matC, dtp,
                                         CUSPARSE_SPMM_ALG_DEFAULT, buf))
 }
