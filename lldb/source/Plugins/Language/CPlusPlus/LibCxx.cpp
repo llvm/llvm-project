@@ -793,7 +793,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   if (!l)
     return {};
 
-  StringLayout layout = l->GetIndexOfChildWithName(ConstString("__data_")) == 0
+  StringLayout layout = l->GetIndexOfChildWithName("__data_") == 0
                             ? StringLayout::DSC
                             : StringLayout::CSD;
 

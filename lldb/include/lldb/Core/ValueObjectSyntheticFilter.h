@@ -56,7 +56,7 @@ public:
   lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create) override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  size_t GetIndexOfChildWithName(llvm::StringRef name) override;
 
   lldb::ValueObjectSP
   GetDynamicValue(lldb::DynamicValueType valueType) override;
