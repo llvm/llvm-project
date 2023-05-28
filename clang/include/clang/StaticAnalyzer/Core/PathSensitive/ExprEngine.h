@@ -607,12 +607,6 @@ public:
                                       StmtNodeBuilder &Bldr,
                                       ExplodedNode *Pred);
 
-  ProgramStateRef handleLVectorSplat(ProgramStateRef state,
-                                     const LocationContext *LCtx,
-                                     const CastExpr *CastE,
-                                     StmtNodeBuilder &Bldr,
-                                     ExplodedNode *Pred);
-
   void handleUOExtension(ExplodedNodeSet::iterator I,
                          const UnaryOperator* U,
                          StmtNodeBuilder &Bldr);
