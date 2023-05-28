@@ -483,7 +483,7 @@ ValueObjectSP ValueObject::GetChildMemberWithName(llvm::StringRef name,
 
   const size_t num_child_indexes =
       GetCompilerType().GetIndexOfChildMemberWithName(
-          name.str().data(), omit_empty_base_classes, child_indexes);
+          name, omit_empty_base_classes, child_indexes);
   if (num_child_indexes == 0)
     return nullptr;
 
