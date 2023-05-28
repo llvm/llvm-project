@@ -13,10 +13,8 @@ define arm_aapcs_vfpcc double @zero(double %a, double %b, double %c) {
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    vmov.f32 s16, s2
-; CHECK-NEXT:    vmov.f32 s18, s0
-; CHECK-NEXT:    vmov.f32 s17, s3
-; CHECK-NEXT:    vmov.f32 s19, s1
+; CHECK-NEXT:    vmov.f64 d8, d1
+; CHECK-NEXT:    vmov.f64 d9, d0
 ; CHECK-NEXT:    bl sqrt
 ; CHECK-NEXT:    vmov r2, r3, d8
 ; CHECK-NEXT:    vmov r0, r1, d0
