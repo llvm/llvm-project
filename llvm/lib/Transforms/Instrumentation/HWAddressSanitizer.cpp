@@ -380,6 +380,7 @@ private:
   bool InstrumentStack;
   bool DetectUseAfterScope;
   bool UsePageAliases;
+  bool UseMatchAllCallback;
 
   std::optional<uint8_t> MatchAllTag;
 
@@ -584,6 +585,7 @@ void HWAddressSanitizer::initializeModule() {
   } else if (CompileKernel) {
     MatchAllTag = 0xFF;
   }
+  UseMatchAllCallback = !CompileKernel && MatchAllTag.has_value();
 
   // If we don't have personality function support, fall back to landing pads.
   InstrumentLandingPads = ClInstrumentLandingPads.getNumOccurrences()
@@ -624,17 +626,33 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
     const std::string EndingStr = Recover ? "_noabort" : "";
+    const std::string MatchAllStr = UseMatchAllCallback ? "_match_all" : "";
+
+    FunctionType *HwasanMemoryAccessCallbackSizedFnTy,
+        *HwasanMemoryAccessCallbackFnTy;
+    if (UseMatchAllCallback) {
+      HwasanMemoryAccessCallbackSizedFnTy =
+          FunctionType::get(VoidTy, {IntptrTy, IntptrTy, Int8Ty}, false);
+      HwasanMemoryAccessCallbackFnTy =
+          FunctionType::get(VoidTy, {IntptrTy, Int8Ty}, false);
+    } else {
+      HwasanMemoryAccessCallbackSizedFnTy =
+          FunctionType::get(VoidTy, {IntptrTy, IntptrTy}, false);
+      HwasanMemoryAccessCallbackFnTy =
+          FunctionType::get(VoidTy, {IntptrTy}, false);
+    }
 
     HwasanMemoryAccessCallbackSized[AccessIsWrite] = M.getOrInsertFunction(
-        ClMemoryAccessCallbackPrefix + TypeStr + "N" + EndingStr,
-        FunctionType::get(VoidTy, {IntptrTy, IntptrTy}, false));
+        ClMemoryAccessCallbackPrefix + TypeStr + "N" + MatchAllStr + EndingStr,
+        HwasanMemoryAccessCallbackSizedFnTy);
 
     for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
          AccessSizeIndex++) {
       HwasanMemoryAccessCallback[AccessIsWrite][AccessSizeIndex] =
           M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr +
-                                    itostr(1ULL << AccessSizeIndex) + EndingStr,
-                                FunctionType::get(VoidTy, {IntptrTy}, false));
+                                    itostr(1ULL << AccessSizeIndex) +
+                                    MatchAllStr + EndingStr,
+                                HwasanMemoryAccessCallbackFnTy);
     }
   }
 
@@ -959,19 +977,34 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
        *O.Alignment >= O.TypeStoreSize / 8)) {
     size_t AccessSizeIndex = TypeSizeToSizeIndex(O.TypeStoreSize);
     if (InstrumentWithCalls) {
-      IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
-                     IRB.CreatePointerCast(Addr, IntptrTy));
+      if (UseMatchAllCallback) {
+        IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
+                       {IRB.CreatePointerCast(Addr, IntptrTy),
+                        ConstantInt::get(Int8Ty, *MatchAllTag)});
+      } else {
+        IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
+                       IRB.CreatePointerCast(Addr, IntptrTy));
+      }
     } else if (OutlinedChecks) {
       instrumentMemAccessOutline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     } else {
       instrumentMemAccessInline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     }
   } else {
-    IRB.CreateCall(HwasanMemoryAccessCallbackSized[O.IsWrite],
-                   {IRB.CreatePointerCast(Addr, IntptrTy),
-                    IRB.CreateUDiv(IRB.CreateTypeSize(IntptrTy,
-                                                      O.TypeStoreSize),
-                                   ConstantInt::get(IntptrTy, 8))});
+    if (UseMatchAllCallback) {
+      IRB.CreateCall(
+          HwasanMemoryAccessCallbackSized[O.IsWrite],
+          {IRB.CreatePointerCast(Addr, IntptrTy),
+           IRB.CreateUDiv(IRB.CreateTypeSize(IntptrTy, O.TypeStoreSize),
+                          ConstantInt::get(IntptrTy, 8)),
+           ConstantInt::get(Int8Ty, *MatchAllTag)});
+    } else {
+      IRB.CreateCall(
+          HwasanMemoryAccessCallbackSized[O.IsWrite],
+          {IRB.CreatePointerCast(Addr, IntptrTy),
+           IRB.CreateUDiv(IRB.CreateTypeSize(IntptrTy, O.TypeStoreSize),
+                          ConstantInt::get(IntptrTy, 8))});
+    }
   }
   untagPointerOperand(O.getInsn(), Addr);
 
