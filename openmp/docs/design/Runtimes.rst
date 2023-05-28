@@ -725,7 +725,7 @@ LIBOMPTARGET_DEBUG
 """"""""""""""""""
 
 ``LIBOMPTARGET_DEBUG`` controls whether or not debugging information will be
-displayed. This feature is only availible if ``libomptarget`` was built with
+displayed. This feature is only available if ``libomptarget`` was built with
 ``-DOMPTARGET_DEBUG``. The debugging output provided is intended for use by
 ``libomptarget`` developers. More user-friendly output is presented when using
 ``LIBOMPTARGET_INFO``.
@@ -975,7 +975,7 @@ going wrong.
     Libomptarget error: Consult https://openmp.llvm.org/design/Runtimes.html for debugging options.
     sum.cpp:5:1: Libomptarget error 1: failure of target construct while offloading is mandatory
 
-This shows that there is an illegal memory access occuring inside the OpenMP
+This shows that there is an illegal memory access occurring inside the OpenMP
 target region once execution has moved to the CUDA device, suggesting a
 segmentation fault. This then causes a chain reaction of failures in
 ``libomptarget``. Another message suggests using the ``LIBOMPTARGET_INFO``
@@ -1061,7 +1061,7 @@ of LLVM did not.
 LIBOMPTARGET_JIT_OPT_LEVEL
 """"""""""""""""""""""""""
 
-This environment variable can be used to change the optimization pipeleine used
+This environment variable can be used to change the optimization pipeline used
 to optimize the embedded device code as part of the device JIT. The value is
 corresponds to the ``-O{0,1,2,3}`` command line argument passed to ``clang``.
 
@@ -1225,9 +1225,9 @@ LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES
 
 This environment variable specifies the maximum size in bytes where the memory
 copies are asynchronous operations in the AMDGPU plugin. Up to this transfer
-size, the memory copies are asychronous operations pushed to the corresponding
+size, the memory copies are asynchronous operations pushed to the corresponding
 stream. For larger transfers, they are synchronous transfers. Memory copies
-involving already locked/pinned host buffers are always asychronous. The default
+involving already locked/pinned host buffers are always asynchronous. The default
 value is ``1*1024*1024`` bytes (1 MB).
 
 LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS
@@ -1288,7 +1288,7 @@ LIBOMPTARGET_RPC_ADDRESS
 The address and port at which the server is running. This needs to be set for
 the server and the application, the default is ``0.0.0.0:50051``. A single
 OpenMP executable can offload onto multiple remote hosts by setting this to
-comma-seperated values of the addresses.
+comma-separated values of the addresses.
 
 LIBOMPTARGET_RPC_ALLOCATOR_MAX
 """"""""""""""""""""""""""""""

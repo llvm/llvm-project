@@ -10,7 +10,7 @@ If your ``-Wl,--gc-sections`` build fail with a linker error like this:
 it is likely your C identifier name sections are not properly annotated to
 suffice under ``--gc-sections``.
 
-``__start_meta`` and ``__stop_meta`` are sometimed called encapsulation
+``__start_meta`` and ``__stop_meta`` are sometimes called encapsulation
 symbols. In October 2015, GNU ld switched behavior and made a ``__start_meta``
 reference from a live section retain all ``meta`` input sections. This
 conservative behavior works for existing code which does not take GC into fair
