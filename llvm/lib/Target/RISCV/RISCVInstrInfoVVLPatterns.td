@@ -133,6 +133,7 @@ def riscv_fclass_vl : SDNode<"RISCVISD::FCLASS_VL",
                              SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisVec<0>,
                                                   SDTCisFP<1>, SDTCisVec<1>,
                                                   SDTCisSameSizeAs<0, 1>,
+                                                  SDTCisSameNumEltsAs<0, 1>,
                                                   SDTCVecEltisVT<2, i1>,
                                                   SDTCisSameNumEltsAs<0, 2>,
                                                   SDTCisVT<3, XLenVT>]>>;
