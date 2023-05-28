@@ -3558,7 +3558,7 @@ The third argument is one of the memory ordering specifiers ``__ATOMIC_RELAXED``
 ``__ATOMIC_CONSUME``, ``__ATOMIC_ACQUIRE``, ``__ATOMIC_RELEASE``,
 ``__ATOMIC_ACQ_REL``, or ``__ATOMIC_SEQ_CST`` following C++11 memory model semantics.
 
-In terms or aquire-release ordering barriers these two operations are always
+In terms of acquire-release ordering barriers these two operations are always
 considered as operations with *load-store* semantics, even when the original value
 is not actually modified after comparison.
 

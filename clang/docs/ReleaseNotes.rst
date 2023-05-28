@@ -207,7 +207,7 @@ Non-comprehensive list of changes in this release
   ``memcmp(&lhs, &rhs, sizeof(T)) == 0``.
 - Clang now ignores null directives outside of the include guard when deciding
   whether a file can be enabled for the multiple-include optimization.
-- Clang now support ``__builtin_FUNCSIG()`` which retruns the same information
+- Clang now support ``__builtin_FUNCSIG()`` which returns the same information
   as the ``__FUNCSIG__`` macro (available only with ``-fms-extensions`` flag).
   This fixes (`#58951 <https://github.com/llvm/llvm-project/issues/58951>`_).
 
