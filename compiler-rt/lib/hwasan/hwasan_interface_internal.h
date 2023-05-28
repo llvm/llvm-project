@@ -236,6 +236,13 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void *__hwasan_memmove(void *dest, const void *src, uptr n);
 
 SANITIZER_INTERFACE_ATTRIBUTE
+void *__hwasan_memcpy_match_all(void *dst, const void *src, uptr size, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void *__hwasan_memset_match_all(void *s, int c, uptr n, u8);
+SANITIZER_INTERFACE_ATTRIBUTE
+void *__hwasan_memmove_match_all(void *dest, const void *src, uptr n, u8);
+
+SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_set_error_report_callback(void (*callback)(const char *));
 }  // extern "C"
 
