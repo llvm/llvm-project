@@ -1033,7 +1033,7 @@ define void @avg_v32i8_const(ptr %a) nounwind {
 ;
 ; AVX1-LABEL: avg_v32i8_const:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = [506097522914230528,506097522914230528]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; AVX1-NEXT:    # xmm0 = mem[0,0]
 ; AVX1-NEXT:    vpavgb (%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpavgb 16(%rdi), %xmm0, %xmm0
@@ -1084,7 +1084,7 @@ define void @avg_v64i8_const(ptr %a) nounwind {
 ;
 ; AVX1-LABEL: avg_v64i8_const:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = [506097522914230528,506097522914230528]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; AVX1-NEXT:    # xmm0 = mem[0,0]
 ; AVX1-NEXT:    vpavgb (%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpavgb 16(%rdi), %xmm0, %xmm2
@@ -1098,7 +1098,7 @@ define void @avg_v64i8_const(ptr %a) nounwind {
 ;
 ; AVX2-LABEL: avg_v64i8_const:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [506097522914230528,506097522914230528,506097522914230528,506097522914230528]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    vpavgb (%rdi), %ymm0, %ymm1
 ; AVX2-NEXT:    vpavgb 32(%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rax)
@@ -1108,7 +1108,7 @@ define void @avg_v64i8_const(ptr %a) nounwind {
 ;
 ; AVX512F-LABEL: avg_v64i8_const:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [506097522914230528,506097522914230528,506097522914230528,506097522914230528]
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; AVX512F-NEXT:    vpavgb (%rdi), %ymm0, %ymm1
 ; AVX512F-NEXT:    vpavgb 32(%rdi), %ymm0, %ymm0
 ; AVX512F-NEXT:    vmovdqu %ymm0, (%rax)
