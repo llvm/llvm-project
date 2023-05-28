@@ -4,6 +4,7 @@ from mlir.ir import *
 import mlir.dialects.func as func
 import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
+import mlir.dialects.arith as arith
 
 
 def run(f):
@@ -467,3 +468,22 @@ def testCustomTypeTypeCaster():
         print(d.type)
         # CHECK: TestIntegerRankedTensorType(tensor<10x10xi5>)
         print(repr(d.type))
+
+
+# CHECK-LABEL: TEST: testInferTypeOpInterface
+@run
+def testInferTypeOpInterface():
+    with Context() as ctx, Location.unknown(ctx):
+        test.register_python_test_dialect(ctx)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i64 = IntegerType.get_signless(64)
+            zero = arith.ConstantOp(i64, 0)
+
+            one_operand = test.InferResultsVariadicInputsOp(single=zero, doubled=None)
+            # CHECK: i32
+            print(one_operand.result.type)
+
+            two_operands = test.InferResultsVariadicInputsOp(single=zero, doubled=zero)
+            # CHECK: f32
+            print(two_operands.result.type)

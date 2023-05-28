@@ -53,6 +53,9 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<py::list> operandList) {
   // Note: as the list may contain other lists this may not be final size.
   mlirOperands.reserve(operandList->size());
   for (const auto &&it : llvm::enumerate(*operandList)) {
+    if (it.value().is_none())
+      continue;
+
     PyValue *val;
     try {
       val = py::cast<PyValue *>(it.value());
