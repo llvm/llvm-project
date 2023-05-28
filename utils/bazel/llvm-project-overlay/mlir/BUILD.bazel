@@ -3979,6 +3979,40 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BytecodeOpInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Bytecode/BytecodeOpInterface.h.inc",
+        ),
+         (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Bytecode/BytecodeOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Bytecode/BytecodeOpInterface.td",
+    deps = [":LLVMOpsTdFiles"],
+)
+
+cc_library(
+    name = "BytecodeOpInterface",
+    srcs = glob([
+        "lib/Bytecode/BytecodeOpInterface.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Bytecode/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterfaceIncGen",
+        ":IR",
+        ":Support",
+    ],
+)
+
 cc_library(
     name = "BytecodeReader",
     srcs = glob([
@@ -4010,6 +4044,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":Support",
         "//llvm:Support",
