@@ -490,7 +490,7 @@ public:
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create);
 
-  virtual size_t GetIndexOfChildWithName(ConstString name);
+  virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
 
   size_t GetNumChildren(uint32_t max = UINT32_MAX);
 
