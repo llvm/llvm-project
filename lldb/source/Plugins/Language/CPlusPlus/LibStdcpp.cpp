@@ -437,9 +437,8 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  ValueObjectSP usecount_sp(valobj_sp->GetChildAtNamePath(
-      {ConstString("_M_refcount"), ConstString("_M_pi"),
-       ConstString("_M_use_count")}));
+  ValueObjectSP usecount_sp(
+      valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi", "_M_use_count"}));
   if (!usecount_sp)
     return false;
 

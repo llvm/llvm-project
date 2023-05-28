@@ -480,8 +480,7 @@ public:
                       size_t *index_of_error = nullptr);
 
   // this will always create the children if necessary
-  lldb::ValueObjectSP GetChildAtNamePath(llvm::ArrayRef<ConstString> names,
-                                         ConstString *name_of_error = nullptr);
+  lldb::ValueObjectSP GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names);
 
   lldb::ValueObjectSP
   GetChildAtNamePath(llvm::ArrayRef<std::pair<ConstString, bool>> names,
