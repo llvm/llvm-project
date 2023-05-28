@@ -45,3 +45,5 @@ Revert "[SLP][NFC]Add missing finalize params in the CostEstimator, NFC."
 Revert: lots of crashes in FastRegAlloc: Assertion `Reg.isPhysical()' failed.
   c4a872badb53 FastRegAlloc: Fix implicit operands not rewritten
 
+Revert: 2be0abb7fe72 Rewrite load-store-vectorizer.
+

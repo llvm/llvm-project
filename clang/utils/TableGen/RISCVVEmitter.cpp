@@ -377,25 +377,13 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     }
   }
 
-  for (int Log2LMUL : Log2LMULs) {
-    auto T = TypeCache.computeType(BasicType::Float16, Log2LMUL,
-                                   PrototypeDescriptor::Vector);
-    if (T)
-      printType(*T);
-  }
-
-  for (int Log2LMUL : Log2LMULs) {
-    auto T = TypeCache.computeType(BasicType::Float32, Log2LMUL,
-                                   PrototypeDescriptor::Vector);
-    if (T)
-      printType(*T);
-  }
-
-  for (int Log2LMUL : Log2LMULs) {
-    auto T = TypeCache.computeType(BasicType::Float64, Log2LMUL,
-                                   PrototypeDescriptor::Vector);
-    if (T)
-      printType(*T);
+  for (BasicType BT :
+       {BasicType::Float16, BasicType::Float32, BasicType::Float64}) {
+    for (int Log2LMUL : Log2LMULs) {
+      auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
+      if (T)
+        printType(*T);
+    }
   }
 
   OS << "#define __riscv_v_intrinsic_overloading 1\n";

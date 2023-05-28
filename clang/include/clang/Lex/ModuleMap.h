@@ -699,7 +699,7 @@ public:
                              const Twine &PathRelativeToRootModuleDirectory);
 
   /// Sets the umbrella directory of the given module to the given directory.
-  void setUmbrellaDirAsWritten(Module *Mod, const DirectoryEntry *UmbrellaDir,
+  void setUmbrellaDirAsWritten(Module *Mod, DirectoryEntryRef UmbrellaDir,
                                const Twine &NameAsWritten,
                                const Twine &PathRelativeToRootModuleDirectory);
 

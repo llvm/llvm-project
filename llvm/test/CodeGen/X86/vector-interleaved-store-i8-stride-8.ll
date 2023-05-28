@@ -1599,7 +1599,7 @@ define void @store_i8_stride8_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[0,2,2,3,4,5,6,7]
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[0,0,2,1,4,4,6,5]
-; AVX1-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [281474976710655,281474976710655,281474976710655,281474976710655]
+; AVX1-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0]
 ; AVX1-ONLY-NEXT:    vandnps %ymm2, %ymm0, %ymm2
 ; AVX1-ONLY-NEXT:    vmovdqa (%r9), %xmm7
 ; AVX1-ONLY-NEXT:    vmovdqa (%r8), %xmm8
@@ -1626,7 +1626,7 @@ define void @store_i8_stride8_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vpshuflw {{.*#+}} xmm14 = xmm15[0,2,2,3,4,5,6,7]
 ; AVX1-ONLY-NEXT:    vpmovzxdq {{.*#+}} xmm14 = xmm14[0],zero,xmm14[1],zero
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm14, %ymm2, %ymm14
-; AVX1-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855]
+; AVX1-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535]
 ; AVX1-ONLY-NEXT:    vandps %ymm2, %ymm13, %ymm13
 ; AVX1-ONLY-NEXT:    vandnps %ymm14, %ymm2, %ymm14
 ; AVX1-ONLY-NEXT:    vorps %ymm14, %ymm13, %ymm13
@@ -4158,7 +4158,7 @@ define void @store_i8_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vpshufhw {{.*#+}} xmm2 = xmm1[0,1,2,3,4,6,6,7]
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX1-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm5 = [281474976710655,281474976710655,281474976710655,281474976710655]
+; AVX1-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm5 = [65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0]
 ; AVX1-ONLY-NEXT:    vandnps %ymm0, %ymm5, %ymm0
 ; AVX1-ONLY-NEXT:    vmovdqa (%r9), %xmm3
 ; AVX1-ONLY-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -4190,7 +4190,7 @@ define void @store_i8_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vpmovzxwq {{.*#+}} xmm8 = xmm8[0],zero,zero,zero,xmm8[1],zero,zero,zero
 ; AVX1-ONLY-NEXT:    vinsertf128 $1, %xmm8, %ymm7, %ymm7
 ; AVX1-ONLY-NEXT:    vshufps {{.*#+}} ymm8 = ymm4[2,1,3,3,6,5,7,7]
-; AVX1-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm4 = [18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855]
+; AVX1-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm4 = [65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535]
 ; AVX1-ONLY-NEXT:    vandnps %ymm8, %ymm4, %ymm8
 ; AVX1-ONLY-NEXT:    vandps %ymm4, %ymm7, %ymm7
 ; AVX1-ONLY-NEXT:    vorps %ymm7, %ymm8, %ymm7
@@ -5972,7 +5972,7 @@ define void @store_i8_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-SLOW-NEXT:    vpshufd $246, {{[-0-9]+}}(%r{{[sb]}}p), %ymm5 # 32-byte Folded Reload
 ; AVX512F-SLOW-NEXT:    # ymm5 = mem[2,1,3,3,6,5,7,7]
 ; AVX512F-SLOW-NEXT:    vinserti64x4 $1, %ymm5, %zmm4, %zmm6
-; AVX512F-SLOW-NEXT:    vpbroadcastq {{.*#+}} zmm5 = [18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855]
+; AVX512F-SLOW-NEXT:    vpbroadcastq {{.*#+}} zmm5 = [65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535]
 ; AVX512F-SLOW-NEXT:    vpternlogq $184, %zmm0, %zmm5, %zmm6
 ; AVX512F-SLOW-NEXT:    vpshufd $96, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Folded Reload
 ; AVX512F-SLOW-NEXT:    # ymm0 = mem[0,0,2,1,4,4,6,5]
@@ -5984,7 +5984,7 @@ define void @store_i8_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-SLOW-NEXT:    vpshufd $232, {{[-0-9]+}}(%r{{[sb]}}p), %ymm7 # 32-byte Folded Reload
 ; AVX512F-SLOW-NEXT:    # ymm7 = mem[0,2,2,3,4,6,6,7]
 ; AVX512F-SLOW-NEXT:    vinserti64x4 $1, %ymm7, %zmm0, %zmm7
-; AVX512F-SLOW-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [281474976710655,281474976710655,281474976710655,281474976710655,281474976710655,281474976710655,281474976710655,281474976710655]
+; AVX512F-SLOW-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0]
 ; AVX512F-SLOW-NEXT:    vpandnq %zmm4, %zmm0, %zmm4
 ; AVX512F-SLOW-NEXT:    vpandq %zmm0, %zmm7, %zmm7
 ; AVX512F-SLOW-NEXT:    movw $-21846, %ax # imm = 0xAAAA
@@ -6415,9 +6415,9 @@ define void @store_i8_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm9 = <8,9,u,u,u,u,u,u,10,11,u,u,u,u,u,u,12,13,u,u,u,u,u,u,14,15,u,u,u,u,u,u>
 ; AVX512F-FAST-NEXT:    vpshufb %ymm9, %ymm0, %ymm0
 ; AVX512F-FAST-NEXT:    vinserti64x4 $1, %ymm0, %zmm6, %zmm8
-; AVX512F-FAST-NEXT:    vpbroadcastq {{.*#+}} zmm6 = [18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855,18446744069414649855]
+; AVX512F-FAST-NEXT:    vpbroadcastq {{.*#+}} zmm6 = [65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535]
 ; AVX512F-FAST-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %zmm6, %zmm8 # 64-byte Folded Reload
-; AVX512F-FAST-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [281474976710655,281474976710655,281474976710655,281474976710655,281474976710655,281474976710655,281474976710655,281474976710655]
+; AVX512F-FAST-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0,65535,65535,65535,0]
 ; AVX512F-FAST-NEXT:    vpandnq %zmm29, %zmm0, %zmm29
 ; AVX512F-FAST-NEXT:    vpandq %zmm0, %zmm17, %zmm17
 ; AVX512F-FAST-NEXT:    movw $-21846, %ax # imm = 0xAAAA

@@ -1718,6 +1718,7 @@ cc_library(
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
+        "//llvm:MC",
         "//llvm:Option",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",

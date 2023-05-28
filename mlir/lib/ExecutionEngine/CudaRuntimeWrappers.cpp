@@ -404,3 +404,37 @@ mgpuSpMM(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c, int32_t dw,
                                         matB, betap, matC, dtp,
                                         CUSPARSE_SPMM_ALG_DEFAULT, buf))
 }
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t
+mgpuSDDMMBufferSize(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c,
+                    int32_t dw, CUstream /*stream*/) {
+  cusparseHandle_t handle = reinterpret_cast<cusparseHandle_t>(h);
+  cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
+  cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
+  cusparseDnMatDescr_t matA = reinterpret_cast<cusparseDnMatDescr_t>(a);
+  cusparseDnMatDescr_t matB = reinterpret_cast<cusparseDnMatDescr_t>(b);
+  cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
+  cudaDataType_t dtp = dataTp(dw);
+  ALPHABETA(dw, alpha, beta)
+  size_t bufferSize = 0;
+  CUSPARSE_REPORT_IF_ERROR(cusparseSDDMM_bufferSize(
+      handle, modeA, modeB, alphap, matA, matB, betap, matC, dtp,
+      CUSPARSE_SDDMM_ALG_DEFAULT, &bufferSize))
+  return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuSDDMM(void *h, int32_t ma, int32_t mb, void *a, void *b, void *c,
+          int32_t dw, void *buf, CUstream /*stream*/) {
+  cusparseHandle_t handle = reinterpret_cast<cusparseHandle_t>(h);
+  cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
+  cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
+  cusparseDnMatDescr_t matA = reinterpret_cast<cusparseDnMatDescr_t>(a);
+  cusparseDnMatDescr_t matB = reinterpret_cast<cusparseDnMatDescr_t>(b);
+  cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
+  cudaDataType_t dtp = dataTp(dw);
+  ALPHABETA(dw, alpha, beta)
+  CUSPARSE_REPORT_IF_ERROR(cusparseSDDMM(handle, modeA, modeB, alphap, matA,
+                                         matB, betap, matC, dtp,
+                                         CUSPARSE_SDDMM_ALG_DEFAULT, buf))
+}

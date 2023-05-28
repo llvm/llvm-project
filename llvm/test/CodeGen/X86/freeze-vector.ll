@@ -447,7 +447,7 @@ define void @freeze_two_buildvectors_one_undef_elt(ptr %origin0, ptr %origin1, p
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl (%edx), %edx
 ; X86-NEXT:    andl $15, %edx
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = [7,7]
+; X86-NEXT:    vmovddup {{.*#+}} xmm0 = [7,0,7,0]
 ; X86-NEXT:    # xmm0 = mem[0,0]
 ; X86-NEXT:    vmovd %edx, %xmm1
 ; X86-NEXT:    vpand %xmm0, %xmm1, %xmm2

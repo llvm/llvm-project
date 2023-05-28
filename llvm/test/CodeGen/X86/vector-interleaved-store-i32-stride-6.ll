@@ -271,10 +271,10 @@ define void @store_i32_stride6_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-ONLY-NEXT:    # ymm10 = mem[0,1,0,1]
 ; AVX2-ONLY-NEXT:    vpermps %ymm6, %ymm10, %ymm10
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} ymm9 = ymm10[0,1],ymm9[2,3],ymm10[4,5,6,7]
-; AVX2-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm10 = [17179869184,17179869184,17179869184,17179869184]
+; AVX2-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm10 = [0,4,0,4,0,4,0,4]
 ; AVX2-ONLY-NEXT:    vpermps %ymm8, %ymm10, %ymm10
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} ymm9 = ymm9[0,1,2,3],ymm10[4,5],ymm9[6,7]
-; AVX2-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm10 = [25769803778,25769803778,25769803778,25769803778]
+; AVX2-ONLY-NEXT:    vbroadcastsd {{.*#+}} ymm10 = [2,6,2,6,2,6,2,6]
 ; AVX2-ONLY-NEXT:    vpermps %ymm6, %ymm10, %ymm6
 ; AVX2-ONLY-NEXT:    vbroadcastf128 {{.*#+}} ymm10 = [1,5,2,6,1,5,2,6]
 ; AVX2-ONLY-NEXT:    # ymm10 = mem[0,1,0,1]

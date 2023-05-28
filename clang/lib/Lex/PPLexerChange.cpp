@@ -298,7 +298,7 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
     return;
 
   ModuleMap &ModMap = getHeaderSearchInfo().getModuleMap();
-  const DirectoryEntry *Dir = Mod.getEffectiveUmbrellaDir();
+  OptionalDirectoryEntryRef Dir = Mod.getEffectiveUmbrellaDir();
   llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
   std::error_code EC;
   for (llvm::vfs::recursive_directory_iterator Entry(FS, Dir->getName(), EC),
@@ -318,7 +318,7 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
         if (!ModMap.isHeaderInUnavailableModule(*Header)) {
           // Find the relative path that would access this header.
           SmallString<128> RelativePath;
-          computeRelativePath(FileMgr, Dir, *Header, RelativePath);
+          computeRelativePath(FileMgr, *Dir, *Header, RelativePath);
           Diag(ExpectedHeadersLoc, diag::warn_uncovered_module_header)
               << Mod.getFullModuleName() << RelativePath;
         }

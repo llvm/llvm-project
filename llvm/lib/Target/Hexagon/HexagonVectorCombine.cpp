@@ -21,6 +21,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -71,10 +72,10 @@ cl::opt<unsigned> VAGroupSizeLimit("hvc-va-group-size-limit", cl::Hidden,
 class HexagonVectorCombine {
 public:
   HexagonVectorCombine(Function &F_, AliasAnalysis &AA_, AssumptionCache &AC_,
-                       DominatorTree &DT_, TargetLibraryInfo &TLI_,
-                       const TargetMachine &TM_)
+                       DominatorTree &DT_, ScalarEvolution &SE_,
+                       TargetLibraryInfo &TLI_, const TargetMachine &TM_)
       : F(F_), DL(F.getParent()->getDataLayout()), AA(AA_), AC(AC_), DT(DT_),
-        TLI(TLI_),
+        SE(SE_), TLI(TLI_),
         HST(static_cast<const HexagonSubtarget &>(*TM_.getSubtargetImpl(F))) {}
 
   bool run();
@@ -170,6 +171,7 @@ public:
   AliasAnalysis &AA;
   AssumptionCache &AC;
   DominatorTree &DT;
+  ScalarEvolution &SE;
   TargetLibraryInfo &TLI;
   const HexagonSubtarget &HST;
 
@@ -1130,7 +1132,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   auto *True = HVC.getFullValue(HVC.getBoolTy(ScLen));
   auto *Undef = UndefValue::get(SecTy);
 
-  SmallVector<Instruction *> Loads(NumSectors + DoAlign, nullptr);
+  // Created load does not have to be "Instruction" (e.g. "undef").
+  SmallVector<Value *> Loads(NumSectors + DoAlign, nullptr);
 
   // We could create all of the aligned loads, and generate the valigns
   // at the location of the first load, but for large load groups, this
@@ -1217,9 +1220,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
     // from source sections of twice the load width.
     int Start = (Index - DoAlign) * ScLen;
     int Width = (1 + DoAlign) * ScLen;
-    Value *Load = this->createLoad(Builder, SecTy, Ptr, Predicate, ScLen, True,
-                                   Undef, VSpan.section(Start, Width).values());
-    return cast<Instruction>(Load);
+    return this->createLoad(Builder, SecTy, Ptr, Predicate, ScLen, True, Undef,
+                            VSpan.section(Start, Width).values());
   };
 
   auto moveBefore = [this](Instruction *In, Instruction *To) {
@@ -1256,8 +1258,10 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
       // If not, then the load needs to be placed at BasePos.
       // We can't do this check proactively because we need the load to exist
       // in order to check legality.
-      if (!HVC.isSafeToMoveBeforeInBB(*Loads[Index], BasePos))
-        moveBefore(Loads[Index], &*BasePos);
+      if (auto *Load = dyn_cast<Instruction>(Loads[Index])) {
+        if (!HVC.isSafeToMoveBeforeInBB(*Load, BasePos))
+          moveBefore(Load, &*BasePos);
+      }
       LLVM_DEBUG(dbgs() << "Loads[" << Index << "]:" << *Loads[Index] << '\n');
     }
   }
@@ -2727,6 +2731,16 @@ auto HexagonVectorCombine::joinVectorElements(IRBuilderBase &Builder,
 auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
                                                       Value *Ptr1) const
     -> std::optional<int> {
+  // Try SCEV first.
+  const SCEV *Scev0 = SE.getSCEV(Ptr0);
+  const SCEV *Scev1 = SE.getSCEV(Ptr1);
+  const SCEV *ScevDiff = SE.getMinusSCEV(Scev0, Scev1);
+  if (auto *Const = dyn_cast<SCEVConstant>(ScevDiff)) {
+    APInt V = Const->getAPInt();
+    if (V.isSignedIntN(8 * sizeof(int)))
+      return static_cast<int>(V.getSExtValue());
+  }
+
   struct Builder : IRBuilder<> {
     Builder(BasicBlock *B) : IRBuilder<>(B->getTerminator()) {}
     ~Builder() {
@@ -2942,6 +2956,7 @@ public:
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     FunctionPass::getAnalysisUsage(AU);
@@ -2954,10 +2969,11 @@ public:
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     TargetLibraryInfo &TLI =
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     auto &TM = getAnalysis<TargetPassConfig>().getTM<HexagonTargetMachine>();
-    HexagonVectorCombine HVC(F, AA, AC, DT, TLI, TM);
+    HexagonVectorCombine HVC(F, AA, AC, DT, SE, TLI, TM);
     return HVC.run();
   }
 };
@@ -2970,6 +2986,7 @@ INITIALIZE_PASS_BEGIN(HexagonVectorCombineLegacy, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(HexagonVectorCombineLegacy, DEBUG_TYPE,
