@@ -436,7 +436,7 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm : StringRef> arguments,
   return output.str();
 };
 
-llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
+static llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
   XcodeSDK::Info info = sdk.Parse();
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
   if (sdk_name.empty())
