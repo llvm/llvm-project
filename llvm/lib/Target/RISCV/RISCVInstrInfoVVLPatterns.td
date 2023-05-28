@@ -1385,6 +1385,16 @@ multiclass VPatWidenBinaryFPVL_WV_WF<SDNode op, PatFrags extop, string instructi
                 (!cast<Instruction>(instruction_name#"_WV_"#fvti.LMul.MX#"_TIED")
                    fwti.RegClass:$rs2, fvti.RegClass:$rs1,
                    GPR:$vl, fvti.Log2SEW, TAIL_AGNOSTIC)>;
+      // Tail undisturbed
+      def : Pat<(riscv_vp_merge_vl true_mask,
+                 (fwti.Vector (op (fwti.Vector fwti.RegClass:$rs2),
+                                  (fwti.Vector (extop (fvti.Vector fvti.RegClass:$rs1),
+                                                      (fvti.Mask true_mask), VLOpFrag)),
+                                  srcvalue, (fwti.Mask true_mask), VLOpFrag)),
+                 fwti.RegClass:$rs2, VLOpFrag),
+                (!cast<Instruction>(instruction_name#"_WV_"#fvti.LMul.MX#"_TIED")
+                   fwti.RegClass:$rs2, fvti.RegClass:$rs1,
+                   GPR:$vl, fvti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
       def : Pat<(fwti.Vector (op (fwti.Vector fwti.RegClass:$rs2),
                                  (fwti.Vector (extop (fvti.Vector (SplatFPOp fvti.ScalarRegClass:$rs1)),
                                                      (fvti.Mask true_mask), VLOpFrag)),
