@@ -112,8 +112,7 @@ lldb::ValueObjectSP lldb_private::formatters::
     ValueObjectSP hash_sp = node_sp->GetChildMemberWithName("__hash_", true);
     if (!hash_sp || !value_sp) {
       if (!m_element_type) {
-        auto p1_sp = m_backend.GetChildAtNamePath({ConstString("__table_"),
-                                                   ConstString("__p1_")});
+        auto p1_sp = m_backend.GetChildAtNamePath({"__table_", "__p1_"});
         if (!p1_sp)
           return nullptr;
 
@@ -199,21 +198,19 @@ bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 
   ValueObjectSP p2_sp = table_sp->GetChildMemberWithName("__p2_", true);
   ValueObjectSP num_elements_sp = nullptr;
-  llvm::SmallVector<ConstString, 3> next_path;
+  llvm::SmallVector<llvm::StringRef, 3> next_path;
   switch (p2_sp->GetCompilerType().GetNumDirectBaseClasses()) {
   case 1:
     // Assume a pre llvm r300140 __compressed_pair implementation:
     num_elements_sp = p2_sp->GetChildMemberWithName("__first_", true);
-    next_path.append({ConstString("__p1_"), ConstString("__first_"),
-                      ConstString("__next_")});
+    next_path.append({"__p1_", "__first_", "__next_"});
     break;
   case 2: {
     // Assume a post llvm r300140 __compressed_pair implementation:
     ValueObjectSP first_elem_parent = p2_sp->GetChildAtIndex(0, true);
     num_elements_sp =
         first_elem_parent->GetChildMemberWithName("__value_", true);
-    next_path.append({ConstString("__p1_"), ConstString("__value_"),
-                      ConstString("__next_")});
+    next_path.append({"__p1_", "__value_", "__next_"});
     break;
   }
   default:

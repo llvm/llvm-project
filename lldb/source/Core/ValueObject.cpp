@@ -427,16 +427,13 @@ lldb::ValueObjectSP ValueObject::GetChildAtIndexPath(
 }
 
 lldb::ValueObjectSP
-ValueObject::GetChildAtNamePath(llvm::ArrayRef<ConstString> names,
-                                ConstString *name_of_error) {
+ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
   if (names.size() == 0)
     return GetSP();
   ValueObjectSP root(GetSP());
-  for (ConstString name : names) {
+  for (llvm::StringRef name : names) {
     root = root->GetChildMemberWithName(name, true);
     if (!root) {
-      if (name_of_error)
-        *name_of_error = name;
       return root;
     }
   }
