@@ -344,16 +344,20 @@ module attributes {gpu.container_module} {
     %bufferSz2, %token10 = gpu.spmm_buffer_size async [%token9] %env, %spmat, %dnmat, %dnmat
     // CHECK: gpu.spmm async
     %token11 = gpu.spmm async [%token10] %env, %spmat, %dnmat, %dnmat, %mem2 : memref<?xf64>
+    // CHECK: gpu.sddmm_buffer_size async
+    %bufferSz3, %token12 = gpu.sddmm_buffer_size async [%token11] %env, %dnmat, %dnmat, %spmat
+    // CHECK: gpu.sddmm async
+    %token13 = gpu.sddmm async [%token12] %env, %dnmat, %dnmat, %spmat, %mem2 : memref<?xf64>
     // CHECK: gpu.destroy_dn_mat async
-    %token12 = gpu.destroy_dn_mat async [%token11] %dnmat
+    %token14 = gpu.destroy_dn_mat async [%token13] %dnmat
     // CHECK: gpu.destroy_sp_mat async
-    %token13 = gpu.destroy_sp_mat async [%token12] %spmat
+    %token15 = gpu.destroy_sp_mat async [%token14] %spmat
     // CHECK: gpu.destroy_dn_vec async
-    %token14 = gpu.destroy_dn_vec async [%token13] %dnvec
+    %token16 = gpu.destroy_dn_vec async [%token15] %dnvec
     // CHECK: gpu.destroy_sparse_env async
-    %token15 = gpu.destroy_sparse_env async [%token14] %env
+    %token17 = gpu.destroy_sparse_env async [%token16] %env
     // CHECK: gpu.wait
-    gpu.wait [%token15]
+    gpu.wait [%token17]
     return
   }
 }

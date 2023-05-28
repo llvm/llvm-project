@@ -62,6 +62,36 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL: func @sddmm
+  // CHECK: llvm.call @mgpuStreamCreate
+  // CHECK: llvm.call @mgpuMemAlloc
+  // CHECK: llvm.call @mgpuMemAlloc
+  // CHECK: llvm.call @mgpuCreateSparseEnv
+  // CHECK: llvm.call @mgpuCreateCsr
+  // CHECK: llvm.call @mgpuCreateDnMat
+  // CHECK: llvm.call @mgpuSDDMMBufferSize
+  // CHECK: llvm.call @mgpuSDDMM
+  // CHECK: llvm.call @mgpuDestroySpMat
+  // CHECK: llvm.call @mgpuDestroyDnMat
+  // CHECK: llvm.call @mgpuDestroySparseEnv
+  // CHECK: llvm.call @mgpuStreamSynchronize
+  // CHECK: llvm.call @mgpuStreamDestroy
+  func.func @sddmm(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %env, %token3 = gpu.create_sparse_env async [%token2]
+    %spmat, %token4 = gpu.create_csr async [%token3] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %dnmat, %token5 = gpu.create_dn_mat async [%token4] %arg0, %arg0, %mem2 : memref<?xf64>
+    %bufferSz, %token6 = gpu.sddmm_buffer_size async [%token5] %env, %dnmat, %dnmat, %spmat
+    %token7 = gpu.sddmm async [%token6] %env, %dnmat, %dnmat, %spmat, %mem2 : memref<?xf64>
+    %token8 = gpu.destroy_sp_mat async [%token7] %spmat
+    %token9 = gpu.destroy_dn_mat async [%token8] %dnmat
+    %token10 = gpu.destroy_sparse_env async [%token9] %env
+    gpu.wait [%token10]
+    return
+  }
+
 }
 
 
