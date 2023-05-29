@@ -489,13 +489,29 @@ define <16 x i4> @v16i4(<16 x i4> %x, <16 x i4> %y) nounwind {
 ; SSE-NEXT:    psubusb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: v16i4:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: v16i4:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: v16i4:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v16i4:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastb {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %z = call <16 x i4> @llvm.usub.sat.v16i4(<16 x i4> %x, <16 x i4> %y)
   ret <16 x i4> %z
 }
@@ -817,7 +833,7 @@ define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ;
 ; AVX2-LABEL: v2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -1112,7 +1128,7 @@ define void @PR48223(ptr %p0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; AVX2-NEXT:    vpsubusw %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsubusw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rdi)
@@ -1124,7 +1140,7 @@ define void @PR48223(ptr %p0) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; AVX512F-NEXT:    vpsubusw %ymm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpsubusw %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vmovdqa %ymm0, (%rdi)

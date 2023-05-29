@@ -342,7 +342,7 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX2-SLOW-NEXT:    shrq $48, %rax
 ; AVX2-SLOW-NEXT:    vmovd %eax, %xmm1
 ; AVX2-SLOW-NEXT:    vpbroadcastw %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} xmm3 = <255,255,0,255,255,255,255,0,u,u,u,u,u,u,u,u>
+; AVX2-SLOW-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,0,255,255,255,255,0,255,255,0,255,255,255,255,0]
 ; AVX2-SLOW-NEXT:    vpblendvb %xmm3, %xmm0, %xmm1, %xmm0
 ; AVX2-SLOW-NEXT:    vmovq %xmm0, 32(%r9)
 ; AVX2-SLOW-NEXT:    vmovdqa %ymm2, (%r9)
@@ -374,7 +374,7 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX2-FAST-NEXT:    shrq $48, %rax
 ; AVX2-FAST-NEXT:    vmovd %eax, %xmm1
 ; AVX2-FAST-NEXT:    vpbroadcastw %xmm1, %xmm1
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} xmm3 = <255,255,0,255,255,255,255,0,u,u,u,u,u,u,u,u>
+; AVX2-FAST-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,0,255,255,255,255,0,255,255,0,255,255,255,255,0]
 ; AVX2-FAST-NEXT:    vpblendvb %xmm3, %xmm0, %xmm1, %xmm0
 ; AVX2-FAST-NEXT:    vmovq %xmm0, 32(%r9)
 ; AVX2-FAST-NEXT:    vmovdqa %ymm2, (%r9)
@@ -406,7 +406,7 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX2-FAST-PERLANE-NEXT:    shrq $48, %rax
 ; AVX2-FAST-PERLANE-NEXT:    vmovd %eax, %xmm1
 ; AVX2-FAST-PERLANE-NEXT:    vpbroadcastw %xmm1, %xmm1
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} xmm3 = <255,255,0,255,255,255,255,0,u,u,u,u,u,u,u,u>
+; AVX2-FAST-PERLANE-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,0,255,255,255,255,0,255,255,0,255,255,255,255,0]
 ; AVX2-FAST-PERLANE-NEXT:    vpblendvb %xmm3, %xmm0, %xmm1, %xmm0
 ; AVX2-FAST-PERLANE-NEXT:    vmovq %xmm0, 32(%r9)
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm2, (%r9)
@@ -1592,7 +1592,8 @@ define void @store_i8_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm6 = ymm4[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,27,u,u,26,u,28,u,u,u,u,29,u,31,u,u,30]
 ; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} ymm7 = ymm3[0,1,2,3,6,5,6,7,8,9,10,11,14,13,14,15]
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm7 = ymm7[2,2,3,3,6,6,7,7]
-; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm8 = <255,u,0,255,0,255,u,0,u,0,255,0,255,u,0,255,255,u,0,255,0,255,u,0,u,0,255,0,255,u,0,255>
+; AVX2-SLOW-NEXT:    vbroadcasti128 {{.*#+}} ymm8 = [255,0,0,255,0,255,0,0,0,0,255,0,255,0,0,255,255,0,0,255,0,255,0,0,0,0,255,0,255,0,0,255]
+; AVX2-SLOW-NEXT:    # ymm8 = mem[0,1,0,1]
 ; AVX2-SLOW-NEXT:    vpblendvb %ymm8, %ymm6, %ymm7, %ymm6
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm6 = ymm6[2,2,3,3]
 ; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm7 = <255,u,0,0,255,255,u,0,0,255,255,u,0,0,255,255,u,0,0,255,255,u,0,0,255,255,u,0,0,255,255,u>
@@ -3293,12 +3294,14 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-SLOW-NEXT:    vmovdqa %ymm5, %ymm15
 ; AVX2-SLOW-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,2,3,3]
-; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm5 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128>
+; AVX2-SLOW-NEXT:    vbroadcasti128 {{.*#+}} ymm5 = [19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128]
+; AVX2-SLOW-NEXT:    # ymm5 = mem[0,1,0,1]
 ; AVX2-SLOW-NEXT:    vpshufb %ymm5, %ymm10, %ymm3
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[2,2,3,3]
 ; AVX2-SLOW-NEXT:    vpor %ymm1, %ymm3, %ymm1
 ; AVX2-SLOW-NEXT:    vmovdqa 32(%rcx), %ymm12
-; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm3 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128>
+; AVX2-SLOW-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128]
+; AVX2-SLOW-NEXT:    # ymm3 = mem[0,1,0,1]
 ; AVX2-SLOW-NEXT:    vpshufb %ymm3, %ymm12, %ymm4
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[2,2,3,3]
 ; AVX2-SLOW-NEXT:    vmovdqa 32(%rdx), %ymm14
@@ -3336,7 +3339,7 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-SLOW-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm2 = <3,3,3,u,4,4,4,4>
 ; AVX2-SLOW-NEXT:    vpermd %ymm15, %ymm2, %ymm5
-; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm6 = <u,u,13,u,u,u,u,14,u,u,u,u,15,u,u,u,u,0,u,u,u,u,1,u,u,u,u,2,u,u,u,u>
+; AVX2-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm6 = [0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14]
 ; AVX2-SLOW-NEXT:    vpshufb %ymm6, %ymm10, %ymm0
 ; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm1 = <u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255>
 ; AVX2-SLOW-NEXT:    vpblendvb %ymm1, %ymm5, %ymm0, %ymm0
@@ -3393,7 +3396,7 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-SLOW-NEXT:    # xmm5 = mem[0,0,1,1]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm5 = ymm5[0,0,0,1]
 ; AVX2-SLOW-NEXT:    vpblendvb %ymm6, %ymm1, %ymm5, %ymm1
-; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm5 = <9,u,11,u,u,10,u,12,u,14,u,u,13,u,15,u,9,u,11,u,u,10,u,12,u,14,u,u,13,u,15,u>
+; AVX2-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm5 = [9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12]
 ; AVX2-SLOW-NEXT:    vpshufb %ymm5, %ymm12, %ymm6
 ; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} ymm11 = ymm14[0,1,2,3,5,6,7,6,8,9,10,11,13,14,15,14]
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm11 = ymm11[2,2,3,3,6,6,7,7]
@@ -3404,7 +3407,7 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} ymm3 = ymm3[0,1,2,3,5,6,7,6,8,9,10,11,13,14,15,14]
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm3 = ymm3[2,2,3,3,6,6,7,7]
 ; AVX2-SLOW-NEXT:    vpblendvb %ymm12, %ymm4, %ymm3, %ymm3
-; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm4 = <11,u,u,10,u,12,u,u,u,u,13,u,15,u,u,14,11,u,u,10,u,12,u,u,u,u,13,u,15,u,u,14>
+; AVX2-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [11,0,13,10,15,12,0,14,11,0,13,10,15,12,0,14,11,0,13,10,15,12,0,14,11,0,13,10,15,12,0,14]
 ; AVX2-SLOW-NEXT:    vpshufb %ymm4, %ymm10, %ymm5
 ; AVX2-SLOW-NEXT:    vpshufhw $230, {{[-0-9]+}}(%r{{[sb]}}p), %ymm10 # 32-byte Folded Reload
 ; AVX2-SLOW-NEXT:    # ymm10 = mem[0,1,2,3,6,5,6,7,8,9,10,11,14,13,14,15]
@@ -3505,7 +3508,8 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm0 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,27,128,29,26,128,28,128,30,128,28,29,128,31,128,29]
 ; AVX2-FAST-NEXT:    vpshufb %ymm0, %ymm11, %ymm1
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,2,3,3]
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm7 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,25,128,27,128,128,26,128,28,128,30,128,128,29,128,31,128>
+; AVX2-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm7 = [25,128,27,128,128,26,128,28,128,30,128,128,29,128,31,128,25,128,27,128,128,26,128,28,128,30,128,128,29,128,31,128]
+; AVX2-FAST-NEXT:    # ymm7 = mem[0,1,0,1]
 ; AVX2-FAST-NEXT:    vmovdqu %ymm13, (%rsp) # 32-byte Spill
 ; AVX2-FAST-NEXT:    vpshufb %ymm7, %ymm13, %ymm2
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,2,3,3]
@@ -3515,7 +3519,8 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-NEXT:    vpshufb %ymm10, %ymm3, %ymm2
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm4 = ymm2[2,2,3,3]
 ; AVX2-FAST-NEXT:    vmovdqa 32(%rsi), %ymm2
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm14 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,27,128,128,26,128,28,128,128,128,128,29,128,31,128,128,30>
+; AVX2-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm14 = [27,128,128,26,128,28,128,128,128,128,29,128,31,128,128,30,27,128,128,26,128,28,128,128,128,128,29,128,31,128,128,30]
+; AVX2-FAST-NEXT:    # ymm14 = mem[0,1,0,1]
 ; AVX2-FAST-NEXT:    vpshufb %ymm14, %ymm2, %ymm5
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm5 = ymm5[2,2,3,3]
 ; AVX2-FAST-NEXT:    vpor %ymm4, %ymm5, %ymm4
@@ -3547,11 +3552,13 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm8 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,21,128,19,20,128,22,128,24,128,22,23,128,25,128,23]
 ; AVX2-FAST-NEXT:    vpshufb %ymm8, %ymm3, %ymm7
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm7 = ymm7[2,2,3,3]
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm10 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128>
+; AVX2-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm10 = [19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128]
+; AVX2-FAST-NEXT:    # ymm10 = mem[0,1,0,1]
 ; AVX2-FAST-NEXT:    vpshufb %ymm10, %ymm2, %ymm14
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm14 = ymm14[2,2,3,3]
 ; AVX2-FAST-NEXT:    vpor %ymm7, %ymm14, %ymm7
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm14 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128>
+; AVX2-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm14 = [128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128]
+; AVX2-FAST-NEXT:    # ymm14 = mem[0,1,0,1]
 ; AVX2-FAST-NEXT:    vpshufb %ymm14, %ymm13, %ymm13
 ; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm13 = ymm13[2,2,3,3]
 ; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm6 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,25]
@@ -3579,7 +3586,7 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-NEXT:    vpblendvb %ymm13, %ymm6, %ymm7, %ymm7
 ; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm6 = <3,3,3,u,4,4,4,4>
 ; AVX2-FAST-NEXT:    vpermd %ymm3, %ymm6, %ymm3
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm8 = <u,u,13,u,u,u,u,14,u,u,u,u,15,u,u,u,u,0,u,u,u,u,1,u,u,u,u,2,u,u,u,u>
+; AVX2-FAST-NEXT:    vpbroadcastq {{.*#+}} ymm8 = [0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14]
 ; AVX2-FAST-NEXT:    vpshufb %ymm8, %ymm2, %ymm2
 ; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm13 = <u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255>
 ; AVX2-FAST-NEXT:    vpblendvb %ymm13, %ymm3, %ymm2, %ymm2
@@ -3715,7 +3722,8 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm10, %ymm9
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqu %ymm10, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,2,3,3]
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} ymm2 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,25,128,27,128,128,26,128,28,128,30,128,128,29,128,31,128>
+; AVX2-FAST-PERLANE-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [25,128,27,128,128,26,128,28,128,30,128,128,29,128,31,128,25,128,27,128,128,26,128,28,128,30,128,128,29,128,31,128]
+; AVX2-FAST-PERLANE-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb %ymm2, %ymm4, %ymm3
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm4, %ymm12
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[2,2,3,3]
@@ -3725,7 +3733,8 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb %ymm3, %ymm5, %ymm4
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm6 = ymm4[2,2,3,3]
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 32(%rsi), %ymm4
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} ymm8 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,27,128,128,26,128,28,128,128,128,128,29,128,31,128,128,30>
+; AVX2-FAST-PERLANE-NEXT:    vbroadcasti128 {{.*#+}} ymm8 = [27,128,128,26,128,28,128,128,128,128,29,128,31,128,128,30,27,128,128,26,128,28,128,128,128,128,29,128,31,128,128,30]
+; AVX2-FAST-PERLANE-NEXT:    # ymm8 = mem[0,1,0,1]
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb %ymm8, %ymm4, %ymm7
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm7 = ymm7[2,2,3,3]
 ; AVX2-FAST-PERLANE-NEXT:    vpor %ymm6, %ymm7, %ymm6
@@ -3763,7 +3772,8 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} ymm14 = ymm4[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,19],zero,ymm4[21],zero,zero,ymm4[20],zero,ymm4[22],zero,ymm4[24],zero,zero,ymm4[23],zero,ymm4[25],zero
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm14 = ymm14[2,2,3,3]
 ; AVX2-FAST-PERLANE-NEXT:    vpor %ymm10, %ymm14, %ymm10
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} ymm14 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128>
+; AVX2-FAST-PERLANE-NEXT:    vbroadcasti128 {{.*#+}} ymm14 = [128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128]
+; AVX2-FAST-PERLANE-NEXT:    # ymm14 = mem[0,1,0,1]
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm12, %ymm6
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb %ymm14, %ymm12, %ymm12
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm12 = ymm12[2,2,3,3]
@@ -3793,7 +3803,7 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2-FAST-PERLANE-NEXT:    vpblendvb %ymm11, %ymm8, %ymm9, %ymm8
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} ymm9 = <3,3,3,u,4,4,4,4>
 ; AVX2-FAST-PERLANE-NEXT:    vpermd %ymm5, %ymm9, %ymm5
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} ymm11 = <u,u,13,u,u,u,u,14,u,u,u,u,15,u,u,u,u,0,u,u,u,u,1,u,u,u,u,2,u,u,u,u>
+; AVX2-FAST-PERLANE-NEXT:    vpbroadcastq {{.*#+}} ymm11 = [0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14]
 ; AVX2-FAST-PERLANE-NEXT:    vpshufb %ymm11, %ymm4, %ymm4
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} ymm12 = <u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255,0,u,u,u,255>
 ; AVX2-FAST-PERLANE-NEXT:    vpblendvb %ymm12, %ymm5, %ymm4, %ymm4
@@ -3915,7 +3925,8 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-SLOW-NEXT:    vpshufb {{.*#+}} ymm4 = ymm4[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u],zero,ymm4[21],zero,zero,ymm4[20],zero,ymm4[22],zero,ymm4[24],zero,zero,ymm4[23],zero,ymm4[25],zero,zero
 ; AVX512F-SLOW-NEXT:    vinserti64x4 $1, %ymm5, %zmm4, %zmm23
 ; AVX512F-SLOW-NEXT:    vpshufb {{.*#+}} ymm12 = ymm7[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u],zero,ymm7[27],zero,zero,ymm7[26],zero,ymm7[28],zero,ymm7[30],zero,zero,ymm7[29],zero,ymm7[31],zero,zero
-; AVX512F-SLOW-NEXT:    vmovdqa {{.*#+}} ymm2 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128>
+; AVX512F-SLOW-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128]
+; AVX512F-SLOW-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512F-SLOW-NEXT:    vpshufb %ymm2, %ymm14, %ymm15
 ; AVX512F-SLOW-NEXT:    vmovdqa64 %ymm2, %ymm31
 ; AVX512F-SLOW-NEXT:    vinserti64x4 $1, %ymm12, %zmm15, %zmm18
@@ -3959,12 +3970,13 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-SLOW-NEXT:    vpandnq %ymm27, %ymm30, %ymm27
 ; AVX512F-SLOW-NEXT:    vpshufb %ymm13, %ymm4, %ymm13
 ; AVX512F-SLOW-NEXT:    vinserti64x4 $1, %ymm27, %zmm13, %zmm27
-; AVX512F-SLOW-NEXT:    vmovdqa {{.*#+}} ymm2 = <9,u,11,u,u,10,u,12,u,14,u,u,13,u,15,u,9,u,11,u,u,10,u,12,u,14,u,u,13,u,15,u>
+; AVX512F-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12]
 ; AVX512F-SLOW-NEXT:    vpshufb %ymm2, %ymm14, %ymm14
 ; AVX512F-SLOW-NEXT:    vmovdqa64 %ymm31, %ymm9
 ; AVX512F-SLOW-NEXT:    vpshufb %ymm9, %ymm12, %ymm13
 ; AVX512F-SLOW-NEXT:    vpshufb %ymm2, %ymm12, %ymm2
-; AVX512F-SLOW-NEXT:    vmovdqa {{.*#+}} ymm12 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,18,19,128,21,128,21,20,128,22,128,24,128,22,23,128,25>
+; AVX512F-SLOW-NEXT:    vbroadcasti128 {{.*#+}} ymm12 = [18,19,128,21,128,21,20,128,22,128,24,128,22,23,128,25,18,19,128,21,128,21,20,128,22,128,24,128,22,23,128,25]
+; AVX512F-SLOW-NEXT:    # ymm12 = mem[0,1,0,1]
 ; AVX512F-SLOW-NEXT:    vpshufb %ymm12, %ymm7, %ymm7
 ; AVX512F-SLOW-NEXT:    vpshufb %ymm12, %ymm6, %ymm12
 ; AVX512F-SLOW-NEXT:    vpshufb {{.*#+}} ymm6 = ymm6[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u],zero,ymm6[27],zero,zero,ymm6[26],zero,ymm6[28],zero,ymm6[30],zero,zero,ymm6[29],zero,ymm6[31],zero,zero
@@ -4146,11 +4158,12 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-FAST-NEXT:    vpandnq %ymm28, %ymm29, %ymm28
 ; AVX512F-FAST-NEXT:    vpshufb %ymm3, %ymm5, %ymm3
 ; AVX512F-FAST-NEXT:    vinserti64x4 $1, %ymm28, %zmm3, %zmm28
-; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm2 = <9,u,11,u,u,10,u,12,u,14,u,u,13,u,15,u,9,u,11,u,u,10,u,12,u,14,u,u,13,u,15,u>
+; AVX512F-FAST-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12]
 ; AVX512F-FAST-NEXT:    vpshufb %ymm2, %ymm0, %ymm14
 ; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm12[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u],zero,zero,ymm12[19],zero,ymm12[21],zero,zero,ymm12[20],zero,ymm12[22],zero,ymm12[24],zero,zero,ymm12[23],zero
 ; AVX512F-FAST-NEXT:    vpshufb %ymm2, %ymm12, %ymm2
-; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm12 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,18,19,128,21,128,21,20,128,22,128,24,128,22,23,128,25>
+; AVX512F-FAST-NEXT:    vbroadcasti128 {{.*#+}} ymm12 = [18,19,128,21,128,21,20,128,22,128,24,128,22,23,128,25,18,19,128,21,128,21,20,128,22,128,24,128,22,23,128,25]
+; AVX512F-FAST-NEXT:    # ymm12 = mem[0,1,0,1]
 ; AVX512F-FAST-NEXT:    vmovdqa64 %ymm17, %ymm3
 ; AVX512F-FAST-NEXT:    vpshufb %ymm12, %ymm3, %ymm3
 ; AVX512F-FAST-NEXT:    vpshufb %ymm12, %ymm7, %ymm12
@@ -4234,193 +4247,195 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512F-FAST-NEXT:    vzeroupper
 ; AVX512F-FAST-NEXT:    retq
 ;
-; AVX512BW-SLOW-LABEL: store_i8_stride5_vf64:
-; AVX512BW-SLOW:       # %bb.0:
-; AVX512BW-SLOW-NEXT:    vmovdqa (%rcx), %ymm0
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm8 = <9,u,11,u,u,10,u,12,u,14,u,u,13,u,15,u,9,u,11,u,u,10,u,12,u,14,u,u,13,u,15,u>
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm8, %ymm0, %ymm2
-; AVX512BW-SLOW-NEXT:    vmovdqa (%rdx), %ymm1
-; AVX512BW-SLOW-NEXT:    vpshufhw {{.*#+}} ymm3 = ymm1[0,1,2,3,5,6,7,6,8,9,10,11,13,14,15,14]
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} ymm3 = ymm3[2,2,3,3,6,6,7,7]
-; AVX512BW-SLOW-NEXT:    movl $693250386, %eax # imm = 0x29522952
-; AVX512BW-SLOW-NEXT:    kmovd %eax, %k1
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %ymm3, %ymm2 {%k1}
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vmovdqa 32(%rdx), %xmm6
-; AVX512BW-SLOW-NEXT:    vmovdqa 32(%rcx), %xmm12
-; AVX512BW-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm3 = xmm12[0],xmm6[0],xmm12[1],xmm6[1],xmm12[2],xmm6[2],xmm12[3],xmm6[3],xmm12[4],xmm6[4],xmm12[5],xmm6[5],xmm12[6],xmm6[6],xmm12[7],xmm6[7]
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} xmm7 = <2,u,1,0,5,4,u,3,u,7,6,11,10,u,9,8>
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm7, %xmm3, %xmm3
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,0,1,1]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm5
-; AVX512BW-SLOW-NEXT:    vmovdqa (%rsi), %ymm2
-; AVX512BW-SLOW-NEXT:    vmovdqa64 {{.*#+}} ymm16 = <11,u,u,10,u,12,u,u,u,u,13,u,15,u,u,14,11,u,u,10,u,12,u,u,u,u,13,u,15,u,u,14>
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm16, %ymm2, %ymm4
-; AVX512BW-SLOW-NEXT:    vmovdqa (%rdi), %ymm3
-; AVX512BW-SLOW-NEXT:    vpshufhw {{.*#+}} ymm9 = ymm3[0,1,2,3,6,5,6,7,8,9,10,11,14,13,14,15]
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} ymm9 = ymm9[2,2,3,3,6,6,7,7]
-; AVX512BW-SLOW-NEXT:    movl $1251232404, %eax # imm = 0x4A944A94
-; AVX512BW-SLOW-NEXT:    kmovd %eax, %k5
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %ymm9, %ymm4 {%k5}
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vmovdqa 32(%rsi), %xmm13
-; AVX512BW-SLOW-NEXT:    vmovdqa 32(%rdi), %xmm14
-; AVX512BW-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm9 = xmm14[0],xmm13[0],xmm14[1],xmm13[1],xmm14[2],xmm13[2],xmm14[3],xmm13[3],xmm14[4],xmm13[4],xmm14[5],xmm13[5],xmm14[6],xmm13[6],xmm14[7],xmm13[7]
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} xmm10 = <0,1,4,5,u,2,3,6,7,10,11,u,8,9,12,13>
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm10, %xmm9, %xmm9
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm9 = ymm9[0,0,1,1]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm9, %zmm4, %zmm4
-; AVX512BW-SLOW-NEXT:    movabsq $1785168781326730801, %rax # imm = 0x18C6318C6318C631
-; AVX512BW-SLOW-NEXT:    kmovq %rax, %k4
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm5, %zmm4 {%k4}
-; AVX512BW-SLOW-NEXT:    vmovdqa (%r8), %ymm5
-; AVX512BW-SLOW-NEXT:    vmovdqa 32(%r8), %ymm15
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} ymm9 = ymm5[2,2,3,3,6,6,7,7]
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm9 = ymm9[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vmovdqa64 32(%r8), %xmm17
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} xmm11 = xmm17[0,0,1,1]
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm11 = ymm11[0,0,0,1]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm11, %zmm9, %zmm9
-; AVX512BW-SLOW-NEXT:    movabsq $2380225041768974402, %rax # imm = 0x2108421084210842
-; AVX512BW-SLOW-NEXT:    kmovq %rax, %k2
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm9, %zmm4 {%k2}
-; AVX512BW-SLOW-NEXT:    vmovdqa64 32(%rdx), %ymm23
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm9 = [128,128,12,13,128,128,128,128,14,128,128,128,14,15,128,128,128,128,16,128,128,128,16,17,128,128,128,128,18,128,128,128]
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm9, %ymm23, %ymm18
-; AVX512BW-SLOW-NEXT:    vmovdqa64 32(%rcx), %ymm24
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm11 = [128,128,128,128,13,128,128,128,128,14,128,128,128,128,15,128,128,128,128,16,128,128,128,128,17,128,128,128,128,18,128,128]
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm11, %ymm24, %ymm19
-; AVX512BW-SLOW-NEXT:    vporq %ymm18, %ymm19, %ymm18
-; AVX512BW-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm19 = <128,6,128,8,u,128,7,128,9,128,11,u,128,10,128,12>
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm19, %xmm12, %xmm12
-; AVX512BW-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm20 = <6,128,8,128,u,7,128,9,128,11,128,u,10,128,12,128>
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm20, %xmm6, %xmm6
-; AVX512BW-SLOW-NEXT:    vpor %xmm6, %xmm12, %xmm6
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm6 = ymm6[0,0,1,1]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm18, %zmm6, %zmm6
-; AVX512BW-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm21 = <8,128,u,7,128,9,128,u,128,u,10,128,12,128,u,11>
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm21, %xmm14, %xmm12
-; AVX512BW-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm22 = <128,8,u,128,7,128,9,u,11,u,128,10,128,12,u,128>
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm22, %xmm13, %xmm13
-; AVX512BW-SLOW-NEXT:    vpor %xmm12, %xmm13, %xmm12
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm14 = ymm12[0,0,1,1]
-; AVX512BW-SLOW-NEXT:    vmovdqa64 32(%rdi), %ymm25
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm12 = <3,3,3,u,4,4,4,4>
-; AVX512BW-SLOW-NEXT:    vpermd %ymm25, %ymm12, %ymm18
-; AVX512BW-SLOW-NEXT:    vmovdqa64 32(%rsi), %ymm26
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm13 = <u,u,13,u,u,u,u,14,u,u,u,u,15,u,u,u,u,0,u,u,u,u,1,u,u,u,u,2,u,u,u,u>
-; AVX512BW-SLOW-NEXT:    movl $138547332, %eax # imm = 0x8421084
-; AVX512BW-SLOW-NEXT:    kmovd %eax, %k2
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm13, %ymm26, %ymm18 {%k2}
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm18, %zmm14, %zmm14
-; AVX512BW-SLOW-NEXT:    movabsq $-8330787646191410408, %rax # imm = 0x8C6318C6318C6318
-; AVX512BW-SLOW-NEXT:    kmovq %rax, %k3
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm14, %zmm6 {%k3}
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm14 = <3,3,3,3,u,4,4,4>
-; AVX512BW-SLOW-NEXT:    vpermd %ymm15, %ymm14, %ymm18
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} xmm17 = xmm17[1,1,2,2]
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm17 = ymm17[0,1,1,1]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm18, %zmm17, %zmm17
-; AVX512BW-SLOW-NEXT:    movabsq $4760450083537948804, %rax # imm = 0x4210842108421084
-; AVX512BW-SLOW-NEXT:    kmovq %rax, %k6
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm17, %zmm6 {%k6}
-; AVX512BW-SLOW-NEXT:    vmovdqa64 {{.*#+}} ymm17 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128>
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm17, %ymm26, %ymm18
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm27 = ymm18[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vmovdqa64 {{.*#+}} ymm18 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128,128]
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm18, %ymm25, %ymm28
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm28 = ymm28[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vporq %ymm27, %ymm28, %ymm27
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm16, %ymm26, %ymm16
-; AVX512BW-SLOW-NEXT:    vpshufhw {{.*#+}} ymm25 = ymm25[0,1,2,3,6,5,6,7,8,9,10,11,14,13,14,15]
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} ymm25 = ymm25[2,2,3,3,6,6,7,7]
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %ymm25, %ymm16 {%k5}
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm16 = ymm16[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm16, %zmm27, %zmm16
-; AVX512BW-SLOW-NEXT:    vmovdqa64 {{.*#+}} ymm25 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,18,19,128,21,128,21,20,128,22,128,24,128,22,23,128,25]
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm25, %ymm23, %ymm26
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm26 = ymm26[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vmovdqa64 {{.*#+}} ymm27 = <u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128>
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm27, %ymm24, %ymm28
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm28 = ymm28[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vporq %ymm26, %ymm28, %ymm26
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm8, %ymm24, %ymm8
-; AVX512BW-SLOW-NEXT:    vpshufhw {{.*#+}} ymm23 = ymm23[0,1,2,3,5,6,7,6,8,9,10,11,13,14,15,14]
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} ymm23 = ymm23[2,2,3,3,6,6,7,7]
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %ymm23, %ymm8 {%k1}
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm8 = ymm8[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm8, %zmm26, %zmm8
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm16, %zmm8 {%k4}
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} ymm16 = ymm15[0,2,1,1,4,6,5,5]
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm16 = ymm16[2,3,3,2]
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} ymm15 = ymm15[2,2,3,3,6,6,7,7]
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm15 = ymm15[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm15, %zmm16, %zmm15
-; AVX512BW-SLOW-NEXT:    vmovdqa64 (%rdx), %xmm16
-; AVX512BW-SLOW-NEXT:    movabsq $-8925843906633654008, %rax # imm = 0x8421084210842108
-; AVX512BW-SLOW-NEXT:    kmovq %rax, %k1
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm15, %zmm8 {%k1}
-; AVX512BW-SLOW-NEXT:    vmovdqa (%rcx), %xmm15
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm19, %xmm15, %xmm19
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm20, %xmm16, %xmm20
-; AVX512BW-SLOW-NEXT:    vporq %xmm19, %xmm20, %xmm19
-; AVX512BW-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm15 = xmm15[0],xmm16[0],xmm15[1],xmm16[1],xmm15[2],xmm16[2],xmm15[3],xmm16[3],xmm15[4],xmm16[4],xmm15[5],xmm16[5],xmm15[6],xmm16[6],xmm15[7],xmm16[7]
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm7, %xmm15, %xmm7
-; AVX512BW-SLOW-NEXT:    vmovdqa (%rsi), %xmm15
-; AVX512BW-SLOW-NEXT:    vinserti32x4 $2, %xmm19, %zmm7, %zmm7
-; AVX512BW-SLOW-NEXT:    vmovdqa64 (%rdi), %xmm16
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm21, %xmm16, %xmm19
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm22, %xmm15, %xmm20
-; AVX512BW-SLOW-NEXT:    vporq %xmm19, %xmm20, %xmm19
-; AVX512BW-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm15 = xmm16[0],xmm15[0],xmm16[1],xmm15[1],xmm16[2],xmm15[2],xmm16[3],xmm15[3],xmm16[4],xmm15[4],xmm16[5],xmm15[5],xmm16[6],xmm15[6],xmm16[7],xmm15[7]
-; AVX512BW-SLOW-NEXT:    vpshufb %xmm10, %xmm15, %xmm10
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} zmm7 = zmm7[0,0,1,1,4,4,5,5]
-; AVX512BW-SLOW-NEXT:    vinserti32x4 $2, %xmm19, %zmm10, %zmm10
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} zmm10 = zmm10[0,0,1,1,4,4,5,5]
-; AVX512BW-SLOW-NEXT:    movabsq $-4165393823095705204, %rax # imm = 0xC6318C6318C6318C
-; AVX512BW-SLOW-NEXT:    kmovq %rax, %k1
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm7, %zmm10 {%k1}
-; AVX512BW-SLOW-NEXT:    vmovdqa (%r8), %xmm7
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} xmm15 = xmm7[0,0,1,1]
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm15 = ymm15[0,0,0,1]
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[1,1,2,2]
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm7 = ymm7[0,1,1,1]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm7, %zmm15, %zmm7
-; AVX512BW-SLOW-NEXT:    movabsq $595056260442243600, %rax # imm = 0x842108421084210
-; AVX512BW-SLOW-NEXT:    kmovq %rax, %k1
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm7, %zmm10 {%k1}
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm25, %ymm1, %ymm7
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm7 = ymm7[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm27, %ymm0, %ymm15
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm15 = ymm15[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vpor %ymm7, %ymm15, %ymm7
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm9, %ymm1, %ymm1
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm11, %ymm0, %ymm0
-; AVX512BW-SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm7, %zmm0, %zmm0
-; AVX512BW-SLOW-NEXT:    vpermd %ymm3, %ymm12, %ymm1
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm13, %ymm2, %ymm1 {%k2}
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm17, %ymm2, %ymm2
-; AVX512BW-SLOW-NEXT:    vpshufb %ymm18, %ymm3, %ymm3
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[2,2,3,3]
-; AVX512BW-SLOW-NEXT:    vpor %ymm2, %ymm3, %ymm2
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k3}
-; AVX512BW-SLOW-NEXT:    vpermd %ymm5, %ymm14, %ymm0
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} ymm2 = ymm5[0,2,1,1,4,6,5,5]
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,3,3,2]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512BW-SLOW-NEXT:    movabsq $1190112520884487201, %rax # imm = 0x1084210842108421
-; AVX512BW-SLOW-NEXT:    kmovq %rax, %k1
-; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k1}
-; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm1, 64(%r9)
-; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm10, (%r9)
-; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm8, 256(%r9)
-; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm6, 192(%r9)
-; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm4, 128(%r9)
-; AVX512BW-SLOW-NEXT:    vzeroupper
-; AVX512BW-SLOW-NEXT:    retq
+; AVX512BW-ONLY-SLOW-LABEL: store_i8_stride5_vf64:
+; AVX512BW-ONLY-SLOW:       # %bb.0:
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa (%rcx), %ymm0
+; AVX512BW-ONLY-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm8 = [9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm8, %ymm0, %ymm2
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa (%rdx), %ymm1
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufhw {{.*#+}} ymm3 = ymm1[0,1,2,3,5,6,7,6,8,9,10,11,13,14,15,14]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} ymm3 = ymm3[2,2,3,3,6,6,7,7]
+; AVX512BW-ONLY-SLOW-NEXT:    movl $693250386, %eax # imm = 0x29522952
+; AVX512BW-ONLY-SLOW-NEXT:    kmovd %eax, %k1
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %ymm3, %ymm2 {%k1}
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa 32(%rdx), %xmm6
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa 32(%rcx), %xmm12
+; AVX512BW-ONLY-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm3 = xmm12[0],xmm6[0],xmm12[1],xmm6[1],xmm12[2],xmm6[2],xmm12[3],xmm6[3],xmm12[4],xmm6[4],xmm12[5],xmm6[5],xmm12[6],xmm6[6],xmm12[7],xmm6[7]
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa {{.*#+}} xmm7 = <2,u,1,0,5,4,u,3,u,7,6,11,10,u,9,8>
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm7, %xmm3, %xmm3
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,0,1,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm5
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa (%rsi), %ymm2
+; AVX512BW-ONLY-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm16 = [11,0,13,10,15,12,0,14,11,0,13,10,15,12,0,14,11,0,13,10,15,12,0,14,11,0,13,10,15,12,0,14]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm16, %ymm2, %ymm4
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa (%rdi), %ymm3
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufhw {{.*#+}} ymm9 = ymm3[0,1,2,3,6,5,6,7,8,9,10,11,14,13,14,15]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} ymm9 = ymm9[2,2,3,3,6,6,7,7]
+; AVX512BW-ONLY-SLOW-NEXT:    movl $1251232404, %eax # imm = 0x4A944A94
+; AVX512BW-ONLY-SLOW-NEXT:    kmovd %eax, %k5
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %ymm9, %ymm4 {%k5}
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa 32(%rsi), %xmm13
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa 32(%rdi), %xmm14
+; AVX512BW-ONLY-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm9 = xmm14[0],xmm13[0],xmm14[1],xmm13[1],xmm14[2],xmm13[2],xmm14[3],xmm13[3],xmm14[4],xmm13[4],xmm14[5],xmm13[5],xmm14[6],xmm13[6],xmm14[7],xmm13[7]
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa {{.*#+}} xmm10 = <0,1,4,5,u,2,3,6,7,10,11,u,8,9,12,13>
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm10, %xmm9, %xmm9
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm9 = ymm9[0,0,1,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm9, %zmm4, %zmm4
+; AVX512BW-ONLY-SLOW-NEXT:    movabsq $1785168781326730801, %rax # imm = 0x18C6318C6318C631
+; AVX512BW-ONLY-SLOW-NEXT:    kmovq %rax, %k4
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm5, %zmm4 {%k4}
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa (%r8), %ymm5
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa 32(%r8), %ymm15
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} ymm9 = ymm5[2,2,3,3,6,6,7,7]
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm9 = ymm9[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 32(%r8), %xmm17
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} xmm11 = xmm17[0,0,1,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm11 = ymm11[0,0,0,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm11, %zmm9, %zmm9
+; AVX512BW-ONLY-SLOW-NEXT:    movabsq $2380225041768974402, %rax # imm = 0x2108421084210842
+; AVX512BW-ONLY-SLOW-NEXT:    kmovq %rax, %k2
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm9, %zmm4 {%k2}
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 32(%rdx), %ymm23
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa {{.*#+}} ymm9 = [128,128,12,13,128,128,128,128,14,128,128,128,14,15,128,128,128,128,16,128,128,128,16,17,128,128,128,128,18,128,128,128]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm9, %ymm23, %ymm18
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 32(%rcx), %ymm24
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa {{.*#+}} ymm11 = [128,128,128,128,13,128,128,128,128,14,128,128,128,128,15,128,128,128,128,16,128,128,128,128,17,128,128,128,128,18,128,128]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm11, %ymm24, %ymm19
+; AVX512BW-ONLY-SLOW-NEXT:    vporq %ymm18, %ymm19, %ymm18
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm19 = <128,6,128,8,u,128,7,128,9,128,11,u,128,10,128,12>
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm19, %xmm12, %xmm12
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm20 = <6,128,8,128,u,7,128,9,128,11,128,u,10,128,12,128>
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm20, %xmm6, %xmm6
+; AVX512BW-ONLY-SLOW-NEXT:    vpor %xmm6, %xmm12, %xmm6
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm6 = ymm6[0,0,1,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm18, %zmm6, %zmm6
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm21 = <8,128,u,7,128,9,128,u,128,u,10,128,12,128,u,11>
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm21, %xmm14, %xmm12
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm22 = <128,8,u,128,7,128,9,u,11,u,128,10,128,12,u,128>
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm22, %xmm13, %xmm13
+; AVX512BW-ONLY-SLOW-NEXT:    vpor %xmm12, %xmm13, %xmm12
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm14 = ymm12[0,0,1,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 32(%rdi), %ymm25
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa {{.*#+}} ymm12 = <3,3,3,u,4,4,4,4>
+; AVX512BW-ONLY-SLOW-NEXT:    vpermd %ymm25, %ymm12, %ymm18
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 32(%rsi), %ymm26
+; AVX512BW-ONLY-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm13 = [0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14]
+; AVX512BW-ONLY-SLOW-NEXT:    movl $138547332, %eax # imm = 0x8421084
+; AVX512BW-ONLY-SLOW-NEXT:    kmovd %eax, %k2
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm13, %ymm26, %ymm18 {%k2}
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm18, %zmm14, %zmm14
+; AVX512BW-ONLY-SLOW-NEXT:    movabsq $-8330787646191410408, %rax # imm = 0x8C6318C6318C6318
+; AVX512BW-ONLY-SLOW-NEXT:    kmovq %rax, %k3
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm14, %zmm6 {%k3}
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa {{.*#+}} ymm14 = <3,3,3,3,u,4,4,4>
+; AVX512BW-ONLY-SLOW-NEXT:    vpermd %ymm15, %ymm14, %ymm18
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} xmm17 = xmm17[1,1,2,2]
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm17 = ymm17[0,1,1,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm18, %zmm17, %zmm17
+; AVX512BW-ONLY-SLOW-NEXT:    movabsq $4760450083537948804, %rax # imm = 0x4210842108421084
+; AVX512BW-ONLY-SLOW-NEXT:    kmovq %rax, %k6
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm17, %zmm6 {%k6}
+; AVX512BW-ONLY-SLOW-NEXT:    vbroadcasti32x4 {{.*#+}} ymm17 = [19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128]
+; AVX512BW-ONLY-SLOW-NEXT:    # ymm17 = mem[0,1,2,3,0,1,2,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm17, %ymm26, %ymm18
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm27 = ymm18[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 {{.*#+}} ymm18 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128,128]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm18, %ymm25, %ymm28
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm28 = ymm28[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vporq %ymm27, %ymm28, %ymm27
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm16, %ymm26, %ymm16
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufhw {{.*#+}} ymm25 = ymm25[0,1,2,3,6,5,6,7,8,9,10,11,14,13,14,15]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} ymm25 = ymm25[2,2,3,3,6,6,7,7]
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %ymm25, %ymm16 {%k5}
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm16 = ymm16[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm16, %zmm27, %zmm16
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 {{.*#+}} ymm25 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,18,19,128,21,128,21,20,128,22,128,24,128,22,23,128,25]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm25, %ymm23, %ymm26
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm26 = ymm26[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vbroadcasti32x4 {{.*#+}} ymm27 = [128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128]
+; AVX512BW-ONLY-SLOW-NEXT:    # ymm27 = mem[0,1,2,3,0,1,2,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm27, %ymm24, %ymm28
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm28 = ymm28[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vporq %ymm26, %ymm28, %ymm26
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm8, %ymm24, %ymm8
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufhw {{.*#+}} ymm23 = ymm23[0,1,2,3,5,6,7,6,8,9,10,11,13,14,15,14]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} ymm23 = ymm23[2,2,3,3,6,6,7,7]
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %ymm23, %ymm8 {%k1}
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm8 = ymm8[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm8, %zmm26, %zmm8
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm16, %zmm8 {%k4}
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} ymm16 = ymm15[0,2,1,1,4,6,5,5]
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm16 = ymm16[2,3,3,2]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} ymm15 = ymm15[2,2,3,3,6,6,7,7]
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm15 = ymm15[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm15, %zmm16, %zmm15
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 (%rdx), %xmm16
+; AVX512BW-ONLY-SLOW-NEXT:    movabsq $-8925843906633654008, %rax # imm = 0x8421084210842108
+; AVX512BW-ONLY-SLOW-NEXT:    kmovq %rax, %k1
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm15, %zmm8 {%k1}
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa (%rcx), %xmm15
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm19, %xmm15, %xmm19
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm20, %xmm16, %xmm20
+; AVX512BW-ONLY-SLOW-NEXT:    vporq %xmm19, %xmm20, %xmm19
+; AVX512BW-ONLY-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm15 = xmm15[0],xmm16[0],xmm15[1],xmm16[1],xmm15[2],xmm16[2],xmm15[3],xmm16[3],xmm15[4],xmm16[4],xmm15[5],xmm16[5],xmm15[6],xmm16[6],xmm15[7],xmm16[7]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm7, %xmm15, %xmm7
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa (%rsi), %xmm15
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti32x4 $2, %xmm19, %zmm7, %zmm7
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 (%rdi), %xmm16
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm21, %xmm16, %xmm19
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm22, %xmm15, %xmm20
+; AVX512BW-ONLY-SLOW-NEXT:    vporq %xmm19, %xmm20, %xmm19
+; AVX512BW-ONLY-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm15 = xmm16[0],xmm15[0],xmm16[1],xmm15[1],xmm16[2],xmm15[2],xmm16[3],xmm15[3],xmm16[4],xmm15[4],xmm16[5],xmm15[5],xmm16[6],xmm15[6],xmm16[7],xmm15[7]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %xmm10, %xmm15, %xmm10
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} zmm7 = zmm7[0,0,1,1,4,4,5,5]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti32x4 $2, %xmm19, %zmm10, %zmm10
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} zmm10 = zmm10[0,0,1,1,4,4,5,5]
+; AVX512BW-ONLY-SLOW-NEXT:    movabsq $-4165393823095705204, %rax # imm = 0xC6318C6318C6318C
+; AVX512BW-ONLY-SLOW-NEXT:    kmovq %rax, %k1
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm7, %zmm10 {%k1}
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa (%r8), %xmm7
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} xmm15 = xmm7[0,0,1,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm15 = ymm15[0,0,0,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[1,1,2,2]
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm7 = ymm7[0,1,1,1]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm7, %zmm15, %zmm7
+; AVX512BW-ONLY-SLOW-NEXT:    movabsq $595056260442243600, %rax # imm = 0x842108421084210
+; AVX512BW-ONLY-SLOW-NEXT:    kmovq %rax, %k1
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm7, %zmm10 {%k1}
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm25, %ymm1, %ymm7
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm7 = ymm7[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm27, %ymm0, %ymm15
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm15 = ymm15[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vpor %ymm7, %ymm15, %ymm7
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm9, %ymm1, %ymm1
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm11, %ymm0, %ymm0
+; AVX512BW-ONLY-SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm7, %zmm0, %zmm0
+; AVX512BW-ONLY-SLOW-NEXT:    vpermd %ymm3, %ymm12, %ymm1
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm13, %ymm2, %ymm1 {%k2}
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm17, %ymm2, %ymm2
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufb %ymm18, %ymm3, %ymm3
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[2,2,3,3]
+; AVX512BW-ONLY-SLOW-NEXT:    vpor %ymm2, %ymm3, %ymm2
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k3}
+; AVX512BW-ONLY-SLOW-NEXT:    vpermd %ymm5, %ymm14, %ymm0
+; AVX512BW-ONLY-SLOW-NEXT:    vpshufd {{.*#+}} ymm2 = ymm5[0,2,1,1,4,6,5,5]
+; AVX512BW-ONLY-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,3,3,2]
+; AVX512BW-ONLY-SLOW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512BW-ONLY-SLOW-NEXT:    movabsq $1190112520884487201, %rax # imm = 0x1084210842108421
+; AVX512BW-ONLY-SLOW-NEXT:    kmovq %rax, %k1
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k1}
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 %zmm1, 64(%r9)
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 %zmm10, (%r9)
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 %zmm8, 256(%r9)
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 %zmm6, 192(%r9)
+; AVX512BW-ONLY-SLOW-NEXT:    vmovdqa64 %zmm4, 128(%r9)
+; AVX512BW-ONLY-SLOW-NEXT:    vzeroupper
+; AVX512BW-ONLY-SLOW-NEXT:    retq
 ;
 ; AVX512BW-FAST-LABEL: store_i8_stride5_vf64:
 ; AVX512BW-FAST:       # %bb.0:
@@ -4457,7 +4472,7 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} ymm3 = <3,3,3,u,4,4,4,4>
 ; AVX512BW-FAST-NEXT:    vpermd %ymm21, %ymm3, %ymm22
 ; AVX512BW-FAST-NEXT:    vmovdqa64 32(%rsi), %ymm23
-; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} ymm4 = <u,u,13,u,u,u,u,14,u,u,u,u,15,u,u,u,u,0,u,u,u,u,1,u,u,u,u,2,u,u,u,u>
+; AVX512BW-FAST-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14]
 ; AVX512BW-FAST-NEXT:    movl $138547332, %eax # imm = 0x8421084
 ; AVX512BW-FAST-NEXT:    kmovd %eax, %k1
 ; AVX512BW-FAST-NEXT:    vpshufb %ymm4, %ymm23, %ymm22 {%k1}
@@ -4576,6 +4591,196 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-FAST-NEXT:    vmovdqa64 %zmm0, 192(%r9)
 ; AVX512BW-FAST-NEXT:    vzeroupper
 ; AVX512BW-FAST-NEXT:    retq
+;
+; AVX512DQBW-SLOW-LABEL: store_i8_stride5_vf64:
+; AVX512DQBW-SLOW:       # %bb.0:
+; AVX512DQBW-SLOW-NEXT:    vmovdqa (%rcx), %ymm0
+; AVX512DQBW-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm8 = [9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12,9,14,11,0,13,10,15,12]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm8, %ymm0, %ymm2
+; AVX512DQBW-SLOW-NEXT:    vmovdqa (%rdx), %ymm1
+; AVX512DQBW-SLOW-NEXT:    vpshufhw {{.*#+}} ymm3 = ymm1[0,1,2,3,5,6,7,6,8,9,10,11,13,14,15,14]
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} ymm3 = ymm3[2,2,3,3,6,6,7,7]
+; AVX512DQBW-SLOW-NEXT:    movl $693250386, %eax # imm = 0x29522952
+; AVX512DQBW-SLOW-NEXT:    kmovd %eax, %k1
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %ymm3, %ymm2 {%k1}
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vmovdqa 32(%rdx), %xmm6
+; AVX512DQBW-SLOW-NEXT:    vmovdqa 32(%rcx), %xmm12
+; AVX512DQBW-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm3 = xmm12[0],xmm6[0],xmm12[1],xmm6[1],xmm12[2],xmm6[2],xmm12[3],xmm6[3],xmm12[4],xmm6[4],xmm12[5],xmm6[5],xmm12[6],xmm6[6],xmm12[7],xmm6[7]
+; AVX512DQBW-SLOW-NEXT:    vmovdqa {{.*#+}} xmm7 = <2,u,1,0,5,4,u,3,u,7,6,11,10,u,9,8>
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm7, %xmm3, %xmm3
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,0,1,1]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm5
+; AVX512DQBW-SLOW-NEXT:    vmovdqa (%rsi), %ymm2
+; AVX512DQBW-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm16 = [11,0,13,10,15,12,0,14,11,0,13,10,15,12,0,14,11,0,13,10,15,12,0,14,11,0,13,10,15,12,0,14]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm16, %ymm2, %ymm4
+; AVX512DQBW-SLOW-NEXT:    vmovdqa (%rdi), %ymm3
+; AVX512DQBW-SLOW-NEXT:    vpshufhw {{.*#+}} ymm9 = ymm3[0,1,2,3,6,5,6,7,8,9,10,11,14,13,14,15]
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} ymm9 = ymm9[2,2,3,3,6,6,7,7]
+; AVX512DQBW-SLOW-NEXT:    movl $1251232404, %eax # imm = 0x4A944A94
+; AVX512DQBW-SLOW-NEXT:    kmovd %eax, %k5
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %ymm9, %ymm4 {%k5}
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vmovdqa 32(%rsi), %xmm13
+; AVX512DQBW-SLOW-NEXT:    vmovdqa 32(%rdi), %xmm14
+; AVX512DQBW-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm9 = xmm14[0],xmm13[0],xmm14[1],xmm13[1],xmm14[2],xmm13[2],xmm14[3],xmm13[3],xmm14[4],xmm13[4],xmm14[5],xmm13[5],xmm14[6],xmm13[6],xmm14[7],xmm13[7]
+; AVX512DQBW-SLOW-NEXT:    vmovdqa {{.*#+}} xmm10 = <0,1,4,5,u,2,3,6,7,10,11,u,8,9,12,13>
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm10, %xmm9, %xmm9
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm9 = ymm9[0,0,1,1]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm9, %zmm4, %zmm4
+; AVX512DQBW-SLOW-NEXT:    movabsq $1785168781326730801, %rax # imm = 0x18C6318C6318C631
+; AVX512DQBW-SLOW-NEXT:    kmovq %rax, %k4
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm5, %zmm4 {%k4}
+; AVX512DQBW-SLOW-NEXT:    vmovdqa (%r8), %ymm5
+; AVX512DQBW-SLOW-NEXT:    vmovdqa 32(%r8), %ymm15
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} ymm9 = ymm5[2,2,3,3,6,6,7,7]
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm9 = ymm9[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 32(%r8), %xmm17
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} xmm11 = xmm17[0,0,1,1]
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm11 = ymm11[0,0,0,1]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm11, %zmm9, %zmm9
+; AVX512DQBW-SLOW-NEXT:    movabsq $2380225041768974402, %rax # imm = 0x2108421084210842
+; AVX512DQBW-SLOW-NEXT:    kmovq %rax, %k2
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm9, %zmm4 {%k2}
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 32(%rdx), %ymm23
+; AVX512DQBW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm9 = [128,128,12,13,128,128,128,128,14,128,128,128,14,15,128,128,128,128,16,128,128,128,16,17,128,128,128,128,18,128,128,128]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm9, %ymm23, %ymm18
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 32(%rcx), %ymm24
+; AVX512DQBW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm11 = [128,128,128,128,13,128,128,128,128,14,128,128,128,128,15,128,128,128,128,16,128,128,128,128,17,128,128,128,128,18,128,128]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm11, %ymm24, %ymm19
+; AVX512DQBW-SLOW-NEXT:    vporq %ymm18, %ymm19, %ymm18
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm19 = <128,6,128,8,u,128,7,128,9,128,11,u,128,10,128,12>
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm19, %xmm12, %xmm12
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm20 = <6,128,8,128,u,7,128,9,128,11,128,u,10,128,12,128>
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm20, %xmm6, %xmm6
+; AVX512DQBW-SLOW-NEXT:    vpor %xmm6, %xmm12, %xmm6
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm6 = ymm6[0,0,1,1]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm18, %zmm6, %zmm6
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm21 = <8,128,u,7,128,9,128,u,128,u,10,128,12,128,u,11>
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm21, %xmm14, %xmm12
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 {{.*#+}} xmm22 = <128,8,u,128,7,128,9,u,11,u,128,10,128,12,u,128>
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm22, %xmm13, %xmm13
+; AVX512DQBW-SLOW-NEXT:    vpor %xmm12, %xmm13, %xmm12
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm14 = ymm12[0,0,1,1]
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 32(%rdi), %ymm25
+; AVX512DQBW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm12 = <3,3,3,u,4,4,4,4>
+; AVX512DQBW-SLOW-NEXT:    vpermd %ymm25, %ymm12, %ymm18
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 32(%rsi), %ymm26
+; AVX512DQBW-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm13 = [0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14,0,0,13,2,15,0,1,14]
+; AVX512DQBW-SLOW-NEXT:    movl $138547332, %eax # imm = 0x8421084
+; AVX512DQBW-SLOW-NEXT:    kmovd %eax, %k2
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm13, %ymm26, %ymm18 {%k2}
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm18, %zmm14, %zmm14
+; AVX512DQBW-SLOW-NEXT:    movabsq $-8330787646191410408, %rax # imm = 0x8C6318C6318C6318
+; AVX512DQBW-SLOW-NEXT:    kmovq %rax, %k3
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm14, %zmm6 {%k3}
+; AVX512DQBW-SLOW-NEXT:    vmovdqa {{.*#+}} ymm14 = <3,3,3,3,u,4,4,4>
+; AVX512DQBW-SLOW-NEXT:    vpermd %ymm15, %ymm14, %ymm18
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} xmm17 = xmm17[1,1,2,2]
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm17 = ymm17[0,1,1,1]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm18, %zmm17, %zmm17
+; AVX512DQBW-SLOW-NEXT:    movabsq $4760450083537948804, %rax # imm = 0x4210842108421084
+; AVX512DQBW-SLOW-NEXT:    kmovq %rax, %k6
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm17, %zmm6 {%k6}
+; AVX512DQBW-SLOW-NEXT:    vbroadcasti64x2 {{.*#+}} ymm17 = [19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128]
+; AVX512DQBW-SLOW-NEXT:    # ymm17 = mem[0,1,0,1]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm17, %ymm26, %ymm18
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm27 = ymm18[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 {{.*#+}} ymm18 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,21,128,128,20,128,22,128,24,128,128,23,128,25,128,128]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm18, %ymm25, %ymm28
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm28 = ymm28[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vporq %ymm27, %ymm28, %ymm27
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm16, %ymm26, %ymm16
+; AVX512DQBW-SLOW-NEXT:    vpshufhw {{.*#+}} ymm25 = ymm25[0,1,2,3,6,5,6,7,8,9,10,11,14,13,14,15]
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} ymm25 = ymm25[2,2,3,3,6,6,7,7]
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %ymm25, %ymm16 {%k5}
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm16 = ymm16[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm16, %zmm27, %zmm16
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 {{.*#+}} ymm25 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,18,19,128,21,128,21,20,128,22,128,24,128,22,23,128,25]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm25, %ymm23, %ymm26
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm26 = ymm26[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vbroadcasti64x2 {{.*#+}} ymm27 = [128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128,128,128,19,128,21,128,128,20,128,22,128,24,128,128,23,128]
+; AVX512DQBW-SLOW-NEXT:    # ymm27 = mem[0,1,0,1]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm27, %ymm24, %ymm28
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm28 = ymm28[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vporq %ymm26, %ymm28, %ymm26
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm8, %ymm24, %ymm8
+; AVX512DQBW-SLOW-NEXT:    vpshufhw {{.*#+}} ymm23 = ymm23[0,1,2,3,5,6,7,6,8,9,10,11,13,14,15,14]
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} ymm23 = ymm23[2,2,3,3,6,6,7,7]
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %ymm23, %ymm8 {%k1}
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm8 = ymm8[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm8, %zmm26, %zmm8
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm16, %zmm8 {%k4}
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} ymm16 = ymm15[0,2,1,1,4,6,5,5]
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm16 = ymm16[2,3,3,2]
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} ymm15 = ymm15[2,2,3,3,6,6,7,7]
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm15 = ymm15[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm15, %zmm16, %zmm15
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 (%rdx), %xmm16
+; AVX512DQBW-SLOW-NEXT:    movabsq $-8925843906633654008, %rax # imm = 0x8421084210842108
+; AVX512DQBW-SLOW-NEXT:    kmovq %rax, %k1
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm15, %zmm8 {%k1}
+; AVX512DQBW-SLOW-NEXT:    vmovdqa (%rcx), %xmm15
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm19, %xmm15, %xmm19
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm20, %xmm16, %xmm20
+; AVX512DQBW-SLOW-NEXT:    vporq %xmm19, %xmm20, %xmm19
+; AVX512DQBW-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm15 = xmm15[0],xmm16[0],xmm15[1],xmm16[1],xmm15[2],xmm16[2],xmm15[3],xmm16[3],xmm15[4],xmm16[4],xmm15[5],xmm16[5],xmm15[6],xmm16[6],xmm15[7],xmm16[7]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm7, %xmm15, %xmm7
+; AVX512DQBW-SLOW-NEXT:    vmovdqa (%rsi), %xmm15
+; AVX512DQBW-SLOW-NEXT:    vinserti32x4 $2, %xmm19, %zmm7, %zmm7
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 (%rdi), %xmm16
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm21, %xmm16, %xmm19
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm22, %xmm15, %xmm20
+; AVX512DQBW-SLOW-NEXT:    vporq %xmm19, %xmm20, %xmm19
+; AVX512DQBW-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm15 = xmm16[0],xmm15[0],xmm16[1],xmm15[1],xmm16[2],xmm15[2],xmm16[3],xmm15[3],xmm16[4],xmm15[4],xmm16[5],xmm15[5],xmm16[6],xmm15[6],xmm16[7],xmm15[7]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %xmm10, %xmm15, %xmm10
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} zmm7 = zmm7[0,0,1,1,4,4,5,5]
+; AVX512DQBW-SLOW-NEXT:    vinserti32x4 $2, %xmm19, %zmm10, %zmm10
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} zmm10 = zmm10[0,0,1,1,4,4,5,5]
+; AVX512DQBW-SLOW-NEXT:    movabsq $-4165393823095705204, %rax # imm = 0xC6318C6318C6318C
+; AVX512DQBW-SLOW-NEXT:    kmovq %rax, %k1
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm7, %zmm10 {%k1}
+; AVX512DQBW-SLOW-NEXT:    vmovdqa (%r8), %xmm7
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} xmm15 = xmm7[0,0,1,1]
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm15 = ymm15[0,0,0,1]
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[1,1,2,2]
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm7 = ymm7[0,1,1,1]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm7, %zmm15, %zmm7
+; AVX512DQBW-SLOW-NEXT:    movabsq $595056260442243600, %rax # imm = 0x842108421084210
+; AVX512DQBW-SLOW-NEXT:    kmovq %rax, %k1
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm7, %zmm10 {%k1}
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm25, %ymm1, %ymm7
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm7 = ymm7[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm27, %ymm0, %ymm15
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm15 = ymm15[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vpor %ymm7, %ymm15, %ymm7
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm9, %ymm1, %ymm1
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm11, %ymm0, %ymm0
+; AVX512DQBW-SLOW-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm7, %zmm0, %zmm0
+; AVX512DQBW-SLOW-NEXT:    vpermd %ymm3, %ymm12, %ymm1
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm13, %ymm2, %ymm1 {%k2}
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm17, %ymm2, %ymm2
+; AVX512DQBW-SLOW-NEXT:    vpshufb %ymm18, %ymm3, %ymm3
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[2,2,3,3]
+; AVX512DQBW-SLOW-NEXT:    vpor %ymm2, %ymm3, %ymm2
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k3}
+; AVX512DQBW-SLOW-NEXT:    vpermd %ymm5, %ymm14, %ymm0
+; AVX512DQBW-SLOW-NEXT:    vpshufd {{.*#+}} ymm2 = ymm5[0,2,1,1,4,6,5,5]
+; AVX512DQBW-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,3,3,2]
+; AVX512DQBW-SLOW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512DQBW-SLOW-NEXT:    movabsq $1190112520884487201, %rax # imm = 0x1084210842108421
+; AVX512DQBW-SLOW-NEXT:    kmovq %rax, %k1
+; AVX512DQBW-SLOW-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k1}
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 %zmm1, 64(%r9)
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 %zmm10, (%r9)
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 %zmm8, 256(%r9)
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 %zmm6, 192(%r9)
+; AVX512DQBW-SLOW-NEXT:    vmovdqa64 %zmm4, 128(%r9)
+; AVX512DQBW-SLOW-NEXT:    vzeroupper
+; AVX512DQBW-SLOW-NEXT:    retq
   %in.vec0 = load <64 x i8>, ptr %in.vecptr0, align 64
   %in.vec1 = load <64 x i8>, ptr %in.vecptr1, align 64
   %in.vec2 = load <64 x i8>, ptr %in.vecptr2, align 64
@@ -4595,11 +4800,9 @@ define void @store_i8_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX2: {{.*}}
 ; AVX512: {{.*}}
 ; AVX512BW-ONLY-FAST: {{.*}}
-; AVX512BW-ONLY-SLOW: {{.*}}
 ; AVX512DQ-FAST: {{.*}}
 ; AVX512DQ-SLOW: {{.*}}
 ; AVX512DQBW-FAST: {{.*}}
-; AVX512DQBW-SLOW: {{.*}}
 ; AVX512F-ONLY-FAST: {{.*}}
 ; AVX512F-ONLY-SLOW: {{.*}}
 ; FALLBACK0: {{.*}}
