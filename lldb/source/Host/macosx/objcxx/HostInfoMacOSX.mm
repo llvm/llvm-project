@@ -338,7 +338,8 @@ FileSpec HostInfoMacOSX::GetXcodeContentsDirectory() {
       }
     }
 
-    auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(XcodeSDK::GetAnyMacOS());
+    auto sdk_path_or_err =
+        HostInfo::GetSDKRoot(SDKOptions{XcodeSDK::GetAnyMacOS()});
     if (!sdk_path_or_err) {
       Log *log = GetLog(LLDBLog::Host);
       LLDB_LOGF(log, "Error while searching for Xcode SDK: %s",
@@ -519,7 +520,7 @@ llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
   return path;
 }
 
-llvm::Expected<llvm::StringRef> HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
+llvm::Expected<llvm::StringRef> HostInfoMacOSX::GetSDKRoot(SDKOptions options) {
   struct ErrorOrPath {
     std::string str;
     bool is_error;
@@ -529,6 +530,11 @@ llvm::Expected<llvm::StringRef> HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
 
   std::lock_guard<std::mutex> guard(g_sdk_path_mutex);
   LLDB_SCOPED_TIMER();
+
+  if (!options.XcodeSDKSelection)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "XCodeSDK not specified");
+  XcodeSDK sdk = *options.XcodeSDKSelection;
 
   auto key = sdk.GetString();
   auto it = g_sdk_path.find(key);

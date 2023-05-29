@@ -53,7 +53,7 @@ public:
 #endif
 
   /// Query xcrun to find an Xcode SDK directory.
-  static llvm::Expected<llvm::StringRef> GetXcodeSDKPath(XcodeSDK sdk);
+  static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options);
 
   /// Shared cache utilities
   static SharedCacheImageInfo
