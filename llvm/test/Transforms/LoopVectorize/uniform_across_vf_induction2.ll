@@ -4,9 +4,7 @@
 
 ; for (iv = 0, iv2 = 0 ; ; iv += 1, iv2 += 1) B[iv] = A[iv/1 + iv2/1] + 42;
 define void @ld_div1_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
-; CHECK-LABEL: define void @ld_div1_step1_start0_ind2
-; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
-; ; VF2-LABEL: define void @ld_div1_step1_start0_ind2
+; VF2-LABEL: define void @ld_div1_step1_start0_ind2
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
 ; VF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -149,8 +147,6 @@ exit:
 
 ; for (iv = 0, iv2 = 0 ; ; iv += 1, iv2 += 1) B[iv] = A[iv/2 + iv2/2] + 42;
 define void @ld_div2_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
-; CHECK-LABEL: define void @ld_div2_step1_start0_ind2
-; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-LABEL: define void @ld_div2_step1_start0_ind2
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; VF2-NEXT:  entry:
