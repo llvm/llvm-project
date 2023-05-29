@@ -42,7 +42,7 @@ namespace __lsan {
 
 // This mutex is used to prevent races between DoLeakCheck and IgnoreObject, and
 // also to protect the global list of root regions.
-Mutex global_mutex;
+static Mutex global_mutex;
 
 Flags lsan_flags;
 
