@@ -182,7 +182,7 @@ def parseScript(test, preamble):
     return script
 
 
-class CxxStandardLibraryTest(lit.formats.TestFormat):
+class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     """
     Lit test format for the C++ Standard Library conformance test suite.
 
@@ -278,7 +278,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             in conjunction with the %{build} substitution.
     """
 
-    def getTestsInDirectory(self, testSuite, pathInSuite, litConfig, localConfig):
+    def getTestsForPath(self, testSuite, pathInSuite, litConfig, localConfig):
         SUPPORTED_SUFFIXES = [
             "[.]pass[.]cpp$",
             "[.]pass[.]mm$",
@@ -293,22 +293,22 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             "[.]verify[.]cpp$",
             "[.]fail[.]cpp$",
         ]
-        sourcePath = testSuite.getSourcePath(pathInSuite)
-        for filename in os.listdir(sourcePath):
-            # Ignore dot files and excluded tests.
-            if filename.startswith(".") or filename in localConfig.excludes:
-                continue
 
-            filepath = os.path.join(sourcePath, filename)
-            if not os.path.isdir(filepath):
-                if any([re.search(ext, filename) for ext in SUPPORTED_SUFFIXES]):
-                    # If this is a generated test, run the generation step and add
-                    # as many Lit tests as necessary.
-                    if re.search('[.]gen[.][^.]+$', filename):
-                        for test in self._generateGenTest(testSuite, pathInSuite + (filename,), litConfig, localConfig):
-                            yield test
-                    else:
-                        yield lit.Test.Test(testSuite, pathInSuite + (filename,), localConfig)
+        sourcePath = testSuite.getSourcePath(pathInSuite)
+        filename = os.path.basename(sourcePath)
+
+        # Ignore dot files, excluded tests and tests with an unsupported suffix
+        hasSupportedSuffix = lambda f: any([re.search(ext, f) for ext in SUPPORTED_SUFFIXES])
+        if filename.startswith(".") or filename in localConfig.excludes or not hasSupportedSuffix(filename):
+            return
+
+        # If this is a generated test, run the generation step and add
+        # as many Lit tests as necessary.
+        if re.search('[.]gen[.][^.]+$', filename):
+            for test in self._generateGenTest(testSuite, pathInSuite, litConfig, localConfig):
+                yield test
+        else:
+            yield lit.Test.Test(testSuite, pathInSuite, localConfig)
 
     def execute(self, test, litConfig):
         VERIFY_FLAGS = (
