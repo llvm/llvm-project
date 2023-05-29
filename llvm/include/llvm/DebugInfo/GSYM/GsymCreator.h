@@ -264,14 +264,6 @@ class GsymCreator {
   /// and strings over into this object.
   void fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II);
 
-  /// Get the first function info address from this GSYM file.
-  ///
-  /// This is used to add a suffix to segmented GSYM files to indicate the first
-  /// address for the first function info within the file.
-  ///
-  /// \returns The first function info address.
-  uint64_t getFirstFunctionInfoAddress() const;
-
   /// Save this GSYM file into segments that are roughly \a SegmentSize in size.
   ///
   /// When segemented GSYM files are saved to disk, they will use \a Path as a
