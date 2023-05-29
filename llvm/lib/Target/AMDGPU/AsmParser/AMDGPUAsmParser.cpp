@@ -1761,7 +1761,7 @@ public:
   AMDGPUOperand::Ptr defaultSMEMOffsetMod() const;
   AMDGPUOperand::Ptr defaultFlatOffset() const;
 
-  OperandMatchResultTy parseOModOperand(OperandVector &Operands);
+  OperandMatchResultTy parseOModSI(OperandVector &Operands);
 
   void cvtVOP3(MCInst &Inst, const OperandVector &Operands,
                OptionalImmIndexMap &OptionalIdx);
@@ -8048,7 +8048,7 @@ void AMDGPUAsmParser::onBeginOfFile() {
     getTargetStreamer().EmitDirectiveAMDGCNTarget();
 }
 
-OperandMatchResultTy AMDGPUAsmParser::parseOModOperand(OperandVector &Operands) {
+OperandMatchResultTy AMDGPUAsmParser::parseOModSI(OperandVector &Operands) {
   StringRef Name = getTokenStr();
   if (Name == "mul") {
     return parseIntWithPrefix("mul", Operands,
@@ -9129,24 +9129,8 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
     return parseTokenOp("off", Operands);
   case MCK_row_95_en:
     return parseTokenOp("row_en", Operands);
-  case MCK_ImmCPol:
-    return parseCPol(Operands);
   case MCK_gds:
     return parseNamedBit("gds", Operands, AMDGPUOperand::ImmTyGDS);
-  case MCK_ImmNegHi:
-    return parseOperandArrayWithPrefix("neg_hi", Operands,
-                                       AMDGPUOperand::ImmTyNegHi);
-  case MCK_ImmNegLo:
-    return parseOperandArrayWithPrefix("neg_lo", Operands,
-                                       AMDGPUOperand::ImmTyNegLo);
-  case MCK_ImmOModSI:
-    return parseOModOperand(Operands);
-  case MCK_ImmOpSel:
-    return parseOperandArrayWithPrefix("op_sel", Operands,
-                                       AMDGPUOperand::ImmTyOpSel);
-  case MCK_ImmOpSelHi:
-    return parseOperandArrayWithPrefix("op_sel_hi", Operands,
-                                       AMDGPUOperand::ImmTyOpSelHi);
   case MCK_tfe:
     return parseNamedBit("tfe", Operands, AMDGPUOperand::ImmTyTFE);
   }
