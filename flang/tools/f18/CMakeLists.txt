@@ -44,9 +44,16 @@ if (NOT CMAKE_CROSSCOMPILING)
         set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_ieee_exceptions.mod)
       endif()
     endif()
+
+    # The module contains PPC vector types that needs the PPC target.
+    set(opts "")
+    if(${filename} STREQUAL "__fortran_ppc_intrinsics")
+      set(opts "--target=ppc64le")
+    endif()
+
     add_custom_command(OUTPUT ${base}.mod
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang-new -fc1 -cpp -fsyntax-only -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
       DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
     )
