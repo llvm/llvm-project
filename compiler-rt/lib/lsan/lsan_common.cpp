@@ -527,8 +527,11 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
 #  endif  // SANITIZER_FUCHSIA
 
-void ScanRootRegion(Frontier *frontier, const Region &root_region,
-                    uptr region_begin, uptr region_end, bool is_readable) {
+bool HasRootRegions() { return !root_regions.empty(); }
+
+static void ScanRootRegion(Frontier *frontier, const Region &root_region,
+                           uptr region_begin, uptr region_end,
+                           bool is_readable) {
   uptr intersection_begin = Max(root_region.begin, region_begin);
   uptr intersection_end = Min(region_end, root_region.end);
   if (intersection_begin >= intersection_end)
@@ -540,6 +543,16 @@ void ScanRootRegion(Frontier *frontier, const Region &root_region,
   if (is_readable)
     ScanRangeForPointers(intersection_begin, intersection_end, frontier, "ROOT",
                          kReachable);
+}
+
+void ScanRootRegions(Frontier *frontier,
+                     const InternalMmapVectorNoCtor<Region> &mapped_regions) {
+  if (!flags()->use_root_regions || mapped_regions.empty())
+    return;
+
+  for (const auto &m : mapped_regions)
+    for (const auto &r : root_regions)
+      ScanRootRegion(frontier, r, m.begin, m.end, true);
 }
 
 static void ProcessRootRegion(Frontier *frontier, const Region &root_region) {
