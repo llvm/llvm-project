@@ -264,11 +264,11 @@ define void @load_i16_stride3_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ;
 ; AVX512BW-SLOW-LABEL: load_i16_stride3_vf4:
 ; AVX512BW-SLOW:       # %bb.0:
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} xmm0 = <0,3,6,9,u,u,u,u>
+; AVX512BW-SLOW-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [0,3,6,9,0,3,6,9]
 ; AVX512BW-SLOW-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512BW-SLOW-NEXT:    vmovdqa 16(%rdi), %xmm2
 ; AVX512BW-SLOW-NEXT:    vpermi2w %xmm2, %xmm1, %xmm0
-; AVX512BW-SLOW-NEXT:    vmovdqa {{.*#+}} xmm3 = <1,4,7,10,u,u,u,u>
+; AVX512BW-SLOW-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,4,7,10,1,4,7,10]
 ; AVX512BW-SLOW-NEXT:    vpermi2w %xmm2, %xmm1, %xmm3
 ; AVX512BW-SLOW-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[0,3,2,3,4,5,6,7]
 ; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,1,2,3]
@@ -281,13 +281,13 @@ define void @load_i16_stride3_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ;
 ; AVX512BW-FAST-LABEL: load_i16_stride3_vf4:
 ; AVX512BW-FAST:       # %bb.0:
-; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} xmm0 = <0,3,6,9,u,u,u,u>
+; AVX512BW-FAST-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [0,3,6,9,0,3,6,9]
 ; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512BW-FAST-NEXT:    vmovdqa 16(%rdi), %xmm2
 ; AVX512BW-FAST-NEXT:    vpermi2w %xmm2, %xmm1, %xmm0
-; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} xmm3 = <1,4,7,10,u,u,u,u>
+; AVX512BW-FAST-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,4,7,10,1,4,7,10]
 ; AVX512BW-FAST-NEXT:    vpermi2w %xmm2, %xmm1, %xmm3
-; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} xmm4 = <2,5,8,11,u,u,u,u>
+; AVX512BW-FAST-NEXT:    vpbroadcastq {{.*#+}} xmm4 = [2,5,8,11,2,5,8,11]
 ; AVX512BW-FAST-NEXT:    vpermi2w %xmm2, %xmm1, %xmm4
 ; AVX512BW-FAST-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512BW-FAST-NEXT:    vmovq %xmm3, (%rdx)

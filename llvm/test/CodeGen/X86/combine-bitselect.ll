@@ -377,7 +377,8 @@ define <4 x i64> @bitselect_v4i64_rm(<4 x i64>, ptr nocapture readonly) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612]
+; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612]
+; AVX512F-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm2, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
@@ -429,7 +430,8 @@ define <4 x i64> @bitselect_v4i64_mr(ptr nocapture readonly, <4 x i64>) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [12884901890,4294967296,12884901890,4294967296]
+; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [12884901890,4294967296,12884901890,4294967296]
+; AVX512F-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512F-NEXT:    vpternlogq $184, %zmm1, %zmm2, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
@@ -481,7 +483,8 @@ define <4 x i64> @bitselect_v4i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX512F-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX512F-NEXT:    vpternlogq $226, %zmm1, %zmm2, %zmm0
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
@@ -489,7 +492,8 @@ define <4 x i64> @bitselect_v4i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; AVX512VL-LABEL: bitselect_v4i64_mm:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX512VL-NEXT:    # ymm0 = mem[0,1,0,1]
 ; AVX512VL-NEXT:    vpternlogq $202, (%rdi), %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %3 = load <4 x i64>, ptr %0
@@ -849,7 +853,8 @@ define <8 x i64> @bitselect_v8i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; AVX512-LABEL: bitselect_v8i64_mm:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa64 (%rsi), %zmm1
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; AVX512-NEXT:    # zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512-NEXT:    vpternlogq $202, (%rdi), %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %3 = load <8 x i64>, ptr %0
