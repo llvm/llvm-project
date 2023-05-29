@@ -239,9 +239,9 @@ void InitializePlatformSpecificModules();
 void ProcessGlobalRegions(Frontier *frontier);
 void ProcessPlatformSpecificAllocations(Frontier *frontier);
 
-struct RootRegion {
+struct Region {
   uptr begin;
-  uptr size;
+  uptr end;
 };
 
 // LockStuffAndStopTheWorld can start to use Scan* calls to collect into
@@ -256,9 +256,9 @@ struct CheckForLeaksParam {
   bool success = false;
 };
 
-InternalMmapVectorNoCtor<RootRegion> const *GetRootRegions();
-void ScanRootRegion(Frontier *frontier, RootRegion const &region,
-                    uptr region_begin, uptr region_end, bool is_readable);
+bool HasRootRegions();
+void ScanRootRegions(Frontier *frontier,
+                     const InternalMmapVectorNoCtor<Region> &region);
 // Run stoptheworld while holding any platform-specific locks, as well as the
 // allocator and thread registry locks.
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,

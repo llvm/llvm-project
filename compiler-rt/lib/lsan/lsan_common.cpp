@@ -42,7 +42,7 @@ namespace __lsan {
 
 // This mutex is used to prevent races between DoLeakCheck and IgnoreObject, and
 // also to protect the global list of root regions.
-Mutex global_mutex;
+static Mutex global_mutex;
 
 Flags lsan_flags;
 
@@ -241,11 +241,7 @@ static LeakSuppressionContext *GetSuppressionContext() {
   return suppression_ctx;
 }
 
-static InternalMmapVectorNoCtor<RootRegion> root_regions;
-
-InternalMmapVectorNoCtor<RootRegion> const *GetRootRegions() {
-  return &root_regions;
-}
+static InternalMmapVectorNoCtor<Region> root_regions;
 
 void InitCommonLsan() {
   if (common_flags()->detect_leaks) {
@@ -527,15 +523,17 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
 #  endif  // SANITIZER_FUCHSIA
 
-void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
-                    uptr region_begin, uptr region_end, bool is_readable) {
+bool HasRootRegions() { return !root_regions.empty(); }
+
+static void ScanRootRegion(Frontier *frontier, const Region &root_region,
+                           uptr region_begin, uptr region_end,
+                           bool is_readable) {
   uptr intersection_begin = Max(root_region.begin, region_begin);
-  uptr intersection_end = Min(region_end, root_region.begin + root_region.size);
+  uptr intersection_end = Min(region_end, root_region.end);
   if (intersection_begin >= intersection_end)
     return;
   LOG_POINTERS("Root region %p-%p intersects with mapped region %p-%p (%s)\n",
-               (void *)root_region.begin,
-               (void *)(root_region.begin + root_region.size),
+               (void *)root_region.begin, (void *)root_region.end,
                (void *)region_begin, (void *)region_end,
                is_readable ? "readable" : "unreadable");
   if (is_readable)
@@ -543,22 +541,27 @@ void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
                          kReachable);
 }
 
-static void ProcessRootRegion(Frontier *frontier,
-                              const RootRegion &root_region) {
-  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
-  MemoryMappedSegment segment;
-  while (proc_maps.Next(&segment)) {
-    ScanRootRegion(frontier, root_region, segment.start, segment.end,
-                   segment.IsReadable());
-  }
+void ScanRootRegions(Frontier *frontier,
+                     const InternalMmapVectorNoCtor<Region> &mapped_regions) {
+  if (!flags()->use_root_regions || mapped_regions.empty())
+    return;
+
+  for (const auto &m : mapped_regions)
+    for (const auto &r : root_regions)
+      ScanRootRegion(frontier, r, m.begin, m.end, true);
 }
 
 // Scans root regions for heap pointers.
 static void ProcessRootRegions(Frontier *frontier) {
-  if (!flags()->use_root_regions)
+  if (!flags()->use_root_regions || !HasRootRegions())
     return;
-  for (uptr i = 0; i < root_regions.size(); i++)
-    ProcessRootRegion(frontier, root_regions[i]);
+  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
+  MemoryMappedSegment segment;
+  InternalMmapVector<Region> mapped_regions;
+  while (proc_maps.Next(&segment))
+    if (segment.IsReadable())
+      mapped_regions.push_back({segment.start, segment.end});
+  ScanRootRegions(frontier, mapped_regions);
 }
 
 static void FloodFillTag(Frontier *frontier, ChunkTag tag) {
@@ -1013,36 +1016,41 @@ void __lsan_ignore_object(const void *p) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_register_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
-  Lock l(&global_mutex);
-  RootRegion region = {reinterpret_cast<uptr>(begin), size};
-  root_regions.push_back(region);
   VReport(1, "Registered root region at %p of size %zu\n", begin, size);
+  uptr b = reinterpret_cast<uptr>(begin);
+  uptr e = b + size;
+  CHECK_LT(b, e);
+
+  Lock l(&global_mutex);
+  root_regions.push_back({b, e});
 #endif  // CAN_SANITIZE_LEAKS
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_unregister_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
-  Lock l(&global_mutex);
-  bool removed = false;
-  for (uptr i = 0; i < root_regions.size(); i++) {
-    RootRegion region = root_regions[i];
-    if (region.begin == reinterpret_cast<uptr>(begin) && region.size == size) {
-      removed = true;
-      uptr last_index = root_regions.size() - 1;
-      root_regions[i] = root_regions[last_index];
-      root_regions.pop_back();
-      VReport(1, "Unregistered root region at %p of size %zu\n", begin, size);
-      break;
+  uptr b = reinterpret_cast<uptr>(begin);
+  uptr e = b + size;
+  CHECK_LT(b, e);
+
+  {
+    Lock l(&global_mutex);
+    for (uptr i = 0; i < root_regions.size(); i++) {
+      Region region = root_regions[i];
+      if (region.begin == b && region.end == e) {
+        uptr last_index = root_regions.size() - 1;
+        root_regions[i] = root_regions[last_index];
+        root_regions.pop_back();
+        VReport(1, "Unregistered root region at %p of size %zu\n", begin, size);
+        return;
+      }
     }
   }
-  if (!removed) {
-    Report(
-        "__lsan_unregister_root_region(): region at %p of size %zu has not "
-        "been registered.\n",
-        begin, size);
-    Die();
-  }
+  Report(
+      "__lsan_unregister_root_region(): region at %p of size %zu has not "
+      "been registered.\n",
+      begin, size);
+  Die();
 #endif  // CAN_SANITIZE_LEAKS
 }
 

@@ -24,12 +24,11 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[ELEMS_COERCE_FCA_0_EXTRACT]] to ptr
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 1
-; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[ELEMS_COERCE_FCA_1_EXTRACT]]
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[ELEMS_COERCE_FCA_1_EXTRACT]]
 ; CHECK-NEXT:    [[CMP_NOT_I_I_I_I:%.*]] = icmp slt i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT_I_I_I_I]], label [[ERROR:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
-; CHECK-NEXT:    [[ADD_PTR_I_IDX_MASK:%.*]] = and i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 4611686018427387903
-; CHECK-NEXT:    [[CMP_I_NOT2:%.*]] = icmp eq i64 [[ADD_PTR_I_IDX_MASK]], 0
+; CHECK-NEXT:    [[CMP_I_NOT2:%.*]] = icmp eq i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 0
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT2]], label [[COMMON_RET:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void

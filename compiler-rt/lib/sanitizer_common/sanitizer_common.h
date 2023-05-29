@@ -519,8 +519,8 @@ class InternalMmapVectorNoCtor {
     return data_[i];
   }
   void push_back(const T &element) {
-    CHECK_LE(size_, capacity());
-    if (size_ == capacity()) {
+    if (UNLIKELY(size_ >= capacity())) {
+      CHECK_EQ(size_, capacity());
       uptr new_capacity = RoundUpToPowerOfTwo(size_ + 1);
       Realloc(new_capacity);
     }
@@ -580,7 +580,7 @@ class InternalMmapVectorNoCtor {
   }
 
  private:
-  void Realloc(uptr new_capacity) {
+  NOINLINE void Realloc(uptr new_capacity) {
     CHECK_GT(new_capacity, 0);
     CHECK_LE(size_, new_capacity);
     uptr new_capacity_bytes =

@@ -1312,7 +1312,7 @@ void VarLocBasedLDV::cleanupEntryValueTransfers(
     return;
 
   auto TransRange = EntryValTransfers.equal_range(TRInst);
-  for (auto TDPair : llvm::make_range(TransRange.first, TransRange.second)) {
+  for (auto &TDPair : llvm::make_range(TransRange.first, TransRange.second)) {
     const VarLoc &EmittedEV = VarLocIDs[TDPair.second];
     if (std::tie(EntryVL.Var, EntryVL.Locs[0].Value.RegNo, EntryVL.Expr) ==
         std::tie(EmittedEV.Var, EmittedEV.Locs[0].Value.RegNo,

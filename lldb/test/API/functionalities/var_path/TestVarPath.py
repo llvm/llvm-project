@@ -5,6 +5,7 @@ Make sure the getting a variable path works and doesn't crash.
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
@@ -115,7 +116,7 @@ class TestVarPath(TestBase):
         self.assertSuccess(v.GetError(), "Make sure we find 'pt_sp'")
         # Make sure we don't crash when looking for non existant child
         # in type with synthetic children. This used to cause a crash.
-        v = frame.GetValueForVariablePath("pt_sp->not_valid_child")
-        self.assertTrue(
-            v.GetError().Fail(), "Make sure we don't find 'pt_sp->not_valid_child'"
-        )
+        if not self.isAArch64Windows():
+            v = frame.GetValueForVariablePath("pt_sp->not_valid_child")
+            self.assertTrue(v.GetError().Fail(),
+            "Make sure we don't find 'pt_sp->not_valid_child'")
