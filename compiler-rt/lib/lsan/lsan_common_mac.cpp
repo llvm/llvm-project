@@ -165,7 +165,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
   vm_address_t address = 0;
   kern_return_t err = KERN_SUCCESS;
 
-  InternalMmapVectorNoCtor<Region> mapped_regions;
+  InternalMmapVector<Region> mapped_regions;
   bool use_root_regions = flags()->use_root_regions && HasRootRegions();
 
   RegionScanState scan_state;
