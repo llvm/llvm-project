@@ -214,7 +214,7 @@ CreateStackTrace(ValueObjectSP o,
   size_t count = trace_value_object->GetNumChildren();
   for (size_t j = 0; j < count; j++) {
     addr_t trace_addr =
-        trace_value_object->GetChildAtIndex(j, true)->GetValueAsUnsigned(0);
+        trace_value_object->GetChildAtIndex(j)->GetValueAsUnsigned(0);
     if (trace_addr == 0)
       break;
     trace_sp->AddIntegerItem(trace_addr);
@@ -235,7 +235,7 @@ static StructuredData::ArraySP ConvertToStructuredArray(
   ValueObjectSP objects =
       return_value_sp->GetValueForExpressionPath(items_name.c_str());
   for (unsigned int i = 0; i < count; i++) {
-    ValueObjectSP o = objects->GetChildAtIndex(i, true);
+    ValueObjectSP o = objects->GetChildAtIndex(i);
     auto dict_sp = std::make_shared<StructuredData::Dictionary>();
 
     callback(o, dict_sp);

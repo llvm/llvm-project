@@ -111,7 +111,7 @@ ValueObjectSP GenericBitsetFrontEnd::GetChildAtIndex(size_t idx) {
         type.GetBitSize(ctx.GetBestExecutionContextScope());
     if (!bit_size || *bit_size == 0)
       return {};
-    chunk = m_first->GetChildAtIndex(idx / *bit_size, true);
+    chunk = m_first->GetChildAtIndex(idx / *bit_size);
   } else {
     type = m_first->GetCompilerType();
     chunk = m_first->GetSP();

@@ -540,7 +540,7 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
   };
 
   for (size_t idx = 0; idx < reserved_dict->GetNumChildren(); idx++) {
-    ValueObjectSP dict_entry = reserved_dict->GetChildAtIndex(idx, true);
+    ValueObjectSP dict_entry = reserved_dict->GetChildAtIndex(idx);
 
     DataExtractor data;
     data.SetAddressByteSize(dict_entry->GetProcessSP()->GetAddressByteSize());
