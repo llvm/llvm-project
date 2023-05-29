@@ -33,19 +33,19 @@ void OpenFile::set_path(OwningPtr<char> &&path, std::size_t bytes) {
 static int openfile_mkstemp(IoErrorHandler &handler) {
 #ifdef _WIN32
   const unsigned int uUnique{0};
-  // GetTempFileNameW needs a directory name < MAX_PATH-14 characters in length.
-  // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettempfilenamew
-  wchar_t tempDirName[MAX_PATH - 14];
-  wchar_t tempFileName[MAX_PATH];
+  // GetTempFileNameA needs a directory name < MAX_PATH-14 characters in length.
+  // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettempfilenamea
+  char tempDirName[MAX_PATH - 14];
+  char tempFileName[MAX_PATH];
   unsigned long nBufferLength{sizeof(tempDirName)};
-  nBufferLength = ::GetTempPathW(nBufferLength, tempDirName);
+  nBufferLength = ::GetTempPathA(nBufferLength, tempDirName);
   if (nBufferLength > sizeof(tempDirName) || nBufferLength == 0) {
     return -1;
   }
-  if (::GetTempFileNameW(tempDirName, L"Fortran", uUnique, tempFileName) == 0) {
+  if (::GetTempFileNameA(tempDirName, "Fortran", uUnique, tempFileName) == 0) {
     return -1;
   }
-  int fd{::_wopen(tempFileName, _O_CREAT | _O_BINARY | _O_TEMPORARY | _O_RDWR,
+  int fd{::_open(tempFileName, _O_CREAT | _O_BINARY | _O_TEMPORARY | _O_RDWR,
       _S_IREAD | _S_IWRITE)};
 #else
   char path[]{"/tmp/Fortran-Scratch-XXXXXX"};
