@@ -127,6 +127,21 @@ clang_tablegen("arm_sve_sema_rangechecks") {
   td_file = "arm_sve.td"
 }
 
+clang_tablegen("arm_sme_builtins") {
+  args = [ "-gen-arm-sme-builtins" ]
+  td_file = "arm_sme.td"
+}
+
+clang_tablegen("arm_sme_builtin_cg") {
+  args = [ "-gen-arm-sme-builtin-codegen" ]
+  td_file = "arm_sme.td"
+}
+
+clang_tablegen("arm_sme_sema_rangechecks") {
+  args = [ "-gen-arm-sme-sema-rangechecks" ]
+  td_file = "arm_sme.td"
+}
+
 clang_tablegen("arm_cde_builtins") {
   args = [ "-gen-arm-cde-builtin-def" ]
   td_file = "arm_cde.td"
