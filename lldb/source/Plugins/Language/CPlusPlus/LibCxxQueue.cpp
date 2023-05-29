@@ -49,7 +49,7 @@ private:
 
 bool QueueFrontEnd::Update() {
   m_container_sp = nullptr;
-  ValueObjectSP c_sp = m_backend.GetChildMemberWithName("c", true);
+  ValueObjectSP c_sp = m_backend.GetChildMemberWithName("c");
   if (!c_sp)
     return false;
   m_container_sp = c_sp->GetSyntheticValue().get();

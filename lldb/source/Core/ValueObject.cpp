@@ -432,7 +432,7 @@ ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
     return GetSP();
   ValueObjectSP root(GetSP());
   for (llvm::StringRef name : names) {
-    root = root->GetChildMemberWithName(name, true);
+    root = root->GetChildMemberWithName(name);
     if (!root) {
       return root;
     }
@@ -2154,7 +2154,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
       {
         child_name.SetString(temp_expression);
         ValueObjectSP child_valobj_sp =
-            root->GetChildMemberWithName(child_name, true);
+            root->GetChildMemberWithName(child_name);
 
         if (child_valobj_sp.get()) // we know we are done, so just return
         {
@@ -2173,7 +2173,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
               child_valobj_sp = root->GetNonSyntheticValue();
               if (child_valobj_sp.get())
                 child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name, true);
+                    child_valobj_sp->GetChildMemberWithName(child_name);
             }
             break;
           case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
@@ -2182,7 +2182,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
               child_valobj_sp = root->GetSyntheticValue();
               if (child_valobj_sp.get())
                 child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name, true);
+                    child_valobj_sp->GetChildMemberWithName(child_name);
             }
             break;
           case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
@@ -2191,12 +2191,12 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
               child_valobj_sp = root->GetNonSyntheticValue();
               if (child_valobj_sp.get())
                 child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name, true);
+                    child_valobj_sp->GetChildMemberWithName(child_name);
             } else {
               child_valobj_sp = root->GetSyntheticValue();
               if (child_valobj_sp.get())
                 child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name, true);
+                    child_valobj_sp->GetChildMemberWithName(child_name);
             }
             break;
           }
@@ -2224,7 +2224,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
         child_name.SetString(temp_expression.slice(0, next_sep_pos));
 
         ValueObjectSP child_valobj_sp =
-            root->GetChildMemberWithName(child_name, true);
+            root->GetChildMemberWithName(child_name);
         if (child_valobj_sp.get()) // store the new root and move on
         {
           root = child_valobj_sp;
@@ -2242,7 +2242,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
               child_valobj_sp = root->GetNonSyntheticValue();
               if (child_valobj_sp.get())
                 child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name, true);
+                    child_valobj_sp->GetChildMemberWithName(child_name);
             }
             break;
           case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
@@ -2251,7 +2251,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
               child_valobj_sp = root->GetSyntheticValue();
               if (child_valobj_sp.get())
                 child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name, true);
+                    child_valobj_sp->GetChildMemberWithName(child_name);
             }
             break;
           case GetValueForExpressionPathOptions::SyntheticChildrenTraversal::
@@ -2260,12 +2260,12 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
               child_valobj_sp = root->GetNonSyntheticValue();
               if (child_valobj_sp.get())
                 child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name, true);
+                    child_valobj_sp->GetChildMemberWithName(child_name);
             } else {
               child_valobj_sp = root->GetSyntheticValue();
               if (child_valobj_sp.get())
                 child_valobj_sp =
-                    child_valobj_sp->GetChildMemberWithName(child_name, true);
+                    child_valobj_sp->GetChildMemberWithName(child_name);
             }
             break;
           }
@@ -2711,11 +2711,10 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     }
 
   } else if (HasSyntheticValue()) {
-    m_deref_valobj = GetSyntheticValue()
-                         ->GetChildMemberWithName("$$dereference$$", true)
-                         .get();
+    m_deref_valobj =
+        GetSyntheticValue()->GetChildMemberWithName("$$dereference$$").get();
   } else if (IsSynthetic()) {
-    m_deref_valobj = GetChildMemberWithName("$$dereference$$", true).get();
+    m_deref_valobj = GetChildMemberWithName("$$dereference$$").get();
   }
 
   if (m_deref_valobj) {

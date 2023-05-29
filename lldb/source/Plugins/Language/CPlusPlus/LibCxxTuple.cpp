@@ -45,10 +45,10 @@ bool TupleFrontEnd::Update() {
   m_base = nullptr;
 
   ValueObjectSP base_sp;
-  base_sp = m_backend.GetChildMemberWithName("__base_", true);
+  base_sp = m_backend.GetChildMemberWithName("__base_");
   if (!base_sp) {
     // Pre r304382 name of the base element.
-    base_sp = m_backend.GetChildMemberWithName("base_", true);
+    base_sp = m_backend.GetChildMemberWithName("base_");
   }
   if (!base_sp)
     return false;

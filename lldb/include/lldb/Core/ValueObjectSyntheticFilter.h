@@ -54,7 +54,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create) override;
 
   lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
-                                             bool can_create) override;
+                                             bool can_create = true) override;
 
   size_t GetIndexOfChildWithName(llvm::StringRef name) override;
 
