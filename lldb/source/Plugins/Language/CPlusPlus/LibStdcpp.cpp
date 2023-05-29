@@ -110,7 +110,7 @@ bool LibstdcppMapIteratorSyntheticFrontEnd::Update() {
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
 
-  ValueObjectSP _M_node_sp(valobj_sp->GetChildMemberWithName("_M_node", true));
+  ValueObjectSP _M_node_sp(valobj_sp->GetChildMemberWithName("_M_node"));
   if (!_M_node_sp)
     return false;
 
@@ -392,7 +392,7 @@ bool LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
 
-  auto ptr_obj_sp = valobj_sp->GetChildMemberWithName("_M_ptr", true);
+  auto ptr_obj_sp = valobj_sp->GetChildMemberWithName("_M_ptr");
   if (!ptr_obj_sp)
     return false;
 
@@ -433,7 +433,7 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("_M_ptr", true));
+  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("_M_ptr"));
   if (!ptr_sp)
     return false;
 

@@ -90,8 +90,8 @@ bool GenericBitsetFrontEnd::Update() {
     size = arg->value.getLimitedValue();
 
   m_elements.assign(size, ValueObjectSP());
-  m_first = m_backend.GetChildMemberWithName(GetDataContainerMemberName(), true)
-                .get();
+  m_first =
+      m_backend.GetChildMemberWithName(GetDataContainerMemberName()).get();
   return false;
 }
 

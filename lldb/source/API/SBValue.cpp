@@ -715,7 +715,7 @@ SBValue::GetChildMemberWithName(const char *name,
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    child_sp = value_sp->GetChildMemberWithName(name, true);
+    child_sp = value_sp->GetChildMemberWithName(name);
   }
 
   SBValue sb_value;
