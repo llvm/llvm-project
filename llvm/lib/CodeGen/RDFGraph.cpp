@@ -1433,87 +1433,24 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
   if (HasDF == PhiM.end() || HasDF->second.empty())
     return;
 
-  // First, remove all R in Refs in such that there exists T in Refs
-  // such that T covers R. In other words, only leave those refs that
-  // are not covered by another ref (i.e. maximal with respect to covering).
-
-  auto MaxCoverIn = [this](RegisterRef RR, RegisterSet &RRs) -> RegisterRef {
-    for (RegisterRef I : RRs)
-      if (I != RR && RegisterAggr::isCoverOf(I, RR, PRI))
-        RR = I;
-    return RR;
-  };
-
-  RegisterSet MaxDF, DefsDF;
-  for (auto I = HasDF->second.rr_begin(), E = HasDF->second.rr_end(); I != E;
-       ++I) {
-    DefsDF.insert(*I);
-  }
-  for (RegisterRef I : DefsDF)
-    MaxDF.insert(MaxCoverIn(I, DefsDF));
-
-  std::vector<RegisterRef> MaxRefs;
-  for (RegisterRef I : MaxDF)
-    MaxRefs.push_back(MaxCoverIn(I, AllRefs));
-
-  // Now, for each R in MaxRefs, get the alias closure of R. If the closure
-  // only has R in it, create a phi a def for R. Otherwise, create a phi,
-  // and add a def for each S in the closure.
-
-  // Sort the refs so that the phis will be created in a deterministic order.
-  llvm::sort(MaxRefs);
-  // Remove duplicates.
-  auto NewEnd = std::unique(MaxRefs.begin(), MaxRefs.end());
-  MaxRefs.erase(NewEnd, MaxRefs.end());
-
-  auto Aliased = [this, &MaxRefs](RegisterRef RR,
-                                  std::vector<unsigned> &Closure) -> bool {
-    for (unsigned I : Closure)
-      if (PRI.alias(RR, MaxRefs[I]))
-        return true;
-    return false;
-  };
-
   // Prepare a list of NodeIds of the block's predecessors.
   NodeList Preds;
   const MachineBasicBlock *MBB = BA.Addr->getCode();
   for (MachineBasicBlock *PB : MBB->predecessors())
     Preds.push_back(findBlock(PB));
 
-  while (!MaxRefs.empty()) {
-    // Put the first element in the closure, and then add all subsequent
-    // elements from MaxRefs to it, if they alias at least one element
-    // already in the closure.
-    // ClosureIdx: vector of indices in MaxRefs of members of the closure.
-    std::vector<unsigned> ClosureIdx = {0};
-    for (unsigned i = 1; i != MaxRefs.size(); ++i)
-      if (Aliased(MaxRefs[i], ClosureIdx))
-        ClosureIdx.push_back(i);
+  const RegisterAggr &Defs = PhiM[BA.Id];
+  uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
 
-    // Build a phi for the closure.
-    unsigned CS = ClosureIdx.size();
+  for (auto I = Defs.rr_begin(), E = Defs.rr_end(); I != E; ++I) {
+    RegisterRef RR = *I;
     NodeAddr<PhiNode *> PA = newPhi(BA);
+    PA.Addr->addMember(newDef(PA, RR, PhiFlags), *this);
 
-    // Add defs.
-    for (unsigned X = 0; X != CS; ++X) {
-      RegisterRef RR = MaxRefs[ClosureIdx[X]];
-      uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
-      NodeAddr<DefNode *> DA = newDef(PA, RR, PhiFlags);
-      PA.Addr->addMember(DA, *this);
-    }
     // Add phi uses.
     for (NodeAddr<BlockNode *> PBA : Preds) {
-      for (unsigned X = 0; X != CS; ++X) {
-        RegisterRef RR = MaxRefs[ClosureIdx[X]];
-        NodeAddr<PhiUseNode *> PUA = newPhiUse(PA, RR, PBA);
-        PA.Addr->addMember(PUA, *this);
-      }
+      PA.Addr->addMember(newPhiUse(PA, RR, PBA), *this);
     }
-
-    // Erase from MaxRefs all elements in the closure.
-    auto Begin = MaxRefs.begin();
-    for (unsigned Idx : llvm::reverse(ClosureIdx))
-      MaxRefs.erase(Begin + Idx);
   }
 }
 
