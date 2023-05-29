@@ -127,9 +127,10 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
                                    "::ttyname")),
       CheckedReturnTypes(utils::options::parseStringList(
           Options.get("CheckedReturnTypes", "::std::error_code;"
+                                            "::std::error_condition;"
+                                            "::std::errc;"
                                             "::std::expected;"
-                                            "::boost::system::error_code;"
-                                            "::abseil::Status"))) {}
+                                            "::boost::system::error_code"))) {}
 
 void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckedFunctions", CheckedFunctions);
