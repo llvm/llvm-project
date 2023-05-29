@@ -1384,6 +1384,27 @@ def Xi32 : X86TypeInfo<i32, "l", GR32, loadi32, i32mem, Imm32, i32imm,
 def Xi64 : X86TypeInfo<i64, "q", GR64, loadi64, i64mem, Imm32S, i64i32imm, 
                       i64immSExt32_su, i64immSExt32, i64i8imm, i64immSExt8_su,
                       i64immSExt8, 1, OpSizeFixed, 1>;
+
+/// ITy - This instruction base class takes the type info for the instruction.
+/// Using this, it:
+/// 1. Concatenates together the instruction mnemonic with the appropriate
+///    suffix letter, a tab, and the arguments.
+/// 2. Infers whether the instruction should have a 0x66 prefix byte.
+/// 3. Infers whether the instruction should have a 0x40 REX_W prefix.
+/// 4. Infers whether the low bit of the opcode should be 0 (for i8 operations)
+///    or 1 (for i16,i32,i64 operations).
+class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
+          string mnemonic, string args, list<dag> pattern>
+  : I<{opcode{7}, opcode{6}, opcode{5}, opcode{4},
+       opcode{3}, opcode{2}, opcode{1}, typeinfo.HasOddOpcode },
+      f, outs, ins,
+      !strconcat(mnemonic, "{", typeinfo.InstrSuffix, "}\t", args), pattern> {
+
+  // Infer instruction prefixes from type info.
+  let OpSize = typeinfo.OpSize;
+  let hasREX_W  = typeinfo.HasREX_W;
+}
+
 //===----------------------------------------------------------------------===//
 // Subsystems.
 //===----------------------------------------------------------------------===//
