@@ -8048,6 +8048,9 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   SDValue Mask, VL;
   if (Op->getOpcode() == ISD::VP_ABS) {
     Mask = Op->getOperand(1);
+    if (VT.isFixedLengthVector())
+      Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
+                                     Subtarget);
     VL = Op->getOperand(2);
   } else
     std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
