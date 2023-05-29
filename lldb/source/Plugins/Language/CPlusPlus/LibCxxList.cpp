@@ -267,7 +267,7 @@ ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(size_t idx) {
   if (!current_sp)
     return nullptr;
 
-  current_sp = current_sp->GetChildAtIndex(1, true); // get the __value_ child
+  current_sp = current_sp->GetChildAtIndex(1); // get the __value_ child
   if (!current_sp)
     return nullptr;
 
@@ -360,7 +360,7 @@ lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(size_t idx) {
   if (!current_sp)
     return lldb::ValueObjectSP();
 
-  current_sp = current_sp->GetChildAtIndex(1, true); // get the __value_ child
+  current_sp = current_sp->GetChildAtIndex(1); // get the __value_ child
   if (!current_sp)
     return lldb::ValueObjectSP();
 

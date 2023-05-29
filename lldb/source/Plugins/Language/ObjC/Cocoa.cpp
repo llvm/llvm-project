@@ -1099,7 +1099,7 @@ bool lldb_private::formatters::ObjCBOOLSummaryProvider(
     if (err.Fail() || !real_guy_sp)
       return false;
   } else if (type_info & eTypeIsReference) {
-    real_guy_sp = valobj.GetChildAtIndex(0, true);
+    real_guy_sp = valobj.GetChildAtIndex(0);
     if (!real_guy_sp)
       return false;
   }

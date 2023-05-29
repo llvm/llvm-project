@@ -690,7 +690,7 @@ ValueObjectSP ValueObjectPrinter::GenerateChild(ValueObject *synth_valobj,
         true);
   } else {
     // otherwise, do the usual thing
-    return synth_valobj->GetChildAtIndex(idx, true);
+    return synth_valobj->GetChildAtIndex(idx);
   }
 }
 
@@ -759,7 +759,7 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
 
     bool did_print_children = false;
     for (uint32_t idx = 0; idx < num_children; ++idx) {
-      lldb::ValueObjectSP child_sp(synth_m_valobj->GetChildAtIndex(idx, true));
+      lldb::ValueObjectSP child_sp(synth_m_valobj->GetChildAtIndex(idx));
       if (child_sp)
         child_sp = child_sp->GetQualifiedRepresentationIfAvailable(
             m_options.m_use_dynamic, m_options.m_use_synthetic);

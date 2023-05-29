@@ -24,7 +24,7 @@ static lldb::addr_t GetCoroFramePtrFromHandle(ValueObjectSP valobj_sp) {
   // We don't care about its name.
   if (valobj_sp->GetNumChildren() != 1)
     return LLDB_INVALID_ADDRESS;
-  ValueObjectSP ptr_sp(valobj_sp->GetChildAtIndex(0, true));
+  ValueObjectSP ptr_sp(valobj_sp->GetChildAtIndex(0));
   if (!ptr_sp)
     return LLDB_INVALID_ADDRESS;
   if (!ptr_sp->GetCompilerType().IsPointerType())
