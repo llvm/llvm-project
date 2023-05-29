@@ -57,7 +57,8 @@ TEST_F(HostInfoTest, GetHostname) {
 #if defined(__APPLE__)
 TEST_F(HostInfoTest, GetXcodeSDK) {
   auto get_sdk = [](std::string sdk, bool error = false) -> llvm::StringRef {
-    auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(XcodeSDK(std::move(sdk)));
+    auto sdk_path_or_err =
+        HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK(std::move(sdk))});
     if (!error) {
       EXPECT_TRUE((bool)sdk_path_or_err);
       return *sdk_path_or_err;
