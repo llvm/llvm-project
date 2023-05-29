@@ -1441,8 +1441,7 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
       if (Offset.has_value()) {
         // `Offset` might not have the expected number of bits, if e.g. AS has a
         // different number of bits than opaque pointers.
-        ChainIter->second.push_back(
-            ChainElem{I, Offset.value().sextOrTrunc(ASPtrBits)});
+        ChainIter->second.push_back(ChainElem{I, Offset.value()});
         // Move ChainIter to the front of the MRU list.
         MRU.remove(*ChainIter);
         MRU.push_front(*ChainIter);
@@ -1475,9 +1474,11 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
   LLVM_DEBUG(dbgs() << "LSV: getConstantOffset, PtrA=" << *PtrA
                     << ", PtrB=" << *PtrB << ", ContextInst= " << *ContextInst
                     << ", Depth=" << Depth << "\n");
-  unsigned OffsetBitWidth = DL.getIndexTypeSizeInBits(PtrA->getType());
-  APInt OffsetA(OffsetBitWidth, 0);
-  APInt OffsetB(OffsetBitWidth, 0);
+  // We'll ultimately return a value of this bit width, even if computations
+  // happen in a different width.
+  unsigned OrigBitWidth = DL.getIndexTypeSizeInBits(PtrA->getType());
+  APInt OffsetA(OrigBitWidth, 0);
+  APInt OffsetB(OrigBitWidth, 0);
   PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
   PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
   unsigned NewPtrBitWidth = DL.getTypeStoreSizeInBits(PtrA->getType());
@@ -1493,7 +1494,7 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
   OffsetA = OffsetA.sextOrTrunc(NewPtrBitWidth);
   OffsetB = OffsetB.sextOrTrunc(NewPtrBitWidth);
   if (PtrA == PtrB)
-    return OffsetB - OffsetA;
+    return (OffsetB - OffsetA).sextOrTrunc(OrigBitWidth);
 
   // Try to compute B - A.
   const SCEV *DistScev = SE.getMinusSCEV(SE.getSCEV(PtrB), SE.getSCEV(PtrA));
@@ -1501,11 +1502,13 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
     LLVM_DEBUG(dbgs() << "LSV: SCEV PtrB - PtrA =" << *DistScev << "\n");
     ConstantRange DistRange = SE.getSignedRange(DistScev);
     if (DistRange.isSingleElement())
-      return OffsetB - OffsetA + *DistRange.getSingleElement();
+      return (OffsetB - OffsetA + *DistRange.getSingleElement())
+          .sextOrTrunc(OrigBitWidth);
   }
   std::optional<APInt> Diff =
       getConstantOffsetComplexAddrs(PtrA, PtrB, ContextInst, Depth);
   if (Diff.has_value())
-    return OffsetB - OffsetA + Diff->sext(OffsetB.getBitWidth());
+    return (OffsetB - OffsetA + Diff->sext(OffsetB.getBitWidth()))
+        .sextOrTrunc(OrigBitWidth);
   return std::nullopt;
 }
