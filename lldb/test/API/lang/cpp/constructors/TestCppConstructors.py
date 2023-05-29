@@ -6,7 +6,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")
-    @expectedFailureAll(oslist=["windows"])
     def test_constructors(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
