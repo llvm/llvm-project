@@ -1011,38 +1011,41 @@ void __lsan_ignore_object(const void *p) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_register_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
-  Lock l(&global_mutex);
-  Region region = {reinterpret_cast<uptr>(begin),
-                   reinterpret_cast<uptr>(begin) + size};
-  root_regions.push_back(region);
   VReport(1, "Registered root region at %p of size %zu\n", begin, size);
+  uptr b = reinterpret_cast<uptr>(begin);
+  uptr e = b + size;
+  CHECK_LT(b, e);
+
+  Lock l(&global_mutex);
+  root_regions.push_back({b, e});
 #endif  // CAN_SANITIZE_LEAKS
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lsan_unregister_root_region(const void *begin, uptr size) {
 #if CAN_SANITIZE_LEAKS
-  Lock l(&global_mutex);
-  bool removed = false;
-  uptr end = reinterpret_cast<uptr>(begin) + size;
-  for (uptr i = 0; i < root_regions.size(); i++) {
-    Region region = root_regions[i];
-    if (region.begin == reinterpret_cast<uptr>(begin) && region.end == end) {
-      removed = true;
-      uptr last_index = root_regions.size() - 1;
-      root_regions[i] = root_regions[last_index];
-      root_regions.pop_back();
-      VReport(1, "Unregistered root region at %p of size %zu\n", begin, size);
-      break;
+  uptr b = reinterpret_cast<uptr>(begin);
+  uptr e = b + size;
+  CHECK_LT(b, e);
+
+  {
+    Lock l(&global_mutex);
+    for (uptr i = 0; i < root_regions.size(); i++) {
+      Region region = root_regions[i];
+      if (region.begin == b && region.end == e) {
+        uptr last_index = root_regions.size() - 1;
+        root_regions[i] = root_regions[last_index];
+        root_regions.pop_back();
+        VReport(1, "Unregistered root region at %p of size %zu\n", begin, size);
+        return;
+      }
     }
   }
-  if (!removed) {
-    Report(
-        "__lsan_unregister_root_region(): region at %p of size %zu has not "
-        "been registered.\n",
-        begin, size);
-    Die();
-  }
+  Report(
+      "__lsan_unregister_root_region(): region at %p of size %zu has not "
+      "been registered.\n",
+      begin, size);
+  Die();
 #endif  // CAN_SANITIZE_LEAKS
 }
 
