@@ -162,7 +162,7 @@ struct RegisterAggr {
       : Units(pri.getTRI().getNumRegUnits()), PRI(pri) {}
   RegisterAggr(const RegisterAggr &RG) = default;
 
-  unsigned count() const { return Units.count(); }
+  unsigned size() const { return Units.count(); }
   bool empty() const { return Units.none(); }
   bool hasAliasOf(RegisterRef RR) const;
   bool hasCoverOf(RegisterRef RR) const;
@@ -228,6 +228,31 @@ struct RegisterAggr {
 private:
   BitVector Units;
   const PhysicalRegisterInfo &PRI;
+};
+
+// This is really a std::map, except that it provides a non-trivial
+// default constructor to the element accessed via [].
+template <typename KeyType> struct RegisterAggrMap {
+  RegisterAggrMap(const PhysicalRegisterInfo &pri) : Empty(pri) {}
+
+  RegisterAggr &operator[](KeyType Key) {
+    return Map.emplace(Key, Empty).first->second;
+  }
+
+  auto begin() { return Map.begin(); }
+  auto end() { return Map.end(); }
+  auto begin() const { return Map.begin(); }
+  auto end() const { return Map.end(); }
+  auto find(const KeyType &Key) const { return Map.find(Key); }
+
+private:
+  RegisterAggr Empty;
+  std::map<KeyType, RegisterAggr> Map;
+
+public:
+  using key_type = typename decltype(Map)::key_type;
+  using mapped_type = typename decltype(Map)::mapped_type;
+  using value_type = typename decltype(Map)::value_type;
 };
 
 // Optionally print the lane mask, if it is not ~0.

@@ -806,7 +806,7 @@ struct DataFlowGraph {
 private:
   void reset();
 
-  RegisterSet getLandingPadLiveIns() const;
+  RegisterAggr getLandingPadLiveIns() const;
 
   NodeAddr<NodeBase *> newNode(uint16_t Attrs);
   NodeAddr<NodeBase *> cloneNode(const NodeAddr<NodeBase *> B);
@@ -830,7 +830,7 @@ private:
   locateNextRef(NodeAddr<InstrNode *> IA, NodeAddr<RefNode *> RA,
                 Predicate P) const;
 
-  using BlockRefsMap = std::map<NodeId, RegisterSet>;
+  using BlockRefsMap = RegisterAggrMap<NodeId>;
 
   void buildStmt(NodeAddr<BlockNode *> BA, MachineInstr &In);
   void recordDefsForDF(BlockRefsMap &PhiM, NodeAddr<BlockNode *> BA);

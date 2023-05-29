@@ -58,20 +58,7 @@ namespace rdf {
 
 struct Liveness {
 public:
-  // This is really a std::map, except that it provides a non-trivial
-  // default constructor to the element accessed via [].
-  struct LiveMapType {
-    LiveMapType(const PhysicalRegisterInfo &pri) : Empty(pri) {}
-
-    RegisterAggr &operator[](MachineBasicBlock *B) {
-      return Map.emplace(B, Empty).first->second;
-    }
-
-  private:
-    RegisterAggr Empty;
-    std::map<MachineBasicBlock *, RegisterAggr> Map;
-  };
-
+  using LiveMapType = RegisterAggrMap<MachineBasicBlock *>;
   using NodeRef = detail::NodeRef;
   using NodeRefSet = std::unordered_set<NodeRef>;
   using RefMap = std::unordered_map<RegisterId, NodeRefSet>;

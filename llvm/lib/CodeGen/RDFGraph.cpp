@@ -764,8 +764,8 @@ unsigned DataFlowGraph::DefStack::nextDown(unsigned P) const {
 
 // Register information.
 
-RegisterSet DataFlowGraph::getLandingPadLiveIns() const {
-  RegisterSet LR;
+RegisterAggr DataFlowGraph::getLandingPadLiveIns() const {
+  RegisterAggr LR(getPRI());
   const Function &F = MF.getFunction();
   const Constant *PF = F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr;
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
@@ -924,7 +924,6 @@ void DataFlowGraph::build(unsigned Options) {
   }
 
   // Add function-entry phi nodes for the live-in registers.
-  // for (std::pair<RegisterId,LaneBitmask> P : LiveIns) {
   for (auto I = LiveIns.rr_begin(), E = LiveIns.rr_end(); I != E; ++I) {
     RegisterRef RR = *I;
     NodeAddr<PhiNode *> PA = newPhi(EA);
@@ -938,7 +937,7 @@ void DataFlowGraph::build(unsigned Options) {
   // branches in the program, or fall-throughs from other blocks. They
   // are entered from the exception handling runtime and target's ABI
   // may define certain registers as defined on entry to such a block.
-  RegisterSet EHRegs = getLandingPadLiveIns();
+  RegisterAggr EHRegs = getLandingPadLiveIns();
   if (!EHRegs.empty()) {
     for (NodeAddr<BlockNode *> BA : Blocks) {
       const MachineBasicBlock &B = *BA.Addr->getCode();
@@ -951,7 +950,8 @@ void DataFlowGraph::build(unsigned Options) {
         Preds.push_back(findBlock(PB));
 
       // Build phi nodes for each live-in.
-      for (RegisterRef RR : EHRegs) {
+      for (auto I = EHRegs.rr_begin(), E = EHRegs.rr_end(); I != E; ++I) {
+        RegisterRef RR = *I;
         NodeAddr<PhiNode *> PA = newPhi(BA);
         uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
         // Add def:
@@ -968,7 +968,7 @@ void DataFlowGraph::build(unsigned Options) {
 
   // Build a map "PhiM" which will contain, for each block, the set
   // of references that will require phi definitions in that block.
-  BlockRefsMap PhiM;
+  BlockRefsMap PhiM(getPRI());
   for (NodeAddr<BlockNode *> BA : Blocks)
     recordDefsForDF(PhiM, BA);
   for (NodeAddr<BlockNode *> BA : Blocks)
@@ -1401,7 +1401,7 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM,
   // in the block's iterated dominance frontier.
   // This is done to make sure that each defined reference gets only one
   // phi node, even if it is defined multiple times.
-  RegisterSet Defs;
+  RegisterAggr Defs(getPRI());
   for (NodeAddr<InstrNode *> IA : BA.Addr->members(*this))
     for (NodeAddr<RefNode *> RA : IA.Addr->members_if(IsDef, *this))
       Defs.insert(RA.Addr->getRegRef(*this));
@@ -1419,7 +1419,7 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM,
   // frontier.
   for (auto *DB : IDF) {
     NodeAddr<BlockNode *> DBA = findBlock(DB);
-    PhiM[DBA.Id].insert(Defs.begin(), Defs.end());
+    PhiM[DBA.Id].insert(Defs);
   }
 }
 
@@ -1444,9 +1444,13 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
     return RR;
   };
 
-  RegisterSet MaxDF;
-  for (RegisterRef I : HasDF->second)
-    MaxDF.insert(MaxCoverIn(I, HasDF->second));
+  RegisterSet MaxDF, DefsDF;
+  for (auto I = HasDF->second.rr_begin(), E = HasDF->second.rr_end(); I != E;
+       ++I) {
+    DefsDF.insert(*I);
+  }
+  for (RegisterRef I : DefsDF)
+    MaxDF.insert(MaxCoverIn(I, DefsDF));
 
   std::vector<RegisterRef> MaxRefs;
   for (RegisterRef I : MaxDF)
@@ -1694,7 +1698,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode *> BA) {
     return PUA.Addr->getPredecessor() == BA.Id;
   };
 
-  RegisterSet EHLiveIns = getLandingPadLiveIns();
+  RegisterAggr EHLiveIns = getLandingPadLiveIns();
   MachineBasicBlock *MBB = BA.Addr->getCode();
 
   for (MachineBasicBlock *SB : MBB->successors()) {
@@ -1706,7 +1710,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode *> BA) {
         // Find what register this phi is for.
         NodeAddr<RefNode *> RA = IA.Addr->getFirstMember(*this);
         assert(RA.Id != 0);
-        if (EHLiveIns.count(RA.Addr->getRegRef(*this)))
+        if (EHLiveIns.hasCoverOf(RA.Addr->getRegRef(*this)))
           continue;
       }
       // Go over each phi use associated with MBB, and link it.
