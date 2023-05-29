@@ -607,20 +607,6 @@ public:
   /// callbacks, metadata).
   Error defineMaterializing(SymbolFlagsMap SymbolFlags);
 
-  /// Define the given symbols as non-existent, removing it from the symbol
-  /// table and notifying any pending queries. Queries that lookup up the
-  /// symbol using the SymbolLookupFlags::WeaklyReferencedSymbol flag will
-  /// behave as if the symbol had not been matched in the first place. Queries
-  /// that required this symbol will fail with a missing symbol definition
-  /// error.
-  ///
-  /// This method is intended to support cleanup of special symbols like
-  /// initializer symbols: Queries using
-  /// SymbolLookupFlags::WeaklyReferencedSymbol can be used to trigger their
-  /// emission, and this method can be used to remove them from the JITDylib
-  /// once materialization is complete.
-  void defineNonExistent(ArrayRef<SymbolStringPtr> Symbols);
-
   /// Notify all not-yet-emitted covered by this MaterializationResponsibility
   /// instance that an error has occurred.
   /// This will remove all symbols covered by this MaterializationResponsibilty
