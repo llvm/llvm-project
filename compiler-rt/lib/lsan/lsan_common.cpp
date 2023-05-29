@@ -243,10 +243,6 @@ static LeakSuppressionContext *GetSuppressionContext() {
 
 static InternalMmapVectorNoCtor<Region> root_regions;
 
-InternalMmapVectorNoCtor<Region> const *GetRootRegions() {
-  return &root_regions;
-}
-
 void InitCommonLsan() {
   if (common_flags()->detect_leaks) {
     // Initialization which can fail or print warnings should only be done if
@@ -555,21 +551,17 @@ void ScanRootRegions(Frontier *frontier,
       ScanRootRegion(frontier, r, m.begin, m.end, true);
 }
 
-static void ProcessRootRegion(Frontier *frontier, const Region &root_region) {
-  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
-  MemoryMappedSegment segment;
-  while (proc_maps.Next(&segment)) {
-    ScanRootRegion(frontier, root_region, segment.start, segment.end,
-                   segment.IsReadable());
-  }
-}
-
 // Scans root regions for heap pointers.
 static void ProcessRootRegions(Frontier *frontier) {
-  if (!flags()->use_root_regions)
+  if (!flags()->use_root_regions || !HasRootRegions())
     return;
-  for (uptr i = 0; i < root_regions.size(); i++)
-    ProcessRootRegion(frontier, root_regions[i]);
+  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
+  MemoryMappedSegment segment;
+  InternalMmapVectorNoCtor<Region> mapped_regions;
+  while (proc_maps.Next(&segment))
+    if (segment.IsReadable())
+      mapped_regions.push_back({segment.start, segment.end});
+  ScanRootRegions(frontier, mapped_regions);
 }
 
 static void FloodFillTag(Frontier *frontier, ChunkTag tag) {
