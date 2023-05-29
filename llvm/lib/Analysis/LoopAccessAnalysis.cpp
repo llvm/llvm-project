@@ -146,13 +146,6 @@ bool VectorizerParams::isInterleaveForced() {
   return ::VectorizationInterleave.getNumOccurrences() > 0;
 }
 
-Value *llvm::stripIntegerCast(Value *V) {
-  if (auto *CI = dyn_cast<CastInst>(V))
-    if (CI->getOperand(0)->getType()->isIntegerTy())
-      return CI->getOperand(0);
-  return V;
-}
-
 const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
                                             const DenseMap<Value *, const SCEV *> &PtrToStride,
                                             Value *Ptr) {
