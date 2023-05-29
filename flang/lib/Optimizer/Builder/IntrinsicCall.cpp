@@ -41,6 +41,7 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -86,6 +87,84 @@ static bool isStaticallyAbsent(llvm::ArrayRef<mlir::Value> args,
 /// cases when it makes sense.
 static bool isStaticallyPresent(const fir::ExtendedValue &exv) {
   return !isStaticallyAbsent(exv);
+}
+
+//===----------------------------------------------------------------------===//
+// Helper functions for argument handling in vector intrinsics.
+//===----------------------------------------------------------------------===//
+static mlir::Type getConvertedElementType(mlir::MLIRContext *context,
+                                          mlir::Type eleTy) {
+  if (eleTy.isa<mlir::IntegerType>() && !eleTy.isSignlessInteger()) {
+    const auto intTy{eleTy.dyn_cast<mlir::IntegerType>()};
+    auto newEleTy{mlir::IntegerType::get(context, intTy.getWidth())};
+    return newEleTy;
+  }
+  return eleTy;
+}
+
+// Wrapper struct to encapsulate information for a vector type. Preserves
+// sign of eleTy if eleTy is signed/unsigned integer. Helps with vector type
+// conversions.
+struct VecTypeInfo {
+  mlir::Type eleTy;
+  uint64_t len;
+
+  mlir::Type toFirVectorType() { return fir::VectorType::get(len, eleTy); }
+
+  // We need a builder to do the signless element conversion.
+  mlir::Type toMlirVectorType(mlir::MLIRContext *context) {
+    // Will convert to eleTy to signless int if eleTy is signed/unsigned int.
+    auto convEleTy{getConvertedElementType(context, eleTy)};
+    return mlir::VectorType::get(len, convEleTy);
+  }
+
+  bool isFloat32() { return mlir::isa<mlir::Float32Type>(eleTy); }
+
+  bool isFloat64() { return mlir::isa<mlir::Float64Type>(eleTy); }
+
+  bool isFloat() { return isFloat32() || isFloat64(); }
+};
+
+static llvm::SmallVector<mlir::Value>
+getBasesForArgs(llvm::ArrayRef<fir::ExtendedValue> args) {
+  llvm::SmallVector<mlir::Value, 4> baseVec;
+  for (auto arg : args)
+    baseVec.push_back(getBase(arg));
+  return baseVec;
+}
+
+static llvm::SmallVector<mlir::Type>
+getTypesForArgs(llvm::ArrayRef<mlir::Value> args) {
+  llvm::SmallVector<mlir::Type, 4> typeVec;
+  for (auto arg : args)
+    typeVec.push_back(arg.getType());
+  return typeVec;
+}
+
+// Returns a VecTypeInfo with element type and length of given fir vector type.
+// Preserves signness of fir vector type if element type of integer.
+static VecTypeInfo getVecTypeFromFirType(mlir::Type firTy) {
+  assert(firTy.isa<fir::VectorType>());
+  VecTypeInfo vecTyInfo;
+  vecTyInfo.eleTy = firTy.dyn_cast<fir::VectorType>().getEleTy();
+  vecTyInfo.len = firTy.dyn_cast<fir::VectorType>().getLen();
+  return vecTyInfo;
+}
+
+static VecTypeInfo getVecTypeFromFir(mlir::Value firVec) {
+  return getVecTypeFromFirType(firVec.getType());
+}
+
+// Converts array of fir vectors to mlir vectors.
+static llvm::SmallVector<mlir::Value>
+convertVecArgs(fir::FirOpBuilder &builder, mlir::Location loc,
+               VecTypeInfo vecTyInfo, llvm::SmallVector<mlir::Value> args) {
+  llvm::SmallVector<mlir::Value, 4> newArgs;
+  auto ty{vecTyInfo.toMlirVectorType(builder.getContext())};
+  assert(ty && "unknown mlir vector type");
+  for (size_t i = 0; i < args.size(); i++)
+    newArgs.push_back(builder.createConvert(loc, ty, args[i]));
+  return newArgs;
 }
 
 constexpr auto asValue = fir::LowerIntrinsicArgAs::Value;
@@ -531,6 +610,26 @@ static constexpr IntrinsicHandler ppcHandlers[]{
      &I::genMtfsf<true>,
      {{{"bf", asValue}, {"i", asValue}}},
      /*isElemental=*/false},
+    {"__ppc_vec_add",
+     &I::genVecAddAndMulSubXor<VecOp::Add>,
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_and",
+     &I::genVecAddAndMulSubXor<VecOp::And>,
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_mul",
+     &I::genVecAddAndMulSubXor<VecOp::Mul>,
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_sub",
+     &I::genVecAddAndMulSubXor<VecOp::Sub>,
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_xor",
+     &I::genVecAddAndMulSubXor<VecOp::Xor>,
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
 };
 
 static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
@@ -4503,6 +4602,73 @@ mlir::Value IntrinsicLibrary::genTrailz(mlir::Type resultType,
       builder.create<mlir::math::CountTrailingZerosOp>(loc, args);
 
   return builder.createConvert(loc, resultType, result);
+}
+
+// VEC_ADD, VEC_AND, VEC_SUB, VEC_MUL, VEC_XOR
+template <VecOp vop>
+fir::ExtendedValue IntrinsicLibrary::genVecAddAndMulSubXor(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto argBases{getBasesForArgs(args)};
+  auto argsTy{getTypesForArgs(argBases)};
+  assert(argsTy[0].isa<fir::VectorType>() && argsTy[1].isa<fir::VectorType>());
+
+  auto vecTyInfo{getVecTypeFromFir(argBases[0])};
+
+  const auto isInteger{vecTyInfo.eleTy.isa<mlir::IntegerType>()};
+  const auto isFloat{vecTyInfo.eleTy.isa<mlir::FloatType>()};
+  assert((isInteger || isFloat) && "unknown vector type");
+
+  auto vargs{convertVecArgs(builder, loc, vecTyInfo, argBases)};
+
+  mlir::Value r{nullptr};
+  switch (vop) {
+  case VecOp::Add:
+    if (isInteger)
+      r = builder.create<mlir::arith::AddIOp>(loc, vargs[0], vargs[1]);
+    else if (isFloat)
+      r = builder.create<mlir::arith::AddFOp>(loc, vargs[0], vargs[1]);
+    break;
+  case VecOp::Mul:
+    if (isInteger)
+      r = builder.create<mlir::arith::MulIOp>(loc, vargs[0], vargs[1]);
+    else if (isFloat)
+      r = builder.create<mlir::arith::MulFOp>(loc, vargs[0], vargs[1]);
+    break;
+  case VecOp::Sub:
+    if (isInteger)
+      r = builder.create<mlir::arith::SubIOp>(loc, vargs[0], vargs[1]);
+    else if (isFloat)
+      r = builder.create<mlir::arith::SubFOp>(loc, vargs[0], vargs[1]);
+    break;
+  case VecOp::And:
+  case VecOp::Xor: {
+    mlir::Value arg1{nullptr};
+    mlir::Value arg2{nullptr};
+    if (isInteger) {
+      arg1 = vargs[0];
+      arg2 = vargs[1];
+    } else if (isFloat) {
+      // bitcast the arguments to integer
+      auto wd{vecTyInfo.eleTy.dyn_cast<mlir::FloatType>().getWidth()};
+      auto ftype{builder.getIntegerType(wd)};
+      auto bcVecTy{mlir::VectorType::get(vecTyInfo.len, ftype)};
+      arg1 = builder.create<mlir::vector::BitCastOp>(loc, bcVecTy, vargs[0]);
+      arg2 = builder.create<mlir::vector::BitCastOp>(loc, bcVecTy, vargs[1]);
+    }
+    if (vop == VecOp::And)
+      r = builder.create<mlir::arith::AndIOp>(loc, arg1, arg2);
+    else if (vop == VecOp::Xor)
+      r = builder.create<mlir::arith::XOrIOp>(loc, arg1, arg2);
+
+    if (isFloat)
+      r = builder.create<mlir::vector::BitCastOp>(loc, vargs[0].getType(), r);
+
+    break;
+  }
+  }
+
+  return builder.createConvert(loc, argsTy[0], r);
 }
 
 static bool hasDefaultLowerBound(const fir::ExtendedValue &exv) {
