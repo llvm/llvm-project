@@ -256,9 +256,9 @@ struct CheckForLeaksParam {
   bool success = false;
 };
 
-InternalMmapVectorNoCtor<Region> const *GetRootRegions();
-void ScanRootRegion(Frontier *frontier, const Region &region, uptr region_begin,
-                    uptr region_end, bool is_readable);
+bool HasRootRegions();
+void ScanRootRegions(Frontier *frontier,
+                     const InternalMmapVectorNoCtor<Region> &region);
 // Run stoptheworld while holding any platform-specific locks, as well as the
 // allocator and thread registry locks.
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
