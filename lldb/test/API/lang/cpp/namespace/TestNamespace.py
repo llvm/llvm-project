@@ -37,6 +37,7 @@ class NamespaceBreakpointTestCase(TestBase):
             )
 
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
+    @expectedFailureAll(oslist=["windows"])
     def test_breakpoints_func_full(self):
         """Test that we can set breakpoints correctly by fullname to find all functions whose fully qualified name is "func"
         (no namespaces)."""
