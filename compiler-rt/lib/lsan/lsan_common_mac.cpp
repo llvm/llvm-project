@@ -165,7 +165,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
   vm_address_t address = 0;
   kern_return_t err = KERN_SUCCESS;
 
-  InternalMmapVectorNoCtor<RootRegion> const *root_regions = GetRootRegions();
+  InternalMmapVectorNoCtor<Region> const *root_regions = GetRootRegions();
 
   RegionScanState scan_state;
   while (err == KERN_SUCCESS) {
