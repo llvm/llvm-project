@@ -8283,14 +8283,13 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   // DAG::getMemcpy needs Alignment to be defined.
   Align Alignment = std::min(DstAlign, SrcAlign);
 
-  bool isVol = false;
   SDLoc sdl = getCurSDLoc();
 
   // In the mempcpy context we need to pass in a false value for isTailCall
   // because the return pointer needs to be adjusted by the size of
   // the copied memory.
-  SDValue Root = isVol ? getRoot() : getMemoryRoot();
-  SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, isVol, false,
+  SDValue Root = getMemoryRoot();
+  SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, false, false,
                              /*isTailCall=*/false,
                              MachinePointerInfo(I.getArgOperand(0)),
                              MachinePointerInfo(I.getArgOperand(1)),
