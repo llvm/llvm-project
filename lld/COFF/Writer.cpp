@@ -1436,7 +1436,16 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // Write COFF header
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  coff->Machine = config->machine;
+  switch (config->machine) {
+  case ARM64EC:
+    coff->Machine = AMD64;
+    break;
+  case ARM64X:
+    coff->Machine = ARM64;
+    break;
+  default:
+    coff->Machine = config->machine;
+  }
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
   if (config->largeAddressAware)
