@@ -501,7 +501,8 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr n
 ; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm4 = [0,0,3,0,10,0,1,0]
 ; X86-AVX512-NEXT:    vpermi2pd %zmm0, %zmm3, %zmm4
 ; X86-AVX512-NEXT:    vmovapd %ymm4, (%ecx)
-; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = <3,0,11,0,u,u,u,u>
+; X86-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm3 = [3,0,11,0,3,0,11,0]
+; X86-AVX512-NEXT:    # ymm3 = mem[0,1,0,1]
 ; X86-AVX512-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm3
 ; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm0 = [2,0,8,0,9,0,3,0]
 ; X86-AVX512-NEXT:    vpermi2pd %zmm3, %zmm2, %zmm0
@@ -568,7 +569,8 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr n
 ; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = [0,3,10,1]
 ; X64-AVX512-NEXT:    vpermi2pd %zmm0, %zmm4, %zmm3
 ; X64-AVX512-NEXT:    vmovapd %ymm3, (%rsi)
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = <3,11,u,u>
+; X64-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm3 = [3,11,3,11]
+; X64-AVX512-NEXT:    # ymm3 = mem[0,1,0,1]
 ; X64-AVX512-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm3
 ; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm0 = [2,8,9,3]
 ; X64-AVX512-NEXT:    vpermi2pd %zmm3, %zmm2, %zmm0
