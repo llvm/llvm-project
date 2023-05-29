@@ -130,6 +130,18 @@ def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi", [], [0,1],
   let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
       "functional-type(operands, results)";
 }
+def LLVM_RintOp : LLVM_UnaryIntrOpF<"rint">;
+def LLVM_NearbyintOp : LLVM_UnaryIntrOpF<"nearbyint">;
+class LLVM_IntRoundIntrOpBase<string func> :
+        LLVM_OneResultIntrOp<func, [0], [0], [Pure]> {
+  let arguments = (ins LLVM_AnyFloat:$val);
+  let assemblyFormat = "`(` operands `)` custom<LLVMOpAttrs>(attr-dict) `:` "
+      "functional-type(operands, results)";
+}
+def LLVM_LroundOp : LLVM_IntRoundIntrOpBase<"lround">;
+def LLVM_LlroundOp : LLVM_IntRoundIntrOpBase<"llround">;
+def LLVM_LrintOp : LLVM_IntRoundIntrOpBase<"lrint">;
+def LLVM_LlrintOp : LLVM_IntRoundIntrOpBase<"llrint">;
 def LLVM_BitReverseOp : LLVM_UnaryIntrOpI<"bitreverse">;
 def LLVM_ByteSwapOp : LLVM_UnaryIntrOpI<"bswap">;
 def LLVM_CountLeadingZerosOp : LLVM_CountZerosIntrOp<"ctlz">;

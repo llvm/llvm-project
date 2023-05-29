@@ -1113,12 +1113,12 @@ define <4 x i32> @strict_vector_fptosi_v4f64_to_v4i32(<4 x double> %a) #0 {
 define <4 x i32> @strict_vector_fptoui_v4f64_to_v4i32(<4 x double> %a) #0 {
 ; AVX-LABEL: strict_vector_fptoui_v4f64_to_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovapd {{.*#+}} ymm1 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
+; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
 ; AVX-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
 ; AVX-NEXT:    vextractf128 $1, %ymm2, %xmm3
 ; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm2[0,2],xmm3[0,2]
 ; AVX-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; AVX-NEXT:    vmovaps {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX-NEXT:    vblendvps %xmm3, %xmm4, %xmm5, %xmm3
 ; AVX-NEXT:    vxorps %xmm4, %xmm4, %xmm4
 ; AVX-NEXT:    vblendvpd %ymm2, %ymm4, %ymm1, %ymm1
@@ -1379,10 +1379,10 @@ define <8 x i32> @strict_vector_fptosi_v8f32_to_v8i32(<8 x float> %a) #0 {
 define <8 x i32> @strict_vector_fptoui_v8f32_to_v8i32(<8 x float> %a) #0 {
 ; AVX-LABEL: strict_vector_fptoui_v8f32_to_v8i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} ymm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX-NEXT:    vbroadcastss {{.*#+}} ymm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; AVX-NEXT:    vcmpltps %ymm1, %ymm0, %ymm2
 ; AVX-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vmovaps {{.*#+}} ymm4 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
+; AVX-NEXT:    vbroadcastss {{.*#+}} ymm4 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
 ; AVX-NEXT:    vblendvps %ymm2, %ymm3, %ymm4, %ymm4
 ; AVX-NEXT:    vblendvps %ymm2, %ymm3, %ymm1, %ymm1
 ; AVX-NEXT:    vsubps %ymm1, %ymm0, %ymm0

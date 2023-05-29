@@ -210,27 +210,31 @@ operator==(const set<Key, Compare, Allocator>& x,
 template <class Key, class Compare, class Allocator>
 bool
 operator< (const set<Key, Compare, Allocator>& x,
-           const set<Key, Compare, Allocator>& y);
+           const set<Key, Compare, Allocator>& y);                                // removed in C++20
 
 template <class Key, class Compare, class Allocator>
 bool
 operator!=(const set<Key, Compare, Allocator>& x,
-           const set<Key, Compare, Allocator>& y);
+           const set<Key, Compare, Allocator>& y);                                // removed in C++20
 
 template <class Key, class Compare, class Allocator>
 bool
 operator> (const set<Key, Compare, Allocator>& x,
-           const set<Key, Compare, Allocator>& y);
+           const set<Key, Compare, Allocator>& y);                                // removed in C++20
 
 template <class Key, class Compare, class Allocator>
 bool
 operator>=(const set<Key, Compare, Allocator>& x,
-           const set<Key, Compare, Allocator>& y);
+           const set<Key, Compare, Allocator>& y);                                // removed in C++20
 
 template <class Key, class Compare, class Allocator>
 bool
 operator<=(const set<Key, Compare, Allocator>& x,
-           const set<Key, Compare, Allocator>& y);
+           const set<Key, Compare, Allocator>& y);                                // removed in C++20
+
+template<class Key, class Compare, class Allocator>
+  synth-three-way-result<Key> operator<=>(const set<Key, Compare, Allocator>& x,
+                                          const set<Key, Compare, Allocator>& y); // since C++20
 
 // specialized algorithms:
 template <class Key, class Compare, class Allocator>
@@ -435,27 +439,31 @@ operator==(const multiset<Key, Compare, Allocator>& x,
 template <class Key, class Compare, class Allocator>
 bool
 operator< (const multiset<Key, Compare, Allocator>& x,
-           const multiset<Key, Compare, Allocator>& y);
+           const multiset<Key, Compare, Allocator>& y);                                // removed in C++20
 
 template <class Key, class Compare, class Allocator>
 bool
 operator!=(const multiset<Key, Compare, Allocator>& x,
-           const multiset<Key, Compare, Allocator>& y);
+           const multiset<Key, Compare, Allocator>& y);                                // removed in C++20
 
 template <class Key, class Compare, class Allocator>
 bool
 operator> (const multiset<Key, Compare, Allocator>& x,
-           const multiset<Key, Compare, Allocator>& y);
+           const multiset<Key, Compare, Allocator>& y);                                // removed in C++20
 
 template <class Key, class Compare, class Allocator>
 bool
 operator>=(const multiset<Key, Compare, Allocator>& x,
-           const multiset<Key, Compare, Allocator>& y);
+           const multiset<Key, Compare, Allocator>& y);                                // removed in C++20
 
 template <class Key, class Compare, class Allocator>
 bool
 operator<=(const multiset<Key, Compare, Allocator>& x,
-           const multiset<Key, Compare, Allocator>& y);
+           const multiset<Key, Compare, Allocator>& y);                                // removed in C++20
+
+template<class Key, class Compare, class Allocator>
+  synth-three-way-result<Key> operator<=>(const multiset<Key, Compare, Allocator>& x,
+                                          const multiset<Key, Compare, Allocator>& y); // since C++20
 
 // specialized algorithms:
 template <class Key, class Compare, class Allocator>
@@ -473,6 +481,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 
 #include <__algorithm/equal.h>
 #include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/lexicographical_compare_three_way.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__functional/is_transparent.h>
@@ -982,6 +991,8 @@ operator==(const set<_Key, _Compare, _Allocator>& __x,
     return __x.size() == __y.size() && _VSTD::equal(__x.begin(), __x.end(), __y.begin());
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Key, class _Compare, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1026,6 +1037,17 @@ operator<=(const set<_Key, _Compare, _Allocator>& __x,
 {
     return !(__y < __x);
 }
+
+#else // _LIBCPP_STD_VER <= 17
+
+template <class _Key, class _Allocator>
+_LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Key>
+operator<=>(const set<_Key, _Allocator>& __x, const set<_Key, _Allocator>& __y) {
+    return std::lexicographical_compare_three_way(
+        __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Key, _Key>);
+}
+
+#endif // _LIBCPP_STD_VER <= 17
 
 // specialized algorithms:
 template <class _Key, class _Compare, class _Allocator>
@@ -1518,6 +1540,8 @@ operator==(const multiset<_Key, _Compare, _Allocator>& __x,
     return __x.size() == __y.size() && _VSTD::equal(__x.begin(), __x.end(), __y.begin());
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Key, class _Compare, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1562,6 +1586,17 @@ operator<=(const multiset<_Key, _Compare, _Allocator>& __x,
 {
     return !(__y < __x);
 }
+
+#else // _LIBCPP_STD_VER <= 17
+
+template <class _Key, class _Allocator>
+_LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Key>
+operator<=>(const multiset<_Key, _Allocator>& __x, const multiset<_Key, _Allocator>& __y) {
+    return std::lexicographical_compare_three_way(
+        __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Key, _Key>);
+}
+
+#endif // _LIBCPP_STD_VER <= 17
 
 template <class _Key, class _Compare, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY

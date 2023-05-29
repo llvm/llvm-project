@@ -134,6 +134,7 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -147,6 +148,7 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -160,6 +162,7 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -173,6 +176,49 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
+    name = "basic_arm_sme_builtins_gen",
+    tbl_outs = [(
+        "-gen-arm-sme-builtins",
+        "include/clang/Basic/arm_sme_builtins.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
+    name = "basic_arm_sme_builtin_cg_gen",
+    tbl_outs = [(
+        "-gen-arm-sme-builtin-codegen",
+        "include/clang/Basic/arm_sme_builtin_cg.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
+    ],
+)
+
+gentbl(
+    name = "basic_arm_sme_sema_rangechecks_gen",
+    tbl_outs = [(
+        "-gen-arm-sme-sema-rangechecks",
+        "include/clang/Basic/arm_sme_sema_rangechecks.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/arm_sme.td",
+    td_srcs = [
+        "include/clang/Basic/arm_sme.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -498,6 +544,8 @@ cc_library(
         "include/clang/Basic/arm_mve_builtin_aliases.inc",
         "include/clang/Basic/arm_mve_builtin_cg.inc",
         "include/clang/Basic/arm_mve_builtin_sema.inc",
+        "include/clang/Basic/arm_sme_builtins.inc",
+        "include/clang/Basic/arm_sme_builtin_cg.inc",
         "include/clang/Basic/arm_neon.inc",
         "include/clang/Basic/AttrHasAttributeImpl.inc",
         "include/clang/Basic/AttrList.inc",
@@ -529,6 +577,8 @@ cc_library(
         ":basic_arm_neon_inc_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_typeflags_gen",
+        ":basic_arm_sme_builtins_gen",
+        ":basic_arm_sme_builtin_cg_gen",
         ":basic_attr_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
@@ -975,6 +1025,8 @@ cc_library(
         ":basic_arm_cde_sema_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
+        ":basic_arm_sme_builtins_gen",
+        ":basic_arm_sme_sema_rangechecks_gen",
         ":basic_riscv_sifive_vector_builtin_sema_gen",
         ":basic_riscv_vector_builtin_sema_gen",
         ":edit",
@@ -1550,6 +1602,7 @@ gentbl(
     td_file = "include/clang/Basic/arm_sve.td",
     td_srcs = [
         "include/clang/Basic/arm_sve.td",
+        "include/clang/Basic/arm_sve_sme_incl.td",
     ],
 )
 
@@ -1744,6 +1797,7 @@ cc_library(
         ":basic",
         ":basic_arm_cde_cg_gen",
         ":basic_arm_sve_builtin_cg_gen",
+        ":basic_arm_sme_builtin_cg_gen",
         ":basic_riscv_sifive_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtin_cg_gen",
         ":driver",

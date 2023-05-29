@@ -681,12 +681,7 @@ void GIMatchTreeVRegDefPartitioner::repartition(
       WantsEdge = true;
     }
 
-    bool isNotReg = false;
-    if (!WantsEdge && isNotReg) {
-      // If this leaf doesn't have an edge and we _don't_ want a register,
-      // then add it to partition 0.
-      addToPartition(false, Leaf.index());
-    } else if (!WantsEdge) {
+    if (!WantsEdge) {
       // If this leaf doesn't have an edge and we don't know what we want,
       // then add it to partition 0 and 1.
       addToPartition(false, Leaf.index());
@@ -733,7 +728,7 @@ void GIMatchTreeVRegDefPartitioner::applyForPartition(
   NewInstrID = SubBuilder.allocInstrID();
 
   GIMatchTreeBuilder::LeafVec &NewLeaves = SubBuilder.getPossibleLeaves();
-  for (const auto I : zip(NewLeaves, TraversedEdgesByNewLeaves)) {
+  for (const auto &I : zip(NewLeaves, TraversedEdgesByNewLeaves)) {
     auto &Leaf = std::get<0>(I);
     auto &TraversedEdgesForLeaf = std::get<1>(I);
     GIMatchTreeInstrInfo *InstrInfo = Leaf.getInstrInfo(InstrID);
