@@ -733,7 +733,7 @@ void GIMatchTreeVRegDefPartitioner::applyForPartition(
   NewInstrID = SubBuilder.allocInstrID();
 
   GIMatchTreeBuilder::LeafVec &NewLeaves = SubBuilder.getPossibleLeaves();
-  for (const auto I : zip(NewLeaves, TraversedEdgesByNewLeaves)) {
+  for (const auto &I : zip(NewLeaves, TraversedEdgesByNewLeaves)) {
     auto &Leaf = std::get<0>(I);
     auto &TraversedEdgesForLeaf = std::get<1>(I);
     GIMatchTreeInstrInfo *InstrInfo = Leaf.getInstrInfo(InstrID);
