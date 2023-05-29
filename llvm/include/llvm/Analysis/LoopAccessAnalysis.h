@@ -701,8 +701,6 @@ private:
   DenseMap<Value *, const SCEV *> SymbolicStrides;
 };
 
-Value *stripIntegerCast(Value *V);
-
 /// Return the SCEV corresponding to a pointer with the symbolic stride
 /// replaced with constant one, assuming the SCEV predicate associated with
 /// \p PSE is true.
