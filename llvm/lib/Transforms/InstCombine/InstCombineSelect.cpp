@@ -2924,31 +2924,20 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   auto *Zero = ConstantInt::getFalse(SelType);
   Value *A, *B, *C, *D;
 
-  auto dropPoisonGeneratingFlagsAndMetadata =
-      [](ArrayRef<Instruction *> Insts) {
-        for (auto *I : Insts)
-          I->dropPoisonGeneratingFlagsAndMetadata();
-      };
   // Folding select to and/or i1 isn't poison safe in general. impliesPoison
   // checks whether folding it does not convert a well-defined value into
   // poison.
   if (match(TrueVal, m_One())) {
+    if (impliesPoison(FalseVal, CondVal)) {
+      // Change: A = select B, true, C --> A = or B, C
+      return BinaryOperator::CreateOr(CondVal, FalseVal);
+    }
+
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
       if (auto *RHS = dyn_cast<FCmpInst>(FalseVal))
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false,
                                         /*IsSelectLogical*/ true))
           return replaceInstUsesWith(SI, V);
-
-    // Some patterns can be matched by both of the above and following
-    // combinations. Because we need to drop poison generating
-    // flags and metadatas for the following combination, it has less priority
-    // than the above combination.
-    SmallVector<Instruction *> IgnoredInsts;
-    if (impliesPoisonIgnoreFlagsOrMetadata(FalseVal, CondVal, IgnoredInsts)) {
-      dropPoisonGeneratingFlagsAndMetadata(IgnoredInsts);
-      // Change: A = select B, true, C --> A = or B, C
-      return BinaryOperator::CreateOr(CondVal, FalseVal);
-    }
 
     // (A && B) || (C && B) --> (A || C) && B
     if (match(CondVal, m_LogicalAnd(m_Value(A), m_Value(B))) &&
@@ -2980,22 +2969,16 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   }
 
   if (match(FalseVal, m_Zero())) {
+    if (impliesPoison(TrueVal, CondVal)) {
+      // Change: A = select B, C, false --> A = and B, C
+      return BinaryOperator::CreateAnd(CondVal, TrueVal);
+    }
+
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
       if (auto *RHS = dyn_cast<FCmpInst>(TrueVal))
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ true,
                                         /*IsSelectLogical*/ true))
           return replaceInstUsesWith(SI, V);
-
-    // Some patterns can be matched by both of the above and following
-    // combinations. Because we need to drop poison generating
-    // flags and metadatas for the following combination, it has less priority
-    // than the above combination.
-    SmallVector<Instruction *> IgnoredInsts;
-    if (impliesPoisonIgnoreFlagsOrMetadata(TrueVal, CondVal, IgnoredInsts)) {
-      dropPoisonGeneratingFlagsAndMetadata(IgnoredInsts);
-      // Change: A = select B, C, false --> A = and B, C
-      return BinaryOperator::CreateAnd(CondVal, TrueVal);
-    }
 
     // (A || B) && (C || B) --> (A && C) || B
     if (match(CondVal, m_LogicalOr(m_Value(A), m_Value(B))) &&

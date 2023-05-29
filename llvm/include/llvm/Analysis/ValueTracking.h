@@ -946,13 +946,6 @@ bool canCreatePoison(const Operator *Op, bool ConsiderFlagsAndMetadata = true);
 /// impliesPoison returns true.
 bool impliesPoison(const Value *ValAssumedPoison, const Value *V);
 
-/// Return true if V is poison given that ValAssumedPoison is already poison.
-/// Poison generating flags or metadata are ignored in the process of implying.
-/// And the ignored instructions will be recorded in IgnoredInsts.
-bool impliesPoisonIgnoreFlagsOrMetadata(
-    Value *ValAssumedPoison, const Value *V,
-    SmallVectorImpl<Instruction *> &IgnoredInsts);
-
 /// Return true if this function can prove that V does not have undef bits
 /// and is never poison. If V is an aggregate value or vector, check whether
 /// all elements (except padding) are not undef or poison.
