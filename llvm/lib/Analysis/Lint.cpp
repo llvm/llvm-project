@@ -93,8 +93,6 @@ class Lint : public InstVisitor<Lint> {
   void visitCallBase(CallBase &CB);
   void visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
                             MaybeAlign Alignment, Type *Ty, unsigned Flags);
-  void visitEHBeginCatch(IntrinsicInst *II);
-  void visitEHEndCatch(IntrinsicInst *II);
 
   void visitReturnInst(ReturnInst &I);
   void visitLoadInst(LoadInst &I);
