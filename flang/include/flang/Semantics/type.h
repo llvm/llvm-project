@@ -306,6 +306,7 @@ public:
   // explicit and equal, len type parameters are ignored.
   bool Match(const DerivedTypeSpec &) const;
   std::string AsFortran() const;
+  std::string VectorTypeAsFortran() const;
 
   Category category() const { return category_; }
   void set_category(Category category) { category_ = category; }
