@@ -557,7 +557,7 @@ static void ProcessRootRegions(Frontier *frontier) {
     return;
   MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
   MemoryMappedSegment segment;
-  InternalMmapVectorNoCtor<Region> mapped_regions;
+  InternalMmapVector<Region> mapped_regions;
   while (proc_maps.Next(&segment))
     if (segment.IsReadable())
       mapped_regions.push_back({segment.start, segment.end});
