@@ -481,7 +481,7 @@ public:
 private:
   class __destroy_vector {
     public:
-      _LIBCPP_CONSTEXPR __destroy_vector(vector& __vec) : __vec_(__vec) {}
+      _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI __destroy_vector(vector& __vec) : __vec_(__vec) {}
 
       _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void operator()() {
           std::__debug_db_erase_c(std::addressof(__vec_));
