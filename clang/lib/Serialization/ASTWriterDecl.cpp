@@ -1138,10 +1138,10 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       !D->isConstexpr() &&
       !D->isInitCapture() &&
       !D->isPreviousDeclInSameBlockScope() &&
-      !D->hasAttr<BlocksAttr>() &&
       !D->isEscapingByref() &&
       !HasDeducedType &&
       D->getStorageDuration() != SD_Static &&
+      !D->getDescribedVarTemplate() &&
       !D->getMemberSpecializationInfo())
     AbbrevToUse = Writer.getDeclVarAbbrev();
 
@@ -2246,8 +2246,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // InitStyle
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isARCPseudoStrong
   Abv->Add(BitCodeAbbrevOp(0));                       // Linkage
-  Abv->Add(BitCodeAbbrevOp(0));                       // HasInit
-  Abv->Add(BitCodeAbbrevOp(0));                   // HasMemberSpecializationInfo
+  Abv->Add(BitCodeAbbrevOp(0));                       // ModulesCodegen
+  Abv->Add(BitCodeAbbrevOp(0));                       // VarKind (local enum)
   // ParmVarDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsObjCMethodParameter
   Abv->Add(BitCodeAbbrevOp(0));                       // ScopeDepth
@@ -2336,8 +2336,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // EscapingByref
   Abv->Add(BitCodeAbbrevOp(0));                         // HasDeducedType
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // HasConstant*
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // VarKind (local enum)
+  Abv->Add(BitCodeAbbrevOp(0));                         // ModulesCodeGen
+  Abv->Add(BitCodeAbbrevOp(0));                         // VarKind (local enum)
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
