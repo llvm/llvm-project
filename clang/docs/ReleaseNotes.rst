@@ -370,6 +370,7 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses unexpected tokens after a
   ``#pragma clang|GCC diagnostic push|pop`` directive.
   (`#13920: <https://github.com/llvm/llvm-project/issues/13920>`_)
+- Clang now does not try to analyze cast validity on variables with dependent alignment (`#63007: <https://github.com/llvm/llvm-project/issues/63007>`_).
 
 Bug Fixes in This Version
 -------------------------
