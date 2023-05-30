@@ -3731,6 +3731,20 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
   MVT XLenVT = Subtarget.getXLenVT();
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
   auto TrueMask = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).first;
+  if (Index == 1 && NumSubElts + Index == (int)NumElts &&
+      isa<BuildVectorSDNode>(InPlace)) {
+    if (SDValue Splat = cast<BuildVectorSDNode>(InPlace)->getSplatValue()) {
+      auto OpCode =
+        VT.isFloatingPoint() ? RISCVISD::VFSLIDE1UP_VL : RISCVISD::VSLIDE1UP_VL;
+      auto Vec = DAG.getNode(OpCode, DL, ContainerVT,
+                             DAG.getUNDEF(ContainerVT),
+                             convertToScalableVector(ContainerVT, ToInsert, DAG, Subtarget),
+                             Splat, TrueMask,
+                             DAG.getConstant(NumSubElts + Index, DL, XLenVT));
+      return convertFromScalableVector(VT, Vec, DAG, Subtarget);
+    }
+  }
+
   // We slide up by the index that the subvector is being inserted at, and set
   // VL to the index + the number of elements being inserted.
   unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVII::MASK_AGNOSTIC;
@@ -3967,6 +3981,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    Subtarget, DAG);
   }
 
+  if (SDValue V =
+          lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
+    return V;
+
   // Detect an interleave shuffle and lower to
   // (vmaccu.vx (vwaddu.vx lohalf(V1), lohalf(V2)), lohalf(V2), (2^eltbits - 1))
   int EvenSrc, OddSrc;
@@ -3988,10 +4006,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
-
-  if (SDValue V =
-          lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
-    return V;
 
   // Detect shuffles which can be re-expressed as vector selects; these are
   // shuffles in which each element in the destination is taken from an element
