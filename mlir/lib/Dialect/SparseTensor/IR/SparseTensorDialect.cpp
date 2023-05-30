@@ -32,17 +32,6 @@ using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 //===----------------------------------------------------------------------===//
-// Additional convenience methods.
-//===----------------------------------------------------------------------===//
-
-/// Gets the dimension-rank of the type of some `T`.  (In particular
-/// this is only used for `Value` and `TypedValue<RankedTensorType>`.)
-template <typename T>
-static inline Dimension getDimRank(T t) {
-  return getRankedTensorType(t).getRank();
-}
-
-//===----------------------------------------------------------------------===//
 // StorageLayout
 //===----------------------------------------------------------------------===//
 
