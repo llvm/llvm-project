@@ -971,6 +971,9 @@ struct AMDGPUQueueTy {
   /// Returns if this queue is considered busy
   bool isBusy() { return Busy.load() > 0; }
 
+  /// Returns if the underlying HSA queue is initialized
+  bool isInitialized() { return Queue != nullptr; }
+
   /// Decrement busy count of the queue object
   void decBusy() { Busy.fetch_sub(1); }
 
@@ -1184,16 +1187,17 @@ private:
   std::atomic<int> Busy{0};
 };
 
+/// Callback function used in conjunction with the completion signal of a
+/// kernels's AQL packet to acknowledge the completion of an execution.
+/// Achieved by decrementing the busy counter.
 bool decrementQueueBusyCountHandler(hsa_signal_value_t value, void *args) {
   DP("NEW_QUEU: The handler\n");
+  // args is always an AMDGPUQueueTy pointer
   auto *Q = reinterpret_cast<AMDGPUQueueTy *>(args);
   Q->decBusy();
+  // Do not execute this callback again for other signal values
   return false;
 }
-
-/// Used to initialize the reference to a queue inside the AMDGPUStreamTy, so
-/// that we can lazily initialize the queues and assign on-demand.
-static AMDGPUQueueTy NullQueue;
 
 /// Struct that implements a stream of asynchronous operations for AMDGPU
 /// devices. This class relies on signals to implement streams and define the
@@ -1339,9 +1343,6 @@ private:
 
   /// The device agent where the stream was created.
   hsa_agent_t Agent;
-
-  /// The queue that the stream uses to launch kernels.
-  AMDGPUQueueTy &Queue;
 
   /// The manager of signals to reuse signals.
   AMDGPUSignalManagerTy &SignalManager;
@@ -2128,15 +2129,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     KernelBusyWaitTics = OMPX_StreamBusyWait;
     DataBusyWaitTics = OMPX_StreamBusyWait;
 
-    // Construct and initialize each device queue.
-    // Construct one queue at start up to avoid construction overhead of
-    // potentially unneeded queues
+    // Default-Construct each device queue (not initialized) to avoid
+    // initialization overhead.
     Queues = std::vector<AMDGPUQueueTy>(NumQueues);
-    // if (auto Err = Queues.front().init(Agent, QueueSize))
-    //   return Err; // TODO
-    // for (AMDGPUQueueTy &Queue : Queues)
-    //   if (auto Err = Queue.init(Agent, QueueSize))
-    //     return Err;
 
     // Initialize stream pool.
     if (auto Err = AMDGPUStreamManager.init(OMPX_InitialNumStreams))
@@ -2912,55 +2907,44 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         });
   }
 
-  // FIXME: Put somewhere right
-  /// Guarding the whole queue initialization
-  std::mutex QueuesLock;
-  /// How many queues have been initialized
-  std::atomic<int> initQueues{0};
-
-  /// Get the next queue in a round-robin fashion.
-  // TODO: Update comment
+  /// Get the next queue depending on its status. Preferably an idle queue is
+  /// returned. If no initialized queue is available, but more queues may be
+  /// active, the next default-constructed queue is initialized. Otherwise, the
+  /// queue is selected in a round-robin fashion.
   AMDGPUQueueTy &getNextQueue() {
     static std::atomic<uint32_t> NextQueue(0);
     // For now, simply use a lock.
     // TODO: Improve implementation and get rid of lock if possible
     std::lock_guard<std::mutex> LG(QueuesLock);
 
-    /// Alternative (possibly better) implementation, that would require
-    //  a Queue to know if it is initialized
-    // for (Q : Queues)
-    //   if !Q.isBusy
-    //     return Q
-    // Logic to create new Q if still room
-    // Fall back to round robin
-
-    // Count how many queues are busy right now
+    // Determine queues that are busy right now
+    // If an idle and already initialized queue is encountered, return it
     int NumBusyQueues = 0;
     for (auto &Q : Queues)
       if (Q.isBusy())
         NumBusyQueues++;
+      else if (Q.isInitialized())
+        return Q;
 
     // For now we always take this code path, as no queue is initialized at the
     // beginning, so we need to execute here at least once.
-    int TempIQ = initQueues.load();
-    if (TempIQ < OMPX_NumQueues && TempIQ <= NumBusyQueues) {
-      int IQ = initQueues.fetch_add(1);
-      if (IQ < OMPX_NumQueues && IQ <= NumBusyQueues) {
-        DP("LAZY_QUEUE: Constructing new Queue: %i (Device %i)\n", IQ,
-           getDeviceId());
-
-        // TODO: Handle errors here: abort? Gracefully? Ignore?
-        if (auto Err = Queues[IQ].init(getAgent(), OMPX_QueueSize))
-          DP("LAZY_QUEUE: Error occured\n");
-      }
+    int QueueCount = NumInitQueues.load();
+    if (QueueCount < OMPX_NumQueues && QueueCount <= NumBusyQueues) {
+      DP("LAZY_QUEUE: Constructing new Queue: %i (Device %i)\n", QueueCount,
+         getDeviceId());
+      // TODO: Handle errors here: abort? Gracefully? Ignore?
+      if (auto Err = Queues[QueueCount].init(getAgent(), OMPX_QueueSize))
+        DP("LAZY_QUEUE: Error occurred during AMDGPUQueueTy init\n");
+      // Actually an atomic pre-increment
+      QueueCount = ++NumInitQueues;
     }
-    TempIQ = (TempIQ == 0) ? 1 : TempIQ; // Circumvent divide by 0
+    QueueCount = (QueueCount == 0) ? 1 : QueueCount; // Circumvent divide by 0
 
     uint32_t Current = NextQueue.fetch_add(1, std::memory_order_relaxed);
-    DP("LAZY_QUEUE: Busy: %i Current %i, TempIQ %i\n", NumBusyQueues, Current,
-       TempIQ);
+    DP("LAZY_QUEUE: Busy: %i Current %i, QueueCount %i\n", NumBusyQueues,
+       Current, QueueCount);
     // Now upper limit is number of init-ed queues
-    return Queues[Current % TempIQ];
+    return Queues[Current % QueueCount];
   }
 
   /// Enable/disable profiling of the HSA queues.
@@ -3082,6 +3066,12 @@ private:
   /// List of device packet queues.
   std::vector<AMDGPUQueueTy> Queues;
 
+  /// Guarding the whole queue initialization
+  std::mutex QueuesLock;
+
+  /// Number of initialized (HSA) queues
+  std::atomic<int> NumInitQueues{0};
+
   // Data structure used to keep track of coarse grain memory regions
   AMDGPUMemTypeBitFieldTable *coarse_grain_mem_tab = nullptr;
 
@@ -3167,11 +3157,11 @@ Error AMDGPUResourceRef<ResourceTy>::create(GenericDeviceTy &Device) {
 }
 
 AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
-    : Agent(Device.getAgent()), Queue(NullQueue), Device(Device),
-      SignalManager(Device.getSignalManager()),
+    : Agent(Device.getAgent()), SignalManager(Device.getSignalManager()),
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0),
-      StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()) {}
+      StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
+      Device(Device) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.
