@@ -1332,7 +1332,10 @@ SBDebugger SBDebugger::FindDebuggerWithID(int id) {
 const char *SBDebugger::GetInstanceName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (m_opaque_sp ? m_opaque_sp->GetInstanceName().AsCString() : nullptr);
+  if (!m_opaque_sp)
+    return nullptr;
+
+  return ConstString(m_opaque_sp->GetInstanceName()).AsCString();
 }
 
 SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
@@ -1340,8 +1343,8 @@ SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
   LLDB_INSTRUMENT_VA(var_name, value, debugger_instance_name);
 
   SBError sb_error;
-  DebuggerSP debugger_sp(Debugger::FindDebuggerWithInstanceName(
-      ConstString(debugger_instance_name)));
+  DebuggerSP debugger_sp(
+      Debugger::FindDebuggerWithInstanceName(debugger_instance_name));
   Status error;
   if (debugger_sp) {
     ExecutionContext exe_ctx(
@@ -1362,8 +1365,8 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
                                      const char *debugger_instance_name) {
   LLDB_INSTRUMENT_VA(var_name, debugger_instance_name);
 
-  DebuggerSP debugger_sp(Debugger::FindDebuggerWithInstanceName(
-      ConstString(debugger_instance_name)));
+  DebuggerSP debugger_sp(
+      Debugger::FindDebuggerWithInstanceName(debugger_instance_name));
   Status error;
   if (debugger_sp) {
     ExecutionContext exe_ctx(
@@ -1493,7 +1496,7 @@ bool SBDebugger::GetDescription(SBStream &description) {
   Stream &strm = description.ref();
 
   if (m_opaque_sp) {
-    const char *name = m_opaque_sp->GetInstanceName().AsCString();
+    const char *name = m_opaque_sp->GetInstanceName().c_str();
     user_id_t id = m_opaque_sp->GetID();
     strm.Printf("Debugger (instance: \"%s\", id: %" PRIu64 ")", name, id);
   } else
