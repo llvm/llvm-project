@@ -19,7 +19,7 @@ def IceLakeModel : SchedMachineModel {
   // All x86 instructions are modeled as a single micro-op, and Ice Lake can
   // decode 6 instructions per cycle.
   let IssueWidth = 6;
-  let MicroOpBufferSize = 224; // Based on the reorder buffer.
+  let MicroOpBufferSize = 352; // Based on the reorder buffer.
   let LoadLatency = 5;
   let MispredictPenalty = 14;
 
