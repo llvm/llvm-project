@@ -99,24 +99,36 @@ public:
 
   const std::vector<Fragment> &getFragments() const { return Fragments; }
 
-  // Add a new Fragment to the beginning of the Fragments.
-  DeclarationFragments &appendFront(StringRef Spelling, FragmentKind Kind,
-                                    StringRef PreciseIdentifier = "",
-                                    const Decl *Declaration = nullptr) {
-    Fragments.emplace(Fragments.begin(), Spelling, Kind, PreciseIdentifier,
-                      Declaration);
+  size_t calculateOffset(intmax_t Index) const {
+    if (Index >= 0) {
+      size_t offset = static_cast<size_t>(Index);
+      if (offset > Fragments.size()) {
+        offset = Fragments.size();
+      }
+      return offset;
+    }
+    return Fragments.size() + static_cast<size_t>(Index);
+  }
+
+  // Add a new Fragment at an arbitrary offset.
+  DeclarationFragments &insertAtIndex(intmax_t Index, StringRef Spelling,
+                                      FragmentKind Kind,
+                                      StringRef PreciseIdentifier = "",
+                                      const Decl *Declaration = nullptr) {
+    Fragments.insert(
+        Fragments.begin() + calculateOffset(Index),
+        std::move(Fragment(Spelling, Kind, PreciseIdentifier, Declaration)));
     return *this;
   }
 
-  DeclarationFragments &appendFront(DeclarationFragments &&Other) {
-    Fragments.insert(Fragments.begin(),
+  DeclarationFragments &insertAtIndex(intmax_t Index,
+                                      DeclarationFragments &&Other) {
+    Fragments.insert(Fragments.begin() + calculateOffset(Index),
                      std::make_move_iterator(Other.Fragments.begin()),
                      std::make_move_iterator(Other.Fragments.end()));
     Other.Fragments.clear();
     return *this;
   }
-
-  void removeLast() { Fragments.pop_back(); }
 
   /// Append a new Fragment to the end of the Fragments.
   ///
