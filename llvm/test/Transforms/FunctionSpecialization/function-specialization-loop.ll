@@ -1,6 +1,8 @@
-; RUN: opt -passes="ipsccp<func-spec>" -funcspec-avg-loop-iters=3 -funcspec-min-function-size=10 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -funcspec-avg-loop-iters=5 -funcspec-min-function-size=10 -S < %s | FileCheck %s
 
-; CHECK-NOT: foo.{{[0-9]+}}
+; Check that the loop depth results in a larger specialization bonus.
+; CHECK: @foo.1(
+; CHECK: @foo.2(
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -13,7 +15,7 @@ declare i1 @cond_begin()
 declare i1 @cond_end()
 declare i1 @getCond()
 
-define internal i32 @foo(i32 %x, ptr %b, ptr %c) alwaysinline {
+define internal i32 @foo(i32 %x, ptr %b, ptr %c) {
 entry:
   br label %loop.entry
 
