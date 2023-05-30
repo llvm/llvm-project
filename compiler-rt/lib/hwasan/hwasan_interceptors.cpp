@@ -14,6 +14,8 @@
 // sanitizer_common/sanitizer_common_interceptors.h
 //===----------------------------------------------------------------------===//
 
+#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
+
 #include "hwasan.h"
 #include "hwasan_allocator.h"
 #include "hwasan_checks.h"
