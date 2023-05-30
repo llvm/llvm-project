@@ -111,6 +111,15 @@ public:
     return withEncoding(enc.withoutBitWidths());
   }
 
+  SparseTensorType
+  withDimSlices(ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
+    return withEncoding(enc.withDimSlices(dimSlices));
+  }
+
+  SparseTensorType withoutDimSlices() const {
+    return withEncoding(enc.withoutDimSlices());
+  }
+
   //
   // Other methods.
   //
