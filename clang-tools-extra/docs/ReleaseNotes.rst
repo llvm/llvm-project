@@ -395,6 +395,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/no-automatic-move>`: warn on ``const &&``
   constructors.
 
+- Fixed :doc:`bugprone-exception-escape<clang-tidy/checks/bugprone/exception-escape>`
+  for coroutines where previously a warning would be emitted with coroutines
+  throwing exceptions in their bodies.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

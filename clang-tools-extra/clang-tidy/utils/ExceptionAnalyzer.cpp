@@ -523,6 +523,19 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     ExceptionInfo Excs =
         throwsException(DefaultInit->getExpr(), Caught, CallStack);
     Results.merge(Excs);
+  } else if (const auto *Coro = dyn_cast<CoroutineBodyStmt>(St)) {
+    for (const Stmt *Child : Coro->childrenExclBody()) {
+      ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+      Results.merge(Excs);
+    }
+    ExceptionInfo Excs = throwsException(Coro->getBody(), Caught, CallStack);
+    for (const Type *Throwable : Excs.getExceptionTypes()) {
+      if (const auto ThrowableRec = Throwable->getAsCXXRecordDecl()) {
+        ExceptionInfo DestructorExcs =
+            throwsException(ThrowableRec->getDestructor(), CallStack);
+        Results.merge(DestructorExcs);
+      }
+    }
   } else {
     for (const Stmt *Child : St->children()) {
       ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
