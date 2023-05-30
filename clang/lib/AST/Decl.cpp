@@ -3331,6 +3331,7 @@ bool FunctionDecl::isInlineBuiltinDeclaration() const {
   case GVA_StrongExternal:
     return true;
   }
+  llvm_unreachable("Unknown GVALinkage");
 }
 
 bool FunctionDecl::isDestroyingOperatorDelete() const {
