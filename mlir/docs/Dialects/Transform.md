@@ -1,22 +1,8 @@
 # Transform Dialect
 
-Fine-grain transformation control dialect.
+Fine-grain transformation control dialect. See [../Tutorials/transform](tutorial) for more introductory information.
 
 [TOC]
-
-## Disclaimer
-
-**This dialect is actively developed and may change frequently.**
-
-To decrease the maintenance burden and churn, please post a description of
-the intended use case on the MLIR forum. A few in-tree use cases are
-currently supported:
-
-  - high-level transformations on "structured ops" (i.e. ops that operate on
-    chunks of data in a way that can be decomposed into operations on
-    smaller chunks of data and control flow) in Linalg, Tensor and Vector
-    dialects;
-  - loop transformations in the SCF dialect.
 
 ## Overview
 
