@@ -449,30 +449,6 @@ void CC1Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
       "The CC1Command doesn't support changing the environment vars!");
 }
 
-ForceSuccessCommand::ForceSuccessCommand(
-    const Action &Source_, const Tool &Creator_,
-    ResponseFileSupport ResponseSupport, const char *Executable_,
-    const llvm::opt::ArgStringList &Arguments_, ArrayRef<InputInfo> Inputs,
-    ArrayRef<InputInfo> Outputs)
-    : Command(Source_, Creator_, ResponseSupport, Executable_, Arguments_,
-              Inputs, Outputs) {}
-
-void ForceSuccessCommand::Print(raw_ostream &OS, const char *Terminator,
-                            bool Quote, CrashReportInfo *CrashInfo) const {
-  Command::Print(OS, "", Quote, CrashInfo);
-  OS << " || (exit 0)" << Terminator;
-}
-
-int ForceSuccessCommand::Execute(ArrayRef<std::optional<StringRef>> Redirects,
-                                 std::string *ErrMsg,
-                                 bool *ExecutionFailed) const {
-  int Status = Command::Execute(Redirects, ErrMsg, ExecutionFailed);
-  (void)Status;
-  if (ExecutionFailed)
-    *ExecutionFailed = false;
-  return 0;
-}
-
 void JobList::Print(raw_ostream &OS, const char *Terminator, bool Quote,
                     CrashReportInfo *CrashInfo) const {
   for (const auto &Job : *this)

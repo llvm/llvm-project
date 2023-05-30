@@ -258,23 +258,6 @@ public:
   void setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) override;
 };
 
-/// Like Command, but always pretends that the wrapped command succeeded.
-class ForceSuccessCommand : public Command {
-public:
-  ForceSuccessCommand(const Action &Source_, const Tool &Creator_,
-                      ResponseFileSupport ResponseSupport,
-                      const char *Executable_,
-                      const llvm::opt::ArgStringList &Arguments_,
-                      ArrayRef<InputInfo> Inputs,
-                      ArrayRef<InputInfo> Outputs = std::nullopt);
-
-  void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
-             CrashReportInfo *CrashInfo = nullptr) const override;
-
-  int Execute(ArrayRef<std::optional<StringRef>> Redirects, std::string *ErrMsg,
-              bool *ExecutionFailed) const override;
-};
-
 /// JobList - A sequence of jobs to perform.
 class JobList {
 public:
