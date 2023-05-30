@@ -460,6 +460,9 @@ Bug Fixes in This Version
 - Fix crash when diagnosing default comparison method.
   (`#62791 <https://github.com/llvm/llvm-project/issues/62791>`_) and
   (`#62102 <https://github.com/llvm/llvm-project/issues/62102>`_).
+- Fix crash when passing a braced initializer list to a parentehsized aggregate
+  initialization expression.
+  (`#63008 <https://github.com/llvm/llvm-project/issues/63008>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
