@@ -1152,6 +1152,7 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
   case InitializedEntity::EK_Parameter_CF_Audited:
   case InitializedEntity::EK_TemplateParameter:
   case InitializedEntity::EK_Result:
+  case InitializedEntity::EK_ParenAggInitMember:
     // Extra braces here are suspicious.
     DiagID = diag::warn_braces_around_init;
     break;
@@ -1186,7 +1187,6 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_Binding:
   case InitializedEntity::EK_StmtExprResult:
-  case InitializedEntity::EK_ParenAggInitMember:
     llvm_unreachable("unexpected braced scalar init");
   }
 

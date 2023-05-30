@@ -721,6 +721,9 @@ Bug Fixes in This Version
 - Fix crash when handling nested immediate invocations in initializers of global
   variables.
   (`#58207 <https://github.com/llvm/llvm-project/issues/58207>`_)
+- Fix crash when passing a braced initializer list to a parentehsized aggregate
+  initialization expression.
+  (`#63008 <https://github.com/llvm/llvm-project/issues/63008>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
