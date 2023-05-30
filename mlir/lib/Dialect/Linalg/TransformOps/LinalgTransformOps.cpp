@@ -361,7 +361,8 @@ static Operation *replaceForAllWithNewSignature(
   SetVector<Operation *> dominatedUsers;
   DominanceInfo domInfo(containingOp);
   for (Operation *user : producerOp->getResult(resultNumber).getUsers()) {
-    if ((user != containingOp) && (domInfo.dominates(containingOp, user))) {
+    if (!containingOp->isAncestor(user) &&
+        (domInfo.dominates(containingOp, user))) {
       dominatedUsers.insert(user);
     }
   }
