@@ -244,7 +244,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // offset = 0, size = 8, and a dynamic stride on the second dimension).
     #CSR_SLICE = #sparse_tensor.encoding<{
       lvlTypes = [ "dense", "compressed" ],
-      slice = [ (0, 4, 1), (0, 8, ?) ]
+      dimSlices = [ (0, 4, 1), (0, 8, ?) ]
     }>
     ... tensor<?x?xf64, #CSC_SLICE> ...
 
@@ -266,9 +266,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // The required bitwidth for coordinate storage.
     "unsigned":$crdWidth,
     // A slice attribute for each dimension of the tensor type.
-    // FIXME: The name used here is `dimSlices`, however the
-    // parser/printer uses the name `slice` instead.  Therefore
-    // the parser/printer need to be updated to match.
     ArrayRefParameter<
       "::mlir::sparse_tensor::SparseTensorDimSliceAttr",
       "per dimension slice metadata"

@@ -66,6 +66,6 @@ func.func private @tensor_invalid_key(%arg0: tensor<16x32xf32, #a>) -> ()
 
 #CSR_SLICE = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  slice = [ (-1, ?, 1), (?, 4, 2) ] // expected-error{{expect positive value or ? for slice offset/size/stride}}
+  dimSlices = [ (-1, ?, 1), (?, 4, 2) ] // expected-error{{expect positive value or ? for slice offset/size/stride}}
 }>
 func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
