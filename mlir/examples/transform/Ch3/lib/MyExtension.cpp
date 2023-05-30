@@ -76,8 +76,8 @@ void MyExtension::init() {
   // ODS generates these helpers for type printing and parsing, but the
   // Transform dialect provides its own support for types supplied by the
   // extension. Reference these functions to avoid a compiler warning.
-  (void)generatedTypeParser;
-  (void)generatedTypePrinter;
+  (void)&generatedTypeParser;
+  (void)&generatedTypePrinter;
 
   // Finally, we register the additional transform operations with the dialect.
   // List all operations generated from ODS. This call will perform additional
