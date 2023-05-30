@@ -192,3 +192,74 @@ entry:
   %and = and i1 %c.1, %t.1
   ret i1 %and
 }
+
+define i1 @and_select_not_used_for_branch(i32 %x, i32 %y,i32 %z) {
+; CHECK-LABEL: @and_select_not_used_for_branch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 [[X]], 16
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[Z:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_4]], i1 [[C_1]], i1 false
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ [[C_1]], [[ENTRY:%.*]] ], [ [[SEL]], [[THEN]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %c.1 = icmp ne i32 %x, 0
+  %c.2 = icmp ne i32 %y, 0
+  %c.3 = icmp eq i32 %x, 16
+  %and = and i1 %c.2, %c.3
+  br i1 %and, label %then, label %exit
+
+then:
+  %c.4 = icmp eq i32 %z, 0
+  %sel = select i1 %c.4, i1 %c.1, i1 false
+  br label %exit
+
+exit:
+  %res = phi i1 [ %c.1, %entry ], [ %sel, %then ]
+  ret i1 %res
+}
+
+define i1 @and_select_scope_limited(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @and_select_scope_limited(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 [[X]], 16
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[Z:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_4]], i1 [[C_1]], i1 false
+; CHECK-NEXT:    br i1 [[SEL]], label [[T_1:%.*]], label [[EXIT]]
+; CHECK:       t.1:
+; CHECK-NEXT:    ret i1 [[C_1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ [[C_1]], [[ENTRY:%.*]] ], [ [[SEL]], [[THEN]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %c.1 = icmp ne i32 %x, 0
+  %c.2 = icmp ne i32 %y, 0
+  %c.3 = icmp eq i32 %x, 16
+  %and = and i1 %c.2, %c.3
+  br i1 %and, label %then, label %exit
+
+then:
+  %c.4 = icmp eq i32 %z, 0
+  %sel = select i1 %c.4, i1 %c.1, i1 false
+  br i1 %sel, label %t.1, label %exit
+
+t.1:
+  ret i1 %c.1
+
+exit:
+  %res = phi i1 [ %c.1, %entry ], [ %sel, %then ]
+  ret i1 %res
+}
