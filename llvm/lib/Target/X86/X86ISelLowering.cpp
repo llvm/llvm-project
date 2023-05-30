@@ -9849,42 +9849,38 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       LLVMContext *Ctx = DAG.getContext();
       MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
-      if (Subtarget.hasAVX()) {
-        if (SplatBitSize == 32 || SplatBitSize == 64 ||
-            (SplatBitSize < 32 && Subtarget.hasAVX2())) {
-          // Load the constant scalar/subvector and broadcast it.
-          MVT CVT = MVT::getIntegerVT(SplatBitSize);
-          Constant *C = getConstantVector(VT, SplatValue, SplatBitSize, *Ctx);
-          SDValue CP = DAG.getConstantPool(C, PVT);
-          unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
+      if (SplatBitSize == 32 || SplatBitSize == 64 ||
+          (SplatBitSize < 32 && Subtarget.hasAVX2())) {
+        // Load the constant scalar/subvector and broadcast it.
+        MVT CVT = MVT::getIntegerVT(SplatBitSize);
+        Constant *C = getConstantVector(VT, SplatValue, SplatBitSize, *Ctx);
+        SDValue CP = DAG.getConstantPool(C, PVT);
+        unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
 
-          Align Alignment = cast<ConstantPoolSDNode>(CP)->getAlign();
-          SDVTList Tys =
-              DAG.getVTList(MVT::getVectorVT(CVT, Repeat), MVT::Other);
-          SDValue Ops[] = {DAG.getEntryNode(), CP};
-          MachinePointerInfo MPI =
-              MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
-          SDValue Brdcst = DAG.getMemIntrinsicNode(
-              X86ISD::VBROADCAST_LOAD, dl, Tys, Ops, CVT, MPI, Alignment,
-              MachineMemOperand::MOLoad);
-          return DAG.getBitcast(VT, Brdcst);
-        }
-        if (SplatBitSize > 64) {
-          // Load the vector of constants and broadcast it.
-          Constant *VecC = getConstantVector(VT, SplatValue, SplatBitSize,
-                                             *Ctx);
-          SDValue VCP = DAG.getConstantPool(VecC, PVT);
-          unsigned NumElm = SplatBitSize / VT.getScalarSizeInBits();
-          MVT VVT = MVT::getVectorVT(VT.getScalarType(), NumElm);
-          Align Alignment = cast<ConstantPoolSDNode>(VCP)->getAlign();
-          SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-          SDValue Ops[] = {DAG.getEntryNode(), VCP};
-          MachinePointerInfo MPI =
-              MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
-          return DAG.getMemIntrinsicNode(
-              X86ISD::SUBV_BROADCAST_LOAD, dl, Tys, Ops, VVT, MPI, Alignment,
-              MachineMemOperand::MOLoad);
-        }
+        Align Alignment = cast<ConstantPoolSDNode>(CP)->getAlign();
+        SDVTList Tys = DAG.getVTList(MVT::getVectorVT(CVT, Repeat), MVT::Other);
+        SDValue Ops[] = {DAG.getEntryNode(), CP};
+        MachinePointerInfo MPI =
+            MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
+        SDValue Brdcst =
+            DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, dl, Tys, Ops, CVT,
+                                    MPI, Alignment, MachineMemOperand::MOLoad);
+        return DAG.getBitcast(VT, Brdcst);
+      }
+      if (SplatBitSize > 64) {
+        // Load the vector of constants and broadcast it.
+        Constant *VecC = getConstantVector(VT, SplatValue, SplatBitSize, *Ctx);
+        SDValue VCP = DAG.getConstantPool(VecC, PVT);
+        unsigned NumElm = SplatBitSize / VT.getScalarSizeInBits();
+        MVT VVT = MVT::getVectorVT(VT.getScalarType(), NumElm);
+        Align Alignment = cast<ConstantPoolSDNode>(VCP)->getAlign();
+        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+        SDValue Ops[] = {DAG.getEntryNode(), VCP};
+        MachinePointerInfo MPI =
+            MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
+        return DAG.getMemIntrinsicNode(X86ISD::SUBV_BROADCAST_LOAD, dl, Tys,
+                                       Ops, VVT, MPI, Alignment,
+                                       MachineMemOperand::MOLoad);
       }
     }
 
