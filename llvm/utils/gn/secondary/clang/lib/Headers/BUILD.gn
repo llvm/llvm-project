@@ -65,6 +65,7 @@ copy("tablegen_headers") {
     ":arm_fp16",
     ":arm_mve",
     ":arm_neon",
+    ":arm_sme_draft_spec_subject_to_change",
     ":arm_sve",
     ":riscv_vector",
   ]
