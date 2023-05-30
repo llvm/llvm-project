@@ -216,6 +216,7 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
         return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);   \
       } while (false)
 
+#    include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"
 #    include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 struct ThreadStartArg {
