@@ -46,10 +46,13 @@ extern void __assert_fail(__const char *__assertion, __const char *__file,
 - (int *_Nullable)returnsNullable;
 - (int *)returnsUnspecified;
 - (void)takesNonnull:(int *_Nonnull)p;
+- (void)takesNonnullBlock:(void (^ _Nonnull)(void))block;
 - (void)takesNullable:(int *_Nullable)p;
 - (void)takesUnspecified:(int *)p;
 @property(readonly, strong) NSString *stuff;
 @property(readonly, nonnull) int *propReturnsNonnull;
+@property(readonly, nonnull) void (^propReturnsNonnullBlock)(void);
+@property(readonly, nullable) void (^propReturnsNullableBlock)(void);
 @property(readonly, nullable) int *propReturnsNullable;
 @property(readonly) int *propReturnsUnspecified;
 @end
@@ -65,6 +68,7 @@ typedef struct Dummy { int val; } Dummy;
 void takesNullable(Dummy *_Nullable);
 void takesNonnull(Dummy *_Nonnull);
 void takesUnspecified(Dummy *);
+void takesNonnullBlock(void (^ _Nonnull)(void));
 
 Dummy *_Nullable returnsNullable();
 Dummy *_Nonnull returnsNonnull();
@@ -197,6 +201,7 @@ void testObjCPropertyReadNullability() {
   switch (getRandom()) {
   case 0:
     [o takesNonnull:o.propReturnsNonnull]; // no-warning
+    [o takesNonnullBlock:o.propReturnsNonnullBlock]; // no-warning
     break;
   case 1:
     [o takesNonnull:o.propReturnsUnspecified]; // no-warning
@@ -235,6 +240,9 @@ void testObjCPropertyReadNullability() {
     // Assertions must be effective at suppressing warnings
     assert(o.propReturnsNullable);
     [o takesNonnull:o.propReturnsNullable]; // no-warning
+    break;
+  case 8:
+    [o takesNonnullBlock:o.propReturnsNullableBlock]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
     break;
   }
 }
@@ -306,6 +314,11 @@ void testDirectCastNilToNonnullAndAssignToParam(Dummy * _Nonnull p) {
 void testIndirectNilPassToNonnull() {
   Dummy *p = 0;
   takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
+}
+
+void testBlockIndirectNilPassToNonnull() {
+  void (^p)(void) = nil;
+  takesNonnullBlock(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
 }
 
 void testConditionalNilPassToNonnull(Dummy *p) {
