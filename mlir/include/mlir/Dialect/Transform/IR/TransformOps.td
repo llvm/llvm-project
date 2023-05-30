@@ -516,7 +516,7 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
       return getResAttrs().value_or(nullptr);
     }
   }];
-}siblings must be matched explicitly 
+}
 
 def SplitHandleOp : TransformDialectOp<"split_handle",
     [FunctionalStyleTransformOpTrait,
