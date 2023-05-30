@@ -122,14 +122,11 @@ bool IoErrorHandler::GetIoMsg(char *buffer, std::size_t bufferLength) {
 #endif
 #elif HAVE_DECL_STRERROR_S // "Windows Secure API"
   ok = ::strerror_s(buffer, bufferLength, ioStat_) == 0;
-#elif HAVE_STRERROR
+#else
   // Copy the thread un-safe result of strerror into
   // the buffer as fast as possible to minimize impact
   // of collision of strerror in multiple threads.
   msg = strerror(ioStat_);
-#else
-  // Strange that this system doesn't even have strerror
-  return false;
 #endif
   if (msg) {
     ToFortranDefaultCharacter(buffer, bufferLength, msg);
