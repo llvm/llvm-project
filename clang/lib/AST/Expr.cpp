@@ -4857,6 +4857,7 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
 
   case AO__hip_atomic_exchange:
   case AO__hip_atomic_fetch_add:
+  case AO__hip_atomic_fetch_sub:
   case AO__hip_atomic_fetch_and:
   case AO__hip_atomic_fetch_or:
   case AO__hip_atomic_fetch_xor:
