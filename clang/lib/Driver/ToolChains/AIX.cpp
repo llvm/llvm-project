@@ -409,6 +409,18 @@ void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
 }
 
+void AIX::addClangTargetOptions(
+    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadingKind) const {
+  Args.AddLastArg(CC1Args, options::OPT_mignore_xcoff_visibility);
+  Args.AddLastArg(CC1Args, options::OPT_mdefault_visibility_export_mapping_EQ);
+  Args.addOptInFlag(CC1Args, options::OPT_mxcoff_roptr, options::OPT_mno_xcoff_roptr);
+
+  if (Args.hasFlag(options::OPT_fxl_pragma_pack,
+                   options::OPT_fno_xl_pragma_pack, true))
+    CC1Args.push_back("-fxl-pragma-pack");
+}
+
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const {
   // Add linker option -u__llvm_profile_runtime to cause runtime

@@ -4,4 +4,4 @@
 
 // CHECK: "-mdefault-visibility-export-mapping=explicit"
 
-// ERROR: unsupported option '-mdefault-visibility-export-mapping=explicit' for target 'powerpc-unknown-linux'
+// ERROR: error: unsupported option '-mdefault-visibility-export-mapping=' for target 'powerpc-unknown-linux'
