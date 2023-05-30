@@ -150,7 +150,12 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     satisfies the constraints of actual types on both sides). The action symbol
     may not have results. The actions are expected to only modify payload
     operations nested in the `root` payload operations associated with the
-    operand of this transform operation.
+    operand of this transform operation. Furhermore, the actions may not modify
+    operations outside of the currently matched payload operation, e.g., they
+    may not modify sibling or parent operations. If such behavior is desired,
+    the parent must be matched first and the nested operations obtained by
+    traversing the IR from the parent. This is due to the matching being
+    performed as a post-order IR walk.
 
     This operation consumes the operand and produces a new handle associated
     with the same payload. This is necessary to trigger invalidation of handles
@@ -511,7 +516,7 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
       return getResAttrs().value_or(nullptr);
     }
   }];
-}
+}siblings must be matched explicitly 
 
 def SplitHandleOp : TransformDialectOp<"split_handle",
     [FunctionalStyleTransformOpTrait,
