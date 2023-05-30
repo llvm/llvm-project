@@ -521,7 +521,7 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
 
   // Inform the preprocessor that includes from within the input buffer should
   // be resolved relative to the build directory of the module map file.
-  CI.getPreprocessor().setMainFileDir(M->Directory);
+  CI.getPreprocessor().setMainFileDir(*M->Directory);
 
   if (auto CacheKey = CI.getCompileJobCacheKey())
     M->setModuleCacheKey(CacheKey->toString());
