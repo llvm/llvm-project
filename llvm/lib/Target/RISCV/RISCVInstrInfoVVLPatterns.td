@@ -388,6 +388,8 @@ def riscv_vwaddu_vl : SDNode<"RISCVISD::VWADDU_VL", SDT_RISCVVWBinOp_VL, [SDNPCo
 def riscv_vwsub_vl :  SDNode<"RISCVISD::VWSUB_VL",  SDT_RISCVVWBinOp_VL, []>;
 def riscv_vwsubu_vl : SDNode<"RISCVISD::VWSUBU_VL", SDT_RISCVVWBinOp_VL, []>;
 
+def riscv_vfwmul_vl : SDNode<"RISCVISD::VFWMUL_VL", SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
+
 def SDT_RISCVVNBinOp_VL : SDTypeProfile<1, 5, [SDTCisVec<0>,
                                                SDTCisSameNumEltsAs<0, 1>,
                                                SDTCisOpSmallerThanOp<0, 1>,
@@ -726,6 +728,7 @@ multiclass VPatBinaryWVL_VV_VX<SDPatternOperator vop, string instruction_name> {
     }
   }
 }
+
 multiclass VPatBinaryWVL_VV_VX_WV_WX<SDPatternOperator vop, SDNode vop_w,
                                      string instruction_name>
     : VPatBinaryWVL_VV_VX<vop, instruction_name> {
@@ -1346,6 +1349,24 @@ multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, PatFrags extop, string instru
   }
 }
 
+multiclass VPatBinaryFPWVL_VV_VF<SDNode vop, string instruction_name> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar vti = fvtiToFWti.Vti;
+    defvar wti = fvtiToFWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in {
+      defm : VPatBinaryVL_V<vop, instruction_name, "VV",
+                            wti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                            vti.Log2SEW, vti.LMul, wti.RegClass, vti.RegClass,
+                            vti.RegClass>;
+      defm : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
+                             wti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
+                             vti.LMul, wti.RegClass, vti.RegClass,
+                             vti.ScalarRegClass>;
+    }
+  }
+}
+
 multiclass VPatWidenBinaryFPVL_VV_VF<SDNode op, PatFrags extop, string instruction_name> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
@@ -1918,7 +1939,7 @@ defm : VPatBinaryFPVL_VV_VF_E<any_riscv_fdiv_vl, "PseudoVFDIV">;
 defm : VPatBinaryFPVL_R_VF_E<any_riscv_fdiv_vl, "PseudoVFRDIV">;
 
 // 13.5. Vector Widening Floating-Point Multiply Instructions
-defm : VPatWidenBinaryFPVL_VV_VF<riscv_fmul_vl, riscv_fpextend_vl_oneuse, "PseudoVFWMUL">;
+defm : VPatBinaryFPWVL_VV_VF<riscv_vfwmul_vl, "PseudoVFWMUL">;
 
 // 13.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
 defm : VPatFPMulAddVL_VV_VF<any_riscv_vfmadd_vl,  "PseudoVFMADD">;
