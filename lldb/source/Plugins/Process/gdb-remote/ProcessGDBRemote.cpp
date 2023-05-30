@@ -995,9 +995,11 @@ void ProcessGDBRemote::LoadStubBinaries() {
     if (standalone_uuid.IsValid()) {
       const bool force_symbol_search = true;
       const bool notify = true;
+      const bool set_address_in_target = true;
       DynamicLoader::LoadBinaryWithUUIDAndAddress(
           this, "", standalone_uuid, standalone_value,
-          standalone_value_is_offset, force_symbol_search, notify);
+          standalone_value_is_offset, force_symbol_search, notify,
+          set_address_in_target);
     }
   }
 
@@ -1025,10 +1027,11 @@ void ProcessGDBRemote::LoadStubBinaries() {
         continue;
 
       const bool force_symbol_search = true;
+      const bool set_address_in_target = true;
       // Second manually load this binary into the Target.
-      DynamicLoader::LoadBinaryWithUUIDAndAddress(this, llvm::StringRef(), uuid,
-                                                  addr, value_is_slide,
-                                                  force_symbol_search, notify);
+      DynamicLoader::LoadBinaryWithUUIDAndAddress(
+          this, llvm::StringRef(), uuid, addr, value_is_slide,
+          force_symbol_search, notify, set_address_in_target);
     }
   }
 }
