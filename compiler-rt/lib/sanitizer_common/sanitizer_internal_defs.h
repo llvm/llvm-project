@@ -215,6 +215,7 @@ typedef u64 tid_t;
 # define UNLIKELY(x) (x)
 # define PREFETCH(x) /* _mm_prefetch(x, _MM_HINT_NTA) */ (void)0
 # define WARN_UNUSED_RESULT
+# define UNINITIALIZED
 #else  // _MSC_VER
 # define ALWAYS_INLINE inline __attribute__((always_inline))
 # define ALIAS(x) __attribute__((alias(SANITIZER_STRINGIFY(x))))
@@ -234,6 +235,11 @@ typedef u64 tid_t;
 #  define PREFETCH(x) __builtin_prefetch(x)
 # endif
 # define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+# if __has_attribute(uninitialized)
+#  define UNINITIALIZED __attribute__((uninitialized))
+# else  // __has_attribute(uninitialized)
+#  define UNINITIALIZED
+# endif  // __has_attribute(uninitialized)
 #endif  // _MSC_VER
 
 #if !defined(_MSC_VER) || defined(__clang__)
