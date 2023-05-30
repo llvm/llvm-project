@@ -267,7 +267,7 @@ private:
   /// intrinsic (for both fixed and scalable vectors)
   NodePtr identifyDeinterleave(Instruction *Real, Instruction *Imag);
 
-  Value *replaceNode(RawNodePtr Node);
+  Value *replaceNode(IRBuilderBase &Builder, RawNodePtr Node);
 
 public:
   void dump() { dump(dbgs()); }
@@ -1011,7 +1011,8 @@ ComplexDeinterleavingGraph::identifyDeinterleave(Instruction *Real,
   return submitCompositeNode(PlaceholderNode);
 }
 
-static Value *replaceSymmetricNode(ComplexDeinterleavingGraph::RawNodePtr Node,
+static Value *replaceSymmetricNode(IRBuilderBase &B,
+                                   ComplexDeinterleavingGraph::RawNodePtr Node,
                                    Value *InputA, Value *InputB) {
   Instruction *I = Node->Real;
   if (I->isUnaryOp())
@@ -1020,8 +1021,6 @@ static Value *replaceSymmetricNode(ComplexDeinterleavingGraph::RawNodePtr Node,
   else if (I->isBinaryOp())
     assert(InputB && "Binary symmetric operations need two inputs, only one "
                      "was provided.");
-
-  IRBuilder<> B(I);
 
   switch (I->getOpcode()) {
   case Instruction::FNeg:
@@ -1037,27 +1036,28 @@ static Value *replaceSymmetricNode(ComplexDeinterleavingGraph::RawNodePtr Node,
   return nullptr;
 }
 
-Value *ComplexDeinterleavingGraph::replaceNode(
-    ComplexDeinterleavingGraph::RawNodePtr Node) {
+Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
+                                               RawNodePtr Node) {
   if (Node->ReplacementNode)
     return Node->ReplacementNode;
 
-  Value *Input0 = replaceNode(Node->Operands[0]);
-  Value *Input1 =
-      Node->Operands.size() > 1 ? replaceNode(Node->Operands[1]) : nullptr;
-  Value *Accumulator =
-      Node->Operands.size() > 2 ? replaceNode(Node->Operands[2]) : nullptr;
+  Value *Input0 = replaceNode(Builder, Node->Operands[0]);
+  Value *Input1 = Node->Operands.size() > 1
+                      ? replaceNode(Builder, Node->Operands[1])
+                      : nullptr;
+  Value *Accumulator = Node->Operands.size() > 2
+                           ? replaceNode(Builder, Node->Operands[2])
+                           : nullptr;
 
   if (Input1)
     assert(Input0->getType() == Input1->getType() &&
            "Node inputs need to be of the same type");
 
   if (Node->Operation == ComplexDeinterleavingOperation::Symmetric)
-    Node->ReplacementNode = replaceSymmetricNode(Node, Input0, Input1);
+    Node->ReplacementNode = replaceSymmetricNode(Builder, Node, Input0, Input1);
   else
     Node->ReplacementNode = TL->createComplexDeinterleavingIR(
-        Node->Real, Node->Operation, Node->Rotation, Input0, Input1,
-        Accumulator);
+        Builder, Node->Operation, Node->Rotation, Input0, Input1, Accumulator);
 
   assert(Node->ReplacementNode && "Target failed to create Intrinsic call.");
   NumComplexTransformations += 1;
@@ -1074,7 +1074,7 @@ void ComplexDeinterleavingGraph::replaceNodes() {
 
     IRBuilder<> Builder(RootInstruction);
     auto RootNode = RootToNode[RootInstruction];
-    Value *R = replaceNode(RootNode.get());
+    Value *R = replaceNode(Builder, RootNode.get());
     assert(R && "Unable to find replacement for RootInstruction");
     DeadInstrRoots.push_back(RootInstruction);
     RootInstruction->replaceAllUsesWith(R);

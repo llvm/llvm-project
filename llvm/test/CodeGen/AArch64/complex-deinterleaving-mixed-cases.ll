@@ -220,11 +220,11 @@ define <4 x float> @mul_add90_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #0
-; CHECK-NEXT:    fcmla v4.4s, v2.4s, v0.4s, #0
-; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #90
-; CHECK-NEXT:    fcmla v4.4s, v2.4s, v0.4s, #90
-; CHECK-NEXT:    fcadd v0.4s, v4.4s, v3.4s, #90
+; CHECK-NEXT:    fcmla v3.4s, v2.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v4.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v2.4s, v0.4s, #90
+; CHECK-NEXT:    fcmla v4.4s, v1.4s, v0.4s, #90
+; CHECK-NEXT:    fcadd v0.4s, v3.4s, v4.4s, #90
 ; CHECK-NEXT:    ret
 entry:
   %ar = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
