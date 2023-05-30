@@ -107,6 +107,10 @@ OPTIONS
  output stream. When enabled warnings are embedded in the linked DWARF debug
  information.
 
+.. option:: --remarks-drop-without-debug
+
+ Drop remarks without valid debug locations. Without this flags, all remarks are kept.
+
 .. option:: --remarks-output-format <format>
 
  Specify the format to be used when serializing the linked remarks.

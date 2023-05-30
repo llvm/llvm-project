@@ -10,6 +10,8 @@ add_mlir_library(MLIRTensorTestPasses
   MLIRPass
   MLIRSCFDialect
   MLIRTensorDialect
+  MLIRTensorTransformOps
   MLIRTensorTransforms
+  MLIRTransformDialect
   MLIRTransforms
   )

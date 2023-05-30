@@ -11,7 +11,6 @@ from lldbsuite.test.decorators import *
 
 
 class TestSaveCrashlog(TestBase):
-
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.
@@ -25,17 +24,17 @@ class TestSaveCrashlog(TestBase):
         self.save_crashlog()
 
     def save_crashlog(self):
-
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                   "I was called", self.main_source_file)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "I was called", self.main_source_file
+        )
 
         self.runCmd("command script import lldb.macosx.crashlog")
         out_file = os.path.join(self.getBuildDir(), "crash.log")
-        self.runCmd("save_crashlog '%s'"%(out_file))
+        self.runCmd("save_crashlog '%s'" % (out_file))
 
         # Make sure we wrote the file:
         self.assertTrue(os.path.exists(out_file), "We wrote our file")
-        
+
         # Now scan the file to make sure it looks right:
         # First get a few facts we'll use:
         exe_module = target.FindModule(target.GetExecutable())
@@ -58,9 +57,8 @@ class TestSaveCrashlog(TestBase):
                     found_main_line = True
                 if uuid_str in line and "a.out" in line:
                     found_uuid_str = True
-        
+
         self.assertTrue(found_thread_header, "Found thread header")
         self.assertTrue(found_call_me, "Found call_me line in stack")
         self.assertTrue(found_uuid_str, "Found main binary UUID")
         self.assertTrue(found_main_line, "Found main line in call stack")
-                        

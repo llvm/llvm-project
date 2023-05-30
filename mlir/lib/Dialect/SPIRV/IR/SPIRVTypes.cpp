@@ -125,23 +125,23 @@ Type CompositeType::getElementType(unsigned index) const {
 }
 
 unsigned CompositeType::getNumElements() const {
-  if (auto arrayType = dyn_cast<ArrayType>())
+  if (auto arrayType = llvm::dyn_cast<ArrayType>(*this))
     return arrayType.getNumElements();
-  if (auto matrixType = dyn_cast<MatrixType>())
+  if (auto matrixType = llvm::dyn_cast<MatrixType>(*this))
     return matrixType.getNumColumns();
-  if (auto structType = dyn_cast<StructType>())
+  if (auto structType = llvm::dyn_cast<StructType>(*this))
     return structType.getNumElements();
-  if (auto vectorType = dyn_cast<VectorType>())
+  if (auto vectorType = llvm::dyn_cast<VectorType>(*this))
     return vectorType.getNumElements();
-  if (isa<CooperativeMatrixNVType>()) {
+  if (llvm::isa<CooperativeMatrixNVType>(*this)) {
     llvm_unreachable(
         "invalid to query number of elements of spirv::CooperativeMatrix type");
   }
-  if (isa<JointMatrixINTELType>()) {
+  if (llvm::isa<JointMatrixINTELType>(*this)) {
     llvm_unreachable(
         "invalid to query number of elements of spirv::JointMatrix type");
   }
-  if (isa<RuntimeArrayType>()) {
+  if (llvm::isa<RuntimeArrayType>(*this)) {
     llvm_unreachable(
         "invalid to query number of elements of spirv::RuntimeArray type");
   }
@@ -149,8 +149,8 @@ unsigned CompositeType::getNumElements() const {
 }
 
 bool CompositeType::hasCompileTimeKnownNumElements() const {
-  return !isa<CooperativeMatrixNVType, JointMatrixINTELType,
-              RuntimeArrayType>();
+  return !llvm::isa<CooperativeMatrixNVType, JointMatrixINTELType,
+              RuntimeArrayType>(*this);
 }
 
 void CompositeType::getExtensions(
@@ -188,11 +188,11 @@ void CompositeType::getCapabilities(
 }
 
 std::optional<int64_t> CompositeType::getSizeInBytes() {
-  if (auto arrayType = dyn_cast<ArrayType>())
+  if (auto arrayType = llvm::dyn_cast<ArrayType>(*this))
     return arrayType.getSizeInBytes();
-  if (auto structType = dyn_cast<StructType>())
+  if (auto structType = llvm::dyn_cast<StructType>(*this))
     return structType.getSizeInBytes();
-  if (auto vectorType = dyn_cast<VectorType>()) {
+  if (auto vectorType = llvm::dyn_cast<VectorType>(*this)) {
     std::optional<int64_t> elementSize =
         llvm::cast<ScalarType>(vectorType.getElementType()).getSizeInBytes();
     if (!elementSize)
@@ -680,7 +680,7 @@ void ScalarType::getCapabilities(
     capabilities.push_back(ref);                                               \
   } break
 
-  if (auto intType = dyn_cast<IntegerType>()) {
+  if (auto intType = llvm::dyn_cast<IntegerType>(*this)) {
     switch (bitwidth) {
       WIDTH_CASE(Int, 8);
       WIDTH_CASE(Int, 16);
@@ -692,7 +692,7 @@ void ScalarType::getCapabilities(
       llvm_unreachable("invalid bitwidth to getCapabilities");
     }
   } else {
-    assert(isa<FloatType>());
+    assert(llvm::isa<FloatType>(*this));
     switch (bitwidth) {
       WIDTH_CASE(Float, 16);
       WIDTH_CASE(Float, 64);
@@ -735,22 +735,22 @@ bool SPIRVType::classof(Type type) {
 }
 
 bool SPIRVType::isScalarOrVector() {
-  return isIntOrFloat() || isa<VectorType>();
+  return isIntOrFloat() || llvm::isa<VectorType>(*this);
 }
 
 void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                               std::optional<StorageClass> storage) {
-  if (auto scalarType = dyn_cast<ScalarType>()) {
+  if (auto scalarType = llvm::dyn_cast<ScalarType>(*this)) {
     scalarType.getExtensions(extensions, storage);
-  } else if (auto compositeType = dyn_cast<CompositeType>()) {
+  } else if (auto compositeType = llvm::dyn_cast<CompositeType>(*this)) {
     compositeType.getExtensions(extensions, storage);
-  } else if (auto imageType = dyn_cast<ImageType>()) {
+  } else if (auto imageType = llvm::dyn_cast<ImageType>(*this)) {
     imageType.getExtensions(extensions, storage);
-  } else if (auto sampledImageType = dyn_cast<SampledImageType>()) {
+  } else if (auto sampledImageType = llvm::dyn_cast<SampledImageType>(*this)) {
     sampledImageType.getExtensions(extensions, storage);
-  } else if (auto matrixType = dyn_cast<MatrixType>()) {
+  } else if (auto matrixType = llvm::dyn_cast<MatrixType>(*this)) {
     matrixType.getExtensions(extensions, storage);
-  } else if (auto ptrType = dyn_cast<PointerType>()) {
+  } else if (auto ptrType = llvm::dyn_cast<PointerType>(*this)) {
     ptrType.getExtensions(extensions, storage);
   } else {
     llvm_unreachable("invalid SPIR-V Type to getExtensions");
@@ -760,17 +760,17 @@ void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
 void SPIRVType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
-  if (auto scalarType = dyn_cast<ScalarType>()) {
+  if (auto scalarType = llvm::dyn_cast<ScalarType>(*this)) {
     scalarType.getCapabilities(capabilities, storage);
-  } else if (auto compositeType = dyn_cast<CompositeType>()) {
+  } else if (auto compositeType = llvm::dyn_cast<CompositeType>(*this)) {
     compositeType.getCapabilities(capabilities, storage);
-  } else if (auto imageType = dyn_cast<ImageType>()) {
+  } else if (auto imageType = llvm::dyn_cast<ImageType>(*this)) {
     imageType.getCapabilities(capabilities, storage);
-  } else if (auto sampledImageType = dyn_cast<SampledImageType>()) {
+  } else if (auto sampledImageType = llvm::dyn_cast<SampledImageType>(*this)) {
     sampledImageType.getCapabilities(capabilities, storage);
-  } else if (auto matrixType = dyn_cast<MatrixType>()) {
+  } else if (auto matrixType = llvm::dyn_cast<MatrixType>(*this)) {
     matrixType.getCapabilities(capabilities, storage);
-  } else if (auto ptrType = dyn_cast<PointerType>()) {
+  } else if (auto ptrType = llvm::dyn_cast<PointerType>(*this)) {
     ptrType.getCapabilities(capabilities, storage);
   } else {
     llvm_unreachable("invalid SPIR-V Type to getCapabilities");
@@ -778,9 +778,9 @@ void SPIRVType::getCapabilities(
 }
 
 std::optional<int64_t> SPIRVType::getSizeInBytes() {
-  if (auto scalarType = dyn_cast<ScalarType>())
+  if (auto scalarType = llvm::dyn_cast<ScalarType>(*this))
     return scalarType.getSizeInBytes();
-  if (auto compositeType = dyn_cast<CompositeType>())
+  if (auto compositeType = llvm::dyn_cast<CompositeType>(*this))
     return compositeType.getSizeInBytes();
   return std::nullopt;
 }

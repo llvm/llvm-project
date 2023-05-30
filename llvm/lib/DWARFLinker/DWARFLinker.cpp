@@ -1278,13 +1278,7 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
   Attr = Loc ? static_cast<DIEValueList *>(Loc)
              : static_cast<DIEValueList *>(Block);
 
-  if (Loc)
-    Value = DIEValue(dwarf::Attribute(AttrSpec.Attr),
-                     dwarf::Form(AttrSpec.Form), Loc);
-  else
-    Value = DIEValue(dwarf::Attribute(AttrSpec.Attr),
-                     dwarf::Form(AttrSpec.Form), Block);
-
+  DWARFUnit &OrigUnit = Unit.getOrigUnit();
   // If the block is a DWARF Expression, clone it into the temporary
   // buffer using cloneExpression(), otherwise copy the data directly.
   SmallVector<uint8_t, 32> Buffer;
@@ -1292,7 +1286,6 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
   if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
-    DWARFUnit &OrigUnit = Unit.getOrigUnit();
     DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
                        IsLittleEndian, OrigUnit.getAddressByteSize());
     DWARFExpression Expr(Data, OrigUnit.getAddressByteSize(),
@@ -1313,8 +1306,24 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
   else
     Block->setSize(Bytes.size());
 
-  Die.addValue(DIEAlloc, Value);
-  return getULEB128Size(Bytes.size()) + Bytes.size();
+  if (Loc)
+    Value = DIEValue(dwarf::Attribute(AttrSpec.Attr),
+                     dwarf::Form(AttrSpec.Form), Loc);
+  else {
+    // The expression location data might be updated and exceed the original
+    // size. Check whether the new data fits into the original form.
+    if ((AttrSpec.Form == dwarf::DW_FORM_block1 &&
+         (Bytes.size() > UINT8_MAX)) ||
+        (AttrSpec.Form == dwarf::DW_FORM_block2 &&
+         (Bytes.size() > UINT16_MAX)) ||
+        (AttrSpec.Form == dwarf::DW_FORM_block4 && (Bytes.size() > UINT32_MAX)))
+      AttrSpec.Form = dwarf::DW_FORM_block;
+
+    Value = DIEValue(dwarf::Attribute(AttrSpec.Attr),
+                     dwarf::Form(AttrSpec.Form), Block);
+  }
+
+  return Die.addValue(DIEAlloc, Value)->sizeOf(OrigUnit.getFormParams());
 }
 
 unsigned DWARFLinker::DIECloner::cloneAddressAttribute(

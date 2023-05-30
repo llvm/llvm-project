@@ -3004,8 +3004,9 @@ private:
                                          SourceLocation EndLoc);
   void ParseAtomicSpecifier(DeclSpec &DS);
 
-  ExprResult ParseAlignArgument(SourceLocation Start,
-                                SourceLocation &EllipsisLoc);
+  ExprResult ParseAlignArgument(StringRef KWName, SourceLocation Start,
+                                SourceLocation &EllipsisLoc, bool &IsType,
+                                ParsedType &Ty);
   void ParseAlignmentSpecifier(ParsedAttributes &Attrs,
                                SourceLocation *endLoc = nullptr);
   ExprResult ParseExtIntegerArgument();

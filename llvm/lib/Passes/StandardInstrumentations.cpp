@@ -96,15 +96,29 @@ static cl::opt<std::string> DotCfgDir(
     cl::desc("Generate dot files into specified directory for changed IRs"),
     cl::Hidden, cl::init("./"));
 
-// An option to print the IR that was being processed when a pass crashes.
-static cl::opt<bool>
-    PrintCrashIR("print-on-crash",
-                 cl::desc("Print the last form of the IR before crash"),
-                 cl::Hidden);
+// Options to print the IR that was being processed when a pass crashes.
+static cl::opt<std::string> PrintOnCrashPath(
+    "print-on-crash-path",
+    cl::desc("Print the last form of the IR before crash to a file"),
+    cl::Hidden);
+
+static cl::opt<bool> PrintOnCrash(
+    "print-on-crash",
+    cl::desc("Print the last form of the IR before crash (use -print-on-crash-path to dump to a file)"),
+    cl::Hidden);
 
 static cl::opt<std::string> OptBisectPrintIRPath(
     "opt-bisect-print-ir-path",
     cl::desc("Print IR to path when opt-bisect-limit is reached"), cl::Hidden);
+
+static cl::opt<bool> PrintPassNumbers(
+    "print-pass-numbers", cl::init(false), cl::Hidden,
+    cl::desc("Print pass names and their ordinals"));
+
+static cl::opt<unsigned>
+    PrintAtPassNumber("print-at-pass-number", cl::init(0), cl::Hidden,
+                cl::desc("Print IR at pass with this number as "
+                         "reported by print-passes-names"));
 
 namespace {
 
@@ -691,13 +705,19 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   // Note: here we rely on a fact that we do not change modules while
   // traversing the pipeline, so the latest captured module is good
   // for all print operations that has not happen yet.
-  if (shouldPrintAfterPass(PassID))
+  if (shouldPrintPassNumbers() || shouldPrintAtPassNumber() ||
+      shouldPrintAfterPass(PassID))
     pushModuleDesc(PassID, IR);
 
-  if (!shouldPrintBeforePass(PassID))
+  if (!shouldPrintIR(IR))
     return;
 
-  if (!shouldPrintIR(IR))
+  ++CurrentPassNumber;
+
+  if (shouldPrintPassNumbers())
+    dbgs() << " Running pass " << CurrentPassNumber << " " << PassID << "\n";   
+
+  if (!shouldPrintBeforePass(PassID))
     return;
 
   dbgs() << "*** IR Dump Before " << PassID << " on " << getIRName(IR)
@@ -709,7 +729,8 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
   if (isIgnored(PassID))
     return;
 
-  if (!shouldPrintAfterPass(PassID))
+  if (!shouldPrintAfterPass(PassID) && !shouldPrintPassNumbers() &&
+      !shouldPrintAtPassNumber())
     return;
 
   const Module *M;
@@ -718,18 +739,23 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
   std::tie(M, IRName, StoredPassID) = popModuleDesc(PassID);
   assert(StoredPassID == PassID && "mismatched PassID");
 
-  if (!shouldPrintIR(IR))
+  if (!shouldPrintIR(IR) || !shouldPrintAfterPass(PassID))
     return;
 
-  dbgs() << "*** IR Dump After " << PassID << " on " << IRName << " ***\n";
+  dbgs() << "*** IR Dump "
+         << (shouldPrintAtPassNumber()
+                 ? StringRef(formatv("At {0}-{1}", CurrentPassNumber, PassID))
+                 : StringRef(formatv("After {0}", PassID)))
+         << " on " << IRName << " ***\n";
   unwrapAndPrint(dbgs(), IR);
 }
 
 void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
-  if (!shouldPrintAfterPass(PassID))
+  if (isIgnored(PassID))
     return;
 
-  if (isIgnored(PassID))
+  if (!shouldPrintAfterPass(PassID) && !shouldPrintPassNumbers() &&
+      !shouldPrintAtPassNumber())
     return;
 
   const Module *M;
@@ -739,11 +765,16 @@ void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
   assert(StoredPassID == PassID && "mismatched PassID");
   // Additional filtering (e.g. -filter-print-func) can lead to module
   // printing being skipped.
-  if (!M)
+  if (!M || !shouldPrintAfterPass(PassID))
     return;
 
-  SmallString<20> Banner =
-      formatv("*** IR Dump After {0} on {1} (invalidated) ***", PassID, IRName);
+  SmallString<20> Banner;
+  if (shouldPrintAtPassNumber())
+    Banner = formatv("*** IR Dump At {0}-{1} on {2} (invalidated) ***",
+                     CurrentPassNumber, PassID, IRName);
+  else 
+    Banner = formatv("*** IR Dump After {0} on {1} (invalidated) ***", 
+                     PassID, IRName);
   dbgs() << Banner << "\n";
   printIR(dbgs(), M);
 }
@@ -760,8 +791,19 @@ bool PrintIRInstrumentation::shouldPrintAfterPass(StringRef PassID) {
   if (shouldPrintAfterAll())
     return true;
 
+  if (shouldPrintAtPassNumber() && CurrentPassNumber == PrintAtPassNumber)
+    return true;
+
   StringRef PassName = PIC->getPassNameForClassName(PassID);
   return is_contained(printAfterPasses(), PassName);
+}
+
+bool PrintIRInstrumentation::shouldPrintPassNumbers() {
+  return PrintPassNumbers;
+}
+
+bool PrintIRInstrumentation::shouldPrintAtPassNumber() {
+  return PrintAtPassNumber > 0;
 }
 
 void PrintIRInstrumentation::registerCallbacks(
@@ -770,11 +812,13 @@ void PrintIRInstrumentation::registerCallbacks(
 
   // BeforePass callback is not just for printing, it also saves a Module
   // for later use in AfterPassInvalidated.
-  if (shouldPrintBeforeSomePass() || shouldPrintAfterSomePass())
+  if (shouldPrintPassNumbers() || shouldPrintAtPassNumber() ||
+      shouldPrintBeforeSomePass() || shouldPrintAfterSomePass())
     PIC.registerBeforeNonSkippedPassCallback(
         [this](StringRef P, Any IR) { this->printBeforePass(P, IR); });
 
-  if (shouldPrintAfterSomePass()) {
+  if (shouldPrintPassNumbers() || shouldPrintAtPassNumber() ||
+      shouldPrintAfterSomePass()) {
     PIC.registerAfterPassCallback(
         [this](StringRef P, Any IR, const PreservedAnalyses &) {
           this->printAfterPass(P, IR);
@@ -2186,7 +2230,17 @@ StandardInstrumentations::StandardInstrumentations(
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
 
-void PrintCrashIRInstrumentation::reportCrashIR() { dbgs() << SavedIR; }
+void PrintCrashIRInstrumentation::reportCrashIR() {
+  if (!PrintOnCrashPath.empty()) {
+    std::error_code EC;
+    raw_fd_ostream Out(PrintOnCrashPath, EC);
+    if (EC)
+      report_fatal_error(errorCodeToError(EC));
+    Out << SavedIR;
+  } else {
+    dbgs() << SavedIR;
+  }
+}
 
 void PrintCrashIRInstrumentation::SignalHandler(void *) {
   // Called by signal handlers so do not lock here
@@ -2194,7 +2248,8 @@ void PrintCrashIRInstrumentation::SignalHandler(void *) {
   if (!CrashReporter)
     return;
 
-  assert(PrintCrashIR && "Did not expect to get here without option set.");
+  assert((PrintOnCrash || !PrintOnCrashPath.empty()) &&
+         "Did not expect to get here without option set.");
   CrashReporter->reportCrashIR();
 }
 
@@ -2202,31 +2257,32 @@ PrintCrashIRInstrumentation::~PrintCrashIRInstrumentation() {
   if (!CrashReporter)
     return;
 
-  assert(PrintCrashIR && "Did not expect to get here without option set.");
+  assert((PrintOnCrash || !PrintOnCrashPath.empty()) &&
+         "Did not expect to get here without option set.");
   CrashReporter = nullptr;
 }
 
 void PrintCrashIRInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  if (!PrintCrashIR || CrashReporter)
+  if ((!PrintOnCrash && PrintOnCrashPath.empty()) || CrashReporter)
     return;
 
   sys::AddSignalHandler(SignalHandler, nullptr);
   CrashReporter = this;
 
-  PIC.registerBeforeNonSkippedPassCallback([&PIC, this](StringRef PassID,
-                                                        Any IR) {
-    SavedIR.clear();
-    raw_string_ostream OS(SavedIR);
-    OS << formatv("*** Dump of {0}IR Before Last Pass {1}",
-                  llvm::forcePrintModuleIR() ? "Module " : "", PassID);
-    if (!isInteresting(IR, PassID, PIC.getPassNameForClassName(PassID))) {
-      OS << " Filtered Out ***\n";
-      return;
-    }
-    OS << " Started ***\n";
-    unwrapAndPrint(OS, IR);
-  });
+  PIC.registerBeforeNonSkippedPassCallback(
+      [&PIC, this](StringRef PassID, Any IR) {
+        SavedIR.clear();
+        raw_string_ostream OS(SavedIR);
+        OS << formatv("*** Dump of {0}IR Before Last Pass {1}",
+                      llvm::forcePrintModuleIR() ? "Module " : "", PassID);
+        if (!isInteresting(IR, PassID, PIC.getPassNameForClassName(PassID))) {
+          OS << " Filtered Out ***\n";
+          return;
+        }
+        OS << " Started ***\n";
+        unwrapAndPrint(OS, IR);
+      });
 }
 
 void StandardInstrumentations::registerCallbacks(

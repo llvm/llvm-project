@@ -347,14 +347,14 @@ BlockRange::BlockRange(SuccessorRange successors)
 
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 BlockRange::OwnerT BlockRange::offset_base(OwnerT object, ptrdiff_t index) {
-  if (auto *operand = object.dyn_cast<BlockOperand *>())
+  if (auto *operand = llvm::dyn_cast_if_present<BlockOperand *>(object))
     return {operand + index};
-  return {object.dyn_cast<Block *const *>() + index};
+  return {llvm::dyn_cast_if_present<Block *const *>(object) + index};
 }
 
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Block *BlockRange::dereference_iterator(OwnerT object, ptrdiff_t index) {
-  if (const auto *operand = object.dyn_cast<BlockOperand *>())
+  if (const auto *operand = llvm::dyn_cast_if_present<BlockOperand *>(object))
     return operand[index].get();
-  return object.dyn_cast<Block *const *>()[index];
+  return llvm::dyn_cast_if_present<Block *const *>(object)[index];
 }

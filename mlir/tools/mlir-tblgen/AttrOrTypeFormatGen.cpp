@@ -259,7 +259,7 @@ static void genAttrSelfTypeParser(MethodBody &os, const FmtContext &ctx,
   // $1: The self type parameter name.
   const char *const selfTypeParser = R"(
 if ($_type) {
-  if (auto reqType = $_type.dyn_cast<$0>()) {
+  if (auto reqType = ::llvm::dyn_cast<$0>($_type)) {
     _result_$1 = reqType;
   } else {
     $_parser.emitError($_loc, "invalid kind of type specified");

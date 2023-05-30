@@ -88,45 +88,45 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  if (isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
-          Float8E4M3FNUZType, Float8E4M3B11FNUZType>())
+  if (llvm::isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType>(*this))
     return 8;
-  if (isa<Float16Type, BFloat16Type>())
+  if (llvm::isa<Float16Type, BFloat16Type>(*this))
     return 16;
-  if (isa<Float32Type>())
+  if (llvm::isa<Float32Type>(*this))
     return 32;
-  if (isa<Float64Type>())
+  if (llvm::isa<Float64Type>(*this))
     return 64;
-  if (isa<Float80Type>())
+  if (llvm::isa<Float80Type>(*this))
     return 80;
-  if (isa<Float128Type>())
+  if (llvm::isa<Float128Type>(*this))
     return 128;
   llvm_unreachable("unexpected float type");
 }
 
 /// Returns the floating semantics for the given type.
 const llvm::fltSemantics &FloatType::getFloatSemantics() {
-  if (isa<Float8E5M2Type>())
+  if (llvm::isa<Float8E5M2Type>(*this))
     return APFloat::Float8E5M2();
-  if (isa<Float8E4M3FNType>())
+  if (llvm::isa<Float8E4M3FNType>(*this))
     return APFloat::Float8E4M3FN();
-  if (isa<Float8E5M2FNUZType>())
+  if (llvm::isa<Float8E5M2FNUZType>(*this))
     return APFloat::Float8E5M2FNUZ();
-  if (isa<Float8E4M3FNUZType>())
+  if (llvm::isa<Float8E4M3FNUZType>(*this))
     return APFloat::Float8E4M3FNUZ();
-  if (isa<Float8E4M3B11FNUZType>())
+  if (llvm::isa<Float8E4M3B11FNUZType>(*this))
     return APFloat::Float8E4M3B11FNUZ();
-  if (isa<BFloat16Type>())
+  if (llvm::isa<BFloat16Type>(*this))
     return APFloat::BFloat();
-  if (isa<Float16Type>())
+  if (llvm::isa<Float16Type>(*this))
     return APFloat::IEEEhalf();
-  if (isa<Float32Type>())
+  if (llvm::isa<Float32Type>(*this))
     return APFloat::IEEEsingle();
-  if (isa<Float64Type>())
+  if (llvm::isa<Float64Type>(*this))
     return APFloat::IEEEdouble();
-  if (isa<Float80Type>())
+  if (llvm::isa<Float80Type>(*this))
     return APFloat::x87DoubleExtended();
-  if (isa<Float128Type>())
+  if (llvm::isa<Float128Type>(*this))
     return APFloat::IEEEquad();
   llvm_unreachable("non-floating point type used");
 }
@@ -269,21 +269,21 @@ Type TensorType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool TensorType::hasRank() const { return !isa<UnrankedTensorType>(); }
+bool TensorType::hasRank() const { return !llvm::isa<UnrankedTensorType>(*this); }
 
 ArrayRef<int64_t> TensorType::getShape() const {
-  return cast<RankedTensorType>().getShape();
+  return llvm::cast<RankedTensorType>(*this).getShape();
 }
 
 TensorType TensorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
-  if (auto unrankedTy = dyn_cast<UnrankedTensorType>()) {
+  if (auto unrankedTy = llvm::dyn_cast<UnrankedTensorType>(*this)) {
     if (shape)
       return RankedTensorType::get(*shape, elementType);
     return UnrankedTensorType::get(elementType);
   }
 
-  auto rankedTy = cast<RankedTensorType>();
+  auto rankedTy = llvm::cast<RankedTensorType>(*this);
   if (!shape)
     return RankedTensorType::get(rankedTy.getShape(), elementType,
                                  rankedTy.getEncoding());
@@ -356,15 +356,15 @@ Type BaseMemRefType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool BaseMemRefType::hasRank() const { return !isa<UnrankedMemRefType>(); }
+bool BaseMemRefType::hasRank() const { return !llvm::isa<UnrankedMemRefType>(*this); }
 
 ArrayRef<int64_t> BaseMemRefType::getShape() const {
-  return cast<MemRefType>().getShape();
+  return llvm::cast<MemRefType>(*this).getShape();
 }
 
 BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                          Type elementType) const {
-  if (auto unrankedTy = dyn_cast<UnrankedMemRefType>()) {
+  if (auto unrankedTy = llvm::dyn_cast<UnrankedMemRefType>(*this)) {
     if (!shape)
       return UnrankedMemRefType::get(elementType, getMemorySpace());
     MemRefType::Builder builder(*shape, elementType);
@@ -372,7 +372,7 @@ BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
     return builder;
   }
 
-  MemRefType::Builder builder(cast<MemRefType>());
+  MemRefType::Builder builder(llvm::cast<MemRefType>(*this));
   if (shape)
     builder.setShape(*shape);
   builder.setElementType(elementType);
@@ -389,15 +389,15 @@ MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape) const {
 }
 
 Attribute BaseMemRefType::getMemorySpace() const {
-  if (auto rankedMemRefTy = dyn_cast<MemRefType>())
+  if (auto rankedMemRefTy = llvm::dyn_cast<MemRefType>(*this))
     return rankedMemRefTy.getMemorySpace();
-  return cast<UnrankedMemRefType>().getMemorySpace();
+  return llvm::cast<UnrankedMemRefType>(*this).getMemorySpace();
 }
 
 unsigned BaseMemRefType::getMemorySpaceAsInt() const {
-  if (auto rankedMemRefTy = dyn_cast<MemRefType>())
+  if (auto rankedMemRefTy = llvm::dyn_cast<MemRefType>(*this))
     return rankedMemRefTy.getMemorySpaceAsInt();
-  return cast<UnrankedMemRefType>().getMemorySpaceAsInt();
+  return llvm::cast<UnrankedMemRefType>(*this).getMemorySpaceAsInt();
 }
 
 //===----------------------------------------------------------------------===//

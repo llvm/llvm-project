@@ -283,8 +283,7 @@ define void @v2i8_volatile_load(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    lh a0, 0(a0)
-; CHECK-NEXT:    sh a0, 0(a1)
+; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
   %v = load volatile <2 x i8>, ptr %p
   store <2 x i8> %v, ptr %q
@@ -294,8 +293,9 @@ define void @v2i8_volatile_load(ptr %p, ptr %q) {
 define void @v2i8_volatile_store(ptr %p, ptr %q) {
 ; CHECK-LABEL: v2i8_volatile_store:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a0, 0(a0)
-; CHECK-NEXT:    sh a0, 0(a1)
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
   %v = load <2 x i8>, ptr %p
   store volatile <2 x i8> %v, ptr %q

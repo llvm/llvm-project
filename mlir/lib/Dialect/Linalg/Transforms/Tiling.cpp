@@ -48,7 +48,7 @@ using namespace mlir::scf;
 static bool isZero(OpFoldResult v) {
   if (!v)
     return false;
-  if (auto attr = v.dyn_cast<Attribute>()) {
+  if (auto attr = llvm::dyn_cast_if_present<Attribute>(v)) {
     IntegerAttr intAttr = dyn_cast<IntegerAttr>(attr);
     return intAttr && intAttr.getValue().isZero();
   }
@@ -104,7 +104,7 @@ void mlir::linalg::transformIndexOps(
 /// checked at runtime.
 static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
                                          OpFoldResult value) {
-  if (auto attr = value.dyn_cast<Attribute>()) {
+  if (auto attr = llvm::dyn_cast_if_present<Attribute>(value)) {
     assert(cast<IntegerAttr>(attr).getValue().isStrictlyPositive() &&
            "expected strictly positive tile size and divisor");
     return;

@@ -27,7 +27,7 @@ def Tosa_Dialect : Dialect {
     The Tensor Operator Set Architecture (TOSA) dialect.
 
     This dialect implements the TOSA standard described at
-    https://developer.mlplatform.org/w/tosa/ .
+    https://www.mlplatform.org/tosa/tosa_spec.html .
 
     Tensor Operator Set Architecture (TOSA) provides a set of whole-tensor
     operations commonly employed by Deep Neural Networks. The intent is to
@@ -213,6 +213,20 @@ def Tosa_ExplicitValuePadOpQuantInfoBuilder : OpBuilder<
 
 class Tosa_Op<string mnemonic, list<Trait> traits = []> :
     Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface])> {
+}
+
+class Tosa_ElemWiseUnaryOp<string mnemonic, list<Trait> traits = []> :
+    Tosa_Op<mnemonic, !listconcat(traits, [
+              DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                                        ["inferReturnTypeComponents"]>,
+              Pure, SameOperandsAndResultElementType])> {
+}
+
+class Tosa_ElemWiseBinaryOp<string mnemonic, list<Trait> traits = []> :
+    Tosa_Op<mnemonic, !listconcat(traits, [
+              DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                                        ["inferReturnTypeComponents"]>,
+              ResultsBroadcastableShape, Pure, SameOperandsAndResultElementType])> {
 }
 
 #endif // TOSA_OP_BASE

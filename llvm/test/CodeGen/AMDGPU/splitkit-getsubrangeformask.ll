@@ -218,7 +218,7 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM undef %488:sreg_64, 0, 0 :: (invariant load (s32) from `ptr addrspace(4) undef`, addrspace 4)
   ; CHECK-NEXT:   KILL %411.sub0, %411.sub1
   ; CHECK-NEXT:   KILL undef %488:sreg_64
-  ; CHECK-NEXT:   KILL [[COPY15]].sub0_sub1, [[COPY15]].sub2_sub3
+  ; CHECK-NEXT:   KILL [[COPY15]].sub0_sub1_sub2, [[COPY15]].sub3
   ; CHECK-NEXT:   [[S_LSHL_B32_8:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY12]], 3, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM24:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM %425, 0, 0 :: (invariant load (s128) from %ir.261, addrspace 4)
   ; CHECK-NEXT:   [[S_ASHR_I32_8:%[0-9]+]]:sreg_32_xm0 = S_ASHR_I32 [[S_LSHL_B32_8]], 31, implicit-def dead $scc

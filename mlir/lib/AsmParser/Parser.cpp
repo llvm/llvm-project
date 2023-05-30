@@ -2060,7 +2060,7 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   if (parseToken(Token::r_paren, "expected ')' in location"))
     return failure();
 
-  if (auto *op = opOrArgument.dyn_cast<Operation *>())
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(opOrArgument))
     op->setLoc(directLoc);
   else
     opOrArgument.get<BlockArgument>().setLoc(directLoc);

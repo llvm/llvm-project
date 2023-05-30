@@ -551,7 +551,7 @@ struct SymbolScope {
                 typename llvm::function_traits<CallbackT>::result_t,
                 void>::value> * = nullptr>
   std::optional<WalkResult> walk(CallbackT cback) {
-    if (Region *region = limit.dyn_cast<Region *>())
+    if (Region *region = llvm::dyn_cast_if_present<Region *>(limit))
       return walkSymbolUses(*region, cback);
     return walkSymbolUses(limit.get<Operation *>(), cback);
   }
@@ -571,7 +571,7 @@ struct SymbolScope {
   /// traversing into any nested symbol tables.
   template <typename CallbackT>
   std::optional<WalkResult> walkSymbolTable(CallbackT &&cback) {
-    if (Region *region = limit.dyn_cast<Region *>())
+    if (Region *region = llvm::dyn_cast_if_present<Region *>(limit))
       return ::walkSymbolTable(*region, cback);
     return ::walkSymbolTable(limit.get<Operation *>(), cback);
   }

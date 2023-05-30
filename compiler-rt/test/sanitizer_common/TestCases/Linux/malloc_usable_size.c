@@ -17,12 +17,14 @@ int main() {
   int size = 1;
   p = malloc(size);
   assert(__sanitizer_get_allocated_size(p) == size);
+  assert(__sanitizer_get_allocated_size_fast(p) == size);
   assert(malloc_usable_size(p) == size);
   free(p);
 
   size = 1234567;
   p = malloc(size);
   assert(__sanitizer_get_allocated_size(p) == size);
+  assert(__sanitizer_get_allocated_size_fast(p) == size);
   assert(malloc_usable_size(p) == size);
   free(p);
   return 0;

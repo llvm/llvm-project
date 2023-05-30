@@ -6640,7 +6640,7 @@ class alignas(8) TypeSourceInfo {
 
   QualType Ty;
 
-  TypeSourceInfo(QualType ty) : Ty(ty) {}
+  TypeSourceInfo(QualType ty, size_t DataSize); // implemented in TypeLoc.h
 
 public:
   /// Return the type wrapped by this type source info.

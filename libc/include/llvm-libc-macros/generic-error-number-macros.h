@@ -43,5 +43,6 @@
 #define EPIPE 32
 #define EDOM 33
 #define ERANGE 34
+#define EILSEQ 35
 
 #endif // __LLVM_LIBC_MACROS_GENERIC_ERROR_NUMBER_MACROS_H

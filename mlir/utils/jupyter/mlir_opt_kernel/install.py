@@ -10,12 +10,11 @@ from jupyter_client.kernelspec import KernelSpecManager
 
 def install_my_kernel_spec(user=True, prefix=None):
     """Install the kernel spec for user in given prefix."""
-    print('Installing mlir-opt IPython kernel spec')
+    print("Installing mlir-opt IPython kernel spec")
     pkgroot = os.path.dirname(__file__)
-    KernelSpecManager().install_kernel_spec(os.path.join(pkgroot, 'assets'),
-                                            'mlir',
-                                            user=user,
-                                            prefix=prefix)
+    KernelSpecManager().install_kernel_spec(
+        os.path.join(pkgroot, "assets"), "mlir", user=user, prefix=prefix
+    )
 
 
 def _is_root():
@@ -29,15 +28,16 @@ def _is_root():
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description='Install KernelSpec for MlirOpt Kernel')
+        description="Install KernelSpec for MlirOpt Kernel"
+    )
     prefix_locations = parser.add_mutually_exclusive_group()
 
-    prefix_locations.add_argument('--user',
-                                  help='Install in user home directory',
-                                  action='store_true')
-    prefix_locations.add_argument('--prefix',
-                                  help='Install directory prefix',
-                                  default=None)
+    prefix_locations.add_argument(
+        "--user", help="Install in user home directory", action="store_true"
+    )
+    prefix_locations.add_argument(
+        "--prefix", help="Install directory prefix", default=None
+    )
 
     args = parser.parse_args(argv)
 
@@ -47,5 +47,5 @@ def main(argv=None):
     install_my_kernel_spec(user=user, prefix=prefix)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

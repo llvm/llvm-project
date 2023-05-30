@@ -132,6 +132,18 @@ def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
+class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
+                          list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
+        NVPTXInst<(outs), (ins), "barrier.cluster."# variant #";", [(Intr)]>,
+        Requires<Preds>;
+
+def barrier_cluster_arrive:
+        INT_BARRIER_CLUSTER<"arrive", int_nvvm_barrier_cluster_arrive>;
+def barrier_cluster_arrive_relaxed:
+        INT_BARRIER_CLUSTER<"arrive.relaxed",
+        int_nvvm_barrier_cluster_arrive_relaxed, [hasPTX<80>, hasSM<90>]>;
+def barrier_cluster_wait:
+        INT_BARRIER_CLUSTER<"wait", int_nvvm_barrier_cluster_wait>;
 
 class SHFL_INSTR<bit sync, string mode, string reg, bit return_pred,
                  bit offset_imm, bit mask_imm, bit threadmask_imm>
@@ -303,6 +315,9 @@ def INT_MEMBAR_CTA : MEMBAR<"membar.cta;", int_nvvm_membar_cta>;
 def INT_MEMBAR_GL  : MEMBAR<"membar.gl;",  int_nvvm_membar_gl>;
 def INT_MEMBAR_SYS : MEMBAR<"membar.sys;", int_nvvm_membar_sys>;
 
+def INT_FENCE_SC_CLUSTER:
+       MEMBAR<"fence.sc.cluster;", int_nvvm_fence_sc_cluster>,
+       Requires<[hasPTX<78>, hasSM<90>]>;
 
 //-----------------------------------
 // Async Copy Functions
@@ -2480,41 +2495,24 @@ def INT_NVVM_COMPILER_ERROR_64 : NVPTXInst<(outs), (ins Int64Regs:$a),
 
 // isspacep
 
-def ISSPACEP_CONST_32
-  : NVPTXInst<(outs Int1Regs:$d), (ins Int32Regs:$a),
-              "isspacep.const \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_isspacep_const Int32Regs:$a))]>,
-    Requires<[hasPTX<31>]>;
-def ISSPACEP_CONST_64
-  : NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
-              "isspacep.const \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_isspacep_const Int64Regs:$a))]>,
-    Requires<[hasPTX<31>]>;
-def ISSPACEP_GLOBAL_32
-  : NVPTXInst<(outs Int1Regs:$d), (ins Int32Regs:$a),
-              "isspacep.global \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_isspacep_global Int32Regs:$a))]>;
-def ISSPACEP_GLOBAL_64
-  : NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
-              "isspacep.global \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_isspacep_global Int64Regs:$a))]>;
-def ISSPACEP_LOCAL_32
-  : NVPTXInst<(outs Int1Regs:$d), (ins Int32Regs:$a),
-              "isspacep.local \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_isspacep_local Int32Regs:$a))]>;
-def ISSPACEP_LOCAL_64
-  : NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
-              "isspacep.local \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_isspacep_local Int64Regs:$a))]>;
-def ISSPACEP_SHARED_32
-  : NVPTXInst<(outs Int1Regs:$d), (ins Int32Regs:$a),
-              "isspacep.shared \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_isspacep_shared Int32Regs:$a))]>;
-def ISSPACEP_SHARED_64
-  : NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
-              "isspacep.shared \t$d, $a;",
-              [(set Int1Regs:$d, (int_nvvm_isspacep_shared Int64Regs:$a))]>;
+multiclass ISSPACEP<string suffix, Intrinsic Intr, list<Predicate> Preds = []> {
+  def _32: NVPTXInst<(outs Int1Regs:$d), (ins Int32Regs:$a),
+              "isspacep." # suffix # "\t$d, $a;",
+              [(set Int1Regs:$d, (Intr Int32Regs:$a))]>,
+    Requires<Preds>;
+  def _64: NVPTXInst<(outs Int1Regs:$d), (ins Int64Regs:$a),
+              "isspacep." # suffix # "\t$d, $a;",
+              [(set Int1Regs:$d, (Intr Int64Regs:$a))]>,
+    Requires<Preds>;
+}
 
+defm isspace_const  : ISSPACEP<"const", int_nvvm_isspacep_const, [hasPTX<31>]>;
+defm isspace_global : ISSPACEP<"global", int_nvvm_isspacep_global>;
+defm isspace_local  : ISSPACEP<"local", int_nvvm_isspacep_local>;
+defm isspace_shared : ISSPACEP<"shared", int_nvvm_isspacep_shared>;
+defm isspace_shared_cluster : ISSPACEP<"shared::cluster",
+                                       int_nvvm_isspacep_shared_cluster,
+                                       [hasPTX<78>, hasSM<90>]>;
 
 // Special register reads
 def MOV_SPECIAL : NVPTXInst<(outs Int32Regs:$d),
@@ -6213,35 +6211,51 @@ def : Pat<(int_nvvm_sust_p_3d_v4i32_trap
 // Read Special Registers
 //-----------------------------------
 
-class PTX_READ_SREG_R64<string regname, Intrinsic intop>
+class PTX_READ_SREG_R64<string regname, Intrinsic intop, list<Predicate> Preds=[]>
   : NVPTXInst<(outs Int64Regs:$d), (ins),
               !strconcat("mov.u64 \t$d, %", regname, ";"),
-              [(set Int64Regs:$d, (intop))]>;
+              [(set Int64Regs:$d, (intop))]>,
+    Requires<Preds>;
 
-class PTX_READ_SREG_R32<string regname, Intrinsic intop>
+class PTX_READ_SREG_R32<string regname, Intrinsic intop, list<Predicate> Preds=[]>
   : NVPTXInst<(outs Int32Regs:$d), (ins),
               !strconcat("mov.u32 \t$d, %", regname, ";"),
-              [(set Int32Regs:$d, (intop))]>;
+              [(set Int32Regs:$d, (intop))]>,
+    Requires<Preds>;
+
+multiclass PTX_READ_SREG_R32V4<string regname, list<Predicate> Preds=[]> {
+   foreach suffix = ["x", "y", "z", "w"] in {
+      defvar reg = regname # "." # suffix;
+      defvar intr = !cast<Intrinsic>("int_nvvm_read_ptx_sreg_" # regname # "_" # suffix);
+      def "_"#suffix :  PTX_READ_SREG_R32<reg, intr, Preds>;
+   }
+}
 
 // TODO Add read vector-version of special registers
 
-def INT_PTX_SREG_TID_X :
-    PTX_READ_SREG_R32<"tid.x", int_nvvm_read_ptx_sreg_tid_x>;
-def INT_PTX_SREG_TID_Y :
-    PTX_READ_SREG_R32<"tid.y", int_nvvm_read_ptx_sreg_tid_y>;
-def INT_PTX_SREG_TID_Z :
-    PTX_READ_SREG_R32<"tid.z", int_nvvm_read_ptx_sreg_tid_z>;
-def INT_PTX_SREG_TID_W :
-    PTX_READ_SREG_R32<"tid.w", int_nvvm_read_ptx_sreg_tid_w>;
+defm INT_PTX_SREG_TID   : PTX_READ_SREG_R32V4<"tid">;
+defm INT_PTX_SREG_NTID  : PTX_READ_SREG_R32V4<"ntid">;
+defm INT_PTX_SREG_CTAID : PTX_READ_SREG_R32V4<"ctaid">;
+defm INT_PTX_SREG_NCTAID: PTX_READ_SREG_R32V4<"nctaid">;
 
-def INT_PTX_SREG_NTID_X :
-    PTX_READ_SREG_R32<"ntid.x", int_nvvm_read_ptx_sreg_ntid_x>;
-def INT_PTX_SREG_NTID_Y :
-    PTX_READ_SREG_R32<"ntid.y", int_nvvm_read_ptx_sreg_ntid_y>;
-def INT_PTX_SREG_NTID_Z :
-    PTX_READ_SREG_R32<"ntid.z", int_nvvm_read_ptx_sreg_ntid_z>;
-def INT_PTX_SREG_NTID_W :
-    PTX_READ_SREG_R32<"ntid.w", int_nvvm_read_ptx_sreg_ntid_w>;
+defm INT_PTX_SREG_CLUSTERID :
+       PTX_READ_SREG_R32V4<"clusterid", [hasSM<90>, hasPTX<78>]>;
+defm INT_PTX_SREG_NCLUSTERID :
+       PTX_READ_SREG_R32V4<"nclusterid", [hasSM<90>, hasPTX<78>]>;
+defm INT_PTX_SREG_CLUSTER_CTAID :
+       PTX_READ_SREG_R32V4<"cluster_ctaid", [hasSM<90>, hasPTX<78>]>;
+defm INT_PTX_SREG_CLUSTER_NCTAID:
+       PTX_READ_SREG_R32V4<"cluster_nctaid", [hasSM<90>, hasPTX<78>]>;
+
+def  INT_PTX_SREG_CLUSTER_CTARANK :
+       PTX_READ_SREG_R32<"cluster_ctarank",
+                         int_nvvm_read_ptx_sreg_cluster_ctarank,
+                         [hasSM<90>, hasPTX<78>]>;
+def  INT_PTX_SREG_CLUSTER_NCTARANK:
+       PTX_READ_SREG_R32<"cluster_nctarank",
+                         int_nvvm_read_ptx_sreg_cluster_nctarank,
+                         [hasSM<90>, hasPTX<78>]>;
+
 
 def INT_PTX_SREG_LANEID :
     PTX_READ_SREG_R32<"laneid", int_nvvm_read_ptx_sreg_laneid>;
@@ -6249,25 +6263,6 @@ def INT_PTX_SREG_WARPID :
     PTX_READ_SREG_R32<"warpid", int_nvvm_read_ptx_sreg_warpid>;
 def INT_PTX_SREG_NWARPID :
     PTX_READ_SREG_R32<"nwarpid", int_nvvm_read_ptx_sreg_nwarpid>;
-
-def INT_PTX_SREG_CTAID_X :
-    PTX_READ_SREG_R32<"ctaid.x", int_nvvm_read_ptx_sreg_ctaid_x>;
-def INT_PTX_SREG_CTAID_Y :
-    PTX_READ_SREG_R32<"ctaid.y", int_nvvm_read_ptx_sreg_ctaid_y>;
-def INT_PTX_SREG_CTAID_Z :
-    PTX_READ_SREG_R32<"ctaid.z", int_nvvm_read_ptx_sreg_ctaid_z>;
-def INT_PTX_SREG_CTAID_W :
-    PTX_READ_SREG_R32<"ctaid.w", int_nvvm_read_ptx_sreg_ctaid_w>;
-
-def INT_PTX_SREG_NCTAID_X :
-    PTX_READ_SREG_R32<"nctaid.x", int_nvvm_read_ptx_sreg_nctaid_x>;
-def INT_PTX_SREG_NCTAID_Y :
-    PTX_READ_SREG_R32<"nctaid.y", int_nvvm_read_ptx_sreg_nctaid_y>;
-def INT_PTX_SREG_NCTAID_Z :
-    PTX_READ_SREG_R32<"nctaid.z", int_nvvm_read_ptx_sreg_nctaid_z>;
-def INT_PTX_SREG_NCTAID_W :
-    PTX_READ_SREG_R32<"nctaid.w", int_nvvm_read_ptx_sreg_nctaid_w>;
-
 def INT_PTX_SREG_SMID :
     PTX_READ_SREG_R32<"smid", int_nvvm_read_ptx_sreg_smid>;
 def INT_PTX_SREG_NSMID :
@@ -6704,3 +6699,45 @@ class MMA_PAT<WMMA_INSTR wi>
 // Build intrinsic->instruction patterns for all MMA instructions.
 foreach mma = !listconcat(MMAs, WMMAs, MMA_LDSTs, LDMATRIXs) in
   def : MMA_PAT<mma>;
+
+multiclass MAPA<string suffix, Intrinsic Intr> {
+  def _32: NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a, Int32Regs:$b),
+              "mapa" # suffix # ".u32\t$d, $a, $b;",
+              [(set Int32Regs:$d, (Intr Int32Regs:$a, Int32Regs:$b))]>,
+    Requires<[hasSM<90>, hasPTX<78>]>;
+  def _32i: NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a, i32imm:$b),
+              "mapa" # suffix # ".u32\t$d, $a, $b;",
+              [(set Int32Regs:$d, (Intr Int32Regs:$a, imm:$b))]>,
+    Requires<[hasSM<90>, hasPTX<78>]>;
+  def _64: NVPTXInst<(outs Int64Regs:$d), (ins Int64Regs:$a, Int32Regs:$b),
+              "mapa" # suffix # ".u64\t$d, $a, $b;",
+              [(set Int64Regs:$d, (Intr Int64Regs:$a, Int32Regs:$b))]>,
+    Requires<[hasSM<90>, hasPTX<78>]>;
+  def _64i: NVPTXInst<(outs Int64Regs:$d), (ins Int64Regs:$a, i32imm:$b),
+              "mapa" # suffix # ".u64\t$d, $a, $b;",
+              [(set Int64Regs:$d, (Intr Int64Regs:$a, imm:$b))]>,
+    Requires<[hasSM<90>, hasPTX<78>]>;
+}
+
+defm mapa  : MAPA<"", int_nvvm_mapa>;
+defm mapa_shared_cluster  : MAPA<".shared::cluster", int_nvvm_mapa_shared_cluster>;
+
+
+multiclass GETCTARANK<string suffix, Intrinsic Intr> {
+  def _32: NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
+              "getctarank" # suffix # ".u32\t$d, $a;",
+              [(set Int32Regs:$d, (Intr Int32Regs:$a))]>,
+    Requires<[hasSM<90>, hasPTX<78>]>;
+  def _64: NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
+              "getctarank" # suffix # ".u64\t$d, $a;",
+              [(set Int32Regs:$d, (Intr Int64Regs:$a))]>,
+    Requires<[hasSM<90>, hasPTX<78>]>;
+}
+
+defm getctarank  : GETCTARANK<"", int_nvvm_getctarank>;
+defm getctarank_shared_cluster  : GETCTARANK<".shared::cluster", int_nvvm_getctarank_shared_cluster>;
+
+def is_explicit_cluster: NVPTXInst<(outs Int1Regs:$d), (ins),
+              "mov.pred\t$d, %is_explicit_cluster;",
+              [(set Int1Regs:$d, (int_nvvm_is_explicit_cluster))]>,
+    Requires<[hasSM<90>, hasPTX<78>]>;

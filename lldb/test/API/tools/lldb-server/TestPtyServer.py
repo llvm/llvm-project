@@ -9,15 +9,15 @@ import xml.etree.ElementTree as ET
 
 @skipIfWindows
 class PtyServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
-
     def setUp(self):
         super().setUp()
         import pty
         import tty
+
         primary, secondary = pty.openpty()
         tty.setraw(primary)
-        self._primary = io.FileIO(primary, 'r+b')
-        self._secondary = io.FileIO(secondary, 'r+b')
+        self._primary = io.FileIO(primary, "r+b")
+        self._secondary = io.FileIO(secondary, "r+b")
 
     def get_debug_monitor_command_line_args(self, attach_pid=None):
         commandline_args = self.debug_monitor_extra_args
@@ -59,14 +59,17 @@ class PtyServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # target.xml transfer should trigger a large enough packet to check
         # for partial write regression
-        self.test_sequence.add_log_lines([
-            "read packet: $qXfer:features:read:target.xml:0,200000#00",
-            {
-                "direction": "send",
-                "regex": re.compile("^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
-                "capture": {1: "target_xml"},
-            }],
-            True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $qXfer:features:read:target.xml:0,200000#00",
+                {
+                    "direction": "send",
+                    "regex": re.compile("^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
+                    "capture": {1: "target_xml"},
+                },
+            ],
+            True,
+        )
         context = self.expect_gdbremote_sequence()
         # verify that we have received a complete, non-malformed XML
         self.assertIsNotNone(ET.fromstring(context.get("target_xml")))

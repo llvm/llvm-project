@@ -70,7 +70,7 @@ public:
   const FileEntry &getFileEntry() const {
     return *getBaseMapEntry().second->V.get<FileEntry *>();
   }
-  DirectoryEntryRef getDir() const { return *getBaseMapEntry().second->Dir; }
+  DirectoryEntryRef getDir() const { return ME->second->Dir; }
 
   inline off_t getSize() const;
   inline unsigned getUID() const;
@@ -120,12 +120,12 @@ public:
     /// name that was used to lookup the file.
     llvm::PointerUnion<FileEntry *, const MapEntry *> V;
 
-    /// Directory the file was found in. Set if and only if V is a FileEntry.
-    OptionalDirectoryEntryRef Dir;
+    /// Directory the file was found in.
+    DirectoryEntryRef Dir;
 
     MapValue() = delete;
     MapValue(FileEntry &FE, DirectoryEntryRef Dir) : V(&FE), Dir(Dir) {}
-    MapValue(MapEntry &ME) : V(&ME) {}
+    MapValue(MapEntry &ME, DirectoryEntryRef Dir) : V(&ME), Dir(Dir) {}
   };
 
   /// Check if RHS referenced the file in exactly the same way.

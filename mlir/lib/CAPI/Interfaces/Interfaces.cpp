@@ -47,7 +47,7 @@ SmallVector<Value> unwrapOperands(intptr_t nOperands, MlirValue *operands) {
 DictionaryAttr unwrapAttributes(MlirAttribute attributes) {
   DictionaryAttr attributeDict;
   if (!mlirAttributeIsNull(attributes))
-    attributeDict = unwrap(attributes).cast<DictionaryAttr>();
+    attributeDict = llvm::cast<DictionaryAttr>(unwrap(attributes));
   return attributeDict;
 }
 

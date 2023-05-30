@@ -1791,6 +1791,10 @@ def fsanitize_address_outline_instrumentation : Flag<["-"], "fsanitize-address-o
 def fno_sanitize_address_outline_instrumentation : Flag<["-"], "fno-sanitize-address-outline-instrumentation">,
                                                    Group<f_clang_Group>,
                                                    HelpText<"Use default code inlining logic for the address sanitizer">;
+defm sanitize_stable_abi
+  : OptInCC1FFlag<"sanitize-stable-abi", "Stable  ", "Conventional ",
+    "ABI instrumentation for sanitizer runtime. Default: Conventional">;
+
 def fsanitize_memtag_mode_EQ : Joined<["-"], "fsanitize-memtag-mode=">,
                                         Group<f_clang_Group>,
                                         HelpText<"Set default MTE mode to 'sync' (default) or 'async'">;

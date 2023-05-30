@@ -501,7 +501,7 @@ Speculation::Speculatability DimOp::getSpeculatability() {
 
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // All forms of folding require a known index.
-  auto index = adaptor.getIndex().dyn_cast_or_null<IntegerAttr>();
+  auto index = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getIndex());
   if (!index)
     return {};
 
@@ -764,7 +764,7 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
       OpFoldResult currDim = std::get<1>(it);
       // Case 1: The empty tensor dim is static. Check that the tensor cast
       // result dim matches.
-      if (auto attr = currDim.dyn_cast<Attribute>()) {
+      if (auto attr = llvm::dyn_cast_if_present<Attribute>(currDim)) {
         if (ShapedType::isDynamic(newDim) ||
             newDim != llvm::cast<IntegerAttr>(attr).getInt()) {
           // Something is off, the cast result shape cannot be more dynamic
@@ -2106,7 +2106,7 @@ static Value foldExtractAfterInsertSlice(ExtractSliceOp extractOp) {
 }
 
 OpFoldResult ExtractSliceOp::fold(FoldAdaptor adaptor) {
-  if (auto splat = adaptor.getSource().dyn_cast_or_null<SplatElementsAttr>()) {
+  if (auto splat = llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
     auto resultType = llvm::cast<ShapedType>(getResult().getType());
     if (resultType.hasStaticShape())
       return splat.resizeSplat(resultType);
@@ -3558,7 +3558,7 @@ asShapeWithAnyValueAsDynamic(ArrayRef<OpFoldResult> ofrs) {
   SmallVector<int64_t> result;
   for (auto o : ofrs) {
     // Have to do this first, as getConstantIntValue special-cases constants.
-    if (o.dyn_cast<Value>())
+    if (llvm::dyn_cast_if_present<Value>(o))
       result.push_back(ShapedType::kDynamic);
     else
       result.push_back(getConstantIntValue(o).value_or(ShapedType::kDynamic));

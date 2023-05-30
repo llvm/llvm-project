@@ -10,7 +10,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/math/fabs.h"
 #include "src/sys/random/getrandom.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcGetRandomTest, InvalidFlag) {

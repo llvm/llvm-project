@@ -1976,14 +1976,27 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
     }
   }
 
+  auto isImplicitNullCheckCmp = [](const CmpInst &I) {
+    for (auto *User : I.users())
+      if (auto *Instr = dyn_cast<Instruction>(User))
+        if (!Instr->getMetadata(LLVMContext::MD_make_implicit))
+          return false;
+    return true;
+  };
+
   // If the comparison is an equality comparison with null, we can simplify it
   // if we know the value (argument) can't be null
-  if (I.isEquality() && isa<ConstantPointerNull>(I.getOperand(1)) &&
-      isKnownNonNullInCallee(I.getOperand(0))) {
-    bool IsNotEqual = I.getPredicate() == CmpInst::ICMP_NE;
-    SimplifiedValues[&I] = IsNotEqual ? ConstantInt::getTrue(I.getType())
-                                      : ConstantInt::getFalse(I.getType());
-    return true;
+  if (I.isEquality() && isa<ConstantPointerNull>(I.getOperand(1))) {
+    if (isKnownNonNullInCallee(I.getOperand(0))) {
+      bool IsNotEqual = I.getPredicate() == CmpInst::ICMP_NE;
+      SimplifiedValues[&I] = IsNotEqual ? ConstantInt::getTrue(I.getType())
+                                        : ConstantInt::getFalse(I.getType());
+      return true;
+    }
+    // Implicit null checks act as unconditional branches and their comparisons
+    // should be treated as simplified and free of cost.
+    if (isImplicitNullCheckCmp(I))
+      return true;
   }
   return handleSROA(I.getOperand(0), isa<ConstantPointerNull>(I.getOperand(1)));
 }
@@ -2265,6 +2278,7 @@ bool CallAnalyzer::visitBranchInst(BranchInst &BI) {
   // inliner more regular and predictable. Interestingly, conditional branches
   // which will fold away are also free.
   return BI.isUnconditional() || isa<ConstantInt>(BI.getCondition()) ||
+         BI.getMetadata(LLVMContext::MD_make_implicit) ||
          isa_and_nonnull<ConstantInt>(
              SimplifiedValues.lookup(BI.getCondition()));
 }

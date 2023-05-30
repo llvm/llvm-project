@@ -14,15 +14,12 @@ file_index = 0
 
 
 class FoundationTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
         self.main_source = "main.m"
-        self.line = line_number(
-            self.main_source,
-            '// Set break point at this line.')
+        self.line = line_number(self.main_source, "// Set break point at this line.")
 
     def test_break(self):
         """Test setting objc breakpoints using '_regexp-break' and 'breakpoint set'."""
@@ -32,35 +29,38 @@ class FoundationTestCase(TestBase):
 
         # Stop at +[NSString stringWithFormat:].
         break_results = lldbutil.run_break_set_command(
-            self, "_regexp-break +[NSString stringWithFormat:]")
+            self, "_regexp-break +[NSString stringWithFormat:]"
+        )
         lldbutil.check_breakpoint_result(
             self,
             break_results,
-            symbol_name='+[NSString stringWithFormat:]',
-            num_locations=1)
+            symbol_name="+[NSString stringWithFormat:]",
+            num_locations=1,
+        )
 
         # Stop at -[MyString initWithNSString:].
         lldbutil.run_break_set_by_symbol(
             self,
-            '-[MyString initWithNSString:]',
+            "-[MyString initWithNSString:]",
             num_expected_locations=1,
-            sym_exact=True)
+            sym_exact=True,
+        )
 
         # Stop at the "description" selector.
         lldbutil.run_break_set_by_selector(
-            self,
-            'description',
-            num_expected_locations=1,
-            module_name='a.out')
+            self, "description", num_expected_locations=1, module_name="a.out"
+        )
 
         # Stop at -[NSAutoreleasePool release].
         break_results = lldbutil.run_break_set_command(
-            self, "_regexp-break -[NSAutoreleasePool release]")
+            self, "_regexp-break -[NSAutoreleasePool release]"
+        )
         lldbutil.check_breakpoint_result(
             self,
             break_results,
-            symbol_name='-[NSAutoreleasePool release]',
-            num_locations=1)
+            symbol_name="-[NSAutoreleasePool release]",
+            num_locations=1,
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -68,7 +68,8 @@ class FoundationTestCase(TestBase):
         self.expect(
             "thread backtrace",
             "Stop at +[NSString stringWithFormat:]",
-            substrs=["Foundation`+[NSString stringWithFormat:]"])
+            substrs=["Foundation`+[NSString stringWithFormat:]"],
+        )
 
         self.runCmd("process continue")
 
@@ -76,7 +77,8 @@ class FoundationTestCase(TestBase):
         self.expect(
             "thread backtrace",
             "Stop at +[NSString stringWithFormat:]",
-            substrs=["Foundation`+[NSString stringWithFormat:]"])
+            substrs=["Foundation`+[NSString stringWithFormat:]"],
+        )
 
         self.runCmd("process continue")
 
@@ -84,25 +86,35 @@ class FoundationTestCase(TestBase):
         self.expect(
             "thread backtrace",
             "Stop at a.out`-[MyString initWithNSString:]",
-            substrs=["a.out`-[MyString initWithNSString:]"])
+            substrs=["a.out`-[MyString initWithNSString:]"],
+        )
 
         self.runCmd("process continue")
 
         # Followed by -[MyString description].
-        self.expect("thread backtrace", "Stop at -[MyString description]",
-                    substrs=["a.out`-[MyString description]"])
+        self.expect(
+            "thread backtrace",
+            "Stop at -[MyString description]",
+            substrs=["a.out`-[MyString description]"],
+        )
 
         self.runCmd("process continue")
 
         # Followed by the same -[MyString description].
-        self.expect("thread backtrace", "Stop at -[MyString description]",
-                    substrs=["a.out`-[MyString description]"])
+        self.expect(
+            "thread backtrace",
+            "Stop at -[MyString description]",
+            substrs=["a.out`-[MyString description]"],
+        )
 
         self.runCmd("process continue")
 
         # Followed by -[NSAutoreleasePool release].
-        self.expect("thread backtrace", "Stop at -[NSAutoreleasePool release]",
-                    substrs=["Foundation`-[NSAutoreleasePool release]"])
+        self.expect(
+            "thread backtrace",
+            "Stop at -[NSAutoreleasePool release]",
+            substrs=["Foundation`-[NSAutoreleasePool release]"],
+        )
 
     # rdar://problem/8542091
     # rdar://problem/8492646
@@ -114,41 +126,48 @@ class FoundationTestCase(TestBase):
 
         # Stop at -[MyString description].
         lldbutil.run_break_set_by_symbol(
-            self,
-            '-[MyString description]',
-            num_expected_locations=1,
-            sym_exact=True)
-#        self.expect("breakpoint set -n '-[MyString description]", BREAKPOINT_CREATED,
-# startstr = "Breakpoint created: 1: name = '-[MyString description]',
-# locations = 1")
+            self, "-[MyString description]", num_expected_locations=1, sym_exact=True
+        )
+        #        self.expect("breakpoint set -n '-[MyString description]", BREAKPOINT_CREATED,
+        # startstr = "Breakpoint created: 1: name = '-[MyString description]',
+        # locations = 1")
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
 
         # The backtrace should show we stop at -[MyString description].
-        self.expect("thread backtrace", "Stop at -[MyString description]",
-                    substrs=["a.out`-[MyString description]"])
+        self.expect(
+            "thread backtrace",
+            "Stop at -[MyString description]",
+            substrs=["a.out`-[MyString description]"],
+        )
 
         # Lookup objc data type MyString and evaluate some expressions.
 
-        self.expect("image lookup -t NSString", DATA_TYPES_DISPLAYED_CORRECTLY,
-                    substrs=['name = "NSString"',
-                             'compiler_type = "@interface NSString'])
+        self.expect(
+            "image lookup -t NSString",
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            substrs=['name = "NSString"', 'compiler_type = "@interface NSString'],
+        )
 
-        self.expect("image lookup -t MyString", DATA_TYPES_DISPLAYED_CORRECTLY,
-                    substrs=['name = "MyString"',
-                             'compiler_type = "@interface MyString',
-                             'NSString * str;',
-                             'NSDate * date;'])
+        self.expect(
+            "image lookup -t MyString",
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'name = "MyString"',
+                'compiler_type = "@interface MyString',
+                "NSString * str;",
+                "NSDate * date;",
+            ],
+        )
 
         self.expect(
             "frame variable --show-types --scope",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["ARG: (MyString *) self"],
-            patterns=[
-                "ARG: \(.*\) _cmd",
-                "(objc_selector *)|(SEL)"])
+            patterns=["ARG: \(.*\) _cmd", "(objc_selector *)|(SEL)"],
+        )
 
         # rdar://problem/8651752
         # don't crash trying to ask clang how many children an empty record has
@@ -160,34 +179,39 @@ class FoundationTestCase(TestBase):
         self.expect(
             "frame variable --show-types self->str",
             VARIABLES_DISPLAYED_CORRECTLY,
-            startstr="(NSString *) self->str")
+            startstr="(NSString *) self->str",
+        )
 
         # rdar://problem/8447030
         # 'frame variable self->date' displays the wrong data member
         self.expect(
             "frame variable --show-types self->date",
             VARIABLES_DISPLAYED_CORRECTLY,
-            startstr="(NSDate *) self->date")
+            startstr="(NSDate *) self->date",
+        )
 
         # This should display the str and date member fields as well.
         self.expect(
             "frame variable --show-types *self",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=[
-                "(MyString) *self",
-                "(NSString *) str",
-                "(NSDate *) date"])
+            substrs=["(MyString) *self", "(NSString *) str", "(NSDate *) date"],
+        )
 
         # isa should be accessible.
-        self.expect("expression self->isa", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=["Class)"])
+        self.expect(
+            "expression self->isa", VARIABLES_DISPLAYED_CORRECTLY, substrs=["Class)"]
+        )
 
         # This should fail expectedly.
         self.expect(
             "expression self->non_existent_member",
             COMMAND_FAILED_AS_EXPECTED,
             error=True,
-            substrs=["error:", "'MyString' does not have a member named 'non_existent_member'"])
+            substrs=[
+                "error:",
+                "'MyString' does not have a member named 'non_existent_member'",
+            ],
+        )
 
         # Use expression parser.
         self.runCmd("expression self->str")
@@ -204,7 +228,8 @@ class FoundationTestCase(TestBase):
 
         self.runCmd("breakpoint delete 1")
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
+            self, "main.m", self.line, num_expected_locations=1, loc_exact=True
+        )
 
         self.runCmd("process continue")
 
@@ -217,9 +242,10 @@ class FoundationTestCase(TestBase):
         self.expect(
             "expression --object-description -- my",
             "Object description displayed correctly",
-            patterns=["Hello from.*a.out.*with timestamp: "])
+            patterns=["Hello from.*a.out.*with timestamp: "],
+        )
 
-    @add_test_categories(['pyapi'])
+    @add_test_categories(["pyapi"])
     def test_print_ivars_correctly(self):
         self.build()
         # See: <rdar://problem/8717050> lldb needs to use the ObjC runtime symbols for ivar offsets
@@ -233,8 +259,7 @@ class FoundationTestCase(TestBase):
         self.assertTrue(break1, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         self.assertTrue(process, PROCESS_IS_VALID)
 
@@ -242,8 +267,11 @@ class FoundationTestCase(TestBase):
         thread = process.GetThreadAtIndex(0)
         if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
             from lldbsuite.test.lldbutil import stop_reason_to_str
-            self.fail(STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS %
-                      stop_reason_to_str(thread.GetStopReason()))
+
+            self.fail(
+                STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS
+                % stop_reason_to_str(thread.GetStopReason())
+            )
 
         # Make sure we stopped at the first breakpoint.
 
@@ -267,9 +295,7 @@ class FoundationTestCase(TestBase):
 
         my_str_value = int(my_str_var.GetValue(), 0)
 
-        self.assertEqual(
-            str_value, my_str_value,
-            "Got the correct value for my->str")
+        self.assertEqual(str_value, my_str_value, "Got the correct value for my->str")
 
     def test_expression_lookups_objc(self):
         """Test running an expression detect spurious debug info lookups (DWARF)."""
@@ -280,9 +306,10 @@ class FoundationTestCase(TestBase):
         # Stop at -[MyString initWithNSString:].
         lldbutil.run_break_set_by_symbol(
             self,
-            '-[MyString initWithNSString:]',
+            "-[MyString initWithNSString:]",
             num_expected_locations=1,
-            sym_exact=True)
+            sym_exact=True,
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -291,11 +318,8 @@ class FoundationTestCase(TestBase):
         ++file_index
         logfile = os.path.join(
             self.getBuildDir(),
-            "dwarf-lookups-" +
-            self.getArchitecture() +
-            "-" +
-            str(file_index) +
-            ".txt")
+            "dwarf-lookups-" + self.getArchitecture() + "-" + str(file_index) + ".txt",
+        )
         self.runCmd("log enable -f %s dwarf lookups" % (logfile))
         self.runCmd("expr self")
         self.runCmd("log disable dwarf lookups")
@@ -314,8 +338,9 @@ class FoundationTestCase(TestBase):
                 if "$__lldb" in line:
                     if num_errors == 0:
                         print(
-                            "error: found spurious name lookups when evaluating an expression:")
+                            "error: found spurious name lookups when evaluating an expression:"
+                        )
                     num_errors += 1
-                    print(line, end='')
+                    print(line, end="")
             self.assertEqual(num_errors, 0, "Spurious lookups detected")
             f.close()

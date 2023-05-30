@@ -834,10 +834,11 @@ enum RankFlags {
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_NOT_SPECIAL = 1 << 17,
-  RF_WRITE = 1 << 13,
-  RF_EXEC_WRITE = 1 << 12,
-  RF_EXEC = 1 << 11,
-  RF_RODATA = 1 << 10,
+  RF_WRITE = 1 << 16,
+  RF_EXEC_WRITE = 1 << 15,
+  RF_EXEC = 1 << 14,
+  RF_RODATA = 1 << 13,
+  RF_LARGE = 1 << 12,
   RF_NOT_RELRO = 1 << 9,
   RF_NOT_TLS = 1 << 8,
   RF_BSS = 1 << 7,
@@ -895,6 +896,9 @@ static unsigned getSectionRank(const OutputSection &osec) {
     // .dynstr and .dynsym can be away from .text.
     if (osec.type == SHT_PROGBITS)
       rank |= RF_RODATA;
+    // Among PROGBITS sections, place .lrodata further from .text.
+    if (!(osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64))
+      rank |= RF_LARGE;
   } else if (isExec) {
     rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
   } else {
@@ -905,6 +909,10 @@ static unsigned getSectionRank(const OutputSection &osec) {
       rank |= RF_NOT_TLS;
     if (!isRelroSection(&osec))
       rank |= RF_NOT_RELRO;
+    // Place .ldata and .lbss after .bss. Making .bss closer to .text alleviates
+    // relocation overflow pressure.
+    if (osec.flags & SHF_X86_64_LARGE && config->emachine == EM_X86_64)
+      rank |= RF_LARGE;
   }
 
   // Within TLS sections, or within other RelRo sections, or within non-RelRo
@@ -2321,16 +2329,27 @@ SmallVector<PhdrEntry *, 0> Writer<ELFT>::createPhdrs(Partition &part) {
     // Segments are contiguous memory regions that has the same attributes
     // (e.g. executable or writable). There is one phdr for each segment.
     // Therefore, we need to create a new phdr when the next section has
-    // different flags or is loaded at a discontiguous address or memory
-    // region using AT or AT> linker script command, respectively. At the same
-    // time, we don't want to create a separate load segment for the headers,
-    // even if the first output section has an AT or AT> attribute.
+    // different flags or is loaded at a discontiguous address or memory region
+    // using AT or AT> linker script command, respectively.
+    //
+    // As an exception, we don't create a separate load segment for the ELF
+    // headers, even if the first "real" output has an AT or AT> attribute.
+    //
+    // In addition, NOBITS sections should only be placed at the end of a LOAD
+    // segment (since it's represented as p_filesz < p_memsz). If we have a
+    // not-NOBITS section after a NOBITS, we create a new LOAD for the latter
+    // even if flags match, so as not to require actually writing the
+    // supposed-to-be-NOBITS section to the output file. (However, we cannot do
+    // so when hasSectionsCommand, since we cannot introduce the extra alignment
+    // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(sec->getPhdrFlags());
     bool sameLMARegion =
         load && !sec->lmaExpr && sec->lmaRegion == load->firstSec->lmaRegion;
     if (!(load && newFlags == flags && sec != relroEnd &&
           sec->memRegion == load->firstSec->memRegion &&
-          (sameLMARegion || load->lastSec == Out::programHeaders))) {
+          (sameLMARegion || load->lastSec == Out::programHeaders) &&
+          (script->hasSectionsCommand || sec->type == SHT_NOBITS ||
+           load->lastSec->type != SHT_NOBITS))) {
       load = addHdr(PT_LOAD, newFlags);
       flags = newFlags;
     }

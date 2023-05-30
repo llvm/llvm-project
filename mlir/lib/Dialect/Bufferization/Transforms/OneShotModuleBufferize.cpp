@@ -238,7 +238,7 @@ static void removeBufferizationAttributes(BlockArgument bbArg) {
 
 /// Return the func::FuncOp called by `callOp`.
 static func::FuncOp getCalledFunction(func::CallOp callOp) {
-  SymbolRefAttr sym = callOp.getCallableForCallee().dyn_cast<SymbolRefAttr>();
+  SymbolRefAttr sym = llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<func::FuncOp>(

@@ -285,7 +285,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
         static_cast<::mlir::spirv::LinkageType>(words[wordIndex++]));
     auto linkageAttr = opBuilder.getAttr<::mlir::spirv::LinkageAttributesAttr>(
         linkageName, linkageTypeAttr);
-    decorations[words[0]].set(symbol, linkageAttr.dyn_cast<Attribute>());
+    decorations[words[0]].set(symbol, llvm::dyn_cast<Attribute>(linkageAttr));
     break;
   }
   case spirv::Decoration::Aliased:

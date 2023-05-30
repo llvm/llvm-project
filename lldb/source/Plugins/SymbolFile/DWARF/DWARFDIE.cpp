@@ -168,10 +168,9 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   }
 
   if (match_addr_range) {
-    DWARFRangeList ranges;
-    if (m_die->GetAttributeAddressRanges(m_cu, ranges,
-                                         /*check_hi_lo_pc=*/true) &&
-        ranges.FindEntryThatContains(address)) {
+    DWARFRangeList ranges =
+        m_die->GetAttributeAddressRanges(m_cu, /*check_hi_lo_pc=*/true);
+    if (ranges.FindEntryThatContains(address)) {
       check_children = true;
       switch (Tag()) {
       default:

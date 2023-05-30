@@ -802,10 +802,10 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange map_operands,
   for (const auto &mapTypeOp : *map_types) {
     int64_t mapTypeBits = 0x00;
 
-    if (!mapTypeOp.isa<mlir::IntegerAttr>())
+    if (!llvm::isa<mlir::IntegerAttr>(mapTypeOp))
       return failure();
 
-    mapTypeBits = mapTypeOp.cast<mlir::IntegerAttr>().getInt();
+    mapTypeBits = llvm::cast<mlir::IntegerAttr>(mapTypeOp).getInt();
 
     bool to =
         bitAnd(mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);

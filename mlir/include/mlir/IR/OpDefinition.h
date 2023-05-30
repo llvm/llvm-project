@@ -269,15 +269,35 @@ public:
   void dump() const { llvm::errs() << *this << "\n"; }
 };
 
+// Temporarily exit the MLIR namespace to add casting support as later code in
+// this uses it. The CastInfo must come after the OpFoldResult definition and
+// before any cast function calls depending on CastInfo.
+
+} // namespace mlir
+
+namespace llvm {
+
+// Allow llvm::cast style functions.
+template <typename To>
+struct CastInfo<To, mlir::OpFoldResult>
+    : public CastInfo<To, mlir::OpFoldResult::PointerUnion> {};
+
+template <typename To>
+struct CastInfo<To, const mlir::OpFoldResult>
+    : public CastInfo<To, const mlir::OpFoldResult::PointerUnion> {};
+
+} // namespace llvm
+
+namespace mlir {
+
 /// Allow printing to a stream.
 inline raw_ostream &operator<<(raw_ostream &os, OpFoldResult ofr) {
-  if (Value value = ofr.dyn_cast<Value>())
+  if (Value value = llvm::dyn_cast_if_present<Value>(ofr))
     value.print(os);
   else
-    ofr.dyn_cast<Attribute>().print(os);
+    llvm::dyn_cast_if_present<Attribute>(ofr).print(os);
   return os;
 }
-
 /// Allow printing to a stream.
 inline raw_ostream &operator<<(raw_ostream &os, OpState op) {
   op.print(os, OpPrintingFlags().useLocalScope());
@@ -1554,7 +1574,7 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands,
     return failure();
 
   if (OpFoldResult result = Trait::foldTrait(op, operands)) {
-    if (result.template dyn_cast<Value>() != op->getResult(0))
+    if (llvm::dyn_cast_if_present<Value>(result) != op->getResult(0))
       results.push_back(result);
     return success();
   }
@@ -1903,7 +1923,8 @@ private:
 
     // If the fold failed or was in-place, try to fold the traits of the
     // operation.
-    if (!result || result.template dyn_cast<Value>() == op->getResult(0)) {
+    if (!result ||
+        llvm::dyn_cast_if_present<Value>(result) == op->getResult(0)) {
       if (succeeded(op_definition_impl::foldTraits<Traits<ConcreteType>...>(
               op, operands, results)))
         return success();
@@ -2119,7 +2140,6 @@ struct DenseMapInfo<T,
   }
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
-
 } // namespace llvm
 
 #endif

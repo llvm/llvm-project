@@ -8,7 +8,7 @@
 
 #include "src/sys/stat/mkdirat.h"
 #include "src/unistd/rmdir.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <fcntl.h>

@@ -28,13 +28,13 @@ class PlatformSDKTestCase(TestBase):
 
     def no_debugserver(self):
         if get_debugserver_exe() is None:
-            return 'no debugserver'
+            return "no debugserver"
         return None
 
     def port_not_available(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        if s.connect_ex(('127.0.0.1', self.PORT)) == 0:
-            return '{} not available'.format(self.PORT)
+        if s.connect_ex(("127.0.0.1", self.PORT)) == 0:
+            return "{} not available".format(self.PORT)
         return None
 
     @no_debug_info_test
@@ -45,8 +45,8 @@ class PlatformSDKTestCase(TestBase):
     def test_macos_sdk(self):
         self.build()
 
-        exe = self.getBuildArtifact('a.out')
-        token = self.getBuildArtifact('token')
+        exe = self.getBuildArtifact("a.out")
+        token = self.getBuildArtifact("token")
 
         # Remove the old token.
         try:
@@ -55,25 +55,31 @@ class PlatformSDKTestCase(TestBase):
             pass
 
         # Create a fake 'SDK' directory.
-        test_home = os.path.join(self.getBuildDir(), 'fake_home.noindex')
+        test_home = os.path.join(self.getBuildDir(), "fake_home.noindex")
         test_home = os.path.realpath(test_home)
         macos_version = platform.mac_ver()[0]
-        sdk_dir = os.path.join(test_home, 'Library', 'Developer', 'Xcode',
-                               'macOS DeviceSupport', macos_version)
-        symbols_dir = os.path.join(sdk_dir, 'Symbols')
+        sdk_dir = os.path.join(
+            test_home,
+            "Library",
+            "Developer",
+            "Xcode",
+            "macOS DeviceSupport",
+            macos_version,
+        )
+        symbols_dir = os.path.join(sdk_dir, "Symbols")
         lldbutil.mkdir_p(symbols_dir)
 
         # Save the current home directory and restore it afterwards.
-        old_home = os.getenv('HOME')
+        old_home = os.getenv("HOME")
 
         def cleanup():
             if not old_home:
-                del os.environ['HOME']
+                del os.environ["HOME"]
             else:
-                os.environ['HOME'] = old_home
+                os.environ["HOME"] = old_home
 
         self.addTearDownHook(cleanup)
-        os.environ['HOME'] = test_home
+        os.environ["HOME"] = test_home
 
         # Launch our test binary.
         inferior = self.spawnSubprocess(exe, [token])
@@ -83,28 +89,25 @@ class PlatformSDKTestCase(TestBase):
         lldbutil.wait_for_file_on_target(self, token)
 
         # Move the binary into the 'SDK'.
-        rel_exe_path = os.path.relpath(os.path.realpath(exe), '/')
+        rel_exe_path = os.path.relpath(os.path.realpath(exe), "/")
         exe_sdk_path = os.path.join(symbols_dir, rel_exe_path)
         lldbutil.mkdir_p(os.path.dirname(exe_sdk_path))
         shutil.move(exe, exe_sdk_path)
 
         # Attach to it with debugserver.
         debugserver = get_debugserver_exe()
-        debugserver_args = [
-            'localhost:{}'.format(self.PORT), '--attach={}'.format(pid)
-        ]
+        debugserver_args = ["localhost:{}".format(self.PORT), "--attach={}".format(pid)]
         self.spawnSubprocess(debugserver, debugserver_args)
 
         # Select the platform.
-        self.expect('platform select remote-macosx', substrs=[sdk_dir])
+        self.expect("platform select remote-macosx", substrs=[sdk_dir])
 
         # Connect to debugserver
         interpreter = self.dbg.GetCommandInterpreter()
         connected = False
         for i in range(self.ATTEMPTS):
             result = lldb.SBCommandReturnObject()
-            interpreter.HandleCommand('gdb-remote {}'.format(self.PORT),
-                                      result)
+            interpreter.HandleCommand("gdb-remote {}".format(self.PORT), result)
             connected = result.Succeeded()
             if connected:
                 break
@@ -113,4 +116,4 @@ class PlatformSDKTestCase(TestBase):
         self.assertTrue(connected, "could not connect to debugserver")
 
         # Make sure the image was loaded from the 'SDK'.
-        self.expect('image list', substrs=[exe_sdk_path])
+        self.expect("image list", substrs=[exe_sdk_path])

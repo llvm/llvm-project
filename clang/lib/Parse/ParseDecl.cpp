@@ -2984,24 +2984,26 @@ Parser::getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context) {
 
 /// ParseAlignArgument - Parse the argument to an alignment-specifier.
 ///
-/// FIXME: Simply returns an alignof() expression if the argument is a
-/// type. Ideally, the type should be propagated directly into Sema.
-///
 /// [C11]   type-id
 /// [C11]   constant-expression
 /// [C++0x] type-id ...[opt]
 /// [C++0x] assignment-expression ...[opt]
-ExprResult Parser::ParseAlignArgument(SourceLocation Start,
-                                      SourceLocation &EllipsisLoc) {
+ExprResult Parser::ParseAlignArgument(StringRef KWName, SourceLocation Start,
+                                      SourceLocation &EllipsisLoc, bool &IsType,
+                                      ParsedType &TypeResult) {
   ExprResult ER;
   if (isTypeIdInParens()) {
     SourceLocation TypeLoc = Tok.getLocation();
     ParsedType Ty = ParseTypeName().get();
     SourceRange TypeRange(Start, Tok.getLocation());
-    ER = Actions.ActOnUnaryExprOrTypeTraitExpr(TypeLoc, UETT_AlignOf, true,
-                                               Ty.getAsOpaquePtr(), TypeRange);
-  } else
+    if (Actions.ActOnAlignasTypeArgument(KWName, Ty, TypeLoc, TypeRange))
+      return ExprError();
+    TypeResult = Ty;
+    IsType = true;
+  } else {
     ER = ParseConstantExpression();
+    IsType = false;
+  }
 
   if (getLangOpts().CPlusPlus11)
     TryConsumeToken(tok::ellipsis, EllipsisLoc);
@@ -3021,17 +3023,21 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
                                      SourceLocation *EndLoc) {
   assert(Tok.isOneOf(tok::kw_alignas, tok::kw__Alignas) &&
          "Not an alignment-specifier!");
-
-  IdentifierInfo *KWName = Tok.getIdentifierInfo();
-  auto Kind = Tok.getKind();
+  Token KWTok = Tok;
+  IdentifierInfo *KWName = KWTok.getIdentifierInfo();
+  auto Kind = KWTok.getKind();
   SourceLocation KWLoc = ConsumeToken();
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.expectAndConsume())
     return;
 
+  bool IsType;
+  ParsedType TypeResult;
   SourceLocation EllipsisLoc;
-  ExprResult ArgExpr = ParseAlignArgument(T.getOpenLocation(), EllipsisLoc);
+  ExprResult ArgExpr =
+      ParseAlignArgument(PP.getSpelling(KWTok), T.getOpenLocation(),
+                         EllipsisLoc, IsType, TypeResult);
   if (ArgExpr.isInvalid()) {
     T.skipToEnd();
     return;
@@ -3041,10 +3047,15 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
   if (EndLoc)
     *EndLoc = T.getCloseLocation();
 
-  ArgsVector ArgExprs;
-  ArgExprs.push_back(ArgExpr.get());
-  Attrs.addNew(KWName, KWLoc, nullptr, KWLoc, ArgExprs.data(), 1, Kind,
-               EllipsisLoc);
+  if (IsType) {
+    Attrs.addNewTypeAttr(KWName, KWLoc, nullptr, KWLoc, TypeResult, Kind,
+                         EllipsisLoc);
+  } else {
+    ArgsVector ArgExprs;
+    ArgExprs.push_back(ArgExpr.get());
+    Attrs.addNew(KWName, KWLoc, nullptr, KWLoc, ArgExprs.data(), 1, Kind,
+                 EllipsisLoc);
+  }
 }
 
 ExprResult Parser::ParseExtIntegerArgument() {

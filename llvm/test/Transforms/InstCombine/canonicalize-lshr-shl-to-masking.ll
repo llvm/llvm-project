@@ -189,7 +189,7 @@ define i8 @positive_biggerlshr_shlnuwnsw(i8 %x) {
 define i8 @positive_biggershl_shlnuwnsw(i8 %x) {
 ; CHECK-LABEL: @positive_biggershl_shlnuwnsw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], 64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %t0 = lshr i8 %x, 3

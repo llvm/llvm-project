@@ -856,9 +856,9 @@ OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getLhs() || !adaptor.getRhs())
     return nullptr;
   auto lhsShape = llvm::to_vector<6>(
-      adaptor.getLhs().cast<DenseIntElementsAttr>().getValues<int64_t>());
+      llvm::cast<DenseIntElementsAttr>(adaptor.getLhs()).getValues<int64_t>());
   auto rhsShape = llvm::to_vector<6>(
-      adaptor.getRhs().cast<DenseIntElementsAttr>().getValues<int64_t>());
+      llvm::cast<DenseIntElementsAttr>(adaptor.getRhs()).getValues<int64_t>());
   SmallVector<int64_t, 6> resultShape;
   resultShape.append(lhsShape.begin(), lhsShape.end());
   resultShape.append(rhsShape.begin(), rhsShape.end());
@@ -989,7 +989,7 @@ OpFoldResult CstrBroadcastableOp::fold(FoldAdaptor adaptor) {
           if (!operand)
             return false;
           extents.push_back(llvm::to_vector<6>(
-              operand.cast<DenseIntElementsAttr>().getValues<int64_t>()));
+              llvm::cast<DenseIntElementsAttr>(operand).getValues<int64_t>()));
         }
         return OpTrait::util::staticallyKnownBroadcastable(extents);
       }())
@@ -1132,10 +1132,10 @@ LogicalResult mlir::shape::DimOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
-  auto lhs = adaptor.getLhs().dyn_cast_or_null<IntegerAttr>();
+  auto lhs = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getLhs());
   if (!lhs)
     return nullptr;
-  auto rhs = adaptor.getRhs().dyn_cast_or_null<IntegerAttr>();
+  auto rhs = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getRhs());
   if (!rhs)
     return nullptr;
 
@@ -1346,7 +1346,7 @@ std::optional<int64_t> GetExtentOp::getConstantDim() {
 }
 
 OpFoldResult GetExtentOp::fold(FoldAdaptor adaptor) {
-  auto elements = adaptor.getShape().dyn_cast_or_null<DenseIntElementsAttr>();
+  auto elements = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
   if (!elements)
     return nullptr;
   std::optional<int64_t> dim = getConstantDim();
@@ -1490,7 +1490,7 @@ bool mlir::shape::MeetOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult shape::RankOp::fold(FoldAdaptor adaptor) {
-  auto shape = adaptor.getShape().dyn_cast_or_null<DenseIntElementsAttr>();
+  auto shape = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
   if (!shape)
     return {};
   int64_t rank = shape.getNumElements();
@@ -1671,10 +1671,10 @@ bool mlir::shape::MinOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
-  auto lhs = adaptor.getLhs().dyn_cast_or_null<IntegerAttr>();
+  auto lhs = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getLhs());
   if (!lhs)
     return nullptr;
-  auto rhs = adaptor.getRhs().dyn_cast_or_null<IntegerAttr>();
+  auto rhs = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getRhs());
   if (!rhs)
     return nullptr;
   APInt folded = lhs.getValue() * rhs.getValue();
@@ -1864,9 +1864,9 @@ LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
   if (!adaptor.getOperand() || !adaptor.getIndex())
     return failure();
   auto shapeVec = llvm::to_vector<6>(
-      adaptor.getOperand().cast<DenseIntElementsAttr>().getValues<int64_t>());
+      llvm::cast<DenseIntElementsAttr>(adaptor.getOperand()).getValues<int64_t>());
   auto shape = llvm::ArrayRef(shapeVec);
-  auto splitPoint = adaptor.getIndex().cast<IntegerAttr>().getInt();
+  auto splitPoint = llvm::cast<IntegerAttr>(adaptor.getIndex()).getInt();
   // Verify that the split point is in the correct range.
   // TODO: Constant fold to an "error".
   int64_t rank = shape.size();
@@ -1889,7 +1889,7 @@ OpFoldResult ToExtentTensorOp::fold(FoldAdaptor adaptor) {
     return OpFoldResult();
   Builder builder(getContext());
   auto shape = llvm::to_vector<6>(
-      adaptor.getInput().cast<DenseIntElementsAttr>().getValues<int64_t>());
+      llvm::cast<DenseIntElementsAttr>(adaptor.getInput()).getValues<int64_t>());
   auto type = RankedTensorType::get({static_cast<int64_t>(shape.size())},
                                     builder.getIndexType());
   return DenseIntElementsAttr::get(type, shape);

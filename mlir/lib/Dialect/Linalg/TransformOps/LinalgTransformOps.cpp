@@ -344,7 +344,8 @@ void transform::FuseIntoContainingOp::build(OpBuilder &builder,
                                             Value producerOp,
                                             Value containingOp) {
   result.addOperands({producerOp, containingOp});
-  result.addTypes(transform::AnyOpType::get(builder.getContext()));
+  auto resultType = transform::AnyOpType::get(builder.getContext());
+  result.addTypes({resultType, resultType});
 }
 
 /// Add new operands to the forall op for users of the producerOp
@@ -388,8 +389,16 @@ static Operation *replaceForAllWithNewSignature(
   newforallOp.getRegion().takeBody(forallOp.getRegion());
 
   // Add additional block argument for new value being returned
+  // and replaces all uses of the new output with corresponding bbArg
+  // inside the scf.forall to enable fusion into this new scf.forall.
   newforallOp.getBody()->addArgument(newOuts.back().getType(),
                                      newOuts.back().getLoc());
+  auto bbArgs = newforallOp.getBody()->getArguments();
+  rewriter.replaceUsesWithIf(newOuts.back(), bbArgs.back(),
+                             [&](OpOperand &use) {
+                               Operation *op = use.getOwner();
+                               return newforallOp->isProperAncestor(op);
+                             });
 
   // Fix terminator
   scf::InParallelOp terminatorOp = newforallOp.getTerminator();
@@ -749,14 +758,15 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
   }
 
   results.set(cast<OpResult>(getFusedOp()), fusedOps);
+  results.set(cast<OpResult>(getNewContainingOp()), {containingOp});
   return DiagnosedSilenceableFailure::success();
 }
 
 void transform::FuseIntoContainingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getProducerOp(), effects);
-  onlyReadsHandle(getContainingOp(), effects);
-  producesHandle(getFusedOp(), effects);
+  consumesHandle(getContainingOp(), effects);
+  producesHandle(getResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -2358,7 +2368,7 @@ transform::TileOp::apply(TransformResults &transformResults,
         sizes.reserve(tileSizes.size());
         unsigned dynamicIdx = 0;
         for (OpFoldResult ofr : getMixedSizes()) {
-          if (auto attr = ofr.dyn_cast<Attribute>()) {
+          if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr)) {
             sizes.push_back(b.create<arith::ConstantIndexOp>(
                 getLoc(), cast<IntegerAttr>(attr).getInt()));
             continue;
@@ -2784,7 +2794,7 @@ transform::TileToScfForOp::apply(TransformResults &transformResults,
             sizes.reserve(tileSizes.size());
             unsigned dynamicIdx = 0;
             for (OpFoldResult ofr : getMixedSizes()) {
-              if (auto attr = ofr.dyn_cast<Attribute>()) {
+              if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr)) {
                 sizes.push_back(b.create<arith::ConstantIndexOp>(
                     getLoc(), cast<IntegerAttr>(attr).getInt()));
               } else {

@@ -241,7 +241,7 @@ mlir::detail::filterEntriesForType(DataLayoutEntryListRef entries,
                                    TypeID typeID) {
   return llvm::to_vector<4>(llvm::make_filter_range(
       entries, [typeID](DataLayoutEntryInterface entry) {
-        auto type = entry.getKey().dyn_cast<Type>();
+        auto type = llvm::dyn_cast_if_present<Type>(entry.getKey());
         return type && type.getTypeID() == typeID;
       }));
 }
@@ -521,7 +521,7 @@ void DataLayoutSpecInterface::bucketEntriesByType(
     DenseMap<TypeID, DataLayoutEntryList> &types,
     DenseMap<StringAttr, DataLayoutEntryInterface> &ids) {
   for (DataLayoutEntryInterface entry : getEntries()) {
-    if (auto type = entry.getKey().dyn_cast<Type>())
+    if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey()))
       types[type.getTypeID()].push_back(entry);
     else
       ids[entry.getKey().get<StringAttr>()] = entry;

@@ -1049,7 +1049,7 @@ std::optional<object::SectionedAddress> DWARFUnit::getBaseAddress() {
   if (BaseAddr)
     return BaseAddr;
 
-  DWARFDie UnitDie = getUnitDIE();
+  DWARFDie UnitDie = (SU ? SU : this)->getUnitDIE();
   std::optional<DWARFFormValue> PC =
       UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc});
   BaseAddr = toSectionedAddress(PC);

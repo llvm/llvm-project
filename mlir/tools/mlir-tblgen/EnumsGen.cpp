@@ -516,7 +516,7 @@ static void emitSpecializedAttrDef(const Record &enumDef, raw_ostream &os) {
   os << formatv("  ::mlir::IntegerAttr baseAttr = "
                 "::mlir::IntegerAttr::get(intType, static_cast<{0}>(val));\n",
                 underlyingType);
-  os << formatv("  return baseAttr.cast<{0}>();\n", attrClassName);
+  os << formatv("  return ::llvm::cast<{0}>(baseAttr);\n", attrClassName);
 
   os << "}\n";
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 # Be sure to add the python path that points to the LLDB shared library.
 #
 # # To use this in the embedded python interpreter using "lldb" just
 # import it with the full path using the "command script import"
 # command
 #   (lldb) command script import /path/to/cmdtemplate.py
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 import platform
 import os
@@ -23,18 +23,21 @@ except ImportError:
     lldb_python_dirs = list()
     # lldb is not in the PYTHONPATH, try some defaults for the current platform
     platform_system = platform.system()
-    if platform_system == 'Darwin':
+    if platform_system == "Darwin":
         # On Darwin, try the currently selected Xcode directory
         xcode_dir = subprocess.check_output("xcode-select --print-path", shell=True)
         if xcode_dir:
             lldb_python_dirs.append(
                 os.path.realpath(
-                    xcode_dir +
-                    '/../SharedFrameworks/LLDB.framework/Resources/Python'))
+                    xcode_dir + "/../SharedFrameworks/LLDB.framework/Resources/Python"
+                )
+            )
             lldb_python_dirs.append(
-                xcode_dir + '/Library/PrivateFrameworks/LLDB.framework/Resources/Python')
+                xcode_dir + "/Library/PrivateFrameworks/LLDB.framework/Resources/Python"
+            )
         lldb_python_dirs.append(
-            '/System/Library/PrivateFrameworks/LLDB.framework/Resources/Python')
+            "/System/Library/PrivateFrameworks/LLDB.framework/Resources/Python"
+        )
     success = False
     for lldb_python_dir in lldb_python_dirs:
         if os.path.exists(lldb_python_dir):
@@ -49,7 +52,9 @@ except ImportError:
                     success = True
                     break
     if not success:
-        print("error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly")
+        print(
+            "error: couldn't locate the 'lldb' module, please set PYTHONPATH correctly"
+        )
         sys.exit(1)
 
 import optparse
@@ -59,7 +64,7 @@ import time
 
 def regex_option_callback(option, opt_str, value, parser):
     if opt_str == "--std":
-        value = '^std::'
+        value = "^std::"
     regex = re.compile(value)
     parser.values.skip_type_regexes.append(regex)
 
@@ -67,91 +72,98 @@ def regex_option_callback(option, opt_str, value, parser):
 def create_types_options(for_lldb_command):
     if for_lldb_command:
         usage = "usage: %prog [options]"
-        description = '''This command will help check for padding in between
+        description = """This command will help check for padding in between
 base classes and members in structs and classes. It will summarize the types
 and how much padding was found. If no types are specified with the --types TYPENAME
 option, all structure and class types will be verified. If no modules are
 specified with the --module option, only the target's main executable will be
 searched.
-'''
+"""
     else:
         usage = "usage: %prog [options] EXEPATH [EXEPATH ...]"
-        description = '''This command will help check for padding in between
+        description = """This command will help check for padding in between
 base classes and members in structures and classes. It will summarize the types
 and how much padding was found. One or more paths to executable files must be
 specified and targets will be created with these modules. If no types are
 specified with the --types TYPENAME option, all structure and class types will
 be verified in all specified modules.
-'''
+"""
     parser = optparse.OptionParser(
-        description=description,
-        prog='framestats',
-        usage=usage)
+        description=description, prog="framestats", usage=usage
+    )
     if not for_lldb_command:
         parser.add_option(
-            '-a',
-            '--arch',
-            type='string',
-            dest='arch',
-            help='The architecture to use when creating the debug target.',
-            default=None)
+            "-a",
+            "--arch",
+            type="string",
+            dest="arch",
+            help="The architecture to use when creating the debug target.",
+            default=None,
+        )
         parser.add_option(
-            '-p',
-            '--platform',
-            type='string',
-            metavar='platform',
-            dest='platform',
-            help='Specify the platform to use when creating the debug target. Valid values include "localhost", "darwin-kernel", "ios-simulator", "remote-freebsd", "remote-macosx", "remote-ios", "remote-linux".')
+            "-p",
+            "--platform",
+            type="string",
+            metavar="platform",
+            dest="platform",
+            help='Specify the platform to use when creating the debug target. Valid values include "localhost", "darwin-kernel", "ios-simulator", "remote-freebsd", "remote-macosx", "remote-ios", "remote-linux".',
+        )
     parser.add_option(
-        '-m',
-        '--module',
-        action='append',
-        type='string',
-        metavar='MODULE',
-        dest='modules',
-        help='Specify one or more modules which will be used to verify the types.',
-        default=[])
+        "-m",
+        "--module",
+        action="append",
+        type="string",
+        metavar="MODULE",
+        dest="modules",
+        help="Specify one or more modules which will be used to verify the types.",
+        default=[],
+    )
     parser.add_option(
-        '-d',
-        '--debug',
-        action='store_true',
-        dest='debug',
-        help='Pause 10 seconds to wait for a debugger to attach.',
-        default=False)
+        "-d",
+        "--debug",
+        action="store_true",
+        dest="debug",
+        help="Pause 10 seconds to wait for a debugger to attach.",
+        default=False,
+    )
     parser.add_option(
-        '-t',
-        '--type',
-        action='append',
-        type='string',
-        metavar='TYPENAME',
-        dest='typenames',
-        help='Specify one or more type names which should be verified. If no type names are specified, all class and struct types will be verified.',
-        default=[])
+        "-t",
+        "--type",
+        action="append",
+        type="string",
+        metavar="TYPENAME",
+        dest="typenames",
+        help="Specify one or more type names which should be verified. If no type names are specified, all class and struct types will be verified.",
+        default=[],
+    )
     parser.add_option(
-        '-v',
-        '--verbose',
-        action='store_true',
-        dest='verbose',
-        help='Enable verbose logging and information.',
-        default=False)
+        "-v",
+        "--verbose",
+        action="store_true",
+        dest="verbose",
+        help="Enable verbose logging and information.",
+        default=False,
+    )
     parser.add_option(
-        '-s',
-        '--skip-type-regex',
+        "-s",
+        "--skip-type-regex",
         action="callback",
         callback=regex_option_callback,
-        type='string',
-        metavar='REGEX',
-        dest='skip_type_regexes',
-        help='Regular expressions that, if they match the current member typename, will cause the type to no be recursively displayed.',
-        default=[])
+        type="string",
+        metavar="REGEX",
+        dest="skip_type_regexes",
+        help="Regular expressions that, if they match the current member typename, will cause the type to no be recursively displayed.",
+        default=[],
+    )
     parser.add_option(
-        '--std',
+        "--std",
         action="callback",
         callback=regex_option_callback,
-        metavar='REGEX',
-        dest='skip_type_regexes',
+        metavar="REGEX",
+        dest="skip_type_regexes",
         help="Don't' recurse into types in the std namespace.",
-        default=[])
+        default=[],
+    )
     return parser
 
 
@@ -159,35 +171,35 @@ def verify_type(target, options, type):
     print(type)
     typename = type.GetName()
     # print 'type: %s' % (typename)
-    (end_offset, padding) = verify_type_recursive(
-        target, options, type, None, 0, 0, 0)
+    (end_offset, padding) = verify_type_recursive(target, options, type, None, 0, 0, 0)
     byte_size = type.GetByteSize()
     # if end_offset < byte_size:
     #     last_member_padding = byte_size - end_offset
     #     print '%+4u <%u> padding' % (end_offset, last_member_padding)
     #     padding += last_member_padding
-    print('Total byte size: %u' % (byte_size))
-    print('Total pad bytes: %u' % (padding))
+    print("Total byte size: %u" % (byte_size))
+    print("Total pad bytes: %u" % (padding))
     if padding > 0:
-        print('Padding percentage: %2.2f %%' % ((float(padding) / float(byte_size)) * 100.0))
+        print(
+            "Padding percentage: %2.2f %%"
+            % ((float(padding) / float(byte_size)) * 100.0)
+        )
     print()
 
 
 def verify_type_recursive(
-        target,
-        options,
-        type,
-        member_name,
-        depth,
-        base_offset,
-        padding):
+    target, options, type, member_name, depth, base_offset, padding
+):
     prev_end_offset = base_offset
     typename = type.GetName()
     byte_size = type.GetByteSize()
     if member_name and member_name != typename:
-        print('%+4u <%3u> %s%s %s;' % (base_offset, byte_size, '    ' * depth, typename, member_name))
+        print(
+            "%+4u <%3u> %s%s %s;"
+            % (base_offset, byte_size, "    " * depth, typename, member_name)
+        )
     else:
-        print('%+4u {%3u} %s%s' % (base_offset, byte_size, '    ' * depth, typename))
+        print("%+4u {%3u} %s%s" % (base_offset, byte_size, "    " * depth, typename))
 
     for type_regex in options.skip_type_regexes:
         match = type_regex.match(typename)
@@ -205,44 +217,82 @@ def verify_type_recursive(
             member_total_offset = member_offset + base_offset
             member_byte_size = member_type.GetByteSize()
             member_is_class_or_struct = False
-            if member_type_class == lldb.eTypeClassStruct or member_type_class == lldb.eTypeClassClass:
+            if (
+                member_type_class == lldb.eTypeClassStruct
+                or member_type_class == lldb.eTypeClassClass
+            ):
                 member_is_class_or_struct = True
-            if member_idx == 0 and member_offset == target.GetAddressByteSize(
-            ) and type.IsPolymorphicClass():
+            if (
+                member_idx == 0
+                and member_offset == target.GetAddressByteSize()
+                and type.IsPolymorphicClass()
+            ):
                 ptr_size = target.GetAddressByteSize()
-                print('%+4u <%3u> %s__vtbl_ptr_type * _vptr;' % (prev_end_offset, ptr_size, '    ' * (depth + 1)))
+                print(
+                    "%+4u <%3u> %s__vtbl_ptr_type * _vptr;"
+                    % (prev_end_offset, ptr_size, "    " * (depth + 1))
+                )
                 prev_end_offset = ptr_size
             else:
                 if prev_end_offset < member_total_offset:
                     member_padding = member_total_offset - prev_end_offset
                     padding = padding + member_padding
-                    print('%+4u <%3u> %s<PADDING>' % (prev_end_offset, member_padding, '    ' * (depth + 1)))
+                    print(
+                        "%+4u <%3u> %s<PADDING>"
+                        % (prev_end_offset, member_padding, "    " * (depth + 1))
+                    )
 
             if member_is_class_or_struct:
-                (prev_end_offset,
-                 padding) = verify_type_recursive(target,
-                                                  options,
-                                                  member_canonical_type,
-                                                  member_name,
-                                                  depth + 1,
-                                                  member_total_offset,
-                                                  padding)
+                (prev_end_offset, padding) = verify_type_recursive(
+                    target,
+                    options,
+                    member_canonical_type,
+                    member_name,
+                    depth + 1,
+                    member_total_offset,
+                    padding,
+                )
             else:
                 prev_end_offset = member_total_offset + member_byte_size
                 member_typename = member_type.GetName()
                 if member.IsBitfield():
-                    print('%+4u <%3u> %s%s:%u %s;' % (member_total_offset, member_byte_size, '    ' * (depth + 1), member_typename, member.GetBitfieldSizeInBits(), member_name))
+                    print(
+                        "%+4u <%3u> %s%s:%u %s;"
+                        % (
+                            member_total_offset,
+                            member_byte_size,
+                            "    " * (depth + 1),
+                            member_typename,
+                            member.GetBitfieldSizeInBits(),
+                            member_name,
+                        )
+                    )
                 else:
-                    print('%+4u <%3u> %s%s %s;' % (member_total_offset, member_byte_size, '    ' * (depth + 1), member_typename, member_name))
+                    print(
+                        "%+4u <%3u> %s%s %s;"
+                        % (
+                            member_total_offset,
+                            member_byte_size,
+                            "    " * (depth + 1),
+                            member_typename,
+                            member_name,
+                        )
+                    )
 
         if prev_end_offset < byte_size:
             last_member_padding = byte_size - prev_end_offset
-            print('%+4u <%3u> %s<PADDING>' % (prev_end_offset, last_member_padding, '    ' * (depth + 1)))
+            print(
+                "%+4u <%3u> %s<PADDING>"
+                % (prev_end_offset, last_member_padding, "    " * (depth + 1))
+            )
             padding += last_member_padding
     else:
         if type.IsPolymorphicClass():
             ptr_size = target.GetAddressByteSize()
-            print('%+4u <%3u> %s__vtbl_ptr_type * _vptr;' % (prev_end_offset, ptr_size, '    ' * (depth + 1)))
+            print(
+                "%+4u <%3u> %s__vtbl_ptr_type * _vptr;"
+                % (prev_end_offset, ptr_size, "    " * (depth + 1))
+            )
             prev_end_offset = ptr_size
         prev_end_offset = base_offset + byte_size
 
@@ -281,9 +331,8 @@ def parse_all_struct_class_types(debugger, command, result, dict):
 
 
 def verify_types(target, options):
-
     if not target:
-        print('error: invalid target')
+        print("error: invalid target")
         return
 
     modules = list()
@@ -300,26 +349,32 @@ def verify_types(target, options):
 
     if modules:
         for module in modules:
-            print('module: %s' % (module.file))
+            print("module: %s" % (module.file))
             if options.typenames:
                 for typename in options.typenames:
                     types = module.FindTypes(typename)
                     if types.GetSize():
-                        print('Found %u types matching "%s" in "%s"' % (len(types), typename, module.file))
+                        print(
+                            'Found %u types matching "%s" in "%s"'
+                            % (len(types), typename, module.file)
+                        )
                         for type in types:
                             verify_type(target, options, type)
                     else:
-                        print('error: no type matches "%s" in "%s"' % (typename, module.file))
+                        print(
+                            'error: no type matches "%s" in "%s"'
+                            % (typename, module.file)
+                        )
             else:
-                types = module.GetTypes(
-                    lldb.eTypeClassClass | lldb.eTypeClassStruct)
+                types = module.GetTypes(lldb.eTypeClassClass | lldb.eTypeClassStruct)
                 print('Found %u types in "%s"' % (len(types), module.file))
                 for type in types:
                     verify_type(target, options, type)
     else:
-        print('error: no modules')
+        print("error: no modules")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     debugger = lldb.SBDebugger.Create()
     parser = create_types_options(False)
 
@@ -339,17 +394,19 @@ if __name__ == '__main__':
         # this is the best practice to access those objects from within a
         # command
         error = lldb.SBError()
-        target = debugger.CreateTarget(path,
-                                       options.arch,
-                                       options.platform,
-                                       True,
-                                       error)
+        target = debugger.CreateTarget(
+            path, options.arch, options.platform, True, error
+        )
         if error.Fail():
             print(error.GetCString())
             continue
         verify_types(target, options)
 
+
 def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
-        'command script add -o -f types.check_padding_command check_padding')
-    print('"check_padding" command installed, use the "--help" option for detailed help')
+        "command script add -o -f types.check_padding_command check_padding"
+    )
+    print(
+        '"check_padding" command installed, use the "--help" option for detailed help'
+    )

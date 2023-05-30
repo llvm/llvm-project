@@ -354,7 +354,7 @@ bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
     auto newType = llvm::cast<LLVMPointerType>(newEntry.getKey().get<Type>());
     const auto *it =
         llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
-          if (auto type = entry.getKey().dyn_cast<Type>()) {
+          if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
             return llvm::cast<LLVMPointerType>(type).getAddressSpace() ==
                    newType.getAddressSpace();
           }
@@ -362,7 +362,7 @@ bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
         });
     if (it == oldLayout.end()) {
       llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
-        if (auto type = entry.getKey().dyn_cast<Type>()) {
+        if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
           return llvm::cast<LLVMPointerType>(type).getAddressSpace() == 0;
         }
         return false;

@@ -9,7 +9,7 @@ import lldb
 def fuzz_obj(obj):
     obj.GetFileAddress()
     obj.GetLoadAddress(lldb.SBTarget())
-    obj.SetLoadAddress(0xffff, lldb.SBTarget())
+    obj.SetLoadAddress(0xFFFF, lldb.SBTarget())
     obj.OffsetAddress(sys.maxsize)
     obj.GetDescription(lldb.SBStream())
     obj.GetSection()

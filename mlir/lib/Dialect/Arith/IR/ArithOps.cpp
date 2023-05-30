@@ -808,7 +808,7 @@ OpFoldResult arith::OrIOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(getRhs(), m_Zero()))
     return getLhs();
   /// or(x, <all ones>) -> <all ones>
-  if (auto rhsAttr = adaptor.getRhs().dyn_cast_or_null<IntegerAttr>())
+  if (auto rhsAttr = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getRhs()))
     if (rhsAttr.getValue().isAllOnes())
       return rhsAttr;
 
@@ -1249,7 +1249,7 @@ LogicalResult arith::ExtSIOp::verify() {
 
 /// Always fold extension of FP constants.
 OpFoldResult arith::ExtFOp::fold(FoldAdaptor adaptor) {
-  auto constOperand = adaptor.getIn().dyn_cast_or_null<FloatAttr>();
+  auto constOperand = llvm::dyn_cast_if_present<FloatAttr>(adaptor.getIn());
   if (!constOperand)
     return {};
 
@@ -1702,7 +1702,7 @@ OpFoldResult arith::CmpIOp::fold(FoldAdaptor adaptor) {
 
   // We are moving constants to the right side; So if lhs is constant rhs is
   // guaranteed to be a constant.
-  if (auto lhs = adaptor.getLhs().dyn_cast_or_null<TypedAttr>()) {
+  if (auto lhs = llvm::dyn_cast_if_present<TypedAttr>(adaptor.getLhs())) {
     return constFoldBinaryOp<IntegerAttr>(
         adaptor.getOperands(), getI1SameShape(lhs.getType()),
         [pred = getPredicate()](const APInt &lhs, const APInt &rhs) {
@@ -1772,8 +1772,8 @@ bool mlir::arith::applyCmpPredicate(arith::CmpFPredicate predicate,
 }
 
 OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
-  auto lhs = adaptor.getLhs().dyn_cast_or_null<FloatAttr>();
-  auto rhs = adaptor.getRhs().dyn_cast_or_null<FloatAttr>();
+  auto lhs = llvm::dyn_cast_if_present<FloatAttr>(adaptor.getLhs());
+  auto rhs = llvm::dyn_cast_if_present<FloatAttr>(adaptor.getRhs());
 
   // If one operand is NaN, making them both NaN does not change the result.
   if (lhs && lhs.getValue().isNaN())
@@ -2193,11 +2193,11 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
   // Constant-fold constant operands over non-splat constant condition.
   // select %cst_vec, %cst0, %cst1 => %cst2
   if (auto cond =
-          adaptor.getCondition().dyn_cast_or_null<DenseElementsAttr>()) {
+          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getCondition())) {
     if (auto lhs =
-            adaptor.getTrueValue().dyn_cast_or_null<DenseElementsAttr>()) {
+            llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getTrueValue())) {
       if (auto rhs =
-              adaptor.getFalseValue().dyn_cast_or_null<DenseElementsAttr>()) {
+              llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getFalseValue())) {
         SmallVector<Attribute> results;
         results.reserve(static_cast<size_t>(cond.getNumElements()));
         auto condVals = llvm::make_range(cond.value_begin<BoolAttr>(),

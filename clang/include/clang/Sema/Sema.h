@@ -5720,6 +5720,11 @@ public:
 
   bool CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N);
 
+  bool ActOnAlignasTypeArgument(StringRef KWName, ParsedType Ty,
+                                SourceLocation OpLoc, SourceRange R);
+  bool CheckAlignasTypeArgument(StringRef KWName, TypeSourceInfo *TInfo,
+                                SourceLocation OpLoc, SourceRange R);
+
   ExprResult CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
                                             SourceLocation OpLoc,
                                             UnaryExprOrTypeTrait ExprKind,
@@ -5738,7 +5743,8 @@ public:
   bool CheckUnaryExprOrTypeTraitOperand(Expr *E, UnaryExprOrTypeTrait ExprKind);
   bool CheckUnaryExprOrTypeTraitOperand(QualType ExprType, SourceLocation OpLoc,
                                         SourceRange ExprRange,
-                                        UnaryExprOrTypeTrait ExprKind);
+                                        UnaryExprOrTypeTrait ExprKind,
+                                        StringRef KWName);
   ExprResult ActOnSizeofParameterPackExpr(Scope *S,
                                           SourceLocation OpLoc,
                                           IdentifierInfo &Name,

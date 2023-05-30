@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import lldb
 
+
 class ScriptedPlatform(metaclass=ABCMeta):
 
     """
@@ -18,7 +19,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, exe_ctx, args):
-        """ Construct a scripted platform.
+        """Construct a scripted platform.
 
         Args:
             exe_ctx (lldb.SBExecutionContext): The execution context for the scripted platform
@@ -29,7 +30,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
 
     @abstractmethod
     def list_processes(self):
-        """ Get a list of processes that are running or that can be attached to on the platform.
+        """Get a list of processes that are running or that can be attached to on the platform.
 
         processes = {
             420: {
@@ -51,7 +52,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
         pass
 
     def get_process_info(self, pid):
-        """ Get the dictionary describing the process.
+        """Get the dictionary describing the process.
 
         Returns:
             Dict: The dictionary of process info that matched process ID.
@@ -61,7 +62,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
 
     @abstractmethod
     def attach_to_process(self, attach_info):
-        """ Attach to a process.
+        """Attach to a process.
 
         Args:
             attach_info (lldb.SBAttachInfo): The information related to attach to a process.
@@ -73,7 +74,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
 
     @abstractmethod
     def launch_process(self, launch_info):
-        """ Launch a process.
+        """Launch a process.
 
         Args:
             launch_info (lldb.SBLaunchInfo): The information related to the process launch.
@@ -85,7 +86,7 @@ class ScriptedPlatform(metaclass=ABCMeta):
 
     @abstractmethod
     def kill_process(self, pid):
-        """ Kill a process.
+        """Kill a process.
 
         Args:
             pid (int): Process ID for the process to be killed.

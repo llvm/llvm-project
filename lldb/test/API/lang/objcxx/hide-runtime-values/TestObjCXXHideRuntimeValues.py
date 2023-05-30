@@ -5,11 +5,11 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestObjCXXHideRuntimeSupportValues(TestBase):
-
     def test_hide_runtime_support_values(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.mm'))
+            self, "break here", lldb.SBFileSpec("main.mm")
+        )
 
         var_opts = lldb.SBVariablesOptions()
         var_opts.SetIncludeArguments(True)
@@ -25,6 +25,7 @@ class TestObjCXXHideRuntimeSupportValues(TestBase):
                 if value.name == name:
                     return True
             return False
+
         # ObjC method.
         values = self.frame().GetVariables(var_opts)
         self.assertFalse(shows_var("this"))

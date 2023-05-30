@@ -11,7 +11,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class MemoryTagTestCase(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_memory_tag_read_unsupported(self):
@@ -23,9 +22,12 @@ class MemoryTagTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line(self, "main.cpp",
-                            line_number('main.cpp', '// Breakpoint here'),
-                                        num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self,
+            "main.cpp",
+            line_number("main.cpp", "// Breakpoint here"),
+            num_expected_locations=1,
+        )
         self.runCmd("run", RUN_SUCCEEDED)
 
         # If you're on AArch64 you could have MTE but the remote process

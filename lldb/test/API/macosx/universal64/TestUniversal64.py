@@ -11,7 +11,7 @@ class Universal64TestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
 
         # Make sure the binary and the dSYM are in the image list.
-        self.expect("image list", patterns=['fat.out', 'fat.out.dSYM'])
+        self.expect("image list", patterns=["fat.out", "fat.out.dSYM"])
 
         # The dynamic loader doesn't support fat64 executables so we can't
         # actually launch them here.
@@ -31,5 +31,5 @@ class Universal64TestCase(TestBase):
     @skipIfDarwinEmbedded
     def test_universal64_dsym(self):
         """Test fat64 universal dSYM"""
-        self.build(debug_info="dsym", dictionary={'FAT64_DSYM': '1'})
+        self.build(debug_info="dsym", dictionary={"FAT64_DSYM": "1"})
         self.do_test()

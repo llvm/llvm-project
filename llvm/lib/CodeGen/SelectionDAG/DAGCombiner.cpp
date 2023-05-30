@@ -170,7 +170,8 @@ namespace {
     /// them) when they are deleted from the underlying DAG. It relies on
     /// stable indices of nodes within the worklist.
     DenseMap<SDNode *, unsigned> WorklistMap;
-    /// This records all nodes attempted to add to the worklist since we
+
+    /// This records all nodes attempted to be added to the worklist since we
     /// considered a new worklist entry. As we keep do not add duplicate nodes
     /// in the worklist, this is different from the tail of the worklist.
     SmallSetVector<SDNode *, 32> PruningList;
@@ -263,7 +264,7 @@ namespace {
 
     /// Add to the worklist making sure its instance is at the back (next to be
     /// processed.)
-    void AddToWorklist(SDNode *N) {
+    void AddToWorklist(SDNode *N, bool IsCandidateForPruning = true) {
       assert(N->getOpcode() != ISD::DELETED_NODE &&
              "Deleted Node added to Worklist");
 
@@ -272,7 +273,8 @@ namespace {
       if (N->getOpcode() == ISD::HANDLENODE)
         return;
 
-      ConsiderForPruning(N);
+      if (IsCandidateForPruning)
+        ConsiderForPruning(N);
 
       if (WorklistMap.insert(std::make_pair(N, Worklist.size())).second)
         Worklist.push_back(N);
@@ -1770,8 +1772,13 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   WorklistInserter AddNodes(*this);
 
   // Add all the dag nodes to the worklist.
+  //
+  // Note: All nodes are not added to PruningList here, this is because the only
+  // nodes which can be deleted are those which have no uses and all other nodes
+  // which would otherwise be added to the worklist by the first call to
+  // getNextWorklistEntry are already present in it.
   for (SDNode &Node : DAG.allnodes())
-    AddToWorklist(&Node);
+    AddToWorklist(&Node, /* IsCandidateForPruning */ Node.use_empty());
 
   // Create a dummy node (which is not added to allnodes), that adds a reference
   // to the root node, preventing it from being deleted, and tracking any

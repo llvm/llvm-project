@@ -7,7 +7,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class CPP11EnumTypesTestCase(TestBase):
-
     def check_enum(self, suffix):
         """
         :param suffix The suffix of the enum type name (enum_<suffix>) that
@@ -18,24 +17,32 @@ class CPP11EnumTypesTestCase(TestBase):
         enum_name = "enum_" + suffix
         unsigned = suffix.startswith("u")
 
-        self.expect("image lookup -t " + enum_name,
-                    patterns=["enum( struct| class) " + enum_name + " {"],
-                    substrs=["Case1",
-                             "Case2",
-                             "Case3"])
+        self.expect(
+            "image lookup -t " + enum_name,
+            patterns=["enum( struct| class) " + enum_name + " {"],
+            substrs=["Case1", "Case2", "Case3"],
+        )
         # Test each case in the enum.
         self.expect_expr("var1_" + suffix, result_type=enum_name, result_value="Case1")
         self.expect_expr("var2_" + suffix, result_type=enum_name, result_value="Case2")
         self.expect_expr("var3_" + suffix, result_type=enum_name, result_value="Case3")
 
         if unsigned:
-            self.expect_expr("var_below_" + suffix, result_type=enum_name, result_value="199")
-            self.expect_expr("var_above_" + suffix, result_type=enum_name, result_value="203")
+            self.expect_expr(
+                "var_below_" + suffix, result_type=enum_name, result_value="199"
+            )
+            self.expect_expr(
+                "var_above_" + suffix, result_type=enum_name, result_value="203"
+            )
         else:
-            self.expect_expr("var_below_" + suffix, result_type=enum_name, result_value="-3")
-            self.expect_expr("var_above_" + suffix, result_type=enum_name, result_value="1")
+            self.expect_expr(
+                "var_below_" + suffix, result_type=enum_name, result_value="-3"
+            )
+            self.expect_expr(
+                "var_above_" + suffix, result_type=enum_name, result_value="1"
+            )
 
-    @skipIf(dwarf_version=['<', '4'])
+    @skipIf(dwarf_version=["<", "4"])
     def test(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))

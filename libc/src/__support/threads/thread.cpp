@@ -12,10 +12,11 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/fixedvector.h"
+#include "src/__support/macros/attributes.h"
 
 namespace __llvm_libc {
 
-thread_local Thread self;
+LIBC_THREAD_LOCAL Thread self;
 
 namespace {
 
@@ -99,7 +100,7 @@ struct TSSValueUnit {
       : active(true), payload(p), dtor(d) {}
 };
 
-static thread_local cpp::array<TSSValueUnit, TSS_KEY_COUNT> tss_values;
+static LIBC_THREAD_LOCAL cpp::array<TSSValueUnit, TSS_KEY_COUNT> tss_values;
 
 } // anonymous namespace
 
@@ -128,7 +129,7 @@ public:
   }
 };
 
-static thread_local ThreadAtExitCallbackMgr atexit_callback_mgr;
+static LIBC_THREAD_LOCAL ThreadAtExitCallbackMgr atexit_callback_mgr;
 
 // The function __cxa_thread_atexit is provided by C++ runtimes like libcxxabi.
 // It is used by thread local object runtime to register destructor calls. To

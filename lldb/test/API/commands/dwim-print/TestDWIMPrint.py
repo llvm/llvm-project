@@ -50,10 +50,13 @@ class TestCase(TestBase):
         # Verify dwim-print chose the expected command.
         self.runCmd("settings set dwim-print-verbosity full")
 
-        self.expect(dwim_cmd, substrs=[
-            f"note: ran `{resolved_cmd}`",
-            dwim_cmd_output,
-        ])
+        self.expect(
+            dwim_cmd,
+            substrs=[
+                f"note: ran `{resolved_cmd}`",
+                dwim_cmd_output,
+            ],
+        )
 
     def test_variables(self):
         """Test dwim-print with variables."""
@@ -118,7 +121,9 @@ class TestCase(TestBase):
     def test_nested_values(self):
         """Test dwim-print with nested values (structs, etc)."""
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.c")
+        )
         self.runCmd("settings set auto-one-line-summaries false")
         self._expect_cmd(f"dwim-print s", "frame variable")
         self._expect_cmd(f"dwim-print (struct Structure)s", "expression")
@@ -126,7 +131,9 @@ class TestCase(TestBase):
     def test_summary_strings(self):
         """Test dwim-print with nested values (structs, etc)."""
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.c")
+        )
         self.runCmd("settings set auto-one-line-summaries false")
         self.runCmd("type summary add -e -s 'stub summary' Structure")
         self._expect_cmd(f"dwim-print s", "frame variable")

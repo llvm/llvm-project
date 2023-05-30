@@ -227,5 +227,5 @@ namespace Preference {
     A a;
     std::strong_ordering operator<=>(const B&) const = default; // expected-error {{call to deleted constructor of 'A'}}
   };
-  bool x = B() < B(); // expected-note {{in defaulted three-way comparison operator for 'Preference::B' first required here}}
+  bool x = B() < B(); // expected-note {{in defaulted three-way comparison operator for 'B' first required here}}
 }

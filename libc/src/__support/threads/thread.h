@@ -13,6 +13,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #include <linux/param.h> // for exec_pagesize.
@@ -225,7 +226,7 @@ struct Thread {
   int get_name(cpp::StringStream &name) const;
 };
 
-extern thread_local Thread self;
+extern LIBC_THREAD_LOCAL Thread self;
 
 // Platforms should implement this function.
 [[noreturn]] void thread_exit(ThreadReturnValue retval, ThreadStyle style);

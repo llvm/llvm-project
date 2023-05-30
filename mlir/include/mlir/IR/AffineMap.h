@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 namespace llvm {
@@ -226,11 +227,11 @@ public:
   AffineMap shiftDims(unsigned shift, unsigned offset = 0) const {
     assert(offset <= getNumDims());
     return AffineMap::get(getNumDims() + shift, getNumSymbols(),
-                          llvm::to_vector<4>(llvm::map_range(
+                          llvm::map_to_vector<4>(
                               getResults(),
                               [&](AffineExpr e) {
                                 return e.shiftDims(getNumDims(), shift, offset);
-                              })),
+                              }),
                           getContext());
   }
 
@@ -238,12 +239,12 @@ public:
   /// by symbols[offset + shift ... shift + numSymbols).
   AffineMap shiftSymbols(unsigned shift, unsigned offset = 0) const {
     return AffineMap::get(getNumDims(), getNumSymbols() + shift,
-                          llvm::to_vector<4>(llvm::map_range(
-                              getResults(),
-                              [&](AffineExpr e) {
-                                return e.shiftSymbols(getNumSymbols(), shift,
-                                                      offset);
-                              })),
+                          llvm::map_to_vector<4>(getResults(),
+                                                 [&](AffineExpr e) {
+                                                   return e.shiftSymbols(
+                                                       getNumSymbols(), shift,
+                                                       offset);
+                                                 }),
                           getContext());
   }
 

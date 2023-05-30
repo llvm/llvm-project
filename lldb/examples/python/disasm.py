@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 # Be sure to add the python path that points to the LLDB shared library.
 # On MacOSX csh, tcsh:
 #   setenv PYTHONPATH /Developer/Library/PrivateFrameworks/LLDB.framework/Resources/Python
 # On MacOSX sh, bash:
 #   export PYTHONPATH=/Developer/Library/PrivateFrameworks/LLDB.framework/Resources/Python
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 import lldb
 import os
@@ -23,11 +23,12 @@ def usage():
     print("       By default, it breaks at and disassembles the 'main' function.")
     sys.exit(0)
 
+
 if len(sys.argv) == 2:
-    fname = 'main'
+    fname = "main"
     exe = sys.argv[1]
 elif len(sys.argv) == 4:
-    if sys.argv[1] != '-n':
+    if sys.argv[1] != "-n":
         usage()
     else:
         fname = sys.argv[2]
@@ -49,8 +50,7 @@ target = debugger.CreateTargetWithFileAndArch(exe, lldb.LLDB_ARCH_DEFAULT)
 
 if target:
     # If the target is valid set a breakpoint at main
-    main_bp = target.BreakpointCreateByName(
-        fname, target.GetExecutable().GetFilename())
+    main_bp = target.BreakpointCreateByName(fname, target.GetExecutable().GetFilename())
 
     print(main_bp)
 
@@ -98,16 +98,26 @@ if target:
                             disassemble_instructions(insts)
 
                     registerList = frame.GetRegisters()
-                    print("Frame registers (size of register set = %d):" % registerList.GetSize())
+                    print(
+                        "Frame registers (size of register set = %d):"
+                        % registerList.GetSize()
+                    )
                     for value in registerList:
                         # print value
-                        print("%s (number of children = %d):" % (value.GetName(), value.GetNumChildren()))
+                        print(
+                            "%s (number of children = %d):"
+                            % (value.GetName(), value.GetNumChildren())
+                        )
                         for child in value:
-                            print("Name: ", child.GetName(), " Value: ", child.GetValue())
+                            print(
+                                "Name: ", child.GetName(), " Value: ", child.GetValue()
+                            )
 
-            print("Hit the breakpoint at main, enter to continue and wait for program to exit or 'Ctrl-D'/'quit' to terminate the program")
+            print(
+                "Hit the breakpoint at main, enter to continue and wait for program to exit or 'Ctrl-D'/'quit' to terminate the program"
+            )
             next = sys.stdin.readline()
-            if not next or next.rstrip('\n') == 'quit':
+            if not next or next.rstrip("\n") == "quit":
                 print("Terminating the inferior process...")
                 process.Kill()
             else:
@@ -119,7 +129,10 @@ if target:
         elif state == lldb.eStateExited:
             print("Didn't hit the breakpoint at main, program has exited...")
         else:
-            print("Unexpected process state: %s, killing process..." % debugger.StateAsCString(state))
+            print(
+                "Unexpected process state: %s, killing process..."
+                % debugger.StateAsCString(state)
+            )
             process.Kill()
 
 

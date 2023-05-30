@@ -92,7 +92,7 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
       rewriter, op.getLoc(), d0 + d1 - d2,
       {iterationSpace[dimension].offset, iterationSpace[dimension].size,
        minSplitPoint});
-  if (auto attr = remainingSize.dyn_cast<Attribute>()) {
+  if (auto attr = llvm::dyn_cast_if_present<Attribute>(remainingSize)) {
     if (cast<IntegerAttr>(attr).getValue().isZero())
       return {op, TilingInterface()};
   }

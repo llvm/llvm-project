@@ -10,6 +10,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //   requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
 //   constexpr I ranges::find(I first, S last, const T& value, Proj proj = {});
@@ -22,6 +24,7 @@
 #include <array>
 #include <cassert>
 #include <ranges>
+#include <vector>
 
 #include "almost_satisfies_types.h"
 #include "boolean_testable.h"
@@ -53,45 +56,77 @@ static_assert(!HasFindR<InputRangeNotInputOrOutputIterator, int>);
 static_assert(!HasFindR<InputRangeNotSentinelSemiregular, int>);
 static_assert(!HasFindR<InputRangeNotSentinelEqualityComparableWith, int>);
 
+static std::vector<int> comparable_data;
+
 template <class It, class Sent = It>
 constexpr void test_iterators() {
-  {
-    int a[] = {1, 2, 3, 4};
-    std::same_as<It> auto ret = std::ranges::find(It(a), Sent(It(a + 4)), 4);
-    assert(base(ret) == a + 3);
-    assert(*ret == 4);
+  using ValueT = std::iter_value_t<It>;
+  { // simple test
+    {
+      ValueT a[] = {1, 2, 3, 4};
+      std::same_as<It> auto ret = std::ranges::find(It(a), Sent(It(a + 4)), 4);
+      assert(base(ret) == a + 3);
+      assert(*ret == 4);
+    }
+    {
+      ValueT a[] = {1, 2, 3, 4};
+      auto range = std::ranges::subrange(It(a), Sent(It(a + 4)));
+      std::same_as<It> auto ret = std::ranges::find(range, 4);
+      assert(base(ret) == a + 3);
+      assert(*ret == 4);
+    }
   }
-  {
-    int a[] = {1, 2, 3, 4};
-    auto range = std::ranges::subrange(It(a), Sent(It(a + 4)));
-    std::same_as<It> auto ret = std::ranges::find(range, 4);
-    assert(base(ret) == a + 3);
-    assert(*ret == 4);
+
+  { // check that an empty range works
+    {
+      std::array<ValueT, 0> a = {};
+      auto ret = std::ranges::find(It(a.data()), Sent(It(a.data())), 1);
+      assert(base(ret) == a.data());
+    }
+    {
+      std::array<ValueT, 0> a = {};
+      auto range = std::ranges::subrange(It(a.data()), Sent(It(a.data())));
+      auto ret = std::ranges::find(range, 1);
+      assert(base(ret) == a.data());
+    }
   }
+
+  { // check that last is returned with no match
+    {
+      ValueT a[] = {1, 1, 1};
+      auto ret = std::ranges::find(a, a + 3, 0);
+      assert(ret == a + 3);
+    }
+    {
+      ValueT a[] = {1, 1, 1};
+      auto ret = std::ranges::find(a, 0);
+      assert(ret == a + 3);
+    }
+  }
+
+  if (!std::is_constant_evaluated())
+    comparable_data.clear();
 }
 
-constexpr bool test() {
-  test_iterators<int*>();
-  test_iterators<const int*>();
-  test_iterators<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>();
-  test_iterators<bidirectional_iterator<int*>>();
-  test_iterators<forward_iterator<int*>>();
-  test_iterators<random_access_iterator<int*>>();
-  test_iterators<contiguous_iterator<int*>>();
+template <class ElementT>
+class TriviallyComparable {
+  ElementT el_;
 
-  {
-    // check that projections are used properly and that they are called with the iterator directly
-    {
-      int a[] = {1, 2, 3, 4};
-      auto ret = std::ranges::find(a, a + 4, a + 3, [](int& i) { return &i; });
-      assert(ret == a + 3);
-    }
-    {
-      int a[] = {1, 2, 3, 4};
-      auto ret = std::ranges::find(a, a + 3, [](int& i) { return &i; });
-      assert(ret == a + 3);
-    }
-  }
+public:
+  TEST_CONSTEXPR TriviallyComparable(ElementT el) : el_(el) {}
+  bool operator==(const TriviallyComparable&) const = default;
+};
+
+constexpr bool test() {
+  types::for_each(types::type_list<char, wchar_t, int, long, TriviallyComparable<char>, TriviallyComparable<wchar_t>>{},
+                  []<class T> {
+                    types::for_each(types::cpp20_input_iterator_list<T*>{}, []<class Iter> {
+                      if constexpr (std::forward_iterator<Iter>)
+                        test_iterators<Iter>();
+                      test_iterators<Iter, sentinel_wrapper<Iter>>();
+                      test_iterators<Iter, sized_sentinel<Iter>>();
+                    });
+                  });
 
   { // check that the first element is returned
     {
@@ -115,19 +150,6 @@ constexpr bool test() {
       assert(ret == a);
       assert(ret->comp == 0);
       assert(ret->other == 0);
-    }
-  }
-
-  { // check that end + 1 iterator is returned with no match
-    {
-      int a[] = {1, 1, 1};
-      auto ret = std::ranges::find(a, a + 3, 0);
-      assert(ret == a + 3);
-    }
-    {
-      int a[] = {1, 1, 1};
-      auto ret = std::ranges::find(a, 0);
-      assert(ret == a + 3);
     }
   }
 
@@ -159,26 +181,45 @@ constexpr bool test() {
     }
   }
 
-  {
-    // check that an empty range works
-    {
-      std::array<int ,0> a = {};
-      auto ret = std::ranges::find(a.begin(), a.end(), 1);
-      assert(ret == a.begin());
-    }
-    {
-      std::array<int, 0> a = {};
-      auto ret = std::ranges::find(a, 1);
-      assert(ret == a.begin());
-    }
-  }
-
   return true;
 }
+
+template <class IndexT>
+class Comparable {
+  IndexT index_;
+
+public:
+  Comparable(IndexT i)
+      : index_([&]() {
+          IndexT size = static_cast<IndexT>(comparable_data.size());
+          comparable_data.push_back(i);
+          return size;
+        }()) {}
+
+  bool operator==(const Comparable& other) const {
+    return comparable_data[other.index_] == comparable_data[index_];
+  }
+
+  friend bool operator==(const Comparable& lhs, long long rhs) { return comparable_data[lhs.index_] == rhs; }
+};
 
 int main(int, char**) {
   test();
   static_assert(test());
+
+  types::for_each(types::cpp20_input_iterator_list<Comparable<char>*>{}, []<class Iter> {
+    if constexpr (std::forward_iterator<Iter>)
+      test_iterators<Iter>();
+    test_iterators<Iter, sentinel_wrapper<Iter>>();
+    test_iterators<Iter, sized_sentinel<Iter>>();
+  });
+
+  types::for_each(types::cpp20_input_iterator_list<Comparable<wchar_t>*>{}, []<class Iter> {
+    if constexpr (std::forward_iterator<Iter>)
+      test_iterators<Iter>();
+    test_iterators<Iter, sentinel_wrapper<Iter>>();
+    test_iterators<Iter, sized_sentinel<Iter>>();
+  });
 
   return 0;
 }

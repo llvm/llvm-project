@@ -8,14 +8,13 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class JobControlTest(PExpectTest):
-    
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_job_control(self):
         def post_spawn():
             self.child.expect("PID=([0-9]+)")
             self.lldb_pid = int(self.child.match[1])
 
-        run_under = [sys.executable, self.getSourcePath('shell.py')]
+        run_under = [sys.executable, self.getSourcePath("shell.py")]
         self.launch(run_under=run_under, post_spawn=post_spawn)
 
         os.kill(self.lldb_pid, signal.SIGTSTP)

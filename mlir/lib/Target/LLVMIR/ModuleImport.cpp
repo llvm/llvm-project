@@ -730,8 +730,8 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
 
   // Returns the static shape of the provided type if possible.
   auto getConstantShape = [&](llvm::Type *type) {
-    return getBuiltinTypeForAttr(convertType(type))
-        .dyn_cast_or_null<ShapedType>();
+    return llvm::dyn_cast_if_present<ShapedType>(getBuiltinTypeForAttr(convertType(type))
+        );
   };
 
   // Convert one-dimensional constant arrays or vectors that store 1/2/4/8-byte
@@ -798,8 +798,8 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
 
   // Convert zero aggregates.
   if (auto *constZero = dyn_cast<llvm::ConstantAggregateZero>(constant)) {
-    auto shape = getBuiltinTypeForAttr(convertType(constZero->getType()))
-                     .dyn_cast_or_null<ShapedType>();
+    auto shape = llvm::dyn_cast_if_present<ShapedType>(getBuiltinTypeForAttr(convertType(constZero->getType()))
+                     );
     if (!shape)
       return {};
     // Convert zero aggregates with a static shape to splat elements attributes.

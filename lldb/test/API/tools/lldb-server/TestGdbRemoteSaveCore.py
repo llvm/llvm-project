@@ -6,8 +6,8 @@ from lldbsuite.test import lldbutil
 import binascii
 import os
 
-class TestGdbSaveCore(gdbremote_testcase.GdbRemoteTestCaseBase):
 
+class TestGdbSaveCore(gdbremote_testcase.GdbRemoteTestCaseBase):
     def coredump_test(self, core_path=None, expect_path=None):
         self.build()
         self.set_inferior_startup_attach()
@@ -21,13 +21,20 @@ class TestGdbSaveCore(gdbremote_testcase.GdbRemoteTestCaseBase):
         packet = "$qSaveCore"
         if core_path is not None:
             packet += ";path-hint:{}".format(
-                binascii.b2a_hex(core_path.encode()).decode())
+                binascii.b2a_hex(core_path.encode()).decode()
+            )
 
-        self.test_sequence.add_log_lines([
-            "read packet: {}#00".format(packet),
-            {"direction": "send", "regex": "[$]core-path:([0-9a-f]+)#.*",
-             "capture": {1: "path"}},
-        ], True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: {}#00".format(packet),
+                {
+                    "direction": "send",
+                    "regex": "[$]core-path:([0-9a-f]+)#.*",
+                    "capture": {1: "path"},
+                },
+            ],
+            True,
+        )
         ret = self.expect_gdbremote_sequence()
         out_path = binascii.a2b_hex(ret["path"].encode()).decode()
         if expect_path is not None:

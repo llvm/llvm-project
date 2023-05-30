@@ -10,16 +10,18 @@
 # RUN: ld.lld -T %t/3.t %t/a2.o -o %t/a3 --print-memory-usage \
 # RUN:     | FileCheck %s --check-prefix=CHECK3 --match-full-lines --strict-whitespace
 
-# CHECK1:Memory region         Used Size  Region Size  %age Used
-# CHECK1:             ROM:           4 B         1 KB      0.39%
-# CHECK1:             RAM:           4 B       256 KB      0.00%
+#      CHECK1:Memory region         Used Size  Region Size  %age Used
+# CHECK1-NEXT:             ROM:           4 B         1 KB      0.39%
+# CHECK1-NEXT:             RAM:           4 B       256 KB      0.00%
+#  CHECK1-NOT:{{.}}
 
 # CHECK2:Memory region         Used Size  Region Size  %age Used
 # CHECK2-NOT:{{.}}
 
-# CHECK3:Memory region         Used Size  Region Size  %age Used
-# CHECK3:             ROM:        256 KB         1 MB     25.00%
-# CHECK3:             RAM:          32 B         2 GB      0.00%
+#      CHECK3:Memory region         Used Size  Region Size  %age Used
+# CHECK3-NEXT:             ROM:        256 KB         1 MB     25.00%
+# CHECK3-NEXT:             RAM:          32 B         2 GB      0.00%
+#  CHECK3-NOT:{{.}}
 
 #--- a1.s
 .text

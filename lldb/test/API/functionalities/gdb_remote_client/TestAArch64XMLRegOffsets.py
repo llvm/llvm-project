@@ -9,7 +9,9 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 class MyResponder(MockGDBServerResponder):
     def qXferRead(self, obj, annex, offset, length):
         if annex == "target.xml":
-            return dedent("""\
+            return (
+                dedent(
+                    """\
                 <?xml version="1.0"?>
                   <target version="1.0">
                     <architecture>aarch64</architecture>
@@ -79,9 +81,12 @@ class MyResponder(MockGDBServerResponder):
                       <reg name="w28" bitsize="32" value_regnums="28" invalidate_regnums="28"/>
                     </feature>
                   </target>
-                """), False
+                """
+                ),
+                False,
+            )
         else:
-            return None,
+            return (None,)
 
     def readRegister(self, regnum):
         return "E01"
@@ -91,7 +96,6 @@ class MyResponder(MockGDBServerResponder):
 
 
 class TestAArch64XMLRegOffsets(GDBRemoteTestBase):
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
@@ -106,46 +110,85 @@ class TestAArch64XMLRegOffsets(GDBRemoteTestBase):
 
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         process = self.connect(target)
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
-                                      [lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
 
-        registerSet = process.GetThreadAtIndex(
-            0).GetFrameAtIndex(0).GetRegisters().GetValueAtIndex(0)
+        registerSet = (
+            process.GetThreadAtIndex(0)
+            .GetFrameAtIndex(0)
+            .GetRegisters()
+            .GetValueAtIndex(0)
+        )
 
         reg_val_dict = {
-            "x0": 0x0000000000000020, "x1": 0x0000000000000020,
-            "x2": 0x0000ffffbf54c1f0, "x3": 0x480bea8f5a98aa5d,
-            "x4": 0x0000ffffbf54b9f0, "x5": 0x480b1570e5cc13ad,
-            "x6": 0x0000000000000038, "x7": 0x0000ffffbf6a4570,
-            "x8": 0x00000000000000a7, "x9": 0x0000000000000000,
-            "x10": 0x0101010101010101, "x11": 0x0000000000000000,
-            "x12": 0x0000ffffbf54c1f0, "x13": 0x000000000000270f,
-            "x14": 0x0000ffffbf55e308, "x15": 0x0000ffffbf550e08,
-            "x16": 0x0000000000411028, "x17": 0x0000ffffbf61de10,
-            "x18": 0x000000000000055c, "x19": 0x0000ffffbf54c1f0,
-            "x20": 0x0000fffffffffc90, "x21": 0x0000fffffffffc8e,
-            "x22": 0x0000fffffffffc8f, "x23": 0x0000000000000000,
-            "x24": 0x0000000000001000, "x25": 0x0000fffffffffc90,
-            "x26": 0x0000ffffbf6cd000, "x27": 0x0000ffffbf54c1f0,
-            "x28": 0x0000000000000001, "x29": 0x0000ffffbf54b9d0,
-            "x30": 0x00000000004007e4, "sp": 0x0000ffffbf54b9d0,
-            "pc": 0x00000000004007e4, "cpsr": 0x00001000, "w0": 0x00000020,
-            "w1": 0x00000020, "w2": 0xbf54c1f0, "w3": 0x5a98aa5d,
-            "w4": 0xbf54b9f0, "w5": 0xe5cc13ad, "w6": 0x00000038,
-            "w7": 0xbf6a4570, "w8": 0x000000a7, "w9": 0x00000000,
-            "w10": 0x01010101, "w11": 0x00000000, "w12": 0xbf54c1f0,
-            "w13": 0x0000270f, "w14": 0xbf55e308, "w15": 0xbf550e08,
-            "w16": 0x00411028, "w17": 0xbf61de10, "w18": 0x0000055c,
-            "w19": 0xbf54c1f0, "w20": 0xfffffc90, "w21": 0xfffffc8e,
-            "w22": 0xfffffc8f, "w23": 0x00000000, "w24": 0x00001000,
-            "w25": 0xfffffc90, "w26": 0xbf6cd000, "w27": 0xbf54c1f0,
-            "w28": 0x00000001
+            "x0": 0x0000000000000020,
+            "x1": 0x0000000000000020,
+            "x2": 0x0000FFFFBF54C1F0,
+            "x3": 0x480BEA8F5A98AA5D,
+            "x4": 0x0000FFFFBF54B9F0,
+            "x5": 0x480B1570E5CC13AD,
+            "x6": 0x0000000000000038,
+            "x7": 0x0000FFFFBF6A4570,
+            "x8": 0x00000000000000A7,
+            "x9": 0x0000000000000000,
+            "x10": 0x0101010101010101,
+            "x11": 0x0000000000000000,
+            "x12": 0x0000FFFFBF54C1F0,
+            "x13": 0x000000000000270F,
+            "x14": 0x0000FFFFBF55E308,
+            "x15": 0x0000FFFFBF550E08,
+            "x16": 0x0000000000411028,
+            "x17": 0x0000FFFFBF61DE10,
+            "x18": 0x000000000000055C,
+            "x19": 0x0000FFFFBF54C1F0,
+            "x20": 0x0000FFFFFFFFFC90,
+            "x21": 0x0000FFFFFFFFFC8E,
+            "x22": 0x0000FFFFFFFFFC8F,
+            "x23": 0x0000000000000000,
+            "x24": 0x0000000000001000,
+            "x25": 0x0000FFFFFFFFFC90,
+            "x26": 0x0000FFFFBF6CD000,
+            "x27": 0x0000FFFFBF54C1F0,
+            "x28": 0x0000000000000001,
+            "x29": 0x0000FFFFBF54B9D0,
+            "x30": 0x00000000004007E4,
+            "sp": 0x0000FFFFBF54B9D0,
+            "pc": 0x00000000004007E4,
+            "cpsr": 0x00001000,
+            "w0": 0x00000020,
+            "w1": 0x00000020,
+            "w2": 0xBF54C1F0,
+            "w3": 0x5A98AA5D,
+            "w4": 0xBF54B9F0,
+            "w5": 0xE5CC13AD,
+            "w6": 0x00000038,
+            "w7": 0xBF6A4570,
+            "w8": 0x000000A7,
+            "w9": 0x00000000,
+            "w10": 0x01010101,
+            "w11": 0x00000000,
+            "w12": 0xBF54C1F0,
+            "w13": 0x0000270F,
+            "w14": 0xBF55E308,
+            "w15": 0xBF550E08,
+            "w16": 0x00411028,
+            "w17": 0xBF61DE10,
+            "w18": 0x0000055C,
+            "w19": 0xBF54C1F0,
+            "w20": 0xFFFFFC90,
+            "w21": 0xFFFFFC8E,
+            "w22": 0xFFFFFC8F,
+            "w23": 0x00000000,
+            "w24": 0x00001000,
+            "w25": 0xFFFFFC90,
+            "w26": 0xBF6CD000,
+            "w27": 0xBF54C1F0,
+            "w28": 0x00000001,
         }
 
         for reg in registerSet:
-            self.assertEqual(reg.GetValueAsUnsigned(),
-                             reg_val_dict[reg.GetName()])
+            self.assertEqual(reg.GetValueAsUnsigned(), reg_val_dict[reg.GetName()])

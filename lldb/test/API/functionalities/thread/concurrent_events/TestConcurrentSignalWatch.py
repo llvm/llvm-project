@@ -1,4 +1,3 @@
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.concurrent_base import ConcurrentEventsBase
 from lldbsuite.test.lldbtest import TestBase
@@ -6,9 +5,8 @@ from lldbsuite.test.lldbtest import TestBase
 
 @skipIfWindows
 class ConcurrentSignalWatch(ConcurrentEventsBase):
-
     # Atomic sequences are not supported yet for MIPS in LLDB.
-    @skipIf(triple='^mips')
+    @skipIf(triple="^mips")
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test a watchpoint and a signal in multiple threads."""

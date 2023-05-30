@@ -871,6 +871,11 @@ private:
                                        RegionIndex, AllocatedGroupSize,
                                        /*MayContainLastBlockInRegion=*/true);
       }
+
+      // We may not be able to do the page release In a rare case that we may
+      // fail on PageMap allocation.
+      if (UNLIKELY(!Context.hasBlockMarked()))
+        return 0;
     }
 
     if (!Context.hasBlockMarked())

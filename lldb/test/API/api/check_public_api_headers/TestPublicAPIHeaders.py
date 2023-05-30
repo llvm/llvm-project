@@ -16,7 +16,7 @@ class SBDirCheckerCase(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        self.source = 'main.cpp'
+        self.source = "main.cpp"
         self.generateSource(self.source)
 
     def test_sb_api_directory(self):
@@ -36,22 +36,28 @@ class SBDirCheckerCase(TestBase):
 
         # This test uses a generated source file, so it's in the build directory.
         self.line_to_break = line_number(
-            self.getBuildArtifact(self.source), '// Set breakpoint here.')
+            self.getBuildArtifact(self.source), "// Set breakpoint here."
+        )
 
         env_cmd = "settings set target.env-vars %s=%s" % (
-            self.dylibPath, self.getLLDBLibraryEnvVal())
+            self.dylibPath,
+            self.getLLDBLibraryEnvVal(),
+        )
         if self.TraceOn():
             print("Set environment to: ", env_cmd)
         self.runCmd(env_cmd)
 
         lldbutil.run_break_set_by_file_and_line(
-            self, self.source, self.line_to_break, num_expected_locations=-1)
+            self, self.source, self.line_to_break, num_expected_locations=-1
+        )
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
-        self.runCmd('frame variable')
+        self.runCmd("frame variable")

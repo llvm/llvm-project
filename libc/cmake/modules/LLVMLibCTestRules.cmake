@@ -92,6 +92,9 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
+  list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
+                           libc.test.UnitTest.ErrnoSetterMatcher)
+  list(REMOVE_DUPLICATES fq_deps_list)
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
@@ -628,6 +631,7 @@ function(add_libc_hermetic_test test_name)
       libc.src.string.memcpy
       libc.src.string.memmove
       libc.src.string.memset
+      libc.src.__support.StringUtil.error_to_string
   )
   list(REMOVE_DUPLICATES fq_deps_list)
 
@@ -704,6 +708,7 @@ function(add_libc_hermetic_test test_name)
       $<$<NOT:$<BOOL:${LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX}>>:${fq_target_name}.__libc__>)
   add_dependencies(${fq_build_target_name}
                    LibcTest.hermetic
+                   libc.test.UnitTest.ErrnoSetterMatcher
                    ${fq_deps_list})
 
   # Tests on the GPU require an external loader utility to launch the kernel.

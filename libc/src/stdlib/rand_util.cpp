@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/rand_util.h"
+#include "src/__support/macros/attributes.h"
 
 namespace __llvm_libc {
 
-thread_local unsigned long rand_next;
+LIBC_THREAD_LOCAL unsigned long rand_next;
 
 } // namespace __llvm_libc

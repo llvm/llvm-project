@@ -5140,6 +5140,26 @@ TEST(TransferTest, UnnamedBitfieldInitializer) {
       });
 }
 
+// Repro for a crash that used to occur with chained short-circuiting logical
+// operators.
+TEST(TransferTest, ChainedLogicalOps) {
+  std::string Code = R"(
+    bool target() {
+      bool b = true || false || false || false;
+      // [[p]]
+      return b;
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &B = getValueForDecl<BoolValue>(ASTCtx, Env, "b");
+        EXPECT_TRUE(Env.flowConditionImplies(B));
+      });
+}
+
 // Repro for a crash that used to occur when we call a `noreturn` function
 // within one of the operands of a `&&` or `||` operator.
 TEST(TransferTest, NoReturnFunctionInsideShortCircuitedBooleanOp) {

@@ -34,6 +34,10 @@ extern "C" {
      Requires (get_ownership(p) == true) or (p == 0). */
   size_t __sanitizer_get_allocated_size(const volatile void *p);
 
+  /* Returns the number of bytes reserved for the pointer p.
+     Requires __sanitizer_get_allocated_begin(p) == p. */
+  size_t __sanitizer_get_allocated_size_fast(const volatile void *p);
+
   /* Number of bytes, allocated and not yet freed by the application. */
   size_t __sanitizer_get_current_allocated_bytes(void);
 

@@ -44,6 +44,7 @@ add_object_library(
   DEPENDS
     .message_mapper
     .platform_errors
+    libc.src.__support.common
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.stringstream
@@ -60,6 +61,7 @@ add_object_library(
     .message_mapper
     .platform_signals
     libc.include.signal
+    libc.src.__support.common
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.stringstream

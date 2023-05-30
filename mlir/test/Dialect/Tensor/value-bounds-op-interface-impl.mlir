@@ -156,3 +156,49 @@ func.func @rank(%t: tensor<5xf32>) -> index {
   %1 = "test.reify_bound"(%0) : (index) -> (index)
   return %1 : index
 }
+
+// -----
+
+func.func @dynamic_dims_are_equal(%t: tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
+  %dim1 = tensor.dim %t, %c0 : tensor<?xf32>
+  // expected-remark @below {{equal}}
+  "test.are_equal"(%dim0, %dim1) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dynamic_dims_are_different(%t: tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
+  %val = arith.addi %dim0, %c1 : index
+  // expected-remark @below {{different}}
+  "test.are_equal"(%dim0, %val) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dynamic_dims_are_maybe_equal_1(%t: tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c5 = arith.constant 5 : index
+  %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
+  // expected-error @below {{could not determine equality}}
+  "test.are_equal"(%dim0, %c5) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dynamic_dims_are_maybe_equal_2(%t: tensor<?x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0 = tensor.dim %t, %c0 : tensor<?x?xf32>
+  %dim1 = tensor.dim %t, %c1 : tensor<?x?xf32>
+  // expected-error @below {{could not determine equality}}
+  "test.are_equal"(%dim0, %dim1) : (index, index) -> ()
+  return
+}

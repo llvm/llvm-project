@@ -14,8 +14,10 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.h"
 #include "mlir/Dialect/Tensor/Transforms/TransformUtils.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
+#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -84,6 +86,11 @@ struct TestTensorTransforms
   Option<bool> testSimplifyPackPatterns{
       *this, "test-simplify-pack-patterns",
       llvm::cl::desc("Test patterns to simplify tensor.pack"),
+      llvm::cl::init(false)};
+
+  Option<bool> testTrackingListener{
+      *this, "test-tracking-listener",
+      llvm::cl::desc("Test tensor TrackingListener for the transform dialect"),
       llvm::cl::init(false)};
 };
 } // namespace
@@ -276,6 +283,82 @@ applyRewriteExtractFromCollapseShapePatterns(Operation *rootOp,
   return applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
+namespace {
+class DummyTrackingListener : public tensor::TrackingListener {
+public:
+  using tensor::TrackingListener::TrackingListener;
+
+  // Expose `findReplacementOp` as a public function, so that it can be tested.
+  Operation *getReplacementOp(Operation *op, ValueRange newValues) const {
+    return findReplacementOp(op, newValues);
+  }
+};
+} // namespace
+
+static LogicalResult testTrackingListenerReplacements(Operation *rootOp) {
+  // Find replaced op.
+  Operation *replaced = nullptr;
+  WalkResult status = rootOp->walk([&](Operation *op) {
+    if (op->hasAttr("replaced")) {
+      if (replaced) {
+        op->emitError("only one 'replaced' op is allowed per test case");
+        replaced->emitRemark("other 'replaced' op");
+        return WalkResult::interrupt();
+      }
+      replaced = op;
+    }
+    return WalkResult::advance();
+  });
+  if (status.wasInterrupted())
+    return failure();
+  if (!replaced) {
+    replaced->emitError("could not find 'replaced' op");
+    return failure();
+  }
+
+  // Find replacements.
+  SmallVector<Value> replacements(replaced->getNumResults(), Value());
+  status = rootOp->walk([&](Operation *op) {
+    for (int64_t i = 0; i < replaced->getNumResults(); ++i) {
+      if (auto attr = op->getAttrOfType<IntegerAttr>("replacement_" +
+                                                     std::to_string(i))) {
+        if (replacements[i]) {
+          op->emitError("only one 'replacement_" + std::to_string(i) +
+                        "' is allowed per test case");
+          replacements[i].getDefiningOp()->emitRemark("other 'replacement_" +
+                                                      std::to_string(i) + "'");
+          return WalkResult::interrupt();
+        }
+        replacements[i] = op->getResult(attr.getInt());
+      }
+    }
+    return WalkResult::advance();
+  });
+  if (status.wasInterrupted())
+    return failure();
+
+  if (!llvm::all_of(replacements,
+                    [](Value v) { return static_cast<bool>(v); })) {
+    replaced->emitError("insufficient replacement values");
+    return failure();
+  }
+
+  // Find the replacement op (if any) and emit a remark/error.
+  transform::TransformState transformState =
+      transform::detail::makeTransformStateForTesting(/*region=*/nullptr,
+                                                      /*payloadRoot=*/nullptr);
+  DummyTrackingListener listener(transformState,
+                                 transform::TransformOpInterface());
+  Operation *replacement = listener.getReplacementOp(replaced, replacements);
+  if (!replacement) {
+    replaced->emitError("listener could not find replacement op");
+    return failure();
+  }
+
+  replacement->emitRemark("replacement found");
+  return success();
+}
+
 void TestTensorTransforms::runOnOperation() {
   Operation *rootOp = getOperation();
   if (testSimplifyPackPatterns)
@@ -295,6 +378,9 @@ void TestTensorTransforms::runOnOperation() {
             applyRewriteExtractFromCollapseShapePatterns(rootOp, useForeach)))
       return signalPassFailure();
   }
+  if (testTrackingListener)
+    if (failed(testTrackingListenerReplacements(rootOp)))
+      return signalPassFailure();
 }
 
 namespace mlir {

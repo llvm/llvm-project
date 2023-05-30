@@ -14,6 +14,7 @@
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/integer_to_string.h"
+#include "src/__support/macros/attributes.h"
 
 #include <signal.h>
 #include <stddef.h>
@@ -32,7 +33,7 @@ constexpr size_t max_buff_size() {
 // This is to hold signal strings that have to be custom built. It may be
 // rewritten on every call to strsignal (or other signal to string function).
 constexpr size_t SIG_BUFFER_SIZE = max_buff_size();
-thread_local char signal_buffer[SIG_BUFFER_SIZE];
+LIBC_THREAD_LOCAL char signal_buffer[SIG_BUFFER_SIZE];
 
 constexpr size_t TOTAL_STR_LEN = total_str_len(PLATFORM_SIGNALS);
 

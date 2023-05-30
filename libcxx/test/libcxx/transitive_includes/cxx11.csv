@@ -7,6 +7,7 @@ algorithm cstdint
 algorithm cstdlib
 algorithm cstring
 algorithm ctime
+algorithm cwchar
 algorithm execution
 algorithm initializer_list
 algorithm iosfwd
@@ -191,6 +192,7 @@ coroutine version
 cstddef version
 ctgmath ccomplex
 ctgmath cmath
+cwchar cstddef
 cwchar cwctype
 cwctype cctype
 deque algorithm
@@ -201,6 +203,7 @@ deque cstddef
 deque cstdint
 deque cstdlib
 deque cstring
+deque cwchar
 deque functional
 deque initializer_list
 deque iosfwd
@@ -951,6 +954,7 @@ vector cstddef
 vector cstdint
 vector cstdlib
 vector cstring
+vector cwchar
 vector initializer_list
 vector iosfwd
 vector limits

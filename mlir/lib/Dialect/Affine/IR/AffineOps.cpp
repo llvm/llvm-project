@@ -1212,7 +1212,7 @@ static void materializeConstants(OpBuilder &b, Location loc,
   actualValues.reserve(values.size());
   auto *dialect = b.getContext()->getLoadedDialect<AffineDialect>();
   for (OpFoldResult ofr : values) {
-    if (auto value = ofr.dyn_cast<Value>()) {
+    if (auto value = llvm::dyn_cast_if_present<Value>(ofr)) {
       actualValues.push_back(value);
       continue;
     }
@@ -4599,7 +4599,7 @@ void AffineDelinearizeIndexOp::build(OpBuilder &builder, OperationState &result,
         if (staticDim.has_value())
           return builder.create<arith::ConstantIndexOp>(result.location,
                                                         *staticDim);
-        return ofr.dyn_cast<Value>();
+        return llvm::dyn_cast_if_present<Value>(ofr);
       });
   result.addOperands(basisValues);
 }

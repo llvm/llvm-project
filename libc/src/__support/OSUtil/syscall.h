@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_SYSCALL_H
 #define LLVM_LIBC_SRC_SUPPORT_OSUTIL_SYSCALL_H
 
-#ifdef __unix__
+#ifdef __APPLE__
+#include "darwin/syscall.h"
+#elif defined(__unix__)
 #include "linux/syscall.h"
 #endif
 

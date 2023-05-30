@@ -9,7 +9,6 @@ import lldbvscode_testcase
 
 
 class TestVSCode_restart_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
-
     def isTestSupported(self):
         try:
             # We skip this test for debug builds because it takes too long
@@ -21,23 +20,22 @@ class TestVSCode_restart_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
         except:
             return False
 
-
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=["arm"]) # Always times out on buildbot
+    @skipIf(archs=["arm"])  # Always times out on buildbot
     def test_basic_functionality(self):
-        '''
-            Test basic restarting functionality when the process is running in
-            a terminal.
-        '''
+        """
+        Test basic restarting functionality when the process is running in
+        a terminal.
+        """
         if not self.isTestSupported():
             return
-        line_A = line_number('main.c', '// breakpoint A')
-        line_B = line_number('main.c', '// breakpoint B')
+        line_A = line_number("main.c", "// breakpoint A")
+        line_B = line_number("main.c", "// breakpoint B")
 
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, runInTerminal=True)
-        [bp_A, bp_B] = self.set_source_breakpoints('main.c', [line_A, line_B])
+        [bp_A, bp_B] = self.set_source_breakpoints("main.c", [line_A, line_B])
 
         # Verify we hit A, then B.
         self.vscode.request_configurationDone()
@@ -46,32 +44,38 @@ class TestVSCode_restart_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
         self.verify_breakpoint_hit([bp_B])
 
         # Make sure i has been modified from its initial value of 0.
-        self.assertEquals(int(self.vscode.get_local_variable_value('i')),
-                          1234, 'i != 1234 after hitting breakpoint B')
+        self.assertEquals(
+            int(self.vscode.get_local_variable_value("i")),
+            1234,
+            "i != 1234 after hitting breakpoint B",
+        )
 
         # Restart.
         self.vscode.request_restart()
 
         # Finally, check we stop back at A and program state has been reset.
         self.verify_breakpoint_hit([bp_A])
-        self.assertEquals(int(self.vscode.get_local_variable_value('i')),
-                          0, 'i != 0 after hitting breakpoint A on restart')
+        self.assertEquals(
+            int(self.vscode.get_local_variable_value("i")),
+            0,
+            "i != 0 after hitting breakpoint A on restart",
+        )
 
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=["arm"]) # Always times out on buildbot
+    @skipIf(archs=["arm"])  # Always times out on buildbot
     def test_stopOnEntry(self):
-        '''
-            Check that stopOnEntry works correctly when using runInTerminal.
-        '''
+        """
+        Check that stopOnEntry works correctly when using runInTerminal.
+        """
         if not self.isTestSupported():
             return
-        line_A = line_number('main.c', '// breakpoint A')
-        line_B = line_number('main.c', '// breakpoint B')
+        line_A = line_number("main.c", "// breakpoint A")
+        line_B = line_number("main.c", "// breakpoint B")
 
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, runInTerminal=True, stopOnEntry=True)
-        [bp_main] = self.set_function_breakpoints(['main'])
+        [bp_main] = self.set_function_breakpoints(["main"])
         self.vscode.request_configurationDone()
 
         # When using stopOnEntry, configurationDone doesn't result in a running
@@ -79,13 +83,13 @@ class TestVSCode_restart_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
         stopped_events = self.vscode.wait_for_stopped()
         # We should be stopped at the entry point.
         for stopped_event in stopped_events:
-            if 'body' in stopped_event:
-                body = stopped_event['body']
-                if 'reason' in body:
-                    reason = body['reason']
+            if "body" in stopped_event:
+                body = stopped_event["body"]
+                if "reason" in body:
+                    reason = body["reason"]
                     self.assertNotEqual(
-                        reason, 'breakpoint',
-                        'verify stop isn\'t a breakpoint')
+                        reason, "breakpoint", "verify stop isn't a breakpoint"
+                    )
 
         # Then, if we continue, we should hit the breakpoint at main.
         self.vscode.request_continue()
@@ -96,11 +100,12 @@ class TestVSCode_restart_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
         self.vscode.request_restart()
         stopped_events = self.vscode.wait_for_stopped()
         for stopped_event in stopped_events:
-            if 'body' in stopped_event:
-                body = stopped_event['body']
-                if 'reason' in body:
-                    reason = body['reason']
+            if "body" in stopped_event:
+                body = stopped_event["body"]
+                if "reason" in body:
+                    reason = body["reason"]
                     self.assertNotEqual(
-                        reason, 'breakpoint',
-                        'verify stop after restart isn\'t "main" breakpoint')
-
+                        reason,
+                        "breakpoint",
+                        'verify stop after restart isn\'t "main" breakpoint',
+                    )

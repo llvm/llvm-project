@@ -76,7 +76,7 @@ struct CastOpInterface
     auto rankedResultType = cast<RankedTensorType>(castOp.getType());
     return MemRefType::get(
         rankedResultType.getShape(), rankedResultType.getElementType(),
-        maybeSrcBufferType->cast<MemRefType>().getLayout(), memorySpace);
+        llvm::cast<MemRefType>(*maybeSrcBufferType).getLayout(), memorySpace);
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -139,7 +139,7 @@ struct CollapseShapeOpInterface
         collapseShapeOp.getSrc(), options, fixedTypes);
     if (failed(maybeSrcBufferType))
       return failure();
-    auto srcBufferType = maybeSrcBufferType->cast<MemRefType>();
+    auto srcBufferType = llvm::cast<MemRefType>(*maybeSrcBufferType);
     bool canBeCollapsed = memref::CollapseShapeOp::isGuaranteedCollapsible(
         srcBufferType, collapseShapeOp.getReassociationIndices());
 
@@ -303,7 +303,7 @@ struct ExpandShapeOpInterface
         expandShapeOp.getSrc(), options, fixedTypes);
     if (failed(maybeSrcBufferType))
       return failure();
-    auto srcBufferType = maybeSrcBufferType->cast<MemRefType>();
+    auto srcBufferType = llvm::cast<MemRefType>(*maybeSrcBufferType);
     auto maybeResultType = memref::ExpandShapeOp::computeExpandedType(
         srcBufferType, expandShapeOp.getResultType().getShape(),
         expandShapeOp.getReassociationIndices());
@@ -369,7 +369,7 @@ struct ExtractSliceOpInterface
     if (failed(resultMemrefType))
       return failure();
     Value subView = rewriter.create<memref::SubViewOp>(
-        loc, resultMemrefType->cast<MemRefType>(), *srcMemref, mixedOffsets,
+        loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref, mixedOffsets,
         mixedSizes, mixedStrides);
 
     replaceOpWithBufferizedValues(rewriter, op, subView);
@@ -389,7 +389,7 @@ struct ExtractSliceOpInterface
     SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
     SmallVector<OpFoldResult> mixedStrides = extractSliceOp.getMixedStrides();
     return cast<BaseMemRefType>(memref::SubViewOp::inferRankReducedResultType(
-        extractSliceOp.getType().getShape(), srcMemrefType->cast<MemRefType>(),
+        extractSliceOp.getType().getShape(), llvm::cast<MemRefType>(*srcMemrefType),
         mixedOffsets, mixedSizes, mixedStrides));
   }
 };
@@ -992,8 +992,8 @@ struct ReshapeOpInterface
         getBuffer(rewriter, reshapeOp.getShape(), options);
     if (failed(srcBuffer) || failed(shapeBuffer))
       return failure();
-    auto resultMemRefType = getMemRefType(
-        reshapeOp.getResult(), options, /*layout=*/{},
+    auto resultMemRefType = getMemRefTypeWithStaticIdentityLayout(
+        reshapeOp.getResult().getType(),
         cast<BaseMemRefType>(srcBuffer->getType()).getMemorySpace());
     replaceOpWithNewBufferizedOp<memref::ReshapeOp>(
         rewriter, op, resultMemRefType, *srcBuffer, *shapeBuffer);

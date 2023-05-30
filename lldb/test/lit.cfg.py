@@ -10,6 +10,6 @@ from lit.llvm import llvm_config
 # subdirectories. Anything configured here will *not* be loaded when pointing
 # lit at on of the subdirectories.
 
-config.name = 'lldb'
+config.name = "lldb"
 config.test_source_root = os.path.dirname(__file__)
-config.test_exec_root = os.path.join(config.lldb_obj_root, 'test')
+config.test_exec_root = os.path.join(config.lldb_obj_root, "test")

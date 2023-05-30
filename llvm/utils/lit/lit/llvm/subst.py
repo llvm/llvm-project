@@ -12,7 +12,7 @@ class FindTool(object):
         self.name = name
 
     def resolve(self, config, dirs):
-        # Check for a user explicitely overriding a tool.  This allows:
+        # Check for a user explicitly overriding a tool. This allows:
         #     llvm-lit -D llc="llc -enable-misched -verify-machineinstrs"
         command = config.lit_config.params.get(self.name)
         if command is None:
@@ -49,9 +49,9 @@ class ToolSubst(object):
 
         key: The text which is to be substituted.
 
-        command: The command to substitute when the key is matched.  By default,
-        this will treat `key` as a tool name and search for it.  If it is
-        a string, it is intereprted as an exact path.  If it is an instance of
+        command: The command to substitute when the key is matched. By default,
+        this will treat `key` as a tool name and search for it. If it is a
+        string, it is interpreted as an exact path. If it is an instance of
         FindTool, the specified tool name is searched for on disk.
 
         pre: If specified, the substitution will not find matches where
@@ -66,7 +66,7 @@ class ToolSubst(object):
         underlying substitution
 
         unresolved: Action to take if the tool substitution cannot be
-        resolved.  Valid values:
+        resolved. Valid values:
             'warn' - log a warning but add the substitution anyway.
             'fatal' - Exit the test suite and log a fatal error.
             'break' - Don't add any of the substitutions from the current
@@ -75,9 +75,6 @@ class ToolSubst(object):
 
         extra_args: If specified, represents a list of arguments that will be
         appended to the tool's substitution.
-
-        explicit_path: If specified, the exact path will be used as a substitution.
-        Otherwise, the tool will be searched for as if by calling which(tool)
 
         """
         self.unresolved = unresolved
@@ -104,10 +101,9 @@ class ToolSubst(object):
         self.regex = not_in(pre, "<") + wordify(key) + not_in(post)
 
     def resolve(self, config, search_dirs):
-        # Extract the tool name from the pattern.  This relies on the tool
-        # name being surrounded by \b word match operators.  If the
-        # pattern starts with "| ", include it in the string to be
-        # substituted.
+        # Extract the tool name from the pattern. This relies on the tool name
+        # being surrounded by \b word match operators. If the pattern starts
+        # with "| ", include it in the string to be substituted.
 
         tool_match = expr.match(self.regex)
         if not tool_match:

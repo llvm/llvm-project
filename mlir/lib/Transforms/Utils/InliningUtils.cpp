@@ -266,7 +266,7 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
 
   // Remap the locations of the inlined operations if a valid source location
   // was provided.
-  if (inlineLoc && !inlineLoc->isa<UnknownLoc>())
+  if (inlineLoc && !llvm::isa<UnknownLoc>(*inlineLoc))
     remapInlinedLocations(newBlocks, *inlineLoc);
 
   // If the blocks were moved in-place, make sure to remap any necessary

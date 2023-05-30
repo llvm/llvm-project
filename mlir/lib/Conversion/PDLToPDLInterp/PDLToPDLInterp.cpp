@@ -412,10 +412,10 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
     auto *ans = cast<TypeAnswer>(answer);
     if (isa<pdl::RangeType>(val.getType()))
       builder.create<pdl_interp::CheckTypesOp>(
-          loc, val, ans->getValue().cast<ArrayAttr>(), success, failure);
+          loc, val, llvm::cast<ArrayAttr>(ans->getValue()), success, failure);
     else
       builder.create<pdl_interp::CheckTypeOp>(
-          loc, val, ans->getValue().cast<TypeAttr>(), success, failure);
+          loc, val, llvm::cast<TypeAttr>(ans->getValue()), success, failure);
     break;
   }
   case Predicates::AttributeQuestion: {

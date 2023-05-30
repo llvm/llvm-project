@@ -20,7 +20,7 @@ Checked signal handler rules for up to and including C++14:
 
 The check is disabled on C++17 and later.
 
-Asnychronous-safety is determined by comparing the function's name against a set
+Asynchronous-safety is determined by comparing the function's name against a set
 of known functions. In addition, the function must come from a system header
 include and in a global namespace. The (possible) arguments passed to the
 function are not checked. Any function that cannot be determined to be

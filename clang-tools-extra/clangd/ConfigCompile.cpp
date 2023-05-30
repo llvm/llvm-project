@@ -196,6 +196,7 @@ struct FragmentCompiler {
     compile(std::move(F.Completion));
     compile(std::move(F.Hover));
     compile(std::move(F.InlayHints));
+    compile(std::move(F.SemanticTokens));
     compile(std::move(F.Style));
   }
 
@@ -616,6 +617,37 @@ struct FragmentCompiler {
           [Value(**F.TypeNameLimit)](const Params &, Config &C) {
             C.InlayHints.TypeNameLimit = Value;
           });
+  }
+
+  void compile(Fragment::SemanticTokensBlock &&F) {
+    if (!F.DisabledKinds.empty()) {
+      std::vector<std::string> DisabledKinds;
+      for (auto &Kind : F.DisabledKinds)
+        DisabledKinds.push_back(std::move(*Kind));
+
+      Out.Apply.push_back(
+          [DisabledKinds(std::move(DisabledKinds))](const Params &, Config &C) {
+            for (auto &Kind : DisabledKinds) {
+              auto It = llvm::find(C.SemanticTokens.DisabledKinds, Kind);
+              if (It == C.SemanticTokens.DisabledKinds.end())
+                C.SemanticTokens.DisabledKinds.push_back(std::move(Kind));
+            }
+          });
+    }
+    if (!F.DisabledModifiers.empty()) {
+      std::vector<std::string> DisabledModifiers;
+      for (auto &Kind : F.DisabledModifiers)
+        DisabledModifiers.push_back(std::move(*Kind));
+
+      Out.Apply.push_back([DisabledModifiers(std::move(DisabledModifiers))](
+                              const Params &, Config &C) {
+        for (auto &Kind : DisabledModifiers) {
+          auto It = llvm::find(C.SemanticTokens.DisabledModifiers, Kind);
+          if (It == C.SemanticTokens.DisabledModifiers.end())
+            C.SemanticTokens.DisabledModifiers.push_back(std::move(Kind));
+        }
+      });
+    }
   }
 
   constexpr static llvm::SourceMgr::DiagKind Error = llvm::SourceMgr::DK_Error;

@@ -63,9 +63,9 @@ LogicalResult reshapeLowerToHigher(PatternRewriter &rewriter, Location loc,
   // Verify the rank agrees with the output type if the output type is ranked.
   if (outputType) {
     if (outputType.getRank() !=
-            input1_copy.getType().cast<RankedTensorType>().getRank() ||
+            llvm::cast<RankedTensorType>(input1_copy.getType()).getRank() ||
         outputType.getRank() !=
-            input2_copy.getType().cast<RankedTensorType>().getRank())
+            llvm::cast<RankedTensorType>(input2_copy.getType()).getRank())
       return rewriter.notifyMatchFailure(
           loc, "the reshaped type doesn't agrees with the ranked output type");
   }

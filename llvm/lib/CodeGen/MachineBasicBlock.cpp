@@ -1462,7 +1462,7 @@ void MachineBasicBlock::replacePhiUsesWith(MachineBasicBlock *Old,
     }
 }
 
-/// Find the next valid DebugLoc starting at MBBI, skipping any DBG_VALUE
+/// Find the next valid DebugLoc starting at MBBI, skipping any debug
 /// instructions.  Return UnknownLoc if there is none.
 DebugLoc
 MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
@@ -1474,6 +1474,8 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
 }
 
 DebugLoc MachineBasicBlock::rfindDebugLoc(reverse_instr_iterator MBBI) {
+  if (MBBI == instr_rend())
+    return findDebugLoc(instr_begin());
   // Skip debug declarations, we don't want a DebugLoc from them.
   MBBI = skipDebugInstructionsBackward(MBBI, instr_rbegin());
   if (!MBBI->isDebugInstr())
@@ -1481,13 +1483,15 @@ DebugLoc MachineBasicBlock::rfindDebugLoc(reverse_instr_iterator MBBI) {
   return {};
 }
 
-/// Find the previous valid DebugLoc preceding MBBI, skipping and DBG_VALUE
+/// Find the previous valid DebugLoc preceding MBBI, skipping any debug
 /// instructions.  Return UnknownLoc if there is none.
 DebugLoc MachineBasicBlock::findPrevDebugLoc(instr_iterator MBBI) {
-  if (MBBI == instr_begin()) return {};
+  if (MBBI == instr_begin())
+    return {};
   // Skip debug instructions, we don't want a DebugLoc from them.
   MBBI = prev_nodbg(MBBI, instr_begin());
-  if (!MBBI->isDebugInstr()) return MBBI->getDebugLoc();
+  if (!MBBI->isDebugInstr())
+    return MBBI->getDebugLoc();
   return {};
 }
 

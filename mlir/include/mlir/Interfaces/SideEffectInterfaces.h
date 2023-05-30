@@ -163,12 +163,12 @@ public:
 
   /// Return the value the effect is applied on, or nullptr if there isn't a
   /// known value being affected.
-  Value getValue() const { return value ? value.dyn_cast<Value>() : Value(); }
+  Value getValue() const { return value ? llvm::dyn_cast_if_present<Value>(value) : Value(); }
 
   /// Return the symbol reference the effect is applied on, or nullptr if there
   /// isn't a known smbol being affected.
   SymbolRefAttr getSymbolRef() const {
-    return value ? value.dyn_cast<SymbolRefAttr>() : SymbolRefAttr();
+    return value ? llvm::dyn_cast_if_present<SymbolRefAttr>(value) : SymbolRefAttr();
   }
 
   /// Return the resource that the effect applies to.

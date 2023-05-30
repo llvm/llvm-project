@@ -183,7 +183,8 @@ def FuseIntoContainingOp :
 
   let arguments = (ins TransformHandleTypeInterface:$producer_op,
                        TransformHandleTypeInterface:$containing_op);
-  let results = (outs TransformHandleTypeInterface:$fused_op);
+  let results = (outs TransformHandleTypeInterface:$fused_op,
+                      TransformHandleTypeInterface:$new_containing_op);
   let assemblyFormat = "$producer_op `into` $containing_op attr-dict "
                        " `:` functional-type(operands, results)";
 

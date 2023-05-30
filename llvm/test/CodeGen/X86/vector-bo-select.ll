@@ -2430,9 +2430,9 @@ define <16 x i32> @sub_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i3
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vpsubd %zmm2, %zmm1, %zmm0
-; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpsubd %zmm2, %zmm1, %zmm1 {%k1}
+; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x i32> zeroinitializer, <16 x i32> %y
   %r = sub <16 x i32> %x, %s
@@ -3388,9 +3388,9 @@ define <16 x i32> @shl_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i3
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vpsllvd %zmm2, %zmm1, %zmm0
-; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpsllvd %zmm2, %zmm1, %zmm1 {%k1}
+; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x i32> zeroinitializer, <16 x i32> %y
   %r = shl <16 x i32> %x, %s
@@ -4140,9 +4140,9 @@ define <16 x i32> @lshr_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vpsrlvd %zmm2, %zmm1, %zmm0
-; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpsrlvd %zmm2, %zmm1, %zmm1 {%k1}
+; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x i32> zeroinitializer, <16 x i32> %y
   %r = lshr <16 x i32> %x, %s
@@ -4993,9 +4993,9 @@ define <16 x i32> @ashr_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vpsravd %zmm2, %zmm1, %zmm0
-; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpsravd %zmm2, %zmm1, %zmm1 {%k1}
+; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x i32> zeroinitializer, <16 x i32> %y
   %r = ashr <16 x i32> %x, %s

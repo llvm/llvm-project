@@ -9,11 +9,13 @@ from lldbsuite.test import lldbutil
 
 
 class TestTargetVarNoVars(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_target_var_no_vars(self):
         self.build()
-        lldbutil.run_to_name_breakpoint(self, 'main')
-        self.expect("target variable", substrs=['no global variables in current compile unit', 'main.c'], error=True)
-
+        lldbutil.run_to_name_breakpoint(self, "main")
+        self.expect(
+            "target variable",
+            substrs=["no global variables in current compile unit", "main.c"],
+            error=True,
+        )

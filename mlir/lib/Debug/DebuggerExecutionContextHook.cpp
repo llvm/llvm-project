@@ -121,11 +121,11 @@ void mlirDebuggerCursorSelectParentIRUnit() {
     return;
   }
   IRUnit *unit = &state.cursor;
-  if (auto *op = unit->dyn_cast<Operation *>()) {
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(*unit)) {
     state.cursor = op->getBlock();
-  } else if (auto *region = unit->dyn_cast<Region *>()) {
+  } else if (auto *region = llvm::dyn_cast_if_present<Region *>(*unit)) {
     state.cursor = region->getParentOp();
-  } else if (auto *block = unit->dyn_cast<Block *>()) {
+  } else if (auto *block = llvm::dyn_cast_if_present<Block *>(*unit)) {
     state.cursor = block->getParent();
   } else {
     llvm::outs() << "Current cursor is not a valid IRUnit";
@@ -142,14 +142,14 @@ void mlirDebuggerCursorSelectChildIRUnit(int index) {
     return;
   }
   IRUnit *unit = &state.cursor;
-  if (auto *op = unit->dyn_cast<Operation *>()) {
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(*unit)) {
     if (index < 0 || index >= static_cast<int>(op->getNumRegions())) {
       llvm::outs() << "Index invalid, op has " << op->getNumRegions()
                    << " but got " << index << "\n";
       return;
     }
     state.cursor = &op->getRegion(index);
-  } else if (auto *region = unit->dyn_cast<Region *>()) {
+  } else if (auto *region = llvm::dyn_cast_if_present<Region *>(*unit)) {
     auto block = region->begin();
     int count = 0;
     while (block != region->end() && count != index) {
@@ -163,7 +163,7 @@ void mlirDebuggerCursorSelectChildIRUnit(int index) {
       return;
     }
     state.cursor = &*block;
-  } else if (auto *block = unit->dyn_cast<Block *>()) {
+  } else if (auto *block = llvm::dyn_cast_if_present<Block *>(*unit)) {
     auto op = block->begin();
     int count = 0;
     while (op != block->end() && count != index) {
@@ -192,14 +192,14 @@ void mlirDebuggerCursorSelectPreviousIRUnit() {
     return;
   }
   IRUnit *unit = &state.cursor;
-  if (auto *op = unit->dyn_cast<Operation *>()) {
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(*unit)) {
     Operation *previous = op->getPrevNode();
     if (!previous) {
       llvm::outs() << "No previous operation in the current block\n";
       return;
     }
     state.cursor = previous;
-  } else if (auto *region = unit->dyn_cast<Region *>()) {
+  } else if (auto *region = llvm::dyn_cast_if_present<Region *>(*unit)) {
     llvm::outs() << "Has region\n";
     Operation *parent = region->getParentOp();
     if (!parent) {
@@ -212,7 +212,7 @@ void mlirDebuggerCursorSelectPreviousIRUnit() {
     }
     state.cursor =
         &region->getParentOp()->getRegion(region->getRegionNumber() - 1);
-  } else if (auto *block = unit->dyn_cast<Block *>()) {
+  } else if (auto *block = llvm::dyn_cast_if_present<Block *>(*unit)) {
     Block *previous = block->getPrevNode();
     if (!previous) {
       llvm::outs() << "No previous block in the current region\n";
@@ -234,14 +234,14 @@ void mlirDebuggerCursorSelectNextIRUnit() {
     return;
   }
   IRUnit *unit = &state.cursor;
-  if (auto *op = unit->dyn_cast<Operation *>()) {
+  if (auto *op = llvm::dyn_cast_if_present<Operation *>(*unit)) {
     Operation *next = op->getNextNode();
     if (!next) {
       llvm::outs() << "No next operation in the current block\n";
       return;
     }
     state.cursor = next;
-  } else if (auto *region = unit->dyn_cast<Region *>()) {
+  } else if (auto *region = llvm::dyn_cast_if_present<Region *>(*unit)) {
     Operation *parent = region->getParentOp();
     if (!parent) {
       llvm::outs() << "No parent operation for the current region\n";
@@ -253,7 +253,7 @@ void mlirDebuggerCursorSelectNextIRUnit() {
     }
     state.cursor =
         &region->getParentOp()->getRegion(region->getRegionNumber() + 1);
-  } else if (auto *block = unit->dyn_cast<Block *>()) {
+  } else if (auto *block = llvm::dyn_cast_if_present<Block *>(*unit)) {
     Block *next = block->getNextNode();
     if (!next) {
       llvm::outs() << "No next block in the current region\n";

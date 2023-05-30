@@ -98,6 +98,9 @@ struct LinkOptions {
   /// The output format of the remarks.
   remarks::Format RemarksFormat = remarks::Format::Bitstream;
 
+  /// Whether all remarks should be kept or only remarks with valid debug
+  /// locations.
+  bool RemarksKeepAll = true;
   /// @}
 
   LinkOptions() = default;

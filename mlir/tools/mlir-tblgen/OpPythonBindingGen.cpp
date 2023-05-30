@@ -674,7 +674,7 @@ populateBuilderLinesAttr(const Operator &op,
   builderLines.push_back("_ods_context = _ods_get_default_loc_context(loc)");
   for (int i = 0, e = op.getNumArgs(); i < e; ++i) {
     Argument arg = op.getArg(i);
-    auto *attribute = arg.dyn_cast<NamedAttribute *>();
+    auto *attribute = llvm::dyn_cast_if_present<NamedAttribute *>(arg);
     if (!attribute)
       continue;
 
@@ -914,9 +914,9 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
     // - default-valued named attributes
     // - optional operands
     Argument a = op.getArg(builderArgIndex - numResultArgs);
-    if (auto *nattr = a.dyn_cast<NamedAttribute *>())
+    if (auto *nattr = llvm::dyn_cast_if_present<NamedAttribute *>(a))
       return (nattr->attr.isOptional() || nattr->attr.hasDefaultValue());
-    if (auto *ntype = a.dyn_cast<NamedTypeConstraint *>())
+    if (auto *ntype = llvm::dyn_cast_if_present<NamedTypeConstraint *>(a))
       return ntype->isOptional();
     return false;
   };

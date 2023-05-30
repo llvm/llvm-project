@@ -180,7 +180,7 @@ struct ReifyPadOp
       AffineExpr expr = b.getAffineDimExpr(0);
       unsigned numSymbols = 0;
       auto addOpFoldResult = [&](OpFoldResult valueOrAttr) {
-        if (Value v = valueOrAttr.dyn_cast<Value>()) {
+        if (Value v = llvm::dyn_cast_if_present<Value>(valueOrAttr)) {
           expr = expr + b.getAffineSymbolExpr(numSymbols++);
           mapOperands.push_back(v);
           return;

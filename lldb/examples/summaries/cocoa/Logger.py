@@ -4,7 +4,6 @@ import inspect
 
 
 class NopLogger:
-
     def __init__(self):
         pass
 
@@ -19,7 +18,6 @@ class NopLogger:
 
 
 class StdoutLogger:
-
     def __init__(self):
         pass
 
@@ -34,15 +32,14 @@ class StdoutLogger:
 
 
 class FileLogger:
-
     def __init__(self, name):
         self.file = None
         try:
             name = os.path.abspath(name)
-            self.file = open(name, 'a')
+            self.file = open(name, "a")
         except:
             try:
-                self.file = open('formatters.log', 'a')
+                self.file = open("formatters.log", "a")
             except:
                 pass
 
@@ -61,6 +58,7 @@ class FileLogger:
             self.file.close()
             self.file = None
 
+
 # to enable logging:
 # define lldb.formatters.Logger._lldb_formatters_debug_level to any number greater than 0
 # if you define it to any value greater than 1, the log will be automatically flushed after each write (slower but should make sure most of the stuff makes it to the log even if we crash)
@@ -71,14 +69,13 @@ class FileLogger:
 
 
 class Logger:
-
     def __init__(self, autoflush=False, logcaller=False):
         global _lldb_formatters_debug_level
         global _lldb_formatters_debug_filename
         self.autoflush = autoflush
         want_log = False
         try:
-            want_log = (_lldb_formatters_debug_level > 0)
+            want_log = _lldb_formatters_debug_level > 0
         except:
             pass
         if not (want_log):
@@ -86,8 +83,11 @@ class Logger:
             return
         want_file = False
         try:
-            want_file = (_lldb_formatters_debug_filename is not None and _lldb_formatters_debug_filename !=
-                         '' and _lldb_formatters_debug_filename != 0)
+            want_file = (
+                _lldb_formatters_debug_filename is not None
+                and _lldb_formatters_debug_filename != ""
+                and _lldb_formatters_debug_filename != 0
+            )
         except:
             pass
         if want_file:
@@ -95,12 +95,12 @@ class Logger:
         else:
             self.impl = StdoutLogger()
         try:
-            self.autoflush = (_lldb_formatters_debug_level > 1)
+            self.autoflush = _lldb_formatters_debug_level > 1
         except:
             self.autoflush = autoflush
         want_caller_info = False
         try:
-            want_caller_info = (_lldb_formatters_debug_level > 2)
+            want_caller_info = _lldb_formatters_debug_level > 2
         except:
             pass
         if want_caller_info:
@@ -110,10 +110,11 @@ class Logger:
         caller = inspect.stack()[2]
         try:
             if caller is not None and len(caller) > 3:
-                self.write('Logging from function ' + str(caller))
+                self.write("Logging from function " + str(caller))
             else:
                 self.write(
-                    'Caller info not available - Required caller logging not possible')
+                    "Caller info not available - Required caller logging not possible"
+                )
         finally:
             del caller  # needed per Python docs to avoid keeping objects alive longer than we care
 

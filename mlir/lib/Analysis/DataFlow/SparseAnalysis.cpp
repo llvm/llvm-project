@@ -66,9 +66,9 @@ AbstractSparseDataFlowAnalysis::initializeRecursively(Operation *op) {
 }
 
 LogicalResult AbstractSparseDataFlowAnalysis::visit(ProgramPoint point) {
-  if (Operation *op = point.dyn_cast<Operation *>())
+  if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point))
     visitOperation(op);
-  else if (Block *block = point.dyn_cast<Block *>())
+  else if (Block *block = llvm::dyn_cast_if_present<Block *>(point))
     visitBlock(block);
   else
     return failure();
@@ -238,7 +238,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
 
     unsigned firstIndex = 0;
     if (inputs.size() != lattices.size()) {
-      if (point.dyn_cast<Operation *>()) {
+      if (llvm::dyn_cast_if_present<Operation *>(point)) {
         if (!inputs.empty())
           firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
         visitNonControlFlowArgumentsImpl(
@@ -316,9 +316,9 @@ AbstractSparseBackwardDataFlowAnalysis::initializeRecursively(Operation *op) {
 
 LogicalResult
 AbstractSparseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
-  if (Operation *op = point.dyn_cast<Operation *>())
+  if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point))
     visitOperation(op);
-  else if (point.dyn_cast<Block *>())
+  else if (llvm::dyn_cast_if_present<Block *>(point))
     // For backward dataflow, we don't have to do any work for the blocks
     // themselves. CFG edges between blocks are processed by the BranchOp
     // logic in `visitOperation`, and entry blocks for functions are tied

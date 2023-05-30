@@ -3018,7 +3018,7 @@ TypeSourceInfo *ASTContext::CreateTypeSourceInfo(QualType T,
 
   auto *TInfo =
     (TypeSourceInfo*)BumpAlloc.Allocate(sizeof(TypeSourceInfo) + DataSize, 8);
-  new (TInfo) TypeSourceInfo(T);
+  new (TInfo) TypeSourceInfo(T, DataSize);
   return TInfo;
 }
 

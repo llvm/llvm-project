@@ -16,8 +16,9 @@ class ThreadExitTestCase(TestBase):
     @skipIf(oslist=no_match(["linux"]))
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here",
-                lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
 
         # There should be one (non-main) thread left
         self.assertEquals(self.process().GetNumThreads(), 1)

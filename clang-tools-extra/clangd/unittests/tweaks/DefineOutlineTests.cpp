@@ -136,6 +136,12 @@ TEST_F(DefineOutlineTest, ApplyTest) {
           "void foo() ;",
           "void foo() { return; }",
       },
+      // Inline specifier.
+      {
+          "inline void fo^o() { return; }",
+          " void foo() ;",
+          " void foo() { return; }",
+      },
       // Default args.
       {
           "void fo^o(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) {}",
@@ -318,6 +324,17 @@ TEST_F(DefineOutlineTest, ApplyTest) {
               explicit explicit Foo(int) ;
             };)cpp",
           "  Foo::Foo(int) {}\n",
+      },
+      {
+          R"cpp(
+            struct A {
+              inline void f^oo(int) {}
+            };)cpp",
+          R"cpp(
+            struct A {
+               void foo(int) ;
+            };)cpp",
+          " void A::foo(int) {}\n",
       },
       // Destrctors
       {

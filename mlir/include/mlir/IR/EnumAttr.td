@@ -168,7 +168,7 @@ class EnumAttrInfo<
 
   // Override Attr class fields for specialized class
   let predicate = !if(genSpecializedAttr,
-    CPred<"$_self.isa<" # cppNamespace # "::" # specializedAttrClassName # ">()">,
+    CPred<"::llvm::isa<" # cppNamespace # "::" # specializedAttrClassName # ">($_self)">,
     baseAttrClass.predicate);
   let storageType = !if(genSpecializedAttr,
     cppNamespace # "::" # specializedAttrClassName,

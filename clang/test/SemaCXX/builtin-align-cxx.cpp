@@ -238,3 +238,6 @@ static_assert(!__builtin_is_aligned(static_cast<signed long>(7), static_cast<uns
 static_assert(!__builtin_is_aligned(static_cast<unsigned long>(7), static_cast<signed long>(4)), "");
 static_assert(!__builtin_is_aligned(static_cast<signed long>(7), static_cast<unsigned short>(4)), "");
 static_assert(!__builtin_is_aligned(static_cast<unsigned short>(7), static_cast<signed long>(4)), "");
+
+// Check the diagnostic message
+_Alignas(void) char align_void_array[1]; // expected-error {{invalid application of '_Alignas' to an incomplete type 'void'}}

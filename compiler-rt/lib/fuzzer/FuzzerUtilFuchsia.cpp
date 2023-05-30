@@ -551,6 +551,11 @@ void DiscardOutput(int Fd) {
   dup2(nullfd, Fd);
 }
 
+size_t PageSize() {
+  static size_t PageSizeCached = _zx_system_get_page_size();
+  return PageSizeCached;
+}
+
 } // namespace fuzzer
 
 #endif // LIBFUZZER_FUCHSIA

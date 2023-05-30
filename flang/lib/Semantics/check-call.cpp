@@ -207,16 +207,18 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
   bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
   allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
-  if (allowActualArgumentConversions) {
-    ConvertIntegerActual(actual, dummy.type, actualType, messages);
-  }
-  bool typesCompatible{
+  bool typesCompatibleWithIgnoreTKR{
       (dummy.ignoreTKR.test(common::IgnoreTKR::Type) &&
           (dummy.type.type().category() == TypeCategory::Derived ||
               actualType.type().category() == TypeCategory::Derived ||
               dummy.type.type().category() != actualType.type().category())) ||
       (dummy.ignoreTKR.test(common::IgnoreTKR::Kind) &&
-          dummy.type.type().category() == actualType.type().category()) ||
+          dummy.type.type().category() == actualType.type().category())};
+  allowActualArgumentConversions &= !typesCompatibleWithIgnoreTKR;
+  if (allowActualArgumentConversions) {
+    ConvertIntegerActual(actual, dummy.type, actualType, messages);
+  }
+  bool typesCompatible{typesCompatibleWithIgnoreTKR ||
       dummy.type.type().IsTkCompatibleWith(actualType.type())};
   if (!typesCompatible && dummy.type.Rank() == 0 &&
       allowActualArgumentConversions) {

@@ -6,18 +6,16 @@ doublewords.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class UnalignedWatchpointTestCase(TestBase):
 
+class UnalignedWatchpointTestCase(TestBase):
     def hit_watchpoint_and_continue(self, process, iter_str):
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                         iter_str)
+        self.assertEqual(process.GetState(), lldb.eStateStopped, iter_str)
         thread = process.GetSelectedThread()
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonWatchpoint, iter_str)
         self.assertEqual(thread.GetStopReasonDataCount(), 1, iter_str)
@@ -25,8 +23,9 @@ class UnalignedWatchpointTestCase(TestBase):
         self.assertEqual(wp_num, 1, iter_str)
 
     NO_DEBUG_INFO_TESTCASE = True
+
     # debugserver on AArch64 has this feature.
-    @skipIf(archs=no_match(['x86_64', 'arm64', 'arm64e', 'aarch64']))
+    @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     @skipUnlessDarwin
     # debugserver only started returning an exception address within
     # a range lldb expects in https://reviews.llvm.org/D147820 2023-04-12.
@@ -34,13 +33,13 @@ class UnalignedWatchpointTestCase(TestBase):
     # which lldb doesn't understand, and will stop executing without a
     # proper stop reason.
     @skipIfOutOfTreeDebugserver
-
     def test_unaligned_watchpoint(self):
         """Test a watchpoint that is handled by two hardware watchpoint registers."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-             "break here", self.main_source_file)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", self.main_source_file
+        )
 
         frame = thread.GetFrameAtIndex(0)
 
@@ -51,11 +50,13 @@ class UnalignedWatchpointTestCase(TestBase):
         self.assertTrue(err.Success())
         self.assertTrue(wp.IsEnabled())
         self.assertEqual(wp.GetWatchSize(), 4)
-        self.assertGreater(wp.GetWatchAddress() % 8, 4, "watched region spans two doublewords")
+        self.assertGreater(
+            wp.GetWatchAddress() % 8, 4, "watched region spans two doublewords"
+        )
 
         # We will hit our watchpoint 6 times during the execution
         # of the inferior.  If the remote stub does not actually split
-        # the watched region into two doubleword watchpoints, we will 
+        # the watched region into two doubleword watchpoints, we will
         # exit before we get to 6 watchpoint hits.
         for i in range(1, 7):
             self.hit_watchpoint_and_continue(process, "wp hit number %s" % i)

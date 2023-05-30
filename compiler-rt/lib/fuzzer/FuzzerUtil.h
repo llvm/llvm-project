@@ -94,7 +94,8 @@ inline size_t Log(size_t X) {
   return static_cast<size_t>((sizeof(unsigned long long) * 8) - Clzll(X) - 1);
 }
 
-inline size_t PageSize() { return 4096; }
+size_t PageSize();
+
 inline uint8_t *RoundUpByPage(uint8_t *P) {
   uintptr_t X = reinterpret_cast<uintptr_t>(P);
   size_t Mask = PageSize() - 1;

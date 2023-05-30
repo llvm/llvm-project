@@ -13,6 +13,8 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "gpu/io.h"
+#elif defined(__APPLE__)
+#include "darwin/io.h"
 #elif defined(__unix__)
 #include "linux/io.h"
 #elif defined(__Fuchsia__)

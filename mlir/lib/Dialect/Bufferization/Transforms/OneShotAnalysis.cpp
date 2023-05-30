@@ -995,7 +995,7 @@ static void annotateOpsWithAliasSets(Operation *op,
   op->walk([&](Operation *op) {
     SmallVector<Attribute> aliasSets;
     for (OpResult opResult : op->getOpResults()) {
-      if (opResult.getType().isa<TensorType>()) {
+      if (llvm::isa<TensorType>(opResult.getType())) {
         SmallVector<Attribute> aliases;
         state.applyOnAliases(opResult, [&](Value alias) {
           std::string buffer;

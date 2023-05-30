@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import subprocess
 
+
 def to_string(b):
     """Return the parameter as type 'str', possibly encoding it.
 
@@ -23,7 +24,7 @@ def to_string(b):
         # In Python2, this branch is never taken ('bytes' is handled as 'str').
         # In Python3, this is true only for 'bytes'.
         try:
-            return b.decode('utf-8')
+            return b.decode("utf-8")
         except UnicodeDecodeError:
             # If the value is not valid Unicode, return the default
             # repr-line encoding.
@@ -41,9 +42,10 @@ def to_string(b):
     # 'unicode' type in Python3 (all the Python3 cases were already handled). In
     # order to get a 'str' object, we need to encode the 'unicode' object.
     try:
-        return b.encode('utf-8')
+        return b.encode("utf-8")
     except AttributeError:
-        raise TypeError('not sure how to convert %s to %s' % (type(b), str))
+        raise TypeError("not sure how to convert %s to %s" % (type(b), str))
+
 
 class ExecuteCommandTimeoutException(Exception):
     def __init__(self, msg, out, err, exitCode):
@@ -59,7 +61,7 @@ class ExecuteCommandTimeoutException(Exception):
 
 # Close extra file handles on UNIX (on Windows this cannot be done while
 # also redirecting input).
-kUseCloseFDs = not (platform.system() == 'Windows')
+kUseCloseFDs = not (platform.system() == "Windows")
 
 
 def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
@@ -83,11 +85,15 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
     """
     if input is not None:
         input = to_bytes(input)
-    p = subprocess.Popen(command, cwd=cwd,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        env=env, close_fds=kUseCloseFDs)
+    p = subprocess.Popen(
+        command,
+        cwd=cwd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        close_fds=kUseCloseFDs,
+    )
     timerObject = None
     # FIXME: Because of the way nested function scopes work in Python 2.x we
     # need to use a reference to a mutable object rather than a plain
@@ -96,6 +102,7 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
     hitTimeOut = [False]
     try:
         if timeout > 0:
+
             def killProcess():
                 # We may be invoking a shell so we need to kill the
                 # process and all its children.
@@ -117,10 +124,10 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
 
     if hitTimeOut[0]:
         raise ExecuteCommandTimeoutException(
-            msg='Reached timeout of {} seconds'.format(timeout),
+            msg="Reached timeout of {} seconds".format(timeout),
             out=out,
             err=err,
-            exitCode=exitCode
+            exitCode=exitCode,
         )
 
     # Detect Ctrl-C in subprocess.
@@ -129,6 +136,7 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
 
     return out, err, exitCode
 
+
 class TestLuaAPI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -136,23 +144,23 @@ class TestLuaAPI(TestBase):
         tests = []
         for filename in os.listdir():
             # Ignore dot files and excluded tests.
-            if filename.startswith('.'):
+            if filename.startswith("."):
                 continue
 
             # Ignore files that don't start with 'Test'.
-            if not filename.startswith('Test'):
+            if not filename.startswith("Test"):
                 continue
 
             if not os.path.isdir(filename):
                 base, ext = os.path.splitext(filename)
-                if ext == '.lua':
+                if ext == ".lua":
                     tests.append(filename)
         return tests
 
-    def test_lua_api(self):  
+    def test_lua_api(self):
         if "LUA_EXECUTABLE" not in os.environ or len(os.environ["LUA_EXECUTABLE"]) == 0:
-           self.skipTest("Lua API tests could not find Lua executable.")
-           return
+            self.skipTest("Lua API tests could not find Lua executable.")
+            return
         lua_executable = os.environ["LUA_EXECUTABLE"]
 
         self.build()
@@ -165,9 +173,9 @@ class TestLuaAPI(TestBase):
         lua_prelude = "package.cpath = '%s;' .. package.cpath" % lua_lldb_cpath
 
         lua_env = {
-            "TEST_EXE":     os.path.join(self.getBuildDir(), test_exe),
-            "TEST_OUTPUT":  os.path.join(self.getBuildDir(), test_output),
-            "TEST_INPUT":   os.path.join(self.getBuildDir(), test_input)
+            "TEST_EXE": os.path.join(self.getBuildDir(), test_exe),
+            "TEST_OUTPUT": os.path.join(self.getBuildDir(), test_output),
+            "TEST_INPUT": os.path.join(self.getBuildDir(), test_input),
         }
 
         for lua_test in self.get_tests():
@@ -178,7 +186,4 @@ class TestLuaAPI(TestBase):
             print(out)
             print(err, file=sys.stderr)
 
-            self.assertTrue(
-                exitCode == 0,
-                "Lua test '%s' failure." % lua_test
-            )
+            self.assertTrue(exitCode == 0, "Lua test '%s' failure." % lua_test)

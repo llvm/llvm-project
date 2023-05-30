@@ -46,9 +46,11 @@ add_mlir_dialect_library(MLIRGPUDialect
 add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp
   Transforms/AsyncRegionRewriter.cpp
+  Transforms/GlobalIdRewriter.cpp
   Transforms/KernelOutlining.cpp
   Transforms/MemoryPromotion.cpp
   Transforms/ParallelLoopMapper.cpp
+  Transforms/ShuffleRewriter.cpp
   Transforms/SerializeToBlob.cpp
   Transforms/SerializeToCubin.cpp
   Transforms/SerializeToHsaco.cpp
@@ -75,6 +77,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRExecutionEngineUtils
   MLIRGPUDialect
   MLIRIR
+  MLIRIndexDialect
   MLIRLLVMDialect
   MLIRGPUToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation

@@ -12,19 +12,17 @@
 
 namespace __llvm_libc {
 
-// Adapt CheckMemset signature to op implementation signatures.
-template <auto FnImpl>
-void BzeroAdaptor(cpp::span<char> p1, uint8_t value, size_t size) {
-  FnImpl(p1.begin(), size);
+// Adapt CheckMemset signature to bzero.
+static inline void Adaptor(cpp::span<char> p1, uint8_t value, size_t size) {
+  __llvm_libc::bzero(p1.begin(), size);
 }
 
 TEST(LlvmLibcBzeroTest, SizeSweep) {
-  static constexpr size_t kMaxSize = 1024;
-  static constexpr auto Impl = BzeroAdaptor<__llvm_libc::bzero>;
+  static constexpr size_t kMaxSize = 400;
   Buffer DstBuffer(kMaxSize);
   for (size_t size = 0; size < kMaxSize; ++size) {
     auto dst = DstBuffer.span().subspan(0, size);
-    ASSERT_TRUE((CheckMemset<Impl>(dst, 0, size)));
+    ASSERT_TRUE((CheckMemset<Adaptor>(dst, 0, size)));
   }
 }
 

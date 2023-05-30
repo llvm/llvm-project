@@ -59,6 +59,11 @@ void prepareValueMappings(
 /// the operands to `block`'s terminator.
 void forwardTerminatorOperands(Block *block, transform::TransformState &state,
                                transform::TransformResults &results);
+
+/// Make a dummy transform state for testing purposes. This MUST NOT be used
+/// outside of test cases.
+TransformState makeTransformStateForTesting(Region *region,
+                                            Operation *payloadRoot);
 } // namespace detail
 
 /// Options controlling the application of transform operations by the
@@ -161,6 +166,9 @@ private:
   friend LogicalResult applyTransforms(Operation *, TransformOpInterface,
                                        const RaggedArray<MappedValue> &,
                                        const TransformOptions &);
+
+  friend TransformState
+  detail::makeTransformStateForTesting(Region *region, Operation *payloadRoot);
 
 public:
   /// Returns the op at which the transformation state is rooted. This is

@@ -377,6 +377,13 @@ uptr user_alloc_usable_size(const void *p) {
   return b->siz;
 }
 
+uptr user_alloc_usable_size_fast(const void *p) {
+  MBlock *b = ctx->metamap.GetBlock((uptr)p);
+  if (b->siz == 0)
+    return 1;  // Zero-sized allocations are actually 1 byte.
+  return b->siz;
+}
+
 void invoke_malloc_hook(void *ptr, uptr size) {
   ThreadState *thr = cur_thread();
   if (ctx == 0 || !ctx->initialized || thr->ignore_interceptors)
@@ -450,6 +457,13 @@ const void *__sanitizer_get_allocated_begin(const void *p) {
 
 uptr __sanitizer_get_allocated_size(const void *p) {
   return user_alloc_usable_size(p);
+}
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = user_alloc_usable_size_fast(p);
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
 }
 
 void __sanitizer_purge_allocator() {

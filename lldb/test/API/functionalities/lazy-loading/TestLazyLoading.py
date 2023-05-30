@@ -12,14 +12,14 @@ All tests in this file behave like this:
      step.
 """
 
-class TestCase(TestBase):
 
+class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
-      TestBase.setUp(self)
-      # Only build this test once.
-      self.build()
+        TestBase.setUp(self)
+        # Only build this test once.
+        self.build()
 
     # Clang declaration kind we are looking for.
     class_decl_kind = "CXXRecordDecl"
@@ -63,7 +63,7 @@ class TestCase(TestBase):
         """Returns the dumped Clang AST of the module as a string"""
         res = lldb.SBCommandReturnObject()
         ci = self.dbg.GetCommandInterpreter()
-        ci.HandleCommand('target modules dump ast a.out', res)
+        ci.HandleCommand("target modules dump ast a.out", res)
         self.assertTrue(res.Succeeded())
         return res.GetOutput()
 
@@ -79,7 +79,7 @@ class TestCase(TestBase):
         decl_name = " " + decl[1] + " "
         decl_name_eol = " " + decl[1] + "\n"
         if not decl_kind in line:
-          return False
+            return False
         return decl_name in line or decl_name_eol in line
 
     def decl_completed_in_line(self, line, decl):
@@ -88,7 +88,10 @@ class TestCase(TestBase):
         the decl was completed (i.e., it has no undeserialized declarations
         in it).
         """
-        return self.decl_in_line(line, decl) and not "<undeserialized declarations>" in line
+        return (
+            self.decl_in_line(line, decl)
+            and not "<undeserialized declarations>" in line
+        )
 
     # The following asserts are used for checking if certain Clang declarations
     # were loaded or not since the target was created.
@@ -104,12 +107,15 @@ class TestCase(TestBase):
         ast = self.get_ast_dump()
         found = False
         for line in ast.splitlines():
-          if self.decl_in_line(line, decl):
-            found = True
-            self.assertTrue(self.decl_completed_in_line(line, decl),
-                            "Should have called assert_decl_not_completed")
-        self.assertTrue(found, "Declaration no longer loaded " + str(decl) +
-            ".\nAST:\n" + ast)
+            if self.decl_in_line(line, decl):
+                found = True
+                self.assertTrue(
+                    self.decl_completed_in_line(line, decl),
+                    "Should have called assert_decl_not_completed",
+                )
+        self.assertTrue(
+            found, "Declaration no longer loaded " + str(decl) + ".\nAST:\n" + ast
+        )
 
     def assert_decl_not_completed(self, decl):
         """
@@ -120,8 +126,8 @@ class TestCase(TestBase):
         ast = self.get_ast_dump()
         found = False
         for line in ast.splitlines():
-          error_msg = "Unexpected completed decl: '" + line + "'.\nAST:\n" + ast
-          self.assertFalse(self.decl_completed_in_line(line, decl), error_msg)
+            error_msg = "Unexpected completed decl: '" + line + "'.\nAST:\n" + ast
+            self.assertFalse(self.decl_completed_in_line(line, decl), error_msg)
 
     def assert_decl_not_loaded(self, decl):
         """
@@ -131,26 +137,26 @@ class TestCase(TestBase):
         ast = self.get_ast_dump()
         found = False
         for line in ast.splitlines():
-          error_msg = "Unexpected loaded decl: '" + line + "'\nAST:\n" + ast
-          self.assertFalse(self.decl_in_line(line, decl), error_msg)
-
+            error_msg = "Unexpected loaded decl: '" + line + "'\nAST:\n" + ast
+            self.assertFalse(self.decl_in_line(line, decl), error_msg)
 
     def clean_setup(self, location):
         """
         Runs to the line with the source line with the given location string
         and ensures that our module AST is empty.
         """
-        lldbutil.run_to_source_breakpoint(self,
-            "// Location: " + location, lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Location: " + location, lldb.SBFileSpec("main.cpp")
+        )
         # Make sure no declarations are loaded initially.
         self.assert_no_decls_loaded()
 
     @add_test_categories(["dwarf"])
     def test_arithmetic_expression_in_main(self):
-        """ Runs a simple arithmetic expression which should load nothing. """
+        """Runs a simple arithmetic expression which should load nothing."""
         self.clean_setup(location="multiple locals function")
 
-        self.expect("expr 1 + (int)2.0", substrs=['(int) $0'])
+        self.expect("expr 1 + (int)2.0", substrs=["(int) $0"])
 
         # This should not have loaded any decls.
         self.assert_no_decls_loaded()
@@ -162,7 +168,7 @@ class TestCase(TestBase):
         """
         self.clean_setup(location="other struct function")
 
-        self.expect("expr other_struct_var", substrs=['(OtherStruct) $0'])
+        self.expect("expr other_struct_var", substrs=["(OtherStruct) $0"])
         # The decl we run on was loaded.
         self.assert_decl_loaded(self.other_struct_decl)
 
@@ -178,7 +184,7 @@ class TestCase(TestBase):
         """
         self.clean_setup(location="multiple locals function")
 
-        self.expect("expr struct_var", substrs=['(SomeStruct) $0'])
+        self.expect("expr struct_var", substrs=["(SomeStruct) $0"])
 
         # We loaded SomeStruct and its member types for printing.
         self.assert_decl_loaded(self.some_struct_decl)
@@ -197,7 +203,7 @@ class TestCase(TestBase):
         """
         self.clean_setup(location="multiple locals function")
 
-        self.expect("expr &struct_var", substrs=['(SomeStruct *) $0'])
+        self.expect("expr &struct_var", substrs=["(SomeStruct *) $0"])
 
         # We loaded SomeStruct.
         self.assert_decl_loaded(self.some_struct_decl)
@@ -220,7 +226,7 @@ class TestCase(TestBase):
     def test_class_function_access_member(self):
         self.clean_setup(location="class function")
 
-        self.expect("expr member", substrs=['(ClassMember) $0'])
+        self.expect("expr member", substrs=["(ClassMember) $0"])
 
         # We loaded the current class we touched.
         self.assert_decl_loaded(self.class_we_enter_decl)
@@ -236,4 +242,3 @@ class TestCase(TestBase):
         self.assert_decl_not_loaded(self.other_struct_decl)
         self.assert_decl_not_loaded(self.some_struct_decl)
         self.assert_decl_not_loaded(self.class_in_namespace_decl)
-

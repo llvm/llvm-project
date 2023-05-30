@@ -181,7 +181,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
         if (auto bound =
                 dyn_cast_or_null<IntegerAttr>(loopBound->get<Attribute>()))
           return bound.getValue();
-      } else if (auto value = loopBound->dyn_cast<Value>()) {
+      } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
         const IntegerValueRangeLattice *lattice =
             getLatticeElementFor(op, value);
         if (lattice != nullptr)

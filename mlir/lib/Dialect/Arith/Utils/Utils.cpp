@@ -33,8 +33,8 @@ LogicalResult mlir::foldDynamicIndexList(Builder &b,
     if (ofr.is<Attribute>())
       continue;
     // Newly static, move from Value to constant.
-    if (auto cstOp =
-            ofr.dyn_cast<Value>().getDefiningOp<arith::ConstantIndexOp>()) {
+    if (auto cstOp = llvm::dyn_cast_if_present<Value>(ofr)
+                         .getDefiningOp<arith::ConstantIndexOp>()) {
       ofr = b.getIndexAttr(cstOp.value());
       valuesChanged = true;
     }
@@ -56,9 +56,9 @@ llvm::SmallBitVector mlir::getPositionsOfShapeOne(unsigned rank,
 
 Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                             OpFoldResult ofr) {
-  if (auto value = ofr.dyn_cast<Value>())
+  if (auto value = llvm::dyn_cast_if_present<Value>(ofr))
     return value;
-  auto attr = dyn_cast<IntegerAttr>(ofr.dyn_cast<Attribute>());
+  auto attr = dyn_cast<IntegerAttr>(llvm::dyn_cast_if_present<Attribute>(ofr));
   assert(attr && "expect the op fold result casts to an integer attribute");
   return b.create<arith::ConstantIndexOp>(loc, attr.getValue().getSExtValue());
 }

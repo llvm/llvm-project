@@ -10,13 +10,15 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestInlineNamespace(TestBase):
-    @skipIf(compiler="clang", compiler_version=['<', '16.0'])
+    @skipIf(compiler="clang", compiler_version=["<", "16.0"])
     def test(self):
         self.build()
 
-        lldbutil.run_to_source_breakpoint(self,
-                                          "return A::B::C::a", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "return A::B::C::a", lldb.SBFileSpec("main.cpp")
+        )
 
         self.expect_expr("A::C::a", result_type="int", result_value="-1")
         self.expect_expr("A::D::a", result_type="int", result_value="-1")

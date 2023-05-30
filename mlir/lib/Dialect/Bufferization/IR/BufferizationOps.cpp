@@ -179,7 +179,7 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
     populateDynamicDimSizes(rewriter, loc, copyBuffer, dynamicDims);
   }
   FailureOr<Value> alloc = options.createAlloc(
-      rewriter, loc, allocType->cast<MemRefType>(), dynamicDims);
+      rewriter, loc, llvm::cast<MemRefType>(*allocType), dynamicDims);
   if (failed(alloc))
     return failure();
 

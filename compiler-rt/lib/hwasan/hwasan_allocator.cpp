@@ -442,6 +442,15 @@ static uptr AllocationSize(const void *p) {
   return b->GetRequestedSize();
 }
 
+static uptr AllocationSizeFast(const void *p) {
+  const void *untagged_ptr = UntagPtr(p);
+  void *aligned_ptr = reinterpret_cast<void *>(
+      RoundDownTo(reinterpret_cast<uptr>(untagged_ptr), kShadowAlignment));
+  Metadata *meta =
+      reinterpret_cast<Metadata *>(allocator.GetMetaData(aligned_ptr));
+  return meta->GetRequestedSize();
+}
+
 void *hwasan_malloc(uptr size, StackTrace *stack) {
   return SetErrnoOnNull(HwasanAllocate(stack, size, sizeof(u64), false));
 }
@@ -679,5 +688,12 @@ const void *__sanitizer_get_allocated_begin(const void *p) {
 }
 
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = AllocationSizeFast(p);
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
+}
 
 void __sanitizer_purge_allocator() { allocator.ForceReleaseToOS(); }

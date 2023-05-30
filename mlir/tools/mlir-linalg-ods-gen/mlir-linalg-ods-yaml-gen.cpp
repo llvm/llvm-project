@@ -378,7 +378,7 @@ static std::string generateCppExpression(SerializedAffineMap self,
   printedSs.flush();
 
   static const char exprFormat[] =
-      R"FMT(mlir::parseAttribute("{0}", {1}).cast<AffineMapAttr>().getValue())FMT";
+      R"FMT(llvm::cast<AffineMapAttr>(mlir::parseAttribute("{0}", {1})).getValue())FMT";
   return llvm::formatv(exprFormat, printedStr, contextName);
 }
 
@@ -1035,7 +1035,7 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
 auto {1}Iter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {{
                               return attr.getName() == "{1}"; });
 if ({1}Iter != attrs.end()) {{
-  if (auto attr = {1}Iter->getValue().dyn_cast<{0}Attr>())
+  if (auto attr = llvm::dyn_cast<{0}Attr>({1}Iter->getValue()))
     {1}Val = attr.getValue();
 }
 )FMT";

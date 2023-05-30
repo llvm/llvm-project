@@ -64,7 +64,7 @@ void func(int sel) {
   svint8_t __attribute__((aligned(4))) aligned_int8_2; // expected-error {{'aligned' attribute cannot be applied to sizeless type 'svint8_t'}}
   svint8_t _Alignas(int) aligned_int8_3;               // expected-error {{'_Alignas' attribute cannot be applied to sizeless type 'svint8_t'}}
 
-  int _Alignas(svint8_t) aligned_int; // expected-error {{invalid application of 'alignof' to sizeless type 'svint8_t'}}
+  int _Alignas(svint8_t) aligned_int; // expected-error {{invalid application of '_Alignas' to sizeless type 'svint8_t'}}
 
   // Using pointers to sizeless data isn't wrong here, but because the
   // type is incomplete, it doesn't provide any alignment guarantees.

@@ -1358,12 +1358,22 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>,
       ClangBuiltin<"__nvvm_barrier_sync_cnt">;
 
+  // barrier.cluster.[wait, arrive, arrive.relaxed]
+  def int_nvvm_barrier_cluster_arrive :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_arrive_relaxed :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_wait :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+
   // Membar
   def int_nvvm_membar_cta : ClangBuiltin<"__nvvm_membar_cta">,
       Intrinsic<[], [], [IntrNoCallback]>;
   def int_nvvm_membar_gl : ClangBuiltin<"__nvvm_membar_gl">,
       Intrinsic<[], [], [IntrNoCallback]>;
   def int_nvvm_membar_sys : ClangBuiltin<"__nvvm_membar_sys">,
+      Intrinsic<[], [], [IntrNoCallback]>;
+  def int_nvvm_fence_sc_cluster:
       Intrinsic<[], [], [IntrNoCallback]>;
 
 // Async Copy
@@ -1569,25 +1579,29 @@ def int_nvvm_reflect :
 
 // isspacep.{const, global, local, shared}
 def int_nvvm_isspacep_const
-  : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], 
+  : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
               [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
               "llvm.nvvm.isspacep.const">,
     ClangBuiltin<"__nvvm_isspacep_const">;
 def int_nvvm_isspacep_global
-  : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], 
+  : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
               [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
               "llvm.nvvm.isspacep.global">,
     ClangBuiltin<"__nvvm_isspacep_global">;
 def int_nvvm_isspacep_local
-  : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], 
+  : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
               [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
               "llvm.nvvm.isspacep.local">,
     ClangBuiltin<"__nvvm_isspacep_local">;
 def int_nvvm_isspacep_shared
-  : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], 
+  : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
               [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
               "llvm.nvvm.isspacep.shared">,
     ClangBuiltin<"__nvvm_isspacep_shared">;
+def int_nvvm_isspacep_shared_cluster
+  : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
+              [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
+              "llvm.nvvm.isspacep.shared.cluster">;
 
 // Environment register read
 def int_nvvm_read_ptx_sreg_envreg0
@@ -4341,30 +4355,29 @@ def int_nvvm_swap_lo_hi_b64
 
 
 // Accessing special registers.
+
+class PTXReadSRegIntrinsicNB_r32
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>;
+class PTXReadSRegIntrinsic_r32<string name>
+  : PTXReadSRegIntrinsicNB_r32, ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+
 multiclass PTXReadSRegIntrinsic_v4i32<string regname> {
 // FIXME: Do we need the 128-bit integer type version?
 //    def _r64   : Intrinsic<[llvm_i128_ty],   [], [IntrNoMem, IntrSpeculatable]>;
 
 // FIXME: Enable this once v4i32 support is enabled in back-end.
 //    def _v4i16 : Intrinsic<[llvm_v4i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
-
-  def _x     : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
-                 [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
-               ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_x">;
-  def _y     : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
-                 [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
-               ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_y">;
-  def _z     : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
-                 [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
-               ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_z">;
-  def _w     : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
-                 [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
-               ClangBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_w">;
+  foreach suffix = ["_x", "_y", "_z", "_w"] in
+    def suffix : PTXReadSRegIntrinsic_r32<regname # suffix>;
 }
 
-class PTXReadSRegIntrinsic_r32<string name>
-  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
-    ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+// Same, but without automatic clang builtins. It will be used for
+// registers that require particular GPU or PTX version.
+multiclass PTXReadSRegIntrinsicNB_v4i32 {
+  foreach suffix = ["_x", "_y", "_z", "_w"] in
+    def suffix : PTXReadSRegIntrinsicNB_r32;
+}
+
 class PTXReadSRegIntrinsic_r64<string name>
   : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>]>,
     ClangBuiltin<"__nvvm_read_ptx_sreg_" # name>;
@@ -4412,6 +4425,15 @@ def int_nvvm_read_ptx_sreg_pm2 : PTXReadNCSRegIntrinsic_r32<"pm2">;
 def int_nvvm_read_ptx_sreg_pm3 : PTXReadNCSRegIntrinsic_r32<"pm3">;
 
 def int_nvvm_read_ptx_sreg_warpsize : PTXReadSRegIntrinsic_r32<"warpsize">;
+
+// sm90+, PTX7.8+
+defm int_nvvm_read_ptx_sreg_clusterid : PTXReadSRegIntrinsicNB_v4i32;
+defm int_nvvm_read_ptx_sreg_nclusterid : PTXReadSRegIntrinsicNB_v4i32;
+defm int_nvvm_read_ptx_sreg_cluster_ctaid : PTXReadSRegIntrinsicNB_v4i32;
+defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32;
+
+def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
+def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
 
 //
 // SHUFFLE
@@ -4660,5 +4682,26 @@ foreach transposed = [0, 1] in {
     }
   }
 }
+
+def int_nvvm_mapa
+  : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty],
+              [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
+              "llvm.nvvm.mapa">;
+def int_nvvm_mapa_shared_cluster
+  : DefaultAttrsIntrinsic<[llvm_shared_i8ptr_ty], [llvm_shared_i8ptr_ty, llvm_i32_ty],
+              [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
+              "llvm.nvvm.mapa.shared.cluster">;
+def int_nvvm_getctarank
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+              [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
+              "llvm.nvvm.getctarank">;
+def int_nvvm_getctarank_shared_cluster
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_shared_i8ptr_ty],
+              [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
+              "llvm.nvvm.getctarank.shared.cluster">;
+def int_nvvm_is_explicit_cluster
+  : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+              [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
+              "llvm.nvvm.is_explicit_cluster">;
 
 } // let TargetPrefix = "nvvm"

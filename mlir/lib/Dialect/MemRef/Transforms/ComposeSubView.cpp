@@ -56,7 +56,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
     // Because we only support input strides of 1, the output stride is also
     // always 1.
     if (llvm::all_of(strides, [](OpFoldResult &valueOrAttr) {
-          Attribute attr = valueOrAttr.dyn_cast<Attribute>();
+          Attribute attr = llvm::dyn_cast_if_present<Attribute>(valueOrAttr);
           return attr && cast<IntegerAttr>(attr).getInt() == 1;
         })) {
       strides = SmallVector<OpFoldResult>(sourceOp.getMixedStrides().size(),
@@ -86,8 +86,9 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
       }
 
       sizes.push_back(opSize);
-      Attribute opOffsetAttr = opOffset.dyn_cast<Attribute>(),
-                sourceOffsetAttr = sourceOffset.dyn_cast<Attribute>();
+      Attribute opOffsetAttr = llvm::dyn_cast_if_present<Attribute>(opOffset),
+                sourceOffsetAttr =
+                    llvm::dyn_cast_if_present<Attribute>(sourceOffset);
 
       if (opOffsetAttr && sourceOffsetAttr) {
         // If both offsets are static we can simply calculate the combined
@@ -101,7 +102,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
         AffineExpr expr = rewriter.getAffineConstantExpr(0);
         SmallVector<Value> affineApplyOperands;
         for (auto valueOrAttr : {opOffset, sourceOffset}) {
-          if (auto attr = valueOrAttr.dyn_cast<Attribute>()) {
+          if (auto attr = llvm::dyn_cast_if_present<Attribute>(valueOrAttr)) {
             expr = expr + cast<IntegerAttr>(attr).getInt();
           } else {
             expr =

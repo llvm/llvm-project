@@ -9,10 +9,11 @@
 #ifndef LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
 #define LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
 
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/StringUtil/error_to_string.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
-
-#include <string.h>
 
 namespace __llvm_libc {
 namespace testing {
@@ -25,29 +26,54 @@ template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
   int ExpectedErrno;
   int ActualErrno;
 
+  // Even though this is a errno matcher primarily, it has to cater to platforms
+  // which do not have an errno. This predicate checks if errno matching is to
+  // be skipped.
+  static constexpr bool ignore_errno() {
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+    return true;
+#else
+    return false;
+#endif
+  }
+
 public:
   ErrnoSetterMatcher(T ExpectedReturn, int ExpectedErrno)
       : ExpectedReturn(ExpectedReturn), ExpectedErrno(ExpectedErrno) {}
 
   void explainError() override {
-    if (ActualReturn != ExpectedReturn)
-      __llvm_libc::testing::tlog
-          << "Expected return to be " << ExpectedReturn << " but got "
-          << ActualReturn << ".\nExpecte errno to be "
-          << strerror(ExpectedErrno) << " but got " << strerror(ActualErrno)
-          << ".\n";
-    else
-      __llvm_libc::testing::tlog
-          << "Correct value " << ExpectedReturn
-          << " was returned\nBut errno was unexpectely set to "
-          << strerror(ActualErrno) << ".\n";
+    if (ActualReturn != ExpectedReturn) {
+      if constexpr (cpp::is_floating_point_v<T>) {
+        __llvm_libc::testing::tlog
+            << "Expected return value to be: "
+            << __llvm_libc::fputil::FPBits<T>(ExpectedReturn).str() << '\n';
+        __llvm_libc::testing::tlog
+            << "                    But got: "
+            << __llvm_libc::fputil::FPBits<T>(ActualReturn).str() << '\n';
+      } else {
+        __llvm_libc::testing::tlog << "Expected return value to be "
+                                   << ExpectedReturn << " but got "
+                                   << ActualReturn << ".\n";
+      }
+    }
+
+    if constexpr (!ignore_errno()) {
+      if (ActualErrno != ExpectedErrno) {
+        __llvm_libc::testing::tlog
+            << "Expected errno to be \"" << get_error_string(ExpectedErrno)
+            << "\" but got \"" << get_error_string(ActualErrno) << "\".\n";
+      }
+    }
   }
 
   bool match(T Got) {
     ActualReturn = Got;
     ActualErrno = libc_errno;
     libc_errno = 0;
-    return Got == ExpectedReturn && ActualErrno == ExpectedErrno;
+    if constexpr (ignore_errno())
+      return Got == ExpectedReturn;
+    else
+      return Got == ExpectedReturn && ActualErrno == ExpectedErrno;
   }
 };
 

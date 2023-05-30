@@ -1272,60 +1272,67 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     const DbgValueInst *DI = cast<DbgValueInst>(II);
     const MCInstrDesc &II = TII.get(TargetOpcode::DBG_VALUE);
     const Value *V = DI->getValue();
-    assert(DI->getVariable()->isValidLocationForIntrinsic(MIMD.getDL()) &&
+    DIExpression *Expr = DI->getExpression();
+    DILocalVariable *Var = DI->getVariable();
+    assert(Var->isValidLocationForIntrinsic(MIMD.getDL()) &&
            "Expected inlined-at fields to agree");
     if (!V || isa<UndefValue>(V) || DI->hasArgList()) {
       // DI is either undef or cannot produce a valid DBG_VALUE, so produce an
       // undef DBG_VALUE to terminate any prior location.
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II, false, 0U,
-              DI->getVariable(), DI->getExpression());
-    } else if (const auto *CI = dyn_cast<ConstantInt>(V)) {
+              Var, Expr);
+      return true;
+    }
+    if (const auto *CI = dyn_cast<ConstantInt>(V)) {
       // See if there's an expression to constant-fold.
-      DIExpression *Expr = DI->getExpression();
       if (Expr)
         std::tie(Expr, CI) = Expr->constantFold(CI);
       if (CI->getBitWidth() > 64)
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
             .addCImm(CI)
             .addImm(0U)
-            .addMetadata(DI->getVariable())
+            .addMetadata(Var)
             .addMetadata(Expr);
       else
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
             .addImm(CI->getZExtValue())
             .addImm(0U)
-            .addMetadata(DI->getVariable())
+            .addMetadata(Var)
             .addMetadata(Expr);
-    } else if (const auto *CF = dyn_cast<ConstantFP>(V)) {
+      return true;
+    }
+    if (const auto *CF = dyn_cast<ConstantFP>(V)) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
           .addFPImm(CF)
           .addImm(0U)
-          .addMetadata(DI->getVariable())
-          .addMetadata(DI->getExpression());
-    } else if (Register Reg = lookUpRegForValue(V)) {
+          .addMetadata(Var)
+          .addMetadata(Expr);
+      return true;
+    }
+    if (Register Reg = lookUpRegForValue(V)) {
       // FIXME: This does not handle register-indirect values at offset 0.
       if (!FuncInfo.MF->useDebugInstrRef()) {
         bool IsIndirect = false;
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II, IsIndirect,
-                Reg, DI->getVariable(), DI->getExpression());
-      } else {
-        // If using instruction referencing, produce this as a DBG_INSTR_REF,
-        // to be later patched up by finalizeDebugInstrRefs.
-        SmallVector<MachineOperand, 1> MOs({MachineOperand::CreateReg(
-            /* Reg */ Reg, /* isDef */ false, /* isImp */ false,
-            /* isKill */ false, /* isDead */ false,
-            /* isUndef */ false, /* isEarlyClobber */ false,
-            /* SubReg */ 0, /* isDebug */ true)});
-        SmallVector<uint64_t, 2> Ops({dwarf::DW_OP_LLVM_arg, 0});
-        auto *NewExpr = DIExpression::prependOpcodes(DI->getExpression(), Ops);
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(),
-                TII.get(TargetOpcode::DBG_INSTR_REF), /*IsIndirect*/ false, MOs,
-                DI->getVariable(), NewExpr);
+                Reg, Var, Expr);
+        return true;
       }
-    } else {
-      // We don't know how to handle other cases, so we drop.
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      // If using instruction referencing, produce this as a DBG_INSTR_REF,
+      // to be later patched up by finalizeDebugInstrRefs.
+      SmallVector<MachineOperand, 1> MOs({MachineOperand::CreateReg(
+          /* Reg */ Reg, /* isDef */ false, /* isImp */ false,
+          /* isKill */ false, /* isDead */ false,
+          /* isUndef */ false, /* isEarlyClobber */ false,
+          /* SubReg */ 0, /* isDebug */ true)});
+      SmallVector<uint64_t, 2> Ops({dwarf::DW_OP_LLVM_arg, 0});
+      auto *NewExpr = DIExpression::prependOpcodes(Expr, Ops);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(),
+              TII.get(TargetOpcode::DBG_INSTR_REF), /*IsIndirect*/ false, MOs,
+              Var, NewExpr);
+      return true;
     }
+    // We don't know how to handle other cases, so we drop.
+    LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
     return true;
   }
   case Intrinsic::dbg_label: {

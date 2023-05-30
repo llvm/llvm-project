@@ -154,6 +154,7 @@ dialects that were also referenced.
 dialect_section {
   numDialects: varint,
   dialectNames: varint[],
+  numTotalOpNames: varint,
   opNames: op_name_group[]
 }
 
@@ -444,8 +445,8 @@ block_arguments {
 }
 
 block_argument {
-  typeIndex: varint,
-  location: varint
+  typeAndLocation: varint, // (type << 1) | (hasLocation)
+  location: varint? // Optional, else unknown location
 }
 ```
 

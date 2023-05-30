@@ -91,11 +91,13 @@ end subroutine
 ! CHECK:      hlfir.yield %[[VAL_12]] : i1
 ! CHECK:    } do {
 ! CHECK:      hlfir.region_assign {
-! CHECK:        %[[VAL_13:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<10xi32>>, i64) -> !fir.ref<i32>
+! CHECK:        %[[I_LOAD:.*]] = fir.load %[[VAL_10]] : !fir.ref<i64>
+! CHECK:        %[[VAL_13:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[I_LOAD]])  : (!fir.ref<!fir.array<10xi32>>, i64) -> !fir.ref<i32>
 ! CHECK:        %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
 ! CHECK:        hlfir.yield %[[VAL_14]] : i32
 ! CHECK:      } to {
-! CHECK:        %[[VAL_15:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]], %[[VAL_9]])  : (!fir.ref<!fir.array<10x10xi32>>, i64, i64) -> !fir.ref<i32>
+! CHECK:        %[[I_LOAD:.*]] = fir.load %[[VAL_10]] : !fir.ref<i64>
+! CHECK:        %[[VAL_15:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[I_LOAD]], %[[I_LOAD]])  : (!fir.ref<!fir.array<10x10xi32>>, i64, i64) -> !fir.ref<i32>
 ! CHECK:        hlfir.yield %[[VAL_15]] : !fir.ref<i32>
 ! CHECK:      }
 ! CHECK:    }

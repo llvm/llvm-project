@@ -9,6 +9,17 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_LIBC_ASSERT_H
 #define LLVM_LIBC_SRC_SUPPORT_LIBC_ASSERT_H
 
+#ifdef LIBC_COPT_USE_C_ASSERT
+
+// The build is configured to just use the public <assert.h> API
+// for libc's internal assertions.
+
+#include <assert.h>
+
+#define LIBC_ASSERT(COND) assert(COND)
+
+#else // Not LIBC_COPT_USE_C_ASSERT
+
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/OSUtil/quick_exit.h"
 #include "src/__support/integer_to_string.h"
@@ -57,5 +68,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
     }                                                                          \
   } while (false)
 #endif // NDEBUG
+
+#endif // LIBC_COPT_USE_C_ASSERT
 
 #endif // LLVM_LIBC_SRC_SUPPORT_LIBC_ASSERT_H

@@ -444,3 +444,81 @@ define <vscale x 4 x float> @scalable.strided.load.nxv4f32.align(ptr align 4 %p,
   %res = tail call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.i32(ptr %p, i32 4, <vscale x 4 x i1> %mask, i32 %evl)
   ret <vscale x 4 x float> %res
 }
+
+; Test vp gather and scatter.
+declare <vscale x 4 x float> @llvm.vp.gather.nxv4f32.v4p0(<vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
+declare void @llvm.vp.scatter.nxv4f32.v4p0(<vscale x 4 x float>, <vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
+
+define <vscale x 4 x float> @scalable.gather.nxv4f32(<vscale x 4 x ptr> %vp, <vscale x 4 x i1> %mask, i32 %evl) sanitize_address {
+; CHECK-LABEL: @scalable.gather.nxv4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[EVL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP12:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 4 x ptr> [[VP:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_load4(i64 [[TMP10]])
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[VP]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+; DISABLED-LABEL: @scalable.gather.nxv4f32(
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[VP:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
+; DISABLED-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+  %res = tail call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.v4p0(<vscale x 4 x ptr> align 4 %vp, <vscale x 4 x i1> %mask, i32 %evl)
+  ret <vscale x 4 x float> %res
+}
+
+define void @scalable.scatter.nxv4f32(<vscale x 4 x float> %arg, <vscale x 4 x ptr> %vp, <vscale x 4 x i1> %mask, i32 %evl) sanitize_address {
+; CHECK-LABEL: @scalable.scatter.nxv4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[EVL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP12:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 4 x ptr> [[VP:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_store4(i64 [[TMP10]])
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.vp.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[ARG:%.*]], <vscale x 4 x ptr> align 4 [[VP]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    ret void
+;
+; DISABLED-LABEL: @scalable.scatter.nxv4f32(
+; DISABLED-NEXT:    tail call void @llvm.vp.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[ARG:%.*]], <vscale x 4 x ptr> align 4 [[VP:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
+; DISABLED-NEXT:    ret void
+;
+  tail call void @llvm.vp.scatter.nxv4f32.v4p0(<vscale x 4 x float> %arg, <vscale x 4 x ptr> align 4 %vp, <vscale x 4 x i1> %mask, i32 %evl)
+  ret void
+}

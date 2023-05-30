@@ -531,7 +531,7 @@ static void emitAttributeSerialization(const Attribute &attr,
     os << tabs
        << formatv("  {0}.push_back(prepareConstantInt({1}.getLoc(), "
                   "Builder({1}).getI32IntegerAttr(static_cast<uint32_t>("
-                  "attr.cast<{2}::{3}Attr>().getValue()))));\n",
+                  "::llvm::cast<{2}::{3}Attr>(attr).getValue()))));\n",
                   operandList, opVar, baseEnum.getCppNamespace(),
                   baseEnum.getEnumClassName());
   } else if (attr.isSubClassOf("SPIRV_BitEnumAttr") ||
@@ -539,26 +539,28 @@ static void emitAttributeSerialization(const Attribute &attr,
     EnumAttr baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
        << formatv("  {0}.push_back(static_cast<uint32_t>("
-                  "attr.cast<{1}::{2}Attr>().getValue()));\n",
+                  "::llvm::cast<{1}::{2}Attr>(attr).getValue()));\n",
                   operandList, baseEnum.getCppNamespace(),
                   baseEnum.getEnumClassName());
   } else if (attr.getAttrDefName() == "I32ArrayAttr") {
     // Serialize all the elements of the array
-    os << tabs << "  for (auto attrElem : attr.cast<ArrayAttr>()) {\n";
+    os << tabs << "  for (auto attrElem : llvm::cast<ArrayAttr>(attr)) {\n";
     os << tabs
        << formatv("    {0}.push_back(static_cast<uint32_t>("
-                  "attrElem.cast<IntegerAttr>().getValue().getZExtValue()));\n",
+                  "llvm::cast<IntegerAttr>(attrElem).getValue().getZExtValue())"
+                  ");\n",
                   operandList);
     os << tabs << "  }\n";
   } else if (attr.getAttrDefName() == "I32Attr") {
     os << tabs
-       << formatv("  {0}.push_back(static_cast<uint32_t>("
-                  "attr.cast<IntegerAttr>().getValue().getZExtValue()));\n",
-                  operandList);
+       << formatv(
+              "  {0}.push_back(static_cast<uint32_t>("
+              "llvm::cast<IntegerAttr>(attr).getValue().getZExtValue()));\n",
+              operandList);
   } else if (attr.isEnumAttr() || attr.getAttrDefName() == "TypeAttr") {
     os << tabs
        << formatv("  {0}.push_back(static_cast<uint32_t>("
-                  "getTypeID(attr.cast<TypeAttr>().getValue())));\n",
+                  "getTypeID(llvm::cast<TypeAttr>(attr).getValue())));\n",
                   operandList);
   } else {
     PrintFatalError(
@@ -924,7 +926,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
   // Process operands/attributes
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
-    if (auto *valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
+    if (auto *valueArg = llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(loc, "SPIR-V ops can have Variadic<..> or "

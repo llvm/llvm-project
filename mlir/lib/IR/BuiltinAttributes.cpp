@@ -1247,12 +1247,12 @@ DenseElementsAttr DenseElementsAttr::bitcast(Type newElType) {
 DenseElementsAttr
 DenseElementsAttr::mapValues(Type newElementType,
                              function_ref<APInt(const APInt &)> mapping) const {
-  return cast<DenseIntElementsAttr>().mapValues(newElementType, mapping);
+  return llvm::cast<DenseIntElementsAttr>(*this).mapValues(newElementType, mapping);
 }
 
 DenseElementsAttr DenseElementsAttr::mapValues(
     Type newElementType, function_ref<APInt(const APFloat &)> mapping) const {
-  return cast<DenseFPElementsAttr>().mapValues(newElementType, mapping);
+  return llvm::cast<DenseFPElementsAttr>(*this).mapValues(newElementType, mapping);
 }
 
 ShapedType DenseElementsAttr::getType() const {

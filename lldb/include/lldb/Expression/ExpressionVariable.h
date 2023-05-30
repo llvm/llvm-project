@@ -207,6 +207,8 @@ public:
   /// LLVM RTTI support
   static char ID;
 
+  PersistentExpressionState();
+
   virtual ~PersistentExpressionState();
 
   virtual lldb::ExpressionVariableSP

@@ -325,3 +325,14 @@ define void @store_constant_undef_v2i8(ptr %p) {
   store <2 x i8> <i8 undef, i8 3>, ptr %p
   ret void
 }
+
+define void @store_constant_v2i8_volatile(ptr %p) {
+; CHECK-LABEL: store_constant_v2i8_volatile:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    ret
+  store volatile <2 x i8> <i8 1, i8 1>, ptr %p
+  ret void
+}

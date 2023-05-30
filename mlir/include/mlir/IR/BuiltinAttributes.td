@@ -562,8 +562,8 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
     /// `AttrClass`, null otherwise.
     template<typename AttrClass, typename NameClass>
     AttrClass getAs(NameClass &&name) const {
-      return get(std::forward<NameClass>(name))
-        .template dyn_cast_or_null<AttrClass>();
+      return llvm::dyn_cast_or_null<AttrClass>(
+               get(std::forward<NameClass>(name)));
     }
 
   private:

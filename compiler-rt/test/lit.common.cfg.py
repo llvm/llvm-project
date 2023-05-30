@@ -231,7 +231,7 @@ if re.match(r"^x86_64.*-linux", config.target_triple):
 
 config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
-if config.have_zlib == "1":
+if config.have_zlib:
     config.available_features.add("zlib")
 
 # Use ugly construction to explicitly prohibit "clang", "clang++" etc.

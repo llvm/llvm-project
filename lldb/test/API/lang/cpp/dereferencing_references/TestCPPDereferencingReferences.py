@@ -3,12 +3,14 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestCase(TestBase):
 
+class TestCase(TestBase):
     def test(self):
         """Tests deferencing lvalue/rvalue references via LLDB's builtin type system."""
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
 
         # Take an lvalue reference and call `Dereference` on the SBValue.
         # The result should be `TTT` (and *not* for example the underlying type

@@ -10,8 +10,8 @@ from tools import mlir_pytaco_api as pt
 
 i, j = pt.get_index_vars(2)
 # Both tensors are true dense tensors.
-A = pt.from_array(np.full([2,3], 1, dtype=np.float64))
-B = pt.from_array(np.full([2,3], 2, dtype=np.float64))
+A = pt.from_array(np.full([2, 3], 1, dtype=np.float64))
+B = pt.from_array(np.full([2, 3], 2, dtype=np.float64))
 # Define the result tensor as a true dense tensor. The parameter is_dense=True
 # is an MLIR-PyTACO extension.
 C = pt.tensor([2, 3], dtype=pt.float64, is_dense=True)

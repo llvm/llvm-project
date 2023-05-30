@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 """
 from lldbsuite.test.lldbtest import *
 
+
 class SwigVersionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

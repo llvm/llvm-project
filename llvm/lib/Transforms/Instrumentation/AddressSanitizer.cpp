@@ -1378,6 +1378,21 @@ void AddressSanitizer::getInterestingMemoryOperands(
                                Stride);
       break;
     }
+    case Intrinsic::vp_gather:
+    case Intrinsic::vp_scatter: {
+      auto *VPI = cast<VPIntrinsic>(CI);
+      unsigned IID = CI->getIntrinsicID();
+      bool IsWrite = IID == Intrinsic::vp_scatter;
+      if (IsWrite ? !ClInstrumentWrites : !ClInstrumentReads)
+        return;
+      unsigned PtrOpNo = *VPI->getMemoryPointerParamPos(IID);
+      Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
+      MaybeAlign Alignment = VPI->getPointerAlignment();
+      Interesting.emplace_back(I, PtrOpNo, IsWrite, Ty, Alignment,
+                               VPI->getMaskParam(),
+                               VPI->getVectorLengthParam());
+      break;
+    }
     default:
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
@@ -1521,7 +1536,12 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
     }
 
     Value *InstrumentedAddress;
-    if (Stride) {
+    if (isa<VectorType>(Addr->getType())) {
+      assert(
+          cast<VectorType>(Addr->getType())->getElementType()->isPointerTy() &&
+          "Expected vector of pointer.");
+      InstrumentedAddress = IRB.CreateExtractElement(Addr, Index);
+    } else if (Stride) {
       Index = IRB.CreateMul(Index, Stride);
       Addr = IRB.CreateBitCast(Addr, Type::getInt8PtrTy(*C));
       InstrumentedAddress = IRB.CreateGEP(Type::getInt8Ty(*C), Addr, {Index});
