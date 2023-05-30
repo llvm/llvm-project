@@ -256,11 +256,21 @@ public:
   ///     to the Target.  The caller may prefer to batch up these when loading
   ///     multiple binaries.
   ///
+  /// \param[in] set_address_in_target
+  ///     Whether the address of the binary should be set in the Target if it
+  ///     is added.  The caller may want to set the section addresses
+  ///     individually, instead of loading the binary the entire based on the
+  ///     start address or slide.  The caller is responsible for setting the
+  ///     load address for the binary or its segments in the Target if it passes
+  ///     true.
+  ///
   /// \return
   ///     Returns a shared pointer for the Module that has been added.
-  static lldb::ModuleSP LoadBinaryWithUUIDAndAddress(
-      Process *process, llvm::StringRef name, UUID uuid, lldb::addr_t value,
-      bool value_is_offset, bool force_symbol_search, bool notify);
+  static lldb::ModuleSP
+  LoadBinaryWithUUIDAndAddress(Process *process, llvm::StringRef name,
+                               UUID uuid, lldb::addr_t value,
+                               bool value_is_offset, bool force_symbol_search,
+                               bool notify, bool set_address_in_target);
 
   /// Get information about the shared cache for a process, if possible.
   ///
