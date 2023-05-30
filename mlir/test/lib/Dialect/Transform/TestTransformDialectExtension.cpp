@@ -178,6 +178,10 @@ void mlir::test::TestProduceValueHandleToArgumentOfParentBlock::getEffects(
   transform::onlyReadsPayload(effects);
 }
 
+bool mlir::test::TestConsumeOperand::allowsRepeatedHandleOperands() {
+  return getAllowRepeatedHandles();
+}
+
 DiagnosedSilenceableFailure
 mlir::test::TestConsumeOperand::apply(transform::TransformResults &results,
                                       transform::TransformState &state) {
