@@ -306,6 +306,10 @@ static NullConstraint getNullConstraint(DefinedOrUnknownSVal Val,
   return NullConstraint::Unknown;
 }
 
+static bool isValidPointerType(QualType T) {
+  return T->isAnyPointerType() || T->isBlockPointerType();
+}
+
 const SymbolicRegion *
 NullabilityChecker::getTrackRegion(SVal Val, bool CheckSuperRegion) const {
   if (!NeedTracking)
@@ -621,7 +625,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (!RetExpr)
     return;
 
-  if (!RetExpr->getType()->isAnyPointerType())
+  if (!isValidPointerType(RetExpr->getType()))
     return;
 
   ProgramStateRef State = C.getState();
@@ -754,7 +758,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
     if (!ArgSVal)
       continue;
 
-    if (!Param->getType()->isAnyPointerType() &&
+    if (!isValidPointerType(Param->getType()) &&
         !Param->getType()->isReferenceType())
       continue;
 
@@ -841,7 +845,7 @@ void NullabilityChecker::checkPostCall(const CallEvent &Call,
   if (!FuncType)
     return;
   QualType ReturnType = FuncType->getReturnType();
-  if (!ReturnType->isAnyPointerType())
+  if (!isValidPointerType(ReturnType))
     return;
   ProgramStateRef State = C.getState();
   if (State->get<InvariantViolated>())
@@ -935,7 +939,7 @@ void NullabilityChecker::checkPostObjCMessage(const ObjCMethodCall &M,
   if (!Decl)
     return;
   QualType RetType = Decl->getReturnType();
-  if (!RetType->isAnyPointerType())
+  if (!isValidPointerType(RetType))
     return;
 
   ProgramStateRef State = C.getState();
@@ -1089,9 +1093,9 @@ void NullabilityChecker::checkPostStmt(const ExplicitCastExpr *CE,
                                        CheckerContext &C) const {
   QualType OriginType = CE->getSubExpr()->getType();
   QualType DestType = CE->getType();
-  if (!OriginType->isAnyPointerType())
+  if (!isValidPointerType(OriginType))
     return;
-  if (!DestType->isAnyPointerType())
+  if (!isValidPointerType(DestType))
     return;
 
   ProgramStateRef State = C.getState();
@@ -1215,7 +1219,7 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
     return;
 
   QualType LocType = TVR->getValueType();
-  if (!LocType->isAnyPointerType())
+  if (!isValidPointerType(LocType))
     return;
 
   ProgramStateRef State = C.getState();
