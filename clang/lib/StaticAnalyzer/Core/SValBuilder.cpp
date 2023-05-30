@@ -395,7 +395,6 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
       return evalCast(*Val, CE->getType(), SE->getType());
     }
     }
-    // FALLTHROUGH
     [[fallthrough]];
   }
 
