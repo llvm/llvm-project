@@ -5426,16 +5426,20 @@ extern "C" __attribute__((visibility("hidden"))) uptr __tls_get_addr_hidden(
 extern "C" uptr __tls_get_offset(void *arg);
 extern "C" uptr TRAMPOLINE(__tls_get_offset)(void *arg);
 extern "C" uptr WRAP(__tls_get_offset)(void *arg);
-// Now carefully intercept __tls_get_offset.
+// Now carefully intercept __tls_get_offset. See DECLARE_WRAPPER for details.
 asm(
   ".text\n"
-// The __intercept_ version has to exist, so that gen_dynamic_list.py
-// exports our symbol.
   ".weak __tls_get_offset\n"
-  ".set __tls_get_offset, __interceptor___tls_get_offset\n"
-  ".global __interceptor___tls_get_offset\n"
-  ".type __interceptor___tls_get_offset, @function\n"
-  "__interceptor___tls_get_offset:\n"
+  ".set __tls_get_offset, __interceptor_trampoline___tls_get_offset\n"
+  ".global __interceptor_trampoline___tls_get_offset\n"
+  ".type __interceptor_trampoline___tls_get_offset, @function\n"
+  "__interceptor_trampoline___tls_get_offset:\n"
+  "jg __interceptor___tls_get_offset\n"
+  ".weak __interceptor___tls_get_offset\n"
+  ".set __interceptor___tls_get_offset, ___interceptor___tls_get_offset\n"
+  ".global ___interceptor___tls_get_offset\n"
+  ".type ___interceptor___tls_get_offset, @function\n"
+  "___interceptor___tls_get_offset:\n"
 #ifdef __s390x__
   "la %r2, 0(%r2,%r12)\n"
   "jg __tls_get_addr_hidden\n"
@@ -5446,7 +5450,7 @@ asm(
   "b 0(%r4,%r3)\n"
   "1: .long __tls_get_addr_hidden - 0b\n"
 #endif
-  ".size __interceptor___tls_get_offset, .-__interceptor___tls_get_offset\n"
+  ".size ___interceptor___tls_get_offset, .-___interceptor___tls_get_offset\n"
 // Assembly wrapper to call REAL(__tls_get_offset)(arg)
   ".type __tls_get_offset_wrapper, @function\n"
   "__tls_get_offset_wrapper:\n"
