@@ -480,6 +480,23 @@ namespace dr1395 { // dr1395: 16
 #endif
 }
 
+namespace dr1397 { // dr1397: 3.2
+#if __cplusplus >= 201103L
+struct A {       // #dr1397-struct-A
+  void *p = A{}; // #dr1397-void-p
+#if __cplusplus == 201103L
+  // expected-error@#dr1397-struct-A {{default member initializer for 'p' needed within definition of enclosing class 'A' outside of member functions}}
+  // expected-note@#dr1397-void-p {{in evaluation of exception specification for 'dr1397::A::A' needed here}}
+  // expected-note@#dr1397-void-p {{default member initializer declared here}}
+#elif __cplusplus >= 201402L
+  // expected-error@#dr1397-void-p {{default member initializer for 'p' needed within definition of enclosing class 'A' outside of member functions}}
+  // expected-note@#dr1397-void-p {{default member initializer declared here}}
+#endif
+  operator void*() const { return nullptr; }
+};
+#endif
+} // namespace dr1397
+
 namespace dr1399 { // dr1399: dup 1388
   template<typename ...T> void f(T..., int, T...) {} // expected-note {{candidate}} expected-error 0-1{{C++11}}
   void g() {
