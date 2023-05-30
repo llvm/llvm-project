@@ -818,3 +818,175 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+; Test unswitch select when the condition is an AND whose LHS is invariant
+define i32 @and_lhs_invariant(i32 %num, i1 %cond) {
+; CHECK-LABEL: define i32 @and_lhs_invariant
+; CHECK-SAME: (i32 [[NUM:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[NUM]], 0
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 undef
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[REM:%.*]] = and i32 [[I_07]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[REM]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND]], [[CMP1]]
+; CHECK-NEXT:    [[COND2:%.*]] = select i1 [[TMP0]], i32 [[I_07]], i32 0
+; CHECK-NEXT:    tail call void @bar(i32 noundef [[COND2]])
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[NUM]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %cmp6 = icmp sgt i32 %num, 0
+  br i1 %cmp6, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret i32 undef
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %rem = and i32 %i.07, 1
+  %cmp1 = icmp eq i32 %rem, 0
+  %0 = and i1 %cond, %cmp1
+  %cond2 = select i1 %0, i32 %i.07, i32 0
+  tail call void @bar(i32 noundef %cond2)
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond.not = icmp eq i32 %inc, %num
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; Test unswitch select when the condition is an AND whose RHS is invariant
+define i32 @and_rhs_invariant(i32 %num, i1 %cond) {
+; CHECK-LABEL: define i32 @and_rhs_invariant
+; CHECK-SAME: (i32 [[NUM:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[NUM]], 0
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 undef
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[REM:%.*]] = and i32 [[I_07]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[REM]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[CMP1]], [[COND]]
+; CHECK-NEXT:    [[COND2:%.*]] = select i1 [[TMP0]], i32 [[I_07]], i32 0
+; CHECK-NEXT:    tail call void @bar(i32 noundef [[COND2]])
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[NUM]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %cmp6 = icmp sgt i32 %num, 0
+  br i1 %cmp6, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret i32 undef
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %rem = and i32 %i.07, 1
+  %cmp1 = icmp eq i32 %rem, 0
+  %0 = and i1 %cmp1, %cond
+  %cond2 = select i1 %0, i32 %i.07, i32 0
+  tail call void @bar(i32 noundef %cond2)
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond.not = icmp eq i32 %inc, %num
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; Test unswitch select when the condition is an OR whose LHS is invariant
+define i32 @or_lhs_invariant(i32 %num, i1 %cond) {
+; CHECK-LABEL: define i32 @or_lhs_invariant
+; CHECK-SAME: (i32 [[NUM:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[NUM]], 0
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 undef
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[REM:%.*]] = and i32 [[I_07]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[REM]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND]], [[CMP1]]
+; CHECK-NEXT:    [[COND2:%.*]] = select i1 [[TMP0]], i32 [[I_07]], i32 0
+; CHECK-NEXT:    tail call void @bar(i32 noundef [[COND2]])
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[NUM]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %cmp6 = icmp sgt i32 %num, 0
+  br i1 %cmp6, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret i32 undef
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %rem = and i32 %i.07, 1
+  %cmp1 = icmp eq i32 %rem, 0
+  %0 = or i1 %cond, %cmp1
+  %cond2 = select i1 %0, i32 %i.07, i32 0
+  tail call void @bar(i32 noundef %cond2)
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond.not = icmp eq i32 %inc, %num
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; Test unswitch select when the condition is an OR whose RHS is invariant
+define i32 @or_rhs_invariant(i32 %num, i1 %cond) {
+; CHECK-LABEL: define i32 @or_rhs_invariant
+; CHECK-SAME: (i32 [[NUM:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[NUM]], 0
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 undef
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_07:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[REM:%.*]] = and i32 [[I_07]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[REM]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[CMP1]], [[COND]]
+; CHECK-NEXT:    [[COND2:%.*]] = select i1 [[TMP0]], i32 [[I_07]], i32 0
+; CHECK-NEXT:    tail call void @bar(i32 noundef [[COND2]])
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_07]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[NUM]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %cmp6 = icmp sgt i32 %num, 0
+  br i1 %cmp6, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret i32 undef
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %rem = and i32 %i.07, 1
+  %cmp1 = icmp eq i32 %rem, 0
+  %0 = or i1 %cmp1, %cond
+  %cond2 = select i1 %0, i32 %i.07, i32 0
+  tail call void @bar(i32 noundef %cond2)
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond.not = icmp eq i32 %inc, %num
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
