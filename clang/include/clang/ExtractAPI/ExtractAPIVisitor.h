@@ -110,16 +110,16 @@ template <typename T>
 static void modifyRecords(const T &Records, const StringRef &Name) {
   for (const auto &Record : Records) {
     if (Name == Record.second.get()->Name) {
-      Record.second.get()
-          ->Declaration
-          .insertAtIndex(0, "typedef",
-                         DeclarationFragments::FragmentKind::Keyword, "",
-                         nullptr)
-          .insertAtIndex(1, " ", DeclarationFragments::FragmentKind::Text)
-          .insertAtIndex(-1, " { ... } ",
-                         DeclarationFragments::FragmentKind::Text)
-          .insertAtIndex(-1, Name,
-                         DeclarationFragments::FragmentKind::Identifier);
+      auto &DeclFragment = Record.second->Declaration;
+      DeclFragment.insert(DeclFragment.begin(), " ",
+                          DeclarationFragments::FragmentKind::Text);
+      DeclFragment.insert(DeclFragment.begin(), "typedef",
+                          DeclarationFragments::FragmentKind::Keyword, "",
+                          nullptr);
+      DeclFragment.insert(--DeclFragment.end(), " { ... } ",
+                          DeclarationFragments::FragmentKind::Text);
+      DeclFragment.insert(--DeclFragment.end(), Name,
+                          DeclarationFragments::FragmentKind::Identifier);
       break;
     }
   }
