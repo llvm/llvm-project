@@ -1121,6 +1121,10 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   // dynamic archetype (and hence its size). Everything follows naturally
   // as the elements are laid out in a contigous buffer without padding.
   CompilerType simd_type = valobj.GetCompilerType().GetCanonicalType();
+  auto ts = simd_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!ts)
+    return false;
+
   ExecutionContext exe_ctx = valobj.GetExecutionContextRef().Lock(true);
   llvm::Optional<uint64_t> opt_type_size =
     simd_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
@@ -1128,18 +1132,14 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
     return false;
   uint64_t type_size = *opt_type_size;
 
-  ::swift::TypeBase *swift_type = GetSwiftType(simd_type).getPointer();
-  if (!swift_type)
+  lldbassert(simd_type.GetNumTemplateArguments() == 1 && "broken SIMD type");
+  if (simd_type.GetNumTemplateArguments() != 1)
     return false;
-  auto bound_type = dyn_cast<::swift::BoundGenericType>(swift_type);
-  if (!bound_type)
+
+  auto arg_type = ts->GetGenericArgumentType(simd_type.GetOpaqueQualType(), 0);
+  lldbassert(arg_type && "Unexpected invalid SIMD generic argument type");
+  if (!arg_type)
     return false;
-  auto generic_args = bound_type->getGenericArgs();
-  lldbassert(generic_args.size() == 1 && "broken SIMD type");
-  if (generic_args.size() != 1)
-    return false;
-  auto swift_arg_type = generic_args[0];
-  CompilerType arg_type = ToCompilerType(swift_arg_type);
 
   llvm::Optional<uint64_t> opt_arg_size =
       arg_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
