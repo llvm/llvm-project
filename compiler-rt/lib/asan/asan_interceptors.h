@@ -168,4 +168,10 @@ DECLARE_REAL(char*, strstr, const char *s1, const char *s2)
 
 #endif  // !SANITIZER_FUCHSIA
 
+#define ASAN_INTERCEPTOR_ENTER(ctx, func)                                      \
+  AsanInterceptorContext _ctx = {#func};                                       \
+  ctx = (void *)&_ctx;                                                         \
+  (void) ctx;
+#define COMMON_INTERCEPT_FUNCTION(name) ASAN_INTERCEPT_FUNC(name)
+
 #endif  // ASAN_INTERCEPTORS_H
