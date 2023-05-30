@@ -7453,9 +7453,19 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
     if (auto *CDS = dyn_cast<ConstantDataSequential>(Cst)) {
       Type *Ty = CDS->getType();
       Mask = APInt::getZero(Ty->getPrimitiveSizeInBits());
-      unsigned EltBits = CDS->getElementType()->getPrimitiveSizeInBits();
+      Type *EltTy = CDS->getElementType();
+      bool IsInteger = EltTy->isIntegerTy();
+      bool IsFP =
+          EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
+      if (!IsInteger && !IsFP)
+        return false;
+      unsigned EltBits = EltTy->getPrimitiveSizeInBits();
       for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I)
-        Mask.insertBits(CDS->getElementAsAPInt(I), I * EltBits);
+        if (IsInteger)
+          Mask.insertBits(CDS->getElementAsAPInt(I), I * EltBits);
+        else
+          Mask.insertBits(CDS->getElementAsAPFloat(I).bitcastToAPInt(),
+                          I * EltBits);
       return true;
     }
     return false;
