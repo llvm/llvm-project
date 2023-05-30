@@ -559,6 +559,13 @@ llvm.func @expect_with_probability(%arg0: i16) {
   llvm.return
 }
 
+// CHECK-LABEL: @threadlocal_test
+llvm.func @threadlocal_test(%arg0 : !llvm.ptr) {
+  // CHECK: call ptr @llvm.threadlocal.address.p0(ptr %{{.*}})
+  "llvm.intr.threadlocal.address"(%arg0) : (!llvm.ptr) -> !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @sadd_sat_test
 llvm.func @sadd_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
   // CHECK: call i32 @llvm.sadd.sat.i32
@@ -996,6 +1003,7 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare i1 @llvm.is.constant.i32(i32)
 // CHECK-DAG: declare i32 @llvm.expect.i32(i32, i32)
 // CHECK-DAG: declare i16 @llvm.expect.with.probability.i16(i16, i16, double immarg)
+// CHECK-DAG: declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
 // CHECK-DAG: declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 // CHECK-DAG: declare ptr @llvm.coro.begin(token, ptr writeonly)
 // CHECK-DAG: declare i64 @llvm.coro.size.i64()

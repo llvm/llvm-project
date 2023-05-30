@@ -324,6 +324,11 @@ def LLVM_ExpectWithProbabilityOp
   let assemblyFormat = "$val `,` $expected `,` $prob attr-dict `:` type($val)";
 }
 
+def LLVM_ThreadlocalAddressOp : LLVM_OneResultIntrOp<"threadlocal.address", [],
+                                [0], [Pure]> {
+  let arguments = (ins LLVM_AnyPointer:$global);
+}
+
 //
 // Coroutine intrinsics.
 //
