@@ -6041,7 +6041,7 @@ void CGOpenMPRuntime::emitUsesAllocatorsInit(CodeGenFunction &CGF,
                               CGM.getModule(), OMPRTL___kmpc_init_allocator),
                           {ThreadId, MemSpaceHandle, NumTraits, Traits});
   // Store to allocator.
-  CGF.EmitVarDecl(*cast<VarDecl>(
+  CGF.EmitAutoVarAlloca(*cast<VarDecl>(
       cast<DeclRefExpr>(Allocator->IgnoreParenImpCasts())->getDecl()));
   LValue AllocatorLVal = CGF.EmitLValue(Allocator->IgnoreParenImpCasts());
   AllocatorVal =
