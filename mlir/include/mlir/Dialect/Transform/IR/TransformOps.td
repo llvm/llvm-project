@@ -101,6 +101,31 @@ def AlternativesOp : TransformDialectOp<"alternatives",
   let hasVerifier = 1;
 }
 
+def AnnotateOp : TransformDialectOp<"annotate",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Annotates the target operation with an attribute by name";
+  let description = [{
+    Adds an attribute with the given `name` to the `target` operation. An
+    optional `param` handle can be provided to give the attribute a specific
+    value, else a UnitAttr is added. A single attribute will be broadcasted to
+    all target operations, otherwise the attributes will be mapped 1:1 based on
+    the order within the handles.
+
+    Fails silently if the length of the parameter payload does not match the length of
+    the target payload. Does not consume the provided handles.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       StrAttr:$name,
+                       Optional<TransformParamTypeInterface>:$param);
+  let results = (outs);
+
+  let assemblyFormat =
+    "$target $name attr-dict (`=` $param^)?"
+    "`:` type($target) (`,` type($param)^)?";
+}
+
 def CastOp : TransformDialectOp<"cast",
     [TransformOpInterface, TransformEachOpTrait,
      DeclareOpInterfaceMethods<CastOpInterface>,
