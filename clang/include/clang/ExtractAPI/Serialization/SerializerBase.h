@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the ExtractAPI APISerializer interface.
+/// This file defines the ExtractAPI APISetVisitor interface.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -15,47 +15,107 @@
 #define LLVM_CLANG_EXTRACTAPI_SERIALIZATION_SERIALIZERBASE_H
 
 #include "clang/ExtractAPI/API.h"
-#include "clang/ExtractAPI/APIIgnoresList.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace extractapi {
 
-/// Common options to customize the serializer output.
-struct APISerializerOption {
-  /// Do not include unnecessary whitespaces to save space.
-  bool Compact;
-};
-
-/// The base interface of serializers for API information.
-class APISerializer {
+/// The base interface of visitors for API information.
+template <typename Derived> class APISetVisitor {
 public:
-  /// Serialize the API information to \p os.
-  virtual void serialize(raw_ostream &os) = 0;
+  void traverseAPISet() {
+    getDerived()->traverseGlobalVariableRecords();
+
+    getDerived()->traverseGlobalFunctionRecords();
+
+    getDerived()->traverseEnumRecords();
+
+    getDerived()->traverseStructRecords();
+
+    getDerived()->traverseObjCInterfaces();
+
+    getDerived()->traverseObjCProtocols();
+
+    getDerived()->traverseMacroDefinitionRecords();
+
+    getDerived()->traverseTypedefRecords();
+  }
+
+  void traverseGlobalFunctionRecords() {
+    for (const auto &GlobalFunction : API.getGlobalFunctions())
+      getDerived()->visitGlobalFunctionRecord(*GlobalFunction.second);
+  }
+
+  void traverseGlobalVariableRecords() {
+    for (const auto &GlobalVariable : API.getGlobalVariables())
+      getDerived()->visitGlobalVariableRecord(*GlobalVariable.second);
+  }
+
+  void traverseEnumRecords() {
+    for (const auto &Enum : API.getEnums())
+      getDerived()->visitEnumRecord(*Enum.second);
+  }
+
+  void traverseStructRecords() {
+    for (const auto &Struct : API.getStructs())
+      getDerived()->visitStructRecord(*Struct.second);
+  }
+
+  void traverseObjCInterfaces() {
+    for (const auto &Interface : API.getObjCInterfaces())
+      getDerived()->visitObjCContainerRecord(*Interface.second);
+  }
+
+  void traverseObjCProtocols() {
+    for (const auto &Protocol : API.getObjCProtocols())
+      getDerived()->visitObjCContainerRecord(*Protocol.second);
+  }
+
+  void traverseMacroDefinitionRecords() {
+    for (const auto &Macro : API.getMacros())
+      getDerived()->visitMacroDefinitionRecord(*Macro.second);
+  }
+
+  void traverseTypedefRecords() {
+    for (const auto &Typedef : API.getTypedefs())
+      getDerived()->visitTypedefRecord(*Typedef.second);
+  }
+
+  /// Visit a global function record.
+  void visitGlobalFunctionRecord(const GlobalFunctionRecord &Record){};
+
+  /// Visit a global variable record.
+  void visitGlobalVariableRecord(const GlobalVariableRecord &Record){};
+
+  /// Visit an enum record.
+  void visitEnumRecord(const EnumRecord &Record){};
+
+  /// Visit a struct record.
+  void visitStructRecord(const StructRecord &Record){};
+
+  /// Visit an Objective-C container record.
+  void visitObjCContainerRecord(const ObjCContainerRecord &Record){};
+
+  /// Visit a macro definition record.
+  void visitMacroDefinitionRecord(const MacroDefinitionRecord &Record){};
+
+  /// Visit a typedef record.
+  void visitTypedefRecord(const TypedefRecord &Record){};
 
 protected:
   const APISet &API;
 
-  /// The list of symbols to ignore.
-  ///
-  /// Note: This should be consulted before emitting a symbol.
-  const APIIgnoresList &IgnoresList;
-
-  APISerializerOption Options;
-
 public:
-  APISerializer() = delete;
-  APISerializer(const APISerializer &) = delete;
-  APISerializer(APISerializer &&) = delete;
-  APISerializer &operator=(const APISerializer &) = delete;
-  APISerializer &operator=(APISerializer &&) = delete;
+  APISetVisitor() = delete;
+  APISetVisitor(const APISetVisitor &) = delete;
+  APISetVisitor(APISetVisitor &&) = delete;
+  APISetVisitor &operator=(const APISetVisitor &) = delete;
+  APISetVisitor &operator=(APISetVisitor &&) = delete;
 
 protected:
-  APISerializer(const APISet &API, const APIIgnoresList &IgnoresList,
-                APISerializerOption Options = {})
-      : API(API), IgnoresList(IgnoresList), Options(Options) {}
+  APISetVisitor(const APISet &API) : API(API) {}
+  ~APISetVisitor() = default;
 
-  virtual ~APISerializer() = default;
+  Derived *getDerived() { return static_cast<Derived *>(this); };
 };
 
 } // namespace extractapi
