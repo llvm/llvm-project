@@ -240,7 +240,7 @@ void namedBarrier() {
   // assert(NumThreads % 32 == 0);
 
   uint32_t WarpSize = mapping::getWarpSize();
-  uint32_t NumWaves = NumThreads / WarpSize;
+  uint32_t NumWaves = (NumThreads < WarpSize) ? 1 : NumThreads / WarpSize;
 
   fence::team(atomic::aquire);
 
