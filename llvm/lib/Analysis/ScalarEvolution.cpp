@@ -6703,8 +6703,15 @@ const ConstantRange &ScalarEvolution::getRangeRef(
           getConstantMaxBackedgeTakenCount(AddRec->getLoop());
       if (!isa<SCEVCouldNotCompute>(MaxBEScev)) {
         APInt MaxBECount = cast<SCEVConstant>(MaxBEScev)->getAPInt();
-        if (MaxBECount.getBitWidth() < BitWidth)
+
+        // Adjust MaxBECount to the same bitwidth as AddRec. We can truncate if
+        // MaxBECount's active bits are all <= AddRec's bit width.
+        if (MaxBECount.getBitWidth() > BitWidth &&
+            MaxBECount.getActiveBits() <= BitWidth)
+          MaxBECount = MaxBECount.trunc(BitWidth);
+        else if (MaxBECount.getBitWidth() < BitWidth)
           MaxBECount = MaxBECount.zext(BitWidth);
+
         if (MaxBECount.getBitWidth() == BitWidth) {
           auto RangeFromAffine = getRangeForAffineAR(
               AddRec->getStart(), AddRec->getStepRecurrence(*this), MaxBECount);
