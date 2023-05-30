@@ -373,7 +373,7 @@ define <4 x float> @mismatch_tofp_v4i32_v4f32(<2 x i32> %x, <2 x i32> %y) {
 ; AVX2-LABEL: mismatch_tofp_v4i32_v4f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [4.503599627370496E+15,4.503599627370496E+15]
 ; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vsubpd %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vcvtpd2ps %xmm0, %xmm0

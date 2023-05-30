@@ -361,7 +361,8 @@ static Operation *replaceForAllWithNewSignature(
   SetVector<Operation *> dominatedUsers;
   DominanceInfo domInfo(containingOp);
   for (Operation *user : producerOp->getResult(resultNumber).getUsers()) {
-    if ((user != containingOp) && (domInfo.dominates(containingOp, user))) {
+    if (!containingOp->isAncestor(user) &&
+        (domInfo.dominates(containingOp, user))) {
       dominatedUsers.insert(user);
     }
   }
@@ -699,11 +700,6 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
                                        transform::TransformState &state) {
   SmallVector<Operation *> fusedOps;
   auto producerOps = state.getPayloadOps(getProducerOp());
-  // If nothing to fuse, propagate success.
-  if (std::empty(producerOps)) {
-    results.set(cast<OpResult>(getFusedOp()), SmallVector<mlir::Operation *>{});
-    return DiagnosedSilenceableFailure::success();
-  }
   auto containingOps = state.getPayloadOps(getContainingOp());
   if (!llvm::hasSingleElement(containingOps)) {
     return emitDefiniteFailure()
@@ -711,6 +707,13 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
            << llvm::range_size(containingOps) << ")";
   }
   Operation *containingOp = *containingOps.begin();
+
+  // If nothing to fuse, propagate success.
+  if (std::empty(producerOps)) {
+    results.set(cast<OpResult>(getFusedOp()), SmallVector<mlir::Operation *>{});
+    results.set(cast<OpResult>(getNewContainingOp()), {containingOp});
+    return DiagnosedSilenceableFailure::success();
+  }
 
   // Helper function to find the next producer that should be fused. Take any
   // producer that has a use inside the containing op.

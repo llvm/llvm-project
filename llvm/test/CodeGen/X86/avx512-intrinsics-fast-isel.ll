@@ -6787,7 +6787,7 @@ define i64 @test_mm512_mask_reduce_mul_epi64(i8 zeroext %__M, <8 x i64> %__W) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0]
+; X86-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0]
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
 ; X86-NEXT:    vpsrlq $32, %ymm1, %ymm2
@@ -7990,7 +7990,7 @@ define i64 @test_mm512_mask_reduce_max_epi64(i8 zeroext %__M, <8 x i64> %__W) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648,0,2147483648,0,2147483648,0,2147483648,0,2147483648]
+; X86-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648,0,2147483648,0,2147483648,0,2147483648,0,2147483648]
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[4,5,6,7,0,1,2,3]
 ; X86-NEXT:    vpmaxsq %zmm0, %zmm1, %zmm0
@@ -8140,7 +8140,7 @@ define i64 @test_mm512_mask_reduce_min_epi64(i8 zeroext %__M, <8 x i64> %__W) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647]
+; X86-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647]
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[4,5,6,7,0,1,2,3]
 ; X86-NEXT:    vpminsq %zmm0, %zmm1, %zmm0

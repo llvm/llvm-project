@@ -122,7 +122,7 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X64-AVX2-LABEL: test_reduce_v2i64:
 ; X64-AVX2:       ## %bb.0:
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm3
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm2
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2

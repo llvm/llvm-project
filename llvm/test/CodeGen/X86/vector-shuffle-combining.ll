@@ -1557,7 +1557,7 @@ define <4 x i32> @combine_test20(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %2
 }
 
-define <4 x i32> @combine_test21(<8 x i32> %a, <4 x i32>* %ptr) {
+define <4 x i32> @combine_test21(<8 x i32> %a, ptr %ptr) {
 ; SSE-LABEL: combine_test21:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm2
@@ -1585,11 +1585,11 @@ define <4 x i32> @combine_test21(<8 x i32> %a, <4 x i32>* %ptr) {
 ; AVX2-NEXT:    retq
   %1 = shufflevector <8 x i32> %a, <8 x i32> %a, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   %2 = shufflevector <8 x i32> %a, <8 x i32> %a, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  store <4 x i32> %1, <4 x i32>* %ptr, align 16
+  store <4 x i32> %1, ptr %ptr, align 16
   ret <4 x i32> %2
 }
 
-define <8 x float> @combine_test22(<2 x float>* %a, <2 x float>* %b) {
+define <8 x float> @combine_test22(ptr %a, ptr %b) {
 ; SSE-LABEL: combine_test22:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -1602,14 +1602,14 @@ define <8 x float> @combine_test22(<2 x float>* %a, <2 x float>* %b) {
 ; AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; AVX-NEXT:    retq
 ; Current AVX2 lowering of this is still awful, not adding a test case.
-  %1 = load <2 x float>, <2 x float>* %a, align 8
-  %2 = load <2 x float>, <2 x float>* %b, align 8
+  %1 = load <2 x float>, ptr %a, align 8
+  %2 = load <2 x float>, ptr %b, align 8
   %3 = shufflevector <2 x float> %1, <2 x float> %2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x float> %3
 }
 
 ; PR22359
-define void @combine_test23(<8 x float> %v, <2 x float>* %ptr) {
+define void @combine_test23(<8 x float> %v, ptr %ptr) {
 ; SSE-LABEL: combine_test23:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups %xmm0, (%rdi)
@@ -1620,11 +1620,11 @@ define void @combine_test23(<8 x float> %v, <2 x float>* %ptr) {
 ; AVX-NEXT:    vmovups %xmm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %idx2 = getelementptr inbounds <2 x float>, <2 x float>* %ptr, i64 1
+  %idx2 = getelementptr inbounds <2 x float>, ptr %ptr, i64 1
   %shuffle0 = shufflevector <8 x float> %v, <8 x float> undef, <2 x i32> <i32 0, i32 1>
   %shuffle1 = shufflevector <8 x float> %v, <8 x float> undef, <2 x i32> <i32 2, i32 3>
-  store <2 x float> %shuffle0, <2 x float>* %ptr, align 8
-  store <2 x float> %shuffle1, <2 x float>* %idx2, align 8
+  store <2 x float> %shuffle0, ptr %ptr, align 8
+  store <2 x float> %shuffle1, ptr %idx2, align 8
   ret void
 }
 
@@ -1721,7 +1721,7 @@ define <4 x float> @combine_test4b(<4 x float> %a, <4 x float> %b) {
 
 ; Verify that we correctly fold shuffles even when we use illegal vector types.
 
-define <4 x i8> @combine_test1c(<4 x i8>* %a, <4 x i8>* %b) {
+define <4 x i8> @combine_test1c(ptr %a, ptr %b) {
 ; SSE2-LABEL: combine_test1c:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -1749,21 +1749,29 @@ define <4 x i8> @combine_test1c(<4 x i8>* %a, <4 x i8>* %b) {
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: combine_test1c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,255,255,255,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
-  %A = load <4 x i8>, <4 x i8>* %a
-  %B = load <4 x i8>, <4 x i8>* %b
+; AVX1-LABEL: combine_test1c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,255,255,255,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_test1c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
+; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %A = load <4 x i8>, ptr %a
+  %B = load <4 x i8>, ptr %b
   %1 = shufflevector <4 x i8> %A, <4 x i8> %B, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   %2 = shufflevector <4 x i8> %1, <4 x i8> %B, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
   ret <4 x i8> %2
 }
 
-define <4 x i8> @combine_test2c(<4 x i8>* %a, <4 x i8>* %b) {
+define <4 x i8> @combine_test2c(ptr %a, ptr %b) {
 ; SSE-LABEL: combine_test2c:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -1777,14 +1785,14 @@ define <4 x i8> @combine_test2c(<4 x i8>* %a, <4 x i8>* %b) {
 ; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX-NEXT:    retq
-  %A = load <4 x i8>, <4 x i8>* %a
-  %B = load <4 x i8>, <4 x i8>* %b
+  %A = load <4 x i8>, ptr %a
+  %B = load <4 x i8>, ptr %b
   %1 = shufflevector <4 x i8> %A, <4 x i8> %B, <4 x i32> <i32 0, i32 5, i32 1, i32 5>
   %2 = shufflevector <4 x i8> %1, <4 x i8> %B, <4 x i32> <i32 0, i32 2, i32 4, i32 1>
   ret <4 x i8> %2
 }
 
-define <4 x i8> @combine_test3c(<4 x i8>* %a, <4 x i8>* %b) {
+define <4 x i8> @combine_test3c(ptr %a, ptr %b) {
 ; SSE-LABEL: combine_test3c:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -1800,14 +1808,14 @@ define <4 x i8> @combine_test3c(<4 x i8>* %a, <4 x i8>* %b) {
 ; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; AVX-NEXT:    retq
-  %A = load <4 x i8>, <4 x i8>* %a
-  %B = load <4 x i8>, <4 x i8>* %b
+  %A = load <4 x i8>, ptr %a
+  %B = load <4 x i8>, ptr %b
   %1 = shufflevector <4 x i8> %A, <4 x i8> %B, <4 x i32> <i32 2, i32 3, i32 5, i32 5>
   %2 = shufflevector <4 x i8> %1, <4 x i8> %B, <4 x i32> <i32 6, i32 7, i32 0, i32 1>
   ret <4 x i8> %2
 }
 
-define <4 x i8> @combine_test4c(<4 x i8>* %a, <4 x i8>* %b) {
+define <4 x i8> @combine_test4c(ptr %a, ptr %b) {
 ; SSE2-LABEL: combine_test4c:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -1835,15 +1843,23 @@ define <4 x i8> @combine_test4c(<4 x i8>* %a, <4 x i8>* %b) {
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: combine_test4c:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = <255,0,255,255,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
-  %A = load <4 x i8>, <4 x i8>* %a
-  %B = load <4 x i8>, <4 x i8>* %b
+; AVX1-LABEL: combine_test4c:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <255,0,255,255,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_test4c:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [255,0,255,255,255,0,255,255,255,0,255,255,255,0,255,255]
+; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %A = load <4 x i8>, ptr %a
+  %B = load <4 x i8>, ptr %b
   %1 = shufflevector <4 x i8> %A, <4 x i8> %B, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
   %2 = shufflevector <4 x i8> %1, <4 x i8> %B, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
   ret <4 x i8> %2
@@ -2630,7 +2646,7 @@ define <4 x float> @combine_insertps4(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %d
 }
 
-define void @combine_scalar_load_with_blend_with_zero(double* %a0, <4 x float>* %a1) {
+define void @combine_scalar_load_with_blend_with_zero(ptr %a0, ptr %a1) {
 ; SSE-LABEL: combine_scalar_load_with_blend_with_zero:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -2642,12 +2658,12 @@ define void @combine_scalar_load_with_blend_with_zero(double* %a0, <4 x float>* 
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovaps %xmm0, (%rsi)
 ; AVX-NEXT:    retq
-  %1 = load double, double* %a0, align 8
+  %1 = load double, ptr %a0, align 8
   %2 = insertelement <2 x double> undef, double %1, i32 0
   %3 = insertelement <2 x double> %2, double 0.000000e+00, i32 1
   %4 = bitcast <2 x double> %3 to <4 x float>
   %5 = shufflevector <4 x float> %4, <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, <4 x i32> <i32 0, i32 1, i32 4, i32 3>
-  store <4 x float> %5, <4 x float>* %a1, align 16
+  store <4 x float> %5, ptr %a1, align 16
   ret void
 }
 
@@ -3044,7 +3060,7 @@ define <8 x i16> @shuffle_extract_concat_insert(<4 x i16> %lhsa, <4 x i16> %rhsa
   ret <8 x i16> %7
 }
 
-define <8 x i16> @shuffle_scalar_to_vector_extract(<8 x i8>* %p0, i8* %p1, i8* %p2) {
+define <8 x i16> @shuffle_scalar_to_vector_extract(ptr %p0, ptr %p1, ptr %p2) {
 ; SSE2-LABEL: shuffle_scalar_to_vector_extract:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -3112,11 +3128,11 @@ define <8 x i16> @shuffle_scalar_to_vector_extract(<8 x i8>* %p0, i8* %p1, i8* %
 ; AVX-NEXT:    movsbl (%rdx), %eax
 ; AVX-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %tmp = load <8 x i8>, <8 x i8>* %p0, align 1
+  %tmp = load <8 x i8>, ptr %p0, align 1
   %tmp1 = sext <8 x i8> %tmp to <8 x i16>
-  %tmp2 = load i8, i8* %p1, align 1
+  %tmp2 = load i8, ptr %p1, align 1
   %cvt1 = sext i8 %tmp2 to i16
-  %tmp3 = load i8, i8* %p2, align 1
+  %tmp3 = load i8, ptr %p2, align 1
   %cvt2 = sext i8 %tmp3 to i16
   %tmp4 = extractelement <8 x i16> %tmp1, i32 4
   %tmp5 = extractelement <8 x i16> %tmp1, i32 7
@@ -3151,8 +3167,8 @@ define i32 @shuffle_binops_with_undef() {
 ; AVX-NEXT:    vmovdqa %xmm0, (%rax)
 ; AVX-NEXT:    retq
 entry:
-  %load0 = load <8 x i16>, <8 x i16>* undef, align 16
-  %load1 = load <8 x i16>, <8 x i16>* undef, align 16
+  %load0 = load <8 x i16>, ptr undef, align 16
+  %load1 = load <8 x i16>, ptr undef, align 16
   %shuf0 = shufflevector <16 x i8> undef, <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
   %addi = add <8 x i16> %load0, %load1
   %bc0 = bitcast <8 x i16> %addi to <2 x i64>
@@ -3162,8 +3178,8 @@ entry:
   %bc2 = bitcast <8 x i16> %addi24 to <2 x i64>
   %shuf2 = shufflevector <2 x i64> %bc0, <2 x i64> %bc2, <2 x i32> <i32 0, i32 2>
   %bc3 = bitcast <2 x i64> %shuf2 to <8 x i16>
-  %psrli = call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %bc3, i32 ptrtoint (i32 ()* @shuffle_binops_with_undef to i32))
-  store <8 x i16> %psrli, <8 x i16>* undef, align 16
+  %psrli = call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %bc3, i32 ptrtoint (ptr @shuffle_binops_with_undef to i32))
+  store <8 x i16> %psrli, ptr undef, align 16
   ret i32 undef
 }
 declare <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16>, i32)
@@ -3212,8 +3228,8 @@ define void @PR43024() {
 ; AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}+12(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vmovss %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, <4 x float>* undef, align 16
-  %1 = load <4 x float>, <4 x float>* undef, align 16
+  store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, ptr undef, align 16
+  %1 = load <4 x float>, ptr undef, align 16
   %2 = fmul <4 x float> %1, <float 0x0, float 0x0, float 0x0, float 0x0>
   %3 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
   %4 = fadd <4 x float> %2, %3
@@ -3221,11 +3237,11 @@ define void @PR43024() {
   %6 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef>
   %7 = fadd <4 x float> %6, %5
   %8 = extractelement <4 x float> %7, i32 0
-  store float %8, float* undef, align 8
+  store float %8, ptr undef, align 8
   ret void
 }
 
-define void @PR45604(<32 x i16>* %dst, <8 x i16>* %src) {
+define void @PR45604(ptr %dst, ptr %src) {
 ; SSE2-LABEL: PR45604:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -3326,7 +3342,7 @@ define void @PR45604(<32 x i16>* %dst, <8 x i16>* %src) {
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[0,2,0,2]
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,1,8,9,u,u,u,u,2,3,10,11,u,u,u,u,4,5,12,13,u,u,u,u,6,7,14,15,u,u,u,u>
 ; AVX2-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = <u,u,u,u,11,0,0,0,u,u,u,u,11,0,0,0,u,u,u,u,11,0,0,0,u,u,u,u,11,0,0,0>
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0,11,0,0,0]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm3[1],ymm1[2],ymm3[3],ymm1[4],ymm3[5],ymm1[6],ymm3[7]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,3,1,3]
 ; AVX2-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
@@ -3335,15 +3351,15 @@ define void @PR45604(<32 x i16>* %dst, <8 x i16>* %src) {
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %v1 = load <8 x i16>, <8 x i16>* %src, align 16
+  %v1 = load <8 x i16>, ptr %src, align 16
   %v2 = shufflevector <8 x i16> %v1, <8 x i16> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %v3 = shufflevector <16 x i16> %v2, <16 x i16> <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-  store <32 x i16> %v3, <32 x i16>* %dst, align 16
+  store <32 x i16> %v3, ptr %dst, align 16
   ret void
 }
 
 ; getFauxShuffle AND/ANDN decoding wrongly assumed an undef src always gives an undef dst.
-define <2 x i64> @PR55157(<16 x i8>* %0) {
+define <2 x i64> @PR55157(ptr %0) {
 ; SSE-LABEL: PR55157:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    xorps %xmm0, %xmm0
@@ -3353,7 +3369,7 @@ define <2 x i64> @PR55157(<16 x i8>* %0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %2 = load <16 x i8>, <16 x i8>* %0, align 16
+  %2 = load <16 x i8>, ptr %0, align 16
   %3 = icmp eq <16 x i8> %2, zeroinitializer
   %4 = tail call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer)
   %5 = select <16 x i1> %3, <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, <16 x i8> %4
@@ -3488,11 +3504,11 @@ define void @SpinningCube() {
 ; AVX-NEXT:    vmovaps %xmm0, (%rax)
 ; AVX-NEXT:    retq
 entry:
-  store float 1.000000e+00, float* undef, align 4
-  %0 = load float, float* undef, align 4
+  store float 1.000000e+00, ptr undef, align 4
+  %0 = load float, ptr undef, align 4
   %1 = fmul float undef, 0.000000e+00
   %2 = insertelement <4 x float> poison, float %0, i32 3
-  %3 = load float, float* undef, align 4
+  %3 = load float, ptr undef, align 4
   %4 = insertelement <2 x float> poison, float %3, i32 0
   %5 = shufflevector <2 x float> %4, <2 x float> poison, <2 x i32> zeroinitializer
   %6 = fmul <2 x float> %5, <float 0.000000e+00, float -2.000000e+00>
@@ -3504,15 +3520,15 @@ entry:
   %12 = insertelement <4 x float> %11, float undef, i32 0
   %13 = insertelement <4 x float> %12, float undef, i32 2
   %14 = fadd <4 x float> %10, %13
-  store <4 x float> %14, <4 x float>* undef, align 16
-  %15 = load float, float* undef, align 4
+  store <4 x float> %14, ptr undef, align 16
+  %15 = load float, ptr undef, align 4
   %16 = insertelement <2 x float> poison, float %15, i32 0
   %17 = shufflevector <2 x float> %16, <2 x float> poison, <2 x i32> zeroinitializer
   %18 = fmul <2 x float> %17, <float 0.000000e+00, float -2.000000e+00>
   %19 = shufflevector <2 x float> %18, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %20 = shufflevector <4 x float> undef, <4 x float> %19, <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
   %21 = fadd <4 x float> %20, %2
-  store <4 x float> %21, <4 x float>* undef, align 16
+  store <4 x float> %21, ptr undef, align 16
   ret void
 }
 
