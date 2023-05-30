@@ -861,19 +861,17 @@ option(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC
 
 if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
   add_custom_target(builtins-standalone-atomic)
-  set(BUILTIN_DEPS "")
   set(BUILTIN_TYPE SHARED)
   if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     if(NOT COMPILER_RT_LIBATOMIC_LINK_FLAGS)
       get_aix_libatomic_default_link_flags(COMPILER_RT_LIBATOMIC_LINK_FLAGS
         "${CMAKE_CURRENT_SOURCE_DIR}/ppc/atomic.exp")
     endif()
-    # The compiler needs builtins to link any other binaries, so let
-    # clang_rt.atomic be built after builtins.
-    set(BUILTIN_DEPS builtins)
     # For different versions of cmake, SHARED behaves differently. For some
     # versions, we might need MODULE rather than SHARED.
     get_aix_libatomic_type(BUILTIN_TYPE)
+  else()
+    list(APPEND COMPILER_RT_LIBATOMIC_LINK_FLAGS -nodefaultlibs)
   endif()
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if(CAN_TARGET_${arch})
@@ -882,7 +880,7 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
                               ARCHS ${arch}
                               SOURCES atomic.c
                               LINK_FLAGS ${COMPILER_RT_LIBATOMIC_LINK_FLAGS}
-                              DEPS ${BUILTIN_DEPS}
+                              DEPS builtins
                               PARENT_TARGET builtins-standalone-atomic)
     endif()
   endforeach()
