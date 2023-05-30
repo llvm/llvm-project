@@ -304,6 +304,14 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// reset to the default, and all other fields inherited from `this`.
     SparseTensorEncodingAttr withoutBitWidths() const;
 
+    /// Constructs a new encoding with the given dimSlices, and all
+    /// other fields inherited from `this`.
+    SparseTensorEncodingAttr withDimSlices(ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr> dimSlices) const;
+
+    /// Constructs a new encoding with the dimSlices reset to the default,
+    /// and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withoutDimSlices() const;
+
     //
     // Rank methods.
     //
