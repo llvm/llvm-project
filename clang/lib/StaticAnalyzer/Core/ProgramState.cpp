@@ -424,7 +424,7 @@ ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
     freeStates.pop_back();
   }
   else {
-    newState = (ProgramState*) Alloc.Allocate<ProgramState>();
+    newState = Alloc.Allocate<ProgramState>();
   }
   new (newState) ProgramState(State);
   StateSet.InsertNode(newState, InsertPos);
