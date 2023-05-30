@@ -21,7 +21,8 @@ static __llvm_libc::rpc::Server server;
 
 /// Queries the RPC client at least once and performs server-side work if there
 /// are any active requests.
-void handle_server() {
+template <typename Alloc, typename Dealloc>
+void handle_server(Alloc allocator, Dealloc deallocator) {
   using namespace __llvm_libc;
 
   // Continue servicing the client until there is no work left and we return.
@@ -47,6 +48,19 @@ void handle_server() {
     case rpc::Opcode::EXIT: {
       port->recv([](rpc::Buffer *buffer) {
         exit(reinterpret_cast<uint32_t *>(buffer->data)[0]);
+      });
+      break;
+    }
+    case rpc::Opcode::MALLOC: {
+      port->recv_and_send([&](rpc::Buffer *buffer) {
+        buffer->data[0] =
+            reinterpret_cast<uintptr_t>(allocator(buffer->data[0]));
+      });
+      break;
+    }
+    case rpc::Opcode::FREE: {
+      port->recv([&](rpc::Buffer *buffer) {
+        deallocator(reinterpret_cast<void *>(buffer->data[0]));
       });
       break;
     }
