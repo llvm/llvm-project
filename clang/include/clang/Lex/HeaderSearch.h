@@ -637,9 +637,9 @@ public:
                        bool AllowExtraModuleMapSearch = false);
 
   /// Try to find a module map file in the given directory, returning
-  /// \c nullptr if none is found.
-  const FileEntry *lookupModuleMapFile(const DirectoryEntry *Dir,
-                                       bool IsFramework);
+  /// \c nullopt if none is found.
+  OptionalFileEntryRef lookupModuleMapFile(const DirectoryEntry *Dir,
+                                           bool IsFramework);
 
   /// Determine whether there is a module map that may map the header
   /// with the given file name to a (sub)module.
@@ -686,8 +686,8 @@ public:
   ///        used to resolve paths within the module (this is required when
   ///        building the module from preprocessed source).
   /// \returns true if an error occurred, false otherwise.
-  bool loadModuleMapFile(const FileEntry *File, bool IsSystem,
-                         FileID ID = FileID(), unsigned *Offset = nullptr,
+  bool loadModuleMapFile(FileEntryRef File, bool IsSystem, FileID ID = FileID(),
+                         unsigned *Offset = nullptr,
                          StringRef OriginalModuleMapFile = StringRef());
 
   /// Collect the set of all known, top-level modules.
@@ -904,8 +904,7 @@ private:
     LMM_InvalidModuleMap
   };
 
-  LoadModuleMapResult loadModuleMapFileImpl(const FileEntry *File,
-                                            bool IsSystem,
+  LoadModuleMapResult loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
                                             DirectoryEntryRef Dir,
                                             FileID ID = FileID(),
                                             unsigned *Offset = nullptr);
