@@ -6438,6 +6438,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     Form = Copy;
     break;
   case AtomicExpr::AO__hip_atomic_fetch_add:
+  case AtomicExpr::AO__hip_atomic_fetch_sub:
   case AtomicExpr::AO__hip_atomic_fetch_min:
   case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__c11_atomic_fetch_add:
