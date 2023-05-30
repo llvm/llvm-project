@@ -1624,7 +1624,7 @@ public:
   /// Indicate RISC-V vector builtin functions enabled or not.
   bool DeclareRISCVVBuiltins = false;
 
-  /// Indicate RISC-V Sifive vector builtin functions enabled or not.
+  /// Indicate RISC-V SiFive vector builtin functions enabled or not.
   bool DeclareRISCVVectorBuiltins = false;
 
 private:
