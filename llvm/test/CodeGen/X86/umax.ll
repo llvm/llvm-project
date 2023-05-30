@@ -369,14 +369,23 @@ define <2 x i64> @test_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE-NEXT:    por %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test_v2i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm3
-; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm2
-; AVX-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_v2i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_v2i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    retq
 ;
 ; X86-LABEL: test_v2i64:
 ; X86:       # %bb.0:

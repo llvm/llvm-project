@@ -150,11 +150,23 @@ define <2 x i64> @elt0_v2i64(i64 %x) {
 ; X86-AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X86-AVX-NEXT:    retl
 ;
-; X64-AVX-LABEL: elt0_v2i64:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,1>
-; X64-AVX-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: elt0_v2i64:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,1>
+; X64-AVX1-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: elt0_v2i64:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,1]
+; X64-AVX2-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512F-LABEL: elt0_v2i64:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,1]
+; X64-AVX512F-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
+; X64-AVX512F-NEXT:    retq
    %ins = insertelement <2 x i64> <i64 42, i64 1>, i64 %x, i32 0
    ret <2 x i64> %ins
 }

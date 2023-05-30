@@ -348,9 +348,9 @@ define <8 x i16> @pmaddubsw_bad_extend(ptr %Aptr, ptr %Bptr) {
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX256-NEXT:    vmovdqa (%rsi), %xmm1
-; AVX256-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; AVX256-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [0,2,4,6,8,10,12,14,0,2,4,6,8,10,12,14]
 ; AVX256-NEXT:    vpshufb %xmm2, %xmm0, %xmm3
-; AVX256-NEXT:    vmovdqa {{.*#+}} xmm4 = <1,3,5,7,9,11,13,15,u,u,u,u,u,u,u,u>
+; AVX256-NEXT:    vpbroadcastq {{.*#+}} xmm4 = [1,3,5,7,9,11,13,15,1,3,5,7,9,11,13,15]
 ; AVX256-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
 ; AVX256-NEXT:    vpshufb %xmm2, %xmm1, %xmm2
 ; AVX256-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
