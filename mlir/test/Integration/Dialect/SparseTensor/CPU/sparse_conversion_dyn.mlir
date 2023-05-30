@@ -32,7 +32,7 @@
 
 #DCSC  = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 //

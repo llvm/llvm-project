@@ -36,7 +36,7 @@
 
 #TsssPermuted = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
+  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
 #COOSlice = #sparse_tensor.encoding<{
