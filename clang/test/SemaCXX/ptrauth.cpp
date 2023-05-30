@@ -61,9 +61,9 @@ void test_builtin_ptrauth_type_discriminator(unsigned s) {
 
   int t;
   int vmarray[s];
-  __builtin_ptrauth_type_discriminator(t); // expected-error {{unknown type name 't'}}
-  __builtin_ptrauth_type_discriminator(&t); // expected-error {{expected a type}}
-  __builtin_ptrauth_type_discriminator(decltype(vmarray)); // expected-error {{cannot pass variably-modified type 'decltype(vmarray)'}}
+  (void)__builtin_ptrauth_type_discriminator(t); // expected-error {{unknown type name 't'}}
+  (void)__builtin_ptrauth_type_discriminator(&t); // expected-error {{expected a type}}
+  (void)__builtin_ptrauth_type_discriminator(decltype(vmarray)); // expected-error {{cannot pass variably-modified type 'decltype(vmarray)'}}
 }
 
 void test_incomplete_virtual_member_function_return_arg_type() {
