@@ -387,7 +387,6 @@ class Format:
         return sparse_tensor.EncodingAttr.get(
             mlir_storage_format,
             ir.AffineMap.get_permutation(order),
-            None,
             _POS_WIDTH,
             _CRD_WIDTH,
         )

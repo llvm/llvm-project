@@ -45,12 +45,12 @@ namespace sparse_tensor {
 ///
 class SparseTensorType {
 public:
-  // We memoize `lvlRank` and `dim2lvl` to avoid repeating the
+  // We memoize `lvlRank` and `dimToLvl` to avoid repeating the
   // conditionals throughout the rest of the class.
   SparseTensorType(RankedTensorType rtp)
       : rtp(rtp), enc(getSparseTensorEncoding(rtp)),
         lvlRank(enc ? enc.getLvlRank() : getDimRank()),
-        dim2lvl(enc.hasIdDimOrdering() ? AffineMap() : enc.getDimOrdering()) {
+        dimToLvl(enc.isIdentity() ? AffineMap() : enc.getDimToLvl()) {
     assert(rtp && "got null RankedTensorType");
     assert((!isIdentity() || getDimRank() == lvlRank) && "Rank mismatch");
   }
@@ -65,6 +65,10 @@ public:
   // So we must explicitly define the copy-ctor to silence -Wdeprecated-copy.
   SparseTensorType(const SparseTensorType &) = default;
 
+  //
+  // Factory methods.
+  //
+
   /// Constructs a new `SparseTensorType` with the same dimension-shape
   /// and element type, but with the encoding replaced by the given encoding.
   SparseTensorType withEncoding(SparseTensorEncodingAttr newEnc) const {
@@ -73,10 +77,43 @@ public:
 
   /// Constructs a new `SparseTensorType` with the same dimension-shape
   /// and element type, but with the encoding replaced by
-  /// `getEncoding().withoutOrdering()`.
-  SparseTensorType withoutOrdering() const {
-    return withEncoding(enc.withoutOrdering());
+  /// `getEncoding().withDimToLvl(dimToLvl)`.
+  SparseTensorType withDimToLvl(AffineMap dimToLvl) const {
+    return withEncoding(enc.withDimToLvl(dimToLvl));
   }
+
+  SparseTensorType withDimToLvl(SparseTensorEncodingAttr dimToLvlEnc) const {
+    return withEncoding(enc.withDimToLvl(dimToLvlEnc));
+  }
+
+  SparseTensorType withDimToLvl(const SparseTensorType &dimToLvlSTT) const {
+    return withDimToLvl(dimToLvlSTT.getEncoding());
+  }
+
+  /// Constructs a new `SparseTensorType` with the same dimension-shape
+  /// and element type, but with the encoding replaced by
+  /// `getEncoding().withoutDimToLvl()`.
+  SparseTensorType withoutDimToLvl() const {
+    return withEncoding(enc.withoutDimToLvl());
+  }
+
+  /// Constructs a new `SparseTensorType` with the same dimension-shape
+  /// and element type, but with the encoding replaced by
+  /// `getEncoding().withBitWidths(posWidth, crdWidth)`.
+  SparseTensorType withBitWidths(unsigned posWidth, unsigned crdWidth) const {
+    return withEncoding(enc.withBitWidths(posWidth, crdWidth));
+  }
+
+  /// Constructs a new `SparseTensorType` with the same dimension-shape
+  /// and element type, but with the encoding replaced by
+  /// `getEncoding().withoutBitWidths()`.
+  SparseTensorType withoutBitWidths() const {
+    return withEncoding(enc.withoutBitWidths());
+  }
+
+  //
+  // Other methods.
+  //
 
   /// Allow implicit conversion to `RankedTensorType`, `ShapedType`,
   /// and `Type`.  These are implicit to help alleviate the impedance
@@ -144,32 +181,36 @@ public:
 
   /// Returns true if the dimToLvl mapping is the identity.
   /// (This is always true for dense-tensors.)
-  bool isIdentity() const { return !dim2lvl; }
+  bool isIdentity() const { return !dimToLvl; }
+
+  /// Returns true if the dimToLvl mapping is a permutation.
+  /// (This is always true for dense-tensors.)
+  bool isPermutation() const { return enc.isPermutation(); }
 
   /// Returns the dimToLvl mapping (or the null-map for the identity).
   /// If you intend to compare the results of this method for equality,
-  /// see `hasSameDimToLvlMap` instead.
-  AffineMap getDimToLvlMap() const { return dim2lvl; }
+  /// see `hasSameDimToLvl` instead.
+  AffineMap getDimToLvl() const { return dimToLvl; }
 
   /// Returns the dimToLvl mapping, where the identity map is expanded out
   /// into a full `AffineMap`.  This method is provided as a convenience,
-  /// but for most purposes other methods (`isIdentity`, `getDimToLvlMap`,
+  /// but for most purposes other methods (`isIdentity`, `getDimToLvl`,
   /// etc) will be more helpful.
-  AffineMap getExpandedDimToLvlMap() const {
-    return dim2lvl
-               ? dim2lvl
+  AffineMap getExpandedDimToLvl() const {
+    return dimToLvl
+               ? dimToLvl
                : AffineMap::getMultiDimIdentityMap(getDimRank(), getContext());
   }
 
   /// Returns true iff the two types have the same mapping.  This method
   /// takes care to handle identity maps properly, so it should be preferred
-  /// over using `getDimToLvlMap` followed by `AffineMap::operator==`.
-  bool hasSameDimToLvlMap(const SparseTensorType &other) const {
+  /// over using `getDimToLvl` followed by `AffineMap::operator==`.
+  bool hasSameDimToLvl(const SparseTensorType &other) const {
     // If the maps are the identity, then we need to check the rank
     // to be sure they're the same size identity.  (And since identity
     // means dimRank==lvlRank, we use lvlRank as a minor optimization.)
     return isIdentity() ? (other.isIdentity() && lvlRank == other.lvlRank)
-                        : (dim2lvl == other.dim2lvl);
+                        : (dimToLvl == other.dimToLvl);
   }
 
   /// Returns the dimension-rank.
@@ -255,7 +296,7 @@ private:
   const SparseTensorEncodingAttr enc;
   // Memoized to avoid frequent redundant conditionals.
   const Level lvlRank;
-  const AffineMap dim2lvl;
+  const AffineMap dimToLvl;
 };
 
 /// Convenience method to abbreviate wrapping `getRankedTensorType`.

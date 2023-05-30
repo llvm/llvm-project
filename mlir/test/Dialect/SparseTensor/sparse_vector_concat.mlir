@@ -6,12 +6,12 @@
 
 #MAT_C_C_P = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 #MAT_C_D_P = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "dense" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 //

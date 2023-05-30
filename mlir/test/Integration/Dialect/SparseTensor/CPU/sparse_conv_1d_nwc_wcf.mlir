@@ -32,7 +32,7 @@
 #CDC = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "dense", "compressed" ]
   // FIXME: Still inadmissible might need investigation
-  // dimOrdering = affine_map<(i,j,k) -> (j,k,i)>
+  // dimToLvl = affine_map<(i,j,k) -> (j,k,i)>
 }>
 
 // Creates and returns 3-D buffer of size (%s1, %s2, %s3) filled with the value %f

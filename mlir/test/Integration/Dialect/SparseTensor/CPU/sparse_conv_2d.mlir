@@ -31,7 +31,7 @@
 #CDR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "dense"]}>
 #CSC = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 // An example of a 2D convolution with a sparse filter.

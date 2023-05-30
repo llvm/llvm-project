@@ -4,12 +4,12 @@
 
 #SparseMatrix_P = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 #SparseMatrix_D_P = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "dense" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>
+  dimToLvl = affine_map<(i,j) -> (j,i)>
 }>
 
 // CHECK-LABEL: func.func @concat_mix_dense(

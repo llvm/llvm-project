@@ -385,7 +385,7 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
 
       // FIXME: `toOrigDim` is deprecated.  For now this relies on the
       // 1:1 mapping between levels and dimensions, since nowhere else
-      // in the code supports HigherOrdering yet either.
+      // in the code supports non-permutations yet either.
       Value lvlSz = mlir::linalg::createOrFoldDimOp(builder, loc, tensor,
                                                     toOrigDim(enc, l));
       // Find upper bound in current dimension.
