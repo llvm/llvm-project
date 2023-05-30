@@ -158,3 +158,18 @@ func.func private @unexpected_type() -> !llvm.f32
 
 // expected-error @below {{cannot use !llvm.vec for built-in primitives, use 'vector' instead}}
 func.func private @llvm_vector_primitive() -> !llvm.vec<4 x f32>
+
+// -----
+
+func.func private @target_ext_invalid_order() {
+  // expected-error @+1 {{failed to parse parameter list for target extension type}}
+  "some.op"() : () -> !llvm.target<"target1", 5, i32, 1>
+}
+
+// -----
+
+func.func private @target_ext_no_name() {
+  // expected-error@below {{expected string}}
+  // expected-error@below {{failed to parse LLVMTargetExtType parameter 'extTypeName' which is to be a `::llvm::StringRef`}}
+  "some.op"() : () -> !llvm.target<i32, 42>
+}
