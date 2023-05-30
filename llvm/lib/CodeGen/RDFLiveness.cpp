@@ -881,9 +881,8 @@ void Liveness::computeLiveIns() {
       // dbgs() << "\tcomp = " << Print(LiveMap[&B], DFG) << '\n';
 
       LV.clear();
-      const RegisterAggr &LG = LiveMap[&B];
-      for (auto I = LG.rr_begin(), E = LG.rr_end(); I != E; ++I)
-        LV.push_back(*I);
+      for (RegisterRef RR : LiveMap[&B].refs())
+        LV.push_back(RR);
       llvm::sort(LV);
       dbgs() << "\tcomp = {";
       for (auto I : LV)
@@ -903,7 +902,7 @@ void Liveness::resetLiveIns() {
       B.removeLiveIn(I);
     // Add the newly computed live-ins.
     const RegisterAggr &LiveIns = LiveMap[&B];
-    for (const RegisterRef R : make_range(LiveIns.rr_begin(), LiveIns.rr_end()))
+    for (RegisterRef R : LiveIns.refs())
       B.addLiveIn({MCPhysReg(R.Reg), R.Mask});
   }
 }
