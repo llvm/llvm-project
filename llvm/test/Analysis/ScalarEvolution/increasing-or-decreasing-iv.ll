@@ -233,7 +233,7 @@ define void @f4(i1 %c) {
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,128) S: [0,128) Exits: ((127 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc = trunc i32 %iv to i16
-; CHECK-NEXT:    --> {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: full-set S: full-set Exits: ((trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: [0,128) S: [0,128) Exits: ((trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
 ; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i32 %loop.iv, 1
@@ -247,11 +247,6 @@ define void @f4(i1 %c) {
 ; CHECK:       Loop %loop: Trip multiple is 128
 ;
 
-; @f4() demonstrates a case where SCEV is not able to compute a
-; precise range for %iv.trunc, though it should be able to, in theory.
-; This is because SCEV looks into affine add recurrences only when the
-; backedge taken count of the loop has the same bitwidth as the
-; induction variable.
 entry:
   %start = select i1 %c, i32 127, i32 0
   %step  = select i1 %c, i32 -1,  i32 1
