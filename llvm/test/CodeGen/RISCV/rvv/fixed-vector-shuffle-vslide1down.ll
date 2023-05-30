@@ -4,8 +4,8 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-define <2 x i8> @vslide1up_2xi8(<2 x i8> %v, i8 %b) {
-; CHECK-LABEL: vslide1up_2xi8:
+define <2 x i8> @vslide1down_2xi8(<2 x i8> %v, i8 %b) {
+; CHECK-LABEL: vslide1down_2xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
@@ -17,8 +17,8 @@ define <2 x i8> @vslide1up_2xi8(<2 x i8> %v, i8 %b) {
   ret <2 x i8> %v1
 }
 
-define <4 x i8> @vslide1up_4xi8(<4 x i8> %v, i8 %b) {
-; RV32-LABEL: vslide1up_4xi8:
+define <4 x i8> @vslide1down_4xi8(<4 x i8> %v, i8 %b) {
+; RV32-LABEL: vslide1down_4xi8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV32-NEXT:    vmv.s.x v9, a0
@@ -27,7 +27,7 @@ define <4 x i8> @vslide1up_4xi8(<4 x i8> %v, i8 %b) {
 ; RV32-NEXT:    vslideup.vi v8, v9, 3
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: vslide1up_4xi8:
+; RV64-LABEL: vslide1down_4xi8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.x v9, a0
@@ -39,8 +39,8 @@ define <4 x i8> @vslide1up_4xi8(<4 x i8> %v, i8 %b) {
   ret <4 x i8> %v1
 }
 
-define <4 x i8> @vslide1up_4xi8_swapped(<4 x i8> %v, i8 %b) {
-; RV32-LABEL: vslide1up_4xi8_swapped:
+define <4 x i8> @vslide1down_4xi8_swapped(<4 x i8> %v, i8 %b) {
+; RV32-LABEL: vslide1down_4xi8_swapped:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV32-NEXT:    vmv.s.x v9, a0
@@ -49,7 +49,7 @@ define <4 x i8> @vslide1up_4xi8_swapped(<4 x i8> %v, i8 %b) {
 ; RV32-NEXT:    vslideup.vi v8, v9, 3
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: vslide1up_4xi8_swapped:
+; RV64-LABEL: vslide1down_4xi8_swapped:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.x v9, a0
@@ -61,8 +61,8 @@ define <4 x i8> @vslide1up_4xi8_swapped(<4 x i8> %v, i8 %b) {
   ret <4 x i8> %v1
 }
 
-define <2 x i16> @vslide1up_2xi16(<2 x i16> %v, i16 %b) {
-; RV32-LABEL: vslide1up_2xi16:
+define <2 x i16> @vslide1down_2xi16(<2 x i16> %v, i16 %b) {
+; RV32-LABEL: vslide1down_2xi16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV32-NEXT:    vmv.s.x v9, a0
@@ -71,7 +71,7 @@ define <2 x i16> @vslide1up_2xi16(<2 x i16> %v, i16 %b) {
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: vslide1up_2xi16:
+; RV64-LABEL: vslide1down_2xi16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.x v9, a0
@@ -83,8 +83,8 @@ define <2 x i16> @vslide1up_2xi16(<2 x i16> %v, i16 %b) {
   ret <2 x i16> %v1
 }
 
-define <4 x i16> @vslide1up_4xi16(<4 x i16> %v, i16 %b) {
-; RV32-LABEL: vslide1up_4xi16:
+define <4 x i16> @vslide1down_4xi16(<4 x i16> %v, i16 %b) {
+; RV32-LABEL: vslide1down_4xi16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.x v9, a0
@@ -92,7 +92,7 @@ define <4 x i16> @vslide1up_4xi16(<4 x i16> %v, i16 %b) {
 ; RV32-NEXT:    vslideup.vi v8, v9, 3
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: vslide1up_4xi16:
+; RV64-LABEL: vslide1down_4xi16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
@@ -105,8 +105,8 @@ define <4 x i16> @vslide1up_4xi16(<4 x i16> %v, i16 %b) {
   ret <4 x i16> %v1
 }
 
-define <2 x i32> @vslide1up_2xi32(<2 x i32> %v, i32 %b) {
-; RV32-LABEL: vslide1up_2xi32:
+define <2 x i32> @vslide1down_2xi32(<2 x i32> %v, i32 %b) {
+; RV32-LABEL: vslide1down_2xi32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.x v9, a0
@@ -114,7 +114,7 @@ define <2 x i32> @vslide1up_2xi32(<2 x i32> %v, i32 %b) {
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: vslide1up_2xi32:
+; RV64-LABEL: vslide1down_2xi32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
@@ -127,8 +127,8 @@ define <2 x i32> @vslide1up_2xi32(<2 x i32> %v, i32 %b) {
   ret <2 x i32> %v1
 }
 
-define <4 x i32> @vslide1up_4xi32(<4 x i32> %v, i32 %b) {
-; CHECK-LABEL: vslide1up_4xi32:
+define <4 x i32> @vslide1down_4xi32(<4 x i32> %v, i32 %b) {
+; CHECK-LABEL: vslide1down_4xi32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
@@ -140,8 +140,8 @@ define <4 x i32> @vslide1up_4xi32(<4 x i32> %v, i32 %b) {
   ret <4 x i32> %v1
 }
 
-define <2 x i64> @vslide1up_2xi64(<2 x i64> %v, i64 %b) {
-; RV32-LABEL: vslide1up_2xi64:
+define <2 x i64> @vslide1down_2xi64(<2 x i64> %v, i64 %b) {
+; RV32-LABEL: vslide1down_2xi64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
@@ -155,7 +155,7 @@ define <2 x i64> @vslide1up_2xi64(<2 x i64> %v, i64 %b) {
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: vslide1up_2xi64:
+; RV64-LABEL: vslide1down_2xi64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v9, a0
@@ -167,8 +167,8 @@ define <2 x i64> @vslide1up_2xi64(<2 x i64> %v, i64 %b) {
   ret <2 x i64> %v1
 }
 
-define <4 x i64> @vslide1up_4xi64(<4 x i64> %v, i64 %b) {
-; RV32-LABEL: vslide1up_4xi64:
+define <4 x i64> @vslide1down_4xi64(<4 x i64> %v, i64 %b) {
+; RV32-LABEL: vslide1down_4xi64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
@@ -182,7 +182,7 @@ define <4 x i64> @vslide1up_4xi64(<4 x i64> %v, i64 %b) {
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: vslide1up_4xi64:
+; RV64-LABEL: vslide1down_4xi64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vmv.v.x v10, a0
@@ -194,8 +194,8 @@ define <4 x i64> @vslide1up_4xi64(<4 x i64> %v, i64 %b) {
   ret <4 x i64> %v1
 }
 
-define <2 x half> @vslide1up_2xf16(<2 x half> %v, half %b) {
-; CHECK-LABEL: vslide1up_2xf16:
+define <2 x half> @vslide1down_2xf16(<2 x half> %v, half %b) {
+; CHECK-LABEL: vslide1down_2xf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
@@ -207,8 +207,8 @@ define <2 x half> @vslide1up_2xf16(<2 x half> %v, half %b) {
   ret <2 x half> %v1
 }
 
-define <4 x half> @vslide1up_4xf16(<4 x half> %v, half %b) {
-; CHECK-LABEL: vslide1up_4xf16:
+define <4 x half> @vslide1down_4xf16(<4 x half> %v, half %b) {
+; CHECK-LABEL: vslide1down_4xf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
@@ -220,8 +220,8 @@ define <4 x half> @vslide1up_4xf16(<4 x half> %v, half %b) {
   ret <4 x half> %v1
 }
 
-define <2 x float> @vslide1up_2xf32(<2 x float> %v, float %b) {
-; CHECK-LABEL: vslide1up_2xf32:
+define <2 x float> @vslide1down_2xf32(<2 x float> %v, float %b) {
+; CHECK-LABEL: vslide1down_2xf32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
@@ -233,8 +233,8 @@ define <2 x float> @vslide1up_2xf32(<2 x float> %v, float %b) {
   ret <2 x float> %v1
 }
 
-define <4 x float> @vslide1up_4xf32(<4 x float> %v, float %b) {
-; CHECK-LABEL: vslide1up_4xf32:
+define <4 x float> @vslide1down_4xf32(<4 x float> %v, float %b) {
+; CHECK-LABEL: vslide1down_4xf32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
@@ -246,8 +246,8 @@ define <4 x float> @vslide1up_4xf32(<4 x float> %v, float %b) {
   ret <4 x float> %v1
 }
 
-define <2 x double> @vslide1up_2xf64(<2 x double> %v, double %b) {
-; CHECK-LABEL: vslide1up_2xf64:
+define <2 x double> @vslide1down_2xf64(<2 x double> %v, double %b) {
+; CHECK-LABEL: vslide1down_2xf64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v9, fa0
@@ -259,8 +259,8 @@ define <2 x double> @vslide1up_2xf64(<2 x double> %v, double %b) {
   ret <2 x double> %v1
 }
 
-define <4 x double> @vslide1up_4xf64(<4 x double> %v, double %b) {
-; CHECK-LABEL: vslide1up_4xf64:
+define <4 x double> @vslide1down_4xf64(<4 x double> %v, double %b) {
+; CHECK-LABEL: vslide1down_4xf64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v10, fa0
@@ -272,8 +272,8 @@ define <4 x double> @vslide1up_4xf64(<4 x double> %v, double %b) {
   ret <4 x double> %v1
 }
 
-define <4 x i8> @vslide1up_4xi8_with_splat(<4 x i8> %v, i8 %b) {
-; CHECK-LABEL: vslide1up_4xi8_with_splat:
+define <4 x i8> @vslide1down_4xi8_with_splat(<4 x i8> %v, i8 %b) {
+; CHECK-LABEL: vslide1down_4xi8_with_splat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 7
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
@@ -290,8 +290,8 @@ define <4 x i8> @vslide1up_4xi8_with_splat(<4 x i8> %v, i8 %b) {
   ret <4 x i8> %v2
 }
 
-define <2 x double> @vslide1up_v2f64_inverted(<2 x double> %v, double %b) {
-; CHECK-LABEL: vslide1up_v2f64_inverted:
+define <2 x double> @vslide1down_v2f64_inverted(<2 x double> %v, double %b) {
+; CHECK-LABEL: vslide1down_v2f64_inverted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0
@@ -304,8 +304,8 @@ define <2 x double> @vslide1up_v2f64_inverted(<2 x double> %v, double %b) {
   ret <2 x double> %v2
 }
 
-define <4 x i8> @vslide1up_4xi8_inverted(<4 x i8> %v, i8 %b) {
-; CHECK-LABEL: vslide1up_4xi8_inverted:
+define <4 x i8> @vslide1down_4xi8_inverted(<4 x i8> %v, i8 %b) {
+; CHECK-LABEL: vslide1down_4xi8_inverted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
