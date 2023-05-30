@@ -77,8 +77,7 @@ define double @bfloat_to_double(bfloat %a) nounwind {
 ; RV64I-LP64:       # %bb.0:
 ; RV64I-LP64-NEXT:    addi sp, sp, -16
 ; RV64I-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-LP64-NEXT:    slli a0, a0, 48
-; RV64I-LP64-NEXT:    srli a0, a0, 32
+; RV64I-LP64-NEXT:    slliw a0, a0, 16
 ; RV64I-LP64-NEXT:    call __extendsfdf2@plt
 ; RV64I-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-LP64-NEXT:    addi sp, sp, 16
