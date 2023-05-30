@@ -1387,3 +1387,39 @@ func.func @invalid_bitcast_addr_cast_vec(%arg : !llvm.vec<4 x ptr<1>>) {
   // expected-error@+1 {{cannot cast pointers of different address spaces, use 'llvm.addrspacecast' instead}}
   %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr<1>> to !llvm.vec<4 x ptr>
 }
+
+// -----
+
+func.func @invalid_target_ext_alloca() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  // expected-error@+1 {{this target extension type cannot be used in alloca}}
+  %1 = llvm.alloca %0 x !llvm.target<"no_alloca"> : (i64) -> !llvm.ptr
+}
+
+// -----
+
+func.func @invalid_target_ext_load(%arg0 : !llvm.ptr) {
+  // expected-error@+1 {{result #0 must be LLVM type with size, but got '!llvm.target<"no_load">'}}
+  %0 = llvm.load %arg0 {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"no_load">
+}
+
+// -----
+
+func.func @invalid_target_ext_atomic(%arg0 : !llvm.ptr) {
+  // expected-error@+1 {{unsupported type '!llvm.target<"spirv.Event">' for atomic access}}
+  %0 = llvm.load %arg0 atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"spirv.Event">
+}
+
+// -----
+
+func.func @invalid_target_ext_constant() {
+  // expected-error@+1 {{target extension type does not support zero-initializer}}
+  %0 = llvm.mlir.constant(0 : index) : !llvm.target<"invalid_constant">
+}
+
+// -----
+
+func.func @invalid_target_ext_constant() {
+  // expected-error@+1 {{only zero-initializer allowed for target extension types}}
+  %0 = llvm.mlir.constant(42 : index) : !llvm.target<"spirv.Event">
+}
