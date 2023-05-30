@@ -11372,7 +11372,8 @@ static SDValue performVFMUL_VLCombine(SDNode *N, SelectionDAG &DAG) {
 
   // TODO: Refactor to handle more complex cases similar to
   // combineBinOp_VLToVWBinOp_VL.
-  if (!Op0.hasOneUse() || !Op1.hasOneUse())
+  if ((!Op0.hasOneUse() || !Op1.hasOneUse()) &&
+      (Op0 != Op1 || !Op0->hasNUsesOfValue(2, 0)))
     return SDValue();
 
   // Check the mask and VL are the same.
