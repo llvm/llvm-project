@@ -224,8 +224,8 @@ struct ThreadStartArg {
 
 static void *HwasanThreadStartFunc(void *arg) {
   __hwasan_thread_enter();
-  ThreadStartArg A = *reinterpret_cast<ThreadStartArg *>(arg);
-  SetSigProcMask(&A.starting_sigset_, nullptr);
+  SetSigProcMask(&reinterpret_cast<ThreadStartArg *>(arg)->starting_sigset_,
+                 nullptr);
   InternalFree(arg);
   auto self = GetThreadSelf();
   auto args = hwasanThreadArgRetval().GetArgs(self);
