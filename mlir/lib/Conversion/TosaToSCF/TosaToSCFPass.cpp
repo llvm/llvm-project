@@ -37,7 +37,7 @@ public:
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addLegalDialect<tensor::TensorDialect, scf::SCFDialect>();
-    target.addIllegalOp<tosa::IfOp, tosa::WhileOp>();
+    target.addIllegalOp<tosa::IfOp, tosa::ScatterOp, tosa::WhileOp>();
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     auto *op = getOperation();
