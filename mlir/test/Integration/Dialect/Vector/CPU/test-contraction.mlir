@@ -1,10 +1,9 @@
-// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts
-// Disable the execution for now because of LLVM backend bug: https://github.com/llvm/llvm-project/issues/62995
-// | \
+// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
-
+// Disable the execution for now because of LLVM backend bug: https://github.com/llvm/llvm-project/issues/62995
+// UNSUPPORTED: target={{.*}}
 #dotp_accesses = [
   affine_map<(i) -> (i)>,
   affine_map<(i) -> (i)>,
