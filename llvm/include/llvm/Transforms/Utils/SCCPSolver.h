@@ -44,6 +44,7 @@ struct AnalysisResultsForFn {
   std::unique_ptr<PredicateInfo> PredInfo;
   DominatorTree *DT;
   PostDominatorTree *PDT;
+  LoopInfo *LI;
 };
 
 /// Helper struct shared between Function Specialization and SCCP Solver.
@@ -89,6 +90,8 @@ public:
   bool markBlockExecutable(BasicBlock *BB);
 
   const PredicateBase *getPredicateInfoFor(Instruction *I);
+
+  const LoopInfo &getLoopInfo(Function &F);
 
   DomTreeUpdater getDTU(Function &F);
 

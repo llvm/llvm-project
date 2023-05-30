@@ -1,6 +1,8 @@
-; RUN: opt -passes="ipsccp<func-spec>" -S < %s | \
+; RUN: opt -passes="ipsccp<func-spec>" -funcspec-avg-loop-iters=3 -S < %s | \
 ; RUN:   FileCheck %s --check-prefixes=COMMON,DISABLED
 ; RUN: opt -passes="ipsccp<func-spec>" -force-specialization -S < %s | \
+; RUN:   FileCheck %s --check-prefixes=COMMON,FORCE
+; RUN: opt -passes="ipsccp<func-spec>" -funcspec-avg-loop-iters=3 -force-specialization -S < %s | \
 ; RUN:   FileCheck %s --check-prefixes=COMMON,FORCE
 
 ; Test for specializing a constant global.
