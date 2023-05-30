@@ -4885,9 +4885,15 @@ void Driver::BuildJobs(Compilation &C) const {
 
       // In clang-cl, don't mention unknown arguments here since they have
       // already been warned about.
-      if (!IsCLMode() || !A->getOption().matches(options::OPT_UNKNOWN))
-        Diag(clang::diag::warn_drv_unused_argument)
-            << A->getAsString(C.getArgs());
+      if (!IsCLMode() || !A->getOption().matches(options::OPT_UNKNOWN)) {
+        if (A->getOption().hasFlag(options::TargetSpecific)) {
+          Diag(diag::err_drv_unsupported_opt_for_target)
+              << A->getSpelling() << getTargetTriple();
+        } else {
+          Diag(clang::diag::warn_drv_unused_argument)
+              << A->getAsString(C.getArgs());
+        }
+      }
     }
   }
 }
