@@ -391,8 +391,8 @@ private:
     return static_cast<bool>(findHeaderInUmbrellaDirs(File, IntermediateDirs));
   }
 
-  Module *inferFrameworkModule(const DirectoryEntry *FrameworkDir,
-                               Attributes Attrs, Module *Parent);
+  Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir, Attributes Attrs,
+                               Module *Parent);
 
 public:
   /// Construct a new module map.
@@ -602,8 +602,8 @@ public:
 
   /// Infer the contents of a framework module map from the given
   /// framework directory.
-  Module *inferFrameworkModule(const DirectoryEntry *FrameworkDir,
-                               bool IsSystem, Module *Parent);
+  Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir, bool IsSystem,
+                               Module *Parent);
 
   /// Create a new top-level module that is shadowed by
   /// \p ShadowingModule.
