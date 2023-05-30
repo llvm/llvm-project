@@ -10,16 +10,15 @@ import unittest2
 
 
 class TestSwiftActorTypes(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
     def test_swift_class_types(self):
         """Test swift Actor types"""
         self.build()
-        _, _, _, _= lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+        _, _, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
-        self.expect('v actor', substrs=['Actor', 'str = "Hello"'])
-        self.expect('expr actor', substrs=['Actor', 'str = "Hello"'])
-
+        self.expect("v actor", substrs=["Actor", 'str = "Hello"'])
+        self.expect("expr actor", substrs=["Actor", 'str = "Hello"'])

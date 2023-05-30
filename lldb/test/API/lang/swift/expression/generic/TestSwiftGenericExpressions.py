@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftGenericExpressions(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -57,7 +56,11 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
         else:
             answer = value.GetValue()
         report_str = "Use summary: %d %s expected: %s got: %s" % (
-            use_summary, expression, expected_result, answer)
+            use_summary,
+            expression,
+            expected_result,
+            answer,
+        )
         self.assertTrue(answer == expected_result, report_str)
 
     def do_test(self):
@@ -73,11 +76,14 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
 
         # Set the breakpoints
         for i in range(1, 7):
-            breakpoints.append(target.BreakpointCreateBySourceRegex(
-                "breakpoint " + str(i), self.main_source_spec))
+            breakpoints.append(
+                target.BreakpointCreateBySourceRegex(
+                    "breakpoint " + str(i), self.main_source_spec
+                )
+            )
             self.assertTrue(
-                breakpoints[i].GetNumLocations() > 0,
-                lldbtest.VALID_BREAKPOINT)
+                breakpoints[i].GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT
+            )
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -88,7 +94,8 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
         for i in range(1, 7):
             # Frame #0 should be at our breakpoint.
             threads = lldbutil.get_threads_stopped_at_breakpoint(
-                process, breakpoints[i])
+                process, breakpoints[i]
+            )
 
             self.assertTrue(len(threads) == 1)
             self.check_expression("i", str(i), use_summary=False)
@@ -109,11 +116,14 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
         # Set the breakpoints only in the class functions:
         class_bkpts = [2, 3, 5, 6]
         for i in range(0, 4):
-            breakpoints.append(target.BreakpointCreateBySourceRegex(
-                "breakpoint " + str(class_bkpts[i]), self.main_source_spec))
+            breakpoints.append(
+                target.BreakpointCreateBySourceRegex(
+                    "breakpoint " + str(class_bkpts[i]), self.main_source_spec
+                )
+            )
             self.assertTrue(
-                breakpoints[i].GetNumLocations() > 0,
-                lldbtest.VALID_BREAKPOINT)
+                breakpoints[i].GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT
+            )
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -124,13 +134,11 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
         for i in range(0, 4):
             # Frame #0 should be at our breakpoint.
             threads = lldbutil.get_threads_stopped_at_breakpoint(
-                process, breakpoints[i])
+                process, breakpoints[i]
+            )
 
             self.assertTrue(len(threads) == 1)
-            self.check_expression(
-                "m_t", str(class_bkpts[i]), use_summary=False)
-            self.check_expression(
-                "m_s.m_s", str(class_bkpts[i]), use_summary=False)
+            self.check_expression("m_t", str(class_bkpts[i]), use_summary=False)
+            self.check_expression("m_s.m_s", str(class_bkpts[i]), use_summary=False)
 
             self.runCmd("continue")
-

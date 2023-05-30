@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftAnyType(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -29,7 +28,8 @@ class TestSwiftAnyType(lldbtest.TestBase):
         """Test the Any type"""
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         frame = thread.frames[0]
         var_c = frame.FindVariable("c")
@@ -38,5 +38,5 @@ class TestSwiftAnyType(lldbtest.TestBase):
         lldbutil.check_variable(self, var_c_x, True, value="12")
         lldbutil.check_variable(self, var_q, True, value="12")
 
-        self.expect("expression -d run -- q", substrs=['12'])
-        self.expect("frame variable -d run -- q", substrs=['12'])
+        self.expect("expression -d run -- q", substrs=["12"])
+        self.expect("frame variable -d run -- q", substrs=["12"])

@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestExpressionsInSwiftMethodsPureSwift(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -35,8 +34,7 @@ class TestExpressionsInSwiftMethodsPureSwift(TestBase):
             answer = value.GetSummary()
         else:
             answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
+        report_str = "%s expected: %s got: %s" % (expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
     @swiftTest
@@ -44,9 +42,9 @@ class TestExpressionsInSwiftMethodsPureSwift(TestBase):
         """Tests that we can run simple Swift expressions correctly"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Stop here in Pure Swift class', lldb.SBFileSpec('main.swift'))
+            self, "Stop here in Pure Swift class", lldb.SBFileSpec("main.swift")
+        )
 
         self.check_expression("m_computed_ivar == 5", "true")
         self.check_expression("m_ivar", "10", use_summary=False)
         self.check_expression("self.m_ivar == 11", "false")
-

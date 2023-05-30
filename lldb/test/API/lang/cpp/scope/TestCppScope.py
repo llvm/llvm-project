@@ -3,12 +3,14 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestCase(TestBase):
 
+class TestCase(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
 
         # Test that global variables contain the right scope operators.
         global_vars = self.frame().GetVariables(False, False, True, False)

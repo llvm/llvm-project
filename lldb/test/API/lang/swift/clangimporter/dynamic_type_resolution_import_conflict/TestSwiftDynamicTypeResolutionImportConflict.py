@@ -18,15 +18,15 @@ import os
 import unittest2
 import shutil
 
-class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
 
+class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     @skipUnlessDarwin
     @swiftTest
     def test(self):
@@ -41,33 +41,39 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
         # To ensure we hit the rebuild problem remove the cache to avoid caching.
         mod_cache = self.getBuildArtifact("my-clang-modules-cache")
         if os.path.isdir(mod_cache):
-          shutil.rmtree(mod_cache)
+            shutil.rmtree(mod_cache)
 
-        self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
-                    % mod_cache)
+        self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % mod_cache)
         self.build()
-        target, _, _, _ = lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec('main.swift'),
-                                          extra_images=['Dylib', 'Conflict'])
+        target, _, _, _ = lldbutil.run_to_source_breakpoint(
+            self,
+            "break here",
+            lldb.SBFileSpec("main.swift"),
+            extra_images=["Dylib", "Conflict"],
+        )
         # Destroy the scratch context with a dynamic clang type lookup.
-        self.expect("target var -d run-target -- foofoo",
-                    substrs=['(Conflict.C) foofoo'])
-        self.expect("target var -- foofoo",
-                    substrs=['(Conflict.C) foofoo'])
+        self.expect(
+            "target var -d run-target -- foofoo", substrs=["(Conflict.C) foofoo"]
+        )
+        self.expect("target var -- foofoo", substrs=["(Conflict.C) foofoo"])
         dylib_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Dylib.swift'))
+            "break here", lldb.SBFileSpec("Dylib.swift")
+        )
         self.assertGreater(dylib_breakpoint.GetNumLocations(), 0)
 
         self.expect("continue")
-        self.expect("bt", substrs=['Dylib.swift'])
-        self.expect("fr v -d no-dynamic-values -- input",
-                    substrs=['(Dylib.LibraryProtocol) input'])
+        self.expect("bt", substrs=["Dylib.swift"])
+        self.expect(
+            "fr v -d no-dynamic-values -- input",
+            substrs=["(Dylib.LibraryProtocol) input"],
+        )
 
         # Because we are now in a per-module scratch context, we don't
         # expect dynamic type resolution to find a type defined inside
         # the other dylib.
-        self.expect("fr v -d run-target -- input",
-                    substrs=['(a.FromMainModule) input', "i = 1"])
+        self.expect(
+            "fr v -d run-target -- input", substrs=["(a.FromMainModule) input", "i = 1"]
+        )
         # FIXME: The output here is nondeterministic.
-        #self.expect("expr -d run-target -- input",
+        # self.expect("expr -d run-target -- input",
         #            substrs=['(a.FromMainModule)'])

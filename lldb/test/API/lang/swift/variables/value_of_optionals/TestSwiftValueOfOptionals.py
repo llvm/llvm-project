@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftValueOfOptionalType(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -42,4 +41,3 @@ class TestSwiftValueOfOptionalType(TestBase):
         self.assertTrue(s.GetValueAsSigned(1) == 1, "reading value fails")
         self.assertTrue(s.GetValueAsUnsigned(0) == 0, "reading value fails")
         self.assertTrue(s.GetValueAsUnsigned(1) == 1, "reading value fails")
-

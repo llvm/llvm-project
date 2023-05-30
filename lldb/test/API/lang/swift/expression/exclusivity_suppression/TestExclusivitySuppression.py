@@ -20,17 +20,19 @@ import os
 import unittest2
 
 import sys
+
 if sys.version_info.major == 2:
     import commands as subprocess
 else:
     import subprocess
 
+
 def execute_command(command):
     (exit_status, output) = subprocess.getstatusoutput(command)
     return exit_status
 
-class TestExclusivitySuppression(TestBase):
 
+class TestExclusivitySuppression(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     # Test that we can evaluate w.s.i at Breakpoint 1 without triggering
@@ -40,8 +42,9 @@ class TestExclusivitySuppression(TestBase):
         """Test that exclusively owned values can still be accessed"""
 
         self.build()
-        (target, process, thread, bp1) = lldbutil.run_to_source_breakpoint(self,
-                'Breakpoint 1', self.main_source_spec)
+        (target, process, thread, bp1) = lldbutil.run_to_source_breakpoint(
+            self, "Breakpoint 1", self.main_source_spec
+        )
 
         frame = thread.frames[0]
         self.assertTrue(frame, "Frame 0 is valid.")
@@ -59,17 +62,19 @@ class TestExclusivitySuppression(TestBase):
     def test_exclusivity_suppression_for_concurrent_expressions(self):
         """Test that exclusivity suppression works with concurrent expressions"""
         self.build()
-        (target, process, thread, bp1) = lldbutil.run_to_source_breakpoint(self,
-                'Breakpoint 1', self.main_source_spec)
+        (target, process, thread, bp1) = lldbutil.run_to_source_breakpoint(
+            self, "Breakpoint 1", self.main_source_spec
+        )
 
         # We hit Breakpoint 1, then evaluate 'get()' to hit breakpoint 2.
-        bp2 = target.BreakpointCreateBySourceRegex('Breakpoint 2',
-                                                   self.main_source_spec)
+        bp2 = target.BreakpointCreateBySourceRegex(
+            "Breakpoint 2", self.main_source_spec
+        )
         self.assertTrue(bp2.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         opts = lldb.SBExpressionOptions()
         opts.SetIgnoreBreakpoints(False)
-        thread.frame[0].EvaluateExpression('get()', opts)
+        thread.frame[0].EvaluateExpression("get()", opts)
 
         # Evaluate w.s.i at breakpoint 2 to check that exclusivity checking
         # is suppressed inside the nested expression
@@ -77,7 +82,7 @@ class TestExclusivitySuppression(TestBase):
 
         # Return to breakpoint 1 and evaluate w.s.i again to check that
         # exclusivity checking is still suppressed
-        self.dbg.HandleCommand('thread ret -x')
+        self.dbg.HandleCommand("thread ret -x")
         self.check_expression(thread.frame[0], "w.s.i", "8", use_summary=False)
 
     def setUp(self):
@@ -95,6 +100,5 @@ class TestExclusivitySuppression(TestBase):
             answer = value.GetSummary()
         else:
             answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
+        report_str = "%s expected: %s got: %s" % (expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)

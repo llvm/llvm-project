@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestDictionaryNSObjectAnyObject(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -33,30 +32,22 @@ class TestDictionaryNSObjectAnyObject(TestBase):
         """Tests that we properly vend synthetic children for Swift.Dictionary<NSObject,AnyObject>"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
-        if self.getArchitecture() in ['arm', 'armv7', 'armv7k', 'i386']:
+        if self.getArchitecture() in ["arm", "armv7", "armv7k", "i386"]:
             self.expect(
                 "frame variable -d run -- d2",
                 ordered=False,
-                substrs=[
-                    'Int32(1)',
-                    'Int32(2)',
-                    'Int32(3)',
-                    'Int32(4)'])
+                substrs=["Int32(1)", "Int32(2)", "Int32(3)", "Int32(4)"],
+            )
         else:
             self.expect(
                 "frame variable -d run -- d2",
                 ordered=False,
-                substrs=[
-                    'Int64(1)',
-                    'Int64(2)',
-                    'Int64(3)',
-                    'Int64(4)'])
+                substrs=["Int64(1)", "Int64(2)", "Int64(3)", "Int64(4)"],
+            )
 
         self.expect(
-            "frame variable -d run -- d3",
-            substrs=[
-                'key = "hello"',
-                'value = 123'])
-
+            "frame variable -d run -- d3", substrs=['key = "hello"', "value = 123"]
+        )

@@ -22,7 +22,6 @@ import unittest2
 
 
 class TestSwiftStructChangeRerun(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -32,7 +31,7 @@ class TestSwiftStructChangeRerun(TestBase):
     def test_swift_struct_change_rerun(self):
         """Test that we display self correctly for an inline-initialized struct"""
         copied_main_swift = self.getBuildArtifact("main.swift")
-        
+
         # Cleanup the copied source file
         def cleanup():
             if os.path.exists(copied_main_swift):
@@ -41,13 +40,13 @@ class TestSwiftStructChangeRerun(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        print('build with main1.swift')
+        print("build with main1.swift")
         cleanup()
         shutil.copyfile("main1.swift", copied_main_swift)
         self.build()
-        (target, process, thread, breakpoint) = \
-            lldbutil.run_to_source_breakpoint(
-                self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+        (target, process, thread, breakpoint) = lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         var_a = self.frame().EvaluateExpression("a")
         var_a_a = var_a.GetChildMemberWithName("a")
@@ -60,8 +59,7 @@ class TestSwiftStructChangeRerun(TestBase):
         self.assertFalse(var_a_c.IsValid(), "make sure a.c doesn't exist")
         process.Kill()
 
-        
-        print('build with main2.swift')
+        print("build with main2.swift")
         cleanup()
         shutil.copyfile("main2.swift", copied_main_swift)
         self.build()
@@ -71,8 +69,7 @@ class TestSwiftStructChangeRerun(TestBase):
 
         self.assertTrue(process, PROCESS_IS_VALID)
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
 
@@ -85,5 +82,4 @@ class TestSwiftStructChangeRerun(TestBase):
 
         var_a_c = var_a.GetChildMemberWithName("c")
         self.assertTrue(var_a_c.IsValid(), "make sure a.c does exist")
-        lldbutil.check_variable(self, var_a_c, False, value='12.125')
-
+        lldbutil.check_variable(self, var_a_c, False, value="12.125")

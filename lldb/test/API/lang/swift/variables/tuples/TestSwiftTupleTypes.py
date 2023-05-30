@@ -20,7 +20,6 @@ import unittest2
 
 
 class TestSwiftTupleTypes(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -45,7 +44,8 @@ class TestSwiftTupleTypes(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
+            "Set breakpoint here", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -54,37 +54,59 @@ class TestSwiftTupleTypes(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
-        self.expect("frame variable t --", substrs=[
-            '(Int, Int, Int) t = ', '0 = 111', '1 = 222', '2 = 333'])
+        self.expect(
+            "frame variable t --",
+            substrs=["(Int, Int, Int) t = ", "0 = 111", "1 = 222", "2 = 333"],
+        )
         self.runCmd("continue")
 
-        self.expect("frame variable --raw-output --show-types tuple1",
-                    substrs=['(length: Swift.Int, name: Swift.String) tuple1',
-                             '(Swift.Int) length =',
-                             'value = 123',
-                             '(Swift.String) name ='])
-        self.expect("frame variable --raw-output --show-types tuple2",
-                    substrs=['(Swift.Int, Swift.String) tuple2',
-                             '(Swift.Int) 0 =',
-                             'value = 123',
-                             '(Swift.String) 1 ='])
-        self.expect("frame variable --raw-output --show-types tuple3",
-                    substrs=['(Swift.Int, name: Swift.String) tuple3',
-                             '(Swift.Int) 0 =',
-                             'value = 123',
-                             '(Swift.String) name ='])
-        self.expect("frame variable --raw-output --show-types tuple4",
-                    substrs=['(p1: ', 'Point, p2: ', '.Point) tuple4',
-                             'Point) p1',
-                             'FPIEEE32)', 'value = 1.25',
-                             'FPIEEE32)', 'value = 2.125',
-                             'Point) p2',
-                             'FPIEEE32)', 'value = 4.5',
-                             'FPIEEE32)', 'value = 8.75'])
-
+        self.expect(
+            "frame variable --raw-output --show-types tuple1",
+            substrs=[
+                "(length: Swift.Int, name: Swift.String) tuple1",
+                "(Swift.Int) length =",
+                "value = 123",
+                "(Swift.String) name =",
+            ],
+        )
+        self.expect(
+            "frame variable --raw-output --show-types tuple2",
+            substrs=[
+                "(Swift.Int, Swift.String) tuple2",
+                "(Swift.Int) 0 =",
+                "value = 123",
+                "(Swift.String) 1 =",
+            ],
+        )
+        self.expect(
+            "frame variable --raw-output --show-types tuple3",
+            substrs=[
+                "(Swift.Int, name: Swift.String) tuple3",
+                "(Swift.Int) 0 =",
+                "value = 123",
+                "(Swift.String) name =",
+            ],
+        )
+        self.expect(
+            "frame variable --raw-output --show-types tuple4",
+            substrs=[
+                "(p1: ",
+                "Point, p2: ",
+                ".Point) tuple4",
+                "Point) p1",
+                "FPIEEE32)",
+                "value = 1.25",
+                "FPIEEE32)",
+                "value = 2.125",
+                "Point) p2",
+                "FPIEEE32)",
+                "value = 4.5",
+                "FPIEEE32)",
+                "value = 8.75",
+            ],
+        )

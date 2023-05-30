@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftCoreGraphicsTypes(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -38,27 +37,25 @@ class TestSwiftCoreGraphicsTypes(TestBase):
         """Test that we are able to properly format basic CG types"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
-        self.expect('frame variable f', substrs=[' f = 1'])
-        self.expect('frame variable p', substrs=[' p = (x = 1, y = 1)'])
-        self.expect('frame variable r', substrs=[
-            ' r = (origin = (x = 0, y = 0), size = (width = 0, height = 0))'])
-
-        self.expect('expr f', substrs=[' = 1'])
-        self.expect('expr p', substrs=[' = (x = 1, y = 1)'])
+        self.expect("frame variable f", substrs=[" f = 1"])
+        self.expect("frame variable p", substrs=[" p = (x = 1, y = 1)"])
         self.expect(
-            'expr r',
-            substrs=[' = (origin = (x = 0, y = 0), size = (width = 0, height = 0))'])
+            "frame variable r",
+            substrs=[" r = (origin = (x = 0, y = 0), size = (width = 0, height = 0))"],
+        )
 
-        self.expect('po f', substrs=['1.0'])
-        self.expect('po p', substrs=['x : 1.0', 'y : 1.0'])
+        self.expect("expr f", substrs=[" = 1"])
+        self.expect("expr p", substrs=[" = (x = 1, y = 1)"])
         self.expect(
-            'po r',
-            substrs=[
-                'x : 0.0',
-                'y : 0.0',
-                'width : 0.0',
-                'height : 0.0'])
+            "expr r",
+            substrs=[" = (origin = (x = 0, y = 0), size = (width = 0, height = 0))"],
+        )
 
-
+        self.expect("po f", substrs=["1.0"])
+        self.expect("po p", substrs=["x : 1.0", "y : 1.0"])
+        self.expect(
+            "po r", substrs=["x : 0.0", "y : 0.0", "width : 0.0", "height : 0.0"]
+        )

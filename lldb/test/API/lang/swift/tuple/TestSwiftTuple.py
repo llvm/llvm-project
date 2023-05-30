@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftTuple(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -32,9 +31,10 @@ class TestSwiftTuple(TestBase):
         """Test that LLDB understands tuple lowering"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
-        self.expect("frame variable s", substrs=['0 = 123', '1 = 0x'])
+        self.expect("frame variable s", substrs=["0 = 123", "1 = 0x"])
 
-        self.expect("expression s.tup.0", substrs=['123'])
-        self.expect("expression s.tup.1()", substrs=['321'])
+        self.expect("expression s.tup.0", substrs=["123"])
+        self.expect("expression s.tup.1()", substrs=["321"])

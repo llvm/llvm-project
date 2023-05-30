@@ -21,39 +21,39 @@ import unittest2
 
 
 class TestSwiftReferenceStorageTypes(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)
 
-    @decorators.skipIf(archs=['ppc64le']) #SR-10215
+    @decorators.skipIf(archs=["ppc64le"])  # SR-10215
     @swiftTest
     @skipIf(oslist=["linux"], bugnumber="rdar://76592966")
     def test_swift_reference_storage_types(self):
         """Test weak, unowned and unmanaged types"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
-        self.expect('frame variable myclass.sub_001', substrs=['x = 1'])
-        self.expect('frame variable myclass.sub_002', substrs=['x = 1'])
-        self.expect('frame variable myclass.sub_003', substrs=['x = 1'])
-        self.expect('frame variable myclass.sub_004', substrs=['x = 1'])
-        self.expect('frame variable myclass.sub_005', substrs=['x = 1'])
-        self.expect('frame variable myclass.sub_006', substrs=['x = 1'])
+        self.expect("frame variable myclass.sub_001", substrs=["x = 1"])
+        self.expect("frame variable myclass.sub_002", substrs=["x = 1"])
+        self.expect("frame variable myclass.sub_003", substrs=["x = 1"])
+        self.expect("frame variable myclass.sub_004", substrs=["x = 1"])
+        self.expect("frame variable myclass.sub_005", substrs=["x = 1"])
+        self.expect("frame variable myclass.sub_006", substrs=["x = 1"])
 
-        self.expect('expression myclass.sub_001', substrs=['x = 1'])
-        self.expect('expression myclass.sub_002', substrs=['x = 1'])
-        self.expect('expression myclass.sub_003', substrs=['x = 1'])
-        self.expect('expression myclass.sub_004', substrs=['x = 1'])
-        self.expect('expression myclass.sub_005', substrs=['x = 1'])
-        self.expect('expression myclass.sub_006', substrs=['x = 1'])
+        self.expect("expression myclass.sub_001", substrs=["x = 1"])
+        self.expect("expression myclass.sub_002", substrs=["x = 1"])
+        self.expect("expression myclass.sub_003", substrs=["x = 1"])
+        self.expect("expression myclass.sub_004", substrs=["x = 1"])
+        self.expect("expression myclass.sub_005", substrs=["x = 1"])
+        self.expect("expression myclass.sub_006", substrs=["x = 1"])
 
-        self.expect('expression myclass.sub_001!', substrs=['x = 1'])
-        self.expect('expression myclass.sub_002!', substrs=['x = 1'])
-        self.expect('expression myclass.sub_003!', substrs=['x = 1'])
-        self.expect('expression myclass.sub_004!', substrs=['x = 1'])
+        self.expect("expression myclass.sub_001!", substrs=["x = 1"])
+        self.expect("expression myclass.sub_002!", substrs=["x = 1"])
+        self.expect("expression myclass.sub_003!", substrs=["x = 1"])
+        self.expect("expression myclass.sub_004!", substrs=["x = 1"])
 
         myclass = self.frame().FindVariable("myclass")
         sub_001 = myclass.GetChildMemberWithName("sub_001")

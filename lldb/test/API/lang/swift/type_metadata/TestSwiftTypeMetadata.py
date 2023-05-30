@@ -20,7 +20,6 @@ import unittest2
 
 
 class SwiftTypeMetadataTest(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -34,54 +33,47 @@ class SwiftTypeMetadataTest(TestBase):
 
     def var_commands(self):
         """Test that LLDB can effectively use the type metadata to reconstruct dynamic types for Swift"""
-        lldbutil.run_to_source_breakpoint(self, "// Set breakpoint here", lldb.SBFileSpec("main.swift"))
-        self.expect("frame select 0", substrs=['foo', 'x', 'ivar'])
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
+        self.expect("frame select 0", substrs=["foo", "x", "ivar"])
         self.expect(
-            "frame variable -d run -- x",
-            substrs=[
-                '(a.AClass) x',
-                'ivar = 3735928559'])  # first stop on foo
+            "frame variable -d run -- x", substrs=["(a.AClass) x", "ivar = 3735928559"]
+        )  # first stop on foo
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs=['bar', 'x', 'y'])
+        self.expect("frame select 0", substrs=["bar", "x", "y"])
         self.expect(
-            "frame variable -d run -- x y",
-            substrs=[
-                '(Int64) x',
-                '(Float) y'])  # first stop on bar
+            "frame variable -d run -- x y", substrs=["(Int64) x", "(Float) y"]
+        )  # first stop on bar
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs=['foo', 'x'])
+        self.expect("frame select 0", substrs=["foo", "x"])
         self.expect(
-            "frame variable -d run -- x",
-            substrs=[
-                '(a.AClass) x',
-                'ivar = 3735928559'])  # second stop on foo
+            "frame variable -d run -- x", substrs=["(a.AClass) x", "ivar = 3735928559"]
+        )  # second stop on foo
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs=['baz', 'x'])
+        self.expect("frame select 0", substrs=["baz", "x"])
         self.expect(
-            "frame variable -d run -- x",
-            substrs=[
-                '(a.AClass) x',
-                'ivar = 3735928559'])  # first stop on baz
+            "frame variable -d run -- x", substrs=["(a.AClass) x", "ivar = 3735928559"]
+        )  # first stop on baz
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs=['bar', 'x'])
+        self.expect("frame select 0", substrs=["bar", "x"])
         self.expect(
-            "frame variable -d run -- x y",
-            substrs=[
-                '(a.AClass) x',
-                '(a.AClass) y'])  # second stop on bar
+            "frame variable -d run -- x y", substrs=["(a.AClass) x", "(a.AClass) y"]
+        )  # second stop on bar
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs=['bat', 'x'])
-        self.expect("frame variable -d run -- x",
-                    substrs=['(a.ADerivedClass) x'])  # first stop on bat
+        self.expect("frame select 0", substrs=["bat", "x"])
+        self.expect(
+            "frame variable -d run -- x", substrs=["(a.ADerivedClass) x"]
+        )  # first stop on bat
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs=['bat', 'x'])
+        self.expect("frame select 0", substrs=["bat", "x"])
         self.expect(
-            "frame variable -d run -- x",
-            substrs=['(a.AnotherDerivedClass) x'])  # second stop on bat
+            "frame variable -d run -- x", substrs=["(a.AnotherDerivedClass) x"]
+        )  # second stop on bat
         self.runCmd("continue", RUN_SUCCEEDED)

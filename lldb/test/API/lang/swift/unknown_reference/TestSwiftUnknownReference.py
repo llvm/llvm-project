@@ -18,7 +18,6 @@ import unittest2
 
 
 class TestSwiftUnknownReference(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     def check_class(self, var_self):
@@ -28,14 +27,14 @@ class TestSwiftUnknownReference(lldbtest.TestBase):
         lldbutil.check_variable(self, m_base_string, summary='"hello"')
         lldbutil.check_variable(self, m_string, summary='"world"')
 
-    
     @swiftTest
     @skipUnlessFoundation
     def test_unknown_objc_ref(self):
         """Test unknown references to Objective-C objects."""
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
         frame = thread.frames[0]
         var_self = frame.FindVariable("self")
@@ -43,4 +42,3 @@ class TestSwiftUnknownReference(lldbtest.TestBase):
         self.check_class(m_pure_ref)
         m_objc_ref = var_self.GetChildMemberWithName("objc_ref")
         self.check_class(m_objc_ref)
-

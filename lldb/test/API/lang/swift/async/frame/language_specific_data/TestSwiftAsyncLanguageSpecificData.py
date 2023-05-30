@@ -3,12 +3,12 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
-class TestCase(lldbtest.TestBase):
 
+class TestCase(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @skipIf(oslist=['windows', 'linux'])
+    @skipIf(oslist=["windows", "linux"])
     def test(self):
         """Test SBFrame.GetLanguageSpecificData() in async functions"""
         self.build()

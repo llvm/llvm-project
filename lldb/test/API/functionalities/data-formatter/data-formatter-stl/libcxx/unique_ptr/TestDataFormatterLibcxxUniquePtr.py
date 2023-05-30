@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     @add_test_categories(["libc++"])
     def test_unique_ptr_variables(self):
         """Test `frame variable` output for `std::unique_ptr` types."""
@@ -65,9 +64,7 @@ class TestCase(TestBase):
             children=[ValueCheck(name="__value_", summary='"hello"')],
         )
 
-        valobj = self.expect_var_path(
-            "up_user", type="std::unique_ptr<User>"
-        )
+        valobj = self.expect_var_path("up_user", type="std::unique_ptr<User>")
         self.assertRegex(valobj.summary, "^User @ 0x0*[1-9a-f][0-9a-f]+$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 

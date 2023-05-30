@@ -10,7 +10,6 @@ import unittest2
 
 
 class TestSwiftBridgedMetatype(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -22,7 +21,8 @@ class TestSwiftBridgedMetatype(TestBase):
         """Test the formatting of bridged Swift metatypes"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         var_k = self.frame().FindVariable("k")
         if sys.platform.startswith("linux"):

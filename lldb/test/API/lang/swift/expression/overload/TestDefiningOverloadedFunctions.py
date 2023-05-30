@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestDefiningOverloadedFunctions(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -37,8 +36,7 @@ class TestDefiningOverloadedFunctions(TestBase):
             answer = value.GetSummary()
         else:
             answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
+        report_str = "%s expected: %s got: %s" % (expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
     @swiftTest
@@ -46,11 +44,13 @@ class TestDefiningOverloadedFunctions(TestBase):
         """Test defining overloaded functions"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Stop here to do your work.', lldb.SBFileSpec('main.swift'))
+            self, "Stop here to do your work.", lldb.SBFileSpec("main.swift")
+        )
 
         # Here's the first function:
         value_obj = self.frame().EvaluateExpression(
-            "func $overload(_ a: Int) -> Int { return 1 }\n 1")
+            "func $overload(_ a: Int) -> Int { return 1 }\n 1"
+        )
         error = value_obj.GetError()
         self.assertSuccess(error)
 
@@ -58,10 +58,10 @@ class TestDefiningOverloadedFunctions(TestBase):
 
         # Here's the second function:
         value_obj = self.frame().EvaluateExpression(
-            "func $overload(_ a: String) -> Int { return 2 } \n 1")
+            "func $overload(_ a: String) -> Int { return 2 } \n 1"
+        )
         error = value_obj.GetError()
         self.assertSuccess(error)
 
-        self.check_expression('$overload(10)', '1', False)
-        self.check_expression('$overload("some string")', '2', False)
-
+        self.check_expression("$overload(10)", "1", False)
+        self.check_expression('$overload("some string")', "2", False)

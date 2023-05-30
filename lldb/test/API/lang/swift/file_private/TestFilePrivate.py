@@ -20,7 +20,6 @@ import os
 
 
 class TestFilePrivate(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -41,8 +40,7 @@ class TestFilePrivate(TestBase):
             answer = value.GetSummary()
         else:
             answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
+        report_str = "%s expected: %s got: %s" % (expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
     @swiftTest
@@ -56,40 +54,37 @@ class TestFilePrivate(TestBase):
 
         # Set the breakpoints
         a_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.a_source_spec)
+            "break here", self.a_source_spec
+        )
         self.assertTrue(a_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
         b_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.b_source_spec)
+            "break here", self.b_source_spec
+        )
         self.assertTrue(b_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
         main_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
-        self.assertTrue(
-            main_breakpoint.GetNumLocations() > 0,
-            VALID_BREAKPOINT)
+            "break here", self.main_source_spec
+        )
+        self.assertTrue(main_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         process = target.LaunchSimple(None, None, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, a_breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, a_breakpoint)
 
         self.assertTrue(len(threads) == 1)
-        self.check_expression("privateVariable", "\"five\"")
+        self.check_expression("privateVariable", '"five"')
 
         process.Continue()
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, b_breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, b_breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.check_expression("privateVariable", "3", False)
 
         process.Continue()
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, main_breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, main_breakpoint)
 
         self.assertTrue(len(threads) == 1)
 
         self.check_expression("privateVariable", None)
         self.check_expression("privateVariable as Int", "3", False)
-        self.check_expression("privateVariable as String", "\"five\"")
-
+        self.check_expression("privateVariable as String", '"five"')

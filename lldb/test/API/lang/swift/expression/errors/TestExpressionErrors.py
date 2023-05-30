@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestExpressionErrors(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -38,13 +37,15 @@ class TestExpressionErrors(TestBase):
 
         self.checkCanThrow("IThrowObjectOver10", True)
         self.checkCanThrow("ClassError.SomeMethod", False)
- 
+
     def checkCanThrow(self, name, expected):
         sc_list = self.target.FindFunctions(name)
-        self.assertEqual(sc_list.GetSize(), 1, "Error looking for %s"%(name))
+        self.assertEqual(sc_list.GetSize(), 1, "Error looking for %s" % (name))
         func = sc_list[0].function
-        self.assertTrue(func.IsValid(), "Couldn't find the function for %s"%(name))
-        self.assertEqual(func.GetCanThrow(), expected,  "GetCanThrow was wrong for %s"%name)
+        self.assertTrue(func.IsValid(), "Couldn't find the function for %s" % (name))
+        self.assertEqual(
+            func.GetCanThrow(), expected, "GetCanThrow was wrong for %s" % name
+        )
 
     @swiftTest
     def test_swift_expression_errors(self):
@@ -62,8 +63,7 @@ class TestExpressionErrors(TestBase):
         self.assertTrue(len(threads) == 1)
 
     def continue_by_pattern(self, pattern):
-        bkpt = self.target.BreakpointCreateBySourceRegex(
-            pattern, self.main_source_spec)
+        bkpt = self.target.BreakpointCreateBySourceRegex(pattern, self.main_source_spec)
         self.assertTrue(bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
         self.continue_to_bkpt(self.process, bkpt)
         self.target.BreakpointDelete(bkpt.GetID())
@@ -80,10 +80,9 @@ class TestExpressionErrors(TestBase):
 
         # Set the breakpoints
         global_scope_bkpt = target.BreakpointCreateBySourceRegex(
-            'Set a breakpoint here to run expressions', self.main_source_spec)
-        self.assertTrue(
-            global_scope_bkpt.GetNumLocations() > 0,
-            VALID_BREAKPOINT)
+            "Set a breakpoint here to run expressions", self.main_source_spec
+        )
+        self.assertTrue(global_scope_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -92,8 +91,7 @@ class TestExpressionErrors(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, global_scope_bkpt)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, global_scope_bkpt)
 
         self.assertTrue(len(threads) == 1)
 
@@ -101,29 +99,24 @@ class TestExpressionErrors(TestBase):
         options.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
 
         # FIXME: pull the "try" back out when we fix <rdar://problem/21949031>
-        enum_value = self.frame().EvaluateExpression(
-            "IThrowEnumOver10(101)", options)
+        enum_value = self.frame().EvaluateExpression("IThrowEnumOver10(101)", options)
         self.assertTrue(enum_value.IsValid(), "Got a valid enum value.")
         self.assertSuccess(enum_value.GetError(), "Error getting enum value")
         self.assertTrue(
             enum_value.GetValue() == "ImportantError",
-            "Expected 'ImportantError', got %s" %
-            (enum_value.GetValue()))
+            "Expected 'ImportantError', got %s" % (enum_value.GetValue()),
+        )
 
         object_value = self.frame().EvaluateExpression(
-            "IThrowObjectOver10(101)", options)
+            "IThrowObjectOver10(101)", options
+        )
         self.assertTrue(object_value.IsValid(), "Got a valid object value.")
-        self.assertSuccess(
-            object_value.GetError(),
-            "Error getting object value")
+        self.assertSuccess(object_value.GetError(), "Error getting object value")
 
         message = object_value.GetChildMemberWithName("m_message")
         self.assertTrue(message.IsValid(), "Found some m_message child.")
-        self.assertSuccess(
-            message.GetError(),
-            "No errors fetching m_message value")
+        self.assertSuccess(message.GetError(), "No errors fetching m_message value")
         self.assertTrue(
             message.GetSummary() == '"Over 100"',
-            "Expected 'Over 100', got %s" %
-            (message.GetSummary()))
-
+            "Expected 'Over 100', got %s" % (message.GetSummary()),
+        )

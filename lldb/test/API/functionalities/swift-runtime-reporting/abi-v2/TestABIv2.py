@@ -22,7 +22,6 @@ import json
 
 
 class SwiftRuntimeReportingABIv2TestCase(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
@@ -40,22 +39,26 @@ class SwiftRuntimeReportingABIv2TestCase(lldbtest.TestBase):
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, lldbtest.VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['swiftCore'])
+        self.registerSharedLibrariesWithTarget(target, ["swiftCore"])
 
         self.runCmd("run")
 
-        self.expect("thread list",
-                    substrs=['stopped', 'stop reason = custom error message'])
+        self.expect(
+            "thread list", substrs=["stopped", "stop reason = custom error message"]
+        )
 
         self.assertEqual(
             self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
-            lldb.eStopReasonInstrumentation)
+            lldb.eStopReasonInstrumentation,
+        )
 
-        self.expect("thread info -s",
-            substrs=["instrumentation_class", "issue_type", "description"])
+        self.expect(
+            "thread info -s",
+            substrs=["instrumentation_class", "issue_type", "description"],
+        )
 
-        output_lines = self.res.GetOutput().split('\n')
-        json_line = '\n'.join(output_lines[2:])
+        output_lines = self.res.GetOutput().split("\n")
+        json_line = "\n".join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "SwiftRuntimeReporting")
         self.assertEqual(data["issue_type"], "my-error")

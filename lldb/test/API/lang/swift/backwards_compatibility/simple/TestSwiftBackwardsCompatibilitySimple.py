@@ -20,29 +20,28 @@ import unittest2
 
 
 class TestSwiftBackwardsCompatibilitySimple(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @skipIf(compiler="swiftc", compiler_version=['<', '5.0'])
+    @skipIf(compiler="swiftc", compiler_version=["<", "5.0"])
     def test_simple(self):
         if configuration.swiftCompiler:
             compiler = configuration.swiftCompiler
         else:
             compiler = swift.getSwiftCompiler()
         version = self.getCompilerVersion(compiler)
-        if version < '5.0':
-            self.skipTest('Swift compiler predates stable ABI')
+        if version < "5.0":
+            self.skipTest("Swift compiler predates stable ABI")
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec('main.swift'))
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
         # FIXME: Removing the next line breaks subsequent expressions
         #        when the swiftmodules can't be loaded.
         self.expect("fr v")
-        self.expect("fr v number", substrs=['23'])
-        self.expect("fr v array", substrs=['1', '2', '3'])
+        self.expect("fr v number", substrs=["23"])
+        self.expect("fr v array", substrs=["1", "2", "3"])
         self.expect("fr v string", substrs=['"hello"'])
-        self.expect("fr v tuple", substrs=['42', '"abc"'])
+        self.expect("fr v tuple", substrs=["42", '"abc"'])
         # FIXME: This doesn't work.
-        #self.expect("fr v generic", substrs=['-1'])
-
+        # self.expect("fr v generic", substrs=['-1'])

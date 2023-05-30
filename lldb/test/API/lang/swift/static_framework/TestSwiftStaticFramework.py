@@ -7,7 +7,6 @@ import unittest2
 
 
 class TestSwiftStaticFramework(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -17,20 +16,21 @@ class TestSwiftStaticFramework(lldbtest.TestBase):
         """Make sure LLDB doesn't attempt to import static frameworks"""
         n = 10
         for i in range(n):
-            with open(self.getBuildArtifact("a%d.swift"%i), "w") as f:
-                f.write("public struct A%d { public init() {} }\n"%i)
+            with open(self.getBuildArtifact("a%d.swift" % i), "w") as f:
+                f.write("public struct A%d { public init() {} }\n" % i)
         src = self.getBuildArtifact("main.swift")
         with open(src, "w") as f:
             f.write("func use<T>(_ t: T) {}\n")
             for i in range(n):
-                f.write("import a%d\n"%i)
+                f.write("import a%d\n" % i)
             for i in range(n):
-                f.write("let v%d = A%d()\n"%(i,i))
-                f.write("use(v%d)\n"%(i))
+                f.write("let v%d = A%d()\n" % (i, i))
+                f.write("use(v%d)\n" % (i))
             f.write('print("break here")\n')
-        self.build(dictionary={"N": "%d"%(n-1)})
+        self.build(dictionary={"N": "%d" % (n - 1)})
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec(src))
+            self, "break here", lldb.SBFileSpec(src)
+        )
 
         log = self.getBuildArtifact("types.log")
         self.runCmd('log enable lldb types -f "%s"' % log)
@@ -42,7 +42,8 @@ class TestSwiftStaticFramework(lldbtest.TestBase):
         load_a0 = 0
         load_dylib = 0
         import io
-        with open(log, "r", encoding='utf-8') as logfile:
+
+        with open(log, "r", encoding="utf-8") as logfile:
             for line in logfile:
                 if 'Loading linked framework "Dylib"' in line:
                     load_dylib += 1

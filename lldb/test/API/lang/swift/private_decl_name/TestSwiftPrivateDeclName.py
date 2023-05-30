@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftPrivateDeclName(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -42,17 +41,18 @@ class TestSwiftPrivateDeclName(TestBase):
 
         # Set the breakpoints
         a_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.a_source_spec)
+            "break here", self.a_source_spec
+        )
         self.assertTrue(a_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
         b_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.b_source_spec)
+            "break here", self.b_source_spec
+        )
         self.assertTrue(b_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         process = target.LaunchSimple(None, None, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, a_breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, a_breakpoint)
 
         self.assertTrue(len(threads) == 1)
 
@@ -63,11 +63,10 @@ class TestSwiftPrivateDeclName(TestBase):
         lldbutil.check_variable(self, var, False, typename="a.S.A")
         lldbutil.check_variable(self, child_a, False, value="1")
         lldbutil.check_variable(self, child_b, False, '"hello"')
-        lldbutil.check_variable(self, child_c, False, value='1.25')
+        lldbutil.check_variable(self, child_c, False, value="1.25")
 
         process.Continue()
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, b_breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, b_breakpoint)
 
         self.assertTrue(len(threads) == 1)
 
@@ -78,5 +77,4 @@ class TestSwiftPrivateDeclName(TestBase):
         lldbutil.check_variable(self, var, False, typename="a.S.A")
         lldbutil.check_variable(self, child_a, False, value="3")
         lldbutil.check_variable(self, child_b, False, '"goodbye"')
-        lldbutil.check_variable(self, child_c, False, value='1.25')
-
+        lldbutil.check_variable(self, child_c, False, value="1.25")

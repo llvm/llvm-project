@@ -3,8 +3,8 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
-class TestSwiftPrivateImport(TestBase):
 
+class TestSwiftPrivateImport(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -16,6 +16,7 @@ class TestSwiftPrivateImport(TestBase):
         """Test a library with a private import for which there is no debug info"""
         invisible_swift = self.getBuildArtifact("Invisible.swift")
         import shutil
+
         shutil.copyfile("InvisibleSource.swift", invisible_swift)
         self.build()
         os.unlink(invisible_swift)
@@ -24,15 +25,16 @@ class TestSwiftPrivateImport(TestBase):
 
         if lldb.remote_platform:
             wd = lldb.remote_platform.GetWorkingDirectory()
-            filename = 'libInvisible.dylib'
+            filename = "libInvisible.dylib"
             err = lldb.remote_platform.Put(
                 lldb.SBFileSpec(self.getBuildArtifact(filename)),
-                lldb.SBFileSpec(os.path.join(wd, filename)))
-            self.assertFalse(err.Fail(), 'Failed to copy ' + filename)
+                lldb.SBFileSpec(os.path.join(wd, filename)),
+            )
+            self.assertFalse(err.Fail(), "Failed to copy " + filename)
 
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'),
-            extra_images=['Library'])
+            self, "break here", lldb.SBFileSpec("main.swift"), extra_images=["Library"]
+        )
         self.expect("fr var -d run -- x", substrs=["(Invisible.InvisibleStruct)"])
         # FIXME: This crashes LLDB with a Swift DESERIALIZATION FAILURE.
         # self.expect("fr var -d run -- y", substrs=["(Any)"])

@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftBool(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -46,7 +45,8 @@ class TestSwiftBool(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
+            "Set breakpoint here", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -55,25 +55,26 @@ class TestSwiftBool(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         thread = threads[0]
-        
+
         frame = thread.frames[0]
         self.assertTrue(frame.IsValid(), "Couldn't get a frame.")
-        
+
         true_vars = ["reg_true", "odd_true", "odd_true_works", "odd_false_works"]
         for name in true_vars:
             var = frame.FindVariable(name)
             summary = var.GetSummary()
-            self.assertTrue(summary == "true", "%s should be true, was: %s"%(name, summary))
+            self.assertTrue(
+                summary == "true", "%s should be true, was: %s" % (name, summary)
+            )
 
         false_vars = ["reg_false", "odd_false"]
         for name in false_vars:
             var = frame.FindVariable(name)
             summary = var.GetSummary()
-            self.assertTrue(summary == "false", "%s should be false, was: %s"%(name, summary))
-
-
+            self.assertTrue(
+                summary == "false", "%s should be false, was: %s" % (name, summary)
+            )

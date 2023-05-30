@@ -20,7 +20,6 @@ import unittest2
 
 
 class SwiftDynamicValueTest(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -34,7 +33,9 @@ class SwiftDynamicValueTest(TestBase):
 
     def dynamic_val_commands(self):
         """Tests that dynamic values work correctly for Swift"""
-        lldbutil.run_to_source_breakpoint(self, "// Set a breakpoint here", lldb.SBFileSpec("main.swift"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set a breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         self.expect(
             "frame variable -d no-dynamic",
@@ -43,7 +44,9 @@ class SwiftDynamicValueTest(TestBase):
                 "SomeClass) anItem = ",
                 "x = ",
                 "Base<Int>) aBase = 0x",
-                "v = 449493530"])
+                "v = 449493530",
+            ],
+        )
         self.expect(
             "frame variable --show-types",
             substrs=[
@@ -56,7 +59,9 @@ class SwiftDynamicValueTest(TestBase):
                 "Base<Int>)",
                 ".Base<Swift.Int> = {",
                 "v = 449493530",
-                "q = 3735928559"])
+                "q = 3735928559",
+            ],
+        )
         self.runCmd("continue")
         self.expect(
             "frame variable -d no-dynamic",
@@ -65,7 +70,9 @@ class SwiftDynamicValueTest(TestBase):
                 "SomeClass) anItem = ",
                 "x = ",
                 "Base<Int>) aBase = 0x",
-                "v = 449493530"])
+                "v = 449493530",
+            ],
+        )
         self.expect(
             "frame variable --show-types",
             substrs=[
@@ -78,4 +85,6 @@ class SwiftDynamicValueTest(TestBase):
                 "Base<Int>)",
                 ".Base<Swift.Int> = {",
                 "v = 449493530",
-                "q = 3735928559"])
+                "q = 3735928559",
+            ],
+        )

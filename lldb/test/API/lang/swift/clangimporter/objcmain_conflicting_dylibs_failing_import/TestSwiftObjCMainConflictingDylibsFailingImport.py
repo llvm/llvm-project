@@ -18,8 +18,8 @@ import os
 import unittest2
 import shutil
 
-class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
 
+class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
 
@@ -27,38 +27,41 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         TestBase.setUp(self)
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     @skipUnlessDarwin
     @swiftTest
     def test(self):
         # To ensure we hit the rebuild problem remove the cache to avoid caching.
         mod_cache = self.getBuildArtifact("my-clang-modules-cache")
         if os.path.isdir(mod_cache):
-          shutil.rmtree(mod_cache)
+            shutil.rmtree(mod_cache)
 
-        self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
-                    % mod_cache)
+        self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % mod_cache)
         self.build()
 
         target, process, _, bar_breakpoint = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('Bar.swift'),
-            extra_images=['Foo', 'Bar'])
+            self,
+            "break here",
+            lldb.SBFileSpec("Bar.swift"),
+            extra_images=["Foo", "Bar"],
+        )
 
         # This works because the Module-SwiftASTContext uses the dylib flags.
         self.expect("fr var bar", "expected result", substrs=["42"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
         # FIXME: The following expression evaluator tests are disabled
         # because it's nondeterministic which one will work.
-        
+
         # This initially fails with the shared scratch context and is
         # then retried with the per-dylib scratch context.
         # self.expect("expression bar", "expected result", substrs=["$R0", "42"])
         # self.expect("expression $R0", "expected result", substrs=["$R1", "42"])
         # self.expect("expression $R1", "expected result", substrs=["$R2", "42"])
-        
+
         # This works by accident because the search paths are in the right order.
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Foo.swift'))
+            "break here", lldb.SBFileSpec("Foo.swift")
+        )
         process.Continue()
         self.expect("fr var foo", "expected result", substrs=["23"])
         # FIXME: The following expression evaluator tests are disabled
@@ -67,4 +70,3 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         # self.expect("expression foo", "expected result", substrs=["$R3", "23"])
         # self.expect("expression $R3", "expected result", substrs=["23"])
         # self.expect("expression $R4", "expected result", substrs=["23"])
-

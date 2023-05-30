@@ -9,30 +9,42 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
+
 def getOSName(os):
-    if os == 'macosx': return 'macOS'
-    if os == 'ios': return 'iOS'
-    if os == 'tvos': return 'tvOS'
-    if os == 'watchos': return 'watchOS'
+    if os == "macosx":
+        return "macOS"
+    if os == "ios":
+        return "iOS"
+    if os == "tvos":
+        return "tvOS"
+    if os == "watchos":
+        return "watchOS"
     return os
+
 
 def getArch(os):
-    if os == 'macosx': return 'x86_64'
-    if os == 'ios': return 'arm64'
-    if os == 'tvos': return 'arm64'
-    if os == 'watchos': return 'armv7k'
+    if os == "macosx":
+        return "x86_64"
+    if os == "ios":
+        return "arm64"
+    if os == "tvos":
+        return "arm64"
+    if os == "watchos":
+        return "armv7k"
     return os
 
+
 def getTriple(os, version):
-    return getArch(os) + '-apple-' + os + version
+    return getArch(os) + "-apple-" + os + version
+
 
 def getOlderVersion(major, minor):
     if minor != 0:
-        return '%d.%d' % (major, minor-1)
-    return '%d.%d' % (major-1, minor)
+        return "%d.%d" % (major, minor - 1)
+    return "%d.%d" % (major - 1, minor)
+
 
 class TestAvailability(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     NO_DEBUG_INFO_TESTCASE = True
@@ -42,14 +54,14 @@ class TestAvailability(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @skipIf(oslist=['linux', 'windows'])
+    @skipIf(oslist=["linux", "windows"])
     def testAvailability(self):
         platform_name = lldbplatformutil.getPlatform()
         os_name = getOSName(platform_name)
         platform = lldb.selected_platform
         major = platform.GetOSMajorVersion()
         minor = platform.GetOSMinorVersion()
-        version = '%d.%d'%(major, minor)
+        version = "%d.%d" % (major, minor)
         program = """
 @available(%s %s, *) func f() {}
 
@@ -120,23 +132,31 @@ f2(0)
 // ---------------------------------------------------------------------
 print("in top_level") // break_7
 """
-        with open(self.getBuildArtifact("main.swift"), 'w') as main:
-            main.write(program %(os_name, version))
+        with open(self.getBuildArtifact("main.swift"), "w") as main:
+            main.write(program % (os_name, version))
 
-        self.build(dictionary={'TRIPLE': getTriple(platform_name,
-                                                   getOlderVersion(major, minor))})
+        self.build(
+            dictionary={
+                "TRIPLE": getTriple(platform_name, getOlderVersion(major, minor))
+            }
+        )
         source_spec = lldb.SBFileSpec("main.swift")
-        (target, process, thread, brk0) = \
-            lldbutil.run_to_source_breakpoint(self, "break_0", source_spec)
+        (target, process, thread, brk0) = lldbutil.run_to_source_breakpoint(
+            self, "break_0", source_spec
+        )
 
         # Create breakpoints.
         breakpoints = []
         for i in range(1, 8):
-            breakpoints.append(target.BreakpointCreateBySourceRegex(
-                'break_%d'%i, lldb.SBFileSpec("main.swift")))
-            self.assertTrue(breakpoints[-1] and
-                            breakpoints[-1].GetNumLocations() >= 1,
-                            VALID_BREAKPOINT)
+            breakpoints.append(
+                target.BreakpointCreateBySourceRegex(
+                    "break_%d" % i, lldb.SBFileSpec("main.swift")
+                )
+            )
+            self.assertTrue(
+                breakpoints[-1] and breakpoints[-1].GetNumLocations() >= 1,
+                VALID_BREAKPOINT,
+            )
 
         for breakpoint in breakpoints:
             threads = lldbutil.continue_to_breakpoint(process, breakpoint)

@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestEnumVariables(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -36,15 +35,11 @@ class TestEnumVariables(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def get_variable(self, name):
-        return self.frame().FindVariable(
-            name).GetDynamicValue(lldb.eDynamicCanRunTarget)
+        return (
+            self.frame().FindVariable(name).GetDynamicValue(lldb.eDynamicCanRunTarget)
+        )
 
-    def check_enum(
-            self,
-            var_name,
-            value,
-            child_summary=None,
-            child_value=None):
+    def check_enum(self, var_name, value, child_summary=None, child_value=None):
         var = self.frame().FindVariable(var_name)
         self.assertTrue(var.IsValid(), "invalid variable")
         self.assertTrue(var.GetValue() == value, "invalid value")
@@ -53,12 +48,12 @@ class TestEnumVariables(TestBase):
             self.assertTrue(child_var.IsValid(), "invalid child")
             if child_summary:
                 self.assertTrue(
-                    child_var.GetSummary() == child_summary,
-                    "invalid child summary")
+                    child_var.GetSummary() == child_summary, "invalid child summary"
+                )
             if child_value:
                 self.assertTrue(
-                    child_var.GetValue() == child_value,
-                    "invalid child value")
+                    child_var.GetValue() == child_value, "invalid child value"
+                )
 
     def do_test(self):
         """Tests that Enum variables display correctly"""
@@ -71,7 +66,8 @@ class TestEnumVariables(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            '// Set breakpoint here', self.main_source_spec)
+            "// Set breakpoint here", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -80,13 +76,12 @@ class TestEnumVariables(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
-        #self.runCmd("frame variable")
+        # self.runCmd("frame variable")
 
         self.check_enum("ona", "A")
         self.check_enum("onb", "B")
@@ -95,11 +90,11 @@ class TestEnumVariables(TestBase):
 
         self.check_enum("twa", "A")
         self.check_enum("twb", "B", '"hello world"')
-        self.check_enum("twc", "C", child_value='12')
+        self.check_enum("twc", "C", child_value="12")
         self.check_enum("twd", "D")
 
         self.check_enum("tha", "A", '"hello world"')
-        self.check_enum("thb", "B", child_value='24')
+        self.check_enum("thb", "B", child_value="24")
         self.check_enum("thc", "C", '"this is me"')
         self.check_enum("thd", "D", "true")
 
@@ -108,7 +103,8 @@ class TestEnumVariables(TestBase):
         self.check_enum("foc", "C", '"life should be"')
         self.check_enum("fod", "D", '"fun for everyone"')
 
-        self.expect('frame variable ContainerOfEnums_Some',
-                    substrs=['Some', 'one1 = A', 'one2 = A'])
-        self.expect('frame variable ContainerOfEnums_Nil', substrs=['nil'])
-
+        self.expect(
+            "frame variable ContainerOfEnums_Some",
+            substrs=["Some", "one1 = A", "one2 = A"],
+        )
+        self.expect("frame variable ContainerOfEnums_Nil", substrs=["nil"])

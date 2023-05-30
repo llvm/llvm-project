@@ -6,5 +6,6 @@ lldbinline.MakeInlineTest(
     globals(),
     decorators=[
         expectedFailureAll(oslist=["linux"], bugnumber="rdar://83444822"),
-        swiftTest
-    ])
+        swiftTest,
+    ],
+)

@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftStdlibSet(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -32,15 +31,10 @@ class TestSwiftStdlibSet(TestBase):
         """Tests that we properly vend synthetic children for Swift.Set"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
         self.expect(
             "frame variable",
             ordered=False,
-            substrs=[
-                ' = 5',
-                ' = 2',
-                ' = 3',
-                ' = 1',
-                ' = 4'])
-
-
+            substrs=[" = 5", " = 2", " = 3", " = 1", " = 4"],
+        )

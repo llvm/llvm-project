@@ -17,8 +17,8 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
 
-class TestSwiftExpressionObjCContext(TestBase):
 
+class TestSwiftExpressionObjCContext(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -29,16 +29,20 @@ class TestSwiftExpressionObjCContext(TestBase):
     def test(self):
         self.build()
 
-        target,  _, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec('main.m'),
-            extra_images=['Foo'])
+        target, _, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.m"), extra_images=["Foo"]
+        )
 
         # This is expected to fail because we can't yet import ObjC
         # modules into a Swift context.
-        self.expect("expr -lang Swift -- Bar()", "failure",
-                    substrs=["cannot find 'Bar'"],
-                    error=True)
-        self.expect("expr -lang Swift -- (1, 2, 3)",
-                    "context-less swift expression works",
-                    substrs=["(Int, Int, Int)"])
-
+        self.expect(
+            "expr -lang Swift -- Bar()",
+            "failure",
+            substrs=["cannot find 'Bar'"],
+            error=True,
+        )
+        self.expect(
+            "expr -lang Swift -- (1, 2, 3)",
+            "context-less swift expression works",
+            substrs=["(Int, Int, Int)"],
+        )

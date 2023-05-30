@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftClassTypes(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -46,7 +45,8 @@ class TestSwiftClassTypes(TestBase):
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
+            "Set breakpoint here", self.main_source_spec
+        )
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -55,16 +55,19 @@ class TestSwiftClassTypes(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
-        self.expect("frame variable --show-types f",
-                    substrs=['Foo) f = 0x',
-                             'Base) ', '.Base = {',
-                             '(String) b = ',
-                             '(Int) x = 12',
-                             '(Float) y = 2.25'])
-
+        self.expect(
+            "frame variable --show-types f",
+            substrs=[
+                "Foo) f = 0x",
+                "Base) ",
+                ".Base = {",
+                "(String) b = ",
+                "(Int) x = 12",
+                "(Float) y = 2.25",
+            ],
+        )

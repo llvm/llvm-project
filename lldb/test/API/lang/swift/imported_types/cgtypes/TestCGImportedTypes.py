@@ -21,7 +21,6 @@ import unittest2
 
 
 class TestSwiftCGImportedTypes(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -33,7 +32,8 @@ class TestSwiftCGImportedTypes(TestBase):
         """Test that we are able to deal with C-imported types from CoreGraphics"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         rect = self.frame().FindVariable("cgrect")
         self.assertTrue(rect.IsValid(), "Got the cgrect variable")
@@ -42,7 +42,5 @@ class TestSwiftCGImportedTypes(TestBase):
         x_var = origin_var.GetChildMemberWithName("x")
         self.assertTrue(x_var.IsValid(), "Got valid x from cgrect.origin")
         x_native = x_var.GetChildMemberWithName("native")
-        self.assertTrue(
-            x_native.IsValid(),
-            "Got valid native from cgrect.origin.x")
+        self.assertTrue(x_native.IsValid(), "Got valid native from cgrect.origin.x")
         self.assertEquals(x_native.GetValue(), "10", "Value of x is correct")

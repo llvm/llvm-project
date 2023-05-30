@@ -22,7 +22,6 @@ import json
 
 
 class SwiftRuntimeReportingExclusivityViolationTestCase(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
@@ -36,9 +35,15 @@ class SwiftRuntimeReportingExclusivityViolationTestCase(lldbtest.TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-        self.line_breakpoint = lldbtest.line_number(self.main_source, '// get address line')
-        self.line_current_access = lldbtest.line_number(self.main_source, '// current access line')
-        self.line_previous_access = lldbtest.line_number(self.main_source, '// previous access line')
+        self.line_breakpoint = lldbtest.line_number(
+            self.main_source, "// get address line"
+        )
+        self.line_current_access = lldbtest.line_number(
+            self.main_source, "// current access line"
+        )
+        self.line_previous_access = lldbtest.line_number(
+            self.main_source, "// previous access line"
+        )
 
     def do_test(self):
         exe_name = "a.out"
@@ -47,12 +52,17 @@ class SwiftRuntimeReportingExclusivityViolationTestCase(lldbtest.TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, lldbtest.VALID_TARGET)
 
-        self.runCmd("breakpoint set -f %s -l %d" % (self.main_source, self.line_breakpoint))
+        self.runCmd(
+            "breakpoint set -f %s -l %d" % (self.main_source, self.line_breakpoint)
+        )
 
         self.runCmd("run")
 
-        self.expect("thread list", lldbtest.STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped', "stop reason = breakpoint"])
+        self.expect(
+            "thread list",
+            lldbtest.STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         thread = target.process.GetSelectedThread()
         frame = thread.GetSelectedFrame()
@@ -65,26 +75,35 @@ class SwiftRuntimeReportingExclusivityViolationTestCase(lldbtest.TestBase):
 
         self.runCmd("continue")
 
-        self.expect("thread list",
-                    substrs=['stopped', 'stop reason = Simultaneous accesses'])
+        self.expect(
+            "thread list", substrs=["stopped", "stop reason = Simultaneous accesses"]
+        )
 
         self.assertEqual(
             self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
-            lldb.eStopReasonInstrumentation)
+            lldb.eStopReasonInstrumentation,
+        )
 
-        self.expect("thread info -s",
-            substrs=["instrumentation_class", "issue_type", "description"])
+        self.expect(
+            "thread info -s",
+            substrs=["instrumentation_class", "issue_type", "description"],
+        )
 
-        output_lines = self.res.GetOutput().split('\n')
-        json_line = '\n'.join(output_lines[2:])
+        output_lines = self.res.GetOutput().split("\n")
+        json_line = "\n".join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "SwiftRuntimeReporting")
         self.assertEqual(data["issue_type"], "exclusivity-violation")
         self.assertEqual(data["memory_address"], addr)
-        self.assertEqual(data["description"],
-            "Simultaneous accesses to 0x%lx, but modification requires exclusive access" % addr)
+        self.assertEqual(
+            data["description"],
+            "Simultaneous accesses to 0x%lx, but modification requires exclusive access"
+            % addr,
+        )
 
-        historical_threads = thread.GetStopReasonExtendedBacktraces(lldb.eInstrumentationRuntimeTypeSwiftRuntimeReporting)
+        historical_threads = thread.GetStopReasonExtendedBacktraces(
+            lldb.eInstrumentationRuntimeTypeSwiftRuntimeReporting
+        )
         self.assertEqual(historical_threads.GetSize(), 2)
 
         current_access = historical_threads.GetThreadAtIndex(0)
@@ -98,5 +117,14 @@ class SwiftRuntimeReportingExclusivityViolationTestCase(lldbtest.TestBase):
 
         previous_access = historical_threads.GetThreadAtIndex(1)
         self.assertEqual(previous_access.GetNumFrames(), 1)
-        self.assertEqual(previous_access.GetFrameAtIndex(0).GetLineEntry().GetFileSpec().GetFilename(), self.main_source)
-        self.assertEqual(previous_access.GetFrameAtIndex(0).GetLineEntry().GetLine(), self.line_previous_access)
+        self.assertEqual(
+            previous_access.GetFrameAtIndex(0)
+            .GetLineEntry()
+            .GetFileSpec()
+            .GetFilename(),
+            self.main_source,
+        )
+        self.assertEqual(
+            previous_access.GetFrameAtIndex(0).GetLineEntry().GetLine(),
+            self.line_previous_access,
+        )

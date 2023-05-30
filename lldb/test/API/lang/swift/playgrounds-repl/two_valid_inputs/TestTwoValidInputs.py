@@ -16,8 +16,8 @@ from __future__ import print_function
 import lldbsuite.test.lldbplaygroundrepl as repl
 from lldbsuite.test.lldbtest import *
 
-class TestTwoValidInputs(repl.PlaygroundREPLTest):
 
+class TestTwoValidInputs(repl.PlaygroundREPLTest):
     mydir = repl.PlaygroundREPLTest.compute_mydir(__file__)
 
     def do_test(self):

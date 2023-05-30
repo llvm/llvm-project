@@ -18,32 +18,34 @@ import os
 import unittest2
 import shutil
 
-class TestSwiftObjCMainConflictingDylibsBridgingHeader(TestBase):
 
+class TestSwiftObjCMainConflictingDylibsBridgingHeader(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         TestBase.setUp(self)
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
-    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     @skipUnlessDarwin
     @swiftTest
     def test(self):
         self.build()
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here",
+            self,
+            "break here",
             lldb.SBFileSpec("Bar.swift"),
-            extra_images=['Foo', 'Bar'])
-
+            extra_images=["Foo", "Bar"],
+        )
 
         self.expect("fr var bar", "expected result", substrs=["42"])
         self.expect("expression bar", "expected result", substrs=["$R0", "42"])
         self.expect("expression $R0", "expected result", substrs=["$R1", "42"])
         self.expect("expression $R1", "expected result", substrs=["$R2", "42"])
-        
+
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Foo.swift'))
+            "break here", lldb.SBFileSpec("Foo.swift")
+        )
         process.Continue()
         self.expect("fr var foo", "expected result", substrs=["23"])
         self.expect("expression foo", "expected result", substrs=["$R3", "23"])

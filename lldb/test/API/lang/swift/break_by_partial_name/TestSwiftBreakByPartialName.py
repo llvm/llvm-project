@@ -21,7 +21,6 @@ import unittest2
 
 
 class SwiftPartialBreakTest(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -42,16 +41,18 @@ class SwiftPartialBreakTest(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
-        self.expect("frame select 0", substrs=['Accumulator', 'incr'])
-
-        self.runCmd("continue", RUN_SUCCEEDED)
-
-        self.expect("frame select 0", substrs=['Accumulator', 'decr'])
+        self.expect("frame select 0", substrs=["Accumulator", "incr"])
 
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs=['Accumulator', 'incr'])
+        self.expect("frame select 0", substrs=["Accumulator", "decr"])
+
+        self.runCmd("continue", RUN_SUCCEEDED)
+
+        self.expect("frame select 0", substrs=["Accumulator", "incr"])

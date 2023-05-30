@@ -15,7 +15,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestOptionalAmbiguity(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -29,12 +28,14 @@ class TestOptionalAmbiguity(TestBase):
         TestBase.setUp(self)
 
     def print_in_closure(self):
-        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(self,
-                                "Set a breakpoint here", self.main_source_file) 
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
 
         # Since the failure mode of a name collision is that the expression fails
         # to compile, I just check that here.
         frame = thread.GetFrameAtIndex(0)
         ret_value = frame.EvaluateExpression("self")
-        self.assertSuccess(ret_value.GetError(), "The expression completed successfully")
-
+        self.assertSuccess(
+            ret_value.GetError(), "The expression completed successfully"
+        )

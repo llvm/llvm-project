@@ -41,9 +41,9 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         self.build()
         # Install invalid modules in the build directory first to check we
         # still fall back to the .swiftinterface.
-        modules = ['AA.swiftmodule', 'BB.swiftmodule', 'CC.swiftmodule']
+        modules = ["AA.swiftmodule", "BB.swiftmodule", "CC.swiftmodule"]
         for module in modules:
-            open(self.getBuildArtifact(module), 'w').close()
+            open(self.getBuildArtifact(module), "w").close()
         self.do_test()
 
     @swiftTest
@@ -57,26 +57,35 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         # Set a breakpoint in and launch the main executable so we load the
         # ASTContext and log the prebuilt cache path
         lldbutil.run_to_source_breakpoint(
-           self, "break here", lldb.SBFileSpec("main.swift"),
-           exe_name=self.getBuildArtifact("main"))
+            self,
+            "break here",
+            lldb.SBFileSpec("main.swift"),
+            exe_name=self.getBuildArtifact("main"),
+        )
         self.expect("expr 1")
 
         # Check the prebuilt cache path in the log output
-        prefix = 'Using prebuilt Swift module cache path: '
-        expected_suffix = os.path.join('macosx', 'prebuilt-modules')
+        prefix = "Using prebuilt Swift module cache path: "
+        expected_suffix = os.path.join("macosx", "prebuilt-modules")
         found = False
 
         import io
-        with io.open(log, "r", encoding='utf-8') as logfile:
+
+        with io.open(log, "r", encoding="utf-8") as logfile:
             for line in logfile:
                 if prefix in line:
-                    self.assertTrue(line.rstrip().endswith(os.path.sep + expected_suffix), 'unexpected prebuilt cache path: ' + line)
+                    self.assertTrue(
+                        line.rstrip().endswith(os.path.sep + expected_suffix),
+                        "unexpected prebuilt cache path: " + line,
+                    )
                     found = True
                     break
-        self.assertTrue(found, 'prebuilt cache path log entry not found')
+        self.assertTrue(found, "prebuilt cache path log entry not found")
 
         # Check the host toolchain has a prebuilt cache in the same subdirectory of its swift resource directory
-        prebuilt_path = os.path.join(self.get_toolchain(), 'usr', 'lib', 'swift', expected_suffix)
+        prebuilt_path = os.path.join(
+            self.get_toolchain(), "usr", "lib", "swift", expected_suffix
+        )
         self.assertTrue(len(os.listdir(prebuilt_path)) > 0)
 
     def get_toolchain(self):
@@ -84,14 +93,16 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         # The SDK root is expected to be wihin the Xcode.app/Contents
         # directory. Drop the last path component from the sdkroot until we get
         # up to that level.
-        self.assertTrue('{0}Contents{0}'.format(os.path.sep) in sdkroot)
+        self.assertTrue("{0}Contents{0}".format(os.path.sep) in sdkroot)
         contents = os.path.abspath(sdkroot)
-        while os.path.split(contents)[1] != 'Contents':
-            (contents, _) =  os.path.split(contents)
+        while os.path.split(contents)[1] != "Contents":
+            (contents, _) = os.path.split(contents)
         # Construct the expected path to the default toolchain from there and
         # check it exists.
-        toolchain = os.path.join(contents, 'Developer', 'Toolchains', 'XcodeDefault.xctoolchain')
-        self.assertTrue(os.path.exists(toolchain), 'no default toolchain?')
+        toolchain = os.path.join(
+            contents, "Developer", "Toolchains", "XcodeDefault.xctoolchain"
+        )
+        self.assertTrue(os.path.exists(toolchain), "no default toolchain?")
         return toolchain
 
     def get_sdkroot(self):
@@ -107,25 +118,30 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
 
         # Clear the swift module cache (populated by the Makefile build)
         shutil.rmtree(swift_mod_cache)
-        self.assertFalse(os.path.isdir(swift_mod_cache),
-                         "module cache should not exist")
+        self.assertFalse(
+            os.path.isdir(swift_mod_cache), "module cache should not exist"
+        )
 
         # Update the settings to use the custom module cache location
-        self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
-                    % swift_mod_cache)
+        self.runCmd(
+            'settings set symbols.clang-modules-cache-path "%s"' % swift_mod_cache
+        )
 
         # Set a breakpoint in and launch the main executable
         lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.swift"),
+            self,
+            "break here",
+            lldb.SBFileSpec("main.swift"),
             exe_name=self.getBuildArtifact("main"),
-            extra_images=['AA', 'BB', 'CC'])
+            extra_images=["AA", "BB", "CC"],
+        )
 
         # Check we are able to access the public fields of variables whose
         # types are from the .swiftinterface-only dylibs
         var = self.frame().FindVariable("x")
         lldbutil.check_variable(self, var, False, typename="AA.MyPoint")
 
-        child_y = var.GetChildMemberWithName("y") # MyPoint.y is public
+        child_y = var.GetChildMemberWithName("y")  # MyPoint.y is public
         lldbutil.check_variable(self, child_y, False, value="0")
 
         # MyPoint.x isn't public, but LLDB can find it through type metadata.
@@ -135,17 +151,22 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         # Expression evaluation using types from the .swiftinterface only
         # dylibs should work too
         lldbutil.check_expression(
-            self, self.frame(), "y.magnitudeSquared", "404", use_summary=False)
+            self, self.frame(), "y.magnitudeSquared", "404", use_summary=False
+        )
         lldbutil.check_expression(
-            self, self.frame(), "MyPoint(x: 1, y: 2).magnitudeSquared", "5",
-            use_summary=False)
+            self,
+            self.frame(),
+            "MyPoint(x: 1, y: 2).magnitudeSquared",
+            "5",
+            use_summary=False,
+        )
 
         # Check the swift module cache was populated with the .swiftmodule
         # files of the loaded modules
         self.assertTrue(os.path.isdir(swift_mod_cache), "module cache exists")
-        a_modules = glob.glob(os.path.join(swift_mod_cache, 'AA-*.swiftmodule'))
-        b_modules = glob.glob(os.path.join(swift_mod_cache, 'BB-*.swiftmodule'))
-        c_modules = glob.glob(os.path.join(swift_mod_cache, 'CC-*.swiftmodule'))
+        a_modules = glob.glob(os.path.join(swift_mod_cache, "AA-*.swiftmodule"))
+        b_modules = glob.glob(os.path.join(swift_mod_cache, "BB-*.swiftmodule"))
+        c_modules = glob.glob(os.path.join(swift_mod_cache, "CC-*.swiftmodule"))
         self.assertEqual(len(a_modules), 1)
         self.assertEqual(len(b_modules), 1)
         self.assertEqual(len(c_modules), 0)
@@ -162,34 +183,40 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         # involving types from it
         self.runCmd("expr import CC")
         lldbutil.check_expression(
-            self, self.frame(), "Baz.baz()", "23", use_summary=False)
+            self, self.frame(), "Baz.baz()", "23", use_summary=False
+        )
 
         # Check we still have a single .swiftmodule in the cache for A and B
         # and that there is now one for C too
-        a_modules = glob.glob(os.path.join(swift_mod_cache, 'AA-*.swiftmodule'))
-        b_modules = glob.glob(os.path.join(swift_mod_cache, 'BB-*.swiftmodule'))
-        c_modules = glob.glob(os.path.join(swift_mod_cache, 'CC-*.swiftmodule'))
-        self.assertEqual(len(a_modules), 1,
-                         "unexpected number of swiftmodules for A.swift")
-        self.assertEqual(len(b_modules), 1,
-                         "unexpected number of swiftmodules for B.swift")
-        self.assertEqual(len(c_modules), 1,
-                         "unexpected number of swiftmodules for C.swift")
+        a_modules = glob.glob(os.path.join(swift_mod_cache, "AA-*.swiftmodule"))
+        b_modules = glob.glob(os.path.join(swift_mod_cache, "BB-*.swiftmodule"))
+        c_modules = glob.glob(os.path.join(swift_mod_cache, "CC-*.swiftmodule"))
+        self.assertEqual(
+            len(a_modules), 1, "unexpected number of swiftmodules for A.swift"
+        )
+        self.assertEqual(
+            len(b_modules), 1, "unexpected number of swiftmodules for B.swift"
+        )
+        self.assertEqual(
+            len(c_modules), 1, "unexpected number of swiftmodules for C.swift"
+        )
 
         # Make sure the .swiftmodule files of A and B were re-used rather than
         # re-generated when they were re-imported
         for file in a_modules + b_modules:
-            self.assertTrue(is_old(file),
-                            "Swiftmodule file was regenerated rather than reused")
+            self.assertTrue(
+                is_old(file), "Swiftmodule file was regenerated rather than reused"
+            )
 
 
-OLD_TIMESTAMP = 1390550700 # 2014-01-24T08:05:00+00:00
+OLD_TIMESTAMP = 1390550700  # 2014-01-24T08:05:00+00:00
+
 
 def make_old(file):
     """Sets the access and modified time of the given file to a time long past"""
     os.utime(file, (OLD_TIMESTAMP, OLD_TIMESTAMP))
 
+
 def is_old(file):
     """Checks the modified time of the given file matches the timestamp set my make_old"""
     return os.stat(file).st_mtime == OLD_TIMESTAMP
-

@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
@@ -21,9 +20,9 @@ class TestCase(TestBase):
         """
         self.build()
 
-        lldbutil.run_to_source_breakpoint(self,
-                                          "// Set break point at this line.",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", lldb.SBFileSpec("main.cpp")
+        )
 
         children = [
             ValueCheck(value="3"),
@@ -34,47 +33,64 @@ class TestCase(TestBase):
         vector_type = "std::vector<int>"
 
         # First muddy the scratch AST with non-C++ module types.
-        self.expect_expr("a", result_type=vector_type,
-                         result_children=children)
-        self.expect_expr("dbg_info_vec",
-                         result_type="std::vector<DbgInfoClass>",
-                         result_children=[
-            ValueCheck(type="DbgInfoClass", children=[
-                ValueCheck(name="ints", type=vector_type, children=[
-                    ValueCheck(value="1")
-                ])
-            ])
-        ])
+        self.expect_expr("a", result_type=vector_type, result_children=children)
+        self.expect_expr(
+            "dbg_info_vec",
+            result_type="std::vector<DbgInfoClass>",
+            result_children=[
+                ValueCheck(
+                    type="DbgInfoClass",
+                    children=[
+                        ValueCheck(
+                            name="ints",
+                            type=vector_type,
+                            children=[ValueCheck(value="1")],
+                        )
+                    ],
+                )
+            ],
+        )
 
         # Enable the C++ module import and get the module vector type.
         self.runCmd("settings set target.import-std-module true")
-        self.expect_expr("a", result_type=vector_type,
-                         result_children=children)
+        self.expect_expr("a", result_type=vector_type, result_children=children)
 
         # Test mixed debug info/module types
-        self.expect_expr("dbg_info_vec",
-                         result_type="std::vector<DbgInfoClass>",
-                         result_children=[
-            ValueCheck(type="DbgInfoClass", children=[
-                ValueCheck(name="ints", type=vector_type, children=[
-                    ValueCheck(value="1")
-                ])
-            ])
-        ])
-
+        self.expect_expr(
+            "dbg_info_vec",
+            result_type="std::vector<DbgInfoClass>",
+            result_children=[
+                ValueCheck(
+                    type="DbgInfoClass",
+                    children=[
+                        ValueCheck(
+                            name="ints",
+                            type=vector_type,
+                            children=[ValueCheck(value="1")],
+                        )
+                    ],
+                )
+            ],
+        )
 
         # Turn off the C++ module import and use debug info types again.
         self.runCmd("settings set target.import-std-module false")
-        self.expect_expr("a", result_type=vector_type,
-                         result_children=children)
+        self.expect_expr("a", result_type=vector_type, result_children=children)
 
         # Test the types that were previoiusly mixed debug info/module types.
-        self.expect_expr("dbg_info_vec",
-                         result_type="std::vector<DbgInfoClass>",
-                         result_children=[
-            ValueCheck(type="DbgInfoClass", children=[
-                ValueCheck(name="ints", type=vector_type, children=[
-                    ValueCheck(value="1")
-                ])
-            ])
-        ])
+        self.expect_expr(
+            "dbg_info_vec",
+            result_type="std::vector<DbgInfoClass>",
+            result_children=[
+                ValueCheck(
+                    type="DbgInfoClass",
+                    children=[
+                        ValueCheck(
+                            name="ints",
+                            type=vector_type,
+                            children=[ValueCheck(value="1")],
+                        )
+                    ],
+                )
+            ],
+        )

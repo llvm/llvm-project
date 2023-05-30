@@ -22,7 +22,6 @@ import json
 
 
 class AsanSwiftTestCase(lldbtest.TestBase):
-
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
@@ -36,8 +35,7 @@ class AsanSwiftTestCase(lldbtest.TestBase):
         lldbtest.TestBase.setUp(self)
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
-        self.line_breakpoint = lldbtest.line_number(
-            self.main_source, '// breakpoint')
+        self.line_breakpoint = lldbtest.line_number(self.main_source, "// breakpoint")
 
     def do_test(self):
         exe_name = "a.out"
@@ -51,44 +49,51 @@ class AsanSwiftTestCase(lldbtest.TestBase):
         for m in target.module_iter():
             libspec = m.GetFileSpec()
             if "clang_rt" in libspec.GetFilename():
-                runtimes.append(os.path.join(libspec.GetDirectory(), libspec.GetFilename()))
+                runtimes.append(
+                    os.path.join(libspec.GetDirectory(), libspec.GetFilename())
+                )
         self.registerSharedLibrariesWithTarget(target, runtimes)
 
         self.runCmd(
-            "breakpoint set -f %s -l %d" %
-            (self.main_source, self.line_breakpoint))
+            "breakpoint set -f %s -l %d" % (self.main_source, self.line_breakpoint)
+        )
 
         self.runCmd("run")
 
-        stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        stop_reason = (
+            self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        )
         if stop_reason == lldb.eStopReasonExec:
             # On OS X 10.10 and older, we need to re-exec to enable
             # interceptors.
             self.runCmd("continue")
 
         # the stop reason of the thread should be breakpoint.
-        self.expect("thread list", lldbtest.STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped', 'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            lldbtest.STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         self.expect(
             "memory history `ptr`",
-            substrs=[
-                'Memory allocated by Thread 1',
-                'main.swift'])
+            substrs=["Memory allocated by Thread 1", "main.swift"],
+        )
 
         # ASan will break when a report occurs and we'll try the API then
         self.runCmd("continue")
 
         # the stop reason of the thread should be a ASan report.
-        self.expect("thread list", "Heap buffer overflow", substrs=[
-                    'stopped', 'stop reason = Heap buffer overflow'])
+        self.expect(
+            "thread list",
+            "Heap buffer overflow",
+            substrs=["stopped", "stop reason = Heap buffer overflow"],
+        )
 
         process = self.dbg.GetSelectedTarget().process
         thread = process.GetSelectedThread()
 
-        self.assertEqual(
-            thread.GetStopReason(),
-            lldb.eStopReasonInstrumentation)
+        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonInstrumentation)
 
         for i in range(0, thread.GetNumFrames()):
             frame = thread.GetFrameAtIndex(i)
@@ -98,6 +103,5 @@ class AsanSwiftTestCase(lldbtest.TestBase):
 
         self.expect(
             "memory history `ptr`",
-            substrs=[
-                'Memory allocated by Thread 1',
-                'main.swift'])
+            substrs=["Memory allocated by Thread 1", "main.swift"],
+        )

@@ -17,7 +17,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestLastLineAssignmentLog(repl.PlaygroundREPLTest):
-
     mydir = repl.PlaygroundREPLTest.compute_mydir(__file__)
 
     def do_test(self):

@@ -18,7 +18,6 @@ import unittest2
 
 
 class TestSwiftUnknownSelf(lldbtest.TestBase):
-
     def check_class(self, var_self, weak):
         self.expect("v self", substrs=["hello", "world"])
         lldbutil.check_variable(self, var_self, num_children=2)
@@ -31,18 +30,19 @@ class TestSwiftUnknownSelf(lldbtest.TestBase):
         lldbutil.check_variable(self, m_string, summary='"world"')
         # Also check the expression evaluator.
         self.expect("expr self", substrs=["hello", "world"])
-        self.expect("expr self%s.base_string"%("!" if weak else ""),
-                    substrs=["hello"])
+        self.expect(
+            "expr self%s.base_string" % ("!" if weak else ""), substrs=["hello"]
+        )
 
-
-    @skipIf(bugnumber="SR-10216", archs=['ppc64le'])
+    @skipIf(bugnumber="SR-10216", archs=["ppc64le"])
     @swiftTest
     @skipUnlessFoundation
     def test_unknown_self_objc_ref(self):
         """Test unknown references to Objective-C objects."""
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
 
         for i in range(2):
             self.assertTrue(thread.GetStopReason() == lldb.eStopReasonBreakpoint)
@@ -59,5 +59,3 @@ class TestSwiftUnknownSelf(lldbtest.TestBase):
             process.Continue()
 
         self.assertTrue(thread.GetStopReason() != lldb.eStopReasonBreakpoint)
-
-

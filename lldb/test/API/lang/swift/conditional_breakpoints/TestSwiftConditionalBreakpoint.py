@@ -20,7 +20,6 @@ import unittest2
 
 
 class TestSwiftConditionalBreakpoint(TestBase):
-
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
@@ -35,31 +34,31 @@ class TestSwiftConditionalBreakpoint(TestBase):
     def check_x_and_y(self, frame, x, y):
         x_var = frame.FindVariable("x")
         y_var = frame.FindVariable("y")
-        
+
         lldbutil.check_variable(self, x_var, value=x)
         lldbutil.check_variable(self, y_var, value=y)
-        
+
     def break_commands(self):
         """Tests that we can set a conditional breakpoint in Swift code"""
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "Set breakpoint here", lldb.SBFileSpec("main.swift"))
+            self, "Set breakpoint here", lldb.SBFileSpec("main.swift")
+        )
 
         bkpt.SetCondition("x==y")
-        
+
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertEqual(len(threads), 1, "Hit conditional breakpoint - first time")
 
-        self.check_x_and_y(threads[0].frames[0], '5', '5')
-        
+        self.check_x_and_y(threads[0].frames[0], "5", "5")
+
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertEqual(len(threads), 1, "Hit conditional breakpoint - second time")
 
-        self.check_x_and_y(threads[0].frames[0], '6', '6')
+        self.check_x_and_y(threads[0].frames[0], "6", "6")
 
-        bkpt.SetCondition('x>y')
+        bkpt.SetCondition("x>y")
 
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertEqual(len(threads), 1, "Hit conditional breakpoint - third time")
 
-        self.check_x_and_y(threads[0].frames[0], '3', '1')
-
+        self.check_x_and_y(threads[0].frames[0], "3", "1")
