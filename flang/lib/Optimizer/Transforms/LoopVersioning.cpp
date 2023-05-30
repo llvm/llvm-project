@@ -73,7 +73,6 @@ namespace {
 
 class LoopVersioningPass
     : public fir::impl::LoopVersioningBase<LoopVersioningPass> {
-
 public:
   void runOnOperation() override;
 };
@@ -105,6 +104,7 @@ void LoopVersioningPass::runOnOperation() {
   struct ArgInfo {
     mlir::Value *arg;
     size_t size;
+    unsigned rank;
     fir::BoxDimsOp dims[CFI_MAX_RANK];
   };
 
@@ -114,13 +114,11 @@ void LoopVersioningPass::runOnOperation() {
   mlir::Block::BlockArgListType args = func.getArguments();
   mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
   fir::KindMapping kindMap = fir::getKindMapping(module);
-  mlir::SmallVector<ArgInfo> argsOfInterest;
+  mlir::SmallVector<ArgInfo, 4> argsOfInterest;
   for (auto &arg : args) {
     if (auto seqTy = getAsSequenceType(&arg)) {
       unsigned rank = seqTy.getDimension();
-      // Currently limited to 1D or 2D arrays as that seems to give good
-      // improvement without excessive increase in code-size, etc.
-      if (rank > 0 && rank < 3 &&
+      if (rank > 0 &&
           seqTy.getShape()[0] == fir::SequenceType::getUnknownExtent()) {
         size_t typeSize = 0;
         mlir::Type elementType = fir::unwrapSeqOrBoxedSeqType(arg.getType());
@@ -130,12 +128,9 @@ void LoopVersioningPass::runOnOperation() {
         else if (auto cty = elementType.dyn_cast<fir::ComplexType>())
           typeSize = 2 * cty.getEleType(kindMap).getIntOrFloatBitWidth() / 8;
         if (typeSize)
-          argsOfInterest.push_back({&arg, typeSize, {}});
+          argsOfInterest.push_back({&arg, typeSize, rank, {}});
         else
           LLVM_DEBUG(llvm::dbgs() << "Type not supported\n");
-
-      } else {
-        LLVM_DEBUG(llvm::dbgs() << "Too many dimensions\n");
       }
     }
   }
@@ -145,14 +140,14 @@ void LoopVersioningPass::runOnOperation() {
 
   struct OpsWithArgs {
     mlir::Operation *op;
-    mlir::SmallVector<ArgInfo> argsAndDims;
+    mlir::SmallVector<ArgInfo, 4> argsAndDims;
   };
   // Now see if those arguments are used inside any loop.
   mlir::SmallVector<OpsWithArgs, 4> loopsOfInterest;
 
   func.walk([&](fir::DoLoopOp loop) {
     mlir::Block &body = *loop.getBody();
-    mlir::SmallVector<ArgInfo> argsInLoop;
+    mlir::SmallVector<ArgInfo, 4> argsInLoop;
     body.walk([&](fir::CoordinateOp op) {
       // The current operation could be inside another loop than
       // the one we're currently processing. Skip it, we'll get
@@ -199,16 +194,16 @@ void LoopVersioningPass::runOnOperation() {
     mlir::Value allCompares = nullptr;
     // Ensure all of the arrays are unit-stride.
     for (auto &arg : op.argsAndDims) {
-
-      fir::SequenceType seqTy = getAsSequenceType(arg.arg);
-      unsigned rank = seqTy.getDimension();
-
-      // We only care about lowest order dimension.
-      for (unsigned i = 0; i < rank; i++) {
+      // Fetch all the dimensions of the array, except the last dimension.
+      // Always fetch the first dimension, however, so set ndims = 1 if
+      // we have one dim
+      unsigned ndims = arg.rank;
+      for (unsigned i = 0; i < ndims; i++) {
         mlir::Value dimIdx = builder.createIntegerConstant(loc, idxTy, i);
         arg.dims[i] = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
                                                      *arg.arg, dimIdx);
       }
+      // We only care about lowest order dimension, here.
       mlir::Value elemSize =
           builder.createIntegerConstant(loc, idxTy, arg.size);
       mlir::Value cmp = builder.create<mlir::arith::CmpIOp>(
@@ -245,25 +240,41 @@ void LoopVersioningPass::runOnOperation() {
         // Reduce the multi-dimensioned index to a single index.
         // This is required becase fir arrays do not support multiple dimensions
         // with unknown dimensions at compile time.
+        // We then calculate the multidimensional array like this:
+        // arr(x, y, z) bedcomes arr(z * stride(2) + y * stride(1) + x)
+        // where stride is the distance between elements in the dimensions
+        // 0, 1 and 2 or x, y and z.
         if (coop->getOperand(0) == *arg.arg &&
             coop->getOperands().size() >= 2) {
           builder.setInsertionPoint(coop);
-          mlir::Value totalIndex = builder.createIntegerConstant(loc, idxTy, 0);
-          // Operand(1) = array; Operand(2) = index1; Operand(3) = index2
-          for (unsigned i = coop->getOperands().size() - 1; i > 1; i--) {
+          mlir::Value totalIndex;
+          for (unsigned i = arg.rank - 1; i > 0; i--) {
+            // Operand(1) = array; Operand(2) = index1; Operand(3) = index2
             mlir::Value curIndex =
-                builder.createConvert(loc, idxTy, coop->getOperand(i));
-            // First arg is Operand2, so dims[i-2] is 0-based i-1!
+                builder.createConvert(loc, idxTy, coop->getOperand(i + 1));
+            // Multiply by the stride of this array. Later we'll divide by the
+            // element size.
             mlir::Value scale =
-                builder.createConvert(loc, idxTy, arg.dims[i - 2].getResult(1));
-            totalIndex = builder.create<mlir::arith::AddIOp>(
-                loc, totalIndex,
-                builder.create<mlir::arith::MulIOp>(loc, scale, curIndex));
+                builder.createConvert(loc, idxTy, arg.dims[i].getResult(2));
+            curIndex =
+                builder.create<mlir::arith::MulIOp>(loc, scale, curIndex);
+            totalIndex = (totalIndex) ? builder.create<mlir::arith::AddIOp>(
+                                            loc, curIndex, totalIndex)
+                                      : curIndex;
           }
-          totalIndex = builder.create<mlir::arith::AddIOp>(
-              loc, totalIndex,
-              builder.createConvert(loc, idxTy, coop->getOperand(1)));
-
+          mlir::Value elemSize =
+              builder.createIntegerConstant(loc, idxTy, arg.size);
+          // This is the lowest dimension - which doesn't need scaling
+          mlir::Value finalIndex =
+              builder.createConvert(loc, idxTy, coop->getOperand(1));
+          if (totalIndex) {
+            totalIndex = builder.create<mlir::arith::AddIOp>(
+                loc,
+                builder.create<mlir::arith::DivSIOp>(loc, totalIndex, elemSize),
+                finalIndex);
+          } else {
+            totalIndex = finalIndex;
+          }
           auto newOp = builder.create<fir::CoordinateOp>(
               loc, builder.getRefType(elementType), caddr,
               mlir::ValueRange{totalIndex});
