@@ -181,7 +181,7 @@ OptionalFileEntryRef ModuleMap::findHeader(
     Module *M, const Module::UnresolvedHeaderDirective &Header,
     SmallVectorImpl<char> &RelativePathName, bool &NeedsFramework) {
   // Search for the header file within the module's home directory.
-  auto *Directory = M->Directory;
+  auto Directory = M->Directory;
   SmallString<128> FullPathName(Directory->getName());
 
   auto GetFile = [&](StringRef Filename) -> OptionalFileEntryRef {
