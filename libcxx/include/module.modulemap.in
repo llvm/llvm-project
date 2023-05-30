@@ -338,6 +338,9 @@ module std [system] {
       module pstl_backends_cpu_backends_for_each {
         private header "__algorithm/pstl_backends/cpu_backends/for_each.h"
       }
+      module pstl_backends_cpu_backends_merge {
+        private header "__algorithm/pstl_backends/cpu_backends/merge.h"
+      }
       module pstl_backends_cpu_backends_serial {
         private header "__algorithm/pstl_backends/cpu_backends/serial.h"
       }
