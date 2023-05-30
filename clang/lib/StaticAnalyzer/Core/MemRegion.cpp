@@ -1279,7 +1279,7 @@ const MemSpaceRegion *MemRegion::getMemorySpace() const {
     SR = dyn_cast<SubRegion>(R);
   }
 
-  return dyn_cast<MemSpaceRegion>(R);
+  return cast<MemSpaceRegion>(R);
 }
 
 bool MemRegion::hasStackStorage() const {
