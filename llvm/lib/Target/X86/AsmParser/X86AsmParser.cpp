@@ -2315,7 +2315,8 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
   // .Imm gets lexed as a real.
   if (Tok.is(AsmToken::Real)) {
     APInt DotDisp;
-    DotDispStr.getAsInteger(10, DotDisp);
+    if (DotDispStr.getAsInteger(10, DotDisp))
+      return Error(Tok.getLoc(), "Unexpected offset");
     Info.Offset = DotDisp.getZExtValue();
   } else if ((isParsingMSInlineAsm() || getParser().isParsingMasm()) &&
              Tok.is(AsmToken::Identifier)) {
