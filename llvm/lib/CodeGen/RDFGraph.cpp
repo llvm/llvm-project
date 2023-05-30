@@ -924,8 +924,7 @@ void DataFlowGraph::build(unsigned Options) {
   }
 
   // Add function-entry phi nodes for the live-in registers.
-  for (auto I = LiveIns.rr_begin(), E = LiveIns.rr_end(); I != E; ++I) {
-    RegisterRef RR = *I;
+  for (RegisterRef RR : LiveIns.refs()) {
     NodeAddr<PhiNode *> PA = newPhi(EA);
     uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
     NodeAddr<DefNode *> DA = newDef(PA, RR, PhiFlags);
@@ -950,8 +949,7 @@ void DataFlowGraph::build(unsigned Options) {
         Preds.push_back(findBlock(PB));
 
       // Build phi nodes for each live-in.
-      for (auto I = EHRegs.rr_begin(), E = EHRegs.rr_end(); I != E; ++I) {
-        RegisterRef RR = *I;
+      for (RegisterRef RR : EHRegs.refs()) {
         NodeAddr<PhiNode *> PA = newPhi(BA);
         uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
         // Add def:
@@ -1442,8 +1440,7 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, RegisterSet &AllRefs,
   const RegisterAggr &Defs = PhiM[BA.Id];
   uint16_t PhiFlags = NodeAttrs::PhiRef | NodeAttrs::Preserving;
 
-  for (auto I = Defs.rr_begin(), E = Defs.rr_end(); I != E; ++I) {
-    RegisterRef RR = *I;
+  for (RegisterRef RR : Defs.refs()) {
     NodeAddr<PhiNode *> PA = newPhi(BA);
     PA.Addr->addMember(newDef(PA, RR, PhiFlags), *this);
 
