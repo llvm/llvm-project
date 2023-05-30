@@ -342,3 +342,25 @@ transform.sequence failures(propagate) {
   // expected-error @below {{uses a handle associated with empty payload and invalidated by a previously executed transform op}}
   transform.test_print_remark_at_operand %0, "remark" : !transform.any_op
 }
+
+// -----
+
+// Make sure we properly report a use-after-consume error when repeated handles
+// are allowed in the consuming op. We still want to report handles consumed by
+// _previous_ operations, just not by this one. To bypass the quick static check
+// of repeated consumption, create a handle to the transform operation and
+// invalidate the handle to the root module thus invalidating all other handles.
+
+// expected-note @below {{ancestor payload op}}
+module {
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-note @below {{handle to invalidated ops}}
+    // expected-note @below {{nested payload op}}
+    %0 = transform.test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+    // expected-note @below {{invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them}}
+    transform.test_consume_operand %arg0 : !transform.any_op
+    // expected-error @below {{uses a handle invalidated by a previously executed transform op}}
+    transform.test_consume_operand %0 { allow_repeated_handles } : !transform.any_op
+  }
+}

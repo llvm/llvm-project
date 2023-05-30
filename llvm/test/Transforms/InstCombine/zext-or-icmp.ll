@@ -251,7 +251,7 @@ define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1
 ; CHECK-NEXT:    store i32 [[SROA38]], ptr [[D]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[INSERT_INSERT41]], [[CONV19]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[R]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[R]]
 ;
 entry:
   br label %for.cond

@@ -1421,6 +1421,7 @@ int OnExit() {
   } while (false)
 
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
+#include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 static uptr signal_impl(int signo, uptr cb);

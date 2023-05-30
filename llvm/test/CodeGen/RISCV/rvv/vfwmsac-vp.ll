@@ -7,6 +7,7 @@
 declare <vscale x 1 x float> @llvm.vp.fma.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x i1>, i32)
 declare <vscale x 1 x float> @llvm.vp.fneg.nxv1f32(<vscale x 1 x float>, <vscale x 1 x i1>, i32)
 declare <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half>, <vscale x 1 x i1>, i32)
+declare <vscale x 1 x float> @llvm.vp.merge.nxv1f32(<vscale x 1 x i1>, <vscale x 1 x float>, <vscale x 1 x float>, i32)
 
 define <vscale x 1 x float> @vmfsac_vv_nxv1f32(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmfsac_vv_nxv1f32:
@@ -36,6 +37,40 @@ define <vscale x 1 x float> @vmfsac_vv_nxv1f32_unmasked(<vscale x 1 x half> %a, 
   %negc = call <vscale x 1 x float> @llvm.vp.fneg.nxv1f32(<vscale x 1 x float> %c, <vscale x 1 x i1> %allones, i32 %evl)
   %v = call <vscale x 1 x float> @llvm.vp.fma.nxv1f32(<vscale x 1 x float> %aext, <vscale x 1 x float> %bext, <vscale x 1 x float> %negc, <vscale x 1 x i1> %allones, i32 %evl)
   ret <vscale x 1 x float> %v
+}
+
+define <vscale x 1 x float> @vmfsac_vv_nxv1f32_tu(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vmfsac_vv_nxv1f32_tu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; CHECK-NEXT:    vfwmsac.vv v10, v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
+  %allones = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
+  %aext = call <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half> %a, <vscale x 1 x i1> %allones, i32 %evl)
+  %bext = call <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half> %b, <vscale x 1 x i1> %allones, i32 %evl)
+  %negc = call <vscale x 1 x float> @llvm.vp.fneg.nxv1f32(<vscale x 1 x float> %c, <vscale x 1 x i1> %allones, i32 %evl)
+  %v = call <vscale x 1 x float> @llvm.vp.fma.nxv1f32(<vscale x 1 x float> %aext, <vscale x 1 x float> %bext, <vscale x 1 x float> %negc, <vscale x 1 x i1> %allones, i32 %evl)
+  %u = call <vscale x 1 x float> @llvm.vp.merge.nxv1f32(<vscale x 1 x i1> %m, <vscale x 1 x float> %v, <vscale x 1 x float> %c, i32 %evl)
+  ret <vscale x 1 x float> %u
+}
+
+define <vscale x 1 x float> @vmfsac_vv_nxv1f32_unmasked_tu(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x float> %c, i32 zeroext %evl) {
+; CHECK-LABEL: vmfsac_vv_nxv1f32_unmasked_tu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
+; CHECK-NEXT:    vfwmsac.vv v10, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
+  %allones = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
+  %aext = call <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half> %a, <vscale x 1 x i1> %allones, i32 %evl)
+  %bext = call <vscale x 1 x float> @llvm.vp.fpext.nxv1f32.nxv1f16(<vscale x 1 x half> %b, <vscale x 1 x i1> %allones, i32 %evl)
+  %negc = call <vscale x 1 x float> @llvm.vp.fneg.nxv1f32(<vscale x 1 x float> %c, <vscale x 1 x i1> %allones, i32 %evl)
+  %v = call <vscale x 1 x float> @llvm.vp.fma.nxv1f32(<vscale x 1 x float> %aext, <vscale x 1 x float> %bext, <vscale x 1 x float> %negc, <vscale x 1 x i1> %allones, i32 %evl)
+  %u = call <vscale x 1 x float> @llvm.vp.merge.nxv1f32(<vscale x 1 x i1> %allones, <vscale x 1 x float> %v, <vscale x 1 x float> %c, i32 %evl)
+  ret <vscale x 1 x float> %u
 }
 
 define <vscale x 1 x float> @vmfsac_vf_nxv1f32(<vscale x 1 x half> %a, half %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {

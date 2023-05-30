@@ -188,10 +188,10 @@ if(LLVM_ENABLE_PIC)
     endif()
 
     # We need the libcuda.so library.
-    find_library(CUDA_RUNTIME_LIBRARY cuda)
+    find_library(CUDA_RUNTIME_LIBRARY cuda HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES} REQUIRED)
 
     # We need the libcusparse.so library.
-    find_library(CUDA_CUSPARSE_LIBRARY cusparse HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+    find_library(CUDA_CUSPARSE_LIBRARY cusparse HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES} REQUIRED)
 
     add_mlir_library(mlir_cuda_runtime
       SHARED

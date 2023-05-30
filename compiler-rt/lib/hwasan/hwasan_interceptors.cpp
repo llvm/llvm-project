@@ -216,6 +216,7 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
         return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);   \
       } while (false)
 
+#    include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"
 #    include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 struct ThreadStartArg {
@@ -224,8 +225,8 @@ struct ThreadStartArg {
 
 static void *HwasanThreadStartFunc(void *arg) {
   __hwasan_thread_enter();
-  ThreadStartArg A = *reinterpret_cast<ThreadStartArg *>(arg);
-  SetSigProcMask(&A.starting_sigset_, nullptr);
+  SetSigProcMask(&reinterpret_cast<ThreadStartArg *>(arg)->starting_sigset_,
+                 nullptr);
   InternalFree(arg);
   auto self = GetThreadSelf();
   auto args = hwasanThreadArgRetval().GetArgs(self);

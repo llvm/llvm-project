@@ -4039,7 +4039,6 @@ cc_library(
         ":BytecodeOpInterfaceIncGen",
         ":IR",
         ":Support",
-        "//llvm:CodeGen",
         "//llvm:Support",
     ],
 )
@@ -6836,7 +6835,6 @@ cc_library(
         ":BytecodeOpInterfaceIncGen",
         ":IR",
         ":Support",
-        "//llvm:CodeGen",
         "//llvm:Support",
     ],
 )

@@ -613,6 +613,13 @@ define void @expect_with_probability(i16 %0) {
   ret void
 }
 
+; CHECK-LABEL: llvm.func @threadlocal_test
+define void @threadlocal_test(ptr %0) {
+  ; CHECK: "llvm.intr.threadlocal.address"(%{{.*}}) : (!llvm.ptr) -> !llvm.ptr
+  %local = call ptr @llvm.threadlocal.address.p0(ptr %0)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @coro_id
 define void @coro_id(i32 %0, ptr %1) {
   ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
@@ -955,6 +962,7 @@ declare <8 x i32> @llvm.ushl.sat.v8i32(<8 x i32>, <8 x i32>)
 declare i1 @llvm.is.constant.i32(i32)
 declare i32 @llvm.expect.i32(i32, i32)
 declare i16 @llvm.expect.with.probability.i16(i16, i16, double immarg)
+declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare i64 @llvm.coro.size.i64()
