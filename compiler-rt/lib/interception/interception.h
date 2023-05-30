@@ -14,6 +14,7 @@
 #ifndef INTERCEPTION_H
 #define INTERCEPTION_H
 
+#include "sanitizer_common/sanitizer_asm.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
 #if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_APPLE &&      \
@@ -67,24 +68,50 @@ typedef __sanitizer::OFF64_T OFF64_T;
 //           for more details). To intercept such functions you need to use the
 //           INTERCEPTOR_WITH_SUFFIX(...) macro.
 
-// How it works:
-// To replace system functions on Linux we just need to declare functions
-// with same names in our library and then obtain the real function pointers
-// using dlsym().
-// There is one complication. A user may also intercept some of the functions
-// we intercept. To resolve this we declare our interceptors with __interceptor_
-// prefix, and then make actual interceptors weak aliases to __interceptor_
-// functions.
+// How it works on Linux
+// ---------------------
 //
-// This is not so on Mac OS, where the two-level namespace makes
-// our replacement functions invisible to other libraries. This may be overcomed
-// using the DYLD_FORCE_FLAT_NAMESPACE, but some errors loading the shared
-// libraries in Chromium were noticed when doing so.
+// To replace system functions on Linux we just need to declare functions with
+// the same names in our library and then obtain the real function pointers
+// using dlsym().
+//
+// There is one complication: a user may also intercept some of the functions we
+// intercept. To allow for up to 3 interceptors (including ours) of a given
+// function "func", the interceptor implementation is in ___interceptor_func,
+// which is aliased by a weak function __interceptor_func, which in turn is
+// aliased (via a trampoline) by weak wrapper function "func".
+//
+// Most user interceptors should define a foreign interceptor as follows:
+//
+//  - provide a non-weak function "func" that performs interception;
+//  - if __interceptor_func exists, call it to perform the real functionality;
+//  - if it does not exist, figure out the real function and call it instead.
+//
+// In rare cases, a foreign interceptor (of another dynamic analysis runtime)
+// may be defined as follows:
+//
+//  - provide a non-weak function __interceptor_func that performs interception;
+//  - if ___interceptor_func exists, call it to perform the real functionality;
+//  - if it does not exist, figure out the real function and call it instead;
+//  - provide a weak function "func" that is an alias to __interceptor_func.
+//
+// With this protocol, sanitizer interceptors, foreign user interceptors, and
+// foreign interceptors of other dynamic analysis runtimes, or any combination
+// thereof, may co-exist simultaneously.
+//
+// How it works on Mac OS
+// ----------------------
+//
+// This is not so on Mac OS, where the two-level namespace makes our replacement
+// functions invisible to other libraries. This may be overcomed using the
+// DYLD_FORCE_FLAT_NAMESPACE, but some errors loading the shared libraries in
+// Chromium were noticed when doing so.
+//
 // Instead we create a dylib containing a __DATA,__interpose section that
 // associates library functions with their wrappers. When this dylib is
-// preloaded before an executable using DYLD_INSERT_LIBRARIES, it routes all
-// the calls to interposed functions done through stubs to the wrapper
-// functions.
+// preloaded before an executable using DYLD_INSERT_LIBRARIES, it routes all the
+// calls to interposed functions done through stubs to the wrapper functions.
+//
 // As it's decided at compile time which functions are to be intercepted on Mac,
 // INTERCEPT_FUNCTION() is effectively a no-op on this system.
 
@@ -131,20 +158,54 @@ const interpose_substitution substitution_##func_name[] \
 # define DECLARE_WRAPPER_WINAPI(ret_type, func, ...) \
     extern "C" __declspec(dllimport) ret_type __stdcall func(__VA_ARGS__);
 #elif !SANITIZER_FUCHSIA  // LINUX, FREEBSD, NETBSD, SOLARIS
-# define WRAP(x) __interceptor_ ## x
-# define TRAMPOLINE(x) WRAP(x)
+# define WRAP(x) ___interceptor_ ## x
+# define TRAMPOLINE(x) __interceptor_trampoline_ ## x
 # define INTERCEPTOR_ATTRIBUTE __attribute__((visibility("default")))
 # if SANITIZER_FREEBSD || SANITIZER_NETBSD
 // FreeBSD's dynamic linker (incompliantly) gives non-weak symbols higher
 // priority than weak ones so weak aliases won't work for indirect calls
 // in position-independent (-fPIC / -fPIE) mode.
-# define OVERRIDE_ATTRIBUTE
+#  define __ASM_WEAK_WRAPPER(func)
 # else  // SANITIZER_FREEBSD || SANITIZER_NETBSD
-# define OVERRIDE_ATTRIBUTE __attribute__((weak))
+#  define __ASM_WEAK_WRAPPER(func) ".weak " #func "\n"
 # endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
+//
+// Note: Weak aliases of weak aliases do not work, therefore we need to set up a
+// trampoline function. The function "func" is a weak alias to the trampoline
+// (so that we may check if "func" was overridden), which calls the weak
+// function __interceptor_func, which in turn aliases the actual interceptor
+// implementation ___interceptor_func:
+//
+//    [wrapper "func": weak] --(alias)--> [TRAMPOLINE(func)]
+//                                                |
+//                     +--------(tail call)-------+
+//                     |
+//                     v
+//      [__interceptor_func: weak] --(alias)--> [WRAP(func)]
+//
+// We use inline assembly to define most of this, because not all compilers
+// support functions with the "naked" attribute with every architecture.
+//
 # define DECLARE_WRAPPER(ret_type, func, ...)                                  \
-    extern "C" ret_type func(__VA_ARGS__) INTERCEPTOR_ATTRIBUTE                \
-      OVERRIDE_ATTRIBUTE ALIAS(WRAP(func));
+    extern "C" ret_type func(__VA_ARGS__);                                     \
+    extern "C" ret_type TRAMPOLINE(func)(__VA_ARGS__);                         \
+    extern "C" ret_type __interceptor_##func(__VA_ARGS__)                      \
+      INTERCEPTOR_ATTRIBUTE __attribute__((weak)) ALIAS(WRAP(func));           \
+    asm(                                                                       \
+      ".text\n"                                                                \
+      __ASM_WEAK_WRAPPER(func)                                                 \
+      ".set " #func ", " SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"            \
+      ".globl " SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                     \
+      ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", @function\n"          \
+      SANITIZER_STRINGIFY(TRAMPOLINE(func)) ":\n"                              \
+      SANITIZER_STRINGIFY(CFI_STARTPROC) "\n"                                  \
+      ASM_INL_PPC64_GLOBALENTRY(SANITIZER_STRINGIFY(TRAMPOLINE(func)))         \
+      SANITIZER_STRINGIFY(ASM_TAIL_CALL) " __interceptor_"                     \
+        SANITIZER_STRINGIFY(ASM_PREEMPTIBLE_SYM(func)) "\n"                    \
+      SANITIZER_STRINGIFY(CFI_ENDPROC) "\n"                                    \
+      ".size  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                     \
+           ".-" SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                     \
+    );
 #endif
 
 #if SANITIZER_FUCHSIA
