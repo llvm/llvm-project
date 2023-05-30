@@ -354,6 +354,12 @@ public:
   /// option id.
   void ClaimAllArgs(OptSpecifier Id0) const;
 
+  template <typename... OptSpecifiers>
+  void claimAllArgs(OptSpecifiers... Ids) const {
+    for (Arg *A : filtered(Ids...))
+      A->claim();
+  }
+
   /// ClaimAllArgs - Claim all arguments.
   ///
   void ClaimAllArgs() const;
