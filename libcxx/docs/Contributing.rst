@@ -48,7 +48,6 @@ sure you don't forget anything:
 
   - Did you add it to ``include/module.modulemap.in``?
   - Did you add it to ``include/CMakeLists.txt``?
-  - If it's a public header, did you add a test under ``test/libcxx`` that the new header defines ``_LIBCPP_VERSION``? See ``test/libcxx/algorithms/version.pass.cpp`` for an example. NOTE: This should be automated.
   - If it's a public header, did you update ``utils/generate_header_inclusion_tests.py``?
 
 - Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
