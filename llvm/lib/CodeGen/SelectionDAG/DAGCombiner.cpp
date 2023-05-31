@@ -604,6 +604,7 @@ namespace {
     SDValue combineRepeatedFPDivisors(SDNode *N);
     SDValue mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex);
     SDValue combineInsertEltToShuffle(SDNode *N, unsigned InsIndex);
+    SDValue combineInsertEltToLoad(SDNode *N, unsigned InsIndex);
     SDValue ConstantFoldBITCASTofBUILD_VECTOR(SDNode *, EVT);
     SDValue BuildSDIV(SDNode *N);
     SDValue BuildSDIVPow2(SDNode *N);
@@ -20952,6 +20953,99 @@ SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
   return DAG.getBitcast(VT, Shuf);
 }
 
+// Combine insert(shuffle(load, <u,0,1,2>), load, 0) into a single load if
+// possible and the new load will be quick. We use more loads but less shuffles
+// and inserts.
+SDValue DAGCombiner::combineInsertEltToLoad(SDNode *N, unsigned InsIndex) {
+  EVT VT = N->getValueType(0);
+
+  // InsIndex is expected to be the first of last lane.
+  if (!VT.isFixedLengthVector() ||
+      (InsIndex != 0 && InsIndex != VT.getVectorNumElements() - 1))
+    return SDValue();
+
+  // Look for a shuffle with the mask u,0,1,2,3,4,5,6 or 1,2,3,4,5,6,7,u
+  // depending on the InsIndex.
+  auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(N->getOperand(0));
+  SDValue Scalar = N->getOperand(1);
+  if (!Shuffle || !all_of(enumerate(Shuffle->getMask()), [&](auto P) {
+        return InsIndex == P.index() || P.value() < 0 ||
+               (InsIndex == 0 && P.value() == (int)P.index() - 1) ||
+               (InsIndex == VT.getVectorNumElements() - 1 &&
+                P.value() == (int)P.index() + 1);
+      }))
+    return SDValue();
+
+  // We optionally skip over an extend so long as both loads are extended in the
+  // same way from the same type.
+  unsigned Extend = 0;
+  if (Scalar.getOpcode() == ISD::ZERO_EXTEND ||
+      Scalar.getOpcode() == ISD::SIGN_EXTEND ||
+      Scalar.getOpcode() == ISD::ANY_EXTEND) {
+    Extend = Scalar.getOpcode();
+    Scalar = Scalar.getOperand(0);
+  }
+
+  auto *ScalarLoad = dyn_cast<LoadSDNode>(Scalar);
+  if (!ScalarLoad)
+    return SDValue();
+
+  SDValue Vec = Shuffle->getOperand(0);
+  if (Extend) {
+    if (Vec.getOpcode() != Extend)
+      return SDValue();
+    Vec = Vec.getOperand(0);
+  }
+  auto *VecLoad = dyn_cast<LoadSDNode>(Vec);
+  if (!VecLoad || Vec.getValueType().getScalarType() != Scalar.getValueType())
+    return SDValue();
+
+  int EltSize = ScalarLoad->getValueType(0).getScalarSizeInBits();
+  if (EltSize == 0 || EltSize % 8 != 0 || !ScalarLoad->isSimple() ||
+      !VecLoad->isSimple() || VecLoad->getExtensionType() != ISD::NON_EXTLOAD ||
+      ScalarLoad->getExtensionType() != ISD::NON_EXTLOAD ||
+      ScalarLoad->getAddressSpace() != VecLoad->getAddressSpace())
+    return SDValue();
+
+  // Check that the offset between the pointers to produce a single continuous
+  // load.
+  if (InsIndex == 0) {
+    if (!DAG.areNonVolatileConsecutiveLoads(ScalarLoad, VecLoad, EltSize / 8,
+                                            -1))
+      return SDValue();
+  } else {
+    if (!DAG.areNonVolatileConsecutiveLoads(
+            VecLoad, ScalarLoad, VT.getVectorNumElements() * EltSize / 8, -1))
+      return SDValue();
+  }
+
+  // And that the new unaligned load will be fast.
+  unsigned IsFast = 0;
+  Align NewAlign = commonAlignment(VecLoad->getAlign(), EltSize / 8);
+  if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+                              Vec.getValueType(), VecLoad->getAddressSpace(),
+                              NewAlign, VecLoad->getMemOperand()->getFlags(),
+                              &IsFast) ||
+      !IsFast)
+    return SDValue();
+
+  // Calculate the new Ptr and create the new load.
+  SDLoc DL(N);
+  SDValue Ptr = ScalarLoad->getBasePtr();
+  if (InsIndex != 0)
+    Ptr = DAG.getNode(ISD::ADD, DL, Ptr.getValueType(), VecLoad->getBasePtr(),
+                      DAG.getConstant(EltSize / 8, DL, Ptr.getValueType()));
+  MachinePointerInfo PtrInfo =
+      InsIndex == 0 ? ScalarLoad->getPointerInfo()
+                    : VecLoad->getPointerInfo().getWithOffset(EltSize / 8);
+
+  SDValue Load = DAG.getLoad(VecLoad->getValueType(0), DL,
+                             ScalarLoad->getChain(), Ptr, PtrInfo, NewAlign);
+  DAG.makeEquivalentMemoryOrdering(ScalarLoad, Load.getValue(1));
+  DAG.makeEquivalentMemoryOrdering(VecLoad, Load.getValue(1));
+  return Extend ? DAG.getNode(Extend, DL, VT, Load) : Load;
+}
+
 SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
   SDValue InVec = N->getOperand(0);
   SDValue InVal = N->getOperand(1);
@@ -21021,6 +21115,9 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     return Shuf;
 
   if (SDValue Shuf = combineInsertEltToShuffle(N, Elt))
+    return Shuf;
+
+  if (SDValue Shuf = combineInsertEltToLoad(N, Elt))
     return Shuf;
 
   // Attempt to convert an insert_vector_elt chain into a legal build_vector.
