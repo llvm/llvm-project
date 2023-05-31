@@ -25,7 +25,7 @@
  * INDEXSTORE_VERSION_MAJOR is intended for "major" source/ABI breaking changes.
  */
 #define INDEXSTORE_VERSION_MAJOR 0
-#define INDEXSTORE_VERSION_MINOR 14 /* added C++ concept */
+#define INDEXSTORE_VERSION_MINOR 15 /* added Swift init accessor sub-symbol */
 
 #define INDEXSTORE_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                           \
@@ -313,6 +313,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_SUBKIND_SWIFTGENERICTYPEPARAM = 1013,
   INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORREAD = 1014,
   INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMODIFY = 1015,
+  INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORINIT = 1016,
 } indexstore_symbol_subkind_t;
 
 INDEXSTORE_OPTIONS(uint64_t, indexstore_symbol_property_t) {
