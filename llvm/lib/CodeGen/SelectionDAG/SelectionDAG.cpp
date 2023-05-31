@@ -11700,7 +11700,7 @@ bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
 
   int64_t Offset = 0;
   if (BaseLocDecomp.equalBaseIndex(LocDecomp, *this, Offset))
-    return (Dist * Bytes == Offset);
+    return (Dist * (int64_t)Bytes == Offset);
   return false;
 }
 

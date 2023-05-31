@@ -6,37 +6,13 @@
 define <8 x i8> @inserti8_first(ptr %p) {
 ; CHECKLE-LABEL: inserti8_first:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrb.u16 q1, [r0, #1]
-; CHECKLE-NEXT:    ldrb r1, [r0]
-; CHECKLE-NEXT:    vmovx.f16 s10, s5
-; CHECKLE-NEXT:    vmovx.f16 s8, s4
-; CHECKLE-NEXT:    vins.f16 s10, s6
-; CHECKLE-NEXT:    vmovx.f16 s6, s6
-; CHECKLE-NEXT:    vmov.16 q0[0], r1
-; CHECKLE-NEXT:    vins.f16 s8, s5
-; CHECKLE-NEXT:    vins.f16 s6, s7
-; CHECKLE-NEXT:    vmov.f32 s1, s8
-; CHECKLE-NEXT:    vmov.f32 s2, s10
-; CHECKLE-NEXT:    vins.f16 s0, s4
-; CHECKLE-NEXT:    vmov.f32 s3, s6
+; CHECKLE-NEXT:    vldrb.u16 q0, [r0]
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: inserti8_first:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrb.u16 q0, [r0, #1]
-; CHECKBE-NEXT:    ldrb r1, [r0]
-; CHECKBE-NEXT:    vmovx.f16 s6, s1
-; CHECKBE-NEXT:    vmovx.f16 s4, s0
-; CHECKBE-NEXT:    vins.f16 s6, s2
-; CHECKBE-NEXT:    vmovx.f16 s2, s2
-; CHECKBE-NEXT:    vmov.16 q2[0], r1
-; CHECKBE-NEXT:    vins.f16 s4, s1
-; CHECKBE-NEXT:    vins.f16 s2, s3
-; CHECKBE-NEXT:    vins.f16 s8, s0
-; CHECKBE-NEXT:    vmov.f32 s9, s4
-; CHECKBE-NEXT:    vmov.f32 s10, s6
-; CHECKBE-NEXT:    vmov.f32 s11, s2
-; CHECKBE-NEXT:    vrev64.16 q0, q2
+; CHECKBE-NEXT:    vldrb.u16 q1, [r0]
+; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
@@ -49,32 +25,12 @@ define <8 x i8> @inserti8_first(ptr %p) {
 define <8 x i8> @inserti8_last(ptr %p) {
 ; CHECKLE-LABEL: inserti8_last:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrb.u16 q1, [r0]
-; CHECKLE-NEXT:    ldrb r1, [r0, #8]
-; CHECKLE-NEXT:    vmovx.f16 s0, s4
-; CHECKLE-NEXT:    vmovx.f16 s1, s5
-; CHECKLE-NEXT:    vmovx.f16 s2, s6
-; CHECKLE-NEXT:    vins.f16 s0, s5
-; CHECKLE-NEXT:    vins.f16 s1, s6
-; CHECKLE-NEXT:    vins.f16 s2, s7
-; CHECKLE-NEXT:    vmov.u16 r0, q1[7]
-; CHECKLE-NEXT:    vmov.16 q0[6], r0
-; CHECKLE-NEXT:    vmov.16 q0[7], r1
+; CHECKLE-NEXT:    vldrb.u16 q0, [r0, #1]
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: inserti8_last:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrb.u16 q0, [r0]
-; CHECKBE-NEXT:    ldrb r1, [r0, #8]
-; CHECKBE-NEXT:    vmovx.f16 s4, s0
-; CHECKBE-NEXT:    vmovx.f16 s5, s1
-; CHECKBE-NEXT:    vmovx.f16 s6, s2
-; CHECKBE-NEXT:    vins.f16 s4, s1
-; CHECKBE-NEXT:    vins.f16 s5, s2
-; CHECKBE-NEXT:    vins.f16 s6, s3
-; CHECKBE-NEXT:    vmov.u16 r0, q0[7]
-; CHECKBE-NEXT:    vmov.16 q1[6], r0
-; CHECKBE-NEXT:    vmov.16 q1[7], r1
+; CHECKBE-NEXT:    vldrb.u16 q1, [r0, #1]
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 8
@@ -88,37 +44,13 @@ define <8 x i8> @inserti8_last(ptr %p) {
 define <8 x i16> @inserti8_first_sext(ptr %p) {
 ; CHECKLE-LABEL: inserti8_first_sext:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrb.s16 q1, [r0, #1]
-; CHECKLE-NEXT:    ldrsb.w r1, [r0]
-; CHECKLE-NEXT:    vmovx.f16 s10, s5
-; CHECKLE-NEXT:    vmovx.f16 s8, s4
-; CHECKLE-NEXT:    vins.f16 s10, s6
-; CHECKLE-NEXT:    vmovx.f16 s6, s6
-; CHECKLE-NEXT:    vmov.16 q0[0], r1
-; CHECKLE-NEXT:    vins.f16 s8, s5
-; CHECKLE-NEXT:    vins.f16 s6, s7
-; CHECKLE-NEXT:    vmov.f32 s1, s8
-; CHECKLE-NEXT:    vmov.f32 s2, s10
-; CHECKLE-NEXT:    vins.f16 s0, s4
-; CHECKLE-NEXT:    vmov.f32 s3, s6
+; CHECKLE-NEXT:    vldrb.s16 q0, [r0]
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: inserti8_first_sext:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrb.s16 q0, [r0, #1]
-; CHECKBE-NEXT:    ldrsb.w r1, [r0]
-; CHECKBE-NEXT:    vmovx.f16 s6, s1
-; CHECKBE-NEXT:    vmovx.f16 s4, s0
-; CHECKBE-NEXT:    vins.f16 s6, s2
-; CHECKBE-NEXT:    vmovx.f16 s2, s2
-; CHECKBE-NEXT:    vmov.16 q2[0], r1
-; CHECKBE-NEXT:    vins.f16 s4, s1
-; CHECKBE-NEXT:    vins.f16 s2, s3
-; CHECKBE-NEXT:    vins.f16 s8, s0
-; CHECKBE-NEXT:    vmov.f32 s9, s4
-; CHECKBE-NEXT:    vmov.f32 s10, s6
-; CHECKBE-NEXT:    vmov.f32 s11, s2
-; CHECKBE-NEXT:    vrev64.16 q0, q2
+; CHECKBE-NEXT:    vldrb.s16 q1, [r0]
+; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
@@ -133,32 +65,12 @@ define <8 x i16> @inserti8_first_sext(ptr %p) {
 define <8 x i16> @inserti8_last_sext(ptr %p) {
 ; CHECKLE-LABEL: inserti8_last_sext:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrb.s16 q1, [r0]
-; CHECKLE-NEXT:    ldrsb.w r1, [r0, #8]
-; CHECKLE-NEXT:    vmovx.f16 s0, s4
-; CHECKLE-NEXT:    vmovx.f16 s1, s5
-; CHECKLE-NEXT:    vmovx.f16 s2, s6
-; CHECKLE-NEXT:    vins.f16 s0, s5
-; CHECKLE-NEXT:    vins.f16 s1, s6
-; CHECKLE-NEXT:    vins.f16 s2, s7
-; CHECKLE-NEXT:    vmov.u16 r0, q1[7]
-; CHECKLE-NEXT:    vmov.16 q0[6], r0
-; CHECKLE-NEXT:    vmov.16 q0[7], r1
+; CHECKLE-NEXT:    vldrb.s16 q0, [r0, #1]
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: inserti8_last_sext:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrb.s16 q0, [r0]
-; CHECKBE-NEXT:    ldrsb.w r1, [r0, #8]
-; CHECKBE-NEXT:    vmovx.f16 s4, s0
-; CHECKBE-NEXT:    vmovx.f16 s5, s1
-; CHECKBE-NEXT:    vmovx.f16 s6, s2
-; CHECKBE-NEXT:    vins.f16 s4, s1
-; CHECKBE-NEXT:    vins.f16 s5, s2
-; CHECKBE-NEXT:    vins.f16 s6, s3
-; CHECKBE-NEXT:    vmov.u16 r0, q0[7]
-; CHECKBE-NEXT:    vmov.16 q1[6], r0
-; CHECKBE-NEXT:    vmov.16 q1[7], r1
+; CHECKBE-NEXT:    vldrb.s16 q1, [r0, #1]
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 8
@@ -174,37 +86,13 @@ define <8 x i16> @inserti8_last_sext(ptr %p) {
 define <8 x i16> @inserti8_first_zext(ptr %p) {
 ; CHECKLE-LABEL: inserti8_first_zext:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrb.u16 q1, [r0, #1]
-; CHECKLE-NEXT:    ldrb r1, [r0]
-; CHECKLE-NEXT:    vmovx.f16 s10, s5
-; CHECKLE-NEXT:    vmovx.f16 s8, s4
-; CHECKLE-NEXT:    vins.f16 s10, s6
-; CHECKLE-NEXT:    vmovx.f16 s6, s6
-; CHECKLE-NEXT:    vmov.16 q0[0], r1
-; CHECKLE-NEXT:    vins.f16 s8, s5
-; CHECKLE-NEXT:    vins.f16 s6, s7
-; CHECKLE-NEXT:    vmov.f32 s1, s8
-; CHECKLE-NEXT:    vmov.f32 s2, s10
-; CHECKLE-NEXT:    vins.f16 s0, s4
-; CHECKLE-NEXT:    vmov.f32 s3, s6
+; CHECKLE-NEXT:    vldrb.u16 q0, [r0]
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: inserti8_first_zext:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrb.u16 q0, [r0, #1]
-; CHECKBE-NEXT:    ldrb r1, [r0]
-; CHECKBE-NEXT:    vmovx.f16 s6, s1
-; CHECKBE-NEXT:    vmovx.f16 s4, s0
-; CHECKBE-NEXT:    vins.f16 s6, s2
-; CHECKBE-NEXT:    vmovx.f16 s2, s2
-; CHECKBE-NEXT:    vmov.16 q2[0], r1
-; CHECKBE-NEXT:    vins.f16 s4, s1
-; CHECKBE-NEXT:    vins.f16 s2, s3
-; CHECKBE-NEXT:    vins.f16 s8, s0
-; CHECKBE-NEXT:    vmov.f32 s9, s4
-; CHECKBE-NEXT:    vmov.f32 s10, s6
-; CHECKBE-NEXT:    vmov.f32 s11, s2
-; CHECKBE-NEXT:    vrev64.16 q0, q2
+; CHECKBE-NEXT:    vldrb.u16 q1, [r0]
+; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
@@ -219,32 +107,12 @@ define <8 x i16> @inserti8_first_zext(ptr %p) {
 define <8 x i16> @inserti8_last_zext(ptr %p) {
 ; CHECKLE-LABEL: inserti8_last_zext:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrb.u16 q1, [r0]
-; CHECKLE-NEXT:    ldrb r1, [r0, #8]
-; CHECKLE-NEXT:    vmovx.f16 s0, s4
-; CHECKLE-NEXT:    vmovx.f16 s1, s5
-; CHECKLE-NEXT:    vmovx.f16 s2, s6
-; CHECKLE-NEXT:    vins.f16 s0, s5
-; CHECKLE-NEXT:    vins.f16 s1, s6
-; CHECKLE-NEXT:    vins.f16 s2, s7
-; CHECKLE-NEXT:    vmov.u16 r0, q1[7]
-; CHECKLE-NEXT:    vmov.16 q0[6], r0
-; CHECKLE-NEXT:    vmov.16 q0[7], r1
+; CHECKLE-NEXT:    vldrb.u16 q0, [r0, #1]
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: inserti8_last_zext:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrb.u16 q0, [r0]
-; CHECKBE-NEXT:    ldrb r1, [r0, #8]
-; CHECKBE-NEXT:    vmovx.f16 s4, s0
-; CHECKBE-NEXT:    vmovx.f16 s5, s1
-; CHECKBE-NEXT:    vmovx.f16 s6, s2
-; CHECKBE-NEXT:    vins.f16 s4, s1
-; CHECKBE-NEXT:    vins.f16 s5, s2
-; CHECKBE-NEXT:    vins.f16 s6, s3
-; CHECKBE-NEXT:    vmov.u16 r0, q0[7]
-; CHECKBE-NEXT:    vmov.16 q1[6], r0
-; CHECKBE-NEXT:    vmov.16 q1[7], r1
+; CHECKBE-NEXT:    vldrb.u16 q1, [r0, #1]
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 8
@@ -260,14 +128,9 @@ define <8 x i16> @inserti8_last_zext(ptr %p) {
 define <8 x i32> @inserti32_first(ptr %p) {
 ; CHECKLE-LABEL: inserti32_first:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrw.u32 q1, [r0, #4]
 ; CHECKLE-NEXT:    vldrw.u32 q2, [r0, #20]
-; CHECKLE-NEXT:    ldr r1, [r0]
-; CHECKLE-NEXT:    vmov.f32 s1, s4
-; CHECKLE-NEXT:    vmov.f32 s2, s5
-; CHECKLE-NEXT:    vmov.f32 s3, s6
-; CHECKLE-NEXT:    vmov.f32 s4, s7
-; CHECKLE-NEXT:    vmov.32 q0[0], r1
+; CHECKLE-NEXT:    vldr s4, [r0, #16]
+; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECKLE-NEXT:    vmov.f32 s5, s8
 ; CHECKLE-NEXT:    vmov.f32 s6, s9
 ; CHECKLE-NEXT:    vmov.f32 s7, s10
@@ -275,19 +138,14 @@ define <8 x i32> @inserti32_first(ptr %p) {
 ;
 ; CHECKBE-LABEL: inserti32_first:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrw.u32 q0, [r0, #20]
-; CHECKBE-NEXT:    vldrw.u32 q2, [r0, #4]
-; CHECKBE-NEXT:    ldr r1, [r0]
-; CHECKBE-NEXT:    vmov.f32 s12, s11
-; CHECKBE-NEXT:    vmov.f32 s13, s0
-; CHECKBE-NEXT:    vmov.f32 s14, s1
-; CHECKBE-NEXT:    vmov.f32 s15, s2
-; CHECKBE-NEXT:    vrev64.32 q1, q3
-; CHECKBE-NEXT:    vmov.f32 s13, s8
-; CHECKBE-NEXT:    vmov.f32 s14, s9
-; CHECKBE-NEXT:    vmov.f32 s15, s10
-; CHECKBE-NEXT:    vmov.32 q3[0], r1
-; CHECKBE-NEXT:    vrev64.32 q0, q3
+; CHECKBE-NEXT:    vldrw.u32 q3, [r0, #20]
+; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
+; CHECKBE-NEXT:    vldr s8, [r0, #16]
+; CHECKBE-NEXT:    vmov.f32 s9, s12
+; CHECKBE-NEXT:    vrev64.8 q0, q1
+; CHECKBE-NEXT:    vmov.f32 s10, s13
+; CHECKBE-NEXT:    vmov.f32 s11, s14
+; CHECKBE-NEXT:    vrev64.32 q1, q2
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 4
   %l1 = load <8 x i32>, ptr %q
@@ -300,34 +158,24 @@ define <8 x i32> @inserti32_first(ptr %p) {
 define <8 x i32> @inserti32_last(ptr %p) {
 ; CHECKLE-LABEL: inserti32_last:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrw.u32 q2, [r0, #16]
-; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
-; CHECKLE-NEXT:    ldr r1, [r0, #32]
-; CHECKLE-NEXT:    vmov.f32 s0, s1
-; CHECKLE-NEXT:    vmov.f32 s1, s2
-; CHECKLE-NEXT:    vmov.f32 s2, s3
-; CHECKLE-NEXT:    vmov.f32 s3, s8
-; CHECKLE-NEXT:    vmov.f32 s4, s9
-; CHECKLE-NEXT:    vmov.f32 s5, s10
-; CHECKLE-NEXT:    vmov.f32 s6, s11
-; CHECKLE-NEXT:    vmov.32 q1[3], r1
+; CHECKLE-NEXT:    vldrw.u32 q2, [r0]
+; CHECKLE-NEXT:    vldr s3, [r0, #16]
+; CHECKLE-NEXT:    vldrw.u32 q1, [r0, #20]
+; CHECKLE-NEXT:    vmov.f32 s0, s9
+; CHECKLE-NEXT:    vmov.f32 s1, s10
+; CHECKLE-NEXT:    vmov.f32 s2, s11
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: inserti32_last:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrw.u32 q0, [r0]
-; CHECKBE-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECKBE-NEXT:    ldr r1, [r0, #32]
-; CHECKBE-NEXT:    vmov.f32 s8, s1
-; CHECKBE-NEXT:    vmov.f32 s9, s2
-; CHECKBE-NEXT:    vmov.f32 s10, s3
-; CHECKBE-NEXT:    vmov.f32 s11, s4
+; CHECKBE-NEXT:    vldrw.u32 q3, [r0]
+; CHECKBE-NEXT:    vldrb.u8 q0, [r0, #20]
+; CHECKBE-NEXT:    vldr s11, [r0, #16]
+; CHECKBE-NEXT:    vmov.f32 s8, s13
+; CHECKBE-NEXT:    vrev64.8 q1, q0
+; CHECKBE-NEXT:    vmov.f32 s9, s14
+; CHECKBE-NEXT:    vmov.f32 s10, s15
 ; CHECKBE-NEXT:    vrev64.32 q0, q2
-; CHECKBE-NEXT:    vmov.f32 s8, s5
-; CHECKBE-NEXT:    vmov.f32 s9, s6
-; CHECKBE-NEXT:    vmov.f32 s10, s7
-; CHECKBE-NEXT:    vmov.32 q2[3], r1
-; CHECKBE-NEXT:    vrev64.32 q1, q2
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 32
   %l1 = load <8 x i32>, ptr %p
@@ -340,37 +188,29 @@ define <8 x i32> @inserti32_last(ptr %p) {
 define <8 x i32> @inserti32_first_multiuse(ptr %p) {
 ; CHECKLE-LABEL: inserti32_first_multiuse:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrw.u32 q1, [r0, #20]
-; CHECKLE-NEXT:    vldrw.u32 q0, [r0, #4]
-; CHECKLE-NEXT:    ldr r1, [r0]
-; CHECKLE-NEXT:    vmov.f32 s8, s3
-; CHECKLE-NEXT:    vmov.f32 s9, s4
-; CHECKLE-NEXT:    vmov.f32 s10, s5
-; CHECKLE-NEXT:    vmov.f32 s11, s6
-; CHECKLE-NEXT:    vadd.i32 q1, q1, q2
-; CHECKLE-NEXT:    vmov.f32 s9, s0
-; CHECKLE-NEXT:    vmov.f32 s10, s1
-; CHECKLE-NEXT:    vmov.f32 s11, s2
-; CHECKLE-NEXT:    vmov.32 q2[0], r1
-; CHECKLE-NEXT:    vadd.i32 q0, q0, q2
+; CHECKLE-NEXT:    vldrw.u32 q0, [r0, #20]
+; CHECKLE-NEXT:    vldrw.u32 q2, [r0, #4]
+; CHECKLE-NEXT:    vmov.f32 s4, s11
+; CHECKLE-NEXT:    vmov.f32 s5, s0
+; CHECKLE-NEXT:    vmov.f32 s6, s1
+; CHECKLE-NEXT:    vmov.f32 s7, s2
+; CHECKLE-NEXT:    vadd.i32 q1, q0, q1
+; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
+; CHECKLE-NEXT:    vadd.i32 q0, q2, q0
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: inserti32_first_multiuse:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrw.u32 q1, [r0, #20]
-; CHECKBE-NEXT:    vldrw.u32 q0, [r0, #4]
-; CHECKBE-NEXT:    ldr r1, [r0]
-; CHECKBE-NEXT:    vmov.f32 s8, s3
-; CHECKBE-NEXT:    vmov.f32 s9, s4
-; CHECKBE-NEXT:    vmov.f32 s10, s5
-; CHECKBE-NEXT:    vmov.f32 s11, s6
-; CHECKBE-NEXT:    vadd.i32 q2, q1, q2
-; CHECKBE-NEXT:    vrev64.32 q1, q2
-; CHECKBE-NEXT:    vmov.f32 s9, s0
-; CHECKBE-NEXT:    vmov.f32 s10, s1
-; CHECKBE-NEXT:    vmov.f32 s11, s2
-; CHECKBE-NEXT:    vmov.32 q2[0], r1
-; CHECKBE-NEXT:    vadd.i32 q2, q0, q2
+; CHECKBE-NEXT:    vldrw.u32 q0, [r0, #20]
+; CHECKBE-NEXT:    vldrw.u32 q2, [r0, #4]
+; CHECKBE-NEXT:    vmov.f32 s4, s11
+; CHECKBE-NEXT:    vmov.f32 s5, s0
+; CHECKBE-NEXT:    vmov.f32 s6, s1
+; CHECKBE-NEXT:    vmov.f32 s7, s2
+; CHECKBE-NEXT:    vadd.i32 q0, q0, q1
+; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    vldrw.u32 q0, [r0]
+; CHECKBE-NEXT:    vadd.i32 q2, q2, q0
 ; CHECKBE-NEXT:    vrev64.32 q0, q2
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 4
@@ -387,16 +227,12 @@ define <8 x i32> @inserti32_last_multiuse(ptr %p) {
 ; CHECKLE:       @ %bb.0:
 ; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECKLE-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECKLE-NEXT:    ldr r1, [r0, #32]
 ; CHECKLE-NEXT:    vmov.f32 s8, s1
 ; CHECKLE-NEXT:    vmov.f32 s9, s2
 ; CHECKLE-NEXT:    vmov.f32 s10, s3
 ; CHECKLE-NEXT:    vmov.f32 s11, s4
 ; CHECKLE-NEXT:    vadd.i32 q0, q0, q2
-; CHECKLE-NEXT:    vmov.f32 s8, s5
-; CHECKLE-NEXT:    vmov.f32 s9, s6
-; CHECKLE-NEXT:    vmov.f32 s10, s7
-; CHECKLE-NEXT:    vmov.32 q2[3], r1
+; CHECKLE-NEXT:    vldrw.u32 q2, [r0, #20]
 ; CHECKLE-NEXT:    vadd.i32 q1, q1, q2
 ; CHECKLE-NEXT:    bx lr
 ;
@@ -404,17 +240,13 @@ define <8 x i32> @inserti32_last_multiuse(ptr %p) {
 ; CHECKBE:       @ %bb.0:
 ; CHECKBE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECKBE-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECKBE-NEXT:    ldr r1, [r0, #32]
 ; CHECKBE-NEXT:    vmov.f32 s8, s1
 ; CHECKBE-NEXT:    vmov.f32 s9, s2
 ; CHECKBE-NEXT:    vmov.f32 s10, s3
 ; CHECKBE-NEXT:    vmov.f32 s11, s4
 ; CHECKBE-NEXT:    vadd.i32 q2, q0, q2
 ; CHECKBE-NEXT:    vrev64.32 q0, q2
-; CHECKBE-NEXT:    vmov.f32 s8, s5
-; CHECKBE-NEXT:    vmov.f32 s9, s6
-; CHECKBE-NEXT:    vmov.f32 s10, s7
-; CHECKBE-NEXT:    vmov.32 q2[3], r1
+; CHECKBE-NEXT:    vldrw.u32 q2, [r0, #20]
 ; CHECKBE-NEXT:    vadd.i32 q2, q1, q2
 ; CHECKBE-NEXT:    vrev64.32 q1, q2
 ; CHECKBE-NEXT:    bx lr
@@ -430,21 +262,13 @@ define <8 x i32> @inserti32_last_multiuse(ptr %p) {
 define <4 x float> @insertf32_first(ptr %p) {
 ; CHECKLE-LABEL: insertf32_first:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrw.u32 q1, [r0, #4]
-; CHECKLE-NEXT:    vldr s0, [r0]
-; CHECKLE-NEXT:    vmov.f32 s1, s4
-; CHECKLE-NEXT:    vmov.f32 s2, s5
-; CHECKLE-NEXT:    vmov.f32 s3, s6
+; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: insertf32_first:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrw.u32 q0, [r0, #4]
-; CHECKBE-NEXT:    vldr s4, [r0]
-; CHECKBE-NEXT:    vmov.f32 s5, s0
-; CHECKBE-NEXT:    vmov.f32 s6, s1
-; CHECKBE-NEXT:    vmov.f32 s7, s2
-; CHECKBE-NEXT:    vrev64.32 q0, q1
+; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
+; CHECKBE-NEXT:    vrev64.8 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 4
   %l1 = load <4 x float>, ptr %q
@@ -457,21 +281,13 @@ define <4 x float> @insertf32_first(ptr %p) {
 define <4 x float> @insertf32_last(ptr %p) {
 ; CHECKLE-LABEL: insertf32_last:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrw.u32 q1, [r0]
-; CHECKLE-NEXT:    vldr s3, [r0, #16]
-; CHECKLE-NEXT:    vmov.f32 s0, s5
-; CHECKLE-NEXT:    vmov.f32 s1, s6
-; CHECKLE-NEXT:    vmov.f32 s2, s7
+; CHECKLE-NEXT:    vldrw.u32 q0, [r0, #4]
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: insertf32_last:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrw.u32 q0, [r0]
-; CHECKBE-NEXT:    vldr s7, [r0, #16]
-; CHECKBE-NEXT:    vmov.f32 s4, s1
-; CHECKBE-NEXT:    vmov.f32 s5, s2
-; CHECKBE-NEXT:    vmov.f32 s6, s3
-; CHECKBE-NEXT:    vrev64.32 q0, q1
+; CHECKBE-NEXT:    vldrb.u8 q1, [r0, #4]
+; CHECKBE-NEXT:    vrev64.8 q0, q1
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 16
   %l1 = load <4 x float>, ptr %p
