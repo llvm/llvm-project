@@ -874,7 +874,7 @@ define void @PR63030(ptr %p0) {
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vmovaps (%eax), %xmm0
-; X86-AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = [3,0,2,0,3,0,2,0]
+; X86-AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = [3,0,3,0]
 ; X86-AVX2-NEXT:    # xmm1 = mem[0,0]
 ; X86-AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm0[1,1,0,0]
 ; X86-AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3],ymm2[4,5,6,7]
@@ -899,7 +899,7 @@ define void @PR63030(ptr %p0) {
 ; X64-AVX2-LABEL: PR63030:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = [3,2,3,2]
+; X64-AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = [3,3]
 ; X64-AVX2-NEXT:    # xmm1 = mem[0,0]
 ; X64-AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm0[1,1,0,0]
 ; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3],ymm2[4,5,6,7]
