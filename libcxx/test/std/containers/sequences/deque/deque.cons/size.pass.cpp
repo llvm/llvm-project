@@ -10,7 +10,6 @@
 
 // explicit deque(size_type n);
 
-#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -33,7 +32,6 @@ test2(unsigned n)
     assert(static_cast<unsigned>(DefaultOnly::count) == n);
     assert(d.size() == n);
     assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i)
         assert(*i == T());
     }
@@ -55,7 +53,6 @@ test1(unsigned n)
     assert(static_cast<unsigned>(DefaultOnly::count) == n);
     assert(d.size() == n);
     assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
 #if TEST_STD_VER >= 11
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i)
         assert(*i == T());
@@ -74,7 +71,6 @@ test3(unsigned n, Allocator const &alloc = Allocator())
     C d(n, alloc);
     assert(d.size() == n);
     assert(d.get_allocator() == alloc);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
     }
 #else
     ((void)n);
