@@ -1647,30 +1647,28 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 
 /// Loads
 
-multiclass LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
-  def : Pat<(vt (LoadOp (AddrRegImm GPR:$rs1, simm12:$imm12))),
-            (Inst GPR:$rs1, simm12:$imm12)>;
-}
+class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT>
+    : Pat<(vt (LoadOp (AddrRegImm GPR:$rs1, simm12:$imm12))),
+          (Inst GPR:$rs1, simm12:$imm12)>;
 
-defm : LdPat<sextloadi8, LB>;
-defm : LdPat<extloadi8, LBU>; // Prefer unsigned due to no c.lb in Zcb.
-defm : LdPat<sextloadi16, LH>;
-defm : LdPat<extloadi16, LH>;
-defm : LdPat<load, LW, i32>, Requires<[IsRV32]>;
-defm : LdPat<zextloadi8, LBU>;
-defm : LdPat<zextloadi16, LHU>;
+def : LdPat<sextloadi8, LB>;
+def : LdPat<extloadi8, LBU>; // Prefer unsigned due to no c.lb in Zcb.
+def : LdPat<sextloadi16, LH>;
+def : LdPat<extloadi16, LH>;
+def : LdPat<load, LW, i32>, Requires<[IsRV32]>;
+def : LdPat<zextloadi8, LBU>;
+def : LdPat<zextloadi16, LHU>;
 
 /// Stores
 
-multiclass StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
-                 ValueType vt> {
-  def : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm GPR:$rs1, simm12:$imm12)),
-            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
-}
+class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
+            ValueType vt>
+    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm GPR:$rs1, simm12:$imm12)),
+          (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
 
-defm : StPat<truncstorei8, SB, GPR, XLenVT>;
-defm : StPat<truncstorei16, SH, GPR, XLenVT>;
-defm : StPat<store, SW, GPR, i32>, Requires<[IsRV32]>;
+def : StPat<truncstorei8, SB, GPR, XLenVT>;
+def : StPat<truncstorei16, SH, GPR, XLenVT>;
+def : StPat<store, SW, GPR, i32>, Requires<[IsRV32]>;
 
 /// Fences
 
@@ -1844,15 +1842,15 @@ def : Pat<(binop_allwusers<xor> GPR:$rs1, u32simm12:$imm),
           (XORI GPR:$rs1, u32simm12:$imm)>;
 /// Loads
 
-defm : LdPat<sextloadi32, LW, i64>;
-defm : LdPat<extloadi32, LW, i64>;
-defm : LdPat<zextloadi32, LWU, i64>;
-defm : LdPat<load, LD, i64>;
+def : LdPat<sextloadi32, LW, i64>;
+def : LdPat<extloadi32, LW, i64>;
+def : LdPat<zextloadi32, LWU, i64>;
+def : LdPat<load, LD, i64>;
 
 /// Stores
 
-defm : StPat<truncstorei32, SW, GPR, i64>;
-defm : StPat<store, SD, GPR, i64>;
+def : StPat<truncstorei32, SW, GPR, i64>;
+def : StPat<store, SD, GPR, i64>;
 } // Predicates = [IsRV64]
 
 /// readcyclecounter
