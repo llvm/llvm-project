@@ -1094,6 +1094,13 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
   if (auto *CU = CUMap.lookup(DIUnit))
     return *CU;
 
+  if (useSplitDwarf() &&
+      !shareAcrossDWOCUs() &&
+      (!DIUnit->getSplitDebugInlining() ||
+       DIUnit->getEmissionKind() == DICompileUnit::FullDebug) &&
+      !CUMap.empty()) {
+    return *CUMap.begin()->second;
+  }
   CompilationDir = DIUnit->getDirectory();
 
   auto OwnedUnit = std::make_unique<DwarfCompileUnit>(
@@ -1297,6 +1304,8 @@ void DwarfDebug::finalizeModuleInfo() {
   if (CUMap.size() > 1)
     DWOName = Asm->TM.Options.MCOptions.SplitDwarfFile;
 
+  bool HasEmittedSplitCU = false;
+
   // Handle anything that needs to be done on a per-unit basis after
   // all other generation.
   for (const auto &P : CUMap) {
@@ -1315,6 +1324,10 @@ void DwarfDebug::finalizeModuleInfo() {
     bool HasSplitUnit = SkCU && !TheCU.getUnitDie().children().empty();
 
     if (HasSplitUnit) {
+      (void)HasEmittedSplitCU;
+      assert((shareAcrossDWOCUs() || !HasEmittedSplitCU) &&
+             "Multiple CUs emitted into a single dwo file");
+      HasEmittedSplitCU = true;
       dwarf::Attribute attrDWOName = getDwarfVersion() >= 5
                                          ? dwarf::DW_AT_dwo_name
                                          : dwarf::DW_AT_GNU_dwo_name;
@@ -2267,7 +2280,7 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 
   LexicalScope *FnScope = LScopes.getCurrentFunctionScope();
   assert(!FnScope || SP == FnScope->getScopeNode());
-  DwarfCompileUnit &TheCU = *CUMap.lookup(SP->getUnit());
+  DwarfCompileUnit &TheCU = getOrCreateDwarfCompileUnit(SP->getUnit());
   if (TheCU.getCUNode()->isDebugDirectivesOnly()) {
     PrevLabel = nullptr;
     CurFn = nullptr;
