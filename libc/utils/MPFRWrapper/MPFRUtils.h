@@ -197,8 +197,8 @@ public:
     return match(input, match_value);
   }
 
-  // This method is marked with NOLINT because it the name `explainError`
-  // does not confirm to the coding style.
+  // This method is marked with NOLINT because the name `explainError` does not
+  // conform to the coding style.
   void explainError() override { // NOLINT
     explain_error(input, match_value);
   }
