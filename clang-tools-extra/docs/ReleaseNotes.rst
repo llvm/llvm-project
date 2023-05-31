@@ -121,6 +121,12 @@ New checks
   Detect implicit and explicit casts of ``enum`` type into ``bool`` where ``enum`` type
   doesn't have a zero-value enumerator.
 
+- New :doc:`bugprone-unique-ptr-array-mismatch
+  <clang-tidy/checks/bugprone/unique-ptr-array-mismatch>` check.
+
+  Finds initializations of C++ unique pointers to non-array type that are
+  initialized with an array.
+
 - New :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check.
 
