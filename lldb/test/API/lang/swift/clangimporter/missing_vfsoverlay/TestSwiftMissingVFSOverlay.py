@@ -19,6 +19,7 @@ class TestSwiftMissingVFSOverlay(TestBase):
            in the expression evaluator"""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'),
-            extra_images=['Foo'])
-        self.expect("expr y", error=True, substrs=["overlay.yaml", "IRGen"])
+            self, "break here", lldb.SBFileSpec("main.swift"),
+            extra_images=["Foo"]
+        )
+        self.expect("expr y", error=True, substrs=["IRGen", "overlay.yaml"])
