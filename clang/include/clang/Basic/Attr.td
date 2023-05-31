@@ -2984,7 +2984,7 @@ def ObjCRequiresPropertyDefs : InheritableAttr {
 }
 
 def PointerAuth : TypeAttr {
-  let Spellings = [Keyword<"__ptrauth">];
+  let Spellings = [CustomKeyword<"__ptrauth">];
   let Args = [IntArgument<"Key">,
               BoolArgument<"AddressDiscriminated", 1>,
               IntArgument<"ExtraDiscriminator", 1>];
