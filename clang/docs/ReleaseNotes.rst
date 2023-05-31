@@ -283,6 +283,10 @@ libclang
 Static Analyzer
 ---------------
 
+- Added a new checker ``core.BitwiseShift`` which reports situations where
+  bitwise shift operators produce undefined behavior (because some operand is
+  negative or too large).
+
 .. _release-notes-sanitizers:
 
 Sanitizers
