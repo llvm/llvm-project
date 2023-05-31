@@ -1138,10 +1138,7 @@ public:
     // TODO: We should check these in ExtractSliceOp::verify.
     if (!srcEnc || !dstEnc || !dstEnc.isSlice())
       return failure();
-    assert(srcEnc.getLvlTypes() == dstEnc.getLvlTypes());
-    assert(srcEnc.getDimToLvl() == dstEnc.getDimToLvl());
-    assert(srcEnc.getPosWidth() == dstEnc.getPosWidth());
-    assert(srcEnc.getCrdWidth() == dstEnc.getCrdWidth());
+    assert(srcEnc.withoutDimSlices() == dstEnc.withoutDimSlices());
 
     SmallVector<Value> fields;
     auto desc = getMutDescriptorFromTensorTuple(adaptor.getSource(), fields);

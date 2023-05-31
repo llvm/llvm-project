@@ -291,6 +291,17 @@ SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutBitWidths() const {
   return withBitWidths(0, 0);
 }
 
+SparseTensorEncodingAttr SparseTensorEncodingAttr::withDimSlices(
+    ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
+  return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(),
+                                       getDimToLvl(), getPosWidth(),
+                                       getCrdWidth(), dimSlices);
+}
+
+SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutDimSlices() const {
+  return withDimSlices(ArrayRef<SparseTensorDimSliceAttr>{});
+}
+
 bool SparseTensorEncodingAttr::isAllDense() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isDenseDLT);
 }
