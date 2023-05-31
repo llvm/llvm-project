@@ -3147,7 +3147,7 @@ namespace DIOp {
 #define HANDLE_OP0(NAME)                                                       \
   class NAME {                                                                 \
   public:                                                                      \
-    explicit NAME() {}                                                         \
+    explicit constexpr NAME() {}                                               \
     bool operator==(const NAME &O) const { return true; }                      \
     friend hash_code hash_value(const NAME &O);                                \
     static constexpr StringRef getAsmName();                                   \
@@ -3158,7 +3158,7 @@ namespace DIOp {
     TYPE1 NAME1;                                                               \
                                                                                \
   public:                                                                      \
-    explicit NAME(TYPE1 NAME1) : NAME1(NAME1) {}                               \
+    explicit constexpr NAME(TYPE1 NAME1) : NAME1(NAME1) {}                     \
     bool operator==(const NAME &O) const { return NAME1 == O.NAME1; }          \
     friend hash_code hash_value(const NAME &O);                                \
     static constexpr StringRef getAsmName();                                   \
@@ -3172,7 +3172,8 @@ namespace DIOp {
     TYPE2 NAME2;                                                               \
                                                                                \
   public:                                                                      \
-    explicit NAME(TYPE1 NAME1, TYPE2 NAME2) : NAME1(NAME1), NAME2(NAME2) {}    \
+    explicit constexpr NAME(TYPE1 NAME1, TYPE2 NAME2)                          \
+        : NAME1(NAME1), NAME2(NAME2) {}                                        \
     bool operator==(const NAME &O) const {                                     \
       return NAME1 == O.NAME1 && NAME2 == O.NAME2;                             \
     }                                                                          \

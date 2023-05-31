@@ -434,6 +434,19 @@ public:
   }
 };
 
+constexpr uint8_t getEquivalentDwarfOp(DIOp::Add) { return dwarf::DW_OP_plus; }
+constexpr uint8_t getEquivalentDwarfOp(DIOp::Div) { return dwarf::DW_OP_div; }
+constexpr uint8_t getEquivalentDwarfOp(DIOp::Mul) { return dwarf::DW_OP_mul; }
+constexpr uint8_t getEquivalentDwarfOp(DIOp::Shl) { return dwarf::DW_OP_shl; }
+constexpr uint8_t getEquivalentDwarfOp(DIOp::Shr) { return dwarf::DW_OP_shr; }
+constexpr uint8_t getEquivalentDwarfOp(DIOp::Sub) { return dwarf::DW_OP_minus; }
+constexpr uint8_t getEquivalentDwarfOp(DIOp::BitOffset) {
+  return dwarf::DW_OP_LLVM_bit_offset;
+}
+constexpr uint8_t getEquivalentDwarfOp(DIOp::ByteOffset) {
+  return dwarf::DW_OP_LLVM_offset;
+}
+
 class DwarfExprAST {
 protected:
   class Node {
@@ -486,7 +499,6 @@ protected:
     }
 
     size_t getChildrenCount() const;
-    std::optional<uint8_t> getEquivalentDwarfOp() const;
   };
 
   const AsmPrinter &AP;
@@ -519,30 +531,46 @@ protected:
   /// \returns true if the optimization was performed successfully, false if it
   /// is not applicable.
   bool tryInlineArgObject(DIObject *ArgObject);
-  void lowerDIOpArg(DwarfExprAST::Node *OpNode);
-  void lowerDIOpConstant(DwarfExprAST::Node *OpNode);
-  void lowerDIOpPushLane(DwarfExprAST::Node *OpNode);
-  void lowerDIOpReferrer(DwarfExprAST::Node *OpNode);
-  void lowerDIOpTypeObject(DwarfExprAST::Node *OpNode);
-  void lowerDIOpAddrOf(DwarfExprAST::Node *OpNode);
-  void lowerDIOpConvert(DwarfExprAST::Node *OpNode);
-  void lowerDIOpDeref(DwarfExprAST::Node *OpNode);
-  void lowerDIOpExtend(DwarfExprAST::Node *OpNode);
-  void lowerDIOpRead(DwarfExprAST::Node *OpNode);
-  void lowerDIOpReinterpret(DwarfExprAST::Node *OpNode);
-  void lowerDIOpAdd(DwarfExprAST::Node *OpNode);
-  void lowerDIOpBitOffset(DwarfExprAST::Node *OpNode);
-  void lowerDIOpByteOffset(DwarfExprAST::Node *OpNode);
-  void lowerDIOpDiv(DwarfExprAST::Node *OpNode);
-  void lowerDIOpMul(DwarfExprAST::Node *OpNode);
-  void lowerDIOpShl(DwarfExprAST::Node *OpNode);
-  void lowerDIOpShr(DwarfExprAST::Node *OpNode);
-  void lowerDIOpSub(DwarfExprAST::Node *OpNode);
-  void lowerDIOpSelect(DwarfExprAST::Node *OpNode);
-  void lowerDIOpComposite(DwarfExprAST::Node *OpNode);
+  using ChildrenT = ArrayRef<std::unique_ptr<DwarfExprAST::Node>>;
+  // Each `lower` overload below will handle one or more concrete DIOp
+  // operations, and will be dispatched to by `lower(DwarfExprAST::Node*)`.
+  // These overloads return `nullptr` when they are not yet implemented, or
+  // return their result Type otherwise.
+  Type *lower(DIOp::Arg Arg, ChildrenT Children);
+  Type *lower(DIOp::Constant Constant, ChildrenT Children);
+  Type *lower(DIOp::PushLane PushLane, ChildrenT Children);
+  Type *lower(DIOp::Referrer Referrer, ChildrenT Children);
+  Type *lower(DIOp::TypeObject TypeObject, ChildrenT Children);
+  Type *lower(DIOp::AddrOf AddrOf, ChildrenT Children);
+  Type *lower(DIOp::Convert Convert, ChildrenT Children);
+  Type *lower(DIOp::Deref Deref, ChildrenT Children);
+  Type *lower(DIOp::Extend Extend, ChildrenT Children);
+  Type *lower(DIOp::Read Read, ChildrenT Children);
+  Type *lower(DIOp::Reinterpret Reinterpret, ChildrenT Children);
+  Type *lower(DIOp::Select Select, ChildrenT Children);
+  Type *lower(DIOp::Composite Composite, ChildrenT Children);
+  template <typename T>
+  std::enable_if_t<is_one_of<T, DIOp::Add, DIOp::Div, DIOp::Mul, DIOp::Shl,
+                             DIOp::Shr, DIOp::Sub>::value,
+                   Type *>
+  lower(T MathOp, ChildrenT Children) {
+    assert(Children.size() == 2 && "Expected 2 children");
+    for (auto &ChildOpNode : Children)
+      readToValue(ChildOpNode.get(), /*NeedsSwap=*/true);
+    emitDwarfOp(getEquivalentDwarfOp(MathOp));
+    emitDwarfOp(dwarf::DW_OP_stack_value);
+    return Children[0]->getResultType();
+  }
+  template <typename T>
+  std::enable_if_t<is_one_of<T, DIOp::BitOffset, DIOp::ByteOffset>::value,
+                   Type *>
+  lower(T OffsetOp, ChildrenT Children) {
+    assert(Children.size() == 2 && "Expected 2 children");
+    readToValue(Children[1].get(), /*NeedsSwap=*/false);
+    emitDwarfOp(getEquivalentDwarfOp(OffsetOp));
+    return OffsetOp.getResultType();
+  }
 
-  void lowerBitOrByteOffset(DwarfExprAST::Node *OpNode);
-  void lowerMathOp(DwarfExprAST::Node *OpNode);
   void readToValue(DwarfExprAST::Node *OpNode, bool NeedsSwap);
 
   void emitReg(int32_t DwarfReg, const char *Comment = nullptr);
