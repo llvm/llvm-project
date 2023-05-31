@@ -95,7 +95,7 @@ define <32 x i8> @splatconstant_rotl_v32i8(<32 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; GFNIAVX1-NEXT:    vpsrlw $4, %xmm1, %xmm2
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; GFNIAVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
 ; GFNIAVX1-NEXT:    vpsllw $4, %xmm1, %xmm1
 ; GFNIAVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
@@ -151,7 +151,7 @@ define <32 x i8> @splatconstant_rotr_v32i8(<32 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; GFNIAVX1-NEXT:    vpsrlw $6, %xmm1, %xmm2
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
 ; GFNIAVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
 ; GFNIAVX1-NEXT:    vpsllw $2, %xmm1, %xmm1
 ; GFNIAVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
@@ -218,7 +218,7 @@ define <64 x i8> @splatconstant_rotl_v64i8(<64 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; GFNIAVX1-NEXT:    vpsrlw $7, %xmm2, %xmm3
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; GFNIAVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
 ; GFNIAVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpor %xmm3, %xmm2, %xmm2
@@ -300,7 +300,7 @@ define <64 x i8> @splatconstant_rotr_v64i8(<64 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; GFNIAVX1-NEXT:    vpsrlw $2, %xmm2, %xmm3
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192]
 ; GFNIAVX1-NEXT:    vpandn %xmm3, %xmm4, %xmm3
 ; GFNIAVX1-NEXT:    vpsllw $6, %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpand %xmm4, %xmm2, %xmm2
