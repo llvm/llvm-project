@@ -218,11 +218,14 @@ void HipBinAmd::constructCompilerPath() {
     if (osInfo == windows) {
       complierPath = getHipPath();
       hipClangPath = complierPath;
-      hipClangPath /= "bin";
     } else {
       complierPath = getRoccmPath();
       hipClangPath = complierPath;
+    }
+    if (fs::exists("llvm/bin/clang++")) {
       hipClangPath /= "llvm/bin";
+    } else {
+      hipClangPath /= "bin";
     }
     complierPath = hipClangPath.string();
   } else {
