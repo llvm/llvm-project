@@ -324,6 +324,7 @@ DemandedFields getDemanded(const MachineInstr &MI,
     auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
     if (VRegDef && VRegDef->isImplicitDef()) {
       Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
+      Res.TailPolicy = false;
     }
   }
 
@@ -888,20 +889,6 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     return true;
 
   DemandedFields Used = getDemanded(MI, MRI);
-
-  if (isScalarMoveInstr(MI)) {
-    // For vmv.s.x and vfmv.s.f, if writing to an implicit_def operand, we don't
-    // need to preserve any other bits and are thus compatible with any larger,
-    // etype and can disregard policy bits.  Warning: It's tempting to try doing
-    // this for any tail agnostic operation, but we can't as TA requires
-    // tail lanes to either be the original value or -1.  We are writing
-    // unknown bits to the lanes here.
-    auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
-    if (VRegDef && VRegDef->isImplicitDef() &&
-        CurInfo.getSEW() >= Require.getSEW()) {
-      Used.TailPolicy = false;
-    }
-  }
 
   // A slidedown/slideup with an IMPLICIT_DEF merge op can freely clobber
   // elements not copied from the source vector (e.g. masked off, tail, or
