@@ -9,10 +9,6 @@
 // Memintrinsic function interceptors for tools like AddressSanitizer,
 // ThreadSanitizer, MemorySanitizer, etc.
 //
-// These interceptors are part of the common interceptors, but separated out so
-// that implementations may add them, if necessary, to a separate source file
-// that should define SANITIZER_COMMON_NO_REDEFINE_BUILTINS at the top.
-//
 // This file should be included into the tool's memintrinsic interceptor file,
 // which has to define its own macros:
 //   COMMON_INTERCEPTOR_ENTER
@@ -23,10 +19,6 @@
 //   COMMON_INTERCEPTOR_MEMCPY_IMPL
 //   COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED
 //===----------------------------------------------------------------------===//
-
-#ifdef SANITIZER_REDEFINE_BUILTINS_H
-#error "Define SANITIZER_COMMON_NO_REDEFINE_BUILTINS in .cpp file"
-#endif
 
 #include "interception/interception.h"
 #include "sanitizer_platform_interceptors.h"
