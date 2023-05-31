@@ -55,7 +55,7 @@ _TACO_TENSOR_PREFIX = "A"
 _POINTER_BIT_WIDTH = 0
 _INDEX_BIT_WIDTH = 0
 # The entry point to the JIT compiled program.
-_ENTRY_NAME = "main"
+_ENTRY_NAME = "pytaco_main"
 
 # Type aliases for type annotation.
 _UnaryOp = Callable[[Any], Any]
@@ -1517,7 +1517,6 @@ class Tensor:
 
     self._engine_kokkos = self._assignment.expression.compile_kokkos(self,
                                                        self._assignment.indices)
-    print("Just finished compile_kokkos, engine's ", self._engine_kokkos)
 
   def get_module(self, force_recompile: bool = False) -> ir.Module:
     """Compiles the tensor assignment to an execution engine.
@@ -1587,36 +1586,35 @@ class Tensor:
     if self._assignment is None:
       return
 
-    print("Hello from compute_kokkos: self._engine_kokkos: ", self._engine_kokkos)
     if self._engine_kokkos is None:
       raise ValueError("Need to invoke compile_kokkos() before invoking compute_kokkos().")
 
     input_accesses = self._assignment.expression.get_input_accesses()
     # Gather the pointers for the input buffers.
-    input_pointers = [a.tensor.ctype_pointer() for a in input_accesses]
-    if self.is_dense():
-      # The pointer to receive dense output is the first argument to the
-      # execution engine.
-      arg_pointers = [self.dense_dst_ctype_pointer()] + input_pointers
-    else:
-      # The pointer to receive the sparse tensor output is the last argument
-      # to the execution engine and is a pointer to pointer of char.
-      arg_pointers = input_pointers + [
-          ctypes.pointer(ctypes.pointer(ctypes.c_char(0)))
-      ]
+    input_pointers = [a.tensor.ctype_pointer().contents for a in input_accesses]
+    #if self.is_dense():
+    #  # The pointer to receive dense output is the first argument to the
+    #  # execution engine.
+    #  arg_pointers = [self.dense_dst_ctype_pointer()] + input_pointers
+    #else:
+    #  # The pointer to receive the sparse tensor output is the last argument
+    #  # to the execution engine and is a pointer to pointer of char.
+    #  arg_pointers = input_pointers + [
+    #      ctypes.pointer(ctypes.pointer(ctypes.c_char(0)))
+    #  ]
 
     # Invoke the execution engine to run the module.
     # Get the function we want by name
     func = getattr(self._engine_kokkos, _ENTRY_NAME)
-    func(*arg_pointers)
+    resultRaw = func(*input_pointers)
 
     # Retrieve the result.
     if self.is_dense():
-      result = runtime.ranked_memref_to_numpy(arg_pointers[0][0])
+      result = runtime.ranked_memref_to_numpy(resultRaw)
       assert isinstance(result, np.ndarray)
       self._dense_storage = result
     else:
-      self._set_packed_sparse_tensor(arg_pointers[-1][0])
+      self._set_packed_sparse_tensor(resultRaw)
 
     self._assignment = None
     self._engine_kokkos = None
@@ -1628,9 +1626,7 @@ class Tensor:
 
   def evaluate_kokkos(self) -> None:
     """Evaluates the tensor assignment."""
-    print("<><> Hello from evaluate_kokkos: begin")
     self.compile_kokkos()
-    print("<><> Hello from evaluate_kokkos: after compile, engine_kokkos is ", self._engine_kokkos)
     self.compute_kokkos()
 
   def _sync_value(self) -> None:

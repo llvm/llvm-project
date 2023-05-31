@@ -27,16 +27,28 @@ namespace mlir {
 //===----------------------------------------------------------------------===//
 
 void registerToKokkosTranslation() {
-  static llvm::cl::opt<bool> declareVariablesAtTop(
-      "kokkos-declare-variables-at-top",
-      llvm::cl::desc("Declare variables at top when emitting C/C++"),
-      llvm::cl::init(false));
-
-  TranslateFromMLIRRegistration reg(
+  TranslateFromMLIRRegistration reg1(
       "mlir-to-kokkos", "translate from mlir to Kokkos",
       [](Operation *op, raw_ostream &output) {
         return emitc::translateToKokkosCpp(
-            op, output, /* declareVariablesAtTop */ false);
+            op, output, /* enableSparseSupport */ false);
+      },
+      [](DialectRegistry &registry) {
+        // clang-format off
+        registry.insert<arith::ArithDialect,
+                        cf::ControlFlowDialect,
+                        emitc::EmitCDialect,
+                        func::FuncDialect,
+                        math::MathDialect,
+                        scf::SCFDialect>();
+        // clang-format on
+      });
+
+  TranslateFromMLIRRegistration reg2(
+      "sparse-mlir-to-kokkos", "translate from mlir (with sparse tensors) to Kokkos",
+      [](Operation *op, raw_ostream &output) {
+        return emitc::translateToKokkosCpp(
+            op, output, /* enableSparseSupport */ true);
       },
       [](DialectRegistry &registry) {
         // clang-format off

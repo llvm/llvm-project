@@ -26,11 +26,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <utility>
-
 #include <iostream>
-//#include <unistd.h>
 
-#define DEBUG_TYPE "translate-to-kokkos-cpp"
+#ifdef __unix__
+#include <unistd.h>
+#endif
 
 using namespace mlir;
 using namespace mlir::emitc;
@@ -73,8 +73,8 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
 
 namespace {
 struct KokkosCppEmitter {
-  explicit KokkosCppEmitter(raw_ostream &os, bool declareVariablesAtTop);
-  explicit KokkosCppEmitter(raw_ostream &os, raw_ostream& py_os, bool declareVariablesAtTop);
+  explicit KokkosCppEmitter(raw_ostream &os, bool enableSparseSupport);
+  explicit KokkosCppEmitter(raw_ostream &os, raw_ostream& py_os, bool enableSparseSupport);
 
   /// Emits attribute or returns failure.
   LogicalResult emitAttribute(Location loc, Attribute attr);
@@ -90,20 +90,20 @@ struct KokkosCppEmitter {
   LogicalResult emitPythonBoilerplate();
 
   /// Emits type 'type' or returns failure.
-  LogicalResult emitType(Location loc, Type type);
+  /// If supportFunction is false, the emitted type is compatible with sparse support library.
+  /// For example, memrefs use StridedMemRefType instead of Kokkos::View.
+  LogicalResult emitType(Location loc, Type type, bool supportFunction = false);
 
   /// Emits array of types as a std::tuple of the emitted types.
   /// - emits void for an empty array;
   /// - emits the type of the only element for arrays of size one;
   /// - emits a std::tuple otherwise;
-  LogicalResult emitTypes(Location loc, ArrayRef<Type> types);
+  /// See emitType(...) for behavior of supportFunction.
+  LogicalResult emitTypes(Location loc, ArrayRef<Type> types, bool supportFunction = false);
 
   /// Emits array of types as a std::tuple of the emitted types independently of
   /// the array size.
   LogicalResult emitTupleType(Location loc, ArrayRef<Type> types);
-
-  /// Emits an assignment for a variable which has been declared previously.
-  LogicalResult emitVariableAssignment(Value result);
 
   /// Emits a variable declaration for a result of an operation.
   LogicalResult emitVariableDeclaration(Value result,
@@ -113,8 +113,8 @@ struct KokkosCppEmitter {
   /// - emits separate variable followed by std::tie for multi-valued operation;
   /// - emits single type followed by variable for single result;
   /// - emits nothing if no value produced by op;
-  /// Emits final '=' operator where a type is produced. Returns failure if
-  /// any result type could not be converted.
+  /// Emits final '=' operator where a type is produced.
+  /// Returns failure if any result type could not be converted.
   LogicalResult emitAssignPrefix(Operation &op);
 
   /// Emits a label for the block.
@@ -156,6 +156,7 @@ struct KokkosCppEmitter {
   private:
     llvm::ScopedHashTableScope<Value, std::string> valueMapperScope;
     llvm::ScopedHashTableScope<Block *, std::string> blockMapperScope;
+
     KokkosCppEmitter &emitter;
   };
 
@@ -173,9 +174,8 @@ struct KokkosCppEmitter {
   /// Returns the Python output stream.
   raw_indented_ostream &py_ostream() { return *py_os.get(); };
 
-  /// Returns if all variables for op results and basic block arguments need to
-  /// be declared at the beginning of a function.
-  bool shouldDeclareVariablesAtTop() { return declareVariablesAtTop; };
+  /// Returns true iff. this emitter is producing code with PyTACO sparse tensor support.
+  bool supportingSparse() { return enableSparseSupport; };
 
   //This lets the emitter act like a stream (writes to the C++ file)
   template<typename T>
@@ -273,10 +273,9 @@ private:
   /// Python output stream to emit to.
   std::shared_ptr<raw_indented_ostream> py_os;
 
-  /// Boolean to enforce that all variables for op results and block
-  /// arguments are declared at the beginning of the function. This also
-  /// includes results from ops located in nested regions.
-  bool declareVariablesAtTop;
+  /// Whether we are adding the boilerplate to support the MLIR sparse
+  /// tensor runtime functions (e.g. newSparseTensor)
+  bool enableSparseSupport;
 
   /// Map from value to name of C++ variable that contain the name.
   ValueMapper valueMapper;
@@ -307,26 +306,28 @@ private:
   //Each element has a name, element type, total size and whether it is intialized.
   //If initialized, ${name}_initial is assumed to be a global 1D host array with the data.
   std::vector<memref::GlobalOp> globalViews;
+
+  // This is a string-string map
+  // Keys are the names of sparse runtime support functions as they appear in the IR
+  //   (e.g. "newSparseTensor")
+  // Values are pairs.
+  //  First:  whether the result(s) is obtained via pointer arg instead of return value
+  //  Second: the actual names of the functions in $SUPPORTLIB
+  //   (e.g. "_mlir_ciface_newSparseTensor")
+  std::unordered_map<std::string, std::pair<bool, std::string>> sparseSupportFunctions;
+  //This helper function (to be called during constructor) populates sparseSupportFunctions
+  void populateSparseSupportFunctions();
+public:
+  bool isSparseSupportFunction(StringRef s) {return sparseSupportFunctions.find(s.str()) != sparseSupportFunctions.end();}
+  bool sparseSupportFunctionPointerResults(StringRef mlirName) {return sparseSupportFunctions[mlirName.str()].first;}
+  // Get the real C function name for the given MLIR function name
+  std::string getSparseSupportFunctionName(StringRef mlirName) {return sparseSupportFunctions[mlirName.str()].second;}
 };
 } // namespace
 
 static LogicalResult printConstantOp(KokkosCppEmitter &emitter, Operation *operation,
                                      Attribute value) {
   OpResult result = operation->getResult(0);
-
-  // Only emit an assignment as the variable was already declared when printing
-  // the FuncOp.
-  if (emitter.shouldDeclareVariablesAtTop()) {
-    // Skip the assignment if the emitc.constant has no value.
-    if (auto oAttr = value.dyn_cast<emitc::OpaqueAttr>()) {
-      if (oAttr.getValue().empty())
-        return success();
-    }
-
-    if (failed(emitter.emitVariableAssignment(result)))
-      return failure();
-    return emitter.emitAttribute(operation->getLoc(), value);
-  }
 
   // Emit a variable declaration for an emitc.constant op without value.
   if (auto oAttr = value.dyn_cast<emitc::OpaqueAttr>()) {
@@ -374,17 +375,6 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     memref::GetGlobalOp op) {
   Operation *operation = op.getOperation();
-  OpResult result = operation->getResult(0);
-
-  // Only emit an assignment as the variable was already declared when printing
-  // the FuncOp.
-  if (emitter.shouldDeclareVariablesAtTop()) {
-    if (failed(emitter.emitVariableAssignment(result)))
-      return failure();
-    //Emit just the name of the global symbol (shallow copy)
-    emitter << op.getName();
-    return success();
-  }
 
   // Emit a variable declaration.
   if (failed(emitter.emitAssignPrefix(*operation)))
@@ -401,18 +391,6 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
   OpResult result = operation->getResult(0);
   MemRefType type = op.getType();
 
-  // Only emit an assignment as the variable was already declared when printing
-  // the FuncOp.
-  if (emitter.shouldDeclareVariablesAtTop()) {
-    if (failed(emitter.emitVariableAssignment(result)))
-      return failure();
-    //Emit a Kokkos::View constructor call. Use the variable name as label.
-    if (failed(emitter.emitType(op.getLoc(), type)))
-      return failure();
-    emitter << "(Kokkos::view_alloc(Kokkos::WithoutInitializing, \"" << emitter.getOrCreateName(result) << "\"))";
-    return success();
-  }
-
   // Emit a variable declaration.
   if (failed(emitter.emitAssignPrefix(*operation)))
     return failure();
@@ -428,18 +406,6 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
   Operation *operation = op.getOperation();
   OpResult result = operation->getResult(0);
   MemRefType type = op.getType();
-
-  // Only emit an assignment as the variable was already declared when printing
-  // the FuncOp.
-  if (emitter.shouldDeclareVariablesAtTop()) {
-    if (failed(emitter.emitVariableAssignment(result)))
-      return failure();
-    //Emit a Kokkos::View constructor call. Use the variable name as label.
-    if (failed(emitter.emitType(op.getLoc(), type)))
-      return failure();
-    emitter << "(Kokkos::view_alloc(Kokkos::WithoutInitializing, \"" << emitter.getOrCreateName(result) << "\"))";
-    return success();
-  }
 
   // Emit a variable declaration.
   if (failed(emitter.emitAssignPrefix(*operation)))
@@ -753,12 +719,97 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 }
 */
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, func::CallOp callOp) {
+static LogicalResult printSupportCall(KokkosCppEmitter &emitter, func::CallOp callOp)
+{
+  // NOTE: do not currently support multiple return values (a tuple) from support functions,
+  // but this is OK as none of them return more than 1 value.
+  if(callOp.getResults().size() > 1)
+    return callOp.emitError("Can't handle support function with multiple results");
+  bool pointerResults = emitter.sparseSupportFunctionPointerResults(callOp.getCallee());
+  raw_ostream &os = emitter.ostream();
+  // Declare the result (if any) in current scope
+  bool hasResult = callOp.getResults().size() == 1;
+  bool resultIsMemref = hasResult && isa<MemRefType>(callOp.getResult(0).getType());
+  if(hasResult)
+  {
+    if(failed(emitter.emitType(callOp.getLoc(), callOp.getResult(0).getType(), false)))
+      return failure();
+    os << ' ' << emitter.getOrCreateName(callOp.getResult(0)) << ";\n";
+  }
+  os << "{\n";
+  // If the result is a memref, it is returned via pointer.
+  // Declare the StridedMemRefType version here in a local scope.
+  if(resultIsMemref)
+  {
+    if(failed(emitter.emitType(callOp.getLoc(), callOp.getResult(0).getType(), true)))
+      return failure();
+    os << " " << emitter.getOrCreateName(callOp.getResult(0)) << "_smr;\n";
+  }
+  // Now go through all the input arguments and convert memrefs to StridedMemRefTypes as well
+  for(Value arg : callOp.getOperands())
+  {
+    if(isa<MemRefType>(arg.getType()))
+    {
+      if(failed(emitter.emitType(callOp.getLoc(), arg.getType(), true)))
+        return failure();
+      os << " " << emitter.getOrCreateName(arg) << "_smr = viewToStridedMemref(" << emitter.getOrCreateName(arg) << ");\n";
+    }
+  }
+  // Finally, emit the call.
+  if(hasResult && !pointerResults)
+  {
+    os << emitter.getOrCreateName(callOp.getResult(0)) << " = ";
+  }
+  os << emitter.getSparseSupportFunctionName(callOp.getCallee()) << "(";
+  // Pointer to the result is first argument, if pointerResult and there is a result
+  if(hasResult && pointerResults)
+  {
+    if(resultIsMemref)
+      os << "&" << emitter.getOrCreateName(callOp.getResult(0)) << "_smr";
+    else
+      os << "&" << emitter.getOrCreateName(callOp.getResult(0));
+    if(callOp.getOperands().size())
+      os << ", ";
+  }
+  // Emit the input arguments, passing in _smr suffixed values for memrefs
+  bool firstArg = true;
+  for(Value arg : callOp.getOperands())
+  {
+    if(!firstArg)
+      os << ", ";
+    if(isa<MemRefType>(arg.getType()))
+      os << "&" << emitter.getOrCreateName(arg) << "_smr";
+    else
+    {
+      if(failed(emitter.emitValue(arg)))
+        return failure();
+    }
+    firstArg = false;
+  }
+  os << ");\n";
+  // Lastly, if result is a memref, convert it back to View
+  if(hasResult && resultIsMemref)
+  {
+    os << emitter.getOrCreateName(callOp.getResult(0)) << " = stridedMemrefToView<";
+    if(failed(emitter.emitType(callOp.getLoc(), callOp.getResult(0).getType())))
+      return failure();
+    os << ">(" << emitter.getOrCreateName(callOp.getResult(0)) << "_smr);\n";
+  }
+  os << "}\n";
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter, func::CallOp callOp)
+{
+  if(emitter.isSparseSupportFunction(callOp.getCallee()))
+    return printSupportCall(emitter, callOp);
+
   if (failed(emitter.emitAssignPrefix(*callOp.getOperation())))
     return failure();
 
   raw_ostream &os = emitter.ostream();
-  os << callOp.getCallee() << "(";
+  os << callOp.getCallee();
+  os << "(";
   if (failed(emitter.emitOperands(*callOp.getOperation())))
     return failure();
   os << ")";
@@ -773,12 +824,10 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp)
   Block::BlockArgListType iterArgs = forOp.getRegionIterArgs();
   Operation::result_range results = forOp.getResults();
 
-  if (!emitter.shouldDeclareVariablesAtTop()) {
-    for (OpResult result : results) {
-      if (failed(emitter.emitVariableDeclaration(result,
-                                                 /*trailingSemicolon=*/true)))
-        return failure();
-    }
+  for (OpResult result : results) {
+    if (failed(emitter.emitVariableDeclaration(result,
+                                               /*trailingSemicolon=*/true)))
+      return failure();
   }
 
   for (auto pair : llvm::zip(iterArgs, operands)) {
@@ -929,11 +978,9 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
   ResultRange results = op.getResults();
   bool isReduction = results.size() > size_t(0);
 
-  if (!emitter.shouldDeclareVariablesAtTop()) {
-    for (OpResult result : results) {
-      if (failed(emitter.emitVariableDeclaration(result, true)))
-        return failure();
-    }
+  for (OpResult result : results) {
+    if (failed(emitter.emitVariableDeclaration(result, true)))
+      return failure();
   }
 
   //TODO: handle common simplifying cases:
@@ -1101,12 +1148,10 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
 static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
   raw_indented_ostream &os = emitter.ostream();
 
-  if (!emitter.shouldDeclareVariablesAtTop()) {
-    for (OpResult result : ifOp.getResults()) {
-      if (failed(emitter.emitVariableDeclaration(result,
-                                                 /*trailingSemicolon=*/true)))
-        return failure();
-    }
+  for (OpResult result : ifOp.getResults()) {
+    if (failed(emitter.emitVariableDeclaration(result,
+                                               /*trailingSemicolon=*/true)))
+      return failure();
   }
 
   os << "if (";
@@ -1200,13 +1245,24 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, ModuleOp moduleOp
 }
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp functionOp) {
-  llvm::StringRef functionOpName = functionOp.getName();
-  if (functionOpName == "main") {
+  // Need to replace function names in 2 cases:
+  //  1. functionOp is a forward declaration for a sparse support function
+  //  2. functionOp's name is "main"
+  bool isSupportFunc = emitter.isSparseSupportFunction(functionOp.getName());
+  // Does the function provide its results via pointer arguments, preceding the input arguments?
+  bool pointerResults = isSupportFunc && emitter.sparseSupportFunctionPointerResults(functionOp.getName());
+  std::string functionOpName;
+  if(isSupportFunc) {
+    functionOpName = emitter.getSparseSupportFunctionName(functionOp.getName());
+  }
+  else if (functionOp.getName().str() == "main") {
     functionOpName = "mymain";
   }
+  else {
+    functionOpName = functionOp.getName().str();
+  }
   // We need to declare variables at top if the function has multiple blocks.
-  if (!emitter.shouldDeclareVariablesAtTop() &&
-      functionOp.getBlocks().size() > 1) {
+  if (functionOp.getBlocks().size() > 1) {
     return functionOp.emitOpError(
         "with multiple blocks needs variables declared at top");
   }
@@ -1214,17 +1270,54 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   // Handle function declarations (empty body). Don't need to give parameters names either.
   if(functionOp.getBody().empty())
   {
-    if (failed(emitter.emitTypes(functionOp.getLoc(), functionOp.getFunctionType().getResults())))
-      return failure();
-    os << ' ' << functionOpName << '(';
+    //Prevent support lib function names from being mangled
+    if(isSupportFunc)
+      os << "extern \"C\" ";
+    if(pointerResults)
+    {
+      os << "void ";
+    }
+    else
+    {
+      if (failed(emitter.emitTypes(functionOp.getLoc(), functionOp.getFunctionType().getResults(), isSupportFunc)))
+        return failure();
+      os << ' ';
+    }
+    os << functionOpName << '(';
+    if (pointerResults)
+    {
+      if (failed(interleaveCommaWithError(functionOp.getFunctionType().getResults(), os,
+        [&](Type resultType) -> LogicalResult
+        {
+          if (failed(emitter.emitType(functionOp.getLoc(), resultType, isSupportFunc)))
+            return failure();
+          // Memrefs are returned by pointer
+          if (isSupportFunc && isa<MemRefType>(resultType))
+            os << "*";
+          return success();
+        })))
+      {
+        return failure();
+      }
+      //If there will be any arg types, add an extra comma
+      if (functionOp.getArgumentTypes().size())
+      {
+        os << ", ";
+      }
+    }
     if (failed(interleaveCommaWithError(functionOp.getArgumentTypes(), os,
       [&](Type argType) -> LogicalResult
       {
-        if (failed(emitter.emitType(functionOp.getLoc(), argType)))
+        if (failed(emitter.emitType(functionOp.getLoc(), argType, isSupportFunc)))
           return failure();
+        // Memrefs are passed by pointer
+        if (isSupportFunc && isa<MemRefType>(argType))
+          os << "*";
         return success();
       })))
+    {
       return failure();
+    }
     os << ");\n";
     return success();
   }
@@ -1246,23 +1339,6 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
     return failure();
   os << ") {\n";
   os.indent();
-  if (emitter.shouldDeclareVariablesAtTop()) {
-    // Declare all variables that hold op results including those from nested
-    // regions.
-    WalkResult result =
-        functionOp.walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
-          for (OpResult result : op->getResults()) {
-            if (failed(emitter.emitVariableDeclaration(
-                    result, /*trailingSemicolon=*/true))) {
-              return WalkResult(
-                  op->emitError("unable to declare result variable for op"));
-            }
-          }
-          return WalkResult::advance();
-        });
-    if (result.wasInterrupted())
-      return failure();
-  }
 
   Region::BlockListType &blocks = functionOp.getBlocks();
   // Create label names for basic blocks.
@@ -1305,7 +1381,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
     }
   }
   os.unindent() << "}\n\n";
-  // If just emitting C++, this is all we have to do
+  // Finally, create the corresponding wrapper function that is callable from Python (if one is needed)
   if(!emitter.emittingPython())
     return success();
   // Emit a wrapper function without Kokkos::View for Python to call
@@ -1360,8 +1436,15 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   os << ")\n";
   os << "{\n";
   os.indent();
+  //FOR DEBUGGING THE EMITTED CODE:
+  //The next 3 lines makes the generated function pause to let you attach a debugger
+  /*
+  os << "std::cout << \"Starting MLIR function on process \" << getpid() << '\\n';\n";
+  os << "std::cout << \"Optionally attach debugger now, then press <Enter> to continue: \";\n";
+  os << "std::cin.get();\n";
+  */
   //Create/allocate device Kokkos::Views for the memref inputs.
-  //TODO: if executing on on host, we might as well use the NumPy buffers directly.
+  //TODO: if executing on on host, we might as well use the NumPy buffers directly
   for(size_t i = 0; i < numParams; i++)
   {
     auto paramType = ftype.getInput(i);
@@ -1537,7 +1620,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
     else if(retType.isa<LLVM::LLVMPointerType>())
     {
       //For pointer results, declare a void* and pass its address (void**)
-      py_os << "ret" << i << " = c_void_p()\n";
+      py_os << "ret" << i << " = ctypes.pointer(ctypes.pointer(ctypes.c_char(0)))\n";
     }
     else
     {
@@ -1559,7 +1642,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
     if(retType.isa<LLVM::LLVMPointerType>())
     {
       // Pointer
-      py_os << "pointer(ret" << i << ")";
+      py_os << "ctypes.pointer(ret" << i << ")";
     }
     else
     {
@@ -1610,17 +1693,37 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   return success();
 }
 
-KokkosCppEmitter::KokkosCppEmitter(raw_ostream& os, bool declareVariablesAtTop)
-    : os(os), py_os(nullptr), declareVariablesAtTop(declareVariablesAtTop) {
+
+
+KokkosCppEmitter::KokkosCppEmitter(raw_ostream& os, bool enableSparseSupport)
+    : os(os), py_os(nullptr), enableSparseSupport(enableSparseSupport) {
   valueInScopeCount.push(0);
   labelInScopeCount.push(0);
+  if(enableSparseSupport)
+    populateSparseSupportFunctions();
 }
 
-KokkosCppEmitter::KokkosCppEmitter(raw_ostream& os, raw_ostream& py_os_, bool declareVariablesAtTop)
-    : os(os), declareVariablesAtTop(declareVariablesAtTop) {
+KokkosCppEmitter::KokkosCppEmitter(raw_ostream& os, raw_ostream& py_os_, bool enableSparseSupport)
+    : os(os), enableSparseSupport(enableSparseSupport) {
   this->py_os = std::make_shared<raw_indented_ostream>(py_os_); 
   valueInScopeCount.push(0);
   labelInScopeCount.push(0);
+  if(enableSparseSupport)
+    populateSparseSupportFunctions();
+}
+
+void KokkosCppEmitter::populateSparseSupportFunctions()
+{
+  //Most sparse support functions are prefixed with _mlir_ciface_ in the library
+  auto registerCIface =
+    [&](bool pointerResult, std::string name)
+    {
+      sparseSupportFunctions.insert({name, {pointerResult, std::string("_mlir_ciface_") + name}});
+    };
+  registerCIface(false, "newSparseTensor");
+  registerCIface(true, "sparseValuesF64");
+  registerCIface(true, "sparseIndices0");
+  registerCIface(true, "sparsePointers0");
 }
 
 /// Return the existing or a new name for a Value.
@@ -1828,21 +1931,6 @@ KokkosCppEmitter::emitValue(Value val)
   }
 }
 
-LogicalResult KokkosCppEmitter::emitVariableAssignment(Value result) {
-  if (!hasValueInScope(result)) {
-    auto op = result.getDefiningOp();
-    if(op) {
-      return op->emitOpError(
-          "result variable for the operation has not been declared");
-    }
-    else {
-      return failure();
-    }
-  }
-  os << getOrCreateName(result) << " = ";
-  return success();
-}
-
 LogicalResult KokkosCppEmitter::emitVariableDeclaration(Value result,
                                                   bool trailingSemicolon) {
   auto op = result.getDefiningOp();
@@ -1870,22 +1958,15 @@ LogicalResult KokkosCppEmitter::emitAssignPrefix(Operation &op) {
     break;
   case 1: {
     OpResult result = op.getResult(0);
-    if (shouldDeclareVariablesAtTop()) {
-      if (failed(emitVariableAssignment(result)))
-        return failure();
-    } else {
-      if (failed(emitVariableDeclaration(result, /*trailingSemicolon=*/false)))
-        return failure();
-      os << " = ";
-    }
+    if (failed(emitVariableDeclaration(result, /*trailingSemicolon=*/false)))
+      return failure();
+    os << " = ";
     break;
   }
   default:
-    if (!shouldDeclareVariablesAtTop()) {
-      for (OpResult result : op.getResults()) {
-        if (failed(emitVariableDeclaration(result, /*trailingSemicolon=*/true)))
-          return failure();
-      }
+    for (OpResult result : op.getResults()) {
+      if (failed(emitVariableDeclaration(result, /*trailingSemicolon=*/true)))
+        return failure();
     }
     os << "std::tie(";
     interleaveComma(op.getResults(), os,
@@ -2497,7 +2578,7 @@ LogicalResult KokkosCppEmitter::emitPythonBoilerplate()
   return success();
 }
 
-LogicalResult KokkosCppEmitter::emitType(Location loc, Type type) {
+LogicalResult KokkosCppEmitter::emitType(Location loc, Type type, bool supportFunction) {
   if (auto iType = type.dyn_cast<IntegerType>()) {
     switch (iType.getWidth()) {
     case 1:
@@ -2545,18 +2626,26 @@ LogicalResult KokkosCppEmitter::emitType(Location loc, Type type) {
   if (auto tType = type.dyn_cast<TupleType>())
     return emitTupleType(loc, tType.getTypes());
   if (auto mrType = type.dyn_cast<MemRefType>()) {
-    os << "Kokkos::View<";
-    if (failed(emitType(loc, mrType.getElementType())))
-      return failure();
-    for(auto extent : mrType.getShape()) {
-      if(mrType.hasStaticShape()) {
-          os << '[' << extent << ']';
-      }
-      else {
-          os << '*';
-      }
+    if (supportFunction) {
+      os << "StridedMemRefType<";
+      if (failed(emitType(loc, mrType.getElementType())))
+        return failure();
+      os << ", " << mrType.getShape().size() << ">";
     }
-    os << ", Kokkos::LayoutRight>";
+    else {
+      os << "Kokkos::View<";
+      if (failed(emitType(loc, mrType.getElementType())))
+        return failure();
+      for(auto extent : mrType.getShape()) {
+        if(mrType.hasStaticShape()) {
+            os << '[' << extent << ']';
+        }
+        else {
+            os << '*';
+        }
+      }
+      os << ", Kokkos::LayoutRight>";
+    }
     return success();
   }
   if (auto mrType = type.dyn_cast<UnrankedMemRefType>()) {
@@ -2575,13 +2664,13 @@ LogicalResult KokkosCppEmitter::emitType(Location loc, Type type) {
   return emitError(loc, "cannot emit type ") << type << "\n";
 }
 
-LogicalResult KokkosCppEmitter::emitTypes(Location loc, ArrayRef<Type> types) {
+LogicalResult KokkosCppEmitter::emitTypes(Location loc, ArrayRef<Type> types, bool supportFunction) {
   switch (types.size()) {
   case 0:
     os << "void";
     return success();
   case 1:
-    return emitType(loc, types.front());
+    return emitType(loc, types.front(), supportFunction);
   default:
     return emitTupleType(loc, types);
   }
@@ -2596,18 +2685,127 @@ LogicalResult KokkosCppEmitter::emitTupleType(Location loc, ArrayRef<Type> types
   return success();
 }
 
-//Version for when we are just emitting C++
-LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, bool declareVariablesAtTop) {
-  /*
-  std::cout << "Hello from K emitter: proc " << getpid() << '\n';
-  std::cout << "Enter anything to proceed: ";
-  std::string asdf;
-  std::cin >> asdf;
-  */
-  KokkosCppEmitter emitter(os, declareVariablesAtTop);
-  //Global preamble.
+inline void pauseForDebugger()
+{
+#ifdef __unix__
+  std::cout << "Starting Kokkos emitter on process " << getpid() << '\n';
+  std::cout << "Optionally attach debugger now, then press <Enter> to continue: ";
+  std::cin.get();
+#else
+  std::cerr << "Can't pause for debugging on non-POSIX system\n";
+#endif
+}
+
+static void emitCppBoilerplate(KokkosCppEmitter &emitter, bool enablePythonWrapper, bool enableSparseSupport)
+{
   emitter << "#include <Kokkos_Core.hpp>\n";
+  emitter << "#include <type_traits>\n";
+  emitter << "#include <cstdint>\n";
+  emitter << "#include <unistd.h>\n";
   emitter << "using exec_space = Kokkos::DefaultExecutionSpace;\n\n";
+  if(enablePythonWrapper)
+  {
+    //Will later add definitions for these functions.
+    //They depend on what global constant memrefs get created
+    emitter << "extern \"C\" void kokkos_mlir_initialize();\n";
+    emitter << "extern \"C\" void kokkos_mlir_finalize();\n\n";
+  }
+  if(enableSparseSupport)
+  {
+    // This is the definition of the StridedMemRefType class, copied from mlir/include/mlir/ExecutionEngine/CRunnerUtils.h
+    emitter << "template <typename T, int N>\n";
+    emitter << "struct StridedMemRefType {\n";
+    emitter << "  T *basePtr;\n";
+    emitter << "  T *data;\n";
+    emitter << "  int64_t offset;\n";
+    emitter << "  int64_t sizes[N];\n";
+    emitter << "  int64_t strides[N];\n";
+    emitter << "};\n\n";
+
+    // Define utility functions to convert between Kokkos views and sparse tensor runtime objects.
+    // This is View to StridedMemRefType. Supported for any input View type as long as it's in HostSpace.
+    emitter << "template<typename V>\n";
+    emitter << "StridedMemRefType<typename V::value_type, V::rank> viewToStridedMemref(const V& v)\n";
+    emitter << "{\n";
+    emitter << "  static_assert(std::is_same_v<typename V::memory_space, Kokkos::HostSpace>, \"Only Kokkos::Views in HostSpace can be converted to StridedMemRefType.\");\n";
+    emitter << "  StridedMemRefType<typename V::value_type, V::rank> smr;\n";
+    emitter << "  smr.basePtr = v.data();\n";
+    emitter << "  smr.data = v.data();\n";
+    emitter << "  smr.offset = 0;\n";
+    emitter << "  for(int i = 0; i < V::rank; i++)\n";
+    emitter << "  {\n";
+    emitter << "    smr.sizes[i] = v.extent(i);\n";
+    emitter << "    smr.strides[i] = v.stride(i);\n";
+    emitter << "  }\n";
+    emitter << "  return smr;\n";
+    emitter << "}\n\n";
+
+    // This is StridedMemRefType to View. Supported as long as View is in HostSpace, and smr's strides are compatible with V's layout.
+    // - If V is LayoutStride, then smr's strides can be anything
+    // - If V is LayoutLeft, then smr.strides[0] must be 1, and smr.strides[k] must be smr.strides[k-1] * smr.sizes[k-1]
+    // - If V is LayoutRight, then smr.strides[rank - 1] must be 1, and smr.strides[k] must be smr.strides[k+1] * smr.sizes[k+1]
+    //
+    // TODO: have a performant (NDEBUG?) mode that disables runtime checks
+    emitter << "template<typename V>\n";
+    emitter << "V stridedMemrefToView(const StridedMemRefType<typename V::value_type, V::rank>& smr)\n";
+    emitter << "{\n";
+    emitter << "  using Layout = typename V::array_layout;\n";
+    emitter << "  static_assert(std::is_same_v<typename V::memory_space, Kokkos::HostSpace>, \"Can only convert a StridedMemRefType to a Kokkos::View in HostSpace.\");\n";
+    emitter << "  if constexpr(std::is_same_v<Layout, Kokkos::LayoutStride>)\n";
+    emitter << "  {\n";
+    emitter << "    Layout layout(\n";
+    for(int i = 0; i < 8; i++)
+    {
+      emitter << "    (" << i << " < V::rank) ? smr.sizes[" << i << "] : 0U,\n";
+      emitter << "    (" << i << " < V::rank) ? smr.strides[" << i << "] : 0U";
+      if(i == 7)
+        emitter << ");\n";
+      else
+        emitter << ",\n";
+    }
+    emitter << "    return V(&smr.data[smr.offset], layout);\n";
+    emitter << "  }\n";
+    //Both contiguous layout types (Left and Right) are constructed from extents only
+    emitter << "  Layout layout(\n";
+    for(int i = 0; i < 8; i++)
+    {
+      emitter << "    (" << i << " < V::rank) ? smr.sizes[" << i << "] : 0U";
+      if(i == 7)
+        emitter << ");\n";
+      else
+        emitter << ",\n";
+    }
+    emitter << "  if constexpr(std::is_same_v<Layout, Kokkos::LayoutLeft>)\n";
+    emitter << "  {\n";
+    emitter << "    int64_t expectedStride = 1;\n";
+    emitter << "    for(int i = 0; i < V::rank; i++)\n";
+    emitter << "    {\n";
+    emitter << "      if(expectedStride != smr.strides[i])\n";
+    emitter << "        Kokkos::abort(\"Cannot convert non-contiguous StridedMemRefType to LayoutLeft Kokkos::View\");\n";
+    emitter << "      expectedStride *= smr.sizes[i];\n";
+    emitter << "    }\n";
+    emitter << "  }\n";
+    emitter << "  else if constexpr(std::is_same_v<Layout, Kokkos::LayoutRight>)\n";
+    emitter << "  {\n";
+    emitter << "    int64_t expectedStride = 1;\n";
+    emitter << "    for(int i = V::rank - 1; i >= 0; i--)\n";
+    emitter << "    {\n";
+    emitter << "      if(expectedStride != smr.strides[i])\n";
+    emitter << "        Kokkos::abort(\"Cannot convert non-contiguous StridedMemRefType to LayoutRight Kokkos::View\");\n";
+    emitter << "      expectedStride *= smr.sizes[i];\n";
+    emitter << "    }\n";
+    emitter << "  }\n";
+    emitter << "  return V(&smr.data[smr.offset], layout);\n";
+    emitter << "}\n\n";
+  }
+}
+
+//Version for when we are just emitting C++
+LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, bool enableSparseSupport) {
+  //Uncomment to pause so you can attach debugger
+  //pauseForDebugger();
+  KokkosCppEmitter emitter(os, enableSparseSupport);
+  emitCppBoilerplate(emitter, false, enableSparseSupport);
   //Emit the actual module (global variables and functions)
   if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false)))
     return failure();
@@ -2615,22 +2813,16 @@ LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, bool d
 }
 
 //Version for when we are emitting both C++ and Python wrappers
-LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os, bool declareVariablesAtTop) {
-  /*
-  std::cout << "Hello from K emitter: proc " << getpid() << '\n';
-  std::cout << "Enter anything to proceed: ";
-  std::string asdf;
-  std::cin >> asdf;
-  */
-  KokkosCppEmitter emitter(os, py_os, declareVariablesAtTop);
-  //Emit the Python ctypes boilerplate first - function wrappers need to come after this.
+LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os, bool enableSparseSupport) {
+  //Uncomment to pause so you can attach debugger
+  //pauseForDebugger();
+  KokkosCppEmitter emitter(os, py_os, enableSparseSupport);
+  //Emit the C++ boilerplate to os
+  emitCppBoilerplate(emitter, true, enableSparseSupport);
+  //Emit the ctypes boilerplate to py_os first - function wrappers need to come after this.
   if(failed(emitter.emitPythonBoilerplate()))
       return failure();
   //Global preamble.
-  emitter << "#include <Kokkos_Core.hpp>\n";
-  emitter << "using exec_space = Kokkos::DefaultExecutionSpace;\n\n";
-  emitter << "extern \"C\" void kokkos_mlir_initialize();\n";
-  emitter << "extern \"C\" void kokkos_mlir_finalize();\n\n";
   //Emit the actual module (global variables and functions)
   if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false)))
     return failure();
