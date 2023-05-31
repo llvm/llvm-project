@@ -11,8 +11,6 @@
 // MemProf versions of memcpy, memmove, and memset.
 //===---------------------------------------------------------------------===//
 
-#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
-
 #include "memprof_interceptors_memintrinsics.h"
 
 #include "memprof_interceptors.h"

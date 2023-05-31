@@ -14,8 +14,6 @@
 // sanitizer_common/sanitizer_common_interceptors.h
 //===----------------------------------------------------------------------===//
 
-#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
-
 #include "interception/interception.h"
 #include "msan.h"
 #include "msan_chained_origin_depot.h"
