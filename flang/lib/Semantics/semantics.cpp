@@ -476,6 +476,13 @@ void SemanticsContext::UsePPCFortranBuiltinTypesModule() {
   }
 }
 
+const Scope *SemanticsContext::GetCUDABuiltinsScope() {
+  if (!CUDABuiltinsScope_) {
+    CUDABuiltinsScope_ = GetBuiltinModule("__cuda_builtins");
+  }
+  return *CUDABuiltinsScope_;
+}
+
 void SemanticsContext::UsePPCFortranBuiltinsModule() {
   if (ppcBuiltinsScope_ == nullptr) {
     ppcBuiltinsScope_ = GetBuiltinModule("__fortran_ppc_intrinsics");

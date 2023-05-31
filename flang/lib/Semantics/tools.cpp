@@ -1066,6 +1066,18 @@ bool IsPolymorphicAllocatable(const Symbol &symbol) {
   return IsAllocatable(symbol) && IsPolymorphic(symbol);
 }
 
+const Scope *FindCUDADeviceContext(const Scope *scope) {
+  return !scope ? nullptr : FindScopeContaining(*scope, [](const Scope &s) {
+    return IsCUDADeviceContext(&s);
+  });
+}
+
+std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
+  const auto *object{
+      symbol ? symbol->detailsIf<ObjectEntityDetails>() : nullptr};
+  return object ? object->cudaDataAttr() : std::nullopt;
+}
+
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     const Scope &scope, const Symbol &symbol) {
   if (symbol.attrs().test(Attr::PRIVATE)) {
