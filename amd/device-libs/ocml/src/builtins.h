@@ -97,18 +97,18 @@
     float _f = BUILTIN_MIN_F32(_x - _floor_x, 0x1.fffffep-1f);  \
     if (!FINITE_ONLY_OPT()) {                                   \
         _f = BUILTIN_ISNAN_F32(_x) ? _x : _f;                   \
-        _f = BUILTIN_ISINF_F32(x) ? 0.0f : _f;                  \
+        _f = BUILTIN_ISINF_F32(_x) ? 0.0f : _f;                  \
     }                                                           \
     _f;                                                         \
 })
 
 #define BUILTIN_FRACTION_F64(X) ({                                      \
     const double _x = X;                                                \
-    const double _floor_x = BUILTIN_FLOOR_F64(x);                       \
+    const double _floor_x = BUILTIN_FLOOR_F64(_x);                       \
     double _f = BUILTIN_MIN_F64(_x - _floor_x, 0x1.fffffffffffffp-1);   \
     if (!FINITE_ONLY_OPT()) {                                           \
-        _f = BUILTIN_ISNAN_F64(x) ? _x : _f;                            \
-        _f = BUILTIN_ISINF_F64(x) ? 0.0 : _f;                           \
+        _f = BUILTIN_ISNAN_F64(_x) ? _x : _f;                            \
+        _f = BUILTIN_ISINF_F64(_x) ? 0.0 : _f;                           \
     }                                                                   \
     _f;                                                                 \
 })
