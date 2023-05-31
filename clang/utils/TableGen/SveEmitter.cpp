@@ -66,7 +66,8 @@ public:
 class SVEType {
   TypeSpec TS;
   bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat;
-  bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp;
+  bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp,
+      Svcount;
   unsigned Bitwidth, ElementBitwidth, NumVectors;
 
 public:
@@ -76,7 +77,8 @@ public:
       : TS(TS), Float(false), Signed(true), Immediate(false), Void(false),
         Constant(false), Pointer(false), BFloat(false), DefaultType(false),
         IsScalable(true), Predicate(false), PredicatePattern(false),
-        PrefetchOp(false), Bitwidth(128), ElementBitwidth(~0U), NumVectors(1) {
+        PrefetchOp(false), Svcount(false), Bitwidth(128), ElementBitwidth(~0U),
+        NumVectors(1) {
     if (!TS.empty())
       applyTypespec();
     applyModifier(CharMod);
@@ -95,13 +97,16 @@ public:
   bool isFloat() const { return Float && !BFloat; }
   bool isBFloat() const { return BFloat && !Float; }
   bool isFloatingPoint() const { return Float || BFloat; }
-  bool isInteger() const { return !isFloatingPoint() && !Predicate; }
+  bool isInteger() const {
+    return !isFloatingPoint() && !Predicate && !Svcount;
+  }
   bool isScalarPredicate() const {
     return !isFloatingPoint() && Predicate && NumVectors == 0;
   }
   bool isPredicateVector() const { return Predicate; }
   bool isPredicatePattern() const { return PredicatePattern; }
   bool isPrefetchOp() const { return PrefetchOp; }
+  bool isSvcount() const { return Svcount; }
   bool isConstant() const { return Constant; }
   unsigned getElementSizeInBits() const { return ElementBitwidth; }
   unsigned getNumVectors() const { return NumVectors; }
@@ -203,6 +208,9 @@ public:
   /// ClassS, so will add type suffixes such as _u32/_s32.
   std::string getMangledName() const { return mangleName(ClassS); }
 
+  /// As above, but mangles the LLVM name instead.
+  std::string getMangledLLVMName() const { return mangleLLVMName(); }
+
   /// Returns true if the intrinsic is overloaded, in that it should also generate
   /// a short form without the type-specifiers, e.g. 'svld1(..)' instead of
   /// 'svld1_u32(..)'.
@@ -233,6 +241,7 @@ public:
 private:
   std::string getMergeSuffix() const { return MergeSuffix; }
   std::string mangleName(ClassKind LocalCK) const;
+  std::string mangleLLVMName() const;
   std::string replaceTemplatedArgs(std::string Name, TypeSpec TS,
                                    std::string Proto) const;
 };
@@ -379,6 +388,9 @@ std::string SVEType::builtin_str() const {
   if (isScalarPredicate())
     return "b";
 
+  if (isSvcount())
+    return "Qa";
+
   if (isVoidPointer())
     S += "v";
   else if (!isFloatingPoint())
@@ -442,13 +454,15 @@ std::string SVEType::str() const {
   if (Void)
     S += "void";
   else {
-    if (isScalableVector())
+    if (isScalableVector() || isSvcount())
       S += "sv";
     if (!Signed && !isFloatingPoint())
       S += "u";
 
     if (Float)
       S += "float";
+    else if (isSvcount())
+      S += "count";
     else if (isScalarPredicate() || isPredicateVector())
       S += "bool";
     else if (isBFloat())
@@ -456,7 +470,7 @@ std::string SVEType::str() const {
     else
       S += "int";
 
-    if (!isScalarPredicate() && !isPredicateVector())
+    if (!isScalarPredicate() && !isPredicateVector() && !isSvcount())
       S += utostr(ElementBitwidth);
     if (!isScalableVector() && isVector())
       S += "x" + utostr(getNumElements());
@@ -476,6 +490,9 @@ std::string SVEType::str() const {
 void SVEType::applyTypespec() {
   for (char I : TS) {
     switch (I) {
+    case 'Q':
+      Svcount = true;
+      break;
     case 'P':
       Predicate = true;
       break;
@@ -570,6 +587,7 @@ void SVEType::applyModifier(char Mod) {
     Float = false;
     BFloat = false;
     Predicate = true;
+    Svcount = false;
     Bitwidth = 16;
     ElementBitwidth = 1;
     break;
@@ -609,18 +627,21 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'u':
     Predicate = false;
+    Svcount = false;
     Signed = false;
     Float = false;
     BFloat = false;
     break;
   case 'x':
     Predicate = false;
+    Svcount = false;
     Signed = true;
     Float = false;
     BFloat = false;
     break;
   case 'i':
     Predicate = false;
+    Svcount = false;
     Float = false;
     BFloat = false;
     ElementBitwidth = Bitwidth = 64;
@@ -630,6 +651,7 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'I':
     Predicate = false;
+    Svcount = false;
     Float = false;
     BFloat = false;
     ElementBitwidth = Bitwidth = 32;
@@ -640,6 +662,7 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'J':
     Predicate = false;
+    Svcount = false;
     Float = false;
     BFloat = false;
     ElementBitwidth = Bitwidth = 32;
@@ -650,6 +673,7 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'k':
     Predicate = false;
+    Svcount = false;
     Signed = true;
     Float = false;
     BFloat = false;
@@ -658,6 +682,7 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'l':
     Predicate = false;
+    Svcount = false;
     Signed = true;
     Float = false;
     BFloat = false;
@@ -666,6 +691,7 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'm':
     Predicate = false;
+    Svcount = false;
     Signed = false;
     Float = false;
     BFloat = false;
@@ -674,6 +700,7 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'n':
     Predicate = false;
+    Svcount = false;
     Signed = false;
     Float = false;
     BFloat = false;
@@ -712,17 +739,20 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'O':
     Predicate = false;
+    Svcount = false;
     Float = true;
     ElementBitwidth = 16;
     break;
   case 'M':
     Predicate = false;
+    Svcount = false;
     Float = true;
     BFloat = false;
     ElementBitwidth = 32;
     break;
   case 'N':
     Predicate = false;
+    Svcount = false;
     Float = true;
     ElementBitwidth = 64;
     break;
@@ -821,6 +851,14 @@ void SVEType::applyModifier(char Mod) {
     NumVectors = 0;
     Signed = false;
     break;
+  case '}':
+    Predicate = false;
+    Signed = true;
+    Svcount = true;
+    NumVectors = 0;
+    Float = false;
+    BFloat = false;
+    break;
   default:
     llvm_unreachable("Unhandled character!");
   }
@@ -901,6 +939,8 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     std::string TypeCode;
     if (T.isInteger())
       TypeCode = T.isSigned() ? 's' : 'u';
+    else if (T.isSvcount())
+      TypeCode = 'c';
     else if (T.isPredicateVector())
       TypeCode = 'b';
     else if (T.isBFloat())
@@ -911,6 +951,13 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
   }
 
   return Ret;
+}
+
+std::string Intrinsic::mangleLLVMName() const {
+  std::string S = getLLVMName();
+
+  // Replace all {d} like expressions with e.g. 'u32'
+  return replaceTemplatedArgs(S, getBaseTypeSpec(), getProto());
 }
 
 std::string Intrinsic::mangleName(ClassKind LocalCK) const {
@@ -995,7 +1042,7 @@ uint64_t SVEEmitter::encodeTypeFlags(const SVEType &T) {
     return encodeEltType("EltTyBFloat16");
   }
 
-  if (T.isPredicateVector()) {
+  if (T.isPredicateVector() || T.isSvcount()) {
     switch (T.getElementSizeInBits()) {
     case 8:
       return encodeEltType("EltTyBool8");
@@ -1185,6 +1232,8 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __clang_svbfloat16x3_t svbfloat16x3_t;\n";
   OS << "typedef __clang_svbfloat16x4_t svbfloat16x4_t;\n";
 
+  OS << "typedef __SVCount_t svcount_t;\n\n";
+
   OS << "enum svpattern\n";
   OS << "{\n";
   OS << "  SV_POW2 = 0,\n";
@@ -1340,7 +1389,7 @@ void SVEEmitter::createCodeGenMap(raw_ostream &OS) {
     uint64_t Flags = Def->getFlags();
     auto FlagString = std::to_string(Flags);
 
-    std::string LLVMName = Def->getLLVMName();
+    std::string LLVMName = Def->getMangledLLVMName();
     std::string Builtin = Def->getMangledName();
     if (!LLVMName.empty())
       OS << "SVEMAP1(" << Builtin << ", " << LLVMName << ", " << FlagString
