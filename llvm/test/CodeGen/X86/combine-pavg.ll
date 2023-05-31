@@ -33,7 +33,7 @@ define <16 x i8> @combine_pavgw_knownbits(<8 x i16> %a0, <8 x i16> %a1, <8 x i16
 ;
 ; AVX1-LABEL: combine_pavgw_knownbits:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [31,31,31,31,31,31,31,31]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [31,31,31,31,31,31,31,31]
 ; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpavgw %xmm1, %xmm0, %xmm0

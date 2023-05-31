@@ -34,7 +34,7 @@ define <16 x i8> @test_v16i8_nosignbit(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; AVX1-LABEL: test_v16i8_nosignbit:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0

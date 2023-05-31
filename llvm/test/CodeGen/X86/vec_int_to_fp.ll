@@ -55,7 +55,8 @@ define <2 x float> @uitofp_2i32_to_2f32(<2 x i32> %a) {
 ; AVX1-LABEL: uitofp_2i32_to_2f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX1-NEXT:    # xmm1 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vcvtpd2ps %xmm0, %xmm0
@@ -679,7 +680,8 @@ define <2 x double> @uitofp_2i32_to_2f64(<4 x i32> %a) {
 ; AVX1-LABEL: uitofp_2i32_to_2f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX1-NEXT:    # xmm1 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -3363,7 +3365,8 @@ define <2 x double> @uitofp_load_2i32_to_2f64(ptr%a) {
 ; AVX1-LABEL: uitofp_load_2i32_to_2f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX1-NEXT:    # xmm1 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -5660,10 +5663,12 @@ define void @PR43609(ptr nocapture %x, <2 x i64> %y) #0 {
 ; AVX1-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [4841369599423283200,4841369599423283200]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [4841369599423283200,4841369599423283200]
+; AVX1-NEXT:    # xmm4 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [4985484787499139072,4985484787499139072]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [4985484787499139072,4985484787499139072]
+; AVX1-NEXT:    # xmm5 = mem[0,0]
 ; AVX1-NEXT:    vpor %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm6 = [1.9342813118337666E+25,1.9342813118337666E+25]
 ; AVX1-NEXT:    # xmm6 = mem[0,0]

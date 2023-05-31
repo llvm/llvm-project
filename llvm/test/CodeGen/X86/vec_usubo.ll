@@ -904,7 +904,8 @@ define <2 x i32> @usubo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ;
 ; AVX1-LABEL: usubo_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm3
 ; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm0
@@ -1143,7 +1144,7 @@ define <4 x i32> @usubo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ;
 ; AVX1-LABEL: usubo_v4i1:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,1,1,1]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1]
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm1

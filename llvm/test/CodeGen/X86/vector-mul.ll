@@ -567,7 +567,7 @@ define <32 x i8> @mul_v32i8_17(<32 x i8> %a0) nounwind {
 ; X64-XOP-LABEL: mul_v32i8_17:
 ; X64-XOP:       # %bb.0:
 ; X64-XOP-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; X64-XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; X64-XOP-NEXT:    vpshlb %xmm2, %xmm1, %xmm3
 ; X64-XOP-NEXT:    vpaddb %xmm1, %xmm3, %xmm1
 ; X64-XOP-NEXT:    vpshlb %xmm2, %xmm0, %xmm2
@@ -910,7 +910,7 @@ define <32 x i8> @mul_v32i8_neg5(<32 x i8> %a0) nounwind {
 ; X64-XOP-LABEL: mul_v32i8_neg5:
 ; X64-XOP:       # %bb.0:
 ; X64-XOP-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; X64-XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; X64-XOP-NEXT:    vpshlb %xmm2, %xmm1, %xmm3
 ; X64-XOP-NEXT:    vpaddb %xmm1, %xmm3, %xmm1
 ; X64-XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3

@@ -458,7 +458,7 @@ define <32 x i8> @ext_i32_32i8(i32 %a0) {
 ; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $7, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $7, %xmm0, %xmm0
@@ -812,7 +812,7 @@ define <64 x i8> @ext_i64_64i8(i64 %a0) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsrlw $7, %xmm3, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $7, %xmm0, %xmm0

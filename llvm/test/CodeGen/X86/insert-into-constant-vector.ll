@@ -152,7 +152,8 @@ define <2 x i64> @elt0_v2i64(i64 %x) {
 ;
 ; X64-AVX1-LABEL: elt0_v2i64:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,1>
+; X64-AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = [1,1]
+; X64-AVX1-NEXT:    # xmm0 = mem[0,0]
 ; X64-AVX1-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
