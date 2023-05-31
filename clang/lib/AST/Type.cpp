@@ -2463,7 +2463,7 @@ bool Type::isRVVVLSBuiltinType() const {
 QualType Type::getRVVEltType(const ASTContext &Ctx) const {
   assert(isRVVVLSBuiltinType() && "unsupported type!");
 
-  const BuiltinType *BTy = getAs<BuiltinType>();
+  const BuiltinType *BTy = castAs<BuiltinType>();
   return Ctx.getBuiltinVectorTypeInfo(BTy).ElementType;
 }
 
