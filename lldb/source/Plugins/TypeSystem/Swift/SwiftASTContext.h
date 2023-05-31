@@ -423,7 +423,21 @@ public:
 
   CompilerType GetErrorType() override;
 
+  /// Error handling
+  /// \{
   bool HasErrors();
+  bool HasClangImporterErrors();
+
+  void RaiseFatalError(std::string msg) { m_fatal_errors.SetErrorString(msg); }
+  static bool HasFatalErrors(swift::ASTContext *ast_context);
+  bool HasFatalErrors() const {
+    return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
+  }
+
+  Status GetAllErrors() const;
+  Status GetFatalErrors() const;
+  void DiagnoseWarnings(Process &process, Module &module) const override;
+  void LogFatalErrors() const;
 
   // NEVER call this without checking HasFatalErrors() first.
   // This clears the fatal-error state which is terrible.
@@ -436,6 +450,7 @@ public:
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
                         uint32_t last_line = UINT32_MAX) const;
+  /// \}
 
   ConstString GetMangledTypeName(swift::TypeBase *);
 
@@ -454,17 +469,6 @@ public:
   typedef llvm::StringMap<swift::ModuleDecl *> SwiftModuleMap;
 
   const SwiftModuleMap &GetModuleCache() { return m_swift_module_cache; }
-
-  void RaiseFatalError(std::string msg) { m_fatal_errors.SetErrorString(msg); }
-  static bool HasFatalErrors(swift::ASTContext *ast_context);
-  bool HasFatalErrors() const {
-    return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
-  }
-
-  Status GetAllErrors() const;
-  Status GetFatalErrors() const;
-  void DiagnoseWarnings(Process &process, Module &module) const override;
-  void LogFatalErrors() const;
 
   /// Return a list of warnings collected from ClangImporter.
   const std::vector<std::string> &GetModuleImportWarnings() const {

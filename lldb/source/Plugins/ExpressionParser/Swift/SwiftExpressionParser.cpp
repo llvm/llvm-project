@@ -1663,7 +1663,9 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // Helper function to diagnose errors in m_swift_scratch_context.
   unsigned buffer_id = UINT32_MAX;
   auto DiagnoseSwiftASTContextError = [&]() {
-    assert(m_swift_ast_ctx.HasErrors() && "error expected");
+    assert((m_swift_ast_ctx.HasErrors() ||
+            m_swift_ast_ctx.HasClangImporterErrors()) &&
+           "error expected");
     m_swift_ast_ctx.PrintDiagnostics(diagnostic_manager, buffer_id, first_line,
                                      last_line);
   };
@@ -1969,7 +1971,11 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     m_module.reset(ContextAndModule.second);
   }
 
-  if (m_swift_ast_ctx.HasErrors()) {
+  // If IRGen failed without errors, the root cause may be a fatal
+  // Clang diagnostic.
+  if (m_swift_ast_ctx.HasErrors() || m_swift_ast_ctx.HasClangImporterErrors()) {
+    diagnostic_manager.Printf(eDiagnosticSeverityRemark,
+                              "couldn't IRGen expression.");
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
@@ -1987,7 +1993,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     }
     std::string error = "couldn't IRGen expression";
     diagnostic_manager.Printf(
-        eDiagnosticSeverityError, "couldn't IRGen expression. %s",
+        eDiagnosticSeverityError, "couldn't IRGen expression: %s",
         warnings.empty()
             ? "Please enable the expression log by running \"log enable lldb "
               "expr\", then run the failing expression again, and file a "
