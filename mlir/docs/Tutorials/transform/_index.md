@@ -15,7 +15,7 @@ demonstration of three use scenarios:
   code to work with the transform dialect infrastructure.
 - Setting up and using the transform dialect infrastructure in a downstream
   out-of-tree project with custom dialects, transformations and passes.
-  
+
 After following the tutorial, one will be able to apply the transform dialect in
 their work and extend it when necessary. Basic familiarity with MLIR is a
 prerequisite. See [Toy tutorial](../Toy) for introduction to MLIR.
