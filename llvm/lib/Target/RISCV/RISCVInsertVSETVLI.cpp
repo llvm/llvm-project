@@ -143,13 +143,7 @@ struct DemandedFields {
   bool VLAny = false;
   // Only zero vs non-zero is used. If demanded, can change non-zero values.
   bool VLZeroness = false;
-  // What properties of SEW we need to preserve.
-  enum : uint8_t {
-    SEWEqual = 2,              // The exact value of SEW needs to be preserved.
-    SEWGreaterThanOrEqual = 1, // SEW can be changed as long as it's greater
-                               // than or equal to the original value.
-    SEWNone = 0                // We don't need to preserve SEW at all.
-  } SEW = SEWNone;
+  bool SEW = false;
   bool LMUL = false;
   bool SEWLMULRatio = false;
   bool TailPolicy = false;
@@ -167,7 +161,7 @@ struct DemandedFields {
 
   // Mark all VTYPE subfields and properties as demanded
   void demandVTYPE() {
-    SEW = SEWEqual;
+    SEW = true;
     LMUL = true;
     SEWLMULRatio = true;
     TailPolicy = true;
@@ -192,19 +186,7 @@ struct DemandedFields {
     OS << "{";
     OS << "VLAny=" << VLAny << ", ";
     OS << "VLZeroness=" << VLZeroness << ", ";
-    OS << "SEW=";
-    switch (SEW) {
-    case SEWEqual:
-      OS << "SEWEqual";
-      break;
-    case SEWGreaterThanOrEqual:
-      OS << "SEWGreaterThanOrEqual";
-      break;
-    case SEWNone:
-      OS << "SEWNone";
-      break;
-    };
-    OS << ", ";
+    OS << "SEW=" << SEW << ", ";
     OS << "LMUL=" << LMUL << ", ";
     OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
     OS << "TailPolicy=" << TailPolicy << ", ";
@@ -222,44 +204,41 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DemandedFields &DF) {
 }
 #endif
 
-/// Return true if moving from CurVType to NewVType is
-/// indistinguishable from the perspective of an instruction (or set
-/// of instructions) which use only the Used subfields and properties.
-static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
-                                const DemandedFields &Used) {
-  if (Used.SEW == DemandedFields::SEWEqual &&
-      RISCVVType::getSEW(CurVType) != RISCVVType::getSEW(NewVType))
-    return false;
 
-  if (Used.SEW == DemandedFields::SEWGreaterThanOrEqual &&
-      RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType))
+/// Return true if the two values of the VTYPE register provided are
+/// indistinguishable from the perspective of an instruction (or set of
+/// instructions) which use only the Used subfields and properties.
+static bool areCompatibleVTYPEs(uint64_t VType1,
+                                uint64_t VType2,
+                                const DemandedFields &Used) {
+  if (Used.SEW &&
+      RISCVVType::getSEW(VType1) != RISCVVType::getSEW(VType2))
     return false;
 
   if (Used.LMUL &&
-      RISCVVType::getVLMUL(CurVType) != RISCVVType::getVLMUL(NewVType))
+      RISCVVType::getVLMUL(VType1) != RISCVVType::getVLMUL(VType2))
     return false;
 
   if (Used.SEWLMULRatio) {
-    auto Ratio1 = RISCVVType::getSEWLMULRatio(RISCVVType::getSEW(CurVType),
-                                              RISCVVType::getVLMUL(CurVType));
-    auto Ratio2 = RISCVVType::getSEWLMULRatio(RISCVVType::getSEW(NewVType),
-                                              RISCVVType::getVLMUL(NewVType));
+    auto Ratio1 = RISCVVType::getSEWLMULRatio(RISCVVType::getSEW(VType1),
+                                              RISCVVType::getVLMUL(VType1));
+    auto Ratio2 = RISCVVType::getSEWLMULRatio(RISCVVType::getSEW(VType2),
+                                              RISCVVType::getVLMUL(VType2));
     if (Ratio1 != Ratio2)
       return false;
   }
 
-  if (Used.TailPolicy && RISCVVType::isTailAgnostic(CurVType) !=
-                             RISCVVType::isTailAgnostic(NewVType))
+  if (Used.TailPolicy &&
+      RISCVVType::isTailAgnostic(VType1) != RISCVVType::isTailAgnostic(VType2))
     return false;
-  if (Used.MaskPolicy && RISCVVType::isMaskAgnostic(CurVType) !=
-                             RISCVVType::isMaskAgnostic(NewVType))
+  if (Used.MaskPolicy &&
+      RISCVVType::isMaskAgnostic(VType1) != RISCVVType::isMaskAgnostic(VType2))
     return false;
   return true;
 }
 
 /// Return the fields and properties demanded by the provided instruction.
-DemandedFields getDemanded(const MachineInstr &MI,
-                           const MachineRegisterInfo *MRI) {
+static DemandedFields getDemanded(const MachineInstr &MI) {
   // Warning: This function has to work on both the lowered (i.e. post
   // emitVSETVLIs) and pre-lowering forms.  The main implication of this is
   // that it can't use the value of a SEW, VL, or Policy operand as they might
@@ -291,7 +270,7 @@ DemandedFields getDemanded(const MachineInstr &MI,
   // Note: We assume that the instructions initial SEW is the EEW encoded
   // in the opcode.  This is asserted when constructing the VSETVLIInfo.
   if (getEEWForLoadStore(MI)) {
-    Res.SEW = DemandedFields::SEWNone;
+    Res.SEW = false;
     Res.LMUL = false;
   }
 
@@ -306,7 +285,7 @@ DemandedFields getDemanded(const MachineInstr &MI,
   // * Probably ok if available VLMax is larger than demanded
   // * The policy bits can probably be ignored..
   if (isMaskRegOp(MI)) {
-    Res.SEW = DemandedFields::SEWNone;
+    Res.SEW = false;
     Res.LMUL = false;
   }
 
@@ -315,17 +294,6 @@ DemandedFields getDemanded(const MachineInstr &MI,
     Res.LMUL = false;
     Res.SEWLMULRatio = false;
     Res.VLAny = false;
-    // For vmv.s.x and vfmv.s.f, if writing to an implicit_def operand, we don't
-    // need to preserve any other bits and are thus compatible with any larger,
-    // etype and can disregard policy bits.  Warning: It's tempting to try doing
-    // this for any tail agnostic operation, but we can't as TA requires
-    // tail lanes to either be the original value or -1.  We are writing
-    // unknown bits to the lanes here.
-    auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
-    if (VRegDef && VRegDef->isImplicitDef()) {
-      Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
-      Res.TailPolicy = false;
-    }
   }
 
   return Res;
@@ -483,7 +451,7 @@ public:
 
   bool hasCompatibleVTYPE(const DemandedFields &Used,
                           const VSETVLIInfo &Require) const {
-    return areCompatibleVTYPEs(Require.encodeVTYPE(), encodeVTYPE(), Used);
+    return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
   }
 
   // Determine whether the vector instructions requirements represented by
@@ -515,7 +483,7 @@ public:
     if (Used.VLZeroness && !hasEquallyZeroAVL(Require, MRI))
       return false;
 
-    return hasCompatibleVTYPE(Used, Require);
+    return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
   }
 
   bool operator==(const VSETVLIInfo &Other) const {
@@ -888,7 +856,22 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
 
-  DemandedFields Used = getDemanded(MI, MRI);
+  DemandedFields Used = getDemanded(MI);
+
+  if (isScalarMoveInstr(MI)) {
+    // For vmv.s.x and vfmv.s.f, if writing to an implicit_def operand, we don't
+    // need to preserve any other bits and are thus compatible with any larger,
+    // etype and can disregard policy bits.  Warning: It's tempting to try doing
+    // this for any tail agnostic operation, but we can't as TA requires
+    // tail lanes to either be the original value or -1.  We are writing
+    // unknown bits to the lanes here.
+    auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
+    if (VRegDef && VRegDef->isImplicitDef() &&
+        CurInfo.getSEW() >= Require.getSEW()) {
+      Used.SEW = false;
+      Used.TailPolicy = false;
+    }
+  }
 
   // A slidedown/slideup with an IMPLICIT_DEF merge op can freely clobber
   // elements not copied from the source vector (e.g. masked off, tail, or
@@ -1324,7 +1307,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
 static void doUnion(DemandedFields &A, DemandedFields B) {
   A.VLAny |= B.VLAny;
   A.VLZeroness |= B.VLZeroness;
-  A.SEW = std::max(A.SEW, B.SEW);
+  A.SEW |= B.SEW;
   A.LMUL |= B.LMUL;
   A.SEWLMULRatio |= B.SEWLMULRatio;
   A.TailPolicy |= B.TailPolicy;
@@ -1394,7 +1377,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
 
     if (!isVectorConfigInstr(MI)) {
-      doUnion(Used, getDemanded(MI, MRI));
+      doUnion(Used, getDemanded(MI));
       continue;
     }
 
@@ -1422,7 +1405,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       }
     }
     NextMI = &MI;
-    Used = getDemanded(MI, MRI);
+    Used = getDemanded(MI);
   }
 
   for (auto *MI : ToDelete)
