@@ -4,5 +4,5 @@
 // REQUIRES: riscv-registered-target
 #include <riscv_vector.h>
 
-vfloat16m1_t foo() { /* expected-error {{RISC-V type 'vfloat16m1_t' (aka '__rvv_float16m1_t') requires the 'zvfh or zvfhmin' extension}} */
+vfloat16m1_t foo() { /* expected-error {{RISC-V type 'vfloat16m1_t' (aka '__rvv_float16m1_t') requires the 'zvfh' extension}} */
 } /* expected-warning {{non-void function does not return a value}}*/

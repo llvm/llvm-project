@@ -2215,13 +2215,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfwcvt_rtz_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_rtz_x">;
   def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "csi", "vfwcvt_f">;
   def vfwcvt_f_x_v : RVVConvBuiltin<"Fw", "Fwv", "csi", "vfwcvt_f">;
-  def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "f", "vfwcvt_f">;
-  let RequiredFeatures = ["ZvfhminOrZvfh"] in
-    def vfwcvt_f_f_v_fp16 : RVVConvBuiltin<"w", "wv", "x", "vfwcvt_f"> {
-      let Name = "vfwcvt_f_f_v";
-      let IRName = "vfwcvt_f_f_v";
-      let MaskedIRName = "vfwcvt_f_f_v_mask";
-    }
+  def vfwcvt_f_f_v : RVVConvBuiltin<"w", "wv", "xf", "vfwcvt_f">;
 }
 
 // 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
@@ -2232,13 +2226,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfncvt_rtz_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_rtz_x">;
   def vfncvt_f_xu_w : RVVConvBuiltin<"Fv", "FvUw", "csi", "vfncvt_f">;
   def vfncvt_f_x_w : RVVConvBuiltin<"Fv", "Fvw", "csi", "vfncvt_f">;
-  def vfncvt_f_f_w : RVVConvBuiltin<"v", "vw", "f", "vfncvt_f">;
-  let RequiredFeatures = ["ZvfhminOrZvfh"] in  
-    def vfncvt_f_f_w_fp16 : RVVConvBuiltin<"v", "vw", "x", "vfncvt_f"> {
-      let Name = "vfncvt_f_f_w";
-      let IRName = "vfncvt_f_f_w";
-      let MaskedIRName = "vfncvt_f_f_w_mask";
-    }
+  def vfncvt_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_f">;
   def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_rod_f">;
 }
 }
