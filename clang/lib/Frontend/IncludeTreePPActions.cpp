@@ -170,8 +170,7 @@ public:
 
       // Add to known headers for the module.
       ModuleMap &MMap = PP.getHeaderSearchInfo().getModuleMap();
-      Module::Header H;
-      H.Entry = *FE;
+      Module::Header H{"", "", *FE};
       MMap.addHeader(M, std::move(H), ModuleMap::NormalHeader);
     }
 

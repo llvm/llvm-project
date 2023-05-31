@@ -289,9 +289,10 @@ static void collectAllSubModulesWithUmbrellaHeader(
 }
 
 void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
-  Module::Header UmbrellaHeader = Mod.getUmbrellaHeaderAsWritten();
-  assert(UmbrellaHeader.Entry && "Module must use umbrella header");
-  const FileID &File = SourceMgr.translateFile(UmbrellaHeader.Entry);
+  std::optional<Module::Header> UmbrellaHeader =
+      Mod.getUmbrellaHeaderAsWritten();
+  assert(UmbrellaHeader && "Module must use umbrella header");
+  const FileID &File = SourceMgr.translateFile(UmbrellaHeader->Entry);
   SourceLocation ExpectedHeadersLoc = SourceMgr.getLocForEndOfFile(File);
   if (getDiagnostics().isIgnored(diag::warn_uncovered_module_header,
                                  ExpectedHeadersLoc))

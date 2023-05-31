@@ -348,19 +348,20 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   for (auto *Submodule : Mod.submodules())
     collectModuleHeaders(*Submodule);
 
-  if (const FileEntry *UmbrellaHeader =
-          Mod.getUmbrellaHeaderAsWritten().Entry) {
-    std::string HeaderPath = getCanonicalPath(UmbrellaHeader->getName());
+  if (std::optional<Module::Header> UmbrellaHeader =
+          Mod.getUmbrellaHeaderAsWritten()) {
+    std::string HeaderPath = getCanonicalPath(UmbrellaHeader->Entry.getName());
     // Collect umbrella header.
     HeaderFileNames.push_back(HeaderPath);
 
     // FUTURE: When needed, umbrella header header collection goes here.
-  } else if (const DirectoryEntry *UmbrellaDir =
-                 Mod.getUmbrellaDirAsWritten().Entry) {
+  } else if (std::optional<Module::DirectoryName> UmbrellaDir =
+                 Mod.getUmbrellaDirAsWritten()) {
     // If there normal headers, assume these are umbrellas and skip collection.
     if (Mod.Headers->size() == 0) {
       // Collect headers in umbrella directory.
-      if (!collectUmbrellaHeaders(UmbrellaDir->getName(), UmbrellaDependents))
+      if (!collectUmbrellaHeaders(UmbrellaDir->Entry.getName(),
+                                  UmbrellaDependents))
         return false;
     }
   }
@@ -377,7 +378,7 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
     // Collect normal header.
     const clang::Module::Header &Header(
       Mod.Headers[clang::Module::HK_Normal][Index]);
-    std::string HeaderPath = getCanonicalPath(Header.Entry->getName());
+    std::string HeaderPath = getCanonicalPath(Header.Entry.getName());
     HeaderFileNames.push_back(HeaderPath);
   }
 
