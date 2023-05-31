@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/StoringDiagnosticConsumer.h"
 
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
@@ -18,8 +19,6 @@
 #include "swift/AST/ASTWalker.h"
 #include "swift/AST/DebuggerClient.h"
 #include "swift/AST/Decl.h"
-#include "swift/AST/DiagnosticEngine.h"
-#include "swift/AST/DiagnosticsSema.h"
 #include "swift/AST/ExistentialLayout.h"
 #include "swift/AST/GenericParamList.h"
 #include "swift/AST/GenericSignature.h"
@@ -34,20 +33,17 @@
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
-#include "swift/Basic/DiagnosticOptions.h"
 #include "swift/Basic/Dwarf.h"
 #include "swift/Basic/LLVM.h"
 #include "swift/Basic/LangOptions.h"
 #include "swift/Basic/Located.h"
 #include "swift/Basic/Platform.h"
 #include "swift/Basic/PrimarySpecificPaths.h"
-#include "swift/Basic/SourceManager.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/ModuleInterfaceLoader.h"
-#include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IRGen/Linking.h"
 #include "swift/SIL/SILModule.h"
 #include "swift/Sema/IDETypeChecking.h"
@@ -69,7 +65,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
@@ -86,7 +81,6 @@
 #include "swift/Strings.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
-#include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
@@ -910,8 +904,74 @@ static std::string GetClangModulesCacheProperty() {
   return std::string(path);
 }
 
+SwiftASTContext::ScopedDiagnostics::ScopedDiagnostics(
+    swift::DiagnosticConsumer &consumer)
+    : m_consumer(consumer),
+      m_cursor({static_cast<StoringDiagnosticConsumer *>(&m_consumer)
+                    ->m_raw_swift_diagnostics.size(),
+                static_cast<StoringDiagnosticConsumer *>(&m_consumer)
+                    ->m_raw_clang_diagnostics.size(),
+                static_cast<StoringDiagnosticConsumer *>(&m_consumer)
+                    ->m_diagnostics.size()}) {}
+
+void SwiftASTContext::ScopedDiagnostics::PrintDiagnostics(
+    DiagnosticManager &diagnostic_manager, uint32_t bufferID,
+    uint32_t first_line, uint32_t last_line) const {
+  auto consumer = static_cast<StoringDiagnosticConsumer *>(&m_consumer);
+  consumer->PrintDiagnostics(diagnostic_manager, m_cursor, bufferID, first_line,
+                             last_line);
+}
+
+bool SwiftASTContext::ScopedDiagnostics::HasErrors() const {
+  auto &consumer = *static_cast<StoringDiagnosticConsumer *>(&m_consumer);
+
+  if (consumer.m_num_swift_errors > m_cursor.m_num_swift_errors)
+    return true;
+  if (consumer.m_raw_clang_diagnostics.size() > m_cursor.clang)
+    return true;
+
+  for (size_t i = m_cursor.lldb; i < consumer.m_diagnostics.size(); ++i)
+    if (consumer.m_diagnostics[i]->GetSeverity() == eDiagnosticSeverityError)
+      return true;
+
+  return false;
+}
+
+llvm::Error SwiftASTContext::ScopedDiagnostics::GetAllErrors() const {
+  // Retrieve the error message from the DiagnosticConsumer.
+  DiagnosticManager diagnostic_manager;
+  PrintDiagnostics(diagnostic_manager);
+  return llvm::make_error<llvm::StringError>(diagnostic_manager.GetString(),
+                                             llvm::inconvertibleErrorCode());
+}
+
+SwiftASTContext::ScopedDiagnostics::~ScopedDiagnostics() {
+  auto &consumer = *static_cast<StoringDiagnosticConsumer *>(&m_consumer);
+  auto &lldb_diags = consumer.m_diagnostics;
+  auto &swift_diags = consumer.m_raw_swift_diagnostics;
+
+  // Intentionally don't reset clang diagnostics. Fatal clang
+  // diagnostics cannot be recovered from and they may need be
+  // surfaced as a root cause later on.
+  lldb_diags.resize(std::min(lldb_diags.size(), m_cursor.lldb));
+  swift_diags.resize(std::min(swift_diags.size(), m_cursor.swift));
+
+  assert(consumer.m_num_swift_errors >= m_cursor.m_num_swift_errors);
+  consumer.m_num_swift_errors = m_cursor.m_num_swift_errors;
+
+  consumer.m_ast_context.GetDiagnosticEngine().resetHadAnyError();
+}
+
+std::unique_ptr<SwiftASTContext::ScopedDiagnostics>
+SwiftASTContext::getScopedDiagnosticConsumer() {
+  auto &consumer =
+      *static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get());
+  return std::make_unique<SwiftASTContext::ScopedDiagnostics>(consumer);
+}
+
 #ifndef NDEBUG
-SwiftASTContext::SwiftASTContext() {
+SwiftASTContext::SwiftASTContext()
+    : m_diagnostic_consumer_ap(new StoringDiagnosticConsumer(*this)) {
   llvm::dbgs() << "Initialized mock SwiftASTContext\n";
 }
 #endif
@@ -919,7 +979,8 @@ SwiftASTContext::SwiftASTContext() {
 SwiftASTContext::SwiftASTContext(std::string description,
                                  TypeSystemSwiftTypeRef &typeref_typesystem)
     : TypeSystemSwift(), m_typeref_typesystem(&typeref_typesystem),
-      m_compiler_invocation_ap(new swift::CompilerInvocation()) {
+      m_compiler_invocation_ap(new swift::CompilerInvocation()),
+      m_diagnostic_consumer_ap(new StoringDiagnosticConsumer(*this)) {
   m_description = description;
 
   // Set the clang modules cache path.
@@ -1051,8 +1112,9 @@ static void printASTValidationError(
 }
 
 void SwiftASTContext::DiagnoseWarnings(Process &process, Module &module) const {
-  for (const std::string &message : m_module_import_warnings)
-    process.PrintWarningCantLoadSwiftModule(module, message);
+  if (HasDiagnostics())
+    process.PrintWarningCantLoadSwiftModule(module,
+                                            GetAllDiagnostics().AsCString());
 }
 
 /// Locate the swift-plugin-server for a plugin library,
@@ -1689,7 +1751,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
                                     m_description, errs, got_serialized_options,
                                     found_swift_modules)) {
       // Validation errors are not fatal for the context.
-      swift_ast_sp->m_module_import_warnings.push_back(std::string(error));
+      swift_ast_sp->AddDiagnostic(eDiagnosticSeverityError, errs.str());
     }
 
     llvm::StringRef serialized_triple =
@@ -2298,21 +2360,22 @@ Status SwiftASTContext::IsCompatible() { return GetFatalErrors(); }
 Status SwiftASTContext::GetFatalErrors() const {
   Status error;
   if (HasFatalErrors())
-    error = GetAllErrors();
+    error = GetAllDiagnostics();
   return error;
 }
 
-Status SwiftASTContext::GetAllErrors() const {
+Status SwiftASTContext::GetAllDiagnostics() const {
   Status error = m_fatal_errors;
   if (error.Success()) {
     // Retrieve the error message from the DiagnosticConsumer.
     DiagnosticManager diagnostic_manager;
     PrintDiagnostics(diagnostic_manager);
     error.SetErrorString(diagnostic_manager.GetString());
+    static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
+        ->Clear();
   }
   return error;
 }
-
 
 void SwiftASTContext::LogFatalErrors() const {
   // Avoid spamming the health log with redundant copies of the fatal error.
@@ -2648,365 +2711,6 @@ void SwiftASTContext::InitializeSearchPathOptions(
       invocation_framework_paths);
 }
 
-namespace lldb_private {
-
-class ANSIColorStringStream : public llvm::raw_string_ostream {
-public:
-  ANSIColorStringStream(bool colorize)
-      : llvm::raw_string_ostream(m_buffer), m_colorize(colorize) {}
-  /// Changes the foreground color of text that will be output from
-  /// this point forward.
-  /// \param Color ANSI color to use, the special SAVEDCOLOR can be
-  ///        used to change only the bold attribute, and keep colors
-  ///        untouched.
-  /// \param Bold bold/brighter text, default false
-  /// \param BG if true change the background,
-  ///        default: change foreground
-  /// \returns itself so it can be used within << invocations.
-  raw_ostream &changeColor(enum Colors colors, bool bold = false,
-                           bool bg = false) override {
-    if (llvm::sys::Process::ColorNeedsFlush())
-      flush();
-    const char *colorcode;
-    if (colors == SAVEDCOLOR)
-      colorcode = llvm::sys::Process::OutputBold(bg);
-    else
-      colorcode =
-          llvm::sys::Process::OutputColor(static_cast<char>(colors), bold, bg);
-    if (colorcode) {
-      size_t len = strlen(colorcode);
-      write(colorcode, len);
-    }
-    return *this;
-  }
-
-  /// Resets the colors to terminal defaults. Call this when you are
-  /// done outputting colored text, or before program exit.
-  raw_ostream &resetColor() override {
-    if (llvm::sys::Process::ColorNeedsFlush())
-      flush();
-    const char *colorcode = llvm::sys::Process::ResetColor();
-    if (colorcode) {
-      size_t len = strlen(colorcode);
-      write(colorcode, len);
-    }
-    return *this;
-  }
-
-  /// Reverses the forground and background colors.
-  raw_ostream &reverseColor() override {
-    if (llvm::sys::Process::ColorNeedsFlush())
-      flush();
-    const char *colorcode = llvm::sys::Process::OutputReverse();
-    if (colorcode) {
-      size_t len = strlen(colorcode);
-      write(colorcode, len);
-    }
-    return *this;
-  }
-
-  /// This function determines if this stream is connected to a "tty"
-  /// or "console" window. That is, the output would be displayed to
-  /// the user rather than being put on a pipe or stored in a file.
-  bool is_displayed() const override { return m_colorize; }
-
-  /// This function determines if this stream is displayed and
-  /// supports colors.
-  bool has_colors() const override { return m_colorize; }
-
-protected:
-  std::string m_buffer;
-  bool m_colorize;
-};
-
-class StoringDiagnosticConsumer : public swift::DiagnosticConsumer {
-public:
-  StoringDiagnosticConsumer(SwiftASTContext &ast_context)
-      : m_ast_context(ast_context), m_raw_diagnostics(), m_diagnostics(),
-        m_num_errors(0), m_colorize(false) {
-    m_ast_context.GetDiagnosticEngine().resetHadAnyError();
-    m_ast_context.GetDiagnosticEngine().addConsumer(*this);
-  }
-
-  ~StoringDiagnosticConsumer() {
-    m_ast_context.GetDiagnosticEngine().takeConsumers();
-  }
-
-  void handleDiagnostic(swift::SourceManager &source_mgr,
-                        const swift::DiagnosticInfo &info) override {
-    llvm::StringRef bufferName = "<anonymous>";
-    unsigned bufferID = 0;
-    std::pair<unsigned, unsigned> line_col = {0, 0};
-
-    llvm::SmallString<256> text;
-    {
-      llvm::raw_svector_ostream out(text);
-      swift::DiagnosticEngine::formatDiagnosticText(out, info.FormatString,
-                                                    info.FormatArgs);
-    }
-
-    swift::SourceLoc source_loc = info.Loc;
-    if (source_loc.isValid()) {
-      bufferID = source_mgr.findBufferContainingLoc(source_loc);
-      bufferName = source_mgr.getDisplayNameForLoc(source_loc);
-      line_col = source_mgr.getPresumedLineAndColumnForLoc(source_loc);
-    }
-
-    if (line_col.first != 0) {
-      ANSIColorStringStream os(m_colorize);
-
-      // Determine what kind of diagnostic we're emitting, and whether
-      // we want to use its fixits:
-      bool use_fixits = false;
-      llvm::SourceMgr::DiagKind source_mgr_kind;
-      switch (info.Kind) {
-      case swift::DiagnosticKind::Error:
-        source_mgr_kind = llvm::SourceMgr::DK_Error;
-        use_fixits = true;
-        break;
-      case swift::DiagnosticKind::Warning:
-        source_mgr_kind = llvm::SourceMgr::DK_Warning;
-        break;
-      case swift::DiagnosticKind::Note:
-        source_mgr_kind = llvm::SourceMgr::DK_Note;
-        break;
-      case swift::DiagnosticKind::Remark:
-        source_mgr_kind = llvm::SourceMgr::DK_Remark;
-        break;
-      }
-
-      // Swift may insert note diagnostics after an error diagnostic with fixits
-      // related to that error. Check if the latest inserted diagnostic is an
-      // error one, and that the diagnostic being processed is a note one that
-      // points to the same error, and if so, copy the fixits from the note
-      // diagnostic to the error one. There may be subsequent notes with fixits
-      // related to the same error, but we only copy the first one as the fixits
-      // are mutually exclusive (for example, one may suggest inserting a '?'
-      // and the next may suggest inserting '!')
-      if (!m_raw_diagnostics.empty() &&
-          info.Kind == swift::DiagnosticKind::Note) {
-        auto &last_diagnostic = m_raw_diagnostics.back();
-        if (last_diagnostic.kind == swift::DiagnosticKind::Error &&
-            last_diagnostic.fixits.empty() &&
-            last_diagnostic.bufferID == bufferID &&
-            last_diagnostic.column == line_col.second &&
-            last_diagnostic.line == line_col.first)
-          last_diagnostic.fixits.insert(last_diagnostic.fixits.end(),
-                                        info.FixIts.begin(), info.FixIts.end());
-      }
-
-      // Translate ranges.
-      llvm::SmallVector<llvm::SMRange, 2> ranges;
-      for (auto R : info.Ranges)
-        ranges.push_back(getRawRange(source_mgr, R));
-
-      // Translate fix-its.
-      llvm::SmallVector<llvm::SMFixIt, 2> fix_its;
-      for (swift::DiagnosticInfo::FixIt F : info.FixIts)
-        fix_its.push_back(getRawFixIt(source_mgr, F));
-
-      // Display the diagnostic.
-      auto message = source_mgr.GetMessage(source_loc, source_mgr_kind, text,
-                                           ranges, fix_its);
-      source_mgr.getLLVMSourceMgr().PrintMessage(os, message);
-
-      // Use the llvm::raw_string_ostream::str() accessor as it will
-      // flush the stream into our "message" and return us a reference
-      // to "message".
-      std::string &message_ref = os.str();
-
-      if (message_ref.empty())
-        m_raw_diagnostics.push_back(RawDiagnostic(
-            std::string(text), info.Kind, bufferName, bufferID, line_col.first,
-            line_col.second,
-            use_fixits ? info.FixIts
-                       : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
-      else
-        m_raw_diagnostics.push_back(RawDiagnostic(
-            message_ref, info.Kind, bufferName, bufferID, line_col.first,
-            line_col.second,
-            use_fixits ? info.FixIts
-                       : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
-    } else {
-      m_raw_diagnostics.push_back(RawDiagnostic(
-          std::string(text), info.Kind, bufferName, bufferID, line_col.first,
-          line_col.second, llvm::ArrayRef<swift::Diagnostic::FixIt>()));
-    }
-
-    if (info.Kind == swift::DiagnosticKind::Error)
-      m_num_errors++;
-  }
-
-  void Clear() {
-    m_ast_context.GetDiagnosticEngine().resetHadAnyError();
-    m_raw_diagnostics.clear();
-    m_diagnostics.clear();
-    m_num_errors = 0;
-  }
-
-  unsigned NumErrors() {
-    if (m_num_errors)
-      return m_num_errors;
-    else if (m_ast_context.GetASTContext()->hadError())
-      return 1;
-    else
-      return 0;
-  }
-
-  static DiagnosticSeverity SeverityForKind(swift::DiagnosticKind kind) {
-    switch (kind) {
-    case swift::DiagnosticKind::Error:
-      return eDiagnosticSeverityError;
-    case swift::DiagnosticKind::Warning:
-      return eDiagnosticSeverityWarning;
-    case swift::DiagnosticKind::Note:
-    case swift::DiagnosticKind::Remark:
-      return eDiagnosticSeverityRemark;
-    }
-
-    llvm_unreachable("Unhandled DiagnosticKind in switch.");
-  }
-
-  void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
-                        uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
-                        uint32_t last_line = UINT32_MAX) {
-    bool added_one_diagnostic = !m_diagnostics.empty();
-
-    for (std::unique_ptr<Diagnostic> &diagnostic : m_diagnostics) {
-      diagnostic_manager.AddDiagnostic(std::move(diagnostic));
-    }
-
-    for (const RawDiagnostic &diagnostic : m_raw_diagnostics) {
-      // We often make expressions and wrap them in some code.  When
-      // we see errors we want the line numbers to be correct so we
-      // correct them below. LLVM stores in SourceLoc objects as
-      // character offsets so there is no way to get LLVM to move its
-      // error line numbers around by adjusting the source location,
-      // we must do it manually. We also want to use the same error
-      // formatting as LLVM and Clang, so we must muck with the
-      // string.
-
-      const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
-      const DiagnosticOrigin origin = eDiagnosticOriginSwift;
-
-      if (first_line > 0 && bufferID != UINT32_MAX) {
-        // Make sure the error line is in range or in another file.
-        if (diagnostic.bufferID == bufferID && !diagnostic.bufferName.empty() &&
-            (diagnostic.line < first_line || diagnostic.line > last_line))
-          continue;
-        // Need to remap the error/warning to a different line.
-        StreamString match;
-        match.Printf("%s:%u:", diagnostic.bufferName.str().c_str(),
-                     diagnostic.line);
-        const size_t match_len = match.GetString().size();
-        size_t match_pos = diagnostic.description.find(match.GetString().str());
-        if (match_pos != std::string::npos) {
-          // We have some <file>:<line>:" instances that need to be updated.
-          StreamString fixed_description;
-          size_t start_pos = 0;
-          do {
-            if (match_pos > start_pos)
-              fixed_description.Printf(
-                  "%s",
-                  diagnostic.description.substr(start_pos, match_pos).c_str());
-            fixed_description.Printf(
-                "%s:%u:", diagnostic.bufferName.str().c_str(),
-                diagnostic.line - first_line + 1);
-            start_pos = match_pos + match_len;
-            match_pos =
-                diagnostic.description.find(match.GetString().str(), start_pos);
-          } while (match_pos != std::string::npos);
-
-          // Append any last remaining text.
-          if (start_pos < diagnostic.description.size())
-            fixed_description.Printf(
-                "%s", diagnostic.description
-                          .substr(start_pos,
-                                  diagnostic.description.size() - start_pos)
-                          .c_str());
-
-          auto new_diagnostic = std::make_unique<SwiftDiagnostic>(
-              fixed_description.GetData(), severity, origin, bufferID);
-          for (auto fixit : diagnostic.fixits)
-            new_diagnostic->AddFixIt(fixit);
-
-          diagnostic_manager.AddDiagnostic(std::move(new_diagnostic));
-          if (diagnostic.kind == swift::DiagnosticKind::Error)
-            added_one_diagnostic = true;
-
-        }
-      }
-    }
-
-    // In general, we don't want to see diagnostics from outside of
-    // the source text range of the actual user expression. But if we
-    // didn't find any diagnostics in the text range, it's probably
-    // because the source range was not specified correctly, and we
-    // don't want to lose legit errors because of that. So in that
-    // case we'll add them all here:
-    if (!added_one_diagnostic) {
-      // This will report diagnostic errors from outside the
-      // expression's source range. Those are not interesting to
-      // users, so we only emit them in debug builds.
-      for (const RawDiagnostic &diagnostic : m_raw_diagnostics) {
-        const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
-        const DiagnosticOrigin origin = eDiagnosticOriginSwift;
-        diagnostic_manager.AddDiagnostic(diagnostic.description.c_str(),
-                                         severity, origin);
-      }
-    }
-  }
-
-  bool GetColorize() const { return m_colorize; }
-
-  bool SetColorize(bool b) {
-    const bool old = m_colorize;
-    m_colorize = b;
-    return old;
-  }
-
-  void AddDiagnostic(std::unique_ptr<Diagnostic> diagnostic) {
-    if (diagnostic)
-      m_diagnostics.push_back(std::move(diagnostic));
-  }
-
-private:
-  // We don't currently use lldb_private::Diagostic or any of the lldb
-  // DiagnosticManager machinery to store diagnostics as they
-  // occur. Instead, we store them in raw form using this struct, then
-  // transcode them to SwiftDiagnostics in PrintDiagnostic.
-  struct RawDiagnostic {
-    RawDiagnostic(std::string in_desc, swift::DiagnosticKind in_kind,
-                  llvm::StringRef in_bufferName, unsigned in_bufferID,
-                  uint32_t in_line, uint32_t in_column,
-                  llvm::ArrayRef<swift::Diagnostic::FixIt> in_fixits)
-        : description(in_desc), kind(in_kind), bufferName(in_bufferName),
-          bufferID(in_bufferID), line(in_line), column(in_column) {
-      for (auto fixit : in_fixits) {
-        fixits.push_back(fixit);
-      }
-    }
-    std::string description;
-    swift::DiagnosticKind kind;
-    const llvm::StringRef bufferName;
-    unsigned bufferID;
-    uint32_t line;
-    uint32_t column;
-    std::vector<swift::DiagnosticInfo::FixIt> fixits;
-  };
-  typedef std::vector<RawDiagnostic> RawDiagnosticBuffer;
-  typedef std::vector<std::unique_ptr<Diagnostic>> DiagnosticList;
-
-  SwiftASTContext &m_ast_context;
-  RawDiagnosticBuffer m_raw_diagnostics;
-  DiagnosticList m_diagnostics;
-
-  unsigned m_num_errors = 0;
-  bool m_colorize;
-};
-
-} // namespace lldb_private
-
 swift::ASTContext *SwiftASTContext::GetASTContext() {
   assert(m_initialized_search_path_options &&
          m_initialized_clang_importer_options &&
@@ -3021,7 +2725,6 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       GetSearchPathOptions(), GetClangImporterOptions(),
       GetSymbolGraphOptions(), GetSourceManager(), GetDiagnosticEngine(),
       ReportModuleLoadingProgress));
-  m_diagnostic_consumer_ap.reset(new StoringDiagnosticConsumer(*this));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
     // NOTE: leaking a swift::PrintingDiagnosticConsumer() here, but
@@ -3042,24 +2745,21 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       swift::DWARFImporterDelegate *delegate = nullptr;
       if (props.GetUseSwiftDWARFImporter())
         delegate = &m_typeref_typesystem->GetDWARFImporterDelegate();
+      auto importer_diags = getScopedDiagnosticConsumer();
       clang_importer_ap = swift::ClangImporter::create(
           *m_ast_context_ap, "", m_dependency_tracker.get(), delegate);
 
       // Handle any errors.
-      if (!clang_importer_ap || HasErrors()) {
-        std::string message;
-        if (!HasErrors()) {
-          message = "failed to create ClangImporter.";
-          m_module_import_warnings.push_back(message);
-        } else {
+      if (!clang_importer_ap || importer_diags->HasErrors()) {
+        AddDiagnostic(eDiagnosticSeverityError,
+                      "failed to create ClangImporter");
+        if (GetLog(LLDBLog::Types)) {
           DiagnosticManager diagnostic_manager;
-          PrintDiagnostics(diagnostic_manager);
+          importer_diags->PrintDiagnostics(diagnostic_manager);
           std::string underlying_error = diagnostic_manager.GetString();
-          message = "failed to initialize ClangImporter: ";
-          message += underlying_error;
-          m_module_import_warnings.push_back(underlying_error);
+          HEALTH_LOG_PRINTF("failed to initialize ClangImporter: %s",
+                            underlying_error.c_str());
         }
-        LOG_PRINTF(GetLog(LLDBLog::Types), "%s", message.c_str());
       }
       if (clang_importer_ap)
         moduleCachePath = swift::getModuleCachePathFromClang(
@@ -3362,11 +3062,16 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
     return nullptr;
   }
 
-  ClearDiagnostics();
+  // Create a diagnostic consumer for the diagnostics produced by the import.
+  auto import_diags = getScopedDiagnosticConsumer();
+
+  // Perform the import.
   swift::ModuleDecl *module_decl = ast->getModuleByName(module_basename_sref);
-  if (HasErrors()) {
+
+  // Error handling.
+  if (import_diags->HasErrors()) {
     DiagnosticManager diagnostic_manager;
-    PrintDiagnostics(diagnostic_manager);
+    import_diags->PrintDiagnostics(diagnostic_manager);
     std::string diagnostic = diagnostic_manager.GetString();
     error.SetErrorStringWithFormat(
         "failed to get module \"%s\" from AST context:\n%s",
@@ -4112,10 +3817,9 @@ swift::TypeBase *
 SwiftASTContext::ReconstructType(ConstString mangled_typename) {
   Status error;
 
-  auto reconstructed_type = this->ReconstructType(mangled_typename, error);
-  if (!error.Success()) {
-    this->AddErrorStatusAsGenericDiagnostic(error);
-  }
+  auto reconstructed_type = ReconstructType(mangled_typename, error);
+  if (!error.Success())
+    AddDiagnostic(eDiagnosticSeverityWarning, error.AsCString());
   return reconstructed_type;
 }
 
@@ -4746,81 +4450,68 @@ uint32_t SwiftASTContext::GetPointerByteSize() {
   return m_pointer_byte_size;
 }
 
-bool SwiftASTContext::HasErrors() {
-  if (m_diagnostic_consumer_ap.get())
-    return (
-        static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-            ->NumErrors() != 0);
-  else
-    return false;
+bool SwiftASTContext::HasDiagnostics() const {
+  assert(m_diagnostic_consumer_ap);
+  return (
+      static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
+          ->HasDiagnostics());
+}
+bool SwiftASTContext::HasClangImporterErrors() const {
+  assert(m_diagnostic_consumer_ap);
+  return (
+      static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
+          ->NumClangErrors() != 0);
+}
+
+void SwiftASTContext::AddDiagnostic(DiagnosticSeverity severity,
+                                    llvm::StringRef message) {
+  assert(m_diagnostic_consumer_ap);
+  HEALTH_LOG_PRINTF("%s", message.str().c_str());
+  if (!m_diagnostic_consumer_ap.get())
+    return;
+
+  auto diagnostic = std::make_unique<Diagnostic>(
+      message, severity, eDiagnosticOriginLLDB, LLDB_INVALID_COMPILER_ID);
+  static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
+      ->AddDiagnostic(std::move(diagnostic));
 }
 
 bool SwiftASTContext::HasFatalErrors(swift::ASTContext *ast_context) {
   return (ast_context && ast_context->Diags.hasFatalErrorOccurred());
 }
 
-void SwiftASTContext::ClearDiagnostics() {
-  assert(!HasFatalErrors() && "Never clear a fatal diagnostic!");
-  if (m_diagnostic_consumer_ap.get())
-    static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-        ->Clear();
-}
-
 bool SwiftASTContext::SetColorizeDiagnostics(bool b) {
-  if (m_diagnostic_consumer_ap.get())
-    return static_cast<StoringDiagnosticConsumer *>(
-               m_diagnostic_consumer_ap.get())
-        ->SetColorize(b);
+  assert(m_diagnostic_consumer_ap.get());
+  return static_cast<StoringDiagnosticConsumer *>(
+             m_diagnostic_consumer_ap.get())
+      ->SetColorize(b);
   return false;
-}
-
-void SwiftASTContext::AddErrorStatusAsGenericDiagnostic(Status error) {
-  assert(!error.Success() && "status should be in an error state");
-
-  auto diagnostic = std::make_unique<Diagnostic>(
-      error.AsCString(), eDiagnosticSeverityError, eDiagnosticOriginLLDB,
-      LLDB_INVALID_COMPILER_ID);
-  if (m_diagnostic_consumer_ap.get())
-    static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-        ->AddDiagnostic(std::move(diagnostic));
 }
 
 void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                                        uint32_t bufferID, uint32_t first_line,
                                        uint32_t last_line) const {
+  // VALID_OR_RETURN cannot be used here here since would exit on error.
   LLDB_SCOPED_TIMER();
-  // If this is a fatal error, copy the error into the AST context's
-  // fatal error field, and then put it to the stream, otherwise just
-  // dump the diagnostics to the stream.
-
-  // N.B. you cannot use VALID_OR_RETURN here since that exits if
-  // you have fatal errors, which are what we are trying to print
-  // here.
   if (!m_ast_context_ap.get()) {
-    SymbolFile *sym_file = GetSymbolFile();
-    if (sym_file) {
-      ConstString name =
-          sym_file->GetObjectFile()->GetModule()->GetObjectName();
-      m_fatal_errors.SetErrorStringWithFormat("Null context for %s.",
-                                              name.AsCString());
-    } else {
-      m_fatal_errors.SetErrorString("Unknown fatal error occurred.");
-    }
+    RaiseFatalError("Swift compiler could not be initialized");
     return;
   }
 
+  // Forward diagnostics into diagnostic_manager.
+  // If there is a fatal error, also copy the error into m_fatal_errors.
+  assert(m_diagnostic_consumer_ap);
+  auto &diags =
+      *static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get());
   if (m_ast_context_ap->Diags.hasFatalErrorOccurred() &&
       !m_reported_fatal_error) {
     DiagnosticManager fatal_diagnostics;
-
-    if (m_diagnostic_consumer_ap.get())
-      static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-          ->PrintDiagnostics(fatal_diagnostics, bufferID, first_line,
-                             last_line);
+    diags.PrintDiagnostics(fatal_diagnostics, {}, bufferID, first_line,
+                           last_line);
     if (fatal_diagnostics.Diagnostics().size())
-      m_fatal_errors.SetErrorString(fatal_diagnostics.GetString().c_str());
+      RaiseFatalError(fatal_diagnostics.GetString());
     else
-      m_fatal_errors.SetErrorString("Unknown fatal error occurred.");
+      RaiseFatalError("Unknown fatal error occurred.");
 
     m_reported_fatal_error = true;
 
@@ -4833,10 +4524,8 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
           fatal_diagnostic->getKind(), fatal_diagnostic->GetCompilerID());
     }
   } else {
-    if (m_diagnostic_consumer_ap.get())
-      static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-          ->PrintDiagnostics(diagnostic_manager, bufferID, first_line,
-                             last_line);
+    diags.PrintDiagnostics(diagnostic_manager, {}, bufferID, first_line,
+                           last_line);
   }
 }
 
@@ -4867,9 +4556,9 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
     if (use_all_compiler_flags && !extra_clang_args.empty()) {
       // We cannot reconfigure ClangImporter after its creation.
       // Instead poison the SwiftASTContext so it gets recreated.
-      m_fatal_errors.SetErrorStringWithFormat(
-          "New Swift image added: %s. ClangImporter needs to be reinitialized.",
-          module_sp->GetFileSpec().GetPath().c_str());
+      RaiseFatalError(
+          "New Swift image added: " + module_sp->GetFileSpec().GetPath() +
+          "ClangImporter needs to be reinitialized.");
       HEALTH_LOG_PRINTF(
           "New Swift image added: %s. ClangImporter needs to be reinitialized.",
           module_sp->GetFileSpec().GetPath().c_str());

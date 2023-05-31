@@ -16,14 +16,19 @@
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
-#include "swift/SymbolGraphGen/SymbolGraphOptions.h"
-#include "swift/Parse/ParseVersion.h"
+
 #include "lldb/Core/SwiftForward.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Utility/Either.h"
+
+#include "swift/Parse/ParseVersion.h"
+#include "swift/SymbolGraphGen/SymbolGraphOptions.h"
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Target/TargetOptions.h"
+
 #include <memory>
 
 namespace swift {
@@ -423,19 +428,66 @@ public:
 
   CompilerType GetErrorType() override;
 
-  bool HasErrors();
+  /// Error handling
+  /// \{
+  bool HasDiagnostics() const;
+  bool HasClangImporterErrors() const;
 
-  // NEVER call this without checking HasFatalErrors() first.
-  // This clears the fatal-error state which is terrible.
-  // We will assert if you clear an actual fatal error.
-  void ClearDiagnostics();
+  void AddDiagnostic(DiagnosticSeverity severity, llvm::StringRef message);
+  void RaiseFatalError(std::string msg) const {
+    m_fatal_errors.SetErrorString(msg);
+  }
+  static bool HasFatalErrors(swift::ASTContext *ast_context);
+  bool HasFatalErrors() const {
+    return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
+  }
 
+  /// Return only fatal errors.
+  Status GetFatalErrors() const;
+  /// Notify the Process about any Swift or ClangImporter errors.
+  void DiagnoseWarnings(Process &process, Module &module) const override;
+  
   bool SetColorizeDiagnostics(bool b);
-  void AddErrorStatusAsGenericDiagnostic(Status error);
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
                         uint32_t last_line = UINT32_MAX) const;
+
+  /// A set of indices into the diagnostic vectors to mark the start
+  /// of a transaction.
+  struct DiagnosticCursor {
+    size_t swift = 0;
+    size_t clang = 0;
+    size_t lldb = 0;
+    size_t m_num_swift_errors = 0;
+  };
+
+  /// A lightweight RAII abstraction that sits on top of a diagnostic
+  /// consumer that can be used capture diagnostics for one
+  /// transaction and restore (most of) the state of the consumer
+  /// after its destruction.  Clang errors and LLDB errors are
+  /// persistent and intentionally not reset by this.
+  class ScopedDiagnostics {
+    swift::DiagnosticConsumer &m_consumer;
+    const DiagnosticCursor m_cursor;
+
+  public:
+    ScopedDiagnostics(swift::DiagnosticConsumer &consumer);
+    ~ScopedDiagnostics();
+    /// Print all diagnostics that happened during the lifetime of
+    /// this object to diagnostic_manager. If none is found, print the
+    /// persistent diagnostics form the parent consumer.
+    void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
+                          uint32_t bufferID = UINT32_MAX,
+                          uint32_t first_line = 0,
+                          uint32_t last_line = UINT32_MAX) const;
+    bool HasErrors() const;
+    /// Return all errors and warnings that happened during the lifetime of this
+    /// object.
+    llvm::Error GetAllErrors() const;
+  };
+  std::unique_ptr<ScopedDiagnostics> getScopedDiagnosticConsumer();
+  /// \}
 
   ConstString GetMangledTypeName(swift::TypeBase *);
 
@@ -454,22 +506,6 @@ public:
   typedef llvm::StringMap<swift::ModuleDecl *> SwiftModuleMap;
 
   const SwiftModuleMap &GetModuleCache() { return m_swift_module_cache; }
-
-  void RaiseFatalError(std::string msg) { m_fatal_errors.SetErrorString(msg); }
-  static bool HasFatalErrors(swift::ASTContext *ast_context);
-  bool HasFatalErrors() const {
-    return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
-  }
-
-  Status GetAllErrors() const;
-  Status GetFatalErrors() const;
-  void DiagnoseWarnings(Process &process, Module &module) const override;
-  void LogFatalErrors() const;
-
-  /// Return a list of warnings collected from ClangImporter.
-  const std::vector<std::string> &GetModuleImportWarnings() const {
-    return m_module_import_warnings;
-  }
 
   const swift::irgen::TypeInfo *
   GetSwiftTypeInfo(lldb::opaque_compiler_type_t type);
@@ -817,6 +853,10 @@ protected:
   typedef llvm::DenseMap<swift::TypeBase *, const char *>
       SwiftMangledNameFromTypeMap;
 
+  /// Called by the VALID_OR_RETURN macro to log all errors.
+  void LogFatalErrors() const;
+  Status GetAllDiagnostics() const;
+
   llvm::TargetOptions *getTargetOptions();
 
   swift::ModuleDecl *GetScratchModule();
@@ -862,9 +902,6 @@ protected:
   llvm::once_flag m_ir_gen_module_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;
-  /// A collection of (not necessarily fatal) error messages that
-  /// should be printed by Process::PrintWarningCantLoadSwift().
-  std::vector<std::string> m_module_import_warnings;
   swift::ModuleDecl *m_scratch_module = nullptr;
   std::unique_ptr<swift::Lowering::TypeConverter> m_sil_types_ap;
   std::unique_ptr<swift::SILModule> m_sil_module_ap;
