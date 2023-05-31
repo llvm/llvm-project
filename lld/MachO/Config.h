@@ -206,6 +206,8 @@ struct Configuration {
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
   bool ltoDebugPassManager = false;
+  bool csProfileGenerate = false;
+  llvm::StringRef csProfilePath;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
