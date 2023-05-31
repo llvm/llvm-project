@@ -1720,10 +1720,18 @@ void KokkosCppEmitter::populateSparseSupportFunctions()
     {
       sparseSupportFunctions.insert({name, {pointerResult, std::string("_mlir_ciface_") + name}});
     };
+  auto registerNonPrefixed =
+    [&](bool pointerResult, std::string name)
+    {
+      sparseSupportFunctions.insert({name, {pointerResult, name}});
+    };
   registerCIface(false, "newSparseTensor");
   registerCIface(true, "sparseValuesF64");
   registerCIface(true, "sparseIndices0");
   registerCIface(true, "sparsePointers0");
+  registerCIface(false, "lexInsertF64");
+  // Now the functions _not_ prefixed with _mlir_ciface_
+  registerNonPrefixed(false, "endInsert");
 }
 
 /// Return the existing or a new name for a Value.
