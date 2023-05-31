@@ -16,8 +16,8 @@ constexpr int bar() {
                 // ref-note {{in call to 'foo()'}}
 }
 
-static_assert(bar() == 12); // expected-error {{not an integral constant expression}} \
-                            // expected-note {{in call to 'bar()'}} \
-                            // ref-error {{not an integral constant expression}} \
-                            // ref-note {{in call to 'bar()'}}
+static_assert(bar() == 12, ""); // expected-error {{not an integral constant expression}} \
+                                // expected-note {{in call to 'bar()'}} \
+                                // ref-error {{not an integral constant expression}} \
+                                // ref-note {{in call to 'bar()'}}
 
