@@ -1088,7 +1088,7 @@ _mm256_sad_epu8(__m256i __a, __m256i __b)
   return __builtin_ia32_psadbw256((__v32qi)__a, (__v32qi)__b);
 }
 
-/// Shuffles 8-bit integers in the 256-bit integer vector \a __a acccording
+/// Shuffles 8-bit integers in the 256-bit integer vector \a __a according
 ///    to control information in the 256-bit integer vector \a __b, and
 ///    returns the 256-bit result. In effect there are two separate 128-bit
 ///    shuffles in the lower and upper halves.
@@ -1128,7 +1128,7 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b)
 }
 
 /// Shuffles 32-bit integers from the 256-bit vector of [8 x i32] in \a a
-///    acccording to control information in the integer literal \a imm, and
+///    according to control information in the integer literal \a imm, and
 ///    returns the 256-bit result. In effect there are two parallel 128-bit
 ///    shuffles in the lower and upper halves.
 ///
@@ -1161,7 +1161,7 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b)
   ((__m256i)__builtin_ia32_pshufd256((__v8si)(__m256i)(a), (int)(imm)))
 
 /// Shuffles 16-bit integers from the 256-bit vector of [16 x i16] in \a a
-///    acccording to control information in the integer literal \a imm, and
+///    according to control information in the integer literal \a imm, and
 ///    returns the 256-bit result. The upper 64 bits of each 128-bit half
 ///    are shuffled in parallel; the lower 64 bits of each 128-bit half are
 ///    copied from \a a unchanged.
@@ -1197,7 +1197,7 @@ _mm256_shuffle_epi8(__m256i __a, __m256i __b)
   ((__m256i)__builtin_ia32_pshufhw256((__v16hi)(__m256i)(a), (int)(imm)))
 
 /// Shuffles 16-bit integers from the 256-bit vector of [16 x i16] \a a
-///    acccording to control information in the integer literal \a imm, and
+///    according to control information in the integer literal \a imm, and
 ///    returns the 256-bit [16 x i16] result. The lower 64 bits of each
 ///    128-bit half are shuffled; the upper 64 bits of each 128-bit half are
 ///    copied from \a a unchanged.
