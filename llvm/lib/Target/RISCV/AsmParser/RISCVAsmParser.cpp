@@ -2782,8 +2782,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
           return Error(Loc, OutputErrMsg.str());
         }
-        getTargetStreamer().emitDirectiveOptionArchPlus(Ext->Key, PrefixEmitted,
-                                                        HasComma);
+        getTargetStreamer().emitDirectiveOptionArchPlusOrMinus(
+            Ext->Key, /*Enable*/ true, PrefixEmitted, HasComma);
       } else {
         // It is invalid to disable an extension that there are other enabled
         // extensions depend on it.
@@ -2798,8 +2798,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
         }
 
         clearFeatureBits(Ext->Value, Ext->Key);
-        getTargetStreamer().emitDirectiveOptionArchMinus(
-            Ext->Key, PrefixEmitted, HasComma);
+        getTargetStreamer().emitDirectiveOptionArchPlusOrMinus(
+            Ext->Key, /*Enable*/ false, PrefixEmitted, HasComma);
       }
 
       if (!HasComma)
