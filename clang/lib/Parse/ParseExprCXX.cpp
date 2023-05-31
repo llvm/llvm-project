@@ -1364,7 +1364,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   if (isCXX11AttributeSpecifier()) {
     Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_decl_attrs_on_lambda
-                  : diag::ext_decl_attrs_on_lambda);
+                  : diag::ext_decl_attrs_on_lambda)
+        << Tok.getIdentifierInfo() << Tok.isRegularKeywordAttribute();
     MaybeParseCXX11Attributes(D);
   }
 
@@ -1499,6 +1500,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                   tok::kw___private, tok::kw___global, tok::kw___local,
                   tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
                   tok::kw_requires, tok::kw_noexcept) ||
+      Tok.isRegularKeywordAttribute() ||
       (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
 
   if (HasSpecifiers && !HasParentheses && !getLangOpts().CPlusPlus23) {

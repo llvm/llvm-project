@@ -1189,7 +1189,7 @@ void Sema::ActOnEndOfTranslationUnit() {
         !(isa<FunctionDecl>(PrevDecl) || isa<VarDecl>(PrevDecl)))
       for (const auto &WI : WeakIDs.second)
         Diag(WI.getLocation(), diag::warn_attribute_wrong_decl_type)
-            << "'weak'" << ExpectedVariableOrFunction;
+            << "'weak'" << /*isRegularKeyword=*/0 << ExpectedVariableOrFunction;
     else
       for (const auto &WI : WeakIDs.second)
         Diag(WI.getLocation(), diag::warn_weak_identifier_undeclared)
