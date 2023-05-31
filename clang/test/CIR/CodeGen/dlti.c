@@ -3,7 +3,7 @@
 
 void foo() {}
 
-//      CHECK: module attributes {
+//      CHECK: module @"{{.*}}dlti.c" attributes {
 //  CHECK-DAG: cir.sob = #cir.signed_overflow_behavior<undefined>,
 //  CHECK-DAG: dlti.dl_spec =
 //  CHECK-DAG: #dlti.dl_spec<

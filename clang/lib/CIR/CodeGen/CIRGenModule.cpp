@@ -156,6 +156,13 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   }
   theModule->setAttr("cir.sob",
                      mlir::cir::SignedOverflowBehaviorAttr::get(&context, sob));
+  // Set the module name to be the name of the main file.
+  auto MainFileID = astctx.getSourceManager().getMainFileID();
+  const FileEntry &MainFile =
+      *astctx.getSourceManager().getFileEntryForID(MainFileID);
+  auto Path = MainFile.tryGetRealPathName();
+  if (!Path.empty())
+    theModule.setSymName(Path);
 }
 
 CIRGenModule::~CIRGenModule() {}
