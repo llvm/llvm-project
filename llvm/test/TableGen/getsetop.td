@@ -5,6 +5,9 @@
 // RUN: not llvm-tblgen -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
 // RUN: not llvm-tblgen -DERROR5 %s 2>&1 | FileCheck --check-prefix=ERROR5 %s
 // RUN: not llvm-tblgen -DERROR6 %s 2>&1 | FileCheck --check-prefix=ERROR6 %s
+// RUN: not llvm-tblgen -DERROR7 %s 2>&1 | FileCheck --check-prefix=ERROR7 %s
+// RUN: not llvm-tblgen -DERROR8 %s 2>&1 | FileCheck --check-prefix=ERROR8 %s
+// RUN: not llvm-tblgen -DERROR9 %s 2>&1 | FileCheck --check-prefix=ERROR9 %s
 
 // !setop and !getop are deprecated in favor of !setdagop and !getdagop.
 // Two tests retain the old names just to be sure they are still supported.
@@ -114,4 +117,34 @@ def test {
   dag in6 = (foo alice:$a, bob:$b);
   // CHECK: Base base = bob;
   Base base = !getdagarg<Base>(in6, 1);
+
+  // CHECK: dag orig_set_val = (foo 1, 2:$a, "val":$b);
+  dag orig_set_val = !setdagarg(orig, 2, "val");
+  // CHECK: dag orig_set_val_by_name = (foo 1, 2:$a, "aval":$b);
+  dag orig_set_val_by_name = !setdagarg(orig, "b", "aval");
+  // CHECK: dag orig_set_dag_val = (foo 1, 2:$a, (bar foo:$p, qux:$q):$b);
+  dag orig_set_dag_val = !setdagarg(orig, "b", (bar foo:$p, qux:$q));
+  // CHECK: dag orig_clr_val = (foo 1, ?:$a, ?:$b);
+  dag orig_clr_val = !setdagarg(orig, "a", ?);
+  // CHECK: dag orig_set_name = (foo 1:$c, 2:$a, ?:$b);
+  dag orig_set_name = !setdagname(orig, 0, "c");
+  // CHECK: dag orig_clr_name = (foo 1, 2, ?:$b);
+  dag orig_clr_name = !setdagname(orig, 1, ?);
+  // CHECK: dag orig_rename = (foo 1, 2:$x, ?:$y);
+  dag orig_rename = !setdagname(!setdagname(orig, "a", "x"), "b", "y");
+
+#ifdef ERROR7
+  // ERROR7: error: !setdagarg index -1 is negative
+  dag orig_negative = !setdagarg(orig, -1, "val");
+#endif
+
+#ifdef ERROR8
+  // ERROR8: error: !setdagarg index 3 is out of range (dag has 3 arguments)
+  dag orig_out_of_range = !setdagarg(orig, 3, "val");
+#endif
+
+#ifdef ERROR9
+  // ERROR9: error: expected integer index or string name, got type 'Base'
+  dag orig_out_of_range = !setdagarg(orig, foo, (foo qux:$a));
+#endif
 }
