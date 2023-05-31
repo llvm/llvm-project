@@ -1144,9 +1144,7 @@ void TextDiagnostic::emitSnippetAndCaret(
       (LastLevel != DiagnosticsEngine::Note || Level == LastLevel))
     return;
 
-  // Decompose the location into a FID/Offset pair.
-  std::pair<FileID, unsigned> LocInfo = Loc.getDecomposedLoc();
-  FileID FID = LocInfo.first;
+  FileID FID = Loc.getFileID();
   const SourceManager &SM = Loc.getManager();
 
   // Get information about the buffer it points into.
