@@ -408,7 +408,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 
   // Process the data from the parsed dictionary value into struct-like data.
   SmallVector<DimLevelType> lvlTypes;
-  SmallVector<SparseTensorDimSliceAttr> slices;
+  SmallVector<SparseTensorDimSliceAttr> dimSlices;
   AffineMap dimToLvl = {};
   unsigned posWidth = 0;
   unsigned crdWidth = 0;
@@ -416,7 +416,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   StringRef attrName;
   // Exactly 6 keys.
   SmallVector<StringRef, 6> keys = {"lvlTypes", "dimToLvl", "posWidth",
-                                    "crdWidth", "slice"};
+                                    "crdWidth", "dimSlices"};
   while (succeeded(parser.parseOptionalKeyword(&attrName))) {
     if (!llvm::is_contained(keys, attrName)) {
       parser.emitError(parser.getNameLoc(), "unexpected key: ") << attrName;
@@ -464,13 +464,13 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
       ERROR_IF(!intAttr, "expected an integral index bitwidth")
       crdWidth = intAttr.getInt();
-    } else if (attrName == "slice") {
+    } else if (attrName == "dimSlices") {
       RETURN_ON_FAIL(parser.parseLSquare())
       // Dispatches to DimSliceAttr to skip mnemonic
       bool finished = false;
       while (auto attr = SparseTensorDimSliceAttr::parse(parser, nullptr)) {
         auto sliceAttr = llvm::cast<SparseTensorDimSliceAttr>(attr);
-        slices.push_back(sliceAttr);
+        dimSlices.push_back(sliceAttr);
         if (parser.parseOptionalComma().failed()) {
           finished = true;
           break;
@@ -494,7 +494,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 
   // Construct struct-like storage for attribute.
   return parser.getChecked<SparseTensorEncodingAttr>(
-      parser.getContext(), lvlTypes, dimToLvl, posWidth, crdWidth, slices);
+      parser.getContext(), lvlTypes, dimToLvl, posWidth, crdWidth, dimSlices);
 }
 
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
@@ -512,7 +512,7 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   if (getCrdWidth())
     printer << ", crdWidth = " << getCrdWidth();
   if (!getDimSlices().empty()) {
-    printer << ", slice = [ ";
+    printer << ", dimSlices = [ ";
     llvm::interleaveComma(getDimSlices(), printer,
                           [&](SparseTensorDimSliceAttr attr) {
                             // Calls SparseTensorDimSliceAttr::print directly to

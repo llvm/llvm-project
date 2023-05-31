@@ -100,31 +100,31 @@ func.func private @sparse_ell(tensor<?x?xf64, #ELL>)
 
 #CSR_SLICE = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  slice = [ (1, 4, 1), (1, 4, 2) ]
+  dimSlices = [ (1, 4, 1), (1, 4, 2) ]
 }>
 
 // CHECK-LABEL: func private @sparse_slice(
-// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], slice = [ (1, 4, 1), (1, 4, 2) ] }>>
+// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimSlices = [ (1, 4, 1), (1, 4, 2) ] }>>
 func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 
 // -----
 
 #CSR_SLICE = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  slice = [ (1, 4, 1), (1, 4, 2) ]
+  dimSlices = [ (1, 4, 1), (1, 4, 2) ]
 }>
 
 // CHECK-LABEL: func private @sparse_slice(
-// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], slice = [ (1, 4, 1), (1, 4, 2) ] }>>
+// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimSlices = [ (1, 4, 1), (1, 4, 2) ] }>>
 func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 
 // -----
 
 #CSR_SLICE = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  slice = [ (1, ?, 1), (?, 4, 2) ]
+  dimSlices = [ (1, ?, 1), (?, 4, 2) ]
 }>
 
 // CHECK-LABEL: func private @sparse_slice(
-// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], slice = [ (1, ?, 1), (?, 4, 2) ] }>>
+// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimSlices = [ (1, ?, 1), (?, 4, 2) ] }>>
 func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
