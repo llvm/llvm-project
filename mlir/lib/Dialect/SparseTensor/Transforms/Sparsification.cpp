@@ -699,14 +699,18 @@ static void addSliceBasedConstraints(CodegenEnv &env, OpOperand &t,
     const AffineExpr fa = map.getResult(toOrigDim(enc, lvl - 1));
     const AffineExpr ta = map.getResult(toOrigDim(enc, lvl));
 
-    if (auto fdim = fa.dyn_cast<AffineDimExpr>()) {
+    if (fa.isa<AffineDimExpr>() || ta.isa<AffineDimExpr>()) {
+      AffineDimCollector fCollector;
+      fCollector.walkPostOrder(fa);
+
       AffineDimCollector tCollector;
       tCollector.walkPostOrder(ta);
-
-      const LoopId f = env.makeLoopId(fdim.getPosition());
-      for (auto td : tCollector.dims) {
-        const LoopId t = env.makeLoopId(td.getPosition());
-        addIterOrdering(f, t, adjM, inDegree);
+      for (auto fd : fCollector.dims) {
+        for (auto td : tCollector.dims) {
+          const LoopId f = env.makeLoopId(fd.getPosition());
+          const LoopId t = env.makeLoopId(td.getPosition());
+          addIterOrdering(f, t, adjM, inDegree);
+        }
       }
       continue;
     }
