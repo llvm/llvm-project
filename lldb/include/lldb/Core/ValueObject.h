@@ -492,7 +492,7 @@ public:
   GetChildAtNamePath(llvm::ArrayRef<std::pair<ConstString, bool>> names,
                      ConstString *name_of_error = nullptr);
 
-  virtual lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
+  virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create);
 
   virtual size_t GetIndexOfChildWithName(ConstString name);
