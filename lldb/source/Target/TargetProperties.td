@@ -23,6 +23,10 @@ let Definition = "target_experimental" in {
     DefaultEnumValue<"eAutoDetectSwiftCxxInterop">,
     EnumValues<"OptionEnumValues(g_enable_swift_cxx_interop_values)">,
     Desc<"Passes the -enable-cxx-interop flag to the swift compiler.">;
+  def SwiftPluginServerForPath: Property<"swift-plugin-server-for-path",
+      "Dictionary">,
+    ElementType<"String">,
+    Desc<"A dictionary of plugin paths as keys and swift-plugin-server binaries as values">;
 }
 
 let Definition = "target" in {
