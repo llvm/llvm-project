@@ -684,12 +684,12 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(const FileEntry *File) {
 }
 
 ArrayRef<ModuleMap::KnownHeader>
-ModuleMap::findAllModulesForHeader(const FileEntry *File, bool AllowCreation) {
+ModuleMap::findAllModulesForHeader(const FileEntry *File) {
   HeadersMap::iterator Known = findKnownHeader(File);
   if (Known != Headers.end())
     return Known->second;
 
-  if (AllowCreation && findOrCreateModuleForHeaderInUmbrellaDir(File))
+  if (findOrCreateModuleForHeaderInUmbrellaDir(File))
     return Headers.find(File)->second;
 
   return std::nullopt;
