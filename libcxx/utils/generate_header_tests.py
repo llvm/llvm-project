@@ -77,13 +77,6 @@ def main():
     test = pathlib.Path(os.path.join(monorepo_root, "libcxx", "test"))
     assert monorepo_root.exists()
 
-    produce(test.joinpath("libcxx/clang_tidy.sh.cpp"), libcxx.test.header_information.variables)
-    produce(test.joinpath("libcxx/double_include.sh.cpp"), libcxx.test.header_information.variables)
-    produce(test.joinpath("libcxx/min_max_macros.compile.pass.cpp"), libcxx.test.header_information.variables)
-    produce(test.joinpath("libcxx/modules_include.sh.cpp"), libcxx.test.header_information.variables)
-    produce(test.joinpath("libcxx/nasty_macros.compile.pass.cpp"), libcxx.test.header_information.variables)
-    produce(test.joinpath("libcxx/no_assert_include.compile.pass.cpp"), libcxx.test.header_information.variables)
-    produce(test.joinpath("libcxx/private_headers.verify.cpp"), libcxx.test.header_information.variables)
     produce(test.joinpath("libcxx/transitive_includes.sh.cpp"), libcxx.test.header_information.variables)
 
 
