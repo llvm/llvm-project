@@ -42,7 +42,9 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
 
   auto PrintName = [&OS](const char *Name) {
     OS << Name;
-    OS.indent(std::max(30l - strlen(Name), 0ul));
+    long N = 30 - strlen(Name);
+    if (N > 0)
+      OS.indent(N);
   };
 
   for (CodePtr Start = getCodeBegin(), PC = Start; PC != getCodeEnd();) {
