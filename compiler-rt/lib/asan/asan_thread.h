@@ -59,15 +59,14 @@ COMPILER_CHECK(sizeof(AsanThreadContext) <= 256);
 // AsanThread are stored in TSD and destroyed when the thread dies.
 class AsanThread {
  public:
-  static AsanThread *Create(thread_callback_t start_routine, void *arg,
-                            u32 parent_tid, StackTrace *stack, bool detached);
+  static AsanThread *Create(u32 parent_tid, StackTrace *stack, bool detached);
   static void TSDDtor(void *tsd);
   void Destroy();
 
   struct InitOptions;
   void Init(const InitOptions *options = nullptr);
 
-  thread_return_t ThreadStart(tid_t os_id);
+  thread_return_t ThreadStart(tid_t os_id, void *(*routine)(void *), void *arg);
 
   uptr stack_top();
   uptr stack_bottom();
@@ -130,8 +129,6 @@ class AsanThread {
 
   void *extra_spill_area() { return &extra_spill_area_; }
 
-  void *get_arg() const { return arg_; }
-
  private:
   // NOTE: There is no AsanThread constructor. It is allocated
   // via mmap() and *must* be valid in zero-initialized state.
@@ -148,8 +145,6 @@ class AsanThread {
   StackBounds GetStackBounds() const;
 
   AsanThreadContext *context_;
-  thread_callback_t start_routine_;
-  void *arg_;
 
   uptr stack_top_;
   uptr stack_bottom_;

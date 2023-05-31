@@ -91,14 +91,11 @@ AsanThreadContext *GetThreadContextByTidLocked(u32 tid) {
 
 // AsanThread implementation.
 
-AsanThread *AsanThread::Create(thread_callback_t start_routine, void *arg,
-                               u32 parent_tid, StackTrace *stack,
+AsanThread *AsanThread::Create(u32 parent_tid, StackTrace *stack,
                                bool detached) {
   uptr PageSize = GetPageSizeCached();
   uptr size = RoundUpTo(sizeof(AsanThread), PageSize);
   AsanThread *thread = (AsanThread *)MmapOrDie(size, __func__);
-  thread->start_routine_ = start_routine;
-  thread->arg_ = arg;
   AsanThreadContext::CreateThreadContextArgs args = {thread, stack};
   asanThreadRegistry().CreateThread(0, detached, parent_tid, &args);
 
@@ -273,22 +270,23 @@ void AsanThread::Init(const InitOptions *options) {
 // asan_fuchsia.c definies CreateMainThread and SetThreadStackAndTls.
 #if !SANITIZER_FUCHSIA
 
-thread_return_t AsanThread::ThreadStart(tid_t os_id) {
+thread_return_t AsanThread::ThreadStart(tid_t os_id, void *(*routine)(void *),
+                                        void *arg) {
   Init();
   asanThreadRegistry().StartThread(tid(), os_id, ThreadType::Regular, nullptr);
 
   if (common_flags()->use_sigaltstack)
     SetAlternateSignalStack();
 
-  if (!start_routine_) {
+  if (!routine) {
     // start_routine_ == 0 if we're on the main thread or on one of the
     // OS X libdispatch worker threads. But nobody is supposed to call
     // ThreadStart() for the worker threads.
-    CHECK_EQ(tid(), 0);
+    CHECK_EQ(tid(), kMainTid);
     return 0;
   }
 
-  thread_return_t res = start_routine_(arg_);
+  thread_return_t res = (*routine)(arg);
 
   // On POSIX systems we defer this to the TSD destructor. LSan will consider
   // the thread's memory as non-live from the moment we call Destroy(), even
@@ -303,10 +301,10 @@ thread_return_t AsanThread::ThreadStart(tid_t os_id) {
 
 AsanThread *CreateMainThread() {
   AsanThread *main_thread = AsanThread::Create(
-      /* start_routine */ nullptr, /* arg */ nullptr, /* parent_tid */ kMainTid,
+      /* parent_tid */ kMainTid,
       /* stack */ nullptr, /* detached */ true);
   SetCurrentThread(main_thread);
-  main_thread->ThreadStart(internal_getpid());
+  main_thread->ThreadStart(internal_getpid(), nullptr, nullptr);
   return main_thread;
 }
 
