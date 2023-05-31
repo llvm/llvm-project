@@ -1314,30 +1314,27 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
     OS << " | ";
   }
 
+  // Print the source line one character at a time.
   bool PrintReversed = false;
-  std::string ToPrint;
   size_t I = 0;
   while (I < SourceLine.size()) {
     auto [Str, WasPrintable] =
         printableTextForNextCharacter(SourceLine, &I, DiagOpts->TabStop);
 
-    if (DiagOpts->ShowColors && WasPrintable == PrintReversed) {
-      if (PrintReversed)
-        OS.reverseColor();
-      OS << ToPrint;
-      ToPrint.clear();
-      if (DiagOpts->ShowColors)
-        OS.resetColor();
+    // Toggle inverted colors on or off for this character.
+    if (DiagOpts->ShowColors) {
+      if (WasPrintable == PrintReversed) {
+        PrintReversed = !PrintReversed;
+        if (PrintReversed)
+          OS.reverseColor();
+        else
+          OS.resetColor();
+      }
     }
-
-    PrintReversed = !WasPrintable;
-    ToPrint += Str;
+    OS << Str;
   }
 
-  if (PrintReversed && DiagOpts->ShowColors)
-    OS.reverseColor();
-  OS << ToPrint;
-  if (PrintReversed && DiagOpts->ShowColors)
+  if (DiagOpts->ShowColors)
     OS.resetColor();
 
   OS << '\n';
