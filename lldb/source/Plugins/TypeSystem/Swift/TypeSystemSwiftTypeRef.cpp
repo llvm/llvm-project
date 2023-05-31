@@ -3117,7 +3117,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
 }
 
 size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
-    opaque_compiler_type_t type, const char *name, ExecutionContext *exe_ctx,
+    opaque_compiler_type_t type, StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   LLDB_SCOPED_TIMER();
   FALLBACK(GetIndexOfChildMemberWithName,

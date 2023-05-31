@@ -569,7 +569,7 @@ ValueObjectSP ValueObject::GetChildMemberWithName(llvm::StringRef name,
   ExecutionContext exe_ctx(GetExecutionContextRef());
   const size_t num_child_indexes =
       GetCompilerType().GetIndexOfChildMemberWithName(
-          name.str().data(), &exe_ctx, omit_empty_base_classes, child_indexes);
+          name, &exe_ctx, omit_empty_base_classes, child_indexes);
   if (num_child_indexes == 0)
     return nullptr;
 

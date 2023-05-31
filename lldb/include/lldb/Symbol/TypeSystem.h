@@ -388,7 +388,7 @@ public:
   // so we catch all names that match a given child name, not just the first.
   virtual size_t
   GetIndexOfChildMemberWithName(lldb::opaque_compiler_type_t type,
-                                const char *name, ExecutionContext *exe_ctx,
+                                llvm::StringRef name, ExecutionContext *exe_ctx,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) = 0;
 
