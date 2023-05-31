@@ -2532,7 +2532,93 @@ OptimizationRemarkAnalysis &LoopAccessInfo::recordAnalysis(StringRef RemarkName,
   return *Report;
 }
 
-bool LoopAccessInfo::isUniform(Value *V) const {
+namespace {
+/// A rewriter to build the SCEVs for each of the VF lanes in the expected
+/// vectorized loop, which can then be compared to detect their uniformity. This
+/// is done by replacing the AddRec SCEVs of the original scalar loop (TheLoop)
+/// with new AddRecs where the step is multiplied by StepMultiplier and Offset *
+/// Step is added. Also checks if all sub-expressions are analyzable w.r.t.
+/// uniformity.
+class SCEVAddRecForUniformityRewriter
+    : public SCEVRewriteVisitor<SCEVAddRecForUniformityRewriter> {
+  /// Multiplier to be applied to the step of AddRecs in TheLoop.
+  unsigned StepMultiplier;
+
+  /// Offset to be added to the AddRecs in TheLoop.
+  unsigned Offset;
+
+  /// Loop for which to rewrite AddRecsFor.
+  Loop *TheLoop;
+
+  /// Is any sub-expressions not analyzable w.r.t. uniformity?
+  bool CannotAnalyze = false;
+
+  bool canAnalyze() const { return !CannotAnalyze; }
+
+public:
+  SCEVAddRecForUniformityRewriter(ScalarEvolution &SE, unsigned StepMultiplier,
+                                  unsigned Offset, Loop *TheLoop)
+      : SCEVRewriteVisitor(SE), StepMultiplier(StepMultiplier), Offset(Offset),
+        TheLoop(TheLoop) {}
+
+  const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
+    assert(Expr->getLoop() == TheLoop &&
+           "addrec outside of TheLoop must be invariant and should have been "
+           "handled earlier");
+    // Build a new AddRec by multiplying the step by StepMultiplier and
+    // incrementing the start by Offset * step.
+    Type *Ty = Expr->getType();
+    auto *Step = Expr->getStepRecurrence(SE);
+    auto *NewStep = SE.getMulExpr(Step, SE.getConstant(Ty, StepMultiplier));
+    auto *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
+    auto *NewStart = SE.getAddExpr(Expr->getStart(), ScaledOffset);
+    return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagAnyWrap);
+  }
+
+  const SCEV *visit(const SCEV *S) {
+    if (CannotAnalyze || SE.isLoopInvariant(S, TheLoop))
+      return S;
+    return SCEVRewriteVisitor<SCEVAddRecForUniformityRewriter>::visit(S);
+  }
+
+  const SCEV *visitUnknown(const SCEVUnknown *S) {
+    if (SE.isLoopInvariant(S, TheLoop))
+      return S;
+    // The value could vary across iterations.
+    CannotAnalyze = true;
+    return S;
+  }
+
+  const SCEV *visitCouldNotCompute(const SCEVCouldNotCompute *S) {
+    // Could not analyze the expression.
+    CannotAnalyze = true;
+    return S;
+  }
+
+  static const SCEV *rewrite(const SCEV *S, ScalarEvolution &SE,
+                             unsigned StepMultiplier, unsigned Offset,
+                             Loop *TheLoop) {
+    /// Bail out if the expression does not contain an UDiv expression.
+    /// Uniform values which are not loop invariant require operations to strip
+    /// out the lowest bits. For now just look for UDivs and use it to avoid
+    /// re-writing UDIV-free expressions for other lanes to limit compile time.
+    if (!SCEVExprContains(S,
+                          [](const SCEV *S) { return isa<SCEVUDivExpr>(S); }))
+      return SE.getCouldNotCompute();
+
+    SCEVAddRecForUniformityRewriter Rewriter(SE, StepMultiplier, Offset,
+                                             TheLoop);
+    const SCEV *Result = Rewriter.visit(S);
+
+    if (Rewriter.canAnalyze())
+      return Result;
+    return SE.getCouldNotCompute();
+  }
+};
+
+} // namespace
+
+bool LoopAccessInfo::isUniform(Value *V, std::optional<ElementCount> VF) const {
   auto *SE = PSE->getSE();
   // Since we rely on SCEV for uniformity, if the type is not SCEVable, it is
   // never considered uniform.
@@ -2540,7 +2626,30 @@ bool LoopAccessInfo::isUniform(Value *V) const {
   // trivially loop-invariant FP values to be considered uniform.
   if (!SE->isSCEVable(V->getType()))
     return false;
-  return (SE->isLoopInvariant(SE->getSCEV(V), TheLoop));
+  const SCEV *S = SE->getSCEV(V);
+  if (SE->isLoopInvariant(S, TheLoop))
+    return true;
+  if (!VF || VF->isScalable())
+    return false;
+  if (VF->isScalar())
+    return true;
+
+  // Rewrite AddRecs in TheLoop to step by VF and check if the expression for
+  // lane 0 matches the expressions for all other lanes.
+  unsigned FixedVF = VF->getKnownMinValue();
+  const SCEV *FirstLaneExpr =
+      SCEVAddRecForUniformityRewriter::rewrite(S, *SE, FixedVF, 0, TheLoop);
+  if (isa<SCEVCouldNotCompute>(FirstLaneExpr))
+    return false;
+
+  // Make sure the expressions for lanes FixedVF-1..1 match the expression for
+  // lane 0. We check lanes in reverse order for compile-time, as frequently
+  // checking the last lane is sufficient to rule out uniformity.
+  return all_of(reverse(seq<unsigned>(1, FixedVF)), [&](unsigned I) {
+    const SCEV *IthLaneExpr =
+        SCEVAddRecForUniformityRewriter::rewrite(S, *SE, FixedVF, I, TheLoop);
+    return FirstLaneExpr == IthLaneExpr;
+  });
 }
 
 /// Find the operand of the GEP that should be checked for consecutive
