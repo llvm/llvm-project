@@ -1703,10 +1703,12 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       if (!IAA)
         return Sema::TDK_NonDeducedMismatch;
 
+      const auto *IAP = S.Context.getAsIncompleteArrayType(P);
+      assert(IAP && "Template parameter not of incomplete array type");
+
       return DeduceTemplateArgumentsByTypeMatch(
-          S, TemplateParams,
-          S.Context.getAsIncompleteArrayType(P)->getElementType(),
-          IAA->getElementType(), Info, Deduced, TDF & TDF_IgnoreQualifiers);
+          S, TemplateParams, IAP->getElementType(), IAA->getElementType(), Info,
+          Deduced, TDF & TDF_IgnoreQualifiers);
     }
 
     //     T [integer-constant]
