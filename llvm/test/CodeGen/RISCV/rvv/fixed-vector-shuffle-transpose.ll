@@ -182,9 +182,8 @@ define <2 x i32> @trn2.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 ; CHECK-LABEL: trn2.v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 1
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
@@ -239,9 +238,8 @@ define <2 x i64> @trn2.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 ; CHECK-LABEL: trn2.v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 1
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
@@ -264,9 +262,8 @@ define <2 x float> @trn2.v2f32(<2 x float> %v0, <2 x float> %v1) {
 ; CHECK-LABEL: trn2.v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 1
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
@@ -321,9 +318,8 @@ define <2 x double> @trn2.v2f64(<2 x double> %v0, <2 x double> %v1) {
 ; CHECK-LABEL: trn2.v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vi v10, v8, 1
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
