@@ -233,8 +233,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
     ExplodedNode *Old = Storage.get<ExplodedNode *>();
 
     BumpVectorContext &Ctx = G.getNodeAllocator();
-    V = G.getAllocator().Allocate<ExplodedNodeVector>();
-    new (V) ExplodedNodeVector(Ctx, 4);
+    V = new (G.getAllocator()) ExplodedNodeVector(Ctx, 4);
     V->push_back(Old, Ctx);
 
     Storage = V;
