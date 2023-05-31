@@ -367,6 +367,12 @@ private:
               [&](const Fortran::parser::AllocOpt::Mold &mold) {
                 moldExpr = Fortran::semantics::GetExpr(mold.v.value());
               },
+              [&](const Fortran::parser::AllocOpt::Stream &) {
+                TODO(loc, "CUDA ALLOCATE(STREAM=)");
+              },
+              [&](const Fortran::parser::AllocOpt::Pinned &) {
+                TODO(loc, "CUDA ALLOCATE(PINNED=)");
+              },
           },
           allocOption.u);
   }

@@ -179,6 +179,8 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
               parserSourceExpr = &mold.v.value();
               info.gotMold = true;
             },
+            [](const parser::AllocOpt::Stream &) { /* CUDA coming */ },
+            [](const parser::AllocOpt::Pinned &) { /* CUDA coming */ },
         },
         allocOpt.u);
   }
