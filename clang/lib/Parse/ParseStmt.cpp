@@ -335,7 +335,12 @@ Retry:
 
   case tok::kw_asm: {
     for (const ParsedAttr &AL : CXX11Attrs)
-      Diag(AL.getRange().getBegin(), diag::warn_attribute_ignored) << AL;
+      // Could be relaxed if asm-related regular keyword attributes are
+      // added later.
+      (AL.isRegularKeywordAttribute()
+           ? Diag(AL.getRange().getBegin(), diag::err_keyword_not_allowed)
+           : Diag(AL.getRange().getBegin(), diag::warn_attribute_ignored))
+          << AL;
     // Prevent these from being interpreted as statement attributes later on.
     CXX11Attrs.clear();
     ProhibitAttributes(GNUAttrs);
