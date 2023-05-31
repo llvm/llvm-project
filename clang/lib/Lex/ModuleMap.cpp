@@ -1180,7 +1180,7 @@ void ModuleMap::setUmbrellaHeaderAsWritten(
 
   // Notify callbacks that we just added a new header.
   for (const auto &Cb : Callbacks)
-    Cb->moduleMapAddUmbrellaHeader(&SourceMgr.getFileManager(), UmbrellaHeader);
+    Cb->moduleMapAddUmbrellaHeader(UmbrellaHeader);
 }
 
 void ModuleMap::setUmbrellaDirAsWritten(

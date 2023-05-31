@@ -67,10 +67,8 @@ public:
 
   /// Called when an umbrella header is added during module map parsing.
   ///
-  /// \param FileMgr FileManager instance
   /// \param Header The umbrella header to collect.
-  virtual void moduleMapAddUmbrellaHeader(FileManager *FileMgr,
-                                          const FileEntry *Header) {}
+  virtual void moduleMapAddUmbrellaHeader(FileEntryRef Header) {}
 };
 
 class ModuleMap {
