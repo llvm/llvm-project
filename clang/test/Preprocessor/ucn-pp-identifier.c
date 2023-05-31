@@ -112,9 +112,9 @@ C 1
 #define capital_u_\U00FC
 // expected-warning@-1 {{incomplete universal character name}} expected-note@-1 {{did you mean to use '\u'?}} expected-warning@-1 {{whitespace}}
 // CHECK: note: did you mean to use '\u'?
-// CHECK-NEXT:   #define capital_u_\U00FC
-// CHECK-NEXT: {{^                   \^}}
-// CHECK-NEXT: {{^                   u}}
+// CHECK-NEXT: {{^  112 | #define capital_u_\U00FC}}
+// CHECK-NEXT: {{^      |                    \^}}
+// CHECK-NEXT: {{^      |                    u}}
 
 #define \u{}           // expected-warning {{empty delimited universal character name; treating as '\' 'u' '{' '}'}} expected-error {{macro name must be an identifier}}
 #define \u1{123}       // expected-warning {{incomplete universal character name; treating as '\' followed by identifier}} expected-error {{macro name must be an identifier}}

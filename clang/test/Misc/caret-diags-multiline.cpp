@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -std=c++11 -fcaret-diagnostics-max-lines 5 -Wsometimes-uninitialized %s 2>&1 | FileCheck %s --strict-whitespace
+// RUN: not %clang_cc1 -std=c++11 -fno-diagnostics-show-line-numbers -fcaret-diagnostics-max-lines 5 -Wsometimes-uninitialized %s 2>&1 | FileCheck %s --strict-whitespace
 
 void line(int);
 
