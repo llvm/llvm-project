@@ -1417,6 +1417,82 @@ TEST(TypeHints, Decltype) {
                   ExpectedHint{": int", "h"}, ExpectedHint{": int", "i"});
 }
 
+TEST(TypeHints, SubstTemplateParameterAliases) {
+  assertTypeHints(
+      R"cpp(
+  template <class T> struct allocator {};
+
+  template <class T, class A>
+  struct vector_base {
+    using pointer = T*;
+  };
+
+  template <class T, class A>
+  struct internal_iterator_type_template_we_dont_expect {};
+
+  struct my_iterator {};
+
+  template <class T, class A = allocator<T>>
+  struct vector : vector_base<T, A> {
+    using base = vector_base<T, A>;
+    typedef T value_type;
+    typedef base::pointer pointer;
+    using allocator_type = A;
+    using size_type = int;
+    using iterator = internal_iterator_type_template_we_dont_expect<T, A>;
+    using non_template_iterator = my_iterator;
+
+    value_type& operator[](int index) { return elements[index]; }
+    const value_type& at(int index) const { return elements[index]; }
+    pointer data() { return &elements[0]; }
+    allocator_type get_allocator() { return A(); }
+    size_type size() const { return 10; }
+    iterator begin() { return iterator(); }
+    non_template_iterator end() { return non_template_iterator(); }
+
+    T elements[10];
+  };
+
+  vector<int> array;
+
+  auto $no_modifier[[by_value]] = array[3];
+  auto* $ptr_modifier[[ptr]] = &array[3];
+  auto& $ref_modifier[[ref]] = array[3];
+  auto& $at[[immutable]] = array.at(3);
+
+  auto $data[[data]] = array.data();
+  auto $allocator[[alloc]] = array.get_allocator();
+  auto $size[[size]] = array.size();
+  auto $begin[[begin]] = array.begin();
+  auto $end[[end]] = array.end();
+
+
+  // If the type alias is not of substituted template parameter type,
+  // do not show desugared type.
+  using VeryLongLongTypeName = my_iterator;
+  using Short = VeryLongLongTypeName;
+
+  auto $short_name[[my_value]] = Short();
+
+  // Same applies with templates.
+  template <typename T, typename A>
+  using basic_static_vector = vector<T, A>;
+  template <typename T>
+  using static_vector = basic_static_vector<T, allocator<T>>;
+
+  auto $vector_name[[vec]] = static_vector<int>();
+  )cpp",
+      ExpectedHint{": int", "no_modifier"},
+      ExpectedHint{": int *", "ptr_modifier"},
+      ExpectedHint{": int &", "ref_modifier"},
+      ExpectedHint{": const int &", "at"}, ExpectedHint{": int *", "data"},
+      ExpectedHint{": allocator<int>", "allocator"},
+      ExpectedHint{": size_type", "size"}, ExpectedHint{": iterator", "begin"},
+      ExpectedHint{": non_template_iterator", "end"},
+      ExpectedHint{": Short", "short_name"},
+      ExpectedHint{": static_vector<int>", "vector_name"});
+}
+
 TEST(DesignatorHints, Basic) {
   assertDesignatorHints(R"cpp(
     struct S { int x, y, z; };
