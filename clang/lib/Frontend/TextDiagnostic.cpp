@@ -173,7 +173,21 @@ static void expandTabs(std::string &SourceLine, unsigned TabStop) {
   }
 }
 
-/// This function takes a raw source line and produces a mapping from the bytes
+/// \p BytesOut:
+///  A mapping from columns to the byte of the source line that produced the
+///  character displaying at that column. This is the inverse of \p ColumnsOut.
+///
+/// The last element in the array is the number of bytes in the source string.
+///
+/// example: (given a tabstop of 8)
+///
+///    "a \t \u3042" -> {0,1,2,-1,-1,-1,-1,-1,3,4,-1,7}
+///
+///  (\\u3042 is represented in UTF-8 by three bytes and takes two columns to
+///   display)
+///
+/// \p ColumnsOut:
+///  A mapping from the bytes
 ///  of the printable representation of the line to the columns those printable
 ///  characters will appear at (numbering the first column as 0).
 ///
@@ -195,60 +209,34 @@ static void expandTabs(std::string &SourceLine, unsigned TabStop) {
 ///
 ///  (\\u3042 is represented in UTF-8 by three bytes and takes two columns to
 ///   display)
-static void byteToColumn(StringRef SourceLine, unsigned TabStop,
-                         SmallVectorImpl<int> &out) {
-  out.clear();
+static void genColumnByteMapping(StringRef SourceLine, unsigned TabStop,
+                                 SmallVectorImpl<int> &BytesOut,
+                                 SmallVectorImpl<int> &ColumnsOut) {
+  assert(BytesOut.empty());
+  assert(ColumnsOut.empty());
 
   if (SourceLine.empty()) {
-    out.resize(1u,0);
+    BytesOut.resize(1u, 0);
+    ColumnsOut.resize(1u, 0);
     return;
   }
 
-  out.resize(SourceLine.size()+1, -1);
+  ColumnsOut.resize(SourceLine.size() + 1, -1);
 
-  int columns = 0;
-  size_t i = 0;
-  while (i<SourceLine.size()) {
-    out[i] = columns;
-    std::pair<SmallString<16>,bool> res
-      = printableTextForNextCharacter(SourceLine, &i, TabStop);
-    columns += llvm::sys::locale::columnWidth(res.first);
-  }
-  out.back() = columns;
-}
-
-/// This function takes a raw source line and produces a mapping from columns
-///  to the byte of the source line that produced the character displaying at
-///  that column. This is the inverse of the mapping produced by byteToColumn()
-///
-/// The last element in the array is the number of bytes in the source string
-///
-/// example: (given a tabstop of 8)
-///
-///    "a \t \u3042" -> {0,1,2,-1,-1,-1,-1,-1,3,4,-1,7}
-///
-///  (\\u3042 is represented in UTF-8 by three bytes and takes two columns to
-///   display)
-static void columnToByte(StringRef SourceLine, unsigned TabStop,
-                         SmallVectorImpl<int> &out) {
-  out.clear();
-
-  if (SourceLine.empty()) {
-    out.resize(1u, 0);
-    return;
+  int Columns = 0;
+  size_t I = 0;
+  while (I < SourceLine.size()) {
+    ColumnsOut[I] = Columns;
+    BytesOut.resize(Columns + 1, -1);
+    BytesOut.back() = I;
+    auto [Str, Printable] =
+        printableTextForNextCharacter(SourceLine, &I, TabStop);
+    Columns += llvm::sys::locale::columnWidth(Str);
   }
 
-  int columns = 0;
-  size_t i = 0;
-  while (i<SourceLine.size()) {
-    out.resize(columns+1, -1);
-    out.back() = i;
-    std::pair<SmallString<16>,bool> res
-      = printableTextForNextCharacter(SourceLine, &i, TabStop);
-    columns += llvm::sys::locale::columnWidth(res.first);
-  }
-  out.resize(columns+1, -1);
-  out.back() = i;
+  ColumnsOut.back() = Columns;
+  BytesOut.resize(Columns + 1, -1);
+  BytesOut.back() = I;
 }
 
 namespace {
@@ -256,8 +244,7 @@ struct SourceColumnMap {
   SourceColumnMap(StringRef SourceLine, unsigned TabStop)
   : m_SourceLine(SourceLine) {
 
-    ::byteToColumn(SourceLine, TabStop, m_byteToColumn);
-    ::columnToByte(SourceLine, TabStop, m_columnToByte);
+    genColumnByteMapping(SourceLine, TabStop, m_columnToByte, m_byteToColumn);
 
     assert(m_byteToColumn.size()==SourceLine.size()+1);
     assert(0 < m_byteToColumn.size() && 0 < m_columnToByte.size());
