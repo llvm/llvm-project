@@ -1276,11 +1276,15 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
 
     bool isDevice = false;
     llvm::StringRef hostIRFilePath = "";
-    if (auto offloadMod =
-            dyn_cast<mlir::omp::OffloadModuleInterface>(mlirModule)) {
-      isDevice = offloadMod.getIsDevice();
-      hostIRFilePath = offloadMod.getHostIRFilePath();
-    }
+
+    if (Attribute deviceAttr = mlirModule->getAttr("omp.is_device"))
+      if (::llvm::isa<mlir::BoolAttr>(deviceAttr))
+        isDevice = ::llvm::dyn_cast<mlir::BoolAttr>(deviceAttr).getValue();
+
+    if (Attribute filepath = mlirModule->getAttr("omp.host_ir_filepath"))
+      if (::llvm::isa<mlir::StringAttr>(filepath))
+        hostIRFilePath =
+            ::llvm::dyn_cast<mlir::StringAttr>(filepath).getValue();
 
     ompBuilder->initialize(hostIRFilePath);
 
