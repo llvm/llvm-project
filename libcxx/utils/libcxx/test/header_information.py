@@ -193,11 +193,3 @@ private_headers = sorted(
                                                                      and str(p.relative_to(include)).startswith("__")
                                                                      and not p.name.startswith("pstl")
 )
-variables = {
-    "toplevel_headers": toplevel_headers,
-    "experimental_headers": experimental_headers,
-    "public_headers": public_headers,
-    "private_headers": private_headers,
-    "header_restrictions": header_restrictions,
-    "private_headers_still_public_in_modules": private_headers_still_public_in_modules,
-}
