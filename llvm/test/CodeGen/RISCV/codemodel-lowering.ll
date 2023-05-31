@@ -152,8 +152,9 @@ define i32 @lower_extern_weak(i32 %a) nounwind {
 ; RV32I-MEDIUM-LABEL: lower_extern_weak:
 ; RV32I-MEDIUM:       # %bb.0:
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi3:
-; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(W)
+; RV32I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(W)
 ; RV32I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV32I-MEDIUM-NEXT:    lw a0, 0(a0)
 ; RV32I-MEDIUM-NEXT:    ret
   %1 = load volatile i32, ptr @W
   ret i32 %1
