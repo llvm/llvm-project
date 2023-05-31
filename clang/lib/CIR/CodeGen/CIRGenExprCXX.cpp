@@ -103,8 +103,6 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
 
   // Compute the object pointer.
   bool CanUseVirtualCall = MD->isVirtual() && !HasQualifier;
-  assert(!CanUseVirtualCall && "NYI");
-
   const CXXMethodDecl *DevirtualizedMethod = nullptr;
   if (CanUseVirtualCall &&
       MD->getDevirtualizedMethod(Base, getLangOpts().AppleKext)) {
