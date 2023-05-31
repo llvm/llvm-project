@@ -17,8 +17,9 @@ using namespace llvm::vfs;
 
 void OutputBackend::anchor() {}
 
-Expected<OutputFile> OutputBackend::createFile(const Twine &Path_,
-                                               Optional<OutputConfig> Config) {
+Expected<OutputFile>
+OutputBackend::createFile(const Twine &Path_,
+                          std::optional<OutputConfig> Config) {
   SmallString<128> Path;
   Path_.toVector(Path);
 

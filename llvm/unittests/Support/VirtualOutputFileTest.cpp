@@ -31,7 +31,7 @@ struct MockOutputFileData {
   }
 
   SmallString<128> V;
-  Optional<raw_svector_ostream> VOS;
+  std::optional<raw_svector_ostream> VOS;
   raw_pwrite_stream *OS = nullptr;
 
   MockOutputFileData() : VOS(std::in_place, V), OS(&*VOS) {}
@@ -96,7 +96,7 @@ TEST(VirtualOutputFileTest, destroy) {
 
   // Check behaviour when destroying, first without a handler and then with
   // one. The handler shouldn't be called.
-  Optional<OutputFile> F(std::in_place, FilePath, createMockOutput(Data));
+  std::optional<OutputFile> F(std::in_place, FilePath, createMockOutput(Data));
   EXPECT_TRUE(F->isOpen());
   EXPECT_EQ(FilePath, F->getPath());
   EXPECT_EQ(Data.OS, &F->getOS());
@@ -123,8 +123,8 @@ TEST(VirtualOutputFileTest, destroy) {
 TEST(VirtualOutputFileTest, destroyProxy) {
   MockOutputFileData Data;
 
-  Optional<OutputFile> F(std::in_place, "some/file/path",
-                         createMockOutput(Data));
+  std::optional<OutputFile> F(std::in_place, "some/file/path",
+                              createMockOutput(Data));
   F->discardOnDestroy(Data.getHandler());
   std::unique_ptr<raw_pwrite_stream> Proxy;
   EXPECT_THAT_ERROR(F->createProxy().moveInto(Proxy), Succeeded());

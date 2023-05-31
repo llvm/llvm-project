@@ -22,7 +22,7 @@ using namespace llvm::cas;
 
 using DirectoryEntry = FileSystemCache::DirectoryEntry;
 
-FileSystemCache::FileSystemCache(Optional<ObjectRef> RootRef) {
+FileSystemCache::FileSystemCache(std::optional<ObjectRef> RootRef) {
   // FIXME: Only correct for posix. To generalize this (for both posix and
   // windows) we should refactor so that the root node has no name (instead of
   // "/").
@@ -97,7 +97,7 @@ static DirectoryEntry &makeLazyEntry(
     ThreadSafeAllocator<SpecificBumpPtrAllocator<char>> &TreePathAlloc,
     ThreadSafeAllocator<SpecificBumpPtrAllocator<DirectoryEntry>> &EntryAlloc,
     DirectoryEntry &Parent, FileSystemCache::Directory &D, StringRef TreePath,
-    DirectoryEntry::EntryKind Kind, Optional<ObjectRef> Ref) {
+    DirectoryEntry::EntryKind Kind, std::optional<ObjectRef> Ref) {
   assert(sys::path::parent_path(TreePath) == Parent.getTreePath());
   assert(!D.lookup(sys::path::filename(TreePath)));
   assert(!D.isComplete());
@@ -126,7 +126,7 @@ FileSystemCache::makeLazyFileAlreadyLocked(DirectoryEntry &Parent,
 
 DirectoryEntry &FileSystemCache::makeDirectory(DirectoryEntry &Parent,
                                                StringRef TreePath,
-                                               Optional<ObjectRef> Ref) {
+                                               std::optional<ObjectRef> Ref) {
   Directory &D = Parent.asDirectory();
   Directory::Writer W(D);
   if (DirectoryEntry *Existing = D.lookup(sys::path::filename(TreePath)))
@@ -136,7 +136,7 @@ DirectoryEntry &FileSystemCache::makeDirectory(DirectoryEntry &Parent,
 }
 
 DirectoryEntry &FileSystemCache::makeDirectoryAlreadyLocked(
-    DirectoryEntry &Parent, StringRef TreePath, Optional<ObjectRef> Ref) {
+    DirectoryEntry &Parent, StringRef TreePath, std::optional<ObjectRef> Ref) {
   DirectoryEntry &Entry =
       makeLazyEntry(TreePathAlloc, EntryAlloc, Parent, Parent.asDirectory(),
                     TreePath, DirectoryEntry::Directory, Ref);

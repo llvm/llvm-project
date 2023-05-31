@@ -394,7 +394,7 @@ public:
     if (CachePath.empty())
       return;
 
-    Optional<std::string> Key =
+    std::optional<std::string> Key =
         computeCacheKey(Index, ModuleID, ImportList, ExportList, ResolvedODR,
                         DefinedGVSummaries, OptLevel, Freestanding, TMBuilder);
 
@@ -470,7 +470,7 @@ public:
     return ModuleCacheEntry::writeObject(OutputBuffer, OutputPath);
   }
 
-  Optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() final {
+  std::optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() final {
     if (getEntryPath().empty())
       return std::nullopt;
 
@@ -501,7 +501,7 @@ public:
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
       bool Freestanding, const TargetMachineBuilder &TMBuilder)
       : CAS(CAS), Cache(Cache) {
-    Optional<std::string> Key =
+    std::optional<std::string> Key =
         computeCacheKey(Index, ModuleID, ImportList, ExportList, ResolvedODR,
                         DefinedGVSummaries, OptLevel, Freestanding, TMBuilder);
 
@@ -561,7 +561,7 @@ public:
 private:
   cas::ObjectStore &CAS;
   cas::ActionCache &Cache;
-  Optional<cas::CASID> ID;
+  std::optional<cas::CASID> ID;
 };
 
 class RemoteModuleCacheEntry : public ModuleCacheEntry {
@@ -578,7 +578,7 @@ public:
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
       bool Freestanding, const TargetMachineBuilder &TMBuilder)
       : Service(Service), OutputPath(OutputPath.str()) {
-    Optional<std::string> Key =
+    std::optional<std::string> Key =
         computeCacheKey(Index, ModuleID, ImportList, ExportList, ResolvedODR,
                         DefinedGVSummaries, OptLevel, Freestanding, TMBuilder);
 
@@ -658,7 +658,7 @@ public:
     return Error::success();
   }
 
-  Optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() final {
+  std::optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() final {
     if (!ProducedOutput)
       return std::nullopt;
 
@@ -675,7 +675,7 @@ private:
   std::string ID;
   std::string OutputPath;
   bool ProducedOutput = false;
-  Optional<std::string> PresumedOutput;
+  std::optional<std::string> PresumedOutput;
 };
 
 static std::unique_ptr<MemoryBuffer>
@@ -805,7 +805,7 @@ static void initTMBuilder(TargetMachineBuilder &TMBuilder,
 
 } // end anonymous namespace
 
-Optional<std::string> ModuleCacheEntry::computeCacheKey(
+std::optional<std::string> ModuleCacheEntry::computeCacheKey(
     const ModuleSummaryIndex &Index, StringRef ModuleID,
     const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,

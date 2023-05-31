@@ -53,7 +53,8 @@ Error TreeSchema::forEachTreeEntry(
 
 Error TreeSchema::walkFileTreeRecursively(
     ObjectStore &CAS, ObjectRef Root,
-    function_ref<Error(const NamedTreeEntry &, Optional<TreeProxy>)> Callback) {
+    function_ref<Error(const NamedTreeEntry &, std::optional<TreeProxy>)>
+        Callback) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
   SmallString<128> PathStorage;
@@ -75,7 +76,7 @@ Error TreeSchema::walkFileTreeRecursively(
     if (Error E = Callback(Parent, Tree))
       return E;
     for (int I = Tree.size(), E = 0; I != E; --I) {
-      Optional<NamedTreeEntry> Child = Tree.get(I - 1);
+      std::optional<NamedTreeEntry> Child = Tree.get(I - 1);
       assert(Child && "Expected no corruption");
 
       PathStorage = Parent.getName();
@@ -100,8 +101,8 @@ NamedTreeEntry TreeSchema::loadTreeEntry(TreeProxy Tree, size_t I) const {
   return {ObjectRef, Kind, Name};
 }
 
-Optional<size_t> TreeSchema::lookupTreeEntry(TreeProxy Tree,
-                                             StringRef Name) const {
+std::optional<size_t> TreeSchema::lookupTreeEntry(TreeProxy Tree,
+                                                  StringRef Name) const {
   size_t NumNames = Tree.size();
   if (!NumNames)
     return std::nullopt;

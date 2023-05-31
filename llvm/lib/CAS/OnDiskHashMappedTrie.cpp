@@ -128,7 +128,7 @@ public:
   void addTable(TableHandle Table);
 
   /// Find a table. May return null.
-  Optional<TableHandle> findTable(StringRef Name);
+  std::optional<TableHandle> findTable(StringRef Name);
 
   static Expected<DatabaseFile>
   create(const Twine &Path, uint64_t Capacity,
@@ -216,7 +216,7 @@ void DatabaseFile::addTable(TableHandle Table) {
                               Root.getName() + "'"));
 }
 
-Optional<TableHandle> DatabaseFile::findTable(StringRef Name) {
+std::optional<TableHandle> DatabaseFile::findTable(StringRef Name) {
   int64_t RootTableOffset = H->RootTableOffset.load();
   if (!RootTableOffset)
     return std::nullopt;
@@ -358,7 +358,7 @@ public:
   void printHash(raw_ostream &OS, ArrayRef<uint8_t> Bytes) const;
   void print(raw_ostream &OS, HashMappedTrieHandle Trie,
              SmallVectorImpl<int64_t> &Records,
-             Optional<std::string> Prefix = std::nullopt) const;
+             std::optional<std::string> Prefix = std::nullopt) const;
 
   /// Return None on success, or the existing offset on failure.
   bool compare_exchange_strong(size_t I, SubtrieSlotValue &Expected,
@@ -515,7 +515,7 @@ public:
 
   static HashMappedTrieHandle
   create(MappedFileRegionBumpPtr &Alloc, StringRef Name,
-         Optional<uint64_t> NumRootBits, uint64_t NumSubtrieBits,
+         std::optional<uint64_t> NumRootBits, uint64_t NumSubtrieBits,
          uint64_t NumHashBits, uint64_t RecordDataSize);
 
   void
@@ -586,7 +586,7 @@ HashMappedTrieHandle::getOrCreateRoot(MappedFileRegionBumpPtr &Alloc) {
 
 HashMappedTrieHandle
 HashMappedTrieHandle::create(MappedFileRegionBumpPtr &Alloc, StringRef Name,
-                             Optional<uint64_t> NumRootBits,
+                             std::optional<uint64_t> NumRootBits,
                              uint64_t NumSubtrieBits, uint64_t NumHashBits,
                              uint64_t RecordDataSize) {
   // Allocate.
@@ -734,7 +734,7 @@ OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
   IndexGenerator IndexGen = Trie.getIndexGen(S, Hash);
 
   size_t Index;
-  if (Optional<HintT> H = Hint.getHint(*this)) {
+  if (std::optional<HintT> H = Hint.getHint(*this)) {
     S = SubtrieHandle::getFromFileOffset(Trie.getRegion(), Hint.getOffset());
     Index = IndexGen.hint(H->I, H->B);
   } else {
@@ -753,7 +753,7 @@ OnDiskHashMappedTrie::insertLazy(const_pointer Hint, ArrayRef<uint8_t> Hash,
   // - Existing data matches tail of Hash but not the head (stored in an
   //   invalid spot). Probably a cheap way to check this too, but needs
   //   thought.
-  Optional<HashMappedTrieHandle::RecordData> NewRecord;
+  std::optional<HashMappedTrieHandle::RecordData> NewRecord;
   SubtrieHandle UnusedSubtrie;
   for (;;) {
     SubtrieSlotValue Existing = S.load(Index);
@@ -945,7 +945,7 @@ static void printPrefix(raw_ostream &OS, StringRef Prefix) {
 
 void SubtrieHandle::print(raw_ostream &OS, HashMappedTrieHandle Trie,
                           SmallVectorImpl<int64_t> &Records,
-                          Optional<std::string> Prefix) const {
+                          std::optional<std::string> Prefix) const {
   if (!Prefix) {
     OS << "root";
     Prefix.emplace();
@@ -1002,9 +1002,9 @@ static Error createTableConfigError(std::errc ErrC, StringRef Path,
 }
 
 static Expected<size_t> checkParameter(StringRef Label, size_t Max,
-                                       Optional<size_t> Value,
-                                       Optional<size_t> Default, StringRef Path,
-                                       StringRef TableName) {
+                                       std::optional<size_t> Value,
+                                       std::optional<size_t> Default,
+                                       StringRef Path, StringRef TableName) {
   assert(Value || Default);
   assert(!Default || *Default <= Max);
   if (!Value)
@@ -1029,11 +1029,13 @@ static Error checkTable(StringRef Label, size_t Expected, size_t Observed,
 
 size_t OnDiskHashMappedTrie::size() const { return Impl->File.size(); }
 
-Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
-    const Twine &PathTwine, const Twine &TrieNameTwine, size_t NumHashBits,
-    uint64_t DataSize, uint64_t MaxFileSize,
-    Optional<uint64_t> NewFileInitialSize, Optional<size_t> NewTableNumRootBits,
-    Optional<size_t> NewTableNumSubtrieBits) {
+Expected<OnDiskHashMappedTrie>
+OnDiskHashMappedTrie::create(const Twine &PathTwine, const Twine &TrieNameTwine,
+                             size_t NumHashBits, uint64_t DataSize,
+                             uint64_t MaxFileSize,
+                             std::optional<uint64_t> NewFileInitialSize,
+                             std::optional<size_t> NewTableNumRootBits,
+                             std::optional<size_t> NewTableNumSubtrieBits) {
   SmallString<128> PathStorage;
   StringRef Path = PathTwine.toStringRef(PathStorage);
   SmallString<128> TrieNameStorage;
@@ -1088,7 +1090,7 @@ Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
   // Find the trie and validate it.
   //
   // TODO: Add support for creating/adding a table to an existing file.
-  Optional<TableHandle> Table = File->findTable(TrieName);
+  std::optional<TableHandle> Table = File->findTable(TrieName);
   if (!Table)
     return createTableConfigError(std::errc::argument_out_of_domain, Path,
                                   TrieName, "table not found");
@@ -1208,7 +1210,7 @@ DataAllocatorHandle DataAllocatorHandle::create(MappedFileRegionBumpPtr &Alloc,
 
 Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
     const Twine &PathTwine, const Twine &TableNameTwine, uint64_t MaxFileSize,
-    Optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
+    std::optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
     function_ref<void(void *)> UserHeaderInit) {
   assert(!UserHeaderSize || UserHeaderInit);
   SmallString<128> PathStorage;
@@ -1235,7 +1237,7 @@ Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
   // Find the table and validate it.
   //
   // TODO: Add support for creating/adding a table to an existing file.
-  Optional<TableHandle> Table = File->findTable(TableName);
+  std::optional<TableHandle> Table = File->findTable(TableName);
   if (!Table)
     return createTableConfigError(std::errc::argument_out_of_domain, Path,
                                   TableName, "table not found");
@@ -1277,11 +1279,13 @@ OnDiskDataAllocator::OnDiskDataAllocator(std::unique_ptr<ImplType> Impl)
 
 struct OnDiskHashMappedTrie::ImplType {};
 
-Expected<OnDiskHashMappedTrie> OnDiskHashMappedTrie::create(
-    const Twine &PathTwine, const Twine &TrieNameTwine, size_t NumHashBits,
-    uint64_t DataSize, uint64_t MaxFileSize,
-    Optional<uint64_t> NewFileInitialSize, Optional<size_t> NewTableNumRootBits,
-    Optional<size_t> NewTableNumSubtrieBits) {
+Expected<OnDiskHashMappedTrie>
+OnDiskHashMappedTrie::create(const Twine &PathTwine, const Twine &TrieNameTwine,
+                             size_t NumHashBits, uint64_t DataSize,
+                             uint64_t MaxFileSize,
+                             std::optional<uint64_t> NewFileInitialSize,
+                             std::optional<size_t> NewTableNumRootBits,
+                             std::optional<size_t> NewTableNumSubtrieBits) {
   report_fatal_error("not supported");
 }
 

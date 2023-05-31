@@ -23,7 +23,7 @@ TEST(TreeSchemaTest, Trees) {
   std::unique_ptr<ObjectStore> CAS2 = createInMemoryCAS();
 
   auto createBlobInBoth = [&](StringRef Content) {
-    Optional<ObjectRef> H1, H2;
+    std::optional<ObjectRef> H1, H2;
     EXPECT_THAT_ERROR(CAS1->storeFromString(std::nullopt, Content).moveInto(H1),
                       Succeeded());
     EXPECT_THAT_ERROR(CAS2->storeFromString(std::nullopt, Content).moveInto(H2),
@@ -59,7 +59,7 @@ TEST(TreeSchemaTest, Trees) {
   TreeSchema Schema1(*CAS1);
 
   for (ArrayRef<NamedTreeEntry> Entries : FlatTreeEntries) {
-    Optional<TreeProxy> H;
+    std::optional<TreeProxy> H;
     ASSERT_THAT_ERROR(Schema1.create(Entries).moveInto(H), Succeeded());
     FlatIDs.push_back(H->getID());
     FlatRefs.push_back(H->getRef());
@@ -68,11 +68,11 @@ TEST(TreeSchemaTest, Trees) {
   // Confirm we get the same IDs the second time and that the trees can be
   // visited (the entries themselves will be checked later).
   for (int I = 0, E = FlatIDs.size(); I != E; ++I) {
-    Optional<TreeProxy> H;
+    std::optional<TreeProxy> H;
     ASSERT_THAT_ERROR(Schema1.create(FlatTreeEntries[I]).moveInto(H),
                       Succeeded());
     EXPECT_EQ(FlatRefs[I], CAS1->getReference(*H));
-    Optional<TreeProxy> Tree;
+    std::optional<TreeProxy> Tree;
     ASSERT_THAT_ERROR(TreeProxy::get(Schema1, *H).moveInto(Tree),
                       Succeeded());
     EXPECT_EQ(FlatTreeEntries[I].size(), Tree->size());
@@ -103,7 +103,7 @@ TEST(TreeSchemaTest, Trees) {
       // Make a copy of the original entries and sort them.
       SmallVector<NamedTreeEntry> NewEntries;
       for (const NamedTreeEntry &Entry : FlatTreeEntries[I - 1]) {
-        Optional<ObjectRef> NewRef =
+        std::optional<ObjectRef> NewRef =
             CAS->getReference(CAS1->getID(Entry.getRef()));
         ASSERT_TRUE(NewRef);
         NewEntries.emplace_back(*NewRef, Entry.getKind(), Entry.getName());
@@ -112,16 +112,16 @@ TEST(TreeSchemaTest, Trees) {
 
       // Confirm we get the same tree out of CAS2.
       {
-        Optional<TreeProxy> Tree;
+        std::optional<TreeProxy> Tree;
         ASSERT_THAT_ERROR(Schema.create(NewEntries).moveInto(Tree),
                           Succeeded());
         EXPECT_EQ(ID, Tree->getID());
       }
 
       // Check that the correct entries come back.
-      Optional<ObjectRef> Ref = CAS->getReference(ID);
+      std::optional<ObjectRef> Ref = CAS->getReference(ID);
       ASSERT_TRUE(Ref);
-      Optional<TreeProxy> Tree;
+      std::optional<TreeProxy> Tree;
       ASSERT_THAT_ERROR(Schema.load(*Ref).moveInto(Tree), Succeeded());
       for (int I = 0, E = NewEntries.size(); I != E; ++I)
         EXPECT_EQ(NewEntries[I], Tree->get(I));
@@ -140,7 +140,7 @@ TEST(TreeSchemaTest, Trees) {
     Entries.emplace_back(*CAS1->getReference(FlatIDs[(I + 4) % FlatIDs.size()]),
                          TreeEntry::Tree, Name);
 
-    Optional<std::string> Name1, Name2;
+    std::optional<std::string> Name1, Name2;
     if (NestedTrees.size() >= 2) {
       int Nested1 = I % NestedTrees.size();
       int Nested2 = (I * 3 + 2) % NestedTrees.size();
@@ -155,9 +155,9 @@ TEST(TreeSchemaTest, Trees) {
       Entries.emplace_back(NestedTrees[(I * 3 + 2) % NestedTrees.size()],
                            TreeEntry::Tree, *Name2);
     }
-    Optional<CASID> ID;
+    std::optional<CASID> ID;
     {
-      Optional<TreeProxy> Tree;
+      std::optional<TreeProxy> Tree;
       ASSERT_THAT_ERROR(Schema1.create(Entries).moveInto(Tree), Succeeded());
       ID = Tree->getID();
     }
@@ -167,7 +167,7 @@ TEST(TreeSchemaTest, Trees) {
       // Make a copy of the original entries and sort them.
       SmallVector<NamedTreeEntry> NewEntries;
       for (const NamedTreeEntry &Entry : Entries) {
-        Optional<ObjectRef> NewRef =
+        std::optional<ObjectRef> NewRef =
             CAS->getReference(CAS1->getID(Entry.getRef()));
         ASSERT_TRUE(NewRef);
         NewEntries.emplace_back(*NewRef, Entry.getKind(), Entry.getName());
@@ -175,13 +175,13 @@ TEST(TreeSchemaTest, Trees) {
       llvm::sort(NewEntries);
 
       TreeSchema Schema(*CAS);
-      Optional<TreeProxy> Tree;
+      std::optional<TreeProxy> Tree;
       ASSERT_THAT_ERROR(Schema.create(NewEntries).moveInto(Tree),
                         Succeeded());
       ASSERT_EQ(*ID, Tree->getID());
       ASSERT_THAT_ERROR(CAS->validate(*ID), Succeeded());
       Tree.reset();
-      Optional<ObjectRef> Ref = CAS->getReference(*ID);
+      std::optional<ObjectRef> Ref = CAS->getReference(*ID);
       ASSERT_TRUE(Ref);
       ASSERT_THAT_ERROR(Schema.load(*Ref).moveInto(Tree), Succeeded());
       for (int I = 0, E = NewEntries.size(); I != E; ++I)
@@ -192,7 +192,7 @@ TEST(TreeSchemaTest, Trees) {
 
 TEST(TreeSchemaTest, Lookup) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
-  Optional<ObjectRef> Node;
+  std::optional<ObjectRef> Node;
   EXPECT_THAT_ERROR(CAS->storeFromString(std::nullopt, "blob").moveInto(Node),
                     Succeeded());
   ObjectRef Blob = *Node;
@@ -205,7 +205,7 @@ TEST(TreeSchemaTest, Lookup) {
       NamedTreeEntry(Blob, TreeEntry::Regular, "f"),
       NamedTreeEntry(Blob, TreeEntry::Regular, "d"),
   };
-  Optional<TreeProxy> Tree;
+  std::optional<TreeProxy> Tree;
   TreeSchema Schema(*CAS);
   ASSERT_THAT_ERROR(Schema.create(FlatTreeEntries).moveInto(Tree),
                     Succeeded());
@@ -236,7 +236,7 @@ TEST(TreeSchemaTest, walkFileTreeRecursively) {
   Builder.push(make("blob1"), TreeEntry::Regular, "/t1/d1");
   Builder.push(make("blob3"), TreeEntry::Regular, "/t3/d3");
   Builder.push(make("blob1"), TreeEntry::Regular, "/t3/t1nested/d1");
-  Optional<ObjectProxy> Root;
+  std::optional<ObjectProxy> Root;
   ASSERT_THAT_ERROR(Builder.create(*CAS).moveInto(Root), Succeeded());
 
   std::pair<std::string, bool> ExpectedEntries[] = {
@@ -254,7 +254,7 @@ TEST(TreeSchemaTest, walkFileTreeRecursively) {
   TreeSchema Schema(*CAS);
   Error E = Schema.walkFileTreeRecursively(
       *CAS, Root->getRef(),
-      [&](const NamedTreeEntry &Entry, Optional<TreeProxy> Tree) -> Error {
+      [&](const NamedTreeEntry &Entry, std::optional<TreeProxy> Tree) -> Error {
         if (RemainingEntries.empty())
           return createStringError(inconvertibleErrorCode(),
                                    "unexpected entry: '" + Entry.getName() +

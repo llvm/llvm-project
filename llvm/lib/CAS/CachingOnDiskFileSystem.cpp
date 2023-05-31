@@ -76,7 +76,7 @@ public:
   /// status(TreePath, /*FollowSymlinks=*/false).
   Expected<DirectoryEntry *>
   makeEntry(DirectoryEntry &Parent, StringRef TreePath,
-            Optional<sys::fs::file_status> KnownStatus);
+            std::optional<sys::fs::file_status> KnownStatus);
 
   /// Preload the real path for \p Remaining, relative to \p From.
   /// \returns The real path entry if it can be computed, an error if the path
@@ -86,7 +86,7 @@ public:
   preloadRealPath(DirectoryEntry &From, StringRef Remaining);
 
   ErrorOr<vfs::Status> statusAndFileID(const Twine &Path,
-                                       Optional<CASID> &FileID) final;
+                                       std::optional<CASID> &FileID) final;
   ErrorOr<vfs::Status> status(const Twine &Path) final;
   bool exists(const Twine &Path) final;
   ErrorOr<std::unique_ptr<vfs::File>> openFileForRead(const Twine &Path) final;
@@ -181,7 +181,7 @@ private:
   IntrusiveRefCntPtr<FileSystemCache> Cache;
   WorkingDirectoryType WorkingDirectory;
 
-  Optional<ObjectRef> EmptyRef;
+  std::optional<ObjectRef> EmptyRef;
 };
 
 class DiscoveryInstanceImpl final : public FileSystemCache::DiscoveryInstance {
@@ -233,7 +233,7 @@ public:
     return Object->getMemoryBuffer(RequestedName.toStringRef(Storage));
   }
 
-  llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() final {
+  llvm::ErrorOr<std::optional<cas::ObjectRef>> getObjectRefForContent() final {
     return Entry->getRef();
   }
 
@@ -389,7 +389,7 @@ CachingOnDiskFileSystemImpl::makeFile(DirectoryEntry &Parent,
 Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeEntry(
     DirectoryEntry &Parent, StringRef TreePath,
-    Optional<sys::fs::file_status> KnownStatus) {
+    std::optional<sys::fs::file_status> KnownStatus) {
   assert(Parent.isDirectory() && "Expected a directory");
 
   // lstat is extremely slow...
@@ -417,7 +417,7 @@ CachingOnDiskFileSystemImpl::makeEntry(
 
 ErrorOr<vfs::Status>
 CachingOnDiskFileSystemImpl::statusAndFileID(const Twine &Path,
-                                             Optional<CASID> &FileID) {
+                                             std::optional<CASID> &FileID) {
   FileID = std::nullopt;
   SmallString<128> Storage;
   StringRef PathRef = Path.toStringRef(Storage);
@@ -468,7 +468,7 @@ CachingOnDiskFileSystemImpl::getRealPath(const Twine &Path,
 }
 
 ErrorOr<vfs::Status> CachingOnDiskFileSystemImpl::status(const Twine &Path) {
-  Optional<CASID> IgnoredID;
+  std::optional<CASID> IgnoredID;
   return statusAndFileID(Path, IgnoredID);
 }
 

@@ -594,32 +594,32 @@ TEST_F(FileManagerTest, CASProvider) {
   FileSystemOptions Opts;
   {
     FileManager Manager(Opts, CASFS);
-    Optional<ObjectRef> CASContents;
+    std::optional<ObjectRef> CASContents;
     auto Buf = Manager.getBufferForFile(Path, /*IsVolatile*/ false,
                                         /*RequiresNullTerminator*/ false,
                                         &CASContents);
     ASSERT_TRUE(Buf);
     EXPECT_EQ(Contents, (*Buf)->getBuffer());
     ASSERT_TRUE(CASContents);
-    Optional<ObjectProxy> BlobContents;
+    std::optional<ObjectProxy> BlobContents;
     ASSERT_THAT_ERROR(DB->getProxy(*CASContents).moveInto(BlobContents),
                       llvm::Succeeded());
     EXPECT_EQ(BlobContents->getData(), Contents);
   }
   {
     FileManager Manager(Opts, CASFS);
-    Optional<FileEntryRef> FERef;
+    std::optional<FileEntryRef> FERef;
     ASSERT_THAT_ERROR(
         Manager.getFileRef(Path, /*OpenFile*/ true).moveInto(FERef),
         llvm::Succeeded());
-    Optional<ObjectRef> CASContents;
+    std::optional<ObjectRef> CASContents;
     auto Buf = Manager.getBufferForFile(*FERef, /*IsVolatile*/ false,
                                         /*RequiresNullTerminator*/ false,
                                         &CASContents);
     ASSERT_TRUE(Buf);
     EXPECT_EQ(Contents, (*Buf)->getBuffer());
     ASSERT_TRUE(CASContents);
-    Optional<ObjectProxy> BlobContents;
+    std::optional<ObjectProxy> BlobContents;
     ASSERT_THAT_ERROR(DB->getProxy(*CASContents).moveInto(BlobContents),
                       llvm::Succeeded());
     EXPECT_EQ(BlobContents->getData(), Contents);
@@ -627,11 +627,11 @@ TEST_F(FileManagerTest, CASProvider) {
   {
     FileSystemOptions Opts;
     FileManager Manager(Opts, CASFS);
-    llvm::ErrorOr<Optional<ObjectRef>> CASContents =
+    llvm::ErrorOr<std::optional<ObjectRef>> CASContents =
         Manager.getObjectRefForFileContent(Path);
     ASSERT_TRUE(CASContents);
     ASSERT_TRUE(*CASContents);
-    Optional<ObjectProxy> BlobContents;
+    std::optional<ObjectProxy> BlobContents;
     ASSERT_THAT_ERROR(DB->getProxy(**CASContents).moveInto(BlobContents),
                       llvm::Succeeded());
     EXPECT_EQ(BlobContents->getData(), Contents);
@@ -640,11 +640,11 @@ TEST_F(FileManagerTest, CASProvider) {
     FileSystemOptions Opts;
     Opts.WorkingDir = "/root";
     FileManager Manager(Opts, CASFS);
-    llvm::ErrorOr<Optional<ObjectRef>> CASContents =
+    llvm::ErrorOr<std::optional<ObjectRef>> CASContents =
         Manager.getObjectRefForFileContent("a.txt");
     ASSERT_TRUE(CASContents);
     ASSERT_TRUE(*CASContents);
-    Optional<ObjectProxy> BlobContents;
+    std::optional<ObjectProxy> BlobContents;
     ASSERT_THAT_ERROR(DB->getProxy(**CASContents).moveInto(BlobContents),
                       llvm::Succeeded());
     EXPECT_EQ(BlobContents->getData(), Contents);

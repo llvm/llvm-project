@@ -57,13 +57,13 @@ public:
   virtual void write(const MemoryBuffer &OutputBuffer) = 0;
   virtual Error writeObject(const MemoryBuffer &OutputBuffer,
                             StringRef OutputPath);
-  virtual Optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() {
+  virtual std::optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() {
     return std::nullopt;
   }
 
   virtual ~ModuleCacheEntry() {}
 protected:
-  Optional<std::string> computeCacheKey(
+  std::optional<std::string> computeCacheKey(
       const ModuleSummaryIndex &Index, StringRef ModuleID,
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
@@ -161,7 +161,7 @@ public:
     } Type;
     std::unique_ptr<cas::ObjectStore> CAS;
     std::unique_ptr<cas::ActionCache> Cache;
-    Optional<cas::remote::ClientServices> Service;
+    std::optional<cas::remote::ClientServices> Service;
   };
 
   /// Provide a path to a directory where to store the cached files for

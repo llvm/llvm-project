@@ -214,7 +214,7 @@ public:
     return getID(asInMemoryObject(Ref));
   }
 
-  Optional<ObjectRef> getReference(const CASID &ID) const final {
+  std::optional<ObjectRef> getReference(const CASID &ID) const final {
     if (const InMemoryObject *Object = getInMemoryObject(ID))
       return toReference(*Object);
     return std::nullopt;

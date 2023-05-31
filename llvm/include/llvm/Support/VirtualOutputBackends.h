@@ -24,7 +24,7 @@ IntrusiveRefCntPtr<OutputBackend> makeNullOutputBackend();
 /// \a NullOutput.
 IntrusiveRefCntPtr<OutputBackend> makeFilteringOutputBackend(
     IntrusiveRefCntPtr<OutputBackend> UnderlyingBackend,
-    std::function<bool(StringRef, Optional<OutputConfig>)> Filter);
+    std::function<bool(StringRef, std::optional<OutputConfig>)> Filter);
 
 /// Create a backend that forwards \a OutputBackend::createFile() to both \p
 /// Backend1 and \p Backend2 and sends content to both places.
@@ -43,7 +43,7 @@ protected:
   // IntrusiveRefCntPtr<OutputBackend> cloneImpl() const override;
 
   Expected<std::unique_ptr<OutputFileImpl>>
-  createFileImpl(StringRef Path, Optional<OutputConfig> Config) override {
+  createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override {
     OutputFile File;
     if (Error E = UnderlyingBackend->createFile(Path, Config).moveInto(File))
       return std::move(E);
@@ -72,7 +72,7 @@ protected:
   }
 
   Expected<std::unique_ptr<OutputFileImpl>>
-  createFileImpl(StringRef Path, Optional<OutputConfig> Config) override;
+  createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override;
 
 public:
   /// Resolve an absolute path.

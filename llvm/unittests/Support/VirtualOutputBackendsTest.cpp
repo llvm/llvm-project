@@ -288,9 +288,9 @@ struct OnDiskFile {
     Extension = sys::path::extension(Filename);
   }
 
-  Optional<OnDiskFile> findTemp() const;
+  std::optional<OnDiskFile> findTemp() const;
 
-  Optional<sys::fs::UniqueID> getCurrentUniqueID();
+  std::optional<sys::fs::UniqueID> getCurrentUniqueID();
 
   bool hasUniqueID(sys::fs::UniqueID ID) {
     auto CurrentID = getCurrentUniqueID();
@@ -299,7 +299,7 @@ struct OnDiskFile {
     return *CurrentID == ID;
   }
 
-  Optional<StringRef> getCurrentContent() {
+  std::optional<StringRef> getCurrentContent() {
     auto OnDiskOrErr = MemoryBuffer::getFile(Path);
     if (!OnDiskOrErr)
       return std::nullopt;
@@ -323,7 +323,7 @@ class OnDiskOutputBackendProvider : public OutputBackendProvider {
 public:
   bool rejectsMissingDirectories() override { return true; }
 
-  Optional<unittest::TempDir> D;
+  std::optional<unittest::TempDir> D;
 
   IntrusiveRefCntPtr<OutputBackend> createBackend() override {
     auto Backend = makeIntrusiveRefCnt<OnDiskOutputBackend>();
@@ -354,10 +354,10 @@ public:
 
   struct FileInfo {
     OutputConfig Config;
-    Optional<OnDiskFile> F;
-    Optional<OnDiskFile> Temp;
-    Optional<sys::fs::UniqueID> UID;
-    Optional<sys::fs::UniqueID> TempUID;
+    std::optional<OnDiskFile> F;
+    std::optional<OnDiskFile> Temp;
+    std::optional<sys::fs::UniqueID> UID;
+    std::optional<sys::fs::UniqueID> TempUID;
   };
   Error checkOpen(FileInfo &Info);
   bool shouldUseTemporaries(const FileInfo &Info) const;
@@ -411,7 +411,7 @@ INSTANTIATE_TEST_SUITE_P(VirtualOutput, BackendTest,
                          ::testing::ValuesIn(BackendGenerators.Generators),
                          BackendGenerators);
 
-Optional<sys::fs::UniqueID> OnDiskFile::getCurrentUniqueID() {
+std::optional<sys::fs::UniqueID> OnDiskFile::getCurrentUniqueID() {
   sys::fs::file_status Status;
   sys::fs::status(Path, Status, /*follow=*/false);
   if (!sys::fs::is_regular_file(Status))
@@ -419,7 +419,7 @@ Optional<sys::fs::UniqueID> OnDiskFile::getCurrentUniqueID() {
   return Status.getUniqueID();
 }
 
-Optional<OnDiskFile> OnDiskFile::findTemp() const {
+std::optional<OnDiskFile> OnDiskFile::findTemp() const {
   std::error_code EC;
   for (sys::fs::directory_iterator I(ParentPath, EC), E; !EC && I != E;
        I.increment(EC)) {
@@ -461,9 +461,9 @@ Error OnDiskOutputBackendProvider::lookupFileInfo(StringRef FilePath,
 Error OnDiskOutputBackendProvider::checkOpen(FileInfo &Info) {
   // Collect info about filesystem state.
   assert(Info.F);
-  Optional<sys::fs::UniqueID> UID = Info.F->getCurrentUniqueID();
-  Optional<OnDiskFile> Temp = Info.F->findTemp();
-  Optional<sys::fs::UniqueID> TempUID;
+  std::optional<sys::fs::UniqueID> UID = Info.F->getCurrentUniqueID();
+  std::optional<OnDiskFile> Temp = Info.F->findTemp();
+  std::optional<sys::fs::UniqueID> TempUID;
   if (Temp)
     TempUID = Temp->getCurrentUniqueID();
 
@@ -561,7 +561,7 @@ Error OnDiskOutputBackendProvider::checkKept(StringRef FilePath,
     return createStringError(inconvertibleErrorCode(),
                              "File not created by keep or changed UID");
 
-  if (Optional<OnDiskFile> Temp = Info->F->findTemp())
+  if (std::optional<OnDiskFile> Temp = Info->F->findTemp())
     return createStringError(inconvertibleErrorCode(),
                              "Temporary not removed by keep");
 
@@ -573,11 +573,11 @@ Error OnDiskOutputBackendProvider::checkDiscarded(StringRef FilePath) {
   if (Error E = lookupFileInfo(FilePath, Info))
     return E;
 
-  if (Optional<sys::fs::UniqueID> UID = Info->F->getCurrentUniqueID())
+  if (std::optional<sys::fs::UniqueID> UID = Info->F->getCurrentUniqueID())
     return createStringError(inconvertibleErrorCode(),
                              "File not removed by discard");
 
-  if (Optional<OnDiskFile> Temp = Info->F->findTemp())
+  if (std::optional<OnDiskFile> Temp = Info->F->findTemp())
     return createStringError(inconvertibleErrorCode(),
                              "Temporary not removed by discard");
 
@@ -588,7 +588,7 @@ TEST(VirtualOutputBackendAdaptors, makeFilteringOutputBackend) {
   bool ShouldCreate = false;
   auto Backend = makeFilteringOutputBackend(
       makeIntrusiveRefCnt<OnDiskOutputBackend>(),
-      [&ShouldCreate](StringRef, Optional<OutputConfig>) {
+      [&ShouldCreate](StringRef, std::optional<OutputConfig>) {
         return ShouldCreate;
       });
 
@@ -620,7 +620,7 @@ class AbsolutePathBackend : public ProxyOutputBackend {
   }
 
   Expected<std::unique_ptr<OutputFileImpl>>
-  createFileImpl(StringRef Path, Optional<OutputConfig> Config) override {
+  createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override {
     assert(!sys::path::is_absolute(Path) &&
            "Expected tests to pass all relative paths");
     SmallString<256> AbsPath;
@@ -686,7 +686,7 @@ class LikeNullOutputBackend final : public OutputBackend {
   }
 
   Expected<std::unique_ptr<OutputFileImpl>>
-  createFileImpl(StringRef Path, Optional<OutputConfig> Config) override {
+  createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override {
     return std::make_unique<LikeNullOutputFile>(OS);
   }
 
@@ -737,7 +737,7 @@ class StringErrorBackend final : public OutputBackend {
   }
 
   Expected<std::unique_ptr<OutputFileImpl>>
-  createFileImpl(StringRef Path, Optional<OutputConfig> Config) override {
+  createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override {
     return createStringError(inconvertibleErrorCode(), Msg);
   }
 

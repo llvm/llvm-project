@@ -46,10 +46,10 @@ public:
   /// otherwise passes \p None.
   Error walkFileTreeRecursively(
       ObjectStore &CAS, ObjectRef Root,
-      function_ref<Error(const NamedTreeEntry &, Optional<TreeProxy>)>
+      function_ref<Error(const NamedTreeEntry &, std::optional<TreeProxy>)>
           Callback);
 
-  Optional<size_t> lookupTreeEntry(TreeProxy Tree, StringRef Name) const;
+  std::optional<size_t> lookupTreeEntry(TreeProxy Tree, StringRef Name) const;
   NamedTreeEntry loadTreeEntry(TreeProxy Tree, size_t I) const;
 
   Expected<TreeProxy> load(ObjectRef Object) const;
@@ -59,7 +59,7 @@ public:
 
 private:
   static constexpr StringLiteral SchemaName = "llvm::cas::schema::tree::v1";
-  Optional<ObjectRef> TreeKindRef;
+  std::optional<ObjectRef> TreeKindRef;
 
   friend class TreeProxy;
 
@@ -88,7 +88,7 @@ public:
   bool empty() const { return size() == 0; }
   size_t size() const { return Schema->getNumTreeEntries(*this); }
 
-  Optional<NamedTreeEntry> lookup(StringRef Name) const {
+  std::optional<NamedTreeEntry> lookup(StringRef Name) const {
     if (auto I = Schema->lookupTreeEntry(*this, Name))
       return get(*I);
     return std::nullopt;

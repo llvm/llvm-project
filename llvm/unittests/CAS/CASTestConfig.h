@@ -30,13 +30,13 @@ struct TestingAndDir {
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::unique_ptr<llvm::cas::ActionCache> Cache;
   std::unique_ptr<llvm::unittest::cas::MockEnv> Env;
-  llvm::Optional<llvm::unittest::TempDir> Temp;
+  std::optional<llvm::unittest::TempDir> Temp;
 };
 
 class CASTest
     : public testing::TestWithParam<std::function<TestingAndDir(int)>> {
 protected:
-  llvm::Optional<int> NextCASIndex;
+  std::optional<int> NextCASIndex;
 
   llvm::SmallVector<llvm::unittest::TempDir> Dirs;
 

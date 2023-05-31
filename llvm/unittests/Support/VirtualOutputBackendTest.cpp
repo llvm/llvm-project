@@ -18,7 +18,7 @@ namespace {
 struct MockOutputBackendData {
   int Cloned = 0;
   int FilesCreated = 0;
-  Optional<OutputConfig> LastConfig;
+  std::optional<OutputConfig> LastConfig;
   unique_function<Error()> FileCreator;
 };
 
@@ -36,7 +36,7 @@ struct MockOutputBackend final : public OutputBackend {
   }
 
   Expected<std::unique_ptr<OutputFileImpl>>
-  createFileImpl(StringRef, Optional<OutputConfig> Config) override {
+  createFileImpl(StringRef, std::optional<OutputConfig> Config) override {
     ++Data.FilesCreated;
     Data.LastConfig = Config;
     if (Data.FileCreator)
@@ -46,7 +46,7 @@ struct MockOutputBackend final : public OutputBackend {
 
   Expected<OutputFile>
   createAutoDiscardFile(const Twine &OutputPath,
-                        Optional<OutputConfig> Config = std::nullopt) {
+                        std::optional<OutputConfig> Config = std::nullopt) {
     return consumeDiscardOnDestroy(createFile(OutputPath, Config));
   }
 

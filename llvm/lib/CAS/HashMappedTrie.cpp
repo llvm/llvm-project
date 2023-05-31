@@ -61,7 +61,7 @@ public:
 
   void printHash(raw_ostream &OS, ArrayRef<uint8_t> Bytes) const;
   void print(raw_ostream &OS) const { print(OS, std::nullopt); }
-  void print(raw_ostream &OS, Optional<std::string> Prefix) const;
+  void print(raw_ostream &OS, std::optional<std::string> Prefix) const;
   void dump() const { print(dbgs()); }
 
   static std::unique_ptr<TrieSubtrie> create(size_t StartBit, size_t NumBits);
@@ -372,7 +372,8 @@ static void printPrefix(raw_ostream &OS, StringRef Prefix) {
     OS << "[" << Prefix << "]";
 }
 
-void TrieSubtrie::print(raw_ostream &OS, Optional<std::string> Prefix) const {
+void TrieSubtrie::print(raw_ostream &OS,
+                        std::optional<std::string> Prefix) const {
   if (!Prefix) {
     OS << "root";
     Prefix.emplace();
@@ -423,7 +424,7 @@ LLVM_DUMP_METHOD void ThreadSafeHashMappedTrieBase::dump() const {
 
 ThreadSafeHashMappedTrieBase::ThreadSafeHashMappedTrieBase(
     size_t ContentAllocSize, size_t ContentAllocAlign, size_t ContentOffset,
-    Optional<size_t> NumRootBits, Optional<size_t> NumSubtrieBits)
+    std::optional<size_t> NumRootBits, std::optional<size_t> NumSubtrieBits)
     : ContentAllocSize(ContentAllocSize), ContentAllocAlign(ContentAllocAlign),
       ContentOffset(ContentOffset),
       NumRootBits(NumRootBits ? *NumRootBits : DefaultNumRootBits),

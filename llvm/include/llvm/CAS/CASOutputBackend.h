@@ -34,7 +34,8 @@ public:
 
 private:
   Expected<std::unique_ptr<vfs::OutputFileImpl>>
-  createFileImpl(StringRef Path, Optional<vfs::OutputConfig> Config) override;
+  createFileImpl(StringRef Path,
+                 std::optional<vfs::OutputConfig> Config) override;
 
   /// Backend is fully thread-safe (so far). Just return a pointer to itself.
   IntrusiveRefCntPtr<vfs::OutputBackend> cloneImpl() const override {

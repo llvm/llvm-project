@@ -10,7 +10,6 @@
 #define LLVM_CAS_CASACTIONCACHE_H
 
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASReference.h"
@@ -68,8 +67,8 @@ public:
   /// \param Globally if true it is a hint to the underlying implementation that
   /// the lookup is profitable to be done on a distributed caching level, not
   /// just locally. The implementation is free to ignore this flag.
-  Expected<Optional<CASID>> get(const CacheKey &ActionKey,
-                                bool Globally = false) const {
+  Expected<std::optional<CASID>> get(const CacheKey &ActionKey,
+                                     bool Globally = false) const {
     return getImpl(arrayRefFromStringRef(ActionKey.getKey()), Globally);
   }
 
@@ -116,8 +115,8 @@ public:
   virtual ~ActionCache() = default;
 
 protected:
-  virtual Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
-                                            bool Globally) const = 0;
+  virtual Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
+                                                 bool Globally) const = 0;
   virtual void getImplAsync(
       ArrayRef<uint8_t> ResolvedKey, bool Globally,
       unique_function<void(Expected<std::optional<CASID>>)> Callback) const;

@@ -36,7 +36,7 @@ std::string CASID::toString() const {
 }
 
 static void printReferenceBase(raw_ostream &OS, StringRef Kind,
-                               uint64_t InternalRef, Optional<CASID> ID) {
+                               uint64_t InternalRef, std::optional<CASID> ID) {
   OS << Kind << "=" << InternalRef;
   if (ID)
     OS << "[" << *ID << "]";
@@ -50,7 +50,7 @@ void ReferenceBase::print(raw_ostream &OS, const ObjectHandle &This) const {
 void ReferenceBase::print(raw_ostream &OS, const ObjectRef &This) const {
   assert(this == &This);
 
-  Optional<CASID> ID;
+  std::optional<CASID> ID;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   if (CAS)
     ID = CAS->getID(This);
@@ -92,7 +92,7 @@ void ObjectStore::readRefs(ObjectHandle Node,
 }
 
 Expected<ObjectProxy> ObjectStore::getProxy(const CASID &ID) {
-  Optional<ObjectRef> Ref = getReference(ID);
+  std::optional<ObjectRef> Ref = getReference(ID);
   if (!Ref)
     return createUnknownObjectError(ID);
 
@@ -100,7 +100,7 @@ Expected<ObjectProxy> ObjectStore::getProxy(const CASID &ID) {
 }
 
 Expected<ObjectProxy> ObjectStore::getProxy(ObjectRef Ref) {
-  Optional<ObjectHandle> H;
+  std::optional<ObjectHandle> H;
   if (Error E = load(Ref).moveInto(H))
     return std::move(E);
 
@@ -109,7 +109,7 @@ Expected<ObjectProxy> ObjectStore::getProxy(ObjectRef Ref) {
 
 Expected<std::optional<ObjectProxy>>
 ObjectStore::getProxyIfExists(ObjectRef Ref) {
-  Optional<ObjectHandle> H;
+  std::optional<ObjectHandle> H;
   if (Error E = loadIfExists(Ref).moveInto(H))
     return std::move(E);
   if (!H)
@@ -161,7 +161,7 @@ Expected<ObjectProxy> ObjectStore::createProxy(ArrayRef<ObjectRef> Refs,
 
 Expected<ObjectRef>
 ObjectStore::storeFromOpenFileImpl(sys::fs::file_t FD,
-                                   Optional<sys::fs::file_status> Status) {
+                                   std::optional<sys::fs::file_status> Status) {
   // Copy the file into an immutable memory buffer and call \c store on that.
   // Using \c mmap would be unsafe because there's a race window between when we
   // get the digest hash for the \c mmap contents and when we store the data; if

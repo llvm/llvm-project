@@ -9,7 +9,6 @@
 #ifndef LLVM_CAS_HIERARCHICALTREEBUILDER_H
 #define LLVM_CAS_HIERARCHICALTREEBUILDER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/CASReference.h"
 #include "llvm/CAS/TreeEntry.h"
@@ -29,17 +28,17 @@ class HierarchicalTreeBuilder {
   struct HierarchicalEntry {
   public:
     StringRef getPath() const { return Path; }
-    Optional<ObjectRef> getRef() const { return Ref; }
+    std::optional<ObjectRef> getRef() const { return Ref; }
     TreeEntry::EntryKind getKind() const { return Kind; }
 
-    HierarchicalEntry(Optional<ObjectRef> Ref, TreeEntry::EntryKind Kind,
+    HierarchicalEntry(std::optional<ObjectRef> Ref, TreeEntry::EntryKind Kind,
                       StringRef Path)
         : Ref(Ref), Kind(Kind), Path(Path.str()) {
       assert(Ref || Kind == TreeEntry::Tree);
     }
 
   private:
-    Optional<ObjectRef> Ref;
+    std::optional<ObjectRef> Ref;
     TreeEntry::EntryKind Kind;
     std::string Path;
   };
@@ -48,7 +47,7 @@ class HierarchicalTreeBuilder {
   SmallVector<HierarchicalEntry, 8> Entries;
   SmallVector<HierarchicalEntry, 0> TreeContents;
 
-  void pushImpl(Optional<ObjectRef> Ref, TreeEntry::EntryKind Kind,
+  void pushImpl(std::optional<ObjectRef> Ref, TreeEntry::EntryKind Kind,
                 const Twine &Path);
 
 public:

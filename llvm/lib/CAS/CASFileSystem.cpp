@@ -107,7 +107,7 @@ public:
     return Object->getMemoryBuffer(Name.toStringRef(Storage));
   }
 
-  llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() final {
+  llvm::ErrorOr<std::optional<cas::ObjectRef>> getObjectRefForContent() final {
     return Entry->getRef();
   }
 
@@ -345,7 +345,7 @@ CASFileSystem::lookupPath(StringRef Path, bool FollowSymlinks) {
 static Expected<std::unique_ptr<CASFileSystem>>
 initializeCASFileSystem(std::unique_ptr<CASFileSystem> FS,
                         const CASID &RootID) {
-  Optional<ObjectRef> Root = FS->getCAS().getReference(RootID);
+  std::optional<ObjectRef> Root = FS->getCAS().getReference(RootID);
   if (!Root)
     return createStringError(inconvertibleErrorCode(),
                              "cannot get reference to root FS");

@@ -34,7 +34,7 @@ public:
                                      IsVolatile);
   }
 
-  ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() override {
+  ErrorOr<std::optional<cas::ObjectRef>> getObjectRefForContent() override {
     auto UnderlyingCASRef = UnderlyingFile->getObjectRefForContent();
     if (!UnderlyingCASRef || *UnderlyingCASRef)
       return UnderlyingCASRef;

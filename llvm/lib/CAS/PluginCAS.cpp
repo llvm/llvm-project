@@ -370,9 +370,9 @@ class PluginActionCache : public ActionCache {
 public:
   Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
                                          bool Globally) const final;
-  void getImplAsync(
-      ArrayRef<uint8_t> ResolvedKey, bool Globally,
-      unique_function<void(Expected<Optional<CASID>>)> Callback) const final;
+  void getImplAsync(ArrayRef<uint8_t> ResolvedKey, bool Globally,
+                    unique_function<void(Expected<std::optional<CASID>>)>
+                        Callback) const final;
 
   Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
                 bool Globally) final;
@@ -409,16 +409,16 @@ PluginActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey, bool Globally) const {
 
 void PluginActionCache::getImplAsync(
     ArrayRef<uint8_t> ResolvedKey, bool Globally,
-    unique_function<void(Expected<Optional<CASID>>)> Callback) const {
+    unique_function<void(Expected<std::optional<CASID>>)> Callback) const {
 
   struct CacheGetCtx {
     std::shared_ptr<PluginCASContext> CASCtx;
-    unique_function<void(Expected<Optional<CASID>>)> Callback;
+    unique_function<void(Expected<std::optional<CASID>>)> Callback;
   };
   auto CacheGetCB = [](void *c_ctx, llcas_lookup_result_t c_result,
                        llcas_objectid_t c_value, char *c_err) {
     auto getValueAndDispose =
-        [&](CacheGetCtx *Ctx) -> Expected<Optional<CASID>> {
+        [&](CacheGetCtx *Ctx) -> Expected<std::optional<CASID>> {
       auto _ = make_scope_exit([Ctx]() { delete Ctx; });
       switch (c_result) {
       case LLCAS_LOOKUP_RESULT_SUCCESS: {

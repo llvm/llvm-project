@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/CASFileSystem.h"
@@ -266,7 +265,7 @@ int listTreeRecursively(ObjectStore &CAS, const CASID &ID) {
   ObjectProxy TreeN = ExitOnErr(CAS.getProxy(ID));
   ExitOnErr(Schema.walkFileTreeRecursively(
       CAS, TreeN.getRef(),
-      [&](const NamedTreeEntry &Entry, Optional<TreeProxy> Tree) -> Error {
+      [&](const NamedTreeEntry &Entry, std::optional<TreeProxy> Tree) -> Error {
         if (Entry.getKind() != TreeEntry::Tree) {
           Entry.print(llvm::outs(), CAS);
           return Error::success();
@@ -348,7 +347,8 @@ static int makeNode(ObjectStore &CAS, ArrayRef<std::string> Objects,
   SmallVector<ObjectRef> IDs;
   for (StringRef Object : Objects) {
     ExitOnError ObjectErr("llvm-cas: make-node: ref: ");
-    Optional<ObjectRef> ID = CAS.getReference(ObjectErr(CAS.parseID(Object)));
+    std::optional<ObjectRef> ID =
+        CAS.getReference(ObjectErr(CAS.parseID(Object)));
     if (!ID)
       ObjectErr(createStringError(inconvertibleErrorCode(),
                                   "unknown object '" + Object + "'"));
@@ -539,7 +539,7 @@ static int mergeTrees(ObjectStore &CAS, ArrayRef<std::string> Objects) {
   for (const auto &Object : Objects) {
     auto ID = CAS.parseID(Object);
     if (ID) {
-      if (Optional<ObjectRef> Ref = CAS.getReference(*ID))
+      if (std::optional<ObjectRef> Ref = CAS.getReference(*ID))
         Builder.pushTreeContent(*Ref, "");
       else
         ExitOnErr(createStringError(inconvertibleErrorCode(),

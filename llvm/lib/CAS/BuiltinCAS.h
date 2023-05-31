@@ -9,7 +9,6 @@
 #ifndef LLVM_LIB_CAS_BUILTINCAS_H
 #define LLVM_LIB_CAS_BUILTINCAS_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/BuiltinCASContext.h"
 #include "llvm/CAS/ObjectStore.h"

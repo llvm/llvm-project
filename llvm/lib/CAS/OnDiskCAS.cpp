@@ -27,7 +27,7 @@ public:
 
   CASID getID(ObjectRef Ref) const final;
 
-  Optional<ObjectRef> getReference(const CASID &ID) const final;
+  std::optional<ObjectRef> getReference(const CASID &ID) const final;
 
   ArrayRef<char> getDataConst(ObjectHandle Node) const final;
 
@@ -83,7 +83,7 @@ CASID OnDiskCAS::getID(ObjectRef Ref) const {
   return CASID::create(&getContext(), toStringRef(Hash));
 }
 
-Optional<ObjectRef> OnDiskCAS::getReference(const CASID &ID) const {
+std::optional<ObjectRef> OnDiskCAS::getReference(const CASID &ID) const {
   std::optional<ondisk::ObjectID> ObjID =
       DB->getExistingReference(ID.getHash());
   if (!ObjID)

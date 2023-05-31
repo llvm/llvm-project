@@ -48,7 +48,7 @@ CASOutputBackend::~CASOutputBackend() = default;
 
 Expected<std::unique_ptr<vfs::OutputFileImpl>>
 CASOutputBackend::createFileImpl(StringRef ResolvedPath,
-                                 Optional<vfs::OutputConfig> Config) {
+                                 std::optional<vfs::OutputConfig> Config) {
   // FIXME: CASIDOutputBackend.createFile() should be called NOW (not inside
   // the OnKeep closure) so that if there are initialization errors (such as
   // output directory not existing) they're reported by createFileImpl().
@@ -56,7 +56,7 @@ CASOutputBackend::createFileImpl(StringRef ResolvedPath,
   // The opened file can be kept inside \a CASOutputFile and forwarded.
   return std::make_unique<CASOutputFile>(
       ResolvedPath, [&](StringRef Path, StringRef Bytes) -> Error {
-        Optional<ObjectRef> BytesRef;
+        std::optional<ObjectRef> BytesRef;
         if (Error E =
                 CAS.storeFromString(std::nullopt, Bytes).moveInto(BytesRef))
           return E;

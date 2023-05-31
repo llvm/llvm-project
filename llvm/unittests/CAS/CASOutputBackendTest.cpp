@@ -30,8 +30,8 @@ TEST(CASOutputBackendTest, createFiles) {
 
   auto Outputs = makeIntrusiveRefCnt<CASOutputBackend>(*CAS);
 
-  Optional<ObjectProxy> Content1;
-  Optional<ObjectProxy> Content2;
+  std::optional<ObjectProxy> Content1;
+  std::optional<ObjectProxy> Content2;
   ASSERT_THAT_ERROR(
       CAS->createProxy(std::nullopt, "content1").moveInto(Content1),
       Succeeded());
@@ -56,7 +56,7 @@ TEST(CASOutputBackendTest, createFiles) {
   for (const OutputDescription &OD : OutputDescriptions) {
     // Use consumeDiscardOnDestroy() so that early exits from
     // ASSERT_THAT_ERROR do not crash the unit test suite.
-    Optional<vfs::OutputFile> O;
+    std::optional<vfs::OutputFile> O;
     ASSERT_THAT_ERROR(
         consumeDiscardOnDestroy(Outputs->createFile(OD.Path)).moveInto(O),
         Succeeded());
