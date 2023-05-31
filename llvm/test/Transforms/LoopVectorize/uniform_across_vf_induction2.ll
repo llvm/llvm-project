@@ -146,6 +146,7 @@ exit:
 }
 
 ; for (iv = 0, iv2 = 0 ; ; iv += 1, iv2 += 1) B[iv] = A[iv/2 + iv2/2] + 42;
+; A[iv/2 + iv2/2] is uniform for VF=2 but not for VF=4.
 define void @ld_div2_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-LABEL: define void @ld_div2_step1_start0_ind2
 ; VF2-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
@@ -155,29 +156,22 @@ define void @ld_div2_step1_start0_ind2(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; VF2-NEXT:    [[TMP1:%.*]] = udiv <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP2:%.*]] = udiv <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[TMP1]], [[TMP2]]
-; VF2-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
+; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; VF2-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 2
+; VF2-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP0]], 2
+; VF2-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], [[TMP3]]
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP4]]
-; VF2-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
-; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP6]]
-; VF2-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP5]], align 8
-; VF2-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP7]], align 8
-; VF2-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i32 0
-; VF2-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> [[TMP10]], i64 [[TMP9]], i32 1
-; VF2-NEXT:    [[TMP12:%.*]] = add nsw <2 x i64> [[TMP11]], <i64 42, i64 42>
-; VF2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[TMP13]], i32 0
-; VF2-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP14]], align 8
+; VF2-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 8
+; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP6]], i64 0
+; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; VF2-NEXT:    [[TMP7:%.*]] = add nsw <2 x i64> [[BROADCAST_SPLAT]], <i64 42, i64 42>
+; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
+; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i32 0
+; VF2-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP9]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
-; VF2-NEXT:    [[VEC_IND_NEXT3]] = add <2 x i64> [[VEC_IND2]], <i64 2, i64 2>
-; VF2-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; VF2-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF2-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; VF2-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; VF2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
