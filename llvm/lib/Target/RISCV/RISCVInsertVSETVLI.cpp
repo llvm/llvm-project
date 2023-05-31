@@ -259,8 +259,7 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
 
 /// Return the fields and properties demanded by the provided instruction.
 DemandedFields getDemanded(const MachineInstr &MI,
-                           const MachineRegisterInfo *MRI,
-                           bool ExpandVMVSXSEW) {
+                           const MachineRegisterInfo *MRI) {
   // Warning: This function has to work on both the lowered (i.e. post
   // emitVSETVLIs) and pre-lowering forms.  The main implication of this is
   // that it can't use the value of a SEW, VL, or Policy operand as they might
@@ -323,7 +322,7 @@ DemandedFields getDemanded(const MachineInstr &MI,
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
     auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
-    if (ExpandVMVSXSEW && VRegDef && VRegDef->isImplicitDef()) {
+    if (VRegDef && VRegDef->isImplicitDef()) {
       Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
     }
   }
@@ -888,7 +887,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
 
-  DemandedFields Used = getDemanded(MI, MRI, true);
+  DemandedFields Used = getDemanded(MI, MRI);
 
   if (isScalarMoveInstr(MI)) {
     // For vmv.s.x and vfmv.s.f, if writing to an implicit_def operand, we don't
@@ -1408,7 +1407,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
 
     if (!isVectorConfigInstr(MI)) {
-      doUnion(Used, getDemanded(MI, MRI, false));
+      doUnion(Used, getDemanded(MI, MRI));
       continue;
     }
 
@@ -1436,7 +1435,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       }
     }
     NextMI = &MI;
-    Used = getDemanded(MI, MRI, false);
+    Used = getDemanded(MI, MRI);
   }
 
   for (auto *MI : ToDelete)
