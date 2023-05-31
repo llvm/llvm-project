@@ -11,7 +11,7 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; AVX1-LABEL: testv4i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
@@ -49,11 +49,11 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; XOP-LABEL: testv4i64:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; XOP-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; XOP-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; XOP-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
 ; XOP-NEXT:    vpshlb %xmm5, %xmm1, %xmm1
 ; XOP-NEXT:    vpshufb %xmm1, %xmm4, %xmm1
 ; XOP-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
@@ -102,7 +102,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; AVX1-LABEL: testv8i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
@@ -152,11 +152,11 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; XOP-LABEL: testv8i32:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; XOP-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; XOP-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; XOP-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
 ; XOP-NEXT:    vpshlb %xmm5, %xmm1, %xmm1
 ; XOP-NEXT:    vpshufb %xmm1, %xmm4, %xmm1
 ; XOP-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
@@ -220,7 +220,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ; AVX1-LABEL: testv16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
@@ -262,11 +262,11 @@ define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ;
 ; XOP-LABEL: testv16i16:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; XOP-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; XOP-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; XOP-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm4 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm4 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
 ; XOP-NEXT:    vpshlb %xmm4, %xmm0, %xmm5
 ; XOP-NEXT:    vpshufb %xmm5, %xmm3, %xmm5
 ; XOP-NEXT:    vpaddb %xmm2, %xmm5, %xmm2
@@ -318,7 +318,7 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; AVX1-LABEL: testv32i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
@@ -351,11 +351,11 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; XOP-LABEL: testv32i8:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; XOP-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; XOP-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; XOP-NEXT:    vpshufb %xmm3, %xmm4, %xmm3
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
 ; XOP-NEXT:    vpshlb %xmm5, %xmm1, %xmm1
 ; XOP-NEXT:    vpshufb %xmm1, %xmm4, %xmm1
 ; XOP-NEXT:    vpaddb %xmm3, %xmm1, %xmm1

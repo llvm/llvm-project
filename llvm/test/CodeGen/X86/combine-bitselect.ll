@@ -466,7 +466,8 @@ define <4 x i64> @bitselect_v4i64_mm(ptr nocapture readonly, ptr nocapture reado
 ; XOP-LABEL: bitselect_v4i64_mm:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa (%rsi), %ymm0
-; XOP-NEXT:    vmovdqa {{.*#+}} ymm1 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [18446744073709551612,18446744065119617022,18446744073709551612,18446744065119617022]
+; XOP-NEXT:    # ymm1 = mem[0,1,0,1]
 ; XOP-NEXT:    vpcmov %ymm1, (%rdi), %ymm0, %ymm0
 ; XOP-NEXT:    retq
 ;
@@ -1092,7 +1093,7 @@ define void @constantfold_andn_mask() nounwind {
 ; XOP-NEXT:    pushq %rax
 ; XOP-NEXT:    callq use@PLT
 ; XOP-NEXT:    vmovdqu (%rax), %xmm1
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [31,248,31,248,31,248,31,248,31,248,31,248,31,248,31,248]
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm2 = [31,248,31,248,31,248,31,248,31,248,31,248,31,248,31,248]
 ; XOP-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; XOP-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; XOP-NEXT:    vpavgb %xmm2, %xmm0, %xmm0
@@ -1110,7 +1111,7 @@ define void @constantfold_andn_mask() nounwind {
 ; AVX1-NEXT:    pushq %rax
 ; AVX1-NEXT:    callq use@PLT
 ; AVX1-NEXT:    vmovdqu (%rax), %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [31,248,31,248,31,248,31,248,31,248,31,248,31,248,31,248]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [31,248,31,248,31,248,31,248,31,248,31,248,31,248,31,248]
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpavgb %xmm2, %xmm0, %xmm0

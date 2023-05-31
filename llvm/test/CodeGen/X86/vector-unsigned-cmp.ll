@@ -356,7 +356,7 @@ define <16 x i1> @ugt_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX1-LABEL: ugt_v16i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
@@ -393,7 +393,7 @@ define <16 x i1> @ult_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX1-LABEL: ult_v16i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
@@ -430,7 +430,7 @@ define <16 x i1> @uge_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX1-LABEL: uge_v16i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
@@ -469,7 +469,7 @@ define <16 x i1> @ule_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX1-LABEL: ule_v16i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
