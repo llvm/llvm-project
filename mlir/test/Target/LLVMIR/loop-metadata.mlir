@@ -233,6 +233,8 @@ llvm.func @unswitchOptions() {
 
 // -----
 
+llvm.func @foo(%arg0: i32)
+
 // CHECK-LABEL: @loopOptions
 llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
     %0 = llvm.mlir.constant(0 : i32) : i32
@@ -262,6 +264,8 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
     "llvm.intr.memcpy"(%4, %4, %0, %8) {access_groups = [@metadata::@group1, @metadata::@group2]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
     // CHECK: llvm.memset{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
     "llvm.intr.memset"(%4, %9, %0, %8) {access_groups = [@metadata::@group1, @metadata::@group2]} : (!llvm.ptr, i8, i32, i1) -> ()
+    // CHECK: call void @foo({{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
+    llvm.call @foo(%arg1) {access_groups = [@metadata::@group1, @metadata::@group2]} : (i32) -> ()
     // CHECK: br label {{.*}} !llvm.loop ![[LOOP_NODE]]
     llvm.br ^bb3(%3 : i32) {loop_annotation = #llvm.loop_annotation<
           licm = <disable = true>,
