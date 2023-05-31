@@ -4,6 +4,7 @@
 ; Tests for checking uniformity within a VF.
 
 ; for (iv = 0 ; ; iv += 1) B[iv] = A[(iv/2)%3];
+; A[(iv/2)%3] is not uniform for VF=8.
 define void @ld_div2_urem3_1(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div2_urem3_1
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
@@ -281,6 +282,7 @@ exit:
 }
 
 ; for (iv = 0 ; ; iv += 1) B[iv] = A[(iv/8)%3];
+; A[(iv/8)%3] is uniform for VF=8.
 define void @ld_div8_urem3(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define void @ld_div8_urem3
 ; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
@@ -290,50 +292,20 @@ define void @ld_div8_urem3(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
-; CHECK-NEXT:    [[TMP2:%.*]] = urem <8 x i64> [[TMP1]], <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i64> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i64> [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i64> [[TMP2]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i64> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i64> [[TMP2]], i32 4
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i64> [[TMP2]], i32 5
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x i64> [[TMP2]], i32 6
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i64> [[TMP2]], i32 7
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = load i64, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = load i64, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP21:%.*]] = load i64, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = load i64, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP23:%.*]] = load i64, ptr [[TMP12]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = load i64, ptr [[TMP14]], align 8
-; CHECK-NEXT:    [[TMP25:%.*]] = load i64, ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[TMP26:%.*]] = load i64, ptr [[TMP18]], align 8
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <8 x i64> poison, i64 [[TMP19]], i32 0
-; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <8 x i64> [[TMP27]], i64 [[TMP20]], i32 1
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <8 x i64> [[TMP28]], i64 [[TMP21]], i32 2
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <8 x i64> [[TMP29]], i64 [[TMP22]], i32 3
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <8 x i64> [[TMP30]], i64 [[TMP23]], i32 4
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <8 x i64> [[TMP31]], i64 [[TMP24]], i32 5
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <8 x i64> [[TMP32]], i64 [[TMP25]], i32 6
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <8 x i64> [[TMP33]], i64 [[TMP26]], i32 7
-; CHECK-NEXT:    [[TMP35:%.*]] = add nsw <8 x i64> [[TMP34]], <i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42>
-; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i64, ptr [[TMP36]], i32 0
-; CHECK-NEXT:    store <8 x i64> [[TMP35]], ptr [[TMP37]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = urem i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TMP4]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <8 x i64> [[BROADCAST_SPLAT]], <i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42, i64 42>
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i32 0
+; CHECK-NEXT:    store <8 x i64> [[TMP5]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
-; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP38]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
