@@ -34,6 +34,7 @@ expand_template(
     out = "include/mlir/Config/mlir-config.h",
     substitutions = {
         "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0",
+        "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "#define MLIR_GREEDY_REWRITE_RANDOMIZER_SEED",
     },
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
