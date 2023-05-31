@@ -195,6 +195,8 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
   const TargetInfo &TI = Context.getTargetInfo();
   bool HasRV64 = TI.hasFeature("64bit");
   bool HasFullMultiply = TI.hasFeature("v");
+  bool HasZvfh = TI.hasFeature("experimental-zvfh");
+  bool HasZvfhminOrZvfh = TI.hasFeature("experimental-zvfhmin") || HasZvfh;
 
   auto ConstructRVVIntrinsics = [&](ArrayRef<RVVIntrinsicRecord> Recs,
                                     IntrinsicKind K) {
@@ -256,6 +258,16 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
              RVV_REQ_FullMultiply) &&
             !HasFullMultiply)
           continue;
+
+        if (BaseType == BasicType::Float16) {
+          if ((Record.RequiredExtensions & RVV_REQ_ZvfhminOrZvfh) ==
+              RVV_REQ_ZvfhminOrZvfh) {
+            if (!HasZvfhminOrZvfh)
+              continue;
+          } else if (!HasZvfh) {
+            continue;
+          }
+        }
 
         // Expanded with different LMUL.
         for (int Log2LMUL = -3; Log2LMUL <= 3; Log2LMUL++) {
