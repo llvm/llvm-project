@@ -365,6 +365,10 @@ Floating Point Support in Clang
 - Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
 - Add ``__builtin_elementwise_sqrt`` builtin for floating point types only.
 - ``__builtin_isfpclass`` builtin now supports vector types.
+- ``#pragma float_control(precise,on)`` enables precise floating-point
+  semantics. If ``math-errno`` is disabled in the current TU, clang will
+  re-enable ``math-errno`` in the presense of
+  ``#pragma float_control(precise,on)``.
 
 AST Matchers
 ------------

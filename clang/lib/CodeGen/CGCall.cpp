@@ -2279,6 +2279,17 @@ static llvm::FPClassTest getNoFPClassTestMask(const LangOptions &LangOpts) {
   return Mask;
 }
 
+void CodeGenModule::AdjustMemoryAttribute(StringRef Name,
+                                          CGCalleeInfo CalleeInfo,
+                                          llvm::AttributeList &Attrs) {
+  if (Attrs.getMemoryEffects().getModRef() == llvm::ModRefInfo::NoModRef) {
+    Attrs = Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Memory);
+    llvm::Attribute MemoryAttr = llvm::Attribute::getWithMemoryEffects(
+        getLLVMContext(), llvm::MemoryEffects::writeOnly());
+    Attrs = Attrs.addFnAttribute(getLLVMContext(), MemoryAttr);
+  }
+}
+
 /// Construct the IR attribute list of a function or call.
 ///
 /// When adding an attribute, please consider where it should be handled:
@@ -5501,11 +5512,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                              /*AttrOnCallSite=*/true,
                              /*IsThunk=*/false);
 
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
     if (FD->hasAttr<StrictFPAttr>())
       // All calls within a strictfp function are marked strictfp
       Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::StrictFP);
 
+    // If -ffast-math is enabled and the function is guarded by an
+    // '__attribute__((optnone)) adjust the memory attribute so the BE emits the
+    // library call instead of the intrinsic.
+    if (FD->hasAttr<OptimizeNoneAttr>() && getLangOpts().FastMath)
+      CGM.AdjustMemoryAttribute(CalleePtr->getName(), Callee.getAbstractInfo(),
+                                Attrs);
+  }
   // Add call-site nomerge attribute if exists.
   if (InNoMergeAttributedStmt)
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoMerge);
