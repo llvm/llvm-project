@@ -1199,20 +1199,16 @@ void TextDiagnostic::emitSnippetAndCaret(
     // Build the byte to column map.
     const SourceColumnMap sourceColMap(SourceLine, DiagOpts->TabStop);
 
-    // Create a line for the caret that is filled with spaces that is the same
-    // number of columns as the line of source code.
-    std::string CaretLine(sourceColMap.columns(), ' ');
-
+    std::string CaretLine;
     // Highlight all of the characters covered by Ranges with ~ characters.
     for (const auto &I : Ranges)
       highlightRange(I, LineNo, FID, sourceColMap, CaretLine, SM, LangOpts);
 
     // Next, insert the caret itself.
     if (CaretLineNo == LineNo) {
-      CaretColNo = sourceColMap.byteToContainingColumn(CaretColNo - 1);
-      if (CaretLine.size() < CaretColNo + 1)
-        CaretLine.resize(CaretColNo + 1, ' ');
-      CaretLine[CaretColNo] = '^';
+      size_t Col = sourceColMap.byteToContainingColumn(CaretColNo - 1);
+      CaretLine.resize(std::max(Col + 1, CaretLine.size()), ' ');
+      CaretLine[Col] = '^';
     }
 
     std::string FixItInsertionLine = buildFixItInsertionLine(
@@ -1233,10 +1229,6 @@ void TextDiagnostic::emitSnippetAndCaret(
       SourceLine = ' ' + SourceLine;
       CaretLine = ' ' + CaretLine;
     }
-
-    // Finally, remove any blank spaces from the end of CaretLine.
-    while (!CaretLine.empty() && CaretLine[CaretLine.size() - 1] == ' ')
-      CaretLine.erase(CaretLine.end() - 1);
 
     // Emit what we have computed.
     emitSnippet(SourceLine, MaxLineNoDisplayWidth, DisplayLineNo);
