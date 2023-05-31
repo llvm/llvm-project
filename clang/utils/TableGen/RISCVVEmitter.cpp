@@ -633,7 +633,6 @@ void RVVEmitter::createRVVIntrinsics(
       RVVRequire RequireExt = StringSwitch<RVVRequire>(RequiredFeature)
                                   .Case("RV64", RVV_REQ_RV64)
                                   .Case("FullMultiply", RVV_REQ_FullMultiply)
-                                  .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
                                   .Case("Xsfvcp", RVV_REQ_Xsfvcp)
                                   .Default(RVV_REQ_None);
       assert(RequireExt != RVV_REQ_None && "Unrecognized required feature?");
