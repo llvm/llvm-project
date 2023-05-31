@@ -535,13 +535,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xE589:  // 89 E5 : mov ebp, esp
     case 0xC18B:  // 8B C1 : mov eax, ecx
     case 0xC033:  // 33 C0 : xor eax, eax
-    case 0x8bec:  // EC 8B : mov ebp, esp
     case 0xC933:  // 33 C9 : xor ecx, ecx
     case 0xD233:  // 33 D2 : xor edx, edx
-    case 0xc084:  // 84 c0 : test al,al
-    case 0xdb84:  // 84 db : test bl,bl
-    case 0xc984:  // 84 c9 : test cl,cl
-    case 0xd284:  // 84 d2 : test dl,dl
+    case 0xDB84:  // 84 DB : test bl,bl
+    case 0xC984:  // 84 C9 : test cl,cl
+    case 0xD284:  // 84 D2 : test dl,dl
       return 2;
 
     // Cannot overwrite control-instruction. Return 0 to indicate failure.
@@ -550,8 +548,8 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   }
 
   switch (0x00FFFFFF & *(u32*)address) {
-    case 0x83e4f8:  // F8 E4 83 : and esp, 0xFFFFFFF8
-    case 0x83ec64:  // 64 EC 83 : sub esp, 64h
+    case 0xF8E484:  // 83 E4 F8 : and esp, 0xFFFFFFF8
+    case 0x64EC83:  // 83 EC 64 : sub esp, 64h
       return 3;
     case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
       return 7;
@@ -562,7 +560,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xA1:  // A1 XX XX XX XX XX XX XX XX :
                 //   movabs eax, dword ptr ds:[XXXXXXXX]
       return 9;
-    case 0xf2:
+    case 0xF2:
       switch (*(u32 *)(address + 1)) {
           case 0x2444110f:  // f2 0f 11 44 24 XX    movsd   mmword ptr [rsp +
                             // XX], xmm0
@@ -601,15 +599,15 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x5641:  // push r14
     case 0x5741:  // push r15
     case 0x9066:  // Two-byte NOP
-    case 0xc084:  // test al, al
-    case 0x018a:  // mov al, byte ptr [rcx]
+    case 0xC084:  // test al, al
+    case 0x018A:  // mov al, byte ptr [rcx]
       return 2;
 
-    case 0x7e80:  // 80 7e YY XX  cmp BYTE PTR [rsi+YY], XX
-    case 0x7d80:  // 80 7d YY XX  cmp BYTE PTR [rdx+YY], XX
-    case 0x7a80:  // 80 7a YY XX  cmp BYTE PTR [rdx+YY], XX
+    case 0x7E80:  // 80 7E YY XX  cmp BYTE PTR [rsi+YY], XX
+    case 0x7D80:  // 80 7D YY XX  cmp BYTE PTR [rdx+YY], XX
+    case 0x7A80:  // 80 7A YY XX  cmp BYTE PTR [rdx+YY], XX
     case 0x7880:  // 80 78 YY XX  cmp BYTE PTR [rax+YY], XX
-    case 0x7b80:  // 80 7b YY XX  cmp BYTE PTR [rbx+YY], XX
+    case 0x7B80:  // 80 7B YY XX  cmp BYTE PTR [rbx+YY], XX
     case 0x7980:  // 80 79 YY XX  cmp BYTE ptr [rcx+YY], XX
       return 4;
 
@@ -618,11 +616,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
         *rel_offset = 2;
       return 6;
 
-    case 0x7e81:  // 81 7e YY XX XX XX XX  cmp DWORD PTR [rsi+YY], XX XX XX XX
-    case 0x7d81:  // 81 7d YY XX XX XX XX  cmp DWORD PTR [rdx+YY], XX XX XX XX
-    case 0x7a81:  // 81 7a YY XX XX XX XX  cmp DWORD PTR [rdx+YY], XX XX XX XX
+    case 0x7E81:  // 81 7E YY XX XX XX XX  cmp DWORD PTR [rsi+YY], XX XX XX XX
+    case 0x7D81:  // 81 7D YY XX XX XX XX  cmp DWORD PTR [rdx+YY], XX XX XX XX
+    case 0x7A81:  // 81 7A YY XX XX XX XX  cmp DWORD PTR [rdx+YY], XX XX XX XX
     case 0x7881:  // 81 78 YY XX XX XX XX  cmp DWORD PTR [rax+YY], XX XX XX XX
-    case 0x7b81:  // 81 78 YY XX XX XX XX  cmp DWORD PTR [rbx+YY], XX XX XX XX
+    case 0x7B81:  // 81 78 YY XX XX XX XX  cmp DWORD PTR [rbx+YY], XX XX XX XX
     case 0x7981:  // 81 79 YY XX XX XX XX  cmp dword ptr [rcx+YY], XX XX XX XX
       return 7;
   }
@@ -692,27 +690,26 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xf88349:  // 49 83 f8 XX : cmp r8, XX
       return 4;
 
-    case 0x246483:  // 83 64 24 00 00 :   and    DWORD PTR [rsp+xx],0x0
+    case 0x246483:  // 83 64 24 XX YY :   and    DWORD PTR [rsp+XX], YY
       return 5;
 
-    case 0x788166:  // 66 81 78 YY XX XX  cmp WORD PTR [rax+0xYY], XX XX
-    case 0x798166:  // 66 81 79 YY XX XX  cmp WORD PTR [rcx+0xYY], XX XX
-    case 0x7a8166:  // 66 81 7a YY XX XX  cmp WORD PTR [rdx+0xYY], XX XX
-    case 0x7b8166:  // 66 81 7b YY XX XX  cmp WORD PTR [rbx+0xYY], XX XX
-    case 0x7e8166:  // 66 81 7e YY XX XX  cmp WORD PTR [rsi+0xYY], XX XX
-    case 0x7f8166:  // 66 81 7f YY XX XX  cmp WORD PTR [rdi+0xYY], XX XX
+    case 0x788166:  // 66 81 78 XX YY YY  cmp WORD PTR [rax+XX], YY YY
+    case 0x798166:  // 66 81 79 XX YY YY  cmp WORD PTR [rcx+XX], YY YY
+    case 0x7a8166:  // 66 81 7a XX YY YY  cmp WORD PTR [rdx+XX], YY YY
+    case 0x7b8166:  // 66 81 7b XX YY YY  cmp WORD PTR [rbx+XX], YY YY
+    case 0x7e8166:  // 66 81 7e XX YY YY  cmp WORD PTR [rsi+XX], YY YY
+    case 0x7f8166:  // 66 81 7f XX YY YY  cmp WORD PTR [rdi+XX], YY YY
       return 6;
 
     case 0xec8148:    // 48 81 EC XX XX XX XX : sub rsp, XXXXXXXX
       return 7;
-    case 0x788141:  // 41 81 78 YY XX XX XX XX cmp DWORD PTR [r8+YY], XX XX XX
-                    // XX
-    case 0x798141:  // r9
-    case 0x7a8141:  // r10
-    case 0x7b8141:  // r11
-    case 0x7c8141:  // r12
-    case 0x7d8141:  // r13
-    case 0x7e8141:  // r14
+    case 0x788141:  // 41 81 78 XX YY YY YY YY : cmp DWORD PTR [r8+YY], XX XX XX XX
+    case 0x798141:  // 41 81 78 XX YY YY YY YY : cmp DWORD PTR [r9+YY], XX XX XX XX
+    case 0x7a8141:  // 41 81 78 XX YY YY YY YY : cmp DWORD PTR [r10+YY], XX XX XX XX
+    case 0x7b8141:  // 41 81 78 XX YY YY YY YY : cmp DWORD PTR [r11+YY], XX XX XX XX
+    case 0x7c8141:  // 41 81 78 XX YY YY YY YY : cmp DWORD PTR [r12+YY], XX XX XX XX
+    case 0x7d8141:  // 41 81 78 XX YY YY YY YY : cmp DWORD PTR [r13+YY], XX XX XX XX
+    case 0x7e8141:  // 41 81 78 XX YY YY YY YY : cmp DWORD PTR [r14+YY], XX XX XX XX
     case 0x7f8141:  // 41 81 78 YY XX XX XX XX cmp DWORD P [r15+YY], XX XX XX XX
     case 0x247c81:  // 81 7c 24 YY XX XX XX XX cmp DWORD P [rsp+YY], XX XX XX XX
       return 8;
