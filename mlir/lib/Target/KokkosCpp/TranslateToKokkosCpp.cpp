@@ -726,7 +726,7 @@ static LogicalResult printSupportCall(KokkosCppEmitter &emitter, func::CallOp ca
   if(callOp.getResults().size() > 1)
     return callOp.emitError("Can't handle support function with multiple results");
   bool pointerResults = emitter.sparseSupportFunctionPointerResults(callOp.getCallee());
-  raw_ostream &os = emitter.ostream();
+  raw_indented_ostream &os = emitter.ostream();
   // Declare the result (if any) in current scope
   bool hasResult = callOp.getResults().size() == 1;
   bool resultIsMemref = hasResult && isa<MemRefType>(callOp.getResult(0).getType());
@@ -737,6 +737,7 @@ static LogicalResult printSupportCall(KokkosCppEmitter &emitter, func::CallOp ca
     os << ' ' << emitter.getOrCreateName(callOp.getResult(0)) << ";\n";
   }
   os << "{\n";
+  os.indent();
   // If the result is a memref, it is returned via pointer.
   // Declare the StridedMemRefType version here in a local scope.
   if(resultIsMemref)
@@ -795,6 +796,7 @@ static LogicalResult printSupportCall(KokkosCppEmitter &emitter, func::CallOp ca
       return failure();
     os << ">(" << emitter.getOrCreateName(callOp.getResult(0)) << "_smr);\n";
   }
+  os.unindent();
   os << "}\n";
   return success();
 }
