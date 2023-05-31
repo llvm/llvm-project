@@ -121,6 +121,50 @@ private_headers_still_public_in_modules = [
     "__verbose_abort",
 ]
 
+# This table was produced manually, by grepping the TeX source of the Standard's
+# library clauses for the string "#include". Each header's synopsis contains
+# explicit "#include" directives for its mandatory inclusions.
+# For example, [algorithm.syn] contains "#include <initializer_list>".
+mandatory_inclusions = {
+    "algorithm": ["initializer_list"],
+    "array": ["compare", "initializer_list"],
+    "bitset": ["iosfwd", "string"],
+    "chrono": ["compare"],
+    "cinttypes": ["cstdint"],
+    "complex.h": ["complex"],
+    "coroutine": ["compare"],
+    "deque": ["compare", "initializer_list"],
+    "filesystem": ["compare"],
+    "forward_list": ["compare", "initializer_list"],
+    "ios": ["iosfwd"],
+    "iostream": ["ios", "istream", "ostream", "streambuf"],
+    "iterator": ["compare", "concepts"],
+    "list": ["compare", "initializer_list"],
+    "map": ["compare", "initializer_list"],
+    "memory": ["compare"],
+    "optional": ["compare"],
+    "queue": ["compare", "initializer_list"],
+    "random": ["initializer_list"],
+    "ranges": ["compare", "initializer_list", "iterator"],
+    "regex": ["compare", "initializer_list"],
+    "set": ["compare", "initializer_list"],
+    "stack": ["compare", "initializer_list"],
+    "string_view": ["compare"],
+    "string": ["compare", "initializer_list"],
+    # TODO "syncstream": ["ostream"],
+    "system_error": ["compare"],
+    "tgmath.h": ["cmath", "complex"],
+    "thread": ["compare"],
+    "tuple": ["compare"],
+    "typeindex": ["compare"],
+    "unordered_map": ["compare", "initializer_list"],
+    "unordered_set": ["compare", "initializer_list"],
+    "utility": ["compare", "initializer_list"],
+    "valarray": ["initializer_list"],
+    "variant": ["compare"],
+    "vector": ["compare", "initializer_list"],
+}
+
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
     return (
