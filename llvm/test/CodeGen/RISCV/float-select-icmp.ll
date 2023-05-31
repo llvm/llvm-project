@@ -227,3 +227,39 @@ define float @select_icmp_sle(i32 signext %a, i32 signext %b, float %c, float %d
   %2 = select i1 %1, float %c, float %d
   ret float %2
 }
+
+define float @select_icmp_slt_one(i32 signext %a) {
+; CHECK-LABEL: select_icmp_slt_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slti a0, a0, 1
+; CHECK-NEXT:    fcvt.s.w fa0, a0
+; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_icmp_slt_one:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    slti a0, a0, 1
+; CHECKZFINX-NEXT:    fcvt.s.w a0, a0
+; CHECKZFINX-NEXT:    ret
+  %1 = icmp slt i32 %a, 1
+  %2 = select i1 %1, float 1.000000e+00, float 0.000000e+00
+  ret float %2
+}
+
+define float @select_icmp_sgt_zero(i32 signext %a) {
+; CHECK-LABEL: select_icmp_sgt_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sgtz a0, a0
+; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    fcvt.s.w fa0, a0
+; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_icmp_sgt_zero:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    sgtz a0, a0
+; CHECKZFINX-NEXT:    xori a0, a0, 1
+; CHECKZFINX-NEXT:    fcvt.s.w a0, a0
+; CHECKZFINX-NEXT:    ret
+  %1 = icmp sgt i32 %a, 0
+  %2 = select i1 %1, float 0.000000e+00, float 1.000000e+00
+  ret float %2
+}
