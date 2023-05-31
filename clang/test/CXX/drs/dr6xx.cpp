@@ -234,7 +234,7 @@ namespace dr619 { // dr619: yes
 
 // dr620: dup 568
 
-namespace dr621 {
+namespace dr621 { // dr621: yes
   template<typename T> T f();
   template<> int f() {} // expected-note {{previous}}
   template<> int f<int>() {} // expected-error {{redefinition}}
