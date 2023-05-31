@@ -604,7 +604,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 2;
 
     case 0x7E80:  // 80 7E YY XX  cmp BYTE PTR [rsi+YY], XX
-    case 0x7D80:  // 80 7D YY XX  cmp BYTE PTR [rdx+YY], XX
+    case 0x7D80:  // 80 7D YY XX  cmp BYTE PTR [rbp+YY], XX
     case 0x7A80:  // 80 7A YY XX  cmp BYTE PTR [rdx+YY], XX
     case 0x7880:  // 80 78 YY XX  cmp BYTE PTR [rax+YY], XX
     case 0x7B80:  // 80 7B YY XX  cmp BYTE PTR [rbx+YY], XX
@@ -617,10 +617,10 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
       return 6;
 
     case 0x7E81:  // 81 7E YY XX XX XX XX  cmp DWORD PTR [rsi+YY], XX XX XX XX
-    case 0x7D81:  // 81 7D YY XX XX XX XX  cmp DWORD PTR [rdx+YY], XX XX XX XX
+    case 0x7D81:  // 81 7D YY XX XX XX XX  cmp DWORD PTR [rbp+YY], XX XX XX XX
     case 0x7A81:  // 81 7A YY XX XX XX XX  cmp DWORD PTR [rdx+YY], XX XX XX XX
     case 0x7881:  // 81 78 YY XX XX XX XX  cmp DWORD PTR [rax+YY], XX XX XX XX
-    case 0x7B81:  // 81 78 YY XX XX XX XX  cmp DWORD PTR [rbx+YY], XX XX XX XX
+    case 0x7B81:  // 81 7B YY XX XX XX XX  cmp DWORD PTR [rbx+YY], XX XX XX XX
     case 0x7981:  // 81 79 YY XX XX XX XX  cmp dword ptr [rcx+YY], XX XX XX XX
       return 7;
   }
@@ -628,7 +628,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   switch (0x00FFFFFF & *(u32*)address) {
     case 0x07c1f6:  // f6 c1 07 : test cl, 0x7
     case 0x10b70f:  // 0f b7 10 : movzx edx, word ptr [rax]
-    case 0xc00b4d:  // 3d 0b c0 : or r8, r8
+    case 0xc00b4d:  // 4d 0b c0 : or r8, r8
     case 0xc03345:  // 45 33 c0 : xor r8d, r8d
     case 0xc08548:  // 48 85 c0 : test rax, rax
     case 0xc0854d:  // 4d 85 c0 : test r8, r8
@@ -676,7 +676,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xe0e483:  // 83 e4 e0 : and esp, 0xffffffe0
     case 0xe48548:  // 48 85 e4 : test rsp, rsp
     case 0xe4854d:  // 4d 85 e4 : test r12, r12
-    case 0xe58948:  // 48 8b c4 : mov rbp, rsp
+    case 0xe58948:  // 48 89 c4 : mov rbp, rsp
     case 0xed8548:  // 48 85 ed : test rbp, rbp
     case 0xed854d:  // 4d 85 ed : test r13, r13
     case 0xf6854d:  // 4d 85 f6 : test r14, r14
