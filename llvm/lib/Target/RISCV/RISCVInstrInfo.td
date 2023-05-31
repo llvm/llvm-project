@@ -84,14 +84,14 @@ def riscv_read_cycle_wide : SDNode<"RISCVISD::READ_CYCLE_WIDE",
 def riscv_add_lo : SDNode<"RISCVISD::ADD_LO", SDTIntBinOp>;
 def riscv_hi : SDNode<"RISCVISD::HI", SDTIntUnaryOp>;
 def riscv_lla : SDNode<"RISCVISD::LLA", SDTIntUnaryOp>;
+def riscv_lga : SDNode<"RISCVISD::LGA", SDTLoad,
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                              SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                   SDTCisSameAs<0, 2>,
                                                   SDTCisSameAs<0, 3>,
                                                   SDTCisInt<0>]>>;
 
-def riscv_la : SDNode<"RISCVISD::LA", SDTLoad,
-                      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def riscv_la_tls_ie : SDNode<"RISCVISD::LA_TLS_IE", SDTLoad,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def riscv_la_tls_gd : SDNode<"RISCVISD::LA_TLS_GD", SDTIntUnaryOp>;
@@ -1601,10 +1601,15 @@ def : Pat<(riscv_lla tconstpool:$in), (PseudoLLA tconstpool:$in)>;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
+def PseudoLGA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                       "lga", "$dst, $src">;
+
+def : Pat<(riscv_lga tglobaladdr:$in), (PseudoLGA tglobaladdr:$in)>;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in
 def PseudoLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                       "la", "$dst, $src">;
-
-def : Pat<(riscv_la tglobaladdr:$in), (PseudoLA tglobaladdr:$in)>;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
