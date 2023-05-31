@@ -288,7 +288,7 @@ define void @freeze_buildvector_single_maybe_poison_operand(ptr %origin, ptr %ds
 ;
 ; X64-LABEL: freeze_buildvector_single_maybe_poison_operand:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,42,42,42>
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [42,42,42,42]
 ; X64-NEXT:    vpinsrd $0, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -322,7 +322,7 @@ define void @freeze_buildvector_single_repeated_maybe_poison_operand(ptr %origin
 ;
 ; X64-LABEL: freeze_buildvector_single_repeated_maybe_poison_operand:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,42,u,u>
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [42,42,42,42]
 ; X64-NEXT:    vpinsrd $0, (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]

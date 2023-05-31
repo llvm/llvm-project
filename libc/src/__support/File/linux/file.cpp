@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "file.h"
+#include "src/__support/File/file.h"
 
 #include "src/__support/CPP/new.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.

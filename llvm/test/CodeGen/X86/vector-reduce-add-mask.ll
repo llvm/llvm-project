@@ -914,7 +914,7 @@ define i16 @test_v4i16_v4i8(<4 x i16> %a0) {
 ; AVX512BW-LABEL: test_v4i16_v4i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm1 = <0,1,2,3,u,u,u,u>
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [0,1,2,3,0,1,2,3]
 ; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX512BW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
@@ -1252,7 +1252,7 @@ define i16 @test_v64i16_v64i8(<64 x i16> %a0) {
 ;
 ; AVX2-LABEL: test_v64i16_v64i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; AVX2-NEXT:    vpand %ymm4, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
 ; AVX2-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
