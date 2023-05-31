@@ -935,12 +935,11 @@ OptionalFileEntryRef Preprocessor::LookupFile(
 
   // If the header lookup mechanism may be relative to the current inclusion
   // stack, record the parent #includes.
-  SmallVector<std::pair<const FileEntry *, const DirectoryEntry *>, 16>
-      Includers;
+  SmallVector<std::pair<const FileEntry *, DirectoryEntryRef>, 16> Includers;
   bool BuildSystemModule = false;
   if (!FromDir && !FromFile) {
     FileID FID = getCurrentFileLexer()->getFileID();
-    const FileEntry *FileEnt = SourceMgr.getFileEntryForID(FID);
+    OptionalFileEntryRef FileEnt = SourceMgr.getFileEntryRefForID(FID);
 
     // If there is no file entry associated with this file, it must be the
     // predefines buffer or the module includes buffer. Any other file is not
@@ -958,11 +957,13 @@ OptionalFileEntryRef Preprocessor::LookupFile(
       if (FID == SourceMgr.getMainFileID() && MainFileDir) {
         Includers.push_back(std::make_pair(nullptr, *MainFileDir));
         BuildSystemModule = getCurrentModule()->IsSystem;
-      } else if ((FileEnt =
-                    SourceMgr.getFileEntryForID(SourceMgr.getMainFileID())))
-        Includers.push_back(std::make_pair(FileEnt, *FileMgr.getDirectory(".")));
+      } else if ((FileEnt = SourceMgr.getFileEntryRefForID(
+                      SourceMgr.getMainFileID()))) {
+        auto CWD = FileMgr.getOptionalDirectoryRef(".");
+        Includers.push_back(std::make_pair(*FileEnt, *CWD));
+      }
     } else {
-      Includers.push_back(std::make_pair(FileEnt, FileEnt->getDir()));
+      Includers.push_back(std::make_pair(*FileEnt, FileEnt->getDir()));
     }
 
     // MSVC searches the current include stack from top to bottom for
@@ -972,7 +973,7 @@ OptionalFileEntryRef Preprocessor::LookupFile(
       for (IncludeStackInfo &ISEntry : llvm::reverse(IncludeMacroStack)) {
         if (IsFileLexer(ISEntry))
           if ((FileEnt = ISEntry.ThePPLexer->getFileEntry()))
-            Includers.push_back(std::make_pair(FileEnt, FileEnt->getDir()));
+            Includers.push_back(std::make_pair(*FileEnt, FileEnt->getDir()));
       }
     }
   }
