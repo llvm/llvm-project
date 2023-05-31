@@ -63,7 +63,6 @@ private:
   std::vector<Operation *> opToErase;
 };
 
-} // namespace
 /// Return true if there is a path from start operation to dest operation,
 /// otherwise return false. The operations have to be in the same region.
 bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
@@ -289,25 +288,14 @@ static int getReducedRank(ArrayRef<int64_t> shape) {
   return llvm::count_if(shape, [](int64_t dimSize) { return dimSize != 1; });
 }
 
-/// Returns a copy of `shape` without unit dims.
-static SmallVector<int64_t> getReducedShape(ArrayRef<int64_t> shape) {
-  SmallVector<int64_t> reducedShape;
-  llvm::copy_if(shape, std::back_inserter(reducedShape),
-                [](int64_t dimSize) { return dimSize != 1; });
-  return reducedShape;
-}
-
 /// Returns true if all values are `arith.constant 0 : index`
 static bool isZero(Value v) {
   auto cst = v.getDefiningOp<arith::ConstantIndexOp>();
   return cst && cst.value() == 0;
 }
 
-namespace {
-
-/// Rewrites `vector.transfer_read` ops where the source has unit dims, by
-/// inserting a memref.subview dropping those unit dims. The vector shapes are
-/// also reduced accordingly.
+/// Rewrites vector.transfer_read ops where the source has unit dims, by
+/// inserting a memref.subview dropping those unit dims.
 class TransferReadDropUnitDimsPattern
     : public OpRewritePattern<vector::TransferReadOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -329,15 +317,12 @@ class TransferReadDropUnitDimsPattern
       return failure();
     if (!transferReadOp.getPermutationMap().isMinorIdentity())
       return failure();
-    // Check if the source shape can be further reduced.
     int reducedRank = getReducedRank(sourceType.getShape());
     if (reducedRank == sourceType.getRank())
-      return failure();
-    // Check if the reduced vector shape matches the reduced source shape.
-    // Otherwise, this case is not supported yet.
-    int vectorReducedRank = getReducedRank(vectorType.getShape());
-    if (reducedRank != vectorReducedRank)
-      return failure();
+      return failure(); // The source shape can't be further reduced.
+    if (reducedRank != vectorType.getRank())
+      return failure(); // This pattern requires the vector shape to match the
+                        // reduced source shape.
     if (llvm::any_of(transferReadOp.getIndices(),
                      [](Value v) { return !isZero(v); }))
       return failure();
@@ -346,22 +331,14 @@ class TransferReadDropUnitDimsPattern
     Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
-    auto reducedVectorType = VectorType::get(
-        getReducedShape(vectorType.getShape()), vectorType.getElementType());
-
-    auto newTransferReadOp = rewriter.create<vector::TransferReadOp>(
-        loc, reducedVectorType, reducedShapeSource, zeros, identityMap);
-    auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
-        loc, vectorType, newTransferReadOp);
-    rewriter.replaceOp(transferReadOp, shapeCast);
-
+    rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
+        transferReadOp, vectorType, reducedShapeSource, zeros, identityMap);
     return success();
   }
 };
 
-/// Rewrites `vector.transfer_write` ops where the "source" (i.e. destination)
-/// has unit dims, by inserting a `memref.subview` dropping those unit dims. The
-/// vector shapes are also reduced accordingly.
+/// Rewrites vector.transfer_write ops where the "source" (i.e. destination) has
+/// unit dims, by inserting a memref.subview dropping those unit dims.
 class TransferWriteDropUnitDimsPattern
     : public OpRewritePattern<vector::TransferWriteOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -383,15 +360,12 @@ class TransferWriteDropUnitDimsPattern
       return failure();
     if (!transferWriteOp.getPermutationMap().isMinorIdentity())
       return failure();
-    // Check if the destination shape can be further reduced.
     int reducedRank = getReducedRank(sourceType.getShape());
     if (reducedRank == sourceType.getRank())
-      return failure();
-    // Check if the reduced vector shape matches the reduced destination shape.
-    // Otherwise, this case is not supported yet.
-    int vectorReducedRank = getReducedRank(vectorType.getShape());
-    if (reducedRank != vectorReducedRank)
-      return failure();
+      return failure(); // The source shape can't be further reduced.
+    if (reducedRank != vectorType.getRank())
+      return failure(); // This pattern requires the vector shape to match the
+                        // reduced source shape.
     if (llvm::any_of(transferWriteOp.getIndices(),
                      [](Value v) { return !isZero(v); }))
       return failure();
@@ -400,19 +374,11 @@ class TransferWriteDropUnitDimsPattern
     Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
-    VectorType reducedVectorType = VectorType::get(
-        getReducedShape(vectorType.getShape()), vectorType.getElementType());
-
-    auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
-        loc, reducedVectorType, vector);
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        transferWriteOp, shapeCast, reducedShapeSource, zeros, identityMap);
-
+        transferWriteOp, vector, reducedShapeSource, zeros, identityMap);
     return success();
   }
 };
-
-} // namespace
 
 /// Return true if the memref type has its inner dimension matching the given
 /// shape. Otherwise return false.
@@ -472,8 +438,6 @@ checkAndCollapseInnerZeroIndices(ValueRange indices, int64_t firstDimToCollapse,
   outIndices.resize(firstDimToCollapse + 1);
   return success();
 }
-
-namespace {
 
 /// Rewrites contiguous row-major vector.transfer_read ops by inserting
 /// memref.collapse_shape on the source so that the resulting
@@ -768,7 +732,6 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
     return success();
   }
 };
-
 } // namespace
 
 void mlir::vector::transferOpflowOpt(RewriterBase &rewriter,
