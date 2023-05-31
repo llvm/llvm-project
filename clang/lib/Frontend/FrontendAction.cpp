@@ -825,11 +825,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
              "trying to build a header unit without a Pre-processor?");
       HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
       // Relative searches begin from CWD.
-      const DirectoryEntry *Dir = nullptr;
-      if (auto DirOrErr = CI.getFileManager().getDirectory("."))
-        Dir = *DirOrErr;
-      SmallVector<std::pair<const FileEntry *, const DirectoryEntry *>, 1> CWD;
-      CWD.push_back({nullptr, Dir});
+      auto Dir = CI.getFileManager().getOptionalDirectoryRef(".");
+      SmallVector<std::pair<const FileEntry *, DirectoryEntryRef>, 1> CWD;
+      CWD.push_back({nullptr, *Dir});
       OptionalFileEntryRef FE =
           HS.LookupFile(FileName, SourceLocation(),
                         /*Angled*/ Input.getKind().getHeaderUnitKind() ==
