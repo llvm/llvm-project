@@ -5278,7 +5278,7 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
       return DAG.getNode(RISCVISD::LLA, DL, Ty, Addr);
 
     // Use PC-relative addressing to access the GOT for this symbol, then load
-    // the address from the GOT. This generates the pattern (PseudoLA sym),
+    // the address from the GOT. This generates the pattern (PseudoLGA sym),
     // which expands to (ld (addi (auipc %got_pcrel_hi(sym)) %pcrel_lo(auipc))).
     MachineFunction &MF = DAG.getMachineFunction();
     MachineMemOperand *MemOp = MF.getMachineMemOperand(
@@ -5287,7 +5287,7 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
             MachineMemOperand::MOInvariant,
         LLT(Ty.getSimpleVT()), Align(Ty.getFixedSizeInBits() / 8));
     SDValue Load =
-        DAG.getMemIntrinsicNode(RISCVISD::LA, DL, DAG.getVTList(Ty, MVT::Other),
+        DAG.getMemIntrinsicNode(RISCVISD::LGA, DL, DAG.getVTList(Ty, MVT::Other),
                                 {DAG.getEntryNode(), Addr}, Ty, MemOp);
     return Load;
   }
@@ -15279,8 +15279,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(ADD_LO)
   NODE_NAME_CASE(HI)
   NODE_NAME_CASE(LLA)
+  NODE_NAME_CASE(LGA)
   NODE_NAME_CASE(ADD_TPREL)
-  NODE_NAME_CASE(LA)
   NODE_NAME_CASE(LA_TLS_IE)
   NODE_NAME_CASE(LA_TLS_GD)
   NODE_NAME_CASE(MULHSU)
