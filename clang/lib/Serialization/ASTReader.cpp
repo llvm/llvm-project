@@ -1973,10 +1973,11 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     std::string Filename = std::string(key.Filename);
     if (key.Imported)
       Reader.ResolveImportedPath(M, Filename);
-    // FIXME: NameAsWritten
-    Module::Header H = {std::string(key.Filename), "",
-                        FileMgr.getOptionalFileRef(Filename)};
-    ModMap.addHeader(Mod, H, HeaderRole, /*Imported*/true);
+    if (auto FE = FileMgr.getOptionalFileRef(Filename)) {
+      // FIXME: NameAsWritten
+      Module::Header H = {std::string(key.Filename), "", *FE};
+      ModMap.addHeader(Mod, H, HeaderRole, /*Imported=*/true);
+    }
     HFI.isModuleHeader |= ModuleMap::isModular(HeaderRole);
   }
 

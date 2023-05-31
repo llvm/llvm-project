@@ -1289,7 +1289,7 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
 
   // Notify callbacks that we just added a new header.
   for (const auto &Cb : Callbacks)
-    Cb->moduleMapAddHeader(Header.Entry->getName());
+    Cb->moduleMapAddHeader(Header.Entry.getName());
 }
 
 OptionalFileEntryRef
@@ -2541,7 +2541,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     for (llvm::vfs::recursive_directory_iterator I(FS, Dir->getName(), EC), E;
          I != E && !EC; I.increment(EC)) {
       if (auto FE = SourceMgr.getFileManager().getOptionalFileRef(I->path())) {
-        Module::Header Header = {"", std::string(I->path()), FE};
+        Module::Header Header = {"", std::string(I->path()), *FE};
         Headers.push_back(std::move(Header));
       }
     }

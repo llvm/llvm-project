@@ -2846,15 +2846,16 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     }
 
     // Emit the umbrella header, if there is one.
-    if (Module::Header UmbrellaHeader = Mod->getUmbrellaHeaderAsWritten()) {
+    if (std::optional<Module::Header> UmbrellaHeader =
+            Mod->getUmbrellaHeaderAsWritten()) {
       RecordData::value_type Record[] = {SUBMODULE_UMBRELLA_HEADER};
       Stream.EmitRecordWithBlob(UmbrellaAbbrev, Record,
-                                UmbrellaHeader.NameAsWritten);
-    } else if (Module::DirectoryName UmbrellaDir =
+                                UmbrellaHeader->NameAsWritten);
+    } else if (std::optional<Module::DirectoryName> UmbrellaDir =
                    Mod->getUmbrellaDirAsWritten()) {
       RecordData::value_type Record[] = {SUBMODULE_UMBRELLA_DIR};
       Stream.EmitRecordWithBlob(UmbrellaDirAbbrev, Record,
-                                UmbrellaDir.NameAsWritten);
+                                UmbrellaDir->NameAsWritten);
     }
 
     // Emit the headers.

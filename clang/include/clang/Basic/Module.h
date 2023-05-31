@@ -243,9 +243,7 @@ public:
   struct Header {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
-    OptionalFileEntryRefDegradesToFileEntryPtr Entry;
-
-    explicit operator bool() { return Entry.has_value(); }
+    FileEntryRef Entry;
   };
 
   /// Information about a directory name as found in the module map
@@ -253,9 +251,7 @@ public:
   struct DirectoryName {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
-    OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Entry;
-
-    explicit operator bool() { return Entry.has_value(); }
+    DirectoryEntryRef Entry;
   };
 
   /// The headers that are part of this module.
@@ -653,21 +649,21 @@ public:
   }
 
   /// Retrieve the umbrella directory as written.
-  DirectoryName getUmbrellaDirAsWritten() const {
+  std::optional<DirectoryName> getUmbrellaDirAsWritten() const {
     if (const auto *ME =
             Umbrella.dyn_cast<const DirectoryEntryRef::MapEntry *>())
       return DirectoryName{UmbrellaAsWritten,
                            UmbrellaRelativeToRootModuleDirectory,
                            DirectoryEntryRef(*ME)};
-    return DirectoryName{};
+    return std::nullopt;
   }
 
   /// Retrieve the umbrella header as written.
-  Header getUmbrellaHeaderAsWritten() const {
+  std::optional<Header> getUmbrellaHeaderAsWritten() const {
     if (const auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
       return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
                     FileEntryRef(*ME)};
-    return Header{};
+    return std::nullopt;
   }
 
   /// Get the effective umbrella directory for this module: either the one
