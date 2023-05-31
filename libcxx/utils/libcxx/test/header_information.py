@@ -36,7 +36,7 @@ lit_header_restrictions = {
     "experimental/utility": "// UNSUPPORTED: c++03",
     "experimental/vector": "// UNSUPPORTED: c++03",
     "filesystem": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14",
-    "fstream": "// UNSUPPORTED: no-localization, no-fstream",
+    "fstream": "// UNSUPPORTED: no-localization, no-filesystem",
     "future": "// UNSUPPORTED: no-threads, c++03",
     "iomanip": "// UNSUPPORTED: no-localization",
     "ios": "// UNSUPPORTED: no-localization",
