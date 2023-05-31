@@ -194,7 +194,7 @@ typedef basic_fstream<wchar_t> wfstream;
 #include <typeinfo>
 #include <version>
 
-#if !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#if !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 #   include <filesystem>
 #endif
 
@@ -209,7 +209,7 @@ _LIBCPP_PUSH_MACROS
 #  define _LIBCPP_HAS_NO_OFF_T_FUNCTIONS
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_FSTREAM)
+#if !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -245,7 +245,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_filebuf* open(const string& __s, ios_base::openmode __mode);
 
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_INLINE_VISIBILITY
     basic_filebuf* open(const _VSTD_FS::path& __p, ios_base::openmode __mode) {
       return open(__p.c_str(), __mode);
@@ -1168,7 +1168,7 @@ public:
 #endif
     _LIBCPP_INLINE_VISIBILITY
     explicit basic_ifstream(const string& __s, ios_base::openmode __mode = ios_base::in);
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_INLINE_VISIBILITY
     explicit basic_ifstream(const filesystem::path& __p, ios_base::openmode __mode = ios_base::in)
       : basic_ifstream(__p.c_str(), __mode) {}
@@ -1189,7 +1189,7 @@ public:
     void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in);
 #endif
     void open(const string& __s, ios_base::openmode __mode = ios_base::in);
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_INLINE_VISIBILITY
     void open(const filesystem::path& __p,
               ios_base::openmode __mode = ios_base::in) {
@@ -1369,7 +1369,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit basic_ofstream(const string& __s, ios_base::openmode __mode = ios_base::out);
 
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_INLINE_VISIBILITY
     explicit basic_ofstream(const filesystem::path& __p, ios_base::openmode __mode = ios_base::out)
       : basic_ofstream(__p.c_str(), __mode) {}
@@ -1392,7 +1392,7 @@ public:
 #endif
     void open(const string& __s, ios_base::openmode __mode = ios_base::out);
 
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_INLINE_VISIBILITY
     void open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::out)
     { return open(__p.c_str(), __mode); }
@@ -1570,7 +1570,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit basic_fstream(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_INLINE_VISIBILITY
     explicit basic_fstream(const filesystem::path& __p, ios_base::openmode __mode = ios_base::in | ios_base::out)
       : basic_fstream(__p.c_str(), __mode) {}
@@ -1595,7 +1595,7 @@ public:
 #endif
     _LIBCPP_HIDE_FROM_ABI void open(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#if _LIBCPP_STD_VER >= 17
     _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_INLINE_VISIBILITY
     void open(const filesystem::path& __p, ios_base::openmode __mode = ios_base::in|ios_base::out)
     { return open(__p.c_str(), __mode); }
@@ -1745,7 +1745,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_filebuf<char>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_HAS_NO_FSTREAM
+#endif // _LIBCPP_HAS_NO_FILESYSTEM
 
 _LIBCPP_POP_MACROS
 

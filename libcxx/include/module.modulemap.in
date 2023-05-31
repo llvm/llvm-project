@@ -976,7 +976,7 @@ module std [system] {
   }
   module fstream {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
-    @requires_LIBCXX_ENABLE_FSTREAM@
+    @requires_LIBCXX_ENABLE_FILESYSTEM@
     header "fstream"
     export *
   }
