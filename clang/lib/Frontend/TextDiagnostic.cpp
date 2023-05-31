@@ -590,15 +590,10 @@ static unsigned findEndOfWord(unsigned Start, StringRef Str,
 /// Str will be printed. This will be non-zero when part of the first
 /// line has already been printed.
 /// \param Bold if the current text should be bold
-/// \param Indentation the number of spaces to indent any lines beyond
-/// the first line.
 /// \returns true if word-wrapping was required, or false if the
 /// string fit on the first line.
-static bool printWordWrapped(raw_ostream &OS, StringRef Str,
-                             unsigned Columns,
-                             unsigned Column = 0,
-                             bool Bold = false,
-                             unsigned Indentation = WordWrapIndentation) {
+static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
+                             unsigned Column, bool Bold) {
   const unsigned Length = std::min(Str.find('\n'), Str.size());
   bool TextNormal = true;
 
@@ -630,10 +625,10 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str,
     // This word does not fit on the current line, so wrap to the next
     // line.
     OS << '\n';
-    OS.indent(Indentation);
+    OS.indent(WordWrapIndentation);
     applyTemplateHighlighting(OS, Str.substr(WordStart, WordLength),
                               TextNormal, Bold);
-    Column = Indentation + WordLength;
+    Column = WordWrapIndentation + WordLength;
     Wrapped = true;
   }
 
