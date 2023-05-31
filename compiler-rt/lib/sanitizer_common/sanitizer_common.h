@@ -1086,7 +1086,7 @@ class ArrayRef {
   ArrayRef(T *begin, T *end) : begin_(begin), end_(end) {}
 
   template <typename C>
-  ArrayRef(const C &src) : begin_(src.begin()), end_(src.end()) {}
+  ArrayRef(const C &src) : begin_(src.data()), end_(src.data() + src.size()) {}
 
   const T *begin() const { return begin_; }
   const T *end() const { return end_; }
