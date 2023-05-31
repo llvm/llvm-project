@@ -10,9 +10,6 @@
 // run-time libraries. See sanitizer_libc.h for details.
 //===----------------------------------------------------------------------===//
 
-// Do not redefine builtins; this file is defining the builtin replacements.
-#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
-
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_common.h"
 #include "sanitizer_libc.h"
@@ -49,10 +46,7 @@ int internal_memcmp(const void* s1, const void* s2, uptr n) {
   return 0;
 }
 
-extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memcpy(void *dest,
-                                                                const void *src,
-                                                                uptr n) {
+void *internal_memcpy(void *dest, const void *src, uptr n) {
   char *d = (char*)dest;
   const char *s = (const char *)src;
   for (uptr i = 0; i < n; ++i)
@@ -60,8 +54,7 @@ SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memcpy(void *dest,
   return dest;
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memmove(
-    void *dest, const void *src, uptr n) {
+void *internal_memmove(void *dest, const void *src, uptr n) {
   char *d = (char*)dest;
   const char *s = (const char *)src;
   sptr i, signed_n = (sptr)n;
@@ -79,8 +72,7 @@ SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memmove(
   return dest;
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memset(void *s, int c,
-                                                                uptr n) {
+void *internal_memset(void* s, int c, uptr n) {
   // Optimize for the most performance-critical case:
   if ((reinterpret_cast<uptr>(s) % 16) == 0 && (n % 16) == 0) {
     u64 *p = reinterpret_cast<u64*>(s);
@@ -103,14 +95,6 @@ SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memset(void *s, int c,
   }
   return s;
 }
-}  // extern "C"
-
-void *internal_memcpy(void *dest, const void *src, uptr n)
-    ALIAS(__sanitizer_internal_memcpy);
-void *internal_memmove(void *dest, const void *src, uptr n)
-    ALIAS(__sanitizer_internal_memmove);
-void *internal_memset(void *s, int c, uptr n)
-    ALIAS(__sanitizer_internal_memset);
 
 uptr internal_strcspn(const char *s, const char *reject) {
   uptr i;
