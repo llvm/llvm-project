@@ -9790,11 +9790,13 @@ cc_library(
     ],
     deps = [
         ":ArithDialect",
+        ":ArithUtils",
         ":ConversionPassIncGen",
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":LinalgDialect",
+        ":LinalgUtils",
         ":MathDialect",
         ":Pass",
         ":SCFDialect",
