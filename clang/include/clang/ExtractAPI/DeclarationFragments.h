@@ -115,8 +115,8 @@ public:
                                FragmentKind Kind,
                                StringRef PreciseIdentifier = "",
                                const Decl *Declaration = nullptr) {
-    Fragments.insert(It, Fragment(Spelling, Kind, PreciseIdentifier,
-                                            Declaration));
+    Fragments.insert(It,
+                     Fragment(Spelling, Kind, PreciseIdentifier, Declaration));
     return *this;
   }
 
