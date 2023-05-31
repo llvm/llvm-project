@@ -419,6 +419,10 @@ gentbl(
             "-gen-clang-attr-subject-match-rule-list",
             "include/clang/Basic/AttrSubMatchRulesList.inc",
         ),
+        (
+            "-gen-clang-attr-token-kinds",
+            "include/clang/Basic/AttrTokenKinds.inc",
+        ),
     ],
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Attr.td",
