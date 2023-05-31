@@ -1400,8 +1400,9 @@ define <2 x i64> @vp_bitreverse_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vand.vx v11, v11, a4, v0.t
 ; RV32-NEXT:    vsrl.vi v12, v8, 8, v0.t
 ; RV32-NEXT:    li a5, 5
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a5
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v13, 0
 ; RV32-NEXT:    lui a5, 1044480
 ; RV32-NEXT:    vmerge.vxm v13, v13, a5, v0
@@ -1524,8 +1525,9 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vor.vv v9, v10, v9
 ; RV32-NEXT:    vsrl.vi v10, v8, 8
 ; RV32-NEXT:    li a4, 5
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a4
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v11, 0
 ; RV32-NEXT:    lui a4, 1044480
 ; RV32-NEXT:    vmerge.vxm v11, v11, a4, v0
@@ -1658,8 +1660,9 @@ define <4 x i64> @vp_bitreverse_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vand.vx v14, v14, a4, v0.t
 ; RV32-NEXT:    vsrl.vi v16, v8, 8, v0.t
 ; RV32-NEXT:    li a5, 85
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a5
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.i v18, 0
 ; RV32-NEXT:    lui a5, 1044480
 ; RV32-NEXT:    vmerge.vxm v18, v18, a5, v0
@@ -1782,8 +1785,9 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vor.vv v10, v12, v10
 ; RV32-NEXT:    vsrl.vi v12, v8, 8
 ; RV32-NEXT:    li a4, 85
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a4
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.i v14, 0
 ; RV32-NEXT:    lui a4, 1044480
 ; RV32-NEXT:    vmerge.vxm v14, v14, a4, v0
@@ -1917,8 +1921,9 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v28, v8, 8, v0.t
 ; RV32-NEXT:    lui a5, 5
 ; RV32-NEXT:    addi a5, a5, 1365
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a5
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.i v20, 0
 ; RV32-NEXT:    lui a5, 1044480
 ; RV32-NEXT:    vmerge.vxm v20, v20, a5, v0
@@ -2042,8 +2047,9 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v20, v8, 8
 ; RV32-NEXT:    lui a4, 5
 ; RV32-NEXT:    addi a4, a4, 1365
-; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; RV32-NEXT:    vmv.s.x v0, a4
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    lui a4, 1044480
 ; RV32-NEXT:    vmerge.vxm v16, v16, a4, v0
