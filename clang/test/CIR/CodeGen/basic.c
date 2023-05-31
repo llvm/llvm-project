@@ -8,7 +8,7 @@ int foo(int i) {
   return i;
 }
 
-//      CHECK: module attributes {
+//      CHECK: module @"{{.*}}basic.c" attributes {
 // CHECK-NEXT: cir.func @foo(%arg0: !s32i loc({{.*}})) -> !s32i {
 // CHECK-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
 // CHECK-NEXT: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}

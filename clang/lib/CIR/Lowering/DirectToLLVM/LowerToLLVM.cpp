@@ -1110,7 +1110,9 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
   mlir::registerBuiltinDialectTranslation(*mlirCtx);
   mlir::registerLLVMDialectTranslation(*mlirCtx);
 
-  auto llvmModule = mlir::translateModuleToLLVMIR(theModule, llvmCtx);
+  auto ModuleName = theModule.getName();
+  auto llvmModule = mlir::translateModuleToLLVMIR(
+      theModule, llvmCtx, ModuleName ? *ModuleName : "CIRToLLVMModule");
 
   if (!llvmModule)
     report_fatal_error("Lowering from LLVMIR dialect to llvm IR failed!");
