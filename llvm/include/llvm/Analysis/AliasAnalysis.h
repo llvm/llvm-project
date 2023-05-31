@@ -985,15 +985,6 @@ FunctionPass *createAAResultsWrapperPass();
 ImmutablePass *createExternalAAWrapperPass(
     std::function<void(Pass &, Function &, AAResults &)> Callback);
 
-/// A helper for the legacy pass manager to create a \c AAResults
-/// object populated to the best of our ability for a particular function when
-/// inside of a \c ModulePass or a \c CallGraphSCCPass.
-///
-/// If a \c ModulePass or a \c CallGraphSCCPass calls \p
-/// createLegacyPMAAResults, it also needs to call \p addUsedAAAnalyses in \p
-/// getAnalysisUsage.
-AAResults createLegacyPMAAResults(Pass &P, Function &F, BasicAAResult &BAR);
-
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_ALIASANALYSIS_H
