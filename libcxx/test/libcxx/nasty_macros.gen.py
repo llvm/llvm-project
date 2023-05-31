@@ -13,14 +13,13 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import header_restrictions, public_headers
+from libcxx.test.header_information import lit_header_restrictions, public_headers
 
 for header in public_headers:
-  test_condition_begin = '#if ' + header_restrictions[header] if header in header_restrictions else ''
-  test_condition_end = '#endif' if header in header_restrictions else ''
-
   print(f"""\
 //--- {header}.compile.pass.cpp
+{lit_header_restrictions.get(header, '')}
+
 #define NASTY_MACRO This should not be expanded!!!
 
 // libc++ does not use single-letter names as a matter of principle.
@@ -150,8 +149,5 @@ for header in public_headers:
 #define min NASTY_MACRO
 #define max NASTY_MACRO
 
-#include <__config>
-{test_condition_begin}
 #include <{header}>
-{test_condition_end}
 """)

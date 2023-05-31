@@ -13,12 +13,9 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import header_restrictions, public_headers, mandatory_inclusions
+from libcxx.test.header_information import lit_header_restrictions, public_headers, mandatory_inclusions
 
 for header in public_headers:
-  test_condition_begin = '#if ' + header_restrictions[header] if header in header_restrictions else ''
-  test_condition_end = '#endif' if header in header_restrictions else ''
-
   header_guard = lambda h: f"_LIBCPP_{h.upper().replace('.', '_').replace('/', '_')}"
 
   # <cassert> has no header guards
@@ -39,9 +36,8 @@ for header in public_headers:
 
   print(f"""\
 //--- {header}.compile.pass.cpp
-#include <__config>
-{test_condition_begin}
+{lit_header_restrictions.get(header, '')}
+
 #include <{header}>
 {checks}
-{test_condition_end}
 """)
