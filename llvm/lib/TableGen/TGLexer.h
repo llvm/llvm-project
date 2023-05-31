@@ -129,6 +129,8 @@ enum TokKind {
   XRange,
   XGetDagArg,
   XGetDagName,
+  XSetDagArg,
+  XSetDagName,
 
   // Boolean literals.
   TrueVal,
