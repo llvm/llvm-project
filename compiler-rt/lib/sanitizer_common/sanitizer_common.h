@@ -1085,12 +1085,19 @@ class ArrayRef {
   ArrayRef() {}
   ArrayRef(T *begin, T *end) : begin_(begin), end_(end) {}
 
-  T *begin() { return begin_; }
-  T *end() { return end_; }
+  template <typename C>
+  ArrayRef(const C &src) : begin_(src.begin()), end_(src.end()) {}
+
+  const T *begin() const { return begin_; }
+  const T *end() const { return end_; }
+
+  bool empty() const { return begin_ == end_; }
+
+  uptr size() const { return end_ - begin_; }
 
  private:
-  T *begin_ = nullptr;
-  T *end_ = nullptr;
+  const T *begin_ = nullptr;
+  const T *end_ = nullptr;
 };
 
 }  // namespace __sanitizer
