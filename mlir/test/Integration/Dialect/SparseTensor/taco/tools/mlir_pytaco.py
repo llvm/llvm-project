@@ -55,7 +55,7 @@ _TACO_TENSOR_PREFIX = "A"
 _POS_WIDTH = 0
 _CRD_WIDTH = 0
 # The entry point to the JIT compiled program.
-_ENTRY_NAME = "main"
+_ENTRY_NAME = "pytaco_main"
 
 # Type aliases for type annotation.
 _UnaryOp = Callable[[Any], Any]
