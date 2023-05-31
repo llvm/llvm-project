@@ -436,8 +436,8 @@ OptionalFileEntryRef HeaderSearch::getFileAndSuggestModule(
 
   // If there is a module that corresponds to this header, suggest it.
   if (!findUsableModuleForHeader(
-          &File->getFileEntry(), Dir ? Dir : File->getFileEntry().getDir(),
-          RequestingModule, SuggestedModule, IsSystemHeaderDir))
+          *File, Dir ? Dir : File->getFileEntry().getDir(), RequestingModule,
+          SuggestedModule, IsSystemHeaderDir))
     return std::nullopt;
 
   return *File;
@@ -491,7 +491,7 @@ OptionalFileEntryRef DirectoryLookup::LookupFile(
   IsInHeaderMap = true;
 
   auto FixupSearchPathAndFindUsableModule =
-      [&](auto File) -> OptionalFileEntryRef {
+      [&](FileEntryRef File) -> OptionalFileEntryRef {
     if (SearchPath) {
       StringRef SearchPathRef(getName());
       SearchPath->clear();
@@ -501,9 +501,9 @@ OptionalFileEntryRef DirectoryLookup::LookupFile(
       RelativePath->clear();
       RelativePath->append(Filename.begin(), Filename.end());
     }
-    if (!HS.findUsableModuleForHeader(
-            &File.getFileEntry(), File.getFileEntry().getDir(),
-            RequestingModule, SuggestedModule, isSystemHeaderDirectory())) {
+    if (!HS.findUsableModuleForHeader(File, File.getFileEntry().getDir(),
+                                      RequestingModule, SuggestedModule,
+                                      isSystemHeaderDirectory())) {
       return std::nullopt;
     }
     return File;
@@ -713,14 +713,13 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
 
     bool IsSystem = getDirCharacteristic() != SrcMgr::C_User;
     if (FoundFramework) {
-      if (!HS.findUsableModuleForFrameworkHeader(
-              &File->getFileEntry(), FrameworkPath, RequestingModule,
-              SuggestedModule, IsSystem))
+      if (!HS.findUsableModuleForFrameworkHeader(*File, FrameworkPath,
+                                                 RequestingModule,
+                                                 SuggestedModule, IsSystem))
         return std::nullopt;
     } else {
-      if (!HS.findUsableModuleForHeader(&File->getFileEntry(), getDir(),
-                                        RequestingModule, SuggestedModule,
-                                        IsSystem))
+      if (!HS.findUsableModuleForHeader(*File, getDir(), RequestingModule,
+                                        SuggestedModule, IsSystem))
         return std::nullopt;
     }
   }
@@ -1279,7 +1278,7 @@ OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
   getFileInfo(&File->getFileEntry()).DirInfo = DirInfo;
 
   FrameworkName.pop_back(); // remove the trailing '/'
-  if (!findUsableModuleForFrameworkHeader(&File->getFileEntry(), FrameworkName,
+  if (!findUsableModuleForFrameworkHeader(*File, FrameworkName,
                                           RequestingModule, SuggestedModule,
                                           /*IsSystem*/ false))
     return std::nullopt;
@@ -1559,7 +1558,7 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
 }
 
 ModuleMap::KnownHeader
-HeaderSearch::findModuleForHeader(const FileEntry *File, bool AllowTextual,
+HeaderSearch::findModuleForHeader(FileEntryRef File, bool AllowTextual,
                                   bool AllowExcluded) const {
   if (ExternalSource) {
     // Make sure the external source has handled header info about this file,
@@ -1570,7 +1569,7 @@ HeaderSearch::findModuleForHeader(const FileEntry *File, bool AllowTextual,
 }
 
 ArrayRef<ModuleMap::KnownHeader>
-HeaderSearch::findAllModulesForHeader(const FileEntry *File) const {
+HeaderSearch::findAllModulesForHeader(FileEntryRef File) const {
   if (ExternalSource) {
     // Make sure the external source has handled header info about this file,
     // which includes whether the file is part of a module.
@@ -1589,7 +1588,7 @@ HeaderSearch::findResolvedModulesForHeader(const FileEntry *File) const {
   return ModMap.findResolvedModulesForHeader(File);
 }
 
-static bool suggestModule(HeaderSearch &HS, const FileEntry *File,
+static bool suggestModule(HeaderSearch &HS, FileEntryRef File,
                           Module *RequestingModule,
                           ModuleMap::KnownHeader *SuggestedModule) {
   ModuleMap::KnownHeader Module =
@@ -1625,18 +1624,18 @@ static bool suggestModule(HeaderSearch &HS, const FileEntry *File,
 }
 
 bool HeaderSearch::findUsableModuleForHeader(
-    const FileEntry *File, const DirectoryEntry *Root, Module *RequestingModule,
+    FileEntryRef File, const DirectoryEntry *Root, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule, bool IsSystemHeaderDir) {
-  if (File && needModuleLookup(RequestingModule, SuggestedModule)) {
+  if (needModuleLookup(RequestingModule, SuggestedModule)) {
     // If there is a module that corresponds to this header, suggest it.
-    hasModuleMap(File->getName(), Root, IsSystemHeaderDir);
+    hasModuleMap(File.getName(), Root, IsSystemHeaderDir);
     return suggestModule(*this, File, RequestingModule, SuggestedModule);
   }
   return true;
 }
 
 bool HeaderSearch::findUsableModuleForFrameworkHeader(
-    const FileEntry *File, StringRef FrameworkName, Module *RequestingModule,
+    FileEntryRef File, StringRef FrameworkName, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule, bool IsSystemFramework) {
   // If we're supposed to suggest a module, look for one now.
   if (needModuleLookup(RequestingModule, SuggestedModule)) {

@@ -364,17 +364,17 @@ private:
   ///
   /// \param IntermediateDirs On success, contains the set of directories
   /// searched before finding \p File.
-  KnownHeader findHeaderInUmbrellaDirs(const FileEntry *File,
-                    SmallVectorImpl<const DirectoryEntry *> &IntermediateDirs);
+  KnownHeader findHeaderInUmbrellaDirs(
+      FileEntryRef File, SmallVectorImpl<DirectoryEntryRef> &IntermediateDirs);
 
   /// Given that \p File is not in the Headers map, look it up within
   /// umbrella directories and find or create a module for it.
-  KnownHeader findOrCreateModuleForHeaderInUmbrellaDir(const FileEntry *File);
+  KnownHeader findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File);
 
   /// A convenience method to determine if \p File is (possibly nested)
   /// in an umbrella directory.
-  bool isHeaderInUmbrellaDirs(const FileEntry *File) {
-    SmallVector<const DirectoryEntry *, 2> IntermediateDirs;
+  bool isHeaderInUmbrellaDirs(FileEntryRef File) {
+    SmallVector<DirectoryEntryRef, 2> IntermediateDirs;
     return static_cast<bool>(findHeaderInUmbrellaDirs(File, IntermediateDirs));
   }
 
@@ -437,8 +437,7 @@ public:
   /// \returns The module KnownHeader, which provides the module that owns the
   /// given header file.  The KnownHeader is default constructed to indicate
   /// that no module owns this header file.
-  KnownHeader findModuleForHeader(const FileEntry *File,
-                                  bool AllowTextual = false,
+  KnownHeader findModuleForHeader(FileEntryRef File, bool AllowTextual = false,
                                   bool AllowExcluded = false);
 
   /// Retrieve all the modules that contain the given header file. Note that
@@ -448,7 +447,7 @@ public:
   ///
   /// Typically, \ref findModuleForHeader should be used instead, as it picks
   /// the preferred module for the header.
-  ArrayRef<KnownHeader> findAllModulesForHeader(const FileEntry *File);
+  ArrayRef<KnownHeader> findAllModulesForHeader(FileEntryRef File);
 
   /// Like \ref findAllModulesForHeader, but do not attempt to infer module
   /// ownership from umbrella headers if we've not already done so.
