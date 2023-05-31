@@ -1298,15 +1298,11 @@ void TextDiagnostic::emitSnippetAndCaret(
   emitParseableFixits(Hints, SM);
 }
 
-void TextDiagnostic::emitSnippet(StringRef line, unsigned MaxLineNoDisplayWidth,
+void TextDiagnostic::emitSnippet(StringRef SourceLine,
+                                 unsigned MaxLineNoDisplayWidth,
                                  unsigned LineNo) {
-  if (line.empty())
+  if (SourceLine.empty())
     return;
-
-  size_t i = 0;
-
-  std::string to_print;
-  bool print_reversed = false;
 
   // Emit line number.
   if (MaxLineNoDisplayWidth > 0) {
@@ -1318,28 +1314,30 @@ void TextDiagnostic::emitSnippet(StringRef line, unsigned MaxLineNoDisplayWidth,
     OS << " | ";
   }
 
-  while (i<line.size()) {
-    std::pair<SmallString<16>,bool> res
-        = printableTextForNextCharacter(line, &i, DiagOpts->TabStop);
-    bool was_printable = res.second;
+  bool PrintReversed = false;
+  std::string ToPrint;
+  size_t I = 0;
+  while (I < SourceLine.size()) {
+    auto [Str, WasPrintable] =
+        printableTextForNextCharacter(SourceLine, &I, DiagOpts->TabStop);
 
-    if (DiagOpts->ShowColors && was_printable == print_reversed) {
-      if (print_reversed)
+    if (DiagOpts->ShowColors && WasPrintable == PrintReversed) {
+      if (PrintReversed)
         OS.reverseColor();
-      OS << to_print;
-      to_print.clear();
+      OS << ToPrint;
+      ToPrint.clear();
       if (DiagOpts->ShowColors)
         OS.resetColor();
     }
 
-    print_reversed = !was_printable;
-    to_print += res.first.str();
+    PrintReversed = !WasPrintable;
+    ToPrint += Str;
   }
 
-  if (print_reversed && DiagOpts->ShowColors)
+  if (PrintReversed && DiagOpts->ShowColors)
     OS.reverseColor();
-  OS << to_print;
-  if (print_reversed && DiagOpts->ShowColors)
+  OS << ToPrint;
+  if (PrintReversed && DiagOpts->ShowColors)
     OS.resetColor();
 
   OS << '\n';
