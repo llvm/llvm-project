@@ -1163,20 +1163,21 @@ enum Symbol : uint32_t {
 /// Scan the symbols from a BitcodeFile \p Buffer and record if we need to
 /// extract any symbols from it.
 Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
-                                     StringSaver &Saver,
+                                     bool IsArchive, StringSaver &Saver,
                                      DenseMap<StringRef, Symbol> &Syms) {
   Expected<IRSymtabFile> IRSymtabOrErr = readIRSymtab(Buffer);
   if (!IRSymtabOrErr)
     return IRSymtabOrErr.takeError();
 
-  bool ShouldExtract = false;
+  bool ShouldExtract = !IsArchive;
+  DenseMap<StringRef, Symbol> TmpSyms;
   for (unsigned I = 0; I != IRSymtabOrErr->Mods.size(); ++I) {
     for (const auto &Sym : IRSymtabOrErr->TheReader.module_symbols(I)) {
       if (Sym.isFormatSpecific() || !Sym.isGlobal())
         continue;
 
       bool NewSymbol = Syms.count(Sym.getName()) == 0;
-      auto &OldSym = Syms[Saver.save(Sym.getName())];
+      auto OldSym = NewSymbol ? Sym_None : Syms[Sym.getName()];
 
       // We will extract if it defines a currenlty undefined non-weak symbol.
       bool ResolvesStrongReference =
@@ -1192,13 +1193,20 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
 
       // Update this symbol in the "table" with the new information.
       if (OldSym & Sym_Undefined && !Sym.isUndefined())
-        OldSym = static_cast<Symbol>(OldSym & ~Sym_Undefined);
+        TmpSyms[Saver.save(Sym.getName())] =
+            static_cast<Symbol>(OldSym & ~Sym_Undefined);
       if (Sym.isUndefined() && NewSymbol)
-        OldSym = static_cast<Symbol>(OldSym | Sym_Undefined);
+        TmpSyms[Saver.save(Sym.getName())] =
+            static_cast<Symbol>(OldSym | Sym_Undefined);
       if (Sym.isWeak())
-        OldSym = static_cast<Symbol>(OldSym | Sym_Weak);
+        TmpSyms[Saver.save(Sym.getName())] =
+            static_cast<Symbol>(OldSym | Sym_Weak);
     }
   }
+
+  // If the file gets extracted we update the table with the new symbols.
+  if (ShouldExtract)
+    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
 
   return ShouldExtract;
 }
@@ -1206,9 +1214,10 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
 /// Scan the symbols from an ObjectFile \p Obj and record if we need to extract
 /// any symbols from it.
 Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
-                                    StringSaver &Saver,
+                                    bool IsArchive, StringSaver &Saver,
                                     DenseMap<StringRef, Symbol> &Syms) {
-  bool ShouldExtract = false;
+  bool ShouldExtract = !IsArchive;
+  DenseMap<StringRef, Symbol> TmpSyms;
   for (SymbolRef Sym : Obj.symbols()) {
     auto FlagsOrErr = Sym.getFlags();
     if (!FlagsOrErr)
@@ -1223,7 +1232,7 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
       return NameOrErr.takeError();
 
     bool NewSymbol = Syms.count(*NameOrErr) == 0;
-    auto &OldSym = Syms[Saver.save(*NameOrErr)];
+    auto OldSym = NewSymbol ? Sym_None : Syms[*NameOrErr];
 
     // We will extract if it defines a currenlty undefined non-weak symbol.
     bool ResolvesStrongReference = (OldSym & Sym_Undefined) &&
@@ -1240,12 +1249,19 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
 
     // Update this symbol in the "table" with the new information.
     if (OldSym & Sym_Undefined && !(*FlagsOrErr & SymbolRef::SF_Undefined))
-      OldSym = static_cast<Symbol>(OldSym & ~Sym_Undefined);
+      TmpSyms[Saver.save(*NameOrErr)] =
+          static_cast<Symbol>(OldSym & ~Sym_Undefined);
     if (*FlagsOrErr & SymbolRef::SF_Undefined && NewSymbol)
-      OldSym = static_cast<Symbol>(OldSym | Sym_Undefined);
+      TmpSyms[Saver.save(*NameOrErr)] =
+          static_cast<Symbol>(OldSym | Sym_Undefined);
     if (*FlagsOrErr & SymbolRef::SF_Weak)
-      OldSym = static_cast<Symbol>(OldSym | Sym_Weak);
+      TmpSyms[Saver.save(*NameOrErr)] = static_cast<Symbol>(OldSym | Sym_Weak);
   }
+
+  // If the file gets extracted we update the table with the new symbols.
+  if (ShouldExtract)
+    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
+
   return ShouldExtract;
 }
 
@@ -1255,18 +1271,19 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
 ///   1) It defines an undefined symbol in a regular object filie.
 ///   2) It defines a global symbol without hidden visibility that has not
 ///      yet been defined.
-Expected<bool> getSymbols(StringRef Image, OffloadKind Kind, StringSaver &Saver,
+Expected<bool> getSymbols(StringRef Image, OffloadKind Kind, bool IsArchive,
+                          StringSaver &Saver,
                           DenseMap<StringRef, Symbol> &Syms) {
   MemoryBufferRef Buffer = MemoryBufferRef(Image, "");
   switch (identify_magic(Image)) {
   case file_magic::bitcode:
-    return getSymbolsFromBitcode(Buffer, Kind, Saver, Syms);
+    return getSymbolsFromBitcode(Buffer, Kind, IsArchive, Saver, Syms);
   case file_magic::elf_relocatable: {
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(Buffer);
     if (!ObjFile)
       return ObjFile.takeError();
-    return getSymbolsFromObject(**ObjFile, Kind, Saver, Syms);
+    return getSymbolsFromObject(**ObjFile, Kind, IsArchive, Saver, Syms);
   }
   default:
     return false;
@@ -1341,13 +1358,14 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
         if (IsArchive && !WholeArchive && !Syms.count(Binary))
           continue;
 
-        Expected<bool> ExtractOrErr = getSymbols(
-            Binary.getBinary()->getImage(),
-            Binary.getBinary()->getOffloadKind(), Saver, Syms[Binary]);
+        Expected<bool> ExtractOrErr =
+            getSymbols(Binary.getBinary()->getImage(),
+                       Binary.getBinary()->getOffloadKind(), IsArchive, Saver,
+                       Syms[Binary]);
         if (!ExtractOrErr)
           return ExtractOrErr.takeError();
 
-        Extracted = IsArchive && !WholeArchive && *ExtractOrErr;
+        Extracted = !WholeArchive && *ExtractOrErr;
 
         if (!IsArchive || WholeArchive || Extracted)
           InputFiles.emplace_back(std::move(Binary));
