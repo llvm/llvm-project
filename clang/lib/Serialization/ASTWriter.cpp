@@ -185,8 +185,7 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
-    for (const auto &KH :
-         HS.findAllModulesForHeader(File, /*AllowCreation=*/false)) {
+    for (const auto &KH : HS.findResolvedModulesForHeader(File)) {
       if (!KH.getModule())
         continue;
       ModulesToProcess.push_back(KH.getModule());

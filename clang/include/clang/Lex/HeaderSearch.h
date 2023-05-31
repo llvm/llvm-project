@@ -670,8 +670,12 @@ public:
   ///
   /// \ref findModuleForHeader should typically be used instead of this.
   ArrayRef<ModuleMap::KnownHeader>
-  findAllModulesForHeader(const FileEntry *File,
-                          bool AllowCreation = true) const;
+  findAllModulesForHeader(const FileEntry *File) const;
+
+  /// Like \ref findAllModulesForHeader, but do not attempt to infer module
+  /// ownership from umbrella headers if we've not already done so.
+  ArrayRef<ModuleMap::KnownHeader>
+  findResolvedModulesForHeader(const FileEntry *File) const;
 
   /// Read the contents of the given module map file.
   ///
