@@ -134,7 +134,8 @@ static AttributeCommonInfo getDummyAttrInfo() {
   return AttributeCommonInfo(SourceRange(),
                              AttributeCommonInfo::UnknownAttribute,
                              {AttributeCommonInfo::AS_GNU,
-                             /*Spelling*/0, /*IsAlignas*/false});
+                              /*Spelling*/ 0, /*IsAlignas*/ false,
+                              /*IsRegularKeywordAttribute*/ false});
 }
 
 namespace {
@@ -685,11 +686,11 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
           kind = SwiftNewTypeAttr::NK_Enum;
           break;
         }
-        AttributeCommonInfo syntaxInfo{SourceRange(),
-                                       AttributeCommonInfo::AT_SwiftNewType,
-                                       {AttributeCommonInfo::AS_GNU,
-                                       SwiftNewTypeAttr::GNU_swift_wrapper,
-                                       /*IsAlignas*/false}};
+        AttributeCommonInfo syntaxInfo{
+            SourceRange(),
+            AttributeCommonInfo::AT_SwiftNewType,
+            {AttributeCommonInfo::AS_GNU, SwiftNewTypeAttr::GNU_swift_wrapper,
+             /*IsAlignas*/ false, /*IsRegularKeywordAttribute*/ false}};
         return new (S.Context) SwiftNewTypeAttr(S.Context, syntaxInfo, kind);
     });
   }
