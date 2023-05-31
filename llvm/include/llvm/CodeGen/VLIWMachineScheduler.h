@@ -151,6 +151,8 @@ protected:
           Pending(ID << ConvergingVLIWScheduler::LogMaxQID, Name + ".P") {}
 
     ~VLIWSchedBoundary();
+    VLIWSchedBoundary &operator=(const VLIWSchedBoundary &other) = delete;
+    VLIWSchedBoundary(const VLIWSchedBoundary &other) = delete;
 
     void init(VLIWMachineScheduler *dag, const TargetSchedModel *smodel) {
       DAG = dag;
