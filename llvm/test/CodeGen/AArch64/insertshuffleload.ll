@@ -4,10 +4,7 @@
 define <8 x i8> @inserti8_first(ptr %p) {
 ; CHECK-LABEL: inserti8_first:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur d0, [x0, #1]
-; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #7
-; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
@@ -20,11 +17,7 @@ define <8 x i8> @inserti8_first(ptr %p) {
 define <8 x i8> @inserti8_last(ptr %p) {
 ; CHECK-LABEL: inserti8_last:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    add x8, x0, #8
-; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #1
-; CHECK-NEXT:    ld1 { v0.b }[7], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 8
   %l1 = load <8 x i8>, ptr %p
@@ -37,11 +30,8 @@ define <8 x i8> @inserti8_last(ptr %p) {
 define <8 x i16> @inserti8_first_sext(ptr %p) {
 ; CHECK-LABEL: inserti8_first_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur d0, [x0, #1]
-; CHECK-NEXT:    ldrsb w8, [x0]
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #14
-; CHECK-NEXT:    mov v0.h[0], w8
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
@@ -56,11 +46,8 @@ define <8 x i16> @inserti8_first_sext(ptr %p) {
 define <8 x i16> @inserti8_last_sext(ptr %p) {
 ; CHECK-LABEL: inserti8_last_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldrsb w8, [x0, #8]
+; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #2
-; CHECK-NEXT:    mov v0.h[7], w8
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 8
   %l1 = load <8 x i8>, ptr %p
@@ -75,11 +62,8 @@ define <8 x i16> @inserti8_last_sext(ptr %p) {
 define <8 x i16> @inserti8_first_zext(ptr %p) {
 ; CHECK-LABEL: inserti8_first_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur d0, [x0, #1]
-; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #14
-; CHECK-NEXT:    mov v0.h[0], w8
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
@@ -94,11 +78,8 @@ define <8 x i16> @inserti8_first_zext(ptr %p) {
 define <8 x i16> @inserti8_last_zext(ptr %p) {
 ; CHECK-LABEL: inserti8_last_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldrb w8, [x0, #8]
+; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #2
-; CHECK-NEXT:    mov v0.h[7], w8
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 8
   %l1 = load <8 x i8>, ptr %p
@@ -113,11 +94,7 @@ define <8 x i16> @inserti8_last_zext(ptr %p) {
 define <8 x i32> @inserti32_first(ptr %p) {
 ; CHECK-LABEL: inserti32_first:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur q1, [x0, #4]
-; CHECK-NEXT:    ldur q2, [x0, #20]
-; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #12
-; CHECK-NEXT:    ext v1.16b, v1.16b, v2.16b, #12
-; CHECK-NEXT:    ld1 { v0.s }[0], [x0]
+; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 4
   %l1 = load <8 x i32>, ptr %q
@@ -130,11 +107,8 @@ define <8 x i32> @inserti32_first(ptr %p) {
 define <8 x i32> @inserti32_last(ptr %p) {
 ; CHECK-LABEL: inserti32_last:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q2, q0, [x0]
-; CHECK-NEXT:    add x8, x0, #32
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #4
-; CHECK-NEXT:    ext v0.16b, v2.16b, v0.16b, #4
-; CHECK-NEXT:    ld1 { v1.s }[3], [x8]
+; CHECK-NEXT:    ldur q0, [x0, #4]
+; CHECK-NEXT:    ldur q1, [x0, #20]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 32
   %l1 = load <8 x i32>, ptr %p
@@ -147,11 +121,9 @@ define <8 x i32> @inserti32_last(ptr %p) {
 define <8 x i32> @inserti32_first_multiuse(ptr %p) {
 ; CHECK-LABEL: inserti32_first_multiuse:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur q0, [x0, #4]
+; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    ldur q1, [x0, #20]
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #12
-; CHECK-NEXT:    ext v3.16b, v0.16b, v1.16b, #12
-; CHECK-NEXT:    ld1 { v2.s }[0], [x0]
+; CHECK-NEXT:    ldur q0, [x0, #4]
 ; CHECK-NEXT:    add v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
@@ -168,12 +140,10 @@ define <8 x i32> @inserti32_last_multiuse(ptr %p) {
 ; CHECK-LABEL: inserti32_last_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    add x8, x0, #32
-; CHECK-NEXT:    ext v2.16b, v1.16b, v0.16b, #4
-; CHECK-NEXT:    ext v3.16b, v0.16b, v1.16b, #4
-; CHECK-NEXT:    ld1 { v2.s }[3], [x8]
-; CHECK-NEXT:    add v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    ldur q2, [x0, #4]
+; CHECK-NEXT:    ldur q3, [x0, #20]
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    add v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 32
   %l1 = load <8 x i32>, ptr %p
@@ -187,9 +157,7 @@ define <8 x i32> @inserti32_last_multiuse(ptr %p) {
 define <4 x float> @insertf32_first(ptr %p) {
 ; CHECK-LABEL: insertf32_first:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur q0, [x0, #4]
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #12
-; CHECK-NEXT:    ld1 { v0.s }[0], [x0]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 4
   %l1 = load <4 x float>, ptr %q
@@ -202,10 +170,7 @@ define <4 x float> @insertf32_first(ptr %p) {
 define <4 x float> @insertf32_last(ptr %p) {
 ; CHECK-LABEL: insertf32_last:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    add x8, x0, #16
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
-; CHECK-NEXT:    ld1 { v0.s }[3], [x8]
+; CHECK-NEXT:    ldur q0, [x0, #4]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 16
   %l1 = load <4 x float>, ptr %p
@@ -218,9 +183,7 @@ define <4 x float> @insertf32_last(ptr %p) {
 define <2 x i64> @inserti64_first(ptr %p) {
 ; CHECK-LABEL: inserti64_first:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #8
-; CHECK-NEXT:    ld1r { v0.2d }, [x8]
-; CHECK-NEXT:    ld1 { v0.d }[0], [x0]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 8
   %l1 = load <2 x i64>, ptr %q
@@ -233,10 +196,7 @@ define <2 x i64> @inserti64_first(ptr %p) {
 define <2 x i64> @inserti64_last(ptr %p) {
 ; CHECK-LABEL: inserti64_last:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    add x8, x0, #16
-; CHECK-NEXT:    dup v0.2d, v0.d[1]
-; CHECK-NEXT:    ld1 { v0.d }[1], [x8]
+; CHECK-NEXT:    ldur q0, [x0, #8]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 16
   %l1 = load <2 x i64>, ptr %p
@@ -249,10 +209,7 @@ define <2 x i64> @inserti64_last(ptr %p) {
 define <8 x i8> @inserti8_first_undef(ptr %p) {
 ; CHECK-LABEL: inserti8_first_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur d0, [x0, #1]
-; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #7
-; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
@@ -265,11 +222,7 @@ define <8 x i8> @inserti8_first_undef(ptr %p) {
 define <8 x i8> @inserti8_last_undef(ptr %p) {
 ; CHECK-LABEL: inserti8_last_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    add x8, x0, #8
-; CHECK-NEXT:    dup v0.8b, v0.b[1]
-; CHECK-NEXT:    ld1 { v0.b }[7], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 8
   %l1 = load <8 x i8>, ptr %p
@@ -445,10 +398,7 @@ define <8 x i8> @storebefore(ptr %p, ptr %r) {
 ; CHECK-LABEL: storebefore:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    strb wzr, [x1]
-; CHECK-NEXT:    ldur d0, [x0, #1]
-; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #7
-; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 1
   store i8 0, ptr %r
@@ -462,11 +412,8 @@ define <8 x i8> @storebefore(ptr %p, ptr %r) {
 define <8 x i8> @storeafter(ptr %p, ptr %r) {
 ; CHECK-LABEL: storeafter:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur d0, [x0, #1]
-; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #7
-; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    strb wzr, [x1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 1
   %l1 = load <8 x i8>, ptr %q
