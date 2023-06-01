@@ -13,7 +13,6 @@
 #define SANITIZER_DEFS_H
 
 #include "sanitizer_platform.h"
-#include "sanitizer_redefine_builtins.h"
 
 #ifndef SANITIZER_DEBUG
 # define SANITIZER_DEBUG 0
