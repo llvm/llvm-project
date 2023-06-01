@@ -633,16 +633,16 @@ define void @get_lane_mask() #0 {
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %mask_nxv2i1_i32 = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i32(i32 undef, i32 undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %mask_nxv32i1_i64 = call <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i64(i64 undef, i64 undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %mask_nxv16i1_i16 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i16(i16 undef, i16 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 61 for instruction: %mask_v16i1_i64 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 undef, i64 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %mask_v8i1_i64 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 undef, i64 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %mask_v4i1_i64 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 undef, i64 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %mask_v2i1_i64 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 undef, i64 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 61 for instruction: %mask_v16i1_i32 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 undef, i32 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 undef, i32 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 undef, i32 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 undef, i32 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 122 for instruction: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 61 for instruction: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %mask_v16i1_i64 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 undef, i64 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %mask_v8i1_i64 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 undef, i64 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %mask_v4i1_i64 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 undef, i64 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %mask_v2i1_i64 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 undef, i64 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %mask_v16i1_i32 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 undef, i32 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 undef, i32 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 undef, i32 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 undef, i32 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 undef, i64 undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 undef, i16 undef)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %mask_nxv16i1_i64 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 undef, i64 undef)
@@ -750,7 +750,7 @@ define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> 
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
   %res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
@@ -804,7 +804,7 @@ define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %ma
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 
