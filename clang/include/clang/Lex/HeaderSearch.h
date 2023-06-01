@@ -553,10 +553,10 @@ public:
   /// macro.
   ///
   /// This routine does not consider the effect of \#import
-  bool isFileMultipleIncludeGuarded(const FileEntry *File);
+  bool isFileMultipleIncludeGuarded(const FileEntry *File) const;
 
   /// Determine whether the given file is known to have ever been \#imported.
-  bool hasFileBeenImported(const FileEntry *File) {
+  bool hasFileBeenImported(const FileEntry *File) const {
     const HeaderFileInfo *FI = getExistingFileInfo(File);
     return FI && FI->isImport;
   }
