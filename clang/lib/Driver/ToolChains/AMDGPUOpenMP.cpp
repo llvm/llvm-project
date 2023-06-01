@@ -204,8 +204,12 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
       getProcessorFromTargetID(getToolChain().getTriple(), TargetID);
 
   std::string LibSuffix = "lib";
+  if (AMDGPUOpenMPTC.getSanitizerArgs(Args).needsAsanRt())
+    LibSuffix.append("/asan");
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_runtimelib_EQ)) {
     LibSuffix = A->getValue();
+    if (AMDGPUOpenMPTC.getSanitizerArgs(Args).needsAsanRt())
+      LibSuffix.append("/asan");
   }
 
   // If device debugging turned on, add specially built bc files

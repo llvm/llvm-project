@@ -922,11 +922,15 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
                                           ArgStringList &CmdArgs) {
   const Driver &D = TC.getDriver();
   std::string LibSuffix = "lib";
+  if (TC.getSanitizerArgs(Args).needsAsanRt())
+    LibSuffix.append("/asan");
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_runtimelib_EQ)) {
     LibSuffix = A->getValue();
     if (LibSuffix != "lib-perf" && LibSuffix != "lib-debug" && LibSuffix != "lib")
       D.Diag(diag::err_drv_unsupported_option_argument)
         << A->getSpelling() << LibSuffix;
+    if (TC.getSanitizerArgs(Args).needsAsanRt())
+      LibSuffix.append("/asan");
   }
   std::string CandidateRPath = FindDebugPerfInLibraryPath(LibSuffix);
   if (CandidateRPath.empty())
