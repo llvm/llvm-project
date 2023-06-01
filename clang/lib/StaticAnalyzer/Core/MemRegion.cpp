@@ -73,8 +73,7 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1,
   auto *R = cast_or_null<RegionTy>(Regions.FindNodeOrInsertPos(ID, InsertPos));
 
   if (!R) {
-    R = A.Allocate<RegionTy>();
-    new (R) RegionTy(arg1, superRegion);
+    R = new (A) RegionTy(arg1, superRegion);
     Regions.InsertNode(R, InsertPos);
   }
 
@@ -90,8 +89,7 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
   auto *R = cast_or_null<RegionTy>(Regions.FindNodeOrInsertPos(ID, InsertPos));
 
   if (!R) {
-    R = A.Allocate<RegionTy>();
-    new (R) RegionTy(arg1, arg2, superRegion);
+    R = new (A) RegionTy(arg1, arg2, superRegion);
     Regions.InsertNode(R, InsertPos);
   }
 
@@ -109,8 +107,7 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
   auto *R = cast_or_null<RegionTy>(Regions.FindNodeOrInsertPos(ID, InsertPos));
 
   if (!R) {
-    R = A.Allocate<RegionTy>();
-    new (R) RegionTy(arg1, arg2, arg3, superRegion);
+    R = new (A) RegionTy(arg1, arg2, arg3, superRegion);
     Regions.InsertNode(R, InsertPos);
   }
 
@@ -834,8 +831,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
 template <typename REG>
 const REG *MemRegionManager::LazyAllocate(REG*& region) {
   if (!region) {
-    region = A.Allocate<REG>();
-    new (region) REG(*this);
+    region = new (A) REG(*this);
   }
 
   return region;
@@ -844,8 +840,7 @@ const REG *MemRegionManager::LazyAllocate(REG*& region) {
 template <typename REG, typename ARG>
 const REG *MemRegionManager::LazyAllocate(REG*& region, ARG a) {
   if (!region) {
-    region = A.Allocate<REG>();
-    new (region) REG(this, a);
+    region = new (A) REG(this, a);
   }
 
   return region;
@@ -859,8 +854,7 @@ MemRegionManager::getStackLocalsRegion(const StackFrameContext *STC) {
   if (R)
     return R;
 
-  R = A.Allocate<StackLocalsSpaceRegion>();
-  new (R) StackLocalsSpaceRegion(*this, STC);
+  R = new (A) StackLocalsSpaceRegion(*this, STC);
   return R;
 }
 
@@ -872,8 +866,7 @@ MemRegionManager::getStackArgumentsRegion(const StackFrameContext *STC) {
   if (R)
     return R;
 
-  R = A.Allocate<StackArgumentsSpaceRegion>();
-  new (R) StackArgumentsSpaceRegion(*this, STC);
+  R = new (A) StackArgumentsSpaceRegion(*this, STC);
   return R;
 }
 
@@ -894,8 +887,7 @@ const GlobalsSpaceRegion
   if (R)
     return R;
 
-  R = A.Allocate<StaticGlobalSpaceRegion>();
-  new (R) StaticGlobalSpaceRegion(*this, CR);
+  R = new (A) StaticGlobalSpaceRegion(*this, CR);
   return R;
 }
 
@@ -1141,8 +1133,7 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
   auto *R = cast_or_null<ElementRegion>(data);
 
   if (!R) {
-    R = A.Allocate<ElementRegion>();
-    new (R) ElementRegion(T, Idx, superRegion);
+    R = new (A) ElementRegion(T, Idx, superRegion);
     Regions.InsertNode(R, InsertPos);
   }
 
@@ -1660,10 +1651,8 @@ void BlockDataRegion::LazyInitializeReferencedVars() {
 
   using VarVec = BumpVector<const MemRegion *>;
 
-  auto *BV = A.Allocate<VarVec>();
-  new (BV) VarVec(BC, NumBlockVars);
-  auto *BVOriginal = A.Allocate<VarVec>();
-  new (BVOriginal) VarVec(BC, NumBlockVars);
+  auto *BV = new (A) VarVec(BC, NumBlockVars);
+  auto *BVOriginal = new (A) VarVec(BC, NumBlockVars);
 
   for (const auto *VD : ReferencedBlockVars) {
     const VarRegion *VR = nullptr;
