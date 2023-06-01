@@ -1254,10 +1254,10 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
   let UsesMaskPolicy = 1;
 }
 
-class VPseudoBinaryTailPolicy<VReg RetClass,
-                              RegisterClass Op1Class,
-                              DAGOperand Op2Class,
-                              string Constraint> :
+class VPseudoTernaryMaskPolicy<VReg RetClass,
+                               RegisterClass Op1Class,
+                               DAGOperand Op2Class,
+                               string Constraint> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                 (ins GetVRegNoV0<RetClass>.R:$merge,
                      Op1Class:$rs2, Op2Class:$rs1,
@@ -3191,9 +3191,9 @@ multiclass VPseudoTernaryWithTailPolicy_E<VReg RetClass,
                                           bit Commutable = 0> {
   let VLMul = MInfo.value in {
     defvar mx = MInfo.MX;
-      let isCommutable = Commutable in
-      def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
-      def "_" # mx # "_E" # sew # "_MASK" : VPseudoBinaryTailPolicy<RetClass, Op1Class, Op2Class, Constraint>;
+    let isCommutable = Commutable in
+    def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
+    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>;
   }
 }
 
