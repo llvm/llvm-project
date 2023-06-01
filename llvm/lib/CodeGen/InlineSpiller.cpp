@@ -268,8 +268,8 @@ static Register isFullCopyOf(const MachineInstr &MI, Register Reg) {
 }
 
 static void getVDefInterval(const MachineInstr &MI, LiveIntervals &LIS) {
-  for (const MachineOperand &MO : MI.operands())
-    if (MO.isReg() && MO.isDef() && MO.getReg().isVirtual())
+  for (const MachineOperand &MO : MI.all_defs())
+    if (MO.getReg().isVirtual())
       LIS.getInterval(MO.getReg());
 }
 
@@ -593,8 +593,8 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
 
   if (!ParentVNI) {
     LLVM_DEBUG(dbgs() << "\tadding <undef> flags: ");
-    for (MachineOperand &MO : MI.operands())
-      if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg())
+    for (MachineOperand &MO : MI.all_uses())
+      if (MO.getReg() == VirtReg.reg())
         MO.setIsUndef();
     LLVM_DEBUG(dbgs() << UseIdx << '\t' << MI);
     return true;

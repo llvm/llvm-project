@@ -1450,9 +1450,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
   // like  ` = OP undef %X, %X`    both operands need the same register assign
   // so we should perform the normal assignment first.
   if (HasUndefUse) {
-    for (MachineOperand &MO : MI.uses()) {
-      if (!MO.isReg() || !MO.isUse())
-        continue;
+    for (MachineOperand &MO : MI.all_uses()) {
       Register Reg = MO.getReg();
       if (!Reg.isVirtual() || !shouldAllocateRegister(Reg))
         continue;
@@ -1464,8 +1462,8 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 
   // Free early clobbers.
   if (HasEarlyClobber) {
-    for (MachineOperand &MO : llvm::reverse(MI.operands())) {
-      if (!MO.isReg() || !MO.isDef() || !MO.isEarlyClobber())
+    for (MachineOperand &MO : llvm::reverse(MI.all_defs())) {
+      if (!MO.isEarlyClobber())
         continue;
       assert(!MO.getSubReg() && "should be already handled in def processing");
 

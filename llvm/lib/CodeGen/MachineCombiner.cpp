@@ -217,11 +217,9 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
   // are tracked in the InstrIdxForVirtReg map depth is looked up in InstrDepth
   for (auto *InstrPtr : InsInstrs) { // for each Use
     unsigned IDepth = 0;
-    for (const MachineOperand &MO : InstrPtr->operands()) {
+    for (const MachineOperand &MO : InstrPtr->all_uses()) {
       // Check for virtual register operand.
-      if (!(MO.isReg() && MO.getReg().isVirtual()))
-        continue;
-      if (!MO.isUse())
+      if (!MO.getReg().isVirtual())
         continue;
       unsigned DepthOp = 0;
       unsigned LatencyOp = 0;
@@ -272,11 +270,9 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
   // Check each definition in NewRoot and compute the latency
   unsigned NewRootLatency = 0;
 
-  for (const MachineOperand &MO : NewRoot->operands()) {
+  for (const MachineOperand &MO : NewRoot->all_defs()) {
     // Check for virtual register operand.
-    if (!(MO.isReg() && MO.getReg().isVirtual()))
-      continue;
-    if (!MO.isDef())
+    if (!MO.getReg().isVirtual())
       continue;
     // Get the first instruction that uses MO
     MachineRegisterInfo::reg_iterator RI = MRI->reg_begin(MO.getReg());
