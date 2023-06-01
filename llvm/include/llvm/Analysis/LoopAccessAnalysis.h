@@ -588,9 +588,8 @@ public:
   static bool blockNeedsPredication(BasicBlock *BB, Loop *TheLoop,
                                     DominatorTree *DT);
 
-  /// Returns true if value \p V is uniform across \p VF lanes, when \p VF is
-  /// provided, and otherwise if \p V is invariant across all loop iterations.
-  bool isUniform(Value *V, std::optional<ElementCount> VF = std::nullopt) const;
+  /// Returns true if value \p V is loop invariant.
+  bool isInvariant(Value *V) const;
 
   uint64_t getMaxSafeDepDistBytes() const { return MaxSafeDepDistBytes; }
   unsigned getNumStores() const { return NumStores; }
