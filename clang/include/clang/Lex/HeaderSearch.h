@@ -867,7 +867,7 @@ public:
   ///        path is relative to a system header directory.
   std::string suggestPathToFileForDiagnostics(const FileEntry *File,
                                               llvm::StringRef MainFile,
-                                              bool *IsSystem = nullptr);
+                                              bool *IsSystem = nullptr) const;
 
   /// Suggest a path by which the specified file could be found, for use in
   /// diagnostics to suggest a #include. Returned path will only contain forward
@@ -881,7 +881,7 @@ public:
   std::string suggestPathToFileForDiagnostics(llvm::StringRef File,
                                               llvm::StringRef WorkingDir,
                                               llvm::StringRef MainFile,
-                                              bool *IsSystem = nullptr);
+                                              bool *IsSystem = nullptr) const;
 
   void PrintStats();
 
