@@ -126,6 +126,10 @@ def check_category_conflicts : Flag<["--"], "check-category-conflicts">,
     Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
+def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
+    HelpText<"Perform context senstive PGO instrumentation">, Group<grp_lld>;
+def cs_profile_path: Joined<["--"], "cs-profile-path=">,
+    HelpText<"Context sensitive profile file path">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo

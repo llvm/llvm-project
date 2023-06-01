@@ -772,16 +772,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                            "sample-profile=" + FName));
   }
 
-  auto *CSPGOGenerateArg = Args.getLastArg(options::OPT_fcs_profile_generate,
-                                           options::OPT_fcs_profile_generate_EQ,
-                                           options::OPT_fno_profile_generate);
-  if (CSPGOGenerateArg &&
-      CSPGOGenerateArg->getOption().matches(options::OPT_fno_profile_generate))
-    CSPGOGenerateArg = nullptr;
-
-  auto *ProfileUseArg = getLastProfileUseArg(Args);
-
-  if (CSPGOGenerateArg) {
+  if (auto *CSPGOGenerateArg = getLastCSProfileGenerateArg(Args)) {
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
                                          "cs-profile-generate"));
     if (CSPGOGenerateArg->getOption().matches(
@@ -794,7 +785,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
                              "cs-profile-path=default_%m.profraw"));
-  } else if (ProfileUseArg) {
+  } else if (auto *ProfileUseArg = getLastProfileUseArg(Args)) {
     SmallString<128> Path(
         ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue());
     if (Path.empty() || llvm::sys::fs::is_directory(Path))
@@ -1346,6 +1337,17 @@ void tools::claimNoWarnArgs(const ArgList &Args) {
   Args.ClaimAllArgs(options::OPT_flto_EQ);
   Args.ClaimAllArgs(options::OPT_flto);
   Args.ClaimAllArgs(options::OPT_fno_lto);
+}
+
+Arg *tools::getLastCSProfileGenerateArg(const ArgList &Args) {
+  auto *CSPGOGenerateArg = Args.getLastArg(options::OPT_fcs_profile_generate,
+                                           options::OPT_fcs_profile_generate_EQ,
+                                           options::OPT_fno_profile_generate);
+  if (CSPGOGenerateArg &&
+      CSPGOGenerateArg->getOption().matches(options::OPT_fno_profile_generate))
+    CSPGOGenerateArg = nullptr;
+
+  return CSPGOGenerateArg;
 }
 
 Arg *tools::getLastProfileUseArg(const ArgList &Args) {
