@@ -298,7 +298,7 @@ private:
   // importing the header.
   std::optional<std::string> getFrameworkUmbrellaSpelling(
       llvm::StringRef Framework, SrcMgr::CharacteristicKind HeadersDirKind,
-      HeaderSearch &HS, FrameworkHeaderPath &HeaderPath) {
+      const HeaderSearch &HS, FrameworkHeaderPath &HeaderPath) {
     auto Res = CacheFrameworkToUmbrellaHeaderSpelling.try_emplace(Framework);
     auto *CachedSpelling = &Res.first->second;
     if (!Res.second) {
