@@ -10,7 +10,6 @@
 
 // void clear() noexcept;
 
-#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -27,7 +26,6 @@ int main(int, char**)
         ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(std::distance(c.begin(), c.end()) == 0);
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
     {
         typedef int T;
@@ -38,11 +36,9 @@ int main(int, char**)
         ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(std::distance(c.begin(), c.end()) == 0);
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
 
         c.clear();
         assert(std::distance(c.begin(), c.end()) == 0);
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
 #if TEST_STD_VER >= 11
     {
@@ -52,7 +48,6 @@ int main(int, char**)
         ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(std::distance(c.begin(), c.end()) == 0);
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
     {
         typedef int T;
@@ -63,11 +58,9 @@ int main(int, char**)
         ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(std::distance(c.begin(), c.end()) == 0);
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
 
         c.clear();
         assert(std::distance(c.begin(), c.end()) == 0);
-        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
 #endif
 
