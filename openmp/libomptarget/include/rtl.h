@@ -194,7 +194,7 @@ struct RTLsTy {
   void loadRTLs();
 
   std::vector<std::string> archsSupportingManagedMemory = {
-      "gfx908", "gfx90a", "gfx940", "sm_35",
+      "gfx908", "gfx90a", "gfx940", "gfx941", "gfx942", "sm_35",
       "sm_50",  "sm_60",  "sm_70",  "sm_61"};
   // Return whether the current system supports omp_get_target_memory_space
   bool SystemSupportManagedMemory();
