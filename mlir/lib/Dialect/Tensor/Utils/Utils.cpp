@@ -123,3 +123,22 @@ bool mlir::tensor::isCastLikeInsertSliceOp(InsertSliceOp op) {
 
   return true;
 }
+
+bool mlir::tensor::isCastLikeExtractSliceOp(ExtractSliceOp op) {
+  llvm::SmallBitVector droppedDims = op.getDroppedDims();
+  int64_t resultDim = 0;
+  // Source dims and result dims (apart from dropped dims) must have the same
+  // size.
+  for (int64_t dim = 0; dim < op.getSourceType().getRank(); ++dim) {
+    if (droppedDims.test(dim)) {
+      continue;
+    }
+    FailureOr<bool> equalDimSize = ValueBoundsConstraintSet::areEqual(
+        op.getSource(), op.getResult(), dim, resultDim);
+    if (failed(equalDimSize) || !*equalDimSize)
+      return false;
+    ++resultDim;
+  }
+
+  return true;
+}
