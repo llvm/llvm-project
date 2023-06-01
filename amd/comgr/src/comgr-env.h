@@ -36,7 +36,6 @@
 #ifndef COMGR_ENV_H
 #define COMGR_ENV_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace COMGR {
@@ -47,7 +46,7 @@ bool shouldSaveTemps();
 
 /// If the environment requests logs be redirected, return the string identifier
 /// of where to redirect. Otherwise return @p None.
-llvm::Optional<llvm::StringRef> getRedirectLogs();
+std::optional<llvm::StringRef> getRedirectLogs();
 
 /// Return whether the environment requests verbose logging.
 bool shouldEmitVerboseLogs();

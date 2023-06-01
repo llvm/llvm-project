@@ -5,7 +5,6 @@
 #include <system_error>
 
 #include "comgr-env.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -29,7 +28,7 @@ static std::unique_ptr<PerfStats> PS = nullptr;
 static void dump() { PS->dumpPerfStats(); }
 
 void GetLogFile(std::string &PerfLog) {
-  if (Optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
+  if (std::optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
     PerfLog = (*RedirectLogs).str();
     return;
   }

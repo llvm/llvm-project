@@ -1293,7 +1293,7 @@ amd_comgr_status_t AMD_COMGR_API
     // Pointer to the currently selected log stream.
     raw_ostream *LogP = &LogS;
 
-    if (Optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
+    if (std::optional<StringRef> RedirectLogs = env::getRedirectLogs()) {
       StringRef RedirectLog = *RedirectLogs;
       if (RedirectLog == "stdout") {
         LogP = &outs();

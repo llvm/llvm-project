@@ -39,7 +39,6 @@
 #include "comgr-objdump.h"
 #include "comgr.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -2145,7 +2144,7 @@ void llvm::DisassemHelper::printRawClangAST(const ObjectFile *Obj) {
     ClangASTSectionName = "clangast";
   }
 
-  Optional<object::SectionRef> ClangASTSection;
+  std::optional<object::SectionRef> ClangASTSection;
   for (auto Sec : toolSectionFilter(*Obj)) {
     StringRef Name;
     auto NameOrErr = Sec.getName();
@@ -2188,7 +2187,7 @@ void llvm::DisassemHelper::printFaultMaps(const ObjectFile *Obj) {
     return;
   }
 
-  Optional<object::SectionRef> FaultMapSection;
+  std::optional<object::SectionRef> FaultMapSection;
 
   for (auto Sec : toolSectionFilter(*Obj)) {
     StringRef Name;
