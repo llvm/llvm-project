@@ -3086,9 +3086,10 @@ void Parser::ParsePtrauthQualifier(ParsedAttributes &attrs) {
   SourceLocation endLoc = T.getCloseLocation();
 
   attrs.addNew(kwName, SourceRange(kwLoc, endLoc),
-               /*scope*/ nullptr, SourceLocation(),
-               argExprs.data(), argExprs.size(),
-               ParsedAttr::Form::Keyword(false));
+               /*scope*/ nullptr, SourceLocation(), argExprs.data(),
+               argExprs.size(),
+               ParsedAttr::Form::Keyword(/*IsAlignAs=*/false,
+                                         /*IsRegularKeywordAttribute=*/false));
 }
 
 ExprResult Parser::ParseExtIntegerArgument() {

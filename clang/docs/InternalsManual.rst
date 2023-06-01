@@ -2798,12 +2798,12 @@ and then the semantic handling of the attribute.
 Parsing of the attribute is determined by the various syntactic forms attributes
 can take, such as GNU, C++11, and Microsoft style attributes, as well as other
 information provided by the table definition of the attribute. Ultimately, the
-parsed representation of an attribute object is an ``ParsedAttr`` object.
+parsed representation of an attribute object is a ``ParsedAttr`` object.
 These parsed attributes chain together as a list of parsed attributes attached
 to a declarator or declaration specifier. The parsing of attributes is handled
-automatically by Clang, except for attributes spelled as keywords. When
-implementing a keyword attribute, the parsing of the keyword and creation of the
-``ParsedAttr`` object must be done manually.
+automatically by Clang, except for attributes spelled as so-called “custom”
+keywords. When implementing a custom keyword attribute, the parsing of the
+keyword and creation of the ``ParsedAttr`` object must be done manually.
 
 Eventually, ``Sema::ProcessDeclAttributeList()`` is called with a ``Decl`` and
 a ``ParsedAttr``, at which point the parsed attribute can be transformed
@@ -2856,33 +2856,60 @@ may have a keyword spelling, as well as a C++11 spelling and a GNU spelling. An
 empty spelling list is also permissible and may be useful for attributes which
 are created implicitly. The following spellings are accepted:
 
-  ============  ================================================================
-  Spelling      Description
-  ============  ================================================================
-  ``GNU``       Spelled with a GNU-style ``__attribute__((attr))`` syntax and
-                placement.
-  ``CXX11``     Spelled with a C++-style ``[[attr]]`` syntax with an optional
-                vendor-specific namespace.
-  ``C2x``       Spelled with a C-style ``[[attr]]`` syntax with an optional
-                vendor-specific namespace.
-  ``Declspec``  Spelled with a Microsoft-style ``__declspec(attr)`` syntax.
-  ``Keyword``   The attribute is spelled as a keyword, and required custom
-                parsing.
-  ``GCC``       Specifies two or three spellings: the first is a GNU-style
-                spelling, the second is a C++-style spelling with the ``gnu``
-                namespace, and the third is an optional C-style spelling with
-                the ``gnu`` namespace. Attributes should only specify this
-                spelling for attributes supported by GCC.
-  ``Clang``     Specifies two or three spellings: the first is a GNU-style
-                spelling, the second is a C++-style spelling with the ``clang``
-                namespace, and the third is an optional C-style spelling with
-                the ``clang`` namespace. By default, a C-style spelling is
-                provided.
-  ``Pragma``    The attribute is spelled as a ``#pragma``, and requires custom
-                processing within the preprocessor. If the attribute is meant to
-                be used by Clang, it should set the namespace to ``"clang"``.
-                Note that this spelling is not used for declaration attributes.
-  ============  ================================================================
+  ==================  =========================================================
+  Spelling            Description
+  ==================  =========================================================
+  ``GNU``             Spelled with a GNU-style ``__attribute__((attr))``
+                      syntax and placement.
+  ``CXX11``           Spelled with a C++-style ``[[attr]]`` syntax with an
+                      optional vendor-specific namespace.
+  ``C2x``             Spelled with a C-style ``[[attr]]`` syntax with an
+                      optional vendor-specific namespace.
+  ``Declspec``        Spelled with a Microsoft-style ``__declspec(attr)``
+                      syntax.
+  ``CustomKeyword``   The attribute is spelled as a keyword, and requires
+                      custom parsing.
+  ``RegularKeyword``  The attribute is spelled as a keyword. It can be
+                      used in exactly the places that the standard
+                      ``[[attr]]`` syntax can be used, and appertains to
+                      exactly the same thing that a standard attribute
+                      would appertain to. Lexing and parsing of the keyword
+                      are handled automatically.
+  ``GCC``             Specifies two or three spellings: the first is a
+                      GNU-style spelling, the second is a C++-style spelling
+                      with the ``gnu`` namespace, and the third is an optional
+                      C-style spelling with the ``gnu`` namespace. Attributes
+                      should only specify this spelling for attributes
+                      supported by GCC.
+  ``Clang``           Specifies two or three spellings: the first is a
+                      GNU-style spelling, the second is a C++-style spelling
+                      with the ``clang`` namespace, and the third is an
+                      optional C-style spelling with the ``clang`` namespace.
+                      By default, a C-style spelling is provided.
+  ``Pragma``          The attribute is spelled as a ``#pragma``, and requires
+                      custom processing within the preprocessor. If the
+                      attribute is meant to be used by Clang, it should
+                      set the namespace to ``"clang"``. Note that this
+                      spelling is not used for declaration attributes.
+  ==================  =========================================================
+
+The C++ standard specifies that “any [non-standard attribute] that is not
+recognized by the implementation is ignored” (``[dcl.attr.grammar]``).
+The rule for C is similar. This makes ``CXX11`` and ``C2x`` spellings
+unsuitable for attributes that affect the type system, that change the
+binary interface of the code, or that have other similar semantic meaning.
+
+``RegularKeyword`` provides an alternative way of spelling such attributes.
+It reuses the production rules for standard attributes, but it applies them
+to plain keywords rather than to ``[[…]]`` sequences. Compilers that don't
+recognize the keyword are likely to report an error of some kind.
+
+For example, the ``ArmStreaming`` function type attribute affects
+both the type system and the binary interface of the function.
+It cannot therefore be spelled ``[[arm::streaming]]``, since compilers
+that don't understand ``arm::streaming`` would ignore it and miscompile
+the code. ``ArmStreaming`` is instead spelled ``__arm_streaming``, but it
+can appear wherever a hypothetical ``[[arm::streaming]]`` could appear.
 
 Subjects
 ~~~~~~~~
