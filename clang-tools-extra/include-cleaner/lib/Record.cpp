@@ -305,7 +305,7 @@ private:
 
   bool InMainFile = false;
   const SourceManager &SM;
-  HeaderSearch &HeaderInfo;
+  const HeaderSearch &HeaderInfo;
   PragmaIncludes *Out;
   llvm::BumpPtrAllocator Arena;
   /// Intern table for strings. Contents are on the arena.
