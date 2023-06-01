@@ -35,7 +35,7 @@ void OptionValueProperties::Initialize(const PropertyDefinitions &defs) {
 }
 
 void OptionValueProperties::SetValueChangedCallback(
-    uint32_t property_idx, std::function<void()> callback) {
+    size_t property_idx, std::function<void()> callback) {
   Property *property = ProtectedGetPropertyAtIndex(property_idx);
   if (property)
     property->SetValueChangedCallback(std::move(callback));
@@ -138,7 +138,7 @@ Status OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
   return error;
 }
 
-uint32_t OptionValueProperties::GetPropertyIndex(ConstString name) const {
+size_t OptionValueProperties::GetPropertyIndex(ConstString name) const {
   return m_name_to_index.Find(name, SIZE_MAX);
 }
 
@@ -149,7 +149,7 @@ OptionValueProperties::GetProperty(ConstString name,
 }
 
 lldb::OptionValueSP OptionValueProperties::GetPropertyValueAtIndex(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *setting = GetPropertyAtIndex(idx, exe_ctx);
   if (setting)
     return setting->GetValue();
@@ -158,7 +158,7 @@ lldb::OptionValueSP OptionValueProperties::GetPropertyValueAtIndex(
 
 OptionValuePathMappings *
 OptionValueProperties::GetPropertyAtIndexAsOptionValuePathMappings(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   OptionValueSP value_sp(GetPropertyValueAtIndex(idx, exe_ctx));
   if (value_sp)
     return value_sp->GetAsPathMappings();
@@ -167,7 +167,7 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValuePathMappings(
 
 OptionValueFileSpecList *
 OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpecList(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   OptionValueSP value_sp(GetPropertyValueAtIndex(idx, exe_ctx));
   if (value_sp)
     return value_sp->GetAsFileSpecList();
@@ -175,7 +175,7 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpecList(
 }
 
 bool OptionValueProperties::GetPropertyAtIndexAsArgs(
-    uint32_t idx, Args &args, const ExecutionContext *exe_ctx) const {
+    size_t idx, Args &args, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (!property)
     return false;
@@ -206,7 +206,7 @@ bool OptionValueProperties::GetPropertyAtIndexAsArgs(
 }
 
 bool OptionValueProperties::SetPropertyAtIndexFromArgs(
-    uint32_t idx, const Args &args, const ExecutionContext *exe_ctx) {
+    size_t idx, const Args &args, const ExecutionContext *exe_ctx) {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (!property)
     return false;
@@ -232,7 +232,7 @@ bool OptionValueProperties::SetPropertyAtIndexFromArgs(
 
 OptionValueDictionary *
 OptionValueProperties::GetPropertyAtIndexAsOptionValueDictionary(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (property)
     return property->GetValue()->GetAsDictionary();
@@ -241,7 +241,7 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueDictionary(
 
 OptionValueFileSpec *
 OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpec(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (property) {
     OptionValue *value = property->GetValue().get();
@@ -252,7 +252,7 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpec(
 }
 
 OptionValueSInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueSInt64(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (property) {
     OptionValue *value = property->GetValue().get();
@@ -263,7 +263,7 @@ OptionValueSInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueSInt64(
 }
 
 OptionValueUInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueUInt64(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
   if (property) {
     OptionValue *value = property->GetValue().get();
@@ -274,7 +274,7 @@ OptionValueUInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueUInt64(
 }
 
 OptionValueString *OptionValueProperties::GetPropertyAtIndexAsOptionValueString(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
+    size_t idx, const ExecutionContext *exe_ctx) const {
   OptionValueSP value_sp(GetPropertyValueAtIndex(idx, exe_ctx));
   if (value_sp)
     return value_sp->GetAsString();
