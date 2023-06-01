@@ -465,6 +465,29 @@ StackArraysAnalysisWrapper::getCandidateOps(mlir::Operation *func) {
   return &funcMaps[func];
 }
 
+/// Restore the old allocation type exected by existing code
+static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
+                                         const mlir::Location &loc,
+                                         mlir::Value heap, mlir::Value stack) {
+  mlir::Type heapTy = heap.getType();
+  mlir::Type stackTy = stack.getType();
+
+  if (heapTy == stackTy)
+    return stack;
+
+  fir::HeapType firHeapTy = mlir::cast<fir::HeapType>(heapTy);
+  fir::ReferenceType firRefTy = mlir::cast<fir::ReferenceType>(stackTy);
+  assert(firHeapTy.getElementType() == firRefTy.getElementType() &&
+         "Allocations must have the same type");
+
+  auto insertionPoint = rewriter.saveInsertionPoint();
+  rewriter.setInsertionPointAfter(stack.getDefiningOp());
+  mlir::Value conv =
+      rewriter.create<fir::ConvertOp>(loc, firHeapTy, stack).getResult();
+  rewriter.restoreInsertionPoint(insertionPoint);
+  return conv;
+}
+
 mlir::LogicalResult
 AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
                                     mlir::PatternRewriter &rewriter) const {
@@ -485,7 +508,9 @@ AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
     rewriter.eraseOp(erase);
 
   // replace references to heap allocation with references to stack allocation
-  rewriter.replaceAllUsesWith(allocmem.getResult(), alloca->getResult());
+  mlir::Value newValue = convertAllocationType(
+      rewriter, allocmem.getLoc(), allocmem.getResult(), alloca->getResult());
+  rewriter.replaceAllUsesWith(allocmem.getResult(), newValue);
 
   // remove allocmem operation
   rewriter.eraseOp(allocmem.getOperation());
