@@ -267,6 +267,7 @@ module std [system] {
       module find_if_not                     { private header "__algorithm/find_if_not.h" }
       module for_each                        { private header "__algorithm/for_each.h" }
       module for_each_n                      { private header "__algorithm/for_each_n.h" }
+      module for_each_segment                { private header "__algorithm/for_each_segment.h" }
       module generate                        { private header "__algorithm/generate.h" }
       module generate_n                      { private header "__algorithm/generate_n.h" }
       module half_positive                   { private header "__algorithm/half_positive.h" }
