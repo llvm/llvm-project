@@ -105,3 +105,38 @@ func.func @cast_like_insert_slice_dynamic(
       {replacement_0 = 0} : tensor<?xf32> into tensor<1x?x1xf32>
   return
 }
+
+// -----
+
+func.func @cast_like_extract_slice() {
+  %0 = "test.foo"() {replaced} : () -> (tensor<5xf32>)
+  // expected-remark @below {{replacement found}}
+  %1 = "test.foo"() : () -> (tensor<1x5x1x1xf32>)
+  %2 = tensor.extract_slice %1[0, 0, 0, 0][1, 5, 1, 1][1, 1, 1, 1]
+      {replacement_0 = 0} : tensor<1x5x1x1xf32> to tensor<5xf32>
+  return
+}
+
+// -----
+
+func.func @cast_like_extract_slice_dynamic() {
+  %0 = "test.foo"() {replaced} : () -> (tensor<?xf32>)
+  // expected-remark @below {{replacement found}}
+  %1 = "test.foo"() : () -> (tensor<1x?x1x1xf32>)
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %1, %c1 : tensor<1x?x1x1xf32>
+  %2 = tensor.extract_slice %1[0, 0, 0, 0][1, %dim, 1, 1][1, 1, 1, 1]
+      {replacement_0 = 0} : tensor<1x?x1x1xf32> to tensor<?xf32>
+  return
+}
+
+// -----
+
+func.func @non_cast_like_extract_slice() {
+  // expected-error @below {{listener could not find replacement op}}
+  %0 = "test.foo"() {replaced} : () -> (tensor<5xf32>)
+  %1 = "test.foo"() : () -> (tensor<1x5x1x1xf32>)
+  %2 = tensor.extract_slice %1[0, 0, 0, 0][1, 3, 1, 1][1, 1, 1, 1]
+      {replacement_0 = 0} : tensor<1x5x1x1xf32> to tensor<3xf32>
+  return
+}
