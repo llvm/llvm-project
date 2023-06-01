@@ -1163,6 +1163,14 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
                               MutableArrayRef<Value> reduc) {
   const LoopInfo &loopInfo = loopStack.back();
   rewriter.setInsertionPointToEnd(loopInfo.userCodeBlock);
+  if (!loopInfo.userCodeBlock->empty() &&
+      llvm::isa<scf::ForOp>(loopInfo.loop) &&
+      llvm::isa<scf::YieldOp>(&loopInfo.userCodeBlock->back())) {
+    // scf::For inserts an implicit yield op when there is no loop iter args. In
+    // this case, we need to insert the code before the yield.
+    assert(reduc.empty());
+    rewriter.setInsertionPoint(&loopInfo.userCodeBlock->back());
+  }
   for (auto [tid, lvl, reduced] : loopInfo.sliceDrivenInfo) {
     SliceInfo &info = sliceStack[tid].back();
     assert(isDenseDLT(lvlTypes[tid][lvl]));

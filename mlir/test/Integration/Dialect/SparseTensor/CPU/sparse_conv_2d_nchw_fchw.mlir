@@ -30,16 +30,14 @@
 // TODO: we can only support dense output for nchw input because 'c' is a reduction loop
 
 
-#CCCD = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense", "dense", "compressed" ]
+#CDCD = #sparse_tensor.encoding<{
+  lvlTypes = [ "compressed", "dense", "compressed", "dense" ]
 }>
 
 
 #CCCC = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed", "compressed", "compressed" ]
 }>
-
-// FIXME: CDCD encoding crashes!
 
 // Creates and returns 4-D buffer of size (%s1, %s2, %s3, %s4) filled with the value %f
 func.func @alloc_4d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %f : f32) -> tensor<?x?x?x?xf32> {
@@ -56,10 +54,10 @@ func.func @conv_2d_nchw_fchw(%arg0: tensor<?x?x?x?xf32>, %arg1: tensor<?x?x?x?xf
   return %ret : tensor<?x?x?x?xf32>
 }
 
-func.func @conv_2d_nchw_fchw_CCCD(%arg0: tensor<?x?x?x?xf32, #CCCD>, %arg1: tensor<?x?x?x?xf32>, %arg2: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+func.func @conv_2d_nchw_fchw_CDCD(%arg0: tensor<?x?x?x?xf32, #CDCD>, %arg1: tensor<?x?x?x?xf32>, %arg2: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %ret = linalg.conv_2d_nchw_fchw {dilations = dense<1> : tensor<2xi64>,
                                      strides = dense<1> : tensor<2xi64>}
-     ins (%arg0, %arg1: tensor<?x?x?x?xf32, #CCCD>, tensor<?x?x?x?xf32>)
+     ins (%arg0, %arg1: tensor<?x?x?x?xf32, #CDCD>, tensor<?x?x?x?xf32>)
     outs (%arg2: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
   return %ret : tensor<?x?x?x?xf32>
 }
@@ -90,12 +88,12 @@ func.func @entry() {
   %out2D_nhwc_CCCC = call @alloc_4d_filled_f32(%c3, %c1, %c6, %c6, %zero) : (index, index, index, index, f32) -> (tensor<?x?x?x?xf32>)
 
   %in2D_nhwc_CCCD = sparse_tensor.convert %in2D_nhwc
-    : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32, #CCCD>
+    : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32, #CDCD>
   %in2D_nhwc_CCCC = sparse_tensor.convert %in2D_nhwc
     : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32, #CCCC>
 
   %dense_ret = call @conv_2d_nchw_fchw(%in2D_nhwc, %filter2D_nhwc, %out2D_nhwc) : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
-  %CCCC_ret = call @conv_2d_nchw_fchw_CCCD(%in2D_nhwc_CCCD, %filter2D_nhwc, %out2D_nhwc_CCCD) : (tensor<?x?x?x?xf32, #CCCD>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
+  %CCCC_ret = call @conv_2d_nchw_fchw_CDCD(%in2D_nhwc_CCCD, %filter2D_nhwc, %out2D_nhwc_CCCD) : (tensor<?x?x?x?xf32, #CDCD>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
   %CDCD_ret = call @conv_2d_nchw_fchw_CCCC(%in2D_nhwc_CCCC, %filter2D_nhwc, %out2D_nhwc_CCCC) : (tensor<?x?x?x?xf32, #CCCC>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
 
 
@@ -173,6 +171,6 @@ func.func @entry() {
   bufferization.dealloc_tensor %out2D_nhwc_CCCC : tensor<?x?x?x?xf32>
 
   bufferization.dealloc_tensor %in2D_nhwc_CCCC : tensor<?x?x?x?xf32, #CCCC>
-  bufferization.dealloc_tensor %in2D_nhwc_CCCD : tensor<?x?x?x?xf32, #CCCD>
+  bufferization.dealloc_tensor %in2D_nhwc_CCCD : tensor<?x?x?x?xf32, #CDCD>
   return
 }
