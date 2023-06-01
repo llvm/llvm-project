@@ -156,13 +156,19 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   }
   theModule->setAttr("cir.sob",
                      mlir::cir::SignedOverflowBehaviorAttr::get(&context, sob));
-  // Set the module name to be the name of the main file.
+  // Set the module name to be the name of the main file. TranslationUnitDecl
+  // often contains invalid source locations and isn't a reliable source for the
+  // module location.
   auto MainFileID = astctx.getSourceManager().getMainFileID();
   const FileEntry &MainFile =
       *astctx.getSourceManager().getFileEntryForID(MainFileID);
   auto Path = MainFile.tryGetRealPathName();
-  if (!Path.empty())
+  if (!Path.empty()) {
     theModule.setSymName(Path);
+    theModule->setLoc(mlir::FileLineColLoc::get(&context, Path,
+                                                /*line=*/0,
+                                                /*col=*/0));
+  }
 }
 
 CIRGenModule::~CIRGenModule() {}
