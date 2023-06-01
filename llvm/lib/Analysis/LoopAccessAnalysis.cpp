@@ -2569,6 +2569,10 @@ public:
     // incrementing the start by Offset * step.
     Type *Ty = Expr->getType();
     auto *Step = Expr->getStepRecurrence(SE);
+    if (!SE.isLoopInvariant(Step, TheLoop)) {
+      CannotAnalyze = true;
+      return Expr;
+    }
     auto *NewStep = SE.getMulExpr(Step, SE.getConstant(Ty, StepMultiplier));
     auto *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
     auto *NewStart = SE.getAddExpr(Expr->getStart(), ScaledOffset);
