@@ -234,13 +234,13 @@ void ProcessProperties::SetVirtualAddressableBits(uint32_t bits) {
 
 uint32_t ProcessProperties::GetHighmemVirtualAddressableBits() const {
   const uint32_t idx = ePropertyHighmemVirtualAddressableBits;
-  return GetPropertyAtIndexAs<uint64_t>(
-      idx, g_process_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_process_properties[idx].default_uint_value);
 }
 
 void ProcessProperties::SetHighmemVirtualAddressableBits(uint32_t bits) {
   const uint32_t idx = ePropertyHighmemVirtualAddressableBits;
-  SetPropertyAtIndex(idx, static_cast<uint64_t>(bits));
+  m_collection_sp->SetPropertyAtIndexAsUInt64(nullptr, idx, bits);
 }
 
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {
