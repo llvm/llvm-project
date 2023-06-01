@@ -481,7 +481,7 @@ public:
 
   /// Forwards to SwiftASTContext.
   PersistentExpressionState *GetPersistentExpressionState() override;
-  void PerformCompileUnitImports(SymbolContext &sc);
+  Status PerformCompileUnitImports(SymbolContext &sc);
 
   friend class SwiftASTContextForExpressions;
 protected:
