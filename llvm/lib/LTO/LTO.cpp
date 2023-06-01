@@ -446,39 +446,52 @@ void llvm::thinLTOResolvePrevailingInIndex(
                                  recordNewLinkage, GUIDPreservedSymbols);
 }
 
-static bool isWeakObjectWithRWAccess(GlobalValueSummary *GVS) {
-  if (auto *VarSummary = dyn_cast<GlobalVarSummary>(GVS->getBaseObject()))
-    return !VarSummary->maybeReadOnly() && !VarSummary->maybeWriteOnly() &&
-           (VarSummary->linkage() == GlobalValue::WeakODRLinkage ||
-            VarSummary->linkage() == GlobalValue::LinkOnceODRLinkage);
-  return false;
-}
-
 static void thinLTOInternalizeAndPromoteGUID(
     ValueInfo VI, function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
   for (auto &S : VI.getSummaryList()) {
+    // First see if we need to promote an internal value because it is not
+    // exported.
     if (isExported(S->modulePath(), VI)) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
         S->setLinkage(GlobalValue::ExternalLinkage);
-    } else if (EnableLTOInternalization &&
-               // Ignore local and appending linkage values since the linker
-               // doesn't resolve them.
-               !GlobalValue::isLocalLinkage(S->linkage()) &&
-               (!GlobalValue::isInterposableLinkage(S->linkage()) ||
-                isPrevailing(VI.getGUID(), S.get())) &&
-               S->linkage() != GlobalValue::AppendingLinkage &&
-               // We can't internalize available_externally globals because this
-               // can break function pointer equality.
-               S->linkage() != GlobalValue::AvailableExternallyLinkage &&
-               // Functions and read-only variables with linkonce_odr and
-               // weak_odr linkage can be internalized. We can't internalize
-               // linkonce_odr and weak_odr variables which are both modified
-               // and read somewhere in the program because reads and writes
-               // will become inconsistent.
-               !isWeakObjectWithRWAccess(S.get()))
-      S->setLinkage(GlobalValue::InternalLinkage);
+      continue;
+    }
+
+    // Otherwise, see if we can internalize.
+    if (!EnableLTOInternalization)
+      continue;
+
+    // Ignore local and appending linkage values since the linker
+    // doesn't resolve them (and there is no need to internalize if this is
+    // already internal).
+    if (GlobalValue::isLocalLinkage(S->linkage()) ||
+        S->linkage() == GlobalValue::AppendingLinkage)
+      continue;
+
+    // We can't internalize available_externally globals because this
+    // can break function pointer equality.
+    if (S->linkage() == GlobalValue::AvailableExternallyLinkage)
+      continue;
+
+    bool IsPrevailing = isPrevailing(VI.getGUID(), S.get());
+
+    if (GlobalValue::isInterposableLinkage(S->linkage()) && !IsPrevailing)
+      continue;
+
+    // Functions and read-only variables with linkonce_odr and weak_odr linkage
+    // can be internalized. We can't internalize linkonce_odr and weak_odr
+    // variables which are both modified and read somewhere in the program
+    // because reads and writes will become inconsistent.
+    auto *VarSummary = dyn_cast<GlobalVarSummary>(S->getBaseObject());
+    if (VarSummary && !VarSummary->maybeReadOnly() &&
+        !VarSummary->maybeWriteOnly() &&
+        (VarSummary->linkage() == GlobalValue::WeakODRLinkage ||
+         VarSummary->linkage() == GlobalValue::LinkOnceODRLinkage))
+      continue;
+
+    S->setLinkage(GlobalValue::InternalLinkage);
   }
 }
 
