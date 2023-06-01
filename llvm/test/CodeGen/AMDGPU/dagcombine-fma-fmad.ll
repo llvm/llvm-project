@@ -257,6 +257,23 @@ define amdgpu_ps float @fmac_sequence_innermost_fmul_multiple_use(float inreg %a
   ret float %t7
 }
 
+; "fmul %m, 2.0" could select to an FMA instruction, but it is no better than
+; selecting it as a multiply. In some cases the multiply is better because
+; SIFoldOperands can fold it into a previous instruction as an output modifier.
+define amdgpu_ps float @fma_vs_output_modifier(float %x, i32 %n) #0 {
+; GCN-LABEL: fma_vs_output_modifier:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cvt_f32_i32_e64 v1, v1 mul:2
+; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
+; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-NEXT:    ; return to shader part epilog
+  %s = sitofp i32 %n to float
+  %m = fmul contract float %x, %x
+  %a = fmul contract float %m, 2.0
+  %r = fmul reassoc nsz float %a, %s
+  ret float %r
+}
+
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare float @llvm.maxnum.f32(float, float) #1
 
