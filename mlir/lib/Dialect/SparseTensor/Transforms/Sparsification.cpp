@@ -1848,6 +1848,24 @@ public:
     if (!findSparseAnnotations(env, idxReducBased))
       return failure();
 
+    // Only standard reduction operations (add, sub, or, xor) that can be
+    // sparsified by merely reducing the stored values are admissible. More
+    // elaborate reduction operations (such as mul, and, min, max) would need
+    // to know whether implicit zeros occur as well. They can still be
+    // implemented with a custom reduction operation, accepted here as well.
+    if (op.getNumReductionLoops() > 0) {
+      Operation *yield = op.getRegion().front().getTerminator();
+      assert(isa<linalg::YieldOp>(yield));
+      Operation *redop = yield->getOperand(0).getDefiningOp();
+      if (!isa<arith::AddFOp>(redop) && !isa<complex::AddOp>(redop) &&
+          !isa<arith::AddIOp>(redop) && !isa<arith::SubFOp>(redop) &&
+          !isa<complex::SubOp>(redop) && !isa<arith::SubIOp>(redop) &&
+          !isa<arith::OrIOp>(redop) && !isa<arith::XOrIOp>(redop) &&
+          !isa<ReduceOp>(redop)) {
+        return failure();
+      }
+    }
+
     // Constructs the tensor expressions tree from `op`, returns failure if the
     // tree can not be built or the tensor expression is inadmissible.
     if (failed(env.initTensorExp()))
