@@ -5870,11 +5870,13 @@ multiclass VPatConversionWF_VF<string intrinsic, string instruction> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
-                                 GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionTA<intrinsic, instruction, "V",
-                            fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
-                            fvti.LMul, fwti.RegClass, fvti.RegClass>;
+    // Define vfwcvt.f.f.v for f16 when Zvfhmin is enable.
+    let Predicates = !if(!eq(fvti.Scalar, f16), [HasVInstructionsF16Minimal],
+                         !listconcat(GetVTypePredicates<fvti>.Predicates,
+                                     GetVTypePredicates<fwti>.Predicates)) in
+      defm : VPatConversionTA<intrinsic, instruction, "V",
+                              fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
+                              fvti.LMul, fwti.RegClass, fvti.RegClass>;
   }
 }
 
@@ -5939,8 +5941,9 @@ multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
   }
 }
 
-multiclass VPatConversionVF_WF_RM <string intrinsic, string instruction> {
-  foreach fvtiToFWti = AllWidenableFloatVectors in {
+multiclass VPatConversionVF_WF_RM <string intrinsic, string instruction,
+                                   list<VTypeInfoToWide> wlist = AllWidenableFloatVectors> {
+  foreach fvtiToFWti = wlist in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
@@ -7196,8 +7199,17 @@ defm : VPatConversionVI_WF<"int_riscv_vfncvt_rtz_xu_f_w", "PseudoVFNCVT_RTZ_XU_F
 defm : VPatConversionVI_WF<"int_riscv_vfncvt_rtz_x_f_w", "PseudoVFNCVT_RTZ_X_F">;
 defm : VPatConversionVF_WI_RM <"int_riscv_vfncvt_f_xu_w", "PseudoVFNCVT_F_XU">;
 defm : VPatConversionVF_WI_RM <"int_riscv_vfncvt_f_x_w", "PseudoVFNCVT_F_X">;
-defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F">;
-defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w",
+defvar WidenableFloatVectorsExceptF16 = !filter(fvtiToFWti, AllWidenableFloatVectors,
+                                                !ne(fvtiToFWti.Vti.Scalar, f16));
+defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F",
+                           WidenableFloatVectorsExceptF16>;
+// Define vfncvt.f.f.w for f16 when Zvfhmin is enable.
+defvar F16WidenableFloatVectors = !filter(fvtiToFWti, AllWidenableFloatVectors,
+                                          !eq(fvtiToFWti.Vti.Scalar, f16));
+let Predicates = [HasVInstructionsF16Minimal] in
+defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F",
+                           F16WidenableFloatVectors>;
+defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w", 
                                  "PseudoVFNCVTBF16_F_F">;
 defm : VPatConversionVF_WF<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F">;
 
