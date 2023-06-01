@@ -89,6 +89,30 @@ add_header_library(
 )
 
 add_libc_test(
+  strtoint32_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strtoint32_test.cpp
+  DEPENDS
+    libc.src.__support.str_to_integer
+    libc.src.errno.errno
+    .strtol_test_support
+)
+
+add_libc_test(
+  strtoint64_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strtoint64_test.cpp
+  DEPENDS
+    libc.src.__support.str_to_integer
+    libc.src.errno.errno
+    .strtol_test_support
+)
+
+add_libc_test(
   strtol_test
   SUITE
     libc-stdlib-tests
