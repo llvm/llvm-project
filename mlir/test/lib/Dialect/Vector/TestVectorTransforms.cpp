@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -709,6 +710,32 @@ struct TestVectorTransferTensorSlicePatterns
   }
 };
 
+struct TestFoldArithExtensionIntoVectorContractPatterns
+    : public PassWrapper<TestFoldArithExtensionIntoVectorContractPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestFoldArithExtensionIntoVectorContractPatterns)
+
+  StringRef getArgument() const final {
+    return "test-fold-arith-extf-into-vector-contract-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test patterns that fold arithmetic extension ops into vector "
+           "contract ops";
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect, func::FuncDialect, nvgpu::NVGPUDialect,
+                    memref::MemRefDialect, scf::SCFDialect,
+                    tensor::TensorDialect, vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateFoldArithExtensionPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -745,6 +772,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorGatherLowering>();
 
   PassRegistration<TestVectorTransferTensorSlicePatterns>();
+
+  PassRegistration<TestFoldArithExtensionIntoVectorContractPatterns>();
 }
 } // namespace test
 } // namespace mlir
