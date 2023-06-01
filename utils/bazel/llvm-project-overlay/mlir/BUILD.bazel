@@ -5935,6 +5935,7 @@ cc_library(
         ":ArithUtils",
         ":DialectUtils",
         ":TensorDialect",
+        ":ValueBoundsOpInterface",
         "//llvm:Support",
     ],
 )
@@ -5988,6 +5989,7 @@ cc_library(
         ":SCFDialect",
         ":TensorDialect",
         ":TensorPassIncGen",
+        ":TensorUtils",
         ":TilingInterface",
         ":Transforms",
         ":ValueBoundsOpInterface",
@@ -6039,6 +6041,7 @@ cc_library(
         ":TensorDialect",
         ":TensorTransformOpsIncGen",
         ":TensorTransforms",
+        ":TensorUtils",
         ":TransformDialect",
         ":ValueBoundsOpInterface",
         "//llvm:Support",
