@@ -80,6 +80,7 @@ set(files
   __algorithm/pstl_backends/cpu_backends/for_each.h
   __algorithm/pstl_backends/cpu_backends/merge.h
   __algorithm/pstl_backends/cpu_backends/serial.h
+  __algorithm/pstl_backends/cpu_backends/stable_sort.h
   __algorithm/pstl_backends/cpu_backends/thread.h
   __algorithm/pstl_backends/cpu_backends/transform.h
   __algorithm/pstl_backends/cpu_backends/transform_reduce.h
@@ -89,6 +90,7 @@ set(files
   __algorithm/pstl_for_each.h
   __algorithm/pstl_frontend_dispatch.h
   __algorithm/pstl_merge.h
+  __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h

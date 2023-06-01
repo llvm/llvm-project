@@ -37,6 +37,12 @@
       _Compare __comp,
       _LeafMerge __leaf_merge);
 
+  template <class _RandomAccessIterator, class _Comp, class _LeafSort>
+  void __parallel_stable_sort(_RandomAccessIterator __first,
+                              _RandomAccessIterator __last,
+                              _Comp __comp,
+                              _LeafSort __leaf_sort);
+
   TODO: Document the parallel backend
 */
 
@@ -46,6 +52,7 @@
 #include <__algorithm/pstl_backends/cpu_backends/find_if.h>
 #include <__algorithm/pstl_backends/cpu_backends/for_each.h>
 #include <__algorithm/pstl_backends/cpu_backends/merge.h>
+#include <__algorithm/pstl_backends/cpu_backends/stable_sort.h>
 #include <__algorithm/pstl_backends/cpu_backends/transform.h>
 #include <__algorithm/pstl_backends/cpu_backends/transform_reduce.h>
 

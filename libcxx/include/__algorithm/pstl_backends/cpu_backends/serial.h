@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__utility/move.h>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -33,6 +34,12 @@ template <class _Index, class _UnaryOp, class _Tp, class _BinaryOp, class _Reduc
 _LIBCPP_HIDE_FROM_ABI _Tp
 __parallel_transform_reduce(_Index __first, _Index __last, _UnaryOp, _Tp __init, _BinaryOp, _Reduce __reduce) {
   return __reduce(std::move(__first), std::move(__last), std::move(__init));
+}
+
+template <class _RandomAccessIterator, class _Compare, class _LeafSort>
+_LIBCPP_HIDE_FROM_ABI void __parallel_stable_sort(
+    _RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp, _LeafSort __leaf_sort) {
+  __leaf_sort(__first, __last, __comp);
 }
 
 _LIBCPP_HIDE_FROM_ABI inline void __cancel_execution() {}
