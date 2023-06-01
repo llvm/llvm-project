@@ -355,6 +355,8 @@ bootstrapping-build)
 
     echo "--- Installing libc++ and libc++abi to a fake location"
     ${NINJA} -C "${BUILD_DIR}" install-runtimes
+
+    ccache -s
 ;;
 generic-static)
     clean
