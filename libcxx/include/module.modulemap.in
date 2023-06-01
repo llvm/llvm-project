@@ -351,6 +351,9 @@ module std [system] {
       module pstl_backends_cpu_backends_transform {
         private header "__algorithm/pstl_backends/cpu_backends/transform.h"
       }
+      module pstl_backends_cpu_backends_transform_reduce {
+        private header "__algorithm/pstl_backends/cpu_backends/transform_reduce.h"
+      }
       module push_heap                       { private header "__algorithm/push_heap.h" }
       module ranges_adjacent_find            { private header "__algorithm/ranges_adjacent_find.h" }
       module ranges_all_of                   { private header "__algorithm/ranges_all_of.h" }
@@ -1679,6 +1682,7 @@ module std [system] {
     module nat                                       { private header "__type_traits/nat.h" }
     module negation                                  { private header "__type_traits/negation.h" }
     module noexcept_move_assign_container            { private header "__type_traits/noexcept_move_assign_container.h" }
+    module operation_traits                          { private header "__type_traits/operation_traits.h" }
     module predicate_traits                          { private header "__type_traits/predicate_traits.h" }
     module promote                                   { private header "__type_traits/promote.h" }
     module rank                                      { private header "__type_traits/rank.h" }

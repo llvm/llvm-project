@@ -15,6 +15,8 @@
 // Make sure that the customization points get called properly when overloaded
 
 #include <__config>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/readable_traits.h>
 #include <cassert>
 
 struct TestPolicy {};
@@ -127,11 +129,55 @@ ForwardOutIterator __pstl_transform(
   return {};
 }
 
+bool pstl_reduce_with_init_called = false;
+
+template <class, class ForwardIterator, class T, class BinaryOperation>
+T __pstl_reduce(TestBackend, ForwardIterator, ForwardIterator, T, BinaryOperation) {
+  assert(!pstl_reduce_with_init_called);
+  pstl_reduce_with_init_called = true;
+  return {};
+}
+
+bool pstl_reduce_without_init_called = false;
+
+template <class, class ForwardIterator>
+typename std::iterator_traits<ForwardIterator>::value_type
+__pstl_reduce(TestBackend, ForwardIterator, ForwardIterator) {
+  assert(!pstl_reduce_without_init_called);
+  pstl_reduce_without_init_called = true;
+  return {};
+}
+
+bool pstl_unary_transform_reduce_called = false;
+
+template <class, class ForwardIterator, class T, class UnaryOperation, class BinaryOperation>
+T __pstl_transform_reduce(TestBackend, ForwardIterator, ForwardIterator, T, UnaryOperation, BinaryOperation) {
+  assert(!pstl_unary_transform_reduce_called);
+  pstl_unary_transform_reduce_called = true;
+  return {};
+}
+
+bool pstl_binary_transform_reduce_called = false;
+
+template <class,
+          class ForwardIterator1,
+          class ForwardIterator2,
+          class T,
+          class BinaryOperation1,
+          class BinaryOperation2>
+typename std::iterator_traits<ForwardIterator1>::value_type __pstl_transform_reduce(
+    TestBackend, ForwardIterator1, ForwardIterator1, ForwardIterator2, T, BinaryOperation1, BinaryOperation2) {
+  assert(!pstl_binary_transform_reduce_called);
+  pstl_binary_transform_reduce_called = true;
+  return {};
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <numeric>
 
 template <>
 inline constexpr bool std::is_execution_policy_v<TestPolicy> = true;
@@ -169,6 +215,14 @@ int main(int, char**) {
   assert(std::pstl_unary_transform_called);
   (void)std::transform(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), std::begin(a), pred);
   assert(std::pstl_unary_transform_called);
+  (void)std::reduce(TestPolicy{}, std::begin(a), std::end(a), 0, pred);
+  assert(std::pstl_reduce_with_init_called);
+  (void)std::reduce(TestPolicy{}, std::begin(a), std::end(a));
+  assert(std::pstl_reduce_without_init_called);
+  (void)std::transform_reduce(TestPolicy{}, std::begin(a), std::end(a), 0, pred, pred);
+  assert(std::pstl_unary_transform_reduce_called);
+  (void)std::transform_reduce(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), 0, pred, pred);
+  assert(std::pstl_binary_transform_reduce_called);
 
   return 0;
 }

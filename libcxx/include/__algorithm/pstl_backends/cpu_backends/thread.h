@@ -11,6 +11,7 @@
 
 #include <__assert>
 #include <__config>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,6 +30,12 @@ inline namespace __thread_cpu_backend {
 template <class _RandomAccessIterator, class _Fp>
 _LIBCPP_HIDE_FROM_ABI void __parallel_for(_RandomAccessIterator __first, _RandomAccessIterator __last, _Fp __f) {
   __f(__first, __last);
+}
+
+template <class _Index, class _UnaryOp, class _Tp, class _BinaryOp, class _Reduce>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__parallel_transform_reduce(_Index __first, _Index __last, _UnaryOp, _Tp __init, _BinaryOp, _Reduce __reduce) {
+  return __reduce(std::move(__first), std::move(__last), std::move(__init));
 }
 
 _LIBCPP_HIDE_FROM_ABI inline void __cancel_execution() {}

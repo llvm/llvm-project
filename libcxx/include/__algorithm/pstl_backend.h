@@ -42,6 +42,29 @@ A PSTL parallel backend is a tag type to which the following functions are assoc
                                 _OutIterator __result,
                                 _BinaryOperation __op);
 
+  template <class _ExecutionPolicy,
+            class _Iterator1,
+            class _Iterator2,
+            class _Tp,
+            class _BinaryOperation1,
+            class _BinaryOperation2>
+  _Tp __pstl_transform_reduce(_Backend,
+                              _Iterator1 __first1,
+                              _Iterator1 __last1,
+                              _Iterator2 __first2,
+                              _Iterator2 __last2,
+                              _Tp __init,
+                              _BinaryOperation1 __reduce,
+                              _BinaryOperation2 __transform);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Tp, class _BinaryOperation, class _UnaryOperation>
+  _Tp __pstl_transform_reduce(_Backend,
+                              _Iterator __first,
+                              _Iterator __last,
+                              _Tp __init,
+                              _BinaryOperation __reduce,
+                              _UnaryOperation __transform);
+
 // TODO: Complete this list
 
 The following functions are optional but can be provided. If provided, they are used by the corresponding
@@ -80,6 +103,12 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
                             _Iterator2 __last2,
                             _OutIterator __result,
                             _Comp __comp);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Tp, class _BinaryOperation>
+  _Tp __pstl_reduce(_Backend, _Iterator __first, _Iterator __last, _Tp __init, _BinaryOperation __op);
+
+  temlate <class _ExecutionPolicy, class _Iterator>
+  __iter_value_type<_Iterator> __pstl_reduce(_Backend, _Iterator __first, _Iterator __last);
 
 // TODO: Complete this list
 
