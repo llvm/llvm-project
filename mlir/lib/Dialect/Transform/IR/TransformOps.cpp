@@ -302,6 +302,43 @@ LogicalResult transform::AlternativesOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AnnotateOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::AnnotateOp::apply(transform::TransformResults &results,
+                             transform::TransformState &state) {
+  SmallVector<Operation *> targets =
+      llvm::to_vector(state.getPayloadOps(getTarget()));
+
+  Attribute attr = UnitAttr::get(getContext());
+  if (auto paramH = getParam()) {
+    ArrayRef<Attribute> params = state.getParams(paramH);
+    if (params.size() != 1) {
+      if (targets.size() != params.size()) {
+        return emitSilenceableError()
+               << "parameter and target have different payload lengths ("
+               << params.size() << " vs " << targets.size() << ")";
+      }
+      for (auto &&[target, attr] : llvm::zip_equal(targets, params))
+        target->setAttr(getName(), attr);
+      return DiagnosedSilenceableFailure::success();
+    }
+    attr = params[0];
+  }
+  for (auto target : targets)
+    target->setAttr(getName(), attr);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::AnnotateOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getParam(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 

@@ -575,6 +575,38 @@ output format of the diagnostics that it generates.
                [...]>>>
 
 
+.. option:: -fcaret-diagnostics-max-lines:
+
+   Controls how many lines of code clang prints for diagnostics. By default,
+   clang prints a maximum of 16 lines of code.
+
+
+.. option:: -fdiagnostics-show-line-numbers:
+
+   Controls whether clang will print a margin containing the line number on
+   the left of each line of code it prints for diagnostics.
+
+   Default:
+
+    ::
+
+      test.cpp:5:1: error: 'main' must return 'int'
+          5 | void main() {}
+            | ^~~~
+            | int
+
+
+   With -fno-diagnostics-show-line-numbers:
+
+    ::
+
+      test.cpp:5:1: error: 'main' must return 'int'
+      void main() {}
+      ^~~~
+      int
+
+
+
 .. _cl_diag_warning_groups:
 
 Individual Warning Groups

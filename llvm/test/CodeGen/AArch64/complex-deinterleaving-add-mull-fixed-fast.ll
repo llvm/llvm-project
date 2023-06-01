@@ -7,18 +7,12 @@ target triple = "aarch64-arm-none-eabi"
 define <4 x double> @mull_add(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
 ; CHECK-LABEL: mull_add:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    zip2 v6.2d, v4.2d, v5.2d
-; CHECK-NEXT:    zip1 v7.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip1 v1.2d, v4.2d, v5.2d
-; CHECK-NEXT:    zip1 v4.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    fmla v6.2d, v0.2d, v4.2d
-; CHECK-NEXT:    fmla v1.2d, v7.2d, v4.2d
-; CHECK-NEXT:    fmla v6.2d, v7.2d, v2.2d
-; CHECK-NEXT:    fmls v1.2d, v0.2d, v2.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v6.2d
-; CHECK-NEXT:    zip2 v1.2d, v1.2d, v6.2d
+; CHECK-NEXT:    fcmla v4.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v5.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v4.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v5.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    mov v0.16b, v4.16b
+; CHECK-NEXT:    mov v1.16b, v5.16b
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -43,25 +37,18 @@ entry:
 define <4 x double> @mul_add_mull(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d) {
 ; CHECK-LABEL: mul_add_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    zip1 v16.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip1 v17.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v1.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip1 v2.2d, v4.2d, v5.2d
-; CHECK-NEXT:    zip2 v3.2d, v4.2d, v5.2d
-; CHECK-NEXT:    fmul v4.2d, v16.2d, v0.2d
-; CHECK-NEXT:    zip1 v5.2d, v6.2d, v7.2d
-; CHECK-NEXT:    zip2 v6.2d, v6.2d, v7.2d
-; CHECK-NEXT:    fmul v0.2d, v1.2d, v0.2d
-; CHECK-NEXT:    fmul v7.2d, v16.2d, v17.2d
-; CHECK-NEXT:    fmla v4.2d, v17.2d, v1.2d
-; CHECK-NEXT:    fmla v0.2d, v3.2d, v6.2d
-; CHECK-NEXT:    fmla v7.2d, v2.2d, v5.2d
-; CHECK-NEXT:    fmla v4.2d, v3.2d, v5.2d
-; CHECK-NEXT:    fsub v1.2d, v7.2d, v0.2d
-; CHECK-NEXT:    fmla v4.2d, v2.2d, v6.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v4.2d
-; CHECK-NEXT:    zip2 v1.2d, v1.2d, v4.2d
+; CHECK-NEXT:    movi v16.2d, #0000000000000000
+; CHECK-NEXT:    movi v17.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v16.2d, v4.2d, v6.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v4.2d, v6.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    mov v0.16b, v16.16b
+; CHECK-NEXT:    mov v1.16b, v17.16b
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -94,26 +81,18 @@ entry:
 define <4 x double> @mul_sub_mull(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d) {
 ; CHECK-LABEL: mul_sub_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    zip1 v17.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip1 v18.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v1.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v2.2d, v4.2d, v5.2d
-; CHECK-NEXT:    zip1 v3.2d, v6.2d, v7.2d
-; CHECK-NEXT:    zip1 v16.2d, v4.2d, v5.2d
-; CHECK-NEXT:    fmul v4.2d, v17.2d, v0.2d
-; CHECK-NEXT:    fmul v5.2d, v17.2d, v18.2d
-; CHECK-NEXT:    fmul v0.2d, v1.2d, v0.2d
-; CHECK-NEXT:    zip2 v6.2d, v6.2d, v7.2d
-; CHECK-NEXT:    fmul v7.2d, v3.2d, v2.2d
-; CHECK-NEXT:    fmla v4.2d, v18.2d, v1.2d
-; CHECK-NEXT:    fmla v0.2d, v16.2d, v3.2d
-; CHECK-NEXT:    fmla v5.2d, v2.2d, v6.2d
-; CHECK-NEXT:    fmla v7.2d, v16.2d, v6.2d
-; CHECK-NEXT:    fsub v1.2d, v5.2d, v0.2d
-; CHECK-NEXT:    fsub v2.2d, v4.2d, v7.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v2.2d
-; CHECK-NEXT:    zip2 v1.2d, v1.2d, v2.2d
+; CHECK-NEXT:    movi v16.2d, #0000000000000000
+; CHECK-NEXT:    movi v17.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v16.2d, v4.2d, v6.2d, #270
+; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #270
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v4.2d, v6.2d, #180
+; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #180
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    mov v0.16b, v16.16b
+; CHECK-NEXT:    mov v1.16b, v17.16b
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -146,25 +125,18 @@ entry:
 define <4 x double> @mul_conj_mull(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d) {
 ; CHECK-LABEL: mul_conj_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    zip2 v16.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v17.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip1 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    fmul v3.2d, v16.2d, v17.2d
-; CHECK-NEXT:    fmul v1.2d, v2.2d, v17.2d
-; CHECK-NEXT:    zip1 v17.2d, v4.2d, v5.2d
-; CHECK-NEXT:    zip2 v4.2d, v4.2d, v5.2d
-; CHECK-NEXT:    fneg v3.2d, v3.2d
-; CHECK-NEXT:    zip1 v5.2d, v6.2d, v7.2d
-; CHECK-NEXT:    fmla v1.2d, v0.2d, v16.2d
-; CHECK-NEXT:    fmla v3.2d, v0.2d, v2.2d
-; CHECK-NEXT:    zip2 v0.2d, v6.2d, v7.2d
-; CHECK-NEXT:    fmls v1.2d, v4.2d, v5.2d
-; CHECK-NEXT:    fmla v3.2d, v17.2d, v5.2d
-; CHECK-NEXT:    fmla v1.2d, v17.2d, v0.2d
-; CHECK-NEXT:    fmla v3.2d, v4.2d, v0.2d
-; CHECK-NEXT:    zip1 v0.2d, v3.2d, v1.2d
-; CHECK-NEXT:    zip2 v1.2d, v3.2d, v1.2d
+; CHECK-NEXT:    movi v16.2d, #0000000000000000
+; CHECK-NEXT:    movi v17.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v6.2d, v4.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v6.2d, v4.2d, #270
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #270
+; CHECK-NEXT:    mov v0.16b, v16.16b
+; CHECK-NEXT:    mov v1.16b, v17.16b
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>

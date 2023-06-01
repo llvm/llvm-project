@@ -55,6 +55,7 @@ module {
     llvm.tbaa_type_desc @tbaa_type_desc_6 {id = "agg1_t", members = {<@tbaa_type_desc_5, 0>, <@tbaa_type_desc_5, 4>}}
     llvm.tbaa_tag @tbaa_tag_7 {access_type = @tbaa_type_desc_5, base_type = @tbaa_type_desc_6, offset = 0 : i64}
   }
+  llvm.func @foo(%arg0: !llvm.ptr)
   llvm.func @tbaa2(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
     %0 = llvm.mlir.constant(0 : i32) : i32
     %1 = llvm.mlir.constant(1 : i32) : i32
@@ -75,6 +76,8 @@ module {
     "llvm.intr.memcpy"(%arg1, %arg1, %0, %8) {tbaa = [@__tbaa::@tbaa_tag_7]} : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
     // CHECK: llvm.memset{{.*}} !tbaa ![[STAG]]
     "llvm.intr.memset"(%arg1, %9, %0, %8) {tbaa = [@__tbaa::@tbaa_tag_7]} : (!llvm.ptr, i8, i32, i1) -> ()
+    // CHECK: call void @foo({{.*}} !tbaa ![[STAG]]
+    llvm.call @foo(%arg1) {tbaa = [@__tbaa::@tbaa_tag_7]} : (!llvm.ptr) -> ()
     llvm.return
   }
 }

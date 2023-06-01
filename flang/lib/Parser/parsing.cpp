@@ -84,6 +84,11 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     prescanner.AddCompilerDirectiveSentinel("$omp");
     prescanner.AddCompilerDirectiveSentinel("$"); // OMP conditional line
   }
+  if (options.features.IsEnabled(LanguageFeature::CUDA)) {
+    prescanner.AddCompilerDirectiveSentinel("$cuf");
+    prescanner.AddCompilerDirectiveSentinel("@cuf");
+    preprocessor.Define("_CUDA", "1");
+  }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
   prescanner.Prescan(range);

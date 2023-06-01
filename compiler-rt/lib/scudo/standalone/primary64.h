@@ -506,6 +506,11 @@ private:
     return BlockSize < PageSize / 16U;
   }
 
+  ALWAYS_INLINE static bool isLargeBlock(uptr BlockSize) {
+    const uptr PageSize = getPageSizeCached();
+    return BlockSize > PageSize;
+  }
+
   // Push the blocks to their batch group. The layout will be like,
   //
   // FreeList - > BG -> BG -> BG
@@ -848,8 +853,6 @@ private:
     if (UNLIKELY(BytesInFreeList == 0))
       return 0;
 
-    bool MaySkip = false;
-
     // Always update `BytesInFreeListAtLastCheckpoint` with the smallest value
     // so that we won't underestimate the releasable pages. For example, the
     // following is the region usage,
@@ -869,38 +872,43 @@ private:
     if (BytesInFreeList <=
         Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint) {
       Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-      MaySkip = true;
     }
 
     const uptr RegionPushedBytesDelta =
         BytesInFreeList - Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
-    if (RegionPushedBytesDelta < PageSize)
-      MaySkip = true;
+    if (RegionPushedBytesDelta < PageSize &&
+        ReleaseType != ReleaseToOS::ForceAll) {
+      return 0;
+    }
 
     const bool CheckDensity = isSmallBlock(BlockSize);
     // Releasing smaller blocks is expensive, so we want to make sure that a
     // significant amount of bytes are free, and that there has been a good
     // amount of batches pushed to the freelist before attempting to release.
-    if (CheckDensity) {
-      if (ReleaseType == ReleaseToOS::Normal &&
-          RegionPushedBytesDelta < Region->TryReleaseThreshold) {
-        MaySkip = true;
-      }
-    }
-
-    if (MaySkip && ReleaseType != ReleaseToOS::ForceAll)
-      return 0;
+    if (CheckDensity && ReleaseType == ReleaseToOS::Normal)
+      if (RegionPushedBytesDelta < Region->TryReleaseThreshold)
+        return 0;
 
     if (ReleaseType == ReleaseToOS::Normal) {
       const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
       if (IntervalMs < 0)
         return 0;
-      if (Region->ReleaseInfo.LastReleaseAtNs +
-              static_cast<u64>(IntervalMs) * 1000000 >
-          getMonotonicTimeFast()) {
-        return 0; // Memory was returned recently.
+
+      // The constant 8 here is selected from profiling some apps and the number
+      // of unreleased pages in the large size classes is around 16 pages or
+      // more. Choose half of it as a heuristic and which also avoids page
+      // release every time for every pushBlocks() attempt by large blocks.
+      const bool ByPassReleaseInterval =
+          isLargeBlock(BlockSize) && RegionPushedBytesDelta > 8 * PageSize;
+      if (!ByPassReleaseInterval) {
+        if (Region->ReleaseInfo.LastReleaseAtNs +
+                static_cast<u64>(IntervalMs) * 1000000 >
+            getMonotonicTimeFast()) {
+          // Memory was returned recently.
+          return 0;
+        }
       }
-    }
+    } // if (ReleaseType == ReleaseToOS::Normal)
 
     const uptr GroupSize = (1U << GroupSizeLog);
     const uptr AllocatedUserEnd = Region->AllocatedUser + Region->RegionBeg;

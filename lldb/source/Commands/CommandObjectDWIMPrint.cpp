@@ -11,6 +11,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Expression/ExpressionVariable.h"
+#include "lldb/Expression/UserExpression.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -135,7 +136,8 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
                                         expr);
       }
 
-      valobj_sp->Dump(result.GetOutputStream(), dump_options);
+      if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
+        valobj_sp->Dump(result.GetOutputStream(), dump_options);
 
       if (suppress_result)
         if (auto result_var_sp =

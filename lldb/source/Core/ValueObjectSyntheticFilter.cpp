@@ -306,11 +306,11 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(size_t idx,
 }
 
 lldb::ValueObjectSP
-ValueObjectSynthetic::GetChildMemberWithName(ConstString name,
+ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create) {
   UpdateValueIfNeeded();
 
-  uint32_t index = GetIndexOfChildWithName(name);
+  uint32_t index = GetIndexOfChildWithName(ConstString(name));
 
   if (index == UINT32_MAX)
     return lldb::ValueObjectSP();

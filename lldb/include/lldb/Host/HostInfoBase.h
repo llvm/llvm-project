@@ -16,6 +16,7 @@
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Errc.h"
 
 #include <cstdint>
 
@@ -133,6 +134,12 @@ public:
   /// Return the directory containing something like a SDK (reused for Swift).
   static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options) {
     return llvm::make_error<HostInfoError>("cannot determine SDK root");
+  }
+
+  /// Return the path to a specific tool in the specified Xcode SDK.
+  static llvm::Expected<llvm::StringRef> FindSDKTool(XcodeSDK sdk,
+                                                     llvm::StringRef tool) {
+    return llvm::errorCodeToError(llvm::errc::no_such_file_or_directory);
   }
 
   /// Return information about module \p image_name if it is loaded in

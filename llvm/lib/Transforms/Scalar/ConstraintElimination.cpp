@@ -987,6 +987,22 @@ static bool checkAndReplaceCondition(
   return Changed;
 }
 
+static void
+removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
+                     Module *ReproducerModule,
+                     SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
+                     SmallVectorImpl<StackEntry> &DFSInStack) {
+  Info.popLastConstraint(E.IsSigned);
+  // Remove variables in the system that went out of scope.
+  auto &Mapping = Info.getValue2Index(E.IsSigned);
+  for (Value *V : E.ValuesToRelease)
+    Mapping.erase(V);
+  Info.popLastNVariables(E.IsSigned, E.ValuesToRelease.size());
+  DFSInStack.pop_back();
+  if (ReproducerModule)
+    ReproducerCondStack.pop_back();
+}
+
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
@@ -1170,16 +1186,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
                        Info.getValue2Index(E.IsSigned));
         dbgs() << "\n";
       });
-
-      Info.popLastConstraint(E.IsSigned);
-      // Remove variables in the system that went out of scope.
-      auto &Mapping = Info.getValue2Index(E.IsSigned);
-      for (Value *V : E.ValuesToRelease)
-        Mapping.erase(V);
-      Info.popLastNVariables(E.IsSigned, E.ValuesToRelease.size());
-      DFSInStack.pop_back();
-      if (ReproducerModule)
-        ReproducerCondStack.pop_back();
+      removeEntryFromStack(E, Info, ReproducerModule.get(), ReproducerCondStack,
+                           DFSInStack);
     }
 
     LLVM_DEBUG({

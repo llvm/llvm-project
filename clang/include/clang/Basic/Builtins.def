@@ -39,6 +39,8 @@
 //  A -> "reference" to __builtin_va_list
 //  V -> Vector, followed by the number of elements and the base type.
 //  q -> Scalable vector, followed by the number of elements and the base type.
+//  Q -> target builtin type, followed by a character to distinguish the builtin type
+//    Qa -> AArch64 svcount_t builtin type.
 //  E -> ext_vector, followed by the number of elements and the base type.
 //  X -> _Complex, followed by the base type.
 //  Y -> ptrdiff_t
@@ -910,6 +912,7 @@ ATOMIC_BUILTIN(__hip_atomic_compare_exchange_weak, "v.", "t")
 ATOMIC_BUILTIN(__hip_atomic_compare_exchange_strong, "v.", "t")
 ATOMIC_BUILTIN(__hip_atomic_exchange, "v.", "t")
 ATOMIC_BUILTIN(__hip_atomic_fetch_add, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_fetch_sub, "v.", "t")
 ATOMIC_BUILTIN(__hip_atomic_fetch_and, "v.", "t")
 ATOMIC_BUILTIN(__hip_atomic_fetch_or, "v.", "t")
 ATOMIC_BUILTIN(__hip_atomic_fetch_xor, "v.", "t")

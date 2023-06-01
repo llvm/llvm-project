@@ -145,11 +145,9 @@ TEST_F(SortIncludesTest, SortPriorityNotDefined) {
   FmtStyle = getLLVMStyle();
   EXPECT_EQ("#include \"FormatTestUtils.h\"\n"
             "#include \"clang/Format/Format.h\"\n"
-            "#include \"llvm/ADT/None.h\"\n"
             "#include \"llvm/Support/Debug.h\"\n"
             "#include \"gtest/gtest.h\"\n",
             sort("#include \"clang/Format/Format.h\"\n"
-                 "#include \"llvm/ADT/None.h\"\n"
                  "#include \"FormatTestUtils.h\"\n"
                  "#include \"gtest/gtest.h\"\n"
                  "#include \"llvm/Support/Debug.h\"\n"));

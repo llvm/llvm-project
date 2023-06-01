@@ -83,6 +83,11 @@ static cl::opt<bool> NormalizeByBin1(
              "collection time and sampling rate for this to make sense"),
     cl::cat(BoltDiffCategory));
 
+static cl::opt<bool>
+    SkipNonSimple("skip-non-simple",
+                  cl::desc("skip non-simple functions in reporting"),
+                  cl::ReallyHidden, cl::cat(BoltDiffCategory));
+
 } // end namespace opts
 
 namespace llvm {
@@ -428,8 +433,10 @@ class RewriteInstanceDiff {
          llvm::make_second_range(llvm::reverse(LargestDiffs))) {
       const double Score2 = getNormalizedScore(*BB2, RI2);
       const double Score1 = getNormalizedScore(*BBMap[BB2], RI1);
-      outs() << "BB " << BB2->getName() << " from "
-             << BBToFuncMap[BB2]->getDemangledName()
+      const BinaryFunction *Func = BBToFuncMap[BB2];
+      if (opts::SkipNonSimple && !Func->isSimple())
+        continue;
+      outs() << "BB " << BB2->getName() << " from " << Func->getDemangledName()
              << "\n\tScore bin1 = " << format("%.4f", Score1 * 100.0)
              << "%\n\tScore bin2 = " << format("%.4f", Score2 * 100.0);
       outs() << "%\t(Difference: ";
@@ -460,9 +467,12 @@ class RewriteInstanceDiff {
       EdgeTy &Edge1 = EI.second;
       const double Score2 = std::get<2>(Edge2);
       const double Score1 = std::get<2>(Edge1);
+      const BinaryFunction *Func = BBToFuncMap[std::get<0>(Edge2)];
+      if (opts::SkipNonSimple && !Func->isSimple())
+        continue;
       outs() << "Edge (" << std::get<0>(Edge2)->getName() << " -> "
              << std::get<1>(Edge2)->getName() << ") in "
-             << BBToFuncMap[std::get<0>(Edge2)]->getDemangledName()
+             << Func->getDemangledName()
              << "\n\tScore bin1 = " << format("%.4f", Score1 * 100.0)
              << "%\n\tScore bin2 = " << format("%.4f", Score2 * 100.0);
       outs() << "%\t(Difference: ";
@@ -536,6 +546,8 @@ class RewriteInstanceDiff {
       if (Iter2 != LTOMap2.end())
         Score2 = LTOAggregatedScore2[Iter2->second];
       if (Score1 == 0.0 || Score2 == 0.0)
+        continue;
+      if (opts::SkipNonSimple && !Func1->isSimple() && !Func2->isSimple())
         continue;
       LargestDiffs.insert(
           std::make_pair<>(std::abs(Score1 - Score2), MapEntry));

@@ -20,10 +20,10 @@
 !RUN: bbc -emit-fir -fopenmp -fopenmp-assume-no-nested-parallelism -fopenmp-is-device -o - %s | FileCheck %s --check-prefix=NEST-PAR-DEVICE-FIR
 !RUN: bbc -emit-fir -fopenmp -fopenmp-target-debug=1 -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism -fopenmp-assume-threads-oversubscription -fopenmp-assume-no-thread-state -fopenmp-is-device -o - %s | FileCheck %s --check-prefix=ALL-DEVICE-FIR
 
-!DEFAULT-DEVICE-FIR: module attributes {{{.*}}, omp.flags = #omp.flags<openmp_device_version = 11>, omp.is_device = #omp.isdevice<is_device = true>{{.*}}}
-!DEFAULT-DEVICE-FIR-VERSION: module attributes {{{.*}}, omp.flags = #omp.flags<openmp_device_version = 45>, omp.is_device = #omp.isdevice<is_device = true>, omp.version = #omp.version<version = 45>{{.*}}
-!DEFAULT-HOST-FIR: module attributes {{{.*}},  omp.is_device = #omp.isdevice<is_device = false>{{.*}}
-!DEFAULT-HOST-FIR-VERSION: module attributes {{{.*}},  omp.is_device = #omp.isdevice<is_device = false>, omp.version = #omp.version<version = 45>{{.*}}
+!DEFAULT-DEVICE-FIR: module attributes {{{.*}}, omp.flags = #omp.flags<openmp_device_version = 11>, omp.is_device = true{{.*}}}
+!DEFAULT-DEVICE-FIR-VERSION: module attributes {{{.*}}, omp.flags = #omp.flags<openmp_device_version = 45>, omp.is_device = true, omp.version = #omp.version<version = 45>{{.*}}
+!DEFAULT-HOST-FIR: module attributes {{{.*}},  omp.is_device = false{{.*}}
+!DEFAULT-HOST-FIR-VERSION: module attributes {{{.*}},  omp.is_device = false, omp.version = #omp.version<version = 45>{{.*}}
 !DBG-DEVICE-FIR: module attributes {{{.*}}, omp.flags = #omp.flags<debug_kind = 1, openmp_device_version = 11>{{.*}}}
 !DBG-EQ-DEVICE-FIR: module attributes {{{.*}}, omp.flags = #omp.flags<debug_kind = 111, openmp_device_version = 11>{{.*}}}
 !TEAMS-OSUB-DEVICE-FIR: module attributes {{{.*}}, omp.flags = #omp.flags<assume_teams_oversubscription = true, openmp_device_version = 11>{{.*}}}

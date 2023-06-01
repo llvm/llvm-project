@@ -333,6 +333,42 @@ func.func @bad_any6(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
 }
 
 // -----
+func.func @bad_all1(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.all' op result must have the same element type as MASK argument}}
+  %0 = hlfir.all %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> !fir.logical<8>
+}
+
+// -----
+func.func @bad_all2(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.all' op result must have the same element type as MASK argument}}
+  %0 = hlfir.all %arg0 dim %arg1 : (!hlfir.expr<?x?x!fir.logical<4>>, i32) -> !hlfir.expr<?x!fir.logical<8>>
+}
+
+// -----
+func.func @bad_all3(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.all' op result rank must be one less than MASK}}
+  %0 = hlfir.all %arg0 dim %arg1 : (!hlfir.expr<?x?x!fir.logical<4>>, i32) -> !hlfir.expr<?x?x!fir.logical<4>>
+}
+
+// -----
+func.func @bad_all4(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.all' op result must be an array}}
+  %0 = hlfir.all %arg0 dim %arg1 : (!hlfir.expr<?x?x!fir.logical<4>>, i32) -> !hlfir.expr<!fir.logical<4>>
+}
+
+// -----
+func.func @bad_all5(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.all' op result must be of logical type}}
+  %0 = hlfir.all %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> i32
+}
+
+// -----
+func.func @bad_all6(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.all' op result must be of logical type}}
+  %0 = hlfir.all %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<!fir.logical<4>>
+}
+
+// -----
 func.func @bad_product1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.product' op result must have the same element type as ARRAY argument}}
   %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> f32

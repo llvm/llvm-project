@@ -1,0 +1,37 @@
+! Common source for CUF parse tree and unparsing tests.
+!@cuf subroutine atcuf;
+end
+
+#ifdef _CUDA
+    subroutine cudadefd;
+end
+#endif
+
+module m
+  real, allocatable, pinned ::pa(:)
+ contains
+  attributes(device) subroutine devicesub; end
+  attributes(device) real function devicefunc(); devicefunc = 1.; end
+  attributes(global) subroutine globalsub; end
+  attributes(grid_global) subroutine gridglobalsub; end
+  attributes(host) subroutine hostsub; end
+  attributes(global) launch_bounds(1, 2) subroutine lbsub; end
+  attributes(global) cluster_dims(1, 2, 3) subroutine cdsub; end
+  attributes(device) subroutine attrs
+    attributes(device) :: devx1
+    real, device :: devx2
+  end subroutine
+  subroutine test
+    logical isPinned
+    !$cuf kernel do(1) <<<*, *, stream = 1>>>
+    do j = 1, 10
+    end do
+    !$cuf kernel do <<<1, (2, 3), stream = 1>>>
+    do j = 1, 10
+    end do
+    call globalsub<<<1, 2>>>
+    call globalsub<<<1, 2, 3>>>
+    call globalsub<<<1, 2, 3, 4>>>
+    allocate(pa(32), stream = 1, pinned = isPinned)
+  end subroutine
+end module

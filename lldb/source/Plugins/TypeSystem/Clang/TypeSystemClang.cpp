@@ -6728,9 +6728,9 @@ uint32_t TypeSystemClang::GetIndexForRecordChild(
 // index 1 is the child index for "m_b" within class A
 
 size_t TypeSystemClang::GetIndexOfChildMemberWithName(
-    lldb::opaque_compiler_type_t type, const char *name,
+    lldb::opaque_compiler_type_t type, llvm::StringRef name,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
-  if (type && name && name[0]) {
+  if (type && !name.empty()) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
     switch (type_class) {
@@ -6748,7 +6748,6 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 
         // Try and find a field that matches NAME
         clang::RecordDecl::field_iterator field, field_end;
-        llvm::StringRef name_sref(name);
         for (field = record_decl->field_begin(),
             field_end = record_decl->field_end();
              field != field_end; ++field, ++child_idx) {
@@ -6761,7 +6760,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               return child_indexes.size();
             child_indexes.pop_back();
 
-          } else if (field_name.equals(name_sref)) {
+          } else if (field_name.equals(name)) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
                 child_idx + TypeSystemClang::GetNumBaseClasses(
@@ -6774,8 +6773,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           const clang::RecordDecl *parent_record_decl = cxx_record_decl;
 
           // Didn't find things easily, lets let clang do its thang...
-          clang::IdentifierInfo &ident_ref =
-              getASTContext().Idents.get(name_sref);
+          clang::IdentifierInfo &ident_ref = getASTContext().Idents.get(name);
           clang::DeclarationName decl_name(&ident_ref);
 
           clang::CXXBasePaths paths;

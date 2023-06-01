@@ -1501,9 +1501,12 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
   if (DistScev != SE.getCouldNotCompute()) {
     LLVM_DEBUG(dbgs() << "LSV: SCEV PtrB - PtrA =" << *DistScev << "\n");
     ConstantRange DistRange = SE.getSignedRange(DistScev);
-    if (DistRange.isSingleElement())
-      return (OffsetB - OffsetA + *DistRange.getSingleElement())
-          .sextOrTrunc(OrigBitWidth);
+    if (DistRange.isSingleElement()) {
+      // Handle index width (the width of Dist) != pointer width (the width of
+      // the Offset*s at this point).
+      APInt Dist = DistRange.getSingleElement()->sextOrTrunc(NewPtrBitWidth);
+      return (OffsetB - OffsetA + Dist).sextOrTrunc(OrigBitWidth);
+    }
   }
   std::optional<APInt> Diff =
       getConstantOffsetComplexAddrs(PtrA, PtrB, ContextInst, Depth);

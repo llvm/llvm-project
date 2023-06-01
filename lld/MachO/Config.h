@@ -131,7 +131,6 @@ struct Configuration {
   bool saveTemps = false;
   bool adhocCodesign = false;
   bool emitFunctionStarts = false;
-  bool emitBitcodeBundle = false;
   bool emitDataInCodeInfo = false;
   bool emitEncryptionInfo = false;
   bool emitInitOffsets = false;
@@ -206,6 +205,7 @@ struct Configuration {
   // so use a vector instead of a map.
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
+  bool ltoDebugPassManager = false;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;

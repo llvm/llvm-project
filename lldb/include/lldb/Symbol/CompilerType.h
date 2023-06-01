@@ -397,7 +397,8 @@ public:
   /// vector<vector<uint32_t>>
   /// so we catch all names that match a given child name, not just the first.
   size_t
-  GetIndexOfChildMemberWithName(const char *name, bool omit_empty_base_classes,
+  GetIndexOfChildMemberWithName(llvm::StringRef name,
+                                bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) const;
 
   /// Return the number of template arguments the type has.

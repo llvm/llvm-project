@@ -294,6 +294,12 @@ static void performOptionalDebugActions(
                         debugPayloadRootTag, debugTransformRootTag,
                         transformLibraryFileName, binaryName);
   });
+
+  // Remove temporary attributes if they were set.
+  if (debugPayloadRootTag.empty())
+    target->removeAttr(kTransformDialectTagAttrName);
+  if (debugTransformRootTag.empty())
+    transform->removeAttr(kTransformDialectTagAttrName);
 }
 
 /// Replaces external symbols in `block` with their (non-external) definitions

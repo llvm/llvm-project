@@ -20,6 +20,20 @@
   // Cancel the execution of other jobs - they aren't needed anymore
   void __cancel_execution();
 
+  template <class _RandomAccessIterator1,
+            class _RandomAccessIterator2,
+            class _RandomAccessIterator3,
+            class _Compare,
+            class _LeafMerge>
+  void __parallel_merge(
+      _RandomAccessIterator1 __first1,
+      _RandomAccessIterator1 __last1,
+      _RandomAccessIterator2 __first2,
+      _RandomAccessIterator2 __last2,
+      _RandomAccessIterator3 __outit,
+      _Compare __comp,
+      _LeafMerge __leaf_merge);
+
   TODO: Document the parallel backend
 */
 
@@ -27,6 +41,7 @@
 #include <__algorithm/pstl_backends/cpu_backends/fill.h>
 #include <__algorithm/pstl_backends/cpu_backends/find_if.h>
 #include <__algorithm/pstl_backends/cpu_backends/for_each.h>
+#include <__algorithm/pstl_backends/cpu_backends/merge.h>
 #include <__algorithm/pstl_backends/cpu_backends/transform.h>
 
 #endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_H

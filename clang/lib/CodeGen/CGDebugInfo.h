@@ -620,7 +620,7 @@ private:
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.def, or nullptr otherwise.
   llvm::DILocalVariable *EmitDef(const VarDecl *decl, llvm::Value *AI,
-                                 llvm::Optional<unsigned> ArgNo,
+                                 std::optional<unsigned> ArgNo,
                                  CGBuilderTy &Builder,
                                  const bool UsePointerValue = false);
 
