@@ -277,9 +277,7 @@ define amdgpu_ps float @fma_vs_output_modifier(float %x, i32 %n) #0 {
 define amdgpu_ps float @fma_vs_output_modifier_2(float %x) #0 {
 ; GCN-LABEL: fma_vs_output_modifier_2:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mul_f32_e32 v1, v0, v0
-; GCN-NEXT:    v_fmac_f32_e32 v1, v0, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, v1
+; GCN-NEXT:    v_mul_f32_e64 v0, v0, v0 mul:2
 ; GCN-NEXT:    ; return to shader part epilog
   %m = fmul contract float %x, %x
   %a = fadd nsz contract float %m, %m
