@@ -16,6 +16,7 @@
 #include "SourceCode.h"
 #include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
+#include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "support/Logger.h"
@@ -197,8 +198,9 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
       continue;
     }
 
-    std::string Spelling =
-        spellHeader(AST, MainFile, SymbolWithMissingInclude.Providers.front());
+    std::string Spelling = include_cleaner::spellHeader(
+        {SymbolWithMissingInclude.Providers.front(),
+         AST.getPreprocessor().getHeaderSearchInfo(), MainFile});
     llvm::StringRef HeaderRef{Spelling};
     bool Angled = HeaderRef.starts_with("<");
     // We might suggest insertion of an existing include in edge cases, e.g.,
@@ -330,21 +332,6 @@ convertIncludes(const SourceManager &SM,
     ConvertedIncludes.add(std::move(TransformedInc));
   }
   return ConvertedIncludes;
-}
-
-std::string spellHeader(ParsedAST &AST, const FileEntry *MainFile,
-                        include_cleaner::Header Provider) {
-  if (Provider.kind() == include_cleaner::Header::Physical) {
-    if (auto CanonicalPath = getCanonicalPath(Provider.physical()->getLastRef(),
-                                              AST.getSourceManager().getFileManager())) {
-      std::string SpelledHeader =
-          llvm::cantFail(URI::includeSpelling(URI::create(*CanonicalPath)));
-      if (!SpelledHeader.empty())
-        return SpelledHeader;
-    }
-  }
-  return include_cleaner::spellHeader(
-      Provider, AST.getPreprocessor().getHeaderSearchInfo(), MainFile);
 }
 
 std::vector<const Inclusion *>

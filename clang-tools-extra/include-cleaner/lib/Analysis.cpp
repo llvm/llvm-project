@@ -8,10 +8,12 @@
 
 #include "clang-include-cleaner/Analysis.h"
 #include "AnalysisInternal.h"
+#include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -20,10 +22,12 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <string>
 
 namespace clang::include_cleaner {
@@ -53,23 +57,6 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
 }
 
-std::string spellHeader(const Header &H, const HeaderSearch &HS,
-                        const FileEntry *Main) {
-  switch (H.kind()) {
-  case Header::Physical: {
-    bool IsSystem = false;
-    std::string Path = HS.suggestPathToFileForDiagnostics(
-        H.physical(), Main->tryGetRealPathName(), &IsSystem);
-    return IsSystem ? "<" + Path + ">" : "\"" + Path + "\"";
-  }
-  case Header::Standard:
-    return H.standard().name().str();
-  case Header::Verbatim:
-    return H.verbatim().str();
-  }
-  llvm_unreachable("Unknown Header kind");
-}
-
 AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
                         llvm::ArrayRef<SymbolReference> MacroRefs,
                         const Includes &Inc, const PragmaIncludes *PI,
@@ -90,7 +77,7 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
              }
              if (!Satisfied && !Providers.empty() &&
                  Ref.RT == RefType::Explicit)
-               Missing.insert(spellHeader(Providers.front(), HS, MainFile));
+               Missing.insert(spellHeader({Providers.front(), HS, MainFile}));
            });
 
   AnalysisResults Results;
