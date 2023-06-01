@@ -471,11 +471,13 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   return 0;
 }
 
-bool LoopVectorizationLegality::isUniform(Value *V) const {
-  return LAI->isUniform(V);
+bool LoopVectorizationLegality::isUniform(
+    Value *V, std::optional<ElementCount> VF) const {
+  return LAI->isUniform(V, VF);
 }
 
-bool LoopVectorizationLegality::isUniformMemOp(Instruction &I) const {
+bool LoopVectorizationLegality::isUniformMemOp(
+    Instruction &I, std::optional<ElementCount> VF) const {
   Value *Ptr = getLoadStorePointerOperand(&I);
   if (!Ptr)
     return false;
@@ -483,7 +485,7 @@ bool LoopVectorizationLegality::isUniformMemOp(Instruction &I) const {
   // stores from being uniform.  The current lowering simply doesn't handle
   // it; in particular, the cost model distinguishes scatter/gather from
   // scalar w/predication, and we currently rely on the scalar path.
-  return isUniform(Ptr) && !blockNeedsPredication(I.getParent());
+  return isUniform(Ptr, VF) && !blockNeedsPredication(I.getParent());
 }
 
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
