@@ -63,7 +63,8 @@ static Status ExceptionMaskValidator(const char *string, void *unused) {
           || candidate == "EXC_BAD_INSTRUCTION"
           || candidate == "EXC_ARITHMETIC"
           || candidate == "EXC_RESOURCE"
-          || candidate == "EXC_GUARD")) {
+          || candidate == "EXC_GUARD"
+          || candidate == "EXC_SYSCALL")) {
       error.SetErrorStringWithFormat("invalid exception type: '%s'",
           candidate.str().c_str());
       return error;
