@@ -874,8 +874,6 @@ private:
   }
 };
 
-bool decrementQueueBusyCountHandler(hsa_signal_value_t value, void *args);
-
 /// Class representing an HSA signal. Signals are used to define dependencies
 /// between asynchronous operations: kernel launches and memory transfers.
 struct AMDGPUSignalTy {
@@ -1030,14 +1028,6 @@ struct AMDGPUQueueTy {
     // Publish the packet. Do not modify the packet after this point.
     publishKernelPacket(PacketId, Packet);
 
-    // Register async callback handler to decrease queue busy counter
-    auto status = hsa_amd_signal_async_handler(
-        OutputSignal->get(), HSA_SIGNAL_CONDITION_EQ, 0,
-        decrementQueueBusyCountHandler, this);
-    if (auto Err = Plugin::check(
-            status, "Something went wrong registering the handler"))
-      return Err;
-
     return Plugin::success();
   }
 
@@ -1092,16 +1082,6 @@ private:
 
     // Publish the packet. Do not modify the packet after this point.
     publishBarrierPacket(PacketId, Packet);
-
-    if (OutputSignal) {
-      // Register async callback handler to decrease queue busy counter
-      auto status = hsa_amd_signal_async_handler(
-          OutputSignal->get(), HSA_SIGNAL_CONDITION_EQ, 0,
-          decrementQueueBusyCountHandler, this);
-      if (auto Err = Plugin::check(
-              status, "Something went wrong registering the handler"))
-        return Err;
-    }
 
     return Plugin::success();
   }
@@ -1187,18 +1167,6 @@ private:
   std::atomic<int> Busy{0};
 };
 
-/// Callback function used in conjunction with the completion signal of a
-/// kernels's AQL packet to acknowledge the completion of an execution.
-/// Achieved by decrementing the busy counter.
-bool decrementQueueBusyCountHandler(hsa_signal_value_t value, void *args) {
-  DP("NEW_QUEU: The handler\n");
-  // args is always an AMDGPUQueueTy pointer
-  auto *Q = reinterpret_cast<AMDGPUQueueTy *>(args);
-  Q->decBusy();
-  // Do not execute this callback again for other signal values
-  return false;
-}
-
 /// Struct that implements a stream of asynchronous operations for AMDGPU
 /// devices. This class relies on signals to implement streams and define the
 /// dependencies between asynchronous operations.
@@ -1230,6 +1198,11 @@ private:
     double TicksToTime;
   };
 
+  /// Utility struct holding arguments for HSA lazy queue handling
+  struct HSABusyQueueTy {
+    AMDGPUQueueTy *Q;
+  };
+
   /// The stream is composed of N stream's slots. The struct below represents
   /// the fields of each slot. Each slot has a signal and an optional action
   /// function. When appending an HSA asynchronous operation to the stream, one
@@ -1253,6 +1226,9 @@ private:
     /// Set to nullptr when there is no action to perform.
     Error (*OmptActionFunction)(void *);
 
+    /// Action function to unmark an HSA queue from being busy
+    Error (*BusyQueueActionFunction)(void *);
+
     /// Space for the action's arguments. A pointer to these arguments is passed
     /// to the action function. Notice the space of arguments is limited.
     union {
@@ -1265,10 +1241,13 @@ private:
     /// passed to the action function.
     OmptKernelTimingArgsTy OmptKernelTimingArgs;
 
+    /// Space for Busy queue acstion's arguments
+    HSABusyQueueTy BusyQueueArgs;
+
     /// Create an empty slot.
     StreamSlotTy()
-        : Signal(nullptr), ActionFunction(nullptr),
-          OmptActionFunction(nullptr) {}
+        : Signal(nullptr), ActionFunction(nullptr), OmptActionFunction(nullptr),
+          BusyQueueActionFunction(nullptr) {}
 
     /// Schedule a host memory copy action on the slot.
     Error schedHostMemoryCopy(void *Dst, const void *Src, size_t Size) {
@@ -1301,9 +1280,15 @@ private:
       return Plugin::success();
     }
 
+    Error schedDecrementQueueBusyCount(AMDGPUQueueTy *Q) {
+      BusyQueueActionFunction = decrementBusyCounter;
+      BusyQueueArgs = HSABusyQueueTy{Q};
+      return Plugin::success();
+    }
+
     // Perform the action if needed.
     Error performAction() {
-      if (!ActionFunction
+      if (!ActionFunction && !BusyQueueActionFunction
 #ifdef OMPT_SUPPORT
           && !OmptActionFunction
 #endif
@@ -1329,6 +1314,13 @@ private:
             if (auto Err = timeKernelInNs(&OmptKernelTimingArgs))
               return Err;
           } else { return Plugin::error("Unknown ompt action function!"); });
+
+      if (BusyQueueActionFunction == decrementBusyCounter) {
+        if (auto Err = decrementBusyCounter(&BusyQueueArgs))
+          return Err;
+      }
+
+      BusyQueueActionFunction = nullptr;
 
       // Invalidate the actions.
       ActionFunction = nullptr;
@@ -1500,6 +1492,13 @@ private:
                        TimeRec.end * Args->TicksToTime);
     return Plugin::check(Status,
                          "Error in hsa_amd_profiling_get_dispatch_time");
+  }
+
+  static Error decrementBusyCounter(void *Data) {
+    HSABusyQueueTy *Args = reinterpret_cast<HSABusyQueueTy *>(Data);
+    assert(Args && "Valid arguments");
+    Args->Q->decBusy();
+    return Plugin::success();
   }
 
   AMDGPUDeviceTy &Device;
@@ -3764,6 +3763,9 @@ Error AMDGPUStreamTy::pushKernelLaunch(const AMDGPUKernelTy &Kernel,
 
   // Push the kernel with the output signal and an input signal (optional)
   auto &Queue = Device.getNextQueue();
+  if (auto Err = Slots[Curr].schedDecrementQueueBusyCount(&Queue))
+    return Err;
+
   DP("Using Queue: %p with HSA Queue: %p\n", &Queue, Queue.getHsaQueue());
   return Queue.pushKernelLaunch(Kernel, KernelArgs, NumThreads, NumBlocks,
                                 GroupSize, OutputSignal, InputSignal);
@@ -3791,6 +3793,8 @@ Error AMDGPUStreamTy::waitOnStreamOperation(AMDGPUStreamTy &OtherStream,
 
   // Push a barrier into the queue with both input signals.
   auto &Queue = Device.getNextQueue();
+  if (auto Err = Slots[Curr].schedDecrementQueueBusyCount(&Queue))
+    return Err;
   DP("Using Queue: %p with HSA Queue: %p\n", &Queue, Queue.getHsaQueue());
   return Queue.pushBarrier(OutputSignal, InputSignal, OtherSignal);
 }
