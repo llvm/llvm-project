@@ -1,19 +1,38 @@
-! Test -flang-experimental-hlfir flag
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-fir -o - %s | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -o - %s | FileCheck %s --check-prefix NO-HLFIR
+! Test -flang-experimental-hlfir, -emit-hlfir, -emit-fir flags
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s
+! RUN: %flang_fc1 -emit-hlfir -flang-experimental-hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s
+! RUN: %flang_fc1 -emit-fir -o - %s | FileCheck %s --check-prefix NO-HLFIR --check-prefix ALL
+! RUN: %flang_fc1 -emit-fir -flang-experimental-hlfir -o - %s | FileCheck --check-prefix FIR --check-prefix ALL %s
+
+! | Action      | -flang-experimental-hlfir? | Result                          |
+! | =========== | ========================== | =============================== |
+! | -emit-hlfir | N                          | Outputs HLFIR                   |
+! | -emit-hlfir | Y                          | Outputs HLFIR                   |
+! | -emit-fir   | N                          | Outputs FIR, using old lowering |
+! | -emit-fir   | Y                          | Outputs FIR, lowering via HLFIR |
 
 subroutine test(a, res)
   real :: a(:), res
   res = SUM(a)
 end subroutine
-! CHECK-LABEL: func.func @_QPtest
-! CHECK:           %[[A:.*]]: !fir.box<!fir.array<?xf32>>
-! CHECK:           %[[RES:.*]]: !fir.ref<f32>
-! CHECK-DAG:     %[[A_VAR:.*]]:2 = hlfir.declare %[[A]]
-! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
-! CHECK-NEXT:    %[[SUM_RES:.*]] = hlfir.sum %[[A_VAR]]#0
-! CHECK-NEXT:    hlfir.assign %[[SUM_RES]] to %[[RES_VAR]]#0
-! CHECK-NEXT:    return
-! CHECK-NEXT:  }
+! ALL-LABEL: func.func @_QPtest
+! ALL:             %[[A:.*]]: !fir.box<!fir.array<?xf32>>
+! ALL:             %[[RES:.*]]: !fir.ref<f32>
 
-! NO-HLFIR-NOT: hlfir.
+! HLFIR:         %[[A_VAR:.*]]:2 = hlfir.declare %[[A]]
+! fir.declare is only generated via the hlfir -> fir lowering
+! FIR:           %[[A_VAR:.*]] = fir.declare %[[A]]
+! NO-HLFIR-NOT:  fir.declare
+
+! HLFIR-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
+! FIR:           %[[RES_VAR:.*]] = fir.declare %[[RES]]
+! NO-HLFIR-NOT:  fir.declare
+
+! HLFIR-NEXT:    %[[SUM_RES:.*]] = hlfir.sum %[[A_VAR]]#0
+! HLFIR-NEXT:    hlfir.assign %[[SUM_RES]] to %[[RES_VAR]]#0
+! FIR-NOT:       hlfir.
+! NO-HLFIR-NOT:  hlfir.
+
+! ALL:           return
+! ALL-NEXT:  }
+
