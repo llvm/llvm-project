@@ -24,6 +24,7 @@ set(files
   __algorithm/find_if_not.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
+  __algorithm/for_each_segment.h
   __algorithm/generate.h
   __algorithm/generate_n.h
   __algorithm/half_positive.h

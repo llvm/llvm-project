@@ -40,7 +40,6 @@ libcxx/include/__algorithm/clamp.h
 libcxx/include/__algorithm/comp.h
 libcxx/include/__algorithm/comp_ref_type.h
 libcxx/include/__algorithm/copy_backward.h
-libcxx/include/__algorithm/copy.h
 libcxx/include/__algorithm/copy_if.h
 libcxx/include/__algorithm/copy_move_common.h
 libcxx/include/__algorithm/copy_n.h
