@@ -2,6 +2,9 @@
 // RUN: not llvm-tblgen -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
 // RUN: not llvm-tblgen -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
 // RUN: not llvm-tblgen -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
+// RUN: not llvm-tblgen -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
+// RUN: not llvm-tblgen -DERROR5 %s 2>&1 | FileCheck --check-prefix=ERROR5 %s
+// RUN: not llvm-tblgen -DERROR6 %s 2>&1 | FileCheck --check-prefix=ERROR6 %s
 
 // !setop and !getop are deprecated in favor of !setdagop and !getdagop.
 // Two tests retain the old names just to be sure they are still supported.
@@ -9,9 +12,14 @@
 class Base;
 class OtherBase;
 
+class Super : Base;
+
 def foo: Base;
 def bar: Base;
 def qux: OtherBase;
+
+def alice : Super;
+def bob : Super;
 
 def test {
   dag orig = (foo 1, 2:$a, $b);
@@ -61,4 +69,49 @@ def test {
   // ERROR3: error: type for !getdagop must be a record type
   int ridiculousCast = !getdagop<int>(orig);
 #endif
+
+  dag in1 = (foo 1:$a, 2:$b, 3:$c);
+  // CHECK: list<string> in1Names = ["a", "b", "c"];
+  list<string> in1Names = !foreach(i, !range(!size(in1)), !getdagname(in1, i));
+  // CHECK: list<int> in1Args = [1, 2, 3];
+  list<int> in1Args = !foreach(i, !range(!size(in1)), !getdagarg<int>(in1, i));
+
+  dag in2 = (foo 1:$a, (bar "x":$x, (qux foo:$s1, bar:$s2):$y, 7:$z):$b, 3:$c);
+  // CHECK: dag in2NestedDag = (qux foo:$s1, bar:$s2);
+  dag in2NestedDag = !getdagarg<dag>(!getdagarg<dag>(in2, 1), "y");
+  // CHECK: Base in2NestedArg = foo;
+  Base in2NestedArg = !getdagarg<Base>(!getdagarg<dag>(!getdagarg<dag>(in2, 1), "y"), "s1");
+
+  dag in3 = (foo 1:$a, ?:$b, 3);
+  // CHECK: list<string> in3Names = ["a", "b", ?];
+  list<string> in3Names = !foreach(i, !range(!size(in3)), !getdagname(in3, i));
+  // CHECK: list<int> in3Args = [1, ?, 3];
+  list<int> in3Args = !foreach(i, !range(!size(in3)), !getdagarg<int>(in3, i));
+
+#ifdef ERROR4
+  // ERROR4: error: !getdagarg index -1 is negative
+  int outOfRange = !getdagarg<int>(in1, -1);
+#endif
+
+#ifdef ERROR5
+  // ERROR5: error: !getdagarg index 3 is out of range (dag has 3 arguments)
+  int outOfRange = !getdagarg<int>(in1, 3);
+#endif
+
+#ifdef ERROR6
+  // ERROR6: error: !getdagarg key 'x' is not found
+  int notFound = !getdagarg<int>(in1, "x");
+#endif
+
+  dag in4 = (foo "arg1":$a, "arg2":$b, "arg3":$c);
+  // CHECK: int misMatchType1 = ?;
+  int misMatchType1 = !getdagarg<int>(in4, 0);
+
+  dag in5 = (foo foo:$a, bar:$b, foo:$c);
+  // CHECK: OtherBase misMatchType2 = ?;
+  OtherBase misMatchType2 = !getdagarg<OtherBase>(in5, 1);
+
+  dag in6 = (foo alice:$a, bob:$b);
+  // CHECK: Base base = bob;
+  Base base = !getdagarg<Base>(in6, 1);
 }
