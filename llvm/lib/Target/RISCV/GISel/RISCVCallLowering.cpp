@@ -133,6 +133,21 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 };
 
+struct RISCVCallReturnHandler : public RISCVIncomingValueHandler {
+  RISCVCallReturnHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                         MachineInstrBuilder &MIB)
+      : RISCVIncomingValueHandler(B, MRI), MIB(MIB) {}
+
+  MachineInstrBuilder MIB;
+
+  void assignValueToReg(Register ValVReg, Register PhysReg,
+                        CCValAssign VA) override {
+    // Copy argument received in physical register to desired VReg.
+    MIB.addDef(PhysReg, RegState::Implicit);
+    MIRBuilder.buildCopy(ValVReg, PhysReg);
+  }
+};
+
 } // namespace
 
 RISCVCallLowering::RISCVCallLowering(const RISCVTargetLowering &TLI)
@@ -232,5 +247,86 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
 bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                   CallLoweringInfo &Info) const {
-  return false;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const DataLayout &DL = MF.getDataLayout();
+  const Function &F = MF.getFunction();
+  CallingConv::ID CC = F.getCallingConv();
+
+  // TODO: Support vararg functions.
+  if (Info.IsVarArg)
+    return false;
+
+  // TODO: Support all argument types.
+  for (auto &AInfo : Info.OrigArgs) {
+    if (AInfo.Ty->isIntegerTy())
+      continue;
+    if (AInfo.Ty->isPointerTy())
+      continue;
+    if (AInfo.Ty->isFloatingPointTy())
+      continue;
+    return false;
+  }
+
+  SmallVector<ArgInfo, 32> SplitArgInfos;
+  SmallVector<ISD::OutputArg, 8> Outs;
+  unsigned Index = 0;
+  for (auto &AInfo : Info.OrigArgs) {
+    // Handle any required unmerging of split value types from a given VReg into
+    // physical registers. ArgInfo objects are constructed correspondingly and
+    // appended to SplitArgInfos.
+    splitToValueTypes(AInfo, SplitArgInfos, DL, CC);
+
+    ++Index;
+  }
+
+  // TODO: Support tail calls.
+  Info.IsTailCall = false;
+
+  if (!Info.Callee.isReg())
+    Info.Callee.setTargetFlags(RISCVII::MO_CALL);
+
+  MachineInstrBuilder Call =
+      MIRBuilder
+          .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
+                                                  : RISCV::PseudoCALL)
+          .add(Info.Callee);
+
+  RISCVOutgoingValueAssigner ArgAssigner(
+      CC == CallingConv::Fast ? RISCV::CC_RISCV_FastCC : RISCV::CC_RISCV,
+      /*IsRet=*/false);
+  RISCVOutgoingValueHandler ArgHandler(MIRBuilder, MF.getRegInfo(), Call);
+  if (!determineAndHandleAssignments(ArgHandler, ArgAssigner, SplitArgInfos,
+                                     MIRBuilder, CC, Info.IsVarArg))
+    return false;
+
+  MIRBuilder.insertInstr(Call);
+
+  if (Info.OrigRet.Ty->isVoidTy())
+    return true;
+
+  // TODO: Only integer, pointer and aggregate types are supported now.
+  if (!Info.OrigRet.Ty->isIntOrPtrTy() && !Info.OrigRet.Ty->isAggregateType())
+    return false;
+
+  SmallVector<ArgInfo, 4> SplitRetInfos;
+  splitToValueTypes(Info.OrigRet, SplitRetInfos, DL, CC);
+
+  // Assignments should be handled *before* the merging of values takes place.
+  // To ensure this, the insert point is temporarily adjusted to just after the
+  // call instruction.
+  MachineBasicBlock::iterator CallInsertPt = Call;
+  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), std::next(CallInsertPt));
+
+  RISCVIncomingValueAssigner RetAssigner(
+      CC == CallingConv::Fast ? RISCV::CC_RISCV_FastCC : RISCV::CC_RISCV,
+      /*IsRet=*/true);
+  RISCVCallReturnHandler RetHandler(MIRBuilder, MF.getRegInfo(), Call);
+  if (!determineAndHandleAssignments(RetHandler, RetAssigner, SplitRetInfos,
+                                     MIRBuilder, CC, Info.IsVarArg))
+    return false;
+
+  // Readjust insert point to end of basic block.
+  MIRBuilder.setMBB(MIRBuilder.getMBB());
+
+  return true;
 }
