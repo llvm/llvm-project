@@ -113,16 +113,16 @@ public:
 
     // Reconstruct the filenames that would satisfy this directive...
     llvm::SmallString<256> Buf;
-    auto NotFoundRelativeTo = [&](const DirectoryEntry *DE) {
-      Buf = DE->getName();
+    auto NotFoundRelativeTo = [&](DirectoryEntryRef DE) {
+      Buf = DE.getName();
       llvm::sys::path::append(Buf, FileName);
       llvm::sys::path::remove_dots(Buf, /*remove_dot_dot=*/true);
       Out.insert(Buf);
     };
     // ...relative to the including file.
     if (!IsAngled) {
-      if (const FileEntry *IncludingFile =
-              SM.getFileEntryForID(SM.getFileID(IncludeTok.getLocation())))
+      if (OptionalFileEntryRef IncludingFile =
+              SM.getFileEntryRefForID(SM.getFileID(IncludeTok.getLocation())))
         if (IncludingFile->getDir())
           NotFoundRelativeTo(IncludingFile->getDir());
     }
@@ -132,7 +132,7 @@ public:
              Search.search_dir_end())) {
       // No support for frameworks or header maps yet.
       if (Dir.isNormalDir())
-        NotFoundRelativeTo(Dir.getDir());
+        NotFoundRelativeTo(*Dir.getDirRef());
     }
   }
 };
