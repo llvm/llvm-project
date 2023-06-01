@@ -1283,24 +1283,25 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
   if (!ompBuilder) {
     ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
 
-    bool isTargetDevice = false;
+    bool isTargetDevice = false, isGPU = false;
     llvm::StringRef hostIRFilePath = "";
 
-    if (Attribute deviceAttr = mlirModule->getAttr("omp.is_target_device"))
-      if (::llvm::isa<mlir::BoolAttr>(deviceAttr))
-        isTargetDevice =
-            ::llvm::dyn_cast<mlir::BoolAttr>(deviceAttr).getValue();
+    if (auto deviceAttr =
+            mlirModule->getAttrOfType<mlir::BoolAttr>("omp.is_target_device"))
+      isTargetDevice = deviceAttr.getValue();
 
-    if (Attribute filepath = mlirModule->getAttr("omp.host_ir_filepath"))
-      if (::llvm::isa<mlir::StringAttr>(filepath))
-        hostIRFilePath =
-            ::llvm::dyn_cast<mlir::StringAttr>(filepath).getValue();
+    if (auto gpuAttr = mlirModule->getAttrOfType<mlir::BoolAttr>("omp.is_gpu"))
+      isGPU = gpuAttr.getValue();
+
+    if (auto filepathAttr =
+            mlirModule->getAttrOfType<mlir::StringAttr>("omp.host_ir_filepath"))
+      hostIRFilePath = filepathAttr.getValue();
 
     ompBuilder->initialize(hostIRFilePath);
 
     // TODO: set the flags when available
     llvm::OpenMPIRBuilderConfig config(
-        isTargetDevice, /* IsGPU */ false,
+        isTargetDevice, isGPU,
         /* HasRequiresUnifiedSharedMemory */ false,
         /* OpenMPOffloadMandatory */ false);
     ompBuilder->setConfig(config);
