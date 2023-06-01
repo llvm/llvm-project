@@ -14286,16 +14286,16 @@ void ScalarEvolution::verify() const {
     }
   }
 
-  // Verify that ConstantMultipleCache computations are correct. It is possible
-  // that a recomputed multiple has a higher multiple than the cached multiple
-  // due to strengthened wrap flags. In this case, the cached multiple is a
-  // conservative, but still correct if it divides the recomputed multiple. As
-  // a special case, if if one multiple is zero, the other must also be zero.
+  // Verify that ConstantMultipleCache computations are correct. We check that
+  // cached multiples and recomputed multiples are multiples of each other to
+  // verify correctness. It is possible that a recomputed multiple is different
+  // from the cached multiple due to strengthened no wrap flags or changes in
+  // KnownBits computations.
   for (auto [S, Multiple] : ConstantMultipleCache) {
-    APInt RecomputedMultiple = SE2.getConstantMultipleImpl(S);
-    if ((Multiple != RecomputedMultiple &&
-         (Multiple == 0 || RecomputedMultiple == 0)) &&
-        RecomputedMultiple.urem(Multiple) != 0) {
+    APInt RecomputedMultiple = SE2.getConstantMultiple(S);
+    if ((Multiple != 0 && RecomputedMultiple != 0 &&
+         Multiple.urem(RecomputedMultiple) != 0 &&
+         RecomputedMultiple.urem(Multiple) != 0)) {
       dbgs() << "Incorrect cached computation in ConstantMultipleCache for "
              << *S << " : Computed " << RecomputedMultiple
              << " but cache contains " << Multiple << "!\n";
