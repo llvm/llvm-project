@@ -6845,12 +6845,12 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
 // second index 1 is the child index for "m_b" within class A.
 
 size_t SwiftASTContext::GetIndexOfChildMemberWithName(
-    opaque_compiler_type_t type, const char *name, ExecutionContext *exe_ctx,
+    opaque_compiler_type_t type, StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   VALID_OR_RETURN_CHECK_TYPE(type, 0);
   LLDB_SCOPED_TIMER();
 
-  if (name && name[0]) {
+  if (!name.empty()) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
 
     const swift::TypeKind type_kind = swift_can_type->getKind();
