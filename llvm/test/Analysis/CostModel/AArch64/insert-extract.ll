@@ -11,8 +11,8 @@ target triple = "aarch64--linux-gnu"
 
 define void @vectorInstrCost() {
 ; CHECK-LABEL: 'vectorInstrCost'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %ta0 = extractelement <8 x i1> undef, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %ta1 = extractelement <8 x i1> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ta0 = extractelement <8 x i1> undef, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ta1 = extractelement <8 x i1> undef, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t1 = extractelement <8 x i8> undef, i32 0
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t2 = extractelement <8 x i8> undef, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t3 = extractelement <4 x i16> undef, i32 0
@@ -27,8 +27,8 @@ define void @vectorInstrCost() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t12 = extractelement <2 x float> undef, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %t13 = extractelement <2 x double> undef, i32 0
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t14 = extractelement <2 x double> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t31 = insertelement <8 x i1> undef, i1 false, i32 0
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t41 = insertelement <8 x i1> undef, i1 true, i32 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t31 = insertelement <8 x i1> undef, i1 false, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t41 = insertelement <8 x i1> undef, i1 true, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t30 = insertelement <8 x i8> undef, i8 0, i32 0
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t40 = insertelement <8 x i8> undef, i8 1, i32 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t50 = insertelement <4 x i16> undef, i16 2, i32 0
@@ -46,8 +46,8 @@ define void @vectorInstrCost() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; KRYO-LABEL: 'vectorInstrCost'
-; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ta0 = extractelement <8 x i1> undef, i32 0
-; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ta1 = extractelement <8 x i1> undef, i32 1
+; KRYO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %ta0 = extractelement <8 x i1> undef, i32 0
+; KRYO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %ta1 = extractelement <8 x i1> undef, i32 1
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t1 = extractelement <8 x i8> undef, i32 0
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t2 = extractelement <8 x i8> undef, i32 1
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t3 = extractelement <4 x i16> undef, i32 0
@@ -62,8 +62,8 @@ define void @vectorInstrCost() {
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t12 = extractelement <2 x float> undef, i32 1
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %t13 = extractelement <2 x double> undef, i32 0
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t14 = extractelement <2 x double> undef, i32 1
-; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t31 = insertelement <8 x i1> undef, i1 false, i32 0
-; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t41 = insertelement <8 x i1> undef, i1 true, i32 1
+; KRYO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t31 = insertelement <8 x i1> undef, i1 false, i32 0
+; KRYO-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %t41 = insertelement <8 x i1> undef, i1 true, i32 1
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t30 = insertelement <8 x i8> undef, i8 0, i32 0
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t40 = insertelement <8 x i8> undef, i8 1, i32 1
 ; KRYO-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t50 = insertelement <4 x i16> undef, i16 2, i32 0
