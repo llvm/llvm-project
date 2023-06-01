@@ -2134,9 +2134,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     KernelBusyWaitTics = OMPX_StreamBusyWait;
     DataBusyWaitTics = OMPX_StreamBusyWait;
 
-    // Default-Construct each device queue (not initialized) to avoid
-    // initialization overhead.
+    // Default-Construct each device queue (and initialize only the first) to
+    // avoid unnecessary initialization overhead.
     Queues = std::vector<AMDGPUQueueTy>(NumQueues);
+    // TODO: Handle errors here: abort? Gracefully? Ignore?
+    if (auto Err = Queues.front().init(Agent, QueueSize))
+      DP("LAZY_QUEUE: Error occurred during AMDGPUQueueTy init\n");
+    ++NumInitQueues;
 
     // Initialize stream pool.
     if (auto Err = AMDGPUStreamManager.init(OMPX_InitialNumStreams))
