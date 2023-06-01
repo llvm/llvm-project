@@ -1919,7 +1919,7 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
 }
 
 std::string HeaderSearch::suggestPathToFileForDiagnostics(
-    const FileEntry *File, llvm::StringRef MainFile, bool *IsSystem) {
+    const FileEntry *File, llvm::StringRef MainFile, bool *IsSystem) const {
   // FIXME: We assume that the path name currently cached in the FileEntry is
   // the most appropriate one for this analysis (and that it's spelled the
   // same way as the corresponding header search path).
@@ -1929,7 +1929,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 
 std::string HeaderSearch::suggestPathToFileForDiagnostics(
     llvm::StringRef File, llvm::StringRef WorkingDir, llvm::StringRef MainFile,
-    bool *IsSystem) {
+    bool *IsSystem) const {
   using namespace llvm::sys;
 
   llvm::SmallString<32> FilePath = File;
