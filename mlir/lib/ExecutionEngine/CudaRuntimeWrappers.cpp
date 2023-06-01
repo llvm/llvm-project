@@ -322,7 +322,7 @@ mgpuCreateCsr(intptr_t rows, intptr_t cols, intptr_t nnz, void *rowPos,
   auto dTp = static_cast<cudaDataType_t>(dtp);
   CUSPARSE_REPORT_IF_ERROR(cusparseCreateCsr(&mat, rows, cols, nnz, rowPos,
                                              colIdxs, values, pTp, iTp,
-                                             CUSPARSE_INDEX_BASE_ZERO, dtp))
+                                             CUSPARSE_INDEX_BASE_ZERO, dTp))
   return reinterpret_cast<void *>(mat);
 }
 
