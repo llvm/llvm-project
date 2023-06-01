@@ -559,10 +559,13 @@ getReductionOperator(const Fortran::parser::AccReductionOperator &op) {
 static mlir::Value genReductionInitValue(mlir::OpBuilder &builder,
                                          mlir::Location loc, mlir::Type ty,
                                          mlir::acc::ReductionOperator op) {
-  if (op != mlir::acc::ReductionOperator::AccAdd)
+  if (op != mlir::acc::ReductionOperator::AccAdd &&
+      op != mlir::acc::ReductionOperator::AccMul)
     TODO(loc, "reduction operator");
 
-  unsigned initValue = 0;
+  // 0 for +, ior, ieor
+  // 1 for *
+  unsigned initValue = op == mlir::acc::ReductionOperator::AccMul ? 1 : 0;
 
   if (ty.isIntOrIndex())
     return builder.create<mlir::arith::ConstantOp>(
@@ -582,6 +585,14 @@ static mlir::Value genCombiner(mlir::OpBuilder &builder, mlir::Location loc,
     if (mlir::isa<mlir::FloatType>(ty))
       return builder.create<mlir::arith::AddFOp>(loc, value1, value2);
     TODO(loc, "reduction add type");
+  }
+
+  if (op == mlir::acc::ReductionOperator::AccMul) {
+    if (ty.isIntOrIndex())
+      return builder.create<mlir::arith::MulIOp>(loc, value1, value2);
+    if (mlir::isa<mlir::FloatType>(ty))
+      return builder.create<mlir::arith::MulFOp>(loc, value1, value2);
+    TODO(loc, "reduction mul type");
   }
   TODO(loc, "reduction operator");
 }
