@@ -1221,6 +1221,9 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
     P += "macosx";
   P += ".a";
 
+  if (!getVFS().exists(P))
+    getDriver().Diag(clang::diag::err_drv_darwin_sdk_missing_arclite) << P;
+
   CmdArgs.push_back(Args.MakeArgString(P));
 }
 
