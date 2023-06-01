@@ -145,8 +145,6 @@ public:
 
   ~FunctionSpecializer();
 
-  bool isClonedFunction(Function *F) { return Specializations.count(F); }
-
   bool run();
 
 private:
