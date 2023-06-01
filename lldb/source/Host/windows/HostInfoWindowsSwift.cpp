@@ -13,9 +13,15 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/StringExtras.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Support/ConvertUTF.h>
 
+#include <cstdlib>
 #include <string>
+#include <vector>
 
 using namespace lldb_private;
 
@@ -59,4 +65,18 @@ llvm::Expected<llvm::StringRef> HostInfoWindows::GetSDKRoot(SDKOptions options) 
   if (!g_sdkroot.empty())
     return g_sdkroot;
   return llvm::make_error<HostInfoError>("`SDKROOT` is unset");
+}
+
+std::vector<std::string> HostInfoWindows::GetSwiftLibrarySearchPaths() {
+  static std::once_flag g_flag;
+  static std::vector<std::string> g_library_paths;
+
+  std::call_once(g_flag, []() {
+    llvm::for_each(llvm::split(std::getenv("Path"), ";"),
+                   [](llvm::StringRef path) {
+      g_library_paths.emplace_back(path);
+    });
+  });
+
+  return g_library_paths;
 }

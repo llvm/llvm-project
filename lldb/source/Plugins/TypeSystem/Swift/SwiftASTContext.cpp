@@ -3233,6 +3233,8 @@ GetLibrarySearchPaths(const swift::SearchPathOptions &search_path_opts) {
     paths.push_back(path);
   for (std::string path : search_path_opts.LibrarySearchPaths)
     paths.push_back(path);
+  for (const std::string &path : HostInfo::GetSwiftLibrarySearchPaths())
+    paths.emplace_back(path);
   return paths;
 }
 
