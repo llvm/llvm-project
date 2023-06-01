@@ -215,6 +215,7 @@ protected:
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
+  bool HasForceVALUThrottle = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1143,6 +1144,8 @@ public:
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
+
+  bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
