@@ -296,6 +296,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-ar
   llvm-cov
   llvm-cxxfilt
+  llvm-debuginfod
   llvm-debuginfod-find
   llvm-dlltool
   ${LLVM_DRIVER_TARGET}
