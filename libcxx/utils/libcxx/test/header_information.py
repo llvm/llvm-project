@@ -130,28 +130,22 @@ def is_header(file):
         and file.name != "libcxx.imp"
     )
 
-monorepo_root = pathlib.Path(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-)
-include = pathlib.Path(os.path.join(monorepo_root, "libcxx", "include"))
-test = pathlib.Path(os.path.join(monorepo_root, "libcxx", "test"))
-assert monorepo_root.exists()
+libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+include = pathlib.Path(os.path.join(libcxx_root, "include"))
+test = pathlib.Path(os.path.join(libcxx_root, "test"))
+assert libcxx_root.exists()
 
 toplevel_headers = sorted(
-    str(p.relative_to(include)) for p in include.glob("[a-z]*") if is_header(p)
+    p.relative_to(include).as_posix() for p in include.glob("[a-z]*") if is_header(p)
 )
 experimental_headers = sorted(
-    str(p.relative_to(include))
-    for p in include.glob("experimental/[a-z]*")
-    if is_header(p)
+    p.relative_to(include).as_posix() for p in include.glob("experimental/[a-z]*") if is_header(p)
 )
 public_headers = toplevel_headers + experimental_headers
 private_headers = sorted(
-    str(p.relative_to(include))
-    for p in include.rglob("*")
-    if is_header(p)
-    and str(p.relative_to(include)).startswith("__")
-    and not p.name.startswith("pstl")
+    p.relative_to(include).as_posix() for p in include.rglob("*") if is_header(p)
+                                                                     and str(p.relative_to(include)).startswith("__")
+                                                                     and not p.name.startswith("pstl")
 )
 variables = {
     "toplevel_headers": toplevel_headers,
