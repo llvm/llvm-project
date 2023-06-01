@@ -1,5 +1,5 @@
 ! Test lowering of array constructors as inlined temporary.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_simple(i)
   call takes_int([42, i])

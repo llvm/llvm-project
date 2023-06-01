@@ -1,5 +1,5 @@
 ! Test lowering of StructureConstructor.
-! RUN: bbc -hlfir -emit-fir -o - -I nowhere %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - -I nowhere %s 2>&1 | FileCheck %s
 
 module types
   type t1

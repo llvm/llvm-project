@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL:   func.func @_QPtest1(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "x"},

@@ -1,7 +1,7 @@
 ! Test lowering of substrings to HLFIR
 ! Note: cse is run to make the expected output more readable by sharing
 ! the boilerplate between the different susbtring cases.
-! RUN: bbc -emit-fir -hlfir -o - %s | fir-opt -cse -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | fir-opt -cse -o - | FileCheck %s
 
 ! CHECK-LABEL:   func.func @_QPcst_len(
 subroutine cst_len(array, scalar)
