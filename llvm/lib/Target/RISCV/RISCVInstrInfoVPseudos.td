@@ -2364,7 +2364,7 @@ multiclass VPseudoVCLS_V {
 multiclass VPseudoVSQR_V {
   foreach m = MxListF in {
     defvar mx = m.MX;
-    defvar sews = SchedSEWSetF<m.MX>.val;
+    defvar sews = SchedSEWSet<m.MX, /*isF*/ 1>.val;
 
     let VLMul = m.value in
       foreach e = sews in {
@@ -2719,7 +2719,7 @@ multiclass VPseudoVFMUL_VV_VF {
 multiclass VPseudoVFDIV_VV_VF {
   foreach m = MxListF in {
     defvar mx = m.MX;
-    defvar sews = SchedSEWSetF<mx>.val;
+    defvar sews = SchedSEWSet<mx, /*isF*/ 1>.val;
     foreach e = sews in {
       defvar WriteVFDivV_MX_E = !cast<SchedWrite>("WriteVFDivV_" # mx # "_E" # e);
       defvar ReadVFDivV_MX_E = !cast<SchedRead>("ReadVFDivV_" # mx # "_E" # e);
@@ -2732,7 +2732,7 @@ multiclass VPseudoVFDIV_VV_VF {
   foreach f = FPList in {
     foreach m = f.MxList in {
       defvar mx = m.MX;
-      defvar sews = SchedSEWSetF<mx>.val;
+      defvar sews = SchedSEWSet<mx, /*isF*/ 1>.val;
       foreach e = sews in {
         defvar WriteVFDivF_MX_E = !cast<SchedWrite>("WriteVFDivF_" # mx # "_E" # e);
         defvar ReadVFDivV_MX_E = !cast<SchedRead>("ReadVFDivV_" # mx # "_E" # e);
@@ -2749,7 +2749,7 @@ multiclass VPseudoVFRDIV_VF {
   foreach f = FPList in {
     foreach m = f.MxList in {
       defvar mx = m.MX;
-      defvar sews = SchedSEWSetF<mx>.val;
+      defvar sews = SchedSEWSet<mx, /*isF*/ 1>.val;
       foreach e = sews in {
         defvar WriteVFDivF_MX_E = !cast<SchedWrite>("WriteVFDivF_" # mx # "_E" # e);
         defvar ReadVFDivV_MX_E = !cast<SchedRead>("ReadVFDivV_" # mx # "_E" # e);
@@ -3464,7 +3464,7 @@ multiclass VPseudoVRED_VS {
 multiclass VPseudoVWRED_VS {
   foreach m = MxListWRed in {
     defvar mx = m.MX;
-    foreach e = SchedSEWSet<mx, 1>.val in {
+    foreach e = SchedSEWSet<mx, /*isF*/ 0, /*isWidening*/ 1>.val in {
       defvar WriteVIWRedV_From_MX_E = !cast<SchedWrite>("WriteVIWRedV_From_" # mx # "_E" # e);
       defm _VS : VPseudoTernaryWithTailPolicy_E<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  Sched<[WriteVIWRedV_From_MX_E, ReadVIWRedV, ReadVIWRedV,
@@ -3476,7 +3476,7 @@ multiclass VPseudoVWRED_VS {
 multiclass VPseudoVFRED_VS {
   foreach m = MxListF in {
     defvar mx = m.MX;
-    foreach e = SchedSEWSetF<mx>.val in {
+    foreach e = SchedSEWSet<mx, /*isF*/ 1>.val in {
       defvar WriteVFRedV_From_MX_E = !cast<SchedWrite>("WriteVFRedV_From_" # mx # "_E" # e);
       defm _VS : VPseudoTernaryWithTailPolicy_E<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  Sched<[WriteVFRedV_From_MX_E, ReadVFRedV, ReadVFRedV, ReadVFRedV,
@@ -3488,7 +3488,7 @@ multiclass VPseudoVFRED_VS {
 multiclass VPseudoVFREDO_VS {
   foreach m = MxListF in {
     defvar mx = m.MX;
-    foreach e = SchedSEWSetF<mx>.val in {
+    foreach e = SchedSEWSet<mx, /*isF*/ 1>.val in {
       defvar WriteVFRedOV_From_MX_E = !cast<SchedWrite>("WriteVFRedOV_From_" # mx # "_E" # e);
       defm _VS : VPseudoTernaryWithTailPolicy_E<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  Sched<[WriteVFRedOV_From_MX_E, ReadVFRedOV, ReadVFRedOV,
@@ -3500,7 +3500,7 @@ multiclass VPseudoVFREDO_VS {
 multiclass VPseudoVFWRED_VS {
   foreach m = MxListFWRed in {
     defvar mx = m.MX;
-    foreach e = SchedSEWSetF<mx, 1>.val in {
+    foreach e = SchedSEWSet<mx, /*isF*/ 1, /*isWidening*/ 1>.val in {
       defvar WriteVFWRedV_From_MX_E = !cast<SchedWrite>("WriteVFWRedV_From_" # mx # "_E" # e);
       defm _VS : VPseudoTernaryWithTailPolicy_E<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  Sched<[WriteVFWRedV_From_MX_E, ReadVFWRedV, ReadVFWRedV,
