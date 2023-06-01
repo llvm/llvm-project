@@ -256,8 +256,8 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    istrstream(istrstream&& __rhs)
-        : istream(_VSTD::move(__rhs)),
+    istrstream(istrstream&& __rhs)  // extension
+        : istream(_VSTD::move(static_cast<istream&>(__rhs))),
           __sb_(_VSTD::move(__rhs.__sb_))
     {
         istream::set_rdbuf(&__sb_);
@@ -305,8 +305,8 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    ostrstream(ostrstream&& __rhs)
-        : ostream(_VSTD::move(__rhs)),
+    ostrstream(ostrstream&& __rhs)  // extension
+        : ostream(_VSTD::move(static_cast<ostream&>(__rhs))),
           __sb_(_VSTD::move(__rhs.__sb_))
     {
         ostream::set_rdbuf(&__sb_);
@@ -365,8 +365,8 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    strstream(strstream&& __rhs)
-        : iostream(_VSTD::move(__rhs)),
+    strstream(strstream&& __rhs)  // extension
+        : iostream(_VSTD::move(static_cast<iostream&>(__rhs))),
           __sb_(_VSTD::move(__rhs.__sb_))
     {
         iostream::set_rdbuf(&__sb_);
