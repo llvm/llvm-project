@@ -123,6 +123,7 @@ END-SCRIPT
 #include <__algorithm/pstl_backends/cpu_backends/for_each.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/for_each.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/merge.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/merge.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/serial.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/serial.h'}}
+#include <__algorithm/pstl_backends/cpu_backends/stable_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/stable_sort.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/thread.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/thread.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/transform.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/transform_reduce.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/transform_reduce.h'}}
