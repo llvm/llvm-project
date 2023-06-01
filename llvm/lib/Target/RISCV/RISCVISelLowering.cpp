@@ -3734,20 +3734,6 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
   MVT XLenVT = Subtarget.getXLenVT();
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
   auto TrueMask = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).first;
-  if (Index == 1 && NumSubElts + Index == (int)NumElts &&
-      isa<BuildVectorSDNode>(InPlace)) {
-    if (SDValue Splat = cast<BuildVectorSDNode>(InPlace)->getSplatValue()) {
-      auto OpCode =
-        VT.isFloatingPoint() ? RISCVISD::VFSLIDE1UP_VL : RISCVISD::VSLIDE1UP_VL;
-      auto Vec = DAG.getNode(OpCode, DL, ContainerVT,
-                             DAG.getUNDEF(ContainerVT),
-                             convertToScalableVector(ContainerVT, ToInsert, DAG, Subtarget),
-                             Splat, TrueMask,
-                             DAG.getConstant(NumSubElts + Index, DL, XLenVT));
-      return convertFromScalableVector(VT, Vec, DAG, Subtarget);
-    }
-  }
-
   // We slide up by the index that the subvector is being inserted at, and set
   // VL to the index + the number of elements being inserted.
   unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVII::MASK_AGNOSTIC;
@@ -3763,6 +3749,58 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
       DAG.getConstant(NumSubElts + Index, DL, XLenVT),
       Policy);
   return convertFromScalableVector(VT, Slideup, DAG, Subtarget);
+}
+
+/// Match v(f)slide1up/down idioms.  These operations involve sliding
+/// N-1 elements to make room for an inserted scalar at one end.
+static SDValue lowerVECTOR_SHUFFLEAsVSlide1(const SDLoc &DL, MVT VT,
+                                            SDValue V1, SDValue V2,
+                                            ArrayRef<int> Mask,
+                                            const RISCVSubtarget &Subtarget,
+                                            SelectionDAG &DAG) {
+  bool OpsSwapped = false;
+  if (!isa<BuildVectorSDNode>(V1)) {
+    if (!isa<BuildVectorSDNode>(V2))
+      return SDValue();
+    std::swap(V1, V2);
+    OpsSwapped = true;
+  }
+  SDValue Splat = cast<BuildVectorSDNode>(V1)->getSplatValue();
+  if (!Splat)
+    return SDValue();
+
+  // Return true if the mask could describe a slide of Mask.size() - 1
+  // elements from concat_vector(V1, V2)[Base:] to [Offset:].
+  auto isSlideMask = [](ArrayRef<int> Mask, unsigned Base, int Offset) {
+    const unsigned S = (Offset > 0) ? 0 : -Offset;
+    const unsigned E = Mask.size() - ((Offset > 0) ? Offset : 0);
+    for (unsigned i = S; i != E; ++i)
+      if (Mask[i] >= 0 && (unsigned)Mask[i] != Base + i + Offset)
+        return false;
+    return true;
+  };
+
+  const unsigned NumElts = VT.getVectorNumElements();
+  bool IsVSlidedown = isSlideMask(Mask, OpsSwapped ? 0 : NumElts, 1);
+  if (!IsVSlidedown && !isSlideMask(Mask, OpsSwapped ? 0 : NumElts, -1))
+    return SDValue();
+
+  const int InsertIdx = Mask[IsVSlidedown ? (NumElts - 1) : 0];
+  // Inserted lane must come from splat, undef scalar is legal but not profitable.
+  if (InsertIdx < 0 || InsertIdx / NumElts != (unsigned)OpsSwapped)
+    return SDValue();
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+  auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto OpCode = IsVSlidedown ?
+    (VT.isFloatingPoint() ? RISCVISD::VFSLIDE1DOWN_VL : RISCVISD::VSLIDE1DOWN_VL) :
+    (VT.isFloatingPoint() ? RISCVISD::VFSLIDE1UP_VL : RISCVISD::VSLIDE1UP_VL);
+  auto Vec = DAG.getNode(OpCode, DL, ContainerVT,
+                         DAG.getUNDEF(ContainerVT),
+                         convertToScalableVector(ContainerVT, V2, DAG, Subtarget),
+                         Splat, TrueMask, VL);
+  return convertFromScalableVector(VT, Vec, DAG, Subtarget);
 }
 
 // Given two input vectors of <[vscale x ]n x ty>, use vwaddu.vv and vwmaccu.vx
@@ -3938,6 +3976,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   }
 
   ArrayRef<int> Mask = SVN->getMask();
+
+  if (SDValue V =
+          lowerVECTOR_SHUFFLEAsVSlide1(DL, VT, V1, V2, Mask, Subtarget, DAG))
+    return V;
 
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
