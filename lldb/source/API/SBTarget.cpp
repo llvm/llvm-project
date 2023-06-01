@@ -1892,7 +1892,7 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
                                                  max_matches, variable_list);
       break;
     case eMatchTypeStartsWith:
-      regexstr = llvm::Regex::escape(name) + ".*";
+      regexstr = "^" + llvm::Regex::escape(name) + ".*";
       target_sp->GetImages().FindGlobalVariables(RegularExpression(regexstr),
                                                  max_matches, variable_list);
       break;
