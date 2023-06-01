@@ -768,7 +768,7 @@ static void SetValueDataBasedOnQualType(Value &V, unsigned long long Data) {
   if (const auto *ET = QT->getAs<EnumType>())
     QT = ET->getDecl()->getIntegerType();
 
-  switch (QT->getAs<BuiltinType>()->getKind()) {
+  switch (QT->castAs<BuiltinType>()->getKind()) {
   default:
     llvm_unreachable("unknown type kind!");
 #define X(type, name)                                                          \
