@@ -1382,17 +1382,18 @@ Instruction *InstCombinerImpl::foldICmpWithConstant(ICmpInst &Cmp) {
 
   if (auto *Phi = dyn_cast<PHINode>(Op0))
     if (all_of(Phi->operands(), [](Value *V) { return isa<Constant>(V); })) {
-      Type *Ty = Cmp.getType();
-      Builder.SetInsertPoint(Phi);
-      PHINode *NewPhi =
-          Builder.CreatePHI(Ty, Phi->getNumOperands());
-      for (BasicBlock *Predecessor : predecessors(Phi->getParent())) {
-        auto *Input =
-            cast<Constant>(Phi->getIncomingValueForBlock(Predecessor));
-        auto *BoolInput = ConstantExpr::getCompare(Pred, Input, C);
-        NewPhi->addIncoming(BoolInput, Predecessor);
+      SmallVector<Constant *> Ops;
+      for (Value *V : Phi->incoming_values()) {
+        Constant *Res =
+            ConstantFoldCompareInstOperands(Pred, cast<Constant>(V), C, DL);
+        if (!Res)
+          return nullptr;
+        Ops.push_back(Res);
       }
-      NewPhi->takeName(&Cmp);
+      Builder.SetInsertPoint(Phi);
+      PHINode *NewPhi = Builder.CreatePHI(Cmp.getType(), Phi->getNumOperands());
+      for (auto [V, Pred] : zip(Ops, Phi->blocks()))
+        NewPhi->addIncoming(V, Pred);
       return replaceInstUsesWith(Cmp, NewPhi);
     }
 
