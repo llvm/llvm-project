@@ -20,8 +20,8 @@ defvar SchedMxListF = !listremove(SchedMxList, ["MF8"]);
 // Used for widening floating-point Reduction as it doesn't contain MF8.
 defvar SchedMxListFWRed = SchedMxListF;
 
-// For widening instructions, SEW will not be 64.
-class SchedSEWSet<string mx, bit isWidening = 0> {
+class SchedSEWSet<string mx, bit isF = 0, bit isWidening = 0> {
+  assert !or(!not(isF), !ne(mx, "MF8")), "LMUL shouldn't be MF8 for floating-point";
   defvar t = !cond(!eq(mx, "M1"):  [8, 16, 32, 64],
                    !eq(mx, "M2"):  [8, 16, 32, 64],
                    !eq(mx, "M4"):  [8, 16, 32, 64],
@@ -29,18 +29,11 @@ class SchedSEWSet<string mx, bit isWidening = 0> {
                    !eq(mx, "MF2"): [8, 16, 32],
                    !eq(mx, "MF4"): [8, 16],
                    !eq(mx, "MF8"): [8]);
-  list<int> val = !if(isWidening, !listremove(t, [64]), t);
-}
-
-// For floating-point instructions, SEW won't be 8.
-class SchedSEWSetF<string mx, bit isWidening = 0> {
-  defvar t = !cond(!eq(mx, "M1"):  [16, 32, 64],
-                   !eq(mx, "M2"):  [16, 32, 64],
-                   !eq(mx, "M4"):  [16, 32, 64],
-                   !eq(mx, "M8"):  [16, 32, 64],
-                   !eq(mx, "MF2"): [16, 32],
-                   !eq(mx, "MF4"): [16]);
-  list<int> val = !if(isWidening, !listremove(t, [64]), t);
+  // For floating-point instructions, SEW won't be 8.
+  defvar remove8 = !if(isF, !listremove(t, [8]), t);
+  // For widening instructions, SEW will not be 64.
+  defvar remove64 = !if(isWidening, !listremove(remove8, [64]), remove8);
+  list<int> val = remove64;
 }
 
 // Helper function to get the largest LMUL from MxList
@@ -52,7 +45,7 @@ class LargestLMUL<list<string> MxList> {
 // Helper function to get the smallest SEW that can be used with LMUL mx
 // Precondition: MxList is sorted in ascending LMUL order and SchedSEWSet<mx>
 class SmallestSEW<string mx, bit isF = 0> {
-  int r = !head(!if(isF, SchedSEWSetF<mx>.val, SchedSEWSet<mx>.val));
+  int r = !head(SchedSEWSet<mx, isF>.val);
 }
 
 // Creates WriteRes for (name, mx, resources) tuple
@@ -111,8 +104,7 @@ multiclass LMULSEWSchedWritesImpl<string name, list<string> MxList, bit isF = 0,
                                   bit isWidening = 0> {
   def name # "_WorstCase" : SchedWrite;
   foreach mx = MxList in {
-    foreach sew = !if(isF, SchedSEWSetF<mx, isWidening>.val,
-                      SchedSEWSet<mx, isWidening>.val) in
+    foreach sew = SchedSEWSet<mx, isF, isWidening>.val in
       def name # "_" # mx # "_E" # sew : SchedWrite;
   }
 }
@@ -120,8 +112,7 @@ multiclass LMULSEWSchedReadsImpl<string name, list<string> MxList, bit isF = 0,
                                  bit isWidening = 0> {
   def name # "_WorstCase" : SchedRead;
   foreach mx = MxList in {
-    foreach sew = !if(isF,SchedSEWSetF<mx, isWidening>.val,
-                      SchedSEWSet<mx, isWidening>.val) in
+    foreach sew = SchedSEWSet<mx, isF, isWidening>.val in
       def name # "_" # mx # "_E" # sew : SchedRead;
   }
 }
@@ -131,8 +122,7 @@ multiclass LMULSEWWriteResImpl<string name, list<ProcResourceKind> resources,
   if !exists<SchedWrite>(name # "_WorstCase") then
     def : WriteRes<!cast<SchedWrite>(name # "_WorstCase"), resources>;
   foreach mx = MxList in {
-    foreach sew = !if(isF,SchedSEWSetF<mx, isWidening>.val,
-                      SchedSEWSet<mx, isWidening>.val) in
+    foreach sew = SchedSEWSet<mx, isF, isWidening>.val in
       if !exists<SchedWrite>(name # "_" # mx # "_E" # sew) then
         def : WriteRes<!cast<SchedWrite>(name # "_" # mx # "_E" # sew), resources>;
   }
@@ -143,8 +133,7 @@ multiclass LMULSEWReadAdvanceImpl<string name, int val, list<SchedWrite> writes 
   if !exists<SchedRead>(name # "_WorstCase") then
     def : ReadAdvance<!cast<SchedRead>(name # "_WorstCase"), val, writes>;
   foreach mx = MxList in {
-    foreach sew = !if(isF,SchedSEWSetF<mx, isWidening>.val,
-                      SchedSEWSet<mx, isWidening>.val) in
+    foreach sew = SchedSEWSet<mx, isF, isWidening>.val in
       if !exists<SchedRead>(name # "_" # mx # "_E" # sew) then
         def : ReadAdvance<!cast<SchedRead>(name # "_" # mx # "_E" # sew), val, writes>;
   }
