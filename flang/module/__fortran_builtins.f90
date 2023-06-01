@@ -73,4 +73,6 @@ module __Fortran_builtins
     type(__builtin_team_type) :: team_type
   end type
 
+  intrinsic :: __builtin_compiler_options, __builtin_compiler_version
+
 end module
