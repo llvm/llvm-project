@@ -1,11 +1,11 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.StdCLibraryFunctionArgs,debug.ExprInspection \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true -verify=stdargs,any %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stdargs,any %s
 
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true -verify=any %s
+// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true -verify=any %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.StdCLibraryFunctionArgs,debug.ExprInspection \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true -verify=stdargs,any %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true -verify=stdargs,any %s
 
 #include "Inputs/system-header-simulator.h"
 

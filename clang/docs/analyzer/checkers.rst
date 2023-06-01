@@ -2421,10 +2421,10 @@ For a more detailed description of configuration options, please see the :doc:`u
 alpha.unix
 ^^^^^^^^^^^
 
-.. _alpha-unix-StdCLibraryFunctionArgs:
+.. _alpha-unix-StdCLibraryFunctions:
 
-alpha.unix.StdCLibraryFunctionArgs (C)
-""""""""""""""""""""""""""""""""""""""
+alpha.unix.StdCLibraryFunctions (C)
+"""""""""""""""""""""""""""""""""""
 Check for calls of standard library functions that violate predefined argument
 constraints. For example, it is stated in the C standard that for the ``int
 isalnum(int ch)`` function the behavior is undefined if the value of ``ch`` is
@@ -2457,6 +2457,12 @@ on standard library functions. Preconditions are checked, and when they are
 violated, a warning is emitted. Post conditions are added to the analysis, e.g.
 that the return value must be no greater than 255.
 
+For example if an argument to a function must be in between 0 and 255, but the
+value of the argument is unknown, the analyzer will conservatively assume that
+it is in this interval. Similarly, if a function mustn't be called with a null
+pointer and the null value of the argument can not be proven, the analyzer will
+assume that it is non-null.
+
 These are the possible checks on the values passed as function arguments:
  - The argument has an allowed range (or multiple ranges) of values. The checker
    can detect if a passed value is outside of the allowed range and show the
@@ -2471,16 +2477,6 @@ These are the possible checks on the values passed as function arguments:
    checker can detect if the buffer size is too small and in optimal case show
    the size of the buffer and the values of the corresponding arguments.
 
-If the user disables the checker then the argument violation warning is
-suppressed. However, the assumption about the argument is still modeled.
-For instance, if the argument to a function must be in between 0 and 255,
-but the value of the argument is unknown, the analyzer will conservatively
-assume that it is in this interval, even if warnings for this checker are
-disabled. Similarly, if a function mustn't be called with a null pointer but it
-is, analysis will stop on that execution path (similarly to a division by zero),
-with or without a warning. If the null value of the argument can not be proven,
-the analyzer will assume that it is non-null.
-
 .. code-block:: c
 
   int test_alnum_symbolic(int x) {
@@ -2492,6 +2488,13 @@ the analyzer will assume that it is non-null.
         return ret / x; // division by zero is not reported
     return ret;
   }
+
+Additionally to the argument and return value conditions, this checker also adds
+state of the value ``errno`` if applicable to the analysis. Many system
+functions set the ``errno`` value only if an error occurs (together with a
+specific return value of the function), otherwise it becomes undefined. This
+checker changes the analysis state to contain such information. This data is
+used by other checkers, for example :ref:`alpha-unix-Errno`.
 
 **Limitations**
 
@@ -2508,12 +2511,9 @@ range of the argument.
 **Parameters**
 
 The checker models functions (and emits diagnostics) from the C standard by
-default. The ``apiModeling.StdCLibraryFunctions:ModelPOSIX`` option enables
-modeling (and emit diagnostics) of additional functions that are defined in the
-POSIX standard. This option is disabled by default. Note that this option
-belongs to a separate built-in checker ``apiModeling.StdCLibraryFunctions`` and
-can have effect on other checkers because it toggles modeling of the functions
-in various aspects.
+default. The ``ModelPOSIX`` option enables modeling (and emit diagnostics) of
+additional functions that are defined in the POSIX standard. This option is
+disabled by default.
 
 .. _alpha-unix-BlockInCriticalSection:
 
@@ -2582,9 +2582,10 @@ pages of the functions and in the `POSIX standard <https://pubs.opengroup.org/on
    return 1;
  }
 
-The supported functions are the same that are modeled by checker
-:ref:`alpha-unix-StdCLibraryFunctionArgs`.
-The ``ModelPOSIX`` option of that checker affects the set of checked functions.
+The checker :ref:`alpha-unix-StdCLibraryFunctions` must be turned on to get the
+warnings from this checker. The supported functions are the same as by
+:ref:`alpha-unix-StdCLibraryFunctions`. The ``ModelPOSIX`` option of that
+checker affects the set of checked functions.
 
 **Parameters**
 
