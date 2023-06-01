@@ -580,9 +580,17 @@ numbers version
 numeric cmath
 numeric concepts
 numeric cstddef
+numeric cstdint
+numeric cstring
+numeric ctime
+numeric execution
 numeric functional
+numeric initializer_list
+numeric iosfwd
 numeric iterator
 numeric limits
+numeric new
+numeric ratio
 numeric type_traits
 numeric version
 optional atomic
