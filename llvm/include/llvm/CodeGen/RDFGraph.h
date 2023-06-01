@@ -884,7 +884,7 @@ NodeAddr<RefNode *> RefNode::getNextRef(RegisterRef RR, Predicate P,
   while (NA.Addr != this) {
     if (NA.Addr->getType() == NodeAttrs::Ref) {
       NodeAddr<RefNode *> RA = NA;
-      if (RA.Addr->getRegRef(G) == RR && P(NA))
+      if (G.getPRI().equal_to(RA.Addr->getRegRef(G), RR) && P(NA))
         return NA;
       if (NextOnly)
         break;
