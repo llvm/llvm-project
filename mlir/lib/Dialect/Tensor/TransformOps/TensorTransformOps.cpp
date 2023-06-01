@@ -38,8 +38,6 @@ tensor::TrackingListener::findReplacementOp(Operation *op,
       return nullptr;
 
     // Skip cast-like operations.
-    // TODO: CastOpInterface could be used if CollapseShapeOp and ExpandShapeOp
-    // implement that interface
     values.clear();
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<CastOp>([&](CastOp op) { values.push_back(op.getSource()); })
@@ -51,6 +49,10 @@ tensor::TrackingListener::findReplacementOp(Operation *op,
             [&](ReshapeOp op) { values.push_back(op.getSource()); })
         .Case<InsertSliceOp>([&](InsertSliceOp op) {
           if (isCastLikeInsertSliceOp(op))
+            values.push_back(op.getSource());
+        })
+        .Case<ExtractSliceOp>([&](ExtractSliceOp op) {
+          if (isCastLikeExtractSliceOp(op))
             values.push_back(op.getSource());
         })
         .Default([](Operation *op) {});
