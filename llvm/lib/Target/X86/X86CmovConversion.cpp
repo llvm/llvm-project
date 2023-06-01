@@ -305,9 +305,13 @@ bool X86CmovConverterPass::collectCmovCandidates(
       // Skip debug instructions.
       if (I.isDebugInstr())
         continue;
+
       X86::CondCode CC = X86::getCondFromCMov(I);
-      // Check if we found a X86::CMOVrr instruction.
-      if (CC != X86::COND_INVALID && (IncludeLoads || !I.mayLoad())) {
+      // Check if we found a X86::CMOVrr instruction. If it is marked as
+      // unpredictable, skip it and do not convert it to branch.
+      if (CC != X86::COND_INVALID &&
+          !I.getFlag(MachineInstr::MIFlag::Unpredictable) &&
+          (IncludeLoads || !I.mayLoad())) {
         if (Group.empty()) {
           // We found first CMOV in the range, reset flags.
           FirstCC = CC;
