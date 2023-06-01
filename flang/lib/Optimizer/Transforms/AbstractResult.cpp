@@ -173,8 +173,7 @@ public:
     if (isResultBuiltinCPtr) {
       mlir::Value save = saveResult.getMemref();
       auto module = op->template getParentOfType<mlir::ModuleOp>();
-      fir::KindMapping kindMap = fir::getKindMapping(module);
-      FirOpBuilder builder(rewriter, kindMap);
+      FirOpBuilder builder(rewriter, module);
       mlir::Value saveAddr = fir::factory::genCPtrOrCFunptrAddr(
           builder, loc, save, result.getType());
       rewriter.create<fir::StoreOp>(loc, newOp->getResult(0), saveAddr);
@@ -226,8 +225,7 @@ public:
         if (fir::isa_builtin_cptr_type(returnedValue.getType())) {
           rewriter.eraseOp(load);
           auto module = ret->getParentOfType<mlir::ModuleOp>();
-          fir::KindMapping kindMap = fir::getKindMapping(module);
-          FirOpBuilder builder(rewriter, kindMap);
+          FirOpBuilder builder(rewriter, module);
           mlir::Value retAddr = fir::factory::genCPtrOrCFunptrAddr(
               builder, loc, resultStorage, returnedValue.getType());
           mlir::Value retValue = rewriter.create<fir::LoadOp>(
