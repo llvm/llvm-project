@@ -247,10 +247,25 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
       createFutureForFile(std::string(path)));
   std::string pathStr = std::string(path);
   enqueueTask([=]() {
-    auto mbOrErr = future->get();
-    if (mbOrErr.second) {
-      std::string msg =
-          "could not open '" + pathStr + "': " + mbOrErr.second.message();
+    auto [mb, ec] = future->get();
+    if (ec) {
+      // Retry reading the file (synchronously) now that we may have added
+      // winsysroot search paths from SymbolTable::addFile().
+      // Retrying synchronously is important for keeping the order of inputs
+      // consistent.
+      // This makes it so that if the user passes something in the winsysroot
+      // before something we can find with an architecture, we won't find the
+      // winsysroot file.
+      if (std::optional<StringRef> retryPath = findFile(pathStr)) {
+        auto retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
+                                             /*RequiresNullTerminator=*/false);
+        ec = retryMb.getError();
+        if (!ec)
+          mb = std::move(*retryMb);
+      }
+    }
+    if (ec) {
+      std::string msg = "could not open '" + pathStr + "': " + ec.message();
       // Check if the filename is a typo for an option flag. OptTable thinks
       // that all args that are not known options and that start with / are
       // filenames, but e.g. `/nodefaultlibs` is more likely a typo for
@@ -262,7 +277,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
       else
         error(msg + "; did you mean '" + nearest + "'");
     } else
-      ctx.driver.addBuffer(std::move(mbOrErr.first), wholeArchive, lazy);
+      ctx.driver.addBuffer(std::move(mb), wholeArchive, lazy);
   });
 }
 
