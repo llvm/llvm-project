@@ -42,6 +42,11 @@ FailureOr<RankedTensorType>
 computeTransposedType(RankedTensorType rankedTensorType,
                       ArrayRef<int64_t> transposeVector);
 
+/// A tensor.insert_slice is a cast-like operation if it merely rank-extends the
+/// source tensor or inserts the source tensor into a destination tensor with
+/// the same shape.
+bool isCastLikeInsertSliceOp(InsertSliceOp op);
+
 } // namespace tensor
 } // namespace mlir
 
