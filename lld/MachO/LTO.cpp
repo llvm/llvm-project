@@ -68,6 +68,7 @@ static lto::Config createConfig() {
 
   c.TimeTraceEnabled = config->timeTraceEnabled;
   c.TimeTraceGranularity = config->timeTraceGranularity;
+  c.DebugPassManager = config->ltoDebugPassManager;
   c.OptLevel = config->ltoo;
   c.CGOptLevel = config->ltoCgo;
   if (config->saveTemps)
