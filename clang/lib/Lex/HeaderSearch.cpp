@@ -1375,7 +1375,7 @@ HeaderSearch::getExistingFileInfo(const FileEntry *FE,
   return HFI;
 }
 
-bool HeaderSearch::isFileMultipleIncludeGuarded(const FileEntry *File) {
+bool HeaderSearch::isFileMultipleIncludeGuarded(const FileEntry *File) const {
   // Check if we've entered this file and found an include guard or #pragma
   // once. Note that we dor't check for #import, because that's not a property
   // of the file itself.
