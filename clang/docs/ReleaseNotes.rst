@@ -473,6 +473,10 @@ Bug Fixes to Attribute Support
   structs, unions, and scoped enums) were not properly ignored, resulting in
   misleading warning messages. Now, such attribute annotations are correctly
   ignored. (`#61660 <https://github.com/llvm/llvm-project/issues/61660>`_)
+- GNU attributes preceding C++ style attributes on templates were not properly
+  handled, resulting in compilation error. This has been corrected to match the
+  behavior exhibited by GCC, which permits mixed ordering of GNU and C++
+  attributes.
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
