@@ -638,6 +638,9 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
     NewVal = Builder.CreateBitOrPointerCast(
         NewVal, Val->getType(), Val->getName() + ".conv");
     IC.replaceInstUsesWith(*cast<Instruction>(Val), NewVal);
+    // Add old instruction to worklist for DCE. We don't directly remove it
+    // here because the original compare is one of the users.
+    IC.addToWorklist(cast<Instruction>(Val));
   }
 
   return NewInsts[Start];
