@@ -408,14 +408,14 @@ public:
       ShouldExtI32Param = true;
       ShouldExtI32Return = true;
     }
-    // Mips and riscv64, on the other hand, needs signext on i32 parameters
-    // corresponding to both signed and unsigned ints.
-    if (T.isMIPS() || T.isRISCV64()) {
+    // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
+    // parameters corresponding to both signed and unsigned ints.
+    if (T.isLoongArch() || T.isMIPS() || T.isRISCV64()) {
       ShouldSignExtI32Param = true;
     }
-    // riscv64 needs signext on i32 returns corresponding to both signed and
-    // unsigned ints.
-    if (T.isRISCV64()) {
+    // LoongArch and riscv64 need signext on i32 returns corresponding to both
+    // signed and unsigned ints.
+    if (T.isLoongArch() || T.isRISCV64()) {
       ShouldSignExtI32Return = true;
     }
   }
