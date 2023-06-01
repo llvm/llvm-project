@@ -95,7 +95,7 @@ int (*C)() = &foobar3; // expected-warning {{declaration is not declared in any 
 int (*D)() = C; // expected-note {{used here}}
                 // host-note@-1 {{used here}}
 #pragma omp end declare target
-int foobar3() { throw 1; }
+int foobar3() { throw 1; } // expected-error {{cannot use 'throw' with exceptions disabled}}
 
 // Check no infinite recursion in deferred diagnostic emitter.
 long E = (long)&E;
