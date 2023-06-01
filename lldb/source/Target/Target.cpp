@@ -2798,7 +2798,9 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
   if (frame_sp && frame_sp.get() && swift_scratch_ctx) {
     SymbolContext sc =
         frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
-    swift_scratch_ctx->PerformCompileUnitImports(sc);
+    Status status = swift_scratch_ctx->PerformCompileUnitImports(sc);
+    if (status.Fail())
+      Debugger::ReportError(status.AsCString(), GetDebugger().GetID());
   }
 
   if (!swift_scratch_ctx)

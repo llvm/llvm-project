@@ -1409,16 +1409,18 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
   }
 }
 
-void TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(
+Status TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(
     SymbolContext &sc) {
-  Status error;
+  Status status;
   lldb::ProcessSP process_sp;
   if (auto target_sp = sc.target_sp)
     process_sp = target_sp->GetProcessSP();
   if (!m_swift_ast_context_initialized)
+    // Stash sc, the import will happen lazily when SwiftASTContext is created.
     m_initial_symbol_context = std::make_unique<SymbolContext>(sc);
   else if (auto *swift_ast_ctx = GetSwiftASTContext())
-    swift_ast_ctx->PerformCompileUnitImports(sc, process_sp, error);
+    swift_ast_ctx->PerformCompileUnitImports(sc, process_sp, status);
+  return status;
 }
 
 UserExpression *TypeSystemSwiftTypeRefForExpressions::GetUserExpression(
