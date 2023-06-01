@@ -374,7 +374,70 @@ lldb_private::FileSpec HostInfoMacOSX::GetXcodeDeveloperDirectory() {
   return g_developer_directory;
 }
 
-llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
+static llvm::Expected<std::string>
+xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
+      llvm::StringRef developer_dir = "") {
+  Args args;
+  if (!developer_dir.empty()) {
+    args.AppendArgument("/usr/bin/env");
+    args.AppendArgument("DEVELOPER_DIR=" + developer_dir.str());
+  }
+  args.AppendArgument("/usr/bin/xcrun");
+  args.AppendArgument("--sdk");
+  args.AppendArgument(sdk);
+  for (auto arg: arguments)
+    args.AppendArgument(arg);
+
+  Log *log = GetLog(LLDBLog::Host);
+  if (log) {
+    std::string cmdstr;
+    args.GetCommandString(cmdstr);
+    log->Printf("GetXcodeSDK() running shell cmd '%s'", cmdstr.c_str());
+  }
+
+  int status = 0;
+  int signo = 0;
+  std::string output_str;
+  // The first time after Xcode was updated or freshly installed,
+  // xcrun can take surprisingly long to build up its database.
+  auto timeout = std::chrono::seconds(60);
+  bool run_in_shell = false;
+  lldb_private::Status error = Host::RunShellCommand(
+      args, FileSpec(), &status, &signo, &output_str, timeout, run_in_shell);
+
+  // Check that xcrun returned something useful.
+  if (error.Fail()) {
+    // Catastrophic error.
+    LLDB_LOG(log, "xcrun failed to execute: %s", error.AsCString());
+    return error.ToError();
+  }
+  if (status != 0) {
+    // xcrun didn't find a matching SDK. Not an error, we'll try
+    // different spellings.
+    LLDB_LOG(log, "xcrun returned exit code %d", status);
+    return "";
+  }
+  if (output_str.empty()) {
+    LLDB_LOG(log, "xcrun returned no results");
+    return "";
+  }
+
+  // Convert to a StringRef so we can manipulate the string without modifying
+  // the underlying data.
+  llvm::StringRef output(output_str);
+
+  // Remove any trailing newline characters.
+  output = output.rtrim();
+
+  // Strip any leading newline characters and everything before them.
+  const size_t last_newline = output.rfind('\n');
+  if (last_newline != llvm::StringRef::npos)
+    output = output.substr(last_newline + 1);
+
+  return output.str();
+}
+
+static llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
   XcodeSDK::Info info = sdk.Parse();
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
   if (sdk_name.empty())
@@ -383,75 +446,14 @@ llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
 
   Log *log = GetLog(LLDBLog::Host);
 
-  auto xcrun = [](const std::string &sdk,
-                  llvm::StringRef developer_dir =
-                      "") -> llvm::Expected<std::string> {
-    Args args;
-    if (!developer_dir.empty()) {
-      args.AppendArgument("/usr/bin/env");
-      args.AppendArgument("DEVELOPER_DIR=" + developer_dir.str());
-    }
-    args.AppendArgument("/usr/bin/xcrun");
-    args.AppendArgument("--show-sdk-path");
-    args.AppendArgument("--sdk");
-    args.AppendArgument(sdk);
-
-    Log *log = GetLog(LLDBLog::Host);
-    if (log) {
-      std::string cmdstr;
-      args.GetCommandString(cmdstr);
-      log->Printf("GetXcodeSDK() running shell cmd '%s'", cmdstr.c_str());
-    }
-
-    int status = 0;
-    int signo = 0;
-    std::string output_str;
-    // The first time after Xcode was updated or freshly installed,
-    // xcrun can take surprisingly long to build up its database.
-    auto timeout = std::chrono::seconds(60);
-    bool run_in_shell = false;
-    lldb_private::Status error = Host::RunShellCommand(
-        args, FileSpec(), &status, &signo, &output_str, timeout, run_in_shell);
-
-    // Check that xcrun returned something useful.
-    if (error.Fail()) {
-      // Catastrophic error.
-      LLDB_LOG(log, "xcrun failed to execute: %s", error.AsCString());
-      return error.ToError();
-    }
-    if (status != 0) {
-      // xcrun didn't find a matching SDK. Not an error, we'll try
-      // different spellings.
-      LLDB_LOG(log, "xcrun returned exit code %d", status);
-      return "";
-    }
-    if (output_str.empty()) {
-      LLDB_LOG(log, "xcrun returned no results");
-      return "";
-    }
-
-    // Convert to a StringRef so we can manipulate the string without modifying
-    // the underlying data.
-    llvm::StringRef output(output_str);
-
-    // Remove any trailing newline characters.
-    output = output.rtrim();
-
-    // Strip any leading newline characters and everything before them.
-    const size_t last_newline = output.rfind('\n');
-    if (last_newline != llvm::StringRef::npos)
-      output = output.substr(last_newline + 1);
-
-    return output.str();
-  };
-
   auto find_sdk =
-      [&xcrun](const std::string &sdk_name) -> llvm::Expected<std::string> {
+      [](const std::string &sdk_name) -> llvm::Expected<std::string> {
+    llvm::SmallVector<llvm::StringRef, 1> show_sdk_path = {"--show-sdk-path"};
     // Invoke xcrun with the developer dir specified in the environment.
     std::string developer_dir = GetEnvDeveloperDir();
     if (!developer_dir.empty()) {
       // Don't fallback if DEVELOPER_DIR was set.
-      return xcrun(sdk_name, developer_dir);
+      return xcrun(sdk_name, show_sdk_path, developer_dir);
     }
 
     // Invoke xcrun with the shlib dir.
@@ -462,7 +464,8 @@ llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
         llvm::StringRef shlib_developer_dir =
             llvm::sys::path::parent_path(contents_dir);
         if (!shlib_developer_dir.empty()) {
-          auto sdk = xcrun(sdk_name, std::move(shlib_developer_dir));
+          auto sdk =
+              xcrun(sdk_name, show_sdk_path, std::move(shlib_developer_dir));
           if (!sdk)
             return sdk.takeError();
           if (!sdk->empty())
@@ -472,7 +475,7 @@ llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
     }
 
     // Invoke xcrun without a developer dir as a last resort.
-    return xcrun(sdk_name);
+    return xcrun(sdk_name, show_sdk_path);
   };
 
   auto path_or_err = find_sdk(sdk_name);
