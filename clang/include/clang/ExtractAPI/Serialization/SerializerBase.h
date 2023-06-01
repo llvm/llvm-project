@@ -29,6 +29,10 @@ public:
 
     getDerived()->traverseEnumRecords();
 
+    getDerived()->traverseStaticFieldRecords();
+
+    getDerived()->traverseCXXClassRecords();
+
     getDerived()->traverseStructRecords();
 
     getDerived()->traverseObjCInterfaces();
@@ -58,6 +62,16 @@ public:
   void traverseStructRecords() {
     for (const auto &Struct : API.getStructs())
       getDerived()->visitStructRecord(*Struct.second);
+  }
+
+  void traverseStaticFieldRecords() {
+    for (const auto &StaticField : API.getStaticFields())
+      getDerived()->visitStaticFieldRecord(*StaticField.second);
+  }
+
+  void traverseCXXClassRecords() {
+    for (const auto &Class : API.getCXXClasses())
+      getDerived()->visitCXXClassRecord(*Class.second);
   }
 
   void traverseObjCInterfaces() {
@@ -91,6 +105,10 @@ public:
 
   /// Visit a struct record.
   void visitStructRecord(const StructRecord &Record){};
+
+  void visitStaticFieldRecord(const StaticFieldRecord &Record){};
+
+  void visitCXXClassRecord(const CXXClassRecord &Record){};
 
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record){};
