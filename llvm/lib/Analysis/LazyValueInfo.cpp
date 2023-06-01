@@ -26,6 +26,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -1146,6 +1147,57 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     if (!CR.isEmptySet())
       return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
           CR.getUnsignedMin().zext(BitWidth), APInt(BitWidth, 0)));
+  }
+
+  // Recognize:
+  // icmp sgt (ashr X, ShAmtC), C --> icmp sgt X, ((C + 1) << ShAmtC) - 1
+  // and friends.
+  // Preconditions: (C != SIGNED_MAX) &&
+  //                ((C+1) << ShAmtC != SIGNED_MIN) &&
+  //                (((C+1) << ShAmtC) >> ShAmtC) == (C+1)
+  const APInt *ShAmtC;
+  if (CmpInst::isSigned(EdgePred) &&
+      match(LHS, m_AShr(m_Specific(Val), m_APInt(ShAmtC))) &&
+      match(RHS, m_APInt(C))) {
+    APInt New = ((*C + 1) << *ShAmtC) - 1;
+    APInt MaxSigned = APInt::getSignedMaxValue(New.getBitWidth());
+    APInt MinSigned = APInt::getSignedMinValue(New.getBitWidth());
+    auto CheckPreConds = [&]() {
+      if (*C == MaxSigned)
+        return false;
+      APInt Shifted = (*C + 1) << *ShAmtC;
+      if (Shifted == MinSigned)
+        return false;
+      if ((Shifted.ashr(*ShAmtC)) != (*C + 1))
+        return false;
+      return true;
+    };
+    if (!CheckPreConds())
+      return ValueLatticeElement::getOverdefined();
+    APInt Lower, Upper;
+    switch (EdgePred) {
+    default:
+      llvm_unreachable("Unknown signed predicate!");
+    case ICmpInst::ICMP_SGT:
+      Lower = New + 1;
+      Upper = MaxSigned;
+      break;
+    case ICmpInst::ICMP_SLE:
+      Lower = MinSigned;
+      Upper = New + 1;
+      break;
+    case ICmpInst::ICMP_SGE:
+      Lower = New;
+      Upper = MaxSigned;
+      break;
+    case ICmpInst::ICMP_SLT:
+      Lower = MinSigned;
+      Upper = New;
+      break;
+    }
+
+    return ValueLatticeElement::getRange(
+        ConstantRange::getNonEmpty(Lower, Upper));
   }
 
   return ValueLatticeElement::getOverdefined();
