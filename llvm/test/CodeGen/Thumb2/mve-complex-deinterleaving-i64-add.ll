@@ -57,13 +57,16 @@ define arm_aapcs_vfpcc <4 x i64> @complex_add_v4i64(<4 x i64> %a, <4 x i64> %b) 
 ; CHECK-NEXT:    sbc.w r12, r3, r1
 ; CHECK-NEXT:    vmov r2, r3, d1
 ; CHECK-NEXT:    vmov r1, r0, d4
-; CHECK-NEXT:    vmov.f64 d1, d2
+; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov.f32 s3, s5
 ; CHECK-NEXT:    subs r1, r1, r2
 ; CHECK-NEXT:    vmov q2[2], q2[0], r1, lr
 ; CHECK-NEXT:    sbcs r0, r3
 ; CHECK-NEXT:    vmov q2[3], q2[1], r0, r12
-; CHECK-NEXT:    vmov.f64 d0, d4
-; CHECK-NEXT:    vmov.f64 d2, d5
+; CHECK-NEXT:    vmov.f32 s0, s8
+; CHECK-NEXT:    vmov.f32 s4, s10
+; CHECK-NEXT:    vmov.f32 s1, s9
+; CHECK-NEXT:    vmov.f32 s5, s11
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -106,7 +109,8 @@ define arm_aapcs_vfpcc <8 x i64> @complex_add_v8i64(<8 x i64> %a, <8 x i64> %b) 
 ; CHECK-NEXT:    sbc.w r12, r3, r1
 ; CHECK-NEXT:    vmov r2, r3, d1
 ; CHECK-NEXT:    vmov r1, r0, d12
-; CHECK-NEXT:    vmov.f64 d1, d2
+; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov.f32 s3, s5
 ; CHECK-NEXT:    subs r1, r1, r2
 ; CHECK-NEXT:    add r2, sp, #104
 ; CHECK-NEXT:    vldrw.u32 q5, [r2]
@@ -115,8 +119,10 @@ define arm_aapcs_vfpcc <8 x i64> @complex_add_v8i64(<8 x i64> %a, <8 x i64> %b) 
 ; CHECK-NEXT:    vmov q4[3], q4[1], r0, r12
 ; CHECK-NEXT:    vmov r0, r1, d6
 ; CHECK-NEXT:    vmov r2, r3, d11
-; CHECK-NEXT:    vmov.f64 d0, d8
-; CHECK-NEXT:    vmov.f64 d2, d9
+; CHECK-NEXT:    vmov.f32 s0, s16
+; CHECK-NEXT:    vmov.f32 s4, s18
+; CHECK-NEXT:    vmov.f32 s1, s17
+; CHECK-NEXT:    vmov.f32 s5, s19
 ; CHECK-NEXT:    adds.w lr, r2, r0
 ; CHECK-NEXT:    adc.w r12, r3, r1
 ; CHECK-NEXT:    add r1, sp, #88
@@ -133,13 +139,16 @@ define arm_aapcs_vfpcc <8 x i64> @complex_add_v8i64(<8 x i64> %a, <8 x i64> %b) 
 ; CHECK-NEXT:    sbc.w r12, r3, r1
 ; CHECK-NEXT:    vmov r2, r3, d5
 ; CHECK-NEXT:    vmov r1, r0, d12
-; CHECK-NEXT:    vmov.f64 d5, d8
+; CHECK-NEXT:    vmov.f32 s10, s16
+; CHECK-NEXT:    vmov.f32 s11, s17
 ; CHECK-NEXT:    subs r1, r1, r2
 ; CHECK-NEXT:    vmov q3[2], q3[0], r1, lr
 ; CHECK-NEXT:    sbcs r0, r3
 ; CHECK-NEXT:    vmov q3[3], q3[1], r0, r12
-; CHECK-NEXT:    vmov.f64 d8, d7
-; CHECK-NEXT:    vmov.f64 d4, d6
+; CHECK-NEXT:    vmov.f32 s16, s14
+; CHECK-NEXT:    vmov.f32 s8, s12
+; CHECK-NEXT:    vmov.f32 s17, s15
+; CHECK-NEXT:    vmov.f32 s9, s13
 ; CHECK-NEXT:    vmov q3, q4
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    pop {r7, pc}
