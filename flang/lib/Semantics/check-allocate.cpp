@@ -31,6 +31,8 @@ struct AllocateCheckerInfo {
   bool gotTypeSpec{false};
   bool gotSource{false};
   bool gotMold{false};
+  bool gotStream{false};
+  bool gotPinned{false};
 };
 
 class AllocationCheckerHelper {
@@ -179,8 +181,22 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
               parserSourceExpr = &mold.v.value();
               info.gotMold = true;
             },
-            [](const parser::AllocOpt::Stream &) { /* CUDA coming */ },
-            [](const parser::AllocOpt::Pinned &) { /* CUDA coming */ },
+            [&](const parser::AllocOpt::Stream &stream) { // CUDA
+              if (info.gotStream) {
+                context.Say(
+                    "STREAM may not be duplicated in a ALLOCATE statement"_err_en_US);
+                stopCheckingAllocate = true;
+              }
+              info.gotStream = true;
+            },
+            [&](const parser::AllocOpt::Pinned &pinned) { // CUDA
+              if (info.gotPinned) {
+                context.Say(
+                    "PINNED may not be duplicated in a ALLOCATE statement"_err_en_US);
+                stopCheckingAllocate = true;
+              }
+              info.gotPinned = true;
+            },
         },
         allocOpt.u);
   }
@@ -569,12 +585,13 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     return false;
   }
   context.CheckIndexVarRedefine(name_);
+  const Scope &subpScope{
+      GetProgramUnitContaining(context.FindScope(name_.source))};
   if (allocateObject_.typedExpr && allocateObject_.typedExpr->v) {
-    if (auto whyNot{
-            WhyNotDefinable(name_.source, context.FindScope(name_.source),
-                {DefinabilityFlag::PointerDefinition,
-                    DefinabilityFlag::AcceptAllocatable},
-                *allocateObject_.typedExpr->v)}) {
+    if (auto whyNot{WhyNotDefinable(name_.source, subpScope,
+            {DefinabilityFlag::PointerDefinition,
+                DefinabilityFlag::AcceptAllocatable},
+            *allocateObject_.typedExpr->v)}) {
       context
           .Say(name_.source,
               "Name in ALLOCATE statement is not definable"_err_en_US)

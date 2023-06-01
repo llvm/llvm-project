@@ -1,6 +1,6 @@
 ! RUN: %flang -S -emit-llvm -o - %s | FileCheck %s
 ! Test communication of COMPILER_OPTIONS from flang-new to flang-new -fc1.
-! CHECK: [[OPTSVAR:@_QQcl\.[0-9a-f]+]] = internal constant [[[OPTSLEN:[0-9]+]] x i8] c"{{.*}}flang-new{{(\.exe)?}} -S -emit-llvm -o - {{.*}}compiler_options.f90"
+! CHECK: [[OPTSVAR:@_QQcl\.[0-9a-f]+]] = {{[a-z]+}} constant [[[OPTSLEN:[0-9]+]] x i8] c"{{.*}}flang-new{{(\.exe)?}} -S -emit-llvm -o - {{.*}}compiler_options.f90"
 program main
     use ISO_FORTRAN_ENV, only: compiler_options
     implicit none

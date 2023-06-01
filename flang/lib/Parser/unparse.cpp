@@ -1698,7 +1698,7 @@ public:
     Put('('), Walk(std::get<std::list<ActualArgSpec>>(x.v.t), ", "), Put(')');
   }
   void Unparse(const CallStmt &x) { // R1521
-    if (asFortran_ && x.typedCall.get() && !x.chevrons /*CUDA todo*/) {
+    if (asFortran_ && x.typedCall.get()) {
       Put(' ');
       asFortran_->call(out_, *x.typedCall);
       Put('\n');

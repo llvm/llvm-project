@@ -2740,7 +2740,7 @@ void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
         Say(source,
             "'%s' already has another CUDA data attribute ('%s')"_err_en_US,
             symbol.name(),
-            common::EnumToString(*object->cudaDataAttr()).substr());
+            std::string{common::EnumToString(*object->cudaDataAttr())}.c_str());
       } else {
         object->set_cudaDataAttr(attr);
       }
@@ -7700,13 +7700,11 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
 
 void ResolveNamesVisitor::UseCUDABuiltinNames() {
   if (FindCUDADeviceContext(&currScope())) {
-    if (const Scope * CUDABuiltins{context().GetCUDABuiltinsScope()}) {
-      for (const auto &[name, symbol] : *CUDABuiltins) {
-        if (!FindInScope(name)) {
-          auto &localSymbol{MakeSymbol(name)};
-          localSymbol.set_details(UseDetails{name, *symbol});
-          localSymbol.flags() = symbol->flags();
-        }
+    for (const auto &[name, symbol] : context().GetCUDABuiltinsScope()) {
+      if (!FindInScope(name)) {
+        auto &localSymbol{MakeSymbol(name)};
+        localSymbol.set_details(UseDetails{name, *symbol});
+        localSymbol.flags() = symbol->flags();
       }
     }
   }
