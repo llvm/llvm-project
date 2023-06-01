@@ -476,7 +476,7 @@ public:
 
   virtual void visitFileDependencies(
       const CompilerInstance &CI,
-      llvm::function_ref<void(const FileEntry *FE, bool isSystem)> visitor) = 0;
+      llvm::function_ref<void(FileEntryRef FE, bool isSystem)> visitor) = 0;
   virtual void
   visitIncludes(llvm::function_ref<void(const FileEntry *Source, unsigned Line,
                                         const FileEntry *Target)>
@@ -491,7 +491,7 @@ class SourceFilesIndexDependencyCollector : public DependencyCollector,
                                             public IndexDependencyProvider {
   IndexingContext &IndexCtx;
   RecordingOptions RecordOpts;
-  llvm::SetVector<const FileEntry *> Entries;
+  llvm::SetVector<FileEntryRef> Entries;
   llvm::BitVector IsSystemByUID;
   std::vector<IncludeLocation> Includes;
   SourceManager *SourceMgr = nullptr;
@@ -515,9 +515,9 @@ public:
 
   void visitFileDependencies(
       const CompilerInstance &CI,
-      llvm::function_ref<void(const FileEntry *FE, bool isSystem)> visitor)
+      llvm::function_ref<void(FileEntryRef FE, bool isSystem)> visitor)
       override {
-    for (auto *FE : getEntries()) {
+    for (FileEntryRef FE : getEntries()) {
       visitor(FE, isSystemFile(FE));
     }
   }
@@ -559,7 +559,7 @@ private:
     return IsSystemByUID.size() > UID && IsSystemByUID[UID];
   }
 
-  ArrayRef<const FileEntry *> getEntries() const {
+  ArrayRef<FileEntryRef> getEntries() const {
     return Entries.getArrayRef();
   }
 
@@ -571,14 +571,13 @@ private:
                      bool IsModuleFile, bool IsMissing) override {
     bool sawIt = DependencyCollector::sawDependency(
         Filename, FromModule, IsSystem, IsModuleFile, IsMissing);
-    if (llvm::ErrorOr<const clang::FileEntry *> FE =
-            SourceMgr->getFileManager().getFile(Filename)) {
+    if (auto FE = SourceMgr->getFileManager().getOptionalFileRef(Filename)) {
       if (sawIt)
         Entries.insert(*FE);
       // Record system-ness for all files that we pass through.
-      if (IsSystemByUID.size() < (*FE)->getUID() + 1)
-        IsSystemByUID.resize((*FE)->getUID() + 1);
-      IsSystemByUID[(*FE)->getUID()] = IsSystem || isInSysroot(Filename);
+      if (IsSystemByUID.size() < FE->getUID() + 1)
+        IsSystemByUID.resize(FE->getUID() + 1);
+      IsSystemByUID[FE->getUID()] = IsSystem || isInSysroot(Filename);
     }
     return sawIt;
   }
@@ -823,10 +822,10 @@ static void writeUnitData(const CompilerInstance &CI,
     return info;
   };
 
-  auto findModuleForHeader = [&](const FileEntry *FE) -> Module * {
+  auto findModuleForHeader = [&](FileEntryRef FE) -> Module * {
     if (!UnitModule)
       return nullptr;
-    if (auto Mod = HS.findModuleForHeader(FE).getModule())
+    if (Module *Mod = HS.findModuleForHeader(FE).getModule())
       if (Mod->isSubModuleOf(UnitModule))
         return Mod;
     return nullptr;
@@ -845,7 +844,7 @@ static void writeUnitData(const CompilerInstance &CI,
       CI.getTargetOpts().Triple, SysrootPath, Remapper, getModuleInfo);
 
   DepProvider.visitFileDependencies(
-      CI, [&](const FileEntry *FE, bool isSystemFile) {
+      CI, [&](FileEntryRef FE, bool isSystemFile) {
         UnitWriter.addFileDependency(FE, isSystemFile, findModuleForHeader(FE));
       });
   DepProvider.visitIncludes(
@@ -870,7 +869,7 @@ static void writeUnitData(const CompilerInstance &CI,
        ++I) {
     FileID FID = I->first;
     const FileIndexRecord &Rec = *I->second;
-    const FileEntry *FE = SM.getFileEntryForID(FID);
+    OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
     std::string RecordFile;
     std::string Error;
 
@@ -880,8 +879,8 @@ static void writeUnitData(const CompilerInstance &CI,
       Diag.Report(DiagID) << RecordFile << Error;
       return;
     }
-    UnitWriter.addRecordFile(RecordFile, FE, Rec.isSystem(),
-                             findModuleForHeader(FE));
+    UnitWriter.addRecordFile(RecordFile, *FE, Rec.isSystem(),
+                             findModuleForHeader(*FE));
   }
 
   std::string Error;
@@ -905,7 +904,7 @@ public:
 
   void visitFileDependencies(
       const CompilerInstance &CI,
-      llvm::function_ref<void(const FileEntry *FE, bool isSystem)> visitor)
+      llvm::function_ref<void(FileEntryRef FE, bool isSystem)> visitor)
       override {
     auto Reader = CI.getASTReader();
     Reader->visitInputFiles(
@@ -921,7 +920,7 @@ public:
           if (FE->getName().endswith("module.modulemap"))
             return;
 
-          visitor(FE, isSystem);
+          visitor(*FE, isSystem);
         });
   }
 
