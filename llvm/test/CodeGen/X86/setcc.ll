@@ -339,17 +339,16 @@ define i32 @PR55138(i32 %x) {
   ret i32 %and
 }
 
-; FIXME: Miscompile.
 define i64 @pr63055(double %arg) {
 ; X86-LABEL: pr63055:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl $255, %eax
+; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr63055:
 ; X64:       ## %bb.0:
-; X64-NEXT:    movl $255, %eax
+; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
   %fcmp = fcmp une double 0x7FF8000000000000, %arg
   %ext = zext i1 %fcmp to i64
