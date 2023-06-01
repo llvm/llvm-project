@@ -831,10 +831,10 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc,
     // Try to determine the module of the include directive.
     // FIXME: Look into directly passing the FileEntry from LookupFile instead.
     FileID IDOfIncl = SourceMgr.getFileID(SourceMgr.getExpansionLoc(Loc));
-    if (const FileEntry *EntryOfIncl = SourceMgr.getFileEntryForID(IDOfIncl)) {
+    if (auto EntryOfIncl = SourceMgr.getFileEntryRefForID(IDOfIncl)) {
       // The include comes from an included file.
       return HeaderInfo.getModuleMap()
-          .findModuleForHeader(EntryOfIncl, AllowTextual)
+          .findModuleForHeader(*EntryOfIncl, AllowTextual)
           .getModule();
     }
   }
@@ -859,7 +859,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
   auto &SM = getSourceManager();
   while (!Loc.isInvalid() && !SM.isInMainFile(Loc)) {
     auto ID = SM.getFileID(SM.getExpansionLoc(Loc));
-    auto *FE = SM.getFileEntryForID(ID);
+    auto FE = SM.getFileEntryRefForID(ID);
     if (!FE)
       break;
 
@@ -869,7 +869,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
                             SourceMgr.isInSystemHeader(Loc));
 
     bool InPrivateHeader = false;
-    for (auto Header : HeaderInfo.findAllModulesForHeader(FE)) {
+    for (auto Header : HeaderInfo.findAllModulesForHeader(*FE)) {
       if (!Header.isAccessibleFrom(IncM)) {
         // It's in a private header; we can't #include it.
         // FIXME: If there's a public header in some module that re-exports it,
@@ -897,7 +897,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
       // If this is an accessible, non-textual header of M's top-level module
       // that transitively includes the given location and makes the
       // corresponding module visible, this is the thing to #include.
-      return FE;
+      return *FE;
     }
 
     // FIXME: If we're bailing out due to a private header, we shouldn't suggest
@@ -908,8 +908,8 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
     // If the header is includable and has an include guard, assume the
     // intended way to expose its contents is by #include, not by importing a
     // module that transitively includes it.
-    if (getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE))
-      return FE;
+    if (getHeaderSearchInfo().isFileMultipleIncludeGuarded(*FE))
+      return *FE;
 
     Loc = SM.getIncludeLoc(ID);
   }
