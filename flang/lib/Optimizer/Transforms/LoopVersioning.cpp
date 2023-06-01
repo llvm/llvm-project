@@ -262,15 +262,19 @@ void LoopVersioningPass::runOnOperation() {
                                             loc, curIndex, totalIndex)
                                       : curIndex;
           }
-          mlir::Value elemSize =
-              builder.createIntegerConstant(loc, idxTy, arg.size);
           // This is the lowest dimension - which doesn't need scaling
           mlir::Value finalIndex =
               builder.createConvert(loc, idxTy, coop->getOperand(1));
           if (totalIndex) {
+            assert(llvm::isPowerOf2_32(arg.size) &&
+                   "Expected power of two here");
+            unsigned bits = llvm::Log2_32(arg.size);
+            mlir::Value elemShift =
+                builder.createIntegerConstant(loc, idxTy, bits);
             totalIndex = builder.create<mlir::arith::AddIOp>(
                 loc,
-                builder.create<mlir::arith::DivSIOp>(loc, totalIndex, elemSize),
+                builder.create<mlir::arith::ShRSIOp>(loc, totalIndex,
+                                                     elemShift),
                 finalIndex);
           } else {
             totalIndex = finalIndex;
