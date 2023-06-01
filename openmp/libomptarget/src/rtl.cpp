@@ -446,6 +446,21 @@ void RTLsTy::disableAPUMapsForUSM(int64_t RequiresFlags) {
     DisableAllocationsForMapsOnApus = false;
 }
 
+bool RTLsTy::requiresAllocForGlobal(const void *HstPtr) {
+  auto It =
+      std::find_if(HostPtrsRequireAlloc.begin(), HostPtrsRequireAlloc.end(),
+                   [=](const void *Arg) { return Arg == HstPtr; });
+  return It != HostPtrsRequireAlloc.end();
+}
+void RTLsTy::markHostPtrForRequiresAlloc(const void *HstPtr) {
+  if (!requiresAllocForGlobal(HstPtr))
+    HostPtrsRequireAlloc.push_back(HstPtr);
+}
+
+void RTLsTy::deMarkHostPtrForRequiresAlloc(const void *HstPtr) {
+  assert(false);
+}
+
 void RTLsTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
   // Minimal check: only set requires flags if previous value

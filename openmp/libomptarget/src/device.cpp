@@ -364,43 +364,74 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
   } else if (((PM->RTLs.DisableAllocationsForMapsOnApus) ||
               (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) &&
              (!HasCloseModifier)) {
-    // If unified shared memory is active, implicitly mapped variables that are
-    // not privatized use host address. Any explicitly mapped variables also use
-    // host address where correctness is not impeded. In all other cases maps
-    // are respected.
-    // In addition to the mapping rules above, the close map modifier forces the
-    // mapping of the variable to the device.
-    if (Size) {
-      // When allocating under unified_shared_memory, amdgpu plugin
-      // can optimize memory access latency by registering allocated
-      // memory as coarse-grained. The usage of coarse-grained memory can be
-      // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
-      // This is not done for APUs.
-      if (!PM->RTLs.IsAPUSystem() &&
-         !PM->RTLs.EnableFineGrainedMemory && HstPtrBegin &&
-          RTL->set_coarse_grain_mem_region) {
-        RTL->set_coarse_grain_mem_region(DeviceID, HstPtrBegin, Size);
-      }
-
-      if (!PM->RTLs.NoUSMMapChecks) {
-        // even under unified_shared_memory need to check for correctness of
-        // use of map clauses. Device pointer is same as host ptr in this case
+    // Pointer has been marked for allocation even under USM execution
+    if (PM->RTLs.requiresAllocForGlobal(HstPtrBegin)) {
+      DP("USM_SPECIAL: Requires alloc for HstPtr: %i\n",
+         PM->RTLs.requiresAllocForGlobal(HstPtrBegin));
+      // This code is copied from below //
+      // We allocate the memory on the device to wire up the pointers correctly
+      // in the case that the user did not compile for USM but actually urns in
+      // USM on APU
+      if (Size) {
+        // We need to allocate
+        LR.TPR.Flags.IsNewEntry = true;
+        uintptr_t Ptr = (uintptr_t)allocData(Size, HstPtrBegin);
         LR.TPR.setEntry(HDTTMap
-                    ->emplace(new HostDataToTargetTy(
-                        (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-                        (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
-                        HasHoldModifier, HstPtrName, /*IsInf=*/true,
-                        /*IsUSMAlloc=*/true))
-                    .first->HDTT);
-      }
-    }
-    DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
-       "memory\n",
-       DPxPTR((uintptr_t)HstPtrBegin), Size);
+                            ->emplace(new HostDataToTargetTy(
+                                (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                                (uintptr_t)HstPtrBegin + Size, Ptr,
+                                HasHoldModifier, HstPtrName))
+                            .first->HDTT);
+        LR.TPR.TargetPointer = (void *)Ptr;
 
-    LR.TPR.Flags.IsPresent = false;
-    LR.TPR.Flags.IsHostPointer = true;
-    LR.TPR.TargetPointer = HstPtrBegin;
+        if (notifyDataMapped(HstPtrBegin, Size)) {
+          return {{false, false}, nullptr, nullptr};
+        }
+        if (ReleaseHDTTMap) {
+          HDTTMap.destroy();
+        }
+      }
+      // End of copied code //
+      LR.TPR.Flags.IsPresent = true;
+      LR.TPR.Flags.IsHostPointer = false;
+    } else {
+      // If unified shared memory is active, implicitly mapped variables that
+      // are not privatized use host address. Any explicitly mapped variables
+      // also use host address where correctness is not impeded. In all other
+      // cases maps are respected. In addition to the mapping rules above, the
+      // close map modifier forces the mapping of the variable to the device.
+      if (Size) {
+        // When allocating under unified_shared_memory, amdgpu plugin
+        // can optimize memory access latency by registering allocated
+        // memory as coarse-grained. The usage of coarse-grained memory can be
+        // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
+        // This is not done for APUs.
+        if (!PM->RTLs.IsAPUSystem() && !PM->RTLs.EnableFineGrainedMemory &&
+            HstPtrBegin && RTL->set_coarse_grain_mem_region) {
+          RTL->set_coarse_grain_mem_region(DeviceID, HstPtrBegin, Size);
+        }
+
+        if (!PM->RTLs.NoUSMMapChecks) {
+          // even under unified_shared_memory need to check for correctness of
+          // use of map clauses. Device pointer is same as host ptr in this case
+          LR.TPR.setEntry(
+              HDTTMap
+                  ->emplace(new HostDataToTargetTy(
+                      (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                      (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
+                      HasHoldModifier, HstPtrName, /*IsInf=*/true,
+                      /*IsUSMAlloc=*/true))
+                  .first->HDTT);
+        }
+      }
+      DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
+         "memory\n",
+         DPxPTR((uintptr_t)HstPtrBegin), Size);
+
+      LR.TPR.Flags.IsPresent = false;
+      LR.TPR.Flags.IsHostPointer = true;
+      LR.TPR.TargetPointer = HstPtrBegin;
+    }
   } else if (HasPresentModifier) {
     DP("Mapping required by 'present' map type modifier does not exist for "
        "HstPtrBegin=" DPxMOD ", Size=%" PRId64 "\n",

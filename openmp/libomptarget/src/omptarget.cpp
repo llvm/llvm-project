@@ -583,6 +583,38 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
   return Rc;
 }
 
+static int prepareAndSubmitData(DeviceTy &Device, void *HstPtrBegin,
+                                void *HstPtrBase, void *LocalTgtPtrBegin,
+                                TargetPointerResultTy &PointerTpr,
+                                void *PointerHstPtrBegin,
+                                void *PointerTgtPtrBegin,
+                                AsyncInfoTy &AsyncInfo) {
+  uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
+  void *ExpectedTgtPtrBase = (void *)((uint64_t)LocalTgtPtrBegin - Delta);
+
+  if (PointerTpr.getEntry()->addShadowPointer(
+          ShadowPtrInfoTy{(void **)PointerHstPtrBegin, HstPtrBase,
+                          (void **)PointerTgtPtrBegin, ExpectedTgtPtrBase})) {
+    DP("USM_SPECIAL: Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
+       DPxPTR(PointerTgtPtrBegin), DPxPTR(LocalTgtPtrBegin));
+
+    void *&LocalTgtPtrBase = AsyncInfo.getVoidPtrLocation();
+    LocalTgtPtrBase = ExpectedTgtPtrBase;
+
+    int Ret =
+        Device.submitData(PointerTgtPtrBegin, &LocalTgtPtrBase, sizeof(void *),
+                          AsyncInfo, PointerTpr.getEntry());
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT("Copying data to device failed.\n");
+      return OFFLOAD_FAIL;
+    }
+    if (PointerTpr.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
+        OFFLOAD_SUCCESS)
+      return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
 /// Internal function to do the mapping and transfer the data to the device
 int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     void **ArgsBase, void **Args, int64_t *ArgSizes,
@@ -719,9 +751,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                                 : "device failure or illegal mapping");
       return OFFLOAD_FAIL;
     }
-    DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
+    DP("There are %" PRId64 " bytes allocated at %s address " DPxMOD
        " - is%s new\n",
-       DataSize, DPxPTR(TgtPtrBegin), (TPR.Flags.IsNewEntry ? "" : " not"));
+       DataSize, (IsHostPtr ? "host" : "target"), DPxPTR(TgtPtrBegin),
+       (TPR.Flags.IsNewEntry ? "" : " not"));
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_RETURN_PARAM) {
       uintptr_t Delta = (uintptr_t)HstPtrBegin - (uintptr_t)HstPtrBase;
@@ -732,28 +765,56 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
 
-      uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
-      void *ExpectedTgtPtrBase = (void *)((uint64_t)TgtPtrBegin - Delta);
+      if (prepareAndSubmitData(Device, HstPtrBegin, HstPtrBase, TgtPtrBegin,
+                               PointerTpr, PointerHstPtrBegin,
+                               PointerTgtPtrBegin,
+                               AsyncInfo) != OFFLOAD_SUCCESS)
+        return OFFLOAD_FAIL;
 
-      if (PointerTpr.getEntry()->addShadowPointer(ShadowPtrInfoTy{
-              (void **)PointerHstPtrBegin, HstPtrBase,
-              (void **)PointerTgtPtrBegin, ExpectedTgtPtrBase})) {
-        DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
-           DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
+    }
+    // XXX Temporary for running a non-USM application on USM-enabled machine
+    // The latter causes the runtime to not copy the data from host to device
+    // although the application will not be able to access the data via the
+    // double indirection that the omp requires unified_shared_memory
+    // clause implies. Therefore, we under the cover perform these transfers
+    // manually for such instances.
+    else if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+      if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && IsHostPtr &&
+          !FromMapper) {
+        // Iterate through all globals / functions and compare to current host
+        // pointer
+        for (auto *TgtEntry : PM->HostEntriesBeginRegistrationOrder) {
+          // In case the pointer of the mapped global is not euqal to the
+          // currently processed pointer, continue
+          if (TgtEntry->addr != PointerHstPtrBegin)
+            continue;
 
-        void *&TgtPtrBase = AsyncInfo.getVoidPtrLocation();
-        TgtPtrBase = ExpectedTgtPtrBase;
+          DP("USM_SPECIAL: TgtEntry->addr: %p\n", TgtEntry->addr);
 
-        int Ret =
-            Device.submitData(PointerTgtPtrBegin, &TgtPtrBase, sizeof(void *),
-                              AsyncInfo, PointerTpr.getEntry());
-        if (Ret != OFFLOAD_SUCCESS) {
-          REPORT("Copying data to device failed.\n");
-          return OFFLOAD_FAIL;
+          // Because running in USM mode, mark the pointer to be allocated
+          // TODO: Do we need to remove from this map?
+          PM->RTLs.markHostPtrForRequiresAlloc(HstPtrBegin);
+
+          // This all is copied from above XXX //
+          DeviceTy::HDTTMapAccessorTy HDTTMap =
+              Device.HostDataToTargetMap.getExclusiveAccessor();
+          // Get pointer on target device
+          // allocate memory on the target device
+          auto LocalTPR = Device.getTargetPointer(
+              HDTTMap, HstPtrBegin, HstPtrBase, DataSize, HstPtrName, HasFlagTo,
+              HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
+              HasPresentModifier, HasHoldModifier, AsyncInfo,
+              PointerTpr.getEntry());
+          // Prepare things so we can copy data to the device.
+          void *LocalTgtPtrBegin = LocalTPR.TargetPointer;
+
+          if (prepareAndSubmitData(Device, HstPtrBegin, HstPtrBase,
+                                   LocalTgtPtrBegin, LocalTPR,
+                                   PointerHstPtrBegin, PointerTgtPtrBegin,
+                                   AsyncInfo) != OFFLOAD_SUCCESS)
+            return OFFLOAD_FAIL;
+          // End of copied code //
         }
-        if (PointerTpr.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
-            OFFLOAD_SUCCESS)
-          return OFFLOAD_FAIL;
       }
     }
 
