@@ -434,6 +434,7 @@ protected:
 #endif
 
   /// The sibling SwiftASTContext.
+  llvm::Triple m_swift_ast_context_triple;
   mutable bool m_swift_ast_context_initialized = false;
   mutable lldb::TypeSystemSP m_swift_ast_context_sp;
   mutable SwiftASTContext *m_swift_ast_context = nullptr;

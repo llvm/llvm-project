@@ -1455,6 +1455,8 @@ SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContext() const {
         *const_cast<TypeSystemSwiftTypeRef *>(this));
     m_swift_ast_context =
         llvm::dyn_cast_or_null<SwiftASTContext>(m_swift_ast_context_sp.get());
+    if (m_swift_ast_context && !m_swift_ast_context_triple.str().empty())
+      m_swift_ast_context->SetTriple(m_swift_ast_context_triple);
   }
   return m_swift_ast_context;
 }
@@ -1524,8 +1526,10 @@ llvm::Triple TypeSystemSwiftTypeRef::GetTriple() const {
 }
 
 void TypeSystemSwiftTypeRef::SetTriple(const llvm::Triple triple) {
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContextOrNull())
     swift_ast_context->SetTriple(triple);
+  else
+    m_swift_ast_context_triple = triple;
 }
 
 void TypeSystemSwiftTypeRef::ClearModuleDependentCaches() {
