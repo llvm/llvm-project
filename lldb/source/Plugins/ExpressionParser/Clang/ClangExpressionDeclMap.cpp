@@ -76,8 +76,7 @@ lldb::ValueObjectSP GetCapturedThisValueObject(StackFrame *frame) {
   assert(frame);
 
   if (auto thisValSP = frame->FindVariable(ConstString("this")))
-    if (auto thisThisValSP =
-            thisValSP->GetChildMemberWithName(ConstString("this"), true))
+    if (auto thisThisValSP = thisValSP->GetChildMemberWithName("this", true))
       return thisThisValSP;
 
   return nullptr;
