@@ -451,7 +451,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_1(<16 x i8> %a0) {
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
+; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; X86-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
@@ -478,7 +478,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_1(<16 x i8> %a0) {
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
+; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
@@ -509,7 +509,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_4(<16 x i8> %a0) {
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; X86-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
@@ -536,7 +536,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_4(<16 x i8> %a0) {
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
@@ -567,7 +567,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_5(<16 x i8> %a0) {
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vpsrlw $5, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; X86-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
@@ -594,7 +594,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_5(<16 x i8> %a0) {
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vpsrlw $5, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
@@ -625,7 +625,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_6(<16 x i8> %a0) {
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vpsrlw $6, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; X86-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    retl
@@ -652,7 +652,7 @@ define <16 x i8> @test_128_i8_x_16_224_mask_ashr_6(<16 x i8> %a0) {
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vpsrlw $6, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq

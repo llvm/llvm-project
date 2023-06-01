@@ -66,7 +66,7 @@ define <16 x i8> @splatconstant_ashr_v16i8(<16 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vpsrlw $4, %xmm0, %xmm0
 ; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; GFNIAVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; GFNIAVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; GFNIAVX1-NEXT:    retq
@@ -109,7 +109,7 @@ define <32 x i8> @splatconstant_shl_v32i8(<32 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; GFNIAVX1-NEXT:    vpsllw $6, %xmm1, %xmm1
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [192,192,192,192,192,192,192,192,192,192,192,192,192,192,192,192]
 ; GFNIAVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; GFNIAVX1-NEXT:    vpsllw $6, %xmm0, %xmm0
 ; GFNIAVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -145,7 +145,7 @@ define <32 x i8> @splatconstant_lshr_v32i8(<32 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; GFNIAVX1-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; GFNIAVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; GFNIAVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; GFNIAVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -186,9 +186,9 @@ define <32 x i8> @splatconstant_ashr_v32i8(<32 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; GFNIAVX1-NEXT:    vpsrlw $2, %xmm1, %xmm1
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
 ; GFNIAVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; GFNIAVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm1
 ; GFNIAVX1-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; GFNIAVX1-NEXT:    vpsrlw $2, %xmm0, %xmm0
@@ -240,7 +240,7 @@ define <64 x i8> @splatconstant_shl_v64i8(<64 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; GFNIAVX1-NEXT:    vpsllw $5, %xmm2, %xmm2
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [224,224,224,224,224,224,224,224,224,224,224,224,224,224,224,224]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [224,224,224,224,224,224,224,224,224,224,224,224,224,224,224,224]
 ; GFNIAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpsllw $5, %xmm0, %xmm0
 ; GFNIAVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
@@ -289,7 +289,7 @@ define <64 x i8> @splatconstant_lshr_v64i8(<64 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; GFNIAVX1-NEXT:    vpsrlw $7, %xmm2, %xmm2
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; GFNIAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpsrlw $7, %xmm0, %xmm0
 ; GFNIAVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
@@ -347,9 +347,9 @@ define <64 x i8> @splatconstant_ashr_v64i8(<64 x i8> %a) nounwind {
 ; GFNIAVX1:       # %bb.0:
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; GFNIAVX1-NEXT:    vpsrlw $1, %xmm2, %xmm2
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; GFNIAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; GFNIAVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
+; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
 ; GFNIAVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpsubb %xmm4, %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0

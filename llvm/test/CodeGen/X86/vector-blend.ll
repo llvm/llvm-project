@@ -86,7 +86,7 @@ define <4 x i8> @vsel_4xi8(<4 x i8> %v1, <4 x i8> %v2) {
 ;
 ; AVX1-LABEL: vsel_4xi8:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <255,255,0,255,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,255,0,255,255,255,0,255,255,255,0,255,255,255,0,255]
 ; AVX1-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -270,7 +270,7 @@ define <16 x i8> @vsel_i8(<16 x i8> %v1, <16 x i8> %v2) {
 ;
 ; AVX1-LABEL: vsel_i8:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
 ; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;

@@ -2362,12 +2362,12 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-AVX1-NEXT:    vpsrlw $8, %xmm5, %xmm5
 ; CHECK-AVX1-NEXT:    vpackuswb %xmm4, %xmm5, %xmm4
 ; CHECK-AVX1-NEXT:    vpsrlw $7, %xmm3, %xmm3
-; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm5 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK-AVX1-NEXT:    vpand %xmm5, %xmm3, %xmm3
 ; CHECK-AVX1-NEXT:    vpaddb %xmm3, %xmm4, %xmm4
 ; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm4[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm6
-; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; CHECK-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
 ; CHECK-AVX1-NEXT:    vpand %xmm3, %xmm6, %xmm6
 ; CHECK-AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero
 ; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
