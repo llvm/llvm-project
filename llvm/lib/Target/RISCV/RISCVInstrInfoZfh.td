@@ -402,10 +402,10 @@ def PseudoFROUND_H_INX : PseudoFROUND<FPR16INX>;
 
 let Predicates = [HasStdExtZfhOrZfhmin] in {
 /// Loads
-defm : LdPat<load, FLH, f16>;
+def : LdPat<load, FLH, f16>;
 
 /// Stores
-defm : StPat<store, FSH, FPR16, f16>;
+def : StPat<store, FSH, FPR16, f16>;
 } // Predicates = [HasStdExtZfhOrZfhmin]
 
 let Predicates = [HasStdExtZhinxOrZhinxmin] in {
