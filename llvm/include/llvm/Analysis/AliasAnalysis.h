@@ -116,6 +116,15 @@ public:
 
   operator Kind() const { return static_cast<Kind>(Alias); }
 
+  bool operator==(const AliasResult &Other) const {
+    return Alias == Other.Alias && HasOffset == Other.HasOffset &&
+           Offset == Other.Offset;
+  }
+  bool operator!=(const AliasResult &Other) const { return !(*this == Other); }
+
+  bool operator==(Kind K) const { return Alias == K; }
+  bool operator!=(Kind K) const { return !(*this == K); }
+
   constexpr bool hasOffset() const { return HasOffset; }
   constexpr int32_t getOffset() const {
     assert(HasOffset && "No offset!");
