@@ -227,6 +227,18 @@ void ProcessProperties::SetVirtualAddressableBits(uint32_t bits) {
   const uint32_t idx = ePropertyVirtualAddressableBits;
   SetPropertyAtIndex(idx, static_cast<uint64_t>(bits));
 }
+
+uint32_t ProcessProperties::GetHighmemVirtualAddressableBits() const {
+  const uint32_t idx = ePropertyHighmemVirtualAddressableBits;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_process_properties[idx].default_uint_value);
+}
+
+void ProcessProperties::SetHighmemVirtualAddressableBits(uint32_t bits) {
+  const uint32_t idx = ePropertyHighmemVirtualAddressableBits;
+  SetPropertyAtIndex(idx, static_cast<uint64_t>(bits));
+}
+
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {
   const uint32_t idx = ePropertyPythonOSPluginPath;
   SetPropertyAtIndex(idx, file);
@@ -5651,23 +5663,29 @@ void Process::Flush() {
 }
 
 lldb::addr_t Process::GetCodeAddressMask() {
-  if (m_code_address_mask == 0) {
-    if (uint32_t number_of_addressable_bits = GetVirtualAddressableBits()) {
-      lldb::addr_t address_mask = ~((1ULL << number_of_addressable_bits) - 1);
-      SetCodeAddressMask(address_mask);
-    }
-  }
+  if (uint32_t num_bits_setting = GetVirtualAddressableBits())
+    return ~((1ULL << num_bits_setting) - 1);
+
   return m_code_address_mask;
 }
 
 lldb::addr_t Process::GetDataAddressMask() {
-  if (m_data_address_mask == 0) {
-    if (uint32_t number_of_addressable_bits = GetVirtualAddressableBits()) {
-      lldb::addr_t address_mask = ~((1ULL << number_of_addressable_bits) - 1);
-      SetDataAddressMask(address_mask);
-    }
-  }
+  if (uint32_t num_bits_setting = GetVirtualAddressableBits())
+    return ~((1ULL << num_bits_setting) - 1);
+
   return m_data_address_mask;
+}
+
+lldb::addr_t Process::GetHighmemCodeAddressMask() {
+  if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
+    return ~((1ULL << num_bits_setting) - 1);
+  return GetCodeAddressMask();
+}
+
+lldb::addr_t Process::GetHighmemDataAddressMask() {
+  if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
+    return ~((1ULL << num_bits_setting) - 1);
+  return GetDataAddressMask();
 }
 
 void Process::DidExec() {
