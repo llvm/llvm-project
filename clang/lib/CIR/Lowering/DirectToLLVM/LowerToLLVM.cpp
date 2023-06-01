@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/IR/Attributes.h"
@@ -522,8 +523,16 @@ public:
         resultType ? resultType : mlir::LLVM::LLVMVoidType::get(getContext()),
         signatureConversion.getConvertedTypes(),
         /*isVarArg=*/fnType.isVarArg());
-    auto fn = rewriter.create<mlir::LLVM::LLVMFuncOp>(op.getLoc(), op.getName(),
-                                                      llvmFnTy);
+    // LLVMFuncOp expects a single FileLine Location instead of a fused
+    // location.
+    auto Loc = op.getLoc();
+    if (Loc.isa<mlir::FusedLoc>()) {
+      auto FusedLoc = Loc.cast<mlir::FusedLoc>();
+      Loc = FusedLoc.getLocations()[0];
+    }
+    assert(Loc.isa<mlir::FileLineColLoc>() && "expected single location here");
+    auto fn =
+        rewriter.create<mlir::LLVM::LLVMFuncOp>(Loc, op.getName(), llvmFnTy);
 
     rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
     if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
@@ -1097,6 +1106,11 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
   mlir::PassManager pm(mlirCtx.get());
 
   pm.addPass(createConvertCIRToLLVMPass());
+
+  // This is necessary to have line tables emitted and basic
+  // debugger working. In the future we will add proper debug information
+  // emission directly from our frontend.
+  pm.addPass(mlir::LLVM::createDIScopeForLLVMFuncOpPass());
 
   auto result = !mlir::failed(pm.run(theModule));
   if (!result)

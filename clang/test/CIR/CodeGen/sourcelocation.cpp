@@ -48,7 +48,7 @@ int s0(int a, int b) {
 // CIR:     cir.return %8 : !s32i loc(#loc30)
 // CIR:   } loc(#loc20)
 // CIR: } loc(#loc)
-// CIR: #loc = loc(unknown)
+// CIR: #loc = loc("{{.*}}sourcelocation.cpp":0:0)
 // CIR: #loc1 = loc("{{.*}}sourcelocation.cpp":6:1)
 // CIR: #loc2 = loc("{{.*}}sourcelocation.cpp":13:1)
 // CIR: #loc7 = loc("{{.*}}sourcelocation.cpp":7:3)
@@ -77,3 +77,14 @@ int s0(int a, int b) {
 
 // LLVM: ModuleID = '{{.*}}sourcelocation.cpp'
 // LLVM: source_filename = "{{.*}}sourcelocation.cpp"
+// LLVM: define i32 @_Z2s0ii(i32 %0, i32 %1) !dbg ![[#SP:]]
+// LLVM:  %3 = alloca i32, i64 1, align 4, !dbg ![[#LOC1:]]
+
+
+// LLVM: !llvm.module.flags = !{!0}
+// LLVM: !llvm.dbg.cu = !{!1}
+// LLVM: !0 = !{i32 2, !"Debug Info Version", i32 3}
+// LLVM: !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
+// LLVM: !2 = !DIFile(filename: "sourcelocation.cpp", directory: "{{.*}}clang/test/CIR/CodeGen")
+// LLVM: ![[#SP]] = distinct !DISubprogram(name: "_Z2s0ii", linkageName: "_Z2s0ii", scope: !2, file: !2, line: 6, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1)
+// LLVM: ![[#LOC1]] = !DILocation(line: 6, scope: ![[#SP]])
