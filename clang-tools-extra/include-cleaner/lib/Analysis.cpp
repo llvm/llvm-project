@@ -53,7 +53,7 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
 }
 
-std::string spellHeader(const Header &H, HeaderSearch &HS,
+std::string spellHeader(const Header &H, const HeaderSearch &HS,
                         const FileEntry *Main) {
   switch (H.kind()) {
   case Header::Physical: {
@@ -73,7 +73,7 @@ std::string spellHeader(const Header &H, HeaderSearch &HS,
 AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
                         llvm::ArrayRef<SymbolReference> MacroRefs,
                         const Includes &Inc, const PragmaIncludes *PI,
-                        const SourceManager &SM, HeaderSearch &HS) {
+                        const SourceManager &SM, const HeaderSearch &HS) {
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
   llvm::DenseSet<const Include *> Used;
   llvm::StringSet<> Missing;
