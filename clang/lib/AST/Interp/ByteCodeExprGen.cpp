@@ -237,31 +237,19 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!visit(LHS) || !visit(RHS))
     return false;
 
-  // For languages such as C, cast the result of one
-  // of our comparision opcodes to T (which is usually int).
-  auto MaybeCastToBool = [this, T, BO](bool Result) {
-    if (!Result)
-      return false;
-    if (DiscardResult)
-      return this->emitPop(*T, BO);
-    if (T != PT_Bool)
-      return this->emitCast(PT_Bool, *T, BO);
-    return true;
-  };
-
   switch (BO->getOpcode()) {
   case BO_EQ:
-    return MaybeCastToBool(this->emitEQ(*LT, BO));
+    return Discard(this->emitEQ(*LT, BO));
   case BO_NE:
-    return MaybeCastToBool(this->emitNE(*LT, BO));
+    return Discard(this->emitNE(*LT, BO));
   case BO_LT:
-    return MaybeCastToBool(this->emitLT(*LT, BO));
+    return Discard(this->emitLT(*LT, BO));
   case BO_LE:
-    return MaybeCastToBool(this->emitLE(*LT, BO));
+    return Discard(this->emitLE(*LT, BO));
   case BO_GT:
-    return MaybeCastToBool(this->emitGT(*LT, BO));
+    return Discard(this->emitGT(*LT, BO));
   case BO_GE:
-    return MaybeCastToBool(this->emitGE(*LT, BO));
+    return Discard(this->emitGE(*LT, BO));
   case BO_Sub:
     if (BO->getType()->isFloatingType())
       return Discard(this->emitSubf(getRoundingMode(BO), BO));
