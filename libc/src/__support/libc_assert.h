@@ -49,7 +49,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
 #endif
 
 // The public "assert" macro calls abort on failure. Should it be same here?
-// The libc intenral assert can fire from anywhere inside the libc. So, to
+// The libc internal assert can fire from anywhere inside the libc. So, to
 // avoid potential chicken-and-egg problems, it is simple to do a quick_exit
 // on assertion failure instead of calling abort. We also don't want to use
 // __builtin_trap as it could potentially be implemented using illegal
