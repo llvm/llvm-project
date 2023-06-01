@@ -345,6 +345,9 @@ module std [system] {
       module pstl_backends_cpu_backends_serial {
         private header "__algorithm/pstl_backends/cpu_backends/serial.h"
       }
+      module pstl_backends_cpu_backends_stable_sort {
+        private header "__algorithm/pstl_backends/cpu_backends/stable_sort.h"
+      }
       module pstl_backends_cpu_backends_thread {
         private header "__algorithm/pstl_backends/cpu_backends/thread.h"
       }
