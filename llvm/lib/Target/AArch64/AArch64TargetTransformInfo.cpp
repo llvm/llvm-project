@@ -2349,6 +2349,11 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(const Instruction *I,
     if (I && dyn_cast<LoadInst>(I->getOperand(1)))
       return ST->getVectorInsertExtractBaseCost() + 1;
 
+    // i1 inserts and extract will include an extra cset or cmp of the vector
+    // value. Increase the cost by 1 to account.
+    if (Val->getScalarSizeInBits() == 1)
+      return ST->getVectorInsertExtractBaseCost() + 1;
+
     // FIXME:
     // If the extract-element and insert-element instructions could be
     // simplified away (e.g., could be combined into users by looking at use-def
