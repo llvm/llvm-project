@@ -21,7 +21,6 @@ _warningFlags = [
     "-Wno-unused-command-line-argument",
     "-Wno-attributes",
     "-Wno-pessimizing-move",
-    "-Wno-c++11-extensions",
     "-Wno-noexcept-type",
     "-Wno-aligned-allocation-unavailable",
     "-Wno-atomic-alignment",
@@ -47,6 +46,10 @@ _warningFlags = [
     "-Wunused-parameter",
     "-Wunreachable-code",
     "-Wno-unused-local-typedef",
+
+    # Disable warnings for extensions used in C++03
+    "-Wno-local-type-template-args",
+    "-Wno-c++11-extensions",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]

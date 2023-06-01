@@ -69,6 +69,7 @@ END-SCRIPT
 #include <__algorithm/find_if_not.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/find_if_not.h'}}
 #include <__algorithm/for_each.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/for_each.h'}}
 #include <__algorithm/for_each_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/for_each_n.h'}}
+#include <__algorithm/for_each_segment.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/for_each_segment.h'}}
 #include <__algorithm/generate.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/generate.h'}}
 #include <__algorithm/generate_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/generate_n.h'}}
 #include <__algorithm/half_positive.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/half_positive.h'}}
