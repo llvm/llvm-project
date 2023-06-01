@@ -29,7 +29,7 @@ constexpr int f(int a) {
                    // expected-note {{in call to 'f(2)'}} \
                    // expected-note {{in call to 'f(1)'}}
 }
-static_assert(f(0) == 100); // ref-error {{not an integral constant expression}} \
-                            // ref-note {{in call to 'f(0)'}} \
-                            // expected-error {{not an integral constant expression}} \
-                            // expected-note {{in call to 'f(0)'}}
+static_assert(f(0) == 100, ""); // ref-error {{not an integral constant expression}} \
+                                // ref-note {{in call to 'f(0)'}} \
+                                // expected-error {{not an integral constant expression}} \
+                                // expected-note {{in call to 'f(0)'}}
