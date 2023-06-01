@@ -107,6 +107,9 @@ Changes to the ARM Backend
   have integer MVE instructions (and therefore have FP registers) but
   no scalar or vector floating point computation.
 
+- The ``.arm`` directive now aligns code to the next 4-byte boundary, and
+  the ``.thumb`` directive aligns code to the next 2-byte boundary.
+
 Changes to the AVR Backend
 --------------------------
 
