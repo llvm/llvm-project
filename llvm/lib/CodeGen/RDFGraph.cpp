@@ -46,19 +46,8 @@ using namespace rdf;
 namespace llvm {
 namespace rdf {
 
-raw_ostream &operator<<(raw_ostream &OS, const PrintLaneMaskOpt &P) {
-  if (!P.Mask.all())
-    OS << ':' << PrintLaneMask(P.Mask);
-  return OS;
-}
-
 raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterRef> &P) {
-  auto &TRI = P.G.getTRI();
-  if (P.Obj.Reg > 0 && P.Obj.Reg < TRI.getNumRegs())
-    OS << TRI.getName(P.Obj.Reg);
-  else
-    OS << '#' << P.Obj.Reg;
-  OS << PrintLaneMaskOpt(P.Obj.Mask);
+  P.G.getPRI().print(OS, P.Obj);
   return OS;
 }
 
@@ -327,7 +316,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterSet> &P) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Print<RegisterAggr> &P) {
-  P.Obj.print(OS);
+  OS << P.Obj;
   return OS;
 }
 
@@ -906,7 +895,7 @@ void DataFlowGraph::build(unsigned Options) {
   NodeList Blocks = Func.Addr->members(*this);
 
   // Collect information about block references.
-  RegisterSet AllRefs;
+  RegisterSet AllRefs(getPRI());
   for (NodeAddr<BlockNode *> BA : Blocks)
     for (NodeAddr<InstrNode *> IA : BA.Addr->members(*this))
       for (NodeAddr<RefNode *> RA : IA.Addr->members(*this))
@@ -982,8 +971,7 @@ void DataFlowGraph::build(unsigned Options) {
 }
 
 RegisterRef DataFlowGraph::makeRegRef(unsigned Reg, unsigned Sub) const {
-  assert(PhysicalRegisterInfo::isRegMaskId(Reg) ||
-         Register::isPhysicalRegister(Reg));
+  assert(RegisterRef::isRegId(Reg) || RegisterRef::isMaskId(Reg));
   assert(Reg != 0);
   if (Sub != 0)
     Reg = TRI.getSubReg(Reg, Sub);
@@ -994,7 +982,8 @@ RegisterRef DataFlowGraph::makeRegRef(const MachineOperand &Op) const {
   assert(Op.isReg() || Op.isRegMask());
   if (Op.isReg())
     return makeRegRef(Op.getReg(), Op.getSubReg());
-  return RegisterRef(PRI.getRegMaskId(Op.getRegMask()), LaneBitmask::getAll());
+  return RegisterRef(getPRI().getRegMaskId(Op.getRegMask()),
+                     LaneBitmask::getAll());
 }
 
 // For each stack in the map DefM, push the delimiter for block B on it.
@@ -1060,7 +1049,7 @@ void DataFlowGraph::pushClobbers(NodeAddr<InstrNode *> IA, DefStackMap &DefM) {
     // The def stack traversal in linkNodeUp will check the exact aliasing.
     DefM[RR.Reg].push(DA);
     Defined.insert(RR.Reg);
-    for (RegisterId A : PRI.getAliasSet(RR.Reg)) {
+    for (RegisterId A : getPRI().getAliasSet(RR.Reg)) {
       // Check that we don't push the same def twice.
       assert(A != RR.Reg);
       if (!Defined.count(A))
@@ -1115,7 +1104,7 @@ void DataFlowGraph::pushDefs(NodeAddr<InstrNode *> IA, DefStackMap &DefM) {
     // Push the definition on the stack for the register and all aliases.
     // The def stack traversal in linkNodeUp will check the exact aliasing.
     DefM[RR.Reg].push(DA);
-    for (RegisterId A : PRI.getAliasSet(RR.Reg)) {
+    for (RegisterId A : getPRI().getAliasSet(RR.Reg)) {
       // Check that we don't push the same def twice.
       assert(A != RR.Reg);
       DefM[A].push(DA);
@@ -1162,8 +1151,10 @@ DataFlowGraph::getNextRelated(NodeAddr<InstrNode *> IA,
   auto Related = [this, RA](NodeAddr<RefNode *> TA) -> bool {
     if (TA.Addr->getKind() != RA.Addr->getKind())
       return false;
-    if (TA.Addr->getRegRef(*this) != RA.Addr->getRegRef(*this))
+    if (!getPRI().equal_to(TA.Addr->getRegRef(*this),
+                           RA.Addr->getRegRef(*this))) {
       return false;
+    }
     return true;
   };
   auto RelatedStmt = [&Related, RA](NodeAddr<RefNode *> TA) -> bool {
@@ -1276,7 +1267,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode *> BA, MachineInstr &In) {
       if (Op.getReg() == 0 || Op.isUndef())
         continue;
       RegisterRef UR = makeRegRef(Op);
-      if (PRI.alias(DR, UR))
+      if (getPRI().alias(DR, UR))
         return false;
     }
     return true;
@@ -1514,7 +1505,7 @@ void DataFlowGraph::linkRefUp(NodeAddr<InstrNode *> IA, NodeAddr<T> TA,
   NodeAddr<T> TAP;
 
   // References from the def stack that have been examined so far.
-  RegisterAggr Defs(PRI);
+  RegisterAggr Defs(getPRI());
 
   for (auto I = DS.top(), E = DS.bottom(); I != E; I.down()) {
     RegisterRef QR = I->Addr->getRegRef(*this);
@@ -1554,7 +1545,7 @@ template <typename Predicate>
 void DataFlowGraph::linkStmtRefs(DefStackMap &DefM, NodeAddr<StmtNode *> SA,
                                  Predicate P) {
 #ifndef NDEBUG
-  RegisterSet Defs;
+  RegisterSet Defs(getPRI());
 #endif
 
   // Link all nodes (upwards in the data-flow) with their reaching defs.

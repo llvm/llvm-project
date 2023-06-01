@@ -25,7 +25,8 @@ class MachineInstr;
 namespace rdf {
 
   struct CopyPropagation {
-    CopyPropagation(DataFlowGraph &dfg) : MDT(dfg.getDT()), DFG(dfg) {}
+    CopyPropagation(DataFlowGraph &dfg) : MDT(dfg.getDT()), DFG(dfg),
+        RDefMap(std::less<RegisterRef>(DFG.getPRI())) {}
 
     virtual ~CopyPropagation() = default;
 
