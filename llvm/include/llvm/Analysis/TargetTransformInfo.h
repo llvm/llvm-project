@@ -1669,9 +1669,9 @@ public:
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
                        TTI::TargetCostKind CostKind) = 0;
-  virtual unsigned getInliningThresholdMultiplier() = 0;
+  virtual unsigned getInliningThresholdMultiplier() const = 0;
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
-  virtual int getInlinerVectorBonusPercent() = 0;
+  virtual int getInlinerVectorBonusPercent() const = 0;
   virtual InstructionCost getMemcpyCost(const Instruction *I) = 0;
   virtual unsigned
   getEstimatedNumberOfCaseClusters(const SwitchInst &SI, unsigned &JTSize,
@@ -2032,13 +2032,13 @@ public:
                                        TargetCostKind CostKind) override {
     return Impl.getPointersChainCost(Ptrs, Base, Info, AccessTy, CostKind);
   }
-  unsigned getInliningThresholdMultiplier() override {
+  unsigned getInliningThresholdMultiplier() const override {
     return Impl.getInliningThresholdMultiplier();
   }
   unsigned adjustInliningThreshold(const CallBase *CB) override {
     return Impl.adjustInliningThreshold(CB);
   }
-  int getInlinerVectorBonusPercent() override {
+  int getInlinerVectorBonusPercent() const override {
     return Impl.getInlinerVectorBonusPercent();
   }
   InstructionCost getMemcpyCost(const Instruction *I) override {
