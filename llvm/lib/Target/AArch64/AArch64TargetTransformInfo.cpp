@@ -3208,8 +3208,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (!Entry)
       break;
     auto *ValVTy = cast<FixedVectorType>(ValTy);
-    if (!ValVTy->getElementType()->isIntegerTy(1) &&
-        MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
+    if (MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
         isPowerOf2_32(ValVTy->getNumElements())) {
       InstructionCost ExtraCost = 0;
       if (LT.first != 1) {
@@ -3220,7 +3219,9 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
         ExtraCost = getArithmeticInstrCost(Opcode, Ty, CostKind);
         ExtraCost *= LT.first - 1;
       }
-      return Entry->Cost + ExtraCost;
+      // All and/or/xor of i1 will be lowered with maxv/minv/addv + fmov
+      auto Cost = ValVTy->getElementType()->isIntegerTy(1) ? 2 : Entry->Cost;
+      return Cost + ExtraCost;
     }
     break;
   }
