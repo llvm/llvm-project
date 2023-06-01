@@ -30,10 +30,8 @@ define <2 x i32> @fneg_as_int_v2f32_noimplicitfloat(<2 x float> %x) noimplicitfl
 define float @fneg_as_int_f32_castback(float %val) {
 ; CHECK-LABEL: define float @fneg_as_int_f32_castback
 ; CHECK-SAME: (float [[VAL:%.*]]) {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[BITCAST]], -2147483648
-; CHECK-NEXT:    [[FNEG:%.*]] = bitcast i32 [[XOR]] to float
-; CHECK-NEXT:    ret float [[FNEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[VAL]]
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %bitcast = bitcast float %val to i32
   %xor = xor i32 %bitcast, -2147483648
@@ -58,11 +56,9 @@ define float @not_fneg_as_int_f32_castback_wrongconst(float %val) {
 define float @fneg_as_int_f32_castback_multi_use(float %val, ptr %ptr) {
 ; CHECK-LABEL: define float @fneg_as_int_f32_castback_multi_use
 ; CHECK-SAME: (float [[VAL:%.*]], ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[BITCAST]], -2147483648
-; CHECK-NEXT:    store i32 [[XOR]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[FNEG:%.*]] = bitcast i32 [[XOR]] to float
-; CHECK-NEXT:    ret float [[FNEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[VAL]]
+; CHECK-NEXT:    store float [[TMP1]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %bitcast = bitcast float %val to i32
   %xor = xor i32 %bitcast, -2147483648
@@ -74,8 +70,8 @@ define float @fneg_as_int_f32_castback_multi_use(float %val, ptr %ptr) {
 define i64 @fneg_as_int_f64(double %x) {
 ; CHECK-LABEL: define i64 @fneg_as_int_f64
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast double [[X]] to i64
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[BC]], -9223372036854775808
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast double [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[XOR]]
 ;
   %bc = bitcast double %x to i64
@@ -86,8 +82,8 @@ define i64 @fneg_as_int_f64(double %x) {
 define <2 x i64> @fneg_as_int_v2f64(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x i64> @fneg_as_int_v2f64
 ; CHECK-SAME: (<2 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x double> [[X]] to <2 x i64>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i64> [[BC]], <i64 -9223372036854775808, i64 -9223372036854775808>
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x double> [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast <2 x double> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[XOR]]
 ;
   %bc = bitcast <2 x double> %x to <2 x i64>
@@ -98,8 +94,8 @@ define <2 x i64> @fneg_as_int_v2f64(<2 x double> %x) {
 define i64 @fneg_as_int_f64_swap(double %x) {
 ; CHECK-LABEL: define i64 @fneg_as_int_f64_swap
 ; CHECK-SAME: (double [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast double [[X]] to i64
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[BC]], -9223372036854775808
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast double [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[XOR]]
 ;
   %bc = bitcast double %x to i64
@@ -110,8 +106,8 @@ define i64 @fneg_as_int_f64_swap(double %x) {
 define i32 @fneg_as_int_f32(float %x) {
 ; CHECK-LABEL: define i32 @fneg_as_int_f32
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast float [[X]] to i32
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[BC]], -2147483648
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast float [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %bc = bitcast float %x to i32
@@ -122,8 +118,8 @@ define i32 @fneg_as_int_f32(float %x) {
 define <2 x i32> @fneg_as_int_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x i32> @fneg_as_int_v2f32
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[BC]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast <2 x float> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[XOR]]
 ;
   %bc = bitcast <2 x float> %x to <2 x i32>
@@ -146,8 +142,8 @@ define <2 x i32> @not_fneg_as_int_v2f32_nonsplat(<2 x float> %x) {
 define <3 x i32> @fneg_as_int_v3f32_undef(<3 x float> %x) {
 ; CHECK-LABEL: define <3 x i32> @fneg_as_int_v3f32_undef
 ; CHECK-SAME: (<3 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <3 x float> [[X]] to <3 x i32>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <3 x i32> [[BC]], <i32 -2147483648, i32 undef, i32 -2147483648>
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x float> [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast <3 x float> [[TMP1]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[XOR]]
 ;
   %bc = bitcast <3 x float> %x to <3 x i32>
@@ -211,8 +207,8 @@ define i128 @fneg_as_int_fp128_f64_mask(fp128 %x) {
 define i128 @fneg_as_int_fp128_f128_mask(fp128 %x) {
 ; CHECK-LABEL: define i128 @fneg_as_int_fp128_f128_mask
 ; CHECK-SAME: (fp128 [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast fp128 [[X]] to i128
-; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[BC]], -170141183460469231731687303715884105728
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg fp128 [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast fp128 [[TMP1]] to i128
 ; CHECK-NEXT:    ret i128 [[XOR]]
 ;
   %bc = bitcast fp128 %x to i128
@@ -223,8 +219,8 @@ define i128 @fneg_as_int_fp128_f128_mask(fp128 %x) {
 define i16 @fneg_as_int_f16(half %x) {
 ; CHECK-LABEL: define i16 @fneg_as_int_f16
 ; CHECK-SAME: (half [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast half [[X]] to i16
-; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[BC]], -32768
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg half [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast half [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[XOR]]
 ;
   %bc = bitcast half %x to i16
@@ -235,8 +231,8 @@ define i16 @fneg_as_int_f16(half %x) {
 define <2 x i16> @fneg_as_int_v2f16(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x i16> @fneg_as_int_v2f16
 ; CHECK-SAME: (<2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x half> [[X]] to <2 x i16>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i16> [[BC]], <i16 -32768, i16 -32768>
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x half> [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast <2 x half> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[XOR]]
 ;
   %bc = bitcast <2 x half> %x to <2 x i16>
@@ -247,8 +243,8 @@ define <2 x i16> @fneg_as_int_v2f16(<2 x half> %x) {
 define i16 @fneg_as_int_bf16(bfloat %x) {
 ; CHECK-LABEL: define i16 @fneg_as_int_bf16
 ; CHECK-SAME: (bfloat [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast bfloat [[X]] to i16
-; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[BC]], -32768
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg bfloat [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast bfloat [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[XOR]]
 ;
   %bc = bitcast bfloat %x to i16
@@ -259,8 +255,8 @@ define i16 @fneg_as_int_bf16(bfloat %x) {
 define <2 x i16> @fneg_as_int_v2bf16(<2 x bfloat> %x) {
 ; CHECK-LABEL: define <2 x i16> @fneg_as_int_v2bf16
 ; CHECK-SAME: (<2 x bfloat> [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x bfloat> [[X]] to <2 x i16>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i16> [[BC]], <i16 -32768, i16 -32768>
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x bfloat> [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast <2 x bfloat> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[XOR]]
 ;
   %bc = bitcast <2 x bfloat> %x to <2 x i16>
@@ -271,8 +267,8 @@ define <2 x i16> @fneg_as_int_v2bf16(<2 x bfloat> %x) {
 define i80 @fneg_as_int_x86_fp80_f64_mask(x86_fp80 %x) {
 ; CHECK-LABEL: define i80 @fneg_as_int_x86_fp80_f64_mask
 ; CHECK-SAME: (x86_fp80 [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast x86_fp80 [[X]] to i80
-; CHECK-NEXT:    [[XOR:%.*]] = xor i80 [[BC]], -604462909807314587353088
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg x86_fp80 [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast x86_fp80 [[TMP1]] to i80
 ; CHECK-NEXT:    ret i80 [[XOR]]
 ;
   %bc = bitcast x86_fp80 %x to i80
