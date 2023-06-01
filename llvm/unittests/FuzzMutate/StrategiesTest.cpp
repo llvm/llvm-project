@@ -374,13 +374,30 @@ TEST(InstModificationIRStrategyTest, DidntShuffleFRem) {
   VerfyDivDidntShuffle(Source);
 }
 
-TEST(FunctionIRStrategy, Func) {
+TEST(InsertFunctionStrategy, Func) {
   LLVMContext Ctx;
   const char *Source = "";
   auto Mutator = createMutator<InsertFunctionStrategy>();
   ASSERT_TRUE(Mutator);
 
   auto M = parseAssembly(Source, Ctx);
+  srand(Seed);
+  for (int i = 0; i < 100; i++) {
+    Mutator->mutateModule(*M, rand(), 1024);
+    EXPECT_TRUE(!verifyModule(*M, &errs()));
+  }
+}
+
+TEST(InsertFunctionStrategy, AvoidCallingFunctionWithSpecialParam) {
+  LLVMContext Ctx;
+  StringRef Source = "\n\
+      declare void @llvm.dbg.value(metadata %0, metadata %1, metadata %2)\n\
+      declare i1 @llvm.experimental.gc.result.i1(token %0)\n\
+      define i32 @test(i32 %0) gc \"statepoint-example\" {\n\
+        ret i32 %0 \n\
+      }";
+  auto Mutator = createMutator<InsertFunctionStrategy>();
+  auto M = parseAssembly(Source.data(), Ctx);
   srand(Seed);
   for (int i = 0; i < 100; i++) {
     Mutator->mutateModule(*M, rand(), 1024);

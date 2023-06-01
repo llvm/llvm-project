@@ -360,7 +360,11 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 
   auto RS = makeSampler(IB.Rand, Functions);
   Function *F = RS.getSelection();
-  if (!F) {
+  auto IsUnsupportedTy = [](Type *T) {
+    return T->isMetadataTy() || T->isTokenTy();
+  };
+  if (!F || IsUnsupportedTy(F->getReturnType()) ||
+      any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
     F = IB.createFunctionDeclaration(*M);
   }
 
