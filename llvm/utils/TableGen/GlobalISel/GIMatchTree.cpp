@@ -230,25 +230,6 @@ void GIMatchTreeBuilder::runStep() {
                dbgs() << "\n");
 #endif // ifndef NDEBUG
 
-  // Check for unreachable rules. Rules are unreachable if they are preceeded by
-  // a fully tested rule.
-  // Note: This is only true for the current algorithm, if we allow the
-  //       algorithm to compare equally valid rules then they will become
-  //       reachable.
-  {
-    auto FullyTestedLeafI = Leaves.end();
-    for (auto LeafI = Leaves.begin(), LeafE = Leaves.end();
-         LeafI != LeafE; ++LeafI) {
-      if (LeafI->isFullyTraversed() && LeafI->isFullyTested())
-        FullyTestedLeafI = LeafI;
-      else if (FullyTestedLeafI != Leaves.end()) {
-        PrintError("Leaf " + LeafI->getName() + " is unreachable");
-        PrintNote("Leaf " + FullyTestedLeafI->getName() +
-                  " will have already matched");
-      }
-    }
-  }
-
   LLVM_DEBUG(dbgs() << "  Eliminating redundant partitioners:\n");
   filterRedundantPartitioners();
   LLVM_DEBUG(dbgs() << "  Partitioners remaining:\n");
