@@ -1897,13 +1897,16 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
                        Variadic<TransformHandleTypeInterface>:$vector_sizes,
                        UnitAttr:$vectorize_nd_extract,
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
-                          $static_vector_sizes);
+                          $static_vector_sizes,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$last_vector_size_scalable);
+
   let results = (outs);
   let assemblyFormat = [{
       $target
       `vector_sizes` custom<DynamicIndexList>($vector_sizes,
                                               $static_vector_sizes,
-                                              type($vector_sizes))
+                                              type($vector_sizes),
+                                              $last_vector_size_scalable)
       attr-dict
       `:` type($target)
   }];
