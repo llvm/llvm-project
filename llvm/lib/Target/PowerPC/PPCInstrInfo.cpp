@@ -226,7 +226,7 @@ void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                          MachineInstr &NewMI2) const {
   // Propagate FP flags from the original instructions.
   // But clear poison-generating flags because those may not be valid now.
-  uint16_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
+  uint32_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
   NewMI1.setFlags(IntersectedFlags);
   NewMI1.clearFlag(MachineInstr::MIFlag::NoSWrap);
   NewMI1.clearFlag(MachineInstr::MIFlag::NoUWrap);
@@ -239,7 +239,7 @@ void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
 }
 
 void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &MI,
-                                         uint16_t Flags) const {
+                                         uint32_t Flags) const {
   MI.setFlags(Flags);
   MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
   MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
@@ -841,7 +841,7 @@ void PPCInstrInfo::reassociateFMA(
   }
   }
 
-  uint16_t IntersectedFlags = 0;
+  uint32_t IntersectedFlags = 0;
   if (IsILPReassociate)
     IntersectedFlags = Root.getFlags() & Prev->getFlags() & Leaf->getFlags();
   else

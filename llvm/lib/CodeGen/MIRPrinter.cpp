@@ -801,6 +801,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nofpexcept ";
   if (MI.getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
+  if (MI.getFlag(MachineInstr::Unpredictable))
+    OS << "unpredictable ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)
