@@ -2121,7 +2121,7 @@ function(llvm_install_symlink project name dest)
   if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
     add_llvm_install_targets(install-${name}
                              DEPENDS ${name} ${dest}
-                             COMPONENT ${component}
+                             COMPONENT ${name}
                              SYMLINK ${dest})
   endif()
 endfunction()
