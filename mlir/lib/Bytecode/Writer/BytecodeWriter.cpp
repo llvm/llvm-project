@@ -65,9 +65,7 @@ void BytecodeWriterConfig::attachResourcePrinter(
 }
 
 void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {
-  // Clamp to current version.
-  impl->bytecodeVersion =
-      std::min<int64_t>(bytecodeVersion, bytecode::kVersion);
+  impl->bytecodeVersion = bytecodeVersion;
 }
 
 int64_t BytecodeWriterConfig::getDesiredBytecodeVersion() const {
@@ -630,6 +628,13 @@ LogicalResult BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
   emitter.emitString("ML\xefR");
 
   // Emit the bytecode version.
+  if (config.bytecodeVersion < bytecode::kMinSupportedVersion ||
+      config.bytecodeVersion > bytecode::kVersion)
+    return rootOp->emitError()
+           << "unsupported version requested " << config.bytecodeVersion
+           << ", must be in range ["
+           << static_cast<int64_t>(bytecode::kMinSupportedVersion) << ", "
+           << static_cast<int64_t>(bytecode::kVersion) << ']';
   emitter.emitVarInt(config.bytecodeVersion);
 
   // Emit the producer.
