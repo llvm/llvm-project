@@ -114,10 +114,16 @@ InjectorIRStrategy::chooseOperation(Value *Src, RandomIRBuilder &IB) {
   return *RS;
 }
 
+static inline iterator_range<BasicBlock::iterator>
+getInsertionRange(BasicBlock &BB) {
+  auto End = BB.getTerminatingMustTailCall() ? std::prev(BB.end()) : BB.end();
+  return make_range(BB.getFirstInsertionPt(), End);
+}
+
 void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   SmallVector<Instruction *, 32> Insts;
-  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
-    Insts.push_back(&*I);
+  for (Instruction &I : getInsertionRange(BB))
+    Insts.push_back(&I);
   if (Insts.size() < 1)
     return;
 
@@ -360,6 +366,10 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 
   auto RS = makeSampler(IB.Rand, Functions);
   Function *F = RS.getSelection();
+  // Some functions accept metadata type or token type as arguments.
+  // We don't call those functions for now.
+  // For example, `@llvm.dbg.declare(metadata, metadata, metadata)`
+  // https://llvm.org/docs/SourceLevelDebugging.html#llvm-dbg-declare
   auto IsUnsupportedTy = [](Type *T) {
     return T->isMetadataTy() || T->isTokenTy();
   };
@@ -385,7 +395,7 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   };
 
   SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : make_range(BB.getFirstInsertionPt(), BB.end()))
+  for (Instruction &I : getInsertionRange(BB))
     Insts.push_back(&I);
   if (Insts.size() < 1)
     return;
@@ -411,7 +421,7 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 
 void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : make_range(BB.getFirstInsertionPt(), BB.end()))
+  for (Instruction &I : getInsertionRange(BB))
     Insts.push_back(&I);
   if (Insts.size() < 1)
     return;
@@ -551,7 +561,7 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     PHI->addIncoming(Src, Pred);
   }
   SmallVector<Instruction *, 32> InstsAfter;
-  for (Instruction &I : make_range(BB.getFirstInsertionPt(), BB.end()))
+  for (Instruction &I : getInsertionRange(BB))
     InstsAfter.push_back(&I);
   IB.connectToSink(BB, InstsAfter, PHI);
 }
@@ -563,7 +573,7 @@ void SinkInstructionStrategy::mutate(Function &F, RandomIRBuilder &IB) {
 }
 void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : make_range(BB.getFirstInsertionPt(), BB.end()))
+  for (Instruction &I : getInsertionRange(BB))
     Insts.push_back(&I);
   if (Insts.size() < 1)
     return;
@@ -572,9 +582,9 @@ void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   Instruction *Inst = Insts[Idx];
   // `Idx + 1` so we don't sink to ourselves.
   auto InstsAfter = ArrayRef(Insts).slice(Idx + 1);
-  LLVMContext &C = BB.getParent()->getParent()->getContext();
-  // Don't sink terminators, void function calls, etc.
-  if (Inst->getType() != Type::getVoidTy(C))
+  Type *Ty = Inst->getType();
+  // Don't sink terminators, void function calls, token, etc.
+  if (!Ty->isVoidTy() && !Ty->isTokenTy())
     // Find a new sink and wire up the results of the operation.
     IB.connectToSink(BB, InstsAfter, Inst);
 }
