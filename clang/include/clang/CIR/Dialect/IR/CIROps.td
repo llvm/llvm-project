@@ -1278,7 +1278,8 @@ def VTableAddrPointOp : CIR_Op<"vtable.address_point",
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$name,
+  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name,
+                       Optional<AnyType>:$sym_addr,
                        I32Attr:$vtable_index,
                        I32Attr:$address_point_index);
   let results = (outs Res<CIR_PointerType, "", []>:$addr);
@@ -1286,9 +1287,12 @@ def VTableAddrPointOp : CIR_Op<"vtable.address_point",
   // FIXME: we should not be printing `cir.ptr` below, that should come
   // from the pointer type directly.
   let assemblyFormat = [{
-    `(` $name `,`
-      `vtable_index` `=` $vtable_index `,`
-      `address_point_index` `=` $address_point_index
+    `(`
+      ($name^)?
+      ($sym_addr^ `:` type($sym_addr))?
+      `,`
+        `vtable_index` `=` $vtable_index `,`
+        `address_point_index` `=` $address_point_index
     `)`
     `:` `cir.ptr` type($addr) attr-dict
   }];
@@ -1508,14 +1512,14 @@ def CallOp : CIR_Op<"call",
     call must match the specified function type. The callee is encoded as a
     symbol reference attribute named "callee".
 
-    Since `mlir::func::CallOp` requires defining symbols to be tied with a
-    `mlir::func::FuncOp`, a custom `cir.call` is needed to interop with
-    `cir.func`. For now this is basically a simplified `mlir::func::CallOp`.
-
     Example:
 
     ```mlir
+    // Direct call
     %2 = cir.call @my_add(%0, %1) : (f32, f32) -> f32
+     ...
+    // Indirect call
+    %20 = cir.call %18(%17)
     ```
   }];
 
