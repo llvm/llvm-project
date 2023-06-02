@@ -58,7 +58,7 @@ char *microsoftDemangle(const char *mangled_name, size_t *n_read, int *status,
 char *rustDemangle(std::string_view MangledName);
 
 // Demangles a D mangled symbol.
-char *dlangDemangle(const char *MangledName);
+char *dlangDemangle(std::string_view MangledName);
 
 /// Attempt to demangle a string using different demangling schemes.
 /// The function uses heuristics to determine which demangling scheme to use.
