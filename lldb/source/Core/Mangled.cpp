@@ -25,6 +25,7 @@
 
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include <cstdlib>
@@ -150,7 +151,7 @@ static char *GetItaniumDemangledStr(const char *M) {
   return demangled_cstr;
 }
 
-static char *GetRustV0DemangledStr(const char *M) {
+static char *GetRustV0DemangledStr(std::string_view M) {
   char *demangled_cstr = llvm::rustDemangle(M);
 
   if (Log *log = GetLog(LLDBLog::Demangle)) {
@@ -259,7 +260,7 @@ ConstString Mangled::GetDemangledName() const {
         break;
       }
       case eManglingSchemeRustV0:
-        demangled_name = GetRustV0DemangledStr(mangled_name);
+        demangled_name = GetRustV0DemangledStr(m_mangled);
         break;
       case eManglingSchemeD:
         demangled_name = GetDLangDemangledStr(mangled_name);
