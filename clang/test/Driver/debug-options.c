@@ -242,6 +242,9 @@
 // RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
 // RUN: %clang -### -c -fdebug-ranges-base-address -fno-debug-ranges-base-address %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
 //
+// RUN: %clang -### -c -gomit-unreferenced-members %s 2>&1 | FileCheck -check-prefix=INCTYPES %s
+// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
+//
 // RUN: %clang -### -c -glldb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -glldb -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
@@ -380,6 +383,9 @@
 //
 // RNGBSE: -fdebug-ranges-base-address
 // NORNGBSE-NOT: -fdebug-ranges-base-address
+//
+// INCTYPES: -gincomplete-types
+// NOINCTYPES-NOT: -gincomplete-types
 //
 // GARANGE-DAG: -generate-arange-section
 //
