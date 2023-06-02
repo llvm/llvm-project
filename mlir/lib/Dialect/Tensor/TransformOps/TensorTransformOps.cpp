@@ -144,6 +144,26 @@ public:
 #define GET_OP_LIST
 #include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.cpp.inc"
         >();
+
+    addDialectDataInitializer<transform::PatternRegistry>(
+        [&](transform::PatternRegistry &registry) {
+          registry.registerPatterns("tensor.fold_tensor_subset_ops",
+                                    tensor::populateFoldTensorSubsetOpPatterns);
+          registry.registerPatterns(
+              "tensor.merge_consecutive_insert_extract_slice",
+              tensor::populateMergeConsecutiveInsertExtractSlicePatterns);
+          registry.registerPatterns(
+              "tensor.drop_redundant_insert_slice_rank_expansion",
+              tensor::populateDropRedundantInsertSliceRankExpansionPatterns);
+          registry.registerPatterns(
+              "tensor.reassociative_reshape_folding",
+              tensor::populateReassociativeReshapeFoldingPatterns);
+          registry.registerPatterns("tensor.fold_tensor_empty",
+                                    tensor::populateFoldTensorEmptyPatterns);
+          registry.registerPatterns(
+              "tensor.fold_into_pack_and_unpack",
+              tensor::populateFoldIntoPackAndUnpackPatterns);
+        });
   }
 };
 } // namespace
