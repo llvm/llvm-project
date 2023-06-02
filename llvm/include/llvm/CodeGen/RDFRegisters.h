@@ -84,6 +84,8 @@ struct RegisterRef {
   constexpr bool isUnit() const { return isUnitId(Reg); }
   constexpr bool isMask() const { return isMaskId(Reg); }
 
+  constexpr unsigned idx() const { return toIdx(Reg); }
+
   constexpr operator bool() const {
     return !isReg() || (Reg != 0 && Mask.any());
   }
@@ -103,10 +105,18 @@ struct RegisterRef {
     return Register::isStackSlot(Id);
   }
 
-  static RegisterId toUnitId(unsigned Idx) {
-    return Register::index2VirtReg(Idx);
+  static constexpr RegisterId toUnitId(unsigned Idx) {
+    return Idx | MCRegister::VirtualRegFlag;
   }
-  static unsigned toRegUnit(RegisterId U) { return Register::virtReg2Index(U); }
+
+  static constexpr unsigned toIdx(RegisterId Id) {
+    // Not using virtReg2Index or stackSlot2Index, because they are
+    // not constexpr.
+    if (isUnitId(Id))
+      return Id & ~MCRegister::VirtualRegFlag;
+    // RegId and MaskId are unchanged.
+    return Id;
+  }
 
   bool operator<(RegisterRef) const = delete;
   bool operator==(RegisterRef) const = delete;

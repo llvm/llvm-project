@@ -332,13 +332,13 @@ bool PhysicalRegisterInfo::less(RegisterRef A, RegisterRef B) const {
 
 void PhysicalRegisterInfo::print(raw_ostream &OS, RegisterRef A) const {
   if (A.Reg == 0 || A.isReg()) {
-    if (0 < A.Reg && A.Reg < TRI.getNumRegs())
-      OS << TRI.getName(A.Reg);
+    if (0 < A.idx() && A.idx() < TRI.getNumRegs())
+      OS << TRI.getName(A.idx());
     else
       OS << printReg(A.Reg, &TRI);
     OS << PrintLaneMaskShort(A.Mask);
   } else if (A.isUnit()) {
-    OS << printRegUnit(A.toRegUnit(A.Reg), &TRI);
+    OS << printRegUnit(A.idx(), &TRI);
   } else {
     assert(A.isMask());
     OS << '#' << format("%08x", A.Reg);
