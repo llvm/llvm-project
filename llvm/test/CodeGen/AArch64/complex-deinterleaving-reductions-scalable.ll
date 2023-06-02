@@ -20,8 +20,9 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    and x10, x10, x11
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    rdvl x11, #2
+; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
+; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
@@ -34,18 +35,16 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ld1b { z4.b }, p1/z, [x1, x8]
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x13, #1, mul vl]
 ; CHECK-NEXT:    add x8, x8, x11
-; CHECK-NEXT:    uzp2 z6.d, z2.d, z3.d
-; CHECK-NEXT:    uzp1 z2.d, z2.d, z3.d
-; CHECK-NEXT:    uzp1 z3.d, z4.d, z5.d
-; CHECK-NEXT:    fmla z0.d, p0/m, z3.d, z2.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z3.d, z6.d
-; CHECK-NEXT:    uzp2 z3.d, z4.d, z5.d
-; CHECK-NEXT:    fmls z0.d, p0/m, z3.d, z6.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z3.d, z2.d
+; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #0
+; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #90
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
+; CHECK-NEXT:    uzp2 z2.d, z1.d, z0.d
+; CHECK-NEXT:    uzp1 z0.d, z1.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z0.d
-; CHECK-NEXT:    faddv d1, p0, z1.d
+; CHECK-NEXT:    faddv d1, p0, z2.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-NEXT:    ret
@@ -103,17 +102,19 @@ define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_nonzero_init_v2f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    fmov d0, #2.00000000
+; CHECK-NEXT:    fmov d0, #1.00000000
+; CHECK-NEXT:    fmov d1, #2.00000000
 ; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    mov w11, #100 // =0x64
-; CHECK-NEXT:    fmov d1, #1.00000000
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    and x10, x10, x11
 ; CHECK-NEXT:    mov z2.d, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    rdvl x11, #2
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
+; CHECK-NEXT:    sel z3.d, p0, z0.d, z2.d
 ; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
+; CHECK-NEXT:    zip2 z0.d, z1.d, z3.d
+; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
@@ -126,18 +127,16 @@ define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ld1b { z4.b }, p1/z, [x1, x8]
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x13, #1, mul vl]
 ; CHECK-NEXT:    add x8, x8, x11
-; CHECK-NEXT:    uzp2 z6.d, z2.d, z3.d
-; CHECK-NEXT:    uzp1 z2.d, z2.d, z3.d
-; CHECK-NEXT:    uzp1 z3.d, z4.d, z5.d
-; CHECK-NEXT:    fmla z0.d, p0/m, z3.d, z2.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z3.d, z6.d
-; CHECK-NEXT:    uzp2 z3.d, z4.d, z5.d
-; CHECK-NEXT:    fmls z0.d, p0/m, z3.d, z6.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z3.d, z2.d
+; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #0
+; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #90
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
+; CHECK-NEXT:    uzp2 z2.d, z1.d, z0.d
+; CHECK-NEXT:    uzp1 z0.d, z1.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z0.d
-; CHECK-NEXT:    faddv d1, p0, z1.d
+; CHECK-NEXT:    faddv d1, p0, z2.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-NEXT:    ret
@@ -195,10 +194,11 @@ define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    and x10, x10, x11
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
+; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:    rdvl x11, #4
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    mov z3.d, z0.d
 ; CHECK-NEXT:    addvl x12, x1, #2
 ; CHECK-NEXT:    addvl x13, x0, #2
@@ -220,27 +220,23 @@ define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ld1b { z18.b }, p1/z, [x12, x8]
 ; CHECK-NEXT:    ld1d { z19.d }, p0/z, [x17, #1, mul vl]
 ; CHECK-NEXT:    add x8, x8, x11
-; CHECK-NEXT:    uzp2 z20.d, z4.d, z5.d
-; CHECK-NEXT:    uzp1 z4.d, z4.d, z5.d
-; CHECK-NEXT:    uzp2 z5.d, z6.d, z7.d
-; CHECK-NEXT:    uzp1 z6.d, z6.d, z7.d
-; CHECK-NEXT:    uzp1 z7.d, z16.d, z17.d
-; CHECK-NEXT:    uzp1 z21.d, z18.d, z19.d
-; CHECK-NEXT:    fmla z2.d, p0/m, z7.d, z4.d
-; CHECK-NEXT:    fmla z3.d, p0/m, z21.d, z6.d
-; CHECK-NEXT:    fmla z0.d, p0/m, z7.d, z20.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z21.d, z5.d
-; CHECK-NEXT:    uzp2 z7.d, z16.d, z17.d
-; CHECK-NEXT:    uzp2 z16.d, z18.d, z19.d
-; CHECK-NEXT:    fmls z2.d, p0/m, z7.d, z20.d
-; CHECK-NEXT:    fmls z3.d, p0/m, z16.d, z5.d
-; CHECK-NEXT:    fmla z0.d, p0/m, z7.d, z4.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z16.d, z6.d
+; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z4.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z17.d, z5.d, #0
+; CHECK-NEXT:    fcmla z2.d, p0/m, z18.d, z6.d, #0
+; CHECK-NEXT:    fcmla z3.d, p0/m, z19.d, z7.d, #0
+; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z4.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z17.d, z5.d, #90
+; CHECK-NEXT:    fcmla z2.d, p0/m, z18.d, z6.d, #90
+; CHECK-NEXT:    fcmla z3.d, p0/m, z19.d, z7.d, #90
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
-; CHECK-NEXT:    fadd z2.d, z3.d, z2.d
-; CHECK-NEXT:    fadd z1.d, z1.d, z0.d
-; CHECK-NEXT:    faddv d0, p0, z2.d
+; CHECK-NEXT:    uzp2 z4.d, z2.d, z3.d
+; CHECK-NEXT:    uzp1 z2.d, z2.d, z3.d
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z0.d
+; CHECK-NEXT:    uzp1 z0.d, z1.d, z0.d
+; CHECK-NEXT:    fadd z0.d, z2.d, z0.d
+; CHECK-NEXT:    fadd z1.d, z4.d, z3.d
+; CHECK-NEXT:    faddv d0, p0, z0.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
