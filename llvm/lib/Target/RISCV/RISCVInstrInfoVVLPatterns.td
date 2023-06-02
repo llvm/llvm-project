@@ -787,15 +787,16 @@ multiclass VPatBinaryNVL_WV_WX_WI<SDPatternOperator vop, string instruction_name
 class VPatBinaryVL_VF<SDPatternOperator vop,
                       string instruction_name,
                       ValueType result_type,
-                      ValueType vop_type,
+                      ValueType vop1_type,
+                      ValueType vop2_type,
                       ValueType mask_type,
                       int sew,
                       LMULInfo vlmul,
                       VReg result_reg_class,
                       VReg vop_reg_class,
                       RegisterClass scalar_reg_class>
-    : Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
-                       (vop_type (SplatFPOp scalar_reg_class:$rs2)),
+    : Pat<(result_type (vop (vop1_type vop_reg_class:$rs1),
+                       (vop2_type (SplatFPOp scalar_reg_class:$rs2)),
                        (result_type result_reg_class:$merge),
                        (mask_type V0),
                        VLOpFrag)),
@@ -835,8 +836,8 @@ multiclass VPatBinaryFPVL_VV_VF<SDPatternOperator vop, string instruction_name> 
                            vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
                            vti.RegClass>;
       def : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
-                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                            vti.LMul, vti.RegClass, vti.RegClass,
+                            vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                            vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
                             vti.ScalarRegClass>;
     }
   }
@@ -1367,8 +1368,8 @@ multiclass VPatBinaryFPWVL_VV_VF<SDNode vop, string instruction_name> {
                            vti.Log2SEW, vti.LMul, wti.RegClass, vti.RegClass,
                            vti.RegClass>;
       def : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
-                            wti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                            vti.LMul, wti.RegClass, vti.RegClass,
+                            wti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                            vti.Log2SEW, vti.LMul, wti.RegClass, vti.RegClass,
                             vti.ScalarRegClass>;
     }
   }
