@@ -598,7 +598,9 @@ class JSONCrashLogParser(CrashLogParser):
 
             if "symbol" in json_frame:
                 symbol = json_frame["symbol"]
-                location = int(json_frame["symbolLocation"])
+                location = 0
+                if "symbolLocation" in json_frame and json_frame["symbolLocation"]:
+                    location = int(json_frame["symbolLocation"])
                 image = self.images[image_id]
                 image.symbols[symbol] = {
                     "name": symbol,
