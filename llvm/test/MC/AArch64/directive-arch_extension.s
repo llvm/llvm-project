@@ -132,3 +132,60 @@ umax x0, x1, x2
 .arch_extension gcs
 gcspushm x0
 // CHECK: gcspushm x0
+
+.arch_extension bf16
+bfdot v0.2s, v0.4h, v0.4h
+// CHECK: bfdot v0.2s, v0.4h, v0.4h
+
+.arch_extension compnum
+fcmla v1.2d, v2.2d, v3.2d, #0
+// CHECK: fcmla v1.2d, v2.2d, v3.2d, #0
+
+.arch_extension dotprod
+udot v0.4s, v0.16b, v0.16b
+// CHECK: udot v0.4s, v0.16b, v0.16b
+
+.arch_extension f32mm
+fmmla z0.s, z1.s, z2.s
+// CHECK: fmmla z0.s, z1.s, z2.s
+
+.arch_extension f64mm
+fmmla z0.d, z1.d, z2.d
+// CHECK: fmmla z0.d, z1.d, z2.d
+
+.arch_extension fp16
+fadd v0.8h, v0.8h, v0.8h
+// CHECK: fadd v0.8h, v0.8h, v0.8h
+
+.arch_extension fp16fml
+fmlal v0.2s, v1.2h, v2.2h
+// CHECK: fmlal v0.2s, v1.2h, v2.2h
+
+.arch_extension i8mm
+usdot v0.4s, v0.16b, v0.16b
+// CHECK: usdot v0.4s, v0.16b, v0.16b
+
+.arch_extension lor
+stllr x0, [x0]
+// CHECK: stllr x0, [x0]
+
+.arch_extension profile
+msr PMBLIMITR_EL1, x0
+// CHECK: msr PMBLIMITR_EL1, x0
+
+.arch_extension rdm
+.arch_extension rdma
+sqrdmlah v0.8h, v0.8h, v0.8h
+// CHECK: sqrdmlah v0.8h, v0.8h, v0.8h
+
+.arch_extension sb
+sb
+// CHECK: sb
+
+.arch_extension ssbs
+msr SSBS, #1
+// CHECK: msr SSBS, #1
+
+.arch_extension tme
+tstart x0
+// CHECK: tstart x0
