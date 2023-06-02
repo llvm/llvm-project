@@ -14456,12 +14456,15 @@ bool AArch64TargetLowering::shouldSinkOperands(
   return false;
 }
 
-static void createTblShuffleForZExt(ZExtInst *ZExt, bool IsLittleEndian) {
+static bool createTblShuffleForZExt(ZExtInst *ZExt, FixedVectorType *DstTy,
+                                    bool IsLittleEndian) {
   Value *Op = ZExt->getOperand(0);
   auto *SrcTy = cast<FixedVectorType>(Op->getType());
-  auto *DstTy = cast<FixedVectorType>(ZExt->getType());
   auto SrcWidth = cast<IntegerType>(SrcTy->getElementType())->getBitWidth();
   auto DstWidth = cast<IntegerType>(DstTy->getElementType())->getBitWidth();
+  if (DstWidth % 8 != 0 || DstWidth <= 16 || DstWidth >= 64)
+    return false;
+
   assert(DstWidth % SrcWidth == 0 &&
          "TBL lowering is not supported for a ZExt instruction with this "
          "source & destination element type.");
@@ -14490,8 +14493,11 @@ static void createTblShuffleForZExt(ZExtInst *ZExt, bool IsLittleEndian) {
       PoisonValue::get(SrcTy), Builder.getInt8(0), uint64_t(0));
   Value *Result = Builder.CreateShuffleVector(Op, FirstEltZero, Mask);
   Result = Builder.CreateBitCast(Result, DstTy);
+  if (DstTy != ZExt->getType())
+    Result = Builder.CreateZExt(Result, ZExt->getType());
   ZExt->replaceAllUsesWith(Result);
   ZExt->eraseFromParent();
+  return true;
 }
 
 static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
@@ -14613,8 +14619,8 @@ static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
   TI->eraseFromParent();
 }
 
-bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
-                                                               Loop *L) const {
+bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
+    Instruction *I, Loop *L, const TargetTransformInfo &TTI) const {
   // shuffle_vector instructions are serialized when targeting SVE,
   // see LowerSPLAT_VECTOR. This peephole is not beneficial.
   if (Subtarget->useSVEForFixedLengthVectors())
@@ -14639,11 +14645,26 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
   // into i8x lanes. This is enabled for cases where it is beneficial.
   auto *ZExt = dyn_cast<ZExtInst>(I);
   if (ZExt && SrcTy->getElementType()->isIntegerTy(8)) {
-    auto DstWidth = cast<IntegerType>(DstTy->getElementType())->getBitWidth();
-    if (DstWidth % 8 == 0 && DstWidth > 16 && DstWidth < 64) {
-      createTblShuffleForZExt(ZExt, Subtarget->isLittleEndian());
-      return true;
+    auto DstWidth = DstTy->getElementType()->getScalarSizeInBits();
+    if (DstWidth % 8 != 0)
+      return false;
+
+    auto *TruncDstType =
+        cast<FixedVectorType>(VectorType::getTruncatedElementVectorType(DstTy));
+    // If the ZExt can be lowered to a single ZExt to the next power-of-2 and
+    // the remaining ZExt folded into the user, don't use tbl lowering.
+    auto SrcWidth = SrcTy->getElementType()->getScalarSizeInBits();
+    if (TTI.getCastInstrCost(I->getOpcode(), DstTy, TruncDstType,
+                             TargetTransformInfo::getCastContextHint(I),
+                             TTI::TCK_SizeAndLatency, I) == TTI::TCC_Free) {
+      if (SrcWidth * 2 >= TruncDstType->getElementType()->getScalarSizeInBits())
+        return false;
+
+      DstTy = TruncDstType;
+      DstWidth = TruncDstType->getElementType()->getScalarSizeInBits();
     }
+
+    return createTblShuffleForZExt(ZExt, DstTy, Subtarget->isLittleEndian());
   }
 
   auto *UIToFP = dyn_cast<UIToFPInst>(I);
@@ -14655,8 +14676,8 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
     auto *UI = Builder.CreateUIToFP(ZExt, DstTy);
     I->replaceAllUsesWith(UI);
     I->eraseFromParent();
-    createTblShuffleForZExt(ZExt, Subtarget->isLittleEndian());
-    return true;
+    return createTblShuffleForZExt(ZExt, cast<FixedVectorType>(ZExt->getType()),
+                                   Subtarget->isLittleEndian());
   }
 
   // Convert 'fptoui <(8|16) x float> to <(8|16) x i8>' to a wide fptoui
