@@ -31,7 +31,7 @@ _DEFAULT_SUPPORTLIB = "libmlir_c_runner_utils.so"
 # The JIT compiler optimization level.
 _OPT_LEVEL = 2
 # The entry point to the JIT compiled program.
-_ENTRY_NAME = "main"
+_ENTRY_NAME = "pytaco_main"
 
 
 @functools.lru_cache()
@@ -206,7 +206,6 @@ def compile_and_build_engine(
   """
   return _get_sparse_compiler().compile_and_jit(module)
 
-
 class _SparseTensorDescriptor(ctypes.Structure):
   """A C structure for an MLIR sparse tensor."""
   _fields_ = [
@@ -372,3 +371,4 @@ def output_sparse_tensor(tensor: ctypes.c_void_p, filename: str,
 
   # Invoke the execution engine to run the module and return the result.
   engine.invoke(_ENTRY_NAME, *arg_pointers)
+

@@ -24,11 +24,11 @@ namespace emitc {
 
 /// Translates the given operation to Kokkos C++ code.
 LogicalResult translateToKokkosCpp(Operation *op, raw_ostream &os,
-                                bool declareVariablesAtTop = false);
+                                bool enableSparseSupport = false);
 
 /// Translates the given operation to Kokkos C++ code, with a Python wrapper module written to py_os.
 LogicalResult translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os,
-                                bool declareVariablesAtTop = false);
+                                bool enableSparseSupport = false);
 } // namespace emitc
 } // namespace mlir
 
