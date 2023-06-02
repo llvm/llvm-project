@@ -139,6 +139,9 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // Helper to emit pseudo instruction "lla" used in PC-rel addressing.
   void emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
+  // Helper to emit pseudo instruction "lga" used in GOT-rel addressing.
+  void emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+
   // Helper to emit pseudo instruction "la" used in GOT/PC-rel addressing.
   void emitLoadAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
@@ -2782,8 +2785,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
           return Error(Loc, OutputErrMsg.str());
         }
-        getTargetStreamer().emitDirectiveOptionArchPlus(Ext->Key, PrefixEmitted,
-                                                        HasComma);
+        getTargetStreamer().emitDirectiveOptionArchPlusOrMinus(
+            Ext->Key, /*Enable*/ true, PrefixEmitted, HasComma);
       } else {
         // It is invalid to disable an extension that there are other enabled
         // extensions depend on it.
@@ -2798,8 +2801,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
         }
 
         clearFeatureBits(Ext->Value, Ext->Key);
-        getTargetStreamer().emitDirectiveOptionArchMinus(
-            Ext->Key, PrefixEmitted, HasComma);
+        getTargetStreamer().emitDirectiveOptionArchPlusOrMinus(
+            Ext->Key, /*Enable*/ false, PrefixEmitted, HasComma);
       }
 
       if (!HasComma)
@@ -3088,29 +3091,34 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
                     RISCV::ADDI, IDLoc, Out);
 }
 
+void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
+                                           MCStreamer &Out) {
+  // The load global address pseudo-instruction "lga" is used in GOT-indirect
+  // addressing of global symbols:
+  //   lga rdest, symbol
+  // expands to
+  //   TmpLabel: AUIPC rdest, %got_pcrel_hi(symbol)
+  //             Lx rdest, %pcrel_lo(TmpLabel)(rdest)
+  MCOperand DestReg = Inst.getOperand(0);
+  const MCExpr *Symbol = Inst.getOperand(1).getExpr();
+  unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
+  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_RISCV_GOT_HI,
+                    SecondOpcode, IDLoc, Out);
+}
+
 void RISCVAsmParser::emitLoadAddress(MCInst &Inst, SMLoc IDLoc,
                                      MCStreamer &Out) {
   // The load address pseudo-instruction "la" is used in PC-relative and
   // GOT-indirect addressing of global symbols:
   //   la rdest, symbol
-  // expands to either (for non-PIC)
-  //   TmpLabel: AUIPC rdest, %pcrel_hi(symbol)
-  //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
+  // is an alias for either (for non-PIC)
+  //   lla rdest, symbol
   // or (for PIC)
-  //   TmpLabel: AUIPC rdest, %got_pcrel_hi(symbol)
-  //             Lx rdest, %pcrel_lo(TmpLabel)(rdest)
-  MCOperand DestReg = Inst.getOperand(0);
-  const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  unsigned SecondOpcode;
-  RISCVMCExpr::VariantKind VKHi;
-  if (ParserOptions.IsPicEnabled) {
-    SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
-    VKHi = RISCVMCExpr::VK_RISCV_GOT_HI;
-  } else {
-    SecondOpcode = RISCV::ADDI;
-    VKHi = RISCVMCExpr::VK_RISCV_PCREL_HI;
-  }
-  emitAuipcInstPair(DestReg, DestReg, Symbol, VKHi, SecondOpcode, IDLoc, Out);
+  //   lga rdest, symbol
+  if (ParserOptions.IsPicEnabled)
+    emitLoadGlobalAddress(Inst, IDLoc, Out);
+  else
+    emitLoadLocalAddress(Inst, IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadTLSIEAddress(MCInst &Inst, SMLoc IDLoc,
@@ -3437,6 +3445,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   }
   case RISCV::PseudoLLA:
     emitLoadLocalAddress(Inst, IDLoc, Out);
+    return false;
+  case RISCV::PseudoLGA:
+    emitLoadGlobalAddress(Inst, IDLoc, Out);
     return false;
   case RISCV::PseudoLA:
     emitLoadAddress(Inst, IDLoc, Out);

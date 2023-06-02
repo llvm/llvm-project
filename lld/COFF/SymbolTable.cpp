@@ -34,6 +34,21 @@ StringRef ltrim1(StringRef s, const char *chars) {
   return s;
 }
 
+static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
+  if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
+    return true;
+  switch (ctx.config.machine) {
+  case ARM64:
+    return mt == ARM64 || mt == ARM64X;
+  case ARM64EC:
+    return COFF::isArm64EC(mt) || mt == AMD64;
+  case ARM64X:
+    return COFF::isAnyArm64(mt) || mt == AMD64;
+  default:
+    return ctx.config.machine == mt;
+  }
+}
+
 void SymbolTable::addFile(InputFile *file) {
   log("Reading " + toString(file));
   if (file->lazy) {
@@ -56,7 +71,7 @@ void SymbolTable::addFile(InputFile *file) {
   if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN) {
     ctx.config.machine = mt;
     ctx.driver.addWinSysRootLibSearchPaths();
-  } else if (mt != IMAGE_FILE_MACHINE_UNKNOWN && ctx.config.machine != mt) {
+  } else if (!compatibleMachineType(ctx, mt)) {
     error(toString(file) + ": machine type " + machineToStr(mt) +
           " conflicts with " + machineToStr(ctx.config.machine));
     return;

@@ -29,6 +29,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRPass
   MLIRSCFDialect
   MLIRTensorDialect
+  MLIRTensorUtils
   MLIRTilingInterface
   MLIRTransforms
   MLIRVectorDialect

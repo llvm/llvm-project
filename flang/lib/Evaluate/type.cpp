@@ -747,14 +747,15 @@ std::optional<DynamicType> ComparisonType(
   }
 }
 
-bool IsInteroperableIntrinsicType(
-    const DynamicType &type, bool checkCharLength) {
+bool IsInteroperableIntrinsicType(const DynamicType &type,
+    const common::LanguageFeatureControl *features, bool checkCharLength) {
   switch (type.category()) {
   case TypeCategory::Integer:
     return true;
   case TypeCategory::Real:
   case TypeCategory::Complex:
-    return type.kind() >= 4; // no short or half floats
+    return (features && features->IsEnabled(common::LanguageFeature::CUDA)) ||
+        type.kind() >= 4; // no short or half floats
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL
   case TypeCategory::Character:
@@ -762,6 +763,23 @@ bool IsInteroperableIntrinsicType(
       return false;
     }
     return type.kind() == 1 /* C_CHAR */;
+  default:
+    // Derived types are tested in Semantics/check-declarations.cpp
+    return false;
+  }
+}
+
+bool IsCUDAIntrinsicType(const DynamicType &type) {
+  switch (type.category()) {
+  case TypeCategory::Integer:
+  case TypeCategory::Logical:
+    return type.kind() <= 8;
+  case TypeCategory::Real:
+    return type.kind() >= 2 && type.kind() <= 8;
+  case TypeCategory::Complex:
+    return type.kind() == 2 || type.kind() == 4 || type.kind() == 8;
+  case TypeCategory::Character:
+    return type.kind() == 1;
   default:
     // Derived types are tested in Semantics/check-declarations.cpp
     return false;

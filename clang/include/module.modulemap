@@ -55,6 +55,7 @@ module Clang_Basic {
   textual header "clang/Basic/BuiltinsPPC.def"
   textual header "clang/Basic/BuiltinsRISCV.def"
   textual header "clang/Basic/BuiltinsRISCVVector.def"
+  textual header "clang/Basic/BuiltinsSME.def"
   textual header "clang/Basic/BuiltinsSVE.def"
   textual header "clang/Basic/BuiltinsSystemZ.def"
   textual header "clang/Basic/BuiltinsVE.def"

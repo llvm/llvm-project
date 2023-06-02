@@ -36,7 +36,7 @@ namespace __llvm_libc {
 namespace testing {
 
 // Only the following conditions are supported. Notice that we do not have
-// a TRUE or FALSE condition. That is because, C library funtions do not
+// a TRUE or FALSE condition. That is because, C library functions do not
 // return boolean values, but use integral return values to indicate true or
 // false conditions. Hence, it is more appropriate to use the other comparison
 // conditions for such cases.

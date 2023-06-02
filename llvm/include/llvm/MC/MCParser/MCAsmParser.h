@@ -236,7 +236,7 @@ public:
 
   bool printPendingErrors() {
     bool rv = !PendingErrors.empty();
-    for (auto Err : PendingErrors) {
+    for (auto &Err : PendingErrors) {
       printError(Err.Loc, Twine(Err.Msg), Err.Range);
     }
     PendingErrors.clear();

@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_ASYNC_IR_ASYNC_H
 #define MLIR_DIALECT_ASYNC_IR_ASYNC_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Async/IR/AsyncTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"

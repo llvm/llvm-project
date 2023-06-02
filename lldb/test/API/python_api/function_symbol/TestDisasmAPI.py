@@ -20,6 +20,7 @@ class DisasmAPITestCase(TestBase):
             "main.c", "// Find the line number for breakpoint 2 here."
         )
 
+    @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr21765')
     def test(self):
         """Exercise getting SBAddress objects, disassembly, and SBAddress APIs."""
         self.build()

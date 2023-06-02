@@ -340,6 +340,7 @@ bootstrapping-build)
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -DCMAKE_CXX_COMPILER_LAUNCHER="ccache" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang" \
@@ -354,6 +355,8 @@ bootstrapping-build)
 
     echo "--- Installing libc++ and libc++abi to a fake location"
     ${NINJA} -C "${BUILD_DIR}" install-runtimes
+
+    ccache -s
 ;;
 generic-static)
     clean

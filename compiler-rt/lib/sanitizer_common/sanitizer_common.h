@@ -519,8 +519,8 @@ class InternalMmapVectorNoCtor {
     return data_[i];
   }
   void push_back(const T &element) {
-    CHECK_LE(size_, capacity());
-    if (size_ == capacity()) {
+    if (UNLIKELY(size_ >= capacity())) {
+      CHECK_EQ(size_, capacity());
       uptr new_capacity = RoundUpToPowerOfTwo(size_ + 1);
       Realloc(new_capacity);
     }
@@ -580,7 +580,7 @@ class InternalMmapVectorNoCtor {
   }
 
  private:
-  void Realloc(uptr new_capacity) {
+  NOINLINE void Realloc(uptr new_capacity) {
     CHECK_GT(new_capacity, 0);
     CHECK_LE(size_, new_capacity);
     uptr new_capacity_bytes =
@@ -1085,12 +1085,19 @@ class ArrayRef {
   ArrayRef() {}
   ArrayRef(T *begin, T *end) : begin_(begin), end_(end) {}
 
-  T *begin() { return begin_; }
-  T *end() { return end_; }
+  template <typename C>
+  ArrayRef(const C &src) : begin_(src.data()), end_(src.data() + src.size()) {}
+
+  const T *begin() const { return begin_; }
+  const T *end() const { return end_; }
+
+  bool empty() const { return begin_ == end_; }
+
+  uptr size() const { return end_ - begin_; }
 
  private:
-  T *begin_ = nullptr;
-  T *end_ = nullptr;
+  const T *begin_ = nullptr;
+  const T *end_ = nullptr;
 };
 
 }  // namespace __sanitizer

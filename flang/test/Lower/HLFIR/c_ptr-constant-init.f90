@@ -1,5 +1,5 @@
 ! Test creation of outlined literal array with c_ptr/c_funptr elements.
-! RUN: bbc -hlfir -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test
   use, intrinsic :: iso_c_binding

@@ -7,7 +7,7 @@
 
 #CSC = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i, j) -> (j, i)>
+  dimToLvl = affine_map<(i, j) -> (j, i)>
 }>
 
 #COO = #sparse_tensor.encoding<{
@@ -26,8 +26,8 @@ func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
 }
 
 // CHECK-LABEL:   func.func @sparse_new_csc(
-// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> {
-// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>>
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<i8>) -> tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>> {
+// CHECK:         %[[COO:.*]] = sparse_tensor.new %[[A]] : !llvm.ptr<i8> to tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton" ], dimToLvl = affine_map<(d0, d1) -> (d1, d0)> }>>
 // CHECK:         %[[R:.*]] = sparse_tensor.convert %[[COO]]
 // CHECK:         bufferization.dealloc_tensor %[[COO]]
 // CHECK:         return %[[R]]

@@ -208,7 +208,7 @@ public:
   const std::string &toURI(const FileEntryRef FE) {
     auto R = CacheFEToURI.try_emplace(FE);
     if (R.second) {
-      auto CanonPath = getCanonicalPath(FE, SM);
+      auto CanonPath = getCanonicalPath(FE, SM.getFileManager());
       R.first->second = &toURIInternal(CanonPath ? *CanonPath : FE.getName());
     }
     return *R.first->second;
@@ -298,7 +298,7 @@ private:
   // importing the header.
   std::optional<std::string> getFrameworkUmbrellaSpelling(
       llvm::StringRef Framework, SrcMgr::CharacteristicKind HeadersDirKind,
-      HeaderSearch &HS, FrameworkHeaderPath &HeaderPath) {
+      const HeaderSearch &HS, FrameworkHeaderPath &HeaderPath) {
     auto Res = CacheFrameworkToUmbrellaHeaderSpelling.try_emplace(Framework);
     auto *CachedSpelling = &Res.first->second;
     if (!Res.second) {

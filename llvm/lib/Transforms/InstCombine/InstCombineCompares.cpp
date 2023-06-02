@@ -534,7 +534,8 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
 /// pointer.
 static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
                                  const DataLayout &DL,
-                                 SetVector<Value *> &Explored) {
+                                 SetVector<Value *> &Explored,
+                                 InstCombiner &IC) {
   // Perform all the substitutions. This is a bit tricky because we can
   // have cycles in our use-def chains.
   // 1. Create the PHI nodes without any incoming values.
@@ -636,7 +637,10 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
                                        Val->getName() + ".ptr");
     NewVal = Builder.CreateBitOrPointerCast(
         NewVal, Val->getType(), Val->getName() + ".conv");
-    Val->replaceAllUsesWith(NewVal);
+    IC.replaceInstUsesWith(*cast<Instruction>(Val), NewVal);
+    // Add old instruction to worklist for DCE. We don't directly remove it
+    // here because the original compare is one of the users.
+    IC.addToWorklist(cast<Instruction>(Val));
   }
 
   return NewInsts[Start];
@@ -689,7 +693,8 @@ getAsConstantIndexedAddress(Type *ElemTy, Value *V, const DataLayout &DL) {
 /// between GEPLHS and RHS.
 static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
                                               ICmpInst::Predicate Cond,
-                                              const DataLayout &DL) {
+                                              const DataLayout &DL,
+                                              InstCombiner &IC) {
   // FIXME: Support vector of pointers.
   if (GEPLHS->getType()->isVectorTy())
     return nullptr;
@@ -713,7 +718,7 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
   // can't have overflow on either side. We can therefore re-write
   // this as:
   //   OFFSET1 cmp OFFSET2
-  Value *NewRHS = rewriteGEPAsOffset(ElemTy, RHS, PtrBase, DL, Nodes);
+  Value *NewRHS = rewriteGEPAsOffset(ElemTy, RHS, PtrBase, DL, Nodes, IC);
 
   // RewriteGEPAsOffset has replaced RHS and all of its uses with a re-written
   // GEP having PtrBase as the pointer base, and has returned in NewRHS the
@@ -832,7 +837,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       // Otherwise, the base pointers are different and the indices are
       // different. Try convert this to an indexed compare by looking through
       // PHIs/casts.
-      return transformToIndexedCompare(GEPLHS, RHS, Cond, DL);
+      return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
     }
 
     // If one of the GEPs has all zero indices, recurse.
@@ -896,7 +901,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
 
   // Try convert this to an indexed compare by looking through PHIs/casts as a
   // last resort.
-  return transformToIndexedCompare(GEPLHS, RHS, Cond, DL);
+  return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
 }
 
 bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
@@ -1377,17 +1382,18 @@ Instruction *InstCombinerImpl::foldICmpWithConstant(ICmpInst &Cmp) {
 
   if (auto *Phi = dyn_cast<PHINode>(Op0))
     if (all_of(Phi->operands(), [](Value *V) { return isa<Constant>(V); })) {
-      Type *Ty = Cmp.getType();
-      Builder.SetInsertPoint(Phi);
-      PHINode *NewPhi =
-          Builder.CreatePHI(Ty, Phi->getNumOperands());
-      for (BasicBlock *Predecessor : predecessors(Phi->getParent())) {
-        auto *Input =
-            cast<Constant>(Phi->getIncomingValueForBlock(Predecessor));
-        auto *BoolInput = ConstantExpr::getCompare(Pred, Input, C);
-        NewPhi->addIncoming(BoolInput, Predecessor);
+      SmallVector<Constant *> Ops;
+      for (Value *V : Phi->incoming_values()) {
+        Constant *Res =
+            ConstantFoldCompareInstOperands(Pred, cast<Constant>(V), C, DL);
+        if (!Res)
+          return nullptr;
+        Ops.push_back(Res);
       }
-      NewPhi->takeName(&Cmp);
+      Builder.SetInsertPoint(Phi);
+      PHINode *NewPhi = Builder.CreatePHI(Cmp.getType(), Phi->getNumOperands());
+      for (auto [V, Pred] : zip(Ops, Phi->blocks()))
+        NewPhi->addIncoming(V, Pred);
       return replaceInstUsesWith(Cmp, NewPhi);
     }
 
@@ -6577,6 +6583,37 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     if (Instruction *NI = foldSelectICmp(I.getSwappedPredicate(), SI, Op0, I))
       return NI;
 
+  // In case of a comparison with two select instructions having the same
+  // condition, check whether one of the resulting branches can be simplified.
+  // If so, just compare the other branch and select the appropriate result.
+  // For example:
+  //   %tmp1 = select i1 %cmp, i32 %y, i32 %x
+  //   %tmp2 = select i1 %cmp, i32 %z, i32 %x
+  //   %cmp2 = icmp slt i32 %tmp2, %tmp1
+  // The icmp will result false for the false value of selects and the result
+  // will depend upon the comparison of true values of selects if %cmp is
+  // true. Thus, transform this into:
+  //   %cmp = icmp slt i32 %y, %z
+  //   %sel = select i1 %cond, i1 %cmp, i1 false
+  // This handles similar cases to transform.
+  {
+    Value *Cond, *A, *B, *C, *D;
+    if (match(Op0, m_Select(m_Value(Cond), m_Value(A), m_Value(B))) &&
+        match(Op1, m_Select(m_Specific(Cond), m_Value(C), m_Value(D))) &&
+        (Op0->hasOneUse() || Op1->hasOneUse())) {
+      // Check whether comparison of TrueValues can be simplified
+      if (Value *Res = simplifyICmpInst(Pred, A, C, SQ)) {
+        Value *NewICMP = Builder.CreateICmp(Pred, B, D);
+        return SelectInst::Create(Cond, Res, NewICMP);
+      }
+      // Check whether comparison of FalseValues can be simplified
+      if (Value *Res = simplifyICmpInst(Pred, B, D, SQ)) {
+        Value *NewICMP = Builder.CreateICmp(Pred, A, C);
+        return SelectInst::Create(Cond, NewICMP, Res);
+      }
+    }
+  }
+
   // Try to optimize equality comparisons against alloca-based pointers.
   if (Op0->getType()->isPointerTy() && I.isEquality()) {
     assert(Op1->getType()->isPointerTy() && "Comparing pointer with non-pointer?");
@@ -7153,11 +7190,11 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // then canonicalize the operand to 0.0.
   if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
     if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0, DL, &TLI, 0,
-                                                      &AC, &I, &DT, &ORE))
+                                                      &AC, &I, &DT))
       return replaceOperand(I, 0, ConstantFP::getZero(OpType));
 
     if (!match(Op1, m_PosZeroFP()) &&
-        isKnownNeverNaN(Op1, DL, &TLI, 0, &AC, &I, &DT, &ORE))
+        isKnownNeverNaN(Op1, DL, &TLI, 0, &AC, &I, &DT))
       return replaceOperand(I, 1, ConstantFP::getZero(OpType));
   }
 

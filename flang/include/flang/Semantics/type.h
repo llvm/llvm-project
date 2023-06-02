@@ -306,6 +306,7 @@ public:
   // explicit and equal, len type parameters are ignored.
   bool Match(const DerivedTypeSpec &) const;
   std::string AsFortran() const;
+  std::string VectorTypeAsFortran() const;
 
   Category category() const { return category_; }
   void set_category(Category category) { category_ = category; }
@@ -456,7 +457,8 @@ inline const DerivedTypeSpec *DeclTypeSpec::AsDerived() const {
   return const_cast<DeclTypeSpec *>(this)->AsDerived();
 }
 
-bool IsInteroperableIntrinsicType(const DeclTypeSpec &);
+bool IsInteroperableIntrinsicType(
+    const DeclTypeSpec &, const common::LanguageFeatureControl &);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TYPE_H_

@@ -1261,9 +1261,9 @@ ParseResult ForallOp::parse(OpAsmParser &parser, OperationState &result) {
       dynamicSteps;
   if (succeeded(parser.parseOptionalKeyword("in"))) {
     // Parse upper bounds.
-    if (parseDynamicIndexList(parser, dynamicUbs, staticUbs,
-                              /*valueTypes=*/nullptr,
-                              OpAsmParser::Delimiter::Paren) ||
+    if (parseDynamicIndexList(
+            parser, dynamicUbs, staticUbs, /*scalable=*/nullptr,
+            /*valueTypes=*/nullptr, OpAsmParser::Delimiter::Paren) ||
         parser.resolveOperands(dynamicUbs, indexType, result.operands))
       return failure();
 
@@ -1273,26 +1273,26 @@ ParseResult ForallOp::parse(OpAsmParser &parser, OperationState &result) {
   } else {
     // Parse lower bounds.
     if (parser.parseEqual() ||
-        parseDynamicIndexList(parser, dynamicLbs, staticLbs,
-                              /*valueTypes=*/nullptr,
-                              OpAsmParser::Delimiter::Paren) ||
+        parseDynamicIndexList(
+            parser, dynamicLbs, staticLbs, /*scalable=*/nullptr,
+            /*valueTypes=*/nullptr, OpAsmParser::Delimiter::Paren) ||
 
         parser.resolveOperands(dynamicLbs, indexType, result.operands))
       return failure();
 
     // Parse upper bounds.
     if (parser.parseKeyword("to") ||
-        parseDynamicIndexList(parser, dynamicUbs, staticUbs,
-                              /*valueTypes=*/nullptr,
-                              OpAsmParser::Delimiter::Paren) ||
+        parseDynamicIndexList(
+            parser, dynamicUbs, staticUbs, /*scalable=*/nullptr,
+            /*valueTypes=*/nullptr, OpAsmParser::Delimiter::Paren) ||
         parser.resolveOperands(dynamicUbs, indexType, result.operands))
       return failure();
 
     // Parse step values.
     if (parser.parseKeyword("step") ||
-        parseDynamicIndexList(parser, dynamicSteps, staticSteps,
-                              /*valueTypes=*/nullptr,
-                              OpAsmParser::Delimiter::Paren) ||
+        parseDynamicIndexList(
+            parser, dynamicSteps, staticSteps, /*scalable=*/nullptr,
+            /*valueTypes=*/nullptr, OpAsmParser::Delimiter::Paren) ||
         parser.resolveOperands(dynamicSteps, indexType, result.operands))
       return failure();
   }

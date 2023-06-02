@@ -21,16 +21,11 @@
 // RUN:   -b one -b two %s 2> %t
 // RUN: FileCheck -check-prefix=AIX < %t %s
 
-// RUN: %clang -target powerpc-unknown-linux -### \
-// RUN:   -b one %s 2> %t
-// RUN: FileCheck -check-prefix=NOT-AIX < %t %s
-
 // DARWIN-NOT: --no-demangle
 // DARWIN: "one" "two" "three" "four" "-z" "five" "-r"
 // LINUX: "--no-demangle" "-e" "_start" "one" "two" "three" "four" "-z" "five" "-r" {{.*}} "-T" "a.lds"
 // MINGW: "--no-demangle"
 // AIX: "-b" "one" "-b" "two"
-// NOT-AIX: error: unsupported option '-b' for target 'powerpc-unknown-linux'
 
 // Check that we forward '-Xlinker' and '-Wl,' on Windows.
 // RUN: %clang -target i686-pc-win32 -fuse-ld=link -### \

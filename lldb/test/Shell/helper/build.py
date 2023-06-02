@@ -73,6 +73,14 @@ parser.add_argument(
     help="Include and link GNUstep libobjc2 (Windows and Linux only)",
 )
 
+parser.add_argument(
+    "--sysroot",
+    metavar="directory",
+    dest="sysroot",
+    required=False,
+    help="If specified, a sysroot to be passed via --sysroot",
+)
+
 if sys.platform == "darwin":
     parser.add_argument(
         "--apple-sdk",
@@ -305,6 +313,7 @@ class Builder(object):
             if args.objc_gnustep_dir
             else None
         )
+        self.sysroot = args.sysroot
 
     def _exe_file_name(self):
         assert self.mode != "compile"
@@ -761,6 +770,8 @@ class GccBuilder(Builder):
                     args.extend(
                         ["-Xclang", "-gcodeview", "-Xclang", "--dependent-lib=msvcrtd"]
                     )
+        elif self.sysroot:
+            args.extend(["--sysroot", self.sysroot])
 
         if self.std:
             args.append("-std={0}".format(self.std))
@@ -797,6 +808,8 @@ class GccBuilder(Builder):
                 args.extend(
                     ["-fuse-ld=lld-link", "-g", "-Xclang", "--dependent-lib=msvcrtd"]
                 )
+        elif self.sysroot:
+            args.extend(["--sysroot", self.sysroot])
 
         return ("linking", self._obj_file_names(), self._exe_file_name(), None, args)
 

@@ -6878,62 +6878,22 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
       continue;
     }
 
-    // If this binary is currently executing, we want to force a
-    // possibly expensive search for the binary and its dSYM.
-    if (image.currently_executing && image.uuid.IsValid()) {
-      ModuleSpec module_spec;
-      module_spec.GetUUID() = image.uuid;
-      Symbols::DownloadObjectAndSymbolFile(module_spec, error, true);
-      if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-        module_sp = process.GetTarget().GetOrCreateModule(module_spec, false);
-        process.GetTarget().GetImages().AppendIfNeeded(module_sp,
-                                                       false /* notify */);
-      }
+    bool value_is_offset = image.load_address == LLDB_INVALID_ADDRESS;
+    uint64_t value = value_is_offset ? image.slide : image.load_address;
+    if (value_is_offset && value == LLDB_INVALID_ADDRESS) {
+      // We have neither address nor slide; so we will find the binary
+      // by UUID and load it at slide/offset 0.
+      value = 0;
     }
 
-    // We have an address, that's the best way to discover the binary.
-    if (!module_sp && image.load_address != LLDB_INVALID_ADDRESS) {
+    // We have either a UUID, or we have a load address which
+    // and can try to read load commands and find a UUID.
+    if (image.uuid.IsValid() ||
+        (!value_is_offset && value != LLDB_INVALID_ADDRESS)) {
+      const bool set_load_address = image.segment_load_addresses.size() == 0;
       module_sp = DynamicLoader::LoadBinaryWithUUIDAndAddress(
-          &process, image.filename, image.uuid, image.load_address,
-          false /* value_is_offset */, image.currently_executing,
-          false /* notify */);
-      if (module_sp) {
-        // We've already set the load address in the Target,
-        // don't do any more processing on this module.
-        added_modules.Append(module_sp, false /* notify */);
-        continue;
-      }
-    }
-
-    // If we have a slide, we need to find the original binary
-    // by UUID, then we can apply the slide value.
-    if (!module_sp && image.uuid.IsValid() &&
-        image.slide != LLDB_INVALID_ADDRESS) {
-      module_sp = DynamicLoader::LoadBinaryWithUUIDAndAddress(
-          &process, image.filename, image.uuid, image.slide,
-          true /* value_is_offset */, image.currently_executing,
-          false /* notify */);
-      if (module_sp) {
-        // We've already set the load address in the Target,
-        // don't do any more processing on this module.
-        added_modules.Append(module_sp, false /* notify */);
-        continue;
-      }
-    }
-
-    // Try to find the binary by UUID or filename on the local
-    // filesystem or in lldb's global module cache.
-    if (!module_sp) {
-      Status error;
-      ModuleSpec module_spec;
-      if (image.uuid.IsValid())
-        module_spec.GetUUID() = image.uuid;
-      if (!image.filename.empty())
-        module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
-      module_sp =
-          process.GetTarget().GetOrCreateModule(module_spec, false, &error);
-      process.GetTarget().GetImages().AppendIfNeeded(module_sp,
-                                                     false /* notify */);
+          &process, image.filename, image.uuid, value, value_is_offset,
+          image.currently_executing, false /* notify */, set_load_address);
     }
 
     // We have a ModuleSP to load in the Target.  Load it at the
@@ -6947,7 +6907,8 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
           std::string uuidstr = image.uuid.GetAsString();
           log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
                       "UUID %s with section load addresses",
-                      image.filename.c_str(), uuidstr.c_str());
+                      module_sp->GetFileSpec().GetPath().c_str(),
+                      uuidstr.c_str());
         }
         for (auto name_vmaddr_tuple : image.segment_load_addresses) {
           SectionList *sectlist = module_sp->GetObjectFile()->GetSectionList();
@@ -6960,39 +6921,17 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
             }
           }
         }
-      } else if (image.load_address != LLDB_INVALID_ADDRESS) {
-        if (log) {
-          std::string uuidstr = image.uuid.GetAsString();
-          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s with load address 0x%" PRIx64,
-                      image.filename.c_str(), uuidstr.c_str(),
-                      image.load_address);
-        }
-        const bool address_is_slide = false;
-        bool changed = false;
-        module_sp->SetLoadAddress(process.GetTarget(), image.load_address,
-                                  address_is_slide, changed);
-      } else if (image.slide != 0) {
-        if (log) {
-          std::string uuidstr = image.uuid.GetAsString();
-          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s with slide amount 0x%" PRIx64,
-                      image.filename.c_str(), uuidstr.c_str(), image.slide);
-        }
-        const bool address_is_slide = true;
-        bool changed = false;
-        module_sp->SetLoadAddress(process.GetTarget(), image.slide,
-                                  address_is_slide, changed);
       } else {
         if (log) {
           std::string uuidstr = image.uuid.GetAsString();
           log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s at its file address, no slide applied",
-                      image.filename.c_str(), uuidstr.c_str());
+                      "UUID %s with %s 0x%" PRIx64,
+                      module_sp->GetFileSpec().GetPath().c_str(),
+                      uuidstr.c_str(),
+                      value_is_offset ? "slide" : "load address", value);
         }
-        const bool address_is_slide = true;
-        bool changed = false;
-        module_sp->SetLoadAddress(process.GetTarget(), 0, address_is_slide,
+        bool changed;
+        module_sp->SetLoadAddress(process.GetTarget(), value, value_is_offset,
                                   changed);
       }
     }

@@ -617,6 +617,9 @@ public:
         extractOp.getVector().template getDefiningOp<vector::TransferReadOp>();
     if (!xferOp)
       return failure();
+    // Check that we are extracting a scalar and not a sub-vector.
+    if (isa<VectorType>(extractOp.getResult().getType()))
+      return failure();
     // If multiple uses are not allowed, check if xfer has a single use.
     if (!allowMultipleUses && !xferOp.getResult().hasOneUse())
       return failure();
@@ -658,6 +661,7 @@ class RewriteScalarExtractElementOfTransferRead
   void rewrite(vector::ExtractElementOp extractOp,
                PatternRewriter &rewriter) const override {
     // Construct scalar load.
+    auto loc = extractOp.getLoc();
     auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
     SmallVector<Value> newIndices(xferOp.getIndices().begin(),
                                   xferOp.getIndices().end());
@@ -665,13 +669,13 @@ class RewriteScalarExtractElementOfTransferRead
       AffineExpr sym0, sym1;
       bindSymbols(extractOp.getContext(), sym0, sym1);
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-          rewriter, extractOp.getLoc(), sym0 + sym1,
+          rewriter, loc, sym0 + sym1,
           {newIndices[newIndices.size() - 1], extractOp.getPosition()});
       if (ofr.is<Value>()) {
         newIndices[newIndices.size() - 1] = ofr.get<Value>();
       } else {
         newIndices[newIndices.size() - 1] =
-            rewriter.create<arith::ConstantIndexOp>(extractOp.getLoc(),
+            rewriter.create<arith::ConstantIndexOp>(loc,
                                                     *getConstantIntValue(ofr));
       }
     }

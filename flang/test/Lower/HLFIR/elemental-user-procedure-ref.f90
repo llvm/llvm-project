@@ -1,5 +1,5 @@
 ! Test lowering of user defined elemental procedure reference to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 subroutine by_addr(x, y)
   integer :: x

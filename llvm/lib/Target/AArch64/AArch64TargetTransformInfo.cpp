@@ -1243,10 +1243,13 @@ instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
 static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_fmul:
+  case Intrinsic::aarch64_sve_fmul_u:
     return Instruction::BinaryOps::FMul;
   case Intrinsic::aarch64_sve_fadd:
+  case Intrinsic::aarch64_sve_fadd_u:
     return Instruction::BinaryOps::FAdd;
   case Intrinsic::aarch64_sve_fsub:
+  case Intrinsic::aarch64_sve_fsub_u:
     return Instruction::BinaryOps::FSub;
   default:
     return Instruction::BinaryOpsEnd;
@@ -1292,6 +1295,11 @@ static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
                                                    Intrinsic::aarch64_sve_mad>(
           IC, II, false))
     return MAD;
+  if (auto FMLA_U =
+          instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
+                                            Intrinsic::aarch64_sve_fmla_u>(
+              IC, II, true))
+    return FMLA_U;
   return instCombineSVEVectorBinOp(IC, II);
 }
 
@@ -1311,6 +1319,11 @@ static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
                                             Intrinsic::aarch64_sve_fnmsb>(
               IC, II, false))
     return FMSB;
+  if (auto FMLS_U =
+          instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
+                                            Intrinsic::aarch64_sve_fmls_u>(
+              IC, II, true))
+    return FMLS_U;
   return instCombineSVEVectorBinOp(IC, II);
 }
 
@@ -1684,25 +1697,20 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEPTest(IC, II);
   case Intrinsic::aarch64_sve_mul:
   case Intrinsic::aarch64_sve_fmul:
+  case Intrinsic::aarch64_sve_fmul_u:
     return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_fadd:
+  case Intrinsic::aarch64_sve_fadd_u:
   case Intrinsic::aarch64_sve_add:
     return instCombineSVEVectorAdd(IC, II);
-  case Intrinsic::aarch64_sve_fadd_u:
-    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
-                                             Intrinsic::aarch64_sve_fmla_u>(
-        IC, II, true);
   case Intrinsic::aarch64_sve_add_u:
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
   case Intrinsic::aarch64_sve_fsub:
+  case Intrinsic::aarch64_sve_fsub_u:
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
-  case Intrinsic::aarch64_sve_fsub_u:
-    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
-                                             Intrinsic::aarch64_sve_fmls_u>(
-        IC, II, true);
   case Intrinsic::aarch64_sve_sub_u:
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mls_u>(
@@ -1789,6 +1797,7 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 }
 
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
+                                           ArrayRef<Type *> SrcTys,
                                            ArrayRef<const Value *> Args) {
 
   // A helper that returns a vector type from the given type. The number of
@@ -1834,7 +1843,7 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   // extending and the same type.
   if (Opcode == Instruction::Mul &&
       (!Arg0 || Arg0->getOpcode() != Extend->getOpcode() ||
-       Arg0->getOperand(0)->getType() != Extend->getOperand(0)->getType()))
+       (SrcTys.size() == 2 && SrcTys[0] != SrcTys[1])))
     return false;
 
   // Legalize the destination type and ensure it can be used in a widening
@@ -1846,7 +1855,9 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
 
   // Legalize the source type and ensure it can be used in a widening
   // operation.
-  auto *SrcTy = toVectorTy(Extend->getSrcTy());
+  Type *SrcTy =
+      SrcTys.size() > 0 ? SrcTys.back() : toVectorTy(Extend->getSrcTy());
+
   auto SrcTyL = getTypeLegalizationCost(SrcTy);
   unsigned SrcElTySize = SrcTyL.second.getScalarSizeInBits();
   if (!SrcTyL.second.isVector() || SrcElTySize != SrcTy->getScalarSizeInBits())
@@ -1870,13 +1881,24 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
-
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && I->hasOneUser()) {
     auto *SingleUser = cast<Instruction>(*I->user_begin());
     SmallVector<const Value *, 4> Operands(SingleUser->operand_values());
-    if (isWideningInstruction(Dst, SingleUser->getOpcode(), Operands)) {
+    SmallVector<Type *, 2> SrcTys;
+    for (const Value *Op : Operands) {
+      auto *Cast = dyn_cast<CastInst>(Op);
+      if (!Cast)
+        continue;
+      // Use provided Src type for I and other casts that have the same source
+      // type.
+      if (Op == I || Cast->getSrcTy() == Cast->getSrcTy())
+        SrcTys.push_back(Src);
+      else
+        SrcTys.push_back(Cast->getSrcTy());
+    }
+    if (isWideningInstruction(Dst, SingleUser->getOpcode(), SrcTys, Operands)) {
       // If the cast is the second operand, it is free. We will generate either
       // a "wide" or "long" version of the widening instruction.
       if (I == SingleUser->getOperand(1))
@@ -1886,7 +1908,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // version of the widening instruction.
       if (auto *Cast = dyn_cast<CastInst>(SingleUser->getOperand(1)))
         if (I->getOpcode() == unsigned(Cast->getOpcode()) &&
-            cast<CastInst>(I)->getSrcTy() == Cast->getSrcTy())
+            (Src == Cast->getSrcTy() || Cast->getSrcTy() == Cast->getSrcTy()))
           return 0;
     }
   }
@@ -2349,6 +2371,11 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(const Instruction *I,
     if (I && dyn_cast<LoadInst>(I->getOperand(1)))
       return ST->getVectorInsertExtractBaseCost() + 1;
 
+    // i1 inserts and extract will include an extra cset or cmp of the vector
+    // value. Increase the cost by 1 to account.
+    if (Val->getScalarSizeInBits() == 1)
+      return ST->getVectorInsertExtractBaseCost() + 1;
+
     // FIXME:
     // If the extract-element and insert-element instructions could be
     // simplified away (e.g., could be combined into users by looking at use-def
@@ -2505,7 +2532,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // LT.first = 2 the cost is 28. If both operands are extensions it will not
     // need to scalarize so the cost can be cheaper (smull or umull).
     // so the cost can be cheaper (smull or umull).
-    if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, Args))
+    if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, {}, Args))
       return LT.first;
     return LT.first * 14;
   case ISD::ADD:
@@ -3208,8 +3235,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (!Entry)
       break;
     auto *ValVTy = cast<FixedVectorType>(ValTy);
-    if (!ValVTy->getElementType()->isIntegerTy(1) &&
-        MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
+    if (MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
         isPowerOf2_32(ValVTy->getNumElements())) {
       InstructionCost ExtraCost = 0;
       if (LT.first != 1) {
@@ -3220,7 +3246,9 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
         ExtraCost = getArithmeticInstrCost(Opcode, Ty, CostKind);
         ExtraCost *= LT.first - 1;
       }
-      return Entry->Cost + ExtraCost;
+      // All and/or/xor of i1 will be lowered with maxv/minv/addv + fmov
+      auto Cost = ValVTy->getElementType()->isIntegerTy(1) ? 2 : Entry->Cost;
+      return Cost + ExtraCost;
     }
     break;
   }

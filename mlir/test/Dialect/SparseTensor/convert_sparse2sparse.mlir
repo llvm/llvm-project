@@ -36,12 +36,12 @@
 
 #TsssPermuted = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
+  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
 #COOSlice = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed-nu", "singleton" ],
-  slice = [ (2, 2, 1), (12, 13, 1) ]
+  dimSlices = [ (2, 2, 1), (12, 13, 1) ]
 }>
 
 // CHECK-LABEL: func @sparse_nop_convert(

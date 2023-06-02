@@ -841,10 +841,17 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   // we introduce the type parameter into the local scope.
   SourceLocation EqualLoc;
   ParsedType DefaultArg;
-  if (TryConsumeToken(tok::equal, EqualLoc))
+  if (TryConsumeToken(tok::equal, EqualLoc)) {
+    // The default argument may declare template parameters, notably
+    // if it contains a generic lambda, so we need to increase
+    // the template depth as these parameters would not be instantiated
+    // at the current level.
+    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+    ++CurTemplateDepthTracker;
     DefaultArg =
         ParseTypeName(/*Range=*/nullptr, DeclaratorContext::TemplateTypeArg)
             .get();
+  }
 
   NamedDecl *NewDecl = Actions.ActOnTypeParameter(getCurScope(),
                                                   TypenameKeyword, EllipsisLoc,
@@ -1030,6 +1037,14 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
       //   end of the template-parameter-list rather than a greater-than
       //   operator.
       GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
+
+      // The default argument may declare template parameters, notably
+      // if it contains a generic lambda, so we need to increase
+      // the template depth as these parameters would not be instantiated
+      // at the current level.
+      TemplateParameterDepthRAII CurTemplateDepthTracker(
+          TemplateParameterDepth);
+      ++CurTemplateDepthTracker;
       EnterExpressionEvaluationContext ConstantEvaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
       DefaultArg =

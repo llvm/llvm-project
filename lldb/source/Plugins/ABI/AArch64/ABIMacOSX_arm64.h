@@ -62,7 +62,8 @@ public:
     return true;
   }
 
-  lldb::addr_t FixAddress(lldb::addr_t pc, lldb::addr_t mask) override;
+  lldb::addr_t FixCodeAddress(lldb::addr_t pc) override;
+  lldb::addr_t FixDataAddress(lldb::addr_t pc) override;
 
   // Static Functions
 

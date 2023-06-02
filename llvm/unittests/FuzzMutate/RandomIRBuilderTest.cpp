@@ -563,4 +563,53 @@ TEST(RandomIRBuilderTest, DoNotCallPointerWhenSink) {
   }
   ASSERT_FALSE(Modified);
 }
+
+TEST(RandomIRBuilderTest, SrcAndSinkWOrphanBlock) {
+  const char *Source = "\n\
+        define i1 @test(i1 %Bool, i32 %Int, i64 %Long) {   \n\
+        Entry:    \n\
+            %Eq0 = icmp eq i64 %Long, 0 \n\
+            br i1 %Eq0, label %True, label %False \n\
+        True: \n\
+            %Or = or i1 %Bool, %Eq0 \n\
+            ret i1 %Or \n\
+        False: \n\
+            %And = and i1 %Bool, %Eq0 \n\
+            ret i1 %And \n\
+        Orphan_1:  \n\
+            %NotBool = sub i1 1, %Bool \n\
+            ret i1 %NotBool \n\
+        Orphan_2:  \n\
+            %Le42 = icmp sle i32 %Int, 42 \n\
+            ret i1 %Le42 \n\
+        }";
+  LLVMContext Ctx;
+  std::mt19937 mt(Seed);
+  std::uniform_int_distribution<int> RandInt(INT_MIN, INT_MAX);
+  std::array<Type *, 3> IntTys(
+      {Type::getInt64Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt1Ty(Ctx)});
+  std::vector<Value *> Constants;
+  for (Type *IntTy : IntTys) {
+    for (size_t v : {1, 42}) {
+      Constants.push_back(ConstantInt::get(IntTy, v));
+    }
+  }
+  for (int i = 0; i < 10; i++) {
+    RandomIRBuilder IB(RandInt(mt), IntTys);
+    std::unique_ptr<Module> M = parseAssembly(Source, Ctx);
+    Function &F = *M->getFunction("test");
+    for (BasicBlock &BB : F) {
+      SmallVector<Instruction *, 4> Insts;
+      for (Instruction &I : BB) {
+        Insts.push_back(&I);
+      }
+      for (int j = 0; j < 10; j++) {
+        IB.findOrCreateSource(BB, Insts);
+      }
+      for (Value *V : Constants) {
+        IB.connectToSink(BB, Insts, V);
+      }
+    }
+  }
+}
 } // namespace

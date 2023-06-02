@@ -1,6 +1,6 @@
 ! Test lowering of vector subscripted designators in assignment
 ! left-hand sides.
-! RUN: bbc -emit-fir -hlfir -o - -I nw %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - -I nw %s 2>&1 | FileCheck %s
 
 subroutine test_simple(x, vector)
   integer(8) :: vector(10)

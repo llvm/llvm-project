@@ -28,6 +28,25 @@ using namespace mlir;
 
 namespace {
 
+struct ConstantOpPattern final : OpConversionPattern<complex::ConstantOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::ConstantOp constOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto spirvType =
+        getTypeConverter()->convertType<ShapedType>(constOp.getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(constOp,
+                                         "unable to convert result type");
+
+    rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+        constOp, spirvType,
+        DenseElementsAttr::get(spirvType, constOp.getValue().getValue()));
+    return success();
+  }
+};
+
 struct CreateOpPattern final : OpConversionPattern<complex::CreateOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -87,6 +106,6 @@ void mlir::populateComplexToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                           RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
-  patterns.add<CreateOpPattern, ReOpPattern, ImOpPattern>(typeConverter,
-                                                          context);
+  patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern>(
+      typeConverter, context);
 }

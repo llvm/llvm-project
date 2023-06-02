@@ -151,8 +151,26 @@ public:
         incIdx(srcIdx, sourceVectorType, srcRank - 1);
         incIdx(resIdx, resultVectorType, resRank - 1);
       }
-      Value e = rewriter.create<vector::ExtractOp>(loc, op.getSource(), srcIdx);
-      result = rewriter.create<vector::InsertOp>(loc, e, result, resIdx);
+
+      Value extract;
+      if (srcRank == 0) {
+        // 0-D vector special case
+        assert(srcIdx.empty() && "Unexpected indices for 0-D vector");
+        extract = rewriter.create<vector::ExtractElementOp>(
+            loc, op.getSourceVectorType().getElementType(), op.getSource());
+      } else {
+        extract =
+            rewriter.create<vector::ExtractOp>(loc, op.getSource(), srcIdx);
+      }
+
+      if (resRank == 0) {
+        // 0-D vector special case
+        assert(resIdx.empty() && "Unexpected indices for 0-D vector");
+        result = rewriter.create<vector::InsertElementOp>(loc, extract, result);
+      } else {
+        result =
+            rewriter.create<vector::InsertOp>(loc, extract, result, resIdx);
+      }
     }
     rewriter.replaceOp(op, result);
     return success();

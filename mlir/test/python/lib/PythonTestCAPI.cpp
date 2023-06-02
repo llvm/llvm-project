@@ -31,6 +31,10 @@ MlirType mlirPythonTestTestTypeGet(MlirContext context) {
   return wrap(python_test::TestTypeType::get(unwrap(context)));
 }
 
+MlirTypeID mlirPythonTestTestTypeGetTypeID(void) {
+  return wrap(python_test::TestTypeType::getTypeID());
+}
+
 bool mlirTypeIsAPythonTestTestTensorValue(MlirValue value) {
   return mlirTypeIsATensor(wrap(unwrap(value).getType()));
 }

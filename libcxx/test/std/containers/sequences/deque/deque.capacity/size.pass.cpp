@@ -12,7 +12,6 @@
 
 // size_type size() const noexcept;
 
-#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -26,25 +25,18 @@ int main(int, char**)
     C c;
     ASSERT_NOEXCEPT(c.size());
     assert(c.size() == 0);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.push_back(C::value_type(2));
     assert(c.size() == 1);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.push_back(C::value_type(1));
     assert(c.size() == 2);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.push_back(C::value_type(3));
     assert(c.size() == 3);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.erase(c.begin());
     assert(c.size() == 2);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.erase(c.begin());
     assert(c.size() == 1);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.erase(c.begin());
     assert(c.size() == 0);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
 #if TEST_STD_VER >= 11
     {
@@ -52,25 +44,18 @@ int main(int, char**)
     C c;
     ASSERT_NOEXCEPT(c.size());
     assert(c.size() == 0);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.push_back(C::value_type(2));
     assert(c.size() == 1);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.push_back(C::value_type(1));
     assert(c.size() == 2);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.push_back(C::value_type(3));
     assert(c.size() == 3);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.erase(c.begin());
     assert(c.size() == 2);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.erase(c.begin());
     assert(c.size() == 1);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     c.erase(c.begin());
     assert(c.size() == 0);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
     }
 #endif
 

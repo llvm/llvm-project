@@ -1693,30 +1693,43 @@ bool Parser::DiagnoseProhibitedCXX11Attribute() {
 void Parser::DiagnoseMisplacedCXX11Attribute(ParsedAttributes &Attrs,
                                              SourceLocation CorrectLocation) {
   assert((Tok.is(tok::l_square) && NextToken().is(tok::l_square)) ||
-         Tok.is(tok::kw_alignas));
+         Tok.is(tok::kw_alignas) || Tok.isRegularKeywordAttribute());
 
   // Consume the attributes.
+  auto Keyword =
+      Tok.isRegularKeywordAttribute() ? Tok.getIdentifierInfo() : nullptr;
   SourceLocation Loc = Tok.getLocation();
   ParseCXX11Attributes(Attrs);
   CharSourceRange AttrRange(SourceRange(Loc, Attrs.Range.getEnd()), true);
   // FIXME: use err_attributes_misplaced
-  Diag(Loc, diag::err_attributes_not_allowed)
-    << FixItHint::CreateInsertionFromRange(CorrectLocation, AttrRange)
-    << FixItHint::CreateRemoval(AttrRange);
+  (Keyword ? Diag(Loc, diag::err_keyword_not_allowed) << Keyword
+           : Diag(Loc, diag::err_attributes_not_allowed))
+      << FixItHint::CreateInsertionFromRange(CorrectLocation, AttrRange)
+      << FixItHint::CreateRemoval(AttrRange);
 }
 
 void Parser::DiagnoseProhibitedAttributes(
-    const SourceRange &Range, const SourceLocation CorrectLocation) {
+    const ParsedAttributesView &Attrs, const SourceLocation CorrectLocation) {
+  auto *FirstAttr = Attrs.empty() ? nullptr : &Attrs.front();
   if (CorrectLocation.isValid()) {
-    CharSourceRange AttrRange(Range, true);
-    Diag(CorrectLocation, diag::err_attributes_misplaced)
+    CharSourceRange AttrRange(Attrs.Range, true);
+    (FirstAttr && FirstAttr->isRegularKeywordAttribute()
+         ? Diag(CorrectLocation, diag::err_keyword_misplaced) << FirstAttr
+         : Diag(CorrectLocation, diag::err_attributes_misplaced))
         << FixItHint::CreateInsertionFromRange(CorrectLocation, AttrRange)
         << FixItHint::CreateRemoval(AttrRange);
-  } else
-    Diag(Range.getBegin(), diag::err_attributes_not_allowed) << Range;
+  } else {
+    const SourceRange &Range = Attrs.Range;
+    (FirstAttr && FirstAttr->isRegularKeywordAttribute()
+         ? Diag(Range.getBegin(), diag::err_keyword_not_allowed) << FirstAttr
+         : Diag(Range.getBegin(), diag::err_attributes_not_allowed))
+        << Range;
+  }
 }
 
-void Parser::ProhibitCXX11Attributes(ParsedAttributes &Attrs, unsigned DiagID,
+void Parser::ProhibitCXX11Attributes(ParsedAttributes &Attrs,
+                                     unsigned AttrDiagID,
+                                     unsigned KeywordDiagID,
                                      bool DiagnoseEmptyAttrs,
                                      bool WarnOnUnknownAttrs) {
 
@@ -1736,13 +1749,18 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributes &Attrs, unsigned DiagID,
         // The attribute range starts with [[, but is empty. So this must
         // be [[]], which we are supposed to diagnose because
         // DiagnoseEmptyAttrs is true.
-        Diag(Attrs.Range.getBegin(), DiagID) << Attrs.Range;
+        Diag(Attrs.Range.getBegin(), AttrDiagID) << Attrs.Range;
         return;
       }
     }
   }
 
   for (const ParsedAttr &AL : Attrs) {
+    if (AL.isRegularKeywordAttribute()) {
+      Diag(AL.getLoc(), KeywordDiagID) << AL;
+      AL.setInvalid();
+      continue;
+    }
     if (!AL.isCXX11Attribute() && !AL.isC2xAttribute())
       continue;
     if (AL.getKind() == ParsedAttr::UnknownAttribute) {
@@ -1750,7 +1768,7 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributes &Attrs, unsigned DiagID,
         Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
             << AL << AL.getRange();
     } else {
-      Diag(AL.getLoc(), DiagID) << AL;
+      Diag(AL.getLoc(), AttrDiagID) << AL;
       AL.setInvalid();
     }
   }
@@ -1758,8 +1776,10 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributes &Attrs, unsigned DiagID,
 
 void Parser::DiagnoseCXX11AttributeExtension(ParsedAttributes &Attrs) {
   for (const ParsedAttr &PA : Attrs) {
-    if (PA.isCXX11Attribute() || PA.isC2xAttribute())
-      Diag(PA.getLoc(), diag::ext_cxx11_attr_placement) << PA << PA.getRange();
+    if (PA.isCXX11Attribute() || PA.isC2xAttribute() ||
+        PA.isRegularKeywordAttribute())
+      Diag(PA.getLoc(), diag::ext_cxx11_attr_placement)
+          << PA << PA.isRegularKeywordAttribute() << PA.getRange();
   }
 }
 
@@ -1991,11 +2011,11 @@ bool Parser::MightBeDeclarator(DeclaratorContext Context) {
       return getLangOpts().CPlusPlus11 && isCXX11VirtSpecifier(NextToken());
 
     default:
-      return false;
+      return Tok.isRegularKeywordAttribute();
     }
 
   default:
-    return false;
+    return Tok.isRegularKeywordAttribute();
   }
 }
 
@@ -3298,13 +3318,17 @@ void Parser::ParseDeclarationSpecifiers(
 
     switch (Tok.getKind()) {
     default:
+      if (Tok.isRegularKeywordAttribute())
+        goto Attribute;
+
     DoneWithDeclSpec:
       if (!AttrsLastTime)
         ProhibitAttributes(attrs);
       else {
         // Reject C++11 / C2x attributes that aren't type attributes.
         for (const ParsedAttr &PA : attrs) {
-          if (!PA.isCXX11Attribute() && !PA.isC2xAttribute())
+          if (!PA.isCXX11Attribute() && !PA.isC2xAttribute() &&
+              !PA.isRegularKeywordAttribute())
             continue;
           if (PA.getKind() == ParsedAttr::UnknownAttribute)
             // We will warn about the unknown attribute elsewhere (in
@@ -3323,7 +3347,8 @@ void Parser::ParseDeclarationSpecifiers(
           if (PA.isTypeAttr() && PA.getKind() != ParsedAttr::AT_LifetimeBound &&
               PA.getKind() != ParsedAttr::AT_AnyX86NoCfCheck)
             continue;
-          Diag(PA.getLoc(), diag::err_attribute_not_type_attr) << PA;
+          Diag(PA.getLoc(), diag::err_attribute_not_type_attr)
+              << PA << PA.isRegularKeywordAttribute();
           PA.setInvalid();
         }
 
@@ -3337,9 +3362,10 @@ void Parser::ParseDeclarationSpecifiers(
 
     case tok::l_square:
     case tok::kw_alignas:
-      if (!standardAttributesAllowed() || !isCXX11AttributeSpecifier())
+      if (!isAllowedCXX11AttributeSpecifier())
         goto DoneWithDeclSpec;
 
+    Attribute:
       ProhibitAttributes(attrs);
       // FIXME: It would be good to recover by accepting the attributes,
       //        but attempting to do that now would cause serious
@@ -5015,6 +5041,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   if (IsElaboratedTypeSpecifier && !getLangOpts().MicrosoftExt &&
       !getLangOpts().ObjC) {
     ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,
+                            diag::err_keyword_not_allowed,
                             /*DiagnoseEmptyAttrs=*/true);
     if (BaseType.isUsable())
       Diag(BaseRange.getBegin(), diag::ext_enum_base_in_type_specifier)
@@ -5160,7 +5187,7 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
     // If attributes exist after the enumerator, parse them.
     ParsedAttributes attrs(AttrFactory);
     MaybeParseGNUAttributes(attrs);
-    if (standardAttributesAllowed() && isCXX11AttributeSpecifier()) {
+    if (isAllowedCXX11AttributeSpecifier()) {
       if (getLangOpts().CPlusPlus)
         Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
                                     ? diag::warn_cxx14_compat_ns_enum_attribute
@@ -5885,8 +5912,8 @@ void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicAllowed,
     bool IdentifierRequired,
     std::optional<llvm::function_ref<void()>> CodeCompletionHandler) {
-  if (standardAttributesAllowed() && (AttrReqs & AR_CXX11AttributesParsed) &&
-      isCXX11AttributeSpecifier()) {
+  if ((AttrReqs & AR_CXX11AttributesParsed) &&
+      isAllowedCXX11AttributeSpecifier()) {
     ParsedAttributes Attrs(AttrFactory);
     ParseCXX11Attributes(Attrs);
     DS.takeAttributesFrom(Attrs);
@@ -6660,6 +6687,10 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       PrototypeScope.Exit();
     } else if (Tok.is(tok::l_square)) {
       ParseBracketDeclarator(D);
+    } else if (Tok.isRegularKeywordAttribute()) {
+      // For consistency with attribute parsing.
+      Diag(Tok, diag::err_keyword_not_allowed) << Tok.getIdentifierInfo();
+      ConsumeToken();
     } else if (Tok.is(tok::kw_requires) && D.hasGroupingParens()) {
       // This declarator is declaring a function, but the requires clause is
       // in the wrong place:
@@ -7064,7 +7095,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
         TrailingReturnTypeLoc = Range.getBegin();
         EndLoc = Range.getEnd();
       }
-    } else if (standardAttributesAllowed()) {
+    } else {
       MaybeParseCXX11Attributes(FnAttrs);
     }
   }

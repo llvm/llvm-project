@@ -150,6 +150,30 @@ static bool isFeatureTestMacro(StringRef MacroName) {
                             MacroName);
 }
 
+static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
+                                     const MacroInfo *MI,
+                                     const StringRef MacroName) {
+  // If this is a macro with special handling (like __LINE__) then it's language
+  // defined.
+  if (MI->isBuiltinMacro())
+    return true;
+  // Builtin macros are defined in the builtin file
+  if (!SourceMgr.isWrittenInBuiltinFile(MI->getDefinitionLoc()))
+    return false;
+  // C defines macros starting with __STDC, and C++ defines macros starting with
+  // __STDCPP
+  if (MacroName.startswith("__STDC"))
+    return true;
+  // C++ defines the __cplusplus macro
+  if (MacroName == "__cplusplus")
+    return true;
+  // C++ defines various feature-test macros starting with __cpp
+  if (MacroName.startswith("__cpp"))
+    return true;
+  // Anything else isn't language-defined
+  return false;
+}
+
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
   StringRef Text = II->getName();
@@ -833,10 +857,10 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc,
     // Try to determine the module of the include directive.
     // FIXME: Look into directly passing the FileEntry from LookupFile instead.
     FileID IDOfIncl = SourceMgr.getFileID(SourceMgr.getExpansionLoc(Loc));
-    if (const FileEntry *EntryOfIncl = SourceMgr.getFileEntryForID(IDOfIncl)) {
+    if (auto EntryOfIncl = SourceMgr.getFileEntryRefForID(IDOfIncl)) {
       // The include comes from an included file.
       return HeaderInfo.getModuleMap()
-          .findModuleForHeader(EntryOfIncl, AllowTextual)
+          .findModuleForHeader(*EntryOfIncl, AllowTextual)
           .getModule();
     }
   }
@@ -861,7 +885,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
   auto &SM = getSourceManager();
   while (!Loc.isInvalid() && !SM.isInMainFile(Loc)) {
     auto ID = SM.getFileID(SM.getExpansionLoc(Loc));
-    auto *FE = SM.getFileEntryForID(ID);
+    auto FE = SM.getFileEntryRefForID(ID);
     if (!FE)
       break;
 
@@ -871,7 +895,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
                             SourceMgr.isInSystemHeader(Loc));
 
     bool InPrivateHeader = false;
-    for (auto Header : HeaderInfo.findAllModulesForHeader(FE)) {
+    for (auto Header : HeaderInfo.findAllModulesForHeader(*FE)) {
       if (!Header.isAccessibleFrom(IncM)) {
         // It's in a private header; we can't #include it.
         // FIXME: If there's a public header in some module that re-exports it,
@@ -899,7 +923,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
       // If this is an accessible, non-textual header of M's top-level module
       // that transitively includes the given location and makes the
       // corresponding module visible, this is the thing to #include.
-      return FE;
+      return *FE;
     }
 
     // FIXME: If we're bailing out due to a private header, we shouldn't suggest
@@ -910,8 +934,8 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
     // If the header is includable and has an include guard, assume the
     // intended way to expose its contents is by #include, not by importing a
     // module that transitively includes it.
-    if (getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE))
-      return FE;
+    if (getHeaderSearchInfo().isFileMultipleIncludeGuarded(*FE))
+      return *FE;
 
     Loc = SM.getIncludeLoc(ID);
   }
@@ -935,12 +959,11 @@ OptionalFileEntryRef Preprocessor::LookupFile(
 
   // If the header lookup mechanism may be relative to the current inclusion
   // stack, record the parent #includes.
-  SmallVector<std::pair<const FileEntry *, const DirectoryEntry *>, 16>
-      Includers;
+  SmallVector<std::pair<const FileEntry *, DirectoryEntryRef>, 16> Includers;
   bool BuildSystemModule = false;
   if (!FromDir && !FromFile) {
     FileID FID = getCurrentFileLexer()->getFileID();
-    const FileEntry *FileEnt = SourceMgr.getFileEntryForID(FID);
+    OptionalFileEntryRef FileEnt = SourceMgr.getFileEntryRefForID(FID);
 
     // If there is no file entry associated with this file, it must be the
     // predefines buffer or the module includes buffer. Any other file is not
@@ -956,13 +979,15 @@ OptionalFileEntryRef Preprocessor::LookupFile(
     // map file.
     if (!FileEnt) {
       if (FID == SourceMgr.getMainFileID() && MainFileDir) {
-        Includers.push_back(std::make_pair(nullptr, MainFileDir));
+        Includers.push_back(std::make_pair(nullptr, *MainFileDir));
         BuildSystemModule = getCurrentModule()->IsSystem;
-      } else if ((FileEnt =
-                    SourceMgr.getFileEntryForID(SourceMgr.getMainFileID())))
-        Includers.push_back(std::make_pair(FileEnt, *FileMgr.getDirectory(".")));
+      } else if ((FileEnt = SourceMgr.getFileEntryRefForID(
+                      SourceMgr.getMainFileID()))) {
+        auto CWD = FileMgr.getOptionalDirectoryRef(".");
+        Includers.push_back(std::make_pair(*FileEnt, *CWD));
+      }
     } else {
-      Includers.push_back(std::make_pair(FileEnt, FileEnt->getDir()));
+      Includers.push_back(std::make_pair(*FileEnt, FileEnt->getDir()));
     }
 
     // MSVC searches the current include stack from top to bottom for
@@ -972,7 +997,7 @@ OptionalFileEntryRef Preprocessor::LookupFile(
       for (IncludeStackInfo &ISEntry : llvm::reverse(IncludeMacroStack)) {
         if (IsFileLexer(ISEntry))
           if ((FileEnt = ISEntry.ThePPLexer->getFileEntry()))
-            Includers.push_back(std::make_pair(FileEnt, FileEnt->getDir()));
+            Includers.push_back(std::make_pair(*FileEnt, FileEnt->getDir()));
       }
     }
   }
@@ -3106,9 +3131,7 @@ void Preprocessor::HandleDefineDirective(
 
       // Warn if defining "__LINE__" and other builtins, per C99 6.10.8/4 and
       // C++ [cpp.predefined]p4, but allow it as an extension.
-      if (OtherMI->isBuiltinMacro() ||
-          (SourceMgr.isWrittenInBuiltinFile(OtherMI->getDefinitionLoc()) &&
-           !isFeatureTestMacro(MacroNameTok.getIdentifierInfo()->getName())))
+      if (isLanguageDefinedBuiltin(SourceMgr, OtherMI, II->getName()))
         Diag(MacroNameTok, diag::ext_pp_redef_builtin_macro);
       // Macros must be identical.  This means all tokens and whitespace
       // separation must be the same.  C99 6.10.3p2.
@@ -3189,11 +3212,8 @@ void Preprocessor::HandleUndefDirective() {
       Diag(MI->getDefinitionLoc(), diag::pp_macro_not_used);
 
     // Warn if undefining "__LINE__" and other builtins, per C99 6.10.8/4 and
-    // C++ [cpp.predefined]p4, but allow it as an extension. Don't warn if this
-    // is an Objective-C builtin macro though.
-    if ((MI->isBuiltinMacro() ||
-         SourceMgr.isWrittenInBuiltinFile(MI->getDefinitionLoc())) &&
-        !(getLangOpts().ObjC && isObjCProtectedMacro(II)))
+    // C++ [cpp.predefined]p4, but allow it as an extension.
+    if (isLanguageDefinedBuiltin(SourceMgr, MI, II->getName()))
       Diag(MacroNameTok, diag::ext_pp_undef_builtin_macro);
 
     if (MI->isWarnIfUnused())

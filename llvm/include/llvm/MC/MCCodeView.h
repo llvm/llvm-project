@@ -146,6 +146,9 @@ public:
   CodeViewContext();
   ~CodeViewContext();
 
+  CodeViewContext &operator=(const CodeViewContext &other) = delete;
+  CodeViewContext(const CodeViewContext &other) = delete;
+
   bool isValidFileNumber(unsigned FileNumber) const;
   bool addFile(MCStreamer &OS, unsigned FileNumber, StringRef Filename,
                ArrayRef<uint8_t> ChecksumBytes, uint8_t ChecksumKind);

@@ -3,9 +3,6 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; REQUIRES: asserts
-; XFAIL: *
-
 ; Test cases for PR60831.
 
 define void @test_invar_gep(ptr %dst) #0 {

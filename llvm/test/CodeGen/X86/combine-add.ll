@@ -245,7 +245,7 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ;
 ; AVX1-LABEL: PR52039:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = [10,10,10,10]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm0 = [10,10,10,10]
 ; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm2

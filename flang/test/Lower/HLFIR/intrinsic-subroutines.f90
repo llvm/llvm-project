@@ -1,7 +1,7 @@
 ! Test lowering of intrinsic subroutines to HLFIR what matters here
 ! is not to test each subroutine, but to check how their
 ! lowering interfaces with the rest of lowering.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_subroutine(x)
  real :: x

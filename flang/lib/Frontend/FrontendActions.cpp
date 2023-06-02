@@ -647,6 +647,34 @@ mapToLevel(const Fortran::frontend::CodeGenOptions &opts) {
   }
 }
 
+// Lower using HLFIR then run the FIR to HLFIR pipeline
+void CodeGenAction::lowerHLFIRToFIR() {
+  assert(mlirModule && "The MLIR module has not been generated yet.");
+
+  CompilerInstance &ci = this->getInstance();
+  auto opts = ci.getInvocation().getCodeGenOpts();
+  llvm::OptimizationLevel level = mapToLevel(opts);
+
+  fir::support::loadDialects(*mlirCtx);
+
+  // Set-up the MLIR pass manager
+  mlir::PassManager pm((*mlirModule)->getName(),
+                       mlir::OpPassManager::Nesting::Implicit);
+
+  pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
+  pm.enableVerifier(/*verifyPasses=*/true);
+
+  // Create the pass pipeline
+  fir::createHLFIRToFIRPassPipeline(pm, level);
+  (void)mlir::applyPassManagerCLOptions(pm);
+
+  if (!mlir::succeeded(pm.run(*mlirModule))) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Lowering to FIR failed");
+    ci.getDiagnostics().Report(diagID);
+  }
+}
+
 // Lower the previously generated MLIR module into an LLVM IR module
 void CodeGenAction::generateLLVMIR() {
   assert(mlirModule && "The MLIR module has not been generated yet.");
@@ -751,7 +779,9 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
   case BackendActionTy::Backend_EmitLL:
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"ll");
-  case BackendActionTy::Backend_EmitMLIR:
+  case BackendActionTy::Backend_EmitFIR:
+    LLVM_FALLTHROUGH;
+  case BackendActionTy::Backend_EmitHLFIR:
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"mlir");
   case BackendActionTy::Backend_EmitBC:
@@ -914,7 +944,17 @@ void CodeGenAction::executeAction() {
     }
   }
 
-  if (action == BackendActionTy::Backend_EmitMLIR) {
+  if (action == BackendActionTy::Backend_EmitFIR) {
+    if (ci.getInvocation().getLoweringOpts().getLowerToHighLevelFIR()) {
+      lowerHLFIRToFIR();
+    }
+    mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
+    return;
+  }
+
+  if (action == BackendActionTy::Backend_EmitHLFIR) {
+    assert(ci.getInvocation().getLoweringOpts().getLowerToHighLevelFIR() &&
+           "Lowering must have been configured to emit HLFIR");
     mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }

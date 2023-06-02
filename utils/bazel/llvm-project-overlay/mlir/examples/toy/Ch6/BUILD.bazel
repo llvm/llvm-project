@@ -106,7 +106,7 @@ cc_binary(
         "//mlir:ArithDialect",
         "//mlir:ArithToLLVM",
         "//mlir:BuiltinToLLVMIRTranslation",
-        "//mlir:CastOpInterfaces",
+        "//mlir:CastInterfaces",
         "//mlir:ControlFlowToLLVM",
         "//mlir:ExecutionEngine",
         "//mlir:ExecutionEngineUtils",

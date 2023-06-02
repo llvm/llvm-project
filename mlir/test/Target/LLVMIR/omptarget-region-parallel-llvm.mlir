@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-module attributes {omp.is_device = #omp.isdevice<is_device = false>} {
+module attributes {omp.is_device = false} {
   llvm.func @omp_target_region_() {
     %0 = llvm.mlir.constant(20 : i32) : i32
     %1 = llvm.mlir.constant(10 : i32) : i32

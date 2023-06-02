@@ -300,7 +300,7 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
   Register Op1 = getOrCreateVReg(*U.getOperand(1));
   Register Res = getOrCreateVReg(U);
-  uint16_t Flags = 0;
+  uint32_t Flags = 0;
   if (isa<Instruction>(U)) {
     const Instruction &I = cast<Instruction>(U);
     Flags = MachineInstr::copyFlagsFromInstruction(I);
@@ -314,7 +314,7 @@ bool IRTranslator::translateUnaryOp(unsigned Opcode, const User &U,
                                     MachineIRBuilder &MIRBuilder) {
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
-  uint16_t Flags = 0;
+  uint32_t Flags = 0;
   if (isa<Instruction>(U)) {
     const Instruction &I = cast<Instruction>(U);
     Flags = MachineInstr::copyFlagsFromInstruction(I);
@@ -345,7 +345,7 @@ bool IRTranslator::translateCompare(const User &U,
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
   else {
-    uint16_t Flags = 0;
+    uint32_t Flags = 0;
     if (CI)
       Flags = MachineInstr::copyFlagsFromInstruction(*CI);
     MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
@@ -1438,7 +1438,7 @@ bool IRTranslator::translateSelect(const User &U,
   ArrayRef<Register> Op0Regs = getOrCreateVRegs(*U.getOperand(1));
   ArrayRef<Register> Op1Regs = getOrCreateVRegs(*U.getOperand(2));
 
-  uint16_t Flags = 0;
+  uint32_t Flags = 0;
   if (const SelectInst *SI = dyn_cast<SelectInst>(&U))
     Flags = MachineInstr::copyFlagsFromInstruction(*SI);
 
@@ -1864,7 +1864,7 @@ bool IRTranslator::translateConstrainedFPIntrinsic(
   if (!Opcode)
     return false;
 
-  unsigned Flags = MachineInstr::copyFlagsFromInstruction(FPI);
+  uint32_t Flags = MachineInstr::copyFlagsFromInstruction(FPI);
   if (EB == fp::ExceptionBehavior::ebIgnore)
     Flags |= MachineInstr::NoFPExcept;
 
@@ -2370,7 +2370,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return CLI->lowerCall(MIRBuilder, Info);
   }
   case Intrinsic::fptrunc_round: {
-    unsigned Flags = MachineInstr::copyFlagsFromInstruction(CI);
+    uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
 
     // Convert the metadata argument to a constant integer
     Metadata *MD = cast<MetadataAsValue>(CI.getArgOperand(1))->getMetadata();

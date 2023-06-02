@@ -1254,8 +1254,8 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
   auto isDefUndef = [this] (const MachineInstr &In, RegisterRef DR) -> bool {
     // This instruction defines DR. Check if there is a use operand that
     // would make DR live on entry to the instruction.
-    for (const MachineOperand &Op : In.operands()) {
-      if (!Op.isReg() || Op.getReg() == 0 || !Op.isUse() || Op.isUndef())
+    for (const MachineOperand &Op : In.all_uses()) {
+      if (Op.getReg() == 0 || Op.isUndef())
         continue;
       RegisterRef UR = makeRegRef(Op);
       if (PRI.alias(DR, UR))

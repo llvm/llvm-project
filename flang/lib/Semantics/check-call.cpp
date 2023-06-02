@@ -196,7 +196,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     characteristics::TypeAndShape &actualType, bool isElemental,
     SemanticsContext &context, evaluate::FoldingContext &foldingContext,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
-    bool allowActualArgumentConversions) {
+    bool allowActualArgumentConversions,
+    const characteristics::Procedure &procedure) {
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{foldingContext.messages()};
@@ -628,6 +629,46 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
   }
+
+  // CUDA
+  if (!intrinsic &&
+      !dummy.attrs.test(characteristics::DummyDataObject::Attr::Value)) {
+    std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
+    if (const auto *actualObject{actualLastSymbol
+                ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
+                : nullptr}) {
+      actualDataAttr = actualObject->cudaDataAttr();
+    }
+    dummyDataAttr = dummy.cudaDataAttr;
+    // Treat MANAGED like DEVICE for nonallocatable nonpointer arguments to
+    // device subprograms
+    if (procedure.cudaSubprogramAttrs.value_or(
+            common::CUDASubprogramAttrs::Host) !=
+            common::CUDASubprogramAttrs::Host &&
+        !dummy.attrs.test(
+            characteristics::DummyDataObject::Attr::Allocatable) &&
+        !dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)) {
+      if (!dummyDataAttr || *dummyDataAttr == common::CUDADataAttr::Managed) {
+        dummyDataAttr = common::CUDADataAttr::Device;
+      }
+      if ((!actualDataAttr && FindCUDADeviceContext(scope)) ||
+          (actualDataAttr &&
+              *actualDataAttr == common::CUDADataAttr::Managed)) {
+        actualDataAttr = common::CUDADataAttr::Device;
+      }
+    }
+    if (!common::AreCompatibleCUDADataAttrs(
+            dummyDataAttr, actualDataAttr, dummy.ignoreTKR)) {
+      auto toStr{[](std::optional<common::CUDADataAttr> x) {
+        return x ? "ATTRIBUTES("s +
+                parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s
+                 : "no CUDA data attribute"s;
+      }};
+      messages.Say(
+          "%s has %s but its associated actual argument has %s"_err_en_US,
+          dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
+    }
+  }
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
@@ -819,7 +860,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                       object.type.Rank() == 0 && proc.IsElemental()};
                   CheckExplicitDataArg(object, dummyName, *expr, *type,
                       isElemental, context, foldingContext, scope, intrinsic,
-                      allowActualArgumentConversions);
+                      allowActualArgumentConversions, proc);
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     IsBOZLiteral(*expr)) {
                   // ok

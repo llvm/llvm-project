@@ -103,8 +103,10 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
     }
   }
 
-  S.Diag(loc, diag::warn_type_attribute_wrong_type) << name << WhichType
-    << type;
+  S.Diag(loc, attr.isRegularKeywordAttribute()
+                  ? diag::err_type_attribute_wrong_type
+                  : diag::warn_type_attribute_wrong_type)
+      << name << WhichType << type;
 }
 
 // objc_gc applies to Objective-C pointers or, otherwise, to the
@@ -126,6 +128,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_VectorCall:                                              \
   case ParsedAttr::AT_AArch64VectorPcs:                                        \
   case ParsedAttr::AT_AArch64SVEPcs:                                           \
+  case ParsedAttr::AT_ArmStreaming:                                            \
   case ParsedAttr::AT_AMDGPUKernelCall:                                        \
   case ParsedAttr::AT_MSABI:                                                   \
   case ParsedAttr::AT_SysVABI:                                                 \
@@ -684,7 +687,7 @@ static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
   for (ParsedAttr &attr : AttrsCopy) {
     // Do not distribute [[]] attributes. They have strict rules for what
     // they appertain to.
-    if (attr.isStandardAttributeSyntax())
+    if (attr.isStandardAttributeSyntax() || attr.isRegularKeywordAttribute())
       continue;
 
     switch (attr.getKind()) {
@@ -4895,8 +4898,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     // If we're supposed to infer nullability, do so now.
     if (inferNullability && !inferNullabilityInnerOnlyComplete) {
       ParsedAttr::Form form =
-          inferNullabilityCS ? ParsedAttr::Form::ContextSensitiveKeyword()
-                             : ParsedAttr::Form::Keyword(false /*IsAlignAs*/);
+          inferNullabilityCS
+              ? ParsedAttr::Form::ContextSensitiveKeyword()
+              : ParsedAttr::Form::Keyword(false /*IsAlignAs*/,
+                                          false /*IsRegularKeywordAttribute*/);
       ParsedAttr *nullabilityAttr = Pool.create(
           S.getNullabilityKeyword(*inferNullability), SourceRange(pointerLoc),
           nullptr, SourceLocation(), nullptr, 0, form);
@@ -7331,12 +7336,12 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   if (Attrs[attr::Ptr32] && Attrs[attr::Ptr64]) {
     S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
         << "'__ptr32'"
-        << "'__ptr64'";
+        << "'__ptr64'" << /*isRegularKeyword=*/0;
     return true;
   } else if (Attrs[attr::SPtr] && Attrs[attr::UPtr]) {
     S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
         << "'__sptr'"
-        << "'__uptr'";
+        << "'__uptr'" << /*isRegularKeyword=*/0;
     return true;
   }
 
@@ -7710,6 +7715,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<AArch64VectorPcsAttr>(Ctx, Attr);
   case ParsedAttr::AT_AArch64SVEPcs:
     return createSimpleAttr<AArch64SVEPcsAttr>(Ctx, Attr);
+  case ParsedAttr::AT_ArmStreaming:
+    return createSimpleAttr<ArmStreamingAttr>(Ctx, Attr);
   case ParsedAttr::AT_AMDGPUKernelCall:
     return createSimpleAttr<AMDGPUKernelCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_Pcs: {
@@ -7857,8 +7864,8 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     CallingConv CC = fn->getCallConv();
     if (CC == CC_X86FastCall) {
       S.Diag(attr.getLoc(), diag::err_attributes_are_not_compatible)
-        << FunctionType::getNameForCallConv(CC)
-        << "regparm";
+          << FunctionType::getNameForCallConv(CC) << "regparm"
+          << attr.isRegularKeywordAttribute();
       attr.setInvalid();
       return true;
     }
@@ -7937,8 +7944,9 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     // and the CCs don't match.
     if (S.getCallingConvAttributedType(type)) {
       S.Diag(attr.getLoc(), diag::err_attributes_are_not_compatible)
-        << FunctionType::getNameForCallConv(CC)
-        << FunctionType::getNameForCallConv(CCOld);
+          << FunctionType::getNameForCallConv(CC)
+          << FunctionType::getNameForCallConv(CCOld)
+          << attr.isRegularKeywordAttribute();
       attr.setInvalid();
       return true;
     }
@@ -7970,7 +7978,8 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   // Also diagnose fastcall with regparm.
   if (CC == CC_X86FastCall && fn->getHasRegParm()) {
     S.Diag(attr.getLoc(), diag::err_attributes_are_not_compatible)
-        << "regparm" << FunctionType::getNameForCallConv(CC_X86FastCall);
+        << "regparm" << FunctionType::getNameForCallConv(CC_X86FastCall)
+        << attr.isRegularKeywordAttribute();
     attr.setInvalid();
     return true;
   }
@@ -8331,7 +8340,7 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   unsigned VecSize = static_cast<unsigned>(RVVVectorSizeInBits.getZExtValue());
 
   ASTContext::BuiltinVectorTypeInfo Info =
-      S.Context.getBuiltinVectorTypeInfo(CurType->getAs<BuiltinType>());
+      S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
   unsigned EltSize = S.Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
 
@@ -8486,12 +8495,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     if (attr.isInvalid())
       continue;
 
-    if (attr.isStandardAttributeSyntax()) {
+    if (attr.isStandardAttributeSyntax() || attr.isRegularKeywordAttribute()) {
       // [[gnu::...]] attributes are treated as declaration attributes, so may
       // not appertain to a DeclaratorChunk. If we handle them as type
       // attributes, accept them in that position and diagnose the GCC
       // incompatibility.
       if (attr.isGNUScope()) {
+        assert(attr.isStandardAttributeSyntax());
         bool IsTypeAttr = attr.isTypeAttr();
         if (TAL == TAL_DeclChunk) {
           state.getSema().Diag(attr.getLoc(),
@@ -8519,9 +8529,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     switch (attr.getKind()) {
     default:
       // A [[]] attribute on a declarator chunk must appertain to a type.
-      if (attr.isStandardAttributeSyntax() && TAL == TAL_DeclChunk) {
+      if ((attr.isStandardAttributeSyntax() ||
+           attr.isRegularKeywordAttribute()) &&
+          TAL == TAL_DeclChunk) {
         state.getSema().Diag(attr.getLoc(), diag::err_attribute_not_type_attr)
-            << attr;
+            << attr << attr.isRegularKeywordAttribute();
         attr.setUsedAsTypeAttr();
       }
       break;
@@ -8702,7 +8714,8 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
       // Attributes with standard syntax have strict rules for what they
       // appertain to and hence should not use the "distribution" logic below.
-      if (attr.isStandardAttributeSyntax()) {
+      if (attr.isStandardAttributeSyntax() ||
+          attr.isRegularKeywordAttribute()) {
         if (!handleFunctionTypeAttr(state, attr, type)) {
           diagnoseBadTypeAttribute(state.getSema(), attr, type);
           attr.setInvalid();

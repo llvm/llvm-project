@@ -95,7 +95,15 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
   int exponentBits{R::bits - significandBits - 1};
   std::uint64_t maxExponent{(std::uint64_t{1} << exponentBits) - 1};
   MATCH(nan.Exponent(), maxExponent)(desc);
-  R inf{Word{maxExponent}.SHIFTL(significandBits)};
+  Word infWord{Word{maxExponent}.SHIFTL(significandBits)};
+  Word negInfWord{
+      Word{maxExponent}.SHIFTL(significandBits).IOR(Word::MASKL(1))};
+  if constexpr (kind == 10) { // x87
+    infWord = infWord.IBSET(63);
+    negInfWord = negInfWord.IBSET(63);
+  }
+  R inf{infWord};
+  R negInf{negInfWord};
   TEST(!inf.IsNegative())(desc);
   TEST(!inf.IsNotANumber())(desc);
   TEST(inf.IsInfinite())(desc);
@@ -106,7 +114,6 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
   TEST(minusZero.Compare(inf) == Relation::Less)(desc);
   TEST(nan.Compare(inf) == Relation::Unordered)(desc);
   TEST(inf.Compare(inf) == Relation::Equal)(desc);
-  R negInf{Word{maxExponent}.SHIFTL(significandBits).IOR(Word::MASKL(1))};
   TEST(negInf.IsNegative())(desc);
   TEST(!negInf.IsNotANumber())(desc);
   TEST(negInf.IsInfinite())(desc);

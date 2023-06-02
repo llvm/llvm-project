@@ -183,7 +183,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   }
 
   // Compute derived properties from the register classes.
-  computeRegisterProperties(STI.getRegisterInfo());
+  computeRegisterProperties(Subtarget.getRegisterInfo());
 
   setStackPointerRegisterToSaveRestore(LoongArch::R3);
 

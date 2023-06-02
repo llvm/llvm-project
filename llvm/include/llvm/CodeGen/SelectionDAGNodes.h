@@ -395,6 +395,8 @@ private:
   // negative "NoFPExcept" flag here (that defaults to true) makes the flag
   // intersection logic more straightforward.
   bool NoFPExcept : 1;
+  // Instructions with attached 'unpredictable' metadata on IR level.
+  bool Unpredictable : 1;
 
 public:
   /// Default constructor turns off all optimization flags.
@@ -402,7 +404,7 @@ public:
       : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false), NoNaNs(false),
         NoInfs(false), NoSignedZeros(false), AllowReciprocal(false),
         AllowContract(false), ApproximateFuncs(false),
-        AllowReassociation(false), NoFPExcept(false) {}
+        AllowReassociation(false), NoFPExcept(false), Unpredictable(false) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
@@ -427,6 +429,7 @@ public:
   void setApproximateFuncs(bool b) { ApproximateFuncs = b; }
   void setAllowReassociation(bool b) { AllowReassociation = b; }
   void setNoFPExcept(bool b) { NoFPExcept = b; }
+  void setUnpredictable(bool b) { Unpredictable = b; }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
@@ -440,6 +443,7 @@ public:
   bool hasApproximateFuncs() const { return ApproximateFuncs; }
   bool hasAllowReassociation() const { return AllowReassociation; }
   bool hasNoFPExcept() const { return NoFPExcept; }
+  bool hasUnpredictable() const { return Unpredictable; }
 
   /// Clear any flags in this flag set that aren't also set in Flags. All
   /// flags will be cleared if Flags are undefined.
@@ -455,6 +459,7 @@ public:
     ApproximateFuncs &= Flags.ApproximateFuncs;
     AllowReassociation &= Flags.AllowReassociation;
     NoFPExcept &= Flags.NoFPExcept;
+    Unpredictable &= Flags.Unpredictable;
   }
 };
 

@@ -710,7 +710,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     auto FID = SM.getFileID(Info.getLocation());
     if (const auto FE = SM.getFileEntryRefForID(FID)) {
       D.File = FE->getName().str();
-      D.AbsFile = getCanonicalPath(*FE, SM);
+      D.AbsFile = getCanonicalPath(*FE, SM.getFileManager());
     }
     D.ID = Info.getID();
     return D;

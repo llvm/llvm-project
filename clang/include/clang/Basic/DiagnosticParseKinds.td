@@ -733,10 +733,12 @@ def ext_using_attribute_ns : ExtWarn<
 def err_using_attribute_ns_conflict : Error<
   "attribute with scope specifier cannot follow default scope specifier">;
 def err_attributes_not_allowed : Error<"an attribute list cannot appear here">;
+def err_keyword_not_allowed : Error<"%0 cannot appear here">;
 def ext_cxx11_attr_placement : ExtWarn<
-  "ISO C++ does not allow an attribute list to appear here">,
+  "ISO C++ does not allow %select{an attribute list|%0}1 to appear here">,
   InGroup<DiagGroup<"cxx-attribute-extension">>;
 def err_attributes_misplaced : Error<"misplaced attributes; expected attributes here">;
+def err_keyword_misplaced : Error<"misplaced %0; expected %0 here">;
 def err_l_square_l_square_not_attribute : Error<
   "C++11 only allows consecutive left square brackets when "
   "introducing an attribute">;
@@ -1014,14 +1016,15 @@ def err_lambda_capture_multiple_ellipses : Error<
 def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
-  "an attribute specifier sequence in this position is a C++23 extension">,
-  InGroup<CXX23>;
+  "%select{an attribute specifier sequence|%0}1 in this position "
+  "is a C++23 extension">, InGroup<CXX23>;
 def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
   InGroup<CXX23>;
 def warn_cxx20_compat_decl_attrs_on_lambda : Warning<
-  "an attribute specifier sequence in this position is incompatible with C++ "
-  "standards before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
+  "%select{an attribute specifier sequence|%1}0 in this position "
+  "is incompatible with C++ standards before C++23">,
+  InGroup<CXXPre23Compat>, DefaultIgnore;
 
 // C++17 lambda expressions
 def err_expected_star_this_capture : Error<
@@ -1582,8 +1585,12 @@ def err_module_expected_ident : Error<
   "expected a module name after '%select{module|import}0'">;
 def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
+def err_keyword_not_module_attr : Error<
+  "%0 cannot be applied to a module">;
 def err_attribute_not_import_attr : Error<
   "%0 attribute cannot be applied to a module import">;
+def err_keyword_not_import_attr : Error<
+  "%0 cannot be applied to a module import">;
 def err_module_expected_semi : Error<
   "expected ';' after module name">;
 def err_global_module_introducer_not_at_start : Error<

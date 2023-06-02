@@ -9,6 +9,7 @@
 #ifndef STANDALONE_STANDALONEDIALECT_H
 #define STANDALONE_STANDALONEDIALECT_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/Dialect.h"
 
 #include "Standalone/StandaloneOpsDialect.h.inc"

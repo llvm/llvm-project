@@ -172,7 +172,7 @@ static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
 }
 
 KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
-                         bool NSW) {
+                         bool NSW, bool ShAmtNonZero) {
   unsigned BitWidth = LHS.getBitWidth();
   auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
     KnownBits Known;
@@ -198,6 +198,8 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
   // Fast path for a common case when LHS is completely unknown.
   KnownBits Known(BitWidth);
   unsigned MinShiftAmount = RHS.getMinValue().getLimitedValue(BitWidth);
+  if (MinShiftAmount == 0 && ShAmtNonZero)
+    MinShiftAmount = 1;
   if (LHS.isUnknown()) {
     Known.Zero.setLowBits(MinShiftAmount);
     if (NUW && NSW && MinShiftAmount != 0)
@@ -254,7 +256,8 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
   return Known;
 }
 
-KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
+KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
+                          bool ShAmtNonZero) {
   unsigned BitWidth = LHS.getBitWidth();
   auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
     KnownBits Known = LHS;
@@ -268,6 +271,8 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
   // Fast path for a common case when LHS is completely unknown.
   KnownBits Known(BitWidth);
   unsigned MinShiftAmount = RHS.getMinValue().getLimitedValue(BitWidth);
+  if (MinShiftAmount == 0 && ShAmtNonZero)
+    MinShiftAmount = 1;
   if (LHS.isUnknown()) {
     Known.Zero.setHighBits(MinShiftAmount);
     return Known;
@@ -297,7 +302,8 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
   return Known;
 }
 
-KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
+KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
+                          bool ShAmtNonZero) {
   unsigned BitWidth = LHS.getBitWidth();
   auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
     KnownBits Known = LHS;
@@ -309,6 +315,8 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
   // Fast path for a common case when LHS is completely unknown.
   KnownBits Known(BitWidth);
   unsigned MinShiftAmount = RHS.getMinValue().getLimitedValue(BitWidth);
+  if (MinShiftAmount == 0 && ShAmtNonZero)
+    MinShiftAmount = 1;
   if (LHS.isUnknown()) {
     if (MinShiftAmount == BitWidth) {
       // Always poison. Return zero because we don't like returning conflict.

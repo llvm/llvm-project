@@ -17,6 +17,7 @@ class ValueAPITestCase(TestBase):
         # Find the line number to of function 'c'.
         self.line = line_number("main.c", "// Break at this line")
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     def test(self):
         """Exercise some SBValue APIs."""
         d = {"EXE": self.exe_name}
