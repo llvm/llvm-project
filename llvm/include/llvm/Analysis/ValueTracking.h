@@ -38,7 +38,7 @@ struct KnownBits;
 class Loop;
 class LoopInfo;
 class MDNode;
-class SimplifyQuery;
+struct SimplifyQuery;
 class StringRef;
 class TargetLibraryInfo;
 class Value;
