@@ -117,6 +117,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s8, sMaxScalar)
       .scalarize(0);
 
+  // integer divisions
+  getActionDefinitionsBuilder({G_SDIV, G_SREM, G_UDIV, G_UREM})
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        return typeInSet(0, {s8, s16, s32})(Query) ||
+               (Is64Bit && typeInSet(0, {s64})(Query));
+      })
+      .clampScalar(0, s8, sMaxScalar);
+
   // bswap
   getActionDefinitionsBuilder(G_BSWAP)
       .legalIf([=](const LegalityQuery &Query) {
@@ -237,12 +245,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
         .widenScalarToNextPow2(0, /*Min*/ 8);
     getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
 
-    // Shifts and SDIV
-    getActionDefinitionsBuilder(
-        {G_SDIV, G_SREM, G_UDIV, G_UREM})
-      .legalFor({s8, s16, s32})
-      .clampScalar(0, s8, s32);
-
+    // Shifts
     getActionDefinitionsBuilder(
         {G_SHL, G_LSHR, G_ASHR})
       .legalFor({{s8, s8}, {s16, s8}, {s32, s8}})
@@ -353,12 +356,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
       .clampScalar(0, s8, s8)
       .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(1);
-
-  // Divisions
-  getActionDefinitionsBuilder(
-      {G_SDIV, G_SREM, G_UDIV, G_UREM})
-      .legalFor({s8, s16, s32, s64})
-      .clampScalar(0, s8, s64);
 
   // Shifts
   getActionDefinitionsBuilder(
