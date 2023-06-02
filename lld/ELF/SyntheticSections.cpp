@@ -1531,6 +1531,9 @@ DynamicSection<ELFT>::computeContents() {
     addInt(DT_PPC64_GLINK, in.plt->getVA() + target->pltHeaderSize - 32);
   }
 
+  if (config->emachine == EM_PPC64)
+    addInt(DT_PPC64_OPT, getPPC64TargetInfo()->ppc64DynamicSectionOpt);
+
   addInt(DT_NULL, 0);
   return entries;
 }
