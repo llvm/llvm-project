@@ -96,7 +96,7 @@ cc_binary(
         ":ToyOpsIncGen",
         "//llvm:Support",
         "//mlir:Analysis",
-        "//mlir:CastOpInterfaces",
+        "//mlir:CastInterfaces",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Pass",

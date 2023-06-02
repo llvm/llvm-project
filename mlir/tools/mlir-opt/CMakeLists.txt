@@ -53,6 +53,7 @@ set(LIBS
   ${test_libs}
   MLIRAffineAnalysis
   MLIRAnalysis
+  MLIRCastInterfaces
   MLIRDialect
   MLIROptLib
   MLIRParser

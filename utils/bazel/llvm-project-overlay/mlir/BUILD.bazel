@@ -304,7 +304,6 @@ cc_library(
     ]) + [
         "include/mlir/Bytecode/BytecodeImplementation.h",
         "include/mlir/Interfaces/CallInterfaces.h",
-        "include/mlir/Interfaces/CastInterfaces.h",
         "include/mlir/Interfaces/DataLayoutInterfaces.h",
         "include/mlir/Interfaces/FoldInterfaces.h",
         "include/mlir/Interfaces/SideEffectInterfaces.h",
@@ -320,7 +319,6 @@ cc_library(
         ":BuiltinTypeInterfacesIncGen",
         ":BuiltinTypesIncGen",
         ":CallOpInterfacesIncGen",
-        ":CastOpInterfacesIncGen",
         ":DataLayoutInterfacesIncGen",
         ":FunctionInterfacesIncGen",
         ":InferTypeOpInterfaceIncGen",
@@ -2865,6 +2863,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":CastInterfaces",
         ":EmitCAttributesIncGen",
         ":EmitCOpsIncGen",
         ":IR",
@@ -3454,6 +3453,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":BytecodeOpInterface",
+        ":CastInterfaces",
         ":ControlFlowInterfaces",
         ":Dialect",
         ":FuncDialect",
@@ -3647,7 +3647,7 @@ cc_library(
         ":ArithDialect",
         ":BytecodeOpInterface",
         ":CallOpInterfaces",
-        ":CastOpInterfaces",
+        ":CastInterfaces",
         ":CommonFolders",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
@@ -5867,7 +5867,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":BytecodeOpInterface",
-        ":CastOpInterfaces",
+        ":CastInterfaces",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
         ":DestinationStyleOpInterface",
@@ -6874,7 +6874,7 @@ cc_library(
 )
 
 gentbl_cc_library(
-    name = "CastOpInterfacesIncGen",
+    name = "CastInterfacesIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
         (
@@ -6892,12 +6892,12 @@ gentbl_cc_library(
 )
 
 cc_library(
-    name = "CastOpInterfaces",
+    name = "CastInterfaces",
     srcs = ["lib/Interfaces/CastInterfaces.cpp"],
     hdrs = ["include/mlir/Interfaces/CastInterfaces.h"],
     includes = ["include"],
     deps = [
-        ":CastOpInterfacesIncGen",
+        ":CastInterfacesIncGen",
         ":IR",
         "//llvm:Support",
     ],
@@ -7538,6 +7538,7 @@ cc_library(
         ":BufferizationDialect",
         ":BufferizationTransformOps",
         ":BufferizationTransforms",
+        ":CastInterfaces",
         ":ComplexDialect",
         ":ComplexToLLVM",
         ":ComplexToLibm",
@@ -8698,6 +8699,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":CastInterfaces",
         ":IR",
         ":IndexEnumsIncGen",
         ":IndexOpsIncGen",
@@ -10024,6 +10026,7 @@ cc_library(
         ":Analysis",
         ":BytecodeOpInterface",
         ":CallOpInterfaces",
+        ":CastInterfaces",
         ":ControlFlowInterfaces",
         ":IR",
         ":Rewrite",
@@ -10501,6 +10504,7 @@ cc_library(
         ":ArithOpsIncGen",
         ":ArithOpsInterfacesIncGen",
         ":BytecodeOpInterface",
+        ":CastInterfaces",
         ":CommonFolders",
         ":IR",
         ":InferIntRangeCommon",
@@ -10795,6 +10799,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":BytecodeOpInterface",
+        ":CastInterfaces",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
