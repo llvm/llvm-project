@@ -1371,7 +1371,9 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     if target is None or not target.IsValid():
         arch = crashlog.process_arch
         if not arch:
-            raise InteractiveCrashLogException("couldn't create find the architecture to create the target")
+            raise InteractiveCrashLogException(
+                "couldn't create find the architecture to create the target"
+            )
         target = debugger.CreateTargetWithFileAndArch(None, arch)
     # 4. Fail
     if target is None or not target.IsValid():
