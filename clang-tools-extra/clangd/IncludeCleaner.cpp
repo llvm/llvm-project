@@ -336,7 +336,7 @@ std::string spellHeader(ParsedAST &AST, const FileEntry *MainFile,
                         include_cleaner::Header Provider) {
   if (Provider.kind() == include_cleaner::Header::Physical) {
     if (auto CanonicalPath = getCanonicalPath(Provider.physical()->getLastRef(),
-                                              AST.getSourceManager())) {
+                                              AST.getSourceManager().getFileManager())) {
       std::string SpelledHeader =
           llvm::cantFail(URI::includeSpelling(URI::create(*CanonicalPath)));
       if (!SpelledHeader.empty())

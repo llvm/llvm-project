@@ -83,19 +83,27 @@ template <typename Config> static void testSecondaryBasic(void) {
 }
 
 struct NoCacheConfig {
-  typedef scudo::MapAllocatorNoCache SecondaryCache;
   static const bool MaySupportMemoryTagging = false;
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
 };
 
 struct TestConfig {
-  typedef scudo::MapAllocatorCache<TestConfig> SecondaryCache;
   static const bool MaySupportMemoryTagging = false;
-  static const scudo::u32 SecondaryCacheEntriesArraySize = 128U;
-  static const scudo::u32 SecondaryCacheQuarantineSize = 0U;
-  static const scudo::u32 SecondaryCacheDefaultMaxEntriesCount = 64U;
-  static const scudo::uptr SecondaryCacheDefaultMaxEntrySize = 1UL << 20;
-  static const scudo::s32 SecondaryCacheMinReleaseToOsIntervalMs = INT32_MIN;
-  static const scudo::s32 SecondaryCacheMaxReleaseToOsIntervalMs = INT32_MAX;
+  struct Secondary {
+    struct Cache {
+      static const scudo::u32 EntriesArraySize = 128U;
+      static const scudo::u32 QuarantineSize = 0U;
+      static const scudo::u32 DefaultMaxEntriesCount = 64U;
+      static const scudo::uptr DefaultMaxEntrySize = 1UL << 20;
+      static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+      static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    };
+
+    template <typename Config> using CacheT = scudo::MapAllocatorCache<Config>;
+  };
 };
 
 TEST(ScudoSecondaryTest, SecondaryBasic) {

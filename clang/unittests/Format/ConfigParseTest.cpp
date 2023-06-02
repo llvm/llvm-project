@@ -1022,6 +1022,23 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
             ParseError::Error);
 
   EXPECT_EQ(FormatStyle::LK_Cpp, Style.Language);
+
+  Style.Language = FormatStyle::LK_Verilog;
+  CHECK_PARSE("---\n"
+              "Language: Verilog\n"
+              "IndentWidth: 12\n"
+              "---\n"
+              "Language: Cpp\n"
+              "IndentWidth: 34\n"
+              "...\n",
+              IndentWidth, 12u);
+  CHECK_PARSE("---\n"
+              "IndentWidth: 78\n"
+              "---\n"
+              "Language: Verilog\n"
+              "IndentWidth: 56\n"
+              "...\n",
+              IndentWidth, 56u);
 }
 
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {

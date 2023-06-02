@@ -857,7 +857,6 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:TensorDialect",
-        "//mlir:TensorTransformOps",
         "//mlir:TensorTransforms",
         "//mlir:TransformDialect",
         "//mlir:Transforms",

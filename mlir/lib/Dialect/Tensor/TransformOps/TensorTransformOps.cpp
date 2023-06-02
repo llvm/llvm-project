@@ -15,50 +15,68 @@
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace tensor;
 
 //===----------------------------------------------------------------------===//
-// TrackingListener
+// FindPayloadReplacementOpInterface implementations
 //===----------------------------------------------------------------------===//
 
-Operation *
-tensor::TrackingListener::findReplacementOp(Operation *op,
-                                            ValueRange newValues) const {
-  SmallVector<Value> values(newValues.begin(), newValues.end());
-  do {
-    if (Operation *replacement =
-            transform::TrackingListener::findReplacementOp(op, values))
-      return replacement;
+namespace {
+struct ExtractSliceOpReplacementInterface
+    : public transform::FindPayloadReplacementOpInterface::ExternalModel<
+          ExtractSliceOpReplacementInterface, tensor::ExtractSliceOp> {
+  SmallVector<Value> getNextOperands(Operation *op) const {
+    auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
+    if (!isCastLikeExtractSliceOp(extractSliceOp))
+      return {};
+    return {extractSliceOp.getSource()};
+  }
+};
 
-    Operation *defOp = getCommonDefiningOp(values);
-    if (!defOp)
-      return nullptr;
+struct InsertSliceOpReplacementInterface
+    : public transform::FindPayloadReplacementOpInterface::ExternalModel<
+          InsertSliceOpReplacementInterface, tensor::InsertSliceOp> {
+  SmallVector<Value> getNextOperands(Operation *op) const {
+    auto insertSliceOp = cast<tensor::InsertSliceOp>(op);
+    if (!isCastLikeInsertSliceOp(insertSliceOp))
+      return {};
+    return {insertSliceOp.getSource()};
+  }
+};
 
-    // Skip cast-like operations.
-    values.clear();
-    llvm::TypeSwitch<Operation *>(defOp)
-        .Case<CastOp>([&](CastOp op) { values.push_back(op.getSource()); })
-        .Case<CollapseShapeOp>(
-            [&](CollapseShapeOp op) { values.push_back(op.getSrc()); })
-        .Case<ExpandShapeOp>(
-            [&](ExpandShapeOp op) { values.push_back(op.getSrc()); })
-        .Case<ReshapeOp>(
-            [&](ReshapeOp op) { values.push_back(op.getSource()); })
-        .Case<InsertSliceOp>([&](InsertSliceOp op) {
-          if (isCastLikeInsertSliceOp(op))
-            values.push_back(op.getSource());
-        })
-        .Case<ExtractSliceOp>([&](ExtractSliceOp op) {
-          if (isCastLikeExtractSliceOp(op))
-            values.push_back(op.getSource());
-        })
-        .Default([](Operation *op) {});
-  } while (!values.empty());
+struct ReshapeOpReplacementInterface
+    : public transform::FindPayloadReplacementOpInterface::ExternalModel<
+          ReshapeOpReplacementInterface, tensor::ReshapeOp> {
+  SmallVector<Value> getNextOperands(Operation *op) const {
+    auto reshapeOp = cast<tensor::ReshapeOp>(op);
+    return {reshapeOp.getSource()};
+  }
+};
 
-  return nullptr;
+template <typename ConcreteOp>
+struct ReassociativeReshapeOpReplacementInterface
+    : public transform::FindPayloadReplacementOpInterface::ExternalModel<
+          ReassociativeReshapeOpReplacementInterface<ConcreteOp>, ConcreteOp> {
+  SmallVector<Value> getNextOperands(Operation *op) const {
+    auto reshapeOp = cast<ConcreteOp>(op);
+    return {reshapeOp.getSrc()};
+  }
+};
+} // namespace
+
+void tensor::registerFindPayloadReplacementOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
+    CollapseShapeOp::attachInterface<
+        ReassociativeReshapeOpReplacementInterface<CollapseShapeOp>>(*ctx);
+    ExpandShapeOp::attachInterface<
+        ReassociativeReshapeOpReplacementInterface<ExpandShapeOp>>(*ctx);
+    ExtractSliceOp::attachInterface<ExtractSliceOpReplacementInterface>(*ctx);
+    InsertSliceOp::attachInterface<InsertSliceOpReplacementInterface>(*ctx);
+    ReshapeOp::attachInterface<ReshapeOpReplacementInterface>(*ctx);
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -126,6 +144,26 @@ public:
 #define GET_OP_LIST
 #include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.cpp.inc"
         >();
+
+    addDialectDataInitializer<transform::PatternRegistry>(
+        [&](transform::PatternRegistry &registry) {
+          registry.registerPatterns("tensor.fold_tensor_subset_ops",
+                                    tensor::populateFoldTensorSubsetOpPatterns);
+          registry.registerPatterns(
+              "tensor.merge_consecutive_insert_extract_slice",
+              tensor::populateMergeConsecutiveInsertExtractSlicePatterns);
+          registry.registerPatterns(
+              "tensor.drop_redundant_insert_slice_rank_expansion",
+              tensor::populateDropRedundantInsertSliceRankExpansionPatterns);
+          registry.registerPatterns(
+              "tensor.reassociative_reshape_folding",
+              tensor::populateReassociativeReshapeFoldingPatterns);
+          registry.registerPatterns("tensor.fold_tensor_empty",
+                                    tensor::populateFoldTensorEmptyPatterns);
+          registry.registerPatterns(
+              "tensor.fold_into_pack_and_unpack",
+              tensor::populateFoldIntoPackAndUnpackPatterns);
+        });
   }
 };
 } // namespace
