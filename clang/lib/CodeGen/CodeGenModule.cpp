@@ -7258,6 +7258,13 @@ public:
       NoLoopCheckStatus = CodeGenModule::NxNestedOmpParallelDirective;
       // No need to continue visiting any more
       return;
+    } else if (D->getDirectiveKind() == llvm::omp::Directive::OMPD_loop) {
+      if (const auto *C = D->getSingleClause<OMPBindClause>())
+        if (C->getBindKind() == OMPC_BIND_parallel) {
+          NoLoopCheckStatus = CodeGenModule::NxNestedOmpParallelDirective;
+          // No need to continue visiting any more
+          return;
+        }
     }
     for (const Stmt *Child : D->children())
       if (Child)
@@ -8128,6 +8135,31 @@ CodeGenModule::checkTargetTeamsNest(const OMPExecutableDirective &D,
   llvm_unreachable("Unexpected OpenMP clause");
 }
 
+bool
+CodeGenModule::canBeParallelFor(const OMPExecutableDirective &D) {
+  NoLoopXteamErr NxStatus = NxSuccess;
+
+  OptKernelNestDirectives NestDirs;
+  if ((NxStatus = checkNest(D, &NestDirs)))
+    return false;
+
+  // Make sure CodeGen can handle the FOR statement
+  if (!D.hasAssociatedStmt())
+    return false;
+
+  const OMPExecutableDirective &InnermostDir = *NestDirs.back();
+  if (!InnermostDir.hasAssociatedStmt())
+    return false;
+
+  std::pair<NoLoopXteamErr, bool> ForStmtStatus =
+      getNoLoopForStmtStatus(InnermostDir, InnermostDir.getAssociatedStmt());
+  if ((NxStatus = ForStmtStatus.first))
+    return false;
+
+  bool HasNestedGenericCall = ForStmtStatus.second;
+  return !HasNestedGenericCall;
+}
+
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   NoLoopXteamErr NxStatus = NxSuccess;
@@ -8189,8 +8221,7 @@ CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   }
 
   if (((getLangOpts().OpenMPNoNestedParallelism &&
-        getLangOpts().OpenMPNoThreadState) ||
-       !HasNestedGenericCall) &&
+        getLangOpts().OpenMPNoThreadState) || !HasNestedGenericCall) &&
       getLangOpts().OpenMPTargetBigJumpLoop) {
     assert(!isBigJumpLoopKernel(FStmt) && "Big-Jump-Loop already set!");
 

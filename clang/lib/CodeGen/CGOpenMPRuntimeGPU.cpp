@@ -669,8 +669,10 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target_simd:
   case OMPD_target_teams_distribute_simd:
     return true;
-  case OMPD_target_teams_loop:  // treated like 'target teams distribute'
   case OMPD_target_teams_distribute:
+    return false;
+  // Presumed not to support SPMD unless it turns out to be no-loop kernel.
+  case OMPD_target_teams_loop:
     return false;
   case OMPD_parallel:
   case OMPD_for:
@@ -931,7 +933,6 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
   case OMPD_target_simd:
   case OMPD_target_teams_distribute_simd:
     return true;
-  case OMPD_target_teams_loop:  // treated like 'target teams distribute'
   case OMPD_target_teams_distribute:
     return false;
   case OMPD_parallel:

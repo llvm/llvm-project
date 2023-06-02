@@ -1705,6 +1705,7 @@ public:
   /// construct, there are no intermediate statements. Used for a combined
   /// construct
   NoLoopXteamErr checkAndSetNoLoopKernel(const OMPExecutableDirective &D);
+  bool canBeParallelFor(const OMPExecutableDirective &D);
 
   /// Given a top-level target construct for no-loop codegen, get the
   /// intermediate OpenMP constructs
