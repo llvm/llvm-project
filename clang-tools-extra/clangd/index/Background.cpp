@@ -291,7 +291,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
     const auto F = SM.getFileEntryRefForID(FID);
     if (!F)
       return false; // Skip invalid files.
-    auto AbsPath = getCanonicalPath(*F, SM);
+    auto AbsPath = getCanonicalPath(*F, SM.getFileManager());
     if (!AbsPath)
       return false; // Skip files without absolute path.
     auto Digest = digestFile(SM, FID);
