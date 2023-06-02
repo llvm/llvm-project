@@ -16,6 +16,7 @@
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -30,6 +31,8 @@
 #define DEBUG_MATCHER(x) DEBUG_WITH_TYPE(DEBUG_TYPE_MATCHER, x)
 
 using namespace mlir;
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::transform::PatternRegistry)
 
 static ParseResult parseSequenceOpOperands(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &root,
@@ -173,6 +176,62 @@ void transform::TrackingListener::notifyOperationReplaced(
   if (!replacement)
     notifyPayloadReplacementNotFound(op, newValues);
   (void)replacePayloadOp(op, replacement);
+}
+
+transform::ErrorCheckingTrackingListener::~ErrorCheckingTrackingListener() {
+  // The state of the ErrorCheckingTrackingListener must be checked and reset
+  // if there was an error. This is to prevent errors from accidentally being
+  // missed.
+  assert(status.succeeded() && "listener state was not checked");
+}
+
+DiagnosedSilenceableFailure
+transform::ErrorCheckingTrackingListener::checkAndResetError() {
+  DiagnosedSilenceableFailure s = std::move(status);
+  status = DiagnosedSilenceableFailure::success();
+  errorCounter = 0;
+  return s;
+}
+
+bool transform::ErrorCheckingTrackingListener::failed() const {
+  return !status.succeeded();
+}
+
+void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
+    Operation *op, ValueRange values) {
+  if (status.succeeded()) {
+    status = emitSilenceableFailure(
+        getTransformOp(), "tracking listener failed to find replacement op");
+  }
+
+  status.attachNote(op->getLoc()) << "[" << errorCounter << "] replaced op";
+  for (auto &&[index, value] : llvm::enumerate(values))
+    status.attachNote(value.getLoc())
+        << "[" << errorCounter << "] replacement value " << index;
+
+  ++errorCounter;
+}
+
+//===----------------------------------------------------------------------===//
+// PatternRegistry
+//===----------------------------------------------------------------------===//
+
+void transform::PatternRegistry::registerPatterns(StringRef identifier,
+                                                  PopulatePatternsFn &&fn) {
+  StringAttr attr = builder.getStringAttr(identifier);
+  assert(!patterns.contains(attr) && "patterns identifier is already in use");
+  patterns.try_emplace(attr, std::move(fn));
+}
+
+void transform::PatternRegistry::populatePatterns(
+    StringAttr identifier, RewritePatternSet &patternSet) const {
+  auto it = patterns.find(identifier);
+  assert(it != patterns.end() && "patterns not registered in registry");
+  it->second(patternSet);
+}
+
+bool transform::PatternRegistry::hasPatterns(StringAttr identifier) const {
+  return patterns.contains(identifier);
 }
 
 //===----------------------------------------------------------------------===//
@@ -354,6 +413,77 @@ void transform::AnnotateOp::getEffects(
   onlyReadsHandle(getTarget(), effects);
   onlyReadsHandle(getParam(), effects);
   modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ApplyPatternsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ApplyPatternsOp::applyToOne(Operation *target,
+                                       ApplyToEachResultList &results,
+                                       transform::TransformState &state) {
+  // Gather all specified patterns.
+  MLIRContext *ctx = target->getContext();
+  RewritePatternSet patterns(ctx);
+  const auto &registry = getContext()
+                             ->getLoadedDialect<transform::TransformDialect>()
+                             ->getExtraData<transform::PatternRegistry>();
+  for (Attribute attr : getPatterns())
+    registry.populatePatterns(attr.cast<StringAttr>(), patterns);
+
+  // Configure the GreedyPatternRewriteDriver.
+  ErrorCheckingTrackingListener listener(state, *this);
+  GreedyRewriteConfig config;
+  config.listener = &listener;
+
+  // Manually gather list of ops because the other GreedyPatternRewriteDriver
+  // overloads only accepts ops that are isolated from above. This way, patterns
+  // can be applied to ops that are not isolated from above.
+  SmallVector<Operation *> ops;
+  target->walk([&](Operation *nestedOp) {
+    if (target != nestedOp)
+      ops.push_back(nestedOp);
+  });
+  LogicalResult result =
+      applyOpPatternsAndFold(ops, std::move(patterns), config);
+  // A failure typically indicates that the pattern application did not
+  // converge.
+  if (failed(result)) {
+    return emitSilenceableFailure(target)
+           << "greedy pattern application failed";
+  }
+
+  // Check listener state for tracking errors.
+  if (listener.failed()) {
+    DiagnosedSilenceableFailure status = listener.checkAndResetError();
+    if (getFailOnPayloadReplacementNotFound())
+      return status;
+    (void)status.silence();
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+LogicalResult transform::ApplyPatternsOp::verify() {
+  const auto &registry = getContext()
+                             ->getLoadedDialect<transform::TransformDialect>()
+                             ->getExtraData<transform::PatternRegistry>();
+  for (Attribute attr : getPatterns()) {
+    auto strAttr = attr.dyn_cast<StringAttr>();
+    if (!strAttr)
+      return emitOpError() << "expected " << getPatternsAttrName()
+                           << " to be an array of strings";
+    if (!registry.hasPatterns(strAttr))
+      return emitOpError() << "patterns not registered: " << strAttr.strref();
+  }
+  return success();
+}
+
+void transform::ApplyPatternsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
