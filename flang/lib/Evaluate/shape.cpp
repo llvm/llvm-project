@@ -902,18 +902,18 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
           if (maskShape->size() == 0) {
             // Scalar MASK= -> [MERGE(SIZE(ARRAY=), 0, mask)]
             if (auto arrayShape{(*this)(call.arguments().at(0))}) {
-              auto arraySize{GetSize(std::move(*arrayShape))};
-              CHECK(arraySize);
-              ActualArguments toMerge{
-                  ActualArgument{AsGenericExpr(std::move(*arraySize))},
-                  ActualArgument{AsGenericExpr(ExtentExpr{0})},
-                  common::Clone(call.arguments().at(1))};
-              auto specific{context_->intrinsics().Probe(
-                  CallCharacteristics{"merge"}, toMerge, *context_)};
-              CHECK(specific);
-              return Shape{ExtentExpr{FunctionRef<ExtentType>{
-                  ProcedureDesignator{std::move(specific->specificIntrinsic)},
-                  std::move(specific->arguments)}}};
+              if (auto arraySize{GetSize(std::move(*arrayShape))}) {
+                ActualArguments toMerge{
+                    ActualArgument{AsGenericExpr(std::move(*arraySize))},
+                    ActualArgument{AsGenericExpr(ExtentExpr{0})},
+                    common::Clone(call.arguments().at(1))};
+                auto specific{context_->intrinsics().Probe(
+                    CallCharacteristics{"merge"}, toMerge, *context_)};
+                CHECK(specific);
+                return Shape{ExtentExpr{FunctionRef<ExtentType>{
+                    ProcedureDesignator{std::move(specific->specificIntrinsic)},
+                    std::move(specific->arguments)}}};
+              }
             }
           } else {
             // Non-scalar MASK= -> [COUNT(mask)]
