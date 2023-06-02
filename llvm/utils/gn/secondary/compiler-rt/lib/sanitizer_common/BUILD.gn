@@ -43,6 +43,7 @@ source_set("sources") {
     "sanitizer_common.cpp",
     "sanitizer_common.h",
     "sanitizer_common_libcdep.cpp",
+    "sanitizer_common_range.cpp",
     "sanitizer_coverage_fuchsia.cpp",
     "sanitizer_coverage_libcdep_new.cpp",
     "sanitizer_coverage_win_sections.cpp",
