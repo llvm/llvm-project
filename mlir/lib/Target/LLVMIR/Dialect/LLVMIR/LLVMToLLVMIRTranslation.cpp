@@ -186,6 +186,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         convertBranchWeights(callOp.getBranchWeights(), moduleTranslation);
     if (branchWeights)
       call->setMetadata(llvm::LLVMContext::MD_prof, branchWeights);
+    moduleTranslation.setAccessGroupsMetadata(callOp, call);
+    moduleTranslation.setAliasScopeMetadata(callOp, call);
+    moduleTranslation.setTBAAMetadata(callOp, call);
     // If the called function has a result, remap the corresponding value.  Note
     // that LLVM IR dialect CallOp has either 0 or 1 result.
     if (opInst.getNumResults() != 0) {

@@ -745,12 +745,11 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ; RV32-LMULMAX8:       # %bb.0:
 ; RV32-LMULMAX8-NEXT:    lui a0, 748388
 ; RV32-LMULMAX8-NEXT:    addi a0, a0, -1793
-; RV32-LMULMAX8-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-LMULMAX8-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; RV32-LMULMAX8-NEXT:    vmv.s.x v8, a0
 ; RV32-LMULMAX8-NEXT:    lui a0, 748384
 ; RV32-LMULMAX8-NEXT:    addi a0, a0, 1776
 ; RV32-LMULMAX8-NEXT:    vmv.s.x v0, a0
-; RV32-LMULMAX8-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; RV32-LMULMAX8-NEXT:    vslideup.vi v0, v8, 1
 ; RV32-LMULMAX8-NEXT:    lui a0, 551776
 ; RV32-LMULMAX8-NEXT:    addi a0, a0, 1776

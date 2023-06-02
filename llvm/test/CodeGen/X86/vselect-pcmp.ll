@@ -531,7 +531,8 @@ define <4 x i64> @blend_splat1_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x 
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vpsllq $63, %xmm3, %xmm3
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
+; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
+; XOP-NEXT:    # xmm4 = mem[0,0]
 ; XOP-NEXT:    vpshaq %xmm4, %xmm3, %xmm3
 ; XOP-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; XOP-NEXT:    vpshaq %xmm4, %xmm0, %xmm0
@@ -860,7 +861,8 @@ define <4 x i64> @blend_splat_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vpsllq $62, %xmm3, %xmm3
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
+; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
+; XOP-NEXT:    # xmm4 = mem[0,0]
 ; XOP-NEXT:    vpshaq %xmm4, %xmm3, %xmm3
 ; XOP-NEXT:    vpsllq $62, %xmm0, %xmm0
 ; XOP-NEXT:    vpshaq %xmm4, %xmm0, %xmm0

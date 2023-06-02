@@ -314,6 +314,11 @@ Improvements to Clang's diagnostics
   is an incomplete type.
   (`#55175: <https://github.com/llvm/llvm-project/issues/55175>`_, and fixes an
   incorrect mention of ``alignof`` in a diagnostic about ``alignas``).
+- Clang will now show a margin with line numbers to the left of each line
+  of code it prints for diagnostics. This can be disabled using
+  ``-fno-diagnostics-show-line-numbers``. At the same time, the maximum
+  number of code lines it prints has been increased from 1 to 16. This
+  can be controlled using ``-fcaret-diagnostics-max-lines=``.
 
 Bug Fixes in This Version
 -------------------------
@@ -455,6 +460,9 @@ Bug Fixes in This Version
 - Fix crash when diagnosing default comparison method.
   (`#62791 <https://github.com/llvm/llvm-project/issues/62791>`_) and
   (`#62102 <https://github.com/llvm/llvm-project/issues/62102>`_).
+- Fix crash when passing a braced initializer list to a parentehsized aggregate
+  initialization expression.
+  (`#63008 <https://github.com/llvm/llvm-project/issues/63008>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

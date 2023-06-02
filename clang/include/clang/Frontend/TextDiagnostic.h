@@ -103,7 +103,8 @@ private:
                            SmallVectorImpl<CharSourceRange> &Ranges,
                            ArrayRef<FixItHint> Hints);
 
-  void emitSnippet(StringRef SourceLine);
+  void emitSnippet(StringRef SourceLine, unsigned MaxLineNoDisplayWidth,
+                   unsigned LineNo);
 
   void emitParseableFixits(ArrayRef<FixItHint> Hints, const SourceManager &SM);
 };

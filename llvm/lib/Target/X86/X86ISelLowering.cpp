@@ -7452,6 +7452,8 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
       if (CollectConstantBits(C, SrcEltBits[0], UndefSrcElts, 0)) {
         if (UndefSrcElts[0])
           UndefSrcElts.setBits(0, NumSrcElts);
+        if (SrcEltBits[0].getBitWidth() != SrcEltSizeInBits)
+          SrcEltBits[0] = SrcEltBits[0].trunc(SrcEltSizeInBits);
         SrcEltBits.append(NumSrcElts - 1, SrcEltBits[0]);
         return CastBitData(UndefSrcElts, SrcEltBits);
       }

@@ -176,9 +176,6 @@
 /* Define to 1 if you have the <signal.h> header file. */
 #cmakedefine HAVE_SIGNAL_H ${HAVE_SIGNAL_H}
 
-/* Define to 1 if you have the `strerror' function. */
-#cmakedefine HAVE_STRERROR ${HAVE_STRERROR}
-
 /* Define to 1 if you have the `strerror_r' function. */
 #cmakedefine HAVE_STRERROR_R ${HAVE_STRERROR_R}
 

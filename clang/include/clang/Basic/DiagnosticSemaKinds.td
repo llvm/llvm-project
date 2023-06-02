@@ -3022,7 +3022,7 @@ def err_musttail_no_variadic : Error<
 def err_nsobject_attribute : Error<
   "'NSObject' attribute is for pointer types only">;
 def err_attributes_are_not_compatible : Error<
-  "%0 and %1 attributes are not compatible">;
+  "%0 and %1%select{ attributes|}2 are not compatible">;
 def err_attribute_invalid_argument : Error<
   "%select{a reference type|an array type|a non-vector or "
   "non-vectorizable scalar type}0 is an invalid argument to attribute %1">;
@@ -3430,9 +3430,9 @@ def warn_attribute_has_no_effect_on_compile_time_if : Warning<
 def note_attribute_has_no_effect_on_compile_time_if_here : Note<
   "annotating the 'if %select{constexpr|consteval}0' statement here">;
 def err_decl_attribute_invalid_on_stmt : Error<
-  "%0 attribute cannot be applied to a statement">;
+  "%0%select{ attribute|}1 cannot be applied to a statement">;
 def err_attribute_invalid_on_decl : Error<
-  "%0 attribute cannot be applied to a declaration">;
+  "%0%select{ attribute|}1 cannot be applied to a declaration">;
 def warn_type_attribute_deprecated_on_decl : Warning<
   "applying attribute %0 to a declaration is deprecated; apply it to the type instead">,
   InGroup<DeprecatedAttributes>;
@@ -3440,6 +3440,10 @@ def warn_declspec_attribute_ignored : Warning<
   "attribute %0 is ignored, place it after "
   "\"%select{class|struct|interface|union|enum|enum class|enum struct}1\" to apply attribute to "
   "type declaration">, InGroup<IgnoredAttributes>;
+def err_declspec_keyword_has_no_effect : Error<
+  "%0 cannot appear here, place it after "
+  "\"%select{class|struct|interface|union|enum}1\" to apply it to the "
+  "type declaration">;
 def warn_attribute_precede_definition : Warning<
   "attribute declaration must precede definition">,
   InGroup<IgnoredAttributes>;
@@ -3538,11 +3542,11 @@ def err_attribute_weakref_without_alias : Error<
 def err_alias_not_supported_on_darwin : Error <
   "aliases are not supported on darwin">;
 def warn_attribute_wrong_decl_type_str : Warning<
-  "%0 attribute only applies to %1">, InGroup<IgnoredAttributes>;
+  "%0%select{ attribute|}1 only applies to %2">, InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type_str : Error<
   warn_attribute_wrong_decl_type_str.Summary>;
 def warn_attribute_wrong_decl_type : Warning<
-  "%0 attribute only applies to %select{"
+  "%0%select{ attribute|}1 only applies to %select{"
   "functions"
   "|unions"
   "|variables and functions"
@@ -3555,13 +3559,15 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|variables, functions and classes"
   "|kernel functions"
-  "|non-K&R-style functions}1">,
+  "|non-K&R-style functions}2">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Summary>;
 def warn_type_attribute_wrong_type : Warning<
   "'%0' only applies to %select{function|pointer|"
   "Objective-C object or block pointer}1 types; type here is %2">,
   InGroup<IgnoredAttributes>;
+def err_type_attribute_wrong_type : Error<
+  warn_type_attribute_wrong_type.Summary>;
 def warn_incomplete_encoded_type : Warning<
   "encoding of %0 type is incomplete because %1 component has unknown encoding">,
   InGroup<DiagGroup<"encode-type">>;
@@ -3612,7 +3618,7 @@ def err_invalid_pcs : Error<"invalid PCS type">;
 def warn_attribute_not_on_decl : Warning<
   "%0 attribute ignored when parsing type">, InGroup<IgnoredAttributes>;
 def err_base_specifier_attribute : Error<
-  "%0 attribute cannot be applied to a base specifier">;
+  "%0%select{ attribute|}1 cannot be applied to a base specifier">;
 def warn_declspec_allocator_nonpointer : Warning<
   "ignoring __declspec(allocator) because the function return type %0 is not "
   "a pointer or reference type">, InGroup<IgnoredAttributes>;
@@ -8523,6 +8529,9 @@ def err_atomic_op_needs_atomic_int_ptr_or_fp : Error<
 def err_atomic_op_needs_atomic_int_or_ptr : Error<
   "address argument to atomic operation must be a pointer to %select{|atomic }0"
   "integer or pointer (%1 invalid)">;
+def err_atomic_op_needs_atomic_int_or_fp : Error<
+  "address argument to atomic operation must be a pointer to %select{|atomic }0"
+  "integer or supported floating point type (%1 invalid)">;
 def err_atomic_op_needs_atomic_int : Error<
   "address argument to atomic operation must be a pointer to "
   "%select{|atomic }0integer (%1 invalid)">;

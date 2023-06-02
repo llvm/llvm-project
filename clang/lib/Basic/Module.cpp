@@ -483,15 +483,15 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "\n";
   }
 
-  if (Header H = getUmbrellaHeaderAsWritten()) {
+  if (std::optional<Header> H = getUmbrellaHeaderAsWritten()) {
     OS.indent(Indent + 2);
     OS << "umbrella header \"";
-    OS.write_escaped(H.NameAsWritten);
+    OS.write_escaped(H->NameAsWritten);
     OS << "\"\n";
-  } else if (DirectoryName D = getUmbrellaDirAsWritten()) {
+  } else if (std::optional<DirectoryName> D = getUmbrellaDirAsWritten()) {
     OS.indent(Indent + 2);
     OS << "umbrella \"";
-    OS.write_escaped(D.NameAsWritten);
+    OS.write_escaped(D->NameAsWritten);
     OS << "\"\n";
   }
 
@@ -523,8 +523,8 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
       OS.indent(Indent + 2);
       OS << K.Prefix << "header \"";
       OS.write_escaped(H.NameAsWritten);
-      OS << "\" { size " << H.Entry->getSize()
-         << " mtime " << H.Entry->getModificationTime() << " }\n";
+      OS << "\" { size " << H.Entry.getSize()
+         << " mtime " << H.Entry.getModificationTime() << " }\n";
     }
   }
   for (auto *Unresolved : {&UnresolvedHeaders, &MissingHeaders}) {

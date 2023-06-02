@@ -369,6 +369,7 @@ void tools::AddTargetFeature(const ArgList &Args,
 /// Get the (LLVM) name of the AMDGPU gpu we are targeting.
 static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
                                       const ArgList &Args) {
+  Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
   Arg *A = Args.getLastArg(options::OPT_mcpu_EQ);
   if (!A)
     A = Args.getLastArg(options::OPT_march_EQ);
@@ -386,9 +387,8 @@ static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
         .Case("aruba", "cayman")
         .Default(GPUName.str());
   }
-  if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    return getProcessorFromTargetID(T, A->getValue()).str();
-  }
+  if (MArch)
+    return getProcessorFromTargetID(T, MArch->getValue()).str();
   return "";
 }
 

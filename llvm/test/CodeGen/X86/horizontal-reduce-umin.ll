@@ -113,7 +113,8 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X64-AVX1-LABEL: test_reduce_v2i64:
 ; X64-AVX1:       ## %bb.0:
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; X64-AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; X64-AVX1-NEXT:    ## xmm2 = mem[0,0]
 ; X64-AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm3
 ; X64-AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm2
 ; X64-AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
@@ -561,7 +562,8 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) {
 ;
 ; X64-AVX1-LABEL: test_reduce_v4i64:
 ; X64-AVX1:       ## %bb.0:
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; X64-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; X64-AVX1-NEXT:    ## xmm1 = mem[0,0]
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm2
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm3, %xmm4
@@ -1285,7 +1287,8 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X64-AVX1-LABEL: test_reduce_v8i64:
 ; X64-AVX1:       ## %bb.0:
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; X64-AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
+; X64-AVX1-NEXT:    ## xmm3 = mem[0,0]
 ; X64-AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm4
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; X64-AVX1-NEXT:    vpxor %xmm3, %xmm5, %xmm6

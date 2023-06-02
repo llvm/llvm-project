@@ -1703,10 +1703,12 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       if (!IAA)
         return Sema::TDK_NonDeducedMismatch;
 
+      const auto *IAP = S.Context.getAsIncompleteArrayType(P);
+      assert(IAP && "Template parameter not of incomplete array type");
+
       return DeduceTemplateArgumentsByTypeMatch(
-          S, TemplateParams,
-          S.Context.getAsIncompleteArrayType(P)->getElementType(),
-          IAA->getElementType(), Info, Deduced, TDF & TDF_IgnoreQualifiers);
+          S, TemplateParams, IAP->getElementType(), IAA->getElementType(), Info,
+          Deduced, TDF & TDF_IgnoreQualifiers);
     }
 
     //     T [integer-constant]
@@ -3749,7 +3751,8 @@ static QualType GetTypeOfFunction(Sema &S, const OverloadExpr::FindResult &R,
 static QualType
 ResolveOverloadForDeduction(Sema &S, TemplateParameterList *TemplateParams,
                             Expr *Arg, QualType ParamType,
-                            bool ParamWasReference) {
+                            bool ParamWasReference,
+                            TemplateSpecCandidateSet *FailedTSC = nullptr) {
 
   OverloadExpr::FindResult R = OverloadExpr::find(Arg);
 
@@ -3771,8 +3774,10 @@ ResolveOverloadForDeduction(Sema &S, TemplateParameterList *TemplateParams,
       !ParamType->isMemberFunctionPointerType()) {
     if (Ovl->hasExplicitTemplateArgs()) {
       // But we can still look for an explicit specialization.
-      if (FunctionDecl *ExplicitSpec
-            = S.ResolveSingleFunctionTemplateSpecialization(Ovl))
+      if (FunctionDecl *ExplicitSpec =
+              S.ResolveSingleFunctionTemplateSpecialization(
+                  Ovl, /*Complain=*/false,
+                  /*FoundDeclAccessPair=*/nullptr, FailedTSC))
         return GetTypeOfFunction(S, R, ExplicitSpec);
     }
 
@@ -3854,7 +3859,8 @@ ResolveOverloadForDeduction(Sema &S, TemplateParameterList *TemplateParams,
 /// overloaded function set that could not be resolved.
 static bool AdjustFunctionParmAndArgTypesForDeduction(
     Sema &S, TemplateParameterList *TemplateParams, unsigned FirstInnerIndex,
-    QualType &ParamType, QualType &ArgType, Expr *Arg, unsigned &TDF) {
+    QualType &ParamType, QualType &ArgType, Expr *Arg, unsigned &TDF,
+    TemplateSpecCandidateSet *FailedTSC = nullptr) {
   // C++0x [temp.deduct.call]p3:
   //   If P is a cv-qualified type, the top level cv-qualifiers of P's type
   //   are ignored for type deduction.
@@ -3871,9 +3877,8 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
   // but there are sometimes special circumstances.  Typically
   // involving a template-id-expr.
   if (ArgType == S.Context.OverloadTy) {
-    ArgType = ResolveOverloadForDeduction(S, TemplateParams,
-                                          Arg, ParamType,
-                                          ParamRefType != nullptr);
+    ArgType = ResolveOverloadForDeduction(S, TemplateParams, Arg, ParamType,
+                                          ParamRefType != nullptr, FailedTSC);
     if (ArgType.isNull())
       return true;
   }
@@ -3951,7 +3956,8 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
     QualType ParamType, Expr *Arg, TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,
     SmallVectorImpl<Sema::OriginalCallArg> &OriginalCallArgs,
-    bool DecomposedParam, unsigned ArgIdx, unsigned TDF);
+    bool DecomposedParam, unsigned ArgIdx, unsigned TDF,
+    TemplateSpecCandidateSet *FailedTSC = nullptr);
 
 /// Attempt template argument deduction from an initializer list
 ///        deemed to be an argument in a function call.
@@ -4027,14 +4033,16 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
     QualType ParamType, Expr *Arg, TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced,
     SmallVectorImpl<Sema::OriginalCallArg> &OriginalCallArgs,
-    bool DecomposedParam, unsigned ArgIdx, unsigned TDF) {
+    bool DecomposedParam, unsigned ArgIdx, unsigned TDF,
+    TemplateSpecCandidateSet *FailedTSC) {
   QualType ArgType = Arg->getType();
   QualType OrigParamType = ParamType;
 
   //   If P is a reference type [...]
   //   If P is a cv-qualified type [...]
-  if (AdjustFunctionParmAndArgTypesForDeduction(
-          S, TemplateParams, FirstInnerIndex, ParamType, ArgType, Arg, TDF))
+  if (AdjustFunctionParmAndArgTypesForDeduction(S, TemplateParams,
+                                                FirstInnerIndex, ParamType,
+                                                ArgType, Arg, TDF, FailedTSC))
     return Sema::TDK_Success;
 
   //   If [...] the argument is a non-empty initializer list [...]
@@ -4717,11 +4725,11 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
 ///        should be specified in the 'Info' parameter.
 /// \param IgnoreConstraints Set if we should not fail if the deduced type does
 ///                          not satisfy the type-constraint in the auto type.
-Sema::TemplateDeductionResult Sema::DeduceAutoType(TypeLoc Type, Expr *Init,
-                                                   QualType &Result,
-                                                   TemplateDeductionInfo &Info,
-                                                   bool DependentDeduction,
-                                                   bool IgnoreConstraints) {
+Sema::TemplateDeductionResult
+Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
+                     TemplateDeductionInfo &Info, bool DependentDeduction,
+                     bool IgnoreConstraints,
+                     TemplateSpecCandidateSet *FailedTSC) {
   assert(DependentDeduction || Info.getDeducedDepth() == 0);
   if (Init->containsErrors())
     return TDK_AlreadyDiagnosed;
@@ -4835,7 +4843,8 @@ Sema::TemplateDeductionResult Sema::DeduceAutoType(TypeLoc Type, Expr *Init,
              "substituting template parameter for 'auto' failed");
       if (auto TDK = DeduceTemplateArgumentsFromCallArgument(
               *this, TemplateParamsSt.get(), 0, FuncParam, Init, Info, Deduced,
-              OriginalCallArgs, /*Decomposed=*/false, /*ArgIdx=*/0, /*TDF=*/0))
+              OriginalCallArgs, /*Decomposed=*/false, /*ArgIdx=*/0, /*TDF=*/0,
+              FailedTSC))
         return DeductionFailed(TDK);
     }
 

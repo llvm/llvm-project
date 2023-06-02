@@ -1276,6 +1276,75 @@ std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS, Init *RHS) c
       return BitInit::get(getRecordKeeper(), *Result);
     break;
   }
+  case GETDAGARG: {
+    DagInit *Dag = dyn_cast<DagInit>(LHS);
+    if (!Dag)
+      break;
+
+    // Helper returning the specified argument.
+    auto getDagArgAsType = [](DagInit *Dag, unsigned Pos,
+                              RecTy *Type) -> Init * {
+      assert(Pos < Dag->getNumArgs());
+      Init *Arg = Dag->getArg(Pos);
+      if (auto *TI = dyn_cast<TypedInit>(Arg))
+        if (!TI->getType()->typeIsConvertibleTo(Type))
+          return UnsetInit::get(Dag->getRecordKeeper());
+      return Arg;
+    };
+
+    // Accessor by index
+    if (IntInit *Idx = dyn_cast<IntInit>(RHS)) {
+      int64_t Pos = Idx->getValue();
+      if (Pos < 0) {
+        // The index is negative.
+        PrintFatalError(CurRec->getLoc(), Twine("!getdagarg index ") +
+                                              std::to_string(Pos) +
+                                              Twine(" is negative"));
+      }
+      if (Pos >= Dag->getNumArgs()) {
+        // The index is out-of-range.
+        PrintFatalError(CurRec->getLoc(),
+                        Twine("!getdagarg index ") + std::to_string(Pos) +
+                            " is out of range (dag has " +
+                            std::to_string(Dag->getNumArgs()) + " arguments)");
+      }
+      return getDagArgAsType(Dag, Pos, getType());
+    }
+    // Accessor by name
+    if (StringInit *Key = dyn_cast<StringInit>(RHS)) {
+      for (unsigned i = 0, e = Dag->getNumArgs(); i < e; ++i) {
+        StringInit *ArgName = Dag->getArgName(i);
+        if (!ArgName || ArgName->getValue() != Key->getValue())
+          continue;
+        // Found
+        return getDagArgAsType(Dag, i, getType());
+      }
+      // The key is not found.
+      PrintFatalError(CurRec->getLoc(), Twine("!getdagarg key '") +
+                                            Key->getValue() +
+                                            Twine("' is not found"));
+    }
+    break;
+  }
+  case GETDAGNAME: {
+    DagInit *Dag = dyn_cast<DagInit>(LHS);
+    IntInit *Idx = dyn_cast<IntInit>(RHS);
+    if (Dag && Idx) {
+      int64_t Pos = Idx->getValue();
+      if (Pos < 0 || Pos >= Dag->getNumArgs()) {
+        // The index is out-of-range.
+        PrintError(CurRec->getLoc(),
+                   Twine("!getdagname index is out of range 0...") +
+                       std::to_string(Dag->getNumArgs() - 1) + ": " +
+                       std::to_string(Pos));
+      }
+      Init *ArgName = Dag->getArgName(Pos);
+      if (!ArgName)
+        return UnsetInit::get(getRecordKeeper());
+      return ArgName;
+    }
+    break;
+  }
   case SETDAGOP: {
     DagInit *Dag = dyn_cast<DagInit>(LHS);
     DefInit *Op = dyn_cast<DefInit>(RHS);
@@ -1380,6 +1449,12 @@ std::string BinOpInit::getAsString() const {
   case STRCONCAT: Result = "!strconcat"; break;
   case INTERLEAVE: Result = "!interleave"; break;
   case SETDAGOP: Result = "!setdagop"; break;
+  case GETDAGARG:
+    Result = "!getdagarg<" + getType()->getAsString() + ">";
+    break;
+  case GETDAGNAME:
+    Result = "!getdagname";
+    break;
   }
   return Result + "(" + LHS->getAsString() + ", " + RHS->getAsString() + ")";
 }

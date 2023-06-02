@@ -105,9 +105,9 @@ define <32 x i8> @vshift09(<32 x i8> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpsrlw $2, %xmm1, %xmm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm2 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
 ; CHECK-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm3 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; CHECK-NEXT:    vpxor %xmm3, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrlw $2, %xmm0, %xmm0
@@ -138,7 +138,7 @@ define <32 x i8> @vshift11(<32 x i8> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpsrlw $2, %xmm1, %xmm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm2 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
 ; CHECK-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrlw $2, %xmm0, %xmm0
 ; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -153,7 +153,7 @@ define <32 x i8> @vshift12(<32 x i8> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpsllw $2, %xmm1, %xmm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm2 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
 ; CHECK-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsllw $2, %xmm0, %xmm0
 ; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -169,7 +169,7 @@ define <8 x i32> @vshift08(<8 x i32> %a)  {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpslld $23, %xmm1, %xmm1
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [1065353216,1065353216,1065353216,1065353216]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vpslld $23, %xmm0, %xmm0
 ; CHECK-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
@@ -184,7 +184,7 @@ define <8 x i32> @vshift08_add(<8 x i32> %a, <8 x i32> %y)  {
 ; CHECK-LABEL: vshift08_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpslld $23, %xmm0, %xmm2
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; CHECK-NEXT:    vcvttps2dq %xmm2, %xmm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0

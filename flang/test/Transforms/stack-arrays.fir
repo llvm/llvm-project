@@ -84,6 +84,33 @@ func.func @dfa3(%arg0: i1) {
 // CHECK-NEXT:  return
 // CHECK-NEXT:  }
 
+func.func private @dfa3a_foo(!fir.ref<!fir.array<1xi8>>) -> ()
+func.func private @dfa3a_bar(!fir.ref<!fir.array<1xi8>>) -> ()
+
+// Check freemem in both regions, with other uses
+func.func @dfa3a(%arg0: i1) {
+  %a = fir.allocmem !fir.array<1xi8>
+  fir.if %arg0 {
+    %ref = fir.convert %a : (!fir.heap<!fir.array<1xi8>>) -> !fir.ref<!fir.array<1xi8>>
+    func.call @dfa3a_foo(%ref) : (!fir.ref<!fir.array<1xi8>>) -> ()
+    fir.freemem %a : !fir.heap<!fir.array<1xi8>>
+  } else {
+    %ref = fir.convert %a : (!fir.heap<!fir.array<1xi8>>) -> !fir.ref<!fir.array<1xi8>>
+    func.call @dfa3a_bar(%ref) : (!fir.ref<!fir.array<1xi8>>) -> ()
+    fir.freemem %a : !fir.heap<!fir.array<1xi8>>
+  }
+  return
+}
+// CHECK:     func.func @dfa3a(%arg0: i1) {
+// CHECK-NEXT:  %[[MEM:.*]] = fir.alloca !fir.array<1xi8>
+// CHECK-NEXT:  fir.if %arg0 {
+// CHECK-NEXT:    func.call @dfa3a_foo(%[[MEM]])
+// CHECK-NEXT:  } else {
+// CHECK-NEXT:    func.call @dfa3a_bar(%[[MEM]])
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+// CHECK-NEXT:  }
+
 // check the alloca is placed after all operands become available
 func.func @placement1() {
   // do some stuff with other ssa values

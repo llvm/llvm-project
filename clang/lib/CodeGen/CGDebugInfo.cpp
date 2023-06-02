@@ -4822,7 +4822,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
 
 llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
                                             llvm::Value *Storage,
-                                            llvm::Optional<unsigned> ArgNo,
+                                            std::optional<unsigned> ArgNo,
                                             CGBuilderTy &Builder,
                                             const bool UsePointerValue) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo() &&

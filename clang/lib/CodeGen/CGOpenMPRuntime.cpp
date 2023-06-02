@@ -2163,7 +2163,11 @@ Address CGOpenMPRuntime::emitThreadIDAddress(CodeGenFunction &CGF,
 llvm::Value *CGOpenMPRuntime::getCriticalRegionLock(StringRef CriticalName) {
   std::string Prefix = Twine("gomp_critical_user_", CriticalName).str();
   std::string Name = getName({Prefix, "var"});
-  return OMPBuilder.getOrCreateInternalVariable(KmpCriticalNameTy, Name);
+  llvm::GlobalVariable *G = OMPBuilder.getOrCreateInternalVariable(KmpCriticalNameTy, Name);
+  llvm::Align PtrAlign = OMPBuilder.M.getDataLayout().getPointerABIAlignment(G->getAddressSpace());
+  if (PtrAlign > llvm::Align(G->getAlignment()))
+    G->setAlignment(PtrAlign);
+  return G;
 }
 
 namespace {
@@ -6062,7 +6066,7 @@ void CGOpenMPRuntime::emitUsesAllocatorsInit(CodeGenFunction &CGF,
                               CGM.getModule(), OMPRTL___kmpc_init_allocator),
                           {ThreadId, MemSpaceHandle, NumTraits, Traits});
   // Store to allocator.
-  CGF.EmitVarDecl(*cast<VarDecl>(
+  CGF.EmitAutoVarAlloca(*cast<VarDecl>(
       cast<DeclRefExpr>(Allocator->IgnoreParenImpCasts())->getDecl()));
   LValue AllocatorLVal = CGF.EmitLValue(Allocator->IgnoreParenImpCasts());
   AllocatorVal =

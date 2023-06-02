@@ -1098,8 +1098,8 @@ For example:
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
 
-Note that any attributes for the function result (``nounwind``,
-``readonly``) come immediately after the argument list.
+Note that any attributes for the function result (``nonnull``,
+``signext``) come before the result type.
 
 Currently, only the following parameter attributes are defined:
 

@@ -72,6 +72,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoAVX512DQ();
   setLegalizerInfoAVX512BW();
 
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
+
   getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
     .scalarize(0)
     .minScalar(0, LLT::scalar(32))
@@ -92,6 +96,41 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       LegacyLegalizerInfo::widenToLargerTypesAndNarrowToLargest);
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+
+
+  if (Subtarget.is64Bit()) {
+    if (Subtarget.hasPOPCNT()) {
+      // popcount
+      getActionDefinitionsBuilder(G_CTPOP)
+        .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
+        .widenScalarToNextPow2(1, /*Min=*/16)
+        .clampScalar(1, s16, s64);
+    }
+
+    if (Subtarget.hasLZCNT()) {
+      // count leading zeros (LZCNT)
+      getActionDefinitionsBuilder(G_CTLZ)
+        .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
+        .widenScalarToNextPow2(1, /*Min=*/16)
+        .clampScalar(1, s16, s64);
+    }
+  } else { // 32-bit
+    if (Subtarget.hasPOPCNT()) {
+      // popcount
+      getActionDefinitionsBuilder(G_CTPOP)
+        .legalFor({{s16, s16}, {s32, s32}})
+        .widenScalarToNextPow2(1, /*Min=*/16)
+        .clampScalar(1, s16, s32);
+    }
+
+    if (Subtarget.hasLZCNT()) {
+      // count leading zeros (LZCNT)
+      getActionDefinitionsBuilder(G_CTLZ)
+        .legalFor({{s16, s16}, {s32, s32}})
+        .widenScalarToNextPow2(1, /*Min=*/16)
+        .clampScalar(1, s16, s32);
+    }
+  }
 
   LegacyInfo.computeTables();
   verify(*STI.getInstrInfo());
@@ -287,22 +326,6 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
                        LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_MERGE_VALUES, 1, s128}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_UNMERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
-
-  if (Subtarget.hasPOPCNT()) {
-    // popcount
-    getActionDefinitionsBuilder(G_CTPOP)
-      .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
-      .widenScalarToNextPow2(1, /*Min=*/16)
-      .clampScalar(1, s16, s64);
-  }
-
-  if (Subtarget.hasLZCNT()) {
-    // count leading zeros (LZCNT)
-    getActionDefinitionsBuilder(G_CTLZ)
-      .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
-      .widenScalarToNextPow2(1, /*Min=*/16)
-      .clampScalar(1, s16, s64);
-  }
 
 }
 

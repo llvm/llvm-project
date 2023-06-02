@@ -229,7 +229,8 @@ define <16 x i8> @trunc_add_v16i64_v16i8(<16 x i64> %a0, <16 x i64> %a1) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm7
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
 ; AVX1-NEXT:    vpaddq %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm7 = [255,255]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [255,255]
+; AVX1-NEXT:    # xmm7 = mem[0,0]
 ; AVX1-NEXT:    vpand %xmm7, %xmm3, %xmm3
 ; AVX1-NEXT:    vpand %xmm7, %xmm6, %xmm6
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm6, %xmm3
@@ -311,7 +312,7 @@ define <16 x i8> @trunc_add_v16i32_v16i8(<16 x i32> %a0, <16 x i32> %a1) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
@@ -364,7 +365,7 @@ define <16 x i8> @trunc_add_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0
@@ -1009,7 +1010,8 @@ define <16 x i8> @trunc_sub_v16i64_v16i8(<16 x i64> %a0, <16 x i64> %a1) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm7
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
 ; AVX1-NEXT:    vpsubq %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm7 = [255,255]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [255,255]
+; AVX1-NEXT:    # xmm7 = mem[0,0]
 ; AVX1-NEXT:    vpand %xmm7, %xmm3, %xmm3
 ; AVX1-NEXT:    vpand %xmm7, %xmm6, %xmm6
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm6, %xmm3
@@ -1091,7 +1093,7 @@ define <16 x i8> @trunc_sub_v16i32_v16i8(<16 x i32> %a0, <16 x i32> %a1) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpsubd %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
@@ -1144,7 +1146,7 @@ define <16 x i8> @trunc_sub_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0
@@ -1859,7 +1861,8 @@ define <16 x i8> @trunc_mul_v16i64_v16i8(<16 x i64> %a0, <16 x i64> %a1) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm7
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
 ; AVX1-NEXT:    vpmuludq %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm7 = [255,255]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm7 = [255,255]
+; AVX1-NEXT:    # xmm7 = mem[0,0]
 ; AVX1-NEXT:    vpand %xmm7, %xmm3, %xmm3
 ; AVX1-NEXT:    vpand %xmm7, %xmm6, %xmm6
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm6, %xmm3
@@ -1985,7 +1988,7 @@ define <16 x i8> @trunc_mul_v16i32_v16i8(<16 x i32> %a0, <16 x i32> %a1) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpmulld %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
@@ -2038,7 +2041,7 @@ define <16 x i8> @trunc_mul_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0
@@ -2325,7 +2328,8 @@ define <16 x i8> @trunc_mul_const_v16i64_v16i8(<16 x i64> %a0) nounwind {
 ; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm7
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
 ; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [255,255]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [255,255]
+; AVX1-NEXT:    # xmm8 = mem[0,0]
 ; AVX1-NEXT:    vpand %xmm3, %xmm8, %xmm3
 ; AVX1-NEXT:    vpand %xmm7, %xmm8, %xmm7
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm7, %xmm3
@@ -2445,7 +2449,7 @@ define <16 x i8> @trunc_mul_const_v16i32_v16i8(<16 x i32> %a0) nounwind {
 ; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm3, %xmm1
@@ -2497,7 +2501,7 @@ define <16 x i8> @trunc_mul_const_v16i16_v16i8(<16 x i16> %a0) nounwind {
 ; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0

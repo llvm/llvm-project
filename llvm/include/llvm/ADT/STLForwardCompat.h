@@ -18,7 +18,6 @@
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
 #include <array>
-#include "llvm/ADT/Optional.h"
 #include <optional>
 #include <type_traits>
 

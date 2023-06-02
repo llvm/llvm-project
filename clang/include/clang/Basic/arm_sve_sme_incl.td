@@ -55,6 +55,7 @@
 // ------------------
 // P: boolean
 // U: unsigned
+// Q: svcount
 
 // Prototype modifiers
 // -------------------
@@ -123,6 +124,9 @@
 // X: const pointer to uint16_t
 // Y: const pointer to uint32_t
 // Z: const pointer to uint64_t
+
+// Prototype modifiers added for SVE2p1
+// }: svcount_t
 
 class MergeType<int val, string suffix=""> {
   int Value = val;

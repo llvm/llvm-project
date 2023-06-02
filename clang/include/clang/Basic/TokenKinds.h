@@ -99,6 +99,13 @@ bool isAnnotation(TokenKind K);
 /// Return true if this is an annotation token representing a pragma.
 bool isPragmaAnnotation(TokenKind K);
 
+inline constexpr bool isRegularKeywordAttribute(TokenKind K) {
+  return (false
+#define KEYWORD_ATTRIBUTE(X) || (K == tok::kw_##X)
+#include "clang/Basic/AttrTokenKinds.inc"
+  );
+}
+
 } // end namespace tok
 } // end namespace clang
 

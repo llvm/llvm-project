@@ -94,6 +94,26 @@ TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
+  Style = getStyle("{}", "a.h", "none", R"objc(
+NS_ASSUME_NONNULL_BEGIN
+extern int i;
+NS_ASSUME_NONNULL_END
+)objc");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none", R"objc(
+FOUNDATION_EXTERN void DoStuff(void);
+)objc");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none", R"objc(
+FOUNDATION_EXPORT void DoStuff(void);
+)objc");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
   Style = getStyle("{}", "a.h", "none", "enum Foo {};");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);

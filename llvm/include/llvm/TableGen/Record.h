@@ -858,7 +858,9 @@ public:
     LT,
     GE,
     GT,
-    SETDAGOP
+    GETDAGARG,
+    GETDAGNAME,
+    SETDAGOP,
   };
 
 private:

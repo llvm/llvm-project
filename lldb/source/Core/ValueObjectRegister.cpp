@@ -128,12 +128,11 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(
 }
 
 lldb::ValueObjectSP
-ValueObjectRegisterSet::GetChildMemberWithName(ConstString name,
+ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
                                                bool can_create) {
   ValueObject *valobj = nullptr;
   if (m_reg_ctx_sp && m_reg_set) {
-    const RegisterInfo *reg_info =
-        m_reg_ctx_sp->GetRegisterInfoByName(name.GetStringRef());
+    const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
     if (reg_info != nullptr)
       valobj = new ValueObjectRegister(*this, m_reg_ctx_sp, reg_info);
   }

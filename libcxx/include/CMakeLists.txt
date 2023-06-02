@@ -77,6 +77,7 @@ set(files
   __algorithm/pstl_backends/cpu_backends/fill.h
   __algorithm/pstl_backends/cpu_backends/find_if.h
   __algorithm/pstl_backends/cpu_backends/for_each.h
+  __algorithm/pstl_backends/cpu_backends/merge.h
   __algorithm/pstl_backends/cpu_backends/serial.h
   __algorithm/pstl_backends/cpu_backends/thread.h
   __algorithm/pstl_backends/cpu_backends/transform.h
@@ -85,6 +86,7 @@ set(files
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
   __algorithm/pstl_frontend_dispatch.h
+  __algorithm/pstl_merge.h
   __algorithm/pstl_transform.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h

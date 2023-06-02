@@ -381,6 +381,7 @@ private:
   }
   bool CheckIsValidForwardReference(const semantics::DerivedTypeSpec &);
   MaybeExpr AnalyzeComplex(MaybeExpr &&re, MaybeExpr &&im, const char *what);
+  std::optional<Chevrons> AnalyzeChevrons(const parser::CallStmt &);
 
   MaybeExpr IterativelyAnalyzeSubexpressions(const parser::Expr &);
 

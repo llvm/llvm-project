@@ -5,7 +5,7 @@
 
 #X = #sparse_tensor.encoding<{
  lvlTypes = [ "dense", "dense", "dense" ],
- dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
+ dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
 #trait = {

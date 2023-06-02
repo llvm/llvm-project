@@ -72,6 +72,15 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
   template <class _ExecutionPolicy, class _Iterator, class _SizeT, class _Tp>
   void __pstl_fill_n(_Backend, _Iterator __first, _SizeT __n, const _Tp& __value);
 
+  template <class _ExecutionPolicy, class _terator1, class _Iterator2, class _OutIterator, class _Comp>
+  _OutIterator __pstl_merge(_Backend,
+                            _Iterator1 __first1,
+                            _Iterator1 __last1,
+                            _Iterator2 __first2,
+                            _Iterator2 __last2,
+                            _OutIterator __result,
+                            _Comp __comp);
+
 // TODO: Complete this list
 
 */

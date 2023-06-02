@@ -40,5 +40,5 @@
 //
 // GENERIC: "-target-cpu" "ppc64"
 
-// RUN: %clang -### -c --target=powerpc64 %s -march=generic 2>&1 | FileCheck --check-prefix=MARCH %s
-// MARCH: error: unsupported option '-march=' for target 'powerpc64'
+// RxUN: %clang -### -c --target=powerpc64 %s -march=generic 2>&1 | FileCheck --check-prefix=MARCH %s
+// MxARCH: error: unsupported option '-march=' for target 'powerpc64'

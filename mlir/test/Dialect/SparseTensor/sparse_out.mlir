@@ -2,12 +2,12 @@
 
 #CSR = #sparse_tensor.encoding<{
   lvlTypes = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (i,j)>
+  dimToLvl = affine_map<(i,j) -> (i,j)>
 }>
 
 #DCSR = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (i,j)>
+  dimToLvl = affine_map<(i,j) -> (i,j)>
 }>
 
 #SparseTensor = #sparse_tensor.encoding<{

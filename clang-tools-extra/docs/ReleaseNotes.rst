@@ -121,6 +121,12 @@ New checks
   Detect implicit and explicit casts of ``enum`` type into ``bool`` where ``enum`` type
   doesn't have a zero-value enumerator.
 
+- New :doc:`bugprone-unique-ptr-array-mismatch
+  <clang-tidy/checks/bugprone/unique-ptr-array-mismatch>` check.
+
+  Finds initializations of C++ unique pointers to non-array type that are
+  initialized with an array.
+
 - New :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check.
 
@@ -394,6 +400,10 @@ Changes in existing checks
 - Improved :doc:`performance-no-automatic-move
   <clang-tidy/checks/performance/no-automatic-move>`: warn on ``const &&``
   constructors.
+
+- Fixed :doc:`bugprone-exception-escape<clang-tidy/checks/bugprone/exception-escape>`
+  for coroutines where previously a warning would be emitted with coroutines
+  throwing exceptions in their bodies.
 
 Removed checks
 ^^^^^^^^^^^^^^

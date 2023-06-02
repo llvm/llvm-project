@@ -84,7 +84,7 @@ class ModuleMap {
 
   /// The directory used for Clang-supplied, builtin include headers,
   /// such as "stdint.h".
-  const DirectoryEntry *BuiltinIncludeDir = nullptr;
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr BuiltinIncludeDir;
 
   /// Language options used to parse the module map itself.
   ///
@@ -380,8 +380,8 @@ private:
     return static_cast<bool>(findHeaderInUmbrellaDirs(File, IntermediateDirs));
   }
 
-  Module *inferFrameworkModule(const DirectoryEntry *FrameworkDir,
-                               Attributes Attrs, Module *Parent);
+  Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir, Attributes Attrs,
+                               Module *Parent);
 
 public:
   /// Construct a new module map.
@@ -407,7 +407,7 @@ public:
 
   /// Set the directory that contains Clang-supplied include
   /// files, such as our stdarg.h or tgmath.h.
-  void setBuiltinIncludeDir(const DirectoryEntry *Dir) {
+  void setBuiltinIncludeDir(DirectoryEntryRef Dir) {
     BuiltinIncludeDir = Dir;
   }
 
@@ -591,8 +591,8 @@ public:
 
   /// Infer the contents of a framework module map from the given
   /// framework directory.
-  Module *inferFrameworkModule(const DirectoryEntry *FrameworkDir,
-                               bool IsSystem, Module *Parent);
+  Module *inferFrameworkModule(DirectoryEntryRef FrameworkDir, bool IsSystem,
+                               Module *Parent);
 
   /// Create a new top-level module that is shadowed by
   /// \p ShadowingModule.
@@ -729,8 +729,8 @@ public:
   ///
   /// \returns true if an error occurred, false otherwise.
   bool parseModuleMapFile(const FileEntry *File, bool IsSystem,
-                          const DirectoryEntry *HomeDir,
-                          FileID ID = FileID(), unsigned *Offset = nullptr,
+                          DirectoryEntryRef HomeDir, FileID ID = FileID(),
+                          unsigned *Offset = nullptr,
                           SourceLocation ExternModuleLoc = SourceLocation());
 
   /// Dump the contents of the module map, for debugging purposes.

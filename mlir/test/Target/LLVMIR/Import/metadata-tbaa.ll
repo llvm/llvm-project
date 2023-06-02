@@ -85,11 +85,14 @@ define void @supported_ops(ptr %arg1, float %arg2, i32 %arg3, i32 %arg4) {
   call void @llvm.memcpy.p0.p0.i32(ptr %arg1, ptr %arg1, i32 4, i1 false), !tbaa !0
   ; CHECK: "llvm.intr.memset"{{.*}}tbaa =
   call void @llvm.memset.p0.i32(ptr %arg1, i8 42, i32 4, i1 false), !tbaa !0
+  ; CHECK: llvm.call{{.*}}tbaa =
+  call void @foo(ptr %arg1), !tbaa !0
   ret void
 }
 
 declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
+declare void @foo(ptr %arg1)
 
 !0 = !{!1, !1, i64 0}
 !1 = !{!"scalar type", !2, i64 0}

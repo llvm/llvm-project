@@ -33,6 +33,22 @@ _LIBCPP_HIDE_FROM_ABI void __parallel_for(_RandomAccessIterator __first, _Random
 
 _LIBCPP_HIDE_FROM_ABI inline void __cancel_execution() {}
 
+template <class _RandomAccessIterator1,
+          class _RandomAccessIterator2,
+          class _RandomAccessIterator3,
+          class _Compare,
+          class _LeafMerge>
+_LIBCPP_HIDE_FROM_ABI void __parallel_merge(
+    _RandomAccessIterator1 __first1,
+    _RandomAccessIterator1 __last1,
+    _RandomAccessIterator2 __first2,
+    _RandomAccessIterator2 __last2,
+    _RandomAccessIterator3 __outit,
+    _Compare __comp,
+    _LeafMerge __leaf_merge) {
+  __leaf_merge(__first1, __last1, __first2, __last2, __outit, __comp);
+}
+
 } // namespace __thread_cpu_backend
 } // namespace __par_backend
 
