@@ -172,7 +172,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_procmaps.h
   sanitizer_ptrauth.h
   sanitizer_quarantine.h
-  sanitizer_redefine_builtins.h
   sanitizer_report_decorator.h
   sanitizer_ring_buffer.h
   sanitizer_signal_interceptors.inc
