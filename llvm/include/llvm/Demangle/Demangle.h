@@ -31,7 +31,7 @@ enum : int {
 /// Returns a non-NULL pointer to a NUL-terminated C style string
 /// that should be explicitly freed, if successful. Otherwise, may return
 /// nullptr if mangled_name is not a valid mangling or is nullptr.
-char *itaniumDemangle(const char *mangled_name);
+char *itaniumDemangle(std::string_view mangled_name);
 
 enum MSDemangleFlags {
   MSDF_None = 0,
@@ -66,7 +66,7 @@ char *dlangDemangle(const char *MangledName);
 /// demangling occurred.
 std::string demangle(const std::string &MangledName);
 
-bool nonMicrosoftDemangle(const char *MangledName, std::string &Result);
+bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain
