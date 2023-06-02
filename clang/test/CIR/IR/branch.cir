@@ -42,3 +42,19 @@ cir.func @b0() {
 // CHECK-NEXT:  }
 // CHECK-NEXT:  cir.return
 // CHECK-NEXT: }
+
+
+!s32i = !cir.int<s, 32>
+cir.func @test_br() -> !s32i {
+    %0 = cir.const(#cir.int<0>: !s32i) : !s32i
+    cir.br ^bb1(%0 : !s32i)
+  ^bb1(%x: !s32i):
+    cir.return %x : !s32i
+}
+
+// CHECK:  cir.func @test_br() -> !s32i {
+// CHECK-NEXT:    %0 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:    cir.br ^bb1(%0 : !s32i)
+// CHECK-NEXT:  ^bb1(%1: !s32i):  // pred: ^bb0
+// CHECK-NEXT:    cir.return %1 : !s32i
+// CHECK-NEXT:  }

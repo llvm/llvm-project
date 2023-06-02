@@ -772,8 +772,7 @@ mlir::LogicalResult YieldOp::verify() {
 
 mlir::SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
-  // Current block targets do not have operands.
-  return mlir::SuccessorOperands(MutableOperandRange(getOperation(), 0, 0));
+  return mlir::SuccessorOperands(getDestOperandsMutable());
 }
 
 Block *BrOp::getSuccessorForOperands(ArrayRef<Attribute>) { return getDest(); }
