@@ -153,10 +153,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar);
 
-  // count leading zeros
-  getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTLZ})
+  // count leading zeros (LZCNT)
+  getActionDefinitionsBuilder(G_CTLZ)
       .legalIf([=](const LegalityQuery &Query) -> bool {
-        return (Query.Opcode == G_CTLZ_ZERO_UNDEF || Subtarget.hasLZCNT()) &&
+        return Subtarget.hasLZCNT() &&
                (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
       })
