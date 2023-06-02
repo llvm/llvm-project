@@ -681,22 +681,46 @@ class JSONCrashLogParser(CrashLogParser):
                 print("error: can't parse application specific backtrace.")
                 return False
 
-            frame_id = frame_img_name = frame_addr = frame_symbol = frame_offset = frame_file = frame_line = frame_column = None
+            frame_id = (
+                frame_img_name
+            ) = (
+                frame_addr
+            ) = (
+                frame_symbol
+            ) = frame_offset = frame_file = frame_line = frame_column = None
 
             if len(frame_match.groups()) == 3:
                 # Get the image UUID from the frame image name.
                 (frame_id, frame_img_name, frame_addr) = frame_match.groups()
             elif len(frame_match.groups()) == 5:
-                (frame_id, frame_img_name, frame_addr,
-                        frame_symbol, frame_offset) = frame_match.groups()
+                (
+                    frame_id,
+                    frame_img_name,
+                    frame_addr,
+                    frame_symbol,
+                    frame_offset,
+                ) = frame_match.groups()
             elif len(frame_match.groups()) == 7:
-                (frame_id, frame_img_name, frame_addr,
-                        frame_symbol, frame_offset,
-                        frame_file, frame_line) = frame_match.groups()
+                (
+                    frame_id,
+                    frame_img_name,
+                    frame_addr,
+                    frame_symbol,
+                    frame_offset,
+                    frame_file,
+                    frame_line,
+                ) = frame_match.groups()
             elif len(frame_match.groups()) == 8:
-                (frame_id, frame_img_name, frame_addr,
-                        frame_symbol, frame_offset,
-                        frame_file, frame_line, frame_column) = frame_match.groups()
+                (
+                    frame_id,
+                    frame_img_name,
+                    frame_addr,
+                    frame_symbol,
+                    frame_offset,
+                    frame_file,
+                    frame_line,
+                    frame_column,
+                ) = frame_match.groups()
 
             thread.add_ident(frame_img_name)
             if frame_img_name not in self.crashlog.idents:
@@ -769,24 +793,24 @@ class CrashLogParseMode:
 
 
 class TextCrashLogParser(CrashLogParser):
-    parent_process_regex = re.compile(r'^Parent Process:\s*(.*)\[(\d+)\]')
-    thread_state_regex = re.compile(r'^Thread \d+ crashed with')
-    thread_instrs_regex = re.compile(r'^Thread \d+ instruction stream')
-    thread_regex = re.compile(r'^Thread (\d+).*:')
-    app_backtrace_regex = re.compile(r'^Application Specific Backtrace (\d+).*:')
+    parent_process_regex = re.compile(r"^Parent Process:\s*(.*)\[(\d+)\]")
+    thread_state_regex = re.compile(r"^Thread \d+ crashed with")
+    thread_instrs_regex = re.compile(r"^Thread \d+ instruction stream")
+    thread_regex = re.compile(r"^Thread (\d+).*:")
+    app_backtrace_regex = re.compile(r"^Application Specific Backtrace (\d+).*:")
 
     class VersionRegex:
-        version = r'\(.+\)|(?:arm|x86_)[0-9a-z]+'
+        version = r"\(.+\)|(?:arm|x86_)[0-9a-z]+"
 
     class FrameRegex(VersionRegex):
         @classmethod
         def get(cls):
-            index    = r'^(\d+)\s+'
-            img_name = r'(.+?)\s+'
-            version  = r'(?:' + super().version + r'\s+)?'
-            address  = r'(0x[0-9a-fA-F]{4,})' # 4 digits or more
+            index = r"^(\d+)\s+"
+            img_name = r"(.+?)\s+"
+            version = r"(?:" + super().version + r"\s+)?"
+            address = r"(0x[0-9a-fA-F]{4,})"  # 4 digits or more
 
-            symbol   = """
+            symbol = """
                         (?:
                             [ ]+
                             (?P<symbol>.+)
@@ -804,24 +828,28 @@ class TextCrashLogParser(CrashLogParser):
                         )?
                        """
 
-            return re.compile(index + img_name + version + address + symbol,
-                              flags=re.VERBOSE)
+            return re.compile(
+                index + img_name + version + address + symbol, flags=re.VERBOSE
+            )
 
     frame_regex = FrameRegex.get()
-    null_frame_regex = re.compile(r'^\d+\s+\?\?\?\s+0{4,} +')
-    image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'          # img_lo
-                                  r'\s+-\s+'                   #   -
-                                  r'(0x[0-9a-fA-F]+)\s+'       # img_hi
-                                  r'[+]?(.+?)\s+'              # img_name
-                                  r'(?:(' +
-                                  VersionRegex.version +         # img_version
-                                  r')\s+)?'
-                                  r'(?:<([-0-9a-fA-F]+)>\s+)?' # img_uuid
-                                  r'(\?+|/.*)'                 # img_path
-                                 )
-    exception_type_regex = re.compile(r'^Exception Type:\s+(EXC_[A-Z_]+)(?:\s+\((.*)\))?')
-    exception_codes_regex = re.compile(r'^Exception Codes:\s+(0x[0-9a-fA-F]+),\s*(0x[0-9a-fA-F]+)')
-    exception_extra_regex = re.compile(r'^Exception\s+.*:\s+(.*)')
+    null_frame_regex = re.compile(r"^\d+\s+\?\?\?\s+0{4,} +")
+    image_regex_uuid = re.compile(
+        r"(0x[0-9a-fA-F]+)"  # img_lo
+        r"\s+-\s+"  #   -
+        r"(0x[0-9a-fA-F]+)\s+"  # img_hi
+        r"[+]?(.+?)\s+"  # img_name
+        r"(?:(" + VersionRegex.version + r")\s+)?"  # img_version
+        r"(?:<([-0-9a-fA-F]+)>\s+)?"  # img_uuid
+        r"(\?+|/.*)"  # img_path
+    )
+    exception_type_regex = re.compile(
+        r"^Exception Type:\s+(EXC_[A-Z_]+)(?:\s+\((.*)\))?"
+    )
+    exception_codes_regex = re.compile(
+        r"^Exception Codes:\s+(0x[0-9a-fA-F]+),\s*(0x[0-9a-fA-F]+)"
+    )
+    exception_extra_regex = re.compile(r"^Exception\s+.*:\s+(.*)")
 
     def __init__(self, debugger, path, verbose):
         super().__init__(debugger, path, verbose)
@@ -1011,22 +1039,44 @@ class TextCrashLogParser(CrashLogParser):
             print('error: frame regex failed for line: "%s"' % line)
             return
 
-        frame_id = frame_img_name = frame_addr = frame_symbol = frame_offset = frame_file = frame_line = frame_column = None
+        frame_id = (
+            frame_img_name
+        ) = (
+            frame_addr
+        ) = frame_symbol = frame_offset = frame_file = frame_line = frame_column = None
 
         if len(frame_match.groups()) == 3:
             # Get the image UUID from the frame image name.
             (frame_id, frame_img_name, frame_addr) = frame_match.groups()
         elif len(frame_match.groups()) == 5:
-            (frame_id, frame_img_name, frame_addr,
-                    frame_symbol, frame_offset) = frame_match.groups()
+            (
+                frame_id,
+                frame_img_name,
+                frame_addr,
+                frame_symbol,
+                frame_offset,
+            ) = frame_match.groups()
         elif len(frame_match.groups()) == 7:
-            (frame_id, frame_img_name, frame_addr,
-                    frame_symbol, frame_offset,
-                    frame_file, frame_line) = frame_match.groups()
+            (
+                frame_id,
+                frame_img_name,
+                frame_addr,
+                frame_symbol,
+                frame_offset,
+                frame_file,
+                frame_line,
+            ) = frame_match.groups()
         elif len(frame_match.groups()) == 8:
-            (frame_id, frame_img_name, frame_addr,
-                    frame_symbol, frame_offset,
-                    frame_file, frame_line, frame_column) = frame_match.groups()
+            (
+                frame_id,
+                frame_img_name,
+                frame_addr,
+                frame_symbol,
+                frame_offset,
+                frame_file,
+                frame_line,
+                frame_column,
+            ) = frame_match.groups()
 
         self.thread.add_ident(frame_img_name)
         if frame_img_name not in self.crashlog.idents:
@@ -1057,15 +1107,24 @@ class TextCrashLogParser(CrashLogParser):
     def parse_images(self, line):
         image_match = self.image_regex_uuid.search(line)
         if image_match:
-            (img_lo, img_hi, img_name, img_version,
-                img_uuid, img_path) = image_match.groups()
+            (
+                img_lo,
+                img_hi,
+                img_name,
+                img_version,
+                img_uuid,
+                img_path,
+            ) = image_match.groups()
 
-            image = self.crashlog.DarwinImage(int(img_lo, 0), int(img_hi, 0),
-                                            img_name.strip(),
-                                            img_version.strip()
-                                            if img_version else "",
-                                            uuid.UUID(img_uuid), img_path,
-                                            self.verbose)
+            image = self.crashlog.DarwinImage(
+                int(img_lo, 0),
+                int(img_hi, 0),
+                img_name.strip(),
+                img_version.strip() if img_version else "",
+                uuid.UUID(img_uuid),
+                img_path,
+                self.verbose,
+            )
             unqualified_img_name = os.path.basename(img_path)
             if unqualified_img_name in self.symbols:
                 for symbol in self.symbols[unqualified_img_name]:
@@ -1326,7 +1385,9 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     if target is None or not target.IsValid():
         arch = crashlog.process_arch
         if not arch:
-            raise InteractiveCrashLogException("couldn't create find the architecture to create the target")
+            raise InteractiveCrashLogException(
+                "couldn't create find the architecture to create the target"
+            )
         target = debugger.CreateTargetWithFileAndArch(None, arch)
     # 4. Fail
     if target is None or not target.IsValid():
