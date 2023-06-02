@@ -1127,8 +1127,8 @@ void ScheduleDAGMILive::collectVRegUses(SUnit &SU) {
     // Ignore re-defs.
     if (TrackLaneMasks) {
       bool FoundDef = false;
-      for (const MachineOperand &MO2 : MI.operands()) {
-        if (MO2.isReg() && MO2.isDef() && MO2.getReg() == Reg && !MO2.isDead()) {
+      for (const MachineOperand &MO2 : MI.all_defs()) {
+        if (MO2.getReg() == Reg && !MO2.isDead()) {
           FoundDef = true;
           break;
         }

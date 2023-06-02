@@ -24,6 +24,7 @@ set(files
   __algorithm/find_if_not.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
+  __algorithm/for_each_segment.h
   __algorithm/generate.h
   __algorithm/generate_n.h
   __algorithm/half_positive.h
@@ -79,14 +80,17 @@ set(files
   __algorithm/pstl_backends/cpu_backends/for_each.h
   __algorithm/pstl_backends/cpu_backends/merge.h
   __algorithm/pstl_backends/cpu_backends/serial.h
+  __algorithm/pstl_backends/cpu_backends/stable_sort.h
   __algorithm/pstl_backends/cpu_backends/thread.h
   __algorithm/pstl_backends/cpu_backends/transform.h
+  __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
   __algorithm/pstl_frontend_dispatch.h
   __algorithm/pstl_merge.h
+  __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
@@ -516,6 +520,8 @@ set(files
   __numeric/iota.h
   __numeric/midpoint.h
   __numeric/partial_sum.h
+  __numeric/pstl_reduce.h
+  __numeric/pstl_transform_reduce.h
   __numeric/reduce.h
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
@@ -786,6 +792,7 @@ set(files
   __type_traits/nat.h
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
+  __type_traits/operation_traits.h
   __type_traits/predicate_traits.h
   __type_traits/promote.h
   __type_traits/rank.h

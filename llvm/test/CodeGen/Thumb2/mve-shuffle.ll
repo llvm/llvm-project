@@ -921,8 +921,10 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @shuffle2_i64(<2 x i64> %src) {
 ; CHECK-LABEL: shuffle2_i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d2, d1
-; CHECK-NEXT:    vmov.f64 d3, d0
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s5, s3
+; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1379,8 +1381,10 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @shuffle2_f64(<2 x double> %src) {
 ; CHECK-LABEL: shuffle2_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d2, d1
-; CHECK-NEXT:    vmov.f64 d3, d0
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s5, s3
+; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1400,9 +1404,12 @@ entry:
 define arm_aapcs_vfpcc <4 x double> @shuffle4_f64(<2 x double> %src1, <2 x double> %src2) {
 ; CHECK-LABEL: shuffle4_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d4, d3
-; CHECK-NEXT:    vmov.f64 d5, d1
-; CHECK-NEXT:    vmov.f64 d3, d0
+; CHECK-NEXT:    vmov.f32 s8, s6
+; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s7, s1
+; CHECK-NEXT:    vmov.f32 s10, s2
+; CHECK-NEXT:    vmov.f32 s11, s3
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1412,10 +1419,14 @@ entry:
 define arm_aapcs_vfpcc <4 x double> @shuffle5_f64(<2 x double> %src1, <2 x double> %src2) {
 ; CHECK-LABEL: shuffle5_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d4, d3
-; CHECK-NEXT:    vmov.f64 d5, d2
-; CHECK-NEXT:    vmov.f64 d2, d1
-; CHECK-NEXT:    vmov.f64 d3, d0
+; CHECK-NEXT:    vmov.f32 s8, s6
+; CHECK-NEXT:    vmov.f32 s10, s4
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s11, s5
+; CHECK-NEXT:    vmov.f32 s5, s3
+; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1425,7 +1436,8 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @shuffle6_f64(<2 x double> %src1, <2 x double> %src2) {
 ; CHECK-LABEL: shuffle6_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d1, d3
+; CHECK-NEXT:    vmov.f32 s2, s6
+; CHECK-NEXT:    vmov.f32 s3, s7
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x double> %src1, <2 x double> %src2, <2 x i32> <i32 0, i32 3>
@@ -1434,7 +1446,8 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @shuffle7_f64(<2 x double> %src1, <2 x double> %src2) {
 ; CHECK-LABEL: shuffle7_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d0, d3
+; CHECK-NEXT:    vmov.f32 s0, s6
+; CHECK-NEXT:    vmov.f32 s1, s7
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x double> %src1, <2 x double> %src2, <2 x i32> <i32 3, i32 1>
@@ -1443,7 +1456,8 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @shuffle8_f64(<2 x double> %src1, <2 x double> %src2) {
 ; CHECK-LABEL: shuffle8_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d3, d1
+; CHECK-NEXT:    vmov.f32 s6, s2
+; CHECK-NEXT:    vmov.f32 s7, s3
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1456,13 +1470,19 @@ define arm_aapcs_vfpcc <8 x double> @shuffle9_f64(<4 x double> %src1, <4 x doubl
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q5, q2
-; CHECK-NEXT:    vmov.f64 d8, d0
-; CHECK-NEXT:    vmov.f64 d9, d10
-; CHECK-NEXT:    vmov.f64 d10, d1
+; CHECK-NEXT:    vmov.f32 s16, s0
+; CHECK-NEXT:    vmov.f32 s18, s20
+; CHECK-NEXT:    vmov.f32 s20, s2
+; CHECK-NEXT:    vmov.f32 s10, s12
+; CHECK-NEXT:    vmov.f32 s19, s21
+; CHECK-NEXT:    vmov.f32 s8, s4
+; CHECK-NEXT:    vmov.f32 s17, s1
+; CHECK-NEXT:    vmov.f32 s21, s3
 ; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vmov.f64 d5, d6
-; CHECK-NEXT:    vmov.f64 d4, d2
-; CHECK-NEXT:    vmov.f64 d6, d3
+; CHECK-NEXT:    vmov.f32 s12, s6
+; CHECK-NEXT:    vmov.f32 s11, s13
+; CHECK-NEXT:    vmov.f32 s9, s5
+; CHECK-NEXT:    vmov.f32 s13, s7
 ; CHECK-NEXT:    vmov q1, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
@@ -1477,9 +1497,12 @@ entry:
 define arm_aapcs_vfpcc <4 x i64> @shuffle4_i64(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: shuffle4_i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d4, d3
-; CHECK-NEXT:    vmov.f64 d5, d1
-; CHECK-NEXT:    vmov.f64 d3, d0
+; CHECK-NEXT:    vmov.f32 s8, s6
+; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s7, s1
+; CHECK-NEXT:    vmov.f32 s10, s2
+; CHECK-NEXT:    vmov.f32 s11, s3
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1489,10 +1512,14 @@ entry:
 define arm_aapcs_vfpcc <4 x i64> @shuffle5_i64(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: shuffle5_i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d4, d3
-; CHECK-NEXT:    vmov.f64 d5, d2
-; CHECK-NEXT:    vmov.f64 d2, d1
-; CHECK-NEXT:    vmov.f64 d3, d0
+; CHECK-NEXT:    vmov.f32 s8, s6
+; CHECK-NEXT:    vmov.f32 s10, s4
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    vmov.f32 s11, s5
+; CHECK-NEXT:    vmov.f32 s5, s3
+; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1502,7 +1529,8 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @shuffle6_i64(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: shuffle6_i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d1, d3
+; CHECK-NEXT:    vmov.f32 s2, s6
+; CHECK-NEXT:    vmov.f32 s3, s7
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x i64> %src1, <2 x i64> %src2, <2 x i32> <i32 0, i32 3>
@@ -1511,7 +1539,8 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @shuffle7_i64(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: shuffle7_i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d0, d3
+; CHECK-NEXT:    vmov.f32 s0, s6
+; CHECK-NEXT:    vmov.f32 s1, s7
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x i64> %src1, <2 x i64> %src2, <2 x i32> <i32 3, i32 1>
@@ -1520,7 +1549,8 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @shuffle8_i64(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: shuffle8_i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d3, d1
+; CHECK-NEXT:    vmov.f32 s6, s2
+; CHECK-NEXT:    vmov.f32 s7, s3
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1533,13 +1563,19 @@ define arm_aapcs_vfpcc <8 x i64> @shuffle9_i64(<4 x i64> %src1, <4 x i64> %src2)
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q5, q2
-; CHECK-NEXT:    vmov.f64 d8, d0
-; CHECK-NEXT:    vmov.f64 d9, d10
-; CHECK-NEXT:    vmov.f64 d10, d1
+; CHECK-NEXT:    vmov.f32 s16, s0
+; CHECK-NEXT:    vmov.f32 s18, s20
+; CHECK-NEXT:    vmov.f32 s20, s2
+; CHECK-NEXT:    vmov.f32 s10, s12
+; CHECK-NEXT:    vmov.f32 s19, s21
+; CHECK-NEXT:    vmov.f32 s8, s4
+; CHECK-NEXT:    vmov.f32 s17, s1
+; CHECK-NEXT:    vmov.f32 s21, s3
 ; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vmov.f64 d5, d6
-; CHECK-NEXT:    vmov.f64 d4, d2
-; CHECK-NEXT:    vmov.f64 d6, d3
+; CHECK-NEXT:    vmov.f32 s12, s6
+; CHECK-NEXT:    vmov.f32 s11, s13
+; CHECK-NEXT:    vmov.f32 s9, s5
+; CHECK-NEXT:    vmov.f32 s13, s7
 ; CHECK-NEXT:    vmov q1, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
@@ -1774,7 +1810,8 @@ entry:
 define arm_aapcs_vfpcc double @extract_f64_1(<2 x double> %a) {
 ; CHECK-LABEL: extract_f64_1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    vmov.f32 s0, s2
+; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    bx lr
 entry:
   %res = extractelement <2 x double> %a, i32 1

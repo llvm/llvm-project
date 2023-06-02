@@ -2548,6 +2548,12 @@ class ElementCount<string name> :
 
 class ElementType<string name> : StrFunc<"getElementTypeOrSelf($" # name # ")">;
 
+class AnyPred<list<string> values> :
+  CPred<!if(!lt(!size(values), 1),
+            "false",
+            !foldl("(" # !head(values) # ")", !tail(values), acc, v,
+                   acc # " || (" # v # ")"))>;
+
 class AllMatchPred<list<string> values> :
   CPred<!if(!lt(!size(values), 2),
             "true",
@@ -2567,6 +2573,17 @@ class AllMatchSameOperatorTrait<list<string> names, string operator,
     PredOpTrait<
         "all of {" # !interleave(names, ", ") # "} have same " # summary,
         AllMatchSameOperatorPred<names, operator>> {
+  list<string> values = names;
+}
+
+class AnyMatchOperatorPred<list<string> names, string operator> :
+    AnyPred<!foreach(n, names, !subst("$_self", "$" # n, operator))>;
+
+class AnyMatchOperatorTrait<list<string> names, string operator,
+                            string summary> :
+    PredOpTrait<
+        "any of {" # !interleave(names, ", ") # "} has " # summary,
+        AnyMatchOperatorPred<names, operator>> {
   list<string> values = names;
 }
 
@@ -2694,5 +2711,17 @@ class TCopVTEtAreSameAt<list<int> indices> : CPred<
       "::mlir::ArrayRef<unsigned>({" # !interleave(indices, ", ") # "}), "
       "[this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); "
       "}))">;
+
+class AnyScalarTypeMatch<list<string> names> :
+    AnyMatchOperatorTrait<names, "$_self.getType().isSignlessInteger(1)",
+                          "scalar type">;
+
+class ScalarConditionOrMatchingShape<list<string> names> :
+    PredOpTrait<
+        !head(names) # " is scalar or has matching shape",
+        Or<[AnyScalarTypeMatch<[!head(names)]>.predicate,
+            AllShapesMatch<names>.predicate]>> {
+  list<string> values = names;
+}
 
 #endif // OP_BASE

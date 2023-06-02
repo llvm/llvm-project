@@ -40,10 +40,9 @@ public:
   /// Return an instance of the internal implementation.
   const Impl &getImpl() const { return *impl; }
 
-  /// Set the desired bytecode version to emit. This function clamps the version
-  /// to the existing version if larger than existing. The desired version may
-  /// not be used depending on the features used and the actual version required
-  /// is returned by bytecode writer entry point.
+  /// Set the desired bytecode version to emit. This method does not validate
+  /// the desired version. The bytecode writer entry point will return failure
+  /// if it cannot emit the desired version.
   void setDesiredBytecodeVersion(int64_t bytecodeVersion);
 
   /// Get the set desired bytecode version to emit.

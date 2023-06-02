@@ -1212,3 +1212,71 @@ loop:
 exit:
   ret void
 }
+
+define void @test_step_is_not_invariant(ptr %A) {
+; CHECK-LABEL: define void @test_step_is_not_invariant
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i16 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw <2 x i32> [[VEC_IND]], [[VEC_IND]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = udiv <2 x i16> [[TMP4]], <i16 6, i16 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i16> [[TMP5]] to <2 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP9]]
+; CHECK-NEXT:    store i16 [[TMP1]], ptr [[TMP8]], align 2
+; CHECK-NEXT:    store i16 [[TMP2]], ptr [[TMP10]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[OFFSET_IDX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], 56
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 56, 56
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 56, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[IV]], [[IV]]
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i32 [[MUL]] to i16
+; CHECK-NEXT:    [[DIV5:%.*]] = udiv i16 [[DIV_LHS_TRUNC]], 6
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[IV]] to i16
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i16 [[DIV5]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[IDXPROM]]
+; CHECK-NEXT:    store i16 [[CONV]], ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], 56
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP39:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw nsw i32 %iv, %iv
+  %div.lhs.trunc = trunc i32 %mul to i16
+  %div5 = udiv i16 %div.lhs.trunc, 6
+  %conv = trunc i32 %iv to i16
+  %idxprom = zext i16 %div5 to i64
+  %arrayidx = getelementptr inbounds i16, ptr %A, i64 %idxprom
+  store i16 %conv, ptr %arrayidx, align 2
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond.not = icmp eq i32 %iv.next, 56
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}

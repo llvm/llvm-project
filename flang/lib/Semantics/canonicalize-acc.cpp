@@ -65,7 +65,7 @@ private:
 
         const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
         if (outer->IsDoConcurrent()) {
-          return; // Tile is not allowed on DO CONURRENT
+          return; // Tile is not allowed on DO CONCURRENT
         }
         for (const parser::DoConstruct *loop{&*outer}; loop && tileArgNb > 0;
              --tileArgNb) {

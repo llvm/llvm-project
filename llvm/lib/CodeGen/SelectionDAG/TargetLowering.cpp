@@ -1033,13 +1033,17 @@ static SDValue combineShiftToAVG(SDValue Op, SelectionDAG &DAG,
   if (!TLI.isOperationLegalOrCustom(AVGOpc, NVT)) {
     // If we could not transform, and (both) adds are nuw/nsw, we can use the
     // larger type size to do the transform.
-    if (((!IsSigned && Add->getFlags().hasNoUnsignedWrap() &&
-          (!Add2 || Add2->getFlags().hasNoUnsignedWrap())) ||
-         (IsSigned && Add->getFlags().hasNoSignedWrap() &&
-          (!Add2 || Add2->getFlags().hasNoSignedWrap()))) &&
-        TLI.isOperationLegalOrCustom(AVGOpc, VT)) {
+    if (!TLI.isOperationLegalOrCustom(AVGOpc, VT))
+      return SDValue();
+
+    if (DAG.computeOverflowForAdd(IsSigned, Add.getOperand(0),
+                                  Add.getOperand(1)) ==
+            SelectionDAG::OFK_Never &&
+        (!Add2 || DAG.computeOverflowForAdd(IsSigned, Add2.getOperand(0),
+                                            Add2.getOperand(1)) ==
+                      SelectionDAG::OFK_Never))
       NVT = VT;
-    } else
+    else
       return SDValue();
   }
 

@@ -267,6 +267,7 @@ module std [system] {
       module find_if_not                     { private header "__algorithm/find_if_not.h" }
       module for_each                        { private header "__algorithm/for_each.h" }
       module for_each_n                      { private header "__algorithm/for_each_n.h" }
+      module for_each_segment                { private header "__algorithm/for_each_segment.h" }
       module generate                        { private header "__algorithm/generate.h" }
       module generate_n                      { private header "__algorithm/generate_n.h" }
       module half_positive                   { private header "__algorithm/half_positive.h" }
@@ -344,11 +345,17 @@ module std [system] {
       module pstl_backends_cpu_backends_serial {
         private header "__algorithm/pstl_backends/cpu_backends/serial.h"
       }
+      module pstl_backends_cpu_backends_stable_sort {
+        private header "__algorithm/pstl_backends/cpu_backends/stable_sort.h"
+      }
       module pstl_backends_cpu_backends_thread {
         private header "__algorithm/pstl_backends/cpu_backends/thread.h"
       }
       module pstl_backends_cpu_backends_transform {
         private header "__algorithm/pstl_backends/cpu_backends/transform.h"
+      }
+      module pstl_backends_cpu_backends_transform_reduce {
+        private header "__algorithm/pstl_backends/cpu_backends/transform_reduce.h"
       }
       module push_heap                       { private header "__algorithm/push_heap.h" }
       module ranges_adjacent_find            { private header "__algorithm/ranges_adjacent_find.h" }
@@ -1678,6 +1685,7 @@ module std [system] {
     module nat                                       { private header "__type_traits/nat.h" }
     module negation                                  { private header "__type_traits/negation.h" }
     module noexcept_move_assign_container            { private header "__type_traits/noexcept_move_assign_container.h" }
+    module operation_traits                          { private header "__type_traits/operation_traits.h" }
     module predicate_traits                          { private header "__type_traits/predicate_traits.h" }
     module promote                                   { private header "__type_traits/promote.h" }
     module rank                                      { private header "__type_traits/rank.h" }

@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -verify %s \
-// RUN:     -analyzer-checker=core,apiModeling \
+// RUN:     -analyzer-checker=core,alpha.unix.StdCLibraryFunctions \
 // RUN:     -analyzer-output=text
 
 #define NULL ((void *)0)

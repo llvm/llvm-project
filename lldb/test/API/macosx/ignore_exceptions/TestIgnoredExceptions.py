@@ -30,10 +30,22 @@ class TestDarwinSignalHandlers(TestBase):
             "EXC_BAD_AXESS",
             error=True,
         )
-        # Now set ourselves to ignore some exceptions.  The test depends on ignoring EXC_BAD_ACCESS, but I passed a couple
-        # to make sure they parse:
+        # Make sure that we don't accept exceptions that lldb/debugserver need:
+        self.match(
+            "settings set platform.plugin.darwin.ignored-exceptions EXC_BREAKPOINT",
+            "EXC_BREAKPOINT",
+            error=True,
+        )
+        # Make sure that we don't accept exceptions that lldb/debugserver need:
+        self.match(
+            "settings set platform.plugin.darwin.ignored-exceptions EXC_SOFT_SIGNAL",
+            "EXC_SOFT_SIGNAL",
+            error=True,
+        )
+        # Now set ourselves to ignore some exceptions.  The test depends on ignoring EXC_BAD_ACCESS, but I passed all the
+        # ones we currently accept to make sure they parse:
         self.runCmd(
-            "settings set platform.plugin.darwin.ignored-exceptions EXC_BAD_ACCESS|EXC_ARITHMETIC"
+            "settings set platform.plugin.darwin.ignored-exceptions EXC_BAD_ACCESS|EXC_BAD_INSTRUCTION|EXC_ARITHMETIC|EXC_RESOURCE|EXC_GUARD|EXC_SYSCALL"
         )
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Stop here to get things going", self.main_source_file

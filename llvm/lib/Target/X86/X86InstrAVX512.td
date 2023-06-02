@@ -12901,6 +12901,38 @@ let Predicates = [HasBF16, HasVLX] in {
   def : Pat<(X86mcvtneps2bf16 (v4f32 (X86VBroadcastld32 addr:$src)),
                               v8i16x_info.ImmAllZerosV, VK4WM:$mask),
             (VCVTNEPS2BF16Z128rmbkz VK4WM:$mask, addr:$src)>;
+// FIXME FP16
+//  def : Pat<(v8bf16 (int_x86_vcvtneps2bf16128 (v4f32 VR128X:$src))),
+//            (VCVTNEPS2BF16Z128rr VR128X:$src)>;
+//  def : Pat<(v8bf16 (int_x86_vcvtneps2bf16128 (loadv4f32 addr:$src))),
+//            (VCVTNEPS2BF16Z128rm addr:$src)>;
+//
+//  def : Pat<(v8bf16 (int_x86_vcvtneps2bf16256 (v8f32 VR256X:$src))),
+//            (VCVTNEPS2BF16Z256rr VR256X:$src)>;
+//  def : Pat<(v8bf16 (int_x86_vcvtneps2bf16256 (loadv8f32 addr:$src))),
+//            (VCVTNEPS2BF16Z256rm addr:$src)>;
+//
+//  def : Pat<(v8bf16 (X86VBroadcastld16 addr:$src)),
+//            (VPBROADCASTWZ128rm addr:$src)>;
+//  def : Pat<(v16bf16 (X86VBroadcastld16 addr:$src)),
+//            (VPBROADCASTWZ256rm addr:$src)>;
+//
+//  def : Pat<(v8bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
+//            (VPBROADCASTWZ128rr VR128X:$src)>;
+//  def : Pat<(v16bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
+//            (VPBROADCASTWZ256rr VR128X:$src)>;
+//
+//  // TODO: No scalar broadcast due to we don't support legal scalar bf16 so far.
+//}
+//
+//let Predicates = [HasBF16] in {
+//  def : Pat<(v32bf16 (X86VBroadcastld16 addr:$src)),
+//            (VPBROADCASTWZrm addr:$src)>;
+//
+//  def : Pat<(v32bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
+//            (VPBROADCASTWZrr VR128X:$src)>;
+//  // TODO: No scalar broadcast due to we don't support legal scalar bf16 so far.
+// END FIXME FP16
 }
 
 let Constraints = "$src1 = $dst" in {

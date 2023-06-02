@@ -62,6 +62,11 @@ struct TestTensorTransforms
                      "with loop nest"),
       llvm::cl::init(false)};
 
+  Option<bool> testDropRedundantInsertSliceRankExpansion{
+      *this, "test-drop-redundant-insert-slice-rank-expansion",
+      llvm::cl::desc("Test dropping redundant insert_slice rank expansions"),
+      llvm::cl::init(false)};
+
   Option<bool> testReassociativeReshapeFolding{
       *this, "test-reassociative-reshape-folding",
       llvm::cl::desc("Test folding of expand_shape/collapse_shape"),
@@ -132,6 +137,13 @@ static void applyFoldConstantExtractSlicePatterns(Operation *rootOp) {
 static void applyFoldConsecutiveInsertExtractSlicePatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+}
+
+static void
+applyDropRedundantInsertSliceRankExpansionPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateDropRedundantInsertSliceRankExpansionPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -367,6 +379,8 @@ void TestTensorTransforms::runOnOperation() {
     applyFoldConstantExtractSlicePatterns(rootOp);
   if (testFoldConsecutiveInsertExtractSlice)
     applyFoldConsecutiveInsertExtractSlicePatterns(rootOp);
+  if (testDropRedundantInsertSliceRankExpansion)
+    applyDropRedundantInsertSliceRankExpansionPatterns(rootOp);
   if (testReassociativeReshapeFolding)
     applyReassociativeReshapeFoldingPatterns(rootOp);
   if (testEmptyOpFolding)

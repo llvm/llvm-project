@@ -3381,6 +3381,9 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
     Flags.copyFMF(*FPOp);
 
+  Flags.setUnpredictable(
+      cast<SelectInst>(I).getMetadata(LLVMContext::MD_unpredictable));
+
   // Min/max matching is only viable if all output VTs are the same.
   if (all_equal(ValueVTs)) {
     EVT VT = ValueVTs[0];

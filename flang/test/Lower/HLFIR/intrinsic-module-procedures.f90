@@ -3,7 +3,7 @@
 ! it only tests that the HFLIR procedure reference lowering
 ! infrastructure properly detects and dispatches intrinsic module
 ! procedure calls.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine foo(cptr, x)
   use iso_c_binding, only : c_ptr, c_loc

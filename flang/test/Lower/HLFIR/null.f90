@@ -1,5 +1,5 @@
 ! Test lowering of NULL(MOLD) to HLFIR.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 subroutine test1(mold)
   integer, pointer :: mold(:)
   interface

@@ -2349,6 +2349,11 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(const Instruction *I,
     if (I && dyn_cast<LoadInst>(I->getOperand(1)))
       return ST->getVectorInsertExtractBaseCost() + 1;
 
+    // i1 inserts and extract will include an extra cset or cmp of the vector
+    // value. Increase the cost by 1 to account.
+    if (Val->getScalarSizeInBits() == 1)
+      return ST->getVectorInsertExtractBaseCost() + 1;
+
     // FIXME:
     // If the extract-element and insert-element instructions could be
     // simplified away (e.g., could be combined into users by looking at use-def
@@ -3208,8 +3213,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (!Entry)
       break;
     auto *ValVTy = cast<FixedVectorType>(ValTy);
-    if (!ValVTy->getElementType()->isIntegerTy(1) &&
-        MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
+    if (MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
         isPowerOf2_32(ValVTy->getNumElements())) {
       InstructionCost ExtraCost = 0;
       if (LT.first != 1) {
@@ -3220,7 +3224,9 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
         ExtraCost = getArithmeticInstrCost(Opcode, Ty, CostKind);
         ExtraCost *= LT.first - 1;
       }
-      return Entry->Cost + ExtraCost;
+      // All and/or/xor of i1 will be lowered with maxv/minv/addv + fmov
+      auto Cost = ValVTy->getElementType()->isIntegerTy(1) ? 2 : Entry->Cost;
+      return Cost + ExtraCost;
     }
     break;
   }

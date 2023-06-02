@@ -10,7 +10,11 @@
 #ifndef _LIBCPP___ALGORITHM_FOR_EACH_H
 #define _LIBCPP___ALGORITHM_FOR_EACH_H
 
+#include <__algorithm/for_each_segment.h>
 #include <__config>
+#include <__iterator/segmented_iterator.h>
+#include <__type_traits/enable_if.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -19,13 +23,24 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Function>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function for_each(_InputIterator __first,
-                                                                                  _InputIterator __last,
-                                                                                  _Function __f) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
+for_each(_InputIterator __first, _InputIterator __last, _Function __f) {
   for (; __first != __last; ++__first)
     __f(*__first);
   return __f;
 }
+
+#if _LIBCPP_STD_VER >= 20
+template <class _SegmentedIterator, class _Function>
+  requires __is_segmented_iterator<_SegmentedIterator>::value
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
+for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function __func) {
+  std::__for_each_segment(__first, __last, [&](auto __lfirst, auto __llast) {
+    __func = std::for_each(__lfirst, __llast, std::move(__func));
+  });
+  return __func;
+}
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

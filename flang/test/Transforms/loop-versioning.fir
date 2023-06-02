@@ -366,9 +366,9 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // Check the 2D -> 1D coordinate conversion, should have a multiply and a final add.
 // Some other operations are checked to synch the different parts.
 // CHECK: %[[OUTER_IDX:.*]] = arith.muli %[[DIMS1]]#2, {{.*}}
-// CHECK: %[[ITEMSIZE:.*]] = arith.constant 8 : index
 // CHECK: %[[INNER_IDX:.*]] = fir.convert {{.*}}
-// CHECK: %[[OUTER_DIV:.*]] = arith.divsi %[[OUTER_IDX]], %[[ITEMSIZE]]
+// CHECK: %[[ITEMSHIFT:.*]] = arith.constant 3 : index
+// CHECK: %[[OUTER_DIV:.*]] = arith.shrsi %[[OUTER_IDX]], %[[ITEMSHIFT]]
 // CHECK: %[[C2D:.*]] = arith.addi %[[OUTER_DIV]], %[[INNER_IDX]]
 // CHECK: %[[COORD:.*]] = fir.coordinate_of %[[BOXADDR]], %[[C2D]] : (!fir.ref<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK: %{{.*}} = fir.load %[[COORD]] : !fir.ref<f64>
@@ -498,9 +498,9 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK: %[[OUTER_IDX:.*]] = arith.muli %[[DIMS2]]#2, {{.*}}
 // CHECK: %[[MIDDLE_IDX:.*]] = arith.muli %[[DIMS1]]#2, {{.*}}
 // CHECK: %[[MIDDLE_SUM:.*]] = arith.addi %[[MIDDLE_IDX]], %[[OUTER_IDX]]
-// CHECK: %[[ITEMSIZE:.*]] = arith.constant 8 : index
 // CHECK: %[[INNER_IDX:.*]] = fir.convert {{.*}}
-// CHECK: %[[MIDDLE_DIV:.*]] = arith.divsi %[[MIDDLE_SUM]], %[[ITEMSIZE]]
+// CHECK: %[[ITEMSHIFT:.*]] = arith.constant 3 : index
+// CHECK: %[[MIDDLE_DIV:.*]] = arith.shrsi %[[MIDDLE_SUM]], %[[ITEMSHIFT]]
 // CHECK: %[[C3D:.*]] = arith.addi %[[MIDDLE_DIV]], %[[INNER_IDX]]
 // CHECK: %[[COORD:.*]] = fir.coordinate_of %[[BOXADDR]], %[[C3D]] : (!fir.ref<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK: %{{.*}} = fir.load %[[COORD]] : !fir.ref<f64>

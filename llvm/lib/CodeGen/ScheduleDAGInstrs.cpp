@@ -208,8 +208,7 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
   ExitSU.setInstr(ExitMI);
   // Add dependencies on the defs and uses of the instruction.
   if (ExitMI) {
-    for (const MachineOperand &MO : ExitMI->operands()) {
-      if (!MO.isReg() || MO.isDef()) continue;
+    for (const MachineOperand &MO : ExitMI->all_uses()) {
       Register Reg = MO.getReg();
       if (Reg.isPhysical()) {
         Uses.insert(PhysRegSUOper(&ExitSU, -1, Reg));

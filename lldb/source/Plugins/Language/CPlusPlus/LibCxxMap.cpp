@@ -241,9 +241,6 @@ size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
 }
 
 bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
-  static ConstString g_tree_("__tree_");
-  static ConstString g_pair3("__pair3_");
-
   if (m_element_type.IsValid())
     return true;
   m_element_type.Clear();
@@ -257,7 +254,7 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
     m_element_type = deref->GetCompilerType();
     return true;
   }
-  deref = m_backend.GetChildAtNamePath({g_tree_, g_pair3});
+  deref = m_backend.GetChildAtNamePath({"__tree_", "__pair3_"});
   if (!deref)
     return false;
   m_element_type = deref->GetCompilerType()

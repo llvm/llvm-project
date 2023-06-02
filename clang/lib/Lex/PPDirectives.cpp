@@ -150,6 +150,30 @@ static bool isFeatureTestMacro(StringRef MacroName) {
                             MacroName);
 }
 
+static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
+                                     const MacroInfo *MI,
+                                     const StringRef MacroName) {
+  // If this is a macro with special handling (like __LINE__) then it's language
+  // defined.
+  if (MI->isBuiltinMacro())
+    return true;
+  // Builtin macros are defined in the builtin file
+  if (!SourceMgr.isWrittenInBuiltinFile(MI->getDefinitionLoc()))
+    return false;
+  // C defines macros starting with __STDC, and C++ defines macros starting with
+  // __STDCPP
+  if (MacroName.startswith("__STDC"))
+    return true;
+  // C++ defines the __cplusplus macro
+  if (MacroName == "__cplusplus")
+    return true;
+  // C++ defines various feature-test macros starting with __cpp
+  if (MacroName.startswith("__cpp"))
+    return true;
+  // Anything else isn't language-defined
+  return false;
+}
+
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
   StringRef Text = II->getName();
@@ -3107,9 +3131,7 @@ void Preprocessor::HandleDefineDirective(
 
       // Warn if defining "__LINE__" and other builtins, per C99 6.10.8/4 and
       // C++ [cpp.predefined]p4, but allow it as an extension.
-      if (OtherMI->isBuiltinMacro() ||
-          (SourceMgr.isWrittenInBuiltinFile(OtherMI->getDefinitionLoc()) &&
-           !isFeatureTestMacro(MacroNameTok.getIdentifierInfo()->getName())))
+      if (isLanguageDefinedBuiltin(SourceMgr, OtherMI, II->getName()))
         Diag(MacroNameTok, diag::ext_pp_redef_builtin_macro);
       // Macros must be identical.  This means all tokens and whitespace
       // separation must be the same.  C99 6.10.3p2.
@@ -3190,11 +3212,8 @@ void Preprocessor::HandleUndefDirective() {
       Diag(MI->getDefinitionLoc(), diag::pp_macro_not_used);
 
     // Warn if undefining "__LINE__" and other builtins, per C99 6.10.8/4 and
-    // C++ [cpp.predefined]p4, but allow it as an extension. Don't warn if this
-    // is an Objective-C builtin macro though.
-    if ((MI->isBuiltinMacro() ||
-         SourceMgr.isWrittenInBuiltinFile(MI->getDefinitionLoc())) &&
-        !(getLangOpts().ObjC && isObjCProtectedMacro(II)))
+    // C++ [cpp.predefined]p4, but allow it as an extension.
+    if (isLanguageDefinedBuiltin(SourceMgr, MI, II->getName()))
       Diag(MacroNameTok, diag::ext_pp_undef_builtin_macro);
 
     if (MI->isWarnIfUnused())

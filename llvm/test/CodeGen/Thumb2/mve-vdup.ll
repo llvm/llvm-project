@@ -208,7 +208,8 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @vdup_f64(double %src) {
 ; CHECK-LABEL: vdup_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d1, d0
+; CHECK-NEXT:    vmov.f32 s2, s0
+; CHECK-NEXT:    vmov.f32 s3, s1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <2 x double> undef, double %src, i32 0
@@ -278,7 +279,8 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vduplane_i64(<2 x i64> %src) {
 ; CHECK-LABEL: vduplane_i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    vmov.f32 s0, s2
+; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x i64> %src, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
@@ -326,7 +328,8 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @vduplane_f64(<2 x double> %src) {
 ; CHECK-LABEL: vduplane_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    vmov.f32 s0, s2
+; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x double> %src, <2 x double> undef, <2 x i32> <i32 1, i32 1>
@@ -503,7 +506,8 @@ define arm_aapcs_vfpcc <2 x i64> @bitcast_i64_v2f64(i64 %a) {
 define arm_aapcs_vfpcc <2 x i64> @bitcast_v2f64_v2i64(<2 x double> %a) {
 ; CHECK-LABEL: bitcast_v2f64_v2i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.f64 d1, d0
+; CHECK-NEXT:    vmov.f32 s2, s0
+; CHECK-NEXT:    vmov.f32 s3, s1
 ; CHECK-NEXT:    bx lr
   %b = bitcast <2 x double> %a to <2 x i64>
   %r = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
@@ -513,7 +517,8 @@ define arm_aapcs_vfpcc <2 x i64> @bitcast_v2f64_v2i64(<2 x double> %a) {
 define arm_aapcs_vfpcc <2 x i64> @bitcast_v8i16_v2i64(<8 x i16> %a) {
 ; CHECK-LABEL: bitcast_v8i16_v2i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.f64 d1, d0
+; CHECK-NEXT:    vmov.f32 s2, s0
+; CHECK-NEXT:    vmov.f32 s3, s1
 ; CHECK-NEXT:    bx lr
   %b = bitcast <8 x i16> %a to <2 x i64>
   %r = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer

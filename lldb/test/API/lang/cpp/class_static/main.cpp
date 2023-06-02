@@ -21,16 +21,29 @@ public:
     static PointType g_points[];
 };
 
+// Make sure similar names don't confuse us:
+
+class AA
+{
+public:
+  static PointType g_points[];
+};
+
 PointType A::g_points[] = 
 {
     {    1,    2 },
     {   11,   22 }
 };
-
 static PointType g_points[] = 
 {
     {    3,    4 },
     {   33,   44 }
+};
+
+PointType AA::g_points[] = 
+{
+    {    5,    6 },
+    {   55,   66 }
 };
 
 int
@@ -38,6 +51,7 @@ main (int argc, char const *argv[])
 {
     const char *hello_world = "Hello, world!";
     printf ("A::g_points[1].x = %i\n", A::g_points[1].x); // Set break point at this line.
+    printf ("AA::g_points[1].x = %i\n", AA::g_points[1].x);
     printf ("::g_points[1].x = %i\n", g_points[1].x);
     printf ("%s\n", hello_world);
     return 0;

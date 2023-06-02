@@ -69,6 +69,7 @@ END-SCRIPT
 #include <__algorithm/find_if_not.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/find_if_not.h'}}
 #include <__algorithm/for_each.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/for_each.h'}}
 #include <__algorithm/for_each_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/for_each_n.h'}}
+#include <__algorithm/for_each_segment.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/for_each_segment.h'}}
 #include <__algorithm/generate.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/generate.h'}}
 #include <__algorithm/generate_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/generate_n.h'}}
 #include <__algorithm/half_positive.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/half_positive.h'}}
@@ -122,8 +123,10 @@ END-SCRIPT
 #include <__algorithm/pstl_backends/cpu_backends/for_each.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/for_each.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/merge.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/merge.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/serial.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/serial.h'}}
+#include <__algorithm/pstl_backends/cpu_backends/stable_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/stable_sort.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/thread.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/thread.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/transform.h'}}
+#include <__algorithm/pstl_backends/cpu_backends/transform_reduce.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/transform_reduce.h'}}
 #include <__algorithm/push_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/push_heap.h'}}
 #include <__algorithm/ranges_adjacent_find.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_adjacent_find.h'}}
 #include <__algorithm/ranges_all_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_all_of.h'}}
@@ -767,6 +770,7 @@ END-SCRIPT
 #include <__type_traits/nat.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/nat.h'}}
 #include <__type_traits/negation.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/negation.h'}}
 #include <__type_traits/noexcept_move_assign_container.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/noexcept_move_assign_container.h'}}
+#include <__type_traits/operation_traits.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/operation_traits.h'}}
 #include <__type_traits/predicate_traits.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/predicate_traits.h'}}
 #include <__type_traits/promote.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/promote.h'}}
 #include <__type_traits/rank.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/rank.h'}}
