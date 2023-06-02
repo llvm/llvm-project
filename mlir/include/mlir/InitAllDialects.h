@@ -82,6 +82,7 @@
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/Interfaces/CastInterfaces.h"
 
 namespace mlir {
 
@@ -145,6 +146,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   arith::registerValueBoundsOpInterfaceExternalModels(registry);
   bufferization::func_ext::registerBufferizableOpInterfaceExternalModels(
       registry);
+  builtin::registerCastOpInterfaceExternalModels(registry);
   linalg::registerBufferizableOpInterfaceExternalModels(registry);
   linalg::registerTilingInterfaceExternalModels(registry);
   linalg::registerValueBoundsOpInterfaceExternalModels(registry);
