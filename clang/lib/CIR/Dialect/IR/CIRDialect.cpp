@@ -1268,23 +1268,32 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 LogicalResult
 VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // vtable ptr is not coming from a symbol.
+  if (!getName())
+    return success();
+  auto name = *getName();
+
   // Verify that the result type underlying pointer type matches the type of the
   // referenced cir.global or cir.func op.
   auto op = dyn_cast_or_null<GlobalOp>(
       symbolTable.lookupNearestSymbolFrom(*this, getNameAttr()));
   if (!op)
     return emitOpError("'")
-           << getName() << "' does not reference a valid cir.global";
+           << name << "' does not reference a valid cir.global";
   auto init = op.getInitialValue();
   if (!init)
     return success();
   if (!isa<mlir::cir::VTableAttr>(*init))
     return emitOpError("Expected #cir.vtable in initializer for global '")
-           << getName() << "'";
+           << name << "'";
   return success();
 }
 
 LogicalResult cir::VTableAddrPointOp::verify() {
+  // The operation uses either a symbol or a value to operate, but not both
+  if (getName() && getSymAddr())
+    return emitOpError("should use either a symbol or value, but not both");
+
   auto resultType = getAddr().getType();
   auto fnTy = mlir::cir::FuncType::get(
       getContext(), {},
