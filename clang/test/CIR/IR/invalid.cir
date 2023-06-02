@@ -394,6 +394,17 @@ module {
 
 // -----
 
+!s32i = !cir.int<s, 32>
+cir.func @test_br() -> !s32i {
+    %0 = cir.const(#cir.int<0>: !s32i) : !s32i
+    // expected-error@below {{branch has 1 operands for successor #0, but target block has 0}}
+    cir.br ^bb1(%0 : !s32i)
+  ^bb1:
+    cir.return %0 : !s32i
+}
+
+// -----
+
 module {
   cir.func private @test() -> !cir.void
   cir.func @invalid_call() {
