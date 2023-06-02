@@ -957,6 +957,8 @@ struct AMDGPUQueueTy {
     hsa_status_t Status =
         hsa_queue_create(Agent, QueueSize, HSA_QUEUE_TYPE_MULTI, callbackError,
                          nullptr, UINT32_MAX, UINT32_MAX, &Queue);
+    OMPT_IF_TRACING_ENABLED(
+        hsa_amd_profiling_set_profiler_enabled(Queue, /*Enable=*/1););
     return Plugin::check(Status, "Error in hsa_queue_create: %s");
   }
 
@@ -965,6 +967,7 @@ struct AMDGPUQueueTy {
     if (!Queue)
       return Plugin::success();
 
+    // Don't bother turning OFF profiling, the queue is going away anyways.
     hsa_status_t Status = hsa_queue_destroy(Queue);
     return Plugin::check(Status, "Error in hsa_queue_destroy: %s");
   }
@@ -2952,7 +2955,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Enable/disable profiling of the HSA queues.
   void setOmptQueueProfile(int Enable) {
     for (auto &Q : Queues)
-      hsa_amd_profiling_set_profiler_enabled(Q.getHsaQueue(), Enable);
+      if (Q.isInitialized())
+        hsa_amd_profiling_set_profiler_enabled(Q.getHsaQueue(), Enable);
   }
 
   /// Get the address of pointer to the preallocated device memory pool.
