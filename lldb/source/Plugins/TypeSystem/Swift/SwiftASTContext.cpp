@@ -1145,6 +1145,14 @@ static std::string GetPluginServer(llvm::StringRef plugin_library_path) {
   return {};
 }
 
+static std::string GetPluginServerForSDK(llvm::StringRef sdk_path) {
+  XcodeSDK sdk(std::string(llvm::sys::path::filename(sdk_path)));
+  auto server_or_err = HostInfo::FindSDKTool(sdk, "swift-plugin-server");
+  if (!server_or_err)
+    return "";
+  return server_or_err->str();
+}
+
 /// Retrieve the serialized AST data blobs and initialize the compiler
 /// invocation with the concatenated search paths from the blobs.
 /// \returns true if an error was encountered.
@@ -1166,6 +1174,37 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
     return false;
 
   auto &search_path_options = invocation.getSearchPathOptions();
+  auto get_override_server = [&](llvm::StringRef plugin_path) -> std::string {
+    // If the user manually specified an override plugin server for a
+    // specific path prefix, return it.
+    Args plugin_servers =
+        Target::GetGlobalProperties().GetSwiftPluginServerForPath();
+    for (auto &arg: plugin_servers) {
+      auto key_value = arg.ref().split('=');
+      llvm::SmallString<0> ignore(plugin_path);
+      if (llvm::sys::path::replace_path_prefix(ignore, key_value.first, {}))
+        return key_value.second.str();
+    }
+    return {};
+  };
+  auto get_plugin_server = [&](llvm::StringRef plugin,
+                               std::function<std::string(void)> fallback) {
+    // Search for a manual override first, then try fallback.
+    std::string server = get_override_server(plugin);
+    if (server.empty())
+      server = fallback();
+    if (server.empty()) {
+      HEALTH_LOG_PRINTF("Could not find swift-plugin-server for %s",
+                        plugin.str().c_str());
+      return std::string();
+    }
+    if (!FileSystem::Instance().Exists(server)) {
+      HEALTH_LOG_PRINTF("Swift plugin server does not exist: %s",
+                        server.c_str());
+      server.clear();
+    }
+    return server; 
+  };
 
 #define INIT_SEARCH_PATH_SET(TYPE, ACCESSOR, NAME, KEY)                        \
   std::vector<TYPE> NAME;                                                      \
@@ -1266,54 +1305,73 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
           // Rewrite them to go through an ABI-compatible swift-plugin-server.
           if (known_plugin_search_paths.insert(path).second) {
             if (known_external_plugin_search_paths.insert(path).second) {
-              std::string server = GetPluginServer(path);
-              if (server.empty()) {
-                HEALTH_LOG_PRINTF("Could not find swift-plugin-server for %s",
-                                  path.str().c_str());
+              std::string server = get_plugin_server(
+                  path, [&]() { return GetPluginServer(path); });
+              if (server.empty())
                 continue;
-              }
               if (exists(path))
                 external_plugin_search_paths.push_back({path.str(), server});
             }
           }
-          for (auto path :
-               extended_validation_info.getExternalPluginSearchPaths()) {
-            // Sandboxed system plugins shipping with some compiler.
-            // Keep the original plugin server path, it needs to be ABI
-            // compatible with the version of SwiftSyntax used by the plugin.
-            auto plugin_server = path.split('#');
-            llvm::StringRef plugin = plugin_server.first;
-            llvm::StringRef server = plugin_server.second;
-            if (known_external_plugin_search_paths.insert(plugin).second)
-              if (exists(plugin) && exists(server))
-                external_plugin_search_paths.push_back(
-                    {plugin.str(), server.str()});
-          }
+        }
+        for (auto path :
+             extended_validation_info.getExternalPluginSearchPaths()) {
+          // Sandboxed system plugins shipping with some compiler.
+          // Keep the original plugin server path, it needs to be ABI
+          // compatible with the version of SwiftSyntax used by the plugin.
+          auto plugin_server = path.split('#');
+          llvm::StringRef plugin = plugin_server.first;
+          std::string server = get_plugin_server(
+              plugin, [&]() { return plugin_server.second.str(); });
+          if (server.empty())
+            continue;
+          if (known_external_plugin_search_paths.insert(plugin).second)
+            if (exists(plugin))
+              external_plugin_search_paths.push_back({plugin.str(), server});
+        }
 
-          for (auto path :
-               extended_validation_info.getCompilerPluginLibraryPaths()) {
-            // Compiler plugin libraries.
-            if (known_compiler_plugin_library_paths.insert(path).second)
-              if (exists(path))
-                compiler_plugin_library_paths.push_back(path.str());
-          }
+        for (auto dylib :
+             extended_validation_info.getCompilerPluginLibraryPaths()) {
+          // Compiler plugin libraries.
+          if (known_compiler_plugin_library_paths.insert(dylib).second)
+            if (exists(dylib)) {
+              // We never want to directly load any plugins, since a crash in
+              // the plugin would bring down LLDB. Here, we assume that the
+              // correct plugin server for a direct compiler plugin is the one
+              // from the SDK the compiler was building for. This is just a
+              // heuristic.
+              llvm::SmallString<0> dir(dylib);
+              llvm::sys::path::remove_filename(dir);
+              std::string server = get_plugin_server(dir, [&]() {
+                return GetPluginServerForSDK(invocation.getSDKPath());
+              });
+              if (server.empty())
+                continue;
 
-          for (auto path :
-               extended_validation_info.getCompilerPluginExecutablePaths()) {
-            // Compiler plugin executables.
-            auto plugin_modules = path.split('#');
-            llvm::StringRef plugin = plugin_modules.first;
-            llvm::StringRef modules_list = plugin_modules.second;
-            llvm::SmallVector<llvm::StringRef, 0> modules;
-            modules_list.split(modules, ",");
-            std::vector<std::string> modules_vec;
-            for (auto m : modules)
-              modules_vec.push_back(m.str());
-            if (known_compiler_plugin_executable_paths.insert(path).second)
-              if (exists(plugin))
-                compiler_plugin_executable_paths.push_back(
-                    {plugin.str(), modules_vec});
-          }
+              // FIXME: The Swift compiler expects external plugins
+              // to be named libModuleName.[dylib|so|dll]. This
+              // means this our translation attempts only work for
+              // macro libraries following this convention. cf.
+              // PluginLoader::lookupExternalLibraryPluginByModuleName().
+              external_plugin_search_paths.push_back({dir.str().str(), server});
+            }
+        }
+
+        for (auto path :
+             extended_validation_info.getCompilerPluginExecutablePaths()) {
+          // Compiler plugin executables.
+          auto plugin_modules = path.split('#');
+          llvm::StringRef plugin = plugin_modules.first;
+          llvm::StringRef modules_list = plugin_modules.second;
+          llvm::SmallVector<llvm::StringRef, 0> modules;
+          modules_list.split(modules, ",");
+          std::vector<std::string> modules_vec;
+          for (auto m : modules)
+            modules_vec.push_back(m.str());
+          if (known_compiler_plugin_executable_paths.insert(path).second)
+            if (exists(plugin))
+              compiler_plugin_executable_paths.push_back(
+                  {plugin.str(), modules_vec});
         }
         return true;
       };
@@ -1946,6 +2004,10 @@ static void
 ProcessModule(ModuleSP module_sp, std::string m_description,
               bool discover_implicit_search_paths, bool use_all_compiler_flags,
               Target &target, llvm::Triple triple,
+              std::vector<swift::ExternalPluginSearchPathAndServerPath>
+                  &external_plugin_search_paths,
+              std::vector<swift::PluginExecutablePathAndModuleNames>
+                  &compiler_plugin_executable_paths,
               std::vector<std::string> &module_search_paths,
               std::vector<std::pair<std::string, bool>> &framework_search_paths,
               std::vector<std::string> &extra_clang_args) {
@@ -2064,7 +2126,15 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
     //       collected here and surfaced.
   }
 
+  // Copy the interesting deserialized flags to the out parameters.
   const auto &opts = invocation.getSearchPathOptions();
+  external_plugin_search_paths.insert(external_plugin_search_paths.end(),
+                                      opts.ExternalPluginSearchPaths.begin(),
+                                      opts.ExternalPluginSearchPaths.end());
+  compiler_plugin_executable_paths.insert(
+      compiler_plugin_executable_paths.end(),
+      opts.getCompilerPluginExecutablePaths().begin(),
+      opts.getCompilerPluginExecutablePaths().end());
   module_search_paths.insert(module_search_paths.end(),
                              opts.getImportSearchPaths().begin(),
                              opts.getImportSearchPaths().end());
@@ -2087,6 +2157,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   LLDB_SCOPED_TIMER();
   std::string m_description = "SwiftASTContextForExpressions";
+  std::vector<swift::ExternalPluginSearchPathAndServerPath>
+    external_plugin_search_paths;
+  std::vector<swift::PluginExecutablePathAndModuleNames>
+      compiler_plugin_executable_paths;
   std::vector<std::string> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
   TargetSP target_sp = typeref_typesystem.GetTargetWP().lock();
@@ -2260,8 +2334,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     std::vector<std::string> extra_clang_args;
     ProcessModule(target.GetImages().GetModuleAtIndex(mi), m_description,
                   discover_implicit_search_paths, use_all_compiler_flags,
-                  target, triple, module_search_paths, framework_search_paths,
-                  extra_clang_args);
+                  target, triple, external_plugin_search_paths,
+                  compiler_plugin_executable_paths, module_search_paths,
+                  framework_search_paths, extra_clang_args);
     swift_ast_sp->AddExtraClangArgs(extra_clang_args);
   }
 
@@ -2305,6 +2380,15 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     logError("couldn't create a ClangImporter");
     return {};
   }
+
+  // Initialize the compiler plugin search paths.
+  auto &opts = swift_ast_sp->GetSearchPathOptions();
+  opts.ExternalPluginSearchPaths.insert(opts.ExternalPluginSearchPaths.end(),
+                                        external_plugin_search_paths.begin(),
+                                        external_plugin_search_paths.end());
+  assert(opts.getCompilerPluginExecutablePaths().empty());
+  opts.setCompilerPluginExecutablePaths(
+      std::move(compiler_plugin_executable_paths));
 
   for (size_t mi = 0; mi != num_images; ++mi) {
     std::vector<std::string> module_names;
@@ -4545,16 +4629,23 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
   bool use_all_compiler_flags = target_sp->GetUseAllCompilerFlags();
   unsigned num_images = module_list.GetSize();
   for (size_t mi = 0; mi != num_images; ++mi) {
+    std::vector<swift::ExternalPluginSearchPathAndServerPath>
+        external_plugin_search_paths;
+    std::vector<swift::PluginExecutablePathAndModuleNames>
+        compiler_plugin_executable_paths;
     std::vector<std::string> module_search_paths;
     std::vector<std::pair<std::string, bool>> framework_search_paths;
     std::vector<std::string> extra_clang_args;
     lldb::ModuleSP module_sp = module_list.GetModuleAtIndex(mi);
     ProcessModule(module_sp, m_description, discover_implicit_search_paths,
                   use_all_compiler_flags, *target_sp, GetTriple(),
-                  module_search_paths, framework_search_paths,
-                  extra_clang_args);
-    // If the use-all-compiler-flags setting is enabled, the expression
-    // context is supposed to merge all search paths from all dylibs.
+                  external_plugin_search_paths,
+                  compiler_plugin_executable_paths, module_search_paths,
+                  framework_search_paths, extra_clang_args);
+    // If the use-all-compiler-flags setting is enabled, the
+    // expression context is supposed to merge all search paths
+    // from all dylibs.
+    // TODO: Maybe we should also do this for compiler plugins?
     if (use_all_compiler_flags && !extra_clang_args.empty()) {
       // We cannot reconfigure ClangImporter after its creation.
       // Instead poison the SwiftASTContext so it gets recreated.
@@ -4585,16 +4676,20 @@ void SwiftASTContext::LogConfiguration() {
     HEALTH_LOG_PRINTF("  (no AST context)");
     return;
   }
+  HEALTH_LOG_PRINTF("  Swift/C++ interop                : %s",
+                    m_ast_context_ap->LangOpts.EnableCXXInterop ? "on" : "off");
+  HEALTH_LOG_PRINTF("  Swift/Objective-C interop        : %s",
+                    m_ast_context_ap->LangOpts.EnableObjCInterop ? "on" : "off");
 
-  HEALTH_LOG_PRINTF("  Architecture                 : %s",
+  HEALTH_LOG_PRINTF("  Architecture                     : %s",
                     m_ast_context_ap->LangOpts.Target.getTriple().c_str());
   HEALTH_LOG_PRINTF(
-      "  SDK path                     : %s",
+      "  SDK path                         : %s",
       m_ast_context_ap->SearchPathOpts.getSDKPath().str().c_str());
   HEALTH_LOG_PRINTF(
-      "  Runtime resource path        : %s",
+      "  Runtime resource path            : %s",
       m_ast_context_ap->SearchPathOpts.RuntimeResourcePath.c_str());
-  HEALTH_LOG_PRINTF("  Runtime library paths        : (%llu items)",
+  HEALTH_LOG_PRINTF("  Runtime library paths            : (%llu items)",
                     (unsigned long long)m_ast_context_ap->SearchPathOpts
                         .RuntimeLibraryPaths.size());
 
@@ -4603,7 +4698,7 @@ void SwiftASTContext::LogConfiguration() {
     HEALTH_LOG_PRINTF("    %s", runtime_library_path.c_str());
   }
 
-  HEALTH_LOG_PRINTF("  Runtime library import paths : (%llu items)",
+  HEALTH_LOG_PRINTF("  Runtime library import paths     : (%llu items)",
                     (unsigned long long)m_ast_context_ap->SearchPathOpts
                         .getRuntimeLibraryImportPaths()
                         .size());
@@ -4613,7 +4708,7 @@ void SwiftASTContext::LogConfiguration() {
     HEALTH_LOG_PRINTF("    %s", runtime_import_path.c_str());
   }
 
-  HEALTH_LOG_PRINTF("  Framework search paths       : (%llu items)",
+  HEALTH_LOG_PRINTF("  Framework search paths           : (%llu items)",
                     (unsigned long long)m_ast_context_ap->SearchPathOpts
                         .getFrameworkSearchPaths()
                         .size());
@@ -4622,7 +4717,7 @@ void SwiftASTContext::LogConfiguration() {
     HEALTH_LOG_PRINTF("    %s", framework_search_path.Path.c_str());
   }
 
-  HEALTH_LOG_PRINTF("  Import search paths          : (%llu items)",
+  HEALTH_LOG_PRINTF("  Import search paths              : (%llu items)",
                     (unsigned long long)m_ast_context_ap->SearchPathOpts
                         .getImportSearchPaths()
                         .size());
@@ -4635,13 +4730,39 @@ void SwiftASTContext::LogConfiguration() {
       GetClangImporterOptions();
 
   HEALTH_LOG_PRINTF(
-      "  Extra clang arguments        : (%llu items)",
+      "  Extra clang arguments            : (%llu items)",
       (unsigned long long)clang_importer_options.ExtraArgs.size());
   for (std::string &extra_arg : clang_importer_options.ExtraArgs) {
     HEALTH_LOG_PRINTF("    %s", extra_arg.c_str());
   }
-  HEALTH_LOG_PRINTF("  Swift/C++ interop mode: %s",
-                    m_ast_context_ap->LangOpts.EnableCXXInterop ? "on" : "off");
+
+#define PRINT_PLUGIN_PATHS(ACCESSOR, NAME, TEMPLATE, ...)                      \
+  {                                                                            \
+    auto paths = m_ast_context_ap->SearchPathOpts.ACCESSOR;                    \
+    HEALTH_LOG_PRINTF("  %s: (%llu items)", NAME,                              \
+                      (unsigned long long)paths.size());                       \
+    for (auto &path : paths) {                                                 \
+      HEALTH_LOG_PRINTF("    " TEMPLATE, ##__VA_ARGS__);                       \
+    }                                                                          \
+  }
+  PRINT_PLUGIN_PATHS(getCompilerPluginLibraryPaths(),
+                     "Compiler Plugin Library Paths    ",
+                     "%s", path.c_str());
+  PRINT_PLUGIN_PATHS(getCompilerPluginExecutablePaths(),
+                     "Compiler Plugin Executable Paths ", "%s: [%s]",
+                     path.ExecutablePath.c_str(),
+                     [](auto path_names) -> std::string {
+                       std::string s;
+                       llvm::raw_string_ostream os(s);
+                       llvm::interleaveComma(path_names, os);
+                       return os.str();
+                     }(path.ModuleNames)
+                      .c_str());
+  PRINT_PLUGIN_PATHS(PluginSearchPaths, "Plugin search paths              ",
+                     "%s", path.c_str());
+  PRINT_PLUGIN_PATHS(ExternalPluginSearchPaths,
+                     "External plugin search paths     ", "%s (server: %s)",
+                     path.SearchPath.c_str(), path.ServerPath.c_str());
 }
 
 bool SwiftASTContext::HasTarget() {

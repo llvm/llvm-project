@@ -12,6 +12,7 @@
 #include "lldb/Host/posix/HostInfoPosix.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
@@ -51,8 +52,9 @@ public:
                                             FileSpec &file_spec, bool verify);
 #endif
 
-  /// Query xcrun to find an Xcode SDK directory.
   static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options);
+  static llvm::Expected<llvm::StringRef> FindSDKTool(XcodeSDK sdk,
+                                                     llvm::StringRef tool);
 
   /// Shared cache utilities
   static SharedCacheImageInfo

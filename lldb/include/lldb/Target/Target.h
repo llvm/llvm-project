@@ -184,6 +184,8 @@ public:
 
   EnableSwiftCxxInterop GetEnableSwiftCxxInterop() const;
 
+  Args GetSwiftPluginServerForPath() const;
+
   bool GetSwiftAutoImportFrameworks() const;
 
   bool GetEnableAutoImportClangModules() const;
