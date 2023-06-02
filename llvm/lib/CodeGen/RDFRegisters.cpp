@@ -335,13 +335,16 @@ void PhysicalRegisterInfo::print(raw_ostream &OS, RegisterRef A) const {
     if (0 < A.idx() && A.idx() < TRI.getNumRegs())
       OS << TRI.getName(A.idx());
     else
-      OS << printReg(A.Reg, &TRI);
+      OS << printReg(A.idx(), &TRI);
     OS << PrintLaneMaskShort(A.Mask);
   } else if (A.isUnit()) {
     OS << printRegUnit(A.idx(), &TRI);
   } else {
     assert(A.isMask());
-    OS << '#' << format("%08x", A.Reg);
+    // RegMask SS flag is preserved by idx().
+    unsigned Idx = Register::stackSlot2Index(A.idx());
+    const char *Fmt = Idx < 0x10000 ? "%04x" : "%08x";
+    OS << "M#" << format(Fmt, Idx);
   }
 }
 
