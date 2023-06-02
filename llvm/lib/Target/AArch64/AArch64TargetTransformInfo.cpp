@@ -1696,6 +1696,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ptest_last:
     return instCombineSVEPTest(IC, II);
   case Intrinsic::aarch64_sve_mul:
+  case Intrinsic::aarch64_sve_mul_u:
   case Intrinsic::aarch64_sve_fmul:
   case Intrinsic::aarch64_sve_fmul_u:
     return instCombineSVEVectorMul(IC, II);
