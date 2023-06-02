@@ -545,9 +545,11 @@ class JSONCrashLogParser(CrashLogParser):
             image_addr = self.get_used_image(image_id)['base']
             pc = image_addr + frame_offset
 
-            if 'symbol' in json_frame:
-                symbol = json_frame['symbol']
-                location = int(json_frame['symbolLocation'])
+            if "symbol" in json_frame:
+                symbol = json_frame["symbol"]
+                location = 0
+                if "symbolLocation" in json_frame and json_frame["symbolLocation"]:
+                    location = int(json_frame["symbolLocation"])
                 image = self.images[image_id]
                 image.symbols[symbol] = {
                     "name": symbol,
