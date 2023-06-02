@@ -227,7 +227,7 @@ void transform::PatternRegistry::registerPatterns(
     StringRef identifier, PopulatePatternsWithBenefitFn &&fn) {
   StringAttr attr = builder.getStringAttr(identifier);
   assert(!patterns.contains(attr) && "patterns identifier is already in use");
-  patterns.try_emplace(attr, [f = move(fn)](RewritePatternSet &patternSet) {
+  patterns.try_emplace(attr, [f = std::move(fn)](RewritePatternSet &patternSet) {
     f(patternSet, /*benefit=*/1);
   });
 }
