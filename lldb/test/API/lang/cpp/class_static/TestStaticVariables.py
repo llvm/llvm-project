@@ -128,7 +128,7 @@ class StaticVariableTestCase(TestBase):
     )
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     @add_test_categories(["pyapi"])
-    def test_with_python_api(self):
+    def test_with_python_FindValue(self):
         """Test Python APIs on file and class static variables."""
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -194,6 +194,44 @@ class StaticVariableTestCase(TestBase):
         self.DebugSBValue(val)
         self.assertEqual(val.GetName(), "hello_world")
 
+    # This test tests behavior that's been broken for a very long time..
+    # The fix for it is in the accelerator table part of the DWARF reader,
+    # and I fixed the version that the names accelerator uses, but I don't
+    # know how to fix it on systems that don't use that. There isn't a
+    # decorator for that - not sure how to construct that so I'm limiting the
+    # test do Darwin for now.
+    @expectedFailureAll(
+        compiler=["gcc"], bugnumber="Compiler emits incomplete debug info"
+    )
+    @skipUnlessDarwin
+    @add_test_categories(["pyapi"])
+    def test_with_python_FindGlobalVariables(self):
+        """Test Python APIs on file and class static variables."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line)
+        self.assertTrue(breakpoint, VALID_BREAKPOINT)
+
+        # Now launch the process, and do not stop at entry point.
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # The stop reason of the thread should be breakpoint.
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
+
+        # Get the SBValue of 'A::g_points' and 'g_points'.
+        frame = thread.GetFrameAtIndex(0)
+
+        # Build ValueCheckers for the values we're going to find:
+        value_check_A = self.build_value_check("A::g_points", ["1", "2", "11", "22"])
+        value_check_none = self.build_value_check("g_points", ["3", "4", "33", "44"])
+        value_check_AA = self.build_value_check("AA::g_points", ["5", "6", "55", "66"])
+
         # We should also be able to get class statics from FindGlobalVariables.
         # eMatchTypeStartsWith should only find A:: not AA::
         val_list = target.FindGlobalVariables("A::", 10, lldb.eMatchTypeStartsWith)
@@ -227,3 +265,4 @@ class StaticVariableTestCase(TestBase):
         # between file statics and globals:
         val_list = target.FindGlobalVariables("g_points", 10, lldb.eMatchTypeNormal)
         self.assertEqual(val_list.GetSize(), 3, "Found all three g_points")
+        
