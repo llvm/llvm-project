@@ -18,21 +18,9 @@ namespace mlir {
 class DialectRegistry;
 
 namespace tensor {
-
-/// A specialized TrackingListener for transform ops that operate on tensor IR.
-/// This listener skips cast-like tensor ops when looking for payload op
-/// replacements.
-class TrackingListener : public transform::TrackingListener {
-public:
-  using transform::TrackingListener::TrackingListener;
-
-protected:
-  Operation *findReplacementOp(Operation *op,
-                               ValueRange newValues) const override;
-};
-
 void registerTransformDialectExtension(DialectRegistry &registry);
-
+void registerFindPayloadReplacementOpInterfaceExternalModels(
+    DialectRegistry &registry);
 } // namespace tensor
 } // namespace mlir
 
