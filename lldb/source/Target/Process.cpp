@@ -2527,7 +2527,7 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
 
   FileSpec exe_spec_to_use;
   if (!exe_module) {
-    if (!launch_info.GetExecutableFile()) {
+    if (!launch_info.GetExecutableFile() && !launch_info.IsScriptedProcess()) {
       error.SetErrorString("executable module does not exist");
       return error;
     }
