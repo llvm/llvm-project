@@ -345,11 +345,11 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
 
   auto *TLI = &IC.getTargetLibraryInfo();
   if (isKnownNeverInfOrNaN(Op0, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I, &IC.getDominatorTree(),
-                           &IC.getOptimizationRemarkEmitter()) &&
+                           &IC.getAssumptionCache(), &I,
+                           &IC.getDominatorTree()) &&
       isKnownNeverInfOrNaN(Op1, IC.getDataLayout(), TLI, 0,
-                           &IC.getAssumptionCache(), &I, &IC.getDominatorTree(),
-                           &IC.getOptimizationRemarkEmitter())) {
+                           &IC.getAssumptionCache(), &I,
+                           &IC.getDominatorTree())) {
     // Neither operand is infinity or NaN.
     return true;
   }
