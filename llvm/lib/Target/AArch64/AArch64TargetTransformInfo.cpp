@@ -1789,6 +1789,7 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 }
 
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
+                                           ArrayRef<Type *> SrcTys,
                                            ArrayRef<const Value *> Args) {
 
   // A helper that returns a vector type from the given type. The number of
@@ -1834,7 +1835,7 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   // extending and the same type.
   if (Opcode == Instruction::Mul &&
       (!Arg0 || Arg0->getOpcode() != Extend->getOpcode() ||
-       Arg0->getOperand(0)->getType() != Extend->getOperand(0)->getType()))
+       (SrcTys.size() == 2 && SrcTys[0] != SrcTys[1])))
     return false;
 
   // Legalize the destination type and ensure it can be used in a widening
@@ -1846,7 +1847,9 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
 
   // Legalize the source type and ensure it can be used in a widening
   // operation.
-  auto *SrcTy = toVectorTy(Extend->getSrcTy());
+  Type *SrcTy =
+      SrcTys.size() > 0 ? SrcTys.back() : toVectorTy(Extend->getSrcTy());
+
   auto SrcTyL = getTypeLegalizationCost(SrcTy);
   unsigned SrcElTySize = SrcTyL.second.getScalarSizeInBits();
   if (!SrcTyL.second.isVector() || SrcElTySize != SrcTy->getScalarSizeInBits())
@@ -1870,13 +1873,24 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
-
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && I->hasOneUser()) {
     auto *SingleUser = cast<Instruction>(*I->user_begin());
     SmallVector<const Value *, 4> Operands(SingleUser->operand_values());
-    if (isWideningInstruction(Dst, SingleUser->getOpcode(), Operands)) {
+    SmallVector<Type *, 2> SrcTys;
+    for (const Value *Op : Operands) {
+      auto *Cast = dyn_cast<CastInst>(Op);
+      if (!Cast)
+        continue;
+      // Use provided Src type for I and other casts that have the same source
+      // type.
+      if (Op == I || Cast->getSrcTy() == Cast->getSrcTy())
+        SrcTys.push_back(Src);
+      else
+        SrcTys.push_back(Cast->getSrcTy());
+    }
+    if (isWideningInstruction(Dst, SingleUser->getOpcode(), SrcTys, Operands)) {
       // If the cast is the second operand, it is free. We will generate either
       // a "wide" or "long" version of the widening instruction.
       if (I == SingleUser->getOperand(1))
@@ -1886,7 +1900,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // version of the widening instruction.
       if (auto *Cast = dyn_cast<CastInst>(SingleUser->getOperand(1)))
         if (I->getOpcode() == unsigned(Cast->getOpcode()) &&
-            cast<CastInst>(I)->getSrcTy() == Cast->getSrcTy())
+            (Src == Cast->getSrcTy() || Cast->getSrcTy() == Cast->getSrcTy()))
           return 0;
     }
   }
@@ -2510,7 +2524,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // LT.first = 2 the cost is 28. If both operands are extensions it will not
     // need to scalarize so the cost can be cheaper (smull or umull).
     // so the cost can be cheaper (smull or umull).
-    if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, Args))
+    if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, {}, Args))
       return LT.first;
     return LT.first * 14;
   case ISD::ADD:

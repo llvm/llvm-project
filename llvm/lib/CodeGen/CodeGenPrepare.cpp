@@ -8069,8 +8069,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       return true;
 
     if ((isa<UIToFPInst>(I) || isa<FPToUIInst>(I) || isa<TruncInst>(I)) &&
-        TLI->optimizeExtendOrTruncateConversion(I,
-                                                LI->getLoopFor(I->getParent())))
+        TLI->optimizeExtendOrTruncateConversion(
+            I, LI->getLoopFor(I->getParent()), *TTI))
       return true;
 
     if (isa<ZExtInst>(I) || isa<SExtInst>(I)) {
@@ -8082,7 +8082,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
         return SinkCast(CI);
       } else {
         if (TLI->optimizeExtendOrTruncateConversion(
-                I, LI->getLoopFor(I->getParent())))
+                I, LI->getLoopFor(I->getParent()), *TTI))
           return true;
 
         bool MadeChange = optimizeExt(I);
