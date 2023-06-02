@@ -6920,6 +6920,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   ExpandCryptoAEK(*ArchInfo, RequestedExtensions);
 
   FeatureBitset Features = STI.getFeatureBits();
+  setAvailableFeatures(ComputeAvailableFeatures(Features));
   for (auto Name : RequestedExtensions) {
     bool EnableFeature = true;
 
