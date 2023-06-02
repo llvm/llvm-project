@@ -115,7 +115,7 @@ public:
   ///     in \a target_sp which can then be properly released.
   bool DeleteTarget(lldb::TargetSP &target_sp);
 
-  int GetNumTargets() const;
+  size_t GetNumTargets() const;
 
   lldb::TargetSP GetTargetAtIndex(uint32_t index) const;
 
