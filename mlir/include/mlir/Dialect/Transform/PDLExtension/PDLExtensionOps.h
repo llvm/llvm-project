@@ -27,6 +27,8 @@ namespace transform {
 /// populated by extensions.
 class PDLMatchHooks : public TransformDialectData<PDLMatchHooks> {
 public:
+  PDLMatchHooks(MLIRContext *ctx) : TransformDialectData(ctx) {}
+
   /// Takes ownership of the named PDL constraint function from the given
   /// map and makes them available for use by the operations in the dialect.
   void

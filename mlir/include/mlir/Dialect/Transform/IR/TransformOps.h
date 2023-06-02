@@ -12,6 +12,7 @@
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/FunctionInterfaces.h"
@@ -25,6 +26,8 @@
 
 namespace mlir {
 namespace transform {
+class ApplyPatternsOp;
+
 enum class FailurePropagationMode : uint32_t;
 class FailurePropagationModeAttr;
 
@@ -120,8 +123,70 @@ private:
   TransformOpInterface transformOp;
 };
 
+/// A specialized listener that keeps track of cases in which no replacement
+/// payload could be found. The error state of this listener must be checked
+/// before the end of its lifetime.
+class ErrorCheckingTrackingListener : public TrackingListener {
+public:
+  using transform::TrackingListener::TrackingListener;
+
+  ~ErrorCheckingTrackingListener() override;
+
+  /// Check and return the current error state of this listener. Afterwards,
+  /// resets the error state to "success".
+  DiagnosedSilenceableFailure checkAndResetError();
+
+  /// Return "true" if this tracking listener had a failure.
+  bool failed() const;
+
+protected:
+  void notifyPayloadReplacementNotFound(Operation *op,
+                                        ValueRange values) override;
+
+private:
+  /// The error state of this listener. "Success" indicates that no error
+  /// happened so far.
+  DiagnosedSilenceableFailure status = DiagnosedSilenceableFailure::success();
+
+  /// The number of errors that have been encountered.
+  int64_t errorCounter = 0;
+};
+
+/// The PatternRegistry stores callbacks to functions that populate a
+/// `RewritePatternSet`. Registered patterns can be applied with the
+/// "transform.apply_patterns" op.
+class PatternRegistry : public TransformDialectData<PatternRegistry> {
+public:
+  PatternRegistry(MLIRContext *ctx) : TransformDialectData(ctx), builder(ctx) {}
+
+  /// A function that populates a `RewritePatternSet`.
+  using PopulatePatternsFn = std::function<void(RewritePatternSet &)>;
+
+  /// Registers patterns with the specified identifier. The identifier should
+  /// be prefixed with the dialect to which the patterns belong.
+  void registerPatterns(StringRef identifier, PopulatePatternsFn &&fn);
+
+protected:
+  friend class ApplyPatternsOp;
+
+  /// Returns "true" if patterns are registered with the specified identifier.
+  bool hasPatterns(StringAttr identifier) const;
+
+  /// Populates the given pattern set with the specified patterns.
+  void populatePatterns(StringAttr identifier,
+                        RewritePatternSet &patternSet) const;
+
+private:
+  /// A builder for creating StringAttrs.
+  Builder builder;
+
+  DenseMap<StringAttr, PopulatePatternsFn> patterns;
+};
+
 } // namespace transform
 } // namespace mlir
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::transform::PatternRegistry)
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.h.inc"
