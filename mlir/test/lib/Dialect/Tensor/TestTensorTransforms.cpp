@@ -14,10 +14,10 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.h"
 #include "mlir/Dialect/Tensor/Transforms/TransformUtils.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -296,9 +296,9 @@ applyRewriteExtractFromCollapseShapePatterns(Operation *rootOp,
 }
 
 namespace {
-class DummyTrackingListener : public tensor::TrackingListener {
+class DummyTrackingListener : public transform::TrackingListener {
 public:
-  using tensor::TrackingListener::TrackingListener;
+  using transform::TrackingListener::TrackingListener;
 
   // Expose `findReplacementOp` as a public function, so that it can be tested.
   Operation *getReplacementOp(Operation *op, ValueRange newValues) const {
