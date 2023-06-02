@@ -710,33 +710,28 @@ public:
   }
 
   using filtered_mop_iterator =
-      filter_iterator<mop_iterator, std::function<bool(MachineOperand &)>>;
+      filter_iterator<mop_iterator, bool (*)(const MachineOperand &)>;
   using filtered_const_mop_iterator =
-      filter_iterator<const_mop_iterator,
-                      std::function<bool(const MachineOperand &)>>;
+      filter_iterator<const_mop_iterator, bool (*)(const MachineOperand &)>;
 
   /// Returns an iterator range over all operands that are (explicit or
   /// implicit) register defs.
   iterator_range<filtered_mop_iterator> all_defs() {
-    return make_filter_range(operands(),
-                             std::function<bool(MachineOperand &)>(opIsRegDef));
+    return make_filter_range(operands(), opIsRegDef);
   }
   /// \copydoc all_defs()
   iterator_range<filtered_const_mop_iterator> all_defs() const {
-    return make_filter_range(
-        operands(), std::function<bool(const MachineOperand &)>(opIsRegDef));
+    return make_filter_range(operands(), opIsRegDef);
   }
 
   /// Returns an iterator range over all operands that are (explicit or
   /// implicit) register uses.
   iterator_range<filtered_mop_iterator> all_uses() {
-    return make_filter_range(uses(),
-                             std::function<bool(MachineOperand &)>(opIsRegUse));
+    return make_filter_range(uses(), opIsRegUse);
   }
   /// \copydoc all_uses()
   iterator_range<filtered_const_mop_iterator> all_uses() const {
-    return make_filter_range(
-        uses(), std::function<bool(const MachineOperand &)>(opIsRegUse));
+    return make_filter_range(uses(), opIsRegUse);
   }
 
   /// Returns the number of the operand iterator \p I points to.
