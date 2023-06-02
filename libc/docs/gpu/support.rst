@@ -12,7 +12,7 @@ Supported Functions
 
 The following functions and headers are supported at least partially on the
 device. Some functions are implemented fully on the GPU, while others require a
-`remote procedure call <libc_gpu_rpc>`.
+`remote procedure call <libc_gpu_rpc>`_.
 
 ctype.h
 -------
