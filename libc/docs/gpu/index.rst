@@ -16,3 +16,4 @@ learn more about this project.
    support
    testing
    rpc
+   motivation
