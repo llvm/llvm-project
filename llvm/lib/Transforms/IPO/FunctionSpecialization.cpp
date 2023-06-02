@@ -49,7 +49,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/InlineCost.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
@@ -81,10 +80,6 @@ static cl::opt<unsigned> MinFunctionSize(
     "funcspec-min-function-size", cl::init(100), cl::Hidden, cl::desc(
     "Don't specialize functions that have less than this number of "
     "instructions"));
-
-static cl::opt<unsigned> AvgLoopIters(
-    "funcspec-avg-loop-iters", cl::init(10), cl::Hidden, cl::desc(
-    "Average loop iteration count"));
 
 static cl::opt<bool> SpecializeOnAddress(
     "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
@@ -502,8 +497,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
       // Calculate the specialisation gain.
       Cost Score = 0 - SpecCost;
       for (ArgInfo &A : S.Args)
-        Score +=
-            getSpecializationBonus(A.Formal, A.Actual, Solver.getLoopInfo(*F));
+        Score += getSpecializationBonus(A.Formal, A.Actual);
 
       // Discard unprofitable specialisations.
       if (!ForceSpecialization && Score <= 0)
@@ -594,41 +588,42 @@ Cost FunctionSpecializer::getSpecializationCost(Function *F) {
 }
 
 static Cost getUserBonus(User *U, TargetTransformInfo &TTI,
-                         const LoopInfo &LI) {
+                         BlockFrequencyInfo &BFI) {
   auto *I = dyn_cast_or_null<Instruction>(U);
   // If not an instruction we do not know how to evaluate.
   // Keep minimum possible cost for now so that it doesnt affect
   // specialization.
   if (!I)
-    return std::numeric_limits<unsigned>::min();
+    return 0;
 
-  Cost Bonus =
+  uint64_t Weight = BFI.getBlockFreq(I->getParent()).getFrequency() /
+                    BFI.getEntryFreq();
+  if (!Weight)
+    return 0;
+
+  Cost Bonus = Weight *
       TTI.getInstructionCost(U, TargetTransformInfo::TCK_SizeAndLatency);
-
-  // Increase the cost if it is inside the loop.
-  unsigned LoopDepth = LI.getLoopDepth(I->getParent());
-  Bonus *= std::pow((double)AvgLoopIters, LoopDepth);
 
   // Traverse recursively if there are more uses.
   // TODO: Any other instructions to be added here?
   if (I->mayReadFromMemory() || I->isCast())
     for (auto *User : I->users())
-      Bonus += getUserBonus(User, TTI, LI);
+      Bonus += getUserBonus(User, TTI, BFI);
 
   return Bonus;
 }
 
 /// Compute a bonus for replacing argument \p A with constant \p C.
-Cost FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
-                                                 const LoopInfo &LI) {
+Cost FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C) {
   Function *F = A->getParent();
-  auto &TTI = (GetTTI)(*F);
+  auto &TTI = GetTTI(*F);
+  auto &BFI = GetBFI(*F);
   LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
                     << C->getNameOrAsOperand() << "\n");
 
   Cost TotalCost = 0;
   for (auto *U : A->users()) {
-    TotalCost += getUserBonus(U, TTI, LI);
+    TotalCost += getUserBonus(U, TTI, BFI);
     LLVM_DEBUG(dbgs() << "FnSpecialization:   User cost ";
                TotalCost.print(dbgs()); dbgs() << " for: " << *U << "\n");
   }
