@@ -45,7 +45,6 @@ elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING AND NOT OPENMP_STANDA
   set(PACKAGER_TOOL $<TARGET_FILE:clang-offload-packager>)
   set(LINK_TOOL $<TARGET_FILE:llvm-link>)
   set(OPT_TOOL $<TARGET_FILE:opt>)
-  set(EXTRACT_TOOL $<TARGET_FILE:llvm-extract>)
   libomptarget_say("Building DeviceRTL. Using clang from in-tree build")
 else()
   libomptarget_say("Not building DeviceRTL. No appropriate clang found")
@@ -131,7 +130,6 @@ set(src_files
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
 set(link_opt_flags  -O3        -openmp-opt-disable -attributor-enable=module)
 set(link_export_flag -passes=internalize -internalize-public-api-file=${source_directory}/exports)
-#set(link_extract_flag --func='__keep_alive' --delete)
 
 # Prepend -I to each list element
 set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
